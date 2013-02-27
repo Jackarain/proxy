@@ -336,7 +336,7 @@ protected:
 				prefix = 0;
 			}
 			else if (m_atyp == SOCKS5_ATYP_IPV6)
-				length = 15;
+				length = 17;
 
 			boost::asio::async_read(m_local_socket, boost::asio::buffer(m_local_buffer.begin() + prefix, length),
 				boost::asio::transfer_exactly(length),
@@ -353,10 +353,10 @@ protected:
 		if (!error)
 		{
 			char *p = m_local_buffer.data();
-			bytes_transferred += 1;	// 加上首个字节.
 
 			if (m_atyp == SOCKS5_ATYP_IPV4)
 			{
+				bytes_transferred += 1;	// 加上首个字节.
 				m_address.address(boost::asio::ip::address_v4(read_uint32(p)));
 				m_address.port(read_int16(p));
 			}
@@ -368,6 +368,7 @@ protected:
 			}
 			else if (m_atyp == SOCKS5_ATYP_IPV6)
 			{
+				bytes_transferred += 1;	// 加上首个字节.
 				boost::asio::ip::address_v6::bytes_type addr;
 				for (boost::asio::ip::address_v6::bytes_type::iterator i = addr.begin();
 					i != addr.end(); i++)
@@ -400,6 +401,7 @@ protected:
 					m_resolver.async_resolve(query, boost::bind(&socks_session::socks_handle_resolve,
 						shared_from_this(),	boost::asio::placeholders::error,
 						boost::asio::placeholders::iterator));
+					return;
 				}
 			}
 			else
@@ -437,7 +439,7 @@ protected:
 			tcp::resolver::iterator end;
 			if (endpoint_iterator != end)
 			{
-				boost::asio::async_connect(m_remote_socket,	++endpoint_iterator,
+				boost::asio::async_connect(m_remote_socket,	endpoint_iterator++,
 					boost::bind(&socks_session::socks_handle_connect_3,
 						shared_from_this(), boost::asio::placeholders::error,
 						endpoint_iterator)
@@ -503,7 +505,7 @@ protected:
 			}
 			if (m_atyp == SOCKS5_ATYP_DOMAINNAME)
 			{
-				len += (m_domain.size() + 2);
+				len += (m_domain.size() + 3);
 				write_int8(m_domain.size(), p);
 				write_string(m_domain, p);
 				write_int16(m_port, p);
@@ -531,7 +533,7 @@ protected:
 	{
 		if (!error)
 		{
-			boost::asio::async_connect(m_remote_socket,	++endpoint_iterator,
+			boost::asio::async_connect(m_remote_socket,	endpoint_iterator++,
 				boost::bind(&socks_session::socks_handle_connect_3,
 					shared_from_this(), boost::asio::placeholders::error,
 					endpoint_iterator)
