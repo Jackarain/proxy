@@ -651,16 +651,25 @@ protected:
 				char *p = m_local_buffer.data();
 				write_int8(SOCKS_VERSION_4, p);
 				write_int8(SOCKS4_REQUEST_GRANTED, p);
-				// 没用了, 随便填.
 				write_int16(m_remote_socket.remote_endpoint().port(), p);
 				write_uint32(m_remote_socket.remote_endpoint().address().to_v4().to_ulong(), p);
+
+				// 回复成功.
 				boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 8),
 				boost::asio::transfer_exactly(8),
-					boost::bind(&socks_session::socks_handle_error, shared_from_this(),
+					boost::bind(&socks_session::socks_handle_succeed, shared_from_this(),
 						boost::asio::placeholders::error,
 						boost::asio::placeholders::bytes_transferred
 					)
 				);
+
+				// 投递一个数据接收.
+				m_remote_socket.async_read_some(boost::asio::buffer(m_remote_buffer),
+					boost::bind(&socks_session::socks_handle_remote_read, shared_from_this(),
+					boost::asio::placeholders::error,
+					boost::asio::placeholders::bytes_transferred));
+
+				return;
 			}
 		}
 	}
