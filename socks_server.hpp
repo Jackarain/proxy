@@ -89,7 +89,7 @@ public:
 		//  [         ]
 		// 读取[]里的部分.
 		boost::asio::async_read(m_local_socket, boost::asio::buffer(m_local_buffer, 2),
-			boost::asio::transfer_exactly(2), 
+			boost::asio::transfer_exactly(2),
 				boost::bind(&socks_session::socks_handle_connect_1, shared_from_this(),
 					boost::asio::placeholders::error,
 					boost::asio::placeholders::bytes_transferred
@@ -122,7 +122,7 @@ protected:
 				//	+----+----------+----------+
 				//                  [          ]
 				boost::asio::async_read(m_local_socket, boost::asio::buffer(m_local_buffer, nmethods),
-					boost::asio::transfer_exactly(nmethods), 
+					boost::asio::transfer_exactly(nmethods),
 						boost::bind(&socks_session::socks_handle_connect_2, shared_from_this(),
 							boost::asio::placeholders::error,
 							boost::asio::placeholders::bytes_transferred
@@ -136,9 +136,12 @@ protected:
 				//	+----+----+----+----+----+----+----+----+----+----+....+----+
 				//  | 1  | 1  |    2    |         4         | variable     | 1  |
 				//	+----+----+----+----+----+----+----+----+----+----+....+----+
-				//       [                                  ]
-				boost::asio::async_read(m_local_socket, boost::asio::buffer(m_local_buffer, 7),
-					boost::asio::transfer_exactly(7), 
+				//            [                             ]
+
+				m_command = read_int8(p);
+
+				boost::asio::async_read(m_local_socket, boost::asio::buffer(m_local_buffer, 6),
+					boost::asio::transfer_exactly(6),
 						boost::bind(&socks_session::socks_handle_connect_2, shared_from_this(),
 							boost::asio::placeholders::error,
 							boost::asio::placeholders::bytes_transferred
@@ -192,7 +195,6 @@ protected:
 			if (m_version == SOCKS_VERSION_4)
 			{
 				char *p = m_local_buffer.data();
-				m_command = read_int8(p);
 				m_address.port(read_int16(p));
 				m_address.address(boost::asio::ip::address_v4(read_uint32(p)));
 
@@ -225,7 +227,7 @@ protected:
 				//	+----+------+----------+------+----------+
 				//  [           ]
 				boost::asio::async_read(m_local_socket, boost::asio::buffer(m_local_buffer, 2),
-					boost::asio::transfer_exactly(2), 
+					boost::asio::transfer_exactly(2),
 						boost::bind(&socks_session::socks_handle_negotiation_1, shared_from_this(),
 							boost::asio::placeholders::error,
 							boost::asio::placeholders::bytes_transferred
@@ -241,7 +243,7 @@ protected:
 				//	+----+-----+-------+------+----------+----------+
 				//  [                          ]
 				boost::asio::async_read(m_local_socket, boost::asio::buffer(m_local_buffer, 5),
-					boost::asio::transfer_exactly(5), 
+					boost::asio::transfer_exactly(5),
 						boost::bind(&socks_session::socks_handle_requests_1, shared_from_this(),
 							boost::asio::placeholders::error,
 							boost::asio::placeholders::bytes_transferred
@@ -276,7 +278,7 @@ protected:
 			//	+----+------+----------+------+----------+
 			//              [                 ]
 			boost::asio::async_read(m_local_socket, boost::asio::buffer(m_local_buffer, name_length),
-				boost::asio::transfer_exactly(name_length), 
+				boost::asio::transfer_exactly(name_length),
 					boost::bind(&socks_session::socks_handle_negotiation_2, shared_from_this(),
 						boost::asio::placeholders::error,
 						boost::asio::placeholders::bytes_transferred
@@ -307,7 +309,7 @@ protected:
 				//	+----+------+----------+------+----------+
 				//                                [          ]
 				boost::asio::async_read(m_local_socket, boost::asio::buffer(m_local_buffer, passwd_len),
-					boost::asio::transfer_exactly(passwd_len), 
+					boost::asio::transfer_exactly(passwd_len),
 						boost::bind(&socks_session::socks_handle_negotiation_3, shared_from_this(),
 							boost::asio::placeholders::error,
 							boost::asio::placeholders::bytes_transferred
@@ -504,10 +506,6 @@ protected:
 					);
 				}
 			}
-
-			if (m_version == SOCKS_VERSION_4)
-			{
-			}
 		}
 	}
 
@@ -577,6 +575,8 @@ protected:
 							boost::asio::placeholders::bytes_transferred
 						)
 					);
+
+					return;
 				}
 			}
 		}
