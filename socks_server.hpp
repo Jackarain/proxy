@@ -11,6 +11,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/array.hpp>
+#include <istream>
 
 #include "io.hpp"
 
@@ -32,8 +33,8 @@ class socks_session
 		SOCKS5_AUTH_UNACCEPTABLE = 0xFF
 	};
 	enum {
-		SOCKS5_CMD_CONNECT = 0x01,
-		SOCKS5_CMD_BIND = 0x02,
+		SOCKS_CMD_CONNECT = 0x01,
+		SOCKS_CMD_BIND = 0x02,
 		SOCKS5_CMD_UDP = 0x03
 	};
 	enum {
@@ -51,6 +52,12 @@ class socks_session
 		SOCKS5_COMMAND_NOT_SUPPORTED,
 		SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED,
 		SOCKS5_UNASSIGNED
+	};
+	enum {
+		SOCKS4_REQUEST_GRANTED = 90,
+		SOCKS4_REQUEST_REJECTED_OR_FAILED,
+		SOCKS4_CANNOT_CONNECT_TARGET_SERVER,
+		SOCKS4_REQUEST_REJECTED_USER_NO_ALLOW,
 	};
 
 public:
@@ -124,7 +131,19 @@ protected:
 			}
 			else if (m_version == SOCKS_VERSION_4)	// socks4协议.
 			{
-
+				//	+----+----+----+----+----+----+----+----+----+----+....+----+
+				//	| VN | CD | DSTPORT |      DSTIP        | USERID       |NULL|
+				//	+----+----+----+----+----+----+----+----+----+----+....+----+
+				//  | 1  | 1  |    2    |         4         | variable     | 1  |
+				//	+----+----+----+----+----+----+----+----+----+----+....+----+
+				//       [                                  ]
+				boost::asio::async_read(m_local_socket, boost::asio::buffer(m_local_buffer, 7),
+					boost::asio::transfer_exactly(7), 
+						boost::bind(&socks_session::socks_handle_connect_2, shared_from_this(),
+							boost::asio::placeholders::error,
+							boost::asio::placeholders::bytes_transferred
+						)
+					);
 			}
 			else
 			{
@@ -137,35 +156,59 @@ protected:
 	{
 		if (!error)
 		{
-			// 循环读取客户端支持的代理方式.
-			char *p = m_local_buffer.data();
-			m_method = SOCKS5_AUTH_UNACCEPTABLE;
-			while (bytes_transferred != 0)
+			if (m_version == SOCKS_VERSION_5)
 			{
-				int m = read_int8(p);
-				if (m == SOCKS5_AUTH_NONE || m == SOCKS5_AUTH)
-					m_method = m;
-				bytes_transferred--;
+				// 循环读取客户端支持的代理方式.
+				char *p = m_local_buffer.data();
+				m_method = SOCKS5_AUTH_UNACCEPTABLE;
+				while (bytes_transferred != 0)
+				{
+					int m = read_int8(p);
+					if (m == SOCKS5_AUTH_NONE || m == SOCKS5_AUTH)
+						m_method = m;
+					bytes_transferred--;
+				}
+
+				// 回复客户端, 选择的代理方式.
+				p = m_local_buffer.data();
+				write_int8(m_version, p);
+				write_int8(m_method, p);
+
+				//	+----+--------+
+				//	|VER | METHOD |
+				//	+----+--------+
+				//	| 1  |   1    |
+				//	+----+--------+
+				//  [             ]
+				boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 2),
+					boost::asio::transfer_exactly(2),
+						boost::bind(&socks_session::socks_handle_send_version, shared_from_this(),
+							boost::asio::placeholders::error,
+							boost::asio::placeholders::bytes_transferred
+						)
+					);
 			}
 
-			// 回复客户端, 选择的代理方式.
-			p = m_local_buffer.data();
-			write_int8(m_version, p);
-			write_int8(m_method, p);
+			if (m_version == SOCKS_VERSION_4)
+			{
+				char *p = m_local_buffer.data();
+				m_command = read_int8(p);
+				m_address.port(read_int16(p));
+				m_address.address(boost::asio::ip::address_v4(read_uint32(p)));
 
-			//	+----+--------+
-			//	|VER | METHOD |
-			//	+----+--------+
-			//	| 1  |   1    |
-			//	+----+--------+
-			//  [             ]
-			boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 2),
-				boost::asio::transfer_exactly(2),
-					boost::bind(&socks_session::socks_handle_send_version, shared_from_this(),
+				//	+----+----+----+----+----+----+----+----+----+----+....+----+
+				//	| VN | CD | DSTPORT |      DSTIP        | USERID       |NULL|
+				//	+----+----+----+----+----+----+----+----+----+----+....+----+
+				//  | 1  | 1  |    2    |         4         | variable     | 1  |
+				//	+----+----+----+----+----+----+----+----+----+----+....+----+
+				//                                          [                   ]
+				boost::asio::async_read_until(m_local_socket, m_streambuf, '\0',
+					boost::bind(&socks_session::socks_handle_negotiation_2, shared_from_this(),
 						boost::asio::placeholders::error,
 						boost::asio::placeholders::bytes_transferred
 					)
 				);
+			}
 		}
 	}
 
@@ -246,28 +289,58 @@ protected:
 	{
 		if (!error)
 		{
-			char *p = m_local_buffer.data();
-			for (int i = 0; i < bytes_transferred - 1; i++)
-				m_uname.push_back(read_int8(p));
-			int passwd_len = read_int8(p);
-			if (passwd_len <= 0 && passwd_len > 255)
+			if (m_version == SOCKS_VERSION_5)
 			{
-				std::cout << "error unknow protocol.\n";
-				return;
+				char *p = m_local_buffer.data();
+				for (int i = 0; i < bytes_transferred - 1; i++)
+					m_uname.push_back(read_int8(p));
+				int passwd_len = read_int8(p);
+				if (passwd_len <= 0 && passwd_len > 255)
+				{
+					std::cout << "error unknow protocol.\n";
+					return;
+				}
+				//	+----+------+----------+------+----------+
+				//	|VER | ULEN |  UNAME   | PLEN |  PASSWD  |
+				//	+----+------+----------+------+----------+
+				//	| 1  |  1   | 1 to 255 |  1   | 1 to 255 |
+				//	+----+------+----------+------+----------+
+				//                                [          ]
+				boost::asio::async_read(m_local_socket, boost::asio::buffer(m_local_buffer, passwd_len),
+					boost::asio::transfer_exactly(passwd_len), 
+						boost::bind(&socks_session::socks_handle_negotiation_3, shared_from_this(),
+							boost::asio::placeholders::error,
+							boost::asio::placeholders::bytes_transferred
+						)
+					);
 			}
-			//	+----+------+----------+------+----------+
-			//	|VER | ULEN |  UNAME   | PLEN |  PASSWD  |
-			//	+----+------+----------+------+----------+
-			//	| 1  |  1   | 1 to 255 |  1   | 1 to 255 |
-			//	+----+------+----------+------+----------+
-			//                                [          ]
-			boost::asio::async_read(m_local_socket, boost::asio::buffer(m_local_buffer, passwd_len),
-				boost::asio::transfer_exactly(passwd_len), 
-					boost::bind(&socks_session::socks_handle_negotiation_3, shared_from_this(),
-						boost::asio::placeholders::error,
-						boost::asio::placeholders::bytes_transferred
-					)
-				);
+
+			if (m_version == SOCKS_VERSION_4)
+			{
+				std::string userid;
+
+				userid.resize(bytes_transferred);
+				m_streambuf.sgetn(&userid[0], bytes_transferred);
+
+				// TODO: 认证用户.
+
+
+				// 发起连接.
+				if (m_command == SOCKS_CMD_CONNECT)
+				{
+					tcp::resolver::iterator endpoint_iterator;
+					m_remote_socket.async_connect(m_address,
+						boost::bind(&socks_session::socks_handle_connect_3,
+						shared_from_this(), boost::asio::placeholders::error,
+						endpoint_iterator));
+					return;
+				}
+
+				if (m_command == SOCKS_CMD_BIND)
+				{
+					// TODO: 实现绑定请求.
+				}
+			}
 		}
 	}
 
@@ -352,81 +425,88 @@ protected:
 	{
 		if (!error)
 		{
-			char *p = m_local_buffer.data();
+			if (m_version == SOCKS_VERSION_5)
+			{
+				char *p = m_local_buffer.data();
 
-			if (m_atyp == SOCKS5_ATYP_IPV4)
-			{
-				bytes_transferred += 1;	// 加上首个字节.
-				m_address.address(boost::asio::ip::address_v4(read_uint32(p)));
-				m_address.port(read_int16(p));
-			}
-			else if (m_atyp == SOCKS5_ATYP_DOMAINNAME)
-			{
-				for (int i = 0; i < bytes_transferred - 2; i++)
-					m_domain.push_back(read_int8(p));
-				m_port = read_int16(p);
-			}
-			else if (m_atyp == SOCKS5_ATYP_IPV6)
-			{
-				bytes_transferred += 1;	// 加上首个字节.
-				boost::asio::ip::address_v6::bytes_type addr;
-				for (boost::asio::ip::address_v6::bytes_type::iterator i = addr.begin();
-					i != addr.end(); i++)
+				if (m_atyp == SOCKS5_ATYP_IPV4)
 				{
-					*i = read_int8(p);
+					bytes_transferred += 1;	// 加上首个字节.
+					m_address.address(boost::asio::ip::address_v4(read_uint32(p)));
+					m_address.port(read_int16(p));
+				}
+				else if (m_atyp == SOCKS5_ATYP_DOMAINNAME)
+				{
+					for (int i = 0; i < bytes_transferred - 2; i++)
+						m_domain.push_back(read_int8(p));
+					m_port = read_int16(p);
+				}
+				else if (m_atyp == SOCKS5_ATYP_IPV6)
+				{
+					bytes_transferred += 1;	// 加上首个字节.
+					boost::asio::ip::address_v6::bytes_type addr;
+					for (boost::asio::ip::address_v6::bytes_type::iterator i = addr.begin();
+						i != addr.end(); i++)
+					{
+						*i = read_int8(p);
+					}
+
+					m_address.address(boost::asio::ip::address_v6(addr));
+					m_address.port(read_int16(p));
 				}
 
-				m_address.address(boost::asio::ip::address_v6(addr));
-				m_address.port(read_int16(p));
+				// 发起连接.
+				if (m_command == SOCKS_CMD_CONNECT)
+				{
+					if (m_atyp == SOCKS5_ATYP_IPV4 || m_atyp == SOCKS5_ATYP_IPV6)
+					{
+						tcp::resolver::iterator endpoint_iterator;
+						m_remote_socket.async_connect(m_address,
+							boost::bind(&socks_session::socks_handle_connect_3,
+							shared_from_this(), boost::asio::placeholders::error,
+							endpoint_iterator));
+						return;
+					}
+					if (m_atyp == SOCKS5_ATYP_DOMAINNAME)
+					{
+						std::ostringstream port_string;
+						port_string << m_port;
+						tcp::resolver::query query(m_domain, port_string.str());
+
+						m_resolver.async_resolve(query, boost::bind(&socks_session::socks_handle_resolve,
+							shared_from_this(),	boost::asio::placeholders::error,
+							boost::asio::placeholders::iterator));
+						return;
+					}
+				}
+				else
+				{
+					//	+----+-----+-------+------+----------+----------+
+					//	|VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
+					//	+----+-----+-------+------+----------+----------+
+					//	| 1  |  1  | X'00' |  1   | Variable |    2     |
+					//	+----+-----+-------+------+----------+----------+
+					//  [                                               ]
+					p = m_local_buffer.data();
+					write_int8(SOCKS_VERSION_5, p);
+					write_int8(SOCKS5_COMMAND_NOT_SUPPORTED, p);
+					write_int8(0x00, p);
+					write_int8(1, p);
+					// 没用的东西.
+					for (int i = 0; i < 6; i++)
+						write_int8(0, p);
+					boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 10),
+					boost::asio::transfer_exactly(10),
+						boost::bind(&socks_session::socks_handle_error, shared_from_this(),
+							boost::asio::placeholders::error,
+							boost::asio::placeholders::bytes_transferred
+						)
+					);
+				}
 			}
 
-			// 发起连接.
-			if (m_command == SOCKS5_CMD_CONNECT)
+			if (m_version == SOCKS_VERSION_4)
 			{
-				if (m_atyp == SOCKS5_ATYP_IPV4 || m_atyp == SOCKS5_ATYP_IPV6)
-				{
-					tcp::resolver::iterator endpoint_iterator;
-					m_remote_socket.async_connect(m_address,
-						boost::bind(&socks_session::socks_handle_connect_3,
-						shared_from_this(), boost::asio::placeholders::error,
-						endpoint_iterator));
-					return;
-				}
-				if (m_atyp == SOCKS5_ATYP_DOMAINNAME)
-				{
-					std::ostringstream port_string;
-					port_string << m_port;
-					tcp::resolver::query query(m_domain, port_string.str());
-
-					m_resolver.async_resolve(query, boost::bind(&socks_session::socks_handle_resolve,
-						shared_from_this(),	boost::asio::placeholders::error,
-						boost::asio::placeholders::iterator));
-					return;
-				}
-			}
-			else
-			{
-				//	+----+-----+-------+------+----------+----------+
-				//	|VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
-				//	+----+-----+-------+------+----------+----------+
-				//	| 1  |  1  | X'00' |  1   | Variable |    2     |
-				//	+----+-----+-------+------+----------+----------+
-				//  [                                               ]
-				p = m_local_buffer.data();
-				write_int8(SOCKS_VERSION_5, p);
-				write_int8(SOCKS5_COMMAND_NOT_SUPPORTED, p);
-				write_int8(0x00, p);
-				write_int8(1, p);
-				// 没用的东西.
-				for (int i = 0; i < 6; i++)
-					write_int8(0, p);
-				boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 10),
-				boost::asio::transfer_exactly(10),
-					boost::bind(&socks_session::socks_handle_error, shared_from_this(),
-						boost::asio::placeholders::error,
-						boost::asio::placeholders::bytes_transferred
-					)
-				);
 			}
 		}
 	}
@@ -447,84 +527,141 @@ protected:
 			}
 			else
 			{
-				// 连接目标失败!
+				if (m_version == SOCKS_VERSION_5)
+				{
+					// 连接目标失败!
+					//	+----+-----+-------+------+----------+----------+
+					//	|VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
+					//	+----+-----+-------+------+----------+----------+
+					//	| 1  |  1  | X'00' |  1   | Variable |    2     |
+					//	+----+-----+-------+------+----------+----------+
+					//  [                                               ]
+					char *p = m_local_buffer.data();
+					write_int8(SOCKS_VERSION_5, p);
+					write_int8(SOCKS5_CONNECTION_REFUSED, p);
+					write_int8(0x00, p);
+					write_int8(1, p);
+					// 没用的东西.
+					for (int i = 0; i < 6; i++)
+						write_int8(0, p);
+					boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 10),
+					boost::asio::transfer_exactly(10),
+						boost::bind(&socks_session::socks_handle_error, shared_from_this(),
+							boost::asio::placeholders::error,
+							boost::asio::placeholders::bytes_transferred
+						)
+					);
+
+					return;
+				}
+
+				// 连接失败.
+				if (m_version == SOCKS_VERSION_4)
+				{
+					//	+----+----+----+----+----+----+----+----+
+					//	| VN | CD | DSTPORT |      DSTIP        |
+					//	+----+----+----+----+----+----+----+----+
+					//  | 1  | 1  |    2    |         4         |
+					//	+----+----+----+----+----+----+----+----+
+					//  [                                       ]
+					char *p = m_local_buffer.data();
+					write_int8(SOCKS_VERSION_4, p);
+					write_int8(SOCKS4_CANNOT_CONNECT_TARGET_SERVER, p);
+					// 没用了, 随便填.
+					write_int16(0x00, p);
+					write_uint32(0x00, p);
+					boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 8),
+					boost::asio::transfer_exactly(8),
+						boost::bind(&socks_session::socks_handle_error, shared_from_this(),
+							boost::asio::placeholders::error,
+							boost::asio::placeholders::bytes_transferred
+						)
+					);
+				}
+			}
+		}
+		else
+		{
+			if (m_version == SOCKS_VERSION_5)
+			{
+				// 连接成功.
 				//	+----+-----+-------+------+----------+----------+
 				//	|VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
 				//	+----+-----+-------+------+----------+----------+
 				//	| 1  |  1  | X'00' |  1   | Variable |    2     |
 				//	+----+-----+-------+------+----------+----------+
 				//  [                                               ]
+
 				char *p = m_local_buffer.data();
+				int len = 4;
 				write_int8(SOCKS_VERSION_5, p);
-				write_int8(SOCKS5_CONNECTION_REFUSED, p);
+				write_int8(SOCKS5_SUCCEEDED, p);
 				write_int8(0x00, p);
-				write_int8(1, p);
-				// 没用的东西.
-				for (int i = 0; i < 6; i++)
-					write_int8(0, p);
-				boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 10),
-				boost::asio::transfer_exactly(10),
+				write_int8(m_atyp, p);
+				
+				if (m_atyp == SOCKS5_ATYP_IPV4)
+				{
+					len += 6;
+					write_uint32(m_remote_socket.remote_endpoint().address().to_v4().to_ulong(), p);
+					write_int16(m_remote_socket.remote_endpoint().port(), p);
+				}
+				if (m_atyp == SOCKS5_ATYP_IPV6)
+				{
+					len += 18;
+					boost::asio::ip::address_v6::bytes_type addr;
+					addr = m_remote_socket.remote_endpoint().address().to_v6().to_bytes();
+					for (int i = 0; i < addr.size(); i++)
+						write_int8(addr[i], p);
+					write_int16(m_remote_socket.remote_endpoint().port(), p);
+				}
+				if (m_atyp == SOCKS5_ATYP_DOMAINNAME)
+				{
+					len += (m_domain.size() + 3);
+					write_int8(m_domain.size(), p);
+					write_string(m_domain, p);
+					write_int16(m_port, p);
+				}
+
+				// 发送回复.
+				boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, len),
+				boost::asio::transfer_exactly(len),
+					boost::bind(&socks_session::socks_handle_succeed, shared_from_this(),
+						boost::asio::placeholders::error,
+						boost::asio::placeholders::bytes_transferred
+					)
+				);
+
+				// 投递一个数据接收.
+				m_remote_socket.async_read_some(boost::asio::buffer(m_remote_buffer),
+					boost::bind(&socks_session::socks_handle_remote_read, shared_from_this(),
+					boost::asio::placeholders::error,
+					boost::asio::placeholders::bytes_transferred));
+
+				return;
+			}
+
+			if (m_version == SOCKS_VERSION_4)
+			{
+				//	+----+----+----+----+----+----+----+----+
+				//	| VN | CD | DSTPORT |      DSTIP        |
+				//	+----+----+----+----+----+----+----+----+
+				//  | 1  | 1  |    2    |         4         |
+				//	+----+----+----+----+----+----+----+----+
+				//  [                                       ]
+				char *p = m_local_buffer.data();
+				write_int8(SOCKS_VERSION_4, p);
+				write_int8(SOCKS4_REQUEST_GRANTED, p);
+				// 没用了, 随便填.
+				write_int16(m_remote_socket.remote_endpoint().port(), p);
+				write_uint32(m_remote_socket.remote_endpoint().address().to_v4().to_ulong(), p);
+				boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 8),
+				boost::asio::transfer_exactly(8),
 					boost::bind(&socks_session::socks_handle_error, shared_from_this(),
 						boost::asio::placeholders::error,
 						boost::asio::placeholders::bytes_transferred
 					)
 				);
 			}
-		}
-		else
-		{
-			// 连接成功.
-			//	+----+-----+-------+------+----------+----------+
-			//	|VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
-			//	+----+-----+-------+------+----------+----------+
-			//	| 1  |  1  | X'00' |  1   | Variable |    2     |
-			//	+----+-----+-------+------+----------+----------+
-			//  [                                               ]
-
-			char *p = m_local_buffer.data();
-			int len = 4;
-			write_int8(SOCKS_VERSION_5, p);
-			write_int8(SOCKS5_SUCCEEDED, p);
-			write_int8(0x00, p);
-			write_int8(m_atyp, p);
-			
-			if (m_atyp == SOCKS5_ATYP_IPV4)
-			{
-				len += 6;
-				write_int32(m_remote_socket.remote_endpoint().address().to_v4().to_ulong(), p);
-				write_int16(m_remote_socket.remote_endpoint().port(), p);
-			}
-			if (m_atyp == SOCKS5_ATYP_IPV6)
-			{
-				len += 18;
-				boost::asio::ip::address_v6::bytes_type addr;
-				addr = m_remote_socket.remote_endpoint().address().to_v6().to_bytes();
-				for (int i = 0; i < addr.size(); i++)
-					write_int8(addr[i], p);
-				write_int16(m_remote_socket.remote_endpoint().port(), p);
-			}
-			if (m_atyp == SOCKS5_ATYP_DOMAINNAME)
-			{
-				len += (m_domain.size() + 3);
-				write_int8(m_domain.size(), p);
-				write_string(m_domain, p);
-				write_int16(m_port, p);
-			}
-
-			// 发送回复.
-			boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, len),
-			boost::asio::transfer_exactly(len),
-				boost::bind(&socks_session::socks_handle_succeed, shared_from_this(),
-					boost::asio::placeholders::error,
-					boost::asio::placeholders::bytes_transferred
-				)
-			);
-
-			// 投递一个数据接收.
-			m_remote_socket.async_read_some(boost::asio::buffer(m_remote_buffer),
-				boost::bind(&socks_session::socks_handle_remote_read, shared_from_this(),
-				boost::asio::placeholders::error,
-				boost::asio::placeholders::bytes_transferred));
 		}
 	}
 
@@ -650,6 +787,7 @@ private:
 	boost::array<char, 2048> m_local_buffer;
 	tcp::socket m_remote_socket;
 	boost::array<char, 2048> m_remote_buffer;
+	boost::asio::streambuf m_streambuf;
 	tcp::resolver m_resolver;
 	int m_version;
 	int m_method;
