@@ -5,7 +5,7 @@ int main(int argc, char **argv)
 {
 	boost::asio::io_service io_service;
 
-	socks::socks_server s(io_service, 6543);
+	socks::socks_server s(io_service, 4567);
 
 	io_service.run();
 	return 0;
