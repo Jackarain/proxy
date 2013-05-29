@@ -68,6 +68,7 @@ public:
 		, m_resolver(io)
 		, m_version(-1)
 		, m_method(-1)
+		, m_verify_passed(false)
 	{}
 	~socks_session() {}
 
@@ -234,7 +235,7 @@ protected:
 						)
 					);
 			}
-			else if (m_method == SOCKS5_AUTH_NONE)	// 非认证模式.
+			else if (m_method == SOCKS5_AUTH_NONE || m_verify_passed)	// 非认证模式, 或认证已经通过, 接收socks客户端Requests.
 			{
 				//	+----+-----+-------+------+----------+----------+
 				//	|VER | CMD |  RSV  | ATYP | DST.ADDR | DST.PORT |
@@ -325,7 +326,7 @@ protected:
 				m_streambuf.sgetn(&userid[0], bytes_transferred);
 
 				// TODO: 认证用户.
-
+				m_verify_passed = true;
 
 				// 发起连接.
 				if (m_command == SOCKS_CMD_CONNECT)
@@ -355,6 +356,7 @@ protected:
 				m_passwd.push_back(read_int8(p));
 
 			// TODO: 验证用户和密码.
+			m_verify_passed = true;
 
 			p = m_local_buffer.data();
 			write_int8(0x01, p);		// version 只能是1.
@@ -807,6 +809,7 @@ private:
 	tcp::endpoint m_address;
 	std::string m_domain;
 	short m_port;
+	bool m_verify_passed;
 };
 
 class socks_server : public boost::noncopyable
