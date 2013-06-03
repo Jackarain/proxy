@@ -3,10 +3,24 @@
 
 int main(int argc, char **argv)
 {
-	boost::asio::io_service io_service;
+	if (argc  != 2)
+	{
+		std::cerr << "usage: " << argv[0] << " <port>" << std::endl;
+		return -1;
+	}
 
-	socks::socks_server s(io_service, 4567);
+	try {
 
-	io_service.run();
+		boost::asio::io_service io_service;
+
+		socks::socks_server s(io_service, atoi(argv[1]));
+
+		io_service.run();
+	}
+	catch (std::exception& e)
+	{
+		std::cerr << e.what() << std::endl;
+	}
+
 	return 0;
 }
