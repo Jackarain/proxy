@@ -612,7 +612,7 @@ protected:
 					len += 18;
 					boost::asio::ip::address_v6::bytes_type addr;
 					addr = m_remote_socket.remote_endpoint().address().to_v6().to_bytes();
-					for (int i = 0; i < addr.size(); i++)
+					for (std::size_t i = 0; i < addr.size(); i++)
 						write_int8(addr[i], p);
 					write_int16(m_remote_socket.remote_endpoint().port(), p);
 				}
