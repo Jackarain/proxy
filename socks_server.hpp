@@ -325,7 +325,7 @@ protected:
 				userid.resize(bytes_transferred);
 				m_streambuf.sgetn(&userid[0], bytes_transferred);
 
-				// TODO: 认证用户.
+				// TODO: SOCKS4认证用户.
 				m_verify_passed = true;
 
 				// 发起连接.
@@ -355,7 +355,7 @@ protected:
 			for (int i = 0; i < bytes_transferred; i++)
 				m_passwd.push_back(read_int8(p));
 
-			// TODO: 验证用户和密码.
+			// TODO: SOCKS5验证用户和密码.
 			m_verify_passed = true;
 
 			p = m_local_buffer.data();
