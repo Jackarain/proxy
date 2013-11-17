@@ -793,7 +793,12 @@ protected:
 			if (m_command == SOCKS5_CMD_UDP)
 			{
 				// 开始投递异步udp数据接收, 并开始转发数据.
-				m_remote_endpoint;
+				// 转发规则为:
+				// 1. 任何接收到的非来自m_client_endpoint上的数据, 都将转发到m_client_endpoint.
+				// 2. 接收到来自m_client_endpoint上的数据, 解析协议头, 并转发到协议中指定的endpoint.
+				// 3. tcp socket断开时, 取消所有异步IO, 销毁当前session对象.
+				// 4. tcp socket上任何数据传输, 处理方法如同步骤2.
+				// 5. 任何socket错误, 处理方法如同步骤2.
 				m_udp_socket.async_receive_from(boost::asio::buffer(m_local_buffer), m_remote_endpoint,
 					boost::bind(&socks_session::socks_handle_udp_read, shared_from_this(),
 						boost::asio::placeholders::error,
