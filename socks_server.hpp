@@ -88,7 +88,7 @@ public:
 		//	+----+----+----+----+----+----+----+----+----+----+....+----+
 		//	  1    1      2        4                  variable       1
 		//  [         ]
-		// ¶ÁÈ¡[]ÀïµÄ²¿·Ö.
+		// è¯»å–[]é‡Œçš„éƒ¨åˆ†.
 		boost::asio::async_read(m_local_socket, boost::asio::buffer(m_local_buffer, 2),
 			boost::asio::transfer_exactly(2),
 				boost::bind(&socks_session::socks_handle_connect_1, shared_from_this(),
@@ -107,9 +107,9 @@ protected:
 		{
 			char *p = m_local_buffer.data();
 			m_version = read_int8(p);
-			if (m_version == SOCKS_VERSION_5)	// sock5Ğ­Òé.
+			if (m_version == SOCKS_VERSION_5)	// sock5åè®®.
 			{
-				int nmethods = read_int8(p);	// ¶ÁÈ¡¿Í»§¶ËÖ§³ÖµÄ´úÀí·½Ê½ÁĞ±í.
+				int nmethods = read_int8(p);	// è¯»å–å®¢æˆ·ç«¯æ”¯æŒçš„ä»£ç†æ–¹å¼åˆ—è¡¨.
 				if (nmethods <= 0 || nmethods > 255)
 				{
 					std::cout << "unsupport any method!\n";
@@ -130,7 +130,7 @@ protected:
 						)
 					);
 			}
-			else if (m_version == SOCKS_VERSION_4)	// socks4Ğ­Òé.
+			else if (m_version == SOCKS_VERSION_4)	// socks4åè®®.
 			{
 				//	+----+----+----+----+----+----+----+----+----+----+....+----+
 				//	| VN | CD | DSTPORT |      DSTIP        | USERID       |NULL|
@@ -162,7 +162,7 @@ protected:
 		{
 			if (m_version == SOCKS_VERSION_5)
 			{
-				// Ñ­»·¶ÁÈ¡¿Í»§¶ËÖ§³ÖµÄ´úÀí·½Ê½.
+				// å¾ªç¯è¯»å–å®¢æˆ·ç«¯æ”¯æŒçš„ä»£ç†æ–¹å¼.
 				char *p = m_local_buffer.data();
 				m_method = SOCKS5_AUTH_UNACCEPTABLE;
 				while (bytes_transferred != 0)
@@ -173,7 +173,7 @@ protected:
 					bytes_transferred--;
 				}
 
-				// »Ø¸´¿Í»§¶Ë, Ñ¡ÔñµÄ´úÀí·½Ê½.
+				// å›å¤å®¢æˆ·ç«¯, é€‰æ‹©çš„ä»£ç†æ–¹å¼.
 				p = m_local_buffer.data();
 				write_int8(m_version, p);
 				write_int8(m_method, p);
@@ -219,7 +219,7 @@ protected:
 	{
 		if (!error)
 		{
-			if (m_method == SOCKS5_AUTH)			// ÈÏÖ¤Ä£Ê½.
+			if (m_method == SOCKS5_AUTH)			// è®¤è¯æ¨¡å¼.
 			{
 				//	+----+------+----------+------+----------+
 				//	|VER | ULEN |  UNAME   | PLEN |  PASSWD  |
@@ -235,7 +235,7 @@ protected:
 						)
 					);
 			}
-			else if (m_method == SOCKS5_AUTH_NONE || m_verify_passed)	// ·ÇÈÏÖ¤Ä£Ê½, »òÈÏÖ¤ÒÑ¾­Í¨¹ı, ½ÓÊÕsocks¿Í»§¶ËRequests.
+			else if (m_method == SOCKS5_AUTH_NONE || m_verify_passed)	// éè®¤è¯æ¨¡å¼, æˆ–è®¤è¯å·²ç»é€šè¿‡, æ¥æ”¶sockså®¢æˆ·ç«¯Requests.
 			{
 				//	+----+-----+-------+------+----------+----------+
 				//	|VER | CMD |  RSV  | ATYP | DST.ADDR | DST.PORT |
@@ -325,10 +325,10 @@ protected:
 				userid.resize(bytes_transferred);
 				m_streambuf.sgetn(&userid[0], bytes_transferred);
 
-				// TODO: SOCKS4ÈÏÖ¤ÓÃ»§.
+				// TODO: SOCKS4è®¤è¯ç”¨æˆ·.
 				m_verify_passed = true;
 
-				// ·¢ÆğÁ¬½Ó.
+				// å‘èµ·è¿æ¥.
 				if (m_command == SOCKS_CMD_CONNECT)
 				{
 					tcp::resolver::iterator endpoint_iterator;
@@ -341,7 +341,7 @@ protected:
 
 				if (m_command == SOCKS_CMD_BIND)
 				{
-					// TODO: ÊµÏÖ°ó¶¨ÇëÇó.
+					// TODO: å®ç°ç»‘å®šè¯·æ±‚.
 				}
 			}
 		}
@@ -355,14 +355,14 @@ protected:
 			for (int i = 0; i < bytes_transferred; i++)
 				m_passwd.push_back(read_int8(p));
 
-			// TODO: SOCKS5ÑéÖ¤ÓÃ»§ºÍÃÜÂë.
+			// TODO: SOCKS5éªŒè¯ç”¨æˆ·å’Œå¯†ç .
 			m_verify_passed = true;
 
 			p = m_local_buffer.data();
-			write_int8(0x01, p);		// version Ö»ÄÜÊÇ1.
-			write_int8(0x00, p);		// ÈÏÖ¤Í¨¹ı·µ»Ø0x00, ÆäËüÖµÎªÊ§°Ü.
+			write_int8(0x01, p);		// version åªèƒ½æ˜¯1.
+			write_int8(0x00, p);		// è®¤è¯é€šè¿‡è¿”å›0x00, å…¶å®ƒå€¼ä¸ºå¤±è´¥.
 
-			// ·µ»ØÈÏÖ¤×´Ì¬.
+			// è¿”å›è®¤è¯çŠ¶æ€.
 			//	+----+--------+
 			//	|VER | STATUS |
 			//	+----+--------+
@@ -402,7 +402,7 @@ protected:
 			int length = 0;
 			int prefix = 1;
 
-			// ±£´æµÚÒ»¸ö×Ö½Ú.
+			// ä¿å­˜ç¬¬ä¸€ä¸ªå­—èŠ‚.
 			m_local_buffer[0] = m_local_buffer[4];
 
 			if (m_atyp == SOCKS5_ATYP_IPV4)
@@ -435,7 +435,7 @@ protected:
 
 				if (m_atyp == SOCKS5_ATYP_IPV4)
 				{
-					bytes_transferred += 1;	// ¼ÓÉÏÊ×¸ö×Ö½Ú.
+					bytes_transferred += 1;	// åŠ ä¸Šé¦–ä¸ªå­—èŠ‚.
 					m_address.address(boost::asio::ip::address_v4(read_uint32(p)));
 					m_address.port(read_int16(p));
 				}
@@ -447,7 +447,7 @@ protected:
 				}
 				else if (m_atyp == SOCKS5_ATYP_IPV6)
 				{
-					bytes_transferred += 1;	// ¼ÓÉÏÊ×¸ö×Ö½Ú.
+					bytes_transferred += 1;	// åŠ ä¸Šé¦–ä¸ªå­—èŠ‚.
 					boost::asio::ip::address_v6::bytes_type addr;
 					for (boost::asio::ip::address_v6::bytes_type::iterator i = addr.begin();
 						i != addr.end(); i++)
@@ -459,7 +459,7 @@ protected:
 					m_address.port(read_int16(p));
 				}
 
-				// ·¢ÆğÁ¬½Ó.
+				// å‘èµ·è¿æ¥.
 				if (m_command == SOCKS_CMD_CONNECT)
 				{
 					if (m_atyp == SOCKS5_ATYP_IPV4 || m_atyp == SOCKS5_ATYP_IPV6)
@@ -483,6 +483,10 @@ protected:
 						return;
 					}
 				}
+				// else if (m_command == SOCKS_CMD_BIND)
+				// {
+				// 	// TODO: å®ç°bindå‘½ä»¤.
+				// }
 				else
 				{
 					//	+----+-----+-------+------+----------+----------+
@@ -496,7 +500,7 @@ protected:
 					write_int8(SOCKS5_COMMAND_NOT_SUPPORTED, p);
 					write_int8(0x00, p);
 					write_int8(1, p);
-					// Ã»ÓÃµÄ¶«Î÷.
+					// æ²¡ç”¨çš„ä¸œè¥¿.
 					for (int i = 0; i < 6; i++)
 						write_int8(0, p);
 					boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 10),
@@ -529,7 +533,7 @@ protected:
 			{
 				if (m_version == SOCKS_VERSION_5)
 				{
-					// Á¬½ÓÄ¿±êÊ§°Ü!
+					// è¿æ¥ç›®æ ‡å¤±è´¥!
 					//	+----+-----+-------+------+----------+----------+
 					//	|VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
 					//	+----+-----+-------+------+----------+----------+
@@ -541,7 +545,7 @@ protected:
 					write_int8(SOCKS5_CONNECTION_REFUSED, p);
 					write_int8(0x00, p);
 					write_int8(1, p);
-					// Ã»ÓÃµÄ¶«Î÷.
+					// æ²¡ç”¨çš„ä¸œè¥¿.
 					for (int i = 0; i < 6; i++)
 						write_int8(0, p);
 					boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 10),
@@ -555,7 +559,7 @@ protected:
 					return;
 				}
 
-				// Á¬½ÓÊ§°Ü.
+				// è¿æ¥å¤±è´¥.
 				if (m_version == SOCKS_VERSION_4)
 				{
 					//	+----+----+----+----+----+----+----+----+
@@ -567,7 +571,7 @@ protected:
 					char *p = m_local_buffer.data();
 					write_int8(SOCKS_VERSION_4, p);
 					write_int8(SOCKS4_CANNOT_CONNECT_TARGET_SERVER, p);
-					// Ã»ÓÃÁË, Ëæ±ãÌî.
+					// æ²¡ç”¨äº†, éšä¾¿å¡«.
 					write_int16(0x00, p);
 					write_uint32(0x00, p);
 					boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 8),
@@ -586,7 +590,7 @@ protected:
 		{
 			if (m_version == SOCKS_VERSION_5)
 			{
-				// Á¬½Ó³É¹¦.
+				// è¿æ¥æˆåŠŸ.
 				//	+----+-----+-------+------+----------+----------+
 				//	|VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
 				//	+----+-----+-------+------+----------+----------+
@@ -624,7 +628,7 @@ protected:
 					write_int16(m_port, p);
 				}
 
-				// ·¢ËÍ»Ø¸´.
+				// å‘é€å›å¤.
 				boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, len),
 				boost::asio::transfer_exactly(len),
 					boost::bind(&socks_session::socks_handle_succeed, shared_from_this(),
@@ -633,7 +637,7 @@ protected:
 					)
 				);
 
-				// Í¶µİÒ»¸öÊı¾İ½ÓÊÕ.
+				// æŠ•é€’ä¸€ä¸ªæ•°æ®æ¥æ”¶.
 				m_remote_socket.async_read_some(boost::asio::buffer(m_remote_buffer),
 					boost::bind(&socks_session::socks_handle_remote_read, shared_from_this(),
 					boost::asio::placeholders::error,
@@ -656,7 +660,7 @@ protected:
 				write_int16(m_remote_socket.remote_endpoint().port(), p);
 				write_uint32(m_remote_socket.remote_endpoint().address().to_v4().to_ulong(), p);
 
-				// »Ø¸´³É¹¦.
+				// å›å¤æˆåŠŸ.
 				boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 8),
 				boost::asio::transfer_exactly(8),
 					boost::bind(&socks_session::socks_handle_succeed, shared_from_this(),
@@ -665,7 +669,7 @@ protected:
 					)
 				);
 
-				// Í¶µİÒ»¸öÊı¾İ½ÓÊÕ.
+				// æŠ•é€’ä¸€ä¸ªæ•°æ®æ¥æ”¶.
 				m_remote_socket.async_read_some(boost::asio::buffer(m_remote_buffer),
 					boost::bind(&socks_session::socks_handle_remote_read, shared_from_this(),
 					boost::asio::placeholders::error,
@@ -691,14 +695,14 @@ protected:
 
 	void socks_handle_error(const boost::system::error_code &error, int bytes_transferred)
 	{
-		// Ê²Ã´¶¼²»ÓÃ×öÁË, ÍËÁË.
+		// ä»€ä¹ˆéƒ½ä¸ç”¨åšäº†, é€€äº†.
 	}
 
 	void socks_handle_succeed(const boost::system::error_code &error, int bytes_transferred)
 	{
 		if (!error)
 		{
-			// Í¶µİÒ»¸öÊı¾İ½ÓÊÕ.
+			// æŠ•é€’ä¸€ä¸ªæ•°æ®æ¥æ”¶.
 			m_local_socket.async_read_some(boost::asio::buffer(m_local_buffer),
 				boost::bind(&socks_session::socks_handle_local_read, shared_from_this(),
 				boost::asio::placeholders::error,
@@ -714,7 +718,7 @@ protected:
 	{
 		if (!error)
 		{
-			// ·¢ËÍµ½±¾µØ.
+			// å‘é€åˆ°æœ¬åœ°.
 			boost::asio::async_write(m_local_socket, boost::asio::buffer(m_remote_buffer, bytes_transferred),
 			boost::asio::transfer_exactly(bytes_transferred),
 				boost::bind(&socks_session::socks_handle_remote_write, shared_from_this(),
@@ -733,7 +737,7 @@ protected:
 	{
 		if (!error)
 		{
-			// ´ÓÔ¶¶Ë¶ÁÈ¡Êı¾İ.
+			// ä»è¿œç«¯è¯»å–æ•°æ®.
 			m_remote_socket.async_read_some(boost::asio::buffer(m_remote_buffer),
 				boost::bind(&socks_session::socks_handle_remote_read, shared_from_this(),
 				boost::asio::placeholders::error,
@@ -749,7 +753,7 @@ protected:
 	{
 		if (!error)
 		{
-			// ·¢ËÍµ½Ä¿±ê.
+			// å‘é€åˆ°ç›®æ ‡.
 			boost::asio::async_write(m_remote_socket, boost::asio::buffer(m_local_buffer, bytes_transferred),
 			boost::asio::transfer_exactly(bytes_transferred),
 				boost::bind(&socks_session::socks_handle_local_write, shared_from_this(),
@@ -768,7 +772,7 @@ protected:
 	{
 		if (!error)
 		{
-			// ´Ó±¾µØ¶ÁÈ¡Êı¾İ.
+			// ä»æœ¬åœ°è¯»å–æ•°æ®.
 			m_local_socket.async_read_some(boost::asio::buffer(m_local_buffer),
 				boost::bind(&socks_session::socks_handle_local_read, shared_from_this(),
 				boost::asio::placeholders::error,
@@ -783,7 +787,7 @@ protected:
 	void close()
 	{
 		boost::system::error_code ignored_ec;
-		// Ô¶³ÌºÍ±¾µØÁ´½Ó¶¼½«¹Ø±Õ.
+		// è¿œç¨‹å’Œæœ¬åœ°é“¾æ¥éƒ½å°†å…³é—­.
 		m_local_socket.shutdown(
 			boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
 		m_local_socket.close(ignored_ec);
