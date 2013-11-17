@@ -483,12 +483,9 @@ protected:
 						return;
 					}
 				}
-				// else if (m_command == SOCKS_CMD_BIND)
-				// {
-				// 	// TODO: 实现bind命令.
-				// }
-				else
+				else if (m_command == SOCKS5_CMD_UDP || m_command == SOCKS_CMD_BIND || true)
 				{
+					// TODO: 实现udp代理, 或 实现bind命令, 或其它命令.
 					//	+----+-----+-------+------+----------+----------+
 					//	|VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
 					//	+----+-----+-------+------+----------+----------+
