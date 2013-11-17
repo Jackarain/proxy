@@ -19,6 +19,7 @@
 namespace socks {
 
 using boost::asio::ip::tcp;
+using boost::asio::ip::udp;
 
 class socks_session
 	: public boost::enable_shared_from_this<socks_session>
@@ -65,6 +66,7 @@ public:
 		: m_io_service(io)
 		, m_local_socket(io)
 		, m_remote_socket(io)
+		, m_udp_socket(io)
 		, m_resolver(io)
 		, m_version(-1)
 		, m_method(-1)
@@ -334,8 +336,10 @@ protected:
 					tcp::resolver::iterator endpoint_iterator;
 					m_remote_socket.async_connect(m_address,
 						boost::bind(&socks_session::socks_handle_connect_3,
-						shared_from_this(), boost::asio::placeholders::error,
-						endpoint_iterator));
+							shared_from_this(), boost::asio::placeholders::error,
+							endpoint_iterator
+						)
+					);
 					return;
 				}
 
@@ -467,8 +471,10 @@ protected:
 						tcp::resolver::iterator endpoint_iterator;
 						m_remote_socket.async_connect(m_address,
 							boost::bind(&socks_session::socks_handle_connect_3,
-							shared_from_this(), boost::asio::placeholders::error,
-							endpoint_iterator));
+								shared_from_this(), boost::asio::placeholders::error,
+								endpoint_iterator
+							)
+						);
 						return;
 					}
 					if (m_atyp == SOCKS5_ATYP_DOMAINNAME)
@@ -477,15 +483,46 @@ protected:
 						port_string << m_port;
 						tcp::resolver::query query(m_domain, port_string.str());
 
-						m_resolver.async_resolve(query, boost::bind(&socks_session::socks_handle_resolve,
-							shared_from_this(),	boost::asio::placeholders::error,
-							boost::asio::placeholders::iterator));
+						m_resolver.async_resolve(query,
+							boost::bind(&socks_session::socks_handle_resolve,
+								shared_from_this(),	boost::asio::placeholders::error,
+								boost::asio::placeholders::iterator
+							)
+						);
 						return;
 					}
 				}
 				else if (m_command == SOCKS5_CMD_UDP || m_command == SOCKS_CMD_BIND || true)
 				{
-					// TODO: 实现udp代理, 或 实现bind命令, 或其它命令.
+					// TODO: 实现UDP ASSOCIATE, 或 实现bind命令, 或其它命令.
+					if (m_command == SOCKS5_CMD_UDP)
+					{
+						if (m_atyp == SOCKS5_ATYP_IPV4 || m_atyp == SOCKS5_ATYP_IPV6)
+						{
+							// 得到客户端指定的协议类型, ipv4或ipv6, 并open udp_socket随机分配一个udp端口.
+							udp::endpoint endp(m_address.address(), m_address.port());
+							boost::system::error_code ec;
+							m_udp_socket.open(endp.protocol(), ec);
+							if (ec)
+							{
+								// 打开udp socket失败.
+								close();
+							}
+							// 打开成功, 返回当前服务器端吕等信息给客户端.
+
+							//  +----+------+------+----------+----------+----------+
+							//  |RSV | FRAG | ATYP | DST.ADDR | DST.PORT |   DATA   |
+							//  +----+------+------+----------+----------+----------+
+							//  | 2  |  1   |  1   | Variable |    2     | Variable |
+							//  +----+------+------+----------+----------+----------+
+
+						}
+						if (m_atyp == SOCKS5_ATYP_DOMAINNAME)
+						{
+							// TODO: 实现客户端域名解析, 用于udp传回数据.
+						}
+					}
+
 					//	+----+-----+-------+------+----------+----------+
 					//	|VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
 					//	+----+-----+-------+------+----------+----------+
@@ -637,8 +674,10 @@ protected:
 				// 投递一个数据接收.
 				m_remote_socket.async_read_some(boost::asio::buffer(m_remote_buffer),
 					boost::bind(&socks_session::socks_handle_remote_read, shared_from_this(),
-					boost::asio::placeholders::error,
-					boost::asio::placeholders::bytes_transferred));
+						boost::asio::placeholders::error,
+						boost::asio::placeholders::bytes_transferred
+					)
+				);
 
 				return;
 			}
@@ -669,8 +708,10 @@ protected:
 				// 投递一个数据接收.
 				m_remote_socket.async_read_some(boost::asio::buffer(m_remote_buffer),
 					boost::bind(&socks_session::socks_handle_remote_read, shared_from_this(),
-					boost::asio::placeholders::error,
-					boost::asio::placeholders::bytes_transferred));
+						boost::asio::placeholders::error,
+						boost::asio::placeholders::bytes_transferred
+					)
+				);
 
 				return;
 			}
@@ -702,8 +743,10 @@ protected:
 			// 投递一个数据接收.
 			m_local_socket.async_read_some(boost::asio::buffer(m_local_buffer),
 				boost::bind(&socks_session::socks_handle_local_read, shared_from_this(),
-				boost::asio::placeholders::error,
-				boost::asio::placeholders::bytes_transferred));
+					boost::asio::placeholders::error,
+					boost::asio::placeholders::bytes_transferred
+				)
+			);
 		}
 		else
 		{
@@ -737,8 +780,10 @@ protected:
 			// 从远端读取数据.
 			m_remote_socket.async_read_some(boost::asio::buffer(m_remote_buffer),
 				boost::bind(&socks_session::socks_handle_remote_read, shared_from_this(),
-				boost::asio::placeholders::error,
-				boost::asio::placeholders::bytes_transferred));
+					boost::asio::placeholders::error,
+					boost::asio::placeholders::bytes_transferred
+				)
+			);
 		}
 		else
 		{
@@ -772,8 +817,10 @@ protected:
 			// 从本地读取数据.
 			m_local_socket.async_read_some(boost::asio::buffer(m_local_buffer),
 				boost::bind(&socks_session::socks_handle_local_read, shared_from_this(),
-				boost::asio::placeholders::error,
-				boost::asio::placeholders::bytes_transferred));
+					boost::asio::placeholders::error,
+					boost::asio::placeholders::bytes_transferred
+				)
+			);
 		}
 		else
 		{
@@ -800,6 +847,7 @@ private:
 	tcp::socket m_remote_socket;
 	boost::array<char, 2048> m_remote_buffer;
 	boost::asio::streambuf m_streambuf;
+	udp::socket m_udp_socket;
 	tcp::resolver m_resolver;
 	int m_version;
 	int m_method;
