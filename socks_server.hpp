@@ -61,6 +61,10 @@ class socks_session
 		SOCKS4_REQUEST_REJECTED_USER_NO_ALLOW,
 	};
 
+	enum {
+		max_recv_buffer_size = 768	// 最大udp接收缓冲大小.
+	};
+
 public:
 	socks_session(boost::asio::io_service &io)
 		: m_io_service(io)
@@ -784,6 +788,12 @@ protected:
 	void socks_handle_error(const boost::system::error_code &error, int bytes_transferred)
 	{
 		// 什么都不用做了, 退了.
+		if (m_udp_socket.is_open())
+		{
+			// 如果打开了udp socket, 则先关掉不.
+			boost::system::error_code ec;
+			m_udp_socket.close(ec);
+		}
 	}
 
 	void socks_handle_succeed(const boost::system::error_code &error, int bytes_transferred)
@@ -799,12 +809,17 @@ protected:
 				// 3. tcp socket断开时, 取消所有异步IO, 销毁当前session对象.
 				// 4. tcp socket上任何数据传输, 处理方法如同步骤2.
 				// 5. 任何socket错误, 处理方法如同步骤2.
-				m_udp_socket.async_receive_from(boost::asio::buffer(m_local_buffer), m_remote_endpoint,
-					boost::bind(&socks_session::socks_handle_udp_read, shared_from_this(),
-						boost::asio::placeholders::error,
-						boost::asio::placeholders::bytes_transferred
-					)
-				);
+				for (int i = 0; i < max_recv_buffer_size; i++)
+				{
+					boost::array<char, 2048>& buf = m_recv_buffers[i];
+					m_udp_socket.async_receive_from(boost::asio::buffer(buf), m_remote_endpoint,
+						boost::bind(&socks_session::socks_handle_udp_read, shared_from_this(),
+							i,
+							boost::asio::placeholders::error,
+							boost::asio::placeholders::bytes_transferred
+						)
+					);
+				}
 			}
 			else if (m_command == SOCKS_CMD_CONNECT)
 			{
@@ -902,9 +917,18 @@ protected:
 		}
 	}
 
-	void socks_handle_udp_read(const boost::system::error_code &error, int bytes_transferred)
+	void socks_handle_udp_read(int buf_index, const boost::system::error_code &error, int bytes_transferred)
 	{
+		if (!error)
+		{
+			// 这里进行数据转发.
 
+			
+		}
+		else
+		{
+			close();
+		}
 	}
 
 	void close()
@@ -929,6 +953,7 @@ private:
 	udp::socket m_udp_socket;
 	udp::endpoint m_client_endpoint;
 	udp::endpoint m_remote_endpoint;
+	std::map<int, boost::array<char, 2048> > m_recv_buffers;
 	tcp::resolver m_resolver;
 	int m_version;
 	int m_method;
