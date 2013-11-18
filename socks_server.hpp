@@ -12,6 +12,7 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/array.hpp>
 #include <istream>
+#include <deque>
 
 #include "io.hpp"
 
@@ -921,13 +922,117 @@ protected:
 	{
 		if (!error)
 		{
-			// 这里进行数据转发.
+			// 这里进行数据转发, 如果是client发过来的数据, 则解析协议包装.
+			if (m_remote_endpoint == m_client_endpoint)
+			{
+				// 解析协议.
+				//  +----+------+------+----------+----------+----------+
+				//  |RSV | FRAG | ATYP | DST.ADDR | DST.PORT  |   DATA   |
+				//  +----+------+------+----------+----------+----------+
+				//  | 2  |  1   |  1   | Variable |    2      | Variable |
+				//  +----+------+------+----------+----------+----------+
+				boost::array<char, 2048>& buf = m_recv_buffers[buf_index];
+				udp::endpoint endp;
+				char *p = buf.data();
 
-			
+				do {
+					// 字节支持小于24.
+					if (bytes_transferred < 24)
+						break;
+
+					// 不是协议中的数据, 
+					if (read_int16(p) != 0 || read_int8(p) != 0)
+						break;
+
+					// 远程主机IP类型.
+					boost::int8_t atyp = read_int8(p);
+					if (atyp != 0x01 || atyp != 0x04)
+						break;
+
+					// 目标主机IP.
+					boost::uint32_t ip = read_uint32(p);
+					if (ip == 0)
+						break;
+					endp.address(boost::asio::ip::address_v4(ip));
+
+					// 读取端口号.
+					boost::int16_t port = read_int16(p);
+					if (port == 0)
+						break;
+					endp.port(port);
+
+					// 这时的指针p是指向数据了(2 + 1 + 1 + 4 + 2 = 10).
+					std::string data(p, bytes_transferred - 10);
+
+					// 转发到指定的endpoint.
+					do_write(data, endp);
+				} while (false);
+
+				// 继续读取下一组udp数据.
+				m_udp_socket.async_receive_from(boost::asio::buffer(buf), m_remote_endpoint,
+					boost::bind(&socks_session::socks_handle_udp_read, shared_from_this(),
+						buf_index,
+						boost::asio::placeholders::error,
+						boost::asio::placeholders::bytes_transferred
+					)
+				);
+				return;
+			}
+
+			// 转发至客户端.
 		}
 		else
 		{
 			close();
+		}
+	}
+
+	void socks_handle_udp_write(const boost::system::error_code& error, std::size_t bytes_transferred)
+	{
+		if (error)
+		{
+			std::cerr << "udp_socket::handle_send : " << error.message();
+			return;
+		}
+
+		// 弹出已经发送过的数据包.
+		m_send_buffers.pop_front();
+		if (!m_send_buffers.empty())
+		{
+			// 继续发送下一个数据包.
+			m_udp_socket.async_send_to(
+				boost::asio::buffer(m_send_buffers.front().buffer.data(),
+					m_send_buffers.front().buffer.size()),
+				m_send_buffers.front().endp,
+				boost::bind(&socks_session::socks_handle_udp_write,
+					this,
+					boost::asio::placeholders::error,
+					boost::asio::placeholders::bytes_transferred
+				)
+			);
+		}
+	}
+
+	void do_write(const std::string& msg, const udp::endpoint& endp)
+	{
+		bool write_in_progress = !m_send_buffers.empty();
+		// 保存到发送队列.
+		send_buffer buf;
+		buf.buffer = msg;
+		buf.endp = endp;
+		m_send_buffers.push_back(buf);
+		if (!write_in_progress)
+		{
+			m_udp_socket.async_send_to(
+				boost::asio::buffer(m_send_buffers.front().buffer.data(),
+					m_send_buffers.front().buffer.size()),
+				m_send_buffers.front().endp,
+				boost::bind(&socks_session::socks_handle_udp_write,
+					this,
+					boost::asio::placeholders::error,
+					boost::asio::placeholders::bytes_transferred
+				)
+			);
 		}
 	}
 
@@ -954,6 +1059,13 @@ private:
 	udp::endpoint m_client_endpoint;
 	udp::endpoint m_remote_endpoint;
 	std::map<int, boost::array<char, 2048> > m_recv_buffers;
+	// 用作数据包发送缓冲.
+	struct send_buffer
+	{
+		udp::endpoint endp;
+		std::string buffer;
+	};
+	std::deque<send_buffer> m_send_buffers;
 	tcp::resolver m_resolver;
 	int m_version;
 	int m_method;
