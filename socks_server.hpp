@@ -538,7 +538,16 @@ protected:
 							// 如果IP地址为空, 则使用tcp连接上的IP.
 							if (m_address.address() == boost::asio::ip::address::from_string("0.0.0.0"))
 							{
-								m_client_endpoint.address(m_local_socket.remote_endpoint().address());
+								boost::system::error_code ignore_ec;
+								tcp::endpoint endp = m_local_socket.remote_endpoint(ignore_ec);
+								if (ignore_ec)
+								{
+									std::cerr << "socks.socks_session.socks_handle_requests_2: " << ignore_ec.message() << std::endl;
+									close();
+									return;
+								}
+
+								m_client_endpoint.address(endp.address());
 							}
 
 							// 打开成功, 返回当前服务器端吕等信息给客户端.
@@ -616,6 +625,7 @@ protected:
 						endpoint_iterator
 					)
 				);
+				return;
 			}
 			else
 			{
@@ -692,21 +702,30 @@ protected:
 				write_int8(SOCKS5_SUCCEEDED, p);
 				write_int8(0x00, p);
 				write_int8(m_atyp, p);
-				
+
+				boost::system::error_code ignore_ec;
+				tcp::endpoint endp = m_remote_socket.remote_endpoint(ignore_ec);
+				if (ignore_ec)
+				{
+					std::cerr << "socks.socks_session.socks_handle_connect_3: " << ignore_ec.message() << std::endl;
+					close();
+					return;
+				}
+
 				if (m_atyp == SOCKS5_ATYP_IPV4)
 				{
 					len += 6;
-					write_uint32(m_remote_socket.remote_endpoint().address().to_v4().to_ulong(), p);
-					write_int16(m_remote_socket.remote_endpoint().port(), p);
+					write_uint32(endp.address().to_v4().to_ulong(), p);
+					write_int16(endp.port(), p);
 				}
 				if (m_atyp == SOCKS5_ATYP_IPV6)
 				{
 					len += 18;
 					boost::asio::ip::address_v6::bytes_type addr;
-					addr = m_remote_socket.remote_endpoint().address().to_v6().to_bytes();
+					addr = endp.address().to_v6().to_bytes();
 					for (std::size_t i = 0; i < addr.size(); i++)
 						write_int8(addr[i], p);
-					write_int16(m_remote_socket.remote_endpoint().port(), p);
+					write_int16(endp.port(), p);
 				}
 				if (m_atyp == SOCKS5_ATYP_DOMAINNAME)
 				{
@@ -747,8 +766,18 @@ protected:
 				char *p = m_local_buffer.data();
 				write_int8(0, p);
 				write_int8(SOCKS4_REQUEST_GRANTED, p);
-				write_int16(m_remote_socket.remote_endpoint().port(), p);
-				write_uint32(m_remote_socket.remote_endpoint().address().to_v4().to_ulong(), p);
+
+				boost::system::error_code ignore_ec;
+				tcp::endpoint endp = m_remote_socket.remote_endpoint(ignore_ec);
+				if (ignore_ec)
+				{
+					std::cerr << "socks.socks_session.socks_handle_connect_3: " << ignore_ec.message() << std::endl;
+					close();
+					return;
+				}
+
+				write_int16(endp.port(), p);
+				write_uint32(endp.address().to_v4().to_ulong(), p);
 
 				// 回复成功.
 				boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 8),
