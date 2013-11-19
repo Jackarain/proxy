@@ -542,7 +542,6 @@ protected:
 								tcp::endpoint endp = m_local_socket.remote_endpoint(ignore_ec);
 								if (ignore_ec)
 								{
-									std::cerr << "socks.socks_session.socks_handle_requests_2: " << ignore_ec.message() << std::endl;
 									close();
 									return;
 								}
@@ -707,7 +706,6 @@ protected:
 				tcp::endpoint endp = m_remote_socket.remote_endpoint(ignore_ec);
 				if (ignore_ec)
 				{
-					std::cerr << "socks.socks_session.socks_handle_connect_3: " << ignore_ec.message() << std::endl;
 					close();
 					return;
 				}
@@ -771,7 +769,6 @@ protected:
 				tcp::endpoint endp = m_remote_socket.remote_endpoint(ignore_ec);
 				if (ignore_ec)
 				{
-					std::cerr << "socks.socks_session.socks_handle_connect_3: " << ignore_ec.message() << std::endl;
 					close();
 					return;
 				}
@@ -1031,10 +1028,7 @@ protected:
 	void socks_handle_udp_write(const boost::system::error_code& error, std::size_t bytes_transferred)
 	{
 		if (error)
-		{
-			std::cerr << "udp_socket::handle_send : " << error.message();
 			return;
-		}
 
 		// 弹出已经发送过的数据包.
 		m_send_buffers.pop_front();
