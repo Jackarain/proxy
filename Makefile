@@ -12,4 +12,4 @@ main.o:	main.cpp
 	$(CC) $(CFLAGS) $(INC) main.cpp
 
 clean:
-	rm -rf *o sss
+	rm -rf *.o sss
