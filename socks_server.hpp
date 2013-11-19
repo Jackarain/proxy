@@ -922,6 +922,9 @@ protected:
 	{
 		if (!error)
 		{
+			boost::array<char, 2048>& buf = m_recv_buffers[buf_index];
+			char *p = buf.data();
+
 			// 这里进行数据转发, 如果是client发过来的数据, 则解析协议包装.
 			if (m_remote_endpoint == m_client_endpoint)
 			{
@@ -931,9 +934,7 @@ protected:
 				//  +----+------+------+----------+----------+----------+
 				//  | 2  |  1   |  1   | Variable |    2      | Variable |
 				//  +----+------+------+----------+----------+----------+
-				boost::array<char, 2048>& buf = m_recv_buffers[buf_index];
 				udp::endpoint endp;
-				char *p = buf.data();
 
 				do {
 					// 字节支持小于24.
@@ -980,6 +981,8 @@ protected:
 			}
 
 			// 转发至客户端.
+			std::string data(p, bytes_transferred);
+			do_write(data, m_client_endpoint);
 		}
 		else
 		{
