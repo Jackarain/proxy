@@ -1,5 +1,5 @@
-#ifndef __SOCKS_SERVER_HPP__
-#define __SOCKS_SERVER_HPP__
+#ifndef SOCKS_SERVER_HPP
+#define SOCKS_SERVER_HPP
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
 # pragma once
@@ -1147,4 +1147,4 @@ private:
 
 } // namespace socks
 
-#endif // __SOCKS_SERVER_HPP__
+#endif // SOCKS_SERVER_HPP
