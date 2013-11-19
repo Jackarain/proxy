@@ -1,7 +1,7 @@
 一个socks服务器的实现
 =====================
 
-支持socks4/5协议的socks代理服务器实现.
+支持socks4/5 udp代理协议的socks代理服务器实现.
 
 
 ##### 使用方法:
@@ -20,5 +20,4 @@ socks_server.exe 4567
 ##### TODO: 
 
 1. 支持认证.
-2. 支持ipv4/ipv6/domainname.
-3. 支持connect/bind/udp等各种参数.
+
