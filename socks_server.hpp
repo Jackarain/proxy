@@ -616,6 +616,7 @@ protected:
 						endpoint_iterator
 					)
 				);
+				return;
 			}
 			else
 			{
