@@ -745,7 +745,7 @@ protected:
 				//  +----+----+----+----+----+----+----+----+
 				//  [                                       ]
 				char *p = m_local_buffer.data();
-				write_int8(SOCKS_VERSION_4, p);
+				write_int8(0, p);
 				write_int8(SOCKS4_REQUEST_GRANTED, p);
 				write_int16(m_remote_socket.remote_endpoint().port(), p);
 				write_uint32(m_remote_socket.remote_endpoint().address().to_v4().to_ulong(), p);
