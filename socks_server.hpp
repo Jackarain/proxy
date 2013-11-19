@@ -983,6 +983,15 @@ protected:
 			// 转发至客户端.
 			std::string data(p, bytes_transferred);
 			do_write(data, m_client_endpoint);
+
+			// 继续读取下一组udp数据.
+			m_udp_socket.async_receive_from(boost::asio::buffer(buf), m_remote_endpoint,
+				boost::bind(&socks_session::socks_handle_udp_read, shared_from_this(),
+					buf_index,
+					boost::asio::placeholders::error,
+					boost::asio::placeholders::bytes_transferred
+				)
+			);
 		}
 		else
 		{
