@@ -19,5 +19,6 @@ socks_server.exe 4567
 
 ##### TODO: 
 
-1. 支持认证.
+1. BIND支持.
+2. GSS-API认证支持.
 
