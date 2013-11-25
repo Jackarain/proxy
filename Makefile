@@ -3,13 +3,13 @@ CFLAGS=-c -DDEBUG
 INC=-I ./include/
 LIB=-lboost_system -lboost_thread -lboost_date_time -lpthread
 
-all:	sss
+all:	ss
 
-sss:	main.o
-	$(CC) main.o $(LIB) -o sss
+ss:	main.o
+	$(CC) main.o $(LIB) -o ss
 
 main.o:	main.cpp
 	$(CC) $(CFLAGS) $(INC) main.cpp
 
 clean:
-	rm -rf *.o sss
+	rm -rf *.o ss
