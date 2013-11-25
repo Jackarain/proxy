@@ -158,7 +158,7 @@ protected:
 			}
 			else
 			{
-				std::cout << "error unknow protocol.\n";
+				// std::cout << "error unknow protocol.\n";
 			}
 		}
 	}
@@ -838,8 +838,9 @@ protected:
 				// 5. 任何socket错误, 处理方法如同步骤2.
 				for (int i = 0; i < max_recv_buffer_size; i++)
 				{
-					boost::array<char, 2048>& buf = m_recv_buffers[i];
-					m_udp_socket.async_receive_from(boost::asio::buffer(buf), m_remote_endpoint,
+					recv_buffer& recv_buf = m_recv_buffers[i];
+					boost::array<char, 2048>& buf = recv_buf.buffer;
+					m_udp_socket.async_receive_from(boost::asio::buffer(buf), recv_buf.endp,
 						boost::bind(&socks_session::socks_handle_udp_read, shared_from_this(),
 							i,
 							boost::asio::placeholders::error,
@@ -948,11 +949,13 @@ protected:
 	{
 		if (!error)
 		{
-			boost::array<char, 2048>& buf = m_recv_buffers[buf_index];
+			recv_buffer& recv_buf = m_recv_buffers[buf_index];
+			boost::array<char, 2048>& buf = recv_buf.buffer;
+
 			char *p = buf.data();
 
 			// 这里进行数据转发, 如果是client发过来的数据, 则解析协议包装.
-			if (m_remote_endpoint == m_client_endpoint)
+			if (recv_buf.endp == m_client_endpoint)
 			{
 				// 解析协议.
 				//  +----+------+------+----------+----------+----------+
@@ -996,7 +999,7 @@ protected:
 				} while (false);
 
 				// 继续读取下一组udp数据.
-				m_udp_socket.async_receive_from(boost::asio::buffer(buf), m_remote_endpoint,
+				m_udp_socket.async_receive_from(boost::asio::buffer(buf), recv_buf.endp,
 					boost::bind(&socks_session::socks_handle_udp_read, shared_from_this(),
 						buf_index,
 						boost::asio::placeholders::error,
@@ -1011,7 +1014,7 @@ protected:
 			do_write(data, m_client_endpoint);
 
 			// 继续读取下一组udp数据.
-			m_udp_socket.async_receive_from(boost::asio::buffer(buf), m_remote_endpoint,
+			m_udp_socket.async_receive_from(boost::asio::buffer(buf), recv_buf.endp,
 				boost::bind(&socks_session::socks_handle_udp_read, shared_from_this(),
 					buf_index,
 					boost::asio::placeholders::error,
@@ -1092,8 +1095,13 @@ private:
 	boost::asio::streambuf m_streambuf;
 	udp::socket m_udp_socket;
 	udp::endpoint m_client_endpoint;
-	udp::endpoint m_remote_endpoint;
-	std::map<int, boost::array<char, 2048> > m_recv_buffers;
+	// 数据接收缓冲.
+	struct recv_buffer
+	{
+		udp::endpoint endp;
+		boost::array<char, 2048> buffer;
+	};
+	std::map<int, recv_buffer> m_recv_buffers;
 	// 用作数据包发送缓冲.
 	struct send_buffer
 	{
