@@ -247,7 +247,7 @@ protected:
 					)
 				);
 			}
-			else if (m_method == SOCKS5_AUTH_NONE)	// 非认证模式, 或认证已经通过, 接收socks客户端Requests.
+			else if (m_method == SOCKS5_AUTH_NONE || m_verify_passed)	// 非认证模式, 或认证已经通过, 接收socks客户端Requests.
 			{
 				//  +----+-----+-------+------+----------+----------+
 				//  |VER | CMD |  RSV  | ATYP | DST.ADDR | DST.PORT |
