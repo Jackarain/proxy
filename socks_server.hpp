@@ -1005,7 +1005,7 @@ protected:
 
 					// 远程主机IP类型.
 					boost::int8_t atyp = read_int8(p);
-					if (atyp != 0x01 || atyp != 0x04)
+					if (atyp != 0x01 && atyp != 0x04)
 						break;
 
 					// 目标主机IP.
