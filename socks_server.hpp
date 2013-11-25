@@ -63,7 +63,7 @@ class socks_session
 	};
 
 	enum {
-		max_recv_buffer_size = 768	// 最大udp接收缓冲大小.
+		MAX_RECV_BUFFER_SIZE = 768	// 最大udp接收缓冲大小.
 	};
 
 public:
@@ -865,7 +865,7 @@ protected:
 				// 3. tcp socket断开时, 取消所有异步IO, 销毁当前session对象.
 				// 4. tcp socket上任何数据传输, 处理方法如同步骤2.
 				// 5. 任何socket错误, 处理方法如同步骤2.
-				for (int i = 0; i < max_recv_buffer_size; i++)
+				for (int i = 0; i < MAX_RECV_BUFFER_SIZE; i++)
 				{
 					recv_buffer& recv_buf = m_recv_buffers[i];
 					boost::array<char, 2048>& buf = recv_buf.buffer;
