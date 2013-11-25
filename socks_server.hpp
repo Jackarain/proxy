@@ -7,6 +7,7 @@
 
 #include <istream>
 #include <deque>
+#include <cstring> // for std::memcpy
 
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
@@ -1067,7 +1068,7 @@ protected:
 			write_uint8(1, wp);		// ATYP.
 			write_uint32(recv_buf.endp.address().to_v4().to_ulong(), wp);	// ADDR.
 			write_uint16(recv_buf.endp.port(), wp);	// PORT.
-			write_string(p, wp);					// DATA.
+			std::memcpy(wp, p, bytes_transferred);	// DATA.
 
 			// 转发数据.
 			do_write(response, m_client_endpoint);
