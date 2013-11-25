@@ -203,7 +203,7 @@ protected:
 			if (m_version == SOCKS_VERSION_4)
 			{
 				char *p = m_local_buffer.data();
-				m_address.port(read_int16(p));
+				m_address.port(read_uint16(p));
 				m_address.address(boost::asio::ip::address_v4(read_uint32(p)));
 
 				//  +----+----+----+----+----+----+----+----+----+----+....+----+
@@ -446,13 +446,13 @@ protected:
 				{
 					bytes_transferred += 1;	// 加上首个字节.
 					m_address.address(boost::asio::ip::address_v4(read_uint32(p)));
-					m_address.port(read_int16(p));
+					m_address.port(read_uint16(p));
 				}
 				else if (m_atyp == SOCKS5_ATYP_DOMAINNAME)
 				{
 					for (int i = 0; i < bytes_transferred - 2; i++)
 						m_domain.push_back(read_int8(p));
-					m_port = read_int16(p);
+					m_port = read_uint16(p);
 				}
 				else if (m_atyp == SOCKS5_ATYP_IPV6)
 				{
@@ -465,7 +465,7 @@ protected:
 					}
 
 					m_address.address(boost::asio::ip::address_v6(addr));
-					m_address.port(read_int16(p));
+					m_address.port(read_uint16(p));
 				}
 
 				// 发起连接.
@@ -535,6 +535,35 @@ protected:
 								return;
 							}
 
+							// 绑定udp端口.
+							m_udp_socket.bind(udp::endpoint(m_client_endpoint.protocol(), 0),ec);
+							if (ec)
+							{
+																// 打开udp socket失败.
+								//  +----+-----+-------+------+----------+----------+
+								//  |VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
+								//  +----+-----+-------+------+----------+----------+
+								//  | 1  |  1  | X'00' |  1   | Variable |    2     |
+								//  +----+-----+-------+------+----------+----------+
+								//  [                                               ]
+								p = m_local_buffer.data();
+								write_int8(SOCKS_VERSION_5, p);
+								write_int8(SOCKS5_GENERAL_SOCKS_SERVER_FAILURE, p);
+								write_int8(0x00, p);
+								write_int8(1, p);
+								// 没用的东西.
+								for (int i = 0; i < 6; i++)
+									write_int8(0, p);
+								boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 10),
+									boost::asio::transfer_exactly(10),
+									boost::bind(&socks_session::socks_handle_error, shared_from_this(),
+										boost::asio::placeholders::error,
+										boost::asio::placeholders::bytes_transferred
+									)
+								);
+								return;
+							}
+
 							// 如果IP地址为空, 则使用tcp连接上的IP.
 							if (m_address.address() == boost::asio::ip::address::from_string("0.0.0.0"))
 							{
@@ -567,7 +596,7 @@ protected:
 							for (int i = 0; i < 4; i++)
 								write_int8(0, p);
 							// UDP侦听的端口(BND.PORT).
-							write_int16(m_udp_socket.local_endpoint().port(), p);
+							write_uint16(m_udp_socket.local_endpoint().port(), p);
 							// 发送.
 							boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 10),
 								boost::asio::transfer_exactly(10),
@@ -669,7 +698,7 @@ protected:
 					write_int8(SOCKS_VERSION_4, p);
 					write_int8(SOCKS4_CANNOT_CONNECT_TARGET_SERVER, p);
 					// 没用了, 随便填.
-					write_int16(0x00, p);
+					write_uint16(0x00, p);
 					write_uint32(0x00, p);
 					boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 8),
 						boost::asio::transfer_exactly(8),
@@ -714,7 +743,7 @@ protected:
 				{
 					len += 6;
 					write_uint32(endp.address().to_v4().to_ulong(), p);
-					write_int16(endp.port(), p);
+					write_uint16(endp.port(), p);
 				}
 				if (m_atyp == SOCKS5_ATYP_IPV6)
 				{
@@ -723,14 +752,14 @@ protected:
 					addr = endp.address().to_v6().to_bytes();
 					for (std::size_t i = 0; i < addr.size(); i++)
 						write_int8(addr[i], p);
-					write_int16(endp.port(), p);
+					write_uint16(endp.port(), p);
 				}
 				if (m_atyp == SOCKS5_ATYP_DOMAINNAME)
 				{
 					len += (m_domain.size() + 3);
 					write_int8(m_domain.size(), p);
 					write_string(m_domain, p);
-					write_int16(m_port, p);
+					write_uint16(m_port, p);
 				}
 
 				// 发送回复.
@@ -773,7 +802,7 @@ protected:
 					return;
 				}
 
-				write_int16(endp.port(), p);
+				write_uint16(endp.port(), p);
 				write_uint32(endp.address().to_v4().to_ulong(), p);
 
 				// 回复成功.
@@ -986,7 +1015,7 @@ protected:
 					endp.address(boost::asio::ip::address_v4(ip));
 
 					// 读取端口号.
-					boost::int16_t port = read_int16(p);
+					boost::uint16_t port = read_uint16(p);
 					if (port == 0)
 						break;
 					endp.port(port);
