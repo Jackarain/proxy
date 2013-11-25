@@ -499,7 +499,7 @@ protected:
 				}
 				else if (m_command == SOCKS5_CMD_UDP || m_command == SOCKS_CMD_BIND || true)
 				{
-					// TODO: 实现UDP ASSOCIATE, 或 实现bind命令, 或其它命令.
+					// 实现UDP ASSOCIATE.
 					if (m_command == SOCKS5_CMD_UDP)
 					{
 						if (m_atyp == SOCKS5_ATYP_IPV4 || m_atyp == SOCKS5_ATYP_IPV6)
