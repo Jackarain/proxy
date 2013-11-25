@@ -5,14 +5,17 @@
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
+#include <istream>
+#include <deque>
+
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/array.hpp>
-#include <istream>
-#include <deque>
+#include <boost/date_time.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 #include "io.hpp"
 
@@ -76,6 +79,7 @@ public:
 		, m_version(-1)
 		, m_method(-1)
 		, m_verify_passed(false)
+		, m_udp_timer(io)
 	{}
 	~socks_session() {}
 
@@ -860,11 +864,12 @@ protected:
 			{
 				// 开始投递异步udp数据接收, 并开始转发数据.
 				// 转发规则为:
-				// 1. 任何接收到的非来自m_client_endpoint上的数据, 都将转发到m_client_endpoint.
+				// 1. 任何接收到的非来自m_client_endpoint上的数据, 添加协议头后, 都将转发到m_client_endpoint.
 				// 2. 接收到来自m_client_endpoint上的数据, 解析协议头, 并转发到协议中指定的endpoint.
 				// 3. tcp socket断开时, 取消所有异步IO, 销毁当前session对象.
 				// 4. tcp socket上任何数据传输, 处理方法如同步骤2.
 				// 5. 任何socket错误, 处理方法如同步骤2.
+				// 6. m_udp_timer超时(即5分钟内没任何数据传输), 处理方法如同步骤2.
 				for (int i = 0; i < MAX_RECV_BUFFER_SIZE; i++)
 				{
 					recv_buffer& recv_buf = m_recv_buffers[i];
@@ -877,6 +882,15 @@ protected:
 						)
 					);
 				}
+
+				// 启动定时器.
+				m_udp_timer.expires_from_now(boost::posix_time::minutes(1));
+				m_udp_timer.async_wait(
+					boost::bind(&socks_session::socks_udp_timer_handle,
+						shared_from_this(),
+						boost::asio::placeholders::error
+					)
+				);
 			}
 			else if (m_command == SOCKS_CMD_CONNECT)
 			{
@@ -978,6 +992,10 @@ protected:
 	{
 		if (!error)
 		{
+			// 更新计时.
+			m_meter = boost::posix_time::second_clock::local_time();
+
+			// 解析数据.
 			recv_buffer& recv_buf = m_recv_buffers[buf_index];
 			boost::array<char, 2048>& buf = recv_buf.buffer;
 
@@ -1074,6 +1092,9 @@ protected:
 		if (error)
 			return;
 
+		// 更新计时.
+		m_meter = boost::posix_time::second_clock::local_time();
+
 		// 弹出已经发送过的数据包.
 		m_send_buffers.pop_front();
 		if (!m_send_buffers.empty())
@@ -1090,6 +1111,29 @@ protected:
 				)
 			);
 		}
+	}
+
+	void socks_udp_timer_handle(const boost::system::error_code& error)
+	{
+		// 出错失败返回.
+		if (error)
+			return;
+
+		// 超时关闭.
+		if (boost::posix_time::second_clock::local_time() - m_meter >= boost::posix_time::minutes(5))
+		{
+			close();
+			return;
+		}
+
+		// 启动定时器.
+		m_udp_timer.expires_from_now(boost::posix_time::minutes(1));
+		m_udp_timer.async_wait(
+			boost::bind(&socks_session::socks_udp_timer_handle,
+				shared_from_this(),
+				boost::asio::placeholders::error
+			)
+		);
 	}
 
 	void do_write(const std::string& msg, const udp::endpoint& endp)
@@ -1125,6 +1169,7 @@ protected:
 		m_remote_socket.shutdown(
 			boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
 		m_remote_socket.close(ignored_ec);
+		m_udp_timer.cancel(ignored_ec);
 	}
 
 private:
@@ -1161,6 +1206,8 @@ private:
 	std::string m_domain;
 	short m_port;
 	bool m_verify_passed;
+	boost::asio::deadline_timer m_udp_timer;
+	boost::posix_time::ptime m_meter;
 };
 
 class socks_server : public boost::noncopyable
