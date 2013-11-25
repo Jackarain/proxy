@@ -1038,9 +1038,21 @@ protected:
 				return;
 			}
 
-			// 转发至客户端.
-			std::string data(p, bytes_transferred);
-			do_write(data, m_client_endpoint);
+			// 转发至客户端, 需要添加头协议.
+			std::string response;
+			response.resize(bytes_transferred + 10);
+			char* wp = (char*)response.data();
+
+			// 添加头信息.
+			write_uint16(0, wp);	// RSV.
+			write_uint8(0, wp);		// FRAG.
+			write_uint8(1, wp);		// ATYP.
+			write_uint32(recv_buf.endp.address().to_v4().to_ulong(), wp);	// ADDR.
+			write_uint16(recv_buf.endp.port(), wp);	// PORT.
+			write_string(p, wp);					// DATA.
+
+			// 转发数据.
+			do_write(response, m_client_endpoint);
 
 			// 继续读取下一组udp数据.
 			m_udp_socket.async_receive_from(boost::asio::buffer(buf), recv_buf.endp,
