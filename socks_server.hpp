@@ -885,7 +885,7 @@ protected:
 				}
 
 				// 启动定时器.
-				m_udp_timer.expires_from_now(boost::posix_time::minutes(1));
+				m_udp_timer.expires_from_now(boost::posix_time::seconds(1));
 				m_udp_timer.async_wait(
 					boost::bind(&socks_session::socks_udp_timer_handle,
 						shared_from_this(),
@@ -1121,14 +1121,14 @@ protected:
 			return;
 
 		// 超时关闭.
-		if (boost::posix_time::second_clock::local_time() - m_meter >= boost::posix_time::minutes(5))
+		if (boost::posix_time::second_clock::local_time() - m_meter >= boost::posix_time::minutes(1))
 		{
 			close();
 			return;
 		}
 
 		// 启动定时器.
-		m_udp_timer.expires_from_now(boost::posix_time::minutes(1));
+		m_udp_timer.expires_from_now(boost::posix_time::seconds(1));
 		m_udp_timer.async_wait(
 			boost::bind(&socks_session::socks_udp_timer_handle,
 				shared_from_this(),
@@ -1164,13 +1164,23 @@ protected:
 	{
 		boost::system::error_code ignored_ec;
 		// 远程和本地链接都将关闭.
-		m_local_socket.shutdown(
-			boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
-		m_local_socket.close(ignored_ec);
-		m_remote_socket.shutdown(
-			boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
-		m_remote_socket.close(ignored_ec);
+		if (m_local_socket.is_open())
+		{
+			m_local_socket.shutdown(
+				boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
+			m_local_socket.close(ignored_ec);
+		}
+		if (m_remote_socket.is_open())
+		{
+			m_remote_socket.shutdown(
+				boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
+			m_remote_socket.close(ignored_ec);
+		}
 		m_udp_timer.cancel(ignored_ec);
+		if (m_udp_socket.is_open())
+		{
+			m_udp_socket.close(ignored_ec);
+		}
 	}
 
 private:
