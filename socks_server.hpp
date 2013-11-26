@@ -1018,7 +1018,7 @@ protected:
 					if (bytes_transferred < 24)
 						break;
 
-					// 不是协议中的数据, 
+					// 不是协议中的数据.
 					if (read_int16(p) != 0 || read_int8(p) != 0)
 						break;
 
@@ -1040,10 +1040,10 @@ protected:
 					endp.port(port);
 
 					// 这时的指针p是指向数据了(2 + 1 + 1 + 4 + 2 = 10).
-					std::string data(p, bytes_transferred - 10);
+					std::string response(p, bytes_transferred - 10);
 
 					// 转发到指定的endpoint.
-					do_write(data, endp);
+					do_write(response, endp);
 				} while (false);
 
 				// 继续读取下一组udp数据.
