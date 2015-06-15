@@ -572,9 +572,9 @@ protected:
 							// 如果IP地址为空, 则使用tcp连接上的IP.
 							if (m_address.address() == boost::asio::ip::address::from_string("0.0.0.0"))
 							{
-								boost::system::error_code ignore_ec;
-								tcp::endpoint endp = m_local_socket.remote_endpoint(ignore_ec);
-								if (ignore_ec)
+								boost::system::error_code ec;
+								tcp::endpoint endp = m_local_socket.remote_endpoint(ec);
+								if (ec)
 								{
 									close();
 									return;
@@ -736,9 +736,9 @@ protected:
 				write_int8(0x00, p);
 				write_int8(m_atyp, p);
 
-				boost::system::error_code ignore_ec;
-				tcp::endpoint endp = m_remote_socket.remote_endpoint(ignore_ec);
-				if (ignore_ec)
+				boost::system::error_code ec;
+				tcp::endpoint endp = m_remote_socket.remote_endpoint(ec);
+				if (ec)
 				{
 					close();
 					return;
@@ -799,9 +799,9 @@ protected:
 				write_int8(0, p);
 				write_int8(SOCKS4_REQUEST_GRANTED, p);
 
-				boost::system::error_code ignore_ec;
-				tcp::endpoint endp = m_remote_socket.remote_endpoint(ignore_ec);
-				if (ignore_ec)
+				boost::system::error_code ec;
+				tcp::endpoint endp = m_remote_socket.remote_endpoint(ec);
+				if (ec)
 				{
 					close();
 					return;
