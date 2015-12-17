@@ -22,3 +22,6 @@
 *.idb
 *.user
 *.log
+
+# build
+build/
