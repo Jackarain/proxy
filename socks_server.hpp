@@ -478,11 +478,10 @@ protected:
 				{
 					if (m_atyp == SOCKS5_ATYP_IPV4 || m_atyp == SOCKS5_ATYP_IPV6)
 					{
-						tcp::resolver::iterator endpoint_iterator;
-						m_remote_socket.async_connect(m_address,
-							boost::bind(&socks_session::socks_handle_connect_3,
+						m_resolver.async_resolve(m_address,
+							boost::bind(&socks_session::socks_handle_resolve,
 								shared_from_this(), boost::asio::placeholders::error,
-								endpoint_iterator
+								boost::asio::placeholders::iterator
 							)
 						);
 						return;
@@ -649,72 +648,58 @@ protected:
 	{
 		if (error)
 		{
-			tcp::resolver::iterator end;
-			if (endpoint_iterator != end)
+			if (m_version == SOCKS_VERSION_5)
 			{
-				boost::asio::async_connect(m_remote_socket,	endpoint_iterator++,
-					boost::bind(&socks_session::socks_handle_connect_3,
-						shared_from_this(), boost::asio::placeholders::error,
-						endpoint_iterator
+				// 连接目标失败!
+				//  +----+-----+-------+------+----------+----------+
+				//  |VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
+				//  +----+-----+-------+------+----------+----------+
+				//  | 1  |  1  | X'00' |  1   | Variable |    2     |
+				//  +----+-----+-------+------+----------+----------+
+				//  [                                               ]
+				char *p = m_local_buffer.data();
+				write_int8(SOCKS_VERSION_5, p);
+				write_int8(SOCKS5_CONNECTION_REFUSED, p);
+				write_int8(0x00, p);
+				write_int8(1, p);
+				// 没用的东西.
+				for (int i = 0; i < 6; i++)
+					write_int8(0, p);
+				boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 10),
+					boost::asio::transfer_exactly(10),
+					boost::bind(&socks_session::socks_handle_error, shared_from_this(),
+						boost::asio::placeholders::error,
+						boost::asio::placeholders::bytes_transferred
 					)
 				);
+
 				return;
 			}
-			else
+
+			// 连接失败.
+			if (m_version == SOCKS_VERSION_4)
 			{
-				if (m_version == SOCKS_VERSION_5)
-				{
-					// 连接目标失败!
-					//  +----+-----+-------+------+----------+----------+
-					//  |VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
-					//  +----+-----+-------+------+----------+----------+
-					//  | 1  |  1  | X'00' |  1   | Variable |    2     |
-					//  +----+-----+-------+------+----------+----------+
-					//  [                                               ]
-					char *p = m_local_buffer.data();
-					write_int8(SOCKS_VERSION_5, p);
-					write_int8(SOCKS5_CONNECTION_REFUSED, p);
-					write_int8(0x00, p);
-					write_int8(1, p);
-					// 没用的东西.
-					for (int i = 0; i < 6; i++)
-						write_int8(0, p);
-					boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 10),
-						boost::asio::transfer_exactly(10),
-						boost::bind(&socks_session::socks_handle_error, shared_from_this(),
-							boost::asio::placeholders::error,
-							boost::asio::placeholders::bytes_transferred
-						)
-					);
+				//  +----+----+----+----+----+----+----+----+
+				//  | VN | CD | DSTPORT |      DSTIP        |
+				//  +----+----+----+----+----+----+----+----+
+				//  | 1  | 1  |    2    |         4         |
+				//  +----+----+----+----+----+----+----+----+
+				//  [                                       ]
+				char *p = m_local_buffer.data();
+				write_int8(SOCKS_VERSION_4, p);
+				write_int8(SOCKS4_CANNOT_CONNECT_TARGET_SERVER, p);
+				// 没用了, 随便填.
+				write_uint16(0x00, p);
+				write_uint32(0x00, p);
+				boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 8),
+					boost::asio::transfer_exactly(8),
+					boost::bind(&socks_session::socks_handle_error, shared_from_this(),
+						boost::asio::placeholders::error,
+						boost::asio::placeholders::bytes_transferred
+					)
+				);
 
-					return;
-				}
-
-				// 连接失败.
-				if (m_version == SOCKS_VERSION_4)
-				{
-					//  +----+----+----+----+----+----+----+----+
-					//  | VN | CD | DSTPORT |      DSTIP        |
-					//  +----+----+----+----+----+----+----+----+
-					//  | 1  | 1  |    2    |         4         |
-					//  +----+----+----+----+----+----+----+----+
-					//  [                                       ]
-					char *p = m_local_buffer.data();
-					write_int8(SOCKS_VERSION_4, p);
-					write_int8(SOCKS4_CANNOT_CONNECT_TARGET_SERVER, p);
-					// 没用了, 随便填.
-					write_uint16(0x00, p);
-					write_uint32(0x00, p);
-					boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 8),
-						boost::asio::transfer_exactly(8),
-						boost::bind(&socks_session::socks_handle_error, shared_from_this(),
-							boost::asio::placeholders::error,
-							boost::asio::placeholders::bytes_transferred
-						)
-					);
-
-					return;
-				}
+				return;
 			}
 		}
 		else
@@ -837,7 +822,7 @@ protected:
 	{
 		if (!error)
 		{
-			boost::asio::async_connect(m_remote_socket,	endpoint_iterator++,
+			boost::asio::async_connect(m_remote_socket,	endpoint_iterator,
 				boost::bind(&socks_session::socks_handle_connect_3,
 					shared_from_this(), boost::asio::placeholders::error,
 					endpoint_iterator
