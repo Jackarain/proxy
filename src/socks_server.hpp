@@ -67,7 +67,8 @@ class socks_session
 	};
 
 	enum {
-		MAX_RECV_BUFFER_SIZE = 768	// 最大udp接收缓冲大小.
+		MAX_RECV_BUFFER_SIZE = 768,	// 最大udp接收缓冲大小.
+		MAX_SEND_BUFFER_SIZE = 768	// 最大udp发送缓冲大小.
 	};
 
 public:
@@ -1125,6 +1126,12 @@ protected:
 	void do_write(const std::string& msg, const udp::endpoint& endp)
 	{
 		bool write_in_progress = !m_send_buffers.empty();
+		if (write_in_progress)
+		{
+			// 超出队列大小,udp包可直接丢掉,这是符合udp协议的.
+			if (m_send_buffers.size() > MAX_SEND_BUFFER_SIZE)
+				return;
+		}
 		// 保存到发送队列.
 		send_buffer buf;
 		buf.buffer = msg;
