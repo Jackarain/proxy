@@ -71,7 +71,7 @@ class socks_session
 	};
 
 public:
-	socks_session(boost::asio::io_service &io)
+	explicit socks_session(boost::asio::io_service &io)
 		: m_io_service(io)
 		, m_local_socket(io)
 		, m_remote_socket(io)
@@ -79,6 +79,9 @@ public:
 		, m_resolver(io)
 		, m_version(-1)
 		, m_method(-1)
+		, m_command(-1)
+		, m_atyp(-1)
+		, m_port(0)
 		, m_verify_passed(false)
 		, m_udp_timer(io)
 	{}
@@ -310,7 +313,7 @@ protected:
 				for (int i = 0; i < bytes_transferred - 1; i++)
 					m_uname.push_back(read_int8(p));
 				int passwd_len = read_int8(p);
-				if (passwd_len <= 0 && passwd_len > 255)
+				if (passwd_len <= 0 || passwd_len > 255)
 				{
 					std::cout << "error unknow protocol.\n";
 					return;
@@ -404,7 +407,7 @@ protected:
 			}
 
 			m_command = read_int8(p);		// CONNECT/BIND/UDP
-			int reserved = read_int8(p);	// reserved.
+			read_int8(p);				// reserved.
 			m_atyp = read_int8(p);			// atyp.
 
 			//  +----+-----+-------+------+----------+----------+
@@ -464,7 +467,7 @@ protected:
 					bytes_transferred += 1;	// 加上首个字节.
 					boost::asio::ip::address_v6::bytes_type addr;
 					for (boost::asio::ip::address_v6::bytes_type::iterator i = addr.begin();
-						i != addr.end(); i++)
+						i != addr.end(); ++i)
 					{
 						*i = read_int8(p);
 					}
