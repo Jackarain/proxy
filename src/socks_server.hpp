@@ -1,4 +1,4 @@
-#ifndef SOCKS_SERVER_HPP
+﻿#ifndef SOCKS_SERVER_HPP
 #define SOCKS_SERVER_HPP
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
@@ -67,7 +67,8 @@ class socks_session
 	};
 
 	enum {
-		MAX_RECV_BUFFER_SIZE = 768	// 最大udp接收缓冲大小.
+		MAX_RECV_BUFFER_SIZE = 768,	// 最大udp接收缓冲大小.
+		MAX_SEND_BUFFER_SIZE = 768	// 最大udp发送缓冲大小.
 	};
 
 public:
@@ -116,7 +117,7 @@ public:
 	tcp::socket& socket() { return m_local_socket; }
 
 protected:
-	void socks_handle_connect_1(const boost::system::error_code& error, int bytes_transferred)
+	void socks_handle_connect_1(const boost::system::error_code& error, std::size_t bytes_transferred)
 	{
 		if (!error)
 		{
@@ -171,7 +172,7 @@ protected:
 		}
 	}
 
-	void socks_handle_connect_2(const boost::system::error_code& error, int bytes_transferred)
+	void socks_handle_connect_2(const boost::system::error_code& error, std::size_t bytes_transferred)
 	{
 		if (!error)
 		{
@@ -230,7 +231,7 @@ protected:
 		}
 	}
 
-	void socks_handle_send_version(const boost::system::error_code& error, int bytes_transferred)
+	void socks_handle_send_version(const boost::system::error_code& error, std::size_t bytes_transferred)
 	{
 		if (!error)
 		{
@@ -269,7 +270,7 @@ protected:
 		}
 	}
 
-	void socks_handle_negotiation_1(const boost::system::error_code& error, int bytes_transferred)
+	void socks_handle_negotiation_1(const boost::system::error_code& error, std::size_t bytes_transferred)
 	{
 		if (!error)
 		{
@@ -303,7 +304,7 @@ protected:
 		}
 	}
 
-	void socks_handle_negotiation_2(const boost::system::error_code& error, int bytes_transferred)
+	void socks_handle_negotiation_2(const boost::system::error_code& error, std::size_t bytes_transferred)
 	{
 		if (!error)
 		{
@@ -364,7 +365,7 @@ protected:
 		}
 	}
 
-	void socks_handle_negotiation_3(const boost::system::error_code& error, int bytes_transferred)
+	void socks_handle_negotiation_3(const boost::system::error_code& error, std::size_t bytes_transferred)
 	{
 		if (!error)
 		{
@@ -395,7 +396,7 @@ protected:
 		}
 	}
 
-	void socks_handle_requests_1(const boost::system::error_code& error, int bytes_transferred)
+	void socks_handle_requests_1(const boost::system::error_code& error, std::size_t bytes_transferred)
 	{
 		if (!error)
 		{
@@ -442,7 +443,7 @@ protected:
 		}
 	}
 
-	void socks_handle_requests_2(const boost::system::error_code& error, int bytes_transferred)
+	void socks_handle_requests_2(const boost::system::error_code& error, std::size_t bytes_transferred)
 	{
 		if (!error)
 		{
@@ -749,8 +750,8 @@ protected:
 				}
 				if (m_atyp == SOCKS5_ATYP_DOMAINNAME)
 				{
-					len += (m_domain.size() + 3);
-					write_int8(m_domain.size(), p);
+					len += (static_cast<int>(m_domain.size()) + 3);
+					write_int8(static_cast<int>(m_domain.size()), p);
 					write_string(m_domain, p);
 					write_uint16(m_port, p);
 				}
@@ -834,7 +835,7 @@ protected:
 		}
 	}
 
-	void socks_handle_error(const boost::system::error_code &error, int bytes_transferred)
+	void socks_handle_error(const boost::system::error_code &error, std::size_t bytes_transferred)
 	{
 		// 什么都不用做了, 退了.
 		if (m_udp_socket.is_open())
@@ -845,7 +846,7 @@ protected:
 		}
 	}
 
-	void socks_handle_succeed(const boost::system::error_code &error, int bytes_transferred)
+	void socks_handle_succeed(const boost::system::error_code &error, std::size_t bytes_transferred)
 	{
 		if (!error)
 		{
@@ -903,7 +904,7 @@ protected:
 		}
 	}
 
-	void socks_handle_remote_read(const boost::system::error_code &error, int bytes_transferred)
+	void socks_handle_remote_read(const boost::system::error_code &error, std::size_t bytes_transferred)
 	{
 		if (!error)
 		{
@@ -922,7 +923,7 @@ protected:
 		}
 	}
 
-	void socks_handle_remote_write(const boost::system::error_code &error, int bytes_transferred)
+	void socks_handle_remote_write(const boost::system::error_code &error, std::size_t bytes_transferred)
 	{
 		if (!error)
 		{
@@ -940,7 +941,7 @@ protected:
 		}
 	}
 
-	void socks_handle_local_read(const boost::system::error_code &error, int bytes_transferred)
+	void socks_handle_local_read(const boost::system::error_code &error, std::size_t bytes_transferred)
 	{
 		if (!error)
 		{
@@ -959,7 +960,7 @@ protected:
 		}
 	}
 
-	void socks_handle_local_write(const boost::system::error_code &error, int bytes_transferred)
+	void socks_handle_local_write(const boost::system::error_code &error, std::size_t bytes_transferred)
 	{
 		if (!error)
 		{
@@ -977,7 +978,7 @@ protected:
 		}
 	}
 
-	void socks_handle_udp_read(int buf_index, const boost::system::error_code &error, int bytes_transferred)
+	void socks_handle_udp_read(int buf_index, const boost::system::error_code &error, std::size_t bytes_transferred)
 	{
 		if (!error)
 		{
@@ -1128,6 +1129,12 @@ protected:
 	void do_write(const std::string& msg, const udp::endpoint& endp)
 	{
 		bool write_in_progress = !m_send_buffers.empty();
+		if (write_in_progress)
+		{
+			// 超出队列大小,udp包可直接丢掉,这是符合udp协议的.
+			if (m_send_buffers.size() > MAX_SEND_BUFFER_SIZE)
+				return;
+		}
 		// 保存到发送队列.
 		send_buffer buf;
 		buf.buffer = msg;
