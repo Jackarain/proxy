@@ -1216,10 +1216,13 @@ public:
 		: m_io_service(io)
 		, m_acceptor(io, tcp::endpoint(tcp::v4(), server_port))
 	{
-		boost::shared_ptr<socks_session> new_session(new socks_session(m_io_service));
-		m_acceptor.async_accept(new_session->socket(),
-			boost::bind(&socks_server::handle_accept, this, new_session,
-			boost::asio::placeholders::error));
+		for (int i = 0; i < 2; i++)
+		{
+			boost::shared_ptr<socks_session> new_session(new socks_session(m_io_service));
+			m_acceptor.async_accept(new_session->socket(),
+				boost::bind(&socks_server::handle_accept, this, new_session,
+				boost::asio::placeholders::error));
+		}
 	}
 	~socks_server() {}
 
