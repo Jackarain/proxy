@@ -1,6 +1,20 @@
 cmake_minimum_required(VERSION 3.0)
 
+option(USE_HUNTER "Use hunter" OFF)
+
+if (USE_HUNTER)
+	include("cmake/HunterGate.cmake")
+	HunterGate(
+		URL "https://github.com/ruslo/hunter/archive/v0.17.18.tar.gz"
+		SHA1 "ffd57842beb628402ea918508718c6f84abe3771"
+	)
+endif()
+
 project(socks_server)
+
+if (USE_HUNTER)
+	hunter_add_package(Boost COMPONENTS system filesystem)
+endif()
 
 if (NOT MSVC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
