@@ -19,11 +19,26 @@ endif()
 if (NOT MSVC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -static-libgcc")
-endif()
+else()
+	set(CompilerFlags
+			CMAKE_CXX_FLAGS_DEBUG
+			CMAKE_CXX_FLAGS_RELEASE
+			CMAKE_CXX_FLAGS_MINSIZEREL
+			CMAKE_CXX_FLAGS_RELWITHDEBINFO
+			CMAKE_C_FLAGS_DEBUG
+			CMAKE_C_FLAGS_RELEASE
+			CMAKE_C_FLAGS_MINSIZEREL
+			CMAKE_C_FLAGS_RELWITHDEBINFO
+		)
 
-if(WIN32)
+	foreach(CompilerFlag ${CompilerFlags})
+		string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
+	endforeach()
+
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 	add_definitions(-D_WIN32_WINNT=0x0501)
+
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 endif()
 
 set(Boost_USE_STATIC_LIBS ON)
