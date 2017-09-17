@@ -13,7 +13,7 @@ endif()
 project(socks_server)
 
 if (USE_HUNTER)
-	hunter_add_package(Boost COMPONENTS system filesystem)
+	hunter_add_package(Boost COMPONENTS system filesystem date_time regex program_options)
 endif()
 
 if (NOT MSVC)
