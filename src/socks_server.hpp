@@ -9,6 +9,7 @@
 #include <deque>
 #include <cstring> // for std::memcpy
 
+#include <boost/logic/tribool.hpp>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/noncopyable.hpp>
@@ -19,7 +20,10 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include "io.hpp"
-
+extern "C"
+{
+#include "v7.h"
+}
 
 namespace socks {
 
@@ -83,10 +87,10 @@ public:
 		, m_command(-1)
 		, m_atyp(-1)
 		, m_port(0)
-		, m_verify_passed(false)
+		, m_verify_passed(boost::indeterminate)
 		, m_udp_timer(io)
 	{}
-	~socks_session() {}
+	~socks_session() = default;
 
 public:
 	void start()
@@ -235,7 +239,7 @@ protected:
 	{
 		if (!error)
 		{
-			if (m_method == SOCKS5_AUTH && !m_verify_passed)			// 认证模式.
+			if (m_method == SOCKS5_AUTH && boost::indeterminate(m_verify_passed))	// 认证模式，未确定认证状态，开始读取用户密码信息.
 			{
 				//  +----+------+----------+------+----------+
 				//  |VER | ULEN |  UNAME   | PLEN |  PASSWD  |
@@ -251,7 +255,7 @@ protected:
 					)
 				);
 			}
-			else if (m_method == SOCKS5_AUTH_NONE || m_verify_passed)	// 非认证模式, 或认证已经通过, 接收socks客户端Requests.
+			else if (m_method == SOCKS5_AUTH_NONE || m_verify_passed)	// 非认证模式, 或认证模式下认证已经通过, 接收socks客户端Requests.
 			{
 				//  +----+-----+-------+------+----------+----------+
 				//  |VER | CMD |  RSV  | ATYP | DST.ADDR | DST.PORT |
@@ -266,6 +270,10 @@ protected:
 						boost::asio::placeholders::bytes_transferred
 					)
 				);
+			}
+			else
+			{
+				close();
 			}
 		}
 	}
@@ -373,12 +381,23 @@ protected:
 			for (int i = 0; i < bytes_transferred; i++)
 				m_passwd.push_back(read_int8(p));
 
-			// TODO: SOCKS5验证用户和密码.
-			m_verify_passed = true;
+			// SOCKS5验证用户和密码.
+			auto endp = m_local_socket.remote_endpoint();
+			auto remote_info = endp.address().to_string();
+			remote_info += ":" + std::to_string(endp.port());
+
+			m_verify_passed = do_auth(remote_info, m_uname, m_passwd);
 
 			p = m_local_buffer.data();
 			write_int8(0x01, p);		// version 只能是1.
-			write_int8(0x00, p);		// 认证通过返回0x00, 其它值为失败.
+			if (m_verify_passed)
+			{
+				write_int8(0x00, p);		// 认证通过返回0x00, 其它值为失败.
+			}
+			else
+			{
+				write_int8(0x01, p);		// 认证返回0x01为失败.
+			}
 
 			// 返回认证状态.
 			//  +----+--------+
@@ -1155,6 +1174,50 @@ protected:
 		}
 	}
 
+	bool do_auth_js(struct v7 *v7, const std::string& remote_info,
+		const std::string& name, const std::string passwd)
+	{
+		v7_val_t func, result, args;
+		std::string func_name = "do_auth";
+
+		func = v7_get(v7, v7_get_global(v7), func_name.c_str(), func_name.size());
+		args = v7_mk_array(v7);
+		v7_array_push(v7, args, v7_mk_string(v7, remote_info.c_str(), remote_info.size(), 0));
+		v7_array_push(v7, args, v7_mk_string(v7, name.c_str(), name.size(), 0));
+		v7_array_push(v7, args, v7_mk_string(v7, passwd.c_str(), passwd.size(), 0));
+
+		auto ok = v7_apply(v7, func, v7_mk_undefined(), args, &result);
+		if (ok == V7_OK)
+			return v7_get_bool(v7, result);
+
+		return false;
+	}
+
+	bool do_auth(const std::string& remote_info, const std::string& name, const std::string passwd)
+	{
+		enum v7_err rcode = V7_OK;
+		v7_val_t result;
+		bool auth = false;
+
+		struct v7 *v7 = v7_create();
+		std::ifstream file("do_auth.js");
+		std::string str((std::istreambuf_iterator<char>(file)),
+			std::istreambuf_iterator<char>());
+		if (!str.empty())
+		{
+			rcode = v7_exec(v7, str.c_str(), &result);
+			if (rcode != V7_OK) {
+				v7_print_error(stderr, v7, "Evaluation error", result);
+			}
+			else {
+				auth = do_auth_js(v7, remote_info, name, passwd);
+			}
+		}
+
+		v7_destroy(v7);
+		return auth;
+	}
+
 	void close()
 	{
 		boost::system::error_code ignored_ec;
@@ -1211,7 +1274,7 @@ private:
 	tcp::endpoint m_address;
 	std::string m_domain;
 	short m_port;
-	bool m_verify_passed;
+	boost::tribool m_verify_passed;
 	boost::asio::deadline_timer m_udp_timer;
 	boost::posix_time::ptime m_meter;
 };
@@ -1219,11 +1282,11 @@ private:
 class socks_server : public boost::noncopyable
 {
 public:
-	socks_server(boost::asio::io_service &io, short server_port)
+	socks_server(boost::asio::io_service &io, unsigned short port, std::string address = "127.0.0.1")
 		: m_io_service(io)
-		, m_acceptor(io, tcp::endpoint(tcp::v4(), server_port))
+		, m_acceptor(io, tcp::endpoint(boost::asio::ip::address::from_string(address), port))
 	{
-		for (int i = 0; i < 2; i++)
+		for (int i = 0; i < 32; i++)
 		{
 			boost::shared_ptr<socks_session> new_session(new socks_session(m_io_service));
 			m_acceptor.async_accept(new_session->socket(),
@@ -1231,7 +1294,7 @@ public:
 				boost::asio::placeholders::error));
 		}
 	}
-	~socks_server() {}
+	~socks_server() = default;
 
 public:
 
