@@ -717,9 +717,16 @@ protected:
 				char *p = m_local_buffer.data();
 				write_int8(SOCKS_VERSION_4, p);
 				write_int8(SOCKS4_CANNOT_CONNECT_TARGET_SERVER, p);
-				// 没用了, 随便填.
-				write_uint16(0x00, p);
-				write_uint32(0x00, p);
+
+				// 返回解析出来的IP:PORT.
+				auto endp = *endpoint_iterator;
+				auto ip_val = endp.endpoint().address().to_v4().to_ulong();
+				auto port = endp.endpoint().port();
+				for (int i = 1; i >= 0; i--)
+					write_int8(port >> (i * 8), p);
+				for (int i = 3; i >= 0; i--)
+					write_int8(ip_val >> (i * 8), p);
+
 				boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 8),
 					boost::asio::transfer_exactly(8),
 					boost::bind(&socks_session::socks_handle_error, shared_from_this(),
