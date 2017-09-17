@@ -682,19 +682,33 @@ protected:
 				//  [                                               ]
 				char *p = m_local_buffer.data();
 				write_int8(SOCKS_VERSION_5, p);
-				write_int8(SOCKS5_CONNECTION_REFUSED, p);
+				if (error == boost::asio::error::connection_refused)
+					write_int8(SOCKS5_CONNECTION_REFUSED, p);
+				else if (error == boost::asio::error::network_unreachable)
+					write_int8(SOCKS5_NETWORK_UNREACHABLE, p);
+				else
+					write_int8(SOCKS5_GENERAL_SOCKS_SERVER_FAILURE, p);
+
 				write_int8(0x00, p);
-				write_int8(1, p);
 
 				// 返回解析出来的IP:PORT.
 				if (endpoint_iterator != tcp::resolver::iterator())
 				{
 					auto endp = endpoint_iterator->endpoint();
+					write_int8(1, p);
 					write_uint32(endp.address().to_v4().to_ulong(), p);
 					write_uint16(endp.port(), p);
 				}
+				else if (!m_domain.empty())
+				{
+					write_int8(0x03, p);
+					write_int8(m_domain.size(), p);
+					write_string(m_domain, p);
+					write_uint16(m_port, p);
+				}
 				else
 				{
+					write_int8(0x1, p);
 					write_uint32(0, p);
 					write_uint16(0, p);
 				}
