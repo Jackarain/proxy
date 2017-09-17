@@ -7,14 +7,7 @@ namespace po = boost::program_options;
 
 int main(int argc, char **argv)
 {
-	if (argc  != 2)
-	{
-		std::cerr << "usage: " << argv[0] << " <port>" << std::endl;
-		return -1;
-	}
-
 	try {
-
 		unsigned short port;
 		std::string address;
 
