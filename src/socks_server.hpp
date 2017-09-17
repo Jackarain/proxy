@@ -687,13 +687,18 @@ protected:
 				write_int8(1, p);
 
 				// 返回解析出来的IP:PORT.
-				auto endp = *endpoint_iterator;
-				auto ip_val = endp.endpoint().address().to_v4().to_ulong();
-				auto port = endp.endpoint().port();
-				for (int i = 3; i >= 0; i--)
-					write_int8(ip_val >> (i * 8), p);
-				for (int i = 1; i >= 0; i--)
-					write_int8(port >> (i * 8), p);
+				if (endpoint_iterator != tcp::resolver::iterator())
+				{
+					auto endp = endpoint_iterator->endpoint();
+					write_uint32(endp.address().to_v4().to_ulong(), p);
+					write_uint16(endp.port(), p);
+				}
+				else
+				{
+					write_uint32(0, p);
+					write_uint16(0, p);
+				}
+
 				boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 10),
 					boost::asio::transfer_exactly(10),
 					boost::bind(&socks_session::socks_handle_error, shared_from_this(),
@@ -715,17 +720,12 @@ protected:
 				//  +----+----+----+----+----+----+----+----+
 				//  [                                       ]
 				char *p = m_local_buffer.data();
-				write_int8(SOCKS_VERSION_4, p);
-				write_int8(SOCKS4_CANNOT_CONNECT_TARGET_SERVER, p);
+				write_int8(0, p);
+				write_int8(SOCKS4_REQUEST_REJECTED_OR_FAILED, p);
 
-				// 返回解析出来的IP:PORT.
-				auto endp = *endpoint_iterator;
-				auto ip_val = endp.endpoint().address().to_v4().to_ulong();
-				auto port = endp.endpoint().port();
-				for (int i = 1; i >= 0; i--)
-					write_int8(port >> (i * 8), p);
-				for (int i = 3; i >= 0; i--)
-					write_int8(ip_val >> (i * 8), p);
+				// 返回IP:PORT.
+				write_uint16(m_address.port(), p);
+				write_uint32(m_address.address().to_v4().to_ulong(), p);
 
 				boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 8),
 					boost::asio::transfer_exactly(8),
