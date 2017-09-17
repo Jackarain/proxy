@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+﻿cmake_minimum_required(VERSION 3.0)
 
 option(USE_HUNTER "Use hunter" OFF)
 
@@ -44,13 +44,17 @@ endif()
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
 
-find_package(Boost COMPONENTS system filesystem REQUIRED)
+find_package(Boost COMPONENTS system filesystem date_time regex program_options REQUIRED)
+link_libraries(${Boost_LIBRARIES})
 include_directories(${Boost_INCLUDE_DIRS})
 
 add_executable(socks_server
   src/main.cpp
+  src/v7.c
+
   src/io.hpp
   src/socks_server.hpp
+  src/v7.h
 )
 
 if(UNIX)
