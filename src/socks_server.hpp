@@ -685,9 +685,15 @@ protected:
 				write_int8(SOCKS5_CONNECTION_REFUSED, p);
 				write_int8(0x00, p);
 				write_int8(1, p);
-				// 没用的东西.
-				for (int i = 0; i < 6; i++)
-					write_int8(0, p);
+
+				// 返回解析出来的IP:PORT.
+				auto endp = *endpoint_iterator;
+				auto ip_val = endp.endpoint().address().to_v4().to_ulong();
+				auto port = endp.endpoint().port();
+				for (int i = 3; i >= 0; i--)
+					write_int8(ip_val >> (i * 8), p);
+				for (int i = 1; i >= 0; i--)
+					write_int8(port >> (i * 8), p);
 				boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 10),
 					boost::asio::transfer_exactly(10),
 					boost::bind(&socks_session::socks_handle_error, shared_from_this(),
