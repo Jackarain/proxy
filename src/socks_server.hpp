@@ -5,6 +5,8 @@
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
+#include <io.h>
+
 #include <istream>
 #include <deque>
 #include <cstring> // for std::memcpy
@@ -193,10 +195,21 @@ protected:
 					bytes_transferred--;
 				}
 
-				// 回复客户端, 选择的代理方式.
-				p = m_local_buffer.data();
-				write_int8(m_version, p);
-				write_int8(m_method, p);
+				// do_auth.js存在则表示需要认证.
+				if (access("do_auth.js", 00) == 0 && m_method == SOCKS5_AUTH_NONE)
+				{
+					// 回复客户端, 选择的代理方式.
+					p = m_local_buffer.data();
+					write_int8(m_version, p);
+					write_int8(SOCKS5_AUTH_UNACCEPTABLE, p);
+				}
+				else
+				{
+					// 回复客户端, 选择的代理方式.
+					p = m_local_buffer.data();
+					write_int8(m_version, p);
+					write_int8(m_method, p);
+				}
 
 				//  +----+--------+
 				//  |VER | METHOD |
@@ -346,11 +359,53 @@ protected:
 			{
 				std::string userid;
 
-				userid.resize(bytes_transferred);
-				m_streambuf.sgetn(&userid[0], bytes_transferred);
+				if (bytes_transferred > 1)
+				{
+					userid.resize(bytes_transferred - 1);
+					m_streambuf.sgetn(&userid[0], bytes_transferred - 1);
+				}
+				m_streambuf.commit(1);
 
-				// TODO: SOCKS4认证用户.
-				m_verify_passed = true;
+				// 检查是否需要SOCKS4认证用户, do_auth.js存在则表示需要认证.
+				if (access("do_auth.js", 0) == 0)
+				{
+					auto endp = m_local_socket.remote_endpoint();
+					auto client = endp.address().to_string();
+					client += ":" + std::to_string(endp.port());
+
+					m_verify_passed = do_auth(client, userid, "");
+				}
+				else
+				{
+					m_verify_passed = true;
+				}
+
+				if (!m_verify_passed)
+				{
+					//  +----+----+----+----+----+----+----+----+
+					//  | VN | CD | DSTPORT |      DSTIP        |
+					//  +----+----+----+----+----+----+----+----+
+					//  | 1  | 1  |    2    |         4         |
+					//  +----+----+----+----+----+----+----+----+
+					//  [                                       ]
+					char *p = m_local_buffer.data();
+					write_int8(0, p);
+					write_int8(SOCKS4_REQUEST_REJECTED_USER_NO_ALLOW, p);
+
+					// 返回IP:PORT.
+					write_uint16(m_address.port(), p);
+					write_uint32(m_address.address().to_v4().to_ulong(), p);
+
+					boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 8),
+						boost::asio::transfer_exactly(8),
+						boost::bind(&socks_session::socks_handle_error, shared_from_this(),
+							boost::asio::placeholders::error,
+							boost::asio::placeholders::bytes_transferred
+						)
+					);
+
+					return;
+				}
 
 				// 发起连接.
 				if (m_command == SOCKS_CMD_CONNECT)
@@ -383,10 +438,10 @@ protected:
 
 			// SOCKS5验证用户和密码.
 			auto endp = m_local_socket.remote_endpoint();
-			auto remote_info = endp.address().to_string();
-			remote_info += ":" + std::to_string(endp.port());
+			auto client = endp.address().to_string();
+			client += ":" + std::to_string(endp.port());
 
-			m_verify_passed = do_auth(remote_info, m_uname, m_passwd);
+			m_verify_passed = do_auth(client, m_uname, m_passwd);
 
 			p = m_local_buffer.data();
 			write_int8(0x01, p);		// version 只能是1.
@@ -702,7 +757,7 @@ protected:
 				else if (!m_domain.empty())
 				{
 					write_int8(0x03, p);
-					write_int8(m_domain.size(), p);
+					write_int8(static_cast<int8_t>(m_domain.size()), p);
 					write_string(m_domain, p);
 					write_uint16(m_port, p);
 				}
@@ -1213,44 +1268,66 @@ protected:
 		}
 	}
 
-	bool do_auth_js(struct v7 *v7, const std::string& remote_info,
+	static enum v7_err js_print(struct v7 *v7, v7_val_t *res)
+	{
+		auto argc = v7_argc(v7);
+		for (auto i = 0; i < argc; i++)
+		{
+			v7_val_t param = v7_arg(v7, i);
+			char buf[4096], *p;
+			p = v7_stringify(v7, param, buf, sizeof(buf), V7_STRINGIFY_DEFAULT);
+			if (p)
+				std::cout << std::string(p);
+			if (p != buf && p)
+				free(p);
+		}
+		std::cout << "\n";
+		return V7_OK;
+	}
+
+	bool do_auth_js(struct v7 *v7, const std::string& client,
 		const std::string& name, const std::string passwd)
 	{
 		v7_val_t func, result, args;
+
 		std::string func_name = "do_auth";
+		if (m_version == SOCKS_VERSION_4)
+			func_name = "do_auth4";
 
 		func = v7_get(v7, v7_get_global(v7), func_name.c_str(), func_name.size());
 		args = v7_mk_array(v7);
-		v7_array_push(v7, args, v7_mk_string(v7, remote_info.c_str(), remote_info.size(), 0));
+		v7_array_push(v7, args, v7_mk_string(v7, client.c_str(), client.size(), 0));
 		v7_array_push(v7, args, v7_mk_string(v7, name.c_str(), name.size(), 0));
-		v7_array_push(v7, args, v7_mk_string(v7, passwd.c_str(), passwd.size(), 0));
-
+		if (m_version != SOCKS_VERSION_4)
+			v7_array_push(v7, args, v7_mk_string(v7, passwd.c_str(), passwd.size(), 0));
 		auto ok = v7_apply(v7, func, v7_mk_undefined(), args, &result);
 		if (ok == V7_OK)
 			return v7_get_bool(v7, result);
+		else
+			v7_print_error(stderr, v7, func_name.c_str(), result);
 
 		return false;
 	}
 
-	bool do_auth(const std::string& remote_info, const std::string& name, const std::string passwd)
+	bool do_auth(const std::string& client, const std::string& name, const std::string passwd)
 	{
 		enum v7_err rcode = V7_OK;
 		v7_val_t result;
 		bool auth = false;
 
 		struct v7 *v7 = v7_create();
+		v7_set_method(v7, v7_get_global(v7), "print", &js_print);
+
 		std::ifstream file("do_auth.js");
 		std::string str((std::istreambuf_iterator<char>(file)),
 			std::istreambuf_iterator<char>());
 		if (!str.empty())
 		{
 			rcode = v7_exec(v7, str.c_str(), &result);
-			if (rcode != V7_OK) {
-				v7_print_error(stderr, v7, "Evaluation error", result);
-			}
-			else {
-				auth = do_auth_js(v7, remote_info, name, passwd);
-			}
+			if (rcode != V7_OK)
+				v7_print_error(stderr, v7, "", result);
+			else
+				auth = do_auth_js(v7, client, name, passwd);
 		}
 
 		v7_destroy(v7);
