@@ -7,15 +7,12 @@
 
 #include <io.h>
 
-#include <istream>
 #include <deque>
 #include <cstring> // for std::memcpy
 
 #include <boost/logic/tribool.hpp>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-#include <boost/noncopyable.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/array.hpp>
 #include <boost/date_time.hpp>
@@ -527,7 +524,6 @@ protected:
 
 				if (m_atyp == SOCKS5_ATYP_IPV4)
 				{
-					bytes_transferred += 1;	// 加上首个字节.
 					m_address.address(boost::asio::ip::address_v4(read_uint32(p)));
 					m_address.port(read_uint16(p));
 				}
@@ -539,7 +535,6 @@ protected:
 				}
 				else if (m_atyp == SOCKS5_ATYP_IPV6)
 				{
-					bytes_transferred += 1;	// 加上首个字节.
 					boost::asio::ip::address_v6::bytes_type addr;
 					for (boost::asio::ip::address_v6::bytes_type::iterator i = addr.begin();
 						i != addr.end(); ++i)
@@ -649,9 +644,9 @@ protected:
 							// 如果IP地址为空, 则使用tcp连接上的IP.
 							if (m_address.address() == boost::asio::ip::address::from_string("0.0.0.0"))
 							{
-								boost::system::error_code ec;
-								tcp::endpoint endp = m_local_socket.remote_endpoint(ec);
-								if (ec)
+								boost::system::error_code err;
+								tcp::endpoint endp = m_local_socket.remote_endpoint(err);
+								if (err)
 								{
 									close();
 									return;
@@ -1311,7 +1306,6 @@ protected:
 
 	bool do_auth(const std::string& client, const std::string& name, const std::string passwd)
 	{
-		enum v7_err rcode = V7_OK;
 		v7_val_t result;
 		bool auth = false;
 
@@ -1323,7 +1317,7 @@ protected:
 			std::istreambuf_iterator<char>());
 		if (!str.empty())
 		{
-			rcode = v7_exec(v7, str.c_str(), &result);
+			auto rcode = v7_exec(v7, str.c_str(), &result);
 			if (rcode != V7_OK)
 				v7_print_error(stderr, v7, "", result);
 			else
