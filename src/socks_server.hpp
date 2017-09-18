@@ -5,21 +5,24 @@
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
-#include <istream>
+#include <io.h>
+
 #include <deque>
 #include <cstring> // for std::memcpy
 
+#include <boost/logic/tribool.hpp>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-#include <boost/noncopyable.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/array.hpp>
 #include <boost/date_time.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include "io.hpp"
-
+extern "C"
+{
+#include "v7.h"
+}
 
 namespace socks {
 
@@ -83,10 +86,10 @@ public:
 		, m_command(-1)
 		, m_atyp(-1)
 		, m_port(0)
-		, m_verify_passed(false)
+		, m_verify_passed(boost::indeterminate)
 		, m_udp_timer(io)
 	{}
-	~socks_session() {}
+	~socks_session() = default;
 
 public:
 	void start()
@@ -189,10 +192,21 @@ protected:
 					bytes_transferred--;
 				}
 
-				// 回复客户端, 选择的代理方式.
-				p = m_local_buffer.data();
-				write_int8(m_version, p);
-				write_int8(m_method, p);
+				// do_auth.js存在则表示需要认证.
+				if (access("do_auth.js", 00) == 0 && m_method == SOCKS5_AUTH_NONE)
+				{
+					// 回复客户端, 选择的代理方式.
+					p = m_local_buffer.data();
+					write_int8(m_version, p);
+					write_int8(SOCKS5_AUTH_UNACCEPTABLE, p);
+				}
+				else
+				{
+					// 回复客户端, 选择的代理方式.
+					p = m_local_buffer.data();
+					write_int8(m_version, p);
+					write_int8(m_method, p);
+				}
 
 				//  +----+--------+
 				//  |VER | METHOD |
@@ -235,7 +249,7 @@ protected:
 	{
 		if (!error)
 		{
-			if (m_method == SOCKS5_AUTH && !m_verify_passed)			// 认证模式.
+			if (m_method == SOCKS5_AUTH && boost::indeterminate(m_verify_passed))	// 认证模式，未确定认证状态，开始读取用户密码信息.
 			{
 				//  +----+------+----------+------+----------+
 				//  |VER | ULEN |  UNAME   | PLEN |  PASSWD  |
@@ -251,7 +265,7 @@ protected:
 					)
 				);
 			}
-			else if (m_method == SOCKS5_AUTH_NONE || m_verify_passed)	// 非认证模式, 或认证已经通过, 接收socks客户端Requests.
+			else if (m_method == SOCKS5_AUTH_NONE || m_verify_passed)	// 非认证模式, 或认证模式下认证已经通过, 接收socks客户端Requests.
 			{
 				//  +----+-----+-------+------+----------+----------+
 				//  |VER | CMD |  RSV  | ATYP | DST.ADDR | DST.PORT |
@@ -266,6 +280,10 @@ protected:
 						boost::asio::placeholders::bytes_transferred
 					)
 				);
+			}
+			else
+			{
+				close();
 			}
 		}
 	}
@@ -338,11 +356,53 @@ protected:
 			{
 				std::string userid;
 
-				userid.resize(bytes_transferred);
-				m_streambuf.sgetn(&userid[0], bytes_transferred);
+				if (bytes_transferred > 1)
+				{
+					userid.resize(bytes_transferred - 1);
+					m_streambuf.sgetn(&userid[0], bytes_transferred - 1);
+				}
+				m_streambuf.commit(1);
 
-				// TODO: SOCKS4认证用户.
-				m_verify_passed = true;
+				// 检查是否需要SOCKS4认证用户, do_auth.js存在则表示需要认证.
+				if (access("do_auth.js", 0) == 0)
+				{
+					auto endp = m_local_socket.remote_endpoint();
+					auto client = endp.address().to_string();
+					client += ":" + std::to_string(endp.port());
+
+					m_verify_passed = do_auth(client, userid, "");
+				}
+				else
+				{
+					m_verify_passed = true;
+				}
+
+				if (!m_verify_passed)
+				{
+					//  +----+----+----+----+----+----+----+----+
+					//  | VN | CD | DSTPORT |      DSTIP        |
+					//  +----+----+----+----+----+----+----+----+
+					//  | 1  | 1  |    2    |         4         |
+					//  +----+----+----+----+----+----+----+----+
+					//  [                                       ]
+					char *p = m_local_buffer.data();
+					write_int8(0, p);
+					write_int8(SOCKS4_REQUEST_REJECTED_USER_NO_ALLOW, p);
+
+					// 返回IP:PORT.
+					write_uint16(m_address.port(), p);
+					write_uint32(m_address.address().to_v4().to_ulong(), p);
+
+					boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 8),
+						boost::asio::transfer_exactly(8),
+						boost::bind(&socks_session::socks_handle_error, shared_from_this(),
+							boost::asio::placeholders::error,
+							boost::asio::placeholders::bytes_transferred
+						)
+					);
+
+					return;
+				}
 
 				// 发起连接.
 				if (m_command == SOCKS_CMD_CONNECT)
@@ -373,12 +433,23 @@ protected:
 			for (int i = 0; i < bytes_transferred; i++)
 				m_passwd.push_back(read_int8(p));
 
-			// TODO: SOCKS5验证用户和密码.
-			m_verify_passed = true;
+			// SOCKS5验证用户和密码.
+			auto endp = m_local_socket.remote_endpoint();
+			auto client = endp.address().to_string();
+			client += ":" + std::to_string(endp.port());
+
+			m_verify_passed = do_auth(client, m_uname, m_passwd);
 
 			p = m_local_buffer.data();
 			write_int8(0x01, p);		// version 只能是1.
-			write_int8(0x00, p);		// 认证通过返回0x00, 其它值为失败.
+			if (m_verify_passed)
+			{
+				write_int8(0x00, p);		// 认证通过返回0x00, 其它值为失败.
+			}
+			else
+			{
+				write_int8(0x01, p);		// 认证返回0x01为失败.
+			}
 
 			// 返回认证状态.
 			//  +----+--------+
@@ -453,7 +524,6 @@ protected:
 
 				if (m_atyp == SOCKS5_ATYP_IPV4)
 				{
-					bytes_transferred += 1;	// 加上首个字节.
 					m_address.address(boost::asio::ip::address_v4(read_uint32(p)));
 					m_address.port(read_uint16(p));
 				}
@@ -465,7 +535,6 @@ protected:
 				}
 				else if (m_atyp == SOCKS5_ATYP_IPV6)
 				{
-					bytes_transferred += 1;	// 加上首个字节.
 					boost::asio::ip::address_v6::bytes_type addr;
 					for (boost::asio::ip::address_v6::bytes_type::iterator i = addr.begin();
 						i != addr.end(); ++i)
@@ -575,9 +644,9 @@ protected:
 							// 如果IP地址为空, 则使用tcp连接上的IP.
 							if (m_address.address() == boost::asio::ip::address::from_string("0.0.0.0"))
 							{
-								boost::system::error_code ec;
-								tcp::endpoint endp = m_local_socket.remote_endpoint(ec);
-								if (ec)
+								boost::system::error_code err;
+								tcp::endpoint endp = m_local_socket.remote_endpoint(err);
+								if (err)
 								{
 									close();
 									return;
@@ -663,12 +732,37 @@ protected:
 				//  [                                               ]
 				char *p = m_local_buffer.data();
 				write_int8(SOCKS_VERSION_5, p);
-				write_int8(SOCKS5_CONNECTION_REFUSED, p);
+				if (error == boost::asio::error::connection_refused)
+					write_int8(SOCKS5_CONNECTION_REFUSED, p);
+				else if (error == boost::asio::error::network_unreachable)
+					write_int8(SOCKS5_NETWORK_UNREACHABLE, p);
+				else
+					write_int8(SOCKS5_GENERAL_SOCKS_SERVER_FAILURE, p);
+
 				write_int8(0x00, p);
-				write_int8(1, p);
-				// 没用的东西.
-				for (int i = 0; i < 6; i++)
-					write_int8(0, p);
+
+				// 返回解析出来的IP:PORT.
+				if (endpoint_iterator != tcp::resolver::iterator())
+				{
+					auto endp = endpoint_iterator->endpoint();
+					write_int8(1, p);
+					write_uint32(endp.address().to_v4().to_ulong(), p);
+					write_uint16(endp.port(), p);
+				}
+				else if (!m_domain.empty())
+				{
+					write_int8(0x03, p);
+					write_int8(static_cast<int8_t>(m_domain.size()), p);
+					write_string(m_domain, p);
+					write_uint16(m_port, p);
+				}
+				else
+				{
+					write_int8(0x1, p);
+					write_uint32(0, p);
+					write_uint16(0, p);
+				}
+
 				boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 10),
 					boost::asio::transfer_exactly(10),
 					boost::bind(&socks_session::socks_handle_error, shared_from_this(),
@@ -690,11 +784,13 @@ protected:
 				//  +----+----+----+----+----+----+----+----+
 				//  [                                       ]
 				char *p = m_local_buffer.data();
-				write_int8(SOCKS_VERSION_4, p);
-				write_int8(SOCKS4_CANNOT_CONNECT_TARGET_SERVER, p);
-				// 没用了, 随便填.
-				write_uint16(0x00, p);
-				write_uint32(0x00, p);
+				write_int8(0, p);
+				write_int8(SOCKS4_REQUEST_REJECTED_OR_FAILED, p);
+
+				// 返回IP:PORT.
+				write_uint16(m_address.port(), p);
+				write_uint32(m_address.address().to_v4().to_ulong(), p);
+
 				boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 8),
 					boost::asio::transfer_exactly(8),
 					boost::bind(&socks_session::socks_handle_error, shared_from_this(),
@@ -919,7 +1015,10 @@ protected:
 		}
 		else
 		{
-			close();
+			if (error == boost::asio::error::eof)
+				close();
+			else
+				close(true, true);
 		}
 	}
 
@@ -937,7 +1036,10 @@ protected:
 		}
 		else
 		{
-			close();
+			if (error == boost::asio::error::eof)
+				close();
+			else
+				close(true, true);
 		}
 	}
 
@@ -956,7 +1058,10 @@ protected:
 		}
 		else
 		{
-			close();
+			if (error == boost::asio::error::eof)
+				close();
+			else
+				close(true, true);
 		}
 	}
 
@@ -974,7 +1079,10 @@ protected:
 		}
 		else
 		{
-			close();
+			if (error == boost::asio::error::eof)
+				close();
+			else
+				close(true, true);
 		}
 	}
 
@@ -1155,21 +1263,90 @@ protected:
 		}
 	}
 
-	void close()
+	static enum v7_err js_print(struct v7 *v7, v7_val_t *res)
+	{
+		auto argc = v7_argc(v7);
+		for (auto i = 0; i < argc; i++)
+		{
+			v7_val_t param = v7_arg(v7, i);
+			char buf[4096], *p;
+			p = v7_stringify(v7, param, buf, sizeof(buf), V7_STRINGIFY_DEFAULT);
+			if (p)
+				std::cout << std::string(p);
+			if (p != buf && p)
+				free(p);
+		}
+		std::cout << "\n";
+		return V7_OK;
+	}
+
+	bool do_auth_js(struct v7 *v7, const std::string& client,
+		const std::string& name, const std::string passwd)
+	{
+		v7_val_t func, result, args;
+
+		std::string func_name = "do_auth";
+		if (m_version == SOCKS_VERSION_4)
+			func_name = "do_auth4";
+
+		func = v7_get(v7, v7_get_global(v7), func_name.c_str(), func_name.size());
+		args = v7_mk_array(v7);
+		v7_array_push(v7, args, v7_mk_string(v7, client.c_str(), client.size(), 0));
+		v7_array_push(v7, args, v7_mk_string(v7, name.c_str(), name.size(), 0));
+		if (m_version != SOCKS_VERSION_4)
+			v7_array_push(v7, args, v7_mk_string(v7, passwd.c_str(), passwd.size(), 0));
+		auto ok = v7_apply(v7, func, v7_mk_undefined(), args, &result);
+		if (ok == V7_OK)
+			return v7_get_bool(v7, result);
+		else
+			v7_print_error(stderr, v7, func_name.c_str(), result);
+
+		return false;
+	}
+
+	bool do_auth(const std::string& client, const std::string& name, const std::string passwd)
+	{
+		v7_val_t result;
+		bool auth = false;
+
+		struct v7 *v7 = v7_create();
+		v7_set_method(v7, v7_get_global(v7), "print", &js_print);
+
+		std::ifstream file("do_auth.js");
+		std::string str((std::istreambuf_iterator<char>(file)),
+			std::istreambuf_iterator<char>());
+		if (!str.empty())
+		{
+			auto rcode = v7_exec(v7, str.c_str(), &result);
+			if (rcode != V7_OK)
+				v7_print_error(stderr, v7, "", result);
+			else
+				auth = do_auth_js(v7, client, name, passwd);
+		}
+
+		v7_destroy(v7);
+		return auth;
+	}
+
+	void close(bool local_force_close = false, bool remote_force_close = false)
 	{
 		boost::system::error_code ignored_ec;
 		// 远程和本地链接都将关闭.
 		if (m_local_socket.is_open())
 		{
-			m_local_socket.shutdown(
-				boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
-			m_local_socket.close(ignored_ec);
+			if (local_force_close)
+				m_local_socket.close(ignored_ec);
+			else
+				m_local_socket.shutdown(
+					boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
 		}
 		if (m_remote_socket.is_open())
 		{
-			m_remote_socket.shutdown(
-				boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
-			m_remote_socket.close(ignored_ec);
+			if (remote_force_close)
+				m_remote_socket.close(ignored_ec);
+			else
+				m_remote_socket.shutdown(
+					boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
 		}
 		m_udp_timer.cancel(ignored_ec);
 		if (m_udp_socket.is_open())
@@ -1211,7 +1388,7 @@ private:
 	tcp::endpoint m_address;
 	std::string m_domain;
 	short m_port;
-	bool m_verify_passed;
+	boost::tribool m_verify_passed;
 	boost::asio::deadline_timer m_udp_timer;
 	boost::posix_time::ptime m_meter;
 };
@@ -1219,11 +1396,11 @@ private:
 class socks_server : public boost::noncopyable
 {
 public:
-	socks_server(boost::asio::io_service &io, short server_port)
+	socks_server(boost::asio::io_service &io, unsigned short port, std::string address = "127.0.0.1")
 		: m_io_service(io)
-		, m_acceptor(io, tcp::endpoint(tcp::v4(), server_port))
+		, m_acceptor(io, tcp::endpoint(boost::asio::ip::address::from_string(address), port))
 	{
-		for (int i = 0; i < 2; i++)
+		for (int i = 0; i < 32; i++)
 		{
 			boost::shared_ptr<socks_session> new_session(new socks_session(m_io_service));
 			m_acceptor.async_accept(new_session->socket(),
@@ -1231,7 +1408,7 @@ public:
 				boost::asio::placeholders::error));
 		}
 	}
-	~socks_server() {}
+	~socks_server() = default;
 
 public:
 
