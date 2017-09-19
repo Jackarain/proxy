@@ -1263,6 +1263,33 @@ protected:
 		}
 	}
 
+	void close(bool local_force_close = false, bool remote_force_close = false)
+	{
+		boost::system::error_code ignored_ec;
+		// 远程和本地链接都将关闭.
+		if (m_local_socket.is_open())
+		{
+			if (local_force_close)
+				m_local_socket.close(ignored_ec);
+			else
+				m_local_socket.shutdown(
+					boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
+		}
+		if (m_remote_socket.is_open())
+		{
+			if (remote_force_close)
+				m_remote_socket.close(ignored_ec);
+			else
+				m_remote_socket.shutdown(
+					boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
+		}
+		m_udp_timer.cancel(ignored_ec);
+		if (m_udp_socket.is_open())
+		{
+			m_udp_socket.close(ignored_ec);
+		}
+	}
+
 	static enum v7_err js_print(struct v7 *v7, v7_val_t *res)
 	{
 		auto argc = v7_argc(v7);
@@ -1326,33 +1353,6 @@ protected:
 
 		v7_destroy(v7);
 		return auth;
-	}
-
-	void close(bool local_force_close = false, bool remote_force_close = false)
-	{
-		boost::system::error_code ignored_ec;
-		// 远程和本地链接都将关闭.
-		if (m_local_socket.is_open())
-		{
-			if (local_force_close)
-				m_local_socket.close(ignored_ec);
-			else
-				m_local_socket.shutdown(
-					boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
-		}
-		if (m_remote_socket.is_open())
-		{
-			if (remote_force_close)
-				m_remote_socket.close(ignored_ec);
-			else
-				m_remote_socket.shutdown(
-					boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
-		}
-		m_udp_timer.cancel(ignored_ec);
-		if (m_udp_socket.is_open())
-		{
-			m_udp_socket.close(ignored_ec);
-		}
 	}
 
 private:
