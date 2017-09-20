@@ -5,7 +5,11 @@
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
+#if __linux__
+#include <unistd.h>
+#else
 #include <io.h>
+#endif
 
 #include <deque>
 #include <cstring> // for std::memcpy
