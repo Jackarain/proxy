@@ -44,12 +44,12 @@ endif()
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
 
-find_package(Boost COMPONENTS system filesystem date_time regex program_options REQUIRED)
+find_package(Boost COMPONENTS system filesystem coroutine context date_time regex program_options REQUIRED)
 link_libraries(${Boost_LIBRARIES})
 include_directories(${Boost_INCLUDE_DIRS})
 
 add_executable(socks_server
-  src/main.cpp
+  src/server.cpp
   src/v7.c
 
   src/io.hpp
@@ -57,11 +57,23 @@ add_executable(socks_server
   src/v7.h
 )
 
+add_executable(socks_client
+  src/client.cpp
+  src/v7.c
+
+  src/io.hpp
+  src/socks_client.hpp
+  src/v7.h
+)
+
 if(UNIX)
 	target_link_libraries(socks_server ${Boost_LIBRARIES} pthread)
+	target_link_libraries(socks_client ${Boost_LIBRARIES} pthread)
 else()
 	target_link_libraries(socks_server ${Boost_LIBRARIES})
+	target_link_libraries(socks_client ${Boost_LIBRARIES})
 endif()
 
 install(TARGETS socks_server RUNTIME DESTINATION bin)
+install(TARGETS socks_client RUNTIME DESTINATION bin)
 

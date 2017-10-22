@@ -184,18 +184,21 @@ protected:
 				// 循环读取客户端支持的代理方式.
 				char *p = m_local_buffer.data();
 				m_method = SOCKS5_AUTH_UNACCEPTABLE;
+				bool support_auth = false;
 				while (bytes_transferred != 0)
 				{
 					int m = read_int8(p);
 					if (m == SOCKS5_AUTH_NONE || m == SOCKS5_AUTH)
 						m_method = m;
+					if (m == SOCKS5_AUTH)
+						support_auth = true;
 					bytes_transferred--;
 				}
 
 				// do_auth.js存在则表示需要认证.
-				if (access("do_auth.js", 00) == 0 && m_method == SOCKS5_AUTH_NONE)
+				if (access("do_auth.js", 00) == 0 && !support_auth)
 				{
-					// 回复客户端, 选择的代理方式.
+					// 回复客户端, 不接受的代理方式.
 					p = m_local_buffer.data();
 					write_int8(m_version, p);
 					write_int8(SOCKS5_AUTH_UNACCEPTABLE, p);
