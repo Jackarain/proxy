@@ -565,7 +565,7 @@ namespace socks {
 				write_uint8(5, wp); // SOCKS VERSION 5.
 				write_uint8(1, wp); // CONNECT command.
 				write_uint8(0, wp); // reserved.
-				write_uint8(3, wp); // address type.
+				write_uint8(3, wp); // address type. TODO: 这里根据使用是IP还是域名区别使用1或3
 				BOOST_ASSERT(m_address.size() <= 255);
 				write_uint8(static_cast<int8_t>(m_address.size()), wp);	// domainname size.
 				std::copy(m_address.begin(), m_address.end(), wp);		// domainname.
@@ -584,11 +584,54 @@ namespace socks {
 				response.consume(response.size());
 				boost::asio::async_read(m_socket, response,
 					boost::asio::transfer_exactly(bytes_to_read), yield[ec]);
-
+				if (ec)
+				{
+					handler(ec);
+					return;
+				}
 				boost::asio::const_buffer cb = response.data();
 				const char* rp = boost::asio::buffer_cast<const char*>(cb);
 				int version = read_uint8(rp);
 				int resp = read_uint8(rp);
+				read_uint8(rp);	// skip RSV.
+				int atyp = read_uint8(rp);
+
+				if (atyp == 1) // ADDR.PORT
+				{
+					m_remote_endp.address(boost::asio::ip::address_v4(read_uint32(rp)));
+					m_remote_endp.port(read_uint16(rp));
+
+					std::cout << "* SOCKS remote host: " << m_remote_endp.address().to_string()
+						<< ":" << m_remote_endp.port() << "\n";
+				}
+				else if (atyp == 3) // DOMAIN
+				{
+					auto domain_length = read_uint8(rp);
+
+					boost::asio::async_read(m_socket, response,
+						boost::asio::transfer_exactly(domain_length - 3), yield[ec]);
+					if (ec)
+					{
+						handler(ec);
+						return;
+					}
+
+					boost::asio::const_buffer cb = response.data();
+					rp = boost::asio::buffer_cast<const char*>(cb) + 5;
+
+					std::string domain;
+					for (int i = 0; i < domain_length; i++)
+						domain.push_back(read_uint8(rp));
+					auto port = read_uint16(rp);
+
+					std::cout << "* SOCKS remote host: " << domain << ":" << port << "\n";
+				}
+				else
+				{
+					ec = errc::socks_general_failure;
+					handler(ec);
+					return;
+				}
 
 				if (version != 5)
 				{
@@ -616,48 +659,9 @@ namespace socks {
 					return;
 				}
 
-				rp++;	// skip reserved.
-
-				int atyp = read_uint8(rp);	// atyp.
-
-				if (atyp == 1)		// address / port 形式返回.
-				{
-					response.consume(response.size());
-					ec = boost::system::error_code();	// 没有发生错误, 返回.
-					handler(ec);
-					return;
-				}
-				else if (atyp == 3)	// domainname 返回.
-				{
-					int len = read_uint8(rp);	// 读取domainname长度.
-					bytes_to_read = len - 3;
-
-					// 继续读取.
-					auto readed = boost::asio::async_read(m_socket, response.prepare(static_cast<size_t>(bytes_to_read)),
-						boost::asio::transfer_exactly(static_cast<size_t>(bytes_to_read)), yield[ec]);
-					if (ec)
-					{
-						handler(ec);
-						return;
-					}
-					response.commit(readed);
-
-					// 得到domainname.
-					// std::string domain;
-					// domain.resize(len);
-					// std::copy(rp, rp + len, domain.begin());
-					response.consume(response.size());
-					ec = boost::system::error_code();
-
-					handler(ec);
-					return;
-				}
-				else
-				{
-					ec = boost::asio::error::address_family_not_supported;
-					handler(ec);
-					return;
-				}
+				ec = boost::system::error_code();	// 没有发生错误, 返回.
+				handler(ec);
+				return;
 			}
 
 			ec = boost::asio::error::address_family_not_supported;
@@ -678,6 +682,7 @@ namespace socks {
 		socks_address m_socks_address;
 		std::string m_address;
 		std::string m_port;
+		tcp::endpoint m_remote_endp;
 	};
 }
 
