@@ -50,11 +50,9 @@ include_directories(${Boost_INCLUDE_DIRS})
 
 add_executable(socks_server
   src/server.cpp
-  src/v7.c
 
   src/io.hpp
   src/socks_server.hpp
-  src/v7.h
 )
 
 add_executable(socks_client
