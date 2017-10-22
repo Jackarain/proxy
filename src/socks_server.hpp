@@ -5,7 +5,11 @@
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
+#if __linux__
+#include <unistd.h>
+#else
 #include <io.h>
+#endif
 
 #include <deque>
 #include <cstring> // for std::memcpy
@@ -184,18 +188,21 @@ protected:
 				// 循环读取客户端支持的代理方式.
 				char *p = m_local_buffer.data();
 				m_method = SOCKS5_AUTH_UNACCEPTABLE;
+				bool support_auth = false;
 				while (bytes_transferred != 0)
 				{
 					int m = read_int8(p);
 					if (m == SOCKS5_AUTH_NONE || m == SOCKS5_AUTH)
 						m_method = m;
+					if (m == SOCKS5_AUTH)
+						support_auth = true;
 					bytes_transferred--;
 				}
 
 				// do_auth.js存在则表示需要认证.
-				if (access("do_auth.js", 00) == 0 && m_method == SOCKS5_AUTH_NONE)
+				if (access("do_auth.js", 00) == 0 && !support_auth)
 				{
-					// 回复客户端, 选择的代理方式.
+					// 回复客户端, 不接受的代理方式.
 					p = m_local_buffer.data();
 					write_int8(m_version, p);
 					write_int8(SOCKS5_AUTH_UNACCEPTABLE, p);
@@ -1263,6 +1270,33 @@ protected:
 		}
 	}
 
+	void close(bool local_force_close = false, bool remote_force_close = false)
+	{
+		boost::system::error_code ignored_ec;
+		// 远程和本地链接都将关闭.
+		if (m_local_socket.is_open())
+		{
+			if (local_force_close)
+				m_local_socket.close(ignored_ec);
+			else
+				m_local_socket.shutdown(
+					boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
+		}
+		if (m_remote_socket.is_open())
+		{
+			if (remote_force_close)
+				m_remote_socket.close(ignored_ec);
+			else
+				m_remote_socket.shutdown(
+					boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
+		}
+		m_udp_timer.cancel(ignored_ec);
+		if (m_udp_socket.is_open())
+		{
+			m_udp_socket.close(ignored_ec);
+		}
+	}
+
 	static enum v7_err js_print(struct v7 *v7, v7_val_t *res)
 	{
 		auto argc = v7_argc(v7);
@@ -1326,33 +1360,6 @@ protected:
 
 		v7_destroy(v7);
 		return auth;
-	}
-
-	void close(bool local_force_close = false, bool remote_force_close = false)
-	{
-		boost::system::error_code ignored_ec;
-		// 远程和本地链接都将关闭.
-		if (m_local_socket.is_open())
-		{
-			if (local_force_close)
-				m_local_socket.close(ignored_ec);
-			else
-				m_local_socket.shutdown(
-					boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
-		}
-		if (m_remote_socket.is_open())
-		{
-			if (remote_force_close)
-				m_remote_socket.close(ignored_ec);
-			else
-				m_remote_socket.shutdown(
-					boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
-		}
-		m_udp_timer.cancel(ignored_ec);
-		if (m_udp_socket.is_open())
-		{
-			m_udp_socket.close(ignored_ec);
-		}
 	}
 
 private:
