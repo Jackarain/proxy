@@ -31,7 +31,7 @@ public:
 
 		server_ = server;
 
-		bool ret = parse_url(socks_server, socks_);
+		bool ret = socks::parse_url(socks_server, socks_);
 		if (!ret)
 			return;
 
