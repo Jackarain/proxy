@@ -31289,7 +31289,6 @@ static enum v7_err s_substr(struct v7 *v7, val_t s, long start, long len,
     if (start < 0) start = 0;
 
     if (start > (long) n) start = n;
-    if (len < 0) len = 0;
     if (len > (long) n - start) len = n - start;
     p = utfnshift(p, start);
   } else {
@@ -32177,9 +32176,6 @@ V7_PRIVATE enum v7_err Date_ctor(struct v7 *v7, v7_val_t *res) {
           goto clean;
         }
         ret_time = v7_get_double(v7, arg);
-        if (rcode != V7_OK) {
-          goto clean;
-        }
       }
     } else {
       /* 2+ paramaters - should be parts of a date */
