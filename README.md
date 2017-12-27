@@ -9,7 +9,7 @@
 在服务器上编译运行命令
 
 ```
-socks_server.exe 4567
+socks_server.exe --address 0.0.0.0 --port 4567
 ```
 
 在客户浏览器上设置socks代理, 主机为服务器IP, 端口为4567.
