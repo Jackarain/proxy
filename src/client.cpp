@@ -24,6 +24,7 @@ public:
 		request_stream << "GET " << path << " HTTP/1.0\r\n";
 		request_stream << "Host: " << server << "\r\n";
 		request_stream << "Accept: */*\r\n";
+		request_stream << "User-Agent: curl/7.60.0\r\n";
 		request_stream << "Connection: close\r\n\r\n";
 
 		// Start an asynchronous resolve to translate the server and service names
@@ -201,12 +202,16 @@ int main(int argc, char **argv)
 {
 	try {
 		std::string socks_server;
+		std::string http_server;
+		std::string http_path;
 
 		po::options_description desc("Options");
 		desc.add_options()
 			("help,h", "Help message.")
 			("version", "Current version.")
 			("socks", po::value<std::string>(&socks_server)->default_value("socks5://127.0.0.1:1080"), "Socks server.")
+			("target", po::value<std::string>(&http_server)->default_value("www.boost.org"), "HTTP server.")
+			("path", po::value<std::string>(&http_path)->default_value("/LICENSE_1_0.txt"), "HTTP path.")
 			;
 
 		// 解析命令行.
@@ -222,7 +227,7 @@ int main(int argc, char **argv)
 		}
 
 		boost::asio::io_service io_service;
-		client c(io_service, "www.boost.org", "/LICENSE_1_0.txt", socks_server);
+		client c(io_service, http_server, http_path, socks_server);
 		io_service.run();
 	}
 	catch (std::exception& e)
