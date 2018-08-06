@@ -693,6 +693,7 @@ protected:
 									return;
 								}
 
+								std::cout << endp << " update udp client: " << endp.address() << std::endl;
 								m_client_endpoint.address(endp.address());
 							}
 
@@ -1148,8 +1149,13 @@ protected:
 			char *p = buf.data();
 
 			// 这里进行数据转发, 如果是client发过来的数据, 则解析协议包装.
-			if (recv_buf.endp == m_client_endpoint)
+			if (recv_buf.endp.address() == m_client_endpoint.address())
 			{
+				if (recv_buf.endp.port() != m_client_endpoint.port())
+				{
+					m_client_endpoint.port(recv_buf.endp.port());
+				}
+
 				// 解析协议.
 				//  +----+------+------+----------+----------+----------+
 				//  |RSV | FRAG | ATYP | DST.ADDR | DST.PORT  |   DATA   |
@@ -1265,8 +1271,8 @@ protected:
 		if (error)
 			return;
 
-		// 超时关闭.
-		if (boost::posix_time::second_clock::local_time() - m_meter >= boost::posix_time::minutes(1))
+		// 120分钟无udp数据传输, 则超时关闭.
+		if (boost::posix_time::second_clock::local_time() - m_meter >= boost::posix_time::minutes(120))
 		{
 			close();
 			return;
