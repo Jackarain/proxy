@@ -392,8 +392,9 @@ namespace socks {
 		};
 
 	public:
-		explicit socks_client(tcp::socket& socket)
+		explicit socks_client(tcp::socket& socket, bool proxy_hostname = true)
 			: m_socket(socket)
+			, m_proxy_hostname(true)
 		{}
 
 		template <typename Handler>
@@ -558,19 +559,43 @@ namespace socks {
 			{
 				request.consume(request.size());
 				std::size_t bytes_to_write = 7 + m_address.size();
-				boost::asio::mutable_buffer mb = request.prepare(bytes_to_write);
+				boost::asio::mutable_buffer mb = request.prepare(std::max<std::size_t>(bytes_to_write, 22));
 				char* wp = boost::asio::buffer_cast<char*>(mb);
 
 				// 发送socks5连接命令.
 				write_uint8(5, wp); // SOCKS VERSION 5.
 				write_uint8(1, wp); // CONNECT command.
 				write_uint8(0, wp); // reserved.
-				write_uint8(3, wp); // address type. TODO: 这里根据使用是IP还是域名区别使用1或3
-				BOOST_ASSERT(m_address.size() <= 255);
-				write_uint8(static_cast<int8_t>(m_address.size()), wp);	// domainname size.
-				std::copy(m_address.begin(), m_address.end(), wp);		// domainname.
-				wp += m_address.size();
-				write_uint16(atoi(m_port.c_str()), wp);					// port.
+
+				if (m_proxy_hostname)
+				{
+					write_uint8(3, wp); // atyp, domain name.
+					BOOST_ASSERT(m_address.size() <= 255);
+					write_uint8(static_cast<int8_t>(m_address.size()), wp);	// domainname size.
+					std::copy(m_address.begin(), m_address.end(), wp);		// domainname.
+					wp += m_address.size();
+					write_uint16(atoi(m_port.c_str()), wp);					// port.
+				}
+				else
+				{
+					auto endp = boost::asio::ip::address::from_string(m_address);
+					if (endp.is_v4())
+					{
+						write_uint8(1, wp); // ipv4.
+						write_uint32(endp.to_v4().to_ulong(), wp);
+						write_uint16(atoi(m_port.c_str()), wp);
+						bytes_to_write = 10;
+					}
+					else
+					{
+						write_uint8(4, wp); // ipv6.
+						auto bytes = endp.to_v6().to_bytes();
+						std::copy(bytes.begin(), bytes.end(), wp);
+						wp += 16;
+						write_uint16(atoi(m_port.c_str()), wp);
+						bytes_to_write = 22;
+					}
+				}
 
 				request.commit(bytes_to_write);
 				boost::asio::async_write(m_socket, request, boost::asio::transfer_exactly(bytes_to_write), yield[ec]);
@@ -679,6 +704,7 @@ namespace socks {
 
 	private:
 		tcp::socket& m_socket;
+		bool m_proxy_hostname;
 		socks_address m_socks_address;
 		std::string m_address;
 		std::string m_port;
