@@ -297,19 +297,25 @@ protected:
 
 	void socks_handle_negotiation_1(const boost::system::error_code& error, std::size_t bytes_transferred)
 	{
+		if (error)
+		{
+			std::cout << "socks_handle_negotiation_1, error: " << error.message() << std::endl;
+			return;
+		}
+
 		if (!error)
 		{
 			char *p = m_local_buffer.data();
 			int auth_version = read_int8(p);
 			if (auth_version != 1)
 			{
-				std::cout << "unsupport socks5 protocol\n";
+				std::cout << "socks_handle_negotiation_1, unsupport socks5 protocol\n";
 				return;
 			}
-			int name_length = read_int8(p);
+			int name_length = read_uint8(p);
 			if (name_length <= 0 || name_length > 255)
 			{
-				std::cout << "error unknow protocol.\n";
+				std::cout << "socks_handle_negotiation_1, error unknow protocol.\n";
 				return;
 			}
 			name_length += 1;
@@ -331,6 +337,12 @@ protected:
 
 	void socks_handle_negotiation_2(const boost::system::error_code& error, std::size_t bytes_transferred)
 	{
+		if (error)
+		{
+			std::cout << "socks_handle_negotiation_2, error: " << error.message() << std::endl;
+			return;
+		}
+
 		if (!error)
 		{
 			if (m_version == SOCKS_VERSION_5)
@@ -338,10 +350,10 @@ protected:
 				char *p = m_local_buffer.data();
 				for (int i = 0; i < bytes_transferred - 1; i++)
 					m_uname.push_back(read_int8(p));
-				int passwd_len = read_int8(p);
+				int passwd_len = read_uint8(p);
 				if (passwd_len <= 0 || passwd_len > 255)
 				{
-					std::cout << "error unknow protocol.\n";
+					std::cout << "socks_handle_negotiation_2, error unknow protocol.\n";
 					return;
 				}
 				//  +----+------+----------+------+----------+
@@ -434,6 +446,12 @@ protected:
 
 	void socks_handle_negotiation_3(const boost::system::error_code& error, std::size_t bytes_transferred)
 	{
+		if (error)
+		{
+			std::cout << "socks_handle_negotiation_3, error: " << error.message() << std::endl;
+			return;
+		}
+
 		if (!error)
 		{
 			char *p = m_local_buffer.data();
@@ -476,12 +494,18 @@ protected:
 
 	void socks_handle_requests_1(const boost::system::error_code& error, std::size_t bytes_transferred)
 	{
+		if (error)
+		{
+			std::cout << "socks_handle_requests_1, error: " << error.message() << std::endl;
+			return;
+		}
+
 		if (!error)
 		{
 			char *p = m_local_buffer.data();
 			if (read_int8(p) != SOCKS_VERSION_5)
 			{
-				std::cout << "error unknow protocol.\n";
+				std::cout << "socks_handle_requests_1, error unknow protocol.\n";
 				return;
 			}
 
@@ -502,14 +526,14 @@ protected:
 			m_local_buffer[0] = m_local_buffer[4];
 
 			if (m_atyp == SOCKS5_ATYP_IPV4)
-				length = 5;
+				length = 5; // 6 - 1
 			else if (m_atyp == SOCKS5_ATYP_DOMAINNAME)
 			{
-				length = read_int8(p) + 2;
+				length = read_uint8(p) + 2;
 				prefix = 0;
 			}
 			else if (m_atyp == SOCKS5_ATYP_IPV6)
-				length = 17;
+				length = 17; // 18 - 1
 
 			boost::asio::async_read(m_local_socket, boost::asio::buffer(m_local_buffer.begin() + prefix, length),
 				boost::asio::transfer_exactly(length),
@@ -523,6 +547,12 @@ protected:
 
 	void socks_handle_requests_2(const boost::system::error_code& error, std::size_t bytes_transferred)
 	{
+		if (error)
+		{
+			std::cout << "socks_handle_requests_2, error: " << error.message() << std::endl;
+			return;
+		}
+
 		if (!error)
 		{
 			if (m_version == SOCKS_VERSION_5)
@@ -558,10 +588,11 @@ protected:
 				{
 					if (m_atyp == SOCKS5_ATYP_IPV4 || m_atyp == SOCKS5_ATYP_IPV6)
 					{
-						m_resolver.async_resolve(m_address,
-							boost::bind(&socks_session::socks_handle_resolve,
+						tcp::resolver::iterator endpoint_iterator;
+						m_remote_socket.async_connect(m_address,
+							boost::bind(&socks_session::socks_handle_connect_3,
 								shared_from_this(), boost::asio::placeholders::error,
-								boost::asio::placeholders::iterator
+								endpoint_iterator
 							)
 						);
 						return;
@@ -927,6 +958,12 @@ protected:
 	void socks_handle_resolve(const boost::system::error_code &error,
 		tcp::resolver::iterator endpoint_iterator)
 	{
+		if (error)
+		{
+			std::cout << "socks_handle_resolve, error: " << error.message() << std::endl;
+			return;
+		}
+
 		if (!error)
 		{
 			boost::asio::async_connect(m_remote_socket,	endpoint_iterator,
@@ -1003,6 +1040,7 @@ protected:
 		}
 		else
 		{
+			std::cout << "socks_handle_succeed, error: " << error.message() << std::endl;
 			close();
 		}
 	}
