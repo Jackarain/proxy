@@ -563,12 +563,14 @@ protected:
 				{
 					m_address.address(boost::asio::ip::address_v4(read_uint32(p)));
 					m_address.port(read_uint16(p));
+					std::cout << m_local_socket.remote_endpoint() << " use ipv4: " << m_address << std::endl;
 				}
 				else if (m_atyp == SOCKS5_ATYP_DOMAINNAME)
 				{
 					for (int i = 0; i < bytes_transferred - 2; i++)
 						m_domain.push_back(read_int8(p));
 					m_port = read_uint16(p);
+					std::cout << m_local_socket.remote_endpoint() << " use domain: " << m_domain << ":" << m_port << std::endl;
 				}
 				else if (m_atyp == SOCKS5_ATYP_IPV6)
 				{
@@ -581,6 +583,7 @@ protected:
 
 					m_address.address(boost::asio::ip::address_v6(addr));
 					m_address.port(read_uint16(p));
+					std::cout << m_local_socket.remote_endpoint() << " use ipv6: " << m_address << std::endl;
 				}
 
 				// 发起连接.
