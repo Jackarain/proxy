@@ -11,6 +11,7 @@
 #include <io.h>
 #endif
 
+#include <atomic>
 #include <deque>
 #include <cstring> // for std::memcpy
 
@@ -32,6 +33,7 @@ namespace socks {
 
 using boost::asio::ip::tcp;
 using boost::asio::ip::udp;
+
 
 class socks_session
 	: public boost::enable_shared_from_this<socks_session>
@@ -654,7 +656,7 @@ protected:
 							}
 
 							// 绑定udp端口.
-							m_udp_socket.bind(udp::endpoint(m_client_endpoint.protocol(), 0),ec);
+							m_udp_socket.bind(udp::endpoint(m_client_endpoint.protocol(), 0), ec);
 							if (ec)
 							{
 																// 打开udp socket失败.
@@ -686,15 +688,18 @@ protected:
 							if (m_address.address() == boost::asio::ip::address::from_string("0.0.0.0"))
 							{
 								boost::system::error_code err;
-								tcp::endpoint endp = m_local_socket.remote_endpoint(err);
+								m_client_endpoint = m_udp_socket.local_endpoint(err);
 								if (err)
 								{
 									close();
 									return;
 								}
 
-								std::cout << endp << " update udp client: " << endp.address() << std::endl;
-								m_client_endpoint.address(endp.address());
+								auto remote = m_local_socket.remote_endpoint(err);
+								m_client_endpoint.address(remote.address());
+
+								std::cout << m_local_socket.remote_endpoint(ec)
+									<< " update udp client: " << m_client_endpoint << std::endl;
 							}
 
 							// 打开成功, 返回当前服务器端吕等信息给客户端.
@@ -715,7 +720,7 @@ protected:
 							for (int i = 0; i < 4; i++)
 								write_int8(0, p);
 							// UDP侦听的端口(BND.PORT).
-							write_uint16(m_udp_socket.local_endpoint().port(), p);
+							write_uint16(m_client_endpoint.port(), p);
 							// 发送.
 							boost::asio::async_write(m_local_socket, boost::asio::buffer(m_local_buffer, 10),
 								boost::asio::transfer_exactly(10),
@@ -1148,12 +1153,18 @@ protected:
 
 			char *p = buf.data();
 
+			boost::system::error_code ignore_ec;
+			std::cout << m_local_socket.remote_endpoint(ignore_ec)
+				<< " receive udp from: " << recv_buf.endp << " size: " << bytes_transferred << std::endl;
+
 			// 这里进行数据转发, 如果是client发过来的数据, 则解析协议包装.
 			if (recv_buf.endp.address() == m_client_endpoint.address())
 			{
 				if (recv_buf.endp.port() != m_client_endpoint.port())
 				{
 					m_client_endpoint.port(recv_buf.endp.port());
+					std::cout << m_local_socket.remote_endpoint(ignore_ec)
+						<< " update udp client: " << m_client_endpoint << std::endl;
 				}
 
 				// 解析协议.
@@ -1163,7 +1174,7 @@ protected:
 				//  | 2  |  1   |  1   | Variable |    2      | Variable |
 				//  +----+------+------+----------+----------+----------+
 				udp::endpoint endp;
-
+				bool fail = true;
 				do {
 					// 字节支持小于24.
 					if (bytes_transferred < 24)
@@ -1193,9 +1204,21 @@ protected:
 					// 这时的指针p是指向数据了(2 + 1 + 1 + 4 + 2 = 10).
 					std::string response(p, bytes_transferred - 10);
 
+					fail = false;
+
 					// 转发到指定的endpoint.
 					do_write(response, endp);
+
+					std::cout << m_local_socket.remote_endpoint(ignore_ec)
+						<< " send udp packet to: " << endp << " size: " << response.size() << std::endl;
+
 				} while (false);
+
+				if (fail)
+				{
+					std::cout << m_local_socket.remote_endpoint(ignore_ec)
+						<< " parse udp socks packet error: " << m_client_endpoint << std::endl;
+				}
 
 				// 继续读取下一组udp数据.
 				m_udp_socket.async_receive_from(boost::asio::buffer(buf), recv_buf.endp,
@@ -1220,6 +1243,9 @@ protected:
 			write_uint32(recv_buf.endp.address().to_v4().to_ulong(), wp);	// ADDR.
 			write_uint16(recv_buf.endp.port(), wp);	// PORT.
 			std::memcpy(wp, p, bytes_transferred);	// DATA.
+
+			std::cout << m_local_socket.remote_endpoint(ignore_ec)
+				<< " send udp packet to: " << m_client_endpoint << " size: " << response.size() << std::endl;
 
 			// 转发数据.
 			do_write(response, m_client_endpoint);
