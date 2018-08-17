@@ -45,6 +45,12 @@ set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
 
 find_package(Boost COMPONENTS thread system filesystem coroutine context date_time regex program_options REQUIRED)
+message(STATUS "Find boost version: ${Boost_VERSION}")
+if (NOT Boost_VERSION VERSION_LESS 106700)
+	message(STATUS "Use boost coroutines v2")
+	add_definitions(-DBOOST_COROUTINES_V2)
+endif()
+
 link_libraries(${Boost_LIBRARIES})
 include_directories(${Boost_INCLUDE_DIRS})
 

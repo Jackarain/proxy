@@ -81,8 +81,8 @@ class socks_session
 	};
 
 public:
-	explicit socks_session(boost::asio::io_service &io)
-		: m_io_service(io)
+	explicit socks_session(boost::asio::io_context &io)
+		: m_io_context(io)
 		, m_local_socket(io)
 		, m_remote_socket(io)
 		, m_udp_socket(io)
@@ -1436,7 +1436,7 @@ protected:
 	}
 
 private:
-	boost::asio::io_service &m_io_service;
+	boost::asio::io_context &m_io_context;
 	tcp::socket m_local_socket;
 	boost::array<char, 2048> m_local_buffer;
 	tcp::socket m_remote_socket;
@@ -1476,13 +1476,13 @@ private:
 class socks_server : public boost::noncopyable
 {
 public:
-	socks_server(boost::asio::io_service &io, unsigned short port, std::string address = "127.0.0.1")
-		: m_io_service(io)
+	socks_server(boost::asio::io_context &io, unsigned short port, std::string address = "127.0.0.1")
+		: m_io_context(io)
 		, m_acceptor(io, tcp::endpoint(boost::asio::ip::address::from_string(address), port))
 	{
 		for (int i = 0; i < 32; i++)
 		{
-			boost::shared_ptr<socks_session> new_session(new socks_session(m_io_service));
+			boost::shared_ptr<socks_session> new_session(new socks_session(m_io_context));
 			m_acceptor.async_accept(new_session->socket(),
 				boost::bind(&socks_server::handle_accept, this, new_session,
 				boost::asio::placeholders::error));
@@ -1496,14 +1496,14 @@ public:
 		const boost::system::error_code& error)
 	{
 		new_session->start();
-		new_session.reset(new socks_session(m_io_service));
+		new_session.reset(new socks_session(m_io_context));
 		m_acceptor.async_accept(new_session->socket(),
 			boost::bind(&socks_server::handle_accept, this, new_session,
 			boost::asio::placeholders::error));
 	}
 
 private:
-	boost::asio::io_service &m_io_service;
+	boost::asio::io_context& m_io_context;
 	tcp::acceptor m_acceptor;
 };
 
