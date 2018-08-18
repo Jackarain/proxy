@@ -100,6 +100,20 @@ class socks_session
 		MAX_SEND_BUFFER_SIZE = 768	// 最大udp发送缓冲大小.
 	};
 
+	struct recv_buffer
+	{
+		udp::endpoint endp;
+		boost::array<char, 2048> buffer;
+	};
+
+	struct send_buffer
+	{
+		udp::endpoint endp;
+		std::string buffer;
+	};
+
+	using udp_socket_ptr = boost::local_shared_ptr<udp::socket>;
+
 public:
 	explicit socks_session(boost::asio::io_context &io)
 		: m_io_context(io)
@@ -1042,6 +1056,15 @@ protected:
 					);
 				}
 
+				// 扩展udp通过tcp来传输数据, 投递一个数据接收.
+				m_streambuf.consume(m_streambuf.size());
+				m_local_socket.async_read_some(m_streambuf.prepare(2048),
+					boost::bind(&socks_session::socks_handle_udp_ext_read, shared_from_this(),
+						boost::asio::placeholders::error,
+						boost::asio::placeholders::bytes_transferred
+					)
+				);
+
 				// 启动定时器.
 				m_udp_timer.expires_from_now(boost::posix_time::seconds(1));
 				m_udp_timer.async_wait(
@@ -1160,6 +1183,127 @@ protected:
 		}
 	}
 
+	void socks_handle_udp_ext_read(const boost::system::error_code &error, std::size_t bytes_transferred)
+	{
+		if (error)
+		{
+			close();
+		}
+
+		m_streambuf.commit(bytes_transferred);
+		bytes_transferred = m_streambuf.size();
+
+		// 更新计时.
+		m_meter = boost::posix_time::second_clock::local_time();
+
+		// 扩展协议.
+		//  +------+----------+------------+------+----------+----------+------+----------+
+		//  | ATYP | LOCAL.IP | LOCAL.PORT | ATYP | DST.ADDR | DST.PORT |  LEN |   DATA   |
+		//  +------+----------+------------+------+----------+----------+------+----------+
+		//  |   1  | Variable |     2      |  1   | Variable |    2     |  2   | Variable |
+		//  +------+----------+------------+------+----------+----------+------+----------+
+		bool fail = false;
+		do {
+			// 字节支持小于24.
+			if (bytes_transferred < 16)
+				break;
+
+			fail = true;
+			auto p = boost::asio::buffer_cast<const char*>(m_streambuf.data());
+
+			// 扩展协议.
+			if (read_int8(p) != 1)
+				break;
+
+			uint32_t local_ip = read_uint32(p);
+			uint16_t local_port = read_uint16(p);
+			auto local_endpint = udp::endpoint(boost::asio::ip::address_v4(local_ip), local_port);
+
+			// 远程主机IP类型.
+			boost::int8_t atyp = read_int8(p);
+			if (atyp != 0x01)
+				break;
+
+			// 目标主机IP.
+			boost::uint32_t ip = read_uint32(p);
+			if (ip == 0)
+				break;
+
+			udp::endpoint endp;
+			endp.address(boost::asio::ip::address_v4(ip));
+
+			// 读取端口号.
+			boost::uint16_t port = read_uint16(p);
+			if (port == 0)
+				break;
+			endp.port(port);
+
+			fail = false;
+
+			// 数据长度.
+			uint16_t len = read_uint16(p);
+			if (bytes_transferred - 16 < len)
+				break;
+
+			auto response = std::string(p, len);
+			m_streambuf.consume(len + 16);
+			bytes_transferred -= (len + 16);
+
+			// 使用本地的新udp socket发送这个udp数据, 如果没有则创建.
+			forward_udp(local_endpint, endp, response, 0);
+
+			boost::system::error_code ignore_ec;
+			std::cout << m_local_socket.remote_endpoint(ignore_ec)
+				<< " send udp packet to: " << endp << " size: " << response.size() << std::endl;
+		} while (true);
+
+		if (fail)
+		{
+			close();
+			return;
+		}
+
+		// 扩展udp通过tcp来传输数据, 投递一个数据接收.
+		m_local_socket.async_read_some(m_streambuf.prepare(2048),
+			boost::bind(&socks_session::socks_handle_udp_ext_read, shared_from_this(),
+				boost::asio::placeholders::error,
+				boost::asio::placeholders::bytes_transferred
+			)
+		);
+	}
+
+	// 发回目标服务器.
+	void socks_udp_ext_write(const std::string& response)
+	{
+		auto writing = !m_ext_send_buffers.empty();
+		m_ext_send_buffers.push_back(response);
+		if (!writing)
+		{
+			boost::asio::async_write(m_local_socket, boost::asio::buffer(m_ext_send_buffers.front()),
+				boost::bind(&socks_session::socks_handle_udp_ext_write, shared_from_this(),
+					boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+		}
+	}
+
+	void socks_handle_udp_ext_write(const boost::system::error_code &error, std::size_t bytes_transferred)
+	{
+		if (error)
+		{
+			close();
+			return;
+		}
+
+		m_ext_send_buffers.pop_front();
+
+		// 没有数据了, 退出发送.
+		if (m_ext_send_buffers.empty())
+			return;
+
+		boost::asio::async_write(m_local_socket, boost::asio::buffer(m_ext_send_buffers.front()),
+			boost::bind(&socks_session::socks_handle_udp_ext_write, shared_from_this(),
+				boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+	}
+
 	void socks_handle_udp_read(int buf_index, const boost::system::error_code &error, std::size_t bytes_transferred)
 	{
 		if (!error)
@@ -1188,12 +1332,11 @@ protected:
 				}
 
 				// 解析协议.
-				//  +----+------+------+----------+----------+----------+
+				//  +----+------+------+----------+-----------+----------+
 				//  |RSV | FRAG | ATYP | DST.ADDR | DST.PORT  |   DATA   |
-				//  +----+------+------+----------+----------+----------+
+				//  +----+------+------+----------+-----------+----------+
 				//  | 2  |  1   |  1   | Variable |    2      | Variable |
-				//  +----+------+------+----------+----------+----------+
-				udp::endpoint endp;
+				//  +----+------+------+----------+-----------+----------+
 				bool fail = true;
 				do {
 					// 字节支持小于24.
@@ -1209,13 +1352,25 @@ protected:
 					if (rsv != 0 || frag != 0)
 					{
 						extension = true;
+						// 协议扩展
+						//  +------+----------+------------+------+----------+-----------+----------+
+						//  | ATYP | LOCAL.IP | LOCAL.PORT | ATYP | DST.ADDR | DST.PORT  |   DATA   |
+						//  +------+----------+------------+------+----------+-----------+----------+
+						//  |   1  | Variable |     2      |  1   | Variable |    2      | Variable |
+						//  +------+----------+------------+------+----------+-----------+----------+
+						uint8_t atyp = read_int8(p);
+						// o  ATYP   address type of following address
+						// o  IP V4 address: X'01'
+						// o  DOMAINNAME: X'03'
+						// o  IP V6 address: X'04'
+						if (atyp != 0x01)
+							break; // 不支持.
 
 						uint32_t local_ip = read_uint32(extension_ptr);
 						uint16_t local_port = read_uint16(extension_ptr);
 						local_endpint = udp::endpoint(boost::asio::ip::address_v4(local_ip), local_port);
 
-						read_int8(p); // skip
-						read_uint16(p); // skip
+						read_int32(p); // skip 4 bytes
 					}
 
 					// 远程主机IP类型.
@@ -1227,6 +1382,8 @@ protected:
 					boost::uint32_t ip = read_uint32(p);
 					if (ip == 0)
 						break;
+
+					udp::endpoint endp;
 					endp.address(boost::asio::ip::address_v4(ip));
 
 					// 读取端口号.
@@ -1237,7 +1394,7 @@ protected:
 
 					// 这时的指针p是指向数据了(2 + 1 + [3] + 1 + 4 + 2 = 10).
 					int len = p - buf.data();
-					std::string response(p, bytes_transferred - len);
+					auto response = std::string(p, bytes_transferred - len);
 
 					fail = false;
 
@@ -1274,12 +1431,12 @@ protected:
 				return;
 			}
 
-			// 转发至客户端, 需要添加头协议.
+			// 原协议, 转发至客户端, 发之前添加协议头.
 			std::string response;
 			response.resize(bytes_transferred + 10);
 			char* wp = (char*)response.data();
 
-			// 添加头信息.
+			// 添加协议头.
 			write_uint16(0, wp);	// RSV.
 			write_uint8(0, wp);		// FRAG.
 			write_uint8(1, wp);		// ATYP.
@@ -1335,13 +1492,14 @@ protected:
 		}
 	}
 
-	void forward_udp(udp::endpoint local, udp::endpoint remote, std::string data)
+	void forward_udp(udp::endpoint local, udp::endpoint remote, std::string data, bool tcp_or_udp = 1)
 	{
+		boost::system::error_code ec;
+
 		auto it = m_udp_conntrack.find(local);
 		if (it == m_udp_conntrack.end())
 		{
 			auto s = boost::make_local_shared<udp::socket>(boost::ref(m_io_context));
-			boost::system::error_code ec;
 			s->open(m_client_endpoint.protocol(), ec);
 			if (ec)
 			{
@@ -1354,28 +1512,27 @@ protected:
 				std::cout << "bind udp error: " << ec.message() << std::endl;
 				return;
 			}
-			it = m_udp_conntrack.insert(local, s);
+			auto ret = m_udp_conntrack.insert(std::make_pair(local, s));
+			it = ret.first;
 
 			auto pbuf = boost::make_local_shared<recv_buffer>();
 			s->async_receive_from(boost::asio::buffer(pbuf->buffer), pbuf->endp,
 				boost::bind(&socks_session::udp_reply_handle, shared_from_this(),
-					pbuf, s, local,
+					pbuf, s, local, tcp_or_udp,
 					boost::asio::placeholders::error,
 					boost::asio::placeholders::bytes_transferred
 				)
 			);
 		}
 
-		// 发送到目标服务器.
+		// 直接发送到目标服务器, udp无拥塞控制, 使用异步和同步接口几乎无区别.
 		auto sock = it->second;
-		sock->async_send_to(remote, data, [this](boost::system::error/*ec*/) {
-			// nothing to do.
-		});
+		sock->send_to(boost::asio::buffer(data), remote, 0, ec);
 	}
 
 	void udp_reply_handle(boost::local_shared_ptr<recv_buffer> pbuf,
-		boost::local_shared_ptr<udp::socket> s, udp::endpoint local,
-		const boost::system::error_code& error, std::size_t)
+		boost::local_shared_ptr<udp::socket> s, udp::endpoint local, bool tcp_or_udp,
+		const boost::system::error_code& error, std::size_t bytes_transferred)
 	{
 		if (error)
 			return;
@@ -1386,28 +1543,36 @@ protected:
 
 		// 转发至客户端, 需要添加头协议.
 		std::string response;
-		response.resize(bytes_transferred + 13);
+		auto header_size = tcp_or_udp == 0 ? 16 : 14;
+		response.resize(bytes_transferred + header_size);
 		char* wp = (char*)response.data();
 
 		// 添加头信息.
+		write_uint8(1, wp);	// ATYP.
 		write_uint32(local.address().to_v4().to_uint(), wp);	// IP.
 		write_uint16(local.port(), wp);	// PORT.
 		write_uint8(1, wp);	// ATYP.
 		write_uint32(pbuf->endp.address().to_v4().to_uint(), wp);	// ADDR.
 		write_uint16(pbuf->endp.port(), wp);	// PORT.
-		std::memcpy(wp, p, bytes_transferred);	// DATA.
+		if (tcp_or_udp == 0)
+			write_uint16(static_cast<uint16_t>(bytes_transferred), wp);	// LEN.
+		std::memcpy(wp, pbuf->buffer.data(), bytes_transferred);	// DATA.
 
+		boost::system::error_code ignore_ec;
 		std::cout << m_local_socket.remote_endpoint(ignore_ec)
 			<< " send udp packet to: " << m_client_endpoint
 			<< " size: " << response.size() << std::endl;
 
-		// 转发数据.
-		do_write(response, m_client_endpoint);
+		// 转发数据到客户端.
+		if (tcp_or_udp == 0)
+			socks_udp_ext_write(response);
+		else
+			do_write(response, m_client_endpoint);
 
 		// 继续再接收数据.
 		s->async_receive_from(boost::asio::buffer(pbuf->buffer), pbuf->endp,
 			boost::bind(&socks_session::udp_reply_handle, shared_from_this(),
-				pbuf, s, local,
+				pbuf, s, local, tcp_or_udp,
 				boost::asio::placeholders::error,
 				boost::asio::placeholders::bytes_transferred
 			)
@@ -1568,19 +1733,10 @@ private:
 	udp::socket m_udp_socket;
 	udp::endpoint m_client_endpoint;
 	// 数据接收缓冲.
-	struct recv_buffer
-	{
-		udp::endpoint endp;
-		boost::array<char, 2048> buffer;
-	};
 	std::map<int, recv_buffer> m_recv_buffers;
 	// 用作数据包发送缓冲.
-	struct send_buffer
-	{
-		udp::endpoint endp;
-		std::string buffer;
-	};
 	std::deque<send_buffer> m_send_buffers;
+	std::deque<std::string> m_ext_send_buffers;
 	tcp::resolver m_resolver;
 	int m_version;
 	int m_method;
@@ -1594,7 +1750,6 @@ private:
 	boost::tribool m_verify_passed;
 	boost::asio::deadline_timer m_udp_timer;
 	boost::posix_time::ptime m_meter;
-	using udp_socket_ptr = boost::local_shared_ptr<udp::socket>;
 	std::unordered_map<udp::endpoint, udp_socket_ptr> m_udp_conntrack;
 };
 
