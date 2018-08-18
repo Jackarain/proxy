@@ -14,14 +14,18 @@
 #include <atomic>
 #include <deque>
 #include <cstring> // for std::memcpy
+#include <unordered_map>
 
 #include <boost/logic/tribool.hpp>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/array.hpp>
+#include <boost/functional/hash_fwd.hpp>
 #include <boost/date_time.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/smart_ptr/local_shared_ptr.hpp>
+#include <boost/smart_ptr/make_local_shared.hpp>
 
 #include "io.hpp"
 extern "C"
@@ -29,11 +33,27 @@ extern "C"
 #include "v7.h"
 }
 
-namespace socks {
-
 using boost::asio::ip::tcp;
 using boost::asio::ip::udp;
 
+namespace std
+{
+	template<> struct hash<udp::endpoint>
+	{
+		typedef udp::endpoint argument_type;
+		typedef std::size_t result_type;
+		inline result_type operator()(argument_type const& s) const
+		{
+			std::string temp = s.address().to_string();
+			std::size_t seed = 0;
+			boost::hash_combine(seed, temp);
+			boost::hash_combine(seed, s.port());
+			return seed;
+		}
+	};
+}
+
+namespace socks {
 
 class socks_session
 	: public boost::enable_shared_from_this<socks_session>
@@ -1180,9 +1200,23 @@ protected:
 					if (bytes_transferred < 24)
 						break;
 
-					// 不是协议中的数据.
-					if (read_int16(p) != 0 || read_int8(p) != 0)
-						break;
+					bool extension = false;
+					auto extension_ptr = p;
+					udp::endpoint local_endpint;
+					uint16_t rsv = read_int16(p);
+					uint8_t frag = read_int8(p);
+					// 扩展协议.
+					if (rsv != 0 || frag != 0)
+					{
+						extension = true;
+
+						uint32_t local_ip = read_uint32(extension_ptr);
+						uint16_t local_port = read_uint16(extension_ptr);
+						local_endpint = udp::endpoint(boost::asio::ip::address_v4(local_ip), local_port);
+
+						read_int8(p); // skip
+						read_uint16(p); // skip
+					}
 
 					// 远程主机IP类型.
 					boost::int8_t atyp = read_int8(p);
@@ -1201,13 +1235,22 @@ protected:
 						break;
 					endp.port(port);
 
-					// 这时的指针p是指向数据了(2 + 1 + 1 + 4 + 2 = 10).
-					std::string response(p, bytes_transferred - 10);
+					// 这时的指针p是指向数据了(2 + 1 + [3] + 1 + 4 + 2 = 10).
+					int len = p - buf.data();
+					std::string response(p, bytes_transferred - len);
 
 					fail = false;
 
-					// 转发到指定的endpoint.
-					do_write(response, endp);
+					if (!extension)
+					{
+						// 转发到指定的endpoint.
+						do_write(response, endp);
+					}
+					else
+					{
+						// 使用本地的新udp socket发送这个udp数据, 如果没有则创建.
+						forward_udp(local_endpint, endp, response);
+					}
 
 					std::cout << m_local_socket.remote_endpoint(ignore_ec)
 						<< " send udp packet to: " << endp << " size: " << response.size() << std::endl;
@@ -1245,7 +1288,8 @@ protected:
 			std::memcpy(wp, p, bytes_transferred);	// DATA.
 
 			std::cout << m_local_socket.remote_endpoint(ignore_ec)
-				<< " send udp packet to: " << m_client_endpoint << " size: " << response.size() << std::endl;
+				<< " send udp packet to: " << m_client_endpoint
+				<< " size: " << response.size() << std::endl;
 
 			// 转发数据.
 			do_write(response, m_client_endpoint);
@@ -1289,6 +1333,85 @@ protected:
 				)
 			);
 		}
+	}
+
+	void forward_udp(udp::endpoint local, udp::endpoint remote, std::string data)
+	{
+		auto it = m_udp_conntrack.find(local);
+		if (it == m_udp_conntrack.end())
+		{
+			auto s = boost::make_local_shared<udp::socket>(boost::ref(m_io_context));
+			boost::system::error_code ec;
+			s->open(m_client_endpoint.protocol(), ec);
+			if (ec)
+			{
+				std::cout << "open udp error: " << ec.message() << std::endl;
+				return;
+			}
+			s->bind(udp::endpoint(m_client_endpoint.protocol(), 0), ec);
+			if (ec)
+			{
+				std::cout << "bind udp error: " << ec.message() << std::endl;
+				return;
+			}
+			it = m_udp_conntrack.insert(local, s);
+
+			auto pbuf = boost::make_local_shared<recv_buffer>();
+			s->async_receive_from(boost::asio::buffer(pbuf->buffer), pbuf->endp,
+				boost::bind(&socks_session::udp_reply_handle, shared_from_this(),
+					pbuf, s, local,
+					boost::asio::placeholders::error,
+					boost::asio::placeholders::bytes_transferred
+				)
+			);
+		}
+
+		// 发送到目标服务器.
+		auto sock = it->second;
+		sock->async_send_to(remote, data, [this](boost::system::error/*ec*/) {
+			// nothing to do.
+		});
+	}
+
+	void udp_reply_handle(boost::local_shared_ptr<recv_buffer> pbuf,
+		boost::local_shared_ptr<udp::socket> s, udp::endpoint local,
+		const boost::system::error_code& error, std::size_t)
+	{
+		if (error)
+			return;
+
+		auto it = m_udp_conntrack.find(local);
+		if (it == m_udp_conntrack.end())
+			return;
+
+		// 转发至客户端, 需要添加头协议.
+		std::string response;
+		response.resize(bytes_transferred + 13);
+		char* wp = (char*)response.data();
+
+		// 添加头信息.
+		write_uint32(local.address().to_v4().to_uint(), wp);	// IP.
+		write_uint16(local.port(), wp);	// PORT.
+		write_uint8(1, wp);	// ATYP.
+		write_uint32(pbuf->endp.address().to_v4().to_uint(), wp);	// ADDR.
+		write_uint16(pbuf->endp.port(), wp);	// PORT.
+		std::memcpy(wp, p, bytes_transferred);	// DATA.
+
+		std::cout << m_local_socket.remote_endpoint(ignore_ec)
+			<< " send udp packet to: " << m_client_endpoint
+			<< " size: " << response.size() << std::endl;
+
+		// 转发数据.
+		do_write(response, m_client_endpoint);
+
+		// 继续再接收数据.
+		s->async_receive_from(boost::asio::buffer(pbuf->buffer), pbuf->endp,
+			boost::bind(&socks_session::udp_reply_handle, shared_from_this(),
+				pbuf, s, local,
+				boost::asio::placeholders::error,
+				boost::asio::placeholders::bytes_transferred
+			)
+		);
 	}
 
 	void socks_udp_timer_handle(const boost::system::error_code& error)
@@ -1471,6 +1594,8 @@ private:
 	boost::tribool m_verify_passed;
 	boost::asio::deadline_timer m_udp_timer;
 	boost::posix_time::ptime m_meter;
+	using udp_socket_ptr = boost::local_shared_ptr<udp::socket>;
+	std::unordered_map<udp::endpoint, udp_socket_ptr> m_udp_conntrack;
 };
 
 class socks_server : public boost::noncopyable
