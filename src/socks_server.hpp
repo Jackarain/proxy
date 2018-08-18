@@ -1585,7 +1585,7 @@ protected:
 		if (error)
 			return;
 
-		// 120分钟无udp数据传输, 则超时关闭.
+		// 120分钟无udp数据传输, 则超时关闭所有.
 		if (boost::posix_time::second_clock::local_time() - m_meter >= boost::posix_time::minutes(120))
 		{
 			close();
