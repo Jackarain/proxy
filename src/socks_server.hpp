@@ -1592,6 +1592,10 @@ protected:
 			return;
 		}
 
+		if (m_print_num_udp_conntrack % 60 == 0)
+			std::cout << "num udp conntrack: " << m_udp_conntrack.size() << std::endl;
+		m_print_num_udp_conntrack++;
+
 		// 启动定时器.
 		m_udp_timer.expires_from_now(boost::posix_time::seconds(1));
 		m_udp_timer.async_wait(
@@ -1750,6 +1754,7 @@ private:
 	boost::tribool m_verify_passed;
 	boost::asio::deadline_timer m_udp_timer;
 	boost::posix_time::ptime m_meter;
+	uint32_t m_print_num_udp_conntrack;
 	std::unordered_map<udp::endpoint, udp_socket_ptr> m_udp_conntrack;
 };
 
