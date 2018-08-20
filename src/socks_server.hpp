@@ -1271,7 +1271,8 @@ protected:
 
 		boost::system::error_code ignore_ec;
 		std::cout << m_local_socket.remote_endpoint(ignore_ec)
-			<< " forward udp packet over tcp: " << len << std::endl;
+			<< " forward udp packet over tcp, local: " << local_endpint
+			<< ", remote: " << remote << ", size: " << len << std::endl;
 
 		return true;
 	}
@@ -1565,6 +1566,9 @@ protected:
 		boost::system::error_code ignore_ec;
 		std::cout << m_local_socket.remote_endpoint(ignore_ec)
 			<< " udp reply: " << m_client_endpoint
+			<< (tcp_or_udp == 0 ? " tcp" : " udp")
+			<< " local: " << local
+			<< " remote: " << pbuf->endp
 			<< " size: " << response.size() << std::endl;
 
 		// 转发数据到客户端.
