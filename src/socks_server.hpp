@@ -1057,6 +1057,7 @@ protected:
 				}
 
 				// 扩展udp通过tcp来传输数据, 投递一个数据接收.
+				m_body_len = 0;
 				m_streambuf.consume(m_streambuf.size());
 				m_local_socket.async_read_some(m_streambuf.prepare(2048),
 					boost::bind(&socks_session::socks_handle_udp_ext_read, shared_from_this(),
@@ -1187,7 +1188,9 @@ protected:
 	{
 		if (error)
 		{
+			std::cout << "socks_handle_udp_ext_read: " << error.message() << std::endl;
 			close();
+			return;
 		}
 
 		m_streambuf.commit(bytes_transferred);
@@ -1205,7 +1208,7 @@ protected:
 		bool fail = false;
 		do {
 			// 字节支持小于24.
-			if (bytes_transferred < 16)
+			if (bytes_transferred - 16 < m_body_len)
 				break;
 
 			fail = true;
@@ -1242,9 +1245,12 @@ protected:
 
 			// 数据长度.
 			uint16_t len = read_uint16(p);
-			if (bytes_transferred - 16 < len)
+			m_body_len = len;
+
+			if (bytes_transferred - 16 < m_body_len)
 				break;
 
+			m_body_len = 0;
 			auto response = std::string(p, len);
 			m_streambuf.consume(len + 16);
 			bytes_transferred -= (len + 16);
@@ -1254,7 +1260,7 @@ protected:
 
 			boost::system::error_code ignore_ec;
 			std::cout << m_local_socket.remote_endpoint(ignore_ec)
-				<< " send udp packet to: " << endp << " size: " << response.size() << std::endl;
+				<< " forward udp packet over tcp to: " << endp << " size: " << response.size() << std::endl;
 		} while (true);
 
 		if (fail)
@@ -1754,6 +1760,7 @@ private:
 	boost::tribool m_verify_passed;
 	boost::asio::deadline_timer m_udp_timer;
 	boost::posix_time::ptime m_meter;
+	int m_body_len;
 	uint32_t m_print_num_udp_conntrack;
 	std::unordered_map<udp::endpoint, udp_socket_ptr> m_udp_conntrack;
 };
