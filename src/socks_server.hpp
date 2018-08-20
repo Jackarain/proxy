@@ -1564,7 +1564,7 @@ protected:
 
 		boost::system::error_code ignore_ec;
 		std::cout << m_local_socket.remote_endpoint(ignore_ec)
-			<< " send udp packet to: " << m_client_endpoint
+			<< " udp reply: " << m_client_endpoint
 			<< " size: " << response.size() << std::endl;
 
 		// 转发数据到客户端.
