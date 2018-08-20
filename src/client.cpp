@@ -14,8 +14,9 @@ class client
 public:
 	client(boost::asio::io_service& io_service,
 		const std::string& server, const std::string& path, const std::string& socks_server)
-		: resolver_(io_service),
-		socket_(io_service)
+		: resolver_(io_service)
+		, socket_(io_service)
+		, server_(server)
 	{
 		// Form the request. We specify the "Connection: close" header so that the
 		// server will close the socket after transmitting the response. This will
@@ -29,26 +30,6 @@ public:
 
 		// Start an asynchronous resolve to translate the server and service names
 		// into a list of endpoints.
-
-		server_ = server;
-
-		{
-			socks::url_parser parser;
-			auto ret =  parser.parse(socks_server);
-			if (!ret)
-			{
-				return;
-			}
-
-			std::cout << parser.scheme_ << std::endl;
-			std::cout << parser.username_ << std::endl;
-			std::cout << parser.password_ << std::endl;
-			std::cout << parser.host_ << std::endl;
-			std::cout << parser.port_ << std::endl;
-			std::cout << parser.path_ << std::endl;
-			std::cout << parser.query_ << std::endl;
-			std::cout << parser.fragment_ << std::endl;
-		}
 		bool ret = socks::parse_url(socks_server, socks_);
 		if (!ret)
 			return;
