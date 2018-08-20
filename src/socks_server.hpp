@@ -1059,7 +1059,8 @@ protected:
 				// 扩展udp通过tcp来传输数据, 投递一个数据接收.
 				m_body_len = 0;
 				m_streambuf.consume(m_streambuf.size());
-				m_local_socket.async_read_some(m_streambuf.prepare(2048),
+				boost::asio::async_read(m_local_socket,
+					m_streambuf.prepare(2048), boost::asio::transfer_at_least(16),
 					boost::bind(&socks_session::socks_handle_udp_ext_read, shared_from_this(),
 						boost::asio::placeholders::error,
 						boost::asio::placeholders::bytes_transferred
@@ -1194,77 +1195,14 @@ protected:
 		}
 
 		m_streambuf.commit(bytes_transferred);
-		bytes_transferred = m_streambuf.size();
 
 		// 更新计时.
 		m_meter = boost::posix_time::second_clock::local_time();
 
-		// 扩展协议.
-		//  +------+----------+------------+------+----------+----------+------+----------+
-		//  | ATYP | LOCAL.IP | LOCAL.PORT | ATYP | DST.ADDR | DST.PORT |  LEN |   DATA   |
-		//  +------+----------+------------+------+----------+----------+------+----------+
-		//  |   1  | Variable |     2      |  1   | Variable |    2     |  2   | Variable |
-		//  +------+----------+------------+------+----------+----------+------+----------+
-		bool fail = false;
-		do {
-			// 字节支持小于24.
-			if (bytes_transferred - 16 < m_body_len)
-				break;
-
-			fail = true;
-			auto p = boost::asio::buffer_cast<const char*>(m_streambuf.data());
-
-			// 扩展协议.
-			if (read_int8(p) != 1)
-				break;
-
-			uint32_t local_ip = read_uint32(p);
-			uint16_t local_port = read_uint16(p);
-			auto local_endpint = udp::endpoint(boost::asio::ip::address_v4(local_ip), local_port);
-
-			// 远程主机IP类型.
-			boost::int8_t atyp = read_int8(p);
-			if (atyp != 0x01)
-				break;
-
-			// 目标主机IP.
-			boost::uint32_t ip = read_uint32(p);
-			if (ip == 0)
-				break;
-
-			udp::endpoint endp;
-			endp.address(boost::asio::ip::address_v4(ip));
-
-			// 读取端口号.
-			boost::uint16_t port = read_uint16(p);
-			if (port == 0)
-				break;
-			endp.port(port);
-
-			fail = false;
-
-			// 数据长度.
-			uint16_t len = read_uint16(p);
-			m_body_len = len;
-
-			if (bytes_transferred - 16 < m_body_len)
-				break;
-
-			m_body_len = 0;
-			auto response = std::string(p, len);
-			m_streambuf.consume(len + 16);
-			bytes_transferred -= (len + 16);
-
-			// 使用本地的新udp socket发送这个udp数据, 如果没有则创建.
-			forward_udp(local_endpint, endp, response, 0);
-
-			boost::system::error_code ignore_ec;
-			std::cout << m_local_socket.remote_endpoint(ignore_ec)
-				<< " forward udp packet over tcp to: " << endp << " size: " << response.size() << std::endl;
-		} while (true);
-
-		if (fail)
+		// 转发数据.
+		if (!socks_forward_udp())
 		{
+			std::cout << "socks_handle_udp_ext_read: data error!" << std::endl;
 			close();
 			return;
 		}
@@ -1276,6 +1214,66 @@ protected:
 				boost::asio::placeholders::bytes_transferred
 			)
 		);
+	}
+
+	bool socks_forward_udp()
+	{
+		// 扩展协议.
+		//  +------+----------+------------+------+----------+----------+------+----------+
+		//  | ATYP | LOCAL.IP | LOCAL.PORT | ATYP | DST.ADDR | DST.PORT |  LEN |   DATA   |
+		//  +------+----------+------------+------+----------+----------+------+----------+
+		//  |   1  | Variable |     2      |  1   | Variable |    2     |  2   | Variable |
+		//  +------+----------+------------+------+----------+----------+------+----------+
+
+		auto size = m_streambuf.size();
+		auto p = boost::asio::buffer_cast<const char*>(m_streambuf.data());
+
+		if (size < 16)
+			return true;
+
+		// 扩展协议.
+		if (read_int8(p) != 0x01)
+			return false;
+
+		uint32_t local_ip = read_uint32(p);
+		uint16_t local_port = read_uint16(p);
+		auto local_endpint = udp::endpoint(boost::asio::ip::address_v4(local_ip), local_port);
+
+		// 远程主机IP类型.
+		if (read_int8(p) != 0x01)
+			return false;
+
+		// 目标主机IP.
+		boost::uint32_t ip = read_uint32(p);
+		if (ip == 0)
+			return false;
+
+		udp::endpoint remote;
+		remote.address(boost::asio::ip::address_v4(ip));
+
+		// 读取端口号.
+		boost::uint16_t port = read_uint16(p);
+		if (port == 0)
+			return false;
+
+		remote.port(port);
+
+		// 数据长度.
+		uint16_t len = read_uint16(p);
+		if (size - 16 < len)
+			return true;
+
+		auto response = std::string(p, len);
+		m_streambuf.consume(len + 16);
+
+		// 使用本地的新udp socket发送这个udp数据到remote, 如果socket没有则创建.
+		forward_udp(local_endpint, remote, response, 0);
+
+		boost::system::error_code ignore_ec;
+		std::cout << m_local_socket.remote_endpoint(ignore_ec)
+			<< " forward udp packet over tcp: " << len << std::endl;
+
+		return true;
 	}
 
 	// 发回目标服务器.

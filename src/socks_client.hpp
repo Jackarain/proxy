@@ -14,6 +14,8 @@
 #include <deque>
 #include <cstring> // for std::memcpy
 
+#include <boost/utility/string_view.hpp>
+
 #include <boost/logic/tribool.hpp>
 #include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -136,6 +138,337 @@ namespace socks {
 
 	// 解析uri格式
 	// scheme:[//[user[:password]@]host[:port]][/path][?query][#fragment]
+
+	using string_view = boost::string_view;
+
+	struct url_parser
+	{
+		string_view scheme_;
+		string_view username_;
+		string_view password_;
+		string_view host_;
+		string_view port_;
+		string_view path_;
+		string_view query_;
+		string_view fragment_;
+
+		//--------------------------------------------------------------------------
+
+		inline string_view make_string_view(const char* b, std::size_t s)
+		{
+			return string_view(b, s);
+		}
+
+		inline bool isunreserved(const char c) const
+		{
+			if (std::isalpha(c) || std::isdigit(c) ||
+				c == '-' || c == '.' || c == '_' || c == '~')
+				return true;
+			return false;
+		}
+
+		inline bool isuchar(const char c) const
+		{
+			if (isunreserved(c) || c == ';' || c == '?' || c == '&' || c == '=')
+				return true;
+			return false;
+		}
+
+		inline bool ishsegment(const char c) const
+		{
+			if (isuchar(c) ||
+				c == ';' || c == ':' || c == '@' || c == '&' || c == '=')
+				return true;
+			return false;
+		}
+
+		inline bool issubdelims(const char c) const
+		{
+			if (c == '!' || c == '$' || c == '\'' || c == '(' ||
+				c == ')' || c == '*' || c == '+' || c == ',' ||
+				c == '=')
+				return true;
+			return false;
+		}
+
+		//--------------------------------------------------------------------------
+
+		inline bool parse(const std::string& url)
+		{
+			enum
+			{
+				scheme_start,
+				scheme,
+				slash_start,
+				slash,
+				username_start,
+				username,
+				password_start,
+				password,
+				host_start,
+				host,
+				port_start,
+				port,
+				path,
+				query,
+				fragment
+			} state = scheme_start;
+
+			auto b = url.c_str();
+			auto e = url.c_str() + url.size();
+			auto part_start = b;
+			bool is_ipv6 = false;
+
+			while (b != e)
+			{
+				auto c = *b++;
+				switch (state)
+				{
+				case scheme_start:
+					if (std::isalpha(c))
+					{
+						state = scheme;
+						continue;
+					}
+					return false;
+				case scheme:
+					if (std::isalpha(c) || std::isdigit(c) ||
+						c == '+' || c == '-' || c == '.')
+						continue;
+					if (c == ':')
+					{
+						scheme_ = make_string_view(part_start, b - part_start - 1);
+						state = slash_start;
+						continue;
+					}
+					return false;
+				case slash_start:
+					if (c == '/')
+					{
+						if (scheme_ == "file")
+						{
+							if (b != e && *b == '/')
+								b++;
+							else
+								return false;
+						}
+						state = slash;
+						continue;
+					}
+					return false;
+				case slash:
+					if (c == '/')
+					{
+						auto search = b;
+						bool find_at = false;
+						while (search != e)
+						{
+							if (*search == '/')
+								break;
+							if (*search == '@')
+							{
+								find_at = true;
+								break;
+							}
+							search++;
+						}
+						part_start = b;
+						if (find_at)
+						{
+							state = username_start;
+							continue;
+						}
+						state = host_start;
+						continue;
+					}
+					return false;
+				case username_start:
+					if (isuchar(c) || issubdelims(c))
+					{
+						state = username;
+						continue;
+					}
+					return false;
+				case username:
+					if (isuchar(c) || issubdelims(c))
+						continue;
+					if (c == ':')
+					{
+						username_ = make_string_view(part_start, b - part_start - 1);
+						part_start = b;
+						state = password_start;
+						continue;
+					}
+					if (c == '@')
+					{
+						username_ = make_string_view(part_start, b - part_start - 1);
+						part_start = b;
+						state = host_start;
+						continue;
+					}
+					return false;
+				case password_start:
+					if (isuchar(c) || issubdelims(c))
+					{
+						state = password;
+						continue;
+					}
+					return false;
+				case password:
+					if (isuchar(c) || issubdelims(c) || c == '#')
+						continue;
+					if (c == '@')
+					{
+						password_ = make_string_view(part_start, b - part_start - 1);
+						part_start = b;
+						state = host_start;
+						continue;
+					}
+					return false;
+				case host_start:
+					if (isunreserved(c) || issubdelims(c) || c == '%' || c == '[')
+					{
+						if (c == '[')
+						{
+							is_ipv6 = true;
+							part_start = b;
+						}
+
+						state = host;
+						continue;
+					}
+					return false;
+				case host:
+					if (b == e) // end
+					{
+						host_ = make_string_view(part_start, b - part_start - 1);
+						return true;
+					}
+					if (is_ipv6)
+					{
+						if (c == ']')
+						{
+							host_ = make_string_view(part_start, b - part_start - 1);
+							if (b == e)
+								return true;
+							if (*b == ':')
+							{
+								b++;
+								part_start = b;
+								state = port_start;
+								continue;
+							}
+							if (*b == '/')
+							{
+								b++;
+								part_start = b;
+								state = path;
+								continue;
+							}
+							return false;
+						}
+						else if (c == '/')
+						{
+							return false;
+						}
+					}
+					else
+					{
+						if (c == ':')
+						{
+							host_ = make_string_view(part_start, b - part_start - 1);
+							part_start = b;
+							state = port_start;
+							continue;
+						}
+					}
+					if (c == '/')
+					{
+						host_ = make_string_view(part_start, b - part_start - 1);
+						part_start = b - 1;
+						state = path;
+						continue;
+					}
+					if (isunreserved(c) || issubdelims(c) || c == '%' || c == ':')
+						continue;
+					return false;
+				case port_start:
+					if (std::isdigit(c))
+					{
+						state = port;
+						continue;
+					}
+					return false;
+				case port:
+					if (b == e) // no path
+					{
+						port_ = make_string_view(part_start, b - part_start - 1);
+						return true;
+					}
+					if (c == '/')
+					{
+						port_ = make_string_view(part_start, b - part_start - 1);
+						part_start = b - 1;
+						state = path;
+						continue;
+					}
+					if (std::isdigit(c))
+						continue;
+					return false;
+				case path:
+					if (b == e)
+					{
+						path_ = make_string_view(part_start, b - part_start - 1);
+						return true;
+					}
+					if (c == '?')
+					{
+						path_ = make_string_view(part_start, b - part_start - 1);
+						part_start = b;
+						state = query;
+						continue;
+					}
+					if (c == '#')
+					{
+						path_ = make_string_view(part_start, b - part_start - 1);
+						part_start = b;
+						state = fragment;
+						continue;
+					}
+					if (ishsegment(c) || c == '/')
+						continue;
+					return false;
+				case query:
+					if (b == e)
+					{
+						query_ = make_string_view(part_start, b - part_start - 1);
+						return true;
+					}
+					if (c == '#')
+					{
+						query_ = make_string_view(part_start, b - part_start - 1);
+						part_start = b;
+						state = fragment;
+						continue;
+					}
+					if (ishsegment(c) || issubdelims(c) || c == '/' || c == '?')
+						continue;
+					return false;
+				case fragment:
+					if (b == e)
+					{
+						fragment_ = make_string_view(part_start, b - part_start - 1);
+						return true;
+					}
+					if (ishsegment(c) || issubdelims(c) || c == '/' || c == '?')
+						continue;
+					return false;
+				}
+			}
+
+			return false;
+		}
+	};
 
 	struct socks_address
 	{
