@@ -134,6 +134,8 @@ public:
 public:
 	void start()
 	{
+		boost::system::error_code ignore_ec;
+		m_local_socket.set_option(tcp::no_delay(true), ignore_ec);
 		// read
 		//  +----+----------+----------+
 		//  |VER | NMETHODS | METHODS  |
@@ -1200,11 +1202,19 @@ protected:
 		m_meter = boost::posix_time::second_clock::local_time();
 
 		// 转发数据.
-		if (!socks_forward_udp())
+		while (true)
 		{
-			std::cout << "socks_handle_udp_ext_read: data error!" << std::endl;
-			close();
-			return;
+			int ret = socks_forward_udp();
+			if (ret < 0)
+			{
+				std::cout << "socks_handle_udp_ext_read: data error!" << std::endl;
+				close();
+				return;
+			}
+			if (ret == 0)
+			{
+				break;
+			}
 		}
 
 		// 扩展udp通过tcp来传输数据, 投递一个数据接收.
@@ -1216,7 +1226,7 @@ protected:
 		);
 	}
 
-	bool socks_forward_udp()
+	int socks_forward_udp()
 	{
 		// 扩展协议.
 		//  +------+----------+------------+------+----------+----------+------+----------+
@@ -1229,11 +1239,11 @@ protected:
 		auto p = boost::asio::buffer_cast<const char*>(m_streambuf.data());
 
 		if (size < 16)
-			return true;
+			return 0;
 
 		// 扩展协议.
 		if (read_int8(p) != 0x01)
-			return false;
+			return -1;
 
 		uint32_t local_ip = read_uint32(p);
 		uint16_t local_port = read_uint16(p);
@@ -1241,12 +1251,12 @@ protected:
 
 		// 远程主机IP类型.
 		if (read_int8(p) != 0x01)
-			return false;
+			return -1;
 
 		// 目标主机IP.
 		boost::uint32_t ip = read_uint32(p);
 		if (ip == 0)
-			return false;
+			return -1;
 
 		udp::endpoint remote;
 		remote.address(boost::asio::ip::address_v4(ip));
@@ -1254,14 +1264,14 @@ protected:
 		// 读取端口号.
 		boost::uint16_t port = read_uint16(p);
 		if (port == 0)
-			return false;
+			return -1;
 
 		remote.port(port);
 
 		// 数据长度.
 		uint16_t len = read_uint16(p);
 		if (size - 16 < len)
-			return true;
+			return 0;
 
 		auto response = std::string(p, len);
 		m_streambuf.consume(len + 16);
@@ -1274,7 +1284,7 @@ protected:
 			<< " forward udp packet over tcp, local: " << local_endpint
 			<< ", remote: " << remote << ", size: " << len << std::endl;
 
-		return true;
+		return size;
 	}
 
 	// 发回目标服务器.
