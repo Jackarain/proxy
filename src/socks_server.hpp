@@ -21,7 +21,7 @@
 #include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/array.hpp>
-#include <boost/functional/hash_fwd.hpp>
+#include <boost/functional/hash.hpp>
 #include <boost/date_time.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/smart_ptr/local_shared_ptr.hpp>
