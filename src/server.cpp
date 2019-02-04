@@ -31,10 +31,10 @@ int main(int argc, char **argv)
 			return 0;
 		}
 
-		boost::asio::io_service io_service;
-		socks::socks_server s(io_service, port, address);
+		boost::asio::io_context io;
+		socks::socks_server s(io, port, address);
 
-		io_service.run();
+		io.run();
 	}
 	catch (std::exception& e)
 	{

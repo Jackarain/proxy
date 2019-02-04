@@ -7585,23 +7585,23 @@ static Rune __alpha2[] = {
     0x06c0, 0x06ce, /* ۀ - ێ */
     0x06d0, 0x06d3, /* ې - ۓ */
     0x0905, 0x0939, /* अ - ह */
-    0x0958, 0x0961, /* क़ - ॡ */
+    0x0958, 0x0961, /* क़ - ॡ */
     0x0985, 0x098c, /* অ - ঌ */
     0x098f, 0x0990, /* এ - ঐ */
     0x0993, 0x09a8, /* ও - ন */
     0x09aa, 0x09b0, /* প - র */
     0x09b6, 0x09b9, /* শ - হ */
-    0x09dc, 0x09dd, /* ড় - ঢ় */
-    0x09df, 0x09e1, /* য় - ৡ */
+    0x09dc, 0x09dd, /* ড় - ঢ় */
+    0x09df, 0x09e1, /* য় - ৡ */
     0x09f0, 0x09f1, /* ৰ - ৱ */
     0x0a05, 0x0a0a, /* ਅ - ਊ */
     0x0a0f, 0x0a10, /* ਏ - ਐ */
     0x0a13, 0x0a28, /* ਓ - ਨ */
     0x0a2a, 0x0a30, /* ਪ - ਰ */
-    0x0a32, 0x0a33, /* ਲ - ਲ਼ */
-    0x0a35, 0x0a36, /* ਵ - ਸ਼ */
+    0x0a32, 0x0a33, /* ਲ - ਲ਼ */
+    0x0a35, 0x0a36, /* ਵ - ਸ਼ */
     0x0a38, 0x0a39, /* ਸ - ਹ */
-    0x0a59, 0x0a5c, /* ਖ਼ - ੜ */
+    0x0a59, 0x0a5c, /* ਖ਼ - ੜ */
     0x0a85, 0x0a8b, /* અ - ઋ */
     0x0a8f, 0x0a91, /* એ - ઑ */
     0x0a93, 0x0aa8, /* ઓ - ન */
@@ -7614,7 +7614,7 @@ static Rune __alpha2[] = {
     0x0b2a, 0x0b30, /* ପ - ର */
     0x0b32, 0x0b33, /* ଲ - ଳ */
     0x0b36, 0x0b39, /* ଶ - ହ */
-    0x0b5c, 0x0b5d, /* ଡ଼ - ଢ଼ */
+    0x0b5c, 0x0b5d, /* ଡ଼ - ଢ଼ */
     0x0b5f, 0x0b61, /* ୟ - ୡ */
     0x0b85, 0x0b8a, /* அ - ஊ */
     0x0b8e, 0x0b90, /* எ - ஐ */
@@ -7658,7 +7658,7 @@ static Rune __alpha2[] = {
     0x0edc, 0x0edd, /* ໜ - ໝ */
     0x0f18, 0x0f19, /* ༘ - ༙ */
     0x0f40, 0x0f47, /* ཀ - ཇ */
-    0x0f49, 0x0f69, /* ཉ - ཀྵ */
+    0x0f49, 0x0f69, /* ཉ - ཀྵ */
     0x10d0, 0x10f6, /* ა - ჶ */
     0x1100, 0x1159, /* ᄀ - ᅙ */
     0x115f, 0x11a2, /* ᅟ - ᆢ */
@@ -7669,15 +7669,15 @@ static Rune __alpha2[] = {
     0x1fb6, 0x1fbc, /* ᾶ - ᾼ */
     0x1fc2, 0x1fc4, /* ῂ - ῄ */
     0x1fc6, 0x1fcc, /* ῆ - ῌ */
-    0x1fd0, 0x1fd3, /* ῐ - ΐ */
-    0x1fd6, 0x1fdb, /* ῖ - Ί */
+    0x1fd0, 0x1fd3, /* ῐ - ΐ */
+    0x1fd6, 0x1fdb, /* ῖ - Ί */
     0x1fe0, 0x1fec, /* ῠ - Ῥ */
     0x1ff2, 0x1ff4, /* ῲ - ῴ */
     0x1ff6, 0x1ffc, /* ῶ - ῼ */
     0x210a, 0x2113, /* ℊ - ℓ */
     0x2115, 0x211d, /* ℕ - ℝ */
     0x2120, 0x2122, /* ℠ - ™ */
-    0x212a, 0x2131, /* K - ℱ */
+    0x212a, 0x2131, /* K - ℱ */
     0x2133, 0x2138, /* ℳ - ℸ */
     0x3041, 0x3094, /* ぁ - ゔ */
     0x30a1, 0x30fa, /* ァ - ヺ */
@@ -7698,14 +7698,14 @@ static Rune __alpha2[] = {
     0x33d9, 0x33dd, /* ㏙ - ㏝ */
     0x4e00, 0x9fff, /* 一 - 鿿 */
     0xac00, 0xd7a3, /* 가 - 힣 */
-    0xf900, 0xfb06, /* 豈 - ﬆ */
+    0xf900, 0xfb06, /* 豈 - ﬆ */
     0xfb13, 0xfb17, /* ﬓ - ﬗ */
-    0xfb1f, 0xfb28, /* ײַ - ﬨ */
-    0xfb2a, 0xfb36, /* שׁ - זּ */
-    0xfb38, 0xfb3c, /* טּ - לּ */
-    0xfb40, 0xfb41, /* נּ - סּ */
-    0xfb43, 0xfb44, /* ףּ - פּ */
-    0xfb46, 0xfbb1, /* צּ - ﮱ */
+    0xfb1f, 0xfb28, /* ײַ - ﬨ */
+    0xfb2a, 0xfb36, /* שׁ - זּ */
+    0xfb38, 0xfb3c, /* טּ - לּ */
+    0xfb40, 0xfb41, /* נּ - סּ */
+    0xfb43, 0xfb44, /* ףּ - פּ */
+    0xfb46, 0xfbb1, /* צּ - ﮱ */
     0xfbd3, 0xfd3d, /* ﯓ - ﴽ */
     0xfd50, 0xfd8f, /* ﵐ - ﶏ */
     0xfd92, 0xfdc7, /* ﶒ - ﷇ */
@@ -7735,7 +7735,7 @@ static Rune __alpha1[] = {
     0x03e0, /* Ϡ */
     0x06d5, /* ە */
     0x09b2, /* ল */
-    0x0a5e, /* ਫ਼ */
+    0x0a5e, /* ਫ਼ */
     0x0a8d, /* ઍ */
     0x0ae0, /* ૠ */
     0x0b9c, /* ஜ */
@@ -7748,15 +7748,15 @@ static Rune __alpha1[] = {
     0x0ea7, /* ວ */
     0x0eb0, /* ະ */
     0x0ebd, /* ຽ */
-    0x1fbe, /* ι */
+    0x1fbe, /* ι */
     0x207f, /* ⁿ */
     0x20a8, /* ₨ */
     0x2102, /* ℂ */
     0x2107, /* ℇ */
     0x2124, /* ℤ */
-    0x2126, /* Ω */
+    0x2126, /* Ω */
     0x2128, /* ℨ */
-    0xfb3e, /* מּ */
+    0xfb3e, /* מּ */
     0xfe74, /* ﹴ */
 };
 
@@ -7767,7 +7767,7 @@ static Rune __space2[] = {
     0x0009, 0x000a, /* tab and newline */
     0x0020, 0x0020, /* space */
     0x00a0, 0x00a0, /*   */
-    0x2000, 0x200b, /*   - ​ */
+    0x2000, 0x200b, /*   - ​ */
     0x2028, 0x2029, /*  -  */
     0x3000, 0x3000, /* 　 */
     0xfeff, 0xfeff, /* ﻿ */
@@ -7798,12 +7798,12 @@ static Rune __toupper2[] = {
     0x1f30, 0x1f37, 508, /* ἰ-ἷ Ἰ-Ἷ */
     0x1f40, 0x1f45, 508, /* ὀ-ὅ Ὀ-Ὅ */
     0x1f60, 0x1f67, 508, /* ὠ-ὧ Ὠ-Ὧ */
-    0x1f70, 0x1f71, 574, /* ὰ-ά Ὰ-Ά */
-    0x1f72, 0x1f75, 586, /* ὲ-ή Ὲ-Ή */
-    0x1f76, 0x1f77, 600, /* ὶ-ί Ὶ-Ί */
-    0x1f78, 0x1f79, 628, /* ὸ-ό Ὸ-Ό */
-    0x1f7a, 0x1f7b, 612, /* ὺ-ύ Ὺ-Ύ */
-    0x1f7c, 0x1f7d, 626, /* ὼ-ώ Ὼ-Ώ */
+    0x1f70, 0x1f71, 574, /* ὰ-ά Ὰ-Ά */
+    0x1f72, 0x1f75, 586, /* ὲ-ή Ὲ-Ή */
+    0x1f76, 0x1f77, 600, /* ὶ-ί Ὶ-Ί */
+    0x1f78, 0x1f79, 628, /* ὸ-ό Ὸ-Ό */
+    0x1f7a, 0x1f7b, 612, /* ὺ-ύ Ὺ-Ύ */
+    0x1f7c, 0x1f7d, 626, /* ὼ-ώ Ὼ-Ώ */
     0x1f80, 0x1f87, 508, /* ᾀ-ᾇ ᾈ-ᾏ */
     0x1f90, 0x1f97, 508, /* ᾐ-ᾗ ᾘ-ᾟ */
     0x1fa0, 0x1fa7, 508, /* ᾠ-ᾧ ᾨ-ᾯ */
@@ -8192,14 +8192,14 @@ static Rune __tolower2[] = {
     0x1f98, 0x1f9f, 492, /* ᾘ-ᾟ ᾐ-ᾗ */
     0x1fa8, 0x1faf, 492, /* ᾨ-ᾯ ᾠ-ᾧ */
     0x1fb8, 0x1fb9, 492, /* Ᾰ-Ᾱ ᾰ-ᾱ */
-    0x1fba, 0x1fbb, 426, /* Ὰ-Ά ὰ-ά */
-    0x1fc8, 0x1fcb, 414, /* Ὲ-Ή ὲ-ή */
+    0x1fba, 0x1fbb, 426, /* Ὰ-Ά ὰ-ά */
+    0x1fc8, 0x1fcb, 414, /* Ὲ-Ή ὲ-ή */
     0x1fd8, 0x1fd9, 492, /* Ῐ-Ῑ ῐ-ῑ */
-    0x1fda, 0x1fdb, 400, /* Ὶ-Ί ὶ-ί */
+    0x1fda, 0x1fdb, 400, /* Ὶ-Ί ὶ-ί */
     0x1fe8, 0x1fe9, 492, /* Ῠ-Ῡ ῠ-ῡ */
-    0x1fea, 0x1feb, 388, /* Ὺ-Ύ ὺ-ύ */
-    0x1ff8, 0x1ff9, 372, /* Ὸ-Ό ὸ-ό */
-    0x1ffa, 0x1ffb, 374, /* Ὼ-Ώ ὼ-ώ */
+    0x1fea, 0x1feb, 388, /* Ὺ-Ύ ὺ-ύ */
+    0x1ff8, 0x1ff9, 372, /* Ὸ-Ό ὸ-ό */
+    0x1ffa, 0x1ffb, 374, /* Ὼ-Ώ ὼ-ώ */
     0x2160, 0x216f, 516, /* Ⅰ-Ⅿ ⅰ-ⅿ */
     0x24b6, 0x24cf, 526, /* Ⓐ-Ⓩ ⓐ-ⓩ */
     0xff21, 0xff3a, 532, /* Ａ-Ｚ ａ-ｚ */
@@ -17144,9 +17144,9 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   const char *a_ptr, *b_ptr, *res_ptr;
   val_t res;
 
-  /* Find out lengths of both srtings */
-  a_ptr = v7_get_string(v7, &a, &a_len);
-  b_ptr = v7_get_string(v7, &b, &b_len);
+  /* Find out lengths of both strings */
+  v7_get_string(v7, &a, &a_len);
+  v7_get_string(v7, &b, &b_len);
 
   /* Create an placeholder string */
   res = v7_mk_string(v7, NULL, a_len + b_len, 1);
@@ -31289,7 +31289,6 @@ static enum v7_err s_substr(struct v7 *v7, val_t s, long start, long len,
     if (start < 0) start = 0;
 
     if (start > (long) n) start = n;
-    if (len < 0) len = 0;
     if (len > (long) n - start) len = n - start;
     p = utfnshift(p, start);
   } else {
@@ -32177,9 +32176,6 @@ V7_PRIVATE enum v7_err Date_ctor(struct v7 *v7, v7_val_t *res) {
           goto clean;
         }
         ret_time = v7_get_double(v7, arg);
-        if (rcode != V7_OK) {
-          goto clean;
-        }
       }
     } else {
       /* 2+ paramaters - should be parts of a date */

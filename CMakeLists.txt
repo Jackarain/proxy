@@ -13,7 +13,7 @@ endif()
 project(socks_server)
 
 if (USE_HUNTER)
-	hunter_add_package(Boost COMPONENTS system filesystem date_time regex program_options)
+	hunter_add_package(Boost COMPONENTS thread system filesystem coroutine context date_time regex program_options)
 endif()
 
 if (NOT MSVC)
@@ -44,7 +44,13 @@ endif()
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
 
-find_package(Boost COMPONENTS system filesystem coroutine context date_time regex program_options REQUIRED)
+find_package(Boost COMPONENTS thread system filesystem coroutine context date_time regex program_options REQUIRED)
+message(STATUS "Find boost version: ${Boost_VERSION}")
+if (NOT Boost_VERSION VERSION_LESS 106700)
+	message(STATUS "Use boost coroutines v2")
+	add_definitions(-DBOOST_COROUTINES_V2)
+endif()
+
 link_libraries(${Boost_LIBRARIES})
 include_directories(${Boost_INCLUDE_DIRS})
 
