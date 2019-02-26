@@ -400,7 +400,7 @@ namespace socks {
 
 		template <typename Handler>
 		bool async_do_proxy(socks_address& content,
-			const std::string& address, const std::string port, Handler handler)
+			const std::string& address, const std::string& port, Handler handler)
 		{
 			m_socks_address = content;
 			m_address = address;
