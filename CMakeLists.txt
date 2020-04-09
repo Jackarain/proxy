@@ -5,8 +5,8 @@ option(USE_HUNTER "Use hunter" OFF)
 if (USE_HUNTER)
 	include("cmake/HunterGate.cmake")
 	HunterGate(
-		URL "https://github.com/ruslo/hunter/archive/v0.19.102.tar.gz"
-		SHA1 "49a8333d7efc24c531aed97159fe58a68374185f"
+		URL "https://github.com/cpp-pm/hunter/archive/v0.23.253.tar.gz"
+		SHA1 "88ea6d37c897a81a080eb9ae0f69d7807bbb3c73"
 	)
 endif()
 
