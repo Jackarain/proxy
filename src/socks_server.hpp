@@ -828,8 +828,18 @@ protected:
 				if (endpoint_iterator != tcp::resolver::iterator())
 				{
 					auto endp = endpoint_iterator->endpoint();
-					write_int8(1, p);
-					write_uint32(endp.address().to_v4().to_ulong(), p);
+					if (endp.address().is_v4())
+					{
+						write_int8(SOCKS5_ATYP_IPV4, p);
+						write_uint32(endp.address().to_v4().to_ulong(), p);
+					}
+					else if (endp.address().is_v6())
+					{
+						write_int8(SOCKS5_ATYP_IPV6, p);
+						auto data = endp.address().to_v6().to_bytes();
+						for (auto c : data)
+							write_uint8(c, p);
+					}
 					write_uint16(endp.port(), p);
 				}
 				else if (!m_domain.empty())
@@ -1009,15 +1019,12 @@ protected:
 			return;
 		}
 
-		if (!error)
-		{
-			boost::asio::async_connect(m_remote_socket,	endpoint_iterator,
-				boost::bind(&socks_session::socks_handle_connect_3,
-					shared_from_this(), boost::asio::placeholders::error,
-					endpoint_iterator
-				)
-			);
-		}
+		boost::asio::async_connect(m_remote_socket,	endpoint_iterator,
+			boost::bind(&socks_session::socks_handle_connect_3,
+			shared_from_this(), boost::asio::placeholders::error,
+			endpoint_iterator
+			)
+		);
 	}
 
 	void socks_handle_error(const boost::system::error_code &error, std::size_t bytes_transferred)
@@ -1514,7 +1521,7 @@ protected:
 		auto it = m_udp_conntrack.find(local);
 		if (it == m_udp_conntrack.end())
 		{
-			auto s = boost::make_local_shared<udp::socket>(boost::ref(m_io_context));
+			auto s = boost::make_local_shared<udp::socket>(m_io_context);
 			s->open(m_client_endpoint.protocol(), ec);
 			if (ec)
 			{
