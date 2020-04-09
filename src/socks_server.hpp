@@ -28,6 +28,8 @@
 #include <boost/smart_ptr/make_local_shared.hpp>
 
 #include "io.hpp"
+#include "async_connect.hpp"
+
 extern "C"
 {
 #include "v7.h"
@@ -1019,7 +1021,7 @@ protected:
 			return;
 		}
 
-		boost::asio::async_connect(m_remote_socket,	endpoint_iterator,
+		socks::async_connect(m_remote_socket,	endpoint_iterator,
 			boost::bind(&socks_session::socks_handle_connect_3,
 			shared_from_this(), boost::asio::placeholders::error,
 			endpoint_iterator

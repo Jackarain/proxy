@@ -16,8 +16,17 @@ if (USE_HUNTER)
 	hunter_add_package(Boost COMPONENTS thread system filesystem coroutine context date_time regex program_options)
 endif()
 
+
+include(CheckCXXCompilerFlag)
+
+CHECK_CXX_COMPILER_FLAG(-std=c++17 LIBCXX_HAS_STDCXX17_FLAG)
+
 if (NOT MSVC)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+	if(NOT LIBCXX_HAS_STDCXX17_FLAG)
+		message(FATAL_ERROR "need at least GCC 9 or clang 9")
+	endif()
+
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -static-libgcc")
 else()
 	set(CompilerFlags
@@ -41,6 +50,7 @@ else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 endif()
 
+
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 #set(Boost_USE_STATIC_RUNTIME ON)
@@ -62,6 +72,7 @@ add_executable(socks_server
 
   src/io.hpp
   src/socks_server.hpp
+  src/async_connect.hpp
   src/v7.h
 )
 
