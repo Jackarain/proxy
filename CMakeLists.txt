@@ -12,11 +12,6 @@ endif()
 
 project(socks_server)
 
-if (USE_HUNTER)
-	hunter_add_package(Boost COMPONENTS thread system filesystem coroutine context date_time regex program_options)
-endif()
-
-
 include(CheckCXXCompilerFlag)
 
 CHECK_CXX_COMPILER_FLAG(-std=c++17 LIBCXX_HAS_STDCXX17_FLAG)
@@ -40,9 +35,9 @@ else()
 			CMAKE_C_FLAGS_RELWITHDEBINFO
 		)
 
-	foreach(CompilerFlag ${CompilerFlags})
-		string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
-	endforeach()
+	#foreach(CompilerFlag ${CompilerFlags})
+	#	string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
+	#endforeach()
 
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 	add_definitions(-D_WIN32_WINNT=0x0501)
@@ -50,17 +45,25 @@ else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 endif()
 
-
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 #set(Boost_USE_STATIC_RUNTIME ON)
 
-find_package(Boost COMPONENTS thread system filesystem coroutine context date_time regex program_options REQUIRED)
+if (USE_HUNTER)
+	hunter_add_package(Boost COMPONENTS thread system filesystem coroutine context program_options)
+endif()
+
+find_package(Boost CONFIG REQUIRED COMPONENTS thread system filesystem coroutine context program_options)
 
 message(STATUS "Find boost version: ${Boost_VERSION}")
+
 if (NOT Boost_VERSION VERSION_LESS 106700)
 	message(STATUS "Use boost coroutines v2")
 	add_definitions(-DBOOST_COROUTINES_V2)
+endif()
+
+if (USE_HUNTER AND MSVC)
+	add_definitions(-DBOOST_ALL_NO_LIB)
 endif()
 
 link_libraries(${Boost_LIBRARIES})
