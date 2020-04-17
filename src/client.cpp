@@ -1,8 +1,8 @@
 ﻿#include <iostream>
+
 #include "socks_client.hpp"
 
 #include <boost/smart_ptr.hpp>
-
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
@@ -12,10 +12,10 @@ using boost::asio::ip::tcp;
 class client
 {
 public:
-	client(boost::asio::io_service& io_service,
+	client(boost::asio::io_context& io_context,
 		const std::string& server, const std::string& path, const std::string& socks_server)
-		: resolver_(io_service)
-		, socket_(io_service)
+		: resolver_(io_context)
+		, socket_(io_context)
 		, server_(server)
 	{
 		// Form the request. We specify the "Connection: close" header so that the
@@ -224,9 +224,9 @@ int main(int argc, char **argv)
 			return 0;
 		}
 
-		boost::asio::io_service io_service;
-		client c(io_service, http_server, http_path, socks_server);
-		io_service.run();
+		boost::asio::io_context io_context;
+		client c(io_context, http_server, http_path, socks_server);
+		io_context.run();
 	}
 	catch (std::exception& e)
 	{

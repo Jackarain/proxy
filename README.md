@@ -22,9 +22,3 @@ socks_server.exe --address 0.0.0.0 --port 4567
 
 do_auth.js必须实现do_auth/do_auth4函数, 参考项目所带的 do_auth.js
 
-
-##### TODO: 
-
-1. BIND支持.
-2. GSS-API认证支持.
-

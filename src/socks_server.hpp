@@ -14,20 +14,33 @@
 #include <atomic>
 #include <deque>
 #include <cstring> // for std::memcpy
+#include <fstream>      // std::ifstream
 #include <unordered_map>
 
 #include <boost/logic/tribool.hpp>
-#include <boost/asio.hpp>
+
+#include <boost/asio/placeholders.hpp>
+#include <boost/asio/connect.hpp>
+#include <boost/asio/spawn.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/ip/udp.hpp>
+#include <boost/asio/streambuf.hpp>
+#include <boost/asio/read.hpp>
+#include <boost/asio/write.hpp>
+#include <boost/asio/read_until.hpp>
+#include <boost/asio/deadline_timer.hpp>
+
 #include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/array.hpp>
 #include <boost/functional/hash.hpp>
-#include <boost/date_time.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/noncopyable.hpp>
 #include <boost/smart_ptr/local_shared_ptr.hpp>
 #include <boost/smart_ptr/make_local_shared.hpp>
 
 #include "io.hpp"
+#include "async_connect.hpp"
+
 extern "C"
 {
 #include "v7.h"
@@ -1019,7 +1032,7 @@ protected:
 			return;
 		}
 
-		boost::asio::async_connect(m_remote_socket,	endpoint_iterator,
+		socks::async_connect(m_remote_socket,	endpoint_iterator,
 			boost::bind(&socks_session::socks_handle_connect_3,
 			shared_from_this(), boost::asio::placeholders::error,
 			endpoint_iterator

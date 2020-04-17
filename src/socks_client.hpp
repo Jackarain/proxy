@@ -14,20 +14,27 @@
 #include <deque>
 #include <cstring> // for std::memcpy
 
+
 #include <boost/utility/string_view.hpp>
+
 
 #include <boost/logic/tribool.hpp>
 #include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/array.hpp>
-#include <boost/date_time.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <boost/system/system_error.hpp>
 #include <boost/system/error_code.hpp>
 
-#include <boost/asio.hpp>
+#include <boost/asio/placeholders.hpp>
+#include <boost/asio/connect.hpp>
 #include <boost/asio/spawn.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/ip/udp.hpp>
+#include <boost/asio/streambuf.hpp>
+#include <boost/asio/read.hpp>
+#include <boost/asio/write.hpp>
+#include <boost/asio/read_until.hpp>
 
 #include "io.hpp"
 
