@@ -69,21 +69,26 @@ endif()
 link_libraries(${Boost_LIBRARIES})
 include_directories(${Boost_INCLUDE_DIRS})
 
-add_executable(socks_server
-  src/server.cpp
-  src/v7.c
 
-  src/io.hpp
-  src/socks_server.hpp
-  src/async_connect.hpp
-  src/v7.h
+file(GLOB libsocks_SRCS
+	libsocks/v7.c
+	libsocks/v7.h
+
+	libsocks/io.hpp
+	libsocks/socks_server.hpp
+	libsocks/async_connect.hpp
+
+	libsocks/socks_client.hpp
 )
 
-add_executable(socks_client
-  src/client.cpp
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libsocks)
 
-  src/io.hpp
-  src/socks_client.hpp
+add_executable(socks_server ${libsocks_SRCS}
+  src/server.cpp
+)
+
+add_executable(socks_client ${libsocks_SRCS}
+  src/client.cpp
 )
 
 if(UNIX)
