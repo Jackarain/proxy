@@ -1,104 +1,285 @@
-﻿cmake_minimum_required(VERSION 3.0)
+﻿cmake_minimum_required(VERSION 3.1)
+cmake_policy(SET CMP0091 NEW) # for CMAKE_MSVC_RUNTIME_LIBRARY
+set(CMAKE_POLICY_DEFAULT_CMP0077 NEW) # cmake_policy(SET CMP0077 NEW)
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+project(socks)
 
-option(USE_HUNTER "Use hunter" OFF)
+include(CheckCXXCompilerFlag)
+include(CheckLibraryExists)
 
-if (USE_HUNTER)
-	include("cmake/HunterGate.cmake")
-	HunterGate(
-		URL "https://github.com/cpp-pm/hunter/archive/v0.23.253.tar.gz"
-		SHA1 "88ea6d37c897a81a080eb9ae0f69d7807bbb3c73"
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/cmake")
+
+if (ENABLE_GIT_VERSION)
+	find_package(Git)
+	gitGetVersion(${CMAKE_CURRENT_SOURCE_DIR} socks)
+	set(VERSION_GIT ${socks_WC_REVISION_HASH})
+	string(TIMESTAMP PVERSION "%Y%m%d-${VERSION_GIT}-${CMAKE_SYSTEM_NAME}")
+endif()
+
+# Disable in-source builds to prevent source tree corruption.
+if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+  message(FATAL_ERROR "
+FATAL: In-source builds are not allowed.
+       You should create a separate directory for build files.
+")
+endif()
+message(STATUS "CMAKE Version: ${CMAKE_VERSION}")
+
+message(STATUS "Source Dir: ${CMAKE_CURRENT_SOURCE_DIR}")
+message(STATUS "Host System name: ${CMAKE_HOST_SYSTEM_NAME}")
+
+set(default_build_type "Release")
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
+        STRING "Choose the type of build." FORCE)
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+                 "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
+message(STATUS "System name: ${CMAKE_SYSTEM_NAME}")
+message(STATUS "System version: ${CMAKE_SYSTEM_VERSION}")
+if (WIN32)
+	message(STATUS "Platform version: ${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")
+endif()
+
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "SYSTEM NAME: ${CMAKE_SYSTEM_NAME}")
+
+include(CheckCXXLinkerFlag)
+
+option(ENABLE_BUILD_WERROR			"All warnings being treated as errors" ON)
+option(ENABLE_GIT_VERSION			"Enable git version" ON)
+
+option(ENABLE_USE_IO_URING			"Enable auto use io_uring" ON)
+option(ENABLE_BUILD_WITH_LIBCXX		"Build with libc++" OFF)
+
+option(ENABLE_MOLD					"build using mold" OFF)
+option(ENABLE_LLD					"build using lld" OFF)
+
+option(ENABLE_TCMALLOC_STATIC		"Build with Tcmalloc support" OFF)
+option(ENABLE_JEMALLOC_STATIC		"Build with Jemalloc support" OFF)
+
+find_program(MOLD_LINKER mold)
+find_program(LLD_LINKER lld)
+
+set(CMAKE_C_STANDARD 11)
+
+if (MSVC)
+	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+	add_definitions(
+		-D_CRT_SECURE_NO_DEPRECATE
+		-D_CRT_SECURE_NO_WARNINGS
+		-D_CRT_NONSTDC_NO_DEPRECATE
+		-D_CRT_NONSTDC_NO_WARNINGS
+		-D_SCL_SECURE_NO_DEPRECATE
+		-D_SCL_SECURE_NO_WARNINGS
+	)
+
+	add_definitions(
+		-DWIN32_LEAN_AND_MEAN
+		-D_WIN32_WINNT=0x0601
+		-DNOMINMAX
+		-DUNICODE
+		-D_UNICODE
+		-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+	)
+
+	add_definitions(
+		-DBOOST_ALL_STATIC_LINK
+		-DBOOST_THREAD_USE_LIB
+		-DBOOST_FILESYSTEM_STATIC_LINK
+		-DBOOST_USE_WINAPI_VERSION=0x0601
+	)
+
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj /MP /Zc:__cplusplus")
+	message(STATUS "Using parallel compiling (/MP)")
+	set(CMAKE_CXX_STACK_SIZE "100000000") #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:100000000")
+	message(STATUS "Set stack size: 100000000 bytes")
+
+	CHECK_CXX_COMPILER_FLAG(/std:c++20 COMPILER_HAS_STD_CXX20)
+
+	if (COMPILER_HAS_STD_CXX20)
+		set(CMAKE_CXX_STANDARD 20)
+		set(CMAKE_CXX_STANDARD_REQUIRED ON)
+		message(STATUS "Set default cxx standard: C++20")
+	elseif (MSVC_VERSION GREATER_EQUAL "1900")
+		set(CMAKE_CXX_STANDARD 17)
+		set(CMAKE_CXX_STANDARD_REQUIRED ON)
+		message(STATUS "Set default cxx standard: C++17")
+	endif()
+elseif(WIN32)
+	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+	add_definitions(
+		-DWIN32_LEAN_AND_MEAN
+		-D_WIN32_WINNT=0x0601
+		-DNOMINMAX
+		-DUNICODE
+		-D_UNICODE
+		-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+	)
+
+	add_definitions(
+		-DBOOST_ALL_STATIC_LINK
+		-DBOOST_THREAD_USE_LIB
+		-DBOOST_FILESYSTEM_STATIC_LINK
+		-DBOOST_USE_WINAPI_VERSION=0x0601
+	)
+	add_compile_options(/utf8)
+endif()
+
+CHECK_CXX_COMPILER_FLAG(-fvisibility-inlines-hidden COMPILER_HAS_VISIBILITY_INLINE_HIDDEN)
+CHECK_CXX_COMPILER_FLAG(-fvisibility=hidden COMPILER_HAS_VISIBILITY_HIDDEN)
+CHECK_CXX_COMPILER_FLAG(-fdiagnostics-color=always COMPILER_HAS_COLOR)
+CHECK_CXX_COMPILER_FLAG(-fcoroutines COMPILER_HAS_FCOROUTINES)
+CHECK_CXX_COMPILER_FLAG(-fcoroutines-ts COMPILER_HAS_FCOROUTINES_TS)
+CHECK_CXX_COMPILER_FLAG(-std=c++20 COMPILER_HAS_STD_CXX20)
+
+if (${COMPILER_HAS_VISIBILITY_INLINE_HIDDEN})
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden")
+endif()
+
+if (${COMPILER_HAS_VISIBILITY_HIDDEN})
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+endif()
+
+if (${COMPILER_HAS_COLOR})
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
+endif()
+
+if (COMPILER_HAS_FCOROUTINES)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines")
+endif()
+
+if (COMPILER_HAS_FCOROUTINES_TS)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines-ts")
+endif()
+
+if (ENABLE_SYSTEMD_LOGGING )
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_SYSTEMD_LOGGING")
+endif()
+
+if (NOT MSVC)
+	if(NOT APPLE)
+		if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+			if (ENABLE_BUILD_WITH_LIBCXX)
+				set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+				CHECK_LINKER_FLAG(CXX "-rtlib=compiler-rt" IS_COMPILER_RT_SUPPORTED)
+
+				if (IS_COMPILER_RT_SUPPORTED)
+					message(STATUS "clang supports compiler-rt, use it")
+					add_link_options(-rtlib=compiler-rt -unwindlib=libunwind)
+				endif()
+			else()
+				set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+			endif()
+		elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+		endif()
+	endif()
+	if (ANDROID)
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fPIE -pie")
+	endif()
+	if(COMPILER_HAS_STD_CXX20)
+		set(CMAKE_CXX_STANDARD 20)
+		add_definitions(-DUSE_STD_STRING_VIEW)
+		message(STATUS "Set default cxx standard: C++20")
+	else()
+		message(FATAL_ERROR "need at least GCC 11 or clang 14")
+	endif()
+
+	if (ENABLE_MOLD)
+		if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+			if (MOLD_LINKER)
+				list(APPEND CMAKE_EXE_LINKER_FLAGS "-fuse-ld=mold")
+			endif()
+		endif()
+	endif()
+
+	if (ENABLE_LLD)
+		if (LLD_LINKER)
+			list(APPEND CMAKE_EXE_LINKER_FLAGS "-fuse-ld=lld")
+		endif()
+	endif()
+endif(NOT MSVC)
+
+set(BUILD_ASIO_BEAST ON)
+
+set(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_STATIC_RUNTIME ON)
+
+set(Boost_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost EXCLUDE_FROM_ALL)
+
+
+add_definitions(-DBOOST_ASIO_SEPARATE_COMPILATION)
+add_definitions(-DBOOST_BEAST_SEPARATE_COMPILATION)
+
+add_definitions(-DBOOST_LOCALE_HIDE_AUTO_PTR)
+add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
+add_definitions(-DBOOST_DISABLE_PRAGMA_MESSAGE)
+add_definitions(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING)
+if (ENABLE_USE_IO_URING)
+	find_package(IOUring)
+
+	if (IOUring_FOUND)
+		message(STATUS "Linux using io_uring...")
+		add_definitions(-DBOOST_ASIO_HAS_IO_URING -DBOOST_ASIO_DISABLE_EPOLL)
+		link_libraries(${IOUring_LIBRARIES})
+	endif()
+endif()
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+	add_definitions(-DBOOST_ASIO_HAS_CO_AWAIT)
+endif()
+
+add_subdirectory(third_party/boost EXCLUDE_FROM_ALL)
+
+find_package(Threads)
+link_libraries(${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
+
+if (ENABLE_TCMALLOC_STATIC)
+	find_package(Tcmalloc)
+	link_libraries(${Tcmalloc_LIBRARY})
+endif()
+
+if (ENABLE_JEMALLOC_STATIC)
+	find_package(JeMalloc)
+	link_libraries(${JEMALLOC_LIBRARIES})
+endif()
+
+add_subdirectory(third_party/fmt)
+
+link_libraries(
+		Boost::thread
+		Boost::date_time
+		Boost::program_options
+		Boost::regex
+
+		fmt
+)
+
+if (WIN32)
+	link_libraries(
+		Secur32.lib
+		Bcrypt.lib
+		Winmm.lib
+		Mswsock.lib
 	)
 endif()
 
-project(socks_server)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-include(CheckCXXCompilerFlag)
-
-CHECK_CXX_COMPILER_FLAG(-std=c++17 LIBCXX_HAS_STDCXX17_FLAG)
-
-if (NOT MSVC)
-	if(NOT LIBCXX_HAS_STDCXX17_FLAG)
-		message(FATAL_ERROR "need at least GCC 9 or clang 9")
-	endif()
-
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -static-libgcc")
-else()
-	set(CompilerFlags
-			CMAKE_CXX_FLAGS_DEBUG
-			CMAKE_CXX_FLAGS_RELEASE
-			CMAKE_CXX_FLAGS_MINSIZEREL
-			CMAKE_CXX_FLAGS_RELWITHDEBINFO
-			CMAKE_C_FLAGS_DEBUG
-			CMAKE_C_FLAGS_RELEASE
-			CMAKE_C_FLAGS_MINSIZEREL
-			CMAKE_C_FLAGS_RELWITHDEBINFO
-		)
-
-	#foreach(CompilerFlag ${CompilerFlags})
-	#	string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
-	#endforeach()
-
-	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-	add_definitions(-D_WIN32_WINNT=0x0501)
-
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+if (WIN32)
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/bin/debug)
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin/release)
 endif()
 
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_MULTITHREADED ON)
-#set(Boost_USE_STATIC_RUNTIME ON)
+add_subdirectory(socks)
 
-if (USE_HUNTER)
-	hunter_add_package(Boost COMPONENTS thread system filesystem coroutine context program_options)
-endif()
-
-find_package(Boost CONFIG REQUIRED COMPONENTS thread system filesystem coroutine context program_options)
-
-message(STATUS "Find boost version: ${Boost_VERSION}")
-
-if (NOT Boost_VERSION VERSION_LESS 106700)
-	message(STATUS "Use boost coroutines v2")
-	add_definitions(-DBOOST_COROUTINES_V2)
-endif()
-
-if (USE_HUNTER AND MSVC)
-	add_definitions(-DBOOST_ALL_NO_LIB)
-endif()
-
-link_libraries(${Boost_LIBRARIES})
-include_directories(${Boost_INCLUDE_DIRS})
-
-
-file(GLOB libsocks_SRCS
-	libsocks/v7.c
-	libsocks/v7.h
-
-	libsocks/io.hpp
-	libsocks/socks_server.hpp
-	libsocks/async_connect.hpp
-
-	libsocks/socks_client.hpp
-)
-
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libsocks)
-
-add_executable(socks_server ${libsocks_SRCS}
-  src/server.cpp
-)
-
-add_executable(socks_client ${libsocks_SRCS}
-  src/client.cpp
-)
-
-if(UNIX)
-	target_link_libraries(socks_server ${Boost_LIBRARIES} pthread)
-	target_link_libraries(socks_client ${Boost_LIBRARIES} pthread)
-else()
-	target_link_libraries(socks_server ${Boost_LIBRARIES})
-	target_link_libraries(socks_client ${Boost_LIBRARIES})
-endif()
-
-install(TARGETS socks_server RUNTIME DESTINATION bin)
-install(TARGETS socks_client RUNTIME DESTINATION bin)
-
+configure_file(socks.service.in socks.service)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/socks.service DESTINATION /usr/lib/systemd/system/)
+install(TARGETS socks DESTINATION bin)
