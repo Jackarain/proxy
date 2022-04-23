@@ -8,6 +8,8 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#include "socks/logging.hpp"
+
 #include <memory>
 #include <string>
 #include <array>
@@ -18,7 +20,6 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ip/udp.hpp>
 
-#include "socks/logging.hpp"
 
 namespace socks {
 

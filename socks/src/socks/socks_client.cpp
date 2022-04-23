@@ -10,7 +10,6 @@
 
 #include "socks/socks_client.hpp"
 #include "socks/socks_enums.hpp"
-
 #include "socks/use_awaitable.hpp"
 
 #include <boost/asio/streambuf.hpp>

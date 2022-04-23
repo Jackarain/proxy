@@ -8,6 +8,8 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#include "socks/socks_error_code.hpp"
+
 #include <string>
 #include <memory>
 
@@ -19,7 +21,6 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ip/udp.hpp>
 
-#include "socks/socks_error_code.hpp"
 
 namespace socks {
 
