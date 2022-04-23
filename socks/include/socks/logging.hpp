@@ -26,6 +26,7 @@
 #include <system_error>
 
 #include <boost/asio/thread_pool.hpp>
+#include <boost/asio/ip/address.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/nowide/convert.hpp>
