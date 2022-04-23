@@ -37,6 +37,53 @@ boost::asio::awaitable<void> start_socks_server(server_ptr& server)
 
 boost::asio::awaitable<void> start_socks_client()
 {
+	// nested proxy chain example...
+
+	auto executor = co_await net::this_coro::executor;
+	tcp::socket s(executor);
+
+	tcp::endpoint server_addr(
+		net::ip::address::from_string("127.0.0.1"),
+		1080);
+
+	boost::system::error_code ec;
+	co_await s.async_connect(server_addr, asio_util::use_awaitable[ec]);
+	if (ec)
+	{
+		LOG_WARN << "client connect to server: " << ec.message();
+		co_return;
+	}
+
+	socks::socks_client_option opt1;
+	opt1.host = "127.0.0.1";
+	opt1.port = 1080;
+	opt1.proxy_hostname = true;
+	opt1.username = "jack";
+	opt1.password = "1111";
+
+	co_await socks::async_socks_handshake(s, opt1, asio_util::use_awaitable[ec]);
+	if (ec)
+	{
+		LOG_WARN << "client 1' handshake to server: " << ec.message();
+		co_return;
+	}
+
+	socks::socks_client_option opt2;
+	opt2.host = "www.baidu.com";
+	opt2.port = 80;
+	opt2.proxy_hostname = true;
+	opt2.username = "jack";
+	opt2.password = "1111";
+
+	co_await socks::async_socks_handshake(s, opt2, asio_util::use_awaitable[ec]);
+	if (ec)
+	{
+		LOG_WARN << "client 2' handshake to server: " << ec.message();
+		co_return;
+	}
+
+	LOG_DBG << "completed 2' handshake.";
+
 	co_return;
 }
 
@@ -46,6 +93,7 @@ int main()
 	server_ptr server;
 
 	co_spawn(ioc, start_socks_server(server), net::detached);
+	co_spawn(ioc, start_socks_client(), net::detached);
 
 	ioc.run();
 	return 0;
