@@ -86,11 +86,13 @@ namespace socks {
 		~socks_server() = default;
 
 	public:
+		void open();
 		void close();
 
 	private:
 		void remove_client(size_t id);
-		bool do_auth(const std::string& userid, const std::string& passwd);
+		bool do_auth(const std::string& userid,
+			const std::string& passwd, int version = 5);
 		bool auth_require();
 
 	private:

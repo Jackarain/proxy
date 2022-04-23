@@ -164,35 +164,48 @@ namespace socks {
 			co_return;
 		}
 
+		auto server = m_socks_server.lock();
+		if (!server)
+			co_return;
+
+		// 服务端是否需要认证.
+		auto auth_required = server->auth_require();
+
 		// 循环读取客户端支持的代理方式.
 		p = m_local_buffer.data();
 
 		int method = SOCKS5_AUTH_UNACCEPTABLE;
-		bool support_auth = false;
 		while (bytes != 0)
 		{
 			int m = read<int8_t>(p);
 
-			if (m == SOCKS5_AUTH_NONE || m == SOCKS5_AUTH)
-				method = m;
-
-			if (m == SOCKS5_AUTH)
-				support_auth = true;
+			if (auth_required)
+			{
+				if (m == SOCKS5_AUTH)
+				{
+					method = m;
+					break;
+				}
+			}
+			else
+			{
+				if (m == SOCKS5_AUTH_NONE || m == SOCKS5_AUTH)
+				{
+					method = m;
+					break;
+				}
+			}
 
 			bytes--;
 		}
 
 		// 客户端不支持认证, 而如果服务端需要认证, 回复客户端不接受.
-		auto server = m_socks_server.lock();
-
-		if (!support_auth && !server && !server->auth_require())
+		if (method == SOCKS5_AUTH_UNACCEPTABLE)
 		{
 			// 回复客户端, 不接受客户端的的代理请求.
 			p = m_local_buffer.data();
 			write<uint8_t>(socks_version, p);
 			write<uint8_t>(SOCKS5_AUTH_UNACCEPTABLE, p);
-
-			method = SOCKS5_AUTH_UNACCEPTABLE;
 		}
 		else
 		{
@@ -554,7 +567,7 @@ namespace socks {
 
 		if (server)
 		{
-			verify_passed = server->do_auth(userid, "");
+			verify_passed = server->do_auth(userid, "", SOCKS_VERSION_4);
 			server.reset();
 		}
 
@@ -814,7 +827,10 @@ namespace socks {
 	{
 		boost::system::error_code ec;
 		m_acceptor.listen(boost::asio::socket_base::max_listen_connections, ec);
+	}
 
+	void socks_server::open()
+	{
 		// 同时启动32个连接协程, 开始为socks client提供服务.
 		for (int i = 0; i < 32; i++)
 		{
@@ -844,13 +860,14 @@ namespace socks {
 		m_clients.erase(id);
 	}
 
-	bool socks_server::do_auth(const std::string& userid, const std::string& passwd)
+	bool socks_server::do_auth(const std::string& userid,
+		const std::string& passwd, int version)
 	{
 		if (m_option.usrdid_.empty())
 			return true;
 
 		if (userid == m_option.usrdid_
-			&& passwd == m_option.passwd_)
+			&& (passwd == m_option.passwd_ || version == SOCKS_VERSION_4))
 			return true;
 
 		return false;
@@ -858,7 +875,7 @@ namespace socks {
 
 	bool socks_server::auth_require()
 	{
-		if (m_option.usrdid_.empty())
+		if (!m_option.usrdid_.empty())
 			return true;
 
 		return false;
