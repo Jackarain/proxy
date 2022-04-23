@@ -53,6 +53,7 @@ option(ENABLE_GIT_VERSION			"Enable git version" ON)
 
 option(ENABLE_USE_IO_URING			"Enable auto use io_uring" ON)
 option(ENABLE_BUILD_WITH_LIBCXX		"Build with libc++" OFF)
+option(ENABLE_SYSTEM_ZLIB			"Build with system zlib support" OFF)
 
 option(ENABLE_MOLD					"build using mold" OFF)
 option(ENABLE_LLD					"build using lld" OFF)
@@ -249,7 +250,20 @@ if (ENABLE_JEMALLOC_STATIC)
 	link_libraries(${JEMALLOC_LIBRARIES})
 endif()
 
+if (WIN32 OR NOT ENABLE_SYSTEM_ZLIB)
+	add_subdirectory(third_party/zlib EXCLUDE_FROM_ALL)
+	set(ZLIB_LIBRARIES zlibstatic)
+	set(ZLIB_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/zlib ${CMAKE_CURRENT_SOURCE_DIR}/third_party/zlib/contrib/minizip)
+else()
+	find_package(ZLIB REQUIRED)
+endif()
+
+
 add_subdirectory(third_party/fmt)
+
+include_directories(third_party
+	${ZLIB_INCLUDE_DIRS}
+)
 
 link_libraries(
 		Boost::thread
@@ -258,6 +272,7 @@ link_libraries(
 		Boost::regex
 
 		fmt
+		${ZLIB_LIBRARIES}
 )
 
 if (WIN32)
