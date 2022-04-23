@@ -806,10 +806,10 @@ namespace socks {
 
 	//////////////////////////////////////////////////////////////////////////
 
-	socks_server::socks_server(boost::asio::io_context& ioc,
+	socks_server::socks_server(boost::asio::any_io_executor& executor,
 		const tcp::endpoint& endp, socks_server_option opt)
-		: m_io_context(ioc)
-		, m_acceptor(ioc, endp)
+		: m_executor(executor)
+		, m_acceptor(executor, endp)
 		, m_option(std::move(opt))
 	{
 		boost::system::error_code ec;
@@ -818,7 +818,7 @@ namespace socks {
 		// 同时启动32个连接协程, 开始为socks client提供服务.
 		for (int i = 0; i < 32; i++)
 		{
-			boost::asio::co_spawn(m_io_context,
+			boost::asio::co_spawn(m_executor,
 				start_socks_listen(m_acceptor), boost::asio::detached);
 		}
 	}
@@ -871,7 +871,7 @@ namespace socks {
 
 		while (!m_abort)
 		{
-			tcp::socket socket(m_io_context);
+			tcp::socket socket(m_executor);
 			co_await a.async_accept(socket, asio_util::use_awaitable[error]);
 			if (error)
 			{

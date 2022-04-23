@@ -78,14 +78,17 @@ namespace socks {
 		socks_server(const socks_server&) = delete;
 		socks_server& operator=(const socks_server&) = delete;
 
+		friend class socks_session;
+
 	public:
-		socks_server(boost::asio::io_context& ioc,
+		socks_server(boost::asio::any_io_executor& executor,
 			const tcp::endpoint& endp, socks_server_option opt = {});
 		~socks_server() = default;
 
 	public:
 		void close();
 
+	private:
 		void remove_client(size_t id);
 		bool do_auth(const std::string& userid, const std::string& passwd);
 		bool auth_require();
@@ -94,7 +97,7 @@ namespace socks {
 		boost::asio::awaitable<void> start_socks_listen(tcp::acceptor& a);
 
 	private:
-		boost::asio::io_context& m_io_context;
+		boost::asio::any_io_executor m_executor;
 		tcp::acceptor m_acceptor;
 		socks_server_option m_option;
 		std::unordered_map<size_t, socks_session_weak_ptr> m_clients;
