@@ -150,7 +150,7 @@ namespace asio_util {
 					auto sock = boost::make_local_shared<Stream>(stream.get_executor());
 					context->socket_.emplace_back(sock);
 
-					auto func = [this, begin, &stream, context, sock, h = &context->handler_, &connect_condition]() mutable
+					auto func = [this, begin, &stream, context, sock, h = &context->handler_, connect_condition]() mutable
 					{
 						if (!check_condition({}, *sock, *begin, connect_condition))
 						{
