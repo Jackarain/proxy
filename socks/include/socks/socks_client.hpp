@@ -52,14 +52,17 @@ namespace socks {
 		struct initiate_do_something
 		{
 			template <typename Handler>
-			void operator()(Handler&& handler, tcp::socket* socket, socks_client_option opt) const
+			void operator()(Handler&& handler,
+				tcp::socket* socket, socks_client_option opt) const
 			{
 				auto executor = boost::asio::get_associated_executor(handler);
 				co_spawn(executor,
-				[socket, opt = opt, handler = std::move(handler)]() mutable -> boost::asio::awaitable<void>
+				[socket, opt = opt, handler = std::move(handler)]
+				() mutable -> boost::asio::awaitable<void>
 				{
 					auto ec = co_await do_socks_handshake(*socket, opt);
 					handler(ec);
+
 					co_return;
 				}, boost::asio::detached);
 			}
@@ -67,10 +70,13 @@ namespace socks {
 	}
 
 	template<typename Handler>
-	auto async_socks_handshake(tcp::socket& socket, socks_client_option opt, Handler&& handler)
+	auto async_socks_handshake(tcp::socket& socket,
+		socks_client_option opt, Handler&& handler)
 	{
 		return boost::asio::async_initiate<Handler,
-			void(boost::system::error_code)>(detail::initiate_do_something(), handler, &socket, opt);
+			void(boost::system::error_code)>(
+				detail::initiate_do_something(),
+					handler, &socket, opt);
 	}
 
 }

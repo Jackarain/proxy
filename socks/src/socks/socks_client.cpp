@@ -271,17 +271,12 @@ namespace socks {
 			for (int i = 0; i < domain_length; i++)
 				domain.push_back(read<uint8_t>(resp));
 			port = read<uint16_t>(resp);
-
-			// std::cout << "* SOCKS remote host: " << domain << ":" << port << std::endl;
 		}
 		else if (atyp == SOCKS5_ATYP_IPV4)
 		{
 			net::ip::tcp::endpoint remote_endp(
 				net::ip::address_v4(read<uint32_t>(resp)),
 				read<uint16_t>(resp));
-
-			// std::cout << "* SOCKS remote host: " << remote_endp.address().to_string()
-			//	<< ":" << remote_endp.port() << std::endl;
 		}
 		else if (atyp == SOCKS5_ATYP_IPV6)
 		{
@@ -292,9 +287,6 @@ namespace socks {
 			net::ip::tcp::endpoint remote_endp(
 				net::ip::address_v6(v6_bytes),
 				read<uint16_t>(resp));
-
-			// std::cout << "* SOCKS remote host: " << remote_endp.address().to_string()
-			//	<< ":" << remote_endp.port() << std::endl;
 		}
 
 		if (rep != 0)
@@ -434,4 +426,3 @@ namespace socks {
 
 }
 
-#include <boost/asio/unyield.hpp>
