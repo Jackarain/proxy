@@ -16,7 +16,7 @@ using namespace socks;
 
 using server_ptr = std::shared_ptr<socks_server>;
 
-boost::asio::awaitable<void> start_socks_server(server_ptr& server)
+net::awaitable<void> start_socks_server(server_ptr& server)
 {
 	tcp::endpoint socks_listen(
 		net::ip::address::from_string("0.0.0.0"),
@@ -35,7 +35,7 @@ boost::asio::awaitable<void> start_socks_server(server_ptr& server)
 	co_return;
 }
 
-boost::asio::awaitable<void> start_socks_client()
+net::awaitable<void> start_socks_client()
 {
 	// nested proxy chain example...
 

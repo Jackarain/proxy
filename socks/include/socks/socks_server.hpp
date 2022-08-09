@@ -8,6 +8,8 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#pragma once
+
 #include "socks/logging.hpp"
 
 #include <memory>
@@ -20,13 +22,22 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ip/udp.hpp>
 
+namespace net = boost::asio;
 
 namespace socks {
 
-	using tcp = boost::asio::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
-	using udp = boost::asio::ip::udp;               // from <boost/asio/ip/udp.hpp>
+	using tcp = net::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
+	using udp = net::ip::udp;               // from <boost/asio/ip/udp.hpp>
 
-	class socks_server;
+	class socks_server_base {
+	public:
+		virtual ~socks_server_base() {}
+		virtual void remove_client(size_t id) = 0;
+		virtual bool do_auth(const std::string& userid,
+			const std::string& passwd, int version) = 0;
+		virtual bool auth_require() = 0;
+	};
+
 	class socks_session
 		: public std::enable_shared_from_this<socks_session>
 	{
@@ -34,7 +45,7 @@ namespace socks {
 		socks_session& operator=(const socks_session&) = delete;
 
 	public:
-		socks_session(tcp::socket&& socket, size_t id, std::weak_ptr<socks_server> server);
+		socks_session(tcp::socket&& socket, size_t id, std::weak_ptr<socks_server_base> server);
 		~socks_session();
 
 	public:
@@ -42,18 +53,18 @@ namespace socks {
 		void close();
 
 	private:
-		boost::asio::awaitable<void> start_socks_proxy();
-		boost::asio::awaitable<void> socks_connect_v5();
-		boost::asio::awaitable<void> socks_connect_v4();
-		boost::asio::awaitable<bool> socks_auth();
-		boost::asio::awaitable<void> transfer(tcp::socket& from, tcp::socket& to);
+		net::awaitable<void> start_socks_proxy();
+		net::awaitable<void> socks_connect_v5();
+		net::awaitable<void> socks_connect_v4();
+		net::awaitable<bool> socks_auth();
+		net::awaitable<void> transfer(tcp::socket& from, tcp::socket& to);
 
 	private:
 		tcp::socket m_local_socket;
 		tcp::socket m_remote_socket;
 		size_t m_connection_id;
 		std::array<char, 2048> m_local_buffer{};
-		std::weak_ptr<socks_server> m_socks_server;
+		std::weak_ptr<socks_server_base> m_socks_server;
 		std::string m_bind_addr;
 		bool m_abort{ false };
 	};
@@ -73,7 +84,8 @@ namespace socks {
 	};
 
 	class socks_server
-		: public std::enable_shared_from_this<socks_server>
+		: public socks_server_base
+		, public std::enable_shared_from_this<socks_server>
 	{
 		socks_server(const socks_server&) = delete;
 		socks_server& operator=(const socks_server&) = delete;
@@ -81,25 +93,25 @@ namespace socks {
 		friend class socks_session;
 
 	public:
-		socks_server(boost::asio::any_io_executor& executor,
+		socks_server(net::any_io_executor& executor,
 			const tcp::endpoint& endp, socks_server_option opt = {});
-		~socks_server() = default;
+		virtual ~socks_server() = default;
 
 	public:
 		void open();
 		void close();
 
 	private:
-		void remove_client(size_t id);
-		bool do_auth(const std::string& userid,
-			const std::string& passwd, int version = 5);
-		bool auth_require();
+		virtual void remove_client(size_t id) override;
+		virtual bool do_auth(const std::string& userid,
+			const std::string& passwd, int version) override;
+		virtual bool auth_require() override;
 
 	private:
-		boost::asio::awaitable<void> start_socks_listen(tcp::acceptor& a);
+		net::awaitable<void> start_socks_listen(tcp::acceptor& a);
 
 	private:
-		boost::asio::any_io_executor m_executor;
+		net::any_io_executor m_executor;
 		tcp::acceptor m_acceptor;
 		socks_server_option m_option;
 		std::unordered_map<size_t, socks_session_weak_ptr> m_clients;

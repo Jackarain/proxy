@@ -19,8 +19,10 @@
 #include <boost/asio/read.hpp>
 #include <boost/asio/read_until.hpp>
 #include <boost/asio/write.hpp>
+
 #include <boost/asio/detached.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
+
 
 namespace socks {
 	namespace detail {
@@ -43,14 +45,15 @@ namespace socks {
 
 	} // detail
 
-	using namespace boost::asio::experimental::awaitable_operators;
+	using namespace net::experimental::awaitable_operators;
 	using namespace util;
 	using namespace boost::asio;
 
 	using detail::write;
 	using detail::read;
 
-	socks_session::socks_session(tcp::socket&& socket, size_t id, std::weak_ptr<socks_server> server)
+	socks_session::socks_session(tcp::socket&& socket,
+		size_t id, std::weak_ptr<socks_server_base> server)
 		: m_local_socket(std::move(socket))
 		, m_remote_socket(m_local_socket.get_executor())
 		, m_connection_id(id)
@@ -70,9 +73,13 @@ namespace socks {
 	void socks_session::start(std::string bind_addr)
 	{
 		m_bind_addr = bind_addr;
+		auto self = shared_from_this();
 
-		boost::asio::co_spawn(m_local_socket.get_executor(),
-			start_socks_proxy(), boost::asio::detached);
+		net::co_spawn(m_local_socket.get_executor(),
+			[self, this]() -> net::awaitable<void>
+			{
+				co_await start_socks_proxy();
+			}, net::detached);
 	}
 
 	void socks_session::close()
@@ -84,7 +91,7 @@ namespace socks {
 		m_remote_socket.close(ignore_ec);
 	}
 
-	boost::asio::awaitable<void> socks_session::start_socks_proxy()
+	net::awaitable<void> socks_session::start_socks_proxy()
 	{
 		// 保持整个生命周期在协程栈上.
 		auto self = shared_from_this();
@@ -106,19 +113,24 @@ namespace socks {
 
 		boost::system::error_code ec;
 
-		[[maybe_unused]] auto bytes = co_await boost::asio::async_read(m_local_socket,
-			boost::asio::buffer(m_local_buffer),
-				boost::asio::transfer_exactly(2),
-					asio_util::use_awaitable[ec]);
+		[[maybe_unused]] auto bytes = co_await net::async_read(m_local_socket,
+			net::buffer(m_local_buffer),
+			net::transfer_exactly(2),
+			asio_util::use_awaitable[ec]);
 		if (ec)
 		{
-			LOG_ERR << "id: " << m_connection_id << ", read socks version: " << ec.message();
+			LOG_ERR << "socks id: " << m_connection_id
+				<< ", read socks version: " << ec.message();
 			co_return;
 		}
 		BOOST_ASSERT(bytes == 2);
 
 		char* p = m_local_buffer.data();
 		int socks_version = read<uint8_t>(p);
+
+		LOG_DBG << "socks id: " << m_connection_id
+			<< ", socks version: " << socks_version;
+
 		if (socks_version == SOCKS_VERSION_5)
 		{
 			co_await socks_connect_v5();
@@ -133,7 +145,7 @@ namespace socks {
 		co_return;
 	}
 
-	boost::asio::awaitable<void> socks_session::socks_connect_v5()
+	net::awaitable<void> socks_session::socks_connect_v5()
 	{
 		char* p = m_local_buffer.data();
 
@@ -142,7 +154,8 @@ namespace socks {
 		int nmethods = read<int8_t>(p);
 		if (nmethods <= 0 || nmethods > 255)
 		{
-			LOG_ERR << "id: " << m_connection_id << ", unsupported method : " << nmethods;
+			LOG_ERR << "socks id: " << m_connection_id
+				<< ", unsupported method : " << nmethods;
 			co_return;
 		}
 
@@ -154,13 +167,14 @@ namespace socks {
 		//                  [          ]
 
 		boost::system::error_code ec;
-		auto bytes = co_await boost::asio::async_read(m_local_socket,
-			boost::asio::buffer(m_local_buffer, nmethods),
-				boost::asio::transfer_exactly(nmethods),
-					asio_util::use_awaitable[ec]);
+		auto bytes = co_await net::async_read(m_local_socket,
+			net::buffer(m_local_buffer, nmethods),
+			net::transfer_exactly(nmethods),
+			asio_util::use_awaitable[ec]);
 		if (ec)
 		{
-			LOG_ERR << "id: " << m_connection_id << ", read socks methods: " << ec.message();
+			LOG_ERR << "socks id: " << m_connection_id
+				<< ", read socks methods: " << ec.message();
 			co_return;
 		}
 
@@ -221,19 +235,21 @@ namespace socks {
 		//  | 1  |   1    |
 		//  +----+--------+
 		//  [             ]
-		bytes = co_await boost::asio::async_write(m_local_socket,
-			boost::asio::buffer(m_local_buffer, 2),
-				boost::asio::transfer_exactly(2),
-					asio_util::use_awaitable[ec]);
+		bytes = co_await net::async_write(m_local_socket,
+			net::buffer(m_local_buffer, 2),
+			net::transfer_exactly(2),
+			asio_util::use_awaitable[ec]);
 		if (ec)
 		{
-			LOG_WARN << "id: " << m_connection_id << ", write server method error : " << ec.message();
+			LOG_WARN << "socks id: " << m_connection_id
+				<< ", write server method error : " << ec.message();
 			co_return;
 		}
 
 		if (method == SOCKS5_AUTH_UNACCEPTABLE)
 		{
-			LOG_WARN << "id: " << m_connection_id << ", no acceptable methods for server";
+			LOG_WARN << "socks id: " << m_connection_id
+				<< ", no acceptable methods for server";
 			co_return;
 		}
 
@@ -251,13 +267,14 @@ namespace socks {
 		//  | 1  |  1  | X'00' |  1   | Variable |    2     |
 		//  +----+-----+-------+------+----------+----------+
 		//  [                          ]
-		bytes = co_await boost::asio::async_read(m_local_socket,
-			boost::asio::buffer(m_local_buffer, 5),
-				boost::asio::transfer_exactly(5),
-					asio_util::use_awaitable[ec]);
+		bytes = co_await net::async_read(m_local_socket,
+			net::buffer(m_local_buffer, 5),
+			net::transfer_exactly(5),
+			asio_util::use_awaitable[ec]);
 		if (ec)
 		{
-			LOG_WARN << "id: " << m_connection_id << ", read client request error: " << ec.message();
+			LOG_WARN << "socks id: " << m_connection_id
+				<< ", read client request error: " << ec.message();
 			co_return;
 		}
 
@@ -265,7 +282,8 @@ namespace socks {
 		auto ver = read<int8_t>(p);
 		if (ver != SOCKS_VERSION_5)
 		{
-			LOG_WARN << "id: " << m_connection_id << ", socks requests, invalid protocol: " << ver;
+			LOG_WARN << "socks id: " << m_connection_id
+				<< ", socks requests, invalid protocol: " << ver;
 			co_return;
 		}
 
@@ -295,13 +313,14 @@ namespace socks {
 		else if (atyp == SOCKS5_ATYP_IPV6)
 			length = 17; // 18 - 1
 
-		bytes = co_await boost::asio::async_read(m_local_socket,
-			boost::asio::buffer(m_local_buffer.data() + prefix, length),
-				boost::asio::transfer_exactly(length),
-					asio_util::use_awaitable[ec]);
+		bytes = co_await net::async_read(m_local_socket,
+			net::buffer(m_local_buffer.data() + prefix, length),
+			net::transfer_exactly(length),
+			asio_util::use_awaitable[ec]);
 		if (ec)
 		{
-			LOG_WARN << "id: " << m_connection_id << ", read client request dst.addr error: " << ec.message();
+			LOG_WARN << "socks id: " << m_connection_id
+				<< ", read client request dst.addr error: " << ec.message();
 			co_return;
 		}
 
@@ -309,7 +328,8 @@ namespace socks {
 		if (ec)
 			m_bind_addr.clear();
 
-		auto check_condition = [this, bind_interface](const boost::system::error_code&,
+		auto check_condition = [this, bind_interface](
+			const boost::system::error_code&,
 			tcp::socket& stream, auto&) mutable
 		{
 			if (m_bind_addr.empty())
@@ -333,26 +353,31 @@ namespace socks {
 		std::string domain;
 		uint16_t port = 0;
 
-		auto executor = co_await boost::asio::this_coro::executor;
+		auto executor = co_await net::this_coro::executor;
 		tcp::socket& remote_socket = m_remote_socket;
 
 		p = m_local_buffer.data();
 		if (atyp == SOCKS5_ATYP_IPV4)
 		{
-			dst_endpoint.address(boost::asio::ip::address_v4(read<uint32_t>(p)));
+			dst_endpoint.address(net::ip::address_v4(read<uint32_t>(p)));
 			dst_endpoint.port(read<uint16_t>(p));
 
-			LOG_DBG << "id: " << m_connection_id << ", " << m_local_socket.remote_endpoint() << " use ipv4: "
-				<< dst_endpoint;
+			LOG_DBG << "socks id: " << m_connection_id
+				<< ", " << m_local_socket.remote_endpoint()
+				<< " use ipv4: " << dst_endpoint;
 
 			if (command == SOCKS_CMD_CONNECT)
 			{
 				auto target = ip::basic_resolver_results<tcp>::create(dst_endpoint, "", "");
-				co_await asio_util::async_connect(remote_socket, target, check_condition, asio_util::use_awaitable[ec]);
+				co_await asio_util::async_connect(remote_socket,
+					target, check_condition, asio_util::use_awaitable[ec]);
 				if (ec)
 				{
-					LOG_WFMT("id: {}, connect to target {}:{} error: {}",
-						m_connection_id, dst_endpoint.address().to_string(), port, ec.message());
+					LOG_WFMT("socks id: {}, connect to target {}:{} error: {}",
+						m_connection_id,
+						dst_endpoint.address().to_string(),
+						port,
+						ec.message());
 				}
 			}
 		}
@@ -361,7 +386,8 @@ namespace socks {
 			for (size_t i = 0; i < bytes - 2; i++)
 				domain.push_back(read<int8_t>(p));
 			port = read<uint16_t>(p);
-			LOG_DBG << "id: " << m_connection_id << ", " << m_local_socket.remote_endpoint()
+			LOG_DBG << "socks id: " << m_connection_id
+				<< ", " << m_local_socket.remote_endpoint()
 				<< " use domain: " << domain << ":" << port;
 
 			if (command == SOCKS_CMD_CONNECT)
@@ -370,6 +396,14 @@ namespace socks {
 
 				auto target_endpoints = co_await resolver.async_resolve(
 					domain, std::to_string(port), asio_util::use_awaitable[ec]);
+				if (ec)
+				{
+					LOG_WARN << "socks id: " << m_connection_id
+						<< ", resolve: " << domain
+						<< ", error: " << ec.message();
+					co_return;
+				}
+
 				bool connected = false;
 
 				for (auto endpoint : target_endpoints)
@@ -377,7 +411,8 @@ namespace socks {
 					dst_endpoint = endpoint;
 
 					auto target = ip::basic_resolver_results<tcp>::create(dst_endpoint, "", "");
-					co_await asio_util::async_connect(remote_socket, target, check_condition, asio_util::use_awaitable[ec]);
+					co_await asio_util::async_connect(
+						remote_socket, target, check_condition, asio_util::use_awaitable[ec]);
 					if (!ec)
 					{
 						connected = true;
@@ -387,33 +422,37 @@ namespace socks {
 
 				if (!connected)
 				{
-					LOG_WFMT("id: {}, connect to target {}:{} error: {}",
+					LOG_WFMT("socks id: {}, connect to target {}:{} error: {}",
 						m_connection_id, domain, port, ec.message());
 				}
 			}
 		}
 		else if (atyp == SOCKS5_ATYP_IPV6)
 		{
-			boost::asio::ip::address_v6::bytes_type addr;
-			for (boost::asio::ip::address_v6::bytes_type::iterator i = addr.begin();
+			net::ip::address_v6::bytes_type addr;
+			for (net::ip::address_v6::bytes_type::iterator i = addr.begin();
 				i != addr.end(); ++i)
 			{
 				*i = read<int8_t>(p);
 			}
 
-			dst_endpoint.address(boost::asio::ip::address_v6(addr));
+			dst_endpoint.address(net::ip::address_v6(addr));
 			dst_endpoint.port(read<uint16_t>(p));
-			LOG_DBG << "id: " << m_connection_id << ", "
+			LOG_DBG << "socks id: " << m_connection_id << ", "
 				<< m_local_socket.remote_endpoint() << " use ipv6: " << dst_endpoint;
 
 			if (command == SOCKS_CMD_CONNECT)
 			{
 				auto target = ip::basic_resolver_results<tcp>::create(dst_endpoint, "", "");
-				co_await asio_util::async_connect(remote_socket, target, check_condition, asio_util::use_awaitable[ec]);
+				co_await asio_util::async_connect(
+					remote_socket, target, check_condition, asio_util::use_awaitable[ec]);
 				if (ec)
 				{
-					LOG_WFMT("id: {}, connect to target {}:{} error: {}",
-						m_connection_id, dst_endpoint.address().to_string(), port, ec.message());
+					LOG_WFMT("socks id: {}, connect to target {}:{} error: {}",
+						m_connection_id,
+						dst_endpoint.address().to_string(),
+						port,
+						ec.message());
 				}
 			}
 		}
@@ -422,9 +461,9 @@ namespace socks {
 		{
 			int8_t error_code = SOCKS5_SUCCEEDED;
 
-			if (ec == boost::asio::error::connection_refused)
+			if (ec == net::error::connection_refused)
 				error_code = SOCKS5_CONNECTION_REFUSED;
-			else if (ec == boost::asio::error::network_unreachable)
+			else if (ec == net::error::network_unreachable)
 				error_code = SOCKS5_NETWORK_UNREACHABLE;
 			else if (ec)
 				error_code = SOCKS5_GENERAL_SOCKS_SERVER_FAILURE;
@@ -461,6 +500,7 @@ namespace socks {
 				write<uint8_t>(SOCKS5_ATYP_DOMAINNAME, p);
 				write<uint8_t>(static_cast<int8_t>(domain.size()), p);
 				std::copy(domain.begin(), domain.end(), p);
+				p += domain.size();
 				write<uint16_t>(port, p);
 			}
 			else
@@ -470,13 +510,15 @@ namespace socks {
 				write<uint16_t>(0, p);
 			}
 
-			bytes = co_await boost::asio::async_write(m_local_socket,
-				boost::asio::buffer(m_local_buffer, 10),
-					boost::asio::transfer_exactly(10),
-						asio_util::use_awaitable[ec]);
+			auto len = p - m_local_buffer.data();
+			bytes = co_await net::async_write(m_local_socket,
+				net::buffer(m_local_buffer, len),
+				net::transfer_exactly(len),
+				asio_util::use_awaitable[ec]);
 			if (ec)
 			{
-				LOG_WARN << "id: " << m_connection_id << ", write server response error: " << ec.message();
+				LOG_WARN << "socks id: " << m_connection_id
+					<< ", write server response error: " << ec.message();
 				co_return;
 			}
 
@@ -484,28 +526,31 @@ namespace socks {
 				co_return;
 		}
 
-		LOG_DBG << "id: " << m_connection_id << ", connected start transfer";
+		LOG_DBG << "socks id: " << m_connection_id
+			<< ", connected start transfer";
 
 		// 发起数据传输协程.
 		if (command == SOCKS_CMD_CONNECT)
 		{
 			co_await(
-					transfer(m_local_socket, remote_socket)
-					&&
-					transfer(remote_socket, m_local_socket)
+				transfer(m_local_socket, remote_socket)
+				&&
+				transfer(remote_socket, m_local_socket)
 				);
 
-			LOG_DBG << "id: " << m_connection_id << ", transfer completed";
+			LOG_DBG << "socks id: " << m_connection_id
+				<< ", transfer completed";
 		}
 		else
 		{
-			LOG_WARN << "id: " << m_connection_id << ", SOCKS_CMD_BIND and SOCKS5_CMD_UDP is unsupported";
+			LOG_WARN << "socks id: " << m_connection_id
+				<< ", SOCKS_CMD_BIND and SOCKS5_CMD_UDP is unsupported";
 		}
 
 		co_return;
 	}
 
-	boost::asio::awaitable<void> socks_session::socks_connect_v4()
+	net::awaitable<void> socks_session::socks_connect_v4()
 	{
 		char* p = m_local_buffer.data();
 
@@ -521,13 +566,14 @@ namespace socks {
 		//            [                             ]
 
 		boost::system::error_code ec;
-		auto bytes = co_await boost::asio::async_read(m_local_socket,
-			boost::asio::buffer(m_local_buffer, 6),
-				boost::asio::transfer_exactly(6),
-					asio_util::use_awaitable[ec]);
+		auto bytes = co_await net::async_read(m_local_socket,
+			net::buffer(m_local_buffer, 6),
+			net::transfer_exactly(6),
+			asio_util::use_awaitable[ec]);
 		if (ec)
 		{
-			LOG_WARN << "id: " << m_connection_id << ", read socks4 dst: " << ec.message();
+			LOG_WARN << "socks id: " << m_connection_id
+				<< ", read socks4 dst: " << ec.message();
 			co_return;
 		}
 
@@ -536,7 +582,12 @@ namespace socks {
 
 		auto port = read<uint16_t>(p);
 		dst_endpoint.port(port);
-		dst_endpoint.address(boost::asio::ip::address_v4(read<uint32_t>(p)));
+		dst_endpoint.address(net::ip::address_v4(read<uint32_t>(p)));
+
+		bool socks4a = false;
+		auto tmp = dst_endpoint.address().to_v4().to_uint() ^ 0x000000ff;
+		if (0xff > tmp)
+			socks4a = true;
 
 		//  +----+----+----+----+----+----+----+----+----+----+....+----+
 		//  | VN | CD | DSTPORT |      DSTIP        | USERID       |NULL|
@@ -544,12 +595,13 @@ namespace socks {
 		//  | 1  | 1  |    2    |         4         | variable     | 1  |
 		//  +----+----+----+----+----+----+----+----+----+----+....+----+
 		//                                          [                   ]
-		boost::asio::streambuf sbuf;
-		bytes = co_await boost::asio::async_read_until(m_local_socket,
+		net::streambuf sbuf;
+		bytes = co_await net::async_read_until(m_local_socket,
 			sbuf, '\0', asio_util::use_awaitable[ec]);
 		if (ec)
 		{
-			LOG_WARN << "id: " << m_connection_id << ", read socks4 userid: " << ec.message();
+			LOG_WARN << "socks id: " << m_connection_id
+				<< ", read socks4 userid: " << ec.message();
 			co_return;
 		}
 
@@ -559,7 +611,26 @@ namespace socks {
 			userid.resize(bytes - 1);
 			sbuf.sgetn(&userid[0], bytes - 1);
 		}
-		sbuf.commit(1);
+		sbuf.consume(1); // consume `null`
+
+		std::string hostname;
+		if (socks4a)
+		{
+			bytes = co_await net::async_read_until(m_local_socket,
+				sbuf, '\0', asio_util::use_awaitable[ec]);
+			if (ec)
+			{
+				LOG_WARN << "socks id: " << m_connection_id
+					<< ", read socks4a hostname: " << ec.message();
+				co_return;
+			}
+
+			if (bytes > 1)
+			{
+				hostname.resize(bytes - 1);
+				sbuf.sgetn(&hostname[0], bytes - 1);
+			}
+		}
 
 		// 用户认证逻辑.
 		bool verify_passed = false;
@@ -568,7 +639,11 @@ namespace socks {
 		if (server)
 		{
 			verify_passed = server->do_auth(userid, "", SOCKS_VERSION_4);
-			server.reset();
+			if (verify_passed)
+				LOG_DBG << "socks id: " << m_connection_id << ", auth passed";
+			else
+				LOG_WARN << "socks id: " << m_connection_id << ", auth no pass";
+			server = {};
 		}
 
 		if (!verify_passed)
@@ -587,17 +662,19 @@ namespace socks {
 			write<uint16_t>(dst_endpoint.port(), p);
 			write<uint32_t>(dst_endpoint.address().to_v4().to_ulong(), p);
 
-			bytes = co_await boost::asio::async_write(m_local_socket,
-				boost::asio::buffer(m_local_buffer, 8),
-					boost::asio::transfer_exactly(8),
-						asio_util::use_awaitable[ec]);
+			bytes = co_await net::async_write(m_local_socket,
+				net::buffer(m_local_buffer, 8),
+				net::transfer_exactly(8),
+				asio_util::use_awaitable[ec]);
 			if (ec)
 			{
-				LOG_WARN << "id: " << m_connection_id << ", write socks4 no allow: " << ec.message();
+				LOG_WARN << "socks id: " << m_connection_id
+					<< ", write socks4 no allow: " << ec.message();
 				co_return;
 			}
 
-			LOG_WARN << "id: " << m_connection_id << ", socks4 " << userid << " auth fail";
+			LOG_WARN << "socks id: " << m_connection_id
+				<< ", socks4 " << userid << " auth fail";
 			co_return;
 		}
 
@@ -606,18 +683,64 @@ namespace socks {
 		if (command == SOCKS_CMD_CONNECT)
 		{
 			auto target = ip::basic_resolver_results<tcp>::create(dst_endpoint, "", "");
-			co_await asio_util::async_connect(remote_socket, target, asio_util::use_awaitable[ec]);
+
+			if (socks4a)
+			{
+				auto executor = co_await net::this_coro::executor;
+				tcp::resolver resolver{ executor };
+
+				target = co_await resolver.async_resolve(
+					hostname, std::to_string(dst_endpoint.port()), asio_util::use_awaitable[ec]);
+				if (ec)
+				{
+					LOG_WARN << "socks id: " << m_connection_id
+						<< ", resolve: " << hostname
+						<< ", error: " << ec.message();
+					co_return;
+				}
+			}
+
+			auto bind_interface = ip::address::from_string(m_bind_addr, ec);
+			if (ec)
+				m_bind_addr.clear();
+
+			auto check_condition = [this, bind_interface](
+				const boost::system::error_code&,
+				tcp::socket& stream, auto&) mutable
+			{
+				if (m_bind_addr.empty())
+					return true;
+
+				tcp::endpoint bind_endpoint(bind_interface, 0);
+				boost::system::error_code err;
+
+				stream.open(bind_endpoint.protocol(), err);
+				if (err)
+					return false;
+
+				stream.bind(bind_endpoint, err);
+				if (err)
+					return false;
+
+				return true;
+			};
+
+			co_await asio_util::async_connect(
+				remote_socket, target, check_condition, asio_util::use_awaitable[ec]);
 			if (ec)
 			{
-				LOG_WFMT("id: {}, connect to target {}:{} error: {}",
-					m_connection_id, dst_endpoint.address().to_string(), port, ec.message());
+				LOG_WFMT("socks id: {}, connect to target {}:{} error: {}",
+					m_connection_id,
+					dst_endpoint.address().to_string(),
+					port,
+					ec.message());
 				error_code = SOCKS4_CANNOT_CONNECT_TARGET_SERVER;
 			}
 		}
 		else
 		{
 			error_code = SOCKS4_REQUEST_REJECTED_OR_FAILED;
-			LOG_WFMT("id: {}, unsupported command for socks4", m_connection_id);
+			LOG_WFMT("socks id: {}, unsupported command for socks4", m_connection_id);
 		}
 
 		//  +----+----+----+----+----+----+----+----+
@@ -634,13 +757,14 @@ namespace socks {
 		write<uint16_t>(dst_endpoint.port(), p);
 		write<uint32_t>(dst_endpoint.address().to_v4().to_ulong(), p);
 
-		bytes = co_await boost::asio::async_write(m_local_socket,
-			boost::asio::buffer(m_local_buffer, 8),
-				boost::asio::transfer_exactly(8),
-					asio_util::use_awaitable[ec]);
+		bytes = co_await net::async_write(m_local_socket,
+			net::buffer(m_local_buffer, 8),
+			net::transfer_exactly(8),
+			asio_util::use_awaitable[ec]);
 		if (ec)
 		{
-			LOG_WARN << "id: " << m_connection_id << ", write socks4 response: " << ec.message();
+			LOG_WARN << "socks id: " << m_connection_id
+				<< ", write socks4 response: " << ec.message();
 			co_return;
 		}
 
@@ -653,11 +777,11 @@ namespace socks {
 			transfer(remote_socket, m_local_socket)
 			);
 
-		LOG_DBG << "id: " << m_connection_id << ", transfer completed";
+		LOG_DBG << "socks id: " << m_connection_id << ", transfer completed";
 		co_return;
 	}
 
-	boost::asio::awaitable<bool> socks_session::socks_auth()
+	net::awaitable<bool> socks_session::socks_auth()
 	{
 		//  +----+------+----------+------+----------+
 		//  |VER | ULEN |  UNAME   | PLEN |  PASSWD  |
@@ -668,13 +792,13 @@ namespace socks {
 
 		boost::system::error_code ec;
 
-		auto bytes = co_await boost::asio::async_read(m_local_socket,
-			boost::asio::buffer(m_local_buffer, 2),
-			boost::asio::transfer_exactly(2),
+		auto bytes = co_await net::async_read(m_local_socket,
+			net::buffer(m_local_buffer, 2),
+			net::transfer_exactly(2),
 			asio_util::use_awaitable[ec]);
 		if (ec)
 		{
-			LOG_WARN << "id: " << m_connection_id
+			LOG_WARN << "socks id: " << m_connection_id
 				<< ", read client username/passwd error: " << ec.message();
 			co_return false;
 		}
@@ -683,13 +807,15 @@ namespace socks {
 		int auth_version = read<int8_t>(p);
 		if (auth_version != 1)
 		{
-			LOG_WARN << "id: " << m_connection_id << ", socks negotiation, unsupported socks5 protocol";
+			LOG_WARN << "socks id: " << m_connection_id
+				<< ", socks negotiation, unsupported socks5 protocol";
 			co_return false;
 		}
 		int name_length = read<uint8_t>(p);
 		if (name_length <= 0 || name_length > 255)
 		{
-			LOG_WARN << "id: " << m_connection_id << ", socks negotiation, invalid name length";
+			LOG_WARN << "socks id: " << m_connection_id
+				<< ", socks negotiation, invalid name length";
 			co_return false;
 		}
 		name_length += 1;
@@ -701,13 +827,14 @@ namespace socks {
 		//  +----+------+----------+------+----------+
 		//              [                 ]
 
-		bytes = co_await boost::asio::async_read(m_local_socket,
-			boost::asio::buffer(m_local_buffer, name_length),
-			boost::asio::transfer_exactly(name_length),
+		bytes = co_await net::async_read(m_local_socket,
+			net::buffer(m_local_buffer, name_length),
+			net::transfer_exactly(name_length),
 			asio_util::use_awaitable[ec]);
 		if (ec)
 		{
-			LOG_WARN << "id: " << m_connection_id << ", read client username error: " << ec.message();
+			LOG_WARN << "socks id: " << m_connection_id
+				<< ", read client username error: " << ec.message();
 			co_return false;
 		}
 
@@ -720,7 +847,8 @@ namespace socks {
 		int passwd_len = read<uint8_t>(p);
 		if (passwd_len <= 0 || passwd_len > 255)
 		{
-			LOG_WARN << "id: " << m_connection_id << ", socks negotiation, invalid passwd length";
+			LOG_WARN << "socks id: " << m_connection_id
+				<< ", socks negotiation, invalid passwd length";
 			co_return false;
 		}
 
@@ -731,13 +859,14 @@ namespace socks {
 		//  +----+------+----------+------+----------+
 		//                                [          ]
 
-		bytes = co_await boost::asio::async_read(m_local_socket,
-			boost::asio::buffer(m_local_buffer, passwd_len),
-			boost::asio::transfer_exactly(passwd_len),
+		bytes = co_await net::async_read(m_local_socket,
+			net::buffer(m_local_buffer, passwd_len),
+			net::transfer_exactly(passwd_len),
 			asio_util::use_awaitable[ec]);
 		if (ec)
 		{
-			LOG_WARN << "id: " << m_connection_id << ", read client passwd error: " << ec.message();
+			LOG_WARN << "socks id: " << m_connection_id
+				<< ", read client passwd error: " << ec.message();
 			co_return false;
 		}
 
@@ -758,7 +887,7 @@ namespace socks {
 
 		if (server)
 		{
-			verify_passed = server->do_auth(uname, passwd);
+			verify_passed = server->do_auth(uname, passwd, auth_version);
 			server.reset();
 		}
 
@@ -779,20 +908,21 @@ namespace socks {
 		//  +----+--------+
 		//  | 1  |   1    |
 		//  +----+--------+
-		co_await boost::asio::async_write(m_local_socket,
-			boost::asio::buffer(m_local_buffer, 2),
-			boost::asio::transfer_exactly(2),
+		co_await net::async_write(m_local_socket,
+			net::buffer(m_local_buffer, 2),
+			net::transfer_exactly(2),
 			asio_util::use_awaitable[ec]);
 		if (ec)
 		{
-			LOG_WARN << "id: " << m_connection_id << ", server write status error: " << ec.message();
+			LOG_WARN << "socks id: " << m_connection_id
+				<< ", server write status error: " << ec.message();
 			co_return false;
 		}
 
 		co_return true;
 	}
 
-	boost::asio::awaitable<void> socks_session::transfer(tcp::socket& from, tcp::socket& to)
+	net::awaitable<void> socks_session::transfer(tcp::socket& from, tcp::socket& to)
 	{
 		std::vector<char> data(65536, 0);
 		boost::system::error_code ec;
@@ -800,18 +930,18 @@ namespace socks {
 		for (; !m_abort;)
 		{
 			auto bytes = co_await from.async_read_some(
-				boost::asio::buffer(data), asio_util::use_awaitable[ec]);
+				net::buffer(data), asio_util::use_awaitable[ec]);
 			if (ec || m_abort)
 			{
-				to.shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
+				to.shutdown(net::ip::tcp::socket::shutdown_send, ec);
 				co_return;
 			}
 
-			co_await boost::asio::async_write(to,
-				boost::asio::buffer(data, bytes), asio_util::use_awaitable[ec]);
+			co_await net::async_write(to,
+				net::buffer(data, bytes), asio_util::use_awaitable[ec]);
 			if (ec || m_abort)
 			{
-				from.shutdown(boost::asio::ip::tcp::socket::shutdown_receive, ec);
+				from.shutdown(net::ip::tcp::socket::shutdown_receive, ec);
 				co_return;
 			}
 		}
@@ -819,14 +949,14 @@ namespace socks {
 
 	//////////////////////////////////////////////////////////////////////////
 
-	socks_server::socks_server(boost::asio::any_io_executor& executor,
+	socks_server::socks_server(net::any_io_executor& executor,
 		const tcp::endpoint& endp, socks_server_option opt)
 		: m_executor(executor)
 		, m_acceptor(executor, endp)
 		, m_option(std::move(opt))
 	{
 		boost::system::error_code ec;
-		m_acceptor.listen(boost::asio::socket_base::max_listen_connections, ec);
+		m_acceptor.listen(net::socket_base::max_listen_connections, ec);
 	}
 
 	void socks_server::open()
@@ -834,8 +964,8 @@ namespace socks {
 		// 同时启动32个连接协程, 开始为socks client提供服务.
 		for (int i = 0; i < 32; i++)
 		{
-			boost::asio::co_spawn(m_executor,
-				start_socks_listen(m_acceptor), boost::asio::detached);
+			net::co_spawn(m_executor,
+				start_socks_listen(m_acceptor), net::detached);
 		}
 	}
 
@@ -881,7 +1011,7 @@ namespace socks {
 		return false;
 	}
 
-	boost::asio::awaitable<void> socks_server::start_socks_listen(tcp::acceptor& a)
+	net::awaitable<void> socks_server::start_socks_listen(tcp::acceptor& a)
 	{
 		auto self = shared_from_this();
 		boost::system::error_code error;
@@ -894,8 +1024,8 @@ namespace socks {
 			{
 				LOG_ERR << "start_socks_listen, async_accept: " << error.message();
 
-				if (error == boost::asio::error::operation_aborted ||
-					error == boost::asio::error::bad_descriptor)
+				if (error == net::error::operation_aborted ||
+					error == net::error::bad_descriptor)
 				{
 					co_return;
 				}
@@ -907,12 +1037,12 @@ namespace socks {
 			}
 
 			{
-				boost::asio::socket_base::keep_alive option(true);
+				net::socket_base::keep_alive option(true);
 				socket.set_option(option, error);
 			}
 
 			{
-				boost::asio::ip::tcp::no_delay option(true);
+				net::ip::tcp::no_delay option(true);
 				socket.set_option(option);
 			}
 
