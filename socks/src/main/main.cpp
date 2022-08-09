@@ -65,8 +65,8 @@ net::awaitable<void> start_socks_client()
 	}
 
 	socks::socks_client_option opt1;
-	opt1.host = "127.0.0.1";
-	opt1.port = 1080;
+	opt1.target_host = "127.0.0.1";
+	opt1.target_port = 1080;
 	opt1.proxy_hostname = true;
 	opt1.username = "jack";
 	opt1.password = "1111";
@@ -79,8 +79,8 @@ net::awaitable<void> start_socks_client()
 	}
 
 	socks::socks_client_option opt2;
-	opt2.host = "www.baidu.com";
-	opt2.port = 80;
+	opt2.target_host = "www.baidu.com";
+	opt2.target_port = 80;
 	opt2.proxy_hostname = true;
 	opt2.username = "jack";
 	opt2.password = "1111";

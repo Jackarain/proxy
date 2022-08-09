@@ -30,8 +30,8 @@ namespace socks {
 	struct socks_client_option
 	{
 		// socks server
-		std::string host;
-		uint16_t port;
+		std::string target_host;
+		uint16_t target_port;
 
 		// user auth info
 		std::string username;

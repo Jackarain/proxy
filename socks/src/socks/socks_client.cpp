@@ -50,8 +50,8 @@ namespace socks {
 
 		auto& username = opt.username;
 		auto& passwd = opt.password;
-		auto& hostname = opt.host;
-		auto& port = opt.port;
+		auto& hostname = opt.target_host;
+		auto& port = opt.target_port;
 
 		std::size_t bytes_to_write = username.empty() ? 3 : 4;
 		net::streambuf request;
@@ -332,8 +332,8 @@ namespace socks {
 		using detail::read;
 
 		auto& username = opt.username;
-		auto& hostname = opt.host;
-		auto& port = opt.port;
+		auto& hostname = opt.target_host;
+		auto& port = opt.target_port;
 		net::streambuf request;
 
 		std::size_t bytes_to_write = 9 + username.size();
