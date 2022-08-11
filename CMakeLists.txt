@@ -294,7 +294,7 @@ if (WIN32)
 endif()
 
 add_subdirectory(socks)
+add_subdirectory(example)
 
 configure_file(socks.service.in socks.service)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/socks.service DESTINATION /usr/lib/systemd/system/)
-install(TARGETS socks DESTINATION bin)

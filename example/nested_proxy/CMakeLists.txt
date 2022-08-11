@@ -1,0 +1,34 @@
+
+add_executable(nested_proxy
+    nested_proxy.cpp
+)
+
+target_link_libraries(nested_proxy
+    libsocks
+	Boost::asio
+	Boost::beast
+)
+
+target_include_directories(nested_proxy PUBLIC ${BASE_SOURCE_DIR})
+
+set_property(TARGET nested_proxy PROPERTY FOLDER "nested_proxy")
+
+if (MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.29.30129 AND CMAKE_VERSION VERSION_GREATER 3.20.3)
+	set_property(TARGET nested_proxy PROPERTY CXX_STANDARD 23)
+	message(STATUS "socks set cxx standard: C++23")
+else()
+	set_property(TARGET nested_proxy PROPERTY CXX_STANDARD 20)
+	message(STATUS "socks set cxx standard: C++20")
+endif()
+
+if(ENABLE_BUILD_WERROR)
+	if(MSVC)
+		target_compile_options(nested_proxy PRIVATE /W4 /WX)
+	elseif(UNIX AND NOT APPLE)
+		if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.1)
+			target_compile_options(nested_proxy PRIVATE -Werror -Wall -Wextra -Wno-unknown-pragmas -Wno-deprecated)
+		else()
+			target_compile_options(nested_proxy PRIVATE -Werror -Wall -Wextra -Wno-unknown-pragmas -Wno-deprecated -Wno-deprecated-copy -Wno-error=deprecated-copy -Wno-pessimizing-move)
+		endif()
+	endif()
+endif()
