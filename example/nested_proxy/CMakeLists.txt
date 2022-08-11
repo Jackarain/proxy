@@ -1,4 +1,4 @@
-
+﻿
 add_executable(nested_proxy
     nested_proxy.cpp
 )
@@ -11,7 +11,7 @@ target_link_libraries(nested_proxy
 
 target_include_directories(nested_proxy PUBLIC ${BASE_SOURCE_DIR})
 
-set_property(TARGET nested_proxy PROPERTY FOLDER "nested_proxy")
+set_property(TARGET nested_proxy PROPERTY FOLDER "example/nested_proxy")
 
 if (MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.29.30129 AND CMAKE_VERSION VERSION_GREATER 3.20.3)
 	set_property(TARGET nested_proxy PROPERTY CXX_STANDARD 23)
