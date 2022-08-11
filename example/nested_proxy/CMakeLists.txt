@@ -15,10 +15,10 @@ set_property(TARGET nested_proxy PROPERTY FOLDER "example/nested_proxy")
 
 if (MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.29.30129 AND CMAKE_VERSION VERSION_GREATER 3.20.3)
 	set_property(TARGET nested_proxy PROPERTY CXX_STANDARD 23)
-	message(STATUS "socks set cxx standard: C++23")
+	message(STATUS "nested_proxy set cxx standard: C++23")
 else()
 	set_property(TARGET nested_proxy PROPERTY CXX_STANDARD 20)
-	message(STATUS "socks set cxx standard: C++20")
+	message(STATUS "nested_proxy set cxx standard: C++20")
 endif()
 
 if(ENABLE_BUILD_WERROR)

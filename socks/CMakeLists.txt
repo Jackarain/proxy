@@ -17,10 +17,10 @@ set_target_properties(libsocks PROPERTIES OUTPUT_NAME socks PREFIX "lib" CLEAN_D
 
 if (MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.29.30129 AND CMAKE_VERSION VERSION_GREATER 3.20.3)
 	set_property(TARGET libsocks PROPERTY CXX_STANDARD 23)
-	message(STATUS "socks set cxx standard: C++23")
+	message(STATUS "libsocks set cxx standard: C++23")
 else()
 	set_property(TARGET libsocks PROPERTY CXX_STANDARD 20)
-	message(STATUS "socks set cxx standard: C++20")
+	message(STATUS "libsocks set cxx standard: C++20")
 endif()
 
 set(BASE_SOURCE_DIR
