@@ -23,9 +23,16 @@
 
 
 namespace socks {
+	namespace net = boost::asio;
 
-	using boost::asio::ip::tcp;
-	using boost::asio::ip::udp;
+	using net::ip::tcp;
+	using net::ip::udp;
+
+	enum {
+		socks5_version = 5,
+		socks4_version = 4,
+		socks4a_version = 41,
+	};
 
 	struct socks_client_option
 	{
@@ -38,7 +45,7 @@ namespace socks {
 		std::string password;
 
 		// socks version: 4 or 5
-		int version{ 5 };
+		int version{ socks5_version };
 
 		// pass hostname to proxy
 		bool proxy_hostname{ true };
@@ -46,7 +53,7 @@ namespace socks {
 
 	namespace detail {
 
-		boost::asio::awaitable<boost::system::error_code>
+		net::awaitable<boost::system::error_code>
 			do_socks_handshake(tcp::socket& socket, socks_client_option opt = {});
 
 		struct initiate_do_something
@@ -55,16 +62,16 @@ namespace socks {
 			void operator()(Handler&& handler,
 				tcp::socket* socket, socks_client_option opt) const
 			{
-				auto executor = boost::asio::get_associated_executor(handler);
-				co_spawn(executor,
+				auto executor = net::get_associated_executor(handler);
+				net::co_spawn(executor,
 				[socket, opt = opt, handler = std::move(handler)]
-				() mutable -> boost::asio::awaitable<void>
+				() mutable -> net::awaitable<void>
 				{
 					auto ec = co_await do_socks_handshake(*socket, opt);
 					handler(ec);
 
 					co_return;
-				}, boost::asio::detached);
+				}, net::detached);
 			}
 		};
 	}
@@ -73,7 +80,7 @@ namespace socks {
 	auto async_socks_handshake(tcp::socket& socket,
 		socks_client_option opt, Handler&& handler)
 	{
-		return boost::asio::async_initiate<Handler,
+		return net::async_initiate<Handler,
 			void(boost::system::error_code)>(
 				detail::initiate_do_something(),
 					handler, &socket, opt);
