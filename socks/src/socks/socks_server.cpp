@@ -1008,7 +1008,7 @@ namespace socks {
 		m_acceptor.listen(net::socket_base::max_listen_connections, ec);
 	}
 
-	void socks_server::open()
+	void socks_server::start()
 	{
 		// 同时启动32个连接协程, 开始为socks client提供服务.
 		for (int i = 0; i < 32; i++)

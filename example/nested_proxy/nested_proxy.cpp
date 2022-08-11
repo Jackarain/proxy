@@ -40,7 +40,7 @@ net::awaitable<void> start_socks_server(server_ptr& server)
 	server =
 		std::make_shared<socks_server>(
 			executor, socks_listen, opt);
-	server->open();
+	server->start();
 
 	co_return;
 }
