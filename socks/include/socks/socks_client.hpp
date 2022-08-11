@@ -21,9 +21,10 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ip/udp.hpp>
 
+namespace net = boost::asio;
+
 
 namespace socks {
-	namespace net = boost::asio;
 
 	using net::ip::tcp;
 	using net::ip::udp;
