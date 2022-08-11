@@ -11,6 +11,7 @@
 #pragma once
 
 #include "socks/logging.hpp"
+#include "uri/uri_view.hpp"
 
 #include <memory>
 #include <string>
@@ -29,13 +30,24 @@ namespace socks {
 	using tcp = net::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 	using udp = net::ip::udp;               // from <boost/asio/ip/udp.hpp>
 
+	struct socks_server_option
+	{
+		std::string usrdid_;
+		std::string passwd_;
+
+		std::string bind_addr_;
+
+		// 多层代理模式, 下一个代理服务器.
+		// 例如: socks5://user:passwd@proxy.server.com:1080
+		// 默认使用hostname模式, dns解析在远程执行.
+		std::string next_proxy_;
+	};
+
 	class socks_server_base {
 	public:
 		virtual ~socks_server_base() {}
 		virtual void remove_client(size_t id) = 0;
-		virtual bool do_auth(const std::string& userid,
-			const std::string& passwd, int version) = 0;
-		virtual bool auth_require() = 0;
+		virtual const socks_server_option& option() = 0;
 	};
 
 	class socks_session
@@ -50,7 +62,7 @@ namespace socks {
 		~socks_session();
 
 	public:
-		void start(std::string bind_addr);
+		void start();
 		void close();
 
 	private:
@@ -60,13 +72,18 @@ namespace socks {
 		net::awaitable<bool> socks_auth();
 		net::awaitable<void> transfer(tcp::socket& from, tcp::socket& to);
 
+		net::awaitable<void> connect_host(
+			std::string target_host, uint16_t target_port,
+			boost::system::error_code& ec, bool resolve = false);
+
 	private:
 		tcp::socket m_local_socket;
 		tcp::socket m_remote_socket;
 		size_t m_connection_id;
 		std::array<char, 2048> m_local_buffer{};
 		std::weak_ptr<socks_server_base> m_socks_server;
-		std::string m_bind_addr;
+		socks_server_option m_option;
+		std::unique_ptr<uri::uri_view> m_next_proxy;
 		bool m_abort{ false };
 	};
 
@@ -75,14 +92,6 @@ namespace socks {
 
 
 	//////////////////////////////////////////////////////////////////////////
-
-	struct socks_server_option
-	{
-		std::string usrdid_;
-		std::string passwd_;
-
-		std::string bind_addr_;
-	};
 
 	class socks_server
 		: public socks_server_base
@@ -104,9 +113,7 @@ namespace socks {
 
 	private:
 		virtual void remove_client(size_t id) override;
-		virtual bool do_auth(const std::string& userid,
-			const std::string& passwd, int version) override;
-		virtual bool auth_require() override;
+		virtual const socks_server_option& option() override;
 
 	private:
 		net::awaitable<void> start_socks_listen(tcp::acceptor& a);
