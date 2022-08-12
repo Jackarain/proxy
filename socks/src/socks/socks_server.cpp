@@ -875,7 +875,7 @@ namespace socks {
 		std::string target_host, uint16_t target_port,
 		boost::system::error_code& ec, bool resolve)
 	{
-		auto bind_interface = ip::address::from_string(m_option.bind_addr_, ec);
+		auto bind_interface = net::ip::address::from_string(m_option.bind_addr_, ec);
 		if (ec)
 		{
 			// bind 地址有问题, 忽略bind参数.
@@ -914,7 +914,7 @@ namespace socks {
 			proxy_endp.address(proxy_addr);
 			proxy_endp.port((uint16_t)std::atoi(proxy_port.c_str()));
 
-			auto target = ip::basic_resolver_results<tcp>::create(
+			auto target = net::ip::basic_resolver_results<tcp>::create(
 				proxy_endp, "", "");
 
 			co_await asio_util::async_connect(m_remote_socket,
@@ -977,7 +977,7 @@ namespace socks {
 				dst_endpoint.address(ip::address::from_string(target_host));
 				dst_endpoint.port(target_port);
 
-				targets = ip::basic_resolver_results<tcp>::create(
+				targets = net::ip::basic_resolver_results<tcp>::create(
 					dst_endpoint, "", "");
 			}
 
