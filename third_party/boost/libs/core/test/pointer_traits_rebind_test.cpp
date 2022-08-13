@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Glen Joseph Fernandes
+Copyright 2017-2022 Glen Joseph Fernandes
 (glenjofe@gmail.com)
 
 Distributed under the Boost Software License, Version 1.0.
@@ -84,15 +84,49 @@ int main()
     BOOST_TEST_TRAIT_TRUE((boost::core::is_same<P1<int>,
         boost::pointer_traits<P1<const R> >::rebind_to<int>::type>));
 #if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<char*,
+        boost::pointer_traits<R*>::rebind<char> >));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<P1<char>,
+        boost::pointer_traits<P1<R> >::rebind<char> >));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<P2<char, R>,
+        boost::pointer_traits<P2<R, R> >::rebind<char> >));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<P3<char, R, R>,
+        boost::pointer_traits<P3<R, R, R> >::rebind<char> >));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<void*,
+        boost::pointer_traits<R*>::rebind<void> >));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<P1<void>,
+        boost::pointer_traits<P1<R> >::rebind<void> >));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<R*,
+        boost::pointer_traits<void*>::rebind<R> >));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<P1<R>,
+        boost::pointer_traits<P1<void> >::rebind<R> >));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<const int*,
+        boost::pointer_traits<R*>::rebind<const int> >));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<P1<const int>,
+        boost::pointer_traits<P1<R> >::rebind<const int> >));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<int*,
+        boost::pointer_traits<const R*>::rebind<int> >));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<P1<int>,
+        boost::pointer_traits<P1<const R> >::rebind<int> >));
     BOOST_TEST_TRAIT_TRUE((boost::core::is_same<E1<bool>,
         boost::pointer_traits<E1<R> >::rebind_to<char>::type>));
     BOOST_TEST_TRAIT_TRUE((boost::core::is_same<E2<bool, R>,
         boost::pointer_traits<E2<R, R> >::rebind_to<char>::type>));
     BOOST_TEST_TRAIT_TRUE((boost::core::is_same<E3<bool, R, R>,
         boost::pointer_traits<E3<R, R, R> >::rebind_to<char>::type>));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<E1<bool>,
+        boost::pointer_traits<E1<R> >::rebind<char> >));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<E2<bool, R>,
+        boost::pointer_traits<E2<R, R> >::rebind<char> >));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<E3<bool, R, R>,
+        boost::pointer_traits<E3<R, R, R> >::rebind<char> >));
 #if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<P<char, R, R, R>,
+        boost::pointer_traits<P<R, R, R, R> >::rebind<char> >));
     BOOST_TEST_TRAIT_TRUE((boost::core::is_same<E<bool, R, R, R>,
         boost::pointer_traits<E<R, R, R, R> >::rebind_to<char>::type>));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<E<bool, R, R, R>,
+        boost::pointer_traits<E<R, R, R, R> >::rebind<char> >));
 #endif
     BOOST_TEST_TRAIT_TRUE((boost::core::is_same<E1<bool>,
         boost::pointer_traits<E1<R> >::rebind_to<void>::type>));
@@ -102,6 +136,14 @@ int main()
         boost::pointer_traits<E1<R> >::rebind_to<const int>::type>));
     BOOST_TEST_TRAIT_TRUE((boost::core::is_same<E1<bool>,
         boost::pointer_traits<E1<const R> >::rebind_to<int>::type>));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<E1<bool>,
+        boost::pointer_traits<E1<R> >::rebind<void> >));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<E1<bool>,
+        boost::pointer_traits<E1<void> >::rebind<R> >));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<E1<bool>,
+        boost::pointer_traits<E1<R> >::rebind<const int> >));
+    BOOST_TEST_TRAIT_TRUE((boost::core::is_same<E1<bool>,
+        boost::pointer_traits<E1<const R> >::rebind<int> >));
 #endif
     return boost::report_errors();
 }

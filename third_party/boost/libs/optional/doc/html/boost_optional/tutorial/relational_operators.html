@@ -29,7 +29,7 @@
 </h3></div></div></div>
 <p>
         Type <code class="computeroutput"><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code> is
-        <a href="http://www.sgi.com/tech/stl/EqualityComparable.html" target="_top"><code class="computeroutput"><span class="identifier">EqualityComparable</span></code></a> whenever <code class="computeroutput"><span class="identifier">T</span></code> is <a href="http://www.sgi.com/tech/stl/EqualityComparable.html" target="_top"><code class="computeroutput"><span class="identifier">EqualityComparable</span></code></a>. Two optional
+        <a href="https://en.cppreference.com/w/cpp/named_req/EqualityComparable" target="_top"><code class="computeroutput"><span class="identifier">EqualityComparable</span></code></a> whenever <code class="computeroutput"><span class="identifier">T</span></code> is <a href="https://en.cppreference.com/w/cpp/named_req/EqualityComparable" target="_top"><code class="computeroutput"><span class="identifier">EqualityComparable</span></code></a>. Two optional
         objects containing a value compare in the same way as their contained values.
         The uninitialized state of <code class="computeroutput"><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code>
         is treated as a distinct value, equal to itself, and unequal to any value
@@ -74,11 +74,11 @@
 <p>
         In case where <code class="computeroutput"><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code> is
         compared to <code class="computeroutput"><span class="identifier">none</span></code>, it is not
-        required that <code class="computeroutput"><span class="identifier">T</span></code> be <a href="http://www.sgi.com/tech/stl/EqualityComparable.html" target="_top"><code class="computeroutput"><span class="identifier">EqualityComparable</span></code></a>.
+        required that <code class="computeroutput"><span class="identifier">T</span></code> be <a href="https://en.cppreference.com/w/cpp/named_req/EqualityComparable" target="_top"><code class="computeroutput"><span class="identifier">EqualityComparable</span></code></a>.
       </p>
 <p>
         In a similar manner, type <code class="computeroutput"><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code>
-        is <a href="http://www.sgi.com/tech/stl/LessThanComparable.html" target="_top"><code class="computeroutput"><span class="identifier">LessThanComparable</span></code></a> whenever <code class="computeroutput"><span class="identifier">T</span></code> is <a href="http://www.sgi.com/tech/stl/LessThanComparable.html" target="_top"><code class="computeroutput"><span class="identifier">LessThanComparable</span></code></a>. The optional
+        is <a href="https://en.cppreference.com/w/cpp/named_req/LessThanComparable" target="_top"><code class="computeroutput"><span class="identifier">LessThanComparable</span></code></a> whenever <code class="computeroutput"><span class="identifier">T</span></code> is <a href="https://en.cppreference.com/w/cpp/named_req/LessThanComparable" target="_top"><code class="computeroutput"><span class="identifier">LessThanComparable</span></code></a>. The optional
         object containing no value is compared less than any value of <code class="computeroutput"><span class="identifier">T</span></code>. To illustrate this, if the default ordering
         of <code class="computeroutput"><span class="identifier">size_t</span></code> is {<code class="computeroutput"><span class="number">0</span></code>, <code class="computeroutput"><span class="number">1</span></code>,
         <code class="computeroutput"><span class="number">2</span></code>, ...}, the default ordering
@@ -99,7 +99,8 @@
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2003-2007 Fernando Luis Cacciola Carballal<br>Copyright © 2014-2021 Andrzej Krzemieński<p>
+<td align="right"><div class="copyright-footer">Copyright © 2003-2007 Fernando Luis Cacciola Carballal<br>Copyright © 2014-2022 Andrzej
+      Krzemieński<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>

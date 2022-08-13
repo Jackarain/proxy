@@ -1,38 +1,64 @@
 # Boost.GIL (Generic Image Library) - examples
 #
-# Copyright (c) 2018 Mateusz Loskot <mateusz@loskot.net>
+# Copyright (c) 2018-2022 Mateusz Loskot <mateusz@loskot.net>
 #
 # Use, modification and distribution is subject to the Boost Software License,
 # Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
 # http://www.boost.org/LICENSE_1_0.txt)
 
-import ac ;
+import ../../config/checks/config : requires ;
 import regex ;
-import testing ;
 
 using libjpeg : : : : true ; # work around bug on master
+using libpng : : : : true ;
+
+# The <experimental/filesystem> header providing std::experimental::filesystem
+# is deprecated by Microsoft and will be REMOVED. It is superseded by the C++17
+# <filesystem> header providing std::filesystem.
+# You can define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
+# to acknowledge that you have received this warning.
+local msvc-cxxs-with-experimental-fs = 14 ;
 
 project
-    : # requirements
-    ;
-
-# TODO: Add missing examples
+  :
+  requirements
+    [ requires
+        cxx14_constexpr
+        cxx14_return_type_deduction
+    ]
+    <include>.
+    # TODO: Enable concepts check for all, not just test/core
+    #<define>BOOST_GIL_USE_CONCEPT_CHECK=1
+    <toolset>msvc,<cxxstd>$(msvc-cxxs-with-experimental-fs):<define>_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING=1
+    <toolset>msvc:<cxxflags>/bigobj
+  ;
 
 local sources =
+    adaptive_histogram_equalization.cpp
     adaptive_threshold.cpp
     affine.cpp
+    anisotropic_diffusion.cpp
     convolution.cpp
     convolve2d.cpp
     dynamic_image.cpp
     harris.cpp
     hessian.cpp
+    histogram_equalization.cpp
+    histogram_matching.cpp
     histogram.cpp
+    hough_transform_circle.cpp
+    hough_transform_line.cpp
     interleaved_ptr.cpp
     mandelbrot.cpp
+    morphology.cpp
     packed_pixel.cpp
+    rasterizer_circle.cpp
+    rasterizer_ellipse.cpp
+    rasterizer_line.cpp
     resize.cpp
     sobel_scharr.cpp
     threshold.cpp
+    tutorial_histogram.cpp
     x_gradient.cpp
     ;
 
@@ -40,11 +66,13 @@ local targets ;
 
 for local s in $(sources)
 {
-    targets +=
-        [ compile $(s) :
-            [ ac.check-library /libjpeg//libjpeg : <library>/libjpeg//libjpeg : <build>no ]
-        ]
-        ;
+targets +=
+    [ exe [ regex.replace $(s)  ".cpp" "" ] :
+        $(s)
+	/libjpeg//libjpeg
+	/libpng//libpng
+    ]
+    ;
 }
 
 alias examples : $(targets) ;

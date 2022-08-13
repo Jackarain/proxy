@@ -10,6 +10,7 @@
 #endif
 
 #include <boost/core/lightweight_test.hpp>
+#include "test_qvm.hpp"
 #include <stdlib.h>
 
 namespace
@@ -21,7 +22,7 @@ namespace
         for( int i=0; i!=100; ++i )
             {
             T a = T(rand()) / T(RAND_MAX);
-            BOOST_TEST_EQ(f1(a), f2(a));
+            BOOST_QVM_TEST_CLOSE(double(f1(a)), double(f2(a)),0.00001);
             }
         }
     template <class T,class U>
@@ -32,7 +33,7 @@ namespace
             {
             T a = T(rand()) / T(RAND_MAX);
             T b = T(rand()) / T(RAND_MAX);
-            BOOST_TEST_EQ(f1(a,b), f2(a,b));
+            BOOST_QVM_TEST_CLOSE(double(f1(a,b)), double(f2(a,b)),0.00001);
             }
         }
     }

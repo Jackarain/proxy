@@ -8,9 +8,11 @@
 */
 
 #include <new>        // for placement new
+#include <string>
 #include <iostream>
+#include <algorithm>  // for std::equal
 #include <cstddef>    // for NULL, std::size_t, std::ptrdiff_t
-#include <cstring>    // for std::strchr and std::strcmp
+#include <cstring>    // for std::strlen, std::strchr and std::strcmp
 #include <cstdlib>    // for std::malloc and std::free
 
 #include <boost/utility/string_view.hpp>
@@ -21,7 +23,7 @@
 typedef boost::string_view string_view;
 
 void ends_with ( const char *arg ) {
-    const size_t sz = std::strlen ( arg );
+    const std::size_t sz = std::strlen ( arg );
     string_view sr ( arg );
     string_view sr2 ( arg );
     const char *p = arg;
@@ -45,20 +47,19 @@ void ends_with ( const char *arg ) {
     char ch = sz == 0 ? '\0' : arg [ sz - 1 ];
     sr2 = arg;
     if ( sz > 0 )
-      BOOST_TEST ( sr2.ends_with ( ch ));
+        BOOST_TEST ( sr2.ends_with ( ch ));
     BOOST_TEST ( !sr2.ends_with ( ++ch ));
     BOOST_TEST ( sr2.ends_with ( string_view()));
     }
 
 void starts_with ( const char *arg ) {
-    const size_t sz = std::strlen ( arg );
+    const std::size_t sz = std::strlen ( arg );
     string_view sr  ( arg );
     string_view sr2 ( arg );
-    const char *p = arg + std::strlen ( arg ) - 1;
-    while ( p >= arg ) {
-        std::string foo ( arg, p + 1 );
+    std::string foo ( arg );
+    while ( !foo.empty ()) {
         BOOST_TEST ( sr.starts_with ( foo ));
-        --p;
+        foo.erase ( foo.end () - 1 );
         }
 
     while ( !sr2.empty ()) {
@@ -68,10 +69,38 @@ void starts_with ( const char *arg ) {
 
     char ch = *arg;
     sr2 = arg;
-  if ( sz > 0 )
-    BOOST_TEST ( sr2.starts_with ( ch ));
+    if ( sz > 0 )
+        BOOST_TEST ( sr2.starts_with ( ch ));
     BOOST_TEST ( !sr2.starts_with ( ++ch ));
     BOOST_TEST ( sr2.starts_with ( string_view ()));
+    }
+
+void contains ( const char *arg ) {
+    const std::size_t sz = std::strlen ( arg );
+    string_view sr  ( arg );
+    string_view sr2 ( arg );
+    std::string foo ( arg );
+    while ( !foo.empty ()) {
+        BOOST_TEST ( sr.contains ( foo ));
+        if ( ( foo.size () & 1u ) != 0u )
+            foo.erase ( foo.end () - 1 );
+        else
+            foo.erase ( foo.begin () );
+        }
+
+    while ( !sr2.empty ()) {
+        BOOST_TEST ( sr.contains ( sr2 ));
+        if ( ( sr2.size () & 1u ) != 0u )
+            sr2.remove_suffix (1);
+        else
+            sr2.remove_prefix (1);
+        }
+
+    sr2 = arg;
+    for ( std::size_t i = 0; i < sz; ++i )
+        BOOST_TEST ( sr2.contains ( arg[i] ));
+    BOOST_TEST ( !sr2.contains ( '\a' ));
+    BOOST_TEST ( sr2.contains ( string_view ()));
     }
 
 void reverse ( const char *arg ) {
@@ -97,7 +126,7 @@ void find ( const char *arg ) {
     string_view sr2;
     const char *p;
 
-//	When we search for the empty string, we find it at position 0
+//  When we search for the empty string, we find it at position 0
     BOOST_TEST ( sr1.find (sr2) == 0 );
     BOOST_TEST ( sr1.rfind(sr2) == 0 );
 
@@ -211,7 +240,7 @@ void find ( const char *arg ) {
         string_view::size_type pos2 = sr1.find_first_not_of(*p);
         BOOST_TEST ( pos1 != string_view::npos && pos1 < sr1.size () && pos1 <= ptr_diff ( p, arg ));
         if ( pos2 != string_view::npos ) {
-            for ( size_t i = 0 ; i < pos2; ++i )
+            for ( string_view::size_type i = 0 ; i < pos2; ++i )
                 BOOST_TEST ( sr1[i] == *p );
             BOOST_TEST ( sr1 [ pos2 ] != *p );
             }
@@ -237,7 +266,7 @@ void find ( const char *arg ) {
         BOOST_TEST ( pos1 != string_view::npos && pos1 < sr1.size () && pos1 >= ptr_diff ( p, arg ));
         BOOST_TEST ( pos2 == string_view::npos || pos1 < sr1.size ());
         if ( pos2 != string_view::npos ) {
-            for ( size_t i = sr1.size () -1 ; i > pos2; --i )
+            for ( string_view::size_type i = sr1.size () -1 ; i > pos2; --i )
                 BOOST_TEST ( sr1[i] == *p );
             BOOST_TEST ( sr1 [ pos2 ] != *p );
             }
@@ -398,12 +427,13 @@ int main()
     while ( *p != NULL ) {
         starts_with ( *p );
         ends_with ( *p );
+        contains ( *p );
         reverse ( *p );
         find ( *p );
         to_string ( *p );
         compare ( *p );
 
-        p++;
+        ++p;
         }
 
     return boost::report_errors();

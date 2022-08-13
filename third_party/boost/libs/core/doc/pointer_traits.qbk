@@ -113,6 +113,9 @@ also not defined (`pointer_traits` is SFINAE-friendly).
   where `Args` is zero or more type arguments; otherwise, the member is not
   defined.]]]
 
+[note When C++11 template aliases are not supported, the `type` for `rebind` is
+`T::rebind<U>::other` if such a type exists.]
+
 [endsect]
 
 [section Member functions]

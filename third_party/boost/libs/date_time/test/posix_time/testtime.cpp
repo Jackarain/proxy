@@ -306,6 +306,18 @@ main()
         t18 == ptime(date(2032,2,15), time_duration(18,47,14)));
   check("time_t conversion from 1960483634", to_time_t(t18) == tt3);
 
+#if !defined(BOOST_NO_INT64_T)
+  // 64-bit time_t test (if running with a 64-bit time_t)
+  if (sizeof(std::time_t) >= 8)
+  {
+    std::time_t tt4(INT64_C(11864480887)); 
+    t18 = from_time_t(tt4); //2345-12-21 09:08:07
+    check("time_t conversion of 11864480887", 
+          t18 == ptime(date(2345,12,21), time_duration(9,8,7)));
+    check("time_t conversion from 11864480887", to_time_t(t18) == tt4);
+  }
+#endif
+  
   special_values_tests();
 
   //min and max constructors

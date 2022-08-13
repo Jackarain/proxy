@@ -303,13 +303,15 @@
 <p>Exception type publicly inheriting from <code>bad_result_access</code> indicating an incorrect observation of value occurred, supplying the error value.</p><li>
 	<a href="../reference/types/bad_result_access.html" ><code>bad_result_access</code></a>
 <p>Exception type publicly inheriting from <code>std::logic_error</code> indicating an incorrect observation of value or error occurred.</p><li>
-	<a href="../reference/types/awaitables/eager.html" ><code>eager&lt;T&gt;/atomic_eager&lt;T&gt;</code></a>
+	<a href="../reference/types/awaitables/eager.html" ><code>eager&lt;T, Executor = void&gt;/atomic_eager&lt;T, Executor = void&gt;</code></a>
 <p>An eagerly evaluated coroutine awaitable with Outcome customisation.</p><li>
 	<a href="../reference/types/failure_type.html" ><code>failure_type&lt;EC, EP = void&gt;</code></a>
 <p>Type sugar for constructing an unsuccessful result or outcome.</p><li>
+	<a href="../reference/types/awaitables/generator.html" ><code>generator&lt;T, Executor = void&gt;</code></a>
+<p>A lazily evaluated coroutine generator with Outcome customisation.</p><li>
 	<a href="../reference/types/in_place_type_t.html" ><code>in_place_type_t&lt;T&gt;</code></a>
 <p>Either <code>std::in_place_type_t&lt;T&gt;</code> or a local emulation, depending on the <code>BOOST_OUTCOME_USE_STD_IN_PLACE_TYPE</code> macro.</p><li>
-	<a href="../reference/types/awaitables/lazy.html" ><code>lazy&lt;T&gt;/atomic_lazy&lt;T&gt;</code></a>
+	<a href="../reference/types/awaitables/lazy.html" ><code>lazy&lt;T, Executor = void&gt;/atomic_lazy&lt;T, Executor = void&gt;</code></a>
 <p>A lazily evaluated coroutine awaitable with Outcome customisation.</p><li>
 	<a href="../reference/types/success_type.html" ><code>success_type&lt;T&gt;</code></a>
 <p>Type sugar for constructing a successful result or outcome.</p></li></ol>

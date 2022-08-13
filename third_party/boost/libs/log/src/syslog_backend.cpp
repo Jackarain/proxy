@@ -452,7 +452,7 @@ struct syslog_backend::implementation::udp_socket_based :
     {
         if (!m_pSocket.get())
         {
-            asio::ip::udp::endpoint any_local_address;
+            asio::ip::udp::endpoint any_local_address(m_Protocol, 0u);
             m_pSocket.reset(new syslog_udp_socket(m_pService->m_IOContext, m_Protocol, any_local_address));
         }
 

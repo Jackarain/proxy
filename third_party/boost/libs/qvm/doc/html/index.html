@@ -39,7 +39,7 @@ function switch_style()
 <li><a href="#tutorial">Tutorial</a>
 <ul class="sectlevel2">
 <li><a href="#_quaternions_vectors_matrices">Quaternions, Vectors, Matrices</a></li>
-<li><a href="#_c_arrays">C Arrays</a></li>
+<li><a href="#_cc_arrays">C/C&#43;&#43; Arrays</a></li>
 <li><a href="#view_proxy">View proxies</a></li>
 <li><a href="#_swizzling">Swizzling</a></li>
 <li><a href="#enable_if">SFINAE/enable_if</a></li>
@@ -509,10 +509,35 @@ QVM does not depend on Boost or other libraries.
 <div class="paragraph">
 <p>User-defined quaternion types are similarly introduced to QVM by specializing the <a href="#quat_traits"><code>quat_traits</code></a> template.</p>
 </div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>In order to support vector types that can not provide access to elements by reference, the <code>write_element</code> / <code>write_element_idx</code> static member functions can be defined as <code>void</code> functions taking a scalar to write into an element, for example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight nowrap"><code data-lang="c++"><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">I</span><span class="p">&gt;</span>
+<span class="k">static</span> <span class="kr">inline</span> <span class="kt">void</span> <span class="nf">write_element</span><span class="p">(</span> <span class="n">float3</span> <span class="o">&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="n">scalar_type</span> <span class="n">s</span> <span class="p">)</span> <span class="p">{</span>
+  <span class="n">v</span><span class="p">.</span><span class="n">a</span><span class="p">[</span><span class="n">I</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Boost QVM automatically detects which alternative is provided.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 <hr>
 </div>
 <div class="sect2">
-<h3 id="_c_arrays">C Arrays</h3>
+<h3 id="_cc_arrays">C/C&#43;&#43; Arrays</h3>
 <div class="paragraph">
 <p>In <code>boost/qvm/quat_traits_array.hpp</code>, <code>vec_traits_array.hpp</code> and <code>mat_traits_array.hpp</code>, QVM defines appropriate <a href="#quat_traits"><code>quat_traits</code></a>, <a href="#vec_traits"><code>vec_traits</code></a> and <a href="#mat_traits"><code>mat_traits</code></a> specializations that allow QVM functions to operate directly on plain old C arrays:</p>
 </div>
@@ -539,6 +564,9 @@ QVM does not depend on Boost or other libraries.
 <pre class="rouge highlight nowrap"><code data-lang="c++"><span class="kt">float</span> <span class="n">v</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">7</span><span class="p">};</span>
 <span class="n">vref</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">*=</span> <span class="mi">42</span><span class="p">;</span></code></pre>
 </div>
+</div>
+<div class="paragraph">
+<p>If C&#43;&#43;-11 is available, the same headers define appropriate <code>quat_traits</code>, <code>vec_traits</code> and <code>mat_traits</code> for <code>std::array</code> objects.</p>
 </div>
 <hr>
 </div>
@@ -1158,6 +1186,11 @@ This template is used by generic binary operations that return a scalar, to dedu
     template &lt;int I&gt;
     static inline scalar_type &amp; write_element( Quaternion &amp; q );
 
+    // Alternative signature for write_element:
+
+    template &lt;int I&gt;
+    static inline void write_element( Quaternion &amp; q, scalar_type s );
+
   };
   */</span>
 
@@ -1198,9 +1231,22 @@ QVM quaternion operations do not require that quaternion types are copyable.
 <p><code>read_element</code>: the expression <code>quat_traits&lt;Quaternion&gt;::read_element&lt;I&gt;(q)</code> returns either a copy of or a <code>const</code> reference to the <code>I</code>-th element of <code>q</code>.</p>
 </li>
 <li>
-<p><code>write_element</code>: the expression <code>quat_traits&lt;Quaternion&gt;::write_element&lt;I&gt;(q)</code> returns mutable reference to the <code>I</code>-th element of <code>q</code>.</p>
+<p><code>write_element</code>: the expression <code>quat_traits&lt;Quaternion&gt;::write_element&lt;I&gt;(q)</code> returns mutable reference to the <code>I</code>-th
+element of <code>q</code>.</p>
 </li>
 </ul>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+Alternatively, <code>write_element</code> may be defined as <code>void</code> function that takes (as the last argument) a scalar to write into the specified element. QVM automatically detects this case by examining the signature of the <code>write_element</code> template.
+</td>
+</tr>
+</table>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -1461,11 +1507,19 @@ For the quaternion <code>a + bi + cj + dk</code>, the elements are assumed to be
     template &lt;int I&gt;
     static inline scalar_type read_element( Vector const &amp; v );
 
+    static inline scalar_type read_element_idx( int i, Vector const &amp; v );
+
     template &lt;int I&gt;
     static inline scalar_type &amp; write_element( Vector &amp; v );
 
-    static inline scalar_type read_element_idx( int i, Vector const &amp; v );
     static inline scalar_type &amp; write_element_idx( int i, Vector &amp; v );
+
+    // Alternative signature for write_element and write_element_idx:
+
+    template &lt;int I&gt;
+    static inline void write_element( Vector &amp; v, scalar_type s );
+
+    static inline void write_element_idx( int i, Vector &amp; v, scalar_type s );
 
   };
   */</span>
@@ -1510,15 +1564,27 @@ QVM vector operations do not require that vector types are copyable.
 <p><code>read_element</code>: the expression <code>vec_traits&lt;Vector&gt;::read_element&lt;I&gt;(v)</code> returns either a copy of or a const reference to the <code>I</code>-th element of <code>v</code>.</p>
 </li>
 <li>
-<p><code>write_element</code>: the expression <code>vec_traits&lt;Vector&gt;::write_element&lt;I&gt;(v)</code> returns mutable reference to the <code>I</code>-th element of <code>v</code>.</p>
+<p><code>read_element_idx</code>: the expression <code>vec_traits&lt;Vector&gt;::read_element_idx(i,v)</code> returns either a copy of or a <code>const</code> reference to the <code>i</code>-th element of <code>v</code>.</p>
 </li>
 <li>
-<p><code>read_element_idx</code>: the expression <code>vec_traits&lt;Vector&gt;::read_element_idx(i,v)</code> returns either a copy of or a <code>const</code> reference to the <code>i</code>-th element of <code>v</code>.</p>
+<p><code>write_element</code>: the expression <code>vec_traits&lt;Vector&gt;::write_element&lt;I&gt;(v)</code> returns mutable reference to the <code>I</code>-th element of <code>v</code>.</p>
 </li>
 <li>
 <p><code>write_element_idx</code>: the expression <code>vec_traits&lt;Vector&gt;::write_element_idx(i,v)</code> returns mutable reference to the <code>i</code>-th element of <code>v</code>.</p>
 </li>
 </ul>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+Alternatively, <code>write_element</code> and <code>write_element_idx</code> may be defined as <code>void</code> functions that take (as the last argument) a scalar to write into the specified element. QVM automatically detects this case by examining the signature of the <code>write_element</code> template.
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
 <p>It is illegal to call any of the above functions unless <code>is_vec&lt;Vector&gt;::value</code> is true. Even then, vector types are allowed to define only a subset of the access functions. The general requirements are:</p>
@@ -1817,11 +1883,19 @@ QVM vector operations do not require that vector types are copyable.
     template &lt;int R,int C&gt;
     static inline scalar_type read_element( Matrix const &amp; m );
 
+    static inline scalar_typeread_element_idx( int r, int c, Matrix const &amp; m );
+
     template &lt;int R,int C&gt;
     static inline scalar_type &amp; write_element( Matrix &amp; m );
 
-    static inline scalar_typeread_element_idx( int r, int c, Matrix const &amp; m );
     static inline scalar_type &amp; write_element_idx( int r, int c, Matrix &amp; m );
+
+    // Alternative signature for write_element and write_element_idx:
+
+    template &lt;int R,int C&gt;
+    static inline void write_element( Matrix &amp; m, scalar_type s );
+
+    static inline void write_element_idx( int r, int c, Matrix &amp; m, scalar_type s );
 
   };
   */</span>
@@ -1869,15 +1943,27 @@ The matrix operations defined by QVM do not require matrix types to be copyable.
 <p><code>read_element</code>: the expression <code>mat_traits&lt;Matrix&gt;::read_element&lt;R,C&gt;(m)</code> returns either a copy of or a const reference to the element at row <code>R</code> and column <code>C</code> of <code>m</code>.</p>
 </li>
 <li>
-<p><code>write_element</code>: the expression <code>mat_traits&lt;Matrix&gt;::write_element&lt;R,C&gt;(m)</code> returns mutable reference to the element at row <code>R</code> and column <code>C</code> of <code>m</code>.</p>
+<p><code>read_element_idx</code>: the expression <code>mat_traits&lt;Matrix&gt;::read_element_idx(r,c,m)</code> returns either a copy of or a const reference to the element at row <code>r</code> and column <code>c</code> of <code>m</code>.</p>
 </li>
 <li>
-<p><code>read_element_idx</code>: the expression <code>mat_traits&lt;Matrix&gt;::read_element_idx(r,c,m)</code> returns either a copy of or a const reference to the element at row <code>r</code> and column <code>c</code> of <code>m</code>.</p>
+<p><code>write_element</code>: the expression <code>mat_traits&lt;Matrix&gt;::write_element&lt;R,C&gt;(m)</code> returns mutable reference to the element at row <code>R</code> and column <code>C</code> of <code>m</code>.</p>
 </li>
 <li>
 <p><code>write_element_idx</code>: the expression <code>mat_traits&lt;Matrix&gt;::write_element_idx(r,c,m)</code> returns mutable reference to the element at row <code>r</code> and column <code>c</code> of <code>m</code>.</p>
 </li>
 </ul>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+Alternatively, <code>write_element</code> and <code>write_element_idx</code> may be defined as <code>void</code> functions that take (as the last argument) a scalar to write into the specified element. QVM automatically detects this case by examining the signature of the <code>write_element</code> template.
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
 <p>It is illegal to call any of the above functions unless <code>is_mat&lt;Matrix&gt;::value</code> is true. Even then, matrix types are allowed to define only a subset of the access functions. The general requirements are:</p>
@@ -6706,7 +6792,7 @@ If <code>v</code> is a 3D vector, the expression <code>diag_mat(XYZ1(v))</code> 
 <div class="sect4">
 <h5 id="_boost_qvm_inline"><code>BOOST_QVM_INLINE</code></h5>
 <div class="listingblock">
-<div class="title">#include &lt;boost/qvm/inline.hpp&gt;</div>
+<div class="title">#include &lt;boost/qvm/config.hpp&gt;</div>
 <div class="content">
 <pre class="rouge highlight nowrap"><code data-lang="c++"><span class="k">namespace</span> <span class="n">boost</span> <span class="p">{</span> <span class="k">namespace</span> <span class="n">qvm</span> <span class="p">{</span>
 
@@ -6718,7 +6804,7 @@ If <code>v</code> is a 3D vector, the expression <code>diag_mat(XYZ1(v))</code> 
 </div>
 </div>
 <div class="paragraph">
-<p>This macro is not used directly by QVM, except as the default value of other macros from <code>&lt;boost/qvm/inline.hpp&gt;</code>. A user-defined <code>BOOST_QVM_INLINE</code> should expand to a value that is valid substitution of the <code>inline</code> keyword in function definitions.</p>
+<p>This macro is not used directly by QVM, except as the default value of other macros from <code>&lt;boost/qvm/config.hpp&gt;</code>. A user-defined <code>BOOST_QVM_INLINE</code> should expand to a value that is valid substitution of the <code>inline</code> keyword in function definitions.</p>
 </div>
 <hr>
 </div>
@@ -6728,7 +6814,7 @@ If <code>v</code> is a 3D vector, the expression <code>diag_mat(XYZ1(v))</code> 
 <div class="sect4">
 <h5 id="_boost_qvm_force_inline"><code>BOOST_QVM_FORCE_INLINE</code></h5>
 <div class="listingblock">
-<div class="title">#include &lt;boost/qvm/inline.hpp&gt;</div>
+<div class="title">#include &lt;boost/qvm/config.hpp&gt;</div>
 <div class="content">
 <pre class="rouge highlight nowrap"><code data-lang="c++"><span class="k">namespace</span> <span class="n">boost</span> <span class="p">{</span> <span class="k">namespace</span> <span class="n">qvm</span> <span class="p">{</span>
 
@@ -6740,7 +6826,7 @@ If <code>v</code> is a 3D vector, the expression <code>diag_mat(XYZ1(v))</code> 
 </div>
 </div>
 <div class="paragraph">
-<p>This macro is not used directly by QVM, except as the default value of other macros from <code>&lt;boost/qvm/inline.hpp&gt;</code>. A user-defined <code>BOOST_QVM_FORCE_INLINE</code> should expand to a value that is valid substitution of the <code>inline</code> keyword in function definitions, to indicate that the compiler must inline the function. Of course, actual inlining may or may not occur.</p>
+<p>This macro is not used directly by QVM, except as the default value of other macros from <code>&lt;boost/qvm/config.hpp&gt;</code>. A user-defined <code>BOOST_QVM_FORCE_INLINE</code> should expand to a value that is valid substitution of the <code>inline</code> keyword in function definitions, to indicate that the compiler must inline the function. Of course, actual inlining may or may not occur.</p>
 </div>
 <hr>
 </div>
@@ -6750,7 +6836,7 @@ If <code>v</code> is a 3D vector, the expression <code>diag_mat(XYZ1(v))</code> 
 <div class="sect4">
 <h5 id="_boost_qvm_inline_trivial"><code>BOOST_QVM_INLINE_TRIVIAL</code></h5>
 <div class="listingblock">
-<div class="title">#include &lt;boost/qvm/inline.hpp&gt;</div>
+<div class="title">#include &lt;boost/qvm/config.hpp&gt;</div>
 <div class="content">
 <pre class="rouge highlight nowrap"><code data-lang="c++"><span class="k">namespace</span> <span class="n">boost</span> <span class="p">{</span> <span class="k">namespace</span> <span class="n">qvm</span> <span class="p">{</span>
 
@@ -6772,7 +6858,7 @@ If <code>v</code> is a 3D vector, the expression <code>diag_mat(XYZ1(v))</code> 
 <div class="sect4">
 <h5 id="_boost_qvm_inline_critical"><code>BOOST_QVM_INLINE_CRITICAL</code></h5>
 <div class="listingblock">
-<div class="title">#include &lt;boost/qvm/inline.hpp&gt;</div>
+<div class="title">#include &lt;boost/qvm/config.hpp&gt;</div>
 <div class="content">
 <pre class="rouge highlight nowrap"><code data-lang="c++"><span class="k">namespace</span> <span class="n">boost</span> <span class="p">{</span> <span class="k">namespace</span> <span class="n">qvm</span> <span class="p">{</span>
 
@@ -6794,7 +6880,7 @@ If <code>v</code> is a 3D vector, the expression <code>diag_mat(XYZ1(v))</code> 
 <div class="sect4">
 <h5 id="_boost_qvm_inline_operations"><code>BOOST_QVM_INLINE_OPERATIONS</code></h5>
 <div class="listingblock">
-<div class="title">#include &lt;boost/qvm/inline.hpp&gt;</div>
+<div class="title">#include &lt;boost/qvm/config.hpp&gt;</div>
 <div class="content">
 <pre class="rouge highlight nowrap"><code data-lang="c++"><span class="k">namespace</span> <span class="n">boost</span> <span class="p">{</span> <span class="k">namespace</span> <span class="n">qvm</span> <span class="p">{</span>
 
@@ -6816,7 +6902,7 @@ If <code>v</code> is a 3D vector, the expression <code>diag_mat(XYZ1(v))</code> 
 <div class="sect4">
 <h5 id="_boost_qvm_inline_recursion"><code>BOOST_QVM_INLINE_RECURSION</code></h5>
 <div class="listingblock">
-<div class="title">#include &lt;boost/qvm/inline.hpp&gt;</div>
+<div class="title">#include &lt;boost/qvm/config.hpp&gt;</div>
 <div class="content">
 <pre class="rouge highlight nowrap"><code data-lang="c++"><span class="k">namespace</span> <span class="n">boost</span> <span class="p">{</span> <span class="k">namespace</span> <span class="n">qvm</span> <span class="p">{</span>
 

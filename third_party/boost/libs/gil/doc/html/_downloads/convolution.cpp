@@ -1,15 +1,28 @@
 //
 // Copyright 2005-2007 Adobe Systems Incorporated
+// Copyright 2021 Pranam Lashkari <plashkari628@gmail.com>
 //
 // Distributed under the Boost Software License, Version 1.0
 // See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt
+
 #include <boost/gil.hpp>
 #include <boost/gil/extension/io/jpeg.hpp>
-#include <boost/gil/extension/numeric/kernel.hpp>
-#include <boost/gil/extension/numeric/convolve.hpp>
+#include <boost/gil/image_processing/kernel.hpp>
+#include <boost/gil/image_processing/convolve.hpp>
 
-// Example for convolve_rows() and convolve_cols() in the numeric extension
+// Convolves the image with a Gaussian kernel.
+
+// Note that the kernel can be fixed or resizable:
+// kernel_1d_fixed<float, N> k(matrix, centre) produces a fixed kernel
+// kernel_1d<float> k(matrix, size, centre) produces a resizable kernel
+
+// Work can be done row by row and column by column, as in this example,
+// using the functions convolve_rows and convolve_cols (or their _fixed counterpart)
+// but the header boost/gil/image_processing/convolve.hpp also offers the function convolve_1d which combines the two.
+
+// See also:
+// convolve2d.cpp - Convolution with 2d kernels
 
 int main() {
     using namespace boost::gil;

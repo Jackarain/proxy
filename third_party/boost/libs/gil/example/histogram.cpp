@@ -1,49 +1,55 @@
 //
-// Copyright 2005-2007 Adobe Systems Incorporated
+// Copyright 2020 Debabrata Mandal <mandaldebabrata123@gmail.com>
 //
 // Distributed under the Boost Software License, Version 1.0
 // See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt
 //
+
 #include <boost/gil.hpp>
-#include <boost/gil/extension/io/jpeg.hpp>
+#include <boost/gil/extension/io/png.hpp>
+#include <boost/gil/io/read_image.hpp>
 
-#include <algorithm>
-#include <fstream>
-
-// Example file to demonstrate a way to compute histogram
+#include <iostream>
 
 using namespace boost::gil;
 
-template <typename GrayView, typename R>
-void gray_image_hist(GrayView const& img_view, R& hist)
+// Explains how to use the histogram class and some of its features
+// that can be applied for a variety of tasks.
+
+// See also:
+// histogram_equalization.cpp - Regular Histogram Equalization
+// adaptive_histogram_equalization.cpp - Adaptive Histogram Equalization
+// histogram_matching.cpp - Reference-based histogram computation
+
+int main()
 {
-    for (auto it = img_view.begin(); it != img_view.end(); ++it)
-        ++hist[*it];
+   // Create a histogram class. Use uint or unsigned short as the default axes type in most cases.
+    histogram<unsigned char> h;
 
-    // Alternatively, prefer the algorithm with lambda
-    // for_each_pixel(img_view, [&hist](gray8_pixel_t const& pixel) {
-    //     ++hist[pixel];
-    // });
-}
+    // Fill histogram with GIL images (of any color space)
+    gray8_image_t g;
+    read_image("test_adaptive.png", g, png_tag{});
 
-template <typename V, typename R>
-void get_hist(const V& img_view, R& hist) {
-    gray_image_hist(color_converted_view<gray8_pixel_t>(img_view), hist);
-}
+    fill_histogram
+    (
+        view(g), // Input image view
+        h,       // Histogram to be filled
+        1,       // Histogram bin widths
+        false,   // Specify whether to accumulate over the values already present in h (default = false)
+        true,    // Specify whether to have a sparse (true) or continuous histogram (false) (default = true)
+        false,   // Specify if image mask is to be specified
+        {{}},    // Mask as a 2D vector. Used only if prev argument specified
+        {0},     // Lower limit on the values in histogram (default numeric_limit::min() on axes)
+        {255},   // Upper limit on the values in histogram (default numeric_limit::max() on axes)
+        true     // Use specified limits if this is true (default is false)
+    );
 
-int main() {
-    rgb8_image_t img;
-    read_image("test.jpg", img, jpeg_tag());
+    // Normalize the histogram
+    h.normalize();
 
-    int histogram[256];
-    std::fill(histogram,histogram + 256, 0);
-    get_hist(const_view(img), histogram);
-
-    std::fstream histo_file("out-histogram.txt", std::ios::out);
-    for(std::size_t ii = 0; ii < 256; ++ii)
-        histo_file << histogram[ii] << std::endl;
-    histo_file.close();
+    // Get a cumulative histogram from the histogram
+    auto h2 = cumulative_histogram(h);
 
     return 0;
 }

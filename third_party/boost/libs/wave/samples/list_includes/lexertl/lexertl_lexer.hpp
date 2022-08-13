@@ -421,9 +421,9 @@ lexertl<Iterator, Position>::init_data_pp_number[INIT_DATA_PP_NUMBER_SIZE] =
 
 // C++11 specific token definitions
 
-#define T_EXTCHARLIT      token_id(T_CHARLIT|AltTokenType)
-#define T_EXTSTRINGLIT    token_id(T_STRINGLIT|AltTokenType)
-#define T_EXTRAWSTRINGLIT token_id(T_RAWSTRINGLIT|AltTokenType)
+constexpr token_id T_EXTCHARLIT = T_CHARLIT | AltTokenType;
+constexpr token_id T_EXTSTRINGLIT = T_STRINGLIT | AltTokenType;
+constexpr token_id T_EXTRAWSTRINGLIT = T_RAWSTRINGLIT | AltTokenType;
 
 template <typename Iterator, typename Position>
 typename lexertl<Iterator, Position>::lexer_data const
@@ -835,10 +835,6 @@ lexer::lexertl<
 #undef INIT_DATA_PP_NUMBER_SIZE
 #undef INIT_MACRO_DATA_SIZE
 #undef T_ANYCTRL
-
-#undef T_EXTCHARLIT
-#undef T_EXTSTRINGLIT
-#undef T_EXTRAWSTRINGLIT
 
 ///////////////////////////////////////////////////////////////////////////////
 //

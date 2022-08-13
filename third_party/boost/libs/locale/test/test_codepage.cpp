@@ -1,20 +1,15 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/locale/encoding.hpp>
 #include <boost/locale/generator.hpp>
-#include <boost/locale/localization_backend.hpp>
 #include <boost/locale/info.hpp>
-#include <boost/locale/config.hpp>
+#include <boost/locale/localization_backend.hpp>
 #include <fstream>
-#include "test_locale.hpp"
-#include "test_locale_tools.hpp"
-
+#include <vector>
 
 #ifndef BOOST_LOCALE_NO_POSIX_BACKEND
 # ifdef __APPLE__
@@ -30,6 +25,8 @@
 #include <windows.h>
 #endif
 
+#include "test_locale.hpp"
+#include "test_locale_tools.hpp"
 
 bool test_iso;
 bool test_iso_8859_8 = true;
@@ -64,7 +61,7 @@ void test_ok(std::string file,std::locale const &l,std::basic_string<Char> cmp=s
 
     stream_type f1("testi.txt",stream_type::in);
     f1.imbue(l);
-    TEST(read_file<Char>(f1) == cmp); 
+    TEST(read_file<Char>(f1) == cmp);
     f1.close();
 
     stream_type f2("testo.txt",stream_type::out);
@@ -109,11 +106,11 @@ void test_wfail(std::string file,std::locale const &l,int pos)
     int i;
     for(i=0;i<pos;i++) {
         f1 << out.at(i);
-        f1<<std::flush;
+        f1 << std::flush;
         TEST(f1.good());
     }
     f1 << out.at(i);
-    TEST(f1.fail() || (f1<<std::flush).fail());
+    TEST(f1.fail() || (f1 << std::flush).fail());
 }
 
 
@@ -138,9 +135,9 @@ void test_for_char()
         test_ok<Char>(res.c_str(),g("en_US.UTF-8")); // U+2008A
     }
     else {
-        std::cout << "    UTF-8 Not supported " << std::endl;
+        std::cout << "    UTF-8 Not supported \n";
     }
-    
+
     if(test_iso) {
         if(test_iso_8859_8) {
             std::cout << "    ISO8859-8" << std::endl;
@@ -161,12 +158,12 @@ void test_wide_io()
 {
     std::cout << "  wchar_t" << std::endl;
     test_for_char<wchar_t>();
-    
-    #if defined BOOST_LOCALE_ENABLE_CHAR16_T && !defined(BOOST_NO_CHAR16_T_CODECVT)
+
+    #if defined BOOST_LOCALE_ENABLE_CHAR16_T
     std::cout << "  char16_t" << std::endl;
     test_for_char<char16_t>();
     #endif
-    #if defined BOOST_LOCALE_ENABLE_CHAR32_T && !defined(BOOST_NO_CHAR32_T_CODECVT)
+    #if defined BOOST_LOCALE_ENABLE_CHAR32_T
     std::cout << "  char32_t" << std::endl;
     test_for_char<char32_t>();
     #endif
@@ -181,7 +178,7 @@ void test_pos(std::string source,std::basic_string<Char> target,std::string enco
     TEST(to_utf<Char>(source,encoding)==target);
     TEST(to_utf<Char>(source.c_str(),encoding)==target);
     TEST(to_utf<Char>(source.c_str(),source.c_str()+source.size(),encoding)==target);
-    
+
     TEST(to_utf<Char>(source,l)==target);
     TEST(to_utf<Char>(source.c_str(),l)==target);
     TEST(to_utf<Char>(source.c_str(),source.c_str()+source.size(),l)==target);
@@ -189,7 +186,7 @@ void test_pos(std::string source,std::basic_string<Char> target,std::string enco
     TEST(from_utf<Char>(target,encoding)==source);
     TEST(from_utf<Char>(target.c_str(),encoding)==source);
     TEST(from_utf<Char>(target.c_str(),target.c_str()+target.size(),encoding)==source);
-    
+
     TEST(from_utf<Char>(target,l)==source);
     TEST(from_utf<Char>(target.c_str(),l)==source);
     TEST(from_utf<Char>(target.c_str(),target.c_str()+target.size(),l)==source);
@@ -274,24 +271,30 @@ struct utfutf<char,1> {
 template<>
 struct utfutf<wchar_t,2> {
     static wchar_t const *ok(){ return  L"\x67\x72\xfc\xdf\x65\x6e"; }
-    static wchar_t const *bad() { 
-        static wchar_t buf[256] = L"\x67\x72\xFF\xfc\xFE\xFD\xdf\x65\x6e"; 
+    static wchar_t const *bad() {
+        static wchar_t buf[256] = L"\x67\x72\xFF\xfc\xFE\xFD\xdf\x65\x6e";
         buf[2]=0xDC01; // second surrogate must not be
         buf[4]=0xD801; // First
         buf[5]=0xD801; // Must be surrogate trail
         return buf;
     }
 };
+#ifdef BOOST_MSVC
+#pragma warning(push)
+#pragma warning(disable: 4309) // narrowing static_cast warning
+#endif
 template<>
 struct utfutf<wchar_t,4> {
     static wchar_t const *ok(){ return  L"\x67\x72\xfc\xdf\x65\x6e"; }
-    static wchar_t const *bad() { 
-        static wchar_t buf[256] = L"\x67\x72\xFF\xfc\xdf\x65\x6e"; 
+    static wchar_t const *bad() {
+        static wchar_t buf[256] = L"\x67\x72\xFF\xfc\xdf\x65\x6e";
         buf[2]=static_cast<wchar_t>(0x1000000); // > 10FFFF
         return buf;
     }
 };
-
+#ifdef BOOST_MSVC
+#pragma warning(pop)
+#endif
 
 template<typename CharOut,typename CharIn>
 void test_combinations()
@@ -306,14 +309,14 @@ void test_combinations()
 
 void test_all_combinations()
 {
-    std::cout << "Testing utf_to_utf" << std::endl;
-    std::cout <<"  char<-char"<<std::endl;
+    std::cout << "Testing utf_to_utf\n";
+    std::cout << "  char<-char" << std::endl;
     test_combinations<char,char>();
-    std::cout <<"  char<-wchar"<<std::endl;
+    std::cout << "  char<-wchar" << std::endl;
     test_combinations<char,wchar_t>();
-    std::cout <<"  wchar<-char"<<std::endl;
+    std::cout << "  wchar<-char" << std::endl;
     test_combinations<wchar_t,char>();
-    std::cout <<"  wchar<-wchar"<<std::endl;
+    std::cout << "  wchar<-wchar" << std::endl;
     test_combinations<wchar_t,wchar_t>();
 }
 
@@ -325,10 +328,10 @@ void test_to()
         test_pos<Char>("\xf9\xec\xe5\xed",utf<Char>("שלום"),"ISO8859-8");
     test_pos<Char>("grüßen",utf<Char>("grüßen"),"UTF-8");
     test_pos<Char>("abc\"\xf0\xa0\x82\x8a\"",utf<Char>("abc\"\xf0\xa0\x82\x8a\""),"UTF-8");
-    
+
     test_to_neg<Char>("g\xFFrüßen",utf<Char>("grüßen"),"UTF-8");
     test_from_neg<Char>(utf<Char>("hello שלום"),"hello ","ISO8859-1");
- 
+
     test_with_0<Char>();
 }
 
@@ -354,7 +357,7 @@ void test_skip(char const *enc,char const *utf,char const *name,char const *opt=
 void test_simple_conversions()
 {
     namespace blc=boost::locale::conv;
-    std::cout << "- Testing correct invalid bytes skipping" << std::endl;
+    std::cout << "- Testing correct invalid bytes skipping\n";
     try {
         std::cout << "-- ISO-8859-8" << std::endl;
         test_skip("test \xE0\xE1\xFB-","test \xd7\x90\xd7\x91-","ISO-8859-8");
@@ -363,7 +366,7 @@ void test_simple_conversions()
         test_skip("\xFB-","-","ISO-8859-8");
     }
     catch(blc::invalid_charset_error const &) {
-        std::cout <<"--- not supported" << std::endl;
+        std::cout << "--- not supported\n"; //LCOV_EXCL_LINE
     }
     try {
         std::cout << "-- cp932" << std::endl;
@@ -373,145 +376,133 @@ void test_simple_conversions()
         test_skip("\x83\xF8-","-","cp932","");
     }
     catch(blc::invalid_charset_error const &) {
-        std::cout <<"--- not supported" << std::endl;
+        std::cout << "--- not supported\n"; //LCOV_EXCL_LINE
     }
 }
 
 
-int main()
+void test_main(int /*argc*/, char** /*argv*/)
 {
-    try {
-        std::vector<std::string> def;
-        #ifdef BOOST_LOCALE_WITH_ICU
-        def.push_back("icu");
-        #endif
-        #ifndef BOOST_LOCALE_NO_STD_BACKEND
-        def.push_back("std");
-        #endif
-        #ifndef BOOST_LOCALE_NO_WINAPI_BACKEND
-        def.push_back("winapi");
-        #endif
-        #ifndef BOOST_LOCALE_NO_POSIX_BACKEND
-        def.push_back("posix");
-        #endif
+    // Sanity check to<char>
+    TEST(to<char>("grüßen") == "gr\xFC\xDF""en");
+    TEST_THROWS(to<char>("€"), std::runtime_error);
 
-        #if !defined(BOOST_LOCALE_WITH_ICU) && !defined(BOOST_LOCALE_WITH_ICONV) && (defined(BOOST_WINDOWS) || defined(__CYGWIN__))
-        test_iso_8859_8 = IsValidCodePage(28598)!=0;
-        #endif
+    std::vector<std::string> def;
+    #ifdef BOOST_LOCALE_WITH_ICU
+    def.push_back("icu");
+    #endif
+    #ifndef BOOST_LOCALE_NO_STD_BACKEND
+    def.push_back("std");
+    #endif
+    #ifndef BOOST_LOCALE_NO_WINAPI_BACKEND
+    def.push_back("winapi");
+    #endif
+    #ifndef BOOST_LOCALE_NO_POSIX_BACKEND
+    def.push_back("posix");
+    #endif
 
-        test_simple_conversions();
-        
-        
-        for(int type = 0; type < int(def.size()); type ++ ) {
-            boost::locale::localization_backend_manager tmp_backend = boost::locale::localization_backend_manager::global();
-            tmp_backend.select(def[type]);
-            boost::locale::localization_backend_manager::global(tmp_backend);
-            
-            std::string bname = def[type];
-            
-            if(bname=="std") { 
-                en_us_8bit = get_std_name("en_US.ISO8859-1");
-                he_il_8bit = get_std_name("he_IL.ISO8859-8");
-                ja_jp_shiftjis = get_std_name("ja_JP.SJIS");
-                if(!ja_jp_shiftjis.empty() && !test_std_supports_SJIS_codecvt(ja_jp_shiftjis))
-                {
-                    std::cout << "Warning: detected unproper support of " << ja_jp_shiftjis << " locale, disableling it" << std::endl;
-                    ja_jp_shiftjis = "";
-                }
-            }
-            else {
-                en_us_8bit = "en_US.ISO8859-1";
-                he_il_8bit = "he_IL.ISO8859-8";
-                ja_jp_shiftjis = "ja_JP.SJIS";
-            }
+    #if !defined(BOOST_LOCALE_WITH_ICU) && !defined(BOOST_LOCALE_WITH_ICONV) && (defined(BOOST_WINDOWS) || defined(__CYGWIN__))
+    test_iso_8859_8 = IsValidCodePage(28598)!=0;
+    #endif
 
-            std::cout << "Testing for backend " << def[type] << std::endl;
+    test_simple_conversions();
 
-            test_iso = true;
-            if(bname=="std" && (he_il_8bit.empty() || en_us_8bit.empty())) {
-                std::cout << "no iso locales availible, passing" << std::endl;
-                test_iso = false;
-            }
-            test_sjis = true;
-            if(bname=="std" && ja_jp_shiftjis.empty()) {
-                test_sjis = false;
-            }
-            if(bname=="winapi") {
-                test_iso = false;
-                test_sjis = false;
-            }
-            test_utf = true;
-            #ifndef BOOST_LOCALE_NO_POSIX_BACKEND
-            if(bname=="posix") {
-                {
-                    locale_t l = newlocale(LC_ALL_MASK,he_il_8bit.c_str(),0);
-                    if(!l)
-                        test_iso = false;
-                    else
-                        freelocale(l);
-                }
-                {
-                    locale_t l = newlocale(LC_ALL_MASK,en_us_8bit.c_str(),0);
-                    if(!l)
-                        test_iso = false;
-                    else
-                        freelocale(l);
-                }
-                {
-                    locale_t l = newlocale(LC_ALL_MASK,"en_US.UTF-8",0);
-                    if(!l)
-                        test_utf = false;
-                    else
-                        freelocale(l);
-                }
-                #ifdef BOOST_LOCALE_WITH_ICONV
-                {
-                    locale_t l = newlocale(LC_ALL_MASK,ja_jp_shiftjis.c_str(),0);
-                    if(!l)
-                        test_sjis = false;
-                    else
-                        freelocale(l);
-                }
-                #else
-                test_sjis = false;
-                #endif
-            }
-            #endif
 
-            if(def[type]=="std" && (get_std_name("en_US.UTF-8").empty() || get_std_name("he_IL.UTF-8").empty())) 
+    for(int type = 0; type < int(def.size()); type ++ ) {
+        boost::locale::localization_backend_manager tmp_backend = boost::locale::localization_backend_manager::global();
+        tmp_backend.select(def[type]);
+        boost::locale::localization_backend_manager::global(tmp_backend);
+
+        std::string bname = def[type];
+
+        if(bname=="std") {
+            en_us_8bit = get_std_name("en_US.ISO8859-1");
+            he_il_8bit = get_std_name("he_IL.ISO8859-8");
+            ja_jp_shiftjis = get_std_name("ja_JP.SJIS");
+            if(!ja_jp_shiftjis.empty() && !test_std_supports_SJIS_codecvt(ja_jp_shiftjis))
             {
-                test_utf = false;
+                std::cout << "Warning: detected unproper support of " << ja_jp_shiftjis << " locale, disableling it" << std::endl;
+                ja_jp_shiftjis = "";
             }
-            
-            std::cout << "Testing wide I/O" << std::endl;
-            test_wide_io();
-            std::cout << "Testing charset to/from UTF conversion functions" << std::endl;
-            std::cout << "  char" << std::endl;
-            test_to<char>();
-            std::cout << "  wchar_t" << std::endl;
-            test_to<wchar_t>();
-            #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
-            if(bname == "icu" || bname == "std") {
-                std::cout << "  char16_t" << std::endl;
-                test_to<char16_t>();
-            }
-            #endif
-            #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
-            if(bname == "icu" || bname == "std") {
-                std::cout << "  char32_t" << std::endl;
-                test_to<char32_t>();
-            }
-            #endif
-
-            test_all_combinations();
         }
+        else {
+            en_us_8bit = "en_US.ISO8859-1";
+            he_il_8bit = "he_IL.ISO8859-8";
+            ja_jp_shiftjis = "ja_JP.SJIS";
+        }
+
+        std::cout << "Testing for backend " << def[type] << std::endl;
+
+        test_iso = true;
+        if(bname=="std" && (he_il_8bit.empty() || en_us_8bit.empty())) {
+            std::cout << "no iso locales availible, passing" << std::endl;
+            test_iso = false;
+        }
+        test_sjis = true;
+        if(bname=="std" && ja_jp_shiftjis.empty()) {
+            test_sjis = false;
+        }
+        if(bname=="winapi") {
+            test_iso = false;
+            test_sjis = false;
+        }
+        test_utf = true;
+        #ifndef BOOST_LOCALE_NO_POSIX_BACKEND
+        if(bname=="posix") {
+            {
+                locale_holder l(newlocale(LC_ALL_MASK,he_il_8bit.c_str(),0));
+                if(!l)
+                    test_iso = false;
+            }
+            {
+                locale_holder l(newlocale(LC_ALL_MASK,en_us_8bit.c_str(),0));
+                if(!l)
+                    test_iso = false;
+            }
+            {
+                locale_holder l(newlocale(LC_ALL_MASK,"en_US.UTF-8",0));
+                if(!l)
+                    test_utf = false;
+            }
+            #ifdef BOOST_LOCALE_WITH_ICONV
+            {
+                locale_holder l(newlocale(LC_ALL_MASK,ja_jp_shiftjis.c_str(),0));
+                if(!l)
+                    test_sjis = false;
+            }
+            #else
+            test_sjis = false;
+            #endif
+        }
+        #endif
+
+        if(def[type]=="std" && (get_std_name("en_US.UTF-8").empty() || get_std_name("he_IL.UTF-8").empty()))
+        {
+            test_utf = false;
+        }
+
+        std::cout << "Testing wide I/O" << std::endl;
+        test_wide_io();
+        std::cout << "Testing charset to/from UTF conversion functions\n";
+        std::cout << "  char" << std::endl;
+        test_to<char>();
+        std::cout << "  wchar_t" << std::endl;
+        test_to<wchar_t>();
+        #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
+        if(bname == "icu" || bname == "std") {
+            std::cout << "  char16_t" << std::endl;
+            test_to<char16_t>();
+        }
+        #endif
+        #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
+        if(bname == "icu" || bname == "std") {
+            std::cout << "  char32_t" << std::endl;
+            test_to<char32_t>();
+        }
+        #endif
+
+        test_all_combinations();
     }
-    catch(std::exception const &e) {
-        std::cerr << "Failed " << e.what() << std::endl;
-        return EXIT_FAILURE;
-    }
-    FINALIZE();
 }
 
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
-// boostinspect:noascii 
+// boostinspect:noascii

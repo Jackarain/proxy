@@ -241,11 +241,11 @@ The header contains implementation of a base class for sink frontends. </para><n
 <method name="flush_backend_impl"><type>void</type><template>
           <template-type-parameter name="BackendMutexT"/>
           <template-type-parameter name="BackendT"/>
-        </template><parameter name="backend_mutex"><paramtype>BackendMutexT &amp;</paramtype></parameter><parameter name="backend"><paramtype>BackendT &amp;</paramtype></parameter><parameter name=""><paramtype>mpl::true_</paramtype></parameter><purpose>Flushes record buffers in the backend (the actual implementation) </purpose></method>
+        </template><parameter name="backend_mutex"><paramtype>BackendMutexT &amp;</paramtype></parameter><parameter name="backend"><paramtype>BackendT &amp;</paramtype></parameter><parameter name=""><paramtype>boost::true_type</paramtype></parameter><purpose>Flushes record buffers in the backend (the actual implementation) </purpose></method>
 <method name="flush_backend_impl"><type>void</type><template>
           <template-type-parameter name="BackendMutexT"/>
           <template-type-parameter name="BackendT"/>
-        </template><parameter name=""><paramtype>BackendMutexT &amp;</paramtype></parameter><parameter name=""><paramtype>BackendT &amp;</paramtype></parameter><parameter name=""><paramtype>mpl::false_</paramtype></parameter><purpose>Flushes record buffers in the backend (stub for backends that don't support flushing) </purpose></method>
+        </template><parameter name=""><paramtype>BackendMutexT &amp;</paramtype></parameter><parameter name=""><paramtype>BackendT &amp;</paramtype></parameter><parameter name=""><paramtype>boost::false_type</paramtype></parameter><purpose>Flushes record buffers in the backend (stub for backends that don't support flushing) </purpose></method>
 </method-group>
 </class></namespace>
 </namespace>

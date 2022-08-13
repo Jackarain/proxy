@@ -14,9 +14,6 @@
 
 #include <boost/functional/hash/hash.hpp>
 
-namespace boost{
-namespace intrusive{
-
 struct int_holder
 {
    explicit int_holder(int value = 0)
@@ -110,8 +107,5 @@ struct int_priority_of_value
    type operator()(const ValueType &tv) const
    {  return tv.int_value();  }
 };
-
-}  //namespace boost{
-}  //namespace intrusive{
 
 #endif   //BOOST_INTRUSIVE_DETAIL_INT_HOLDER_HPP

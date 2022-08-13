@@ -143,6 +143,16 @@ void test_index_image_view()
     BOOST_TEST_EQ(gil::get_color(q, gil::red_t()), 70);
     BOOST_TEST_EQ(gil::get_color(q, gil::green_t()), 80);
     BOOST_TEST_EQ(gil::get_color(q, gil::blue_t()), 90);
+
+    BOOST_TEST(ii_view.num_dimensions == 2);
+    BOOST_TEST(ii_view.dimensions().x == width);
+    BOOST_TEST(ii_view.dimensions().y == height);
+    BOOST_TEST(ii_view.width() == width);
+    BOOST_TEST(ii_view.height() == height);
+    BOOST_TEST(ii_view.num_channels() == gil::num_channels<gil::rgb8_image_t::value_type>::value);
+    BOOST_TEST(ii_view.num_colors() == palette_view.dimensions().x);
+    BOOST_TEST(!ii_view.empty());
+    BOOST_TEST(!ii_view.is_1d_traversable()); // by virtual_2d_locator
 }
 
 int main()

@@ -66,3 +66,7 @@ by using `(h * m) >> (w - k)`, where `h` is the hash value, `m` is the golden
 ratio multiplied by `2^w`, `w` is the word size (32 or 64), and `2^k` is the
 number of buckets. This provides a good compromise between speed and
 distribution.
+
+Since release 1.80.0, prime numbers are chosen for the number of buckets in
+tandem with sophisticated modulo arithmetic. This removes the need for "mixing"
+the result of the user's hash function as was used for release 1.79.0.

@@ -265,14 +265,13 @@ void test_subimage()
 
 void test_dynamic_image()
 {
-    using my_img_types = mp11::mp_list
+    gil::any_image
     <
         gil::gray8_image_t,
         gil::gray16_image_t,
         gil::rgb8_image_t,
         gil::rgba8_image_t
-    >;
-    gil::any_image<my_img_types> image;
+    > image;
 
     gil::read_image(png_filename.c_str(), image, gil::png_tag());
 

@@ -14,7 +14,7 @@
 #include <boost/process.hpp>
 #include <boost/process/posix.hpp>
 
-#include <boost/filesystem.hpp>
+#include <boost/process/filesystem.hpp>
 
 #include <system_error>
 
@@ -23,7 +23,7 @@
 #include <sys/wait.h>
 #include <errno.h>
 
-namespace fs = boost::filesystem;
+namespace fs = boost::process::filesystem;
 namespace bp = boost::process;
 
 BOOST_AUTO_TEST_CASE(bind_fd, *boost::unit_test::timeout(2))

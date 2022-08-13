@@ -1,19 +1,16 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 filetype=cpp.doxygen
 /*!
 \page running_examples_under_windows Running Examples under Microsoft Windows
 
 All of the examples that come with Boost.Locale are designed for UTF-8 and it is
 the default encoding used by Boost.Locale.
 
-However, the default narrow encoding under Microsoft Windows is not UTF-8 and 
+However, the default narrow encoding under Microsoft Windows is not UTF-8 and
 the output of the applications would not be displayed correctly in the console.
 
 So in order to use UTF-8 encoding under the Windows console and see the output correctly, do the following:

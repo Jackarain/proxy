@@ -7,6 +7,11 @@
 #include <boost/core/lightweight_test.hpp>
 #include <boost/core/lightweight_test_trait.hpp>
 
+#if defined(_MSC_VER) && _MSC_VER < 1900
+# pragma warning(disable: 4510) // default constructor could not be generated
+# pragma warning(disable: 4610) // struct can never be instantiated
+#endif
+
 struct X
 {
 };

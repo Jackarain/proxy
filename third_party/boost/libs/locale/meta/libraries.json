@@ -9,6 +9,8 @@
         "String"
     ],
     "maintainers": [
-        "Artyom Beilis <artyomtnk -at- yahoo.com>"
-    ]
+        "Artyom Beilis <artyomtnk -at- yahoo.com>",
+        "Alexander Grund <alex -at- grundis.de>"
+    ],
+    "cxxstd": "03"
 }

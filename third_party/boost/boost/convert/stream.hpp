@@ -30,13 +30,13 @@
         typename mpl::has_key<              \
             argument_pack, cnv::parameter::type::param_name>::type());
 
-namespace boost { namespace cnv
+namespace boost::cnv
 {
     template<class Char> struct basic_stream;
 
     using cstream = boost::cnv::basic_stream<char>;
     using wstream = boost::cnv::basic_stream<wchar_t>;
-}}
+}
 
 template<class Char>
 struct boost::cnv::basic_stream
@@ -156,8 +156,9 @@ struct boost::cnv::basic_stream
     {
         cnv::notation notation = arg[cnv::parameter::notation];
 
-        /**/ if (notation == cnv::notation::     fixed)      std::fixed(stream_);
+        /**/ if (notation == cnv::notation::     fixed) std::fixed(stream_);
         else if (notation == cnv::notation::scientific) std::scientific(stream_);
+        else if (notation == cnv::notation::       hex) std::hexfloat(stream_);
         else BOOST_ASSERT(!"Not implemented");
     }
 

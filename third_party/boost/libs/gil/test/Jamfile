@@ -16,51 +16,30 @@ import regex ;
 import sequence ;
 import testing ;
 
-# Avoid warnings flood from CI builds
-if ! [ os.environ CI ] && ! [ os.environ AGENT_JOBSTATUS ] && ! [ os.environ GITHUB_ACTIONS ]
-{
-  DEVELOPMENT_EXTRA_WARNINGS =
-    <toolset>msvc:<cxxflags>"-W4"
-    <toolset>gcc:<cxxflags>"-pedantic -Wextra -Wcast-align -Wconversion -Wfloat-equal -Wshadow -Wsign-promo -Wstrict-aliasing -Wunused-parameter"
-    <toolset>clang,<variant>debug:<cxxflags>"-pedantic -Wextra -Wcast-align -Wconversion -Wfloat-equal -Wshadow -Wsign-promo -Wstrict-aliasing -Wunused-parameter -Wsign-conversion"
-    <toolset>clang,<variant>release:<cxxflags>"-pedantic -Wextra -Wcast-align -Wconversion -Wfloat-equal -Wshadow -Wsign-promo -Wstrict-aliasing -Wunused-parameter -Wsign-conversion"
-    <toolset>darwin:<cxxflags>"-pedantic -Wextra -Wcast-align -Wconversion -Wfloat-equal -Wshadow -Wsign-promo -Wstrict-aliasing -Wunused-parameter"
-    ;
-}
-else
-{
-  DEVELOPMENT_EXTRA_WARNINGS =
-    <toolset>msvc:<cxxflags>"-W1"
-    ;
-}
+# The <experimental/filesystem> header providing std::experimental::filesystem
+# is deprecated by Microsoft and will be REMOVED. It is superseded by the C++17
+# <filesystem> header providing std::filesystem.
+# You can define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
+# to acknowledge that you have received this warning.
+local msvc-cxxs-with-experimental-fs = 14 ;
 
 project
   :
   requirements
-    <include>.
-    # TODO: Enable concepts check for all, not just test/core
-    #<define>BOOST_GIL_USE_CONCEPT_CHECK=1
-    <toolset>msvc:<cxxflags>"-bigobj"
-    <toolset>msvc:<asynch-exceptions>on
-    <toolset>msvc:<define>_SCL_SECURE_NO_DEPRECATE
-    <toolset>msvc:<define>_CRT_SECURE_NO_WARNINGS
-    <toolset>msvc:<define>_CRT_NONSTDC_NO_DEPRECATE
-    <toolset>msvc:<define>NOMINMAX
-    <toolset>intel:<debug-symbols>off
-    <toolset>gcc:<cxxflags>"-fstrict-aliasing"
-    <toolset>darwin:<cxxflags>"-fstrict-aliasing"
-    # variant filter for clang is necessary to allow ubsan_*
-    # custom variants declare distinct set of <cxxflags>
-    <toolset>clang,<variant>debug:<cxxflags>"-fstrict-aliasing"
-    <toolset>clang,<variant>release:<cxxflags>"-fstrict-aliasing"
-    $(DEVELOPMENT_EXTRA_WARNINGS)
     [ requires
         cxx11_constexpr
         cxx11_defaulted_functions
         cxx11_template_aliases
         cxx11_trailing_result_types  # implies decltype and auto
         cxx11_variadic_templates
+        cxx14_constexpr
+        cxx14_return_type_deduction
     ]
+    <include>.
+    # TODO: Enable concepts check for all, not just test/core
+    #<define>BOOST_GIL_USE_CONCEPT_CHECK=1
+    <toolset>msvc,<cxxstd>$(msvc-cxxs-with-experimental-fs):<define>_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING=1
+    <toolset>msvc:<cxxflags>/bigobj
   ;
 
 variant gil_ubsan_integer

@@ -688,6 +688,7 @@ pre.rouge {
 </li>
 <li><a href="#changes">Revision History</a>
 <ul class="sectlevel2">
+<li><a href="#changes_in_boost_1_80">Changes in Boost 1.80</a></li>
 <li><a href="#changes_in_boost_1_79">Changes in Boost 1.79</a></li>
 <li><a href="#changes_in_boost_1_78">Changes in Boost 1.78</a></li>
 <li><a href="#changes_in_boost_1_77">Changes in Boost 1.77</a></li>
@@ -2538,6 +2539,28 @@ image format" condition.</p>
 <h2 id="changes">Revision History</h2>
 <div class="sectionbody">
 <div class="sect2">
+<h3 id="changes_in_boost_1_80">Changes in Boost 1.80</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>When an <code>error_code</code> is converted to <code>std::error_code</code> and then back
+to <code>error_code</code>, the original is now restored, if possible.</p>
+</li>
+<li>
+<p>Reworked the conversion from <code>error_category</code> to <code>std::error_category</code>
+to avoid the one-time allocation that shows up on leak checkers.</p>
+</li>
+<li>
+<p>Added a constructor that allows replacing the source location of an
+<code>error_code</code>, and a corresponding <code>assign</code>.</p>
+</li>
+<li>
+<p>Added a converting constructor to <code>result</code>.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
 <h3 id="changes_in_boost_1_79">Changes in Boost 1.79</h3>
 <div class="ulist">
 <ul>
@@ -3744,9 +3767,8 @@ by exception.</p>
     <span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">ErrorCodeEnum</span><span class="p">&gt;</span>
       <span class="k">constexpr</span> <span class="n">error_code</span><span class="p">(</span> <span class="n">ErrorCodeEnum</span> <span class="n">e</span> <span class="p">)</span> <span class="k">noexcept</span><span class="p">;</span>
 
-    <span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">ErrorCodeEnum</span><span class="p">&gt;</span>
-      <span class="n">error_code</span><span class="p">(</span> <span class="n">ErrorCodeEnum</span> <span class="n">e</span><span class="p">,</span> <span class="n">boost</span><span class="o">::</span><span class="n">source_location</span> <span class="k">const</span> <span class="o">*</span> <span class="n">loc</span> <span class="p">)</span>
-        <span class="k">noexcept</span><span class="p">;</span>
+    <span class="n">error_code</span><span class="p">(</span> <span class="n">error_code</span> <span class="k">const</span><span class="o">&amp;</span> <span class="n">ec</span><span class="p">,</span>
+      <span class="n">boost</span><span class="o">::</span><span class="n">source_location</span> <span class="k">const</span> <span class="o">*</span> <span class="n">loc</span> <span class="p">)</span> <span class="k">noexcept</span><span class="p">;</span>
 
     <span class="n">error_code</span><span class="p">(</span> <span class="n">std</span><span class="o">::</span><span class="n">error_code</span> <span class="k">const</span><span class="o">&amp;</span> <span class="n">ec</span> <span class="p">)</span> <span class="k">noexcept</span><span class="p">;</span>
 
@@ -3760,9 +3782,8 @@ by exception.</p>
     <span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">ErrorCodeEnum</span><span class="p">&gt;</span>
       <span class="k">constexpr</span> <span class="n">error_code</span> <span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span> <span class="n">ErrorCodeEnum</span> <span class="n">e</span> <span class="p">)</span> <span class="k">noexcept</span><span class="p">;</span>
 
-    <span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">ErrorCodeEnum</span><span class="p">&gt;</span>
-      <span class="kt">void</span> <span class="n">assign</span><span class="p">(</span> <span class="n">ErrorCodeEnum</span> <span class="n">e</span><span class="p">,</span>
-        <span class="n">boost</span><span class="o">::</span><span class="n">source_location</span> <span class="k">const</span> <span class="o">*</span> <span class="n">loc</span> <span class="p">)</span> <span class="k">noexcept</span><span class="p">;</span>
+    <span class="kt">void</span> <span class="n">assign</span><span class="p">(</span> <span class="n">error_code</span> <span class="k">const</span><span class="o">&amp;</span> <span class="n">ec</span><span class="p">,</span>
+      <span class="n">boost</span><span class="o">::</span><span class="n">source_location</span> <span class="k">const</span> <span class="o">*</span> <span class="n">loc</span> <span class="p">)</span> <span class="k">noexcept</span><span class="p">;</span>
 
     <span class="k">constexpr</span> <span class="kt">void</span> <span class="n">clear</span><span class="p">()</span> <span class="k">noexcept</span><span class="p">;</span>
 
@@ -3946,8 +3967,8 @@ by exception.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="rouge highlight"><code data-lang="c++"><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">ErrorCodeEnum</span><span class="p">&gt;</span>
-  <span class="n">error_code</span><span class="p">(</span> <span class="n">ErrorCodeEnum</span> <span class="n">e</span><span class="p">,</span> <span class="n">boost</span><span class="o">::</span><span class="n">source_location</span> <span class="k">const</span> <span class="o">*</span> <span class="n">loc</span> <span class="p">)</span> <span class="k">noexcept</span><span class="p">;</span></code></pre>
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">error_code</span><span class="p">(</span> <span class="n">error_code</span> <span class="k">const</span><span class="o">&amp;</span> <span class="n">ec</span><span class="p">,</span>
+  <span class="n">boost</span><span class="o">::</span><span class="n">source_location</span> <span class="k">const</span> <span class="o">*</span> <span class="n">loc</span> <span class="p">)</span> <span class="k">noexcept</span><span class="p">;</span></code></pre>
 </div>
 </div>
 <div class="ulist none">
@@ -3958,17 +3979,17 @@ by exception.</p>
 <dl>
 <dt class="hdlist1">Requires: </dt>
 <dd>
-<p><code>loc</code> points to a valid <code>boost::source_location</code> object with static storage duration.</p>
+<p><code>loc</code> points to a valid <code>boost::source_location</code> object with static storage duration, or is <code>nullptr</code>.</p>
 </dd>
 <dt class="hdlist1">Ensures: </dt>
 <dd>
-<p><code>*this == make_error_code( e )</code>.</p>
+<p><code>*this == ec</code>.</p>
 </dd>
 <dt class="hdlist1">Remarks: </dt>
 <dd>
-<p>This constructor is only enabled when <code>is_error_code_enum&lt;ErrorCodeEnum&gt;::value</code> is <code>true</code>.
-When <code>make_error_code( e )</code> is not a default-constructed <code>error_code</code> and doesn&#8217;t wrap a
-<code>std::error_code</code>, <code>has_location()</code> is <code>true</code> and <code>&amp;location()</code> is <code>loc</code>.</p>
+<p>When <code>ec</code> is a default-constructed <code>error_code</code> or wraps a <code>std::error_code</code>,
+or when <code>loc</code> is <code>nullptr</code>, <code>*this</code> stores no location (<code>has_location()</code> is <code>false</code>).
+Otherwise, <code>*this</code> stores <code>loc</code> (<code>has_location()</code> is <code>true</code> and <code>&amp;location()</code> is <code>loc</code>.)</p>
 </dd>
 </dl>
 </div>
@@ -4070,9 +4091,8 @@ When <code>make_error_code( e )</code> is not a default-constructed <code>error_
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="rouge highlight"><code data-lang="c++"><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">ErrorCodeEnum</span><span class="p">&gt;</span>
-  <span class="kt">void</span> <span class="n">assign</span><span class="p">(</span> <span class="n">ErrorCodeEnum</span> <span class="n">e</span><span class="p">,</span>
-    <span class="n">boost</span><span class="o">::</span><span class="n">source_location</span> <span class="k">const</span> <span class="o">*</span> <span class="n">loc</span> <span class="p">)</span> <span class="k">noexcept</span><span class="p">;</span></code></pre>
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">assign</span><span class="p">(</span> <span class="n">error_code</span> <span class="k">const</span><span class="o">&amp;</span> <span class="n">ec</span><span class="p">,</span>
+  <span class="n">boost</span><span class="o">::</span><span class="n">source_location</span> <span class="k">const</span> <span class="o">*</span> <span class="n">loc</span> <span class="p">)</span> <span class="k">noexcept</span><span class="p">;</span></code></pre>
 </div>
 </div>
 <div class="ulist none">
@@ -4081,17 +4101,9 @@ When <code>make_error_code( e )</code> is not a default-constructed <code>error_
 <p></p>
 <div class="dlist">
 <dl>
-<dt class="hdlist1">Requires: </dt>
-<dd>
-<p><code>loc</code> points to a valid <code>boost::source_location</code> object with static storage duration.</p>
-</dd>
 <dt class="hdlist1">Effects: </dt>
 <dd>
-<p><code>*this = error_code( e, loc )</code>.</p>
-</dd>
-<dt class="hdlist1">Remarks: </dt>
-<dd>
-<p>This function is only enabled when <code>is_error_code_enum&lt;ErrorCodeEnum&gt;::value</code> is <code>true</code>.</p>
+<p><code>*this = error_code( ec, loc )</code>.</p>
 </dd>
 </dl>
 </div>
@@ -5632,6 +5644,12 @@ to <code>error_code</code>. In a typical use, functions that can fail return <co
     <span class="k">template</span><span class="o">&lt;</span><span class="k">class</span><span class="o">...</span> <span class="nc">A</span><span class="p">&gt;</span>
       <span class="k">constexpr</span> <span class="n">result</span><span class="p">(</span> <span class="n">in_place_error_t</span><span class="p">,</span> <span class="n">A</span><span class="o">&amp;&amp;</span><span class="p">...</span> <span class="n">a</span> <span class="p">);</span>
 
+    <span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">T2</span><span class="p">,</span> <span class="k">class</span> <span class="nc">E2</span><span class="p">&gt;</span>
+      <span class="k">constexpr</span> <span class="n">result</span><span class="p">(</span> <span class="n">result</span><span class="o">&lt;</span><span class="n">T2</span><span class="p">,</span> <span class="n">E2</span><span class="o">&gt;</span> <span class="k">const</span><span class="o">&amp;</span> <span class="n">r2</span> <span class="p">);</span>
+
+    <span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">T2</span><span class="p">,</span> <span class="k">class</span> <span class="nc">E2</span><span class="p">&gt;</span>
+      <span class="k">constexpr</span> <span class="n">result</span><span class="p">(</span> <span class="n">result</span><span class="o">&lt;</span><span class="n">T2</span><span class="p">,</span> <span class="n">E2</span><span class="o">&gt;&amp;&amp;</span> <span class="n">r2</span> <span class="p">);</span>
+
     <span class="c1">// queries</span>
 
     <span class="k">constexpr</span> <span class="kt">bool</span> <span class="n">has_value</span><span class="p">()</span> <span class="k">const</span> <span class="k">noexcept</span><span class="p">;</span>
@@ -5796,6 +5814,56 @@ ensures that <code>*this</code> holds the error <code>E( std::forward&lt;A&gt;(a
 <dt class="hdlist1">Remarks: </dt>
 <dd>
 <p>This constructor is only enabled when <code>std::is_constructible&lt;E, A&#8230;&#8203;&gt;::value</code> is <code>true</code>.</p>
+</dd>
+</dl>
+</div>
+</li>
+</ul>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">T2</span><span class="p">,</span> <span class="k">class</span> <span class="nc">E2</span><span class="p">&gt;</span>
+  <span class="k">constexpr</span> <span class="nf">result</span><span class="p">(</span> <span class="n">result</span><span class="o">&lt;</span><span class="n">T2</span><span class="p">,</span> <span class="n">E2</span><span class="o">&gt;</span> <span class="k">const</span><span class="o">&amp;</span> <span class="n">r2</span> <span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="ulist none">
+<ul class="none">
+<li>
+<p></p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Ensures: </dt>
+<dd>
+<p>If <code>r2.has_value()</code> is <code>true</code>, <code>*this</code> holds the value <code>T( *r2 )</code>, otherwise <code>*this</code> holds the value <code>E( r2.error() )</code>.</p>
+</dd>
+<dt class="hdlist1">Remarks: </dt>
+<dd>
+<p>This constructor is only enabled when <code>std::is_convertible&lt;T2, T&gt;::value &amp;&amp; std::is_convertible&lt;E2, E&gt;::value</code> is <code>true</code>.</p>
+</dd>
+</dl>
+</div>
+</li>
+</ul>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">T2</span><span class="p">,</span> <span class="k">class</span> <span class="nc">E2</span><span class="p">&gt;</span>
+  <span class="k">constexpr</span> <span class="nf">result</span><span class="p">(</span> <span class="n">result</span><span class="o">&lt;</span><span class="n">T2</span><span class="p">,</span> <span class="n">E2</span><span class="o">&gt;&amp;&amp;</span> <span class="n">r2</span> <span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="ulist none">
+<ul class="none">
+<li>
+<p></p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Ensures: </dt>
+<dd>
+<p>If <code>r2.has_value()</code> is <code>true</code>, <code>*this</code> holds the value <code>T( std::move( *r2 ) )</code>, otherwise <code>*this</code> holds the value <code>E( r2.error() )</code>.</p>
+</dd>
+<dt class="hdlist1">Remarks: </dt>
+<dd>
+<p>This constructor is only enabled when <code>std::is_convertible&lt;T2, T&gt;::value &amp;&amp; std::is_convertible&lt;E2, E&gt;::value</code> is <code>true</code>.</p>
 </dd>
 </dl>
 </div>
@@ -6672,7 +6740,7 @@ paper. Johan Nilsson&#8217;s comments led to several of the refinements in N2066
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2022-04-06 21:02:43 UTC
+Last updated 2022-08-04 02:47:17 UTC
 </div>
 </div>
 <style>

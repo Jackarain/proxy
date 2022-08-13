@@ -22,8 +22,6 @@
 #include <boost/intrusive/link_mode.hpp>
 
 
-namespace boost {
-namespace intrusive {
 
 struct BPtr_Value
 {
@@ -210,6 +208,8 @@ struct ValueContainer< BPtr_Value >
    typedef bounded_reference_cont< BPtr_Value > type;
 };
 
+namespace boost {
+namespace intrusive {
 namespace test{
 
 template <>

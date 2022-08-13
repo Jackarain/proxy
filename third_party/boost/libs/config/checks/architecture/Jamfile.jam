@@ -18,7 +18,8 @@ obj 64 : 64.cpp ;
 
 obj arm      : arm.cpp ;
 obj combined : combined.cpp ;
-obj mips1    : mips1.cpp ;
+obj mips     : mips.cpp ;
+alias mips1  : mips ; # Backwards compatibility
 obj power    : power.cpp ;
 obj riscv    : riscv.cpp ;
 obj sparc    : sparc.cpp ;

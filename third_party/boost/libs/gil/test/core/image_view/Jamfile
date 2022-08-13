@@ -20,6 +20,7 @@ compile view_type_from_pixel.cpp ;
 
 run axis_iterator.cpp ;
 run collection.cpp ;
+run is_1d_traversable.cpp ;
 run iterator.cpp ;
 run planar_rgba_view.cpp ;
 run reverse_iterator.cpp ;

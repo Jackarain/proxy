@@ -24,7 +24,7 @@
 #include <boost/process/async.hpp>
 #include <system_error>
 
-#include <boost/filesystem.hpp>
+#include <boost/process/filesystem.hpp>
 
 #include <string>
 #include <istream>
@@ -38,7 +38,7 @@ typedef boost::asio::windows::stream_handle pipe_end;
 typedef boost::asio::posix::stream_descriptor pipe_end;
 #endif
 
-namespace fs = boost::filesystem;
+namespace fs = boost::process::filesystem;
 namespace bp = boost::process;
 
 BOOST_AUTO_TEST_CASE(sync_spawn, *boost::unit_test::timeout(5))

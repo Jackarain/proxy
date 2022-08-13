@@ -16,7 +16,7 @@
 
 //H 10: t_2_008.cpp(14): #define
 //H 08: t_2_008.cpp(14): INCLUDE_FILE="some_include_file.h"
-//H 10: t_2_008.cpp(15): #include
+//H 10: t_2_008.cpp(15): #include 
 //H 01: t_2_008.cpp(14): INCLUDE_FILE
 //H 02: "some_include_file.h"
 //H 03: "some_include_file.h"

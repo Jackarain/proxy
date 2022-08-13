@@ -22,6 +22,8 @@
 
 #include "private_config.hpp"
 
+#include <boost/filesystem/detail/header.hpp> // must be the last #include
+
 //--------------------------------------------------------------------------------------//
 
 namespace boost {
@@ -114,3 +116,5 @@ const codecvt_error_category_initializer g_codecvt_error_category_initializer;
 
 } // namespace filesystem
 } // namespace boost
+
+#include <boost/filesystem/detail/footer.hpp>

@@ -15,6 +15,17 @@
 #include <boost/config.hpp>
 #include <boost/config/workaround.hpp>
 
+// Minimum language standard transition
+ #ifdef _MSVC_LANG
+ #  if _MSVC_LANG < 201402L
+ #    pragma warning("The minimum language standard to use Boost.Math will be C++14 starting in July 2023 (Boost 1.82 release)");
+ #  endif
+ #else
+ #  if __cplusplus < 201402L
+ #    warning "The minimum language standard to use Boost.Math will be C++14 starting in July 2023 (Boost 1.82 release)"
+ #  endif
+ #endif
+
 // If any of the most frequently used boost headers are missing assume that standalone mode is supposed to be used
 #ifdef __has_include
 #if !__has_include(<boost/assert.hpp>) || !__has_include(<boost/lexical_cast.hpp>) || \
@@ -53,7 +64,7 @@ namespace boost { namespace multiprecision {
 #endif
 
 #ifndef BOOST_MP_MATH_AVAILABLE
-#  define BOOST_MATH_INSTRUMENT_CODE(x) 
+#  define BOOST_MATH_INSTRUMENT_CODE(x)
 #endif
 
 // Prevent Macro sub

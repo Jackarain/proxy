@@ -13,15 +13,15 @@ import testing ;
 project
   : default-build
 
-    <warnings>all
+    <warnings>pedantic
 
   : requirements
 
     <toolset>msvc:<warnings-as-errors>on
 
     <toolset>gcc:<cxxflags>-Wno-long-long
-    <toolset>gcc-4.4.7:<cxxflags>-Wno-strict-aliasing
-    <toolset>gcc-4.4.7:<cxxflags>-Wno-sign-compare
+    <toolset>gcc-4.4:<cxxflags>-Wno-strict-aliasing
+    <toolset>gcc-4.4:<cxxflags>-Wno-sign-compare
     <toolset>gcc:<warnings-as-errors>on
 
     <toolset>clang:<cxxflags>-Wno-long-long
@@ -51,13 +51,6 @@ run intrinsic_test.cpp ;
 
 run quick.cpp ;
 
-local allow-warnings =
-    "-<toolset>msvc:<warnings-as-errors>on"
-    "-<toolset>gcc:<warnings-as-errors>on"
-    "-<toolset>clang:<warnings-as-errors>on" ;
-
-compile spirit_conflict_test.cpp : $(allow-warnings) ;
-
 run endian_reverse_test.cpp ;
 run-ni endian_reverse_test.cpp ;
 
@@ -86,8 +79,10 @@ run-ni load_convenience_test.cpp ;
 run store_convenience_test.cpp ;
 run-ni store_convenience_test.cpp ;
 
-run float_typedef_test.cpp ;
-run-ni float_typedef_test.cpp ;
+run float_typedef_test.cpp
+    : : : "<toolset>gcc,<address-model>32:<cxxflags>-ffloat-store" ;
+run float_typedef_test.cpp : : :
+    "<toolset>gcc,<address-model>32:<cxxflags>-ffloat-store" <define>BOOST_ENDIAN_NO_INTRINSICS : float_typedef_test_ni ;
 
 run data_test.cpp ;
 run-ni data_test.cpp ;

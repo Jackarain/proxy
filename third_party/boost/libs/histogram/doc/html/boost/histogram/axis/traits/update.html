@@ -35,7 +35,7 @@
 <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> Axis<span class="special">,</span> <span class="keyword">typename</span> U<span class="special">&gt;</span> 
   <span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span> <span class="identifier">index_type</span><span class="special">,</span> <span class="identifier">index_type</span> <span class="special">&gt;</span> <span class="identifier">update</span><span class="special">(</span><span class="identifier">Axis</span> <span class="special">&amp;</span> axis<span class="special">,</span> <span class="keyword">const</span> <span class="identifier">U</span> <span class="special">&amp;</span> value<span class="special">)</span><span class="special">;</span></pre></div>
 <div class="refsect1">
-<a name="idm29174"></a><h2>Description</h2>
+<a name="idm28802"></a><h2>Description</h2>
 <p>Throws <code class="computeroutput">std::invalid_argument</code> if the value argument is not implicitly convertible to the argument expected by the<code class="computeroutput">index</code> method. If the result of boost::histogram::axis::traits::get_options&lt;decltype(axis)&gt; has the growth flag set, call<code class="computeroutput">update</code> method with the argument and return the result. Otherwise, call<code class="computeroutput">index</code> and return the pair of the result and a zero shift.</p>
 <p>
 </p>

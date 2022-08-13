@@ -116,8 +116,8 @@ plain iterators or adaptors over another pixel iterator:</p>
 <div class="admonition seealso">
 <p class="first admonition-title">See also</p>
 <ul class="last simple">
-<li><a class="reference external" href="reference/group___pixel_iterator_concept_pixel_iterator.html">PixelIteratorConcept&lt;Iterator&gt;</a></li>
-<li><a class="reference external" href="reference/structboost_1_1gil_1_1_mutable_pixel_iterator_concept.html">MutablePixelIteratorConcept&lt;Iterator&gt;</a></li>
+<li><a class="reference external" href="../reference/group___pixel_iterator_concept_pixel_iterator.html">PixelIteratorConcept&lt;Iterator&gt;</a></li>
+<li><a class="reference external" href="../reference/structboost_1_1gil_1_1_mutable_pixel_iterator_concept.html">MutablePixelIteratorConcept&lt;Iterator&gt;</a></li>
 </ul>
 </div>
 <div class="section" id="models">
@@ -173,7 +173,7 @@ provide a member method to return the base iterator, a metafunction to get its
 type, and a metafunction to rebind to another base iterator:</p>
 <div class="highlight-cpp"><div class="highlight"><pre><span></span><span class="n">concept</span> <span class="n">IteratorAdaptorConcept</span><span class="o">&lt;</span><span class="n">RandomAccessTraversalIteratorConcept</span> <span class="n">Iterator</span><span class="o">&gt;</span>
 <span class="p">{</span>
-  <span class="n">where</span> <span class="n">SameType</span><span class="o">&lt;</span><span class="n">is_iterator_adaptor</span><span class="o">&lt;</span><span class="n">Iterator</span><span class="o">&gt;::</span><span class="n">type</span><span class="p">,</span> <span class="n">mpl</span><span class="o">::</span><span class="n">true_</span><span class="o">&gt;</span><span class="p">;</span>
+  <span class="n">where</span> <span class="n">SameType</span><span class="o">&lt;</span><span class="n">is_iterator_adaptor</span><span class="o">&lt;</span><span class="n">Iterator</span><span class="o">&gt;::</span><span class="n">type</span><span class="p">,</span> <span class="n">mp11</span><span class="o">::</span><span class="n">mp_true</span><span class="o">&gt;</span><span class="p">;</span>
 
   <span class="k">typename</span> <span class="n">iterator_adaptor_get_base</span><span class="o">&lt;</span><span class="n">Iterator</span><span class="o">&gt;</span><span class="p">;</span>
       <span class="n">where</span> <span class="n">Metafunction</span><span class="o">&lt;</span><span class="n">iterator_adaptor_get_base</span><span class="o">&lt;</span><span class="n">Iterator</span><span class="o">&gt;</span> <span class="o">&gt;</span><span class="p">;</span>
@@ -194,8 +194,8 @@ type, and a metafunction to rebind to another base iterator:</p>
 <div class="admonition seealso">
 <p class="first admonition-title">See also</p>
 <ul class="last simple">
-<li><a class="reference external" href="reference/structboost_1_1gil_1_1_iterator_adaptor_concept.html">IteratorAdaptorConcept&lt;Iterator&gt;</a></li>
-<li><a class="reference external" href="reference/structboost_1_1gil_1_1_mutable_iterator_adaptor_concept.html">MutableIteratorAdaptorConcept&lt;Iterator&gt;</a></li>
+<li><a class="reference external" href="../reference/structboost_1_1gil_1_1_iterator_adaptor_concept.html">IteratorAdaptorConcept&lt;Iterator&gt;</a></li>
+<li><a class="reference external" href="../reference/structboost_1_1gil_1_1_mutable_iterator_adaptor_concept.html">MutableIteratorAdaptorConcept&lt;Iterator&gt;</a></li>
 </ul>
 </div>
 <div class="section" id="id1">
@@ -324,10 +324,10 @@ support <code class="docutils literal"><span class="pre">HasDynamicXStepTypeConc
 <div class="admonition seealso">
 <p class="first admonition-title">See also</p>
 <ul class="last simple">
-<li><a class="reference external" href="reference/structboost_1_1gil_1_1_step_iterator_concept.html">StepIteratorConcept&lt;Iterator&gt;</a></li>
-<li><a class="reference external" href="reference/structboost_1_1gil_1_1_mutable_step_iterator_concept.html">MutableStepIteratorConcept&lt;Iterator&gt;</a></li>
-<li><a class="reference external" href="reference/structboost_1_1gil_1_1_memory_based_iterator_concept.html">MemoryBasedIteratorConcept&lt;Iterator&gt;</a></li>
-<li><a class="reference external" href="reference/structboost_1_1gil_1_1_has_dynamic_x_step_type_concept.html">HasDynamicXStepTypeConcept&lt;T&gt;</a></li>
+<li><a class="reference external" href="../reference/structboost_1_1gil_1_1_step_iterator_concept.html">StepIteratorConcept&lt;Iterator&gt;</a></li>
+<li><a class="reference external" href="../reference/structboost_1_1gil_1_1_mutable_step_iterator_concept.html">MutableStepIteratorConcept&lt;Iterator&gt;</a></li>
+<li><a class="reference external" href="../reference/structboost_1_1gil_1_1_memory_based_iterator_concept.html">MemoryBasedIteratorConcept&lt;Iterator&gt;</a></li>
+<li><a class="reference external" href="../reference/structboost_1_1gil_1_1_has_dynamic_x_step_type_concept.html">HasDynamicXStepTypeConcept&lt;T&gt;</a></li>
 </ul>
 </div>
 <div class="section" id="id3">
@@ -367,7 +367,7 @@ but not <code class="docutils literal"><span class="pre">MemoryBasedIteratorConc
     </div>
     </div>
     <div class="footer" role="contentinfo">
-      Last updated on 2022-04-06 21:04:50.
+      Last updated on 2022-08-04 02:08:16.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.6.
     </div>
   </body>

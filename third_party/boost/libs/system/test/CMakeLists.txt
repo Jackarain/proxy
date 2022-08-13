@@ -118,6 +118,12 @@ boost_test(TYPE run SOURCES std_interop_test12.cpp)
 
 boost_test(TYPE run SOURCES errc_test4.cpp)
 
+boost_test(TYPE run SOURCES std_interop_test13.cpp)
+boost_test(TYPE run SOURCES std_interop_test14.cpp)
+
+boost_test(TYPE run SOURCES ec_location_test3.cpp)
+boost_test(TYPE run SOURCES ec_location_test4.cpp)
+
 # result
 
 set(BOOST_TEST_COMPILE_FEATURES cxx_std_11)
@@ -136,3 +142,4 @@ boost_test(TYPE run SOURCES result_eq.cpp)
 boost_test(TYPE run SOURCES result_range_for.cpp)
 boost_test(TYPE run SOURCES result_value_construct2.cpp)
 boost_test(TYPE run SOURCES result_error_construct2.cpp)
+boost_test(TYPE run SOURCES result_convert_construct.cpp)

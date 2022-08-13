@@ -6805,6 +6805,15 @@ thank them:
 
 [section:release_notes Release Notes]
 
+[section:release_notes_boost_1_80_00 Boost 1.80 Release]
+
+*  Fixed bugs:
+   * [@https://github.com/boostorg/interprocess/issues/174   GitHub #174 (['"shared_memory_object constructor may fail on macOS"])].
+   * [@https://github.com/boostorg/interprocess/issues/177   GitHub #177 (['"check_sanity() scoped mutex locked after assertion"])].
+   * [@https://github.com/boostorg/interprocess/issues/181   GitHub #181 (['"clang-8 warning: result of comparison of constant 'K' with expression of type 'std::size_t' (...) is always false"])].
+
+[endsect]
+
 [section:release_notes_boost_1_79_00 Boost 1.79 Release]
 
 *  The library now compiles without warnings with GCC's -Wcast-align=strict

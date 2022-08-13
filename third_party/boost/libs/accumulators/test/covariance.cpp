@@ -6,7 +6,7 @@
 #define BOOST_NUMERIC_FUNCTIONAL_STD_VECTOR_SUPPORT
 
 #include <boost/test/unit_test.hpp>
-#include <boost/test/floating_point_comparison.hpp>
+#include <boost/test/tools/floating_point_comparison.hpp>
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/variates/covariate.hpp>
 #include <boost/accumulators/statistics/stats.hpp>

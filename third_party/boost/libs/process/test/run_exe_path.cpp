@@ -12,7 +12,7 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include <system_error>
-#include <boost/filesystem.hpp>
+#include <boost/process/filesystem.hpp>
 
 #include <boost/process/cmd.hpp>
 #include <boost/process/error.hpp>
@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_CASE(run_exe_success)
 {
     using boost::unit_test::framework::master_test_suite;
 
-    boost::filesystem::path exe = master_test_suite().argv[1];
+    boost::process::filesystem::path exe = master_test_suite().argv[1];
 
     std::error_code ec;
     bp::child c(
@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE(run_exe_success)
 #if defined(BOOST_WINDOWS_API)
 BOOST_AUTO_TEST_CASE(run_exe_error)
 {
-    boost::filesystem::path exe = "doesnt-exist";
+    boost::process::filesystem::path exe = "doesnt-exist";
 
     std::error_code ec;
     bp::child c(

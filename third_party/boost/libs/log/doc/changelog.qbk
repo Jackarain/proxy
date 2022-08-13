@@ -9,6 +9,13 @@
 
 [section:changelog Changelog]
 
+[heading 2.25, Boost 1.80]
+
+[*Bug fixes:]
+
+* Fixed binding incorrect local address in UDP socket-based [link log.detailed.sink_backends.syslog `syslog_backend`] when IPv6 address is used for the syslog server. ([github_issue 181])
+* Added a workaround for a [@https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105857 bug] in libstdc++ from gcc 11.2. When [link log.detailed.expressions.formatters.decorators.max_size `max_size_decor`] was used on a formatting stream, `std::codecvt::do_length` incorrectly accessed the input buffer and caused a buffer overflow.
+
 [heading 2.24, Boost 1.79]
 
 [*General changes:]

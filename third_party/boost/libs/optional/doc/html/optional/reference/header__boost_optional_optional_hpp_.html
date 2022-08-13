@@ -92,12 +92,23 @@
 <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="keyword">inline</span> <span class="keyword">void</span> <span class="identifier">swap</span><span class="special">(</span> <span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&amp;&gt;&amp;</span> <span class="identifier">x</span><span class="special">,</span> <span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&amp;&gt;&amp;</span> <span class="identifier">y</span> <span class="special">)</span> <span class="special">;</span> <a class="link" href="../../boost_optional/reference/header__boost_optional_optional_hpp_/detailed_semantics___free_functions.html#reference_swap_optional_reference"><span class="inlinemediaobject"><img src="../../images/callouts/R.png" alt="R"></span></a>
 
 <span class="special">}</span> <span class="comment">// namespace boost</span>
+
+<span class="keyword">namespace</span> <span class="identifier">std</span> <span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">hash</span><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="special">;</span> <a class="link" href="../../boost_optional/reference/header__boost_optional_optional_hpp_/detailed_semantics___std__hash_specializations.html#reference_std_hash_spec"><span class="inlinemediaobject"><img src="../../images/callouts/R.png" alt="R"></span></a>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">hash</span><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&amp;&gt;</span> <span class="special">&gt;</span> <span class="special">;</span> <a class="link" href="../../boost_optional/reference/header__boost_optional_optional_hpp_/detailed_semantics___std__hash_specializations.html#reference_std_hash_spec"><span class="inlinemediaobject"><img src="../../images/callouts/R.png" alt="R"></span></a>
+
+<span class="special">}</span> <span class="comment">// namespace std</span>
 </pre>
 </div>
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2003-2007 Fernando Luis Cacciola Carballal<br>Copyright © 2014-2021 Andrzej Krzemieński<p>
+<td align="right"><div class="copyright-footer">Copyright © 2003-2007 Fernando Luis Cacciola Carballal<br>Copyright © 2014-2022 Andrzej
+      Krzemieński<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>

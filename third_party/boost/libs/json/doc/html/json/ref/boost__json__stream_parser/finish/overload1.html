@@ -30,22 +30,28 @@
 <p>
             Indicate the end of JSON input.
           </p>
-<h7><a name="json.ref.boost__json__stream_parser.finish.overload1.h0"></a>
+<h6>
+<a name="json.ref.boost__json__stream_parser.finish.overload1.h0"></a>
             <span class="phrase"><a name="json.ref.boost__json__stream_parser.finish.overload1.synopsis"></a></span><a class="link" href="overload1.html#json.ref.boost__json__stream_parser.finish.overload1.synopsis">Synopsis</a>
-          </h7><pre class="programlisting"><span class="keyword">void</span>
+          </h6>
+<pre class="programlisting"><span class="keyword">void</span>
 <span class="identifier">finish</span><span class="special">(</span>
     <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span><span class="special">);</span>
 </pre>
-<h7><a name="json.ref.boost__json__stream_parser.finish.overload1.h1"></a>
+<h6>
+<a name="json.ref.boost__json__stream_parser.finish.overload1.h1"></a>
             <span class="phrase"><a name="json.ref.boost__json__stream_parser.finish.overload1.description"></a></span><a class="link" href="overload1.html#json.ref.boost__json__stream_parser.finish.overload1.description">Description</a>
-          </h7><p>
+          </h6>
+<p>
             This function is used to indicate that there are no more character buffers
             in the current JSON being parsed. If ther resulting JSON is incomplete,
             the error is set to indicate a parsing failure.
           </p>
-<h7><a name="json.ref.boost__json__stream_parser.finish.overload1.h2"></a>
+<h6>
+<a name="json.ref.boost__json__stream_parser.finish.overload1.h2"></a>
             <span class="phrase"><a name="json.ref.boost__json__stream_parser.finish.overload1.example"></a></span><a class="link" href="overload1.html#json.ref.boost__json__stream_parser.finish.overload1.example">Example</a>
-          </h7><p>
+          </h6>
+<p>
             In the code below, <a class="link" href="../finish.html" title="stream_parser::finish"><code class="computeroutput"><span class="identifier">finish</span></code></a> is called to indicate
             there are no more digits in the resulting number:
           </p>
@@ -57,23 +63,29 @@
 <span class="identifier">assert</span><span class="special">(</span> <span class="identifier">p</span><span class="special">.</span><span class="identifier">done</span><span class="special">()</span> <span class="special">);</span>                             <span class="comment">// now we are finished</span>
 <span class="identifier">value</span> <span class="identifier">jv</span> <span class="special">=</span> <span class="identifier">p</span><span class="special">.</span><span class="identifier">release</span><span class="special">();</span>                         <span class="comment">// take ownership of the value</span>
 </pre>
-<h7><a name="json.ref.boost__json__stream_parser.finish.overload1.h3"></a>
+<h6>
+<a name="json.ref.boost__json__stream_parser.finish.overload1.h3"></a>
             <span class="phrase"><a name="json.ref.boost__json__stream_parser.finish.overload1.complexity"></a></span><a class="link" href="overload1.html#json.ref.boost__json__stream_parser.finish.overload1.complexity">Complexity</a>
-          </h7><p>
+          </h6>
+<p>
             Constant.
           </p>
-<h7><a name="json.ref.boost__json__stream_parser.finish.overload1.h4"></a>
+<h6>
+<a name="json.ref.boost__json__stream_parser.finish.overload1.h4"></a>
             <span class="phrase"><a name="json.ref.boost__json__stream_parser.finish.overload1.exception_safety"></a></span><a class="link" href="overload1.html#json.ref.boost__json__stream_parser.finish.overload1.exception_safety">Exception
             Safety</a>
-          </h7><p>
+          </h6>
+<p>
             Basic guarantee. Calls to <code class="computeroutput"><span class="identifier">memory_resource</span><span class="special">::</span><span class="identifier">allocate</span></code>
             may throw. Upon error or exception, subsequent calls will fail until
             <a class="link" href="../reset.html" title="stream_parser::reset"><code class="computeroutput"><span class="identifier">reset</span></code></a> is called to parse a new
             JSON.
           </p>
-<h7><a name="json.ref.boost__json__stream_parser.finish.overload1.h5"></a>
+<h6>
+<a name="json.ref.boost__json__stream_parser.finish.overload1.h5"></a>
             <span class="phrase"><a name="json.ref.boost__json__stream_parser.finish.overload1.parameters"></a></span><a class="link" href="overload1.html#json.ref.boost__json__stream_parser.finish.overload1.parameters">Parameters</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>

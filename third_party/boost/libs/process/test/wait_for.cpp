@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE(wait_until)
     auto now = std::chrono::system_clock::now();
 
     auto t1 = now + std::chrono::milliseconds(400);
-    auto t2 = now + std::chrono::milliseconds(1200);
+    auto t2 = now + std::chrono::milliseconds(2000);
 
     BOOST_CHECK(!c.wait_until(t1));
     BOOST_CHECK( c.wait_until(t2));
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE(wait_until_ec)
     auto now = std::chrono::system_clock::now();
 
     auto t1 = now + std::chrono::milliseconds(400);
-    auto t2 = now + std::chrono::milliseconds(1200);
+    auto t2 = now + std::chrono::milliseconds(2000);
 
     BOOST_CHECK(!c.wait_until(t1, ec));
     BOOST_CHECK( c.wait_until(t2, ec));

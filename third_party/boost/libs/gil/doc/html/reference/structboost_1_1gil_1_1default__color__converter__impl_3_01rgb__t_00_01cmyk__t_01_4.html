@@ -39,7 +39,7 @@ $(function() {
 <div id="main-nav"></div>
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><b>boost</b></li><li class="navelem"><b>gil</b></li><li class="navelem"><a class="el" href="structboost_1_1gil_1_1default__color__converter__impl_3_01rgb__t_00_01cmyk__t_01_4.html">default_color_converter_impl&lt; rgb_t, cmyk_t &gt;</a></li>  </ul>
+<li class="navelem"><a class="el" href="namespaceboost.html">boost</a></li><li class="navelem"><b>gil</b></li><li class="navelem"><a class="el" href="structboost_1_1gil_1_1default__color__converter__impl_3_01rgb__t_00_01cmyk__t_01_4.html">default_color_converter_impl&lt; rgb_t, cmyk_t &gt;</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
@@ -69,8 +69,7 @@ struct boost::gil::default_color_converter_impl&lt; rgb_t, cmyk_t &gt;</h3>
 
 <p>RGB to CMYK (not the fastest code in the world) </p>
 <p>k = min(1 - r, 1 - g, 1 - b) c = (1 - r - k) / (1 - k) m = (1 - g - k) / (1 - k) y = (1 - b - k) / (1 - k) where `1` denotes max value of channel type of destination pixel.</p>
-<p>The conversion from RGB to CMYK is based on CMY-&gt;CMYK (Version 2) from the Principles of Digital Image Processing - Fundamental Techniques by Burger, Wilhelm, Burge, Mark J. and it is a gross approximation not precise enough for professional work.</p>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000002">Todo:</a></b></dt><dd>FIXME: The original implementation did not handle properly signed CMYK pixels as destination </dd></dl>
+<p>The conversion from RGB to CMYK is based on CMY-&gt;CMYK (Version 2) from the Principles of Digital Image Processing - Fundamental Techniques by Burger, Wilhelm, Burge, Mark J. and it is a gross approximation not precise enough for professional work. </p>
 </div><hr/>The documentation for this struct was generated from the following file:<ul>
 <li><a class="el" href="color__convert_8hpp_source.html">color_convert.hpp</a></li>
 </ul>

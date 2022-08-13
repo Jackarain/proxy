@@ -159,6 +159,7 @@ Or
 '''<indexterm><primary>buffered_flat_end</primary></indexterm>'''
 '''<indexterm><primary>buffered_point</primary></indexterm>'''
 '''<indexterm><primary>buffered_concave</primary></indexterm>'''
+'''<indexterm><primary>buffered_empty_side</primary></indexterm>'''
 '''<indexterm><primary>piece_type_unknown</primary></indexterm>'''
 Enumerates types of pieces (parts of buffer) around geometries. 
 
@@ -171,6 +172,7 @@ Enumerates types of pieces (parts of buffer) around geometries.
     buffered_flat_end,
     buffered_point,
     buffered_concave,
+    buffered_empty_side,
     piece_type_unknown
 };``
 
@@ -184,6 +186,7 @@ Enumerates types of pieces (parts of buffer) around geometries.
 [[buffered_flat_end] []]
 [[buffered_point] []]
 [[buffered_concave] []]
+[[buffered_empty_side] []]
 [[piece_type_unknown] []]
 ]
 

@@ -90,6 +90,14 @@
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -501,6 +509,14 @@
 
 
 
+
+
+
+
+
+
+
+
 <function name="operator!="><type>bool</type><template>
           <template-type-parameter name="T"/>
           <template-nontype-parameter name="Options"><type>class ...</type></template-nontype-parameter>
@@ -576,6 +592,14 @@
       <template-nontype-parameter name="Options"><type>class ...</type></template-nontype-parameter>
     </template><description><para>Helper metafunction to define a <computeroutput><classname alt="boost::intrusive::avl_set_member_hook">avl_set_member_hook</classname></computeroutput> that yields to the same type when the same options (either explicitly or implicitly) are used. </para></description><typedef name="type"><type>implementation_defined</type></typedef>
 </struct>
+
+
+
+
+
+
+
+
 
 
 
@@ -879,6 +903,14 @@
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -972,6 +1004,14 @@
 <method name="is_header" cv="noexcept" specifiers="static"><type>bool</type><parameter name="p"><paramtype>const_node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: p is a node of a tree.</para><para><emphasis role="bold">Effects</emphasis>: Returns true if p is the header of the tree.</para><para><emphasis role="bold">Complexity</emphasis>: Constant.</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 </method-group>
 </class>
+
+
+
+
+
+
+
+
 
 
 
@@ -1422,6 +1462,14 @@
 
 
 
+
+
+
+
+
+
+
+
 <function name="operator!="><type>bool</type><template>
           <template-type-parameter name="T"/>
           <template-nontype-parameter name="Options"><type>class ...</type></template-nontype-parameter>
@@ -1507,6 +1555,14 @@
       <template-nontype-parameter name="Options"><type>class ...</type></template-nontype-parameter>
     </template><description><para>Helper metafunction to define a <computeroutput><classname alt="boost::intrusive::bs_set_member_hook">bs_set_member_hook</classname></computeroutput> that yields to the same type when the same options (either explicitly or implicitly) are used. </para></description><typedef name="type"><type>implementation_defined</type></typedef>
 </struct>
+
+
+
+
+
+
+
+
 
 
 
@@ -1819,6 +1875,14 @@
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -2055,6 +2119,14 @@ header------------------------------&gt;|         |
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -2074,6 +2146,7 @@ header------------------------------&gt;|         |
 <method name="init" cv="noexcept" specifiers="static"><type>void</type><parameter name="this_node"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Constructs an non-used list element, so that inited(this_node) == true</para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="inited" cv="noexcept" specifiers="static"><type>bool</type><parameter name="this_node"><paramtype>const_node_ptr</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Returns true is "this_node" is in a non-used state as if it was initialized by the "init" function.</para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="init_header" cv="noexcept" specifiers="static"><type>void</type><parameter name="this_node"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Constructs an empty list, making this_node the only node of the circular list: <computeroutput>NodeTraits::get_next(this_node) == NodeTraits::get_previous(this_node) == this_node</computeroutput>.</para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
+<method name="is_empty" cv="noexcept" specifiers="static"><type>bool</type><parameter name="this_node"><paramtype>const_node_ptr</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Returns true if this_node_points to an empty list.</para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="unique" cv="noexcept" specifiers="static"><type>bool</type><parameter name="this_node"><paramtype>const_node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: this_node must be in a circular list or be an empty circular list.</para><para><emphasis role="bold">Effects</emphasis>: Returns true is "this_node" is the only node of a circular list: <computeroutput>return NodeTraits::get_next(this_node) == this_node</computeroutput></para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="count" cv="noexcept" specifiers="static"><type>std::size_t</type><parameter name="this_node"><paramtype>const_node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: this_node must be in a circular list or be an empty circular list.</para><para><emphasis role="bold">Effects</emphasis>: Returns the number of nodes in a circular list. If the circular list is empty, returns 1.</para><para><emphasis role="bold">Complexity</emphasis>: Linear</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="unlink" cv="noexcept" specifiers="static"><type>node_ptr</type><parameter name="this_node"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: this_node must be in a circular list or be an empty circular list.</para><para><emphasis role="bold">Effects</emphasis>: Unlinks the node from the circular list.</para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
@@ -2147,6 +2220,14 @@ header------------------------------&gt;|         |
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -2168,6 +2249,10 @@ header------------------------------&gt;|         |
 <method name="link_after" cv="noexcept" specifiers="static"><type>void</type><parameter name="prev_node"><paramtype>node_ptr</paramtype></parameter><parameter name="this_node"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: prev_node must be a node of a circular list.</para><para><emphasis role="bold">Effects</emphasis>: Links this_node after prev_node in the circular list.</para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="transfer_after" cv="noexcept" specifiers="static"><type>void</type><parameter name="p"><paramtype>node_ptr</paramtype></parameter><parameter name="b"><paramtype>node_ptr</paramtype></parameter><parameter name="e"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: b and e must be nodes of the same circular list or an empty range. and p must be a node of a different circular list.</para><para><emphasis role="bold">Effects</emphasis>: Removes the nodes from (b, e] range from their circular list and inserts them after p in p's circular list.</para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="init_header" cv="noexcept" specifiers="static"><type>void</type><parameter name="this_node"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Constructs an empty list, making this_node the only node of the circular list: <computeroutput>NodeTraits::get_next(this_node) == this_node</computeroutput>.</para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
+<method name="end_node" cv="noexcept" specifiers="static"><type>node_ptr</type><parameter name="p"><paramtype>const_node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: 'p' is the first node of a list.</para><para><emphasis role="bold">Effects</emphasis>: Returns a pointer to a node that represents the "end" (one past end) node</para><para><emphasis role="bold">Complexity</emphasis>: Constant time.</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
+<method name="is_empty" cv="noexcept" specifiers="static"><type>bool</type><parameter name="this_node"><paramtype>const_node_ptr</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Returns true if this_node_points to an empty list.</para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
+<method name="is_sentinel" cv="noexcept" specifiers="static"><type>bool</type><parameter name="this_node"><paramtype>const_node_ptr</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Returns true if this_node points to a sentinel node.</para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
+<method name="set_sentinel" cv="noexcept" specifiers="static"><type>void</type><parameter name="this_node"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Marks this node as a "sentinel" node, a special state that is different from "empty", that can be used to mark a special state of the list</para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="get_previous_node" cv="noexcept" specifiers="static"><type>node_ptr</type><parameter name="prev_init_node"><paramtype>node_ptr</paramtype></parameter><parameter name="this_node"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: this_node and prev_init_node must be in the same circular list.</para><para><emphasis role="bold">Effects</emphasis>: Returns the previous node of this_node in the circular list starting. the search from prev_init_node. The first node checked for equality is NodeTraits::get_next(prev_init_node).</para><para><emphasis role="bold">Complexity</emphasis>: Linear to the number of elements between prev_init_node and this_node.</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="get_previous_node" cv="noexcept" specifiers="static"><type>node_ptr</type><parameter name="this_node"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: this_node must be in a circular list or be an empty circular list.</para><para><emphasis role="bold">Effects</emphasis>: Returns the previous node of this_node in the circular list.</para><para><emphasis role="bold">Complexity</emphasis>: Linear to the number of elements in the circular list.</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="get_previous_previous_node" cv="noexcept" specifiers="static"><type>node_ptr</type><parameter name="this_node"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: this_node must be in a circular list or be an empty circular list.</para><para><emphasis role="bold">Effects</emphasis>: Returns the previous node of the previous node of this_node in the circular list.</para><para><emphasis role="bold">Complexity</emphasis>: Linear to the number of elements in the circular list.</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
@@ -2179,8 +2264,20 @@ header------------------------------&gt;|         |
 <method name="reverse" cv="noexcept" specifiers="static"><type>void</type><parameter name="p"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Reverses the order of elements in the list.</para><para><emphasis role="bold">Throws</emphasis>: Nothing.</para><para><emphasis role="bold">Complexity</emphasis>: This function is linear to the contained elements. </para></description></method>
 <method name="move_backwards" cv="noexcept" specifiers="static"><type>node_ptr</type><parameter name="p"><paramtype>node_ptr</paramtype></parameter><parameter name="n"><paramtype>std::size_t</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Moves the node p n positions towards the end of the list.</para><para><emphasis role="bold">Returns</emphasis>: The previous node of p after the function if there has been any movement, Null if n leads to no movement.</para><para><emphasis role="bold">Throws</emphasis>: Nothing.</para><para><emphasis role="bold">Complexity</emphasis>: Linear to the number of elements plus the number moved positions. </para></description></method>
 <method name="move_forward" cv="noexcept" specifiers="static"><type>node_ptr</type><parameter name="p"><paramtype>node_ptr</paramtype></parameter><parameter name="n"><paramtype>std::size_t</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Moves the node p n positions towards the beginning of the list.</para><para><emphasis role="bold">Returns</emphasis>: The previous node of p after the function if there has been any movement, Null if n leads equals to no movement.</para><para><emphasis role="bold">Throws</emphasis>: Nothing.</para><para><emphasis role="bold">Complexity</emphasis>: Linear to the number of elements plus the number moved positions. </para></description></method>
+<method name="transfer_after" cv="noexcept" specifiers="static"><type>void</type><parameter name="p"><paramtype>node_ptr</paramtype></parameter><parameter name="other"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: other must be a list and p must be a node of a different list.</para><para><emphasis role="bold">Effects</emphasis>: Transfers all nodes from other after p in p's list.</para><para><emphasis role="bold">Complexity</emphasis>: Linear</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
+<method name="detach_and_dispose" cv="noexcept" specifiers="static"><type>std::size_t</type><template>
+          <template-type-parameter name="Disposer"/>
+        </template><parameter name="p"><paramtype>node_ptr</paramtype></parameter><parameter name="disposer"><paramtype>Disposer</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: "disposer" must be an object function taking a node_ptr parameter and shouldn't throw.</para><para><emphasis role="bold">Effects</emphasis>: Unlinks all nodes reachable from p (but not p) and calls <computeroutput>void disposer::operator()(node_ptr)</computeroutput> for every node of the list where p is linked.</para><para><emphasis role="bold">Returns</emphasis>: The number of disposed nodes</para><para><emphasis role="bold">Complexity</emphasis>: Linear to the number of element of the list.</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 </method-group>
 </class>
+
+
+
+
+
+
+
+
 
 
 
@@ -2310,16 +2407,467 @@ header------------------------------&gt;|         |
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
 <header name="boost/intrusive/hashtable.hpp">
 <namespace name="boost">
 <namespace name="intrusive">
-<class name="hashtable"><template>
+<struct name="bucket_hash_equal_t"><template>
+      <template-type-parameter name="ValueTraits"/>
+      <template-type-parameter name="VoidOrKeyOfValue"/>
+      <template-type-parameter name="VoidOrKeyHash"/>
+      <template-type-parameter name="VoidOrKeyEqual"/>
+      <template-type-parameter name="BucketTraits"/>
+      <template-nontype-parameter name="LinearBuckets"><type>bool</type></template-nontype-parameter>
+      <template-nontype-parameter name=""><type>bool</type></template-nontype-parameter>
+    </template><inherit access="public">boost::intrusive::bucket_hash_t&lt; ValueTraits, VoidOrKeyOfValue, VoidOrKeyHash, BucketTraits, LinearBuckets &gt;</inherit><inherit access="public">hashtable_equal_holder::type&lt; ValueTraits, BucketTraits, VoidOrKeyOfValue, VoidOrKeyEqual, LinearBuckets &gt;</inherit><typedef name="equal_holder_t"><type>hashtable_equal_holder&lt; ValueTraits, BucketTraits, VoidOrKeyOfValue, VoidOrKeyEqual, LinearBuckets &gt;::type</type></typedef>
+<typedef name="bucket_hash_type"><type>bucket_hash_t&lt; ValueTraits, VoidOrKeyOfValue, VoidOrKeyHash, BucketTraits, LinearBuckets &gt;</type></typedef>
+<typedef name="bucket_plus_vtraits_t"><type>bucket_plus_vtraits&lt; ValueTraits, BucketTraits, LinearBuckets &gt;</type></typedef>
+<typedef name="value_traits"><type>ValueTraits</type></typedef>
+<typedef name="key_equal"><type>equal_holder_t::functor_type</type></typedef>
+<typedef name="hasher"><type>bucket_hash_type::hasher</type></typedef>
+<typedef name="bucket_traits"><type>BucketTraits</type></typedef>
+<typedef name="siterator"><type>bucket_plus_vtraits_t::siterator</type></typedef>
+<typedef name="const_siterator"><type>bucket_plus_vtraits_t::const_siterator</type></typedef>
+<typedef name="bucket_type"><type>bucket_plus_vtraits_t::bucket_type</type></typedef>
+<typedef name="slist_node_algorithms"><type>bucket_plus_vtraits_t::slist_node_algorithms</type></typedef>
+<typedef name="bucket_ptr"><type>unordered_bucket_ptr_impl&lt; value_traits &gt;::type</type></typedef>
+<method-group name="public member functions">
+<method name="priv_get_cache"><type>bucket_ptr</type></method>
+<method name="priv_set_cache"><type>void</type><parameter name=""><paramtype>bucket_ptr</paramtype></parameter></method>
+<method name="priv_set_cache_bucket_num"><type>void</type><parameter name=""><paramtype>std::size_t</paramtype></parameter></method>
+<method name="priv_get_cache_bucket_num"><type>std::size_t</type></method>
+<method name="priv_init_cache"><type>void</type></method>
+<method name="priv_swap_cache"><type>void</type><parameter name=""><paramtype>bucket_hash_equal_t &amp;</paramtype></parameter></method>
+<method name="priv_begin" cv="const"><type>siterator</type><parameter name="pbucketptr"><paramtype>bucket_ptr &amp;</paramtype></parameter></method>
+<method name="priv_insertion_update_cache"><type>void</type><parameter name=""><paramtype>std::size_t</paramtype></parameter></method>
+<method name="priv_erasure_update_cache_range"><type>void</type><parameter name=""><paramtype>std::size_t</paramtype></parameter><parameter name=""><paramtype>std::size_t</paramtype></parameter></method>
+<method name="priv_erasure_update_cache"><type>void</type><parameter name=""><paramtype>bucket_ptr</paramtype></parameter></method>
+<method name="priv_erasure_update_cache"><type>void</type></method>
+<method name="priv_equal" cv="const"><type>const key_equal &amp;</type></method>
+<method name="priv_equal"><type>key_equal &amp;</type></method>
+</method-group>
+<constructor><parameter name="val_traits"><paramtype>const ValueTraits &amp;</paramtype></parameter><parameter name="b_traits"><paramtype>const bucket_traits &amp;</paramtype></parameter><parameter name="h"><paramtype>const hasher &amp;</paramtype></parameter><parameter name="e"><paramtype>const key_equal &amp;</paramtype></parameter></constructor>
+<constructor><parameter name="other"><paramtype>bucket_hash_equal_t &amp;&amp;</paramtype></parameter></constructor>
+</struct><struct-specialization name="bucket_hash_equal_t"><template>
+      <template-type-parameter name="ValueTraits"/>
+      <template-type-parameter name="VoidOrKeyOfValue"/>
+      <template-type-parameter name="VoidOrKeyHash"/>
+      <template-type-parameter name="VoidOrKeyEqual"/>
+      <template-type-parameter name="BucketTraits"/>
+      <template-nontype-parameter name="LinearBuckets"><type>bool</type></template-nontype-parameter>
+    </template><specialization><template-arg>ValueTraits</template-arg><template-arg>VoidOrKeyOfValue</template-arg><template-arg>VoidOrKeyHash</template-arg><template-arg>VoidOrKeyEqual</template-arg><template-arg>BucketTraits</template-arg><template-arg>LinearBuckets</template-arg><template-arg>true</template-arg></specialization><inherit access="public">boost::intrusive::bucket_hash_t&lt; ValueTraits, VoidOrKeyOfValue, VoidOrKeyHash, BucketTraits, LinearBuckets &gt;</inherit><inherit access="public">hashtable_equal_holder::type&lt; ValueTraits, BucketTraits, VoidOrKeyOfValue, VoidOrKeyEqual, LinearBuckets &gt;</inherit><typedef name="equal_holder_t"><type>hashtable_equal_holder&lt; ValueTraits, BucketTraits, VoidOrKeyOfValue, VoidOrKeyEqual, LinearBuckets &gt;::type</type></typedef>
+<typedef name="bucket_plus_vtraits_t"><type>bucket_plus_vtraits&lt; ValueTraits, BucketTraits, LinearBuckets &gt;</type></typedef>
+<typedef name="value_traits"><type>ValueTraits</type></typedef>
+<typedef name="key_equal"><type>equal_holder_t::functor_type</type></typedef>
+<typedef name="bucket_hash_type"><type>bucket_hash_t&lt; ValueTraits, VoidOrKeyOfValue, VoidOrKeyHash, BucketTraits, LinearBuckets &gt;</type></typedef>
+<typedef name="hasher"><type>bucket_hash_type::hasher</type></typedef>
+<typedef name="bucket_traits"><type>BucketTraits</type></typedef>
+<typedef name="siterator"><type>bucket_plus_vtraits_t::siterator</type></typedef>
+<typedef name="slist_node_algorithms"><type>bucket_plus_vtraits_t::slist_node_algorithms</type></typedef>
+<typedef name="bucket_ptr"><type>unordered_bucket_ptr_impl&lt; typename bucket_hash_type::value_traits &gt;::type</type></typedef>
+<data-member name="cached_begin_"><type>bucket_ptr</type></data-member>
+<method-group name="public member functions">
+<method name="priv_get_cache" cv="const"><type>bucket_ptr</type></method>
+<method name="priv_set_cache"><type>void</type><parameter name="p"><paramtype>bucket_ptr</paramtype></parameter></method>
+<method name="priv_set_cache_bucket_num"><type>void</type><parameter name="insertion_bucket"><paramtype>std::size_t</paramtype></parameter></method>
+<method name="priv_get_cache_bucket_num"><type>std::size_t</type></method>
+<method name="priv_init_cache"><type>void</type></method>
+<method name="priv_swap_cache"><type>void</type><parameter name="other"><paramtype>bucket_hash_equal_t &amp;</paramtype></parameter></method>
+<method name="priv_begin" cv="const"><type>siterator</type><parameter name="pbucketptr"><paramtype>bucket_ptr &amp;</paramtype></parameter></method>
+<method name="priv_insertion_update_cache"><type>void</type><parameter name="insertion_bucket"><paramtype>std::size_t</paramtype></parameter></method>
+<method name="priv_equal" cv="const"><type>const key_equal &amp;</type></method>
+<method name="priv_equal"><type>key_equal &amp;</type></method>
+<method name="priv_erasure_update_cache_range"><type>void</type><parameter name="first_bucket_num"><paramtype>std::size_t</paramtype></parameter><parameter name="last_bucket_num"><paramtype>std::size_t</paramtype></parameter></method>
+<method name="priv_erasure_update_cache"><type>void</type><parameter name="first_bucket"><paramtype>bucket_ptr</paramtype></parameter></method>
+<method name="priv_erasure_update_cache"><type>void</type></method>
+</method-group>
+<constructor><parameter name="val_traits"><paramtype>const ValueTraits &amp;</paramtype></parameter><parameter name="b_traits"><paramtype>const bucket_traits &amp;</paramtype></parameter><parameter name="h"><paramtype>const hasher &amp;</paramtype></parameter><parameter name="e"><paramtype>const key_equal &amp;</paramtype></parameter></constructor>
+<constructor><parameter name="other"><paramtype>bucket_hash_equal_t &amp;&amp;</paramtype></parameter></constructor>
+</struct-specialization><struct name="bucket_hash_t"><template>
+      <template-type-parameter name="ValueTraits"/>
+      <template-type-parameter name="VoidOrKeyOfValue"/>
+      <template-type-parameter name="VoidOrKeyHash"/>
+      <template-type-parameter name="BucketTraits"/>
+      <template-nontype-parameter name="LinearBuckets"><type>bool</type></template-nontype-parameter>
+    </template><inherit access="public">boost::intrusive::bucket_plus_vtraits&lt; ValueTraits, BucketTraits, LinearBuckets &gt;</inherit><typedef name="value_traits"><type>bucket_plus_vtraits&lt; ValueTraits, BucketTraits, LinearBuckets &gt;::value_traits</type></typedef>
+<typedef name="value_type"><type>value_traits::value_type</type></typedef>
+<typedef name="node_traits"><type>value_traits::node_traits</type></typedef>
+<typedef name="hash_key_hash_t"><type>hash_key_hash&lt; value_type, VoidOrKeyOfValue, VoidOrKeyHash &gt;</type></typedef>
+<typedef name="hasher"><type>hash_key_hash_t::type</type></typedef>
+<typedef name="key_of_value"><type>hash_key_types_base&lt; value_type, VoidOrKeyOfValue &gt;::key_of_value</type></typedef>
+<typedef name="bucket_traits"><type>BucketTraits</type></typedef>
+<typedef name="bucket_plus_vtraits_t"><type>bucket_plus_vtraits&lt; ValueTraits, BucketTraits, LinearBuckets &gt;</type></typedef>
+<typedef name="base_t"><type><emphasis>unspecified</emphasis></type></typedef>
+<method-group name="public member functions">
+<method name="priv_hasher" cv="const"><type>const hasher &amp;</type></method>
+<method name="priv_hasher"><type>hasher &amp;</type></method>
+<method name="priv_stored_or_compute_hash" cv="const"><type>std::size_t</type><parameter name="v"><paramtype>const value_type &amp;</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+</method-group>
+<constructor><parameter name="val_traits"><paramtype>const ValueTraits &amp;</paramtype></parameter><parameter name="b_traits"><paramtype>const bucket_traits &amp;</paramtype></parameter><parameter name="h"><paramtype>const hasher &amp;</paramtype></parameter></constructor>
+<constructor><parameter name="other"><paramtype>bucket_hash_t &amp;&amp;</paramtype></parameter></constructor>
+</struct><struct name="bucket_plus_vtraits"><template>
+      <template-type-parameter name="ValueTraits"/>
+      <template-type-parameter name="BucketTraits"/>
+      <template-nontype-parameter name="LinearBuckets"><type>bool</type></template-nontype-parameter>
+    </template><struct name="data_type"><inherit access="public">ValueTraits</inherit><inherit access="public">BucketTraits</inherit><method-group name="public member functions">
+</method-group>
+<constructor><parameter name="val_traits"><paramtype>const ValueTraits &amp;</paramtype></parameter><parameter name="b_traits"><paramtype>const BucketTraits &amp;</paramtype></parameter></constructor>
+<constructor><parameter name="other"><paramtype>data_type &amp;&amp;</paramtype></parameter></constructor>
+</struct><struct name="typeof_node_disposer"><template>
+      <template-type-parameter name="Disposer"/>
+    </template><typedef name="type"><type><emphasis>unspecified</emphasis></type></typedef>
+</struct><typedef name="bucket_traits"><type>BucketTraits</type></typedef>
+<typedef name="value_traits"><type>ValueTraits</type></typedef>
+<typedef name="bucket_type"><type>unordered_bucket_impl&lt; value_traits &gt;::type</type></typedef>
+<typedef name="bucket_ptr"><type>unordered_bucket_ptr_impl&lt; value_traits &gt;::type</type></typedef>
+<typedef name="node_traits"><type>value_traits::node_traits</type></typedef>
+<typedef name="slist_node_traits"><type>bucket_type::node_traits</type></typedef>
+<typedef name="group_traits"><type>unordered_group_adapter&lt; node_traits &gt;</type></typedef>
+<typedef name="group_functions_t"><type>group_functions&lt; node_traits &gt;</type></typedef>
+<typedef name="slist_node_algorithms"><type><emphasis>unspecified</emphasis></type></typedef>
+<typedef name="slist_node_ptr"><type>slist_node_traits::node_ptr</type></typedef>
+<typedef name="slist_value_traits"><type><classname>trivial_value_traits</classname>&lt; slist_node_traits, normal_link &gt;</type></typedef>
+<typedef name="siterator"><type>slist_iterator&lt; <classname>slist_value_traits</classname>, false &gt;</type></typedef>
+<typedef name="const_siterator"><type>slist_iterator&lt; <classname>slist_value_traits</classname>, true &gt;</type></typedef>
+<typedef name="node_ptr"><type>node_traits::node_ptr</type></typedef>
+<typedef name="const_node_ptr"><type>node_traits::const_node_ptr</type></typedef>
+<typedef name="node"><type>node_traits::node</type></typedef>
+<typedef name="value_type"><type>value_traits::value_type</type></typedef>
+<typedef name="pointer"><type>value_traits::pointer</type></typedef>
+<typedef name="const_pointer"><type>value_traits::const_pointer</type></typedef>
+<typedef name="reference"><type><classname>pointer_traits</classname>&lt; pointer &gt;::reference</type></typedef>
+<typedef name="const_reference"><type><classname>pointer_traits</classname>&lt; const_pointer &gt;::reference</type></typedef>
+<typedef name="group_algorithms"><type><classname>circular_slist_algorithms</classname>&lt; group_traits &gt;</type></typedef>
+<typedef name="const_value_traits_ptr"><type><classname>pointer_traits</classname>&lt; typename value_traits::pointer &gt;::template rebind_pointer&lt; const value_traits &gt;::type</type></typedef>
+<typedef name="const_bucket_value_traits_ptr"><type><classname>pointer_traits</classname>&lt; typename value_traits::pointer &gt;::template rebind_pointer&lt; const bucket_plus_vtraits &gt;::type</type></typedef>
+<typedef name="linear_buckets_t"><type><emphasis>unspecified</emphasis></type></typedef>
+<typedef name="this_ref"><type>bucket_plus_vtraits &amp;</type></typedef>
+<typedef name="iterator"><type>hashtable_iterator&lt; bucket_plus_vtraits, LinearBuckets, false &gt;</type></typedef>
+<typedef name="const_iterator"><type>hashtable_iterator&lt; bucket_plus_vtraits, LinearBuckets, true &gt;</type></typedef>
+<data-member name="safemode_or_autounlink" specifiers="static"><type>const bool</type></data-member>
+<data-member name="bucket_overhead" specifiers="static"><type>const std::size_t</type></data-member>
+<method-group name="public member functions">
+<method name="priv_value_traits_ptr" cv="const"><type>const_value_traits_ptr</type></method>
+<method name="get_bucket_value_traits" cv="const"><type>const bucket_plus_vtraits &amp;</type></method>
+<method name="get_bucket_value_traits"><type>bucket_plus_vtraits &amp;</type></method>
+<method name="bucket_value_traits_ptr" cv="const"><type>const_bucket_value_traits_ptr</type></method>
+<method name="priv_value_traits" cv="const"><type>const value_traits &amp;</type></method>
+<method name="priv_value_traits"><type>value_traits &amp;</type></method>
+<method name="priv_bucket_traits" cv="const"><type>const bucket_traits &amp;</type></method>
+<method name="priv_bucket_traits"><type>bucket_traits &amp;</type></method>
+<method name="priv_bucket_pointer" cv="const noexcept"><type>bucket_ptr</type></method>
+<method name="priv_usable_bucket_count" cv="const noexcept"><type>std::size_t</type></method>
+<method name="priv_bucket" cv="const noexcept"><type>bucket_type &amp;</type><parameter name="n"><paramtype>std::size_t</paramtype></parameter></method>
+<method name="priv_bucket_ptr" cv="const noexcept"><type>bucket_ptr</type><parameter name="n"><paramtype>std::size_t</paramtype></parameter></method>
+<method name="priv_past_usable_bucket_ptr" cv="const"><type>bucket_ptr</type></method>
+<method name="priv_invalid_bucket_ptr" cv="const"><type>bucket_ptr</type></method>
+<method name="priv_set_sentinel_bucket" cv="const"><type>void</type></method>
+<method name="priv_unset_sentinel_bucket" cv="const"><type>void</type></method>
+<method name="priv_end_sit" cv="const"><type>siterator</type></method>
+<method name="priv_end_sit" cv="const"><type>siterator</type><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="priv_end_sit" cv="const"><type>siterator</type><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="priv_bucket_lbegin" cv="const"><type>siterator</type><parameter name="n"><paramtype>std::size_t</paramtype></parameter></method>
+<method name="priv_bucket_lbbegin" cv="const"><type>siterator</type><parameter name="n"><paramtype>std::size_t</paramtype></parameter></method>
+<method name="priv_bucket_lend" cv="const"><type>siterator</type><parameter name="n"><paramtype>std::size_t</paramtype></parameter></method>
+<method name="priv_bucket_size" cv="const"><type>std::size_t</type><parameter name="n"><paramtype>std::size_t</paramtype></parameter></method>
+<method name="priv_bucket_empty" cv="const"><type>bool</type><parameter name="n"><paramtype>std::size_t</paramtype></parameter></method>
+<method name="priv_bucket_empty" cv="const"><type>bool</type><parameter name="p"><paramtype>bucket_ptr</paramtype></parameter></method>
+<method name="priv_erase_node_range"><type>std::size_t</type><template>
+          <template-type-parameter name="NodeDisposer"/>
+          <template-nontype-parameter name="OptimizeMultikey"><type>bool</type></template-nontype-parameter>
+        </template><parameter name="before_first_it"><paramtype>siterator const &amp;</paramtype></parameter><parameter name="first_bucket"><paramtype>std::size_t const</paramtype></parameter><parameter name="last_it"><paramtype>siterator const &amp;</paramtype></parameter><parameter name="last_bucket"><paramtype>std::size_t const</paramtype></parameter><parameter name="node_disposer"><paramtype>NodeDisposer</paramtype></parameter><parameter name="optimize_multikey_tag"><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="make_node_disposer" cv="const"><type>typeof_node_disposer&lt; Disposer &gt;::type</type><template>
+          <template-type-parameter name="Disposer"/>
+        </template><parameter name="disposer"><paramtype>const Disposer &amp;</paramtype></parameter></method>
+<method name="priv_value_to_node"><type>node &amp;</type><parameter name="v"><paramtype>reference</paramtype></parameter></method>
+<method name="priv_value_to_node" cv="const"><type>const node &amp;</type><parameter name="v"><paramtype>const_reference</paramtype></parameter></method>
+<method name="priv_value_to_node_ptr"><type>node_ptr</type><parameter name="v"><paramtype>reference</paramtype></parameter></method>
+<method name="priv_value_to_node_ptr" cv="const"><type>const_node_ptr</type><parameter name="v"><paramtype>const_reference</paramtype></parameter></method>
+<method name="priv_value_from_siterator"><type>reference</type><parameter name="s"><paramtype>siterator</paramtype></parameter></method>
+<method name="priv_value_from_siterator" cv="const"><type>const_reference</type><parameter name="s"><paramtype>siterator</paramtype></parameter></method>
+<method name="priv_clear_buckets"><type>void</type><parameter name="buckets_ptr"><paramtype>const bucket_ptr</paramtype></parameter><parameter name="bucket_cnt"><paramtype>const std::size_t</paramtype></parameter></method>
+<method name="priv_stored_or_compute_hash" cv="const"><type>std::size_t</type><parameter name="v"><paramtype>const value_type &amp;</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="end" cv="noexcept"><type>iterator</type></method>
+<method name="end" cv="const noexcept"><type>const_iterator</type></method>
+<method name="cend" cv="const noexcept"><type>const_iterator</type></method>
+<method name="build_iterator"><type>iterator</type><parameter name="s"><paramtype>siterator</paramtype></parameter><parameter name="p"><paramtype>bucket_ptr</paramtype></parameter></method>
+<method name="build_iterator"><type>iterator</type><parameter name="s"><paramtype>siterator</paramtype></parameter><parameter name="p"><paramtype>bucket_ptr</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="build_iterator"><type>iterator</type><parameter name="s"><paramtype>siterator</paramtype></parameter><parameter name=""><paramtype>bucket_ptr</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter><purpose>linear buckets </purpose></method>
+<method name="build_const_iterator" cv="const"><type>const_iterator</type><parameter name="s"><paramtype>siterator</paramtype></parameter><parameter name="p"><paramtype>bucket_ptr</paramtype></parameter></method>
+<method name="build_const_iterator" cv="const"><type>const_iterator</type><parameter name="s"><paramtype>siterator</paramtype></parameter><parameter name="p"><paramtype>bucket_ptr</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="build_const_iterator" cv="const"><type>const_iterator</type><parameter name="s"><paramtype>siterator</paramtype></parameter><parameter name=""><paramtype>bucket_ptr</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter><purpose>linear buckets </purpose></method>
+</method-group>
+<constructor><parameter name="val_traits"><paramtype>const ValueTraits &amp;</paramtype></parameter><parameter name="b_traits"><paramtype>const bucket_traits &amp;</paramtype></parameter></constructor>
+<constructor><parameter name="other"><paramtype>bucket_plus_vtraits &amp;&amp;</paramtype></parameter></constructor>
+<method-group name="public static functions">
+<method name="priv_bucket_lbegin" specifiers="static"><type>siterator</type><parameter name="b"><paramtype>bucket_type &amp;</paramtype></parameter></method>
+<method name="priv_bucket_lbbegin" specifiers="static"><type>siterator</type><parameter name="b"><paramtype>bucket_type &amp;</paramtype></parameter></method>
+<method name="priv_bucket_lend" specifiers="static"><type>siterator</type><parameter name="b"><paramtype>bucket_type &amp;</paramtype></parameter></method>
+<method name="priv_bucket_size" specifiers="static"><type>std::size_t</type><parameter name="b"><paramtype>const bucket_type &amp;</paramtype></parameter></method>
+<method name="priv_bucket_empty" specifiers="static"><type>bool</type><parameter name="b"><paramtype>const bucket_type &amp;</paramtype></parameter></method>
+<method name="priv_erase_from_single_bucket" specifiers="static"><type>std::size_t</type><template>
+          <template-type-parameter name="NodeDisposer"/>
+        </template><parameter name="b"><paramtype>bucket_type &amp;</paramtype></parameter><parameter name="sbefore_first"><paramtype>siterator</paramtype></parameter><parameter name="slast"><paramtype>siterator</paramtype></parameter><parameter name="node_disposer"><paramtype>NodeDisposer</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="priv_erase_from_single_bucket" specifiers="static"><type>std::size_t</type><template>
+          <template-type-parameter name="NodeDisposer"/>
+        </template><parameter name=""><paramtype>bucket_type &amp;</paramtype></parameter><parameter name="sbefore_first"><paramtype>siterator</paramtype></parameter><parameter name="slast"><paramtype>siterator</paramtype></parameter><parameter name="node_disposer"><paramtype>NodeDisposer</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="priv_erase_node" specifiers="static"><type>void</type><template>
+          <template-type-parameter name="NodeDisposer"/>
+        </template><parameter name="b"><paramtype>bucket_type &amp;</paramtype></parameter><parameter name="i"><paramtype>siterator</paramtype></parameter><parameter name="node_disposer"><paramtype>NodeDisposer</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="priv_erase_node" specifiers="static"><type>void</type><template>
+          <template-type-parameter name="NodeDisposer"/>
+        </template><parameter name="b"><paramtype>bucket_type &amp;</paramtype></parameter><parameter name="i"><paramtype>siterator</paramtype></parameter><parameter name="node_disposer"><paramtype>NodeDisposer</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter><purpose>optimize multikey </purpose></method>
+<method name="priv_get_last" specifiers="static"><type>siterator</type><parameter name="b"><paramtype>bucket_type &amp;</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="priv_get_last" specifiers="static"><type>siterator</type><parameter name="b"><paramtype>bucket_type &amp;</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="priv_erase_whole_bucket" specifiers="static"><type>std::size_t</type><template>
+          <template-type-parameter name="NodeDisposer"/>
+        </template><parameter name="b"><paramtype>bucket_type &amp;</paramtype></parameter><parameter name="node_disposer"><paramtype>NodeDisposer</paramtype></parameter></method>
+<method name="priv_get_previous" specifiers="static"><type>siterator</type><parameter name="b"><paramtype>bucket_type &amp;</paramtype></parameter><parameter name="i"><paramtype>siterator</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="priv_get_previous" specifiers="static"><type>siterator</type><parameter name="b"><paramtype>bucket_type &amp;</paramtype></parameter><parameter name="i"><paramtype>siterator</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="to_ptr" specifiers="static"><type>bucket_ptr</type><parameter name="b"><paramtype>bucket_type &amp;</paramtype></parameter></method>
+<method name="sit_bbegin" specifiers="static"><type>siterator</type><parameter name="b"><paramtype>bucket_type &amp;</paramtype></parameter></method>
+<method name="sit_begin" specifiers="static"><type>siterator</type><parameter name="b"><paramtype>bucket_type &amp;</paramtype></parameter></method>
+<method name="sit_end" specifiers="static"><type>siterator</type><parameter name="b"><paramtype>bucket_type &amp;</paramtype></parameter></method>
+<method name="priv_stored_hash" specifiers="static"><type>std::size_t</type><parameter name="s"><paramtype>siterator</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="priv_stored_hash" specifiers="static"><type>std::size_t</type><parameter name=""><paramtype>siterator</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="priv_init_buckets" specifiers="static"><type>void</type><parameter name="buckets_ptr"><paramtype>const bucket_ptr</paramtype></parameter><parameter name="bucket_cnt"><paramtype>const std::size_t</paramtype></parameter></method>
+</method-group>
+</struct><struct name="bucket_traits_impl"><template>
+      <template-type-parameter name="BucketPtr"/>
+      <template-type-parameter name="SizeType"/>
+    </template><method-group name="public member functions">
+<method name="bucket_begin" cv="const"><type>bucket_ptr</type></method>
+<method name="bucket_count" cv="const noexcept"><type><classname>size_type</classname></type></method>
+</method-group>
+<constructor><parameter name="buckets"><paramtype>bucket_ptr</paramtype></parameter><parameter name="len"><paramtype><classname>size_type</classname></paramtype></parameter></constructor>
+<constructor><parameter name="x"><paramtype>const bucket_traits_impl &amp;</paramtype></parameter></constructor>
+<constructor><parameter name="x"><paramtype>bucket_traits_impl &amp;&amp;</paramtype></parameter></constructor>
+<copy-assignment><type>bucket_traits_impl &amp;</type><parameter name="x"><paramtype>bucket_traits_impl &amp;&amp;</paramtype></parameter></copy-assignment>
+<copy-assignment><type>bucket_traits_impl &amp;</type><parameter name="x"><paramtype>BOOST_COPY_ASSIGN_REF(bucket_traits_impl)</paramtype></parameter></copy-assignment>
+</struct><struct name="default_hashtable_hook_applier"><struct name="apply"><template>
+      <template-type-parameter name="T"/>
+    </template><typedef name="type"><type>T::default_hashtable_hook</type></typedef>
+</struct></struct><struct name="downcast_node_to_value_t"><template>
+      <template-type-parameter name="ValueTraits"/>
+      <template-nontype-parameter name="IsConst"><type>bool</type></template-nontype-parameter>
+    </template><typedef name="base_t"><type><emphasis>unspecified</emphasis></type></typedef>
+<typedef name="result_type"><type>base_t::result_type</type></typedef>
+<typedef name="value_traits"><type>ValueTraits</type></typedef>
+<typedef name="node"><type>unordered_bucket_impl&lt; value_traits &gt;::type::node_traits::node</type></typedef>
+<typedef name="first_argument_type"><type><emphasis>unspecified</emphasis></type></typedef>
+<typedef name="intermediate_argument_type"><type><emphasis>unspecified</emphasis></type></typedef>
+<typedef name="const_value_traits_ptr"><type><classname>pointer_traits</classname>&lt; typename ValueTraits::pointer &gt;::template rebind_pointer&lt; const ValueTraits &gt;::type</type></typedef>
+<method-group name="public member functions">
+<method name="operator()" cv="const"><type>result_type</type><parameter name="arg"><paramtype>first_argument_type</paramtype></parameter></method>
+</method-group>
+<constructor><parameter name="ptr"><paramtype>const_value_traits_ptr</paramtype></parameter></constructor>
+</struct><class name="exception_bucket_disposer"><template>
+      <template-type-parameter name="Bucket"/>
+      <template-type-parameter name="Algo"/>
+      <template-type-parameter name="Disposer"/>
+      <template-type-parameter name="SizeType"/>
+    </template><method-group name="private member functions">
+</method-group>
+<constructor><parameter name=""><paramtype>const exception_bucket_disposer &amp;</paramtype></parameter></constructor>
+<copy-assignment><type>exception_bucket_disposer &amp;</type><parameter name=""><paramtype>const exception_bucket_disposer &amp;</paramtype></parameter></copy-assignment>
+<method-group name="public member functions">
+<method name="release"><type>void</type></method>
+</method-group>
+<constructor><parameter name="cont"><paramtype>Bucket &amp;</paramtype></parameter><parameter name="disp"><paramtype>Disposer &amp;</paramtype></parameter><parameter name="constructed"><paramtype>const SizeType &amp;</paramtype></parameter></constructor>
+<destructor/>
+</class><struct name="get_equal_to"><template>
+      <template-type-parameter name="EqualTo"/>
+      <template-type-parameter name=""/>
+    </template><typedef name="type"><type>EqualTo</type></typedef>
+</struct><struct-specialization name="get_equal_to"><template>
+      <template-type-parameter name="T"/>
+    </template><specialization><template-arg>void</template-arg><template-arg>T</template-arg></specialization><typedef name="type"><type>value_equal&lt; T &gt;</type></typedef>
+</struct-specialization><struct name="get_hash"><template>
+      <template-type-parameter name="Hash"/>
+      <template-type-parameter name=""/>
+    </template><typedef name="type"><type>Hash</type></typedef>
+</struct><struct-specialization name="get_hash"><template>
+      <template-type-parameter name="T"/>
+    </template><specialization><template-arg>void</template-arg><template-arg>T</template-arg></specialization><typedef name="type"><type>::boost::hash&lt; T &gt;</type></typedef>
+</struct-specialization><struct name="get_hash_key_of_value"><template>
+      <template-type-parameter name="KeyOfValue"/>
+      <template-type-parameter name="T"/>
+    </template><typedef name="type"><type>KeyOfValue</type></typedef>
+</struct><struct-specialization name="get_hash_key_of_value"><template>
+      <template-type-parameter name="T"/>
+    </template><specialization><template-arg>void</template-arg><template-arg>T</template-arg></specialization><typedef name="type"><type><emphasis>unspecified</emphasis></type></typedef>
+</struct-specialization><struct name="get_hashtable_size_wrapper_bucket"><template>
+      <template-type-parameter name="ValueTraits"/>
+      <template-type-parameter name="VoidOrKeyOfValue"/>
+      <template-type-parameter name="VoidOrKeyHash"/>
+      <template-type-parameter name="VoidOrKeyEqual"/>
+      <template-type-parameter name="BucketTraits"/>
+      <template-type-parameter name="SizeType"/>
+      <template-nontype-parameter name="BoolFlags"><type>std::size_t</type></template-nontype-parameter>
+    </template><typedef name="type"><type>hashtable_size_wrapper&lt; bucket_hash_equal_t&lt; ValueTraits, VoidOrKeyOfValue, VoidOrKeyHash, VoidOrKeyEqual, BucketTraits, 0 !=(BoolFlags &amp;hash_bool_flags::linear_buckets_pos), 0 !=(BoolFlags &amp;hash_bool_flags::cache_begin_pos) &gt;, SizeType,(BoolFlags &amp;hash_bool_flags::incremental_pos) !=0||(BoolFlags &amp;hash_bool_flags::fastmod_buckets_pos) !=0 &gt;</type></typedef>
+</struct><struct name="get_hashtable_size_wrapper_internal"><template>
+      <template-type-parameter name="ValueTraits"/>
+      <template-type-parameter name="VoidOrKeyOfValue"/>
+      <template-type-parameter name="VoidOrKeyHash"/>
+      <template-type-parameter name="VoidOrKeyEqual"/>
+      <template-type-parameter name="BucketTraits"/>
+      <template-type-parameter name="SizeType"/>
+      <template-nontype-parameter name="BoolFlags"><type>std::size_t</type></template-nontype-parameter>
+    </template><typedef name="type"><type>hashtable_size_wrapper&lt; hashdata_internal&lt; ValueTraits, VoidOrKeyOfValue, VoidOrKeyHash, VoidOrKeyEqual, BucketTraits, SizeType, BoolFlags &amp;~(hash_bool_flags::constant_time_size_pos) &gt;, SizeType,(BoolFlags &amp;hash_bool_flags::constant_time_size_pos) !=0 &gt;</type></typedef>
+</struct><struct name="group_functions"><template>
+      <template-type-parameter name="NodeTraits"/>
+    </template><typedef name="node_traits"><type>NodeTraits</type></typedef>
+<typedef name="group_traits"><type>unordered_group_adapter&lt; node_traits &gt;</type></typedef>
+<typedef name="node_ptr"><type>node_traits::node_ptr</type></typedef>
+<typedef name="node"><type>node_traits::node</type></typedef>
+<typedef name="reduced_node_traits"><type>reduced_slist_node_traits&lt; node_traits &gt;::type</type></typedef>
+<typedef name="slist_node_ptr"><type>reduced_node_traits::node_ptr</type></typedef>
+<typedef name="slist_node"><type>reduced_node_traits::node</type></typedef>
+<typedef name="group_algorithms"><type><classname>circular_slist_algorithms</classname>&lt; group_traits &gt;</type></typedef>
+<typedef name="node_algorithms"><type><classname>circular_slist_algorithms</classname>&lt; node_traits &gt;</type></typedef>
+<method-group name="public static functions">
+<method name="get_bucket_before_begin" specifiers="static"><type>slist_node_ptr</type><parameter name="bucket_beg"><paramtype>slist_node_ptr</paramtype></parameter><parameter name="bucket_last"><paramtype>slist_node_ptr</paramtype></parameter><parameter name="sp"><paramtype>slist_node_ptr</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="get_bucket_before_begin" specifiers="static"><type>slist_node_ptr</type><parameter name="bucket_beg"><paramtype>slist_node_ptr</paramtype></parameter><parameter name="bucket_last"><paramtype>slist_node_ptr</paramtype></parameter><parameter name="sp"><paramtype>slist_node_ptr</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="get_prev_to_first_in_group" specifiers="static"><type>node_ptr</type><parameter name="bucket_node"><paramtype>slist_node_ptr</paramtype></parameter><parameter name="first_in_group"><paramtype>node_ptr</paramtype></parameter></method>
+<method name="erase_from_group" specifiers="static"><type>void</type><parameter name="end_ptr"><paramtype>slist_node_ptr</paramtype></parameter><parameter name="to_erase_ptr"><paramtype>node_ptr</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="erase_from_group" specifiers="static"><type>void</type><parameter name=""><paramtype>slist_node_ptr</paramtype></parameter><parameter name=""><paramtype>node_ptr</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="get_last_in_group" specifiers="static"><type>node_ptr</type><parameter name="first_in_group"><paramtype>node_ptr</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="get_last_in_group" specifiers="static"><type>node_ptr</type><parameter name="n"><paramtype>node_ptr</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="get_first_in_group" specifiers="static"><type>node_ptr</type><parameter name="n"><paramtype>node_ptr</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="get_first_in_group" specifiers="static"><type>node_ptr</type><parameter name="n"><paramtype>node_ptr</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="is_first_in_group" specifiers="static"><type>bool</type><parameter name="ptr"><paramtype>node_ptr</paramtype></parameter></method>
+<method name="insert_in_group" specifiers="static"><type>void</type><parameter name="first_in_group"><paramtype>node_ptr</paramtype></parameter><parameter name="n"><paramtype>node_ptr</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="insert_in_group" specifiers="static"><type>void</type><parameter name=""><paramtype>node_ptr</paramtype></parameter><parameter name=""><paramtype>node_ptr</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="split_group" specifiers="static"><type>node_ptr</type><parameter name="new_first"><paramtype>node_ptr const</paramtype></parameter></method>
+</method-group>
+</struct><struct name="hash_bool_flags"><data-member name="unique_keys_pos" specifiers="static"><type>const std::size_t</type></data-member>
+<data-member name="constant_time_size_pos" specifiers="static"><type>const std::size_t</type></data-member>
+<data-member name="power_2_buckets_pos" specifiers="static"><type>const std::size_t</type></data-member>
+<data-member name="cache_begin_pos" specifiers="static"><type>const std::size_t</type></data-member>
+<data-member name="compare_hash_pos" specifiers="static"><type>const std::size_t</type></data-member>
+<data-member name="incremental_pos" specifiers="static"><type>const std::size_t</type></data-member>
+<data-member name="linear_buckets_pos" specifiers="static"><type>const std::size_t</type></data-member>
+<data-member name="fastmod_buckets_pos" specifiers="static"><type>const std::size_t</type></data-member>
+</struct><struct name="hash_key_equal"><template>
+      <template-type-parameter name="T"/>
+      <template-type-parameter name="VoidOrKeyOfValue"/>
+      <template-type-parameter name="VoidOrKeyEqual"/>
+    </template><inherit access="public">boost::intrusive::get_equal_to&lt; VoidOrKeyEqual, hash_key_types_base&lt; T, VoidOrKeyOfValue &gt;::key_type &gt;</inherit></struct><struct name="hash_key_hash"><template>
+      <template-type-parameter name="T"/>
+      <template-type-parameter name="VoidOrKeyOfValue"/>
+      <template-type-parameter name="VoidOrKeyHash"/>
+    </template><inherit access="public">boost::intrusive::get_hash&lt; VoidOrKeyHash, hash_key_types_base&lt; T, VoidOrKeyOfValue &gt;::key_type &gt;</inherit></struct><struct name="hash_key_types_base"><template>
+      <template-type-parameter name="T"/>
+      <template-type-parameter name="VoidOrKeyOfValue"/>
+    </template><typedef name="key_of_value"><type>get_hash_key_of_value&lt; VoidOrKeyOfValue, T &gt;::type</type></typedef>
+<typedef name="key_type"><type>key_of_value::type</type></typedef>
+</struct><struct name="hashdata_internal"><template>
+      <template-type-parameter name="ValueTraits"/>
+      <template-type-parameter name="VoidOrKeyOfValue"/>
+      <template-type-parameter name="VoidOrKeyHash"/>
+      <template-type-parameter name="VoidOrKeyEqual"/>
+      <template-type-parameter name="BucketTraits"/>
+      <template-type-parameter name="SizeType"/>
+      <template-nontype-parameter name="BoolFlags"><type>std::size_t</type></template-nontype-parameter>
+    </template><inherit access="public">boost::intrusive::hashtable_size_wrapper&lt; ValueTraits, VoidOrKeyOfValue, VoidOrKeyHash, VoidOrKeyEqual, BucketTraits, SizeType, BoolFlags &gt;</inherit><typedef name="internal_type"><type>get_hashtable_size_wrapper_bucket&lt; ValueTraits, VoidOrKeyOfValue, VoidOrKeyHash, VoidOrKeyEqual, BucketTraits, SizeType, BoolFlags &gt;::type</type></typedef>
+<typedef name="key_equal"><type>internal_type::key_equal</type></typedef>
+<typedef name="hasher"><type>internal_type::hasher</type></typedef>
+<typedef name="bucket_plus_vtraits_t"><type>bucket_plus_vtraits&lt; ValueTraits, BucketTraits, <classname>linear_buckets</classname> &gt;</type></typedef>
+<typedef name="size_type"><type>SizeType</type></typedef>
+<typedef name="split_traits"><type>internal_type::size_traits</type></typedef>
+<typedef name="bucket_ptr"><type>bucket_plus_vtraits_t::bucket_ptr</type></typedef>
+<typedef name="const_value_traits_ptr"><type>bucket_plus_vtraits_t::const_value_traits_ptr</type></typedef>
+<typedef name="siterator"><type>bucket_plus_vtraits_t::siterator</type></typedef>
+<typedef name="bucket_traits"><type>bucket_plus_vtraits_t::bucket_traits</type></typedef>
+<typedef name="value_traits"><type>bucket_plus_vtraits_t::value_traits</type></typedef>
+<typedef name="bucket_type"><type>bucket_plus_vtraits_t::bucket_type</type></typedef>
+<typedef name="value_type"><type>value_traits::value_type</type></typedef>
+<typedef name="pointer"><type>value_traits::pointer</type></typedef>
+<typedef name="const_pointer"><type>value_traits::const_pointer</type></typedef>
+<typedef name="reference"><type><classname>pointer_traits</classname>&lt; pointer &gt;::reference</type></typedef>
+<typedef name="const_reference"><type><classname>pointer_traits</classname>&lt; const_pointer &gt;::reference</type></typedef>
+<typedef name="node_traits"><type>value_traits::node_traits</type></typedef>
+<typedef name="node"><type>node_traits::node</type></typedef>
+<typedef name="node_ptr"><type>node_traits::node_ptr</type></typedef>
+<typedef name="const_node_ptr"><type>node_traits::const_node_ptr</type></typedef>
+<typedef name="slist_node_algorithms"><type>bucket_plus_vtraits_t::slist_node_algorithms</type></typedef>
+<typedef name="slist_node_ptr"><type>bucket_plus_vtraits_t::slist_node_ptr</type></typedef>
+<typedef name="hash_types_base"><type>hash_key_types_base&lt; typename ValueTraits::value_type, VoidOrKeyOfValue &gt;</type></typedef>
+<typedef name="key_of_value"><type>hash_types_base::key_of_value</type></typedef>
+<typedef name="store_hash_t"><type><emphasis>unspecified</emphasis></type></typedef>
+<typedef name="local_iterator"><type><emphasis>unspecified</emphasis></type></typedef>
+<typedef name="const_local_iterator"><type><emphasis>unspecified</emphasis></type></typedef>
+<typedef name="linear_buckets_t"><type><emphasis>unspecified</emphasis></type></typedef>
+<typedef name="iterator"><type>bucket_plus_vtraits_t::iterator</type></typedef>
+<typedef name="const_iterator"><type>bucket_plus_vtraits_t::const_iterator</type></typedef>
+<typedef name="fastmod_buckets_t"><type><emphasis>unspecified</emphasis></type></typedef>
+<data-member name="linear_buckets" specifiers="static"><type>const bool</type></data-member>
+<data-member name="store_hash" specifiers="static"><type>const bool</type></data-member>
+<data-member name="safemode_or_autounlink" specifiers="static"><type>const bool</type></data-member>
+<data-member name="stateful_value_traits" specifiers="static"><type>const bool</type></data-member>
+<data-member name="incremental" specifiers="static"><type>const bool</type></data-member>
+<data-member name="power_2_buckets" specifiers="static"><type>const bool</type></data-member>
+<data-member name="fastmod_buckets" specifiers="static"><type>const bool</type></data-member>
+<method-group name="public member functions">
+<method name="priv_split_traits"><type>internal_type::size_traits_t</type></method>
+<method name="priv_split_traits" cv="const"><type>internal_type::size_traits_const_t</type></method>
+<method name="priv_clear_buckets"><type>void</type></method>
+<method name="priv_clear_buckets_and_cache"><type>void</type></method>
+<method name="priv_init_buckets_and_cache"><type>void</type></method>
+<method name="split_count" cv="const noexcept"><type>SizeType</type></method>
+<method name="iterator_to" cv="noexcept(!linear_buckets))"><type>iterator</type><parameter name="value"><paramtype>reference</paramtype></parameter></method>
+<method name="iterator_to" cv="const noexcept(!linear_buckets))"><type>const_iterator</type><parameter name="value"><paramtype>const_reference</paramtype></parameter></method>
+<method name="iterator_to"><type>iterator</type><parameter name="value"><paramtype>reference</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="iterator_to" cv="const"><type>const_iterator</type><parameter name="value"><paramtype>const_reference</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="priv_hash_to_bucket" cv="const"><type>bucket_type &amp;</type><parameter name="hash_value"><paramtype>std::size_t</paramtype></parameter></method>
+<method name="priv_hash_to_bucket_ptr" cv="const"><type>bucket_ptr</type><parameter name="hash_value"><paramtype>std::size_t</paramtype></parameter></method>
+<method name="priv_hash_to_nbucket" cv="const"><type>size_type</type><parameter name="hash_value"><paramtype>std::size_t</paramtype></parameter></method>
+<method name="priv_hash_to_nbucket" cv="const"><type>size_type</type><parameter name="hash_value"><paramtype>std::size_t</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="priv_hash_to_nbucket" cv="const"><type>size_type</type><parameter name="hash_value"><paramtype>std::size_t</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter><purpose>fastmod_buckets_t </purpose></method>
+<method name="iterator_to" cv="noexcept"><type>iterator</type><parameter name="value"><paramtype>reference</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="iterator_to" cv="const noexcept"><type>const_iterator</type><parameter name="value"><paramtype>const_reference</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="local_iterator_to" cv="noexcept"><type>local_iterator</type><parameter name="value"><paramtype>reference</paramtype></parameter></method>
+<method name="local_iterator_to" cv="const noexcept"><type>const_local_iterator</type><parameter name="value"><paramtype>const_reference</paramtype></parameter></method>
+<method name="bucket_count" cv="const noexcept"><type>size_type</type></method>
+<method name="bucket_size" cv="const noexcept"><type>size_type</type><parameter name="n"><paramtype>size_type</paramtype></parameter></method>
+<method name="bucket_pointer" cv="const noexcept"><type>bucket_ptr</type></method>
+<method name="begin" cv="noexcept"><type>local_iterator</type><parameter name="n"><paramtype>size_type</paramtype></parameter></method>
+<method name="begin" cv="const noexcept"><type>const_local_iterator</type><parameter name="n"><paramtype>size_type</paramtype></parameter></method>
+<method name="cbegin" cv="const noexcept"><type>const_local_iterator</type><parameter name="n"><paramtype>size_type</paramtype></parameter></method>
+<method name="end" cv="noexcept"><type>local_iterator</type><parameter name="n"><paramtype>size_type</paramtype></parameter></method>
+<method name="end" cv="const noexcept"><type>const_local_iterator</type><parameter name="n"><paramtype>size_type</paramtype></parameter></method>
+<method name="cend" cv="const noexcept"><type>const_local_iterator</type><parameter name="n"><paramtype>size_type</paramtype></parameter></method>
+<method name="begin" cv="noexcept"><type>iterator</type></method>
+<method name="begin" cv="const noexcept"><type>const_iterator</type></method>
+<method name="cbegin" cv="const noexcept"><type>const_iterator</type></method>
+<method name="hash_function" cv="const"><type>hasher</type></method>
+<method name="key_eq" cv="const"><type>key_equal</type></method>
+</method-group>
+<constructor><parameter name="val_traits"><paramtype>const ValueTraits &amp;</paramtype></parameter><parameter name="b_traits"><paramtype>const bucket_traits &amp;</paramtype></parameter><parameter name="h"><paramtype>const hasher &amp;</paramtype></parameter><parameter name="e"><paramtype>const key_equal &amp;</paramtype></parameter></constructor>
+<constructor><parameter name="other"><paramtype>hashdata_internal &amp;&amp;</paramtype></parameter></constructor>
+<destructor/>
+<method-group name="public static functions">
+<method name="initial_split_from_bucket_count" cv="noexcept" specifiers="static"><type>SizeType</type><parameter name="bc"><paramtype>SizeType</paramtype></parameter></method>
+<method name="rehash_split_from_bucket_count" cv="noexcept" specifiers="static"><type>SizeType</type><parameter name="bc"><paramtype>SizeType</paramtype></parameter></method>
+<method name="s_local_iterator_to" cv="noexcept" specifiers="static"><type>local_iterator</type><parameter name="value"><paramtype>reference</paramtype></parameter></method>
+<method name="s_local_iterator_to" cv="noexcept" specifiers="static"><type>const_local_iterator</type><parameter name="value"><paramtype>const_reference</paramtype></parameter></method>
+<method name="suggested_upper_bucket_count" cv="noexcept" specifiers="static"><type>size_type</type><parameter name="n"><paramtype>size_type</paramtype></parameter></method>
+<method name="suggested_lower_bucket_count" cv="noexcept" specifiers="static"><type>size_type</type><parameter name="n"><paramtype>size_type</paramtype></parameter></method>
+</method-group>
+</struct><class name="hashtable"><template>
       <template-type-parameter name="T"/>
       <template-nontype-parameter name="Options"><type>class ...</type></template-nontype-parameter>
-    </template><inherit access="private">hashtable_size_traits_wrapper&lt; hashdata_internal&lt; ValueTraits, VoidOrKeyOfValue, VoidOrKeyHash, VoidOrKeyEqual, BucketTraits, SizeType, BoolFlags &amp;(hash_bool_flags::incremental_pos|hash_bool_flags::cache_begin_pos) &gt;, SizeType,(BoolFlags &amp;hash_bool_flags::constant_time_size_pos) !=0 &gt;</inherit><description><para>The class template hashtable is an intrusive hash table container, that is used to construct intrusive <classname alt="boost::intrusive::unordered_set">unordered_set</classname> and <classname alt="boost::intrusive::unordered_multiset">unordered_multiset</classname> containers. The no-throw guarantee holds only, if the VoidOrKeyEqual object and Hasher don't throw.</para><para>hashtable is a semi-intrusive container: each object to be stored in the container must contain a proper hook, but the container also needs additional auxiliary memory to work: hashtable needs a pointer to an array of type <computeroutput>bucket_type</computeroutput> to be passed in the constructor. This bucket array must have at least the same lifetime as the container. This makes the use of hashtable more complicated than purely intrusive containers. <computeroutput>bucket_type</computeroutput> is default-constructible, copyable and assignable</para><para>The template parameter <computeroutput>T</computeroutput> is the type to be managed by the container. The user can specify additional options and if no options are provided default options are used.</para><para>The container supports the following options: <computeroutput>base_hook&lt;&gt;/member_hook&lt;&gt;/value_traits&lt;&gt;</computeroutput>, <computeroutput>constant_time_size&lt;&gt;</computeroutput>, <computeroutput>size_type&lt;&gt;</computeroutput>, <computeroutput>hash&lt;&gt;</computeroutput> and <computeroutput>equal&lt;&gt;</computeroutput> <computeroutput>bucket_traits&lt;&gt;</computeroutput>, power_2_buckets&lt;&gt;, cache_begin&lt;&gt; and incremental&lt;&gt;.</para><para>hashtable only provides forward iterators but it provides 4 iterator types: iterator and const_iterator to navigate through the whole container and local_iterator and const_local_iterator to navigate through the values stored in a single bucket. Local iterators are faster and smaller.</para><para>It's not recommended to use non constant-time size hashtables because several key functions, like "empty()", become non-constant time functions. Non constant_time size hashtables are mainly provided to support auto-unlink hooks.</para><para>hashtables, does not make automatic rehashings nor offers functions related to a load factor. Rehashing can be explicitly requested and the user must provide a new bucket array that will be used from that moment.</para><para>Since no automatic rehashing is done, iterators are never invalidated when inserting or erasing elements. Iterators are only invalidated when rehashing. </para></description><typedef name="value_traits"><type>ValueTraits</type></typedef>
+    </template><inherit access="private">boost::intrusive::hashtable_size_wrapper&lt; ValueTraits, VoidOrKeyOfValue, VoidOrKeyHash, VoidOrKeyEqual, BucketTraits, SizeType, BoolFlags &gt;</inherit><description><para>The class template hashtable is an intrusive hash table container, that is used to construct intrusive <classname alt="boost::intrusive::unordered_set">unordered_set</classname> and <classname alt="boost::intrusive::unordered_multiset">unordered_multiset</classname> containers. The no-throw guarantee holds only, if the VoidOrKeyEqual object and Hasher don't throw.</para><para>hashtable is a semi-intrusive container: each object to be stored in the container must contain a proper hook, but the container also needs additional auxiliary memory to work: hashtable needs a pointer to an array of type <computeroutput>bucket_type</computeroutput> to be passed in the constructor. This bucket array must have at least the same lifetime as the container. This makes the use of hashtable more complicated than purely intrusive containers. <computeroutput>bucket_type</computeroutput> is default-constructible, copyable and assignable</para><para>The template parameter <computeroutput>T</computeroutput> is the type to be managed by the container. The user can specify additional options and if no options are provided default options are used.</para><para>The container supports the following options: <computeroutput>base_hook&lt;&gt;/member_hook&lt;&gt;/value_traits&lt;&gt;</computeroutput>, <computeroutput>constant_time_size&lt;&gt;</computeroutput>, <computeroutput>size_type&lt;&gt;</computeroutput>, <computeroutput>hash&lt;&gt;</computeroutput> and <computeroutput>equal&lt;&gt;</computeroutput> <computeroutput>bucket_traits&lt;&gt;</computeroutput>, power_2_buckets&lt;&gt;, cache_begin&lt;&gt; and incremental&lt;&gt;.</para><para>hashtable only provides forward iterators but it provides 4 iterator types: iterator and const_iterator to navigate through the whole container and local_iterator and const_local_iterator to navigate through the values stored in a single bucket. Local iterators are faster and smaller.</para><para>It's not recommended to use non constant-time size hashtables because several key functions, like "empty()", become non-constant time functions. Non constant_time size hashtables are mainly provided to support auto-unlink hooks.</para><para>hashtables, does not make automatic rehashings nor offers functions related to a load factor. Rehashing can be explicitly requested and the user must provide a new bucket array that will be used from that moment.</para><para>Since no automatic rehashing is done, iterators are never invalidated when inserting or erasing elements. Iterators are only invalidated when rehashing. </para></description><typedef name="value_traits"><type>ValueTraits</type></typedef>
 <typedef name="pointer"><type>value_traits::pointer</type></typedef>
 <typedef name="const_pointer"><type>value_traits::const_pointer</type></typedef>
 <typedef name="value_type"><type>value_traits::value_type</type></typedef>
@@ -2331,10 +2879,8 @@ header------------------------------&gt;|         |
 <typedef name="size_type"><type>SizeType</type></typedef>
 <typedef name="key_equal"><type>internal_type::key_equal</type></typedef>
 <typedef name="hasher"><type>internal_type::hasher</type></typedef>
-<typedef name="bucket_type"><type>bucket_impl&lt; <classname>slist</classname> &gt;</type></typedef>
+<typedef name="bucket_type"><type>internal_type::bucket_type</type></typedef>
 <typedef name="bucket_ptr"><type>internal_type::bucket_ptr</type></typedef>
-<typedef name="siterator"><type>slist::iterator</type></typedef>
-<typedef name="const_siterator"><type>slist::const_iterator</type></typedef>
 <typedef name="iterator"><type>internal_type::iterator</type></typedef>
 <typedef name="const_iterator"><type>internal_type::const_iterator</type></typedef>
 <typedef name="local_iterator"><type>internal_type::local_iterator</type></typedef>
@@ -2345,8 +2891,8 @@ header------------------------------&gt;|         |
 <typedef name="const_node_ptr"><type><classname>pointer_traits</classname>&lt; pointer &gt;::template rebind_pointer&lt; const node &gt;::type</type></typedef>
 <typedef name="node_reference"><type><classname>pointer_traits</classname>&lt; node_ptr &gt;::reference</type></typedef>
 <typedef name="const_node_reference"><type><classname>pointer_traits</classname>&lt; const_node_ptr &gt;::reference</type></typedef>
-<typedef name="node_algorithms"><type>slist::node_algorithms</type></typedef>
-<typedef name="insert_commit_data"><type><emphasis>unspecified</emphasis></type></typedef>
+<typedef name="slist_node_algorithms"><type>internal_type::slist_node_algorithms</type></typedef>
+<typedef name="insert_commit_data"><type>insert_commit_data_impl&lt; <classname>store_hash</classname> &gt;</type></typedef>
 <data-member name="stateful_value_traits" specifiers="static"><type>const bool</type></data-member>
 <data-member name="store_hash" specifiers="static"><type>const bool</type></data-member>
 <data-member name="unique_keys" specifiers="static"><type>const bool</type></data-member>
@@ -2356,7 +2902,11 @@ header------------------------------&gt;|         |
 <data-member name="incremental" specifiers="static"><type>const bool</type></data-member>
 <data-member name="power_2_buckets" specifiers="static"><type>const bool</type></data-member>
 <data-member name="optimize_multikey" specifiers="static"><type>const bool</type></data-member>
+<data-member name="linear_buckets" specifiers="static"><type>const bool</type></data-member>
+<data-member name="fastmod_buckets" specifiers="static"><type>const bool</type></data-member>
+<data-member name="bucket_overhead" specifiers="static"><type>const std::size_t</type></data-member>
 <method-group name="public member functions">
+<method name="default_init_actions"><type>void</type></method>
 <method name="begin" cv="noexcept"><type>iterator</type><description><para><emphasis role="bold">Effects</emphasis>: Returns an iterator pointing to the beginning of the <classname alt="boost::intrusive::unordered_set">unordered_set</classname>.</para><para><emphasis role="bold">Complexity</emphasis>: Amortized constant time. Worst case (empty <classname alt="boost::intrusive::unordered_set">unordered_set</classname>): O(this-&gt;bucket_count())</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="begin" cv="const noexcept"><type>const_iterator</type><description><para><emphasis role="bold">Effects</emphasis>: Returns a const_iterator pointing to the beginning of the <classname alt="boost::intrusive::unordered_set">unordered_set</classname>.</para><para><emphasis role="bold">Complexity</emphasis>: Amortized constant time. Worst case (empty <classname alt="boost::intrusive::unordered_set">unordered_set</classname>): O(this-&gt;bucket_count())</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="cbegin" cv="const noexcept"><type>const_iterator</type><description><para><emphasis role="bold">Effects</emphasis>: Returns a const_iterator pointing to the beginning of the <classname alt="boost::intrusive::unordered_set">unordered_set</classname>.</para><para><emphasis role="bold">Complexity</emphasis>: Amortized constant time. Worst case (empty <classname alt="boost::intrusive::unordered_set">unordered_set</classname>): O(this-&gt;bucket_count())</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
@@ -2485,10 +3035,161 @@ header------------------------------&gt;|         |
 <method name="suggested_upper_bucket_count" cv="noexcept" specifiers="static"><type>size_type</type><parameter name="n"><paramtype>size_type</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Returns the nearest new bucket count optimized for the container that is bigger or equal than n. This suggestion can be used to create bucket arrays with a size that will usually improve container's performance. If such value does not exist, the higher possible value is returned.</para><para><emphasis role="bold">Complexity</emphasis>: Amortized constant time.</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="suggested_lower_bucket_count" cv="noexcept" specifiers="static"><type>size_type</type><parameter name="n"><paramtype>size_type</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Returns the nearest new bucket count optimized for the container that is smaller or equal than n. This suggestion can be used to create bucket arrays with a size that will usually improve container's performance. If such value does not exist, the lowest possible value is returned.</para><para><emphasis role="bold">Complexity</emphasis>: Amortized constant time.</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 </method-group>
-</class><struct name="make_hashtable"><template>
+</class><struct name="hashtable_defaults"><typedef name="proto_value_traits"><type>default_hashtable_hook_applier</type></typedef>
+<typedef name="size_type"><type>std::size_t</type></typedef>
+<typedef name="key_of_value"><type>void</type></typedef>
+<typedef name="equal"><type>void</type></typedef>
+<typedef name="hash"><type>void</type></typedef>
+<typedef name="bucket_traits"><type>default_bucket_traits</type></typedef>
+<data-member name="constant_time_size" specifiers="static"><type>const bool</type></data-member>
+<data-member name="power_2_buckets" specifiers="static"><type>const bool</type></data-member>
+<data-member name="cache_begin" specifiers="static"><type>const bool</type></data-member>
+<data-member name="compare_hash" specifiers="static"><type>const bool</type></data-member>
+<data-member name="incremental" specifiers="static"><type>const bool</type></data-member>
+<data-member name="linear_buckets" specifiers="static"><type>const bool</type></data-member>
+<data-member name="fastmod_buckets" specifiers="static"><type>const bool</type></data-member>
+</struct><struct name="hashtable_equal_holder"><template>
+      <template-type-parameter name="ValueTraits"/>
+      <template-type-parameter name="BucketTraits"/>
+      <template-type-parameter name="VoidOrKeyOfValue"/>
+      <template-type-parameter name="VoidOrKeyEqual"/>
+      <template-nontype-parameter name="LinearBuckets"><type>bool</type></template-nontype-parameter>
+    </template><typedef name="type"><type><emphasis>unspecified</emphasis></type></typedef>
+</struct><struct name="hashtable_size_wrapper"><template>
+      <template-type-parameter name="DeriveFrom"/>
+      <template-type-parameter name="SizeType"/>
+      <template-nontype-parameter name=""><type>bool</type></template-nontype-parameter>
+    </template><inherit access="public">DeriveFrom</inherit><typedef name="size_traits"><type><emphasis>unspecified</emphasis></type></typedef>
+<typedef name="size_traits_const_t"><type>const size_traits &amp;</type></typedef>
+<typedef name="size_traits_t"><type>size_traits &amp;</type></typedef>
+<data-member name="size_traits_"><type>size_traits</type></data-member>
+<method-group name="public member functions">
+<method name="priv_size_traits" cv="const"><type>size_traits_const_t</type></method>
+<method name="priv_size_traits"><type>size_traits_t</type></method>
+</method-group>
+<constructor><template>
+          <template-type-parameter name="Base"/>
+          <template-type-parameter name="Arg0"/>
+          <template-type-parameter name="Arg1"/>
+          <template-type-parameter name="Arg2"/>
+        </template><parameter name="base"><paramtype>BOOST_FWD_REF(Base)</paramtype></parameter><parameter name="arg0"><paramtype>BOOST_FWD_REF(Arg0)</paramtype></parameter><parameter name="arg1"><paramtype>BOOST_FWD_REF(Arg1)</paramtype></parameter><parameter name="arg2"><paramtype>BOOST_FWD_REF(Arg2)</paramtype></parameter></constructor>
+<constructor><parameter name="other"><paramtype>hashtable_size_wrapper &amp;&amp;</paramtype></parameter></constructor>
+</struct><struct-specialization name="hashtable_size_wrapper"><template>
+      <template-type-parameter name="DeriveFrom"/>
+      <template-type-parameter name="SizeType"/>
+    </template><specialization><template-arg>DeriveFrom</template-arg><template-arg>SizeType</template-arg><template-arg>false</template-arg></specialization><inherit access="public">DeriveFrom</inherit><typedef name="size_traits"><type><emphasis>unspecified</emphasis></type></typedef>
+<typedef name="size_traits_const_t"><type>size_traits</type></typedef>
+<typedef name="size_traits_t"><type>size_traits</type></typedef>
+<method-group name="public member functions">
+<method name="priv_size_traits" cv="const"><type>size_traits</type></method>
+</method-group>
+<constructor><template>
+          <template-type-parameter name="Base"/>
+          <template-type-parameter name="Arg0"/>
+          <template-type-parameter name="Arg1"/>
+          <template-type-parameter name="Arg2"/>
+        </template><parameter name="base"><paramtype>BOOST_FWD_REF(Base)</paramtype></parameter><parameter name="arg0"><paramtype>BOOST_FWD_REF(Arg0)</paramtype></parameter><parameter name="arg1"><paramtype>BOOST_FWD_REF(Arg1)</paramtype></parameter><parameter name="arg2"><paramtype>BOOST_FWD_REF(Arg2)</paramtype></parameter></constructor>
+<constructor><parameter name="other"><paramtype>hashtable_size_wrapper &amp;&amp;</paramtype></parameter></constructor>
+</struct-specialization><class name="incremental_rehash_rollback"><template>
+      <template-type-parameter name="BucketType"/>
+      <template-type-parameter name="SplitTraits"/>
+      <template-type-parameter name="SlistNodeAlgorithms"/>
+    </template><method-group name="private member functions">
+</method-group>
+<constructor/>
+<copy-assignment><type>incremental_rehash_rollback &amp;</type><parameter name=""><paramtype>const incremental_rehash_rollback &amp;</paramtype></parameter></copy-assignment>
+<constructor><parameter name=""><paramtype>const incremental_rehash_rollback &amp;</paramtype></parameter></constructor>
+<method-group name="public member functions">
+<method name="release"><type>void</type></method>
+</method-group>
+<constructor><parameter name="source_bucket"><paramtype>bucket_type &amp;</paramtype></parameter><parameter name="destiny_bucket"><paramtype>bucket_type &amp;</paramtype></parameter><parameter name="split_tr"><paramtype>split_traits &amp;</paramtype></parameter></constructor>
+<destructor/>
+</class><struct name="insert_commit_data_impl"><template>
+      <template-nontype-parameter name="StoreHash"><type>bool</type></template-nontype-parameter>
+    </template><data-member name="hash"><type>std::size_t</type></data-member>
+<data-member name="bucket_idx"><type>std::size_t</type></data-member>
+<method-group name="public member functions">
+<method name="get_hash" cv="const"><type>std::size_t</type></method>
+<method name="set_hash"><type>void</type><parameter name="h"><paramtype>std::size_t</paramtype></parameter></method>
+</method-group>
+</struct><struct-specialization name="insert_commit_data_impl"><template>
+    </template><specialization><template-arg>false</template-arg></specialization><data-member name="bucket_idx"><type>std::size_t</type></data-member>
+<method-group name="public member functions">
+<method name="get_hash" cv="const"><type>std::size_t</type></method>
+<method name="set_hash"><type>void</type><parameter name=""><paramtype>std::size_t</paramtype></parameter></method>
+</method-group>
+</struct-specialization><struct-specialization name="is_default_hook_tag"><template>
+    </template><specialization><template-arg>default_hashtable_hook_applier</template-arg></specialization><data-member name="value" specifiers="static"><type>const bool</type></data-member>
+</struct-specialization><struct name="make_hashtable"><template>
       <template-type-parameter name="T"/>
       <template-nontype-parameter name="Options"><type>class ...</type></template-nontype-parameter>
     </template><description><para>Helper metafunction to define a <computeroutput>hashtable</computeroutput> that yields to the same type when the same options (either explicitly or implicitly) are used. </para></description><typedef name="type"><type>implementation_defined</type></typedef>
+</struct><struct name="node_cast_adaptor"><template>
+      <template-type-parameter name="F"/>
+      <template-type-parameter name="SlistNodePtr"/>
+      <template-type-parameter name="NodePtr"/>
+    </template><typedef name="base_t"><type><emphasis>unspecified</emphasis></type></typedef>
+<typedef name="slist_node"><type><classname>pointer_traits</classname>&lt; SlistNodePtr &gt;::element_type</type></typedef>
+<typedef name="node"><type><classname>pointer_traits</classname>&lt; NodePtr &gt;::element_type</type></typedef>
+<method-group name="public member functions">
+<method name="operator()"><type>base_t::node_ptr</type><parameter name="to_clone"><paramtype>const slist_node &amp;</paramtype></parameter></method>
+<method name="operator()"><type>void</type><parameter name="to_clone"><paramtype>SlistNodePtr</paramtype></parameter></method>
+</method-group>
+<constructor><template>
+          <template-type-parameter name="ConvertibleToF"/>
+          <template-type-parameter name="RealValuTraits"/>
+        </template><parameter name="c2f"><paramtype>const ConvertibleToF &amp;</paramtype></parameter><parameter name="traits"><paramtype>const RealValuTraits *</paramtype></parameter></constructor>
+</struct><struct name="node_functions"><template>
+      <template-type-parameter name="NodeTraits"/>
+    </template><method-group name="public static functions">
+<method name="store_hash" specifiers="static"><type>void</type><parameter name="p"><paramtype>typename NodeTraits::node_ptr</paramtype></parameter><parameter name="h"><paramtype>std::size_t</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+<method name="store_hash" specifiers="static"><type>void</type><parameter name=""><paramtype>typename NodeTraits::node_ptr</paramtype></parameter><parameter name=""><paramtype>std::size_t</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></method>
+</method-group>
+</struct><struct name="optimize_multikey_is_true"><template>
+      <template-type-parameter name="T"/>
+    </template><struct name="two_or_three"><template>
+      <template-nontype-parameter name="Add"><type>bool</type></template-nontype-parameter>
+    </template><data-member name="_"><type><emphasis>unspecified</emphasis></type></data-member>
+</struct><data-member name="value" specifiers="static"><type>const bool</type></data-member>
+<method-group name="public static functions">
+<method name="test" specifiers="static"><type><emphasis>unspecified</emphasis></type><template>
+          <template-type-parameter name="U"/>
+        </template><parameter name=""><paramtype>...</paramtype></parameter></method>
+<method name="test" specifiers="static"><type>two_or_three&lt; U::optimize_multikey &gt;</type><template>
+          <template-type-parameter name="U"/>
+        </template><parameter name=""><paramtype>int</paramtype></parameter></method>
+</method-group>
+</struct><struct name="store_hash_is_true"><template>
+      <template-type-parameter name="T"/>
+    </template><struct name="two_or_three"><template>
+      <template-nontype-parameter name="Add"><type>bool</type></template-nontype-parameter>
+    </template><data-member name="_"><type><emphasis>unspecified</emphasis></type></data-member>
+</struct><data-member name="value" specifiers="static"><type>const bool</type></data-member>
+<method-group name="public static functions">
+<method name="test" specifiers="static"><type><emphasis>unspecified</emphasis></type><template>
+          <template-type-parameter name="U"/>
+        </template><parameter name=""><paramtype>...</paramtype></parameter></method>
+<method name="test" specifiers="static"><type>two_or_three&lt; U::store_hash &gt;</type><template>
+          <template-type-parameter name="U"/>
+        </template><parameter name=""><paramtype>int</paramtype></parameter></method>
+</method-group>
+</struct><struct name="unordered_bucket"><template>
+      <template-type-parameter name="ValueTraitsOrHookOption"/>
+    </template><inherit access="public">boost::intrusive::unordered_bucket_impl&lt; ValueTraitsOrHookOption::template pack&lt; empty &gt;::proto_value_traits &gt;</inherit><description><para>This metafunction will obtain the type of a bucket from the <classname alt="boost::intrusive::value_traits">value_traits</classname> or hook option to be used with a hash container. </para></description></struct><struct name="unordered_bucket_impl"><template>
+      <template-type-parameter name="SupposedValueTraits"/>
+    </template><typedef name="node_traits"><type><emphasis>unspecified</emphasis></type></typedef>
+<typedef name="reduced_node_traits"><type>reduced_slist_node_traits&lt; node_traits &gt;::type</type></typedef>
+<typedef name="type"><type>bucket_impl&lt; reduced_node_traits &gt;</type></typedef>
+<typedef name="pointer"><type><classname>pointer_traits</classname>&lt; typename reduced_node_traits::node_ptr &gt;::template rebind_pointer&lt; type &gt;::type</type></typedef>
+</struct><struct name="unordered_bucket_ptr"><template>
+      <template-type-parameter name="ValueTraitsOrHookOption"/>
+    </template><inherit access="public">boost::intrusive::unordered_bucket_ptr_impl&lt; ValueTraitsOrHookOption::template pack&lt; empty &gt;::proto_value_traits &gt;</inherit><description><para>This metafunction will obtain the type of a bucket pointer from the <classname alt="boost::intrusive::value_traits">value_traits</classname> or hook option to be used with a hash container. </para></description></struct><struct name="unordered_bucket_ptr_impl"><template>
+      <template-type-parameter name="SupposedValueTraits"/>
+    </template><typedef name="type"><type>unordered_bucket_impl&lt; SupposedValueTraits &gt;::pointer</type></typedef>
+</struct><struct name="unordered_default_bucket_traits"><template>
+      <template-type-parameter name="ValueTraitsOrHookOption"/>
+    </template><description><para>This metafunction will obtain the type of the default bucket traits (when the user does not specify the bucket_traits&lt;&gt; option) from the <classname alt="boost::intrusive::value_traits">value_traits</classname> or hook option to be used with a hash container. </para></description><typedef name="supposed_value_traits"><type>ValueTraitsOrHookOption::template pack&lt; empty &gt;::proto_value_traits</type></typedef>
+<typedef name="type"><type>bucket_traits_impl&lt; typename unordered_bucket_ptr_impl&lt; supposed_value_traits &gt;::type, std::size_t &gt;</type></typedef>
 </struct>
 
 
@@ -2521,6 +3222,32 @@ header------------------------------&gt;|         |
 
 
 
+<function name="priv_algo_find"><type>InputIt</type><template>
+          <template-type-parameter name="InputIt"/>
+          <template-type-parameter name="T"/>
+        </template><parameter name="first"><paramtype>InputIt</paramtype></parameter><parameter name="last"><paramtype>InputIt</paramtype></parameter><parameter name="value"><paramtype>const T &amp;</paramtype></parameter></function>
+<function name="priv_algo_count"><type>boost::intrusive::iterator_traits&lt; InputIt &gt;::difference_type</type><template>
+          <template-type-parameter name="InputIt"/>
+          <template-type-parameter name="T"/>
+        </template><parameter name="first"><paramtype>InputIt</paramtype></parameter><parameter name="last"><paramtype>InputIt</paramtype></parameter><parameter name="value"><paramtype>const T &amp;</paramtype></parameter></function>
+<function name="priv_algo_is_permutation"><type>bool</type><template>
+          <template-type-parameter name="ForwardIterator1"/>
+          <template-type-parameter name="ForwardIterator2"/>
+        </template><parameter name="first1"><paramtype>ForwardIterator1</paramtype></parameter><parameter name="last1"><paramtype>ForwardIterator1</paramtype></parameter><parameter name="first2"><paramtype>ForwardIterator2</paramtype></parameter></function>
+<function name="dcast_bucket_ptr"><type><classname>pointer_traits</classname>&lt; SlistNodePtr &gt;::template rebind_pointer&lt; Node &gt;::type</type><template>
+          <template-type-parameter name="Node"/>
+          <template-type-parameter name="SlistNodePtr"/>
+        </template><parameter name="p"><paramtype>const SlistNodePtr &amp;</paramtype></parameter></function>
+<function name="hash_to_bucket"><type>std::size_t</type><parameter name="hash_value"><paramtype>std::size_t</paramtype></parameter><parameter name="bucket_cnt"><paramtype>std::size_t</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></function>
+<function name="hash_to_bucket"><type>std::size_t</type><parameter name="hash_value"><paramtype>std::size_t</paramtype></parameter><parameter name="bucket_cnt"><paramtype>std::size_t</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></function>
+<function name="hash_to_bucket_split"><type>std::size_t</type><template>
+          <template-nontype-parameter name="Power2Buckets"><type>bool</type></template-nontype-parameter>
+          <template-nontype-parameter name="Incremental"><type>bool</type></template-nontype-parameter>
+        </template><parameter name="hash_value"><paramtype>std::size_t</paramtype></parameter><parameter name="bucket_cnt"><paramtype>std::size_t</paramtype></parameter><parameter name="split"><paramtype>std::size_t</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter><purpose><classname alt="boost::intrusive::fastmod_buckets">fastmod_buckets</classname> </purpose></function>
+<function name="hash_to_bucket_split"><type>std::size_t</type><template>
+          <template-nontype-parameter name="Power2Buckets"><type>bool</type></template-nontype-parameter>
+          <template-nontype-parameter name="Incremental"><type>bool</type></template-nontype-parameter>
+        </template><parameter name="hash_value"><paramtype>std::size_t</paramtype></parameter><parameter name="bucket_cnt"><paramtype>std::size_t</paramtype></parameter><parameter name="split"><paramtype>std::size_t</paramtype></parameter><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter></function>
 
 
 
@@ -2592,14 +3319,30 @@ header------------------------------&gt;|         |
 <method name="link_after" cv="noexcept" specifiers="static"><type>void</type><parameter name="prev_node"><paramtype>node_ptr</paramtype></parameter><parameter name="this_node"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: prev_node must be a node of a linear list.</para><para><emphasis role="bold">Effects</emphasis>: Links this_node after prev_node in the linear list.</para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="transfer_after" cv="noexcept" specifiers="static"><type>void</type><parameter name="p"><paramtype>node_ptr</paramtype></parameter><parameter name="b"><paramtype>node_ptr</paramtype></parameter><parameter name="e"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: b and e must be nodes of the same linear list or an empty range. and p must be a node of a different linear list.</para><para><emphasis role="bold">Effects</emphasis>: Removes the nodes from (b, e] range from their linear list and inserts them after p in p's linear list.</para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="init_header" cv="noexcept" specifiers="static"><type>void</type><parameter name="this_node"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Constructs an empty list, making this_node the only node of the circular list: <computeroutput>NodeTraits::get_next(this_node) == this_node</computeroutput>.</para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
+<method name="end_node" cv="noexcept" specifiers="static"><type>node_ptr</type><parameter name=""><paramtype>const_node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: 'p' is the first node of a list.</para><para><emphasis role="bold">Effects</emphasis>: Returns a pointer to a node that represents the "end" (one past end) node</para><para><emphasis role="bold">Complexity</emphasis>: Constant time.</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
+<method name="is_empty" cv="noexcept" specifiers="static"><type>bool</type><parameter name="this_node"><paramtype>const_node_ptr</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Returns true if this_node_points to an empty list.</para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
+<method name="is_sentinel" cv="noexcept" specifiers="static"><type>bool</type><parameter name="this_node"><paramtype>const_node_ptr</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Returns true if this_node points to a sentinel node.</para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
+<method name="set_sentinel" cv="noexcept" specifiers="static"><type>void</type><parameter name="this_node"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Marks this node as a "sentinel" node, a special state that is different from "empty", that can be used to mark a special state of the list</para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="get_previous_node" cv="noexcept" specifiers="static"><type>node_ptr</type><parameter name="prev_init_node"><paramtype>node_ptr</paramtype></parameter><parameter name="this_node"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: this_node and prev_init_node must be in the same linear list.</para><para><emphasis role="bold">Effects</emphasis>: Returns the previous node of this_node in the linear list starting. the search from prev_init_node. The first node checked for equality is NodeTraits::get_next(prev_init_node).</para><para><emphasis role="bold">Complexity</emphasis>: Linear to the number of elements between prev_init_node and this_node.</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="count" cv="noexcept" specifiers="static"><type>std::size_t</type><parameter name="this_node"><paramtype>const_node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: this_node must be in a linear list or be an empty linear list.</para><para><emphasis role="bold">Effects</emphasis>: Returns the number of nodes in a linear list. If the linear list is empty, returns 1.</para><para><emphasis role="bold">Complexity</emphasis>: Linear</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="swap_trailing_nodes" cv="noexcept" specifiers="static"><type>void</type><parameter name="this_node"><paramtype>node_ptr</paramtype></parameter><parameter name="other_node"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: this_node and other_node must be nodes inserted in linear lists or be empty linear lists.</para><para><emphasis role="bold">Effects</emphasis>: Moves all the nodes previously chained after this_node after other_node and vice-versa.</para><para><emphasis role="bold">Complexity</emphasis>: Constant</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="reverse" cv="noexcept" specifiers="static"><type>node_ptr</type><parameter name="p"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Reverses the order of elements in the list.</para><para><emphasis role="bold">Returns</emphasis>: The new first node of the list.</para><para><emphasis role="bold">Throws</emphasis>: Nothing.</para><para><emphasis role="bold">Complexity</emphasis>: This function is linear to the contained elements. </para></description></method>
 <method name="move_first_n_backwards" cv="noexcept" specifiers="static"><type>node_pair</type><parameter name="p"><paramtype>node_ptr</paramtype></parameter><parameter name="n"><paramtype>std::size_t</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Moves the first n nodes starting at p to the end of the list.</para><para><emphasis role="bold">Returns</emphasis>: A pair containing the new first and last node of the list or if there has been any movement, a null pair if n leads to no movement.</para><para><emphasis role="bold">Throws</emphasis>: Nothing.</para><para><emphasis role="bold">Complexity</emphasis>: Linear to the number of elements plus the number moved positions. </para></description></method>
 <method name="move_first_n_forward" cv="noexcept" specifiers="static"><type>node_pair</type><parameter name="p"><paramtype>node_ptr</paramtype></parameter><parameter name="n"><paramtype>std::size_t</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Moves the first n nodes starting at p to the beginning of the list.</para><para><emphasis role="bold">Returns</emphasis>: A pair containing the new first and last node of the list or if there has been any movement, a null pair if n leads to no movement.</para><para><emphasis role="bold">Throws</emphasis>: Nothing.</para><para><emphasis role="bold">Complexity</emphasis>: Linear to the number of elements plus the number moved positions. </para></description></method>
+<method name="transfer_after" cv="noexcept" specifiers="static"><type>void</type><parameter name="p"><paramtype>node_ptr</paramtype></parameter><parameter name="other"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: other must be a list and p must be a node of a different linear list.</para><para><emphasis role="bold">Effects</emphasis>: Transfers all nodes from other after p in p's linear list.</para><para><emphasis role="bold">Complexity</emphasis>: Linear</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
+<method name="detach_and_dispose" cv="noexcept" specifiers="static"><type>std::size_t</type><template>
+          <template-type-parameter name="Disposer"/>
+        </template><parameter name="p"><paramtype>node_ptr</paramtype></parameter><parameter name="disposer"><paramtype>Disposer</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: "disposer" must be an object function taking a node_ptr parameter and shouldn't throw.</para><para><emphasis role="bold">Effects</emphasis>: Unlinks all nodes reachable from p (but not p) and calls <computeroutput>void disposer::operator()(node_ptr)</computeroutput> for every node of the list where p is linked.</para><para><emphasis role="bold">Returns</emphasis>: The number of disposed nodes</para><para><emphasis role="bold">Complexity</emphasis>: Linear to the number of element of the list.</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 </method-group>
 </class>
+
+
+
+
+
+
+
+
 
 
 
@@ -2658,6 +3401,14 @@ header------------------------------&gt;|         |
 <namespace name="boost">
 <namespace name="intrusive">
 <enum name="link_mode_type"><enumvalue name="normal_link"><description><para>If this linking policy is specified in a <classname alt="boost::intrusive::value_traits">value_traits</classname> class as the <classname alt="boost::intrusive::link_mode">link_mode</classname>, containers configured with such <classname alt="boost::intrusive::value_traits">value_traits</classname> won't set the hooks of the erased values to a default state. Containers also won't check that the hooks of the new values are default initialized. </para></description></enumvalue><enumvalue name="safe_link"><description><para>If this linking policy is specified in a <classname alt="boost::intrusive::value_traits">value_traits</classname> class as the <classname alt="boost::intrusive::link_mode">link_mode</classname>, containers configured with such <classname alt="boost::intrusive::value_traits">value_traits</classname> will set the hooks of the erased values to a default state. Containers also will check that the hooks of the new values are default initialized. </para></description></enumvalue><enumvalue name="auto_unlink"><description><para>Same as "safe_link" but the user type is an auto-unlink type, so the containers with constant-time size features won't be compatible with <classname alt="boost::intrusive::value_traits">value_traits</classname> configured with this policy. Containers also know that the a value can be silently erased from the container without using any function provided by the containers. </para></description></enumvalue><description><para>This enumeration defines the type of <classname alt="boost::intrusive::value_traits">value_traits</classname> that can be defined for Boost.Intrusive containers </para></description></enum>
+
+
+
+
+
+
+
+
 
 
 
@@ -2913,6 +3664,14 @@ header------------------------------&gt;|         |
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -2948,6 +3707,14 @@ header------------------------------&gt;|         |
       <template-nontype-parameter name="Options"><type>class ...</type></template-nontype-parameter>
     </template><description><para>Helper metafunction to define a <computeroutput><computeroutput><classname alt="boost::intrusive::list_member_hook">list_member_hook</classname></computeroutput> that</computeroutput> yields to the same type when the same options (either explicitly or implicitly) are used. </para></description><typedef name="type"><type>implementation_defined</type></typedef>
 </struct>
+
+
+
+
+
+
+
+
 
 
 
@@ -3079,6 +3846,14 @@ header------------------------------&gt;|         |
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -3101,7 +3876,9 @@ header------------------------------&gt;|         |
       <template-nontype-parameter name="Enabled"><type>bool</type></template-nontype-parameter>
     </template><description><para>This option setter specifies if the intrusive container stores its size as a member to obtain constant-time size() member. </para></description></struct><struct name="equal"><template>
       <template-type-parameter name="Equal"/>
-    </template><description><para>This option setter specifies the equality functor for the value type </para></description></struct><struct name="floating_point"><template>
+    </template><description><para>This option setter specifies the equality functor for the value type </para></description></struct><struct name="fastmod_buckets"><template>
+      <template-nontype-parameter name="Enabled"><type>bool</type></template-nontype-parameter>
+    </template><description><para>WARNING: this option is EXPERIMENTAL, don't use it in production code This option setter specifies if the length of the bucket array provided by the user will always be a value specified by the suggested_upper|lower_bucket_count call. This allows the use of some precomputed values and speeds hash to bucket index operations, leading to better performance. In debug mode, the provided bucket array length will be checked with assertions. </para></description></struct><struct name="floating_point"><template>
       <template-nontype-parameter name="Enabled"><type>bool</type></template-nontype-parameter>
     </template><description><para>This option setter for scapegoat containers specifies if the intrusive scapegoat container should use a non-variable alpha value that does not need floating-point operations.</para><para>If activated, the fixed alpha value is 1/sqrt(2). This option also saves some space in the container since the alpha value and some additional data does not need to be stored in the container.</para><para>If the user only needs an alpha value near 1/sqrt(2), this option also improves performance since avoids logarithm and division operations when rebalancing the tree. </para></description></struct><struct name="function_hook"><template>
       <template-type-parameter name="Functor"/>
@@ -3115,7 +3892,9 @@ header------------------------------&gt;|         |
       <template-type-parameter name="KeyOfValue"/>
     </template><description><para>This option setter specifies a function object that specifies the type of the key of an associative container and an operator to obtain it from a value type.</para><para>This function object must the define a <computeroutput>type</computeroutput> member typedef and a member with signature <computeroutput>type [const&amp;] operator()(const value_type &amp;) const</computeroutput> that will return the key from a value_type of an associative container </para></description></struct><struct name="linear"><template>
       <template-nontype-parameter name="Enabled"><type>bool</type></template-nontype-parameter>
-    </template><description><para>This option setter specifies if the slist container should use a linear implementation instead of a circular one. </para></description></struct><struct name="link_mode"><template>
+    </template><description><para>This option setter specifies if the slist container should use a linear implementation instead of a circular one. </para></description></struct><struct name="linear_buckets"><template>
+      <template-nontype-parameter name="Enabled"><type>bool</type></template-nontype-parameter>
+    </template><description><para>This option setter specifies if the buckets (which form a singly linked lists of nodes) are linear (true) or circular (false, default value). Linear buckets can improve performance in some cases, but the container loses some features like obtaining an iterator from a value. </para></description></struct><struct name="link_mode"><template>
       <template-nontype-parameter name="LinkType"><type>link_mode_type</type></template-nontype-parameter>
     </template><description><para>This option setter specifies the link mode (normal_link, safe_link or auto_unlink) </para></description></struct><struct name="member_hook"><template>
       <template-type-parameter name="Parent"/>
@@ -3127,7 +3906,7 @@ header------------------------------&gt;|         |
       <template-nontype-parameter name="Enabled"><type>bool</type></template-nontype-parameter>
     </template><description><para>This option setter specifies if the hook should be optimized for size instead of for speed. </para></description></struct><struct name="power_2_buckets"><template>
       <template-nontype-parameter name="Enabled"><type>bool</type></template-nontype-parameter>
-    </template><description><para>This option setter specifies if the bucket array will be always power of two. This allows using masks instead of the default modulo operation to determine the bucket number from the hash value, leading to better performance. In debug mode, if power of two buckets mode is activated, the bucket length will be checked with assertions. </para></description></struct><struct name="priority"><template>
+    </template><description><para>This option setter specifies if the length of the bucket array provided by the user will always be power of two. This allows using masks instead of the default modulo operation to determine the bucket number from the hash value, leading to better performance. In debug mode, the provided bucket array length will be checked with assertions. </para></description></struct><struct name="priority"><template>
       <template-type-parameter name="Priority"/>
     </template><description><para>This option setter specifies the priority comparison functor for the value type </para></description></struct><struct name="priority_of_value"><template>
       <template-type-parameter name="PrioOfValue"/>
@@ -3142,6 +3921,14 @@ header------------------------------&gt;|         |
     </template><description><para>This option setter specifies the relationship between the type to be managed by the container (the value type) and the node to be used in the node algorithms. It also specifies the linking policy. </para></description></struct><struct name="void_pointer"><template>
       <template-type-parameter name="VoidPointer"/>
     </template><description><para>This option setter specifies the type of a void pointer. This will instruct the hook to use this type of pointer instead of the default one </para></description></struct>
+
+
+
+
+
+
+
+
 
 
 
@@ -3227,6 +4014,14 @@ pack_options&lt; default_options, my_pointer&lt;void*&gt;, incremental&lt;true&g
 };
 </programlisting></para><para>If an option is specified in the default options argument and later redefined as an option, the last definition will prevail. </para></description><typedef name="type"><type>unspecified_type</type></typedef>
 </struct>
+
+
+
+
+
+
+
+
 
 
 
@@ -3374,6 +4169,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -3402,6 +4205,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 <method name="set_bits" cv="noexcept" specifiers="static"><type>void</type><parameter name="n"><paramtype>pointer &amp;</paramtype></parameter><parameter name="c"><paramtype>std::size_t</paramtype></parameter></method>
 </method-group>
 </struct-specialization>
+
+
+
+
+
+
+
+
 
 
 
@@ -3581,6 +4392,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -3681,6 +4500,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -3703,6 +4530,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
         </template><parameter name="t"><paramtype>const T &amp;</paramtype></parameter><parameter name="u"><paramtype>const U &amp;</paramtype></parameter></method>
 </method-group>
 </struct-specialization>
+
+
+
+
+
+
+
+
 
 
 
@@ -4010,6 +4845,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -4103,6 +4946,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 <method name="is_header" cv="noexcept" specifiers="static"><type>bool</type><parameter name="p"><paramtype>const_node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: p is a node of a tree.</para><para><emphasis role="bold">Effects</emphasis>: Returns true if p is the header of the tree.</para><para><emphasis role="bold">Complexity</emphasis>: Constant.</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 </method-group>
 </class>
+
+
+
+
+
+
+
+
 
 
 
@@ -4605,6 +5456,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -4640,6 +5499,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 <copy-assignment cv="noexcept"><type><classname>set_member_hook</classname> &amp;</type><parameter name=""><paramtype>const <classname>set_member_hook</classname> &amp;</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Empty function. The argument is ignored.</para><para><emphasis role="bold">Throws</emphasis>: Nothing.</para><para><emphasis role="bold">Rationale</emphasis>: Providing an assignment operator makes classes using the hook STL-compliant without forcing the user to do some additional work. <computeroutput>swap</computeroutput> can be used to emulate move-semantics. </para></description></copy-assignment>
 <destructor><description><para><emphasis role="bold">Effects</emphasis>: If <classname alt="boost::intrusive::link_mode">link_mode</classname> is <computeroutput>normal_link</computeroutput>, the destructor does nothing (ie. no code is generated). If <classname alt="boost::intrusive::link_mode">link_mode</classname> is <computeroutput>safe_link</computeroutput> and the object is stored in a set an assertion is raised. If <classname alt="boost::intrusive::link_mode">link_mode</classname> is <computeroutput>auto_unlink</computeroutput> and <computeroutput>is_linked()</computeroutput> is true, the node is unlinked.</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></destructor>
 </class>
+
+
+
+
+
+
+
+
 
 
 
@@ -5150,6 +6017,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -5410,6 +6285,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -5519,6 +6402,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 <method name="rebalance" cv="noexcept" specifiers="static"><type>void</type><parameter name="header"><paramtype>node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: p is a node of a tree.</para><para><emphasis role="bold">Effects</emphasis>: Returns true if p is the header of the tree.</para><para><emphasis role="bold">Complexity</emphasis>: Constant.</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 </method-group>
 </class>
+
+
+
+
+
+
+
+
 
 
 
@@ -5806,6 +6697,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -5841,6 +6740,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 <copy-assignment><type><classname>slist_member_hook</classname> &amp;</type><parameter name=""><paramtype>const <classname>slist_member_hook</classname> &amp;</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Empty function. The argument is ignored.</para><para><emphasis role="bold">Throws</emphasis>: Nothing.</para><para><emphasis role="bold">Rationale</emphasis>: Providing an assignment operator makes classes using the hook STL-compliant without forcing the user to do some additional work. <computeroutput>swap</computeroutput> can be used to emulate move-semantics. </para></description></copy-assignment>
 <destructor><description><para><emphasis role="bold">Effects</emphasis>: If <classname alt="boost::intrusive::link_mode">link_mode</classname> is <computeroutput>normal_link</computeroutput>, the destructor does nothing (ie. no code is generated). If <classname alt="boost::intrusive::link_mode">link_mode</classname> is <computeroutput>safe_link</computeroutput> and the object is stored in an slist an assertion is raised. If <classname alt="boost::intrusive::link_mode">link_mode</classname> is <computeroutput>auto_unlink</computeroutput> and <computeroutput>is_linked()</computeroutput> is true, the node is unlinked.</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></destructor>
 </class>
+
+
+
+
+
+
+
+
 
 
 
@@ -6364,6 +7271,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -6629,6 +7544,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -6760,6 +7683,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
         </template><parameter name="header"><paramtype>node_ptr</paramtype></parameter><parameter name="key"><paramtype>const KeyType &amp;</paramtype></parameter><parameter name="comp"><paramtype>KeyNodePtrCompare</paramtype></parameter><parameter name="pfound"><paramtype>bool *</paramtype><default>0</default></parameter></method>
 </method-group>
 </class>
+
+
+
+
+
+
+
+
 
 
 
@@ -7092,6 +8023,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -7202,6 +8141,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 <method name="is_header" cv="noexcept" specifiers="static"><type>bool</type><parameter name="p"><paramtype>const_node_ptr</paramtype></parameter><description><para><emphasis role="bold">Requires</emphasis>: p is a node of a tree.</para><para><emphasis role="bold">Effects</emphasis>: Returns true if p is the header of the tree.</para><para><emphasis role="bold">Complexity</emphasis>: Constant.</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 </method-group>
 </class>
+
+
+
+
+
+
+
+
 
 
 
@@ -7702,6 +8649,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -7776,6 +8731,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -7793,7 +8756,7 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 </struct><class name="unordered_multiset"><template>
       <template-type-parameter name="T"/>
       <template-nontype-parameter name="Options"><type>class ...</type></template-nontype-parameter>
-    </template><inherit access="public">boost::intrusive::hashtable&lt; ValueTraits, VoidOrKeyOfValue, VoidOrKeyHash, VoidOrKeyEqual, BucketTraits, SizeType, BoolFlags &gt;</inherit><description><para>The class template <classname alt="boost::intrusive::unordered_multiset">unordered_multiset</classname> is an intrusive container, that mimics most of the interface of std::tr1::unordered_multiset as described in the C++ TR1.</para><para><classname alt="boost::intrusive::unordered_multiset">unordered_multiset</classname> is a semi-intrusive container: each object to be stored in the container must contain a proper hook, but the container also needs additional auxiliary memory to work: <classname alt="boost::intrusive::unordered_multiset">unordered_multiset</classname> needs a pointer to an array of type <computeroutput>bucket_type</computeroutput> to be passed in the constructor. This bucket array must have at least the same lifetime as the container. This makes the use of <classname alt="boost::intrusive::unordered_multiset">unordered_multiset</classname> more complicated than purely intrusive containers. <computeroutput>bucket_type</computeroutput> is default-constructible, copyable and assignable</para><para>The template parameter <computeroutput>T</computeroutput> is the type to be managed by the container. The user can specify additional options and if no options are provided default options are used.</para><para>The container supports the following options: <computeroutput>base_hook&lt;&gt;/member_hook&lt;&gt;/value_traits&lt;&gt;</computeroutput>, <computeroutput>constant_time_size&lt;&gt;</computeroutput>, <computeroutput>size_type&lt;&gt;</computeroutput>, <computeroutput>hash&lt;&gt;</computeroutput> and <computeroutput>equal&lt;&gt;</computeroutput> <computeroutput>bucket_traits&lt;&gt;</computeroutput>, <computeroutput>power_2_buckets&lt;&gt;</computeroutput> and <computeroutput>cache_begin&lt;&gt;</computeroutput>.</para><para><classname alt="boost::intrusive::unordered_multiset">unordered_multiset</classname> only provides forward iterators but it provides 4 iterator types: iterator and const_iterator to navigate through the whole container and local_iterator and const_local_iterator to navigate through the values stored in a single bucket. Local iterators are faster and smaller.</para><para>It's not recommended to use non constant-time size unordered_multisets because several key functions, like "empty()", become non-constant time functions. Non constant-time size unordered_multisets are mainly provided to support auto-unlink hooks.</para><para><classname alt="boost::intrusive::unordered_multiset">unordered_multiset</classname>, unlike std::unordered_set, does not make automatic rehashings nor offers functions related to a load factor. Rehashing can be explicitly requested and the user must provide a new bucket array that will be used from that moment.</para><para>Since no automatic rehashing is done, iterators are never invalidated when inserting or erasing elements. Iterators are only invalidated when rehasing. </para></description><typedef name="value_type"><type>implementation_defined::value_type</type></typedef>
+    </template><description><para>The class template <classname alt="boost::intrusive::unordered_multiset">unordered_multiset</classname> is an intrusive container, that mimics most of the interface of std::tr1::unordered_multiset as described in the C++ TR1.</para><para><classname alt="boost::intrusive::unordered_multiset">unordered_multiset</classname> is a semi-intrusive container: each object to be stored in the container must contain a proper hook, but the container also needs additional auxiliary memory to work: <classname alt="boost::intrusive::unordered_multiset">unordered_multiset</classname> needs a pointer to an array of type <computeroutput>bucket_type</computeroutput> to be passed in the constructor. This bucket array must have at least the same lifetime as the container. This makes the use of <classname alt="boost::intrusive::unordered_multiset">unordered_multiset</classname> more complicated than purely intrusive containers. <computeroutput>bucket_type</computeroutput> is default-constructible, copyable and assignable</para><para>The template parameter <computeroutput>T</computeroutput> is the type to be managed by the container. The user can specify additional options and if no options are provided default options are used.</para><para>The container supports the following options: <computeroutput>base_hook&lt;&gt;/member_hook&lt;&gt;/value_traits&lt;&gt;</computeroutput>, <computeroutput>constant_time_size&lt;&gt;</computeroutput>, <computeroutput>size_type&lt;&gt;</computeroutput>, <computeroutput>hash&lt;&gt;</computeroutput> and <computeroutput>equal&lt;&gt;</computeroutput> <computeroutput>bucket_traits&lt;&gt;</computeroutput>, <computeroutput>power_2_buckets&lt;&gt;</computeroutput> and <computeroutput>cache_begin&lt;&gt;</computeroutput>.</para><para><classname alt="boost::intrusive::unordered_multiset">unordered_multiset</classname> only provides forward iterators but it provides 4 iterator types: iterator and const_iterator to navigate through the whole container and local_iterator and const_local_iterator to navigate through the values stored in a single bucket. Local iterators are faster and smaller.</para><para>It's not recommended to use non constant-time size unordered_multisets because several key functions, like "empty()", become non-constant time functions. Non constant-time size unordered_multisets are mainly provided to support auto-unlink hooks.</para><para><classname alt="boost::intrusive::unordered_multiset">unordered_multiset</classname>, unlike std::unordered_set, does not make automatic rehashings nor offers functions related to a load factor. Rehashing can be explicitly requested and the user must provide a new bucket array that will be used from that moment.</para><para>Since no automatic rehashing is done, iterators are never invalidated when inserting or erasing elements. Iterators are only invalidated when rehasing. </para></description><typedef name="value_type"><type>implementation_defined::value_type</type></typedef>
 <typedef name="key_type"><type>implementation_defined::key_type</type></typedef>
 <typedef name="value_traits"><type>implementation_defined::value_traits</type></typedef>
 <typedef name="bucket_traits"><type>implementation_defined::bucket_traits</type></typedef>
@@ -7816,7 +8779,6 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 <typedef name="node"><type>implementation_defined::node</type></typedef>
 <typedef name="node_ptr"><type>implementation_defined::node_ptr</type></typedef>
 <typedef name="const_node_ptr"><type>implementation_defined::const_node_ptr</type></typedef>
-<typedef name="node_algorithms"><type>implementation_defined::node_algorithms</type></typedef>
 <method-group name="public member functions">
 <method name="begin" cv="noexcept"><type>iterator</type><description><para><emphasis role="bold">Effects</emphasis>: Returns an iterator pointing to the beginning of the <classname alt="boost::intrusive::unordered_set">unordered_set</classname>.</para><para><emphasis role="bold">Complexity</emphasis>: Amortized constant time. Worst case (empty <classname alt="boost::intrusive::unordered_set">unordered_set</classname>): O(this-&gt;bucket_count())</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="begin" cv="const noexcept"><type>const_iterator</type><description><para><emphasis role="bold">Effects</emphasis>: Returns a const_iterator pointing to the beginning of the <classname alt="boost::intrusive::unordered_set">unordered_set</classname>.</para><para><emphasis role="bold">Complexity</emphasis>: Amortized constant time. Worst case (empty <classname alt="boost::intrusive::unordered_set">unordered_set</classname>): O(this-&gt;bucket_count())</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
@@ -7938,7 +8900,7 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 </class><class name="unordered_set"><template>
       <template-type-parameter name="T"/>
       <template-nontype-parameter name="Options"><type>class ...</type></template-nontype-parameter>
-    </template><inherit access="public">boost::intrusive::hashtable&lt; ValueTraits, VoidOrKeyOfValue, VoidOrKeyHash, VoidOrKeyEqual, BucketTraits, SizeType, BoolFlags|hash_bool_flags::unique_keys_pos &gt;</inherit><description><para>The class template <classname alt="boost::intrusive::unordered_set">unordered_set</classname> is an intrusive container, that mimics most of the interface of std::tr1::unordered_set as described in the C++ TR1.</para><para><classname alt="boost::intrusive::unordered_set">unordered_set</classname> is a semi-intrusive container: each object to be stored in the container must contain a proper hook, but the container also needs additional auxiliary memory to work: <classname alt="boost::intrusive::unordered_set">unordered_set</classname> needs a pointer to an array of type <computeroutput>bucket_type</computeroutput> to be passed in the constructor. This bucket array must have at least the same lifetime as the container. This makes the use of <classname alt="boost::intrusive::unordered_set">unordered_set</classname> more complicated than purely intrusive containers. <computeroutput>bucket_type</computeroutput> is default-constructible, copyable and assignable</para><para>The template parameter <computeroutput>T</computeroutput> is the type to be managed by the container. The user can specify additional options and if no options are provided default options are used.</para><para>The container supports the following options: <computeroutput>base_hook&lt;&gt;/member_hook&lt;&gt;/value_traits&lt;&gt;</computeroutput>, <computeroutput>constant_time_size&lt;&gt;</computeroutput>, <computeroutput>size_type&lt;&gt;</computeroutput>, <computeroutput>hash&lt;&gt;</computeroutput> and <computeroutput>equal&lt;&gt;</computeroutput> <computeroutput>bucket_traits&lt;&gt;</computeroutput>, <computeroutput>power_2_buckets&lt;&gt;</computeroutput> and <computeroutput>cache_begin&lt;&gt;</computeroutput>.</para><para><classname alt="boost::intrusive::unordered_set">unordered_set</classname> only provides forward iterators but it provides 4 iterator types: iterator and const_iterator to navigate through the whole container and local_iterator and const_local_iterator to navigate through the values stored in a single bucket. Local iterators are faster and smaller.</para><para>It's not recommended to use non constant-time size unordered_sets because several key functions, like "empty()", become non-constant time functions. Non constant-time size unordered_sets are mainly provided to support auto-unlink hooks.</para><para><classname alt="boost::intrusive::unordered_set">unordered_set</classname>, unlike std::unordered_set, does not make automatic rehashings nor offers functions related to a load factor. Rehashing can be explicitly requested and the user must provide a new bucket array that will be used from that moment.</para><para>Since no automatic rehashing is done, iterators are never invalidated when inserting or erasing elements. Iterators are only invalidated when rehasing. </para></description><typedef name="value_type"><type>implementation_defined::value_type</type></typedef>
+    </template><description><para>The class template <classname alt="boost::intrusive::unordered_set">unordered_set</classname> is an intrusive container, that mimics most of the interface of std::tr1::unordered_set as described in the C++ TR1.</para><para><classname alt="boost::intrusive::unordered_set">unordered_set</classname> is a semi-intrusive container: each object to be stored in the container must contain a proper hook, but the container also needs additional auxiliary memory to work: <classname alt="boost::intrusive::unordered_set">unordered_set</classname> needs a pointer to an array of type <computeroutput>bucket_type</computeroutput> to be passed in the constructor. This bucket array must have at least the same lifetime as the container. This makes the use of <classname alt="boost::intrusive::unordered_set">unordered_set</classname> more complicated than purely intrusive containers. <computeroutput>bucket_type</computeroutput> is default-constructible, copyable and assignable</para><para>The template parameter <computeroutput>T</computeroutput> is the type to be managed by the container. The user can specify additional options and if no options are provided default options are used.</para><para>The container supports the following options: <computeroutput>base_hook&lt;&gt;/member_hook&lt;&gt;/value_traits&lt;&gt;</computeroutput>, <computeroutput>constant_time_size&lt;&gt;</computeroutput>, <computeroutput>size_type&lt;&gt;</computeroutput>, <computeroutput>hash&lt;&gt;</computeroutput> and <computeroutput>equal&lt;&gt;</computeroutput> <computeroutput>bucket_traits&lt;&gt;</computeroutput>, <computeroutput>power_2_buckets&lt;&gt;</computeroutput> and <computeroutput>cache_begin&lt;&gt;</computeroutput>.</para><para><classname alt="boost::intrusive::unordered_set">unordered_set</classname> only provides forward iterators but it provides 4 iterator types: iterator and const_iterator to navigate through the whole container and local_iterator and const_local_iterator to navigate through the values stored in a single bucket. Local iterators are faster and smaller.</para><para>It's not recommended to use non constant-time size unordered_sets because several key functions, like "empty()", become non-constant time functions. Non constant-time size unordered_sets are mainly provided to support auto-unlink hooks.</para><para><classname alt="boost::intrusive::unordered_set">unordered_set</classname>, unlike std::unordered_set, does not make automatic rehashings nor offers functions related to a load factor. Rehashing can be explicitly requested and the user must provide a new bucket array that will be used from that moment.</para><para>Since no automatic rehashing is done, iterators are never invalidated when inserting or erasing elements. Iterators are only invalidated when rehasing. </para></description><typedef name="value_type"><type>implementation_defined::value_type</type></typedef>
 <typedef name="key_type"><type>implementation_defined::key_type</type></typedef>
 <typedef name="key_of_value"><type>implementation_defined::key_of_value</type></typedef>
 <typedef name="value_traits"><type>implementation_defined::value_traits</type></typedef>
@@ -7962,7 +8924,6 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 <typedef name="node"><type>implementation_defined::node</type></typedef>
 <typedef name="node_ptr"><type>implementation_defined::node_ptr</type></typedef>
 <typedef name="const_node_ptr"><type>implementation_defined::const_node_ptr</type></typedef>
-<typedef name="node_algorithms"><type>implementation_defined::node_algorithms</type></typedef>
 <method-group name="public member functions">
 <method name="begin" cv="noexcept"><type>iterator</type><description><para><emphasis role="bold">Effects</emphasis>: Returns an iterator pointing to the beginning of the <classname alt="boost::intrusive::unordered_set">unordered_set</classname>.</para><para><emphasis role="bold">Complexity</emphasis>: Amortized constant time. Worst case (empty <classname alt="boost::intrusive::unordered_set">unordered_set</classname>): O(this-&gt;bucket_count())</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
 <method name="begin" cv="const noexcept"><type>const_iterator</type><description><para><emphasis role="bold">Effects</emphasis>: Returns a const_iterator pointing to the beginning of the <classname alt="boost::intrusive::unordered_set">unordered_set</classname>.</para><para><emphasis role="bold">Complexity</emphasis>: Amortized constant time. Worst case (empty <classname alt="boost::intrusive::unordered_set">unordered_set</classname>): O(this-&gt;bucket_count())</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></method>
@@ -8140,6 +9101,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 
 
 
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </header>
@@ -8175,6 +9144,14 @@ BOOST_STATIC_ASSERT(( is_incremental == true ));
 <copy-assignment><type><classname>unordered_set_member_hook</classname> &amp;</type><parameter name=""><paramtype>const <classname>unordered_set_member_hook</classname> &amp;</paramtype></parameter><description><para><emphasis role="bold">Effects</emphasis>: Empty function. The argument is ignored.</para><para><emphasis role="bold">Throws</emphasis>: Nothing.</para><para><emphasis role="bold">Rationale</emphasis>: Providing an assignment operator makes classes using the hook STL-compliant without forcing the user to do some additional work. <computeroutput>swap</computeroutput> can be used to emulate move-semantics. </para></description></copy-assignment>
 <destructor><description><para><emphasis role="bold">Effects</emphasis>: If <classname alt="boost::intrusive::link_mode">link_mode</classname> is <computeroutput>normal_link</computeroutput>, the destructor does nothing (ie. no code is generated). If <classname alt="boost::intrusive::link_mode">link_mode</classname> is <computeroutput>safe_link</computeroutput> and the object is stored in an <classname alt="boost::intrusive::unordered_set">unordered_set</classname> an assertion is raised. If <classname alt="boost::intrusive::link_mode">link_mode</classname> is <computeroutput>auto_unlink</computeroutput> and <computeroutput>is_linked()</computeroutput> is true, the node is unlinked.</para><para><emphasis role="bold">Throws</emphasis>: Nothing. </para></description></destructor>
 </class>
+
+
+
+
+
+
+
+
 
 
 

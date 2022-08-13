@@ -17,21 +17,22 @@ namespace { namespace local
     //     Even though INT_MAX(32) = 2147483647, i.e. 10 digits (not to mention long int)
     //     we only test up to 9 digits as Spirit does not handle more than 9.
 
-    typedef std::array<my_string, 18> strings; //C1
-    ///////////////////////////////////////////////////////////////////////////
+    using strings = std::array<my_string, 18>; //C1
+
     // Generate a random number string with N digits
     std::string
     gen_int(int digits, bool negative)
     {
         std::string result;
 
-        if (negative)                       // Prepend a '-'
+        if (negative) // Prepend a '-'
             result += '-';
 
-        result += '1' + (std::rand() % 9);  // The first digit cannot be '0'
+        result += '1' + (std::rand() % 9); // The first digit cannot be '0'
 
-        for (int i = 1; i < digits; ++i)    // Generate the remaining digits
+        for (int i = 1; i < digits; ++i) // Generate the remaining digits
             result += '0' + (std::rand()%10);
+
         return result;
     }
 

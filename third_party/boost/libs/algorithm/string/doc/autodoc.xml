@@ -1966,16 +1966,17 @@ For N&gt;=0, at most N characters are extracted. For N&lt;0, size(Input)-|N| cha
 <namespace name="algorithm">
 <class name="find_iterator"><template>
       <template-type-parameter name="IteratorT"/>
-    </template><inherit access="public">iterator_facade&lt; find_iterator&lt; IteratorT &gt;, const iterator_range&lt; IteratorT &gt;, forward_traversal_tag &gt;</inherit><purpose><classname alt="boost::algorithm::find_iterator">find_iterator</classname> </purpose><description><para>Find iterator encapsulates a Finder and allows for incremental searching in a string. Each increment moves the iterator to the next match.</para><para>Find iterator is a readable forward traversal iterator.</para><para>Dereferencing the iterator yields an iterator_range delimiting the current match. </para></description><method-group name="public member functions">
+    </template><inherit access="public">iterator_facade&lt; find_iterator&lt; IteratorT &gt;, const iterator_range&lt; IteratorT &gt;, forward_traversal_tag &gt;</inherit><purpose><classname alt="boost::algorithm::find_iterator">find_iterator</classname> </purpose><description><para>Find iterator encapsulates a Finder and allows for incremental searching in a string. Each increment moves the iterator to the next match.</para><para>Find iterator is a readable forward traversal iterator.</para><para>Dereferencing the iterator yields an iterator_range delimiting the current match. </para></description><data-member name="End"><type>IteratorT</type></data-member>
+<data-member name="Finder"><type>IteratorT FinderT</type></data-member>
+<method-group name="public member functions">
+<method name="BOOST_DEFAULTED_FUNCTION"><type/><parameter name="operator"><paramtype><classname>find_iterator</classname> &amp;</paramtype><default>(const <classname alt="boost::algorithm::find_iterator">find_iterator</classname> &amp;Other)</default></parameter><parameter name=""><paramtype>{ if(this==&amp;Other) return *this;this-&gt;base_type::operator=(Other);m_Match=Other.m_Match;m_End=Other.m_End;return *this;}</paramtype></parameter><purpose>Copy assignment. </purpose><description><para>Assigns a copy of the find_iteratorConstructor</para><para>Construct new <classname alt="boost::algorithm::find_iterator">find_iterator</classname> for a given finder and a range. </para></description></method>
+<method name="m_Match"><type>IteratorT FinderT</type><parameter name=""><paramtype>Begin</paramtype></parameter><parameter name=""><paramtype>Begin</paramtype></parameter></method>
+<method name="m_End"><type>IteratorT FinderT</type><parameter name=""><paramtype>End</paramtype></parameter></method>
 <method name="eof" cv="const"><type>bool</type><purpose>Eof check. </purpose><description><para>Check the eof condition. Eof condition means that there is nothing more to be searched i.e. <classname alt="boost::algorithm::find_iterator">find_iterator</classname> is after the last match. </para></description></method>
 </method-group>
-<constructor><purpose>Default constructor. </purpose><description><para>Construct null iterator. All null iterators are equal.</para><para>
-</para></description><postconditions><para>eof()==true </para>
+<constructor><parameter name="Other"><paramtype>const <classname>find_iterator</classname> &amp;</paramtype></parameter><purpose>Default constructor. </purpose><description><para>Construct null iterator. All null iterators are equal.</para><para>
+Construct a copy of the <classname alt="boost::algorithm::find_iterator">find_iterator</classname> </para></description><postconditions><para>eof()==trueCopy constructor</para>
 </postconditions></constructor>
-<constructor><parameter name="Other"><paramtype>const <classname>find_iterator</classname> &amp;</paramtype></parameter><purpose>Copy constructor. </purpose><description><para>Construct a copy of the <classname alt="boost::algorithm::find_iterator">find_iterator</classname> </para></description></constructor>
-<constructor><template>
-          <template-type-parameter name="FinderT"/>
-        </template><parameter name="Begin"><paramtype>IteratorT</paramtype></parameter><parameter name="End"><paramtype>IteratorT</paramtype></parameter><parameter name="Finder"><paramtype>FinderT</paramtype></parameter><purpose>Constructor. </purpose><description><para>Construct new <classname alt="boost::algorithm::find_iterator">find_iterator</classname> for a given finder and a range. </para></description></constructor>
 <constructor><template>
           <template-type-parameter name="FinderT"/>
           <template-type-parameter name="RangeT"/>
@@ -1987,16 +1988,20 @@ For N&gt;=0, at most N characters are extracted. For N&lt;0, size(Input)-|N| cha
 </method-group>
 </class><class name="split_iterator"><template>
       <template-type-parameter name="IteratorT"/>
-    </template><inherit access="public">iterator_facade&lt; split_iterator&lt; IteratorT &gt;, const iterator_range&lt; IteratorT &gt;, forward_traversal_tag &gt;</inherit><purpose><classname alt="boost::algorithm::split_iterator">split_iterator</classname> </purpose><description><para>Split iterator encapsulates a Finder and allows for incremental searching in a string. Unlike the find iterator, split iterator iterates through gaps between matches.</para><para>Find iterator is a readable forward traversal iterator.</para><para>Dereferencing the iterator yields an iterator_range delimiting the current match. </para></description><method-group name="public member functions">
+    </template><inherit access="public">iterator_facade&lt; split_iterator&lt; IteratorT &gt;, const iterator_range&lt; IteratorT &gt;, forward_traversal_tag &gt;</inherit><purpose><classname alt="boost::algorithm::split_iterator">split_iterator</classname> </purpose><description><para>Split iterator encapsulates a Finder and allows for incremental searching in a string. Unlike the find iterator, split iterator iterates through gaps between matches.</para><para>Find iterator is a readable forward traversal iterator.</para><para>Dereferencing the iterator yields an iterator_range delimiting the current match. </para></description><data-member name="End"><type>IteratorT</type></data-member>
+<data-member name="Finder"><type>IteratorT FinderT</type></data-member>
+<method-group name="public member functions">
+<method name="BOOST_DEFAULTED_FUNCTION"><type/><parameter name="operator"><paramtype><classname>split_iterator</classname> &amp;</paramtype><default>(const <classname alt="boost::algorithm::split_iterator">split_iterator</classname> &amp;Other)</default></parameter><parameter name=""><paramtype>{ if(this==&amp;Other) return *this;this-&gt;base_type::operator=(Other);m_Match=Other.m_Match;m_Next=Other.m_Next;m_End=Other.m_End;m_bEof=Other.m_bEof;return *this;}</paramtype></parameter><purpose>Assignment operator. </purpose><description><para>Assigns a copy of the split_iteratorConstructor</para><para>Construct new <classname alt="boost::algorithm::split_iterator">split_iterator</classname> for a given finder and a range. </para></description></method>
+<method name="m_Match"><type>IteratorT FinderT</type><parameter name=""><paramtype>Begin</paramtype></parameter><parameter name=""><paramtype>Begin</paramtype></parameter></method>
+<method name="m_Next"><type>IteratorT FinderT</type><parameter name=""><paramtype>Begin</paramtype></parameter></method>
+<method name="m_End"><type>IteratorT FinderT</type><parameter name=""><paramtype>End</paramtype></parameter></method>
+<method name="m_bEof"><type>IteratorT FinderT</type><parameter name=""><paramtype>false</paramtype></parameter></method>
 <method name="eof" cv="const"><type>bool</type><purpose>Eof check. </purpose><description><para>Check the eof condition. Eof condition means that there is nothing more to be searched i.e. <classname alt="boost::algorithm::find_iterator">find_iterator</classname> is after the last match. </para></description></method>
 </method-group>
 <constructor><purpose>Default constructor. </purpose><description><para>Construct null iterator. All null iterators are equal.</para><para>
 </para></description><postconditions><para>eof()==true </para>
 </postconditions></constructor>
 <constructor><parameter name="Other"><paramtype>const <classname>split_iterator</classname> &amp;</paramtype></parameter><purpose>Copy constructor. </purpose><description><para>Construct a copy of the <classname alt="boost::algorithm::split_iterator">split_iterator</classname> </para></description></constructor>
-<constructor><template>
-          <template-type-parameter name="FinderT"/>
-        </template><parameter name="Begin"><paramtype>IteratorT</paramtype></parameter><parameter name="End"><paramtype>IteratorT</paramtype></parameter><parameter name="Finder"><paramtype>FinderT</paramtype></parameter><purpose>Constructor. </purpose><description><para>Construct new <classname alt="boost::algorithm::split_iterator">split_iterator</classname> for a given finder and a range. </para></description></constructor>
 <constructor><template>
           <template-type-parameter name="FinderT"/>
           <template-type-parameter name="RangeT"/>

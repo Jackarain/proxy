@@ -381,9 +381,10 @@ namespace boost { namespace stl_interfaces { BOOST_STL_INTERFACES_NAMESPACE_V1 {
                 std::enable_if_t<!v1_dtl::plus_eq<D, difference_type>::value>>
         constexpr auto
         operator--() noexcept(noexcept(--access::base(std::declval<D &>())))
-            -> decltype(--access::base(std::declval<D &>()))
+            -> decltype(--access::base(std::declval<D &>()), std::declval<D &>())
         {
-            return --access::base(derived());
+            --access::base(derived());
+            return derived();
         }
 
         template<typename D = Derived>
@@ -576,7 +577,8 @@ namespace boost { namespace stl_interfaces { BOOST_STL_INTERFACES_NAMESPACE_V2 {
             } &&
             requires {
                 typename std::iterator_traits<Iterator>::iterator_category;
-            }) struct iter_concept<Iterator>
+            })
+	struct iter_concept<Iterator>
         {
             using type =
                 typename std::iterator_traits<Iterator>::iterator_category;
@@ -589,7 +591,8 @@ namespace boost { namespace stl_interfaces { BOOST_STL_INTERFACES_NAMESPACE_V2 {
             } &&
             !requires {
                 typename std::iterator_traits<Iterator>::iterator_category;
-            }) struct iter_concept<Iterator>
+            })
+	struct iter_concept<Iterator>
         {
             using type = std::random_access_iterator_tag;
         };
@@ -603,13 +606,13 @@ namespace boost { namespace stl_interfaces { BOOST_STL_INTERFACES_NAMESPACE_V2 {
 
         template<typename D, typename DifferenceType>
         // clang-format off
-        concept plus_eq = requires(D d) { d += DifferenceType(1); };
+        concept plus_eq = requires (D d) { d += DifferenceType(1); };
         // clang-format on
 
         template<typename D>
         // clang-format off
         concept base_3way =
-            requires(D d) { access::base(d) <=> access::base(d); };
+            requires (D d) { access::base(d) <=> access::base(d); };
         // clang-format on
 
         template<typename D1, typename D2 = D1>
@@ -620,7 +623,7 @@ namespace boost { namespace stl_interfaces { BOOST_STL_INTERFACES_NAMESPACE_V2 {
 
         template<typename D>
         // clang-format off
-        concept sub = requires(D d) { d - d; };
+        concept sub = requires (D d) { d - d; };
         // clang-format on
     }
 
@@ -661,47 +664,47 @@ namespace boost { namespace stl_interfaces { BOOST_STL_INTERFACES_NAMESPACE_V2 {
       using difference_type = DifferenceType;
 
       constexpr decltype(auto) operator*()
-        requires requires { *access::base(derived()); } {
+        requires requires (D d) { *access::base(d); } {
           return *access::base(derived());
         }
       constexpr decltype(auto) operator*() const
-        requires requires { *access::base(derived()); } {
+        requires requires (D const d) { *access::base(d); } {
           return *access::base(derived());
         }
 
       constexpr auto operator->()
-        requires requires { *derived(); } {
+        requires requires (D d) { *d; } {
           return detail::make_pointer<pointer>(*derived());
         }
       constexpr auto operator->() const
-        requires requires { *derived(); } {
+        requires requires (D const d) { *d; } {
           return detail::make_pointer<pointer>(*derived());
         }
 
       constexpr decltype(auto) operator[](difference_type n) const
-        requires requires { derived() + n; } {
+        requires requires (D const d) { d + n; } {
         D retval = derived();
         retval += n;
         return *retval;
       }
 
       constexpr decltype(auto) operator++()
-        requires requires { ++access::base(derived()); } &&
-          (!v2_dtl::plus_eq<decltype(derived()), difference_type>) {
+        requires requires (D d) { ++access::base(d); } &&
+          (!v2_dtl::plus_eq<D, difference_type>) {
             ++access::base(derived());
             return derived();
           }
       constexpr decltype(auto) operator++()
-        requires requires { derived() += difference_type(1); } {
+        requires requires (D d) { d += difference_type(1); } {
           return derived() += difference_type(1);
         }
-      constexpr auto operator++(int) requires requires { ++derived(); } {
+      constexpr auto operator++(int) requires requires (D d) { ++d; } {
         D retval = derived();
         ++derived();
         return retval;
       }
       constexpr decltype(auto) operator+=(difference_type n)
-        requires requires { access::base(derived()) += n; } {
+        requires requires (D d) { access::base(d) += n; } {
           access::base(derived()) += n;
           return derived();
         }
@@ -715,22 +718,22 @@ namespace boost { namespace stl_interfaces { BOOST_STL_INTERFACES_NAMESPACE_V2 {
         }
 
       constexpr decltype(auto) operator--()
-        requires requires { --access::base(derived()); } &&
-          (!v2_dtl::plus_eq<decltype(derived()), difference_type>) {
+        requires requires (D d) { --access::base(d); } &&
+          (!v2_dtl::plus_eq<D, difference_type>) {
             --access::base(derived());
             return derived();
           }
       constexpr decltype(auto) operator--()
-        requires requires { derived() += -difference_type(1); } {
+        requires requires (D d) { d += -difference_type(1); } {
           return derived() += -difference_type(1);
         }
-      constexpr auto operator--(int) requires requires { --derived(); } {
+      constexpr auto operator--(int) requires requires (D d) { --d; } {
         D retval = derived();
         --derived();
         return retval;
       }
       constexpr decltype(auto) operator-=(difference_type n)
-        requires requires { derived() += -n; } {
+        requires requires (D d) { d += -n; } {
           return derived() += -n;
         }
       friend constexpr auto operator-(D lhs, D rhs)
@@ -856,7 +859,7 @@ namespace boost { namespace stl_interfaces { BOOST_STL_INTERFACES_NAMESPACE_V2 {
     `iterator_interface` has the correct iterator traits.
 
     For example: `BOOST_STL_INTERFACES_STATIC_ASSERT_ITERATOR_TRAITS(my_iter,
-    std::input_iterator_tag, std::input_iterator_tag, int, int &, int *, std::ptrdiff_t)`.
+    std::input_iterator_tag, std::input_iterator, int, int &, int *, std::ptrdiff_t)`.
 
     \note This macro ignores the `concept` parameter when `__cpp_lib_concepts`
     is not defined. */

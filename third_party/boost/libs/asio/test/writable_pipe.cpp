@@ -75,6 +75,9 @@ void test()
 
 #if defined(BOOST_ASIO_HAS_MOVE)
     writable_pipe pipe5(std::move(pipe4));
+
+    basic_writable_pipe<io_context::executor_type> pipe6(ioc);
+    writable_pipe pipe7(std::move(pipe6));
 #endif // defined(BOOST_ASIO_HAS_MOVE)
 
     // basic_writable_pipe operators.
@@ -82,6 +85,7 @@ void test()
 #if defined(BOOST_ASIO_HAS_MOVE)
     pipe1 = writable_pipe(ioc);
     pipe1 = std::move(pipe2);
+    pipe1 = std::move(pipe6);
 #endif // defined(BOOST_ASIO_HAS_MOVE)
 
     // basic_io_object functions.
@@ -102,8 +106,13 @@ void test()
     pipe1.close();
     pipe1.close(ec);
 
-    writable_pipe::native_handle_type native_pipe5 = pipe1.native_handle();
+    writable_pipe::native_handle_type native_pipe5 = pipe1.release();
     (void)native_pipe5;
+    writable_pipe::native_handle_type native_pipe6 = pipe1.release(ec);
+    (void)native_pipe6;
+
+    writable_pipe::native_handle_type native_pipe7 = pipe1.native_handle();
+    (void)native_pipe7;
 
     pipe1.cancel();
     pipe1.cancel(ec);
@@ -131,5 +140,5 @@ void test()
 BOOST_ASIO_TEST_SUITE
 (
   "writable_pipe",
-  BOOST_ASIO_TEST_CASE(writable_pipe_compile::test)
+  BOOST_ASIO_COMPILE_TEST_CASE(writable_pipe_compile::test)
 )

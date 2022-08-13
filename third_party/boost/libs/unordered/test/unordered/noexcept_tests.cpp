@@ -189,7 +189,8 @@ namespace noexcept_tests {
 
 #if !defined(BOOST_NO_SFINAE_EXPR) && !defined(BOOST_NO_CXX11_NOEXCEPT) &&     \
   !defined(BOOST_NO_CXX11_DECLTYPE) &&                                         \
-  !defined(BOOST_NO_CXX11_FUNCTION_TEMPLATE_DEFAULT_ARGS)
+  !defined(BOOST_NO_CXX11_FUNCTION_TEMPLATE_DEFAULT_ARGS) &&                   \
+  !BOOST_WORKAROUND(BOOST_GCC_VERSION, < 40700)
     BOOST_TEST(have_is_nothrow_swap);
 #endif
 

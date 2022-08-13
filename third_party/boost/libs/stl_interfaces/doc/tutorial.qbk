@@ -951,3 +951,226 @@ There's nothing much to document about it; it works just like
 `std::reverse_iterator`.
 
 [endsect]
+
+[section Tutorial: View Adaptors]
+
+C++20 introduced views and view adaptors.  The adaptors have a nice "pipe"
+syntax, like:
+
+    for (auto x : range | std::views::reverse | std::views::take(10)) {
+        // Here, we get the last 10 values of range, in reverse order.
+    }
+
+However, the C++20 standard provides you no help in making your own views and
+view adaptors that work this way.  C++23 introduces
+`std::range_adaptor_closure`, a base type that allows your view adaptors and
+`std` view adaptors to interoperate in pipe expressions.
+
+_IFaces_ provides a type `boost::stl_interfaces::range_adaptor_closure` that
+is defined to be a work-alike of `std::range_adaptor_closure` in pre-C++23
+builds, and is an alias for `std::range_adaptor_closure` in C++23 and later.
+
+[note For GCC 12, it was necessary to make
+`boost::stl_interfaces::range_adaptor_closure` an alias for
+`std::views::__adaptor::_RangeAdaptorClosure`.  This is necessary because all
+the `std` views will only combine with views derived from
+`std::views::__adaptor::_RangeAdaptorClosure`.  Even naming a namespace that
+contains `__` is technically UB.  I do not expect you to encounter any real
+problems if you use `boost::stl_interfaces::range_adaptor_closure` with GCC
+12, but I thought you should know. ]
+
+[heading Example: `all()`]
+
+Let's take a look at a very simple view adaptor, `all()`.  `all()` is a
+simplified version of `std::views::all()` that only works with lvalues.
+
+First, we need a small amount of C++20 backported for use in earlier build
+modes:
+
+[iterator_sentinel_t_defn]
+
+Here is the view type itself:
+
+[all_view_defn]
+
+If we want to make our view adaptor in the style of the standard library, we
+need an impl-`struct`:
+
+[all_impl_defn]
+
+... followed by an invocable object:
+
+[old_all_defn]
+
+With these definitions, we can use `old_all()` with the standard range
+adaptors:
+
+    for (auto x : old_all(range) | std::views::reverse) {
+        // etc.
+    }
+
+However, _IFaces_ provides a simpler facility, based on the example in _P2387_:
+
+[all_defn]
+
+This does everything that `all_impl` and `old_all` (combined) do above, but
+with a lot less typing.  From here on, we'll use
+`boost::stl_interfaces::closure` instead of the more verbose technique.
+
+Finally, we should make sure `all_view` is treated as a borrowed range:
+
+[all_enable_borrowed_range]
+
+[heading Example: `reverse()`]
+
+`reverse()` is more interesting than `all()`, in that it does something more
+useful than simple adaptation.  It is still very simple; all it does is
+provide a reversed view of a given view.  Here is its definition:
+
+[reverse_view_defn]
+
+As with `all()`, we define a `closure` object `reverse` that we can invoke:
+
+[reverse_defn]
+
+And again, we do this:
+
+[reverse_enable_borrowed_range]
+
+Now that we have `all()` and `reverse()`, we can write this:
+
+    for (auto x : all(range) | reverse) {
+        // etc.
+    }
+
+Since everythinge is `std`-compatible, we can also write:
+
+    for (auto x : all(range) | reverse | std::views::reverse) {
+        // etc.
+    }
+
+Unfortunately, `reverse` and `std::views::reverse` know nothing about one
+another, so `all(range) | reverse | std::views::reverse` does not reduce to
+`all(range)` as both `all(range) | reverse | reverse` and `all(range) |
+std::views::reverse | std::views::reverse` do.
+
+[heading Example: `take()`]
+
+`take_view` is a little different from the previous two views, in that it
+takes more than just a range to construct it _emdash_ it is constructed from a
+range and a count.  Any time a view takes more than just a range to construct,
+it is usually nice to use it with all the parameters besides the view itself.
+For instance, you might want to use take as `v | take(42)`, or as `take(v,
+42)` (more on this below).  Here is our definition of `take_view`:
+
+[take_view_defn]
+
+Now we need an invocable for users to call.  Instead of using `closure`, we
+use `adaptor`:
+
+[take_defn]
+
+[endsect]
+
+[section Tutorial: `closure` and `adaptor`]
+
+Here is `boost::stl_interfaces::closure`:
+
+[closure_defn]
+
+As you can see, it inherits from
+`boost::stl_interfaces::range_adaptor_closure`, and its only member function
+is a call operator that forwards to the function `F` it is constructed from.
+It exists simply to adapt some function that constructs a particular view to
+use in pipe expressions.
+
+`adaptor` is slightly different; it operates essentially just like `closure`
+if you call its `operator()` with all arguments necessary to invoke its
+function `F` _emdash_ it just constructs a view.  However, if you pass it all
+the arguments but the first, it returns a `closure` with all those arguments
+bound into it:
+
+[adaptor_defn]
+
+This allows you to use it both as a view-constructor (e.g. `take(range, 3)`),
+and as a closure-constructor (e.g. `range | take(3)`).
+
+[important Due to the way `adaptor` works, your views's constructors should
+always take their view parameter before any other parameters.  Otherwise, the
+combination of `bind_back()` and `closure` will probably not do anything very
+useful.]
+
+[endsect]
+
+[section Tutorial: `bind_back()` and More Complicated View Adaptors]
+
+As we saw in the previous section, you can use
+`boost::stl_interfaces::bind_back()` in combination with `closure` to make
+closure objects that use the pipe syntax.  `std::bind_back()` is an addition
+to C++23 that is designed to make constructing view adaptors easier.
+
+In some cases, you might have a view adaptor for which `adaptor` is too
+simple.  For instance, let's say you have a view adaptor `foo` that can be
+parameterized in more than one way.  Perhaps `range | foo(a, b)` is a valid
+use, but so is `range | foo(b, c, d)`.  If this is the case, `adaptor`'s
+all-but-one argument binding is no help.
+
+If you have a view adaptor like this, you should re-introduce an `impl` class
+like we saw in the `all()` example, and construct `closure`s from
+`bind_back()` expressions as needed:
+
+    template<typename R>
+    struct foo_view
+    {
+        // etc.
+        template<typename R2>
+        requires std::is_same_v<std::remove_reference_t<R2>, R>
+        foo_view(R2 &&, int, std::string);
+
+        template<typename R2>
+        requires std::is_same_v<std::remove_reference_t<R2>, R>
+        foo_view(R2 &&, std::string, int, double);
+        // etc.
+    };
+
+    struct foo_impl
+    {
+        // These just directly construct the view from the full set of arguments.
+        template<typename R>
+        auto operator()(R && r, int i, std::string s) const
+        {
+            return foo_view((R &&)r, i, std::move(s));
+        }
+        template<typename R>
+        auto operator()(R && r, std::string s, int i, double d) const
+        {
+            return foo_view((R &&)r, std::move(s), i, d);
+        }
+
+        // This one binds *this, i, and s into a bind-expression (which is an
+        // invocable object), and then uses that invocable to construct a
+        // closure.  When the closure is called with a range r, it forwards that
+        // range arg to the bind-expression, which calls (*this)(r, i,
+        // std::move(s)).
+        auto operator()(int i, std::string s) const
+        {
+            return boost::stl_interfaces::closure(
+                boost::stl_interfaces::bind_back(*this, i, std::move(s)));
+        }
+
+        // Works just like the overload immediately above, but with a
+        // different set of parameters.
+        auto operator()(std::string s, int i, double d) const
+        {
+            return boost::stl_interfaces::closure(
+                boost::stl_interfaces::bind_back(*this, std::move(s), i, d));
+        }
+    };
+
+    inline constexpr foo_impl foo;
+
+With these definitions, you can use `foo` as we discussed earlier; `range |
+foo(42, "bar")` and `range | foo("bar", 42, 3.14)` are both well-formed, and
+do what you'd expect.
+
+[endsect]

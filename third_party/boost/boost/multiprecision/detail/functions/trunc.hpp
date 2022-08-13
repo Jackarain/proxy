@@ -61,7 +61,7 @@ inline long long lltrunc BOOST_PREVENT_MACRO_SUBSTITUTION (const T arg)
 template <typename T>
 inline int itrunc BOOST_PREVENT_MACRO_SUBSTITUTION (const T arg)
 {
-    if (arg > INT_MAX)
+    if (arg > static_cast<T>(INT_MAX))
     {
         BOOST_MP_THROW_EXCEPTION(std::domain_error("arg cannot be converted into an int"));
     }

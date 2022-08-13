@@ -1,12 +1,9 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 filetype=cpp.doxygen
 /*!
 \page localized_text_formatting Localized Text Formatting
 
@@ -51,7 +48,7 @@ The syntax is described by following grammar:
     parameters: parameter | parameter ',' parameters;
     parameter : key ["=" value] ;
     key : [0-9a-zA-Z<>]+ ;
-    value : ascii-string-excluding-"}"-and="," | local-string ; 
+    value : ascii-string-excluding-"}"-and="," | local-string ;
     local-string : quoted-text | quoted-text local-string;
     quoted-text : '[^']*' ;
 \endverbatim
@@ -164,5 +161,3 @@ Because the temporary value of \c (a+b) no longer exists when \c fmt is written 
 \endcode
 
 */
-
-

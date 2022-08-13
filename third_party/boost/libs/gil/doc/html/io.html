@@ -24,7 +24,7 @@
     <link rel="search" title="Search" href="search.html" />
     <link rel="top" title="Boost.GIL  documentation" href="index.html" />
     <link rel="next" title="ToolBox extension" href="toolbox.html" />
-    <link rel="prev" title="Affine region detectors" href="image_processing/affine-region-detectors.html" /> 
+    <link rel="prev" title="STD extension" href="histogram/extension/std.html" /> 
   </head>
   <body>
     <div class="header">
@@ -58,7 +58,7 @@
     <div class="navbar" style="text-align:right;">
       
       
-      <a class="prev" title="Affine region detectors" href="image_processing/affine-region-detectors.html"><img src="_static/prev.png" alt="prev"/></a>
+      <a class="prev" title="STD extension" href="histogram/extension/std.html"><img src="_static/prev.png" alt="prev"/></a>
       <a class="next" title="ToolBox extension" href="toolbox.html"><img src="_static/next.png" alt="next"/></a>
       
     </div>
@@ -248,9 +248,10 @@ incompatible color space with the destination (gil image type).
 If that&#8217;s the case the user has to use the xxx_and_convert_xxx variants.</p>
 <p>All functions take the filename or a device as the first parameter.
 The filename can be anything from a C-string, <code class="docutils literal"><span class="pre">std::string</span></code>,
-<code class="docutils literal"><span class="pre">std::wstring</span></code> and <code class="docutils literal"><span class="pre">boost::filesystem</span></code> path. When using the path
-object the user needs to define the ADD_FS_PATH_SUPPORT compiler symbol to
-include the boost::filesystem dependency.
+<code class="docutils literal"><span class="pre">std::wstring</span></code> to <code class="docutils literal"><span class="pre">std::filesystem</span></code> and <code class="docutils literal"><span class="pre">boost::filesystem</span></code> path.
+The availability of the <code class="docutils literal"><span class="pre">std::filesystem</span></code> is detected automatically,
+unless <code class="docutils literal"><span class="pre">BOOST_GIL_IO_USE_BOOST_FILESYSTEM</span></code> macro is defined that forces
+preference of the Boost.Filesystem.
 Devices could be a <code class="docutils literal"><span class="pre">FILE*</span></code>, <code class="docutils literal"><span class="pre">std::ifstream</span></code>, and <code class="docutils literal"><span class="pre">TIFF*</span></code> for TIFF images.</p>
 <p>The second parameter is either an image or view type depending on the
 <code class="docutils literal"><span class="pre">read_xxx</span></code> function.
@@ -280,13 +281,11 @@ In the context of GIL.IO a user can define an <code class="docutils literal"><sp
 several image types. The IO extension would then pick the matching image type
 to the current image file.
 The following example shows this feature:</p>
-<div class="highlight-c++"><div class="highlight"><pre><span></span><span class="k">typedef</span> <span class="n">mpl</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span> <span class="n">gray8_image_t</span>
-                   <span class="p">,</span> <span class="n">gray16_image_t</span>
-                   <span class="p">,</span> <span class="n">rgb8_image_t</span>
-                   <span class="p">,</span> <span class="n">rgba_image_t</span>
-                   <span class="o">&gt;</span> <span class="n">my_img_types</span><span class="p">;</span>
-
-<span class="n">any_image</span><span class="o">&lt;</span> <span class="n">my_img_types</span> <span class="o">&gt;</span> <span class="n">runtime_image</span><span class="p">;</span>
+<div class="highlight-c++"><div class="highlight"><pre><span></span><span class="n">any_image</span><span class="o">&lt;</span> <span class="n">gray8_image_t</span>
+         <span class="p">,</span> <span class="n">gray16_image_t</span>
+         <span class="p">,</span> <span class="n">rgb8_image_t</span>
+         <span class="p">,</span> <span class="n">rgba8_image_t</span>
+         <span class="o">&gt;</span> <span class="n">my_img_types</span> <span class="o">&gt;</span> <span class="n">runtime_image</span><span class="p">;</span>
 
 <span class="n">read_image</span><span class="p">(</span> <span class="n">filename</span>
           <span class="p">,</span> <span class="n">runtime_image</span>
@@ -344,9 +343,10 @@ scanline is supported.</p>
 <p>There is only one function for writing out images, write_view.
 Similar to reading the first parameter is either a filename or a device.
 The filename can be anything from a C-string, <code class="docutils literal"><span class="pre">std::string</span></code>,
-<code class="docutils literal"><span class="pre">std::wstring</span></code>, and <code class="docutils literal"><span class="pre">boost::filesystem</span></code> path. When using the path object
-the user needs to define the <code class="docutils literal"><span class="pre">ADD_FS_PATH_SUPPORT</span></code> compiler symbol to
-include the <code class="docutils literal"><span class="pre">boost::filesystem</span></code> dependency.
+<code class="docutils literal"><span class="pre">std::wstring</span></code> to <code class="docutils literal"><span class="pre">std::filesystem</span></code> and <code class="docutils literal"><span class="pre">boost::filesystem</span></code> path.
+The availability of the <code class="docutils literal"><span class="pre">std::filesystem</span></code> is detected automatically,
+unless <code class="docutils literal"><span class="pre">BOOST_GIL_IO_USE_BOOST_FILESYSTEM</span></code> macro is defined that forces
+preference of the Boost.Filesystem.
 Devices could be <code class="docutils literal"><span class="pre">FILE*</span></code>, <code class="docutils literal"><span class="pre">std::ifstream</span></code>, and <code class="docutils literal"><span class="pre">TIFF*</span></code> for TIFF images.</p>
 <p>The second parameter is an view object to image being written.
 The third and last parameter is either a tag or an
@@ -355,14 +355,11 @@ One example for instance is the JPEG quality.
 Refer to the format specific sections under 3.3. to have a list of all
 the possible settings.</p>
 <p>Writing an any_image&lt;...&gt; is supported. See the following example:</p>
-<div class="highlight-c++"><div class="highlight"><pre><span></span><span class="k">typedef</span> <span class="n">mpl</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span> <span class="n">gray8_image_t</span>
-                   <span class="p">,</span> <span class="n">gray16_image_t</span>
-                   <span class="p">,</span> <span class="n">rgb8_image_t</span>
-                   <span class="p">,</span> <span class="n">rgba_image_t</span>
-                   <span class="o">&gt;</span> <span class="n">my_img_types</span><span class="p">;</span>
-
-
-<span class="n">any_image</span><span class="o">&lt;</span> <span class="n">my_img_types</span> <span class="o">&gt;</span> <span class="n">runtime_image</span><span class="p">;</span>
+<div class="highlight-c++"><div class="highlight"><pre><span></span><span class="n">any_image</span><span class="o">&lt;</span> <span class="n">gray8_image_t</span>
+         <span class="p">,</span> <span class="n">gray16_image_t</span>
+         <span class="p">,</span> <span class="n">rgb8_image_t</span>
+         <span class="p">,</span> <span class="n">rgba8_image_t</span>
+         <span class="o">&gt;</span> <span class="n">my_img_types</span> <span class="o">&gt;</span> <span class="n">runtime_image</span><span class="p">;</span>
 
 <span class="c1">// fill any_image</span>
 
@@ -391,52 +388,49 @@ that can be set by the user:</p>
 <tr class="row-even"><td>BOOST_GIL_IO_ENABLE_GRAY_ALPHA</td>
 <td>Enable the color space &#8220;gray_alpha&#8221;.</td>
 </tr>
-<tr class="row-odd"><td>BOOST_GIL_IO_ADD_FS_PATH_SUPPORT</td>
-<td>Enable boost::filesystem 3.0 library.</td>
-</tr>
-<tr class="row-even"><td>BOOST_GIL_IO_PNG_FLOATING_POINT_SUPPORTED</td>
+<tr class="row-odd"><td>BOOST_GIL_IO_PNG_FLOATING_POINT_SUPPORTED</td>
 <td>Use libpng in floating point mode. This symbol is incompatible with BOOST_GIL_IO_PNG_FIXED_POINT_SUPPORTED.</td>
 </tr>
-<tr class="row-odd"><td>BOOST_GIL_IO_PNG_FIXED_POINT_SUPPORTED</td>
+<tr class="row-even"><td>BOOST_GIL_IO_PNG_FIXED_POINT_SUPPORTED</td>
 <td>Use libpng in integer mode. This symbol is incompatible with BOOST_GIL_IO_PNG_FLOATING_POINT_SUPPORTED.</td>
 </tr>
-<tr class="row-even"><td>BOOST_GIL_IO_PNG_DITHERING_SUPPORTED</td>
+<tr class="row-odd"><td>BOOST_GIL_IO_PNG_DITHERING_SUPPORTED</td>
 <td>Look up &#8220;dithering&#8221; in libpng manual for explanation.</td>
 </tr>
-<tr class="row-odd"><td>BOOST_GIL_IO_PNG_1_4_OR_LOWER</td>
+<tr class="row-even"><td>BOOST_GIL_IO_PNG_1_4_OR_LOWER</td>
 <td>Allow compiling with libpng 1.4 or lower.</td>
 </tr>
-<tr class="row-even"><td>BOOST_GIL_EXTENSION_IO_JPEG_C_LIB_COMPILED_AS_CPLUSPLUS</td>
+<tr class="row-odd"><td>BOOST_GIL_EXTENSION_IO_JPEG_C_LIB_COMPILED_AS_CPLUSPLUS</td>
 <td>libjpeg is compiled as c++ lib.</td>
 </tr>
-<tr class="row-odd"><td>BOOST_GIL_EXTENSION_IO_PNG_C_LIB_COMPILED_AS_CPLUSPLUS</td>
+<tr class="row-even"><td>BOOST_GIL_EXTENSION_IO_PNG_C_LIB_COMPILED_AS_CPLUSPLUS</td>
 <td>libpng is compiled as c++ lib.</td>
 </tr>
-<tr class="row-even"><td>BOOST_GIL_EXTENSION_IO_TIFF_C_LIB_COMPILED_AS_CPLUSPLUS</td>
+<tr class="row-odd"><td>BOOST_GIL_EXTENSION_IO_TIFF_C_LIB_COMPILED_AS_CPLUSPLUS</td>
 <td>libtiff is compiled as c++ lib.</td>
 </tr>
-<tr class="row-odd"><td>BOOST_GIL_EXTENSION_IO_ZLIB_C_LIB_COMPILED_AS_CPLUSPLUS</td>
+<tr class="row-even"><td>BOOST_GIL_EXTENSION_IO_ZLIB_C_LIB_COMPILED_AS_CPLUSPLUS</td>
 <td>zlib is compiled as c++ lib.</td>
 </tr>
-<tr class="row-even"><td>BOOST_GIL_IO_TEST_ALLOW_READING_IMAGES</td>
+<tr class="row-odd"><td>BOOST_GIL_IO_TEST_ALLOW_READING_IMAGES</td>
 <td>Allow basic test images to be read from local hard drive. The paths can be set in paths.hpp</td>
 </tr>
-<tr class="row-odd"><td>BOOST_GIL_IO_TEST_ALLOW_WRITING_IMAGES</td>
+<tr class="row-even"><td>BOOST_GIL_IO_TEST_ALLOW_WRITING_IMAGES</td>
 <td>Allow images to be written to the local hard drive. The paths can be set in paths.hpp</td>
 </tr>
-<tr class="row-even"><td>BOOST_GIL_IO_USE_BMP_TEST_SUITE_IMAGES</td>
+<tr class="row-odd"><td>BOOST_GIL_IO_USE_BMP_TEST_SUITE_IMAGES</td>
 <td>Run tests using the bmp test images suite. See _BMP_TEST_FILES</td>
 </tr>
-<tr class="row-odd"><td>BOOST_GIL_IO_USE_PNG_TEST_SUITE_IMAGES</td>
+<tr class="row-even"><td>BOOST_GIL_IO_USE_PNG_TEST_SUITE_IMAGES</td>
 <td>Run tests using the png test images suite. See _PNG_TEST_FILES</td>
 </tr>
-<tr class="row-even"><td>BOOST_GIL_IO_USE_PNM_TEST_SUITE_IMAGES</td>
+<tr class="row-odd"><td>BOOST_GIL_IO_USE_PNM_TEST_SUITE_IMAGES</td>
 <td>Run tests using the pnm test images suite. Send me an email for accessing the files.</td>
 </tr>
-<tr class="row-odd"><td>BOOST_GIL_IO_USE_TIFF_LIBTIFF_TEST_SUITE_IMAGES</td>
+<tr class="row-even"><td>BOOST_GIL_IO_USE_TIFF_LIBTIFF_TEST_SUITE_IMAGES</td>
 <td>Run tests using the targa file format test images suite. See _TIFF_LIB_TIFF_TEST_FILES</td>
 </tr>
-<tr class="row-even"><td>BOOST_GIL_IO_USE_TIFF_GRAPHICSMAGICK_TEST_SUITE_IMAGES</td>
+<tr class="row-odd"><td>BOOST_GIL_IO_USE_TIFF_GRAPHICSMAGICK_TEST_SUITE_IMAGES</td>
 <td>Run tests using the targa file format test images suite. See _TIFF_GRAPHICSMAGICK_TEST_FILES</td>
 </tr>
 </tbody>
@@ -740,13 +734,13 @@ to enable the tests:</p>
     <div class="navbar" style="text-align:right;">
       
       
-      <a class="prev" title="Affine region detectors" href="image_processing/affine-region-detectors.html"><img src="_static/prev.png" alt="prev"/></a>
+      <a class="prev" title="STD extension" href="histogram/extension/std.html"><img src="_static/prev.png" alt="prev"/></a>
       <a class="next" title="ToolBox extension" href="toolbox.html"><img src="_static/next.png" alt="next"/></a>
       
     </div>
     </div>
     <div class="footer" role="contentinfo">
-      Last updated on 2022-04-06 21:04:50.
+      Last updated on 2022-08-04 02:08:16.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.6.
     </div>
   </body>

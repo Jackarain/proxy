@@ -14,6 +14,7 @@
 #include <iterator>
 #include <iostream>
 #include <algorithm>
+#include <thread>
 
 namespace leaf = boost::leaf;
 
@@ -33,7 +34,7 @@ task_result task()
     if( succeed )
         return { };
     else
-        throw leaf::exception(
+        leaf::throw_exception(
             e_thread_id{std::this_thread::get_id()},
             e_failure_info1{"info"},
             e_failure_info2{42} );

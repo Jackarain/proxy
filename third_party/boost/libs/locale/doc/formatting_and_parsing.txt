@@ -1,12 +1,9 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 filetype=cpp.doxygen
 /*!
 
 \page formatting_and_parsing Numbers, Time and Currency formatting and parsing
@@ -117,7 +114,7 @@ There is a list of supported \c strftime flags by ICU backend:
 -   \c \%c  -- Locale date-time format. \b Note: prefer using \c as::datetime
 -   \c \%d  -- Day of Month [01,31]
 -   \c \%e  -- Day of Month [1,31]
--   \c \%h  -- Same as \c \%b 
+-   \c \%h  -- Same as \c \%b
 -   \c \%H  -- 24 clock hour [00,23]
 -   \c \%I  -- 12 clock hour [01,12]
 -   \c \%j  -- Day of year [1,366]
@@ -125,11 +122,11 @@ There is a list of supported \c strftime flags by ICU backend:
 -   \c \%M  -- Minute [00,59]
 -   \c \%n  -- New Line
 -   \c \%p  -- AM/PM in locale representation
--   \c \%r  -- Time with AM/PM, same as \c \%I:\%M:\%S \%p 
--   \c \%R  -- Same as \c \%H:\%M 
+-   \c \%r  -- Time with AM/PM, same as \c \%I:\%M:\%S \%p
+-   \c \%R  -- Same as \c \%H:\%M
 -   \c \%S  -- Second [00,61]
 -   \c \%t  -- Tab character
--   \c \%T  -- Same as \c \%H:\%M:\%S 
+-   \c \%T  -- Same as \c \%H:\%M:\%S
 -   \c \%x  -- Local date representation. **Note:** prefer using \c as::date
 -   \c \%X  -- Local time representation. **Note:** prefer using \c as::time
 -   \c \%y  -- Year [00,99]
@@ -158,5 +155,3 @@ next time a number is written to the stream, the same formatter would be used un
 invalid.
 
 */
-
-

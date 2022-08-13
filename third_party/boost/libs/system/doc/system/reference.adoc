@@ -610,9 +610,8 @@ public:
     template<class ErrorCodeEnum>
       constexpr error_code( ErrorCodeEnum e ) noexcept;
 
-    template<class ErrorCodeEnum>
-      error_code( ErrorCodeEnum e, boost::source_location const * loc )
-        noexcept;
+    error_code( error_code const& ec,
+      boost::source_location const * loc ) noexcept;
 
     error_code( std::error_code const& ec ) noexcept;
 
@@ -626,9 +625,8 @@ public:
     template<class ErrorCodeEnum>
       constexpr error_code & operator=( ErrorCodeEnum e ) noexcept;
 
-    template<class ErrorCodeEnum>
-      void assign( ErrorCodeEnum e,
-        boost::source_location const * loc ) noexcept;
+    void assign( error_code const& ec,
+      boost::source_location const * loc ) noexcept;
 
     constexpr void clear() noexcept;
 
@@ -757,17 +755,17 @@ Ensures: :: `*this == make_error_code( e )`.
 Remarks: :: This constructor is only enabled when `is_error_code_enum<ErrorCodeEnum>::value` is `true`.
 
 ```
-template<class ErrorCodeEnum>
-  error_code( ErrorCodeEnum e, boost::source_location const * loc ) noexcept;
+error_code( error_code const& ec,
+  boost::source_location const * loc ) noexcept;
 ```
 [none]
 * {blank}
 +
-Requires: :: `loc` points to a valid `boost::source_location` object with static storage duration.
-Ensures: :: `*this == make_error_code( e )`.
-Remarks: :: This constructor is only enabled when `is_error_code_enum<ErrorCodeEnum>::value` is `true`.
-  When `make_error_code( e )` is not a default-constructed `error_code` and doesn't wrap a
-  `std::error_code`, `has_location()` is `true` and `&location()` is `loc`.
+Requires: :: `loc` points to a valid `boost::source_location` object with static storage duration, or is `nullptr`.
+Ensures: :: `*this == ec`.
+Remarks: :: When `ec` is a default-constructed `error_code` or wraps a `std::error_code`,
+  or when `loc` is `nullptr`, `*this` stores no location (`has_location()` is `false`).
+  Otherwise, `*this` stores `loc` (`has_location()` is `true` and `&location()` is `loc`.)
 
 ```
 error_code( std::error_code const & ec ) noexcept;
@@ -808,16 +806,13 @@ Ensures: :: `*this == make_error_code( e )`.
 Remarks: :: This operator is only enabled when `is_error_code_enum<ErrorCodeEnum>::value` is `true`.
 
 ```
-template<class ErrorCodeEnum>
-  void assign( ErrorCodeEnum e,
-    boost::source_location const * loc ) noexcept;
+void assign( error_code const& ec,
+  boost::source_location const * loc ) noexcept;
 ```
 [none]
 * {blank}
 +
-Requires: :: `loc` points to a valid `boost::source_location` object with static storage duration.
-Effects: :: `*this = error_code( e, loc )`.
-Remarks: :: This function is only enabled when `is_error_code_enum<ErrorCodeEnum>::value` is `true`.
+Effects: :: `*this = error_code( ec, loc )`.
 
 ```
 constexpr void clear() noexcept;
@@ -1613,6 +1608,12 @@ public:
     template<class... A>
       constexpr result( in_place_error_t, A&&... a );
 
+    template<class T2, class E2>
+      constexpr result( result<T2, E2> const& r2 );
+
+    template<class T2, class E2>
+      constexpr result( result<T2, E2>&& r2 );
+
     // queries
 
     constexpr bool has_value() const noexcept;
@@ -1720,6 +1721,30 @@ Ensures: ::
   `*this` holds the error `E( std::forward<A>(a)... )`.
 Remarks: ::
   This constructor is only enabled when `std::is_constructible<E, A...>::value` is `true`.
+
+```
+template<class T2, class E2>
+  constexpr result( result<T2, E2> const& r2 );
+```
+[none]
+* {blank}
++
+Ensures: ::
+  If `r2.has_value()` is `true`, `*this` holds the value `T( *r2 )`, otherwise `*this` holds the value `E( r2.error() )`.
+Remarks: ::
+  This constructor is only enabled when `std::is_convertible<T2, T>::value && std::is_convertible<E2, E>::value` is `true`.
+
+```
+template<class T2, class E2>
+  constexpr result( result<T2, E2>&& r2 );
+```
+[none]
+* {blank}
++
+Ensures: ::
+  If `r2.has_value()` is `true`, `*this` holds the value `T( std::move( *r2 ) )`, otherwise `*this` holds the value `E( r2.error() )`.
+Remarks: ::
+  This constructor is only enabled when `std::is_convertible<T2, T>::value && std::is_convertible<E2, E>::value` is `true`.
 
 #### Queries
 

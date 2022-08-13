@@ -1216,7 +1216,7 @@ __SPACE__
 
 [: `bool operator == ( optional<T> const& x, optional<T> const& y );`]
 
-* [*Requires:] `T` shall meet requirements of __SGI_EQUALITY_COMPARABLE__.
+* [*Requires:] `T` shall meet requirements of __STD_EQUALITY_COMPARABLE__.
 * [*Returns:] If both `x` and `y` are initialized, `(*x == *y)`. If only
 `x` or `y` is initialized, `false`. If both are uninitialized, `true`.
 * [*Notes:] This definition guarantees that `optional<T>` not containing a value is compared unequal to any `optional<T>` containing any value, and equal to any other `optional<T>` not containing a value.
@@ -1249,7 +1249,7 @@ __SPACE__
 * [*Returns:] `(!y) ? false : (!x) ? true : *x < *y`.
 * [*Notes:] This definition guarantees that `optional<T>` not containing a value is ordered as less than any `optional<T>` containing any value, and equivalent to any other `optional<T>` not containing a value.
 Pointers have shallow relational operators while `optional` has deep relational operators. Do not use `operator<` directly in generic code
-which expect to be given either an `optional<T>` or a pointer; use __FUNCTION_LESS_POINTEES__ instead. `T` need not be __SGI_LESS_THAN_COMPARABLE__. Only single `operator<` is required. Other relational operations are defined in terms of this one. If `T`'s `operator<` satisfies the axioms of __SGI_LESS_THAN_COMPARABLE__ (transitivity, antisymmetry and irreflexivity), `optinal<T>` is __SGI_LESS_THAN_COMPARABLE__.
+which expect to be given either an `optional<T>` or a pointer; use __FUNCTION_LESS_POINTEES__ instead. `T` need not be __STD_LESS_THAN_COMPARABLE__. Only single `operator<` is required. Other relational operations are defined in terms of this one. If `T`'s `operator<` satisfies the axioms of __STD_LESS_THAN_COMPARABLE__ (transitivity, antisymmetry and irreflexivity), `optinal<T>` is __STD_LESS_THAN_COMPARABLE__.
 * [*Example:]
 ``
 optional<T> oN, oN_;
@@ -1310,7 +1310,7 @@ __SPACE__
 [: `bool operator == ( none_t, optional<T> const& x ) noexcept;`]
 
 * [*Returns:] `!x`.
-* [*Notes:] `T` need not meet requirements of __SGI_EQUALITY_COMPARABLE__.
+* [*Notes:] `T` need not meet requirements of __STD_EQUALITY_COMPARABLE__.
 
 
 __SPACE__
@@ -1406,5 +1406,39 @@ assert ( opt0 );
 assert ( !optX );
 assert (addressof(*opt0) == addressof(y));
 ``
+
+[endsect]
+
+
+[section Detailed Semantics - std::hash Specializations]
+
+__SPACE__
+[#reference_std_hash_spec]
+
+``
+namespace std {
+
+template <typename T>
+struct hash<boost::optional<T> > ;
+
+template <typename T>
+struct hash<boost::optional<T&> > ;
+
+} // namespace std
+``
+
+The specialization `hash<optional<T>>` is enabled if and only if
+`hash<remove_­const_­t<T>>` is enabled. When enabled, for an object `o`
+of type `optional<T>`, if `o.has_­value() == true`, then `hash<optional<T>>()(o)`
+ evaluates to the same value as `hash<remove_­const_­t<T>>()(*o)`; otherwise it
+evaluates to an unspecified value.
+The member functions are not guaranteed to be `noexcept`.
+
+[caution
+You may get compiler errors when your program provides specializations for
+`std::hash<boost::optional<T>>`. If this happens, define macro
+`BOOST_OPTIONAL_CONFIG_DO_NOT_SPECIALIZE_STD_HASH` to suppress the specializations
+of `std::hash` in this library.
+]
 
 [endsect]

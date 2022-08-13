@@ -11,11 +11,11 @@
 #include <boost/core/lightweight_test.hpp>
 #include "bugs.hpp"
 
-int test_main(int, char *[]) {
+int main(int, char *[]) {
   boost::numeric::interval<double> i(0.0, 0.0);
   boost::numeric::interval<double> i2 = 60.0 - i;
 # ifdef BOOST_BORLANDC
   ::detail::ignore_warnings();
 # endif
-  return 0;
+  return boost::report_errors();
 }

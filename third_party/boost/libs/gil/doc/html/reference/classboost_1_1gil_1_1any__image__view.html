@@ -39,7 +39,7 @@ $(function() {
 <div id="main-nav"></div>
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><b>boost</b></li><li class="navelem"><b>gil</b></li><li class="navelem"><a class="el" href="classboost_1_1gil_1_1any__image__view.html">any_image_view</a></li>  </ul>
+<li class="navelem"><a class="el" href="namespaceboost.html">boost</a></li><li class="navelem"><b>gil</b></li><li class="navelem"><a class="el" href="classboost_1_1gil_1_1any__image__view.html">any_image_view</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
@@ -79,17 +79,6 @@ using&#160;</td><td class="memItemRight" valign="bottom"><b>size_type</b> = std:
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a7247fb6c60d4cfc81f95d20e443fb5a3"><td class="memItemLeft" align="right" valign="top"><a id="a7247fb6c60d4cfc81f95d20e443fb5a3"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>any_image_view</b> (<a class="el" href="classboost_1_1gil_1_1any__image__view.html">any_image_view</a> const &amp;view)</td></tr>
-<tr class="separator:a7247fb6c60d4cfc81f95d20e443fb5a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a040965d28eaa229fb77aee6278d00a1b"><td class="memTemplParams" colspan="2"><a id="a040965d28eaa229fb77aee6278d00a1b"></a>
-template&lt;typename View &gt; </td></tr>
-<tr class="memitem:a040965d28eaa229fb77aee6278d00a1b"><td class="memTemplItemLeft" align="right" valign="top">&#160;</td><td class="memTemplItemRight" valign="bottom"><b>any_image_view</b> (View const &amp;view)</td></tr>
-<tr class="separator:a040965d28eaa229fb77aee6278d00a1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8ca77d7eab7724bafc4c7942ca5c5bed"><td class="memTemplParams" colspan="2"><a id="a8ca77d7eab7724bafc4c7942ca5c5bed"></a>
-template&lt;typename ... OtherViews&gt; </td></tr>
-<tr class="memitem:a8ca77d7eab7724bafc4c7942ca5c5bed"><td class="memTemplItemLeft" align="right" valign="top">&#160;</td><td class="memTemplItemRight" valign="bottom"><b>any_image_view</b> (<a class="el" href="classboost_1_1gil_1_1any__image__view.html">any_image_view</a>&lt; OtherViews... &gt; const &amp;view)</td></tr>
-<tr class="separator:a8ca77d7eab7724bafc4c7942ca5c5bed"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3ae448f15af336769a05d9c98b104f17"><td class="memItemLeft" align="right" valign="top"><a id="a3ae448f15af336769a05d9c98b104f17"></a>
 <a class="el" href="classboost_1_1gil_1_1any__image__view.html">any_image_view</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="classboost_1_1gil_1_1any__image__view.html">any_image_view</a> const &amp;view)</td></tr>
 <tr class="separator:a3ae448f15af336769a05d9c98b104f17"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -124,7 +113,7 @@ class boost::gil::any_image_view&lt; Views &gt;</h3>
 <p>Represents a run-time specified image view. Models <a class="el" href="structboost_1_1gil_1_1_has_dynamic_x_step_type_concept.html" title="Concept for iterators, locators and views that can define a type just like the given iterator,...">HasDynamicXStepTypeConcept</a>, <a class="el" href="structboost_1_1gil_1_1_has_dynamic_y_step_type_concept.html" title="Concept for locators and views that can define a type just like the given locator or view,...">HasDynamicYStepTypeConcept</a>, Note that this class does NOT model <a class="el" href="structboost_1_1gil_1_1_image_view_concept.html" title="GIL&#39;s 2-dimensional view over immutable GIL pixels.">ImageViewConcept</a>. </p>
 <p>CLASS <a class="el" href="classboost_1_1gil_1_1any__image__view.html" title="Represents a run-time specified image view. Models HasDynamicXStepTypeConcept, HasDynamicYStepTypeCon...">any_image_view</a></p>
 <p>Represents a view whose type (color space, layout, planar/interleaved organization, etc) can be specified at run time. It is the runtime equivalent of <code><a class="el" href="classboost_1_1gil_1_1image__view.html" title="A lightweight object that interprets memory as a 2D array of pixels. Models ImageViewConcept,...">image_view</a></code>. Some of the requirements of <a class="el" href="structboost_1_1gil_1_1_image_view_concept.html" title="GIL&#39;s 2-dimensional view over immutable GIL pixels.">ImageViewConcept</a>, such as the <code>value_type</code> alias cannot be fulfilled, since the language does not allow runtime type specification. Other requirements, such as access to the pixels, would be inefficient to provide. Thus <code><a class="el" href="classboost_1_1gil_1_1any__image__view.html" title="Represents a run-time specified image view. Models HasDynamicXStepTypeConcept, HasDynamicYStepTypeCon...">any_image_view</a></code> does not fully model <a class="el" href="structboost_1_1gil_1_1_image_view_concept.html" title="GIL&#39;s 2-dimensional view over immutable GIL pixels.">ImageViewConcept</a>. However, many algorithms provide overloads taking runtime specified views and thus in many cases <code><a class="el" href="classboost_1_1gil_1_1any__image__view.html" title="Represents a run-time specified image view. Models HasDynamicXStepTypeConcept, HasDynamicYStepTypeCon...">any_image_view</a></code> can be used in places taking a view.</p>
-<p>To perform an algorithm on <a class="el" href="classboost_1_1gil_1_1any__image__view.html" title="Represents a run-time specified image view. Models HasDynamicXStepTypeConcept, HasDynamicYStepTypeCon...">any_image_view</a>, put the algorithm in a function object and invoke it by calling <code>apply_operation(runtime_view, algorithm_fn)</code>; </p>
+<p>To perform an algorithm on <a class="el" href="classboost_1_1gil_1_1any__image__view.html" title="Represents a run-time specified image view. Models HasDynamicXStepTypeConcept, HasDynamicYStepTypeCon...">any_image_view</a>, put the algorithm in a function object and invoke it by calling <code>variant2::visit(algorithm_fn, runtime_view)</code>; </p>
 </div><hr/>The documentation for this class was generated from the following file:<ul>
 <li><a class="el" href="any__image__view_8hpp_source.html">any_image_view.hpp</a></li>
 </ul>

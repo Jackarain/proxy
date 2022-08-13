@@ -69,8 +69,9 @@
     long as the traditional x87 floating-point unit is used for
     floating-point computations (no <code>-mfpmath=sse2</code> support).
       <ul>
-        <li>clang (though v8) does not have proper
+        <li>clang (though v9) does not have proper
           <a href="http://lists.llvm.org/pipermail/llvm-dev/2018-May/123529.html">rounding support</a>.</li>
+        <li>clang (10+) requires <tt>-frounding-math</tt> to be specified.</li>
         <li>gcc requires <tt>-frounding-math</tt> to be specified.</li>
         <li>msvc requires <tt>/fp:strict</tt> to be specified, which means
             MSVC 10.0 and earlier will not work properly.</li>
@@ -85,8 +86,6 @@
     <li>Alpha hardware is supported with GCC, except maybe for the square
     root. The options <code>-mfp-rounding-mode=d -mieee</code> have to be
     used.</li>
-
-    <li>valgrind cannot be used as it lacks necessary rounding support.</li>
   </ul>
 
   <p>The previous list is not exhaustive. And even if a system does not

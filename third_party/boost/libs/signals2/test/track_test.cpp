@@ -10,8 +10,8 @@
 // For more information, see http://www.boost.org
 
 #include <memory>
+#include <boost/core/ref.hpp>
 #include <boost/optional.hpp>
-#include <boost/ref.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/signals2.hpp>
 #define BOOST_TEST_MODULE track_test

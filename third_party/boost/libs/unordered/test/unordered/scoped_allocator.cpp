@@ -1,12 +1,13 @@
 
-// Copyright 2021 Christian Mazakas.
+// Copyright 2021-2022 Christian Mazakas.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/config.hpp>
 #include <boost/config/pragma_message.hpp>
+#include <boost/config/workaround.hpp>
 
-#if BOOST_CXX_VERSION <= 199711L
+#if BOOST_CXX_VERSION <= 199711L || BOOST_WORKAROUND(BOOST_GCC_VERSION, < 40800)
 
 BOOST_PRAGMA_MESSAGE(
   "scoped allocator adaptor tests only work under C++11 and above")

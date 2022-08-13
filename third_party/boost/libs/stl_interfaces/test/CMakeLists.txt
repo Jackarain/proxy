@@ -43,6 +43,7 @@ add_test_executable(detail)
 add_test_executable(static_vec)
 add_test_executable(static_vec_noncopyable)
 add_test_executable(array)
+add_test_executable(view_adaptor)
 
 add_executable(
     compile_tests

@@ -50,6 +50,14 @@ void test_back()
     BOOST_TEST_EQ(v.back(), pb);
 }
 
+void test_is_1d_traversable()
+{
+    auto v2x2 = gil::planar_rgba_view(fixture::d.x, fixture::d.y, fixture::r, fixture::g, fixture::b, fixture::a, sizeof(std::uint8_t) * 2);
+    BOOST_TEST(v2x2.is_1d_traversable());
+    auto v3x1 = gil::planar_rgba_view(3, 1, fixture::r, fixture::g, fixture::b, fixture::a, sizeof(std::uint8_t) * 3);
+    BOOST_TEST(v3x1.is_1d_traversable());
+}
+
 void test_pixel_equal_to_operator()
 {
     auto v = gil::planar_rgba_view(fixture::d.x, fixture::d.y, fixture::r, fixture::g, fixture::b, fixture::a, sizeof(std::uint8_t) * 2);
@@ -65,6 +73,7 @@ int main()
     test_dimensions();
     test_front();
     test_back();
+    test_is_1d_traversable();
     test_pixel_equal_to_operator();
 
     return ::boost::report_errors();

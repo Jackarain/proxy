@@ -99,39 +99,6 @@ namespace leaf_detail
 
 ////////////////////////////////////////
 
-#ifdef BOOST_LEAF_NO_EXCEPTIONS
-
-namespace boost
-{
-BOOST_LEAF_NORETURN void throw_exception( std::exception const & ); // user defined
-}
-
-namespace boost { namespace leaf {
-
-template <class T>
-BOOST_LEAF_NORETURN void throw_exception( T const & e )
-{
-    ::boost::throw_exception(e);
-}
-
-} }
-
-#else
-
-namespace boost { namespace leaf {
-
-template <class T>
-BOOST_LEAF_NORETURN void throw_exception( T const & e )
-{
-    throw e;
-}
-
-} }
-
-#endif
-
-////////////////////////////////////////
-
 namespace boost { namespace leaf {
 
 #if BOOST_LEAF_CFG_DIAGNOSTICS
@@ -154,7 +121,7 @@ namespace leaf_detail
         template <class CharT, class Traits>
         void print( std::basic_ostream<CharT, Traits> & os ) const
         {
-            BOOST_LEAF_ASSERT(first_type != 0);
+            BOOST_LEAF_ASSERT(first_type != nullptr);
             BOOST_LEAF_ASSERT(count>0);
             os << "Detected ";
             if( count==1 )
@@ -253,15 +220,15 @@ namespace leaf_detail
     public:
 
         BOOST_LEAF_CONSTEXPR slot() noexcept:
-            prev_(0)
+            prev_(nullptr)
         {
         }
 
         BOOST_LEAF_CONSTEXPR slot( slot && x ) noexcept:
             optional<E>(std::move(x)),
-            prev_(0)
+            prev_(nullptr)
         {
-            BOOST_LEAF_ASSERT(x.prev_==0);
+            BOOST_LEAF_ASSERT(x.prev_==nullptr);
         }
 
         BOOST_LEAF_CONSTEXPR void activate() noexcept
@@ -308,20 +275,24 @@ namespace leaf_detail
     BOOST_LEAF_CONSTEXPR inline void load_unexpected_count( int err_id ) noexcept
     {
         if( slot<e_unexpected_count> * sl = tls::read_ptr<slot<e_unexpected_count>>() )
+        {
             if( e_unexpected_count * unx = sl->has_value(err_id) )
                 ++unx->count;
             else
                 sl->put(err_id, e_unexpected_count(&type<E>));
+        }
     }
 
     template <class E>
     BOOST_LEAF_CONSTEXPR inline void load_unexpected_info( int err_id, E && e ) noexcept
     {
         if( slot<e_unexpected_info> * sl = tls::read_ptr<slot<e_unexpected_info>>() )
+        {
             if( e_unexpected_info * unx = sl->has_value(err_id) )
                 unx->add(std::forward<E>(e));
             else
                 sl->put(err_id, e_unexpected_info()).add(std::forward<E>(e));
+        }
     }
 
     template <class E>
@@ -380,10 +351,12 @@ namespace leaf_detail
         static_assert(!std::is_pointer<E>::value, "Error objects of pointer types are not allowed");
         BOOST_LEAF_ASSERT((err_id&3)==1);
         if( auto sl = tls::read_ptr<slot<E>>() )
+        {
             if( auto v = sl->has_value(err_id) )
                 (void) std::forward<F>(f)(*v);
             else
                 (void) std::forward<F>(f)(sl->put(err_id,E()));
+        }
         return 0;
     }
 }
@@ -691,7 +664,7 @@ public:
 #if !defined(BOOST_LEAF_NO_EXCEPTIONS) && BOOST_LEAF_STD_UNCAUGHT_EXCEPTIONS
         uncaught_exceptions_(std::uncaught_exceptions()),
 #endif
-        ctx_(ctx.is_active() ? 0 : &ctx)
+        ctx_(ctx.is_active() ? nullptr : &ctx)
     {
         if( ctx_ )
             ctx_->activate();
@@ -703,7 +676,7 @@ public:
 #endif
         ctx_(x.ctx_)
     {
-        x.ctx_ = 0;
+        x.ctx_ = nullptr;
     }
 
     BOOST_LEAF_ALWAYS_INLINE ~context_activator() noexcept

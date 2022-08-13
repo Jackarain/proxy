@@ -7,6 +7,7 @@
     For more information, see http://www.boost.org
 */
 
+#include <cstddef>
 #include <iostream>
 #include <algorithm>
 #include <string>
@@ -42,30 +43,30 @@ void null_tests ( const char *p ) {
 
 //  make sure that substrings work just like strings
 void test_substr ( const std::string &str ) {
-    const size_t sz = str.size ();
+    const std::size_t sz = str.size ();
     string_view ref ( str );
 
 //  Substrings at the end
-    for ( size_t i = 0; i <= sz; ++ i )
+    for ( std::size_t i = 0; i <= sz; ++ i )
         interop ( str.substr ( i ), ref.substr ( i ));
 
 //  Substrings at the beginning
-    for ( size_t i = 0; i <= sz; ++ i )
+    for ( std::size_t i = 0; i <= sz; ++ i )
         interop ( str.substr ( 0, i ), ref.substr ( 0, i ));
 
 //  All possible substrings
-    for ( size_t i = 0; i < sz; ++i )
-        for ( size_t j = i; j < sz; ++j )
+    for ( std::size_t i = 0; i < sz; ++i )
+        for ( std::size_t j = i; j < sz; ++j )
             interop ( str.substr ( i, j ), ref.substr ( i, j ));
     }
 
 //  make sure that removing prefixes and suffixes work just like strings
 void test_remove ( const std::string &str ) {
-    const size_t sz = str.size ();
+    const std::size_t sz = str.size ();
     std::string work;
     string_view ref;
 
-    for ( size_t i = 1; i <= sz; ++i ) {
+    for ( std::size_t i = 1; i <= sz; ++i ) {
       work = str;
       ref  = str;
       while ( ref.size () >= i ) {
@@ -75,7 +76,7 @@ void test_remove ( const std::string &str ) {
           }
       }
 
-    for ( size_t i = 1; i < sz; ++ i ) {
+    for ( std::size_t i = 1; i < sz; ++ i ) {
       work = str;
       ref  = str;
       while ( ref.size () >= i ) {

@@ -87,7 +87,7 @@ void binary_rgb_to_rgb()
 {
     //expected_rgb view after thresholding of the original_rgb view with threshold value of 100
     //filling expected_rgb view's upper half part with rgb pixels of value 0, 165, 165
-    //filling expected_rgb view's lower half part with rgb pixels of value 165, 0, 0 
+    //filling expected_rgb view's lower half part with rgb pixels of value 165, 0, 0
     gil::fill_pixels(gil::subimage_view(gil::view(expected_rgb), 0, 0, original_rgb.width(),
         original_rgb.height() / 2), gil::rgb8_pixel_t(0, 165, 165));
     gil::fill_pixels(gil::subimage_view(gil::view(expected_rgb), 0, original_rgb.height() / 2,
@@ -102,7 +102,7 @@ void binary_rgb_to_rgb()
 void binary_inverse_rgb_to_rgb()
 {
     //expected_rgb view after thresholding of the original_rgb view with threshold value of 100
-    //filling expected_rgb view's upper half part with rgb pixels of value 90, 0, 0 
+    //filling expected_rgb view's upper half part with rgb pixels of value 90, 0, 0
     //filling expected_rgb view's lower half part with rgb pixels of value 0, 90, 90
     gil::fill_pixels(gil::subimage_view(gil::view(expected_rgb), 0, 0, original_rgb.width(),
         original_rgb.height() / 2), gil::rgb8_pixel_t(90, 0, 0));
@@ -127,7 +127,7 @@ int main()
 {
     fill_original_gray();
     fill_original_rgb();
-    
+
     binary_gray_to_gray();
     binary_inverse_gray_to_gray();
     binary_rgb_to_rgb();

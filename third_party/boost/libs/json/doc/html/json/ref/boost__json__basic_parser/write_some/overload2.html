@@ -30,18 +30,22 @@
 <p>
             Parse some of an input string as JSON, incrementally.
           </p>
-<h7><a name="json.ref.boost__json__basic_parser.write_some.overload2.h0"></a>
+<h6>
+<a name="json.ref.boost__json__basic_parser.write_some.overload2.h0"></a>
             <span class="phrase"><a name="json.ref.boost__json__basic_parser.write_some.overload2.synopsis"></a></span><a class="link" href="overload2.html#json.ref.boost__json__basic_parser.write_some.overload2.synopsis">Synopsis</a>
-          </h7><pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span>
+          </h6>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span>
 <span class="identifier">write_some</span><span class="special">(</span>
     <span class="keyword">bool</span> <span class="identifier">more</span><span class="special">,</span>
     <span class="keyword">char</span> <span class="keyword">const</span><span class="special">*</span> <span class="identifier">data</span><span class="special">,</span>
     <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">size</span><span class="special">,</span>
     <span class="identifier">std</span><span class="special">::</span><span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span><span class="special">);</span>
 </pre>
-<h7><a name="json.ref.boost__json__basic_parser.write_some.overload2.h1"></a>
+<h6>
+<a name="json.ref.boost__json__basic_parser.write_some.overload2.h1"></a>
             <span class="phrase"><a name="json.ref.boost__json__basic_parser.write_some.overload2.description"></a></span><a class="link" href="overload2.html#json.ref.boost__json__basic_parser.write_some.overload2.description">Description</a>
-          </h7><p>
+          </h6>
+<p>
             This function parses the JSON in the specified buffer, calling the handler
             to emit each SAX parsing event. The parse proceeds from the current state,
             which is at the beginning of a new JSON or in the middle of the current
@@ -70,29 +74,37 @@
             <code class="computeroutput"><span class="identifier">more</span> <span class="special">=</span>
             <span class="keyword">false</span></code>.
           </p>
-<h7><a name="json.ref.boost__json__basic_parser.write_some.overload2.h2"></a>
+<h6>
+<a name="json.ref.boost__json__basic_parser.write_some.overload2.h2"></a>
             <span class="phrase"><a name="json.ref.boost__json__basic_parser.write_some.overload2.complexity"></a></span><a class="link" href="overload2.html#json.ref.boost__json__basic_parser.write_some.overload2.complexity">Complexity</a>
-          </h7><p>
+          </h6>
+<p>
             Linear in <code class="computeroutput"><span class="identifier">size</span></code>.
           </p>
-<h7><a name="json.ref.boost__json__basic_parser.write_some.overload2.h3"></a>
+<h6>
+<a name="json.ref.boost__json__basic_parser.write_some.overload2.h3"></a>
             <span class="phrase"><a name="json.ref.boost__json__basic_parser.write_some.overload2.exception_safety"></a></span><a class="link" href="overload2.html#json.ref.boost__json__basic_parser.write_some.overload2.exception_safety">Exception
             Safety</a>
-          </h7><p>
+          </h6>
+<p>
             Basic guarantee. Calls to the handler may throw. Upon error or exception,
             subsequent calls will fail until <a class="link" href="../reset.html" title="basic_parser::reset"><code class="computeroutput"><span class="identifier">reset</span></code></a> is called to parse a new
             JSON.
           </p>
-<h7><a name="json.ref.boost__json__basic_parser.write_some.overload2.h4"></a>
+<h6>
+<a name="json.ref.boost__json__basic_parser.write_some.overload2.h4"></a>
             <span class="phrase"><a name="json.ref.boost__json__basic_parser.write_some.overload2.return_value"></a></span><a class="link" href="overload2.html#json.ref.boost__json__basic_parser.write_some.overload2.return_value">Return
             Value</a>
-          </h7><p>
+          </h6>
+<p>
             The number of characters successfully parsed, which may be smaller than
             <code class="computeroutput"><span class="identifier">size</span></code>.
           </p>
-<h7><a name="json.ref.boost__json__basic_parser.write_some.overload2.h5"></a>
+<h6>
+<a name="json.ref.boost__json__basic_parser.write_some.overload2.h5"></a>
             <span class="phrase"><a name="json.ref.boost__json__basic_parser.write_some.overload2.parameters"></a></span><a class="link" href="overload2.html#json.ref.boost__json__basic_parser.write_some.overload2.parameters">Parameters</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>

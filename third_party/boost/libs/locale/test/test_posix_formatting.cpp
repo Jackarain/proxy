@@ -1,32 +1,29 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
+
 #ifdef BOOST_LOCALE_NO_POSIX_BACKEND
 #include <iostream>
 int main()
 {
-        std::cout << "POSIX Backend is not build... Skipping" << std::endl;
+        std::cout << "POSIX Backend is not build... Skipping\n";
 }
 #else
 #include <boost/locale/formatting.hpp>
-#include <boost/locale/localization_backend.hpp>
-#include <boost/locale/generator.hpp>
 #include <boost/locale/encoding.hpp>
+#include <boost/locale/generator.hpp>
 #include <boost/locale/info.hpp>
+#include <boost/locale/localization_backend.hpp>
 #include <iomanip>
+#include <ctime>
+#include <iostream>
+#include <monetary.h>
+#include <langinfo.h>
+
 #include "test_locale.hpp"
 #include "test_locale_tools.hpp"
-#include "test_posix_tools.hpp"
-#include <iostream>
-
-#include <time.h>
-#include <monetary.h>
-#include <assert.h>
-#include <langinfo.h>
 
 //#define DEBUG_FMT
 
@@ -94,8 +91,8 @@ void test_by_char(std::locale const &l,locale_t lreal)
     {
         std::cout << "- Testing as::currency national " << std::endl;
 
-        char buf[256];
-        strfmon_l(buf,256,lreal,"%n",1043.34);
+        char buf[64];
+        TEST(strfmon_l(buf,sizeof(buf),lreal,"%n",1043.34) > 0);
 
         ss_type ss;
         ss.imbue(l);
@@ -114,8 +111,8 @@ void test_by_char(std::locale const &l,locale_t lreal)
 
     {
         std::cout << "- Testing as::currency iso" << std::endl;
-        char buf[256];
-        strfmon_l(buf,256,lreal,"%i",1043.34);
+        char buf[64];
+        TEST(strfmon_l(buf,sizeof(buf),lreal,"%i",1043.34) > 0);
         ss_type ss;
         ss.imbue(l);
 
@@ -129,13 +126,13 @@ void test_by_char(std::locale const &l,locale_t lreal)
         std::cout << "[" << boost::locale::conv::from_utf(buf,"UTF-8") << "]\n" ;
         #endif
     }
-    
-    
+
+
     {
         std::cout << "- Testing as::date/time" << std::endl;
         ss_type ss;
         ss.imbue(l);
-        
+
         time_t a_date = 3600*24*(31+4); // Feb 5th
         time_t a_time = 3600*15+60*33; // 15:33:05
         time_t a_timesec = 13;
@@ -152,8 +149,8 @@ void test_by_char(std::locale const &l,locale_t lreal)
         ss << as::ftime(conv_to_char<CharType>("%M")) << a_datetime << CharType('\n');
 
         std::tm tm=*gmtime(&a_datetime);
-        char buf[256];
-        strftime_l(buf,sizeof(buf),"%x\n%X\n%c\n16\n48\n",&tm,lreal);
+        char buf[64];
+        TEST(strftime_l(buf,sizeof(buf),"%x\n%X\n%c\n16\n48\n",&tm,lreal) > 0);
 
         TEST(equal(ss.str(),buf,lreal));
         #ifdef DEBUG_FMT
@@ -164,118 +161,99 @@ void test_by_char(std::locale const &l,locale_t lreal)
 
 }
 
-int main()
+void test_main(int /*argc*/, char** /*argv*/)
 {
-    locale_t lreal = 0;
-    try {
-        boost::locale::localization_backend_manager mgr = boost::locale::localization_backend_manager::global();
-        mgr.select("posix");
-        boost::locale::localization_backend_manager::global(mgr);
-        boost::locale::generator gen;
-        std::string name;
+    locale_holder lreal;
+    boost::locale::localization_backend_manager mgr = boost::locale::localization_backend_manager::global();
+    mgr.select("posix");
+    boost::locale::localization_backend_manager::global(mgr);
+    boost::locale::generator gen;
+    std::string name;
 
-        {
-            std::cout << "en_US.UTF locale" << std::endl;
-            name="en_US.UTF-8";
-            if(!have_locale(name)) {
-                std::cout << "en_US.UTF-8 not supported" << std::endl;
-            }
-            else {
-                std::locale l1=gen(name);
-                lreal=newlocale(LC_ALL_MASK,name.c_str(),0);
-                assert(lreal);
-                std::cout << "UTF-8" << std::endl;
-                
-                test_by_char<char,char>(l1,lreal);
-                
-                std::cout << "Wide UTF-" << sizeof(wchar_t) * 8 << std::endl;
-                test_by_char<wchar_t,char>(l1,lreal);
-                freelocale(lreal);
-                lreal = 0;
-            }
+    {
+        std::cout << "en_US.UTF locale" << std::endl;
+        name="en_US.UTF-8";
+        if(!have_locale(name)) {
+            std::cout << "en_US.UTF-8 not supported" << std::endl;
         }
-        {
-            std::cout << "en_US.Latin-1 locale" << std::endl;
-            std::string name = "en_US.ISO8859-1";
-            if(!have_locale(name)) {
-                std::cout << "en_US.ISO8859-8 not supported" << std::endl;
-            }
-            else {
-                std::locale l1=gen(name);
-                lreal=newlocale(LC_ALL_MASK,name.c_str(),0);
-                assert(lreal);
-                test_by_char<char,char>(l1,lreal);
-                std::cout << "Wide UTF-" << sizeof(wchar_t) * 8 << std::endl;
-                test_by_char<wchar_t,char>(l1,lreal);
-                freelocale(lreal);
-                lreal = 0;
-            }
-        }
-        {
-            std::cout << "he_IL.UTF locale" << std::endl;
-            name="he_IL.UTF-8";
-            if(!have_locale(name)) {
-                std::cout << name << " not supported" << std::endl;
-            }
-            else {
-                std::locale l1=gen(name);
-                lreal=newlocale(LC_ALL_MASK,name.c_str(),0);
-                assert(lreal);
-                std::cout << "UTF-8" << std::endl;
-                
-                test_by_char<char,char>(l1,lreal);
-                
-                std::cout << "Wide UTF-" << sizeof(wchar_t) * 8 << std::endl;
-                test_by_char<wchar_t,char>(l1,lreal);
-                freelocale(lreal);
-                lreal = 0;
-            }
-        }
-        {
-            std::cout << "he_IL.ISO locale" << std::endl;
-            std::string name = "he_IL.ISO8859-8";
-            if(!have_locale(name)) {
-                std::cout << name <<" not supported" << std::endl;
-            }
-            else {
-                std::locale l1=gen(name);
-                lreal=newlocale(LC_ALL_MASK,name.c_str(),0);
-                assert(lreal);
-                test_by_char<char,char>(l1,lreal);
-                std::cout << "Wide UTF-" << sizeof(wchar_t) * 8 << std::endl;
-                test_by_char<wchar_t,char>(l1,lreal);
-                freelocale(lreal);
-                lreal = 0;
-            }
-        }
-        {
-            std::cout << "Testing UTF-8 punct issues" << std::endl;
-            std::string name = "ru_RU.UTF-8";
-            if(!have_locale(name)) {
-                std::cout << "- No russian locale" << std::endl;
-            }
-            else {
-                std::locale l1=gen(name);
-                std::ostringstream ss;
-                ss.imbue(l1);
-                ss << std::setprecision(10) ;
-                ss << boost::locale::as::number << 12345.45;
-                std::string v=ss.str();
-                TEST(v == "12345,45" || v == "12 345,45" || v=="12.345,45");
-            }
+        else {
+            std::locale l1=gen(name);
+            lreal=newlocale(LC_ALL_MASK,name.c_str(),0);
+            TEST_REQUIRE(lreal);
+            std::cout << "UTF-8" << std::endl;
+
+            test_by_char<char,char>(l1,lreal);
+
+            std::cout << "Wide UTF-" << sizeof(wchar_t) * 8 << std::endl;
+            test_by_char<wchar_t,char>(l1,lreal);
         }
     }
-    catch(std::exception const &e) {
-        std::cerr << "Failed " << e.what() << std::endl;
-        if(lreal)
-            freelocale(lreal);
-        return EXIT_FAILURE;
+    {
+        std::cout << "en_US.Latin-1 locale" << std::endl;
+        std::string name = "en_US.ISO8859-1";
+        if(!have_locale(name)) {
+            std::cout << "en_US.ISO8859-8 not supported" << std::endl;
+        }
+        else {
+            std::locale l1=gen(name);
+            lreal=newlocale(LC_ALL_MASK,name.c_str(),0);
+            TEST_REQUIRE(lreal);
+            test_by_char<char,char>(l1,lreal);
+            std::cout << "Wide UTF-" << sizeof(wchar_t) * 8 << std::endl;
+            test_by_char<wchar_t,char>(l1,lreal);
+        }
     }
-    FINALIZE();
+    {
+        std::cout << "he_IL.UTF locale" << std::endl;
+        name="he_IL.UTF-8";
+        if(!have_locale(name)) {
+            std::cout << name << " not supported" << std::endl;
+        }
+        else {
+            std::locale l1=gen(name);
+            lreal=newlocale(LC_ALL_MASK,name.c_str(),0);
+            TEST_REQUIRE(lreal);
+            std::cout << "UTF-8" << std::endl;
 
+            test_by_char<char,char>(l1,lreal);
+
+            std::cout << "Wide UTF-" << sizeof(wchar_t) * 8 << std::endl;
+            test_by_char<wchar_t,char>(l1,lreal);
+        }
+    }
+    {
+        std::cout << "he_IL.ISO locale" << std::endl;
+        std::string name = "he_IL.ISO8859-8";
+        if(!have_locale(name)) {
+            std::cout << name << " not supported" << std::endl;
+        }
+        else {
+            std::locale l1=gen(name);
+            lreal=newlocale(LC_ALL_MASK,name.c_str(),0);
+            TEST_REQUIRE(lreal);
+            test_by_char<char,char>(l1,lreal);
+            std::cout << "Wide UTF-" << sizeof(wchar_t) * 8 << std::endl;
+            test_by_char<wchar_t,char>(l1,lreal);
+        }
+    }
+    {
+        std::cout << "Testing UTF-8 punct issues" << std::endl;
+        std::string name = "ru_RU.UTF-8";
+        if(!have_locale(name)) {
+            std::cout << "- No russian locale" << std::endl;
+        }
+        else {
+            std::locale l1=gen(name);
+            std::ostringstream ss;
+            ss.imbue(l1);
+            ss << std::setprecision(10) ;
+            ss << boost::locale::as::number << 12345.45;
+            std::string v=ss.str();
+            TEST(v == "12345,45" || v == "12 345,45" || v=="12.345,45");
+        }
+    }
 }
 
 #endif // posix
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 
-// boostinspect:noascii 
+// boostinspect:noascii

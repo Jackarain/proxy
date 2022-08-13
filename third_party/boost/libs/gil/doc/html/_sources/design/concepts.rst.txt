@@ -8,7 +8,7 @@ algorithmic guarantees. For example, GIL class ``pixel`` is a model of GIL
 ``PixelConcept``. The user may substitute the pixel class with one of their
 own, and, as long as it satisfies the requirements of ``PixelConcept``,
 all other GIL classes and algorithms can be used with it.
-See more about concepts is avaialble at
+See more about concepts at
 `Generic Programming in ConceptC++ <https://web.archive.org/web/20160324115943/http://www.generic-programming.org/languages/conceptcpp/>`_
 
 In this document we will use a syntax for defining concepts that is described

@@ -17,9 +17,9 @@ same set of colors in the same order).
 
 .. seealso::
 
-  - `ColorSpaceConcept<ColorSpace> <reference/structboost_1_1gil_1_1_color_space_concept.html>`_
-  - `ColorSpacesCompatibleConcept<ColorSpace1,ColorSpace2> <reference/structboost_1_1gil_1_1_color_spaces_compatible_concept.html>`_
-  - `ChannelMappingConcept<Mapping> <reference/structboost_1_1gil_1_1_channel_mapping_concept.html>`_
+  - `ColorSpaceConcept<ColorSpace> <../reference/structboost_1_1gil_1_1_color_space_concept.html>`_
+  - `ColorSpacesCompatibleConcept<ColorSpace1,ColorSpace2> <../reference/structboost_1_1gil_1_1_color_spaces_compatible_concept.html>`_
+  - `ChannelMappingConcept<Mapping> <../reference/structboost_1_1gil_1_1_channel_mapping_concept.html>`_
 
 Models
 ------
@@ -45,7 +45,7 @@ Besides the standard layouts, it also provides:
 - ``abgr_layout_t``
 - ``argb_layout_t``
 
-As an example, here is how GIL defines the RGBA color space::
+As an example, here is how GIL defines the RGBA color space:
 
 .. code-block:: cpp
 
@@ -53,12 +53,12 @@ As an example, here is how GIL defines the RGBA color space::
   struct green_t {};
   struct blue_t {};
   struct alpha_t {};
-  rgba_t = using mpl::vector4<red_t, green_t, blue_t, alpha_t>;
+  rgba_t = using mp11::mp_list<red_t, green_t, blue_t, alpha_t>;
 
 The ordering of the channels in the color space definition specifies their
 semantic order. For example, ``red_t`` is the first semantic channel of
 ``rgba_t``. While there is a unique semantic ordering of the channels in a
-color space, channels may vary in their physical ordering in memory
+color space, channels may vary in their physical ordering in memory.
 
 The mapping of channels is specified by ``ChannelMappingConcept``, which is
 an MPL random access sequence of integral types.
@@ -71,7 +71,7 @@ Thus they are grouped in GIL's layout:
   template
   <
       typename ColorSpace,
-      typename ChannelMapping = mpl::range_c<int, 0, mpl::size<ColorSpace>::value>
+      typename ChannelMapping = mp11::make_integer_sequence<int, mp11::mp_size<ColorSpace>::value>
   >
   struct layout
   {
@@ -84,6 +84,6 @@ Here is how to create layouts for the RGBA color space:
 .. code-block:: cpp
 
   using rgba_layout_t = layout<rgba_t>; // default ordering is 0,1,2,3...
-  using bgra_layout_t = layout<rgba_t, mpl::vector4_c<int,2,1,0,3>>;
-  using argb_layout_t = layout<rgba_t, mpl::vector4_c<int,1,2,3,0>>;
-  using abgr_layout_t = layout<rgba_t, mpl::vector4_c<int,3,2,1,0>>;
+  using bgra_layout_t = layout<rgba_t, mp11::mp_list_c<int,2,1,0,3>>;
+  using argb_layout_t = layout<rgba_t, mp11::mp_list_c<int,1,2,3,0>>;
+  using abgr_layout_t = layout<rgba_t, mp11::mp_list_c<int,3,2,1,0>>;

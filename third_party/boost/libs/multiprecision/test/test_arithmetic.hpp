@@ -370,6 +370,7 @@ void test_rational_signed(const std::integral_constant<bool, false>&)
 template <class Real>
 void test_rational(const std::integral_constant<bool, false>&)
 {
+   typedef typename Real::value_type value_type;
    Real a(2);
    a /= 3;
    BOOST_CHECK_EQUAL(numerator(a), 2);
@@ -381,6 +382,15 @@ void test_rational(const std::integral_constant<bool, false>&)
 #ifndef BOOST_NO_EXCEPTIONS
    BOOST_CHECK_THROW(Real(a / 0), std::overflow_error);
    BOOST_CHECK_THROW(Real("3.14"), std::runtime_error);
+   //
+   // Check construction/assignment from zero denominator:
+   //
+   BOOST_CHECK_THROW(Real(5, 0), std::overflow_error);
+   BOOST_CHECK_THROW(Real(value_type(5), value_type(0)), std::overflow_error);
+   BOOST_CHECK_THROW(Real("5", "0"), std::overflow_error);
+   BOOST_CHECK_THROW(Real(1).assign(5, 0), std::overflow_error);
+   BOOST_CHECK_THROW(Real(1).assign(value_type(5), value_type(0)), std::overflow_error);
+   BOOST_CHECK_THROW(Real(1).assign("5", "0"), std::overflow_error);
 #endif
    b = Real("2/3");
    BOOST_CHECK_EQUAL(a, b);
@@ -399,6 +409,69 @@ void test_rational(const std::integral_constant<bool, false>&)
    BOOST_CHECK_EQUAL(static_cast<std::uint32_t>(three), 3);
    BOOST_CHECK_EQUAL(static_cast<std::uint64_t>(three), 3);
    test_rational_signed<Real>(std::integral_constant<bool, std::numeric_limits<Real>::is_signed>());
+   //
+   // Verify normalization:
+   //
+   {
+      Real c(20, 6);
+      BOOST_CHECK_EQUAL(numerator(c), 10);
+      BOOST_CHECK_EQUAL(denominator(c), 3);
+      c.assign(15, 6);
+      BOOST_CHECK_EQUAL(numerator(c), 5);
+      BOOST_CHECK_EQUAL(denominator(c), 2);
+   }
+   {
+      typename Real::value_type v1(20), v2(6);
+      Real                      c(v1, v2);
+      BOOST_CHECK_EQUAL(numerator(c), 10);
+      BOOST_CHECK_EQUAL(denominator(c), 3);
+      v1 = 15;
+      v2 = 6;
+      c.assign(v1, v2);
+      BOOST_CHECK_EQUAL(numerator(c), 5);
+      BOOST_CHECK_EQUAL(denominator(c), 2);
+   }
+   {
+      Real c("20", "6");
+      BOOST_CHECK_EQUAL(numerator(c), 10);
+      BOOST_CHECK_EQUAL(denominator(c), 3);
+      c.assign("15", "6");
+      BOOST_CHECK_EQUAL(numerator(c), 5);
+      BOOST_CHECK_EQUAL(denominator(c), 2);
+   }
+   //
+   // Verify normalization of negative denominator:
+   //
+   BOOST_IF_CONSTEXPR(std::numeric_limits<value_type>::is_signed)
+   {
+      {
+         Real c(20, -6);
+         BOOST_CHECK_EQUAL(numerator(c), -10);
+         BOOST_CHECK_EQUAL(denominator(c), 3);
+         c.assign(15, -6);
+         BOOST_CHECK_EQUAL(numerator(c), -5);
+         BOOST_CHECK_EQUAL(denominator(c), 2);
+      }
+      {
+         typename Real::value_type v1(20), v2(-6);
+         Real                      c(v1, v2);
+         BOOST_CHECK_EQUAL(numerator(c), -10);
+         BOOST_CHECK_EQUAL(denominator(c), 3);
+         v1 = 15;
+         v2 = -6;
+         c.assign(v1, v2);
+         BOOST_CHECK_EQUAL(numerator(c), -5);
+         BOOST_CHECK_EQUAL(denominator(c), 2);
+      }
+      {
+         Real c("20", "-6");
+         BOOST_CHECK_EQUAL(numerator(c), -10);
+         BOOST_CHECK_EQUAL(denominator(c), 3);
+         c.assign("15", "-6");
+         BOOST_CHECK_EQUAL(numerator(c), -5);
+         BOOST_CHECK_EQUAL(denominator(c), 2);
+      }
+   }
 }
 
 template <class Real>

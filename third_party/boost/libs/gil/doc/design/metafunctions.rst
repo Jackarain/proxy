@@ -209,7 +209,7 @@ just like ``View``, but being grayscale and planar:
 
 .. code-block:: cpp
 
-  using VT = typename derived_view_type<View, boost::use_default, gray_t, mpl::true_>::type;
+  using VT = typename derived_view_type<View, boost::use_default, gray_t, mp11::mp_true>::type;
 
 Type traits
 -----------

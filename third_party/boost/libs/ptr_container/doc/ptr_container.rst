@@ -384,7 +384,7 @@ __ http://www.two-sdg.demon.co.uk/curbralan/papers/europlop/NullObject.pdf
 
 .. raw:: html 
 
-        <hr>
+        <hr/>
 
 :Copyright: Thorsten Ottosen 2004-2006. 
 

@@ -5,7 +5,6 @@
 // See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt
 //
-#define BOOST_GIL_IO_ADD_FS_PATH_SUPPORT
 #include <boost/gil.hpp>
 #include <boost/gil/extension/io/targa.hpp>
 
@@ -21,7 +20,7 @@
 #include "subimage_test.hpp"
 #include "test_utility_output_stream.hpp"
 
-namespace fs = boost::filesystem;
+namespace fs  = boost::gil::detail::filesystem;
 namespace gil = boost::gil;
 namespace mp11 = boost::mp11;
 
@@ -254,15 +253,14 @@ void test_subimage()
 
 void test_dynamic_image()
 {
-    using my_img_types = mp11::mp_list
+    gil::any_image
     <
         gil::gray8_image_t,
         gil::gray16_image_t,
         gil::rgb8_image_t,
         gil::rgba8_image_t
-    >;
+    > image;
 
-    gil::any_image<my_img_types> image;
     gil::read_image(targa_filename.c_str(), image, gil::targa_tag());
     gil::write_view(targa_out + "dynamic_image_test.tga", gil::view(image), gil::targa_tag());
 }

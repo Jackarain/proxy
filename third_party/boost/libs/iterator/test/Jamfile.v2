@@ -50,6 +50,8 @@ test-suite iterator
     [ run permutation_iterator_test.cpp : : : # <stlport-iostream>on
     ]
     [ run function_input_iterator_test.cpp ]
+    [ run function_output_iterator_test.cpp ]
+    [ compile-fail function_output_iterator_cf.cpp ]
 
     [ run generator_iterator_test.cpp ]
 

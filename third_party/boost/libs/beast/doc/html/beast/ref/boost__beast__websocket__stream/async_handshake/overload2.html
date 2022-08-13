@@ -30,9 +30,11 @@
 <p>
             Perform the WebSocket handshake asynchronously in the client role.
           </p>
-<h7><a name="beast.ref.boost__beast__websocket__stream.async_handshake.overload2.h0"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.async_handshake.overload2.h0"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.async_handshake.overload2.synopsis"></a></span><a class="link" href="overload2.html#beast.ref.boost__beast__websocket__stream.async_handshake.overload2.synopsis">Synopsis</a>
-          </h7><pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
+          </h6>
+<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
     <span class="keyword">class</span> <span class="identifier">HandshakeHandler</span> <span class="special">=</span> <span class="identifier">net</span><span class="special">::</span><span class="identifier">default_completion_token_t</span><span class="special">&lt;</span><a class="link" href="../executor_type.html" title="websocket::stream::executor_type">executor_type</a><span class="special">&gt;&gt;</span>
 <a href="../../../../../../../../doc/html/boost_asio/reference/asynchronous_operations.html#boost_asio.reference.asynchronous_operations.automatic_deduction_of_initiating_function_return_type" target="_top"><span class="emphasis"><em>DEDUCED</em></span></a>
 <span class="identifier">async_handshake</span><span class="special">(</span>
@@ -41,9 +43,11 @@
     <span class="identifier">string_view</span> <span class="identifier">target</span><span class="special">,</span>
     <span class="identifier">HandshakeHandler</span><span class="special">&amp;&amp;</span> <span class="identifier">handler</span> <span class="special">=</span> <span class="identifier">net</span><span class="special">::</span><span class="identifier">default_completion_token_t</span><span class="special">&lt;</span> <a class="link" href="../executor_type.html" title="websocket::stream::executor_type">executor_type</a> <span class="special">&gt;{});</span>
 </pre>
-<h7><a name="beast.ref.boost__beast__websocket__stream.async_handshake.overload2.h1"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.async_handshake.overload2.h1"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.async_handshake.overload2.description"></a></span><a class="link" href="overload2.html#beast.ref.boost__beast__websocket__stream.async_handshake.overload2.description">Description</a>
-          </h7><p>
+          </h6>
+<p>
             This initiating function is used to asynchronously begin performing the
             <a href="https://en.wikipedia.org/wiki/WebSocket#Protocol_handshake" target="_top">WebSocket
             handshake</a>, required before messages can be sent and received.
@@ -70,9 +74,11 @@
             by a <a href="https://tools.ietf.org/html/rfc7230#section-3.1.2" target="_top">status-code</a>
             of <a class="link" href="../../boost__beast__http__status.html" title="http::status"><code class="computeroutput"><span class="identifier">beast</span><span class="special">::</span><span class="identifier">http</span><span class="special">::</span><span class="identifier">status</span><span class="special">::</span><span class="identifier">switching_protocols</span></code></a>.
           </p>
-<h7><a name="beast.ref.boost__beast__websocket__stream.async_handshake.overload2.h2"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.async_handshake.overload2.h2"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.async_handshake.overload2.parameters"></a></span><a class="link" href="overload2.html#beast.ref.boost__beast__websocket__stream.async_handshake.overload2.parameters">Parameters</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>
@@ -162,9 +168,11 @@
 </tr>
 </tbody>
 </table></div>
-<h7><a name="beast.ref.boost__beast__websocket__stream.async_handshake.overload2.h3"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.async_handshake.overload2.h3"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.async_handshake.overload2.example"></a></span><a class="link" href="overload2.html#beast.ref.boost__beast__websocket__stream.async_handshake.overload2.example">Example</a>
-          </h7><pre class="programlisting"><span class="identifier">response_type</span> <span class="identifier">res</span><span class="special">;</span>
+          </h6>
+<pre class="programlisting"><span class="identifier">response_type</span> <span class="identifier">res</span><span class="special">;</span>
 <span class="identifier">ws</span><span class="special">.</span><span class="identifier">async_handshake</span><span class="special">(</span><span class="identifier">res</span><span class="special">,</span> <span class="string">"localhost"</span><span class="special">,</span> <span class="string">"/"</span><span class="special">,</span>
     <span class="special">[&amp;</span><span class="identifier">res</span><span class="special">](</span><span class="identifier">error_code</span> <span class="identifier">ec</span><span class="special">)</span>
     <span class="special">{</span>
@@ -175,10 +183,12 @@
 
     <span class="special">});</span>
 </pre>
-<h7><a name="beast.ref.boost__beast__websocket__stream.async_handshake.overload2.h4"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.async_handshake.overload2.h4"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.async_handshake.overload2.see_also"></a></span><a class="link" href="overload2.html#beast.ref.boost__beast__websocket__stream.async_handshake.overload2.see_also">See
             Also</a>
-          </h7><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+          </h6>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
 <li class="listitem">
                 <a href="https://tools.ietf.org/html/rfc6455#section-4.1" target="_top">Websocket
                 Opening Handshake Client Requirements (RFC6455)</a>

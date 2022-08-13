@@ -6,6 +6,7 @@
 
 project
     :   requirements
+        <library>/boost/serialization//boost_serialization
         <library>/boost/system//boost_system
         <define>BOOST_ALL_NO_LIB=1
         <warnings>all
@@ -34,6 +35,7 @@ test-suite pool :
         <toolset>pathscale:<cxxflags>-Wno-long-long ]
     [ run test_bug_2696.cpp ]
     [ run test_bug_5526.cpp ]
+    [ run test_bug_6701.cpp ]
     [ run test_threading.cpp : : : <threading>multi <library>/boost/thread//boost_thread ]
     [ compile test_poisoned_macros.cpp ]
     ;

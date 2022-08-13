@@ -1,5 +1,6 @@
 #
 # Copyright (c) 2017 Mateusz Loskot <mateusz at loskot dot net>
+# Copyright (c) 2019-2021 Pranam Lashkari <plashkari628@gmail.com>
 # All rights reserved.
 #
 # Distributed under the Boost Software License, Version 1.0.
@@ -9,17 +10,7 @@
 message(STATUS "Boost.GIL: Configuring tests in test/extension/numeric")
 
 foreach(_name
-  channel_numeric_operations
-  convolve
-  convolve_2d
-  convolve_cols
-  convolve_rows
-  extend_boundary
-  kernel
-  kernel_fixed
   matrix3x2
-  pixel_numeric_operations
-  pixel_numeric_operations_float
   resample)
   set(_test t_ext_numeric_${_name})
   set(_target test_ext_numeric_${_name})

@@ -506,7 +506,7 @@ All containers can be serialized by means of
 
 .. raw:: html 
 
-        <hr>
+        <hr/>
 
 :Copyright:     Thorsten Ottosen 2004-2007. Use, modification and distribution is subject to the Boost Software License, Version 1.0 (see LICENSE_1_0.txt__).
 

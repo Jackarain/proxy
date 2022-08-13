@@ -377,6 +377,15 @@ and asynchronous operations.
 * [@boost_asio/example/cpp11/echo/blocking_udp_echo_server.cpp]
 
 
+[heading Deferred]
+
+Examples showing how to use the [link boost_asio.reference.deferred `deferred`]
+completion token.
+
+* [@boost_asio/example/cpp11/deferred/deferred_1.cpp]
+* [@boost_asio/example/cpp11/deferred/deferred_2.cpp]
+
+
 [heading Fork]
 
 These POSIX-specific examples show how to use Boost.Asio in conjunction with the
@@ -534,8 +543,8 @@ Examples showing how to use UNIX domain (local) sockets.
 
 [heading Deferred]
 
-Examples showing how to use the [link boost_asio.reference.experimental__deferred
-`experimental::deferred`] completion token.
+Examples showing how to use the [link boost_asio.reference.deferred `deferred`]
+completion token.
 
 * [@boost_asio/example/cpp14/deferred/deferred_1.cpp]
 * [@boost_asio/example/cpp14/deferred/deferred_2.cpp]
@@ -641,6 +650,41 @@ Coroutines TS.
 Example showing how to use a channel in conjunction with C++20 coroutines.
 
 * [@boost_asio/example/cpp20/channels/throttling_proxy.cpp]
+
+
+[heading Coroutines]
+
+Examples showing how to implement a chain of asynchronous operations using C++20
+Coroutines.
+
+* [@boost_asio/example/cpp20/coroutines/echo_server.cpp]
+* [@boost_asio/example/cpp20/coroutines/echo_server_with_default.cpp]
+* [@boost_asio/example/cpp20/coroutines/echo_server_with_as_tuple_default.cpp]
+* [@boost_asio/example/cpp20/coroutines/echo_server_with_as_single_default.cpp]
+* [@boost_asio/example/cpp20/coroutines/echo_server_with_deferred.cpp]
+* [@boost_asio/example/cpp20/coroutines/echo_server_with_deferred_default.cpp]
+* [@boost_asio/example/cpp20/coroutines/refactored_echo_server.cpp]
+* [@boost_asio/example/cpp20/coroutines/chat_server.cpp]
+* [@boost_asio/example/cpp20/coroutines/timeout.cpp]
+
+
+[heading Operations]
+
+Examples showing how to implement composed asynchronous operations as reusable library functions.
+
+* [@boost_asio/example/cpp20/operations/composed_1.cpp]
+* [@boost_asio/example/cpp20/operations/composed_2.cpp]
+* [@boost_asio/example/cpp20/operations/composed_3.cpp]
+* [@boost_asio/example/cpp20/operations/composed_4.cpp]
+* [@boost_asio/example/cpp20/operations/composed_5.cpp]
+* [@boost_asio/example/cpp20/operations/composed_6.cpp]
+* [@boost_asio/example/cpp20/operations/composed_7.cpp]
+* [@boost_asio/example/cpp20/operations/composed_8.cpp]
+
+Examples showing how to expose callback-based APIs as asynchronous operations.
+
+* [@boost_asio/example/cpp20/operations/callback_wrapper.cpp]
+* [@boost_asio/example/cpp20/operations/c_callback_wrapper.cpp]
 
 
 [endsect]

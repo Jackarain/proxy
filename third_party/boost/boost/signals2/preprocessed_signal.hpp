@@ -22,6 +22,7 @@
 #include <boost/preprocessor/iteration.hpp>
 #include <boost/preprocessor/repetition.hpp>
 #include <boost/signals2/detail/preprocessed_arg_type.hpp>
+#include <boost/smart_ptr/make_shared.hpp>
 #include <boost/type_traits/add_reference.hpp>
 #include <boost/type_traits/is_void.hpp> 
 #include <boost/utility/enable_if.hpp>

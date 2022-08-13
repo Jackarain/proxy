@@ -159,14 +159,14 @@ y dimension types are the same. They model the following concept:
 
 .. seealso::
 
-  - `HasDynamicYStepTypeConcept<T> <reference/structboost_1_1gil_1_1_has_dynamic_y_step_type_concept.html>`_
-  - `HasTransposedTypeConcept<T> <reference/structboost_1_1gil_1_1_has_transposed_type_concept.html>`_
-  - `RandomAccessNDLocatorConcept<Locator> <reference/structboost_1_1gil_1_1_random_access_n_d_locator_concept.html>`_
-  - `MutableRandomAccessNDLocatorConcept<Locator> <reference/structboost_1_1gil_1_1_mutable_random_access_n_d_locator_concept.html>`_
-  - `RandomAccess2DLocatorConcept<Locator> <reference/structboost_1_1gil_1_1_random_access2_d_locator_concept.html>`_
-  - `MutableRandomAccess2DLocatorConcept<Locator> <reference/structboost_1_1gil_1_1_mutable_random_access2_d_locator_concept.html>`_
-  - `PixelLocatorConcept<Locator> <reference/structboost_1_1gil_1_1_pixel_locator_concept.html>`_
-  - `MutablePixelLocatorConcept<Locator> <reference/structboost_1_1gil_1_1_mutable_pixel_locator_concept.html>`_
+  - `HasDynamicYStepTypeConcept<T> <../reference/structboost_1_1gil_1_1_has_dynamic_y_step_type_concept.html>`_
+  - `HasTransposedTypeConcept<T> <../reference/structboost_1_1gil_1_1_has_transposed_type_concept.html>`_
+  - `RandomAccessNDLocatorConcept<Locator> <../reference/structboost_1_1gil_1_1_random_access_n_d_locator_concept.html>`_
+  - `MutableRandomAccessNDLocatorConcept<Locator> <../reference/structboost_1_1gil_1_1_mutable_random_access_n_d_locator_concept.html>`_
+  - `RandomAccess2DLocatorConcept<Locator> <../reference/structboost_1_1gil_1_1_random_access2_d_locator_concept.html>`_
+  - `MutableRandomAccess2DLocatorConcept<Locator> <../reference/structboost_1_1gil_1_1_mutable_random_access2_d_locator_concept.html>`_
+  - `PixelLocatorConcept<Locator> <../reference/structboost_1_1gil_1_1_pixel_locator_concept.html>`_
+  - `MutablePixelLocatorConcept<Locator> <../reference/structboost_1_1gil_1_1_mutable_pixel_locator_concept.html>`_
 
 Models
 ------

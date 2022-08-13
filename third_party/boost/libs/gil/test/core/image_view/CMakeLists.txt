@@ -12,6 +12,7 @@ foreach(_name
   derived_view_type
   dynamic_step
   is_planar
+  is_1d_traversable
   iterator
   planar_rgba_view
   reverse_iterator

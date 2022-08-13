@@ -2,6 +2,8 @@
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
+#define _SILENCE_NONFLOATING_COMPLEX_DEPRECATION_WARNING
+
 #include <boost/config/pragma_message.hpp>
 
 #if defined(__GNUC__) && !defined(__clang__) && __cplusplus < 201100L

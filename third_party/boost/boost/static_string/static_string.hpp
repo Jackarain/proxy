@@ -350,10 +350,10 @@ integer_to_string(
   }
   if (value < 0)
   {
-    const bool is_min = value == std::numeric_limits<Integer>::min();
+    const bool is_min = value == (std::numeric_limits<Integer>::min)();
     // negation of a min value cannot be represented
     if (is_min)
-      value = std::numeric_limits<Integer>::max();
+      value = (std::numeric_limits<Integer>::max)();
     else
       value = -value;
     const auto last_char = str_end - 1;
@@ -405,10 +405,10 @@ integer_to_wstring(
   }
   if (value < 0)
   {
-    const bool is_min = value == std::numeric_limits<Integer>::min();
+    const bool is_min = value == (std::numeric_limits<Integer>::min)();
     // negation of a min value cannot be represented
     if (is_min)
-      value = std::numeric_limits<Integer>::max();
+      value = (std::numeric_limits<Integer>::max)();
     else
       value = -value;
     const auto last_char = str_end - 1;

@@ -168,6 +168,7 @@ detail/pool_construct.bat and detail/pool_construct.sh are also provided to call
 <method name="alloc_size" cv="const"><type>size_type</type><description><para>Calculated size of the memory chunks that will be allocated by this Pool. 
 </para></description><returns><para>allocated size. </para>
 </returns></method>
+<method name="max_chunks" cv="const"><type>size_type</type><description><para>Calculated maximum number of memory chunks that can be allocated in a single call by this Pool. </para></description></method>
 </method-group>
 <method-group name="protected static functions">
 <method name="is_from" specifiers="static"><type>bool</type><parameter name="chunk"><paramtype>void *const</paramtype><description><para>chunk to check if is from this pool. </para></description></parameter><parameter name="i"><paramtype>char *const</paramtype><description><para>memory chunk at i with element sizeof_i. </para></description></parameter><parameter name="sizeof_i"><paramtype>const size_type</paramtype><description><para>element size (size of the chunk area of that block, not the total size of that block). </para></description></parameter><description><para>
@@ -188,9 +189,7 @@ Returns false if chunk was allocated from some other pool, or may be returned as
 <method name="get_next_size" cv="const"><type>size_type</type><description><para>Number of chunks to request from the system the next time that object needs to allocate system memory. This value should never be 0. 
 </para></description><returns><para>next_size; </para>
 </returns></method>
-<method name="set_next_size"><type>void</type><parameter name="nnext_size"><paramtype>const size_type</paramtype></parameter><description><para>Set number of chunks to request from the system the next time that object needs to allocate system memory. This value should never be set to 0. 
-</para></description><returns><para>nnext_size. </para>
-</returns></method>
+<method name="set_next_size"><type>void</type><parameter name="nnext_size"><paramtype>const size_type</paramtype></parameter><description><para>Set number of chunks to request from the system the next time that object needs to allocate system memory. This value should never be set to 0. </para></description></method>
 <method name="get_max_size" cv="const"><type>size_type</type><description><para>
 </para></description><returns><para>max_size. </para>
 </returns></method>

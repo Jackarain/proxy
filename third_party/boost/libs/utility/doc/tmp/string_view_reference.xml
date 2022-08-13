@@ -31,7 +31,7 @@
 <method name="max_size" cv="const noexcept"><type>constexpr size_type</type></method>
 <method name="empty" cv="const noexcept"><type>constexpr bool</type></method>
 <method name="operator[]" cv="const noexcept"><type>constexpr const_reference</type><parameter name="pos"><paramtype>size_type</paramtype></parameter></method>
-<method name="at" cv="const"><type>constexpr const_reference</type><parameter name="pos"><paramtype>size_t</paramtype></parameter></method>
+<method name="at" cv="const"><type>constexpr const_reference</type><parameter name="pos"><paramtype>size_type</paramtype></parameter></method>
 <method name="front" cv="const"><type>constexpr const_reference</type></method>
 <method name="back" cv="const"><type>constexpr const_reference</type></method>
 <method name="data" cv="const noexcept"><type>constexpr const_pointer</type></method>
@@ -46,9 +46,10 @@
           <template-type-parameter name="Allocator"><default>std::allocator&lt;charT&gt;</default></template-type-parameter>
         </template><parameter name="a"><paramtype>const Allocator &amp;</paramtype><default>Allocator()</default></parameter></method>
 <method name="copy" cv="const"><type>size_type</type><parameter name="s"><paramtype>charT *</paramtype></parameter><parameter name="n"><paramtype>size_type</paramtype></parameter><parameter name="pos"><paramtype>size_type</paramtype><default>0</default></parameter></method>
+<method name="substr" cv="const"><type>constexpr <classname>basic_string_view</classname></type></method>
 <method name="substr" cv="const"><type>constexpr <classname>basic_string_view</classname></type><parameter name="pos"><paramtype>size_type</paramtype></parameter><parameter name="n"><paramtype>size_type</paramtype><default>npos</default></parameter></method>
 <method name="compare" cv="const noexcept"><type>constexpr int</type><parameter name="x"><paramtype><classname>basic_string_view</classname></paramtype></parameter></method>
-<method name="compare" cv="const noexcept"><type>constexpr int</type><parameter name="pos1"><paramtype>size_type</paramtype></parameter><parameter name="n1"><paramtype>size_type</paramtype></parameter><parameter name="x"><paramtype><classname>basic_string_view</classname></paramtype></parameter></method>
+<method name="compare" cv="const"><type>constexpr int</type><parameter name="pos1"><paramtype>size_type</paramtype></parameter><parameter name="n1"><paramtype>size_type</paramtype></parameter><parameter name="x"><paramtype><classname>basic_string_view</classname></paramtype></parameter></method>
 <method name="compare" cv="const"><type>constexpr int</type><parameter name="pos1"><paramtype>size_type</paramtype></parameter><parameter name="n1"><paramtype>size_type</paramtype></parameter><parameter name="x"><paramtype><classname>basic_string_view</classname></paramtype></parameter><parameter name="pos2"><paramtype>size_type</paramtype></parameter><parameter name="n2"><paramtype>size_type</paramtype></parameter></method>
 <method name="compare" cv="const"><type>constexpr int</type><parameter name="x"><paramtype>const charT *</paramtype></parameter></method>
 <method name="compare" cv="const"><type>constexpr int</type><parameter name="pos1"><paramtype>size_type</paramtype></parameter><parameter name="n1"><paramtype>size_type</paramtype></parameter><parameter name="x"><paramtype>const charT *</paramtype></parameter></method>
@@ -57,6 +58,9 @@
 <method name="starts_with" cv="const noexcept"><type>constexpr bool</type><parameter name="x"><paramtype><classname>basic_string_view</classname></paramtype></parameter></method>
 <method name="ends_with" cv="const noexcept"><type>constexpr bool</type><parameter name="c"><paramtype>charT</paramtype></parameter></method>
 <method name="ends_with" cv="const noexcept"><type>constexpr bool</type><parameter name="x"><paramtype><classname>basic_string_view</classname></paramtype></parameter></method>
+<method name="contains" cv="const noexcept"><type>constexpr bool</type><parameter name="s"><paramtype><classname>basic_string_view</classname></paramtype></parameter></method>
+<method name="contains" cv="const noexcept"><type>constexpr bool</type><parameter name="c"><paramtype>charT</paramtype></parameter></method>
+<method name="contains" cv="const noexcept"><type>constexpr bool</type><parameter name="s"><paramtype>const charT *</paramtype></parameter></method>
 <method name="find" cv="const noexcept"><type>constexpr size_type</type><parameter name="s"><paramtype><classname>basic_string_view</classname></paramtype></parameter><parameter name="pos"><paramtype>size_type</paramtype><default>0</default></parameter></method>
 <method name="find" cv="const noexcept"><type>constexpr size_type</type><parameter name="c"><paramtype>charT</paramtype></parameter><parameter name="pos"><paramtype>size_type</paramtype><default>0</default></parameter></method>
 <method name="find" cv="const noexcept"><type>constexpr size_type</type><parameter name="s"><paramtype>const charT *</paramtype></parameter><parameter name="pos"><paramtype>size_type</paramtype></parameter><parameter name="n"><paramtype>size_type</paramtype></parameter></method>

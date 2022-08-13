@@ -1,17 +1,14 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 filetype=cpp.doxygen
 /*!
 \page dates_times_timezones Working with dates, times, timezones and calendars.
 
 \section dates_times_timezones_intro Introduction
- 
+
 There are several important flaws in the standard C, C++ and Boost libraries that handle dates and time:
 
 -#  The biggest flaw of most libraries that provide operations over dates is the fact that they only support
@@ -23,7 +20,7 @@ There are several important flaws in the standard C, C++ and Boost libraries tha
     user the information about the first day of week. This information is locale dependent.
     It is Monday in France and it is Sunday in United States.
 
-Boost.Locale provides generic \ref boost::locale::date_time "date_time", and \ref boost::locale::calendar "calendar" classes 
+Boost.Locale provides generic \ref boost::locale::date_time "date_time", and \ref boost::locale::calendar "calendar" classes
 that allow you to perform operations on dates and times for non-Gregorian calendars such as Hebrew, Islamic, Japanese and others.
 
 \ref using_localization_backends "Non-ICU based backends" support the Gregorian calendar only.
@@ -49,7 +46,7 @@ For example:
     cout << "Let's meet tomorrow at " << as::date << tomorrow << endl;
     date_time some_point = period::year(1995) + period::january() + period::day(1);
     // Set some_point's date to 1995-Jan-1.
-    cout << "The "<< as::date << some_point << " is the " 
+    cout << "The "<< as::date << some_point << " is the "
         << as::ordinal << some_point / period::day_of_week_local() << " day of the week"  << endl;
 \endcode
 
@@ -61,7 +58,7 @@ You can calculate the difference between dates by dividing the difference by a p
             "between " << as::date << now << " and " << now + 2*period::month() << endl;
 \endcode
 
-You can also use different syntax (less operator overloading) 
+You can also use different syntax (less operator overloading)
 
 \code
     date_time now;
@@ -95,7 +92,7 @@ For example:
     // Create locales with Hebrew and Gregorian (default) calendars.
     std::locale l_hebrew=gen("en_US.UTF-8@calendar=hebrew");
     std::locale l_gregorian=gen("en_US.UTF-8");
-    
+
     // Create a Gregorian date from fields
     date_time greg(year(2010) + february() + day(5),l_gregorian);
     // Assign a time point taken from the Gregorian date to date_time with
@@ -105,12 +102,12 @@ For example:
     std::cout << "Hebrew year is " << heb / year << std::endl;
 \endcode
 
-\note 
+\note
 
 Non-ICU based backends support the same date-time range as \c mktime and \c localtime C library functions.
 
 - Unix 32 bit: dates between 1901 and 2038
-- Unix 64 bit: dates from 1 BC 
+- Unix 64 bit: dates from 1 BC
 - Windows: dates from 1970. If the \c time_t is 32 bits wide (mingw), then the upper limit is year 2038
 
 \section dates_times_timezones_tz Time Zone
@@ -129,7 +126,7 @@ several different levels:
 
 \ref using_localization_backends "Non-ICU based backends" support only two kinds of time zones:
 
--#  The current OS time zone, as it is handled by \c localtime and \c mktime the standard 
+-#  The current OS time zone, as it is handled by \c localtime and \c mktime the standard
     library functions - the default time zone
 -#  Simple time zone in format "GMT+HH:MM" - the time zone represented using fixed shift from
     the UTC without support of daylight saving time.
@@ -140,7 +137,7 @@ several different levels:
 Writing a \ref boost::locale::date_time "date_time" is equivalent
 to:
 
--   Applying \ref boost::locale::as::datetime "as::datetime" manipulator on the stream 
+-   Applying \ref boost::locale::as::datetime "as::datetime" manipulator on the stream
 -   Writing POSIX time as number that is fetched by calling \ref boost::locale::date_time::time()
     "date_time::time()" function.
 -   Reverting the manipulator effect back.
@@ -180,7 +177,7 @@ Would print something like:
 This is important to remember that \c date_time object is always rendered and parsed in the context
 of the \c iostream's locale and time zone and not in the context of specific \c date_time object.
 
-\section dates_times_timezones_qna Questions and Answers 
+\section dates_times_timezones_qna Questions and Answers
 
 
 <b>Why should I use Boost.Locale over Boost.DateTime when I need Gregorian calendar only?</b>
@@ -201,11 +198,9 @@ a simple table of rules where daylight saving depend only on certain n'th day of
 The daylight savings time may vary by year, political issues and many other things.
 
 Most of the modern operating systems (Linux, *BSD, Mac OS X, OpenVMS) and many important software packages
-(ICU, Java, Python) use so called Olson database in order to handle daylight saving time 
+(ICU, Java, Python) use so called Olson database in order to handle daylight saving time
 correctly.
 
 If you need full time zone database support, then you should use ICU library.
 
 */
-
-

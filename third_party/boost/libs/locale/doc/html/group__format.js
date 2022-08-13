@@ -7,9 +7,9 @@ var group__format =
       [ "string_type", "classboost_1_1locale_1_1basic__format.html#a0e1263d23f67aa38b4d857031fccf973", null ],
       [ "basic_format", "classboost_1_1locale_1_1basic__format.html#a4c885ae60a5b867863b79acb75feff9e", null ],
       [ "basic_format", "classboost_1_1locale_1_1basic__format.html#a155e8e60061da7461bbcc958d600c190", null ],
-      [ "operator%", "classboost_1_1locale_1_1basic__format.html#a24de7f69a5d95fd6181d888f07fc6770", null ],
-      [ "str", "classboost_1_1locale_1_1basic__format.html#a6bc65d7993e3ab6ad51809ef8fb65400", null ],
-      [ "write", "classboost_1_1locale_1_1basic__format.html#a457c9228d13e80da3c807a51aa5ef6cd", null ]
+      [ "operator %", "classboost_1_1locale_1_1basic__format.html#a9377f31ad9f456389a07738dffc33537", null ],
+      [ "str", "classboost_1_1locale_1_1basic__format.html#a9722d947da6ff23dd4e5e77507c19d98", null ],
+      [ "write", "classboost_1_1locale_1_1basic__format.html#aaefca2f7ba9d12348ee2528bc9f99979", null ]
     ] ],
     [ "format", "group__format.html#gad7914df7b54382c1ad7f5360676fe2e8", null ],
     [ "u16format", "group__format.html#ga7e1b668f020290ebca6570b4c12a36e6", null ],

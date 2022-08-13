@@ -30,39 +30,51 @@
 <p>
             Insert elements.
           </p>
-<h7><a name="json.ref.boost__json__object.insert.overload1.h0"></a>
+<h6>
+<a name="json.ref.boost__json__object.insert.overload1.h0"></a>
             <span class="phrase"><a name="json.ref.boost__json__object.insert.overload1.synopsis"></a></span><a class="link" href="overload1.html#json.ref.boost__json__object.insert.overload1.synopsis">Synopsis</a>
-          </h7><pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
+          </h6>
+<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
     <span class="keyword">class</span> <span class="identifier">P</span><span class="special">&gt;</span>
 <span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span> <span class="identifier">iterator</span><span class="special">,</span> <span class="keyword">bool</span> <span class="special">&gt;</span>
 <span class="identifier">insert</span><span class="special">(</span>
     <span class="identifier">P</span><span class="special">&amp;&amp;</span> <span class="identifier">p</span><span class="special">);</span>
 </pre>
-<h7><a name="json.ref.boost__json__object.insert.overload1.h1"></a>
+<h6>
+<a name="json.ref.boost__json__object.insert.overload1.h1"></a>
             <span class="phrase"><a name="json.ref.boost__json__object.insert.overload1.description"></a></span><a class="link" href="overload1.html#json.ref.boost__json__object.insert.overload1.description">Description</a>
-          </h7><p>
+          </h6>
+<p>
             Inserts <code class="computeroutput"><span class="identifier">p</span></code>, from which
             <a class="link" href="../value_type.html" title="object::value_type"><code class="computeroutput"><span class="identifier">value_type</span></code></a> must be constructible.
           </p>
-<h7><a name="json.ref.boost__json__object.insert.overload1.h2"></a>
+<h6>
+<a name="json.ref.boost__json__object.insert.overload1.h2"></a>
             <span class="phrase"><a name="json.ref.boost__json__object.insert.overload1.constraints"></a></span><a class="link" href="overload1.html#json.ref.boost__json__object.insert.overload1.constraints">Constraints</a>
-          </h7><pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">is_constructible_v</span><span class="special">&lt;</span><span class="identifier">value_type</span><span class="special">,</span> <span class="identifier">P</span><span class="special">&gt;</span>
+          </h6>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">is_constructible_v</span><span class="special">&lt;</span><span class="identifier">value_type</span><span class="special">,</span> <span class="identifier">P</span><span class="special">&gt;</span>
 </pre>
-<h7><a name="json.ref.boost__json__object.insert.overload1.h3"></a>
+<h6>
+<a name="json.ref.boost__json__object.insert.overload1.h3"></a>
             <span class="phrase"><a name="json.ref.boost__json__object.insert.overload1.complexity"></a></span><a class="link" href="overload1.html#json.ref.boost__json__object.insert.overload1.complexity">Complexity</a>
-          </h7><p>
+          </h6>
+<p>
             Average case amortized constant, worst case linear in <a class="link" href="../size.html" title="object::size"><code class="computeroutput"><span class="identifier">size</span><span class="special">()</span></code></a>.
           </p>
-<h7><a name="json.ref.boost__json__object.insert.overload1.h4"></a>
+<h6>
+<a name="json.ref.boost__json__object.insert.overload1.h4"></a>
             <span class="phrase"><a name="json.ref.boost__json__object.insert.overload1.exception_safety"></a></span><a class="link" href="overload1.html#json.ref.boost__json__object.insert.overload1.exception_safety">Exception
             Safety</a>
-          </h7><p>
+          </h6>
+<p>
             Strong guarantee. Calls to <code class="computeroutput"><span class="identifier">memory_resource</span><span class="special">::</span><span class="identifier">allocate</span></code>
             may throw.
           </p>
-<h7><a name="json.ref.boost__json__object.insert.overload1.h5"></a>
+<h6>
+<a name="json.ref.boost__json__object.insert.overload1.h5"></a>
             <span class="phrase"><a name="json.ref.boost__json__object.insert.overload1.parameters"></a></span><a class="link" href="overload1.html#json.ref.boost__json__object.insert.overload1.parameters">Parameters</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>
@@ -92,9 +104,11 @@
                   </td>
 </tr></tbody>
 </table></div>
-<h7><a name="json.ref.boost__json__object.insert.overload1.h6"></a>
+<h6>
+<a name="json.ref.boost__json__object.insert.overload1.h6"></a>
             <span class="phrase"><a name="json.ref.boost__json__object.insert.overload1.exceptions"></a></span><a class="link" href="overload1.html#json.ref.boost__json__object.insert.overload1.exceptions">Exceptions</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>
@@ -139,10 +153,12 @@
 </tr>
 </tbody>
 </table></div>
-<h7><a name="json.ref.boost__json__object.insert.overload1.h7"></a>
+<h6>
+<a name="json.ref.boost__json__object.insert.overload1.h7"></a>
             <span class="phrase"><a name="json.ref.boost__json__object.insert.overload1.return_value"></a></span><a class="link" href="overload1.html#json.ref.boost__json__object.insert.overload1.return_value">Return
             Value</a>
-          </h7><p>
+          </h6>
+<p>
             A pair where <code class="computeroutput"><span class="identifier">first</span></code> is
             an iterator to the existing or inserted element, and <code class="computeroutput"><span class="identifier">second</span></code>
             is <code class="computeroutput"><span class="keyword">true</span></code> if the insertion

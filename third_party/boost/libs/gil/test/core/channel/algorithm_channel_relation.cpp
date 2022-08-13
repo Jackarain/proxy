@@ -21,8 +21,6 @@ template <typename ChannelFixtureBase>
 void test_channel_relation()
 {
     using fixture_t = fixture::channel<ChannelFixtureBase>;
-    using channel_value_t = typename fixture_t::channel_value_t;
-    channel_value_t const one = 1;
 
     fixture_t f;
     BOOST_TEST_LE(f.min_v_, f.max_v_);
@@ -31,11 +29,14 @@ void test_channel_relation()
     BOOST_TEST_GT(f.max_v_, f.min_v_);
     BOOST_TEST_NE(f.max_v_, f.min_v_);
     BOOST_TEST_EQ(f.min_v_, f.min_v_);
+
 #if !defined(BOOST_CLANG) || (__clang_major__ == 3 && __clang_minor__ >= 8)
     // This particular test fails with optimised build using clang 3.5 or 3.6
     // for unknown reasons. Volunteers are welcome to debug and confirm it is
     // either the compiler bug or the library bug:
     // b2 toolset=clang variant=release cxxstd=11 define=_GLIBCXX_USE_CXX11_ABI=0 libs/gil/test/core/channel//algorithm_channel_relation
+    using channel_value_t = typename fixture_t::channel_value_t;
+    channel_value_t const one = 1;
     BOOST_TEST_NE(f.min_v_, one); // comparable to integral
 #endif
 }

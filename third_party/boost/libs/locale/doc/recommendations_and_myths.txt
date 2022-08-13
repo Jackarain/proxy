@@ -1,12 +1,9 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 filetype=cpp.doxygen
 /*!
 \page recommendations_and_myths Recommendations and Myths
 
@@ -16,10 +13,10 @@
     supported Unicode characters and is more convenient for general use than encodings like Latin1.
 -   Remember, there are many different cultures. You can assume very little about the user's language. His calendar
     may not have "January". It may be not possible to convert strings to integers using \c atoi because
-    they may not use the "ordinary" digits 0..9 at all. You can't assume that "space" characters are frequent 
+    they may not use the "ordinary" digits 0..9 at all. You can't assume that "space" characters are frequent
     because in Chinese the space character does not separate words. The text may be written from Right-to-Left or
     from Up-to-Down, and so on.
--   Using message formatting, try to provide as much context information as you can. Prefer translating entire 
+-   Using message formatting, try to provide as much context information as you can. Prefer translating entire
     sentences over single words. When translating words, \b always add some context information.
 
 
@@ -52,5 +49,3 @@ So UTF-16 can be used for Unicode, in fact ICU and many other applications use U
 you should be very careful and never assume one-code-point == one-utf16-character.
 
 */
-
-

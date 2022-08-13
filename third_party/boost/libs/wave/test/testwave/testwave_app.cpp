@@ -209,7 +209,8 @@ testwave_app::got_expected_result(std::string const& filename,
                         }
                         std::string source = expected.substr(pos1+3, p-pos1-3);
                         std::string result, error, hooks;
-                        bool pp_result = preprocess_file(filename, source,
+                        bool pp_result;
+                        std::tie(pp_result, std::ignore) = preprocess_file(filename, source,
                             result, error, hooks, "", true);
                         if (!pp_result) {
                             std::cerr
@@ -431,7 +432,7 @@ testwave_app::testwave_app(po::variables_map const& vm)
 //
 //  Test the given file (i.e. preprocess the file and compare the result
 //  against the embedded 'R' comments, if an error occurs compare the error
-//  message against the given 'E' comments, if no error occurred, compare the
+//  message against the given 'E' comments. Then, compare the
 //  generated hooks result against the given 'H' comments).
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -460,10 +461,12 @@ testwave_app::test_a_file(std::string filename)
         bool retval = true;   // assume success
         bool printed_result = false;
         std::string result, error, hooks;
-        bool pp_result = preprocess_file(filename, instr, result, error, hooks,
-            expected_cfg_macro);
+        bool pp_result;
+        bool suppressed;    // true if there is an absent expected config macro
+        std::tie(pp_result, suppressed) =
+            preprocess_file(filename, instr, result, error, hooks, expected_cfg_macro);
         if (pp_result || !result.empty()) {
-        // did we expect an error?
+            // did we expect an error?
             std::string expected_error;
             if (!extract_special_information(filename, instr, 'E', expected_error))
                 return false;
@@ -471,7 +474,7 @@ testwave_app::test_a_file(std::string filename)
             if (!expected_error.empty() &&
                 !got_expected_result(filename, error, expected_error))
             {
-            // we expected an error but got none (or a different one)
+                // we expected an error but got none (or a different one)
                 if (debuglevel > 2) {
                     std::cerr
                         << filename << ": failed" << std::endl
@@ -490,6 +493,10 @@ testwave_app::test_a_file(std::string filename)
                     std::cerr << filename << ": failed" << std::endl;
                 }
                 retval = false;
+            }
+            else if (suppressed)
+            {
+                // no need to check result or hooks as the test was not run
             }
             else if (!got_expected_result(filename, result, expected)) {
                 //  no preprocessing error encountered
@@ -569,6 +576,23 @@ testwave_app::test_a_file(std::string filename)
                     std::cerr << filename << ": failed" << std::endl;
                 }
                 retval = false;
+            } else {
+                // expected error; check the hooks also
+                if (test_hooks && !expected_hooks.empty() &&
+                    !got_expected_result(filename, hooks, expected_hooks))
+                {
+                    if (debuglevel > 2) {
+                        std::cerr << filename << ": failed (though caught expected error)" << std::endl
+                                  << "hooks result: " << std::endl << hooks
+                                  << std::endl;
+                        std::cerr << "expected hooks result: " << std::endl
+                                  << expected_hooks << std::endl;
+                    }
+                    else if (debuglevel > 1) {
+                        std::cerr << filename << ": failed" << std::endl;
+                    }
+                    retval = false;
+                }
             }
 
             if (retval) {
@@ -770,7 +794,8 @@ testwave_app::extract_special_information(std::string const& filename,
                         }
                         std::string source = value.substr(4, p-4);
                         std::string result, error, hooks;
-                        bool pp_result = preprocess_file(filename, source,
+                        bool pp_result;
+                        std::tie(pp_result, std::ignore) = preprocess_file(filename, source,
                             result, error, hooks, "", true);
                         if (!pp_result) {
                             std::cerr
@@ -816,7 +841,9 @@ testwave_app::extract_special_information(std::string const& filename,
                         }
                         std::string source = value.substr(4, p-4);
                         std::string result, error, hooks;
-                        bool pp_result = preprocess_file(filename, source,
+                        bool pp_result;
+                        bool suppressed;
+                        std::tie(pp_result, suppressed) = preprocess_file(filename, source,
                             result, error, hooks, "", true);
                         if (!pp_result) {
                             std::cerr
@@ -1426,7 +1453,7 @@ testwave_app::add_predefined_macros(Context& ctx)
 //  the parameter 'result'.
 //
 ///////////////////////////////////////////////////////////////////////////////
-bool
+std::tuple<bool, bool>    // pass/fail + suppressed (or not) by absent macro
 testwave_app::preprocess_file(std::string filename, std::string const& instr,
     std::string& result, std::string& error, std::string& hooks,
     std::string const& expected_cfg_macro, bool single_line)
@@ -1453,22 +1480,22 @@ testwave_app::preprocess_file(std::string filename, std::string const& instr,
 
         //  initialize the context from the options given on the command line
         if (!initialise_options(ctx, global_vm, single_line))
-            return false;
+            return std::make_tuple(false, false);
 
         //  extract the options from the input data and initialize the context
         boost::program_options::variables_map local_vm;
         if (!extract_options(filename, instr, ctx, single_line, local_vm))
-            return false;
+            return std::make_tuple(false, false);
 
         //  add special predefined macros
         if (!add_predefined_macros(ctx))
-            return false;
+            return std::make_tuple(false, false);
 
         if (!expected_cfg_macro.empty() &&
             !ctx.is_defined_macro(expected_cfg_macro))
         {
             // skip this test as it is for a disabled configuration
-            return false;
+            return std::make_tuple(true, true);
         }
 
         //  preprocess the input, loop over all generated tokens collecting the
@@ -1504,7 +1531,7 @@ testwave_app::preprocess_file(std::string filename, std::string const& instr,
                 // special handling of the whole #line directive is required to
                 // allow correct file name matching
                 if (!handle_line_directive(it, end, result))
-                    return false;   // unexpected eof
+                    return std::make_tuple(false, false);   // unexpected eof
             }
             else {
                 // add the value of the current token
@@ -1522,7 +1549,7 @@ testwave_app::preprocess_file(std::string filename, std::string const& instr,
             << e.description() << std::endl;
 
         error = BOOST_WAVETEST_GETSTRING(strm);
-        return false;
+        return std::make_tuple(false, false);
     }
     catch (boost::wave::cpp_exception const& e) {
         // some preprocessing error
@@ -1533,7 +1560,7 @@ testwave_app::preprocess_file(std::string filename, std::string const& instr,
             << e.description() << std::endl;
 
         error = BOOST_WAVETEST_GETSTRING(strm);
-        return false;
+        return std::make_tuple(false, false);
     }
 
     if (9 == debuglevel) {
@@ -1541,5 +1568,5 @@ testwave_app::preprocess_file(std::string filename, std::string const& instr,
                   << filename << std::endl;
     }
 
-    return true;
+    return std::make_tuple(true, false);
 }

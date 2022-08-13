@@ -6,6 +6,10 @@
 #ifndef BOOST_QVM_EF9152E42E4711DFB699737156D89593
 #define BOOST_QVM_EF9152E42E4711DFB699737156D89593
 
+#if defined(BOOST_QVM_TEST_SINGLE_HEADER) && !defined(BOOST_QVM_TEST_SINGLE_HEADER)
+#   define BOOST_QVM_TEST_REF_WRITE_ELEMENT
+#endif
+
 #include <boost/qvm/quat_traits_defaults.hpp>
 #include <boost/qvm/deduce_quat.hpp>
 #include <boost/qvm/assert.hpp>
@@ -39,32 +43,84 @@ test_qvm
 
 namespace boost { namespace qvm {
 
-        template <class Tag,class T>
-        struct
-        quat_traits< test_qvm::quaternion<Tag,T> >:
-            quat_traits_defaults<test_qvm::quaternion<Tag,T>,T>
-            {
-            typedef quat_traits_defaults<test_qvm::quaternion<Tag,T>,T> base;
+#ifdef BOOST_QVM_TEST_REF_WRITE_ELEMENT
 
-            template <int I>
-            static
-            typename base::scalar_type &
-            write_element( typename base::quat_type & m )
-                {
-                BOOST_QVM_STATIC_ASSERT(I>=0);
-                BOOST_QVM_STATIC_ASSERT(I<4);
-                return m.a[I];
-                }
-            };
+template <class Tag,class T>
+struct
+quat_traits< test_qvm::quaternion<Tag,T> >:
+    quat_traits_defaults<test_qvm::quaternion<Tag,T>,T>
+    {
+    typedef quat_traits_defaults<test_qvm::quaternion<Tag,T>,T> base;
 
-        template <class Tag,class T>
-        struct
-        deduce_quat2<test_qvm::quaternion<Tag,T>,test_qvm::quaternion<Tag,T> >
-            {
-            typedef test_qvm::quaternion<Tag,T> type;
-            };
+    template <int I>
+    static
+    typename base::scalar_type &
+    write_element( typename base::quat_type & m )
+        {
+        BOOST_QVM_STATIC_ASSERT(I>=0);
+        BOOST_QVM_STATIC_ASSERT(I<4);
+        return m.a[I];
         }
-    }
+    };
+
+#else
+
+template <class Tag,class T>
+struct
+quat_traits< test_qvm::quaternion<Tag,T> >
+    {
+    typedef test_qvm::quaternion<Tag,T> this_quaternion;
+    typedef T scalar_type;
+
+    template <int I>
+    static
+    T
+    read_element( this_quaternion const & v )
+        {
+        BOOST_QVM_STATIC_ASSERT(I>=0);
+        BOOST_QVM_STATIC_ASSERT(I<4);
+        return v.a[I];
+        }
+
+    template <int I>
+    static
+    void
+    write_element( this_quaternion & v, T s )
+        {
+        BOOST_QVM_STATIC_ASSERT(I>=0);
+        BOOST_QVM_STATIC_ASSERT(I<4);
+        v.a[I] = s;
+        }
+
+    static
+    T
+    read_element_idx( int i, this_quaternion const & v )
+        {
+        BOOST_QVM_ASSERT(i>=0);
+        BOOST_QVM_ASSERT(i<4);
+        return v.a[i];
+        }
+
+    static
+    void
+    write_element_idx( int i, this_quaternion & v, T s )
+        {
+        BOOST_QVM_ASSERT(i>=0);
+        BOOST_QVM_ASSERT(i<4);
+        v.a[i] = s;
+        }
+    };
+
+#endif
+
+    template <class Tag,class T>
+    struct
+    deduce_quat2<test_qvm::quaternion<Tag,T>,test_qvm::quaternion<Tag,T> >
+        {
+        typedef test_qvm::quaternion<Tag,T> type;
+        };
+
+} }
 
 namespace
     {

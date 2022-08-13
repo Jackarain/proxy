@@ -117,6 +117,9 @@ public:
   static inline const _std_error_code_domain *get(_error_code_type ec);
 
   virtual string_ref name() const noexcept override { return string_ref(_name.c_str(), _name.size()); }  // NOLINT
+
+  virtual payload_info_t payload_info() const noexcept override { return {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type), (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) : alignof(status_code_domain *)}; }
+
 protected:
   virtual bool _do_failure(const status_code<void> &code) const noexcept override;
   virtual bool _do_equivalent(const status_code<void> &code1, const status_code<void> &code2) const noexcept override;

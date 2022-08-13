@@ -428,8 +428,6 @@
 <method name="operator&gt;" cv="const noexcept"><type>bool</type><parameter name="rhs"><paramtype>const <classname>sum</classname> &amp;</paramtype></parameter></method>
 <method name="operator&lt;=" cv="const noexcept"><type>bool</type><parameter name="rhs"><paramtype>const <classname>sum</classname> &amp;</paramtype></parameter></method>
 <method name="operator&gt;=" cv="const noexcept"><type>bool</type><parameter name="rhs"><paramtype>const <classname>sum</classname> &amp;</paramtype></parameter></method>
-<method name="large" cv="const noexcept"><type>const_reference</type><purpose>Return large part of the sum. </purpose></method>
-<method name="small" cv="const noexcept"><type>const_reference</type><purpose>Return small part of the sum. </purpose></method>
 </method-group>
 <constructor cv="= default"/>
 <constructor cv="noexcept"><parameter name="value"><paramtype>const_reference</paramtype></parameter><purpose>Initialize sum to value and allow implicit conversion. </purpose></constructor>
@@ -509,60 +507,6 @@ for (auto&amp;&amp; x : indexed(hist))
 
 
 </namespace>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-</namespace>
-</namespace>
-</header>
-<header name="boost/histogram/accumulators/thread_safe.hpp">
-<namespace name="boost">
-<namespace name="histogram">
-<namespace name="accumulators">
-<struct-specialization name="is_thread_safe"><template>
-      <template-type-parameter name="T"/>
-    </template><specialization><template-arg>thread_safe&lt; T &gt;</template-arg></specialization><inherit access="public">true_type</inherit></struct-specialization><class name="thread_safe"><template>
-      <template-type-parameter name="T"><purpose><para>type to adapt, must be an integral type. </para></purpose></template-type-parameter>
-    </template><inherit access="public">std::atomic&lt; T &gt;</inherit><purpose>Thread-safe adaptor for builtin integral numbers. </purpose><description><para>This adaptor uses atomic operations to make concurrent increments and additions safe for the stored value.</para><para>On common computing platforms, the adapted integer has the same size and alignment as underlying type. The atomicity is implemented with a special CPU instruction. On exotic platforms the size of the adapted number may be larger and/or the type may have different alignment, which means it cannot be tightly packed into arrays.</para><para>
-</para></description><typedef name="value_type"><type>T</type></typedef>
-<typedef name="super_t"><type>std::atomic&lt; T &gt;</type></typedef>
-<method-group name="public member functions">
-<method name="operator+="><type><classname>thread_safe</classname> &amp;</type><parameter name="arg"><paramtype>const <classname>thread_safe</classname> &amp;</paramtype></parameter></method>
-<method name="operator+="><type><classname>thread_safe</classname> &amp;</type><parameter name="arg"><paramtype>value_type</paramtype></parameter></method>
-<method name="operator++"><type><classname>thread_safe</classname> &amp;</type></method>
-<method name="serialize"><type>void</type><template>
-          <template-type-parameter name="Archive"/>
-        </template><parameter name="ar"><paramtype>Archive &amp;</paramtype></parameter><parameter name=""><paramtype>unsigned</paramtype></parameter></method>
-</method-group>
-<constructor cv="noexcept"/>
-<constructor cv="noexcept"><parameter name="o"><paramtype>const <classname>thread_safe</classname> &amp;</paramtype></parameter></constructor>
-<copy-assignment cv="noexcept"><type><classname>thread_safe</classname> &amp;</type><parameter name="o"><paramtype>const <classname>thread_safe</classname> &amp;</paramtype></parameter></copy-assignment>
-<constructor><parameter name="arg"><paramtype>value_type</paramtype></parameter></constructor>
-<copy-assignment><type><classname>thread_safe</classname> &amp;</type><parameter name="arg"><paramtype>value_type</paramtype></parameter></copy-assignment>
-</class></namespace>
 
 
 
@@ -839,7 +783,6 @@ for (auto&amp;&amp; x : indexed(hist))
 <namespace name="algorithm">
 <enum name="slice_mode"><enumvalue name="shrink"/><enumvalue name="crop"/><purpose>Whether to behave like <computeroutput>shrink</computeroutput> or <computeroutput>crop</computeroutput> regarding removed bins. </purpose></enum>
 <typedef name="reduce_command"><purpose>Holder for a reduce command. </purpose><description><para>Use this type to store reduce commands in a container. The internals of this type are an implementation detail. </para></description><type><emphasis>unspecified</emphasis></type></typedef>
-<typedef name="reduce_option"><purpose>deprecated </purpose><type>reduce_command</type></typedef>
 
 <function name="shrink"><type>reduce_command</type><parameter name="iaxis"><paramtype>unsigned</paramtype><description><para>which axis to operate on. </para></description></parameter><parameter name="lower"><paramtype>double</paramtype><description><para>bin which contains lower is first to be kept. </para></description></parameter><parameter name="upper"><paramtype>double</paramtype><description><para>bin which contains upper is last to be kept, except if upper is equal to the lower edge. </para></description></parameter><purpose>Shrink command to be used in <computeroutput>reduce</computeroutput>. </purpose><description><para>Command is applied to axis with given index.</para><para>Shrinking is based on an inclusive value interval. The bin which contains the first value starts the range of bins to keep. The bin which contains the second value is the last included in that range. When the second value is exactly equal to a lower bin edge, then the previous bin is the last in the range.</para><para>The counts in removed bins are added to the corresponding underflow and overflow bins, if they are present. If they are not present, the counts are discarded. Also see <computeroutput>crop</computeroutput>, which always discards the counts.</para><para>
 </para></description></function>
@@ -2231,7 +2174,6 @@ The axis computes the number of bins as n = abs(stop - start) / step, rounded do
 </method-group>
 <constructor specifiers="explicit" cv="noexcept"><parameter name="i"><paramtype>index_pointer</paramtype></parameter></constructor>
 </class><typedef name="const_reference"><type>const axis::index_type &amp;</type></typedef>
-<typedef name="reference"><purpose>deprecated </purpose><type>const_reference</type></typedef>
 <method-group name="public member functions">
 <method name="begin" cv="const noexcept"><type><classname>const_iterator</classname></type></method>
 <method name="end" cv="const noexcept"><type><classname>const_iterator</classname></type></method>
@@ -2333,7 +2275,6 @@ The axis computes the number of bins as n = abs(stop - start) / step, rounded do
 </class><typedef name="value_iterator"><purpose>implementation detail </purpose><type>std::conditional_t&lt; std::is_const&lt; histogram_type &gt;::value, typename histogram_type::const_iterator, typename histogram_type::iterator &gt;</type></typedef>
 <typedef name="value_reference"><purpose>implementation detail </purpose><type>typename std::iterator_traits&lt; value_iterator &gt;::reference</type></typedef>
 <typedef name="value_type"><purpose>implementation detail </purpose><type>typename std::iterator_traits&lt; value_iterator &gt;::value_type</type></typedef>
-<typedef name="range_iterator"><purpose>deprecated </purpose><type><classname>iterator</classname></type></typedef>
 <method-group name="public member functions">
 <method name="begin" cv="noexcept"><type><classname>iterator</classname></type></method>
 <method name="end" cv="noexcept"><type><classname>iterator</classname></type></method>

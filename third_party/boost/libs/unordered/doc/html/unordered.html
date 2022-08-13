@@ -663,6 +663,35 @@ pre.rouge {
 <ul class="sectlevel2">
 <li><a href="#buckets_controlling_the_number_of_buckets">Controlling the number of buckets</a></li>
 <li><a href="#buckets_iterator_invalidation">Iterator Invalidation</a></li>
+<li><a href="#buckets_fast_closed_addressing_implementation">Fast Closed Addressing Implementation</a></li>
+</ul>
+</li>
+<li><a href="#benchmarks">Benchmarks</a>
+<ul class="sectlevel2">
+<li><a href="#benchmarks_gcc_11_libstdc_v3">GCC 11 + libstdc++-v3</a>
+<ul class="sectlevel3">
+<li><a href="#benchmarks_insertion">Insertion</a></li>
+<li><a href="#benchmarks_erasure">Erasure</a></li>
+<li><a href="#benchmarks_successful_lookup">Successful Lookup</a></li>
+<li><a href="#benchmarks_unsuccessful_lookup">Unsuccessful lookup</a></li>
+</ul>
+</li>
+<li><a href="#benchmarks_clang_12_libc">Clang 12 + libc++</a>
+<ul class="sectlevel3">
+<li><a href="#benchmarks_insertion_2">Insertion</a></li>
+<li><a href="#benchmarks_erasure_2">Erasure</a></li>
+<li><a href="#benchmarks_successful_lookup_2">Successful lookup</a></li>
+<li><a href="#benchmarks_unsuccessful_lookup_2">Unsuccessful lookup</a></li>
+</ul>
+</li>
+<li><a href="#benchmarks_visual_studio_2019_dinkumware">Visual Studio 2019 + Dinkumware</a>
+<ul class="sectlevel3">
+<li><a href="#benchmarks_insertion_3">Insertion</a></li>
+<li><a href="#benchmarks_erasure_3">Erasure</a></li>
+<li><a href="#benchmarks_successful_lookup_3">Successful lookup</a></li>
+<li><a href="#benchmarks_unsuccessful_lookup_3">Unsuccessful lookup</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li><a href="#hash_equality">Equality Predicates and Hash Functions</a>
@@ -773,6 +802,7 @@ pre.rouge {
 </li>
 <li><a href="#changes">Change Log</a>
 <ul class="sectlevel2">
+<li><a href="#changes_release_1_80_0_major_update">Release 1.80.0 - Major update</a></li>
 <li><a href="#changes_release_1_79_0">Release 1.79.0</a></li>
 <li><a href="#changes_release_1_67_0">Release 1.67.0</a></li>
 <li><a href="#changes_release_1_66_0">Release 1.66.0</a></li>
@@ -1151,6 +1181,634 @@ number of available buckets, this function is logically equivalent to:</p>
 </div>
 </dd>
 </dl>
+</div>
+</div>
+<div class="sect2">
+<h3 id="buckets_fast_closed_addressing_implementation"><a class="link" href="#buckets_fast_closed_addressing_implementation">Fast Closed Addressing Implementation</a></h3>
+<style>
+  .imageblock > .title {
+    text-align: inherit;
+  }
+</style>
+<div class="paragraph">
+<p>Boost.Unordered sports one of the fastest implementations of closed addressing, also commonly known as <a href="https://en.wikipedia.org/wiki/Hash_table#Separate_chaining">separate chaining</a>. An example figure representing the data structure is below:</p>
+</div>
+<div id="img-bucket-groups" class="imageblock text-center">
+<div class="content">
+<img src="../diagrams/bucket-groups.png" alt="bucket groups">
+</div>
+<div class="title">Figure 1. A simple bucket group approach</div>
+</div>
+<div class="paragraph">
+<p>An array of "buckets" is allocated and each bucket in turn points to its own individual linked list. This makes meeting the standard requirements of bucket iteration straight-forward. Unfortunately, iteration of the entire container is often times slow using this layout as each bucket must be examined for occupancy, yielding a time complexity of <code>O(bucket_count() + size())</code> when the standard requires complexity to be <code>O(size())</code>.</p>
+</div>
+<div class="paragraph">
+<p>Canonical standard implementations will wind up looking like the diagram below:</p>
+</div>
+<div class="imageblock text-center text-center">
+<div class="content">
+<a class="image" href="../diagrams/singly-linked.png" target="_blank" rel="noopener"><img src="../diagrams/singly-linked.png" alt="singly linked"></a>
+</div>
+<div class="title">Figure 2. The canonical standard approach</div>
+</div>
+<div class="paragraph">
+<p>It&#8217;s worth noting that this approach is only used by libc++ and libstdc++; the MSVC Dinkumware implementation uses a different one. A more detailed analysis of the standard containers can be found <a href="http://bannalia.blogspot.com/2013/10/implementation-of-c-unordered.html">here</a>.</p>
+</div>
+<div class="paragraph">
+<p>This unusually laid out data structure is chosen to make iteration of the entire container efficient by inter-connecting all of the nodes into a singly-linked list. One might also notice that buckets point to the node <em>before</em> the start of the bucket&#8217;s elements. This is done so that removing elements from the list can be done efficiently without introducing the need for a doubly-linked list. Unfortunately, this data structure introduces a guaranteed extra indirection. For example, to access the first element of a bucket, something like this must be done:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">auto</span> <span class="k">const</span> <span class="n">idx</span> <span class="o">=</span> <span class="n">get_bucket_idx</span><span class="p">(</span><span class="n">hash_function</span><span class="p">(</span><span class="n">key</span><span class="p">));</span>
+<span class="n">node</span><span class="o">*</span> <span class="n">p</span> <span class="o">=</span> <span class="n">buckets</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span> <span class="c1">// first load</span>
+<span class="n">node</span><span class="o">*</span> <span class="n">n</span> <span class="o">=</span> <span class="n">p</span><span class="o">-&gt;</span><span class="n">next</span><span class="p">;</span> <span class="c1">// second load</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">n</span> <span class="o">&amp;&amp;</span> <span class="n">is_in_bucket</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">idx</span><span class="p">))</span> <span class="p">{</span>
+  <span class="n">value_type</span> <span class="k">const</span><span class="o">&amp;</span> <span class="n">v</span> <span class="o">=</span> <span class="o">*</span><span class="n">n</span><span class="p">;</span> <span class="c1">// third load</span>
+  <span class="c1">// ...</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>With a simple bucket group layout, this is all that must be done:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">auto</span> <span class="k">const</span> <span class="n">idx</span> <span class="o">=</span> <span class="n">get_bucket_idx</span><span class="p">(</span><span class="n">hash_function</span><span class="p">(</span><span class="n">key</span><span class="p">));</span>
+<span class="n">node</span><span class="o">*</span> <span class="n">n</span> <span class="o">=</span> <span class="n">buckets</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span> <span class="c1">// first load</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">value_type</span> <span class="k">const</span><span class="o">&amp;</span> <span class="n">v</span> <span class="o">=</span> <span class="o">*</span><span class="n">n</span><span class="p">;</span> <span class="c1">// second load</span>
+  <span class="c1">// ...</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In practice, the extra indirection can have a dramatic performance impact to common operations such as <code>insert</code>, <code>find</code> and <code>erase</code>. But to keep iteration of the container fast, Boost.Unordered introduces a novel data structure, a "bucket group". A bucket group is a fixed-width view of a subsection of the buckets array. It contains a bitmask (a <code>std::size_t</code>) which it uses to track occupancy of buckets and contains two pointers so that it can form a doubly-linked list with non-empty groups. An example diagram is below:</p>
+</div>
+<div id="img-fca-layout" class="imageblock text-center">
+<div class="content">
+<img src="../diagrams/fca.png" alt="fca">
+</div>
+<div class="title">Figure 3. The new layout used by Boost</div>
+</div>
+<div class="paragraph">
+<p>Thus container-wide iteration is turned into traversing the non-empty bucket groups (an operation with constant time complexity) which reduces the time complexity back to <code>O(size())</code>. In total, a bucket group is only 4 words in size and it views <code>sizeof(std::size_t) * CHAR_BIT</code> buckets meaning that for all common implementations, there&#8217;s only 4 bits of space overhead per bucket introduced by the bucket groups.</p>
+</div>
+<div class="paragraph">
+<p>For more information on implementation rationale, read the <a href="#rationale">corresponding section</a>.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="benchmarks"><a class="link" href="#benchmarks">Benchmarks</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>All benchmarks were created using <code>unordered_set&lt;unsigned int&gt;</code> (non-duplicate) and <code>unordered_multiset&lt;unsigned int&gt;</code> (duplicate). The source code can be <a href="https://github.com/joaquintides/boost_unordered_benchmark">found here</a>.</p>
+</div>
+<div class="paragraph">
+<p>The insertion benchmarks insert <code>n</code> random values, where <code>n</code> is between 10,000 and 3 million. For the duplicated benchmarks, the same random values are repeated an average of 5 times.</p>
+</div>
+<div class="paragraph">
+<p>The erasure benchmarks erase all <code>n</code> elements randomly until the container is empty.</p>
+</div>
+<div class="paragraph">
+<p>The successful lookup benchmarks are done by looking up all <code>n</code> values, in the their original insertion order.</p>
+</div>
+<div class="paragraph">
+<p>The unsuccessful lookup benchmarks use <code>n</code> randomly generated integers but using a different seed value.</p>
+</div>
+<div class="sect2">
+<h3 id="benchmarks_gcc_11_libstdc_v3"><a class="link" href="#benchmarks_gcc_11_libstdc_v3">GCC 11 + libstdc++-v3</a></h3>
+<div class="sect3">
+<h4 id="benchmarks_insertion"><a class="link" href="#benchmarks_insertion">Insertion</a></h4>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/gcc/running insertion.xlsx.practice.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/gcc/running%20insertion.xlsx.practice.png" alt="running insertion.xlsx.practice" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/gcc/running%20insertion.xlsx.practice non-unique.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/gcc/running%20insertion.xlsx.practice%20non-unique.png" alt="running%20insertion.xlsx.practice non unique" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/gcc/running%20insertion.xlsx.practice non-unique 5.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/gcc/running%20insertion.xlsx.practice%20non-unique%205.png" alt="running%20insertion.xlsx.practice non unique 5" width="250"></a>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">non-duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements<br>
+max load factor 5</p></th>
+</tr>
+</tbody>
+</table>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/gcc/running%20insertion.xlsx.practice norehash.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/gcc/running%20insertion.xlsx.practice%20norehash.png" alt="running%20insertion.xlsx.practice norehash" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/gcc/running%20insertion.xlsx.practice norehash non-unique.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/gcc/running%20insertion.xlsx.practice%20norehash%20non-unique.png" alt="running%20insertion.xlsx.practice norehash non unique" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/gcc/running%20insertion.xlsx.practice norehash non-unique 5.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/gcc/running%20insertion.xlsx.practice%20norehash%20non-unique%205.png" alt="running%20insertion.xlsx.practice norehash non unique 5" width="250"></a>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">non-duplicate elements,<br>
+prior <code>reserve</code></p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements,<br>
+prior <code>reserve</code></p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements,<br>
+max load factor 5,<br>
+prior <code>reserve</code></p></th>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="benchmarks_erasure"><a class="link" href="#benchmarks_erasure">Erasure</a></h4>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/gcc/scattered%20erasure.xlsx.practice.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/gcc/scattered%20erasure.xlsx.practice.png" alt="scattered%20erasure.xlsx.practice" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/gcc/scattered%20erasure.xlsx.practice non-unique.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/gcc/scattered%20erasure.xlsx.practice%20non-unique.png" alt="scattered%20erasure.xlsx.practice non unique" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/gcc/scattered%20erasure.xlsx.practice non-unique 5.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/gcc/scattered%20erasure.xlsx.practice%20non-unique%205.png" alt="scattered%20erasure.xlsx.practice non unique 5" width="250"></a>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">non-duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements<br>
+max load factor 5</p></th>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="benchmarks_successful_lookup"><a class="link" href="#benchmarks_successful_lookup">Successful Lookup</a></h4>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/gcc/scattered%20successful%20looukp.xlsx.practice.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/gcc/scattered%20successful%20looukp.xlsx.practice.png" alt="scattered%20successful%20looukp.xlsx.practice" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/gcc/scattered%20successful%20looukp.xlsx.practice non-unique.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/gcc/scattered%20successful%20looukp.xlsx.practice%20non-unique.png" alt="scattered%20successful%20looukp.xlsx.practice non unique" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/gcc/scattered%20successful%20looukp.xlsx.practice non-unique 5.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/gcc/scattered%20successful%20looukp.xlsx.practice%20non-unique%205.png" alt="scattered%20successful%20looukp.xlsx.practice non unique 5" width="250"></a>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">non-duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements,<br>
+max load factor 5</p></th>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="benchmarks_unsuccessful_lookup"><a class="link" href="#benchmarks_unsuccessful_lookup">Unsuccessful lookup</a></h4>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/gcc/scattered%20unsuccessful%20looukp.xlsx.practice.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/gcc/scattered%20unsuccessful%20looukp.xlsx.practice.png" alt="scattered%20unsuccessful%20looukp.xlsx.practice" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/gcc/scattered%20unsuccessful%20looukp.xlsx.practice non-unique.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/gcc/scattered%20unsuccessful%20looukp.xlsx.practice%20non-unique.png" alt="scattered%20unsuccessful%20looukp.xlsx.practice non unique" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/gcc/scattered%20unsuccessful%20looukp.xlsx.practice non-unique 5.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/gcc/scattered%20unsuccessful%20looukp.xlsx.practice%20non-unique%205.png" alt="scattered%20unsuccessful%20looukp.xlsx.practice non unique 5" width="250"></a>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">non-duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements,<br>
+max load factor 5</p></th>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="benchmarks_clang_12_libc"><a class="link" href="#benchmarks_clang_12_libc">Clang 12 + libc++</a></h3>
+<div class="sect3">
+<h4 id="benchmarks_insertion_2"><a class="link" href="#benchmarks_insertion_2">Insertion</a></h4>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/clang_libcpp/running%20insertion.xlsx.practice.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/clang_libcpp/running%20insertion.xlsx.practice.png" alt="running%20insertion.xlsx.practice" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/clang_libcpp/running%20insertion.xlsx.practice non-unique.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/clang_libcpp/running%20insertion.xlsx.practice%20non-unique.png" alt="running%20insertion.xlsx.practice non unique" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/clang_libcpp/running%20insertion.xlsx.practice non-unique 5.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/clang_libcpp/running%20insertion.xlsx.practice%20non-unique%205.png" alt="running%20insertion.xlsx.practice non unique 5" width="250"></a>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">non-duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements,<br>
+max load factor 5</p></th>
+</tr>
+</tbody>
+</table>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/clang_libcpp/running%20insertion.xlsx.practice norehash.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/clang_libcpp/running%20insertion.xlsx.practice%20norehash.png" alt="running%20insertion.xlsx.practice norehash" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/clang_libcpp/running%20insertion.xlsx.practice norehash non-unique.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/clang_libcpp/running%20insertion.xlsx.practice%20norehash%20non-unique.png" alt="running%20insertion.xlsx.practice norehash non unique" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/clang_libcpp/running%20insertion.xlsx.practice norehash non-unique 5.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/clang_libcpp/running%20insertion.xlsx.practice%20norehash%20non-unique%205.png" alt="running%20insertion.xlsx.practice norehash non unique 5" width="250"></a>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">non-duplicate elements,<br>
+prior <code>reserve</code></p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements,<br>
+prior <code>reserve</code></p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements,<br>
+max load factor 5,<br>
+prior <code>reserve</code></p></th>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="benchmarks_erasure_2"><a class="link" href="#benchmarks_erasure_2">Erasure</a></h4>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/clang_libcpp/scattered%20erasure.xlsx.practice.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/clang_libcpp/scattered%20erasure.xlsx.practice.png" alt="scattered%20erasure.xlsx.practice" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/clang_libcpp/scattered%20erasure.xlsx.practice non-unique.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/clang_libcpp/scattered%20erasure.xlsx.practice%20non-unique.png" alt="scattered%20erasure.xlsx.practice non unique" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/clang_libcpp/scattered%20erasure.xlsx.practice non-unique 5.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/clang_libcpp/scattered%20erasure.xlsx.practice%20non-unique%205.png" alt="scattered%20erasure.xlsx.practice non unique 5" width="250"></a>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">non-duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements,<br>
+max load factor 5</p></th>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="benchmarks_successful_lookup_2"><a class="link" href="#benchmarks_successful_lookup_2">Successful lookup</a></h4>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/clang_libcpp/scattered%20successful%20looukp.xlsx.practice.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/clang_libcpp/scattered%20successful%20looukp.xlsx.practice.png" alt="scattered%20successful%20looukp.xlsx.practice" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/clang_libcpp/scattered%20successful%20looukp.xlsx.practice non-unique.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/clang_libcpp/scattered%20successful%20looukp.xlsx.practice%20non-unique.png" alt="scattered%20successful%20looukp.xlsx.practice non unique" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/clang_libcpp/scattered%20successful%20looukp.xlsx.practice non-unique 5.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/clang_libcpp/scattered%20successful%20looukp.xlsx.practice%20non-unique%205.png" alt="scattered%20successful%20looukp.xlsx.practice non unique 5" width="250"></a>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">non-duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements,<br>
+max load factor 5</p></th>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="benchmarks_unsuccessful_lookup_2"><a class="link" href="#benchmarks_unsuccessful_lookup_2">Unsuccessful lookup</a></h4>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/clang_libcpp/scattered%20unsuccessful%20looukp.xlsx.practice.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/clang_libcpp/scattered%20unsuccessful%20looukp.xlsx.practice.png" alt="scattered%20unsuccessful%20looukp.xlsx.practice" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/clang_libcpp/scattered%20unsuccessful%20looukp.xlsx.practice non-unique.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/clang_libcpp/scattered%20unsuccessful%20looukp.xlsx.practice%20non-unique.png" alt="scattered%20unsuccessful%20looukp.xlsx.practice non unique" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/clang_libcpp/scattered%20unsuccessful%20looukp.xlsx.practice non-unique 5.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/clang_libcpp/scattered%20unsuccessful%20looukp.xlsx.practice%20non-unique%205.png" alt="scattered%20unsuccessful%20looukp.xlsx.practice non unique 5" width="250"></a>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">non-duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements,<br>
+max load factor 5</p></th>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="benchmarks_visual_studio_2019_dinkumware"><a class="link" href="#benchmarks_visual_studio_2019_dinkumware">Visual Studio 2019 + Dinkumware</a></h3>
+<div class="sect3">
+<h4 id="benchmarks_insertion_3"><a class="link" href="#benchmarks_insertion_3">Insertion</a></h4>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/vs/running%20insertion.xlsx.practice.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/vs/running%20insertion.xlsx.practice.png" alt="running%20insertion.xlsx.practice" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/vs/running%20insertion.xlsx.practice non-unique.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/vs/running%20insertion.xlsx.practice%20non-unique.png" alt="running%20insertion.xlsx.practice non unique" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/vs/running%20insertion.xlsx.practice non-unique 5.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/vs/running%20insertion.xlsx.practice%20non-unique%205.png" alt="running%20insertion.xlsx.practice non unique 5" width="250"></a>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">non-duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements,<br>
+max load factor 5</p></th>
+</tr>
+</tbody>
+</table>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/vs/running%20insertion.xlsx.practice norehash.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/vs/running%20insertion.xlsx.practice%20norehash.png" alt="running%20insertion.xlsx.practice norehash" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/vs/running%20insertion.xlsx.practice norehash non-unique.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/vs/running%20insertion.xlsx.practice%20norehash%20non-unique.png" alt="running%20insertion.xlsx.practice norehash non unique" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/vs/running%20insertion.xlsx.practice norehash non-unique 5.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/vs/running%20insertion.xlsx.practice%20norehash%20non-unique%205.png" alt="running%20insertion.xlsx.practice norehash non unique 5" width="250"></a>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">non-duplicate elements,<br>
+prior <code>reserve</code></p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements,<br>
+prior <code>reserve</code></p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements,<br>
+max load factor 5,<br>
+prior <code>reserve</code></p></th>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="benchmarks_erasure_3"><a class="link" href="#benchmarks_erasure_3">Erasure</a></h4>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/vs/scattered%20erasure.xlsx.practice.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/vs/scattered%20erasure.xlsx.practice.png" alt="scattered%20erasure.xlsx.practice" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/vs/scattered%20erasure.xlsx.practice non-unique.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/vs/scattered%20erasure.xlsx.practice%20non-unique.png" alt="scattered%20erasure.xlsx.practice non unique" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/vs/scattered%20erasure.xlsx.practice non-unique 5.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/vs/scattered%20erasure.xlsx.practice%20non-unique%205.png" alt="scattered%20erasure.xlsx.practice non unique 5" width="250"></a>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">non-duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements,<br>
+max load factor 5</p></th>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="benchmarks_successful_lookup_3"><a class="link" href="#benchmarks_successful_lookup_3">Successful lookup</a></h4>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/vs/scattered%20successful%20looukp.xlsx.practice.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/vs/scattered%20successful%20looukp.xlsx.practice.png" alt="scattered%20successful%20looukp.xlsx.practice" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/vs/scattered%20successful%20looukp.xlsx.practice non-unique.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/vs/scattered%20successful%20looukp.xlsx.practice%20non-unique.png" alt="scattered%20successful%20looukp.xlsx.practice non unique" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/vs/scattered%20successful%20looukp.xlsx.practice non-unique 5.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/vs/scattered%20successful%20looukp.xlsx.practice%20non-unique%205.png" alt="scattered%20successful%20looukp.xlsx.practice non unique 5" width="250"></a>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">non-duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements,<br>
+max load factor 5</p></th>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="benchmarks_unsuccessful_lookup_3"><a class="link" href="#benchmarks_unsuccessful_lookup_3">Unsuccessful lookup</a></h4>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/vs/scattered%20unsuccessful%20looukp.xlsx.practice.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/vs/scattered%20unsuccessful%20looukp.xlsx.practice.png" alt="scattered%20unsuccessful%20looukp.xlsx.practice" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/vs/scattered%20unsuccessful%20looukp.xlsx.practice non-unique.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/vs/scattered%20unsuccessful%20looukp.xlsx.practice%20non-unique.png" alt="scattered%20unsuccessful%20looukp.xlsx.practice non unique" width="250"></a>
+</div>
+</div></div></td>
+<td class="tableblock halign-center valign-middle"><div class="content"><div class="imageblock">
+<div class="content">
+<a class="image" href="../diagrams/benchmarks/vs/scattered%20unsuccessful%20looukp.xlsx.practice non-unique 5.png" target="_blank" rel="noopener"><img src="../diagrams/benchmarks/vs/scattered%20unsuccessful%20looukp.xlsx.practice%20non-unique%205.png" alt="scattered%20unsuccessful%20looukp.xlsx.practice non unique 5" width="250"></a>
+</div>
+</div></div></td>
+</tr>
+<tr>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">non-duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements</p></th>
+<th class="tableblock halign-center valign-middle"><p class="tableblock">duplicate elements,<br>
+max load factor 5</p></th>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 </div>
@@ -1737,6 +2395,11 @@ by using <code>(h * m) &gt;&gt; (w - k)</code>, where <code>h</code> is the hash
 ratio multiplied by <code>2^w</code>, <code>w</code> is the word size (32 or 64), and <code>2^k</code> is the
 number of buckets. This provides a good compromise between speed and
 distribution.</p>
+</div>
+<div class="paragraph">
+<p>Since release 1.80.0, prime numbers are chosen for the number of buckets in
+tandem with sophisticated modulo arithmetic. This removes the need for "mixing"
+the result of the user&#8217;s hash function as was used for release 1.79.0.</p>
 </div>
 </div>
 </div>
@@ -13245,6 +13908,23 @@ Notes:
 <h2 id="changes"><a class="link" href="#changes">Change Log</a></h2>
 <div class="sectionbody">
 <div class="sect2">
+<h3 id="changes_release_1_80_0_major_update"><a class="link" href="#changes_release_1_80_0_major_update">Release 1.80.0 - Major update</a></h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Refactor internal implementation to be dramatically faster</p>
+</li>
+<li>
+<p>Allow <code>final</code> Hasher and KeyEqual objects</p>
+</li>
+<li>
+<p>Update documentation, adding benchmark graphs and notes on the new internal
+data structures</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
 <h3 id="changes_release_1_79_0"><a class="link" href="#changes_release_1_79_0">Release 1.79.0</a></h3>
 <div class="ulist">
 <ul>
@@ -14039,6 +14719,9 @@ An introducation to the standard unordered containers.</p>
 </div>
 <div class="paragraph">
 <p>Copyright &#169; 2005-2008 Daniel James</p>
+</div>
+<div class="paragraph">
+<p>Copyright &#169; 2022 Christian Mazakas</p>
 </div>
 <div class="paragraph">
 <p>Distributed under the Boost Software License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" class="bare">http://www.boost.org/LICENSE_1_0.txt</a>)</p>

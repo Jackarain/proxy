@@ -1,4 +1,4 @@
-// Copyright 2021 Christian Mazakas.
+// Copyright 2021-2022 Christian Mazakas.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -11,9 +11,10 @@
 
 #include "../helpers/test.hpp"
 
+#include <boost/config.hpp>
 #include <string>
 
-#if BOOST_CXX_VERSION >= 201103L
+#if !defined(BOOST_NO_CXX11_REF_QUALIFIERS)
 #define UNORDERED_LVALUE_QUAL &
 #else
 #define UNORDERED_LVALUE_QUAL

@@ -11,7 +11,6 @@ add_library(boost_process INTERFACE)
 add_library(Boost::process ALIAS boost_process)
 
 target_include_directories(boost_process INTERFACE include)
-
 target_link_libraries(boost_process
   INTERFACE
     Boost::algorithm

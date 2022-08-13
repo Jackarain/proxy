@@ -1,15 +1,14 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
+
 #ifdef BOOST_LOCALE_NO_POSIX_BACKEND
 #include <iostream>
 int main()
 {
-        std::cout << "POSIX Backend is not build... Skipping" << std::endl;
+        std::cout << "POSIX Backend is not build... Skipping\n";
 }
 #else
 #include <boost/locale/conversion.hpp>
@@ -19,7 +18,6 @@ int main()
 #include <iomanip>
 #include "test_locale.hpp"
 #include "test_locale_tools.hpp"
-#include "test_posix_tools.hpp"
 #include <iostream>
 
 #include <wctype.h>
@@ -67,56 +65,36 @@ void test_char()
     else {
         std::cout << "- en_US.ISO8859-1 is not supported, skipping" << std::endl;
     }
-    
+
     name = "tr_TR.UTF-8";
     if(have_locale(name)) {
         std::cout << "Testing " << name << std::endl;
-        locale_t cl = newlocale(LC_ALL_MASK,name.c_str(),0);
-        try { 
-            TEST(cl);
-            if(towupper_l(L'i',cl) == 0x130) {
-                test_one<CharType>(gen(name),"i","i","İ");
-            }
-            else {
-                std::cout <<"  Turkish locale is not supported well" << std::endl;
-            }
-        }
-        catch(...) {
-            if(cl) freelocale(cl);
-            throw;
-        }
-        if(cl) freelocale(cl);
-        
+        locale_holder cl(newlocale(LC_ALL_MASK,name.c_str(),0));
+        TEST(cl);
+        if(towupper_l(L'i',cl) == 0x130)
+            test_one<CharType>(gen(name),"i","i","İ");
+        else
+            std::cout << "  Turkish locale is not supported well" << std::endl; // LCOV_EXCL_LINE
     }
-    else 
+    else
     {
         std::cout << "- tr_TR.UTF-8 is not supported, skipping" << std::endl;
     }
 }
 
 
-int main()
+void test_main(int /*argc*/, char** /*argv*/)
 {
-    try {
-        boost::locale::localization_backend_manager mgr = boost::locale::localization_backend_manager::global();
-        mgr.select("posix");
-        boost::locale::localization_backend_manager::global(mgr);
+    boost::locale::localization_backend_manager mgr = boost::locale::localization_backend_manager::global();
+    mgr.select("posix");
+    boost::locale::localization_backend_manager::global(mgr);
 
-        std::cout << "Testing char" << std::endl;
-        test_char<char>();
-        std::cout << "Testing wchar_t" << std::endl;
-        test_char<wchar_t>();
-    }
-    catch(std::exception const &e) {
-        std::cerr << "Failed " << e.what() << std::endl;
-        return EXIT_FAILURE;
-    }
-    FINALIZE();
-
+    std::cout << "Testing char" << std::endl;
+    test_char<char>();
+    std::cout << "Testing wchar_t" << std::endl;
+    test_char<wchar_t>();
 }
 
 #endif // POSIX
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 
-
-// boostinspect:noascii 
+// boostinspect:noascii

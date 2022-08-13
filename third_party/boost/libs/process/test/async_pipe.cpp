@@ -120,7 +120,7 @@ BOOST_AUTO_TEST_CASE(move_pipe)
         ap_inv.close();
         const auto ap3 = std::move(ap_inv);
     }
-
+/*
     {
         //copy an a closed pipe
         BOOST_TEST_CHECKPOINT("Copy assign");
@@ -139,7 +139,7 @@ BOOST_AUTO_TEST_CASE(move_pipe)
         BOOST_TEST_CHECKPOINT("Copy construct");
         bp::async_pipe ap4{ap_inv};
     }
-
+*/
 
 }
 

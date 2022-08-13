@@ -35,7 +35,7 @@ namespace
             test_qvm::quaternion<Q1> q3(42,1);
             test_qvm::quaternion<Q1> r1=q3*q1;
             rotate_x(q3,r);
-            BOOST_QVM_TEST_EQ(q3.a,r1.a);
+            BOOST_QVM_TEST_CLOSE(q3.a,r1.a,0.000001f);
             }
         rotx_quat(0.0f)+rotx_quat(0.0f);
         -rotx_quat(0.0f);

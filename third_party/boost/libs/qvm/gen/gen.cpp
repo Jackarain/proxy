@@ -28,7 +28,7 @@
 #define INCLUDE_MATH "boost/qvm/math.hpp"
 #define INCLUDE_THROW_EXCEPTION "boost/qvm/throw_exception.hpp"
 #define INCLUDE_ERROR "boost/qvm/error.hpp"
-#define INCLUDE_INLINE "boost/qvm/inline.hpp"
+#define INCLUDE_CONFIG "boost/qvm/config.hpp"
 #define INCLUDE_M_TRAITS "boost/qvm/mat_traits.hpp"
 #define INCLUDE_V_TRAITS "boost/qvm/vec_traits.hpp"
 #define INCLUDE_Q_TRAITS "boost/qvm/quat_traits.hpp"
@@ -671,14 +671,14 @@ namespace
         for( int i=0; i!=m; ++i )
             for( int j=0; j!=p; ++j )
                 {
-                g<<TAB1 "mat_traits<R>::template write_element<"<<i<<","<<j<<">(r)=";
+                g<<TAB1 "write_mat_element<"<<i<<","<<j<<">(r,";
                 for( int k=0; k!=n; ++k )
                     {
                     if( k )
                         g<<'+';
                     g<<'a'<<i<<k<<"*b"<<k<<j;
                     }
-                g<<";" NL;
+                g<<");" NL;
                 }
         g<<
             TAB1 "return r;" NL
@@ -707,14 +707,14 @@ namespace
         for( int i=0; i!=d; ++i )
             for( int j=0; j!=d; ++j )
                 {
-                g<<TAB1 "mat_traits<A>::template write_element<"<<i<<","<<j<<">(a)=";
+                g<<TAB1 "write_mat_element<"<<i<<","<<j<<">(a,";
                 for( int k=0; k!=d; ++k )
                     {
                     if( k )
                         g<<'+';
                     g<<'a'<<i<<k<<"*b"<<k<<j;
                     }
-                g<<";" NL;
+                g<<");" NL;
                 }
         g<<
             TAB1 "return a;" NL
@@ -729,7 +729,7 @@ namespace
         assert(r>0);
         assert(c>0);
         header_vr_ma_vb_mult(out,r,c,"operator*");
-        out.require_include(INCLUDE_INLINE);
+        out.require_include(INCLUDE_CONFIG);
         out.require_include(INCLUDE_V_TRAITS);
         out.require_include(INCLUDE_M_TRAITS);
         out.require_include(INCLUDE_ENABLE_IF);
@@ -752,14 +752,14 @@ namespace
             ;
         for( int i=0; i!=r; ++i )
             {
-            g<<TAB1 "vec_traits<R>::template write_element<"<<i<<">(r)=";
+            g<<TAB1 "write_vec_element<"<<i<<">(r,";
             for( int j=0; j!=c; ++j )
                 {
                 if( j )
                     g<<'+';
                 g<<'a'<<i<<j<<"*b"<<j;
                 }
-            g<<";" NL;
+            g<<");" NL;
             }
         g<<
             TAB1 "return r;" NL
@@ -774,7 +774,7 @@ namespace
         assert(r>0);
         assert(c>0);
         header_vr_va_mb_mult(out,r,c,"operator*");
-        out.require_include(INCLUDE_INLINE);
+        out.require_include(INCLUDE_CONFIG);
         out.require_include(INCLUDE_V_TRAITS);
         out.require_include(INCLUDE_M_TRAITS);
         out.require_include(INCLUDE_ENABLE_IF);
@@ -797,14 +797,14 @@ namespace
             ;
         for( int i=0; i!=c; ++i )
             {
-            g<<TAB1 "vec_traits<R>::template write_element<"<<i<<">(r)=";
+            g<<TAB1 "write_vec_element<"<<i<<">(r,";
             for( int j=0; j!=r; ++j )
                 {
                 if( j )
                     g<<'+';
                 g<<'a'<<j<<"*b"<<j<<i;
                 }
-            g<<";" NL;
+            g<<");" NL;
             }
         g<<
             TAB1 "return r;" NL
@@ -827,7 +827,7 @@ namespace
             TAB1 "R r;" NL
             ;
         for( int i=0; i!=d; ++i )
-            g<<TAB1 "vec_traits<R>::template write_element<"<<i<<">(r)=vec_traits<A>::template read_element<"<<i<<">(a)"<<op<<"vec_traits<B>::template read_element<"<<i<<">(b);" NL;
+            g<<TAB1 "write_vec_element<"<<i<<">(r,vec_traits<A>::template read_element<"<<i<<">(a)"<<op<<"vec_traits<B>::template read_element<"<<i<<">(b));" NL;
         g<<
             TAB1 "return r;" NL
             TAB1 "}" NL
@@ -931,7 +931,7 @@ namespace
             ;
         for( int i=0; i!=r; ++i )
             for( int j=0; j!=c; ++j )
-                g<<TAB1 "mat_traits<R>::template write_element<"<<i<<","<<j<<">(r)=mat_traits<A>::template read_element<"<<i<<","<<j<<">(a)"<<op<<"mat_traits<B>::template read_element<"<<i<<","<<j<<">(b);" NL;
+                g<<TAB1 "write_mat_element<"<<i<<","<<j<<">(r,mat_traits<A>::template read_element<"<<i<<","<<j<<">(a)"<<op<<"mat_traits<B>::template read_element<"<<i<<","<<j<<">(b));" NL;
         g<<
             TAB1 "return r;" NL
             TAB1 "}" NL
@@ -948,7 +948,7 @@ namespace
         g<<TAB1 "{" NL;
         for( int i=0; i!=r; ++i )
             for( int j=0; j!=c; ++j )
-                g<<TAB1 "mat_traits<A>::template write_element<"<<i<<","<<j<<">(a)"<<op<<"mat_traits<B>::template read_element<"<<i<<","<<j<<">(b);" NL;
+                g<<TAB1 "write_mat_element<"<<i<<","<<j<<">(a,mat_traits<A>::template read_element<"<<i<<","<<j<<">(a)"<<op<<"mat_traits<B>::template read_element<"<<i<<","<<j<<">(b));" NL;
         g<<
             TAB1 "return a;" NL
             TAB1 "}" NL
@@ -964,7 +964,7 @@ namespace
         std::ostream & g=out.stream();
         g<<TAB1 "{" NL;
         for( int i=0; i!=d; ++i )
-            g<<TAB1 "vec_traits<A>::template write_element<"<<i<<">(a)"<<op<<"vec_traits<B>::template read_element<"<<i<<">(b);" NL;
+            g<<TAB1 "write_vec_element<"<<i<<">(a,vec_traits<A>::template read_element<"<<i<<">(a)"<<op<<"vec_traits<B>::template read_element<"<<i<<">(b));" NL;
         g<<
             TAB1 "return a;" NL
             TAB1 "}" NL
@@ -986,7 +986,7 @@ namespace
             ;
         for( int i=0; i!=r; ++i )
             for( int j=0; j!=c; ++j )
-                g<<TAB1 "mat_traits<R>::template write_element<"<<i<<","<<j<<">(r)="<<op<<"mat_traits<A>::template read_element<"<<i<<","<<j<<">(a);" NL;
+                g<<TAB1 "write_mat_element<"<<i<<","<<j<<">(r,"<<op<<"mat_traits<A>::template read_element<"<<i<<","<<j<<">(a));" NL;
         g<<
             TAB1 "return r;" NL
             TAB1 "}" NL
@@ -1007,7 +1007,7 @@ namespace
             TAB1 "R r;" NL
             ;
         for( int i=0; i!=d; ++i )
-            g<<TAB1 "vec_traits<R>::template write_element<"<<i<<">(r)="<<op<<"vec_traits<A>::template read_element<"<<i<<">(a);" NL;
+            g<<TAB1 "write_vec_element<"<<i<<">(r,"<<op<<"vec_traits<A>::template read_element<"<<i<<">(a));" NL;
         g<<
             TAB1 "return r;" NL
             TAB1 "}" NL
@@ -1030,7 +1030,7 @@ namespace
             ;
         for( int i=0; i!=r; ++i )
             for( int j=0; j!=c; ++j )
-                g<<TAB1 "mat_traits<R>::template write_element<"<<i<<","<<j<<">(r)=mat_traits<A>::template read_element<"<<i<<","<<j<<">(a)"<<op<<"b;" NL;
+                g<<TAB1 "write_mat_element<"<<i<<","<<j<<">(r,mat_traits<A>::template read_element<"<<i<<","<<j<<">(a)"<<op<<"b);" NL;
         g<<
             TAB1 "return r;" NL
             TAB1 "}" NL
@@ -1053,7 +1053,7 @@ namespace
             ;
         for( int i=0; i!=r; ++i )
             for( int j=0; j!=c; ++j )
-                g<<TAB1 "mat_traits<R>::template write_element<"<<i<<","<<j<<">(r)=a"<<op<<"mat_traits<B>::template read_element<"<<i<<","<<j<<">(b);" NL;
+                g<<TAB1 "write_mat_element<"<<i<<","<<j<<">(r,a"<<op<<"mat_traits<B>::template read_element<"<<i<<","<<j<<">(b));" NL;
         g<<
             TAB1 "return r;" NL
             TAB1 "}" NL
@@ -1074,7 +1074,7 @@ namespace
             TAB1 "R r;" NL
             ;
         for( int i=0; i!=d; ++i )
-            g<<TAB1 "vec_traits<R>::template write_element<"<<i<<">(r)=vec_traits<A>::template read_element<"<<i<<">(a)"<<op<<"b;" NL;
+            g<<TAB1 "write_vec_element<"<<i<<">(r,vec_traits<A>::template read_element<"<<i<<">(a)"<<op<<"b);" NL;
         g<<
             TAB1 "return r;" NL
             TAB1 "}" NL
@@ -1095,7 +1095,7 @@ namespace
             TAB1 "R r;" NL
             ;
         for( int i=0; i!=d; ++i )
-            g<<TAB1 "vec_traits<R>::template write_element<"<<i<<">(r)=a"<<op<<"vec_traits<B>::template read_element<"<<i<<">(b);" NL;
+            g<<TAB1 "write_vec_element<"<<i<<">(r,a"<<op<<"vec_traits<B>::template read_element<"<<i<<">(b));" NL;
         g<<
             TAB1 "return r;" NL
             TAB1 "}" NL
@@ -1114,7 +1114,7 @@ namespace
             ;
         for( int i=0; i!=r; ++i )
             for( int j=0; j!=c; ++j )
-                g<<TAB1 "mat_traits<A>::template write_element<"<<i<<","<<j<<">(a)"<<op<<"b;" NL;
+                g<<TAB1 "write_mat_element<"<<i<<","<<j<<">(a,mat_traits<A>::template read_element<"<<i<<","<<j<<">(a)"<<op<<"b);" NL;
         g<<
             TAB1 "return a;" NL
             TAB1 "}" NL
@@ -1132,7 +1132,7 @@ namespace
             TAB1 "{" NL
             ;
         for( int i=0; i!=d; ++i )
-            g<<TAB1 "vec_traits<A>::template write_element<"<<i<<">(a)"<<op<<"b;" NL;
+            g<<TAB1 "write_vec_element<"<<i<<">(a, vec_traits<A>::template read_element<"<<i<<">(a)"<<op<<"b);" NL;
         g<<
             TAB1 "return a;" NL
             TAB1 "}" NL
@@ -1145,13 +1145,13 @@ namespace
         {
         header_ma_mb_same_size(out,r,c,"assign");
         out.require_include(INCLUDE_M_TRAITS);
-        out.require_include(INCLUDE_INLINE);
+        out.require_include(INCLUDE_CONFIG);
         out.require_include(INCLUDE_ENABLE_IF);
         std::ostream & g=out.stream();
         g<<TAB1 "{" NL;
         for( int i=0; i!=r; ++i )
             for( int j=0; j!=c; ++j )
-                g<<TAB1 "mat_traits<A>::template write_element<"<<i<<","<<j<<">(a)=mat_traits<B>::template read_element<"<<i<<","<<j<<">(b);" NL;
+                g<<TAB1 "write_mat_element<"<<i<<","<<j<<">(a,mat_traits<B>::template read_element<"<<i<<","<<j<<">(b));" NL;
         g<<
             TAB1 "return a;" NL
             TAB1 "}" NL
@@ -1164,12 +1164,12 @@ namespace
         {
         header_va_vb_same_size(out,d,"assign");
         out.require_include(INCLUDE_V_TRAITS);
-        out.require_include(INCLUDE_INLINE);
+        out.require_include(INCLUDE_CONFIG);
         out.require_include(INCLUDE_ENABLE_IF);
         std::ostream & g=out.stream();
         g<<TAB1 "{" NL;
         for( int i=0; i!=d; ++i )
-            g<<TAB1 "vec_traits<A>::template write_element<"<<i<<">(a)=vec_traits<B>::template read_element<"<<i<<">(b);" NL;
+            g<<TAB1 "write_vec_element<"<<i<<">(a,vec_traits<B>::template read_element<"<<i<<">(b));" NL;
         g<<
             TAB1 "return a;" NL
             TAB1 "}" NL
@@ -1199,7 +1199,7 @@ namespace
             ;
         for( int i=0; i!=r; ++i )
             for( int j=0; j!=c; ++j )
-                g<<TAB1 "mat_traits<R>::template write_element<"<<i<<","<<j<<">(r) = mat_traits<A>::template read_element<"<<i<<","<<j<<">(a);" NL;
+                g<<TAB1 "write_mat_element<"<<i<<","<<j<<">(r,mat_traits<A>::template read_element<"<<i<<","<<j<<">(a));" NL;
         g<<
             TAB1 "return r;" NL
             TAB1 "}" NL
@@ -1234,29 +1234,29 @@ namespace
                 TAB1 "T const one = scalar_traits<T>::value(1);" NL
                 TAB1 "T const two = one+one;" NL
                 TAB1 "R r;" NL
-                TAB1 "mat_traits<R>::template write_element<0,0>(r) = one - two*(cc+dd);" NL
-                TAB1 "mat_traits<R>::template write_element<0,1>(r) = two*(bc-ad);" NL
-                TAB1 "mat_traits<R>::template write_element<0,2>(r) = two*(bd+ac);" NL
+                TAB1 "write_mat_element<0,0>(r,one - two*(cc+dd));" NL
+                TAB1 "write_mat_element<0,1>(r,two*(bc-ad));" NL
+                TAB1 "write_mat_element<0,2>(r,two*(bd+ac));" NL
                 ;
             for( int i=3; i!=c; ++i )
-                g<<TAB1 "mat_traits<R>::template write_element<0,"<<i<<">(r) = zero;" NL;
+                g<<TAB1 "write_mat_element<0,"<<i<<">(r,zero);" NL;
             g<<
-                TAB1 "mat_traits<R>::template write_element<1,0>(r) = two*(bc+ad);" NL
-                TAB1 "mat_traits<R>::template write_element<1,1>(r) = one - two*(bb+dd);" NL
-                TAB1 "mat_traits<R>::template write_element<1,2>(r) = two*(cd-ab);" NL
+                TAB1 "write_mat_element<1,0>(r,two*(bc+ad));" NL
+                TAB1 "write_mat_element<1,1>(r,one - two*(bb+dd));" NL
+                TAB1 "write_mat_element<1,2>(r,two*(cd-ab));" NL
                 ;
             for( int i=3; i!=c; ++i )
-                g<<TAB1 "mat_traits<R>::template write_element<1,"<<i<<">(r) = zero;" NL;
+                g<<TAB1 "write_mat_element<1,"<<i<<">(r,zero);" NL;
             g<<
-                TAB1 "mat_traits<R>::template write_element<2,0>(r) = two*(bd-ac);" NL
-                TAB1 "mat_traits<R>::template write_element<2,1>(r) = two*(cd+ab);" NL
-                TAB1 "mat_traits<R>::template write_element<2,2>(r) = one - two*(bb+cc);" NL
+                TAB1 "write_mat_element<2,0>(r,two*(bd-ac));" NL
+                TAB1 "write_mat_element<2,1>(r,two*(cd+ab));" NL
+                TAB1 "write_mat_element<2,2>(r,one - two*(bb+cc));" NL
                 ;
             for( int i=3; i!=c; ++i )
-                g<<TAB1 "mat_traits<R>::template write_element<2,"<<i<<">(r) = zero;" NL;
+                g<<TAB1 "write_mat_element<2,"<<i<<">(r,zero);" NL;
             for( int i=3; i!=r; ++i )
                 for( int j=0; j!=c; ++j )
-                    g<<TAB1 "mat_traits<R>::template write_element<"<<i<<","<<j<<">(r) = "<<(i==j?"one":"zero")<<";" NL;
+                    g<<TAB1 "write_mat_element<"<<i<<","<<j<<">(r,"<<(i==j?"one":"zero")<<");" NL;
             g<<
                 TAB1 "return r;" NL
                 TAB1 "}" NL
@@ -1274,7 +1274,7 @@ namespace
             TAB1 "R r;" NL
             ;
         for( int i=0; i!=d; ++i )
-            g<<TAB1 "vec_traits<R>::template write_element<"<<i<<">(r)=vec_traits<A>::template read_element<"<<i<<">(a);" NL;
+            g<<TAB1 "write_vec_element<"<<i<<">(r,vec_traits<A>::template read_element<"<<i<<">(a));" NL;
         g<<
             TAB1 "return r;" NL
             TAB1 "}" NL
@@ -1391,9 +1391,9 @@ namespace
         for( int i=0; i!=d; ++i )
             for( int j=0; j!=d; ++j )
                 {
-                g<<TAB1 "mat_traits<R>::template write_element<"<<i<<','<<j<<">(r)="<<(((i+j)&1)?'-':' ')<<"f*";
+                g<<TAB1 "write_mat_element<"<<i<<','<<j<<">(r,"<<(((i+j)&1)?'-':' ')<<"f*";
                 determinant_impl(g,d-1,del_row_col(del_row_col('a'),j,i));
-                g<<";" NL;
+                g<<");" NL;
                 }
         g<<
             TAB1 "return r;" NL
@@ -1502,7 +1502,7 @@ namespace
             TAB1 "R r;" NL
             ;
         for( int i=0; i!=d; ++i )
-            g<<TAB1 "vec_traits<R>::template write_element<"<<i<<">(r)=a"<<i<<"*rm;" NL;
+            g<<TAB1 "write_vec_element<"<<i<<">(r,a"<<i<<"*rm);" NL;
         g<<
             TAB1 "return r;" NL
             TAB1 "}" NL
@@ -1538,7 +1538,7 @@ namespace
             TAB1 "T const rm=scalar_traits<T>::value(1)/sqrt(m2);" NL
             ;
         for( int i=0; i!=d; ++i )
-            g<<TAB1 "vec_traits<A>::template write_element<"<<i<<">(a)*=rm;" NL;
+            g<<TAB1 "write_vec_element<"<<i<<">(a,vec_traits<A>::template read_element<"<<i<<">(a)*rm);" NL;
         g<<TAB1 "}" NL;
         defined(g,d,"normalize",suffix);
         }
@@ -1690,7 +1690,7 @@ namespace
     swizzle( output_file & out, int d )
         {
         assert(d>1);
-        out.require_include(INCLUDE_INLINE);
+        out.require_include(INCLUDE_CONFIG);
         out.require_include(INCLUDE_SWIZZLE_TRAITS);
         out.require_include(INCLUDE_ENABLE_IF);
         std::ostream & g=out.stream();
@@ -1763,29 +1763,29 @@ namespace
             mr_op_ma_mb_same_size(f,d,d,"operator-","-","mm");
             mr_op_ma_mb_same_size(f,d,1,"operator-","-","mm");
             mr_op_ma_mb_same_size(f,1,d,"operator-","-","mm");
-            ma_op_ma_mb_same_size(f,d,d,"operator+=","+=","mm");
-            ma_op_ma_mb_same_size(f,d,1,"operator+=","+=","mm");
-            ma_op_ma_mb_same_size(f,1,d,"operator+=","+=","mm");
-            ma_op_ma_mb_same_size(f,d,d,"operator-=","-=","mm");
-            ma_op_ma_mb_same_size(f,d,1,"operator-=","-=","mm");
-            ma_op_ma_mb_same_size(f,1,d,"operator-=","-=","mm");
+            ma_op_ma_mb_same_size(f,d,d,"operator+=","+","mm");
+            ma_op_ma_mb_same_size(f,d,1,"operator+=","+","mm");
+            ma_op_ma_mb_same_size(f,1,d,"operator+=","+","mm");
+            ma_op_ma_mb_same_size(f,d,d,"operator-=","-","mm");
+            ma_op_ma_mb_same_size(f,d,1,"operator-=","-","mm");
+            ma_op_ma_mb_same_size(f,1,d,"operator-=","-","mm");
             mr_op_ma_sb(f,d,d,"operator*","*","ms");
             mr_op_sa_mb(f,d,d,"operator*","*","sm");
             mr_op_ma_sb(f,d,1,"operator*","*","ms");
             mr_op_sa_mb(f,d,1,"operator*","*","sm");
             mr_op_ma_sb(f,1,d,"operator*","*","ms");
             mr_op_sa_mb(f,1,d,"operator*","*","sm");
-            ma_op_ma_sb(f,d,d,"operator*=","*=","ms");
-            ma_op_ma_sb(f,d,1,"operator*=","*=","ms");
-            ma_op_ma_sb(f,1,d,"operator*=","*=","ms");
+            ma_op_ma_sb(f,d,d,"operator*=","*","ms");
+            ma_op_ma_sb(f,d,1,"operator*=","*","ms");
+            ma_op_ma_sb(f,1,d,"operator*=","*","ms");
             mr_op_ma_sb(f,d,d,"operator/","/","ms");
             mr_op_sa_mb(f,d,d,"operator/","/","sm");
             mr_op_ma_sb(f,d,1,"operator/","/","ms");
             mr_op_sa_mb(f,d,1,"operator/","/","sm");
             mr_op_ma_sb(f,1,d,"operator/","/","ms");
-            ma_op_ma_sb(f,d,d,"operator/=","/=","ms");
-            ma_op_ma_sb(f,d,1,"operator/=","/=","ms");
-            ma_op_ma_sb(f,1,d,"operator/=","/=","ms");
+            ma_op_ma_sb(f,d,d,"operator/=","/","ms");
+            ma_op_ma_sb(f,d,1,"operator/=","/","ms");
+            ma_op_ma_sb(f,1,d,"operator/=","/","ms");
             mr_convert_to_ma(f,d,d,"m");
             mr_convert_to_ma(f,d,1,"m");
             mr_convert_to_ma(f,1,d,"m");
@@ -1826,13 +1826,13 @@ namespace
                 }
             vr_op_va_vb_same_size(f,d,"operator+","+","vv");
             vr_op_va_vb_same_size(f,d,"operator-","-","vv");
-            va_op_va_vb_same_size(f,d,"operator+=","+=","vv");
-            va_op_va_vb_same_size(f,d,"operator-=","-=","vv");
+            va_op_va_vb_same_size(f,d,"operator+=","+","vv");
+            va_op_va_vb_same_size(f,d,"operator-=","-","vv");
             vr_op_va_sb(f,d,"operator*","*","vs");
             vr_op_sa_vb(f,d,"operator*","*","sv");
-            va_op_va_sb(f,d,"operator*=","*=","vs");
+            va_op_va_sb(f,d,"operator*=","*","vs");
             vr_op_va_sb(f,d,"operator/","/","vs");
-            va_op_va_sb(f,d,"operator/=","/=","vs");
+            va_op_va_sb(f,d,"operator/=","/","vs");
             vr_convert_to_va(f,d,"v");
             bool_eq_va_vb(f,d,"vv");
             bool_neq_va_vb(f,d,"vv");

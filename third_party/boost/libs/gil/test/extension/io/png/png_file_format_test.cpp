@@ -5,9 +5,7 @@
 // See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt
 //
-#define BOOST_GIL_IO_ADD_FS_PATH_SUPPORT
 #define BOOST_GIL_IO_ENABLE_GRAY_ALPHA
-#define BOOST_FILESYSTEM_VERSION 3
 #include <boost/gil.hpp>
 #include <boost/gil/extension/io/png.hpp>
 
@@ -15,8 +13,8 @@
 
 #include "paths.hpp"
 
+namespace fs  = boost::gil::detail::filesystem;
 namespace gil = boost::gil;
-namespace fs = boost::filesystem;
 
 #ifdef BOOST_GIL_IO_USE_PNG_TEST_SUITE_IMAGES
 

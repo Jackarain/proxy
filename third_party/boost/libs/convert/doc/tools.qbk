@@ -1,5 +1,5 @@
 [/
-  Copyright (c) Vladimir Batov 2009-2020
+  Copyright (c) Vladimir Batov 2009-2022
   Distributed under the Boost Software License, Version 1.0.
   See copy at http://www.boost.org/LICENSE_1_0.txt.
 ]
@@ -55,11 +55,6 @@ The traits allow to test if the supplied class has respectively `operator()` and
 [is_callable_usage2]
 
 As it can be seen from the example the traits check for the existence of a ['callable] member function but ['not necessarily of the specified signature]. Please check the ['Boost.TTI] library for the latter.
-
-[endsect]
-[section boost::cnv::is_cnv]
-
-TODO
 
 [endsect]
 [endsect]

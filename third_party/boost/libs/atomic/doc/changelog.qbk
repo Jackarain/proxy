@@ -1,11 +1,16 @@
 [/
- / Copyright (c) 2021 Andrey Semashev
+ / Copyright (c) 2021-2022 Andrey Semashev
  /
  / Distributed under the Boost Software License, Version 1.0. (See accompanying
  / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
  /]
 
 [section:changelog Changelog]
+
+[heading Boost 1.80]
+
+* Improved portability of endianness checks on ARM, AArch32 and AArch64 targets. ([github_issue 59])
+* Fixed compilation with MSVC 14.0 (Visual Studio 2015) in C++17 mode. ([github_issue 61])
 
 [heading Boost 1.79]
 

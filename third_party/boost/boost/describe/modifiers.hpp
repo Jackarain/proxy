@@ -34,7 +34,7 @@ BOOST_DESCRIBE_ENUM(modifiers,
     mod_function,
     mod_any_member,
     mod_inherited,
-    mod_hidden);
+    mod_hidden)
 
 BOOST_DESCRIBE_CONSTEXPR_OR_CONST modifiers mod_any_access = static_cast<modifiers>( mod_public | mod_protected | mod_private );
 

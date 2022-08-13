@@ -67,6 +67,9 @@ namespace detail
 #endif
 
     virtual string_ref name() const noexcept override { return typename StatusCode::domain_type().name(); }  // NOLINT
+
+    virtual payload_info_t payload_info() const noexcept override { return {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type), (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) : alignof(status_code_domain *)}; }
+
   protected:
     using _mycode = status_code<indirecting_domain>;
     virtual bool _do_failure(const status_code<void> &code) const noexcept override  // NOLINT
@@ -102,14 +105,20 @@ namespace detail
       abort();  // suppress buggy GCC warning
     }
 #endif
-    virtual void _do_erased_copy(status_code<void> &dst, const status_code<void> &src, size_t /*unused*/) const override  // NOLINT
+    virtual bool _do_erased_copy(status_code<void> &dst, const status_code<void> &src, payload_info_t dstinfo) const override  // NOLINT
     {
-      // Note that dst will not have its domain set
+      // Note that dst may not have its domain set
+      const auto srcinfo = payload_info();
       assert(src.domain() == *this);
+      if(dstinfo.total_size < srcinfo.total_size)
+      {
+        return false;
+      }
       auto &d = static_cast<_mycode &>(dst);               // NOLINT
       const auto &_s = static_cast<const _mycode &>(src);  // NOLINT
       const StatusCode &s = *_s.value();
       new(&d) _mycode(in_place, new StatusCode(s));
+      return true;
     }
     virtual void _do_erased_destroy(status_code<void> &code, size_t /*unused*/) const noexcept override  // NOLINT
     {

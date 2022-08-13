@@ -10,11 +10,11 @@
 #define BOOST_TEST_MAIN
 #include <boost/test/included/unit_test.hpp>
 #include <boost/process/search_path.hpp>
-#include <boost/filesystem/path.hpp>
+#include <boost/process/filesystem.hpp>
 #include <string>
 
 namespace bp = boost::process;
-namespace fs = boost::filesystem;
+namespace fs = boost::process::filesystem;
 
 BOOST_AUTO_TEST_CASE(search_path)
 {

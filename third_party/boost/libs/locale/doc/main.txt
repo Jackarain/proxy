@@ -1,12 +1,8 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
-
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 filetype=cpp.doxygen
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
 /*!
 
@@ -47,7 +43,7 @@ Boost.Locale enhances and unifies the standard library's API
 the way it becomes useful and convenient for development
 of cross platform and "cross-culture" software.
 
-In order to achieve this goal Boost.Locale uses 
+In order to achieve this goal Boost.Locale uses
 the-state-of-the-art Unicode and Localization
 library: <a href="http://icu-project.org/">ICU</a> - International Components for Unicode.
 
@@ -70,7 +66,7 @@ and use library.
     - \ref conversions
     - \ref formatting_and_parsing
     - \ref messages_formatting
-    - \ref charset_handling 
+    - \ref charset_handling
     - \ref boundary_analysys
     - \ref localized_text_formatting
     - \ref dates_times_timezones
@@ -83,10 +79,10 @@ and use library.
     - \ref rationale
     - \ref faq
     - \ref default_encoding_under_windows
-    - \ref running_examples_under_windows 
+    - \ref running_examples_under_windows
     - \ref gettext_for_windows
     - \ref glossary
-    - \ref tested_compilers_and_paltforms 
+    - \ref tested_compilers_and_platforms
     - \ref status_of_cpp0x_characters_support
     - \ref special_thanks
 - \subpage changelog

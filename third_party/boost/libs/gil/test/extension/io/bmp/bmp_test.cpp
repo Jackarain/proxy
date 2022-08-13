@@ -5,8 +5,6 @@
 // See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt
 //
-#define BOOST_GIL_IO_ADD_FS_PATH_SUPPORT
-#define BOOST_FILESYSTEM_VERSION 3
 #include <boost/gil.hpp>
 #include <boost/gil/extension/io/bmp.hpp>
 
@@ -21,7 +19,7 @@
 #include "paths.hpp"
 #include "subimage_test.hpp"
 
-namespace fs = boost::filesystem;
+namespace fs  = boost::gil::detail::filesystem;
 namespace gil = boost::gil;
 namespace mp11 = boost::mp11;
 
@@ -247,15 +245,13 @@ void test_subimage()
 
 void test_dynamic_image()
 {
-    using my_img_types = mp11::mp_list
-        <
-            gil::gray8_image_t,
-            gil::gray16_image_t,
-            gil::rgb8_image_t,
-            gil::rgba8_image_t
-        >;
-
-    gil::any_image<my_img_types> image;
+    gil::any_image
+    <
+        gil::gray8_image_t,
+        gil::gray16_image_t,
+        gil::rgb8_image_t,
+        gil::rgba8_image_t
+    > image;
     gil::read_image(bmp_filename.c_str(), image, gil::bmp_tag());
 
     gil::write_view(bmp_out + "dynamic_image_test.bmp", gil::view(image), gil::bmp_tag());

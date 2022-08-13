@@ -1,5 +1,6 @@
 #
 # Copyright (c) 2019 Mateusz Loskot <mateusz at loskot dot net>
+# Copyright (c) 2021 Pranam Lashkari <plashkari628@gmail.com>
 #
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at
@@ -15,7 +16,9 @@ foreach(_name
   packed_pixel
   pixel_reference_is_mutable
   pixels_are_compatible
-  test_fixture)
+  test_fixture
+  pixel_numeric_operations
+  pixel_numeric_operations_float)
   set(_test t_core_pixel_${_name})
   set(_target test_core_pixel_${_name})
 

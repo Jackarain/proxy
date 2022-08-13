@@ -5,9 +5,7 @@
 // See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt
 //
-#define BOOST_GIL_IO_ADD_FS_PATH_SUPPORT
 #define BOOST_GIL_IO_ENABLE_GRAY_ALPHA
-#define BOOST_FILESYSTEM_VERSION 3
 #include <boost/gil.hpp>
 #include <boost/gil/extension/io/png.hpp>
 
@@ -22,8 +20,8 @@
 #include "scanline_read_test.hpp"
 #include "test_utility_output_stream.hpp"
 
+namespace fs  = boost::gil::detail::filesystem;
 namespace gil = boost::gil;
-namespace fs = boost::filesystem;
 
 using gray_alpha8_pixel_t = gil::pixel<std::uint8_t, gil::gray_alpha_layout_t>;
 using gray_alpha8c_pixel_t = gil::pixel<std::uint8_t, gil::gray_alpha_layout_t> const;

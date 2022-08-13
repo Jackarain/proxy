@@ -27,6 +27,118 @@
 </h2></div></div></div>
 <h4>
 <a name="histogram.history.h0"></a>
+      <span class="phrase"><a name="histogram.history.boost_1_80"></a></span><a class="link" href="history.html#histogram.history.boost_1_80">Boost
+      1.80</a>
+    </h4>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Fixed segfault in <code class="computeroutput"><span class="identifier">indexed</span></code>
+          when trying to iterate over histogram with axes of zero size (physical
+          or logical) under certain conditions
+        </li>
+<li class="listitem">
+          Removed previously deprecated API:
+          <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; ">
+<li class="listitem">
+                class <code class="computeroutput"><span class="identifier">accumulators</span><span class="special">::</span><span class="identifier">thread_safe</span></code>:
+                use <code class="computeroutput"><span class="identifier">accumulators</span><span class="special">::</span><span class="identifier">count</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span> <span class="keyword">true</span><span class="special">&gt;</span></code>
+              </li>
+<li class="listitem">
+                Methods <code class="computeroutput"><span class="identifier">accumulators</span><span class="special">::</span><span class="identifier">sum</span><span class="special">::</span><span class="identifier">large</span></code>
+                and <code class="computeroutput"><span class="identifier">accumulators</span><span class="special">::</span><span class="identifier">sum</span><span class="special">::</span><span class="identifier">small</span></code>:
+                use <code class="computeroutput"><span class="identifier">accumulators</span><span class="special">::</span><span class="identifier">sum</span><span class="special">::</span><span class="identifier">large_part</span></code>
+                and <code class="computeroutput"><span class="identifier">accumulators</span><span class="special">::</span><span class="identifier">sum</span><span class="special">::</span><span class="identifier">small_part</span></code>
+              </li>
+<li class="listitem">
+                Type alias <code class="computeroutput"><span class="identifier">algorithm</span><span class="special">::</span><span class="identifier">reduce_option</span></code>:
+                use <code class="computeroutput"><span class="identifier">algorithm</span><span class="special">::</span><span class="identifier">reduce_command</span></code>
+              </li>
+<li class="listitem">
+                Template function <code class="computeroutput"><span class="identifier">axis</span><span class="special">::</span><span class="identifier">traits</span><span class="special">::</span><span class="identifier">static_options</span></code>:
+                use <code class="computeroutput"><span class="identifier">axis</span><span class="special">::</span><span class="identifier">traits</span><span class="special">::</span><span class="identifier">get_options</span></code>
+              </li>
+<li class="listitem">
+                Template function <code class="computeroutput"><span class="identifier">axis</span><span class="special">::</span><span class="identifier">traits</span><span class="special">::</span><span class="identifier">static_is_inclusive</span></code>:
+                use <code class="computeroutput"><span class="identifier">axis</span><span class="special">::</span><span class="identifier">traits</span><span class="special">::</span><span class="identifier">is_inclusive</span></code>
+              </li>
+<li class="listitem">
+                Type alias <code class="computeroutput"><span class="identifier">indexed</span><span class="special">::</span><span class="identifier">range_iterator</span></code>:
+                use <code class="computeroutput"><span class="identifier">indexed</span><span class="special">::</span><span class="identifier">iterator</span></code>
+              </li>
+<li class="listitem">
+                Type alias <code class="computeroutput"><span class="identifier">indexed</span><span class="special">::</span><span class="identifier">accessor</span><span class="special">::</span><span class="identifier">reference</span></code>:
+                use <code class="computeroutput"><span class="identifier">indexed</span><span class="special">::</span><span class="identifier">accessor</span><span class="special">::</span><span class="identifier">const_reference</span></code>
+              </li>
+</ul></div>
+        </li>
+</ul></div>
+<h4>
+<a name="histogram.history.h1"></a>
+      <span class="phrase"><a name="histogram.history.boost_1_79"></a></span><a class="link" href="history.html#histogram.history.boost_1_79">Boost
+      1.79</a>
+    </h4>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Division support for <code class="computeroutput"><span class="identifier">accumulators</span><span class="special">::</span><span class="identifier">weighted_sum</span></code>
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">axis</span><span class="special">::</span><span class="identifier">regular</span></code> and <code class="computeroutput"><span class="identifier">axis</span><span class="special">::</span><span class="identifier">variable</span></code>
+          now represent closed intervals if overflow bin is absent, this is needed
+          for example to correctly bin a probability in the closed interval [0, 1]
+        </li>
+<li class="listitem">
+          cpp17 support: set axis compile-time options via deduction guide
+        </li>
+</ul></div>
+<h4>
+<a name="histogram.history.h2"></a>
+      <span class="phrase"><a name="histogram.history.boost_1_78"></a></span><a class="link" href="history.html#histogram.history.boost_1_78">Boost
+      1.78</a>
+    </h4>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Deprecate <code class="computeroutput"><span class="identifier">accumulators</span><span class="special">::</span><span class="identifier">sum</span><span class="special">::</span><span class="identifier">small</span></code>
+          and <code class="computeroutput"><span class="special">::</span><span class="identifier">large</span></code>
+          as workaround for bug in windows.h
+        </li>
+<li class="listitem">
+          Fixed broken division operator in <code class="computeroutput"><span class="identifier">accumulators</span><span class="special">::</span><span class="identifier">count</span></code>
+        </li>
+<li class="listitem">
+          Fix bug in 1D histogram::fill when axis is growing and argument is single
+          value
+        </li>
+<li class="listitem">
+          Improvements to documentation
+        </li>
+</ul></div>
+<h4>
+<a name="histogram.history.h3"></a>
+      <span class="phrase"><a name="histogram.history.boost_1_77"></a></span><a class="link" href="history.html#histogram.history.boost_1_77">Boost
+      1.77</a>
+    </h4>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">indexed</span></code> now allows iteration
+          over user-defined rectangular subrange
+        </li>
+<li class="listitem">
+          Deprecate <code class="computeroutput"><span class="identifier">accumulators</span><span class="special">::</span><span class="identifier">thread_safe</span></code>,
+          users should replace with optionally thread-safe <code class="computeroutput"><span class="identifier">accumulators</span><span class="special">::</span><span class="identifier">count</span></code>
+        </li>
+<li class="listitem">
+          Fixed broken scaling operator in <code class="computeroutput"><span class="identifier">accumulators</span><span class="special">::</span><span class="identifier">count</span></code>
+        </li>
+<li class="listitem">
+          Fixed bug in <code class="computeroutput"><span class="identifier">axis</span><span class="special">::</span><span class="identifier">integer</span><span class="special">::</span><span class="identifier">inclusive</span></code>
+        </li>
+<li class="listitem">
+          Improvements to ostreaming: support for more accumulators, drawing unicode
+          bar charts is now the default
+        </li>
+</ul></div>
+<h4>
+<a name="histogram.history.h4"></a>
       <span class="phrase"><a name="histogram.history.boost_1_76"></a></span><a class="link" href="history.html#histogram.history.boost_1_76">Boost
       1.76</a>
     </h4>
@@ -53,7 +165,7 @@
 </ul></div>
         </li></ul></div>
 <h4>
-<a name="histogram.history.h1"></a>
+<a name="histogram.history.h5"></a>
       <span class="phrase"><a name="histogram.history.boost_1_75"></a></span><a class="link" href="history.html#histogram.history.boost_1_75">Boost
       1.75</a>
     </h4>
@@ -97,7 +209,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h2"></a>
+<a name="histogram.history.h6"></a>
       <span class="phrase"><a name="histogram.history.boost_1_74"></a></span><a class="link" href="history.html#histogram.history.boost_1_74">Boost
       1.74</a>
     </h4>
@@ -155,7 +267,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h3"></a>
+<a name="histogram.history.h7"></a>
       <span class="phrase"><a name="histogram.history.boost_1_73"></a></span><a class="link" href="history.html#histogram.history.boost_1_73">Boost
       1.73</a>
     </h4>
@@ -292,7 +404,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h4"></a>
+<a name="histogram.history.h8"></a>
       <span class="phrase"><a name="histogram.history.boost_1_72"></a></span><a class="link" href="history.html#histogram.history.boost_1_72">Boost
       1.72</a>
     </h4>
@@ -448,7 +560,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h5"></a>
+<a name="histogram.history.h9"></a>
       <span class="phrase"><a name="histogram.history.boost_1_71"></a></span><a class="link" href="history.html#histogram.history.boost_1_71">Boost
       1.71</a>
     </h4>
@@ -546,7 +658,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h6"></a>
+<a name="histogram.history.h10"></a>
       <span class="phrase"><a name="histogram.history.boost_1_70"></a></span><a class="link" href="history.html#histogram.history.boost_1_70">Boost
       1.70</a>
     </h4>
@@ -629,7 +741,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h7"></a>
+<a name="histogram.history.h11"></a>
       <span class="phrase"><a name="histogram.history.3_2_not_in_boost"></a></span><a class="link" href="history.html#histogram.history.3_2_not_in_boost">3.2
       (not in Boost)</a>
     </h4>
@@ -642,7 +754,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h8"></a>
+<a name="histogram.history.h12"></a>
       <span class="phrase"><a name="histogram.history.3_1_not_in_boost"></a></span><a class="link" href="history.html#histogram.history.3_1_not_in_boost">3.1
       (not in Boost)</a>
     </h4>
@@ -679,7 +791,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h9"></a>
+<a name="histogram.history.h13"></a>
       <span class="phrase"><a name="histogram.history.3_0_not_in_boost"></a></span><a class="link" href="history.html#histogram.history.3_0_not_in_boost">3.0
       (not in Boost)</a>
     </h4>
@@ -719,7 +831,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h10"></a>
+<a name="histogram.history.h14"></a>
       <span class="phrase"><a name="histogram.history.2_0_not_in_boost"></a></span><a class="link" href="history.html#histogram.history.2_0_not_in_boost">2.0
       (not in Boost)</a>
     </h4>
@@ -754,7 +866,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h11"></a>
+<a name="histogram.history.h15"></a>
       <span class="phrase"><a name="histogram.history.1_0_not_in_boost"></a></span><a class="link" href="history.html#histogram.history.1_0_not_in_boost">1.0
       (not in Boost)</a>
     </h4>

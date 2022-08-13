@@ -1,5 +1,6 @@
 
 // Copyright 2006-2009 Daniel James.
+// Copyright 2022 Christian Mazakas
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -10,6 +11,8 @@
 #if !defined(BOOST_UNORDERED_OBJECTS_MINIMAL_HEADER)
 #define BOOST_UNORDERED_OBJECTS_MINIMAL_HEADER
 
+#include <boost/core/lightweight_test.hpp>
+#include <boost/core/pointer_traits.hpp>
 #include <boost/move/move.hpp>
 #include <cstddef>
 #include <utility>
@@ -309,12 +312,16 @@ namespace test {
         return tmp;
       }
       ptr operator+(std::ptrdiff_t s) const { return ptr<T>(ptr_ + s); }
-      friend ptr operator+(std::ptrdiff_t s, ptr p)
-      {
-        return ptr<T>(s + p.ptr_);
-      }
+      friend ptr operator+(std::ptrdiff_t s, ptr p) { return ptr<T>(s + p.ptr_); }
+
+      std::ptrdiff_t operator-(ptr p) const { return ptr_ - p.ptr_; }
+      ptr operator-(std::ptrdiff_t s) const { return ptr(ptr_ - s); }
       T& operator[](std::ptrdiff_t s) const { return ptr_[s]; }
       bool operator!() const { return !ptr_; }
+
+      static ptr pointer_to(T& p) {
+        return ptr(&p);
+      }
 
       // I'm not using the safe bool idiom because the containers should be
       // able to cope with bool conversions.
@@ -428,16 +435,20 @@ namespace test {
         ::operator delete((void*)p.ptr_);
       }
 
-      void construct(T* p, T const& t) { new ((void*)p) T(t); }
-
-#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
-      template <class... Args> void construct(T* p, BOOST_FWD_REF(Args)... args)
+#if defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
+      template <class U, class V> void construct(U* p, V const& v)
       {
-        new ((void*)p) T(boost::forward<Args>(args)...);
+        new ((void*)p) U(v);
+      }
+#else
+      template <class U, class... Args>
+      void construct(U* p, BOOST_FWD_REF(Args)... args)
+      {
+        new ((void*)p) U(boost::forward<Args>(args)...);
       }
 #endif
 
-      void destroy(T* p) { p->~T(); }
+      template <class U> void destroy(U* p) { p->~U(); }
 
       size_type max_size() const { return 1000; }
 
@@ -498,17 +509,20 @@ namespace test {
         ::operator delete((void*)p.ptr_);
       }
 
-      void construct(T const* p, T const& t) { new ((void*)p) T(t); }
-
-#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
-      template <class... Args>
-      void construct(T const* p, BOOST_FWD_REF(Args)... args)
+#if defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
+      template <class U> void construct(U* p, U const& t)
       {
-        new ((void*)p) T(boost::forward<Args>(args)...);
+        new (p) U(t);
+      }
+#else
+      template <class U, class... Args>
+      void construct(U* p, BOOST_FWD_REF(Args)... args)
+      {
+        new (p) U(boost::forward<Args>(args)...);
       }
 #endif
 
-      void destroy(T const* p) { p->~T(); }
+      template <class U> void destroy(U* p) { p->~U(); }
 
       size_type max_size() const { return 1000; }
 
@@ -573,16 +587,20 @@ namespace test {
 
       void deallocate(T* p, std::size_t) { ::operator delete((void*)p); }
 
-      void construct(T* p, T const& t) { new ((void*)p) T(t); }
-
-#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
-      template <class... Args> void construct(T* p, BOOST_FWD_REF(Args)... args)
+#if defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
+      template <class U, class V> void construct(U* p, V const& v)
       {
-        new ((void*)p) T(boost::forward<Args>(args)...);
+        new ((void*)p) U(v);
+      }
+#else
+      template <class U, class... Args>
+      void construct(U* p, BOOST_FWD_REF(Args)... args)
+      {
+        new ((void*)p) U(boost::forward<Args>(args)...);
       }
 #endif
 
-      void destroy(T* p) { p->~T(); }
+      template <class U> void destroy(U* p) { p->~U(); }
 
       std::size_t max_size() const { return 1000u; }
     };
@@ -623,5 +641,15 @@ namespace test {
 #if defined(BOOST_MSVC)
 #pragma warning(pop)
 #endif
+
+namespace boost {
+  template <> struct pointer_traits< ::test::minimal::void_ptr>
+  {
+    template <class U> struct rebind_to
+    {
+      typedef ::test::minimal::ptr<U> type;
+    };
+  };
+}
 
 #endif

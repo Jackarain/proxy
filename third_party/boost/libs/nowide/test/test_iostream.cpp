@@ -1,9 +1,8 @@
-//  Copyright (c) 2015 Artyom Beilis (Tonkikh)
-//  Copyright (c) 2020 - 2021 Alexander Grund
+// Copyright (c) 2015 Artyom Beilis (Tonkikh)
+// Copyright (c) 2020 - 2021 Alexander Grund
 //
-//  Distributed under the Boost Software License, Version 1.0.
-//  (See accompanying file LICENSE or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
 #ifndef _SCL_SECURE_NO_WARNINGS
 // Call to 'std::copy_n' with parameters that may be unsafe
@@ -398,7 +397,9 @@ public:
         }
         TEST(h != INVALID_HANDLE_VALUE);
         TEST(SetStdHandle(handleType, h));
-        if(handleType != STD_INPUT_HANDLE)
+        if(handleType == STD_INPUT_HANDLE)
+            TEST(SetConsoleMode(h, ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_EXTENDED_FLAGS));
+        else
             TEST(SetConsoleActiveScreenBuffer(h));
     }
     ~RedirectStdio()
@@ -466,6 +467,7 @@ public:
 
 void test_console()
 {
+#ifndef BOOST_NOWIDE_DISABLE_CIN_TEST
     std::cout << "Test cin console: " << std::flush;
     {
         RedirectStdio stdinHandle(STD_INPUT_HANDLE);
@@ -488,6 +490,7 @@ void test_console()
         std::cout << "UTF-8 line read" << std::endl;
         TEST_EQ(line, testStringIn2);
     }
+#endif
     std::cout << "Test cout console" << std::endl;
     {
         RedirectStdio stdoutHandle(STD_OUTPUT_HANDLE);
@@ -522,7 +525,7 @@ void test_console()
 #endif
 #endif
 
-// coverity [root_function]
+// coverity[root_function]
 void test_main(int argc, char** argv, char**)
 {
     // LCOV_EXCL_START

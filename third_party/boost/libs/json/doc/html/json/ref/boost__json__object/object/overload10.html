@@ -30,35 +30,45 @@
 <p>
             Construct from initializer-list.
           </p>
-<h7><a name="json.ref.boost__json__object.object.overload10.h0"></a>
+<h6>
+<a name="json.ref.boost__json__object.object.overload10.h0"></a>
             <span class="phrase"><a name="json.ref.boost__json__object.object.overload10.synopsis"></a></span><a class="link" href="overload10.html#json.ref.boost__json__object.object.overload10.synopsis">Synopsis</a>
-          </h7><pre class="programlisting"><span class="identifier">object</span><span class="special">(</span>
+          </h6>
+<pre class="programlisting"><span class="identifier">object</span><span class="special">(</span>
     <span class="identifier">std</span><span class="special">::</span><span class="identifier">initializer_list</span><span class="special">&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span> <span class="identifier">string_view</span><span class="special">,</span> <span class="identifier">value_ref</span> <span class="special">&gt;&gt;</span> <span class="identifier">init</span><span class="special">,</span>
     <span class="identifier">storage_ptr</span> <span class="identifier">sp</span> <span class="special">=</span> <span class="special">{});</span>
 </pre>
-<h7><a name="json.ref.boost__json__object.object.overload10.h1"></a>
+<h6>
+<a name="json.ref.boost__json__object.object.overload10.h1"></a>
             <span class="phrase"><a name="json.ref.boost__json__object.object.overload10.description"></a></span><a class="link" href="overload10.html#json.ref.boost__json__object.object.overload10.description">Description</a>
-          </h7><p>
+          </h6>
+<p>
             The object is constructed with a copy of the values in the initializer-list
             in order, using the specified memory resource. If there are elements
             with duplicate keys; that is, if multiple elements in the range have
             keys that compare equal, only the first equivalent element will be inserted.
           </p>
-<h7><a name="json.ref.boost__json__object.object.overload10.h2"></a>
+<h6>
+<a name="json.ref.boost__json__object.object.overload10.h2"></a>
             <span class="phrase"><a name="json.ref.boost__json__object.object.overload10.complexity"></a></span><a class="link" href="overload10.html#json.ref.boost__json__object.object.overload10.complexity">Complexity</a>
-          </h7><p>
+          </h6>
+<p>
             Linear in <code class="computeroutput"><span class="identifier">init</span><span class="special">.</span><span class="identifier">size</span><span class="special">()</span></code>.
           </p>
-<h7><a name="json.ref.boost__json__object.object.overload10.h3"></a>
+<h6>
+<a name="json.ref.boost__json__object.object.overload10.h3"></a>
             <span class="phrase"><a name="json.ref.boost__json__object.object.overload10.exception_safety"></a></span><a class="link" href="overload10.html#json.ref.boost__json__object.object.overload10.exception_safety">Exception
             Safety</a>
-          </h7><p>
+          </h6>
+<p>
             Strong guarantee. Calls to <code class="computeroutput"><span class="identifier">memory_resource</span><span class="special">::</span><span class="identifier">allocate</span></code>
             may throw.
           </p>
-<h7><a name="json.ref.boost__json__object.object.overload10.h4"></a>
+<h6>
+<a name="json.ref.boost__json__object.object.overload10.h4"></a>
             <span class="phrase"><a name="json.ref.boost__json__object.object.overload10.parameters"></a></span><a class="link" href="overload10.html#json.ref.boost__json__object.object.overload10.parameters">Parameters</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>

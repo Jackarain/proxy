@@ -15,6 +15,7 @@
 #include "core/image/test_fixture.hpp"
 
 namespace gil = boost::gil;
+namespace variant2 = boost::variant2;
 namespace fixture = boost::gil::test::fixture;
 
 struct test_subimage_equals_image
@@ -61,16 +62,16 @@ struct test_subimage_equals_image_quadrants
         // create test image and set values of pixels in:
         //  quadrant 1
         auto const i1 = fixture::create_image<image_t>(2, 2, 255);
-        gil::apply_operation(v0, fixture::fill_any_view<image_t>({2, 3, 6, 7}, gil::const_view(i1)[0]));
+        variant2::visit(fixture::fill_any_view<image_t>({2, 3, 6, 7}, gil::const_view(i1)[0]), v0);
         //  quadrant 2
         auto const i2 = fixture::create_image<image_t>(2, 2, 128);
-        gil::apply_operation(v0, fixture::fill_any_view<image_t>({0, 1, 4, 5}, gil::const_view(i2)[0]));
+        variant2::visit(fixture::fill_any_view<image_t>({0, 1, 4, 5}, gil::const_view(i2)[0]), v0);
         //  quadrant 3
         auto const i3 = fixture::create_image<image_t>(2, 2, 64);
-        gil::apply_operation(v0, fixture::fill_any_view<image_t>({8, 9, 12, 13}, gil::const_view(i3)[0]));
+        variant2::visit(fixture::fill_any_view<image_t>({8, 9, 12, 13}, gil::const_view(i3)[0]), v0);
         //  quadrant 4
         auto const i4 = fixture::create_image<image_t>(2, 2, 32);
-        gil::apply_operation(v0, fixture::fill_any_view<image_t>({10, 11, 14, 15}, gil::const_view(i4)[0]));
+        variant2::visit(fixture::fill_any_view<image_t>({10, 11, 14, 15}, gil::const_view(i4)[0]), v0);
 
         auto v1 = gil::subimage_view(gil::view(i0), { 2, 0 }, i0.dimensions() / 2);
         BOOST_TEST(gil::equal_pixels(v1, gil::const_view(i1)));

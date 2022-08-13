@@ -39,15 +39,15 @@ in which both dimensions are of the same type:
       typename value_type = axis<0>::type;
 
       const value_type& operator[](const T&, size_t i);
-          value_type& operator[](      T&, size_t i);
+            value_type& operator[](      T&, size_t i);
 
       value_type x,y;
   };
 
 .. seealso::
 
-  - `PointNDConcept <reference/structboost_1_1gil_1_1_point_n_d_concept.html>`_
-  - `Point2DConcept <reference/structboost_1_1gil_1_1_point2_d_concept.html>`_
+  - `PointNDConcept <../reference/structboost_1_1gil_1_1_point_n_d_concept.html>`_
+  - `Point2DConcept <../reference/structboost_1_1gil_1_1_point2_d_concept.html>`_
 
 Models
 ------

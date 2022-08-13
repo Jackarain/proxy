@@ -14,7 +14,7 @@
 #include <iostream>
 #include <string>
 #include <boost/bind/bind.hpp>
-#include <boost/ref.hpp>
+#include <boost/core/ref.hpp>
 #include <boost/signals2/deconstruct.hpp>
 #include <boost/signals2/signal.hpp>
 #include <boost/shared_ptr.hpp>

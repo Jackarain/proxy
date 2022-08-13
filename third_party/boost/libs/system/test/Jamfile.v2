@@ -61,7 +61,11 @@ run single_instance_test.cpp single_instance_lib1 single_instance_lib2 : : : <li
 run single_instance_test.cpp single_instance_lib1 single_instance_lib2 : : : <link>shared : single_instance_lib_shared ;
 
 system-run before_main_test.cpp ;
-run-fail throws_assign_fail.cpp ;
+
+run-fail throws_assign_fail.cpp : : :
+    # GCC 12 catches this at compile time with a warning
+    <toolset>gcc,<variant>release:<build>no ;
+
 system-run constexpr_test.cpp ;
 system-run win32_hresult_test.cpp ;
 
@@ -142,6 +146,12 @@ run std_interop_test12.cpp ;
 
 run errc_test4.cpp ;
 
+run std_interop_test13.cpp ;
+run std_interop_test14.cpp ;
+
+run ec_location_test3.cpp ;
+run ec_location_test4.cpp ;
+
 # result
 
 import ../../config/checks/config : requires ;
@@ -163,3 +173,4 @@ run result_range_for.cpp : : : $(CPP11) ;
 run result_value_construct2.cpp : : : $(CPP11) ;
 run result_error_construct2.cpp : : : $(CPP11) ;
 run result_errc_construct.cpp : : : $(CPP11) ;
+run result_convert_construct.cpp : : : $(CPP11) ;

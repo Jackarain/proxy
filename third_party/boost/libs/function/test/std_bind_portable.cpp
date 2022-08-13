@@ -14,6 +14,10 @@
 # endif
 #endif
 
+#if defined(__GNUC__) && __GNUC__ >= 12
+# pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 #include <boost/function.hpp>
 #include <iostream>
 #include <functional>

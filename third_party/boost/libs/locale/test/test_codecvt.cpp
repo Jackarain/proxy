@@ -1,19 +1,22 @@
 //
-//  Copyright (c) 2015 Artyom Beilis (Tonkikh)
+// Copyright (c) 2015 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
+
 #include <boost/locale/utf8_codecvt.hpp>
-#include <locale>
-#include <iostream>
+#include <cstring>
 #include <iomanip>
-#include <string.h>
-#include <wchar.h>
+#include <iostream>
+#include <locale>
 #include <memory.h>
+#include <wchar.h>
 #define BOOST_LOCALE_ERROR_LIMIT -1
 #include "test_locale.hpp"
+
+#if defined(BOOST_MSVC) && BOOST_MSVC < 1700
+#pragma warning(disable : 4428) // universal-character-name encountered in source
+#endif
 
 static char const *utf8_name = "\xf0\x9d\x92\x9e-\xD0\xBF\xD1\x80\xD0\xB8\xD0\xB2\xD0\xB5\xD1\x82-\xE3\x82\x84\xE3\x81\x82.txt";
 static wchar_t const *wide_name = L"\U0001D49E-\u043F\u0440\u0438\u0432\u0435\u0442-\u3084\u3042.txt";
@@ -35,8 +38,8 @@ typedef std::codecvt<wchar_t,char,std::mbstate_t> cvt_type;
 void test_codecvt_in_n_m(cvt_type const &cvt,int n,int m)
 {
     wchar_t const *wptr = wide_name;
-    int wlen = wcslen(wide_name);
-    int u8len = strlen(utf8_name);
+    const size_t wlen = wcslen(wide_name);
+    const size_t u8len = strlen(utf8_name);
     char const *from = utf8_name;
     char const *end = from;
     char const *real_end = utf8_name + u8len;
@@ -48,17 +51,17 @@ void test_codecvt_in_n_m(cvt_type const &cvt,int n,int m)
             if(end > real_end)
                 end = real_end;
         }
-        
+
         wchar_t buf[128];
         wchar_t *to = buf;
         wchar_t *to_end = to + m;
         wchar_t *to_next = to;
-        
-        
+
+
         std::mbstate_t mb2 = mb;
         std::codecvt_base::result r = cvt.in(mb,from,end,from_next,to,to_end,to_next);
         //std::cout << "In from_size=" << (end-from) << " from move=" <<  (from_next - from) << " to move= " << to_next - to << " state = " << res(r) << std::endl;
-       
+
         int count = cvt.length(mb2,from,end,to_end - to);
         #ifndef BOOST_LOCALE_DO_LENGTH_MBSTATE_CONST
         TEST(memcmp(&mb,&mb2,sizeof(mb))==0);
@@ -70,7 +73,7 @@ void test_codecvt_in_n_m(cvt_type const &cvt,int n,int m)
         TEST(count == to_next - to);
         #endif
 
-        
+
         if(r == cvt_type::partial) {
             end+=n;
             if(end > real_end)
@@ -88,26 +91,26 @@ void test_codecvt_in_n_m(cvt_type const &cvt,int n,int m)
     }
     TEST(wptr == wide_name + wlen);
     TEST(from == real_end);
-    
+
 }
 
 void test_codecvt_out_n_m(cvt_type const &cvt,int n,int m)
 {
     char const *nptr = utf8_name;
-    int wlen = wcslen(wide_name);
-    int u8len = strlen(utf8_name);
-    
+    const size_t wlen = wcslen(wide_name);
+    const size_t u8len = strlen(utf8_name);
+
     std::mbstate_t mb=std::mbstate_t();
-    
+
     wchar_t const *from_next = wide_name;
     wchar_t const *real_from_end = wide_name + wlen;
-    
+
     char buf[256];
     char *to = buf;
     char *to_next = to;
     char *to_end = to + n;
     char *real_to_end = buf + sizeof(buf);
-    
+
     while(from_next < real_from_end) {
         wchar_t const *from = from_next;
         wchar_t const *from_end = from + m;
@@ -116,7 +119,7 @@ void test_codecvt_out_n_m(cvt_type const &cvt,int n,int m)
         if(to_end == to) {
             to_end = to+n;
         }
-        
+
         std::codecvt_base::result r = cvt.out(mb,from,from_end,from_next,to,to_end,to_next);
         //std::cout << "In from_size=" << (end-from) << " from move=" <<  (from_next - from) << " to move= " << to_next - to << " state = " << res(r) << std::endl;
         if(r == cvt_type::partial) {
@@ -128,7 +131,7 @@ void test_codecvt_out_n_m(cvt_type const &cvt,int n,int m)
         else {
             TEST(r == cvt_type::ok);
         }
-        
+
         while(to!=to_next) {
             TEST(*nptr == *to);
             nptr++;
@@ -148,11 +151,11 @@ void test_codecvt_conv()
 {
     std::cout << "Conversions " << std::endl;
     std::locale l(std::locale::classic(),new boost::locale::utf8_codecvt<wchar_t>());
- 
+
     cvt_type const &cvt = std::use_facet<cvt_type>(l);
 
     TEST(cvt.max_length()==4);
-    
+
     for(int i=1;i<=(int)strlen(utf8_name)+1;i++) {
         for(int j=1;j<=(int)wcslen(wide_name)+1;j++) {
             try {
@@ -164,19 +167,19 @@ void test_codecvt_conv()
                 throw;
             }
         }
-    }    
+    }
 }
 
 void test_codecvt_err()
 {
     std::cout << "Errors " << std::endl;
     std::locale l(std::locale::classic(),new boost::locale::utf8_codecvt<wchar_t>());
- 
+
     cvt_type const &cvt = std::use_facet<cvt_type>(l);
 
     std::cout << "- UTF-8" << std::endl;
     {
-        
+
         wchar_t buf[2];
         wchar_t *to=buf;
         wchar_t *to_end = buf+2;
@@ -203,11 +206,11 @@ void test_codecvt_err()
             TEST(from_next == from);
             TEST(to_next == to);
         }
-    }    
-    
+    }
+
     std::cout << "- UTF-16/32" << std::endl;
     {
-        
+
         char buf[32];
         char *to=buf;
         char *to_end = buf+32;
@@ -235,14 +238,14 @@ void test_codecvt_err()
             TEST(from_next == from);
             TEST(to_next == to);
         }
-    }    
-    
+    }
+
 }
 
 
 void test_char_char()
 {
-    std::cout << "Char-char specialization"<<std::endl;
+    std::cout << "Char-char specialization" << std::endl;
     std::locale l(std::locale::classic(),new boost::locale::utf8_codecvt<char>());
     std::codecvt<char,char,std::mbstate_t> const &cvt=std::use_facet<std::codecvt<char,char,std::mbstate_t> >(l);
     std::mbstate_t mb=std::mbstate_t();
@@ -264,20 +267,10 @@ void test_char_char()
     TEST(cvt.max_length()==1);
 }
 
-int main()
-{   
-    try {
-        test_codecvt_conv();
-        test_codecvt_err();
-        test_char_char();
-        
-    }
-    catch(std::exception const &e) {
-        std::cerr << "Failed : " << e.what() << std::endl;
-        return 1;
-    }
-    std::cout << "Ok" << std::endl;
-    return 0;
+void test_main(int /*argc*/, char** /*argv*/)
+{
+    test_codecvt_conv();
+    test_codecvt_err();
+    test_char_char();
 }
 ///
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

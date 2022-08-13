@@ -368,6 +368,10 @@ rule generate_self_contained_header_tests
           [ thread-run test_10964.cpp ]
           [ thread-test test_11053.cpp ]
           [ thread-run test_11266.cpp ]
+          [ thread-run test_366_1.cpp ]
+          [ thread-run test_366_2.cpp ]
+          [ thread-run test_366_3.cpp ]
+          [ thread-run test_366_4.cpp ]
     ;
 
 

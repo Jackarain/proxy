@@ -1,12 +1,9 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 filetype=cpp.doxygen
 /*!
 \page working_with_multiple_locales Working with multiple locales
 
@@ -31,7 +28,7 @@ For example:
     gen("ja_JP.UTF-8");
     // Create all locales
 
-    std::locale en=gen("en_US.UTF-8"); 
+    std::locale en=gen("en_US.UTF-8");
     // Fetch an existing locale from the cache
     std::locale ar=gen("ar_EG.UTF-8");
     // Because ar_EG not in the cache, a new locale is generated (and cached)
@@ -42,5 +39,3 @@ Then these locales can be imbued to \c iostreams or used directly as parameters 
 
 
 */
-
-

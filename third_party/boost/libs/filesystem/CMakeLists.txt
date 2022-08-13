@@ -19,6 +19,7 @@ set(BOOST_FILESYSTEM_DISABLE_STATX OFF CACHE BOOL "Disable usage of statx API in
 set(BOOST_FILESYSTEM_DISABLE_GETRANDOM OFF CACHE BOOL "Disable usage of getrandom API in Boost.Filesystem")
 set(BOOST_FILESYSTEM_DISABLE_ARC4RANDOM OFF CACHE BOOL "Disable usage of arc4random API in Boost.Filesystem")
 set(BOOST_FILESYSTEM_DISABLE_BCRYPT OFF CACHE BOOL "Disable usage of BCrypt API in Boost.Filesystem")
+set(BOOST_FILESYSTEM_EMSCRIPTEN_USE_WASI OFF CACHE BOOL "Use WASI under emscripten in Boost.Filesystem")
 
 # Note: We can't use the Boost::library targets in the configure checks as they may not yet be included
 # by the superproject when this CMakeLists.txt is included. We also don't want to hardcode include paths
@@ -45,6 +46,7 @@ if(NOT BOOST_FILESYSTEM_DISABLE_STATX)
     endif()
 endif()
 check_cxx_source_compiles("#include <${CMAKE_CURRENT_SOURCE_DIR}/config/has_fdopendir_nofollow.cpp>" BOOST_FILESYSTEM_HAS_FDOPENDIR_NOFOLLOW)
+check_cxx_source_compiles("#include <${CMAKE_CURRENT_SOURCE_DIR}/config/has_posix_at_apis.cpp>" BOOST_FILESYSTEM_HAS_POSIX_AT_APIS)
 if(WIN32 AND NOT BOOST_FILESYSTEM_DISABLE_BCRYPT)
     set(CMAKE_REQUIRED_LIBRARIES bcrypt)
     check_cxx_source_compiles("#include <${CMAKE_CURRENT_SOURCE_DIR}/config/has_bcrypt.cpp>" BOOST_FILESYSTEM_HAS_BCRYPT)
@@ -131,6 +133,9 @@ endif()
 if(BOOST_FILESYSTEM_DISABLE_BCRYPT)
     target_compile_definitions(boost_filesystem PRIVATE BOOST_FILESYSTEM_DISABLE_BCRYPT)
 endif()
+if(BOOST_FILESYSTEM_DISABLE_EMSCRIPTEN_WASI)
+    target_compile_definitions(boost_filesystem PRIVATE BOOST_FILESYSTEM_DISABLE_EMSCRIPTEN_WASI)
+endif()
 
 if(BOOST_FILESYSTEM_HAS_STAT_ST_BLKSIZE)
     target_compile_definitions(boost_filesystem PRIVATE BOOST_FILESYSTEM_HAS_STAT_ST_BLKSIZE)
@@ -158,6 +163,9 @@ if(BOOST_FILESYSTEM_HAS_STATX_SYSCALL)
 endif()
 if(BOOST_FILESYSTEM_HAS_FDOPENDIR_NOFOLLOW)
     target_compile_definitions(boost_filesystem PRIVATE BOOST_FILESYSTEM_HAS_FDOPENDIR_NOFOLLOW)
+endif()
+if(BOOST_FILESYSTEM_HAS_POSIX_AT_APIS)
+    target_compile_definitions(boost_filesystem PRIVATE BOOST_FILESYSTEM_HAS_POSIX_AT_APIS)
 endif()
 
 target_link_libraries(boost_filesystem

@@ -440,7 +440,7 @@ That is all; now you have learned all the basics!
 
 .. raw:: html 
 
-        <hr>
+        <hr/>
         
 **See also**
 
@@ -455,7 +455,7 @@ That is all; now you have learned all the basics!
 
 .. raw:: html 
 
-        <hr>
+        <hr/>
 
 :Copyright:     Thorsten Ottosen 2004-2006. Use, modification and distribution is subject to the Boost Software License, Version 1.0 (see LICENSE_1_0.txt__).
 

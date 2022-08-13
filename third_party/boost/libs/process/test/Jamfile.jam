@@ -70,7 +70,7 @@ rule test-options ( name )
 
 test-suite bare :
     [ run environment.cpp system filesystem : [ test-options environment ] ]
-    [ run async_pipe.cpp  system filesystem : [ test-options async_pipe ] ]
+    [ run async_pipe.cpp  system filesystem : [ test-options async_pipe ] : : <target-os>darwin:<build>no ]
     [ run pipe.cpp        system filesystem : [ test-options pipe ] ]
     [ compile no_ansi_apps.cpp ]
     [ compile-fail spawn_fail.cpp        ]
@@ -100,12 +100,12 @@ test-suite with-valgrind :
     [ run env.cpp     program_options system filesystem       : [ test-options env ] : sparring_partner ]
     [ run group.cpp     system thread filesystem              : [ test-options group ] : sub_launch ]
     [ run group.cpp          system thread filesystem         : [ test-options group ] : sub_launch : <build>no <target-os>windows:<build>yes <define>BOOST_USE_WINDOWS_H=1 : group-windows-h ]
-    [ run group_wait.cpp     system thread filesystem         : [ test-options group_wait ] : sparring_partner ]
+    [ run group_wait.cpp     system thread filesystem         : [ test-options group_wait ] : sparring_partner : <target-os>darwin:<build>no ]
 	[ run limit_fd.cpp     program_options system filesystem  : [ test-options limit_fd ] : sparring_partner ]
     [ run run_exe.cpp filesystem                              : : sparring_partner ]
     [ run run_exe_path.cpp filesystem                         : [ test-options run_exe_path ] : sparring_partner ]
     [ run search_path.cpp filesystem system                   : [ test-options search_path ] : : <target-os>windows:<source>shell32 ]
-    [ run shell.cpp filesystem system                         : [ test-options shell ] : sparring_partner ]
+    [ run shell.cpp filesystem system                         : [ test-options shell ] : sparring_partner : <target-os>darwin:<build>no ]
     [ run shell_path.cpp  filesystem system                   : [ test-options shell_path ] ]
     [ run system_test1.cpp filesystem system                  : [ test-options system_test1 ] : sparring_partner ]
     [ run system_test2.cpp filesystem system                  : [ test-options system_test2 ] : sparring_partner ]
@@ -125,10 +125,11 @@ test-suite with-valgrind :
 test-suite without-valgrind :
     [ run async_system_future.cpp filesystem system coroutine           : [ test-options async_system_future ] : sparring_partner : <link>static <toolset>msvc:<cxxflags>/bigobj ]
     [ run async_system_stackful.cpp filesystem system coroutine         : [ test-options async_system_stackful ] : sparring_partner : <link>static <toolset>msvc:<cxxflags>/bigobj ]
-    [ run async_system_stackful_error.cpp filesystem system coroutine   : [ test-options async_system_stackful_error ] : sparring_partner : <link>static <toolset>msvc:<cxxflags>/bigobj ]
+#   [ run async_system_stackful_error.cpp filesystem system coroutine   : [ test-options async_system_stackful_error ] : sparring_partner : <link>static <toolset>msvc:<cxxflags>/bigobj ]
     [ run async_system_stackful_except.cpp filesystem system coroutine  : [ test-options async_system_stackful_except ] : sparring_partner : <link>static <toolset>msvc:<cxxflags>/bigobj ]
     [ run async_system_stackless.cpp filesystem system coroutine        : [ test-options async_system_stackless ] : sparring_partner : <link>static <toolset>msvc:<cxxflags>/bigobj ]
     [ run vfork.cpp     system filesystem                               : [ test-options vfork ] : sparring_partner : <build>no <target-os>linux:<build>yes ]
     ;
 
 
+alias v2-tests : v2//standalone v2//with_target ;

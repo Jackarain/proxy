@@ -12,6 +12,19 @@
 
 [section:hist History]
 
+[h4 Multiprecision-4.1.1 (Boost-1.80)]
+
+* [*Mark C++11 support as deprecated]: from 2023 we will move to requiring C++14 as a minimum standard level.  That will drop support for
+GCC versions prior to 5 and MSVC prior to 14.1.
+* Fix conflict between `boost/cstdfloat.hpp` and this library.
+* Clean up lots of gcc and clang warnings.
+* Fix input streaming of composite types (complex, interval rational) where there is a trailing delimeter in the stream and no whitespace.
+* Fix `constexpr` integer square root where the input is 1, 2 or 3.
+* Add missing `#include` of `<memory>` to float128.hpp.
+* Correct 2-arg constructor for class `number` to prevent ambiguity in some cases.
+* Correct and make more consistent behaviour of divide-by-zero in gmp.hpp.
+
+
 [h4 Multiprecision-4.1.0 (Boost-1.79)]
 
 * Big update to support use of this library "standalone": ie without the rest of Boost.  A copy

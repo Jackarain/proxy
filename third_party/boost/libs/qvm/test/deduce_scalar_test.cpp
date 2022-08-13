@@ -22,8 +22,14 @@ template <class A,class B,class R>
 struct
 check
     {
-    same_type<typename boost::qvm::deduce_scalar<A,B>::type,R> a;
-    same_type<typename boost::qvm::deduce_scalar<B,A>::type,R> b;
+    same_type<typename boost::qvm::deduce_scalar<A,B>::type,R> a1;
+    same_type<typename boost::qvm::deduce_scalar<A const,B>::type,R> a2;
+    same_type<typename boost::qvm::deduce_scalar<A,B const>::type,R> a3;
+    same_type<typename boost::qvm::deduce_scalar<A const,B const>::type,R> a4;
+    same_type<typename boost::qvm::deduce_scalar<B,A>::type,R> b1;
+    same_type<typename boost::qvm::deduce_scalar<B const,A>::type,R> b2;
+    same_type<typename boost::qvm::deduce_scalar<B,A const>::type,R> b3;
+    same_type<typename boost::qvm::deduce_scalar<B const,A const>::type,R> b4;
     };
 
 int

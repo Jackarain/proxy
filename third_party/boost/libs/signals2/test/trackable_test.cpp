@@ -14,7 +14,7 @@
 #define BOOST_TEST_MODULE trackable_test
 #include <boost/test/included/unit_test.hpp>
 #include <boost/bind/bind.hpp>
-#include <boost/ref.hpp>
+#include <boost/core/ref.hpp>
 #include <boost/weak_ptr.hpp>
 
 using namespace boost::placeholders;

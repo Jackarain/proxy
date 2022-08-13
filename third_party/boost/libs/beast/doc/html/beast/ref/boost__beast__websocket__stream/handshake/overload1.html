@@ -30,16 +30,20 @@
 <p>
             Perform the WebSocket handshake in the client role.
           </p>
-<h7><a name="beast.ref.boost__beast__websocket__stream.handshake.overload1.h0"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.handshake.overload1.h0"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.handshake.overload1.synopsis"></a></span><a class="link" href="overload1.html#beast.ref.boost__beast__websocket__stream.handshake.overload1.synopsis">Synopsis</a>
-          </h7><pre class="programlisting"><span class="keyword">void</span>
+          </h6>
+<pre class="programlisting"><span class="keyword">void</span>
 <span class="identifier">handshake</span><span class="special">(</span>
     <span class="identifier">string_view</span> <span class="identifier">host</span><span class="special">,</span>
     <span class="identifier">string_view</span> <span class="identifier">target</span><span class="special">);</span>
 </pre>
-<h7><a name="beast.ref.boost__beast__websocket__stream.handshake.overload1.h1"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.handshake.overload1.h1"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.handshake.overload1.description"></a></span><a class="link" href="overload1.html#beast.ref.boost__beast__websocket__stream.handshake.overload1.description">Description</a>
-          </h7><p>
+          </h6>
+<p>
             This function is used to perform the <a href="https://en.wikipedia.org/wiki/WebSocket#Protocol_handshake" target="_top">WebSocket
             handshake</a>, required before messages can be sent and received.
             During the handshake, the client sends the Websocket Upgrade HTTP request,
@@ -63,9 +67,11 @@
             upgrade was accepted by the server, represented by a <a href="https://tools.ietf.org/html/rfc7230#section-3.1.2" target="_top">status-code</a>
             of <a class="link" href="../../boost__beast__http__status.html" title="http::status"><code class="computeroutput"><span class="identifier">beast</span><span class="special">::</span><span class="identifier">http</span><span class="special">::</span><span class="identifier">status</span><span class="special">::</span><span class="identifier">switching_protocols</span></code></a>.
           </p>
-<h7><a name="beast.ref.boost__beast__websocket__stream.handshake.overload1.h2"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.handshake.overload1.h2"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.handshake.overload1.parameters"></a></span><a class="link" href="overload1.html#beast.ref.boost__beast__websocket__stream.handshake.overload1.parameters">Parameters</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>
@@ -112,9 +118,11 @@
 </tr>
 </tbody>
 </table></div>
-<h7><a name="beast.ref.boost__beast__websocket__stream.handshake.overload1.h3"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.handshake.overload1.h3"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.handshake.overload1.exceptions"></a></span><a class="link" href="overload1.html#beast.ref.boost__beast__websocket__stream.handshake.overload1.exceptions">Exceptions</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>
@@ -144,14 +152,18 @@
                   </td>
 </tr></tbody>
 </table></div>
-<h7><a name="beast.ref.boost__beast__websocket__stream.handshake.overload1.h4"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.handshake.overload1.h4"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.handshake.overload1.example"></a></span><a class="link" href="overload1.html#beast.ref.boost__beast__websocket__stream.handshake.overload1.example">Example</a>
-          </h7><pre class="programlisting"><span class="identifier">ws</span><span class="special">.</span><span class="identifier">handshake</span><span class="special">(</span><span class="string">"localhost"</span><span class="special">,</span> <span class="string">"/"</span><span class="special">);</span>
+          </h6>
+<pre class="programlisting"><span class="identifier">ws</span><span class="special">.</span><span class="identifier">handshake</span><span class="special">(</span><span class="string">"localhost"</span><span class="special">,</span> <span class="string">"/"</span><span class="special">);</span>
 </pre>
-<h7><a name="beast.ref.boost__beast__websocket__stream.handshake.overload1.h5"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.handshake.overload1.h5"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.handshake.overload1.see_also"></a></span><a class="link" href="overload1.html#beast.ref.boost__beast__websocket__stream.handshake.overload1.see_also">See
             Also</a>
-          </h7><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+          </h6>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
 <li class="listitem">
                 <a href="https://tools.ietf.org/html/rfc6455#section-4.1" target="_top">Websocket
                 Opening Handshake Client Requirements (RFC6455)</a>

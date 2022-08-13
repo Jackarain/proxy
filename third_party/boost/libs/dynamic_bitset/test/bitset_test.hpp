@@ -1158,6 +1158,94 @@ struct bitset_test {
     BOOST_TEST((lhs >> pos) == (x >>= pos));
   }
 
+  static void at(const Bitset& lhs, const std::vector<bool>& bit_vec)
+  {
+      Bitset b(lhs);
+      std::size_t i, j, k;
+
+      // x = b.at(i)
+      // x = ~b.at(i)
+      for (i = 0; i < b.size(); ++i)
+      {
+          bool x = b.at(i);
+          BOOST_TEST(x == bit_vec.at(i));
+          x = ~b.at(i);
+          BOOST_TEST(x == !bit_vec.at(i));
+      }
+      Bitset prev(b);
+
+      // b.at(i) = x
+      for (j = 0; j < b.size(); ++j)
+      {
+          bool x = !prev.at(j);
+          b.at(j) = x;
+          for (k = 0; k < b.size(); ++k)
+              if (j == k)
+                  BOOST_TEST(b.at(k) == x);
+              else
+                  BOOST_TEST(b.at(k) == prev.at(k));
+          b.at(j) = prev.at(j);
+      }
+      b.flip();
+
+      // b.at(i) = b.at(j)
+      for (i = 0; i < b.size(); ++i)
+      {
+          b.at(i) = prev.at(i);
+          for (j = 0; j < b.size(); ++j)
+          {
+              if (i == j)
+                  BOOST_TEST(b.at(j) == prev.at(j));
+              else
+                  BOOST_TEST(b.at(j) == !prev.at(j));
+          }
+          b.at(i) = !prev.at(i);
+      }
+
+      // b.at(i).flip()
+      for (i = 0; i < b.size(); ++i)
+      {
+          b.at(i).flip();
+          for (j = 0; j < b.size(); ++j)
+          {
+              if (i == j)
+                  BOOST_TEST(b.at(j) == prev.at(j));
+              else
+                  BOOST_TEST(b.at(j) == !prev.at(j));
+          }
+          b.at(i).flip();
+      }
+
+      // b.at(b.size())
+      bool will_out_of_range = false;
+      for (i = 0; i <= b.size(); ++i)
+      {
+          if (i == b.size())
+          {
+              will_out_of_range = true;
+              break;
+          }
+          b.at(i);
+      }
+      if (will_out_of_range)
+      {
+          try
+          {
+              b.at(b.size());
+              BOOST_TEST(false); // It should have thrown an exception
+          }
+          catch (const std::out_of_range& ex)
+          {
+              // Good!
+              BOOST_TEST(!!ex.what());
+          }
+          catch (...)
+          {
+              BOOST_TEST(false); // threw the wrong exception
+          }
+      }
+  }
+
   // operator|
   static
   void operator_or(const Bitset& lhs, const Bitset& rhs)

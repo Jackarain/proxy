@@ -1,13 +1,8 @@
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 filetype=cpp.doxygen
-
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
-
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
 /*!
 \page building_boost_locale Building The library
@@ -131,7 +126,7 @@ You can run unit tests by invoking \c bjam with \c libs/locale/test project para
 
 Boost.Locale is built with binary compatibility in mind. Switching localization back ends on or off,
 or using iconv or not, does not affect binary compatibility. So if a dynamic library was built
-with all possible backends, other dynamic libraries compiled with, for example, only the \c std, \c posix 
+with all possible backends, other dynamic libraries compiled with, for example, only the \c std, \c posix
 or \c winapi backends would still be binary-compatible with it.
 
 However this definitely has an effect on some features. For example, if you
@@ -139,5 +134,3 @@ try to use boundary analysis or a calendar facet when the library does not suppo
 you would get an exception.
 
 */
-
-

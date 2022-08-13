@@ -135,10 +135,11 @@ thus making it suitable for use in the global headers of really large codebases.
 guaranteed and is C-compatible for <code>result&lt;T, E&gt;</code><sup class="footnote-ref" id="fnref:1"><a href="#fn:1">1</a></sup>, thus making Outcome based code long term ABI-stable.</p>
 
 <p>Fully deterministic all-<code>noexcept</code> C++ Coroutine support in Outcome is particularly strong, and we
-supply Outcome-optimising <a href="./reference/types/awaitables/eager.html" class="api-reference"><code>eager&lt;T&gt;/atomic_eager&lt;T&gt;</code></a>
- and <a href="./reference/types/awaitables/lazy.html" class="api-reference"><code>lazy&lt;T&gt;/atomic_lazy&lt;T&gt;</code></a>
+supply Outcome-optimising <a href="./reference/types/awaitables/eager.html" class="api-reference"><code>eager&lt;T, Executor = void&gt;/atomic_eager&lt;T, Executor = void&gt;</code></a>
+, <a href="./reference/types/awaitables/lazy.html" class="api-reference"><code>lazy&lt;T, Executor = void&gt;/atomic_lazy&lt;T, Executor = void&gt;</code></a>
 
-awaitables which work for any user type.</p>
+and <a href="./reference/types/awaitables/generator.html" class="api-reference"><code>generator&lt;T, Executor = void&gt;</code></a>
+ awaitables which work for any user type.</p>
 
 <h2 id="sample-usage">Sample usage</h2>
 
@@ -192,7 +193,7 @@ is available in scope.</p>
 </div>
 
 
-        </div><p><small>Last revised: December 15, 2021 at 11:47:12 UTC</small></p>
+        </div><p><small>Last revised: March 18, 2022 at 14:45:32 UTC</small></p>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="./history.html"><img src="./images/prev.png" alt="Prev"></a>

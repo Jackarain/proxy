@@ -1,5 +1,6 @@
 #
 # Copyright (c) 2018 Mateusz Loskot <mateusz at loskot dot net>
+# Copyright (c) 2021 Pranam Lashkari <plashkari628@gmail.com>
 #
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at
@@ -16,7 +17,8 @@ foreach(_name
   is_channel_integral
   packed_channel_value
   scoped_channel_value
-  test_fixture)
+  test_fixture
+  channel_numeric_operations)
   set(_test t_core_channel_${_name})
   set(_target test_core_channel_${_name})
 

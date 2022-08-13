@@ -38,7 +38,7 @@ main()
         BOOST_TEST(v2.a[0]==1);
         BOOST_TEST(v2.a[1]==42);
         float s=42.0f;
-        BOOST_TEST(&X(X1(s))==&s);
+        BOOST_TEST(X(X1(s))==s);
         }
         {
         test_qvm::vector<V2,2> r;

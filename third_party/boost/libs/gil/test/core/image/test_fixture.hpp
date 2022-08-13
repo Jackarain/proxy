@@ -9,7 +9,6 @@
 #define BOOST_GIL_TEST_CORE_IMAGE_TEST_FIXTURE_HPP
 
 #include <boost/gil.hpp>
-#include <boost/assert.hpp>
 
 #include <cstdint>
 #include <initializer_list>
@@ -17,8 +16,6 @@
 #include <random>
 #include <tuple>
 #include <type_traits>
-
-#include "core/test_fixture.hpp"
 
 namespace boost { namespace gil { namespace test { namespace fixture {
 
@@ -38,6 +35,26 @@ using image_types = std::tuple
     gil::rgba32_image_t
 >;
 
+#if defined(BOOST_NO_CXX17_HDR_MEMORY_RESOURCE)
+    using pmr_image_types = std::tuple<>;
+#else
+    using pmr_image_types = std::tuple
+    <
+        gil::pmr::gray8_image_t,
+        gil::pmr::gray16_image_t,
+        gil::pmr::gray32_image_t,
+        gil::pmr::bgr8_image_t,
+        gil::pmr::bgr16_image_t,
+        gil::pmr::bgr32_image_t,
+        gil::pmr::rgb8_image_t,
+        gil::pmr::rgb16_image_t,
+        gil::pmr::rgb32_image_t,
+        gil::pmr::rgba8_image_t,
+        gil::pmr::rgba16_image_t,
+        gil::pmr::rgba32_image_t
+    >;
+#endif //defined(BOOST_NO_CXX17_HDR_MEMORY_RESOURCE)
+
 using rgb_interleaved_image_types = std::tuple
 <
     gil::bgr8_image_t,
@@ -49,6 +66,16 @@ using rgb_interleaved_image_types = std::tuple
     gil::rgba8_image_t,
     gil::rgba16_image_t,
     gil::rgba32_image_t
+>;
+
+using bit_aligned_image_types = std::tuple
+<
+    gil::bit_aligned_image1_type<1, gil::gray_layout_t>::type,
+    gil::bit_aligned_image1_type<3, gil::gray_layout_t>::type,
+    gil::bit_aligned_image1_type<8, gil::gray_layout_t>::type,
+    gil::bit_aligned_image3_type<2, 2, 2, gil::rgb_layout_t>::type,
+    gil::bit_aligned_image3_type<5, 6, 5, gil::rgb_layout_t>::type,
+    gil::bit_aligned_image3_type<6, 6, 6, gil::rgb_layout_t>::type
 >;
 
 template <typename Image, typename Generator>

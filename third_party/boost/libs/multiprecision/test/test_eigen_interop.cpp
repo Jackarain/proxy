@@ -363,7 +363,7 @@ void example10()
    cout << "a.abs().sqrt() =" << endl
         << a.abs().sqrt() << endl;
    cout << "a.min(a.abs().sqrt()) =" << endl
-        << a.std::min)(a.abs().sqrt()) << endl;
+        << (a.min)(a.abs().sqrt()) << endl;
 }
 
 template <class Num>

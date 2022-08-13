@@ -1,12 +1,9 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 filetype=cpp.doxygen
 /*!
 \page messages_formatting Messages Formatting (Translation)
 
@@ -14,7 +11,7 @@
 - \ref msg_loading_dictionaries
 - \ref message_translation
     - \ref indirect_message_translation
-    - \ref plural_forms 
+    - \ref plural_forms
     - \ref multiple_gettext_domain
     - \ref direct_message_translation
 - \ref extracting_messages_from_code
@@ -33,7 +30,7 @@ of GNU Gettext, as it is outside the scope of this document.
 
 The model is following:
 
--   First, our application \c foo is prepared for localization by calling the \ref boost::locale::translate() "translate" function 
+-   First, our application \c foo is prepared for localization by calling the \ref boost::locale::translate() "translate" function
     for each message used in user interface.
     \n
     For example:
@@ -101,7 +98,6 @@ This is an example of our first fully localized program:
 #include <boost/locale.hpp>
 #include <iostream>
 
-using namespace std;
 using namespace boost::locale;
 
 int main()
@@ -113,11 +109,11 @@ int main()
     gen.add_messages_domain("hello");
 
     // Generate locales and imbue them to iostream
-    locale::global(gen(""));
-    cout.imbue(locale());
+    std::locale::global(gen(""));
+    std::cout.imbue(std::locale());
 
     // Display a message using current system locale
-    cout << translate("Hello World") << endl;
+    std::cout << translate("Hello World") << std::endl;
 }
 \endcode
 
@@ -128,7 +124,7 @@ There are two ways to translate messages:
 
 -   using \ref boost_locale_translate_family "boost::locale::translate()" family of functions:
     \n
-    These functions create a special proxy object \ref boost::locale::basic_message "basic_message" 
+    These functions create a special proxy object \ref boost::locale::basic_message "basic_message"
     that can be converted to string according to given locale or written to \c std::ostream
     formatting the message in the \c std::ostream's locale.
     \n
@@ -147,7 +143,7 @@ The basic function that allows us to translate a message is \ref boost_locale_tr
 
 These functions use a character type \c CharType as template parameter and receive either <tt>CharType const *</tt> or <tt>std::basic_string<CharType></tt> as input.
 
-These functions receive an original message and return a special proxy 
+These functions receive an original message and return a special proxy
 object - \ref boost::locale::basic_message "basic_message<CharType>".
 This object holds all the required information for the message formatting.
 
@@ -196,8 +192,8 @@ int main()
 
 \note
 
--   \ref boost::locale::basic_message "basic_message" can be implicitly converted 
-    to an apopriate std::basic_string using 
+-   \ref boost::locale::basic_message "basic_message" can be implicitly converted
+    to an apopriate std::basic_string using
     the global locale:
     \n
     \code
@@ -267,7 +263,7 @@ For more detailed information please refer to GNU Gettext: <a href="http://www.g
 \subsection adding_context_information Adding Context Information
 
 In many cases it is not sufficient to provide only the original English string to get the correct translation.
-You sometimes need to provide some context information. In German, for example, a button labeled "open" is translated to 
+You sometimes need to provide some context information. In German, for example, a button labeled "open" is translated to
 "öffnen" in the context of "opening a file", or to "aufbauen" in the context of opening an internet connection.
 
 In these cases you must add some context information to the original string, by adding a comment.
@@ -282,7 +278,7 @@ function in both singular and plural forms. The translator would see this contex
 
 For example, this is how the \c po file would look:
 
-\code    
+\code
 msgctxt "File"
 msgid "open"
 msgstr "öffnen"
@@ -300,7 +296,7 @@ formatting message catalogs.
 
 In some cases it is useful to work with multiple message domains.
 
-For example, if an application consists of several independent modules, it may 
+For example, if an application consists of several independent modules, it may
 have several domains - a separate domain for each module.
 
 For example, developing a FooBar office suite we might have:
@@ -341,7 +337,7 @@ The GNU Gettext like functions prototypes can be found \ref boost_locale_gettext
 
 All of these functions can have different prefixes for different forms:
 
--  \c d - translation in specific domain 
+-  \c d - translation in specific domain
 -  \c n - plural form translation
 -  \c p - translation in specific context
 
@@ -360,7 +356,7 @@ For example, we have a source file called \c dir.cpp that prints:
 
 \code
     cout << format(translate("Listing of catalog {1}:")) % file_name << endl;
-    cout << format(translate("Catalog {1} contains 1 file","Catalog {1} contains {2,num} files",files_no)) 
+    cout << format(translate("Catalog {1} contains 1 file","Catalog {1} contains {2,num} files",files_no))
             % file_name % files_no << endl;
 \endcode
 
@@ -386,13 +382,13 @@ msgstr[1] ""
 
 This file can be given to translators to adapt it to specific languages.
 
-We used the \c --keyword  parameter of \c xgettext to make it suitable for extracting messages from 
+We used the \c --keyword  parameter of \c xgettext to make it suitable for extracting messages from
 source code localized with Boost.Locale, searching for <tt>translate()</tt> function calls instead of the default <tt>gettext()</tt>
 and <tt>ngettext()</tt> ones.
 The first parameter <tt>--keyword=translate:1,1t</tt> provides the template for basic messages: a \c translate function that is
 called with 1 argument (1t) and the first message is taken as the key. The second one <tt>--keyword=translate:1,2,3t</tt> is used
 for plural forms.
-It tells \c xgettext to use a <tt>translate()</tt> function call with 3 parameters (3t) and take the 1st and 2nd parameter as keys. An 
+It tells \c xgettext to use a <tt>translate()</tt> function call with 3 parameters (3t) and take the 1st and 2nd parameter as keys. An
 additional marker \c Nc can be used to mark context information.
 
 The full set of xgettext parameters suitable for Boost.Locale is:
@@ -411,11 +407,11 @@ may ignore some of these parameters.
 \subsection custom_file_system_support Custom Filesystem Support
 
 When the access to actual file system is limited like in ActiveX controls or
-when the developer wants to ship all-in-one executable file, 
-it is useful to be able to load \c gettext  catalogs from a custom location - 
+when the developer wants to ship all-in-one executable file,
+it is useful to be able to load \c gettext  catalogs from a custom location -
 a custom file system.
 
-Boost.Locale provides an option to install boost::locale::message_format facet 
+Boost.Locale provides an option to install boost::locale::message_format facet
 with customized options provided in boost::locale::gnu_gettext::messages_info structure.
 
 This structure contains \c boost::function based
@@ -494,7 +490,6 @@ domain name for the application.
 #include <boost/locale.hpp>
 #include <iostream>
 
-using namespace std;
 using namespace boost::locale;
 
 int main()
@@ -507,9 +502,9 @@ int main()
     gen.add_messages_domain("copyrighted/windows-1255");
 
     // Generate locales and imbue them to iostream
-    locale::global(gen(""));
-    cout.imbue(locale());
-    
+    std::locale::global(gen(""));
+    std::cout.imbue(std::locale());
+
     // In Windows 1255 (C) symbol is encoded as 0xA9
     cout << translate("© 2001 All Rights Reserved") << endl;
 }
@@ -534,7 +529,7 @@ key is missing in the dictionary.
     -#  A tool for extracting strings from source code, and managing them: GNU Gettext provides good tools, but other
         implementations are available as well.
     -#  A good translation program like <a href="http://userbase.kde.org/Lokalize">Lokalize</a>, <a href="http://www.poedit.net/">Pedit</a> or <a href="http://projects.gnome.org/gtranslator/">GTranslator</a>.
-    
+
 -   Why doesn't Boost.Locale provide tools for extracting and management of message catalogs. Why should
     I use GPL-ed software? Are my programs or message catalogs affected by its license?
     \n
@@ -546,7 +541,7 @@ key is missing in the dictionary.
         do a very fine job, especially as they are freely available for download and support almost any platform.
     All Linux distributions, BSD Flavors, Mac OS X and other Unix like operating systems provide GNU Gettext tools
     as a standard package.\n
-    Windows users can get GNU Gettext utilities via MinGW project. See \ref gettext_for_windows. 
+    Windows users can get GNU Gettext utilities via MinGW project. See \ref gettext_for_windows.
 
 
 -   Is there any reason to prefer the Boost.Locale implementation to the original GNU Gettext runtime library?
@@ -555,12 +550,10 @@ key is missing in the dictionary.
     There are two important differences between the GNU Gettext runtime library and the Boost.Locale implementation:
     \n
     -#  The GNU Gettext runtime supports only one locale per process. It is not thread-safe to use multiple locales
-        and encodings in the same process. This is perfectly fine for applications that interact directly with 
+        and encodings in the same process. This is perfectly fine for applications that interact directly with
         a single user like most GUI applications, but is problematic for services and servers.
     -#  The GNU Gettext API supports only 8-bit encodings, making it irrelevant in environments that natively use
         wide strings.
     -#  The GNU Gettext runtime library distributed under LGPL license which may be not convenient for some users.
 
 */
-
-

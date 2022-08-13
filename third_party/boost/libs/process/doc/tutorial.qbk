@@ -82,10 +82,10 @@ int result = bp::system("/usr/bin/g++", "main.cpp");
 ```
 
 With that syntax we still have "g++" hard-coded, so let's assume we get the string
-from an external source as `boost::filesystem::path`, we can do this too.
+from an external source as `boost::process::filesystem::path`, we can do this too.
 
 ```
-boost::filesystem::path p = "/usr/bin/g++"; //or get it from somewhere else.
+boost::process::filesystem::path p = "/usr/bin/g++"; //or get it from somewhere else.
 int result = bp::system(p, "main.cpp");
 ```
 
@@ -93,7 +93,7 @@ Now we might want to find the `g++` executable in the `PATH`-variable, as the `c
 `Boost.process` provides a function to this end: bp::search_path.
 
 ```
-boost::filesystem::path p = bp::search_path("g++"); //or get it from somewhere else.
+boost::process::filesystem::path p = bp::search_path("g++"); //or get it from somewhere else.
 int result = bp::system(p, "main.cpp");
 ```
 

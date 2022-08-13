@@ -22,7 +22,8 @@
 #include <boost/process/child.hpp>
 #include <boost/process/async_pipe.hpp>
 
-#include <boost/filesystem.hpp>
+#include <boost/process/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 #include <string>
 #include <istream>
@@ -37,7 +38,7 @@ typedef boost::asio::windows::stream_handle pipe_end;
 typedef boost::asio::posix::stream_descriptor pipe_end;
 #endif
 
-namespace fs = boost::filesystem;
+namespace fs = boost::process::filesystem;
 namespace bp = boost::process;
 BOOST_AUTO_TEST_SUITE( bind_stderr );
 
@@ -148,7 +149,7 @@ BOOST_AUTO_TEST_CASE(file_io, *boost::unit_test::timeout(2))
         is >> s;
         BOOST_CHECK_EQUAL(s, "hello");
     }
-    boost::filesystem::remove(pth);
+    boost::process::filesystem::remove(pth);
 
 }
 

@@ -509,6 +509,26 @@ void run_test_cases( BOOST_EXPLICIT_TEMPLATE_TYPE(Block) )
       bit_vec[i] = long_string[n - 1 - i] == '0' ? 0 : 1;
     Tests::operator_bracket(b, bit_vec);
   }
+  //=====================================================================
+  // Test at
+  {
+      boost::dynamic_bitset<Block> b1;
+      std::vector<bool> bitvec1;
+      Tests::at(b1, bitvec1);
+  }
+  {
+      boost::dynamic_bitset<Block> b(std::string("1"));
+      std::vector<bool> bit_vec(1, true);
+      Tests::at(b, bit_vec);
+  }
+  {
+      boost::dynamic_bitset<Block> b(long_string);
+      std::size_t n = long_string.size();
+      std::vector<bool> bit_vec(n);
+      for (std::size_t i = 0; i < n; ++i)
+          bit_vec[i] = long_string[n - 1 - i] == '0' ? 0 : 1;
+      Tests::at(b, bit_vec);
+  }
 #if !defined(BOOST_NO_CXX11_ALLOCATOR)
   {
      typedef boost::dynamic_bitset<Block,

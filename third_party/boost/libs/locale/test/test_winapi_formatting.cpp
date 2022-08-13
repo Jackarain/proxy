@@ -1,38 +1,34 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
 #ifdef BOOST_LOCALE_NO_WINAPI_BACKEND
 #include <iostream>
 int main()
 {
-        std::cout << "WinAPI Backend is not build... Skipping" << std::endl;
+        std::cout << "WinAPI Backend is not build... Skipping\n";
 }
 #else
 
 #include <boost/locale/formatting.hpp>
-#include <boost/locale/localization_backend.hpp>
-#include <boost/locale/generator.hpp>
 #include <boost/locale/encoding.hpp>
+#include <boost/locale/generator.hpp>
 #include <boost/locale/info.hpp>
+#include <boost/locale/localization_backend.hpp>
 #include <iomanip>
-#include "test_locale.hpp"
-#include "test_locale_tools.hpp"
-#include "../src/win32/lcid.hpp"
+#include <ctime>
 #include <iostream>
-
-#include <time.h>
-#include <assert.h>
 
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-
 #include <windows.h>
+
+#include "test_locale.hpp"
+#include "test_locale_tools.hpp"
+#include "../src/boost/locale/win32/lcid.hpp"
 
 #define DEBUG_FMT
 
@@ -41,7 +37,7 @@ bool equal(std::string const &s1,std::wstring const &s2)
     bool res = s1 == boost::locale::conv::from_utf(s2,"UTF-8");
     #ifdef DEBUG_FMT
     if(!res)
-        std::cout << "[" << s1 << "]!=["<<boost::locale::conv::from_utf(s2,"UTF-8")<<"]"<<std::endl;
+        std::cout << "[" << s1 << "]!=[" << boost::locale::conv::from_utf(s2,"UTF-8") << "]\n";
     #endif
     return res;
 }
@@ -51,7 +47,7 @@ bool equal(std::wstring const &s1,std::wstring const &s2)
     bool res = s1 == s2;
     #ifdef DEBUG_FMT
     if(!res)
-        std::cout << "[" << boost::locale::conv::from_utf(s1,"UTF-8") << "]!=["<<boost::locale::conv::from_utf(s2,"UTF-8")<<"]"<<std::endl;
+        std::cout << "[" << boost::locale::conv::from_utf(s1,"UTF-8") << "]!=[" << boost::locale::conv::from_utf(s2,"UTF-8") << "]\n";
     #endif
     return res;
 }
@@ -62,7 +58,7 @@ bool equal(std::string const &s1,std::string const &s2)
     bool res = s1 == s2;
     #ifdef DEBUG_FMT
     if(!res)
-        std::cout << "[" << s1 << "]!=["<<s2<<"]"<<std::endl;
+        std::cout << "[" << s1 << "]!=[" << s2 << "]\n";
     #endif
     return res;
 }
@@ -72,7 +68,7 @@ bool equal(std::wstring const &s1,std::string const &s2)
     bool res = s1 == boost::locale::conv::to_utf<wchar_t>(s2,"UTF-8");
     #ifdef DEBUG_FMT
     if(!res)
-        std::cout << "[" << boost::locale::conv::from_utf(s1,"UTF-8") << "]!=["<<s2<<"]"<<std::endl;
+        std::cout << "[" << boost::locale::conv::from_utf(s1,"UTF-8") << "]!=[" << s2 << "]\n";
     #endif
     return res;
 
@@ -92,7 +88,6 @@ template<typename CharType>
 void test_by_char(std::locale const &l,std::string name,int lcid)
 {
     typedef std::basic_stringstream<CharType> ss_type;
-    typedef std::basic_string<CharType> string_type;
 
     using namespace boost::locale;
 
@@ -124,10 +119,12 @@ void test_by_char(std::locale const &l,std::string name,int lcid)
         TEST(n == 1045.45);
 
         if(name == "ru_RU.UTF-8") {
+BOOST_LOCALE_START_CONST_CONDITION
             if(sizeof(CharType)==1)
                 TEST(equal(ss.str(),"1 045,45")); // SP
             else
                 TEST(equal(ss.str(),"1\xC2\xA0" "045,45")); // NBSP
+BOOST_LOCALE_END_CONST_CONDITION
         }
         else
             TEST(equal(ss.str(),"1,045.45"));
@@ -142,10 +139,10 @@ void test_by_char(std::locale const &l,std::string name,int lcid)
         ss << as::currency;
         ss << 1043.34;
         TEST(ss);
-        
+
         wchar_t buf[256];
         GetCurrencyFormatW(lcid,0,L"1043.34",0,buf,256);
-        
+
         TEST(equal(ss.str(),buf));
     }
 
@@ -153,7 +150,7 @@ void test_by_char(std::locale const &l,std::string name,int lcid)
         std::cout << "--- Testing as::date/time" << std::endl;
         ss_type ss;
         ss.imbue(l);
-        
+
         time_t a_date = 3600*24*(31+4); // Feb 5th
         time_t a_time = 3600*15+60*33; // 15:33:13
         time_t a_timesec = 13;
@@ -171,7 +168,7 @@ void test_by_char(std::locale const &l,std::string name,int lcid)
 
         wchar_t time_buf[256];
         wchar_t date_buf[256];
-        
+
         SYSTEMTIME st= { 1970, 2,5, 5,15,33,13,0 };
         GetTimeFormatW(lcid,0,&st,0,time_buf,256);
         GetDateFormatW(lcid,0,&st,0,date_buf,256);
@@ -225,43 +222,33 @@ void test_date_time(std::locale l)
     }
 }
 
-int main()
+void test_main(int /*argc*/, char** /*argv*/)
 {
-    try {
-        boost::locale::localization_backend_manager mgr = boost::locale::localization_backend_manager::global();
-        mgr.select("winapi");
-        boost::locale::localization_backend_manager::global(mgr);
-        boost::locale::generator gen;
-        std::string name;
-        std::string names[] = { "en_US.UTF-8", "he_IL.UTF-8", "ru_RU.UTF-8" };
-        int lcids[] = { 0x0409, 0x040D ,0x0419 };
+    boost::locale::localization_backend_manager mgr = boost::locale::localization_backend_manager::global();
+    mgr.select("winapi");
+    boost::locale::localization_backend_manager::global(mgr);
+    boost::locale::generator gen;
+    std::string name;
+    std::string names[] = { "en_US.UTF-8", "he_IL.UTF-8", "ru_RU.UTF-8" };
+    int lcids[] = { 0x0409, 0x040D ,0x0419 };
 
-        for(unsigned i=0;i<sizeof(names)/sizeof(names[9]);i++) {
-            name = names[i];
-            std::cout << "- " << name << " locale" << std::endl;
-            if(boost::locale::impl_win::locale_to_lcid(name) == 0) {
-                std::cout << "-- not supported, skipping" << std::endl;
-                continue;
-            }
-            std::locale l1=gen(name);
-            std::cout << "-- UTF-8" << std::endl;
-            test_by_char<char>(l1,name,lcids[i]);
-            std::cout << "-- UTF-16" << std::endl;
-            test_by_char<wchar_t>(l1,name,lcids[i]);
+    for(unsigned i=0;i<sizeof(names)/sizeof(names[9]);i++) {
+        name = names[i];
+        std::cout << "- " << name << " locale" << std::endl;
+        if(boost::locale::impl_win::locale_to_lcid(name) == 0) {
+            std::cout << "-- not supported, skipping" << std::endl;
+            continue;
         }
-        std::cout << "- Testing strftime" <<std::endl;
-        test_date_time(gen("en_US.UTF-8"));
+        std::locale l1=gen(name);
+        std::cout << "-- UTF-8" << std::endl;
+        test_by_char<char>(l1,name,lcids[i]);
+        std::cout << "-- UTF-16" << std::endl;
+        test_by_char<wchar_t>(l1,name,lcids[i]);
     }
-    catch(std::exception const &e) {
-        std::cerr << "Failed " << e.what() << std::endl;
-        return EXIT_FAILURE;
-    }
-    FINALIZE();
-
+    std::cout << "- Testing strftime" << std::endl;
+    test_date_time(gen("en_US.UTF-8"));
 }
 
 #endif // no winapi
 
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
-
-// boostinspect:noascii 
+// boostinspect:noascii

@@ -3,8 +3,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef BOOST_MULTIPRECISION_MPC_HPP
-#define BOOST_MULTIPRECISION_MPC_HPP
+#ifndef BOOST_MP_MPC_HPP
+#define BOOST_MP_MPC_HPP
 
 #include <cstdint>
 #include <boost/multiprecision/detail/standalone_config.hpp>
@@ -103,7 +103,7 @@ struct mpc_complex_imp
       if ((this->get_default_options() != variable_precision_options::preserve_target_precision) || (mpc_get_prec(o.data()) == binary_default_precision))
       {
          m_data[0] = o.m_data[0];
-         o.m_data[0].re[0]._mpfr_d = 0;
+         o.m_data[0].re[0]._mpfr_d = nullptr;
       }
       else
       {
@@ -117,7 +117,7 @@ struct mpc_complex_imp
    {
       if ((o.m_data[0].re[0]._mpfr_d) && (this != &o))
       {
-         if (m_data[0].re[0]._mpfr_d == 0)
+         if (m_data[0].re[0]._mpfr_d == nullptr)
             mpc_init2(m_data, preserve_source_precision() ? mpc_get_prec(o.m_data) : boost::multiprecision::detail::digits10_2_2(get_default_precision()));
          else if (preserve_source_precision() && (mpc_get_prec(o.data()) != mpc_get_prec(data())))
          {
@@ -140,14 +140,14 @@ struct mpc_complex_imp
 #ifdef _MPFR_H_HAVE_INTMAX_T
    mpc_complex_imp& operator=(unsigned long long i)
    {
-      if (m_data[0].re[0]._mpfr_d == 0)
+      if (m_data[0].re[0]._mpfr_d == nullptr)
          mpc_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
       mpc_set_uj(data(), i, GMP_RNDN);
       return *this;
    }
    mpc_complex_imp& operator=(long long i)
    {
-      if (m_data[0].re[0]._mpfr_d == 0)
+      if (m_data[0].re[0]._mpfr_d == nullptr)
          mpc_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
       mpc_set_sj(data(), i, GMP_RNDN);
       return *this;
@@ -171,42 +171,42 @@ struct mpc_complex_imp
 #endif
    mpc_complex_imp& operator=(unsigned long i)
    {
-      if (m_data[0].re[0]._mpfr_d == 0)
+      if (m_data[0].re[0]._mpfr_d == nullptr)
          mpc_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
       mpc_set_ui(m_data, i, GMP_RNDN);
       return *this;
    }
    mpc_complex_imp& operator=(long i)
    {
-      if (m_data[0].re[0]._mpfr_d == 0)
+      if (m_data[0].re[0]._mpfr_d == nullptr)
          mpc_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
       mpc_set_si(m_data, i, GMP_RNDN);
       return *this;
    }
    mpc_complex_imp& operator=(double d)
    {
-      if (m_data[0].re[0]._mpfr_d == 0)
+      if (m_data[0].re[0]._mpfr_d == nullptr)
          mpc_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
       mpc_set_d(m_data, d, GMP_RNDN);
       return *this;
    }
    mpc_complex_imp& operator=(long double d)
    {
-      if (m_data[0].re[0]._mpfr_d == 0)
+      if (m_data[0].re[0]._mpfr_d == nullptr)
          mpc_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
       mpc_set_ld(m_data, d, GMP_RNDN);
       return *this;
    }
    mpc_complex_imp& operator=(mpz_t i)
    {
-      if (m_data[0].re[0]._mpfr_d == 0)
+      if (m_data[0].re[0]._mpfr_d == nullptr)
          mpc_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
       mpc_set_z(m_data, i, GMP_RNDN);
       return *this;
    }
    mpc_complex_imp& operator=(gmp_int i)
    {
-      if (m_data[0].re[0]._mpfr_d == 0)
+      if (m_data[0].re[0]._mpfr_d == nullptr)
          mpc_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
       mpc_set_z(m_data, i.data(), GMP_RNDN);
       return *this;
@@ -239,7 +239,7 @@ struct mpc_complex_imp
    {
       using default_ops::eval_fpclassify;
 
-      if (m_data[0].re[0]._mpfr_d == 0)
+      if (m_data[0].re[0]._mpfr_d == nullptr)
          mpc_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
 
       mpfr_float_backend<digits10> a(0uL, mpc_get_prec(m_data)), b(0uL, mpc_get_prec(m_data));
@@ -625,7 +625,7 @@ struct mpc_complex_backend<0> : public detail::mpc_complex_imp<0>
    }
    mpc_complex_backend& operator=(gmp_int const& val)
    {
-      if (this->m_data[0].im->_mpfr_d == 0)
+      if (this->m_data[0].im->_mpfr_d == nullptr)
       {
          unsigned requested_precision = this->thread_default_precision();
          if (thread_default_variable_precision_options() >= variable_precision_options::preserve_all_precision)
@@ -695,7 +695,7 @@ struct mpc_complex_backend<0> : public detail::mpc_complex_imp<0>
    }
    mpc_complex_backend& operator=(gmp_rational const& val)
    {
-      if (this->m_data[0].im->_mpfr_d == 0)
+      if (this->m_data[0].im->_mpfr_d == nullptr)
       {
          unsigned requested_precision = this->get_default_precision();
          if (thread_default_variable_precision_options() >= variable_precision_options::preserve_all_precision)

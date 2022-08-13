@@ -35,14 +35,14 @@
 <span class="keyword">struct</span> <a class="link" href="is_ordered.html" title="Struct template is_ordered">is_ordered</a> <span class="special">{</span>
 <span class="special">}</span><span class="special">;</span></pre></div>
 <div class="refsect1">
-<a name="idm28929"></a><h2>Description</h2>
+<a name="idm28557"></a><h2>Description</h2>
 <p>Doxygen does not render this well. This is a meta-function (template alias), it accepts an axis type and returns a compile-time boolean. If the boolean is true, the axis is ordered.</p>
 <p>The meta-function checks for the method <code class="computeroutput">constexpr static bool ordered()</code>, and uses the result. If this method is not present, it returns true if the value type of the Axis is arithmetic and false otherwise.</p>
 <p>An ordered axis has a value type that is ordered, which means that indices i &lt; j &lt; k implies either value(i) &lt; value(j) &lt; value(k) or value(i) &gt; value(j) &gt; value(k) for all i,j,k. For example, the integer axis is ordered, but the category axis is not. Axis which are not ordered must not have underflow bins, because they only have an "other" category, which is identified with the overflow bin if it is available.</p>
 <p>
 </p>
 <div class="refsect2">
-<a name="idm28936"></a><h3>Template Parameters</h3>
+<a name="idm28564"></a><h3>Template Parameters</h3>
 <div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
 <pre class="literallayout"><span class="keyword">typename</span> Axis</pre>
 <p>axis type </p>

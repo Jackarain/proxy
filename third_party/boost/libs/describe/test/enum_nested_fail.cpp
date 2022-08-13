@@ -12,7 +12,7 @@
 
 struct S1 {
     enum E1 {};
-    BOOST_DESCRIBE_ENUM(E1);
+    BOOST_DESCRIBE_ENUM(E1)
 };
 
 #endif // !defined(BOOST_DESCRIBE_CXX14)

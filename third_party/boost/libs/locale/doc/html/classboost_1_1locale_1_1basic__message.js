@@ -13,13 +13,13 @@ var classboost_1_1locale_1_1basic__message =
     [ "basic_message", "group__message.html#ga8c2fab962e10a46ea85f0188d08e499d", null ],
     [ "basic_message", "group__message.html#gaf8ba10b7b1d45e6c78b84d77e8175d5d", null ],
     [ "basic_message", "group__message.html#gae6ed9dded4ab78ff28e994b48c766c84", null ],
-    [ "operator string_type", "group__message.html#ga8da81038939b85ca248cba50f1deacf1", null ],
+    [ "operator string_type", "group__message.html#ga945e7a59bfeb58cb701ab284c11b3698", null ],
     [ "operator=", "group__message.html#gae0e786e45ef32cf73efd8495cae45aed", null ],
-    [ "str", "group__message.html#ga11c5f400e03e0b16b9a60bd3fae3f168", null ],
-    [ "str", "group__message.html#ga26c6489f8269096f835abfb268498fdd", null ],
-    [ "str", "group__message.html#gaa907a1d3f43fe59cea938e1606f004ee", null ],
-    [ "str", "group__message.html#ga2d2ca0fe119e4ce4766fd3d42b549314", null ],
-    [ "str", "group__message.html#gaa51c0f65363d8d1cee83bb07fe45ced5", null ],
+    [ "str", "group__message.html#gab784cd4cdd8ae3af9c05247fb8f79aa8", null ],
+    [ "str", "group__message.html#ga0ceabb7b62194c6e23394dfb53dcab9c", null ],
+    [ "str", "group__message.html#ga3d1aac6730f32589db1e141484888e88", null ],
+    [ "str", "group__message.html#gaf7739cf338d7438f81ae109eb9bf1831", null ],
+    [ "str", "group__message.html#ga909ef2e35ec88a2c89c0143ce3503681", null ],
     [ "swap", "group__message.html#gac204b563c7c9bd86e5555f129350f0e3", null ],
-    [ "write", "group__message.html#ga4dd81f4d40c4e8871bb1bf02bbc8e968", null ]
+    [ "write", "group__message.html#ga7e7ae8c2003301d40d8d873f026bcda3", null ]
 ];

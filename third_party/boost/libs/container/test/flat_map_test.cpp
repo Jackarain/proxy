@@ -306,7 +306,7 @@ bool flat_tree_extract_adopt_test()
          fmap.emplace(static_cast<int>(i), -static_cast<int>(i));
       }
 
-      flat_map<int, int> fmap_copy(fmap);
+      const flat_map<int, int> fmap_copy(fmap);
       flat_map<int, int>::sequence_type seq(fmap.extract_sequence());
       if(!fmap.empty())
          return false;
@@ -317,6 +317,8 @@ bool flat_tree_extract_adopt_test()
       boost::container::test::random_shuffle(seq.begin(), seq.end());
       fmap.adopt_sequence(boost::move(seq));
       if(!CheckEqualContainers(fmap, fmap_copy))
+         return false;
+      if (!CheckEqualContainers(fmap.sequence(), fmap_copy.sequence()))
          return false;
    }
 
@@ -329,7 +331,7 @@ bool flat_tree_extract_adopt_test()
          fmap.emplace(static_cast<int>(i), -static_cast<int>(i));
       }
 
-      flat_map<int, int> fmap_copy(fmap);
+      const flat_map<int, int> fmap_copy(fmap);
       flat_map<int, int>::sequence_type seq(fmap.extract_sequence());
       if(!fmap.empty())
          return false;
@@ -338,6 +340,8 @@ bool flat_tree_extract_adopt_test()
 
       fmap.adopt_sequence(ordered_unique_range, boost::move(seq));
       if(!CheckEqualContainers(fmap, fmap_copy))
+         return false;
+      if (!CheckEqualContainers(fmap.sequence(), fmap_copy.sequence()))
          return false;
    }
 
@@ -351,7 +355,7 @@ bool flat_tree_extract_adopt_test()
          fmmap.emplace(static_cast<int>(i), -static_cast<int>(i));
       }
 
-      flat_multimap<int, int> fmmap_copy(fmmap);
+      const flat_multimap<int, int> fmmap_copy(fmmap);
       flat_multimap<int, int>::sequence_type seq(fmmap.extract_sequence());
       if(!fmmap.empty())
          return false;
@@ -361,6 +365,8 @@ bool flat_tree_extract_adopt_test()
       boost::container::test::random_shuffle(seq.begin(), seq.end());
       fmmap.adopt_sequence(boost::move(seq));
       if(!CheckEqualContainers(fmmap, fmmap_copy))
+         return false;
+      if (!CheckEqualContainers(fmmap.sequence(), fmmap_copy.sequence()))
          return false;
    }
 
@@ -374,7 +380,7 @@ bool flat_tree_extract_adopt_test()
          fmmap.emplace(static_cast<int>(i), -static_cast<int>(i));
       }
 
-      flat_multimap<int, int> fmmap_copy(fmmap);
+      const flat_multimap<int, int> fmmap_copy(fmmap);
       flat_multimap<int, int>::sequence_type seq(fmmap.extract_sequence());
       if(!fmmap.empty())
          return false;
@@ -383,6 +389,8 @@ bool flat_tree_extract_adopt_test()
 
       fmmap.adopt_sequence(ordered_range, boost::move(seq));
       if(!CheckEqualContainers(fmmap, fmmap_copy))
+         return false;
+      if (!CheckEqualContainers(fmmap.sequence(), fmmap_copy.sequence()))
          return false;
    }
 

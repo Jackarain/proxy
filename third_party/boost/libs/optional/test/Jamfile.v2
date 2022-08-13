@@ -26,6 +26,7 @@ import testing ;
     [ run optional_test_empty_braces.cpp ]
     [ run optional_test_make_optional.cpp ]
     [ run optional_test_flat_map.cpp ]
+    [ run optional_test_hash.cpp ]
     [ run optional_test_map.cpp ]
     [ run optional_test_tie.cpp ]
     [ run optional_test_ref_assign_portable_minimum.cpp ]

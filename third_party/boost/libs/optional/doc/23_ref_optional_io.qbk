@@ -26,11 +26,11 @@ template <class CharType, class CharTrait, class T>
   template <class CharType, class CharTrait>
   std::basic_ostream<CharType, CharTrait>&
   operator<<(std::basic_ostream<CharType, CharTrait>& out, none_t const&); ``[link reference_operator_ostream_none __GO_TO__]``
-  
+
 template<class CharType, class CharTrait, class T>
   std::basic_istream<CharType, CharTrait>&
   operator>>(std::basic_istream<CharType, CharTrait>& in, optional<T>& v); ``[link reference_operator_istream __GO_TO__]``
-  
+
 } // namespace boost
 ```
 
@@ -43,8 +43,8 @@ template<class CharType, class CharTrait, class T>
 
 
 `template <class CharType, class CharTrait, class T>` [br]
-\u00A0\u00A0\u00A0\u00A0`std::basic_ostream<CharType, CharTrait>&` [br]
-\u00A0\u00A0\u00A0\u00A0`operator<<(std::basic_ostream<CharType, CharTrait>& out, optional<T> const& v);`
+ std::basic_ostream<CharType, CharTrait>&` [br]
+ operator<<(std::basic_ostream<CharType, CharTrait>& out, optional<T> const& v);`
 
 * [*Effect:] Outputs an implementation-defined string. The output contains the information about whether the optional object contains a value or not. If `v` contains a value, the output contains result of calling `out << *v`.
 * [*Returns:] `out`.
@@ -53,8 +53,8 @@ __SPACE__
 [#reference_operator_ostream_none]
 
 `template <class CharType, class CharTrait, class T>` [br]
-\u00A0\u00A0\u00A0\u00A0`std::basic_ostream<CharType, CharTrait>&` [br]
-\u00A0\u00A0\u00A0\u00A0`operator<<(std::basic_ostream<CharType, CharTrait>& out, none_t);`
+ std::basic_ostream<CharType, CharTrait>&` [br]
+ operator<<(std::basic_ostream<CharType, CharTrait>& out, none_t);`
 
 * [*Effect:] Outputs an implementation-defined string.
 * [*Returns:] `out`.
@@ -63,11 +63,11 @@ __SPACE__
 [#reference_operator_istream]
 
 `template <class CharType, class CharTrait, class T>` [br]
-\u00A0\u00A0\u00A0\u00A0`std::basic_ostream<CharType, CharTrait>&` [br]
-\u00A0\u00A0\u00A0\u00A0`operator>>(std::basic_istream<CharType, CharTrait>& in, optional<T>& v);`
+ std::basic_ostream<CharType, CharTrait>&` [br]
+ operator>>(std::basic_istream<CharType, CharTrait>& in, optional<T>& v);`
 
-* [*Requires:] `T` is __SGI_DEFAULT_CONSTRUCTIBLE__ and __MOVE_CONSTRUCTIBLE__.
-* [*Effect:] Reads the value of optional object from `in`. If the string representation indicates that the optional object should contain a value, `v` contains a value and its contained value is obtained as if by default-constructing an object `o` of type `T` and then calling `in >> o`; otherwise `v` does not contain a value, and the previously contained value (if any) has been destroyed. 
+* [*Requires:] `T` is __STD_DEFAULT_CONSTRUCTIBLE__ and __MOVE_CONSTRUCTIBLE__.
+* [*Effect:] Reads the value of optional object from `in`. If the string representation indicates that the optional object should contain a value, `v` contains a value and its contained value is obtained as if by default-constructing an object `o` of type `T` and then calling `in >> o`; otherwise `v` does not contain a value, and the previously contained value (if any) has been destroyed.
 * [*Returns:] `out`.
 
 [endsect]

@@ -11,6 +11,8 @@
     ]
 ]
 
+[note [link process.v2 Process V2] is available as  experimental]
+
 [include introduction.qbk]
 [include concepts.qbk]
 [include tutorial.qbk]
@@ -19,3 +21,4 @@
 [include faq.qbk]
 [xinclude autodoc.xml]
 [include acknowledgements.qbk]
+[include v2.qbk]

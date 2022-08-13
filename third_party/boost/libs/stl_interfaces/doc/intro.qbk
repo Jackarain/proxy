@@ -21,6 +21,15 @@ and `end()`.  C++20 has a template that does exactly this,
 `std::ranges::view_interface`; _IFaces_ provides a pre-C++20-friendly
 implementation.
 
+Due to inconsistencies in the way different compilers implement their C++20
+view adaptors' `operator|` support, its particularly thorny to try and write a
+view adaptor portable across multiple versions of C++, or even across multiple
+compilers building in C++20 mode.  _IFaces_ provides a type
+`boost::stl_interfaces::range_adaptor_closure` that is compatible with C++23's
+`std::range_adaptor_closure`, and which works with earlier versions of C++ as
+well.  _IFaces_ also has helper templates that make it much easier to write
+view adaptors with `operator|` support.
+
 Most daunting of all is the task of writing a type or template that meets the
 container requirements in the standard.  _IFaces_ provides another template
 called _cont_iface_ that reduces the implementation and testing burden
@@ -28,9 +37,7 @@ dramatically.
 
 [note C++20 versions of _iter_iface_ and _cont_iface_ are provided (C++20
 provides `std::view_interface`).  These are constrained templates using C++20
-concepts.  These are in the `boost::stl_interfaces::v2` namespace, and are
-considered experimental, because at the time of this writing, no
-C++20-conforming compiler exists. ]
+concepts.  These are in the `boost::stl_interfaces::v2` namespace. ]
 
 [heading A Quick Example]
 

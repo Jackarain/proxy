@@ -63,12 +63,11 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
 Macros</h2></td></tr>
-<tr class="memitem:a1c34b7fa978286d269d931ca0b7cce1d"><td class="memItemLeft" align="right" valign="top"><a id="a1c34b7fa978286d269d931ca0b7cce1d"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="config_8hpp.html#a1c34b7fa978286d269d931ca0b7cce1d">BOOST_NOWIDE_USE_WCHAR_OVERLOADS</a>&#160;&#160;&#160;0</td></tr>
-<tr class="memdesc:a1c34b7fa978286d269d931ca0b7cce1d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether to use the wchar_t* overloads in fstream/filebuf Enabled on Windows and Cygwin as the latter may use wchar_t in filesystem::path. <br /></td></tr>
+<tr class="memitem:a1c34b7fa978286d269d931ca0b7cce1d"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="config_8hpp.html#a1c34b7fa978286d269d931ca0b7cce1d">BOOST_NOWIDE_USE_WCHAR_OVERLOADS</a>&#160;&#160;&#160;1</td></tr>
+<tr class="memdesc:a1c34b7fa978286d269d931ca0b7cce1d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether to use the wchar_t* overloads in fstream-classes.  <a href="#a1c34b7fa978286d269d931ca0b7cce1d">More...</a><br /></td></tr>
 <tr class="separator:a1c34b7fa978286d269d931ca0b7cce1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a00bc772d2cae3efdcaf4044ce857c779"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="config_8hpp.html#a00bc772d2cae3efdcaf4044ce857c779">BOOST_NOWIDE_USE_FILEBUF_REPLACEMENT</a>&#160;&#160;&#160;0</td></tr>
-<tr class="memdesc:a00bc772d2cae3efdcaf4044ce857c779"><td class="mdescLeft">&#160;</td><td class="mdescRight">Define to 1 to use internal class from <a class="el" href="filebuf_8hpp_source.html">filebuf.hpp</a>.  <a href="#a00bc772d2cae3efdcaf4044ce857c779">More...</a><br /></td></tr>
+<tr class="memitem:a00bc772d2cae3efdcaf4044ce857c779"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="config_8hpp.html#a00bc772d2cae3efdcaf4044ce857c779">BOOST_NOWIDE_USE_FILEBUF_REPLACEMENT</a>&#160;&#160;&#160;1</td></tr>
+<tr class="memdesc:a00bc772d2cae3efdcaf4044ce857c779"><td class="mdescLeft">&#160;</td><td class="mdescRight">Define to 1 to use the class from &lt;<a class="el" href="filebuf_8hpp_source.html">filebuf.hpp</a>&gt; that is used on Windows.  <a href="#a00bc772d2cae3efdcaf4044ce857c779">More...</a><br /></td></tr>
 <tr class="separator:a00bc772d2cae3efdcaf4044ce857c779"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Macro Definition Documentation</h2>
@@ -79,17 +78,35 @@ Macros</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define BOOST_NOWIDE_USE_FILEBUF_REPLACEMENT&#160;&#160;&#160;0</td>
+          <td class="memname">#define BOOST_NOWIDE_USE_FILEBUF_REPLACEMENT&#160;&#160;&#160;1</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>Define to 1 to use internal class from <a class="el" href="filebuf_8hpp_source.html">filebuf.hpp</a>. </p>
+<p>Define to 1 to use the class from &lt;<a class="el" href="filebuf_8hpp_source.html">filebuf.hpp</a>&gt; that is used on Windows. </p>
 <ul>
-<li>On Non-Windows platforms: Define to 1 to use the same class from header &lt;<a class="el" href="filebuf_8hpp_source.html">filebuf.hpp</a>&gt; that is used on Windows.</li>
 <li>On Windows: No effect, always overwritten to 1</li>
+<li>Others (including Cygwin): Defaults to the value of <a class="el" href="config_8hpp.html#a1c34b7fa978286d269d931ca0b7cce1d" title="Whether to use the wchar_t* overloads in fstream-classes.">BOOST_NOWIDE_USE_WCHAR_OVERLOADS</a> if not set.</li>
 </ul>
-<p>Affects <a class="el" href="classboost_1_1nowide_1_1basic__filebuf.html" title="This forward declaration defines the basic_filebuf type.">boost::nowide::basic_filebuf</a>, <a class="el" href="classboost_1_1nowide_1_1basic__ofstream.html" title="Same as std::basic_ofstream&lt;char&gt; but accepts UTF-8 strings under Windows.">boost::nowide::basic_ofstream</a>, <a class="el" href="classboost_1_1nowide_1_1basic__ifstream.html" title="Same as std::basic_ifstream&lt;char&gt; but accepts UTF-8 strings under Windows.">boost::nowide::basic_ifstream</a>, <a class="el" href="classboost_1_1nowide_1_1basic__fstream.html" title="Same as std::basic_fstream&lt;char&gt; but accepts UTF-8 strings under Windows.">boost::nowide::basic_fstream</a> </p>
+<p>When set to 0 <a class="el" href="classboost_1_1nowide_1_1basic__filebuf.html" title="This forward declaration defines the basic_filebuf type which is used when BOOST_NOWIDE_USE_FILEBUF_R...">boost::nowide::basic_filebuf</a> will be an alias for std::basic_filebuf.</p>
+<p>Affects <a class="el" href="classboost_1_1nowide_1_1basic__filebuf.html" title="This forward declaration defines the basic_filebuf type which is used when BOOST_NOWIDE_USE_FILEBUF_R...">boost::nowide::basic_filebuf</a>, <a class="el" href="classboost_1_1nowide_1_1basic__ofstream.html" title="Same as std::basic_ofstream&lt;char&gt; but accepts UTF-8 strings under Windows.">boost::nowide::basic_ofstream</a>, <a class="el" href="classboost_1_1nowide_1_1basic__ifstream.html" title="Same as std::basic_ifstream&lt;char&gt; but accepts UTF-8 strings under Windows.">boost::nowide::basic_ifstream</a>, <a class="el" href="classboost_1_1nowide_1_1basic__fstream.html" title="Same as std::basic_fstream&lt;char&gt; but accepts UTF-8 strings under Windows.">boost::nowide::basic_fstream</a> </p>
+
+</div>
+</div>
+<a id="a1c34b7fa978286d269d931ca0b7cce1d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1c34b7fa978286d269d931ca0b7cce1d">&#9670;&nbsp;</a></span>BOOST_NOWIDE_USE_WCHAR_OVERLOADS</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BOOST_NOWIDE_USE_WCHAR_OVERLOADS&#160;&#160;&#160;1</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Whether to use the wchar_t* overloads in fstream-classes. </p>
+<p>Enabled by default on Windows and Cygwin as the latter may use wchar_t in filesystem::path. </p>
 
 </div>
 </div>

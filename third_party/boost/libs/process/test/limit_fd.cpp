@@ -16,7 +16,7 @@
 #include <boost/process/async_pipe.hpp>
 #include <boost/process/extend.hpp>
 
-#include <boost/filesystem.hpp>
+#include <boost/process/filesystem.hpp>
 
 #include <system_error>
 #include <string>
@@ -27,9 +27,12 @@
 #if defined(BOOST_WINDOWS_API)
 #include <boost/winapi/get_current_thread.hpp>
 #include <boost/winapi/get_current_process.hpp>
+
+#elif defined(__APPLE__)
+#include <dirent.h>
 #endif
 
-namespace fs = boost::filesystem;
+namespace fs = boost::process::filesystem;
 namespace bp = boost::process;
 namespace bt = boost::this_process;
 
@@ -98,7 +101,8 @@ BOOST_AUTO_TEST_CASE(leak_test, *boost::unit_test::timeout(5))
     int event_fd =::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
     BOOST_CHECK(!bt::is_stream_handle(event_fd , ec)); BOOST_CHECK_MESSAGE(!ec, ec.message());
 #endif
-    int dir_fd = ::dirfd(::opendir("."));
+    auto od = ::opendir(".");
+    int dir_fd = ::dirfd(od);
     BOOST_CHECK(!bt::is_stream_handle(dir_fd , ec)); BOOST_CHECK_MESSAGE(!ec, ec.message());
 #endif
 
@@ -115,6 +119,9 @@ BOOST_AUTO_TEST_CASE(leak_test, *boost::unit_test::timeout(5))
     BOOST_CHECK(bt::is_stream_handle(socket_to_handle(udp_socket.native_handle()), ec)); BOOST_CHECK_MESSAGE(!ec, ec.message());
     BOOST_CHECK(bt::is_stream_handle(std::move(ap).sink().  native_handle(), ec)); BOOST_CHECK_MESSAGE(!ec, ec.message());
     BOOST_CHECK(bt::is_stream_handle(std::move(ap).source().native_handle(), ec)); BOOST_CHECK_MESSAGE(!ec, ec.message());
+#if !defined( BOOST_WINDOWS_API )
+    ::closedir(od);
+#endif
 }
 
 struct on_setup_t
@@ -154,7 +161,7 @@ BOOST_AUTO_TEST_CASE(iterate_handles, *boost::unit_test::timeout(5))
 
     BOOST_CHECK_MESSAGE(!ec, ec.message());
 
-    BOOST_CHECK_EQUAL(ret, 42u);
+    BOOST_CHECK_EQUAL(ret, 42);
     BOOST_CHECK_EQUAL(std::count(res.begin(), res.end(), p_in. native_sink()), 0u);
     BOOST_CHECK_EQUAL(std::count(res.begin(), res.end(), p_out.native_source()), 0u);
 }

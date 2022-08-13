@@ -73,6 +73,16 @@
 
     } // namespace boost
 
+    namespace std {
+
+    template <typename T>
+    struct hash<boost::optional<T> > ; ``[link reference_std_hash_spec __GO_TO__]``
+
+    template <typename T>
+    struct hash<boost::optional<T&> > ; ``[link reference_std_hash_spec __GO_TO__]``
+
+    } // namespace std
+
 
 [endsect]
 

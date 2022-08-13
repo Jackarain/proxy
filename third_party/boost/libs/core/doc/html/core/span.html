@@ -33,7 +33,7 @@
 </dl></div>
 <div class="simplesect">
 <div class="titlepage"><div><div><h3 class="title">
-<a name="idm11570"></a>Authors</h3></div></div></div>
+<a name="idm11285"></a>Authors</h3></div></div></div>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
           Glen Fernandes
         </li></ul></div>
@@ -169,14 +169,6 @@
     <span class="keyword">constexpr</span> <span class="identifier">const_iterator</span> <span class="identifier">cend</span><span class="special">()</span> <span class="keyword">const</span> <span class="keyword">noexcept</span><span class="special">;</span>
     <span class="keyword">constexpr</span> <span class="identifier">const_reverse_iterator</span> <span class="identifier">crbegin</span><span class="special">()</span> <span class="keyword">const</span> <span class="keyword">noexcept</span><span class="special">;</span>
     <span class="keyword">constexpr</span> <span class="identifier">const_reverse_iterator</span> <span class="identifier">crend</span><span class="special">()</span> <span class="keyword">const</span> <span class="keyword">noexcept</span><span class="special">;</span>
-
-    <span class="keyword">friend</span> <span class="keyword">constexpr</span> <span class="identifier">iterator</span> <span class="identifier">begin</span><span class="special">(</span><span class="identifier">span</span> <span class="identifier">s</span><span class="special">)</span> <span class="keyword">noexcept</span> <span class="special">{</span>
-        <span class="keyword">return</span> <span class="identifier">s</span><span class="special">.</span><span class="identifier">begin</span><span class="special">();</span>
-    <span class="special">}</span>
-
-    <span class="keyword">friend</span> <span class="keyword">constexpr</span> <span class="identifier">iterator</span> <span class="identifier">end</span><span class="special">(</span><span class="identifier">span</span> <span class="identifier">s</span><span class="special">)</span> <span class="keyword">noexcept</span> <span class="special">{</span>
-        <span class="keyword">return</span> <span class="identifier">s</span><span class="special">.</span><span class="identifier">end</span><span class="special">();</span>
-    <span class="special">}</span>
 <span class="special">};</span>
 
 <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">I</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">L</span><span class="special">&gt;</span>

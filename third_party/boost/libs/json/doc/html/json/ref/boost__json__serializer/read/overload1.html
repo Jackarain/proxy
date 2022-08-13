@@ -30,16 +30,20 @@
 <p>
             Read the next buffer of serialized JSON.
           </p>
-<h7><a name="json.ref.boost__json__serializer.read.overload1.h0"></a>
+<h6>
+<a name="json.ref.boost__json__serializer.read.overload1.h0"></a>
             <span class="phrase"><a name="json.ref.boost__json__serializer.read.overload1.synopsis"></a></span><a class="link" href="overload1.html#json.ref.boost__json__serializer.read.overload1.synopsis">Synopsis</a>
-          </h7><pre class="programlisting"><span class="identifier">string_view</span>
+          </h6>
+<pre class="programlisting"><span class="identifier">string_view</span>
 <span class="identifier">read</span><span class="special">(</span>
     <span class="keyword">char</span><span class="special">*</span> <span class="identifier">dest</span><span class="special">,</span>
     <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">size</span><span class="special">);</span>
 </pre>
-<h7><a name="json.ref.boost__json__serializer.read.overload1.h1"></a>
+<h6>
+<a name="json.ref.boost__json__serializer.read.overload1.h1"></a>
             <span class="phrase"><a name="json.ref.boost__json__serializer.read.overload1.description"></a></span><a class="link" href="overload1.html#json.ref.boost__json__serializer.read.overload1.description">Description</a>
-          </h7><p>
+          </h6>
+<p>
             This function attempts to fill the caller provided buffer starting at
             <code class="computeroutput"><span class="identifier">dest</span></code> with up to <code class="computeroutput"><span class="identifier">size</span></code> characters of the serialized JSON
             that represents the value. If the buffer is not large enough, multiple
@@ -50,33 +54,43 @@
             characters belonging to the serialized value have been written to caller-provided
             buffers, the function <a class="link" href="../done.html" title="serializer::done"><code class="computeroutput"><span class="identifier">done</span></code></a> will return <code class="computeroutput"><span class="keyword">true</span></code>.
           </p>
-<h7><a name="json.ref.boost__json__serializer.read.overload1.h2"></a>
+<h6>
+<a name="json.ref.boost__json__serializer.read.overload1.h2"></a>
             <span class="phrase"><a name="json.ref.boost__json__serializer.read.overload1.preconditions"></a></span><a class="link" href="overload1.html#json.ref.boost__json__serializer.read.overload1.preconditions">Preconditions</a>
-          </h7><p>
+          </h6>
+<p>
             <code class="computeroutput"><span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">done</span><span class="special">()</span> <span class="special">==</span> <span class="keyword">true</span></code>
           </p>
-<h7><a name="json.ref.boost__json__serializer.read.overload1.h3"></a>
+<h6>
+<a name="json.ref.boost__json__serializer.read.overload1.h3"></a>
             <span class="phrase"><a name="json.ref.boost__json__serializer.read.overload1.complexity"></a></span><a class="link" href="overload1.html#json.ref.boost__json__serializer.read.overload1.complexity">Complexity</a>
-          </h7><p>
+          </h6>
+<p>
             Linear in <code class="computeroutput"><span class="identifier">size</span></code>.
           </p>
-<h7><a name="json.ref.boost__json__serializer.read.overload1.h4"></a>
+<h6>
+<a name="json.ref.boost__json__serializer.read.overload1.h4"></a>
             <span class="phrase"><a name="json.ref.boost__json__serializer.read.overload1.exception_safety"></a></span><a class="link" href="overload1.html#json.ref.boost__json__serializer.read.overload1.exception_safety">Exception
             Safety</a>
-          </h7><p>
+          </h6>
+<p>
             Basic guarantee. Calls to <code class="computeroutput"><span class="identifier">memory_resource</span><span class="special">::</span><span class="identifier">allocate</span></code>
             may throw.
           </p>
-<h7><a name="json.ref.boost__json__serializer.read.overload1.h5"></a>
+<h6>
+<a name="json.ref.boost__json__serializer.read.overload1.h5"></a>
             <span class="phrase"><a name="json.ref.boost__json__serializer.read.overload1.return_value"></a></span><a class="link" href="overload1.html#json.ref.boost__json__serializer.read.overload1.return_value">Return
             Value</a>
-          </h7><p>
+          </h6>
+<p>
             A <a class="link" href="../../boost__json__string_view.html" title="string_view"><code class="computeroutput"><span class="identifier">string_view</span></code></a>
             containing the characters written, which may be less than <code class="computeroutput"><span class="identifier">size</span></code>.
           </p>
-<h7><a name="json.ref.boost__json__serializer.read.overload1.h6"></a>
+<h6>
+<a name="json.ref.boost__json__serializer.read.overload1.h6"></a>
             <span class="phrase"><a name="json.ref.boost__json__serializer.read.overload1.parameters"></a></span><a class="link" href="overload1.html#json.ref.boost__json__serializer.read.overload1.parameters">Parameters</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>

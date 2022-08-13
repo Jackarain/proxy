@@ -70,15 +70,15 @@ Classes</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ga0af81efbbb77846afe2570f242d2b974"><td class="memTemplParams" colspan="2"><a id="ga0af81efbbb77846afe2570f242d2b974"></a>
+<tr class="memitem:ga42b36d9931aba011f853bb6104751a1c"><td class="memTemplParams" colspan="2"><a id="ga42b36d9931aba011f853bb6104751a1c"></a>
 template&lt;typename Channel &gt; </td></tr>
-<tr class="memitem:ga0af81efbbb77846afe2570f242d2b974"><td class="memTemplItemLeft" align="right" valign="top">channel_traits&lt; Channel &gt;::value_type&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group___channel_multiply_algorithm.html#ga0af81efbbb77846afe2570f242d2b974">channel_multiply</a> (Channel a, Channel b)</td></tr>
-<tr class="memdesc:ga0af81efbbb77846afe2570f242d2b974"><td class="mdescLeft">&#160;</td><td class="mdescRight">A function multiplying two channels. result = a * b / max_value. <br /></td></tr>
-<tr class="separator:ga0af81efbbb77846afe2570f242d2b974"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga42b36d9931aba011f853bb6104751a1c"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group___channel_multiply_algorithm.html#ga42b36d9931aba011f853bb6104751a1c">channel_multiply</a> (Channel a, Channel b) -&gt; typename channel_traits&lt; Channel &gt;::value_type</td></tr>
+<tr class="memdesc:ga42b36d9931aba011f853bb6104751a1c"><td class="mdescLeft">&#160;</td><td class="mdescRight">A function multiplying two channels. result = a * b / max_value. <br /></td></tr>
+<tr class="separator:ga42b36d9931aba011f853bb6104751a1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <p>Multiplying unsigned channel values of the same type. Performs scaled multiplication result = a * b / max_value. </p>
-<p>Example: </p><div class="fragment"><div class="line">uint8_t x=128;</div><div class="line">uint8_t y=128;</div><div class="line">uint8_t mul = <a class="code" href="group___channel_multiply_algorithm.html#ga0af81efbbb77846afe2570f242d2b974">channel_multiply</a>(x,y);</div><div class="line">assert(mul == 64);    <span class="comment">// 64 = 128 * 128 / 255</span></div></div><!-- fragment --> </div><!-- contents -->
+<p>Example: </p><div class="fragment"><div class="line">uint8_t x=128;</div><div class="line">uint8_t y=128;</div><div class="line">uint8_t mul = <a class="code" href="group___channel_multiply_algorithm.html#ga42b36d9931aba011f853bb6104751a1c">channel_multiply</a>(x,y);</div><div class="line">assert(mul == 64);    <span class="comment">// 64 = 128 * 128 / 255</span></div></div><!-- fragment --> </div><!-- contents -->
      <!-- HTML footer for doxygen 1.8.13-->
      <!-- start footer part -->
      <hr class="footer"/>

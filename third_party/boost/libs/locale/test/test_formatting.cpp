@@ -1,42 +1,38 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
+
 #ifndef BOOST_LOCALE_WITH_ICU
 #include <iostream>
 int main()
 {
-        std::cout << "ICU is not build... Skipping" << std::endl;
+        std::cout << "ICU is not build... Skipping\n";
 }
 #else
 
 #ifdef _MSC_VER
-#define _CRT_SECURE_NO_WARNINGS 
+#define _CRT_SECURE_NO_WARNINGS
 // Disable this "security crap"
 #endif
 
-#include <boost/locale/formatting.hpp>
-#include <boost/locale/format.hpp>
 #include <boost/locale/date_time.hpp>
+#include <boost/locale/format.hpp>
+#include <boost/locale/formatting.hpp>
 #include <boost/locale/generator.hpp>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <sstream>
+#include <unicode/uversion.h>
+
 #include "test_locale.hpp"
 #include "test_locale_tools.hpp"
-#include <sstream>
-#include <iostream>
-#include <iomanip>
-#include <limits>
-
-#include <unicode/uversion.h>
 
 using namespace boost::locale;
 
 //#define TEST_DEBUG
-#ifdef BOOST_MSVC
-#define _CRT_SECURE_NO_WARNINGS
-#endif
 
 #ifdef TEST_DEBUG
 #undef BOOST_LOCALE_ENABLE_CHAR16_T
@@ -49,11 +45,11 @@ template<>
 void print_diff(std::string const &l,std::string const &r,int line)
 {
     if(l!=r) {
-        std::cerr << "----[" << l <<"]!=\n----["<<r<<"] in " << line << std::endl;
+        std::cerr << "----[" << l << "]!=\n----[" << r << " ] in " << line << std::endl;
     }
 }
 
-#define TESTEQ(x,y) do { print_diff((x),(y),__LINE__); TEST((x)==(y)); } while(0)
+#define TESTEQ(x,y) print_diff((x),(y),__LINE__); TEST((x)==(y))
 #else
 #define TESTEQ(x,y) TEST((x)==(y))
 #endif
@@ -64,7 +60,8 @@ do{ \
     ss.imbue(loc); \
     ss << manip << value; \
     TESTEQ(ss.str(),to_correct_string<CharType>(expected,loc)); \
-}while(0)
+BOOST_LOCALE_START_CONST_CONDITION                              \
+}while(0) BOOST_LOCALE_END_CONST_CONDITION
 
 #ifndef _LIBCPP_VERSION
 static bool parsing_fails()
@@ -92,7 +89,7 @@ static bool parsing_fails()
         }
         checked=true;
         if(!fails) {
-            std::cerr << "!!! Warning: libc++ library does not throw an exception on failbit !!!" << std::endl;
+            std::cerr << "!!! Warning: libc++ library does not throw an exception on failbit !!!\n";
         }
     }
     return fails;
@@ -120,8 +117,9 @@ do{                                                             \
         ss >> manip;                                            \
         TEST_THROWS(ss >> v,std::ios_base::failure);            \
     }                                                           \
-}while(0)
- 
+BOOST_LOCALE_START_CONST_CONDITION                              \
+}while(0) BOOST_LOCALE_END_CONST_CONDITION
+
 #define TEST_PAR(manip,type,actual,expected) \
 do{ \
     type v; \
@@ -138,31 +136,36 @@ do{ \
     ss >> manip >> v >> std::skipws >> tmp_c; \
     TESTEQ(v,expected); \
     TEST(tmp_c=='@'); } \
-}while(0)
+BOOST_LOCALE_START_CONST_CONDITION                  \
+}while(0) BOOST_LOCALE_END_CONST_CONDITION
 
 #define TEST_FP1(manip,value_in,str,type,value_out) \
 do { \
     TEST_FMT(manip,value_in,str); \
     TEST_PAR(manip,type,str,value_out); \
-}while(0)
+BOOST_LOCALE_START_CONST_CONDITION                  \
+}while(0) BOOST_LOCALE_END_CONST_CONDITION
 
 #define TEST_FP2(m1,m2,value_in,str,type,value_out) \
 do { \
-    TEST_FMT(m1<<m2,value_in,str); \
+    TEST_FMT(m1 << m2,value_in,str); \
     TEST_PAR(m1>>m2,type,str,value_out);  \
-}while(0)
+BOOST_LOCALE_START_CONST_CONDITION                  \
+}while(0) BOOST_LOCALE_END_CONST_CONDITION
 
 #define TEST_FP3(m1,m2,m3,value_in,str,type,value_out) \
 do { \
-    TEST_FMT(m1<<m2<<m3,value_in,str); \
+    TEST_FMT(m1 << m2 << m3,value_in,str); \
     TEST_PAR(m1>>m2>>m3,type,str,value_out); \
-}while(0)
+BOOST_LOCALE_START_CONST_CONDITION                  \
+}while(0) BOOST_LOCALE_END_CONST_CONDITION
 
 #define TEST_FP4(m1,m2,m3,m4,value_in,str,type,value_out) \
 do { \
-    TEST_FMT(m1<<m2<<m3<<m4,value_in,str); \
+    TEST_FMT(m1 << m2 << m3 << m4,value_in,str); \
     TEST_PAR(m1>>m2>>m3>>m4,type,str,value_out); \
-}while(0)
+BOOST_LOCALE_START_CONST_CONDITION                  \
+}while(0) BOOST_LOCALE_END_CONST_CONDITION
 
 
 #define FORMAT(f,v,exp) \
@@ -177,30 +180,34 @@ do { \
         /*ss << boost::locale::basic_format<CharType>(fmt) % v; */ \
         TESTEQ(ss.str(),to_correct_string<CharType>(exp,loc)); \
         TESTEQ( (boost::locale::basic_format<CharType>(fmt) % v).str(loc),to_correct_string<CharType>(exp,loc)); \
-    } while(0)
+    BOOST_LOCALE_START_CONST_CONDITION                  \
+    }while(0) BOOST_LOCALE_END_CONST_CONDITION
 
 
 #define TEST_MIN_MAX_FMT(type,minval,maxval)    \
     do { \
         TEST_FMT(as::number,std::numeric_limits<type>::min(),minval); \
         TEST_FMT(as::number,std::numeric_limits<type>::max(),maxval); \
-    }while(0)
+    BOOST_LOCALE_START_CONST_CONDITION                                \
+    }while(0) BOOST_LOCALE_END_CONST_CONDITION
 
 #define TEST_MIN_MAX_PAR(type,minval,maxval)    \
     do {\
         TEST_PAR(as::number,type,minval,std::numeric_limits<type>::min()); \
         TEST_PAR(as::number,type,maxval,std::numeric_limits<type>::max()); \
-    }while(0)
+    BOOST_LOCALE_START_CONST_CONDITION                                     \
+    }while(0) BOOST_LOCALE_END_CONST_CONDITION
 
 #define TEST_MIN_MAX(type,minval,maxval)    \
     do { \
         TEST_MIN_MAX_FMT(type,minval,maxval); \
         TEST_MIN_MAX_PAR(type,minval,maxval); \
-    }while(0)
+    BOOST_LOCALE_START_CONST_CONDITION        \
+    }while(0) BOOST_LOCALE_END_CONST_CONDITION
 
 
-#define BOOST_ICU_VER (U_ICU_VERSION_MAJOR_NUM*100 + U_ICU_VERSION_MINOR_NUM)
-#define BOOST_ICU_EXACT_VER (U_ICU_VERSION_MAJOR_NUM*10000 + U_ICU_VERSION_MINOR_NUM  * 100 + U_ICU_VERSION_PATCHLEVEL_NUM)
+#define BOOST_LOCALE_ICU_VERSION (U_ICU_VERSION_MAJOR_NUM * 100 + U_ICU_VERSION_MINOR_NUM)
+#define BOOST_LOCALE_ICU_VERSION_EXACT (BOOST_LOCALE_ICU_VERSION  * 100 + U_ICU_VERSION_PATCHLEVEL_NUM)
 
 bool short_parsing_fails()
 {
@@ -222,13 +229,14 @@ void test_manip(std::string e_charset="UTF-8")
 {
     boost::locale::generator g;
     std::locale loc=g("en_US."+e_charset);
-    
+
     TEST_FP1(as::posix,1200.1,"1200.1",double,1200.1);
     TEST_FP1(as::number,1200.1,"1,200.1",double,1200.1);
-    TEST_FMT(as::number<<std::setfill(CharType('_'))<<std::setw(6),1534,"_1,534");
-    TEST_FMT(as::number<<std::left<<std::setfill(CharType('_'))<<std::setw(6),1534,"1,534_");
-    
+    TEST_FMT(as::number << std::setfill(CharType('_')) << std::setw(6),1534,"_1,534");
+    TEST_FMT(as::number << std::left << std::setfill(CharType('_')) << std::setw(6),1534,"1,534_");
+
     // Ranges
+BOOST_LOCALE_START_CONST_CONDITION
     if(sizeof(short) == 2) {
         TEST_MIN_MAX(short,"-32,768","32,767");
         TEST_MIN_MAX(unsigned short,"0","65,535");
@@ -264,13 +272,14 @@ void test_manip(std::string e_charset="UTF-8")
         TEST_NOPAR(as::number,"-1",unsigned long long);
     }
     #endif
+BOOST_LOCALE_END_CONST_CONDITION
 
 
 
     TEST_FP3(as::number,std::left,std::setw(3),15,"15 ",int,15);
     TEST_FP3(as::number,std::right,std::setw(3),15," 15",int,15);
     TEST_FP3(as::number,std::setprecision(3),std::fixed,13.1,"13.100",double,13.1);
-    #if BOOST_ICU_VER < 5601 
+    #if BOOST_LOCALE_ICU_VERSION < 5601
     // bug #13276
     TEST_FP3(as::number,std::setprecision(3),std::scientific,13.1,"1.310E1",double,13.1);
     #endif
@@ -290,14 +299,14 @@ void test_manip(std::string e_charset="UTF-8")
     TEST_NOPAR(as::currency,"$",double);
 
 
-    #if BOOST_ICU_VER >= 402
+    #if BOOST_LOCALE_ICU_VERSION >= 402
     TEST_FP2(as::currency,as::currency_national,1345,"$1,345.00",int,1345);
     TEST_FP2(as::currency,as::currency_national,1345.34,"$1,345.34",double,1345.34);
     TEST_FP2(as::currency,as::currency_iso,1345,"USD1,345.00",int,1345);
     TEST_FP2(as::currency,as::currency_iso,1345.34,"USD1,345.34",double,1345.34);
     #endif
     TEST_FP1(as::spellout,10,"ten",int,10);
-    #if 402 <= BOOST_ICU_VER && BOOST_ICU_VER < 408
+    #if 402 <= BOOST_LOCALE_ICU_VERSION && BOOST_LOCALE_ICU_VERSION < 408
     if(e_charset=="UTF-8") {
         TEST_FMT(as::ordinal,1,"1\xcb\xa2\xe1\xb5\x97"); // 1st with st as ligatures
     }
@@ -315,21 +324,21 @@ void test_manip(std::string e_charset="UTF-8")
     TEST_FP3(as::date,as::date_medium,as::gmt,a_datetime,"Feb 5, 1970",time_t,a_date);
     TEST_FP3(as::date,as::date_long  ,as::gmt,a_datetime,"February 5, 1970",time_t,a_date);
     TEST_FP3(as::date,as::date_full  ,as::gmt,a_datetime,"Thursday, February 5, 1970",time_t,a_date);
-    
+
     TEST_NOPAR(as::date>>as::date_short,"aa/bb/cc",double);
 
-#if BOOST_ICU_VER >= 5901
+#if BOOST_LOCALE_ICU_VERSION >= 5901
 #define GMT_FULL "Greenwich Mean Time"
 #else
 #define GMT_FULL "GMT"
 #endif
-    
+
     TEST_FP2(as::time,                as::gmt,a_datetime,"3:33:13 PM",time_t,a_time+a_timesec);
     TEST_FP3(as::time,as::time_short ,as::gmt,a_datetime,"3:33 PM",time_t,a_time);
     TEST_FP3(as::time,as::time_medium,as::gmt,a_datetime,"3:33:13 PM",time_t,a_time+a_timesec);
-    #if BOOST_ICU_VER >= 408
+    #if BOOST_LOCALE_ICU_VERSION >= 408
     TEST_FP3(as::time,as::time_long  ,as::gmt,a_datetime,"3:33:13 PM GMT",time_t,a_time+a_timesec);
-        #if BOOST_ICU_EXACT_VER != 40800
+        #if BOOST_LOCALE_ICU_VERSION_EXACT != 40800
             // know bug #8675
             TEST_FP3(as::time,as::time_full  ,as::gmt,a_datetime,"3:33:13 PM " GMT_FULL,time_t,a_time+a_timesec);
         #endif
@@ -337,7 +346,7 @@ void test_manip(std::string e_charset="UTF-8")
     TEST_FP3(as::time,as::time_long  ,as::gmt,a_datetime,"3:33:13 PM GMT+00:00",time_t,a_time+a_timesec);
     TEST_FP3(as::time,as::time_full  ,as::gmt,a_datetime,"3:33:13 PM GMT+00:00",time_t,a_time+a_timesec);
     #endif
-    
+
     TEST_NOPAR(as::time,"AM",double);
 
     TEST_FP2(as::time,                as::time_zone("GMT+01:00"),a_datetime,"4:33:13 PM",time_t,a_time+a_timesec);
@@ -352,7 +361,7 @@ void test_manip(std::string e_charset="UTF-8")
 
 
 #if U_ICU_VERSION_MAJOR_NUM >= 50
-#define PERIOD "," 
+#define PERIOD ","
 #define ICUAT " at"
 #else
 #define PERIOD ""
@@ -360,7 +369,7 @@ void test_manip(std::string e_charset="UTF-8")
 #endif
 
     TEST_FP3(as::time,as::time_long  ,as::time_zone("GMT+01:00"),a_datetime,"4:33:13 PM "  GMT_P100,time_t,a_time+a_timesec);
-    #if BOOST_ICU_VER == 308 && defined(__CYGWIN__)
+    #if BOOST_LOCALE_ICU_VERSION == 308 && defined(__CYGWIN__)
     // Known faliture ICU issue
     #else
     TEST_FP3(as::time,as::time_full  ,as::time_zone("GMT+01:00"),a_datetime,"4:33:13 PM GMT+01:00",time_t,a_time+a_timesec);
@@ -369,9 +378,9 @@ void test_manip(std::string e_charset="UTF-8")
     TEST_FP2(as::datetime,                                as::gmt,a_datetime,"Feb 5, 1970" PERIOD  " 3:33:13 PM",time_t,a_datetime);
     TEST_FP4(as::datetime,as::date_short ,as::time_short ,as::gmt,a_datetime,"2/5/70" PERIOD " 3:33 PM",time_t,a_date+a_time);
     TEST_FP4(as::datetime,as::date_medium,as::time_medium,as::gmt,a_datetime,"Feb 5, 1970" PERIOD " 3:33:13 PM",time_t,a_datetime);
-    #if BOOST_ICU_VER >= 408
+    #if BOOST_LOCALE_ICU_VERSION >= 408
     TEST_FP4(as::datetime,as::date_long  ,as::time_long  ,as::gmt,a_datetime,"February 5, 1970" ICUAT " 3:33:13 PM GMT",time_t,a_datetime);
-        #if BOOST_ICU_EXACT_VER != 40800
+        #if BOOST_LOCALE_ICU_VERSION_EXACT != 40800
             // know bug #8675
             TEST_FP4(as::datetime,as::date_full  ,as::time_full  ,as::gmt,a_datetime,"Thursday, February 5, 1970" ICUAT " 3:33:13 PM " GMT_FULL,time_t,a_datetime);
         #endif
@@ -387,10 +396,10 @@ void test_manip(std::string e_charset="UTF-8")
     std::basic_string<CharType> format_string(format.begin(),format.end());
     strftime(local_time_str,sizeof(local_time_str),format.c_str(),gmtime(&lnow));
     TEST_FMT(as::ftime(format_string),now,local_time_str);
-    TEST_FMT(as::ftime(format_string)<<as::gmt<<as::local_time,now,local_time_str);
+    TEST_FMT(as::ftime(format_string) << as::gmt << as::local_time,now,local_time_str);
 
-    std::string marks =  
-        "aAbB" 
+    std::string marks =
+        "aAbB"
         "cdeh"
         "HIjm"
         "Mnpr"
@@ -398,9 +407,9 @@ void test_manip(std::string e_charset="UTF-8")
         "xXyY"
         "Z%";
 
-    std::string result[]= { 
+    std::string result[]= {
         "Thu","Thursday","Feb","February",  // aAbB
-        #if BOOST_ICU_VER >= 408
+        #if BOOST_LOCALE_ICU_VERSION >= 408
         "Thursday, February 5, 1970" ICUAT  " 3:33:13 PM " GMT_FULL, // c
         #else
         "Thursday, February 5, 1970 3:33:13 PM GMT+00:00", // c
@@ -410,7 +419,7 @@ void test_manip(std::string e_charset="UTF-8")
         "33","\n","PM", "03:33:13 PM",// Mnpr
         "15:33","13","\t","15:33:13", // RStT
         "Feb 5, 1970","3:33:13 PM","70","1970", // xXyY
-        #if BOOST_ICU_VER >= 408
+        #if BOOST_LOCALE_ICU_VERSION >= 408
         GMT_FULL // Z
         #else
         "GMT+00:00" // Z
@@ -421,14 +430,14 @@ void test_manip(std::string e_charset="UTF-8")
         format_string.clear();
         format_string+=static_cast<CharType>('%');
         format_string+=static_cast<CharType>(marks[i]);
-        TEST_FMT(as::ftime(format_string)<<as::gmt,a_datetime,result[i]);
+        TEST_FMT(as::ftime(format_string) << as::gmt,a_datetime,result[i]);
     }
 
     std::string sample_f[]={
         "Now is %A, %H o'clo''ck ' or not ' ",
         "'test %H'",
         "%H'",
-        "'%H'" 
+        "'%H'"
     };
     std::string expected_f[] = {
         "Now is Thursday, 15 o'clo''ck ' or not ' ",
@@ -439,7 +448,7 @@ void test_manip(std::string e_charset="UTF-8")
 
     for(unsigned i=0;i<sizeof(sample_f)/sizeof(sample_f[0]);i++) {
         format_string.assign(sample_f[i].begin(),sample_f[i].end());
-        TEST_FMT(as::ftime(format_string)<<as::gmt,a_datetime,expected_f[i]);
+        TEST_FMT(as::ftime(format_string) << as::gmt,a_datetime,expected_f[i]);
     }
 
 }
@@ -449,13 +458,13 @@ void test_format(std::string charset="UTF-8")
 {
     boost::locale::generator g;
     std::locale loc=g("en_US."+charset);
-    
+
     FORMAT("{3} {1} {2}", 1 % 2 % 3,"3 1 2");
     FORMAT("{1} {2}", "hello" % 2,"hello 2");
     FORMAT("{1}",1200.1,"1200.1");
     FORMAT("Test {1,num}",1200.1,"Test 1,200.1");
     FORMAT("{{}} {1,number}",1200.1,"{} 1,200.1");
-    #if BOOST_ICU_VER < 5601 
+    #if BOOST_LOCALE_ICU_VERSION < 5601
     // bug #13276
     FORMAT("{1,num=sci,p=3}",13.1,"1.310E1");
     FORMAT("{1,num=scientific,p=3}",13.1,"1.310E1");
@@ -469,19 +478,20 @@ void test_format(std::string charset="UTF-8")
     FORMAT("{1,cur}",1234,"$1,234.00");
     FORMAT("{1,currency}",1234,"$1,234.00");
     if(charset=="UTF-8") {
-        if(U_ICU_VERSION_MAJOR_NUM >=4)
+#if BOOST_LOCALE_ICU_VERSION >= 400
             FORMAT("{1,cur,locale=de_DE}",10,"10,00\xC2\xA0€");
-        else
+#else
             FORMAT("{1,cur,locale=de_DE}",10,"10,00 €");
+#endif
     }
-    #if BOOST_ICU_VER >= 402
+    #if BOOST_LOCALE_ICU_VERSION >= 402
     FORMAT("{1,cur=nat}",1234,"$1,234.00");
     FORMAT("{1,cur=national}",1234,"$1,234.00");
     FORMAT("{1,cur=iso}",1234,"USD1,234.00");
     #endif
     FORMAT("{1,spell}",10,"ten");
     FORMAT("{1,spellout}",10,"ten");
-    #if 402 <= BOOST_ICU_VER && BOOST_ICU_VER < 408
+    #if 402 <= BOOST_LOCALE_ICU_VERSION && BOOST_LOCALE_ICU_VERSION < 408
     if(charset=="UTF-8") {
         FORMAT("{1,ord}",1,"1\xcb\xa2\xe1\xb5\x97");
         FORMAT("{1,ordinal}",1,"1\xcb\xa2\xe1\xb5\x97");
@@ -508,7 +518,7 @@ void test_format(std::string charset="UTF-8")
     time_t a_datetime = a_date + a_time + a_timesec;
     FORMAT("{1,date,gmt};{1,time,gmt};{1,datetime,gmt};{1,dt,gmt}",a_datetime,
             "Feb 5, 1970;3:33:13 PM;Feb 5, 1970" PERIOD " 3:33:13 PM;Feb 5, 1970" PERIOD " 3:33:13 PM");
-    #if BOOST_ICU_VER >= 408
+    #if BOOST_LOCALE_ICU_VERSION >= 408
     FORMAT("{1,time=short,gmt};{1,time=medium,gmt};{1,time=long,gmt};{1,date=full,gmt}",a_datetime,
             "3:33 PM;3:33:13 PM;3:33:13 PM GMT;Thursday, February 5, 1970");
     FORMAT("{1,time=s,gmt};{1,time=m,gmt};{1,time=l,gmt};{1,date=f,gmt}",a_datetime,
@@ -535,42 +545,34 @@ void test_format(std::string charset="UTF-8")
 }
 
 
-int main()
+void test_main(int /*argc*/, char** /*argv*/)
 {
-    try {
-        boost::locale::time_zone::global("GMT+4:00");
-        std::cout << "Testing char, UTF-8" << std::endl;
-        test_manip<char>();
-        test_format<char>();
-        std::cout << "Testing char, ISO8859-1" << std::endl;
-        test_manip<char>("ISO8859-1");
-        test_format<char>("ISO8859-1");
+    boost::locale::time_zone::global("GMT+4:00");
+    std::cout << "Testing char, UTF-8" << std::endl;
+    test_manip<char>();
+    test_format<char>();
+    std::cout << "Testing char, ISO8859-1" << std::endl;
+    test_manip<char>("ISO8859-1");
+    test_format<char>("ISO8859-1");
 
-        std::cout << "Testing wchar_t" << std::endl;
-        test_manip<wchar_t>();
-        test_format<wchar_t>();
+    std::cout << "Testing wchar_t" << std::endl;
+    test_manip<wchar_t>();
+    test_format<wchar_t>();
 
-        #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
-        std::cout << "Testing char16_t" << std::endl;
-        test_manip<char16_t>();
-        test_format<char16_t>();
-        #endif
+    #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
+    std::cout << "Testing char16_t" << std::endl;
+    test_manip<char16_t>();
+    test_format<char16_t>();
+    #endif
 
-        #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
-        std::cout << "Testing char32_t" << std::endl;
-        test_manip<char32_t>();
-        test_format<char32_t>();
-        #endif
-
-    }
-    catch(std::exception const &e) {
-        std::cerr << "Failed " << e.what() << std::endl;
-        return EXIT_FAILURE;
-    }
-    FINALIZE();
-
+    #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
+    std::cout << "Testing char32_t" << std::endl;
+    test_manip<char32_t>();
+    test_format<char32_t>();
+    #endif
 }
 
 #endif // NOICU
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
-// boostinspect:noascii 
+
+// boostinspect:noascii
+// boostinspect:nominmax

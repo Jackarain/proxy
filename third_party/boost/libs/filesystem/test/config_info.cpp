@@ -10,8 +10,8 @@
 //--------------------------------------------------------------------------------------//
 
 #include <boost/filesystem.hpp>
-#include <boost/filesystem/detail/macro_value.hpp>
 #include <iostream>
+#include "macro_value.hpp"
 
 using std::cout;
 using std::endl;

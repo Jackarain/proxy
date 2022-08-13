@@ -37,8 +37,8 @@ Simplify a geometry using a specified strategy.
           </h6>
 <p>
 </p>
-<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Geometry</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Distance</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Strategy</span><span class="special">&gt;</span>
-<span class="keyword">void</span> <span class="identifier">simplify</span><span class="special">(</span><span class="identifier">Geometry</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">geometry</span><span class="special">,</span> <span class="identifier">Geometry</span> <span class="special">&amp;</span> <span class="identifier">out</span><span class="special">,</span> <span class="identifier">Distance</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">max_distance</span><span class="special">,</span>
+<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Geometry</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">GeometryOut</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Distance</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Strategy</span><span class="special">&gt;</span>
+<span class="keyword">void</span> <span class="identifier">simplify</span><span class="special">(</span><span class="identifier">Geometry</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">geometry</span><span class="special">,</span> <span class="identifier">GeometryOut</span> <span class="special">&amp;</span> <span class="identifier">out</span><span class="special">,</span> <span class="identifier">Distance</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">max_distance</span><span class="special">,</span>
               <span class="identifier">Strategy</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">strategy</span><span class="special">)</span></pre>
 <p>
           </p>
@@ -101,12 +101,12 @@ Simplify a geometry using a specified strategy.
 <tr>
 <td>
                     <p>
-                      Geometry &amp;
+                      GeometryOut &amp;
                     </p>
                   </td>
 <td>
                     <p>
-                      Any type fulfilling a Geometry Concept
+                      The output geometry
                     </p>
                   </td>
 <td>
@@ -161,8 +161,7 @@ Simplify a geometry using a specified strategy.
                   </td>
 <td>
                     <p>
-                      simplify strategy to be used for simplification, might include
-                      point-distance strategy
+                      simplify strategy to be used for simplification
                     </p>
                   </td>
 </tr>

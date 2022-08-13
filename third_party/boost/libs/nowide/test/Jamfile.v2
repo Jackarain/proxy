@@ -1,12 +1,9 @@
-# Boost Nowide Library test Jamfile
-
 # Copyright (c) 2003, 2006 Beman Dawes
 # Copyright (c) 2012 Artyom Beilis (Tonkikh)
-# Copyright (c) 2020-2021 Alexander Grund
+# Copyright (c) 2020-2022 Alexander Grund
 # 
 # Distributed under the Boost Software License, Version 1.0.
-# (See accompanying file LICENSE or www.boost.org/LICENSE_1_0.txt)
-# See library home page at http://www.boost.org/libs/nowide
+# https://www.boost.org/LICENSE_1_0.txt
 
 import testing ;
 import config : requires ;
@@ -23,6 +20,7 @@ rule require-windows ( properties * )
 
 project : requirements
   <library>/boost/nowide//boost_nowide
+  <include>.
   <warnings>pedantic
   <warnings-as-errors>on
   [ requires

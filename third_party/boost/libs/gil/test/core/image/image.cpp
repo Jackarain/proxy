@@ -35,6 +35,7 @@ struct test_constructor_with_dimensions_pixel
     static void run()
     {
         boost::mp11::mp_for_each<fixture::image_types>(test_constructor_with_dimensions_pixel{});
+        boost::mp11::mp_for_each<fixture::pmr_image_types>(test_constructor_with_dimensions_pixel{});
     }
 };
 
@@ -44,31 +45,87 @@ struct test_constructor_from_other_image
     void operator()(Image const &)
     {
         using image_t = Image;
+        using allocator_t = typename Image::allocator_type;
         gil::point_t const dimensions{256, 128};
         using pixel_t = typename image_t::view_t::value_type;
         pixel_t const rnd_pixel = fixture::pixel_generator<pixel_t>::random();
         {
             //constructor interleaved from planar
-            gil::image<pixel_t, true> image1(dimensions, rnd_pixel); 
+            gil::image<pixel_t, true, allocator_t> image1(dimensions, rnd_pixel);
             image_t image2(image1);
             BOOST_TEST_EQ(image2.dimensions(), dimensions);
             auto v1 = gil::const_view(image1);
             auto v2 = gil::const_view(image2);
             BOOST_TEST_ALL_EQ(v1.begin(), v1.end(), v2.begin(), v2.end());
         }
-        // {
-        //     //constructor planar from interleaved
-        //     image_t image1(dimensions, rnd_pixel); 
-        //     gil::image<pixel_t, true> image2(image1); 
-        //     BOOST_TEST_EQ(image2.dimensions(), dimensions);
-        //     auto v1 = gil::const_view(image1);
-        //     auto v2 = gil::const_view(image2);
-        //     BOOST_TEST_ALL_EQ(v1.begin(), v1.end(), v2.begin(), v2.end());
-        // }
+        {
+            // constructor planar from interleaved
+            image_t image1(dimensions, rnd_pixel);
+            gil::image<pixel_t, true> image2(image1);
+            BOOST_TEST_EQ(image2.dimensions(), dimensions);
+            auto v1 = gil::const_view(image1);
+            auto v2 = gil::const_view(image2);
+            BOOST_TEST_ALL_EQ(v1.begin(), v1.end(), v2.begin(), v2.end());
+        }
     }
     static void run()
     {
         boost::mp11::mp_for_each<fixture::rgb_interleaved_image_types>(test_constructor_from_other_image{});
+    }
+};
+
+struct test_constructor_from_view
+{
+    template <typename Image>
+    void operator()(Image const&)
+    {
+        using image_t = Image;
+        gil::point_t const dimensions{ 256, 128 };
+        using pixel_t = typename image_t::view_t::value_type;
+        pixel_t const rnd_pixel = fixture::pixel_generator<pixel_t>::random();
+        {
+            //constructor interleaved from planar
+            gil::image<pixel_t, true> image1(dimensions, rnd_pixel);
+            auto v1 = gil::transposed_view(gil::const_view(image1));
+            image_t image2(gil::transposed_view(v1));
+            BOOST_TEST_EQ(image2.dimensions(), dimensions);
+            auto v2 = gil::const_view(image2);
+            BOOST_TEST_ALL_EQ(v1.begin(), v1.end(), v2.begin(), v2.end());
+        }
+        {
+            //constructor planar from interleaved
+            image_t image1(dimensions, rnd_pixel);
+            auto v1 = gil::transposed_view(gil::const_view(image1));
+            gil::image<pixel_t, true> image2(gil::transposed_view(v1));
+            BOOST_TEST_EQ(image2.dimensions(), dimensions);
+            auto v2 = gil::const_view(image2);
+            BOOST_TEST_ALL_EQ(v1.begin(), v1.end(), v2.begin(), v2.end());
+        }
+    }
+    static void run()
+    {
+        boost::mp11::mp_for_each<fixture::rgb_interleaved_image_types>(test_constructor_from_view{});
+    }
+};
+
+struct test_copy_assignement
+{
+    template <typename Image>
+    void operator()(Image const&)
+    {
+        using image_t = Image;
+        gil::point_t const dimensions{ 256, 128 };
+        {
+            image_t image = fixture::create_image<image_t>(dimensions.x, dimensions.y, 0);
+            image_t image2;
+            image2 = image;
+            BOOST_TEST_EQ(image2.dimensions(), dimensions);
+        }
+    }
+    static void run()
+    {
+        boost::mp11::mp_for_each<fixture::image_types>(test_copy_assignement{});
+        boost::mp11::mp_for_each<fixture::pmr_image_types>(test_copy_assignement{});
     }
 };
 
@@ -90,6 +147,7 @@ struct test_move_constructor
     static void run()
     {
         boost::mp11::mp_for_each<fixture::image_types>(test_move_constructor{});
+        boost::mp11::mp_for_each<fixture::pmr_image_types>(test_move_constructor{});
     }
 };
 
@@ -108,9 +166,11 @@ struct test_move_assignement
             BOOST_TEST_EQ(image.dimensions(), gil::point_t{});
         }
     }
+
     static void run()
     {
         boost::mp11::mp_for_each<fixture::image_types>(test_move_assignement{});
+        boost::mp11::mp_for_each<fixture::pmr_image_types>(test_move_assignement{});
     }
 };
 
@@ -118,6 +178,9 @@ int main()
 {
     test_constructor_with_dimensions_pixel::run();
     test_constructor_from_other_image::run();
+    test_constructor_from_view::run();
+
+    test_copy_assignement::run();
 
     test_move_constructor::run();
     test_move_assignement::run();

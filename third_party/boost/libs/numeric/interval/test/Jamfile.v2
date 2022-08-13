@@ -15,6 +15,7 @@ project
     <toolset>hp_cxx,<os>OSF:<cflags>"-fprm d"
     <toolset>gcc,<os>OSF:<cflags>-mfp-rounding-mode=d
     <toolset>gcc:<cxxflags>-frounding-math
+    <toolset>clang:<cxxflags>-frounding-math
     <toolset>msvc:<cxxflags>/fp\:strict
   ;
 

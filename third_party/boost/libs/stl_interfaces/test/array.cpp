@@ -525,7 +525,7 @@ using insert_il_t = decltype(std::declval<Container &>().insert(
 static_assert(ill_formed<lvalue_insert_t, arr_type>::value, "");
 static_assert(ill_formed<rvalue_insert_t, arr_type>::value, "");
 
-#if defined(__cpp_lib_concepts)
+#if BOOST_STL_INTERFACES_USE_CONCEPTS
 static_assert(ill_formed<insert_n_t, arr_type>::value, "");
 #endif
 

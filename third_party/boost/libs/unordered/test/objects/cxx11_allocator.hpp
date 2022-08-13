@@ -1,5 +1,6 @@
 
 // Copyright 2006-2011 Daniel James.
+// Copyright 2022 Christian Mazakas
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -213,25 +214,27 @@ namespace test
       ::operator delete((void*)p);
     }
 
-    void construct(T* p, T const& t)
+#if defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
+    template <class U, class V>
+    void construct(U* p, V const& v)
     {
-      detail::tracker.track_construct((void*)p, sizeof(T), tag_);
-      new (p) T(t);
+      detail::tracker.track_construct((void*)p, sizeof(U), tag_);
+      new (p) U(v);
     }
-
-#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
-    template <typename... Args>
-    void construct(T* p, BOOST_FWD_REF(Args)... args)
+#else
+    template <class U, typename... Args>
+    void construct(U* p, BOOST_FWD_REF(Args)... args)
     {
-      detail::tracker.track_construct((void*)p, sizeof(T), tag_);
-      new (p) T(boost::forward<Args>(args)...);
+      detail::tracker.track_construct((void*)p, sizeof(U), tag_);
+      new (p) U(boost::forward<Args>(args)...);
     }
 #endif
 
-    void destroy(T* p)
+    template <class U>
+    void destroy(U* p)
     {
-      detail::tracker.track_destroy((void*)p, sizeof(T), tag_);
-      p->~T();
+      detail::tracker.track_destroy((void*)p, sizeof(U), tag_);
+      p->~U();
     }
 
     size_type max_size() const

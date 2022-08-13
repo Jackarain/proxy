@@ -1,12 +1,9 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 filetype=cpp.doxygen
 /*!
 \page locale_gen Locale Generation
 
@@ -18,20 +15,20 @@ and variant is additional options for specializing the locale, like \c euro or \
 
 Note that each locale should include the encoding in order to handle \c char based strings correctly.
 
-\section locale_gen_basics Basics 
+\section locale_gen_basics Basics
 
 The class \ref boost::locale::generator "generator" provides tools to generate the locales we need. The simplest way to use
 \c generator is to create a locale and set it as the global one:
 
 \code
     #include <boost/locale.hpp>
-    
+
     using namespace boost::locale;
     int main()
     {
         generator gen;
-        // Create locale generator 
-        std::locale::global(gen("")); 
+        // Create locale generator
+        std::locale::global(gen(""));
         // "" - the system default locale, set
         // it globally
     }
@@ -40,7 +37,7 @@ The class \ref boost::locale::generator "generator" provides tools to generate t
 Of course we can also specify the locale manually
 
 \code
-    std::locale loc = gen("en_US.UTF-8"); 
+    std::locale loc = gen("en_US.UTF-8");
     // Use English, United States locale
 \endcode
 
@@ -64,7 +61,7 @@ member functions of the \ref boost::locale::generator "generator" class.
 
 For example:
 
-\code    
+\code
     generator gen;
     gen.characters(wchar_t_facet);
     gen.categories(collation_facet | formatting_facet);
@@ -75,10 +72,10 @@ For example:
 
 The variant part of the locale (the part that comes after \@ symbol) is localization \ref using_localization_backends "back-end" dependent.
 
-\subsection locale_gen_variant_non_icu Non ICU Backends 
+\subsection locale_gen_variant_non_icu Non ICU Backends
 
-\ref posix_backend "POSIX" and \ref std_backend "std" back-ends use their own OS specific naming conventions and 
-depend on the current OS configuration. For example typical Linux distribution provides \c euro for currency selection, 
+\ref posix_backend "POSIX" and \ref std_backend "std" back-ends use their own OS specific naming conventions and
+depend on the current OS configuration. For example typical Linux distribution provides \c euro for currency selection,
 \c cyrillic and \c latin for specification of language script.
 
 \ref winapi_backend "winapi" back-end does not support any variants.
@@ -93,7 +90,7 @@ However in general it is represented as set of key=value pairs separated with a 
 
 Currently ICU supports following keys:
 
--   \c calendar - the calendar used for the current locale. For example: \c gregorian, \c japanese, 
+-   \c calendar - the calendar used for the current locale. For example: \c gregorian, \c japanese,
     \c buddhist, \c islamic, \c hebrew,  \c chinese, \c islamic-civil.
 -   \c collation - the collation order used for this locales, for example \c phonebook, \c pinyin, \c traditional,
     \c stroke, \c direct, \c posix.

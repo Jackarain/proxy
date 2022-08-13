@@ -5,12 +5,16 @@
 // See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt
 //
+
 #include <boost/gil.hpp>
 #include <boost/gil/extension/io/jpeg.hpp>
 #include <boost/gil/extension/numeric/sampler.hpp>
 #include <boost/gil/extension/numeric/resample.hpp>
 
-// Example for resize_view() in the numeric extension
+// Demonstrates how to scale an image using bilinear sampling
+// This example relies on the function resize_view(), available in include/boost/gil/extension/numeric/resample.hpp,
+// to apply the resampling.
+// This example demonstrates bilinear sampling; include/boost/gil/extension/numeric/sample.hpp also offers nearest-neighbour sampling.
 
 int main()
 {

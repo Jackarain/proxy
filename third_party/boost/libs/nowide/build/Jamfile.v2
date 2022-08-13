@@ -1,12 +1,11 @@
-# Boost Nowide Library Build Jamfile
-
 # Copyright (c) 2002, 2006 Beman Dawes
 # Copyright (c) 2012 Artyom Beilis (Tonkikh)
 # Copyright (c) 2020-2021 Alexander Grund
 # 
 # Distributed under the Boost Software License, Version 1.0.
-# (See accompanying file LICENSE or www.boost.org/LICENSE_1_0.txt)
-# See library home page at http://www.boost.org/libs/nowide
+# https://www.boost.org/LICENSE_1_0.txt
+#
+# See library home page at https://www.boost.org/libs/nowide
 
 import ../../config/checks/config : requires ;
 import configure ;
@@ -37,6 +36,7 @@ local SOURCES = console_buffer cstdio cstdlib filebuf iostream stat ;
 
 lib boost_nowide
   : $(SOURCES).cpp
+  : <include>../src
   ;
 
 boost-install boost_nowide ;

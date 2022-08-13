@@ -261,7 +261,7 @@ type by changing one or more of its properties:</p>
 for the rest. In this case <code class="docutils literal"><span class="pre">IsPlanar</span></code>, <code class="docutils literal"><span class="pre">IsStep</span></code> and <code class="docutils literal"><span class="pre">IsMutable</span></code> are
 MPL boolean constants. For example, here is how to create the type of a view
 just like <code class="docutils literal"><span class="pre">View</span></code>, but being grayscale and planar:</p>
-<div class="highlight-cpp"><div class="highlight"><pre><span></span><span class="k">using</span> <span class="n">VT</span> <span class="o">=</span> <span class="k">typename</span> <span class="n">derived_view_type</span><span class="o">&lt;</span><span class="n">View</span><span class="p">,</span> <span class="n">boost</span><span class="o">::</span><span class="n">use_default</span><span class="p">,</span> <span class="n">gray_t</span><span class="p">,</span> <span class="n">mpl</span><span class="o">::</span><span class="n">true_</span><span class="o">&gt;::</span><span class="n">type</span><span class="p">;</span>
+<div class="highlight-cpp"><div class="highlight"><pre><span></span><span class="k">using</span> <span class="n">VT</span> <span class="o">=</span> <span class="k">typename</span> <span class="n">derived_view_type</span><span class="o">&lt;</span><span class="n">View</span><span class="p">,</span> <span class="n">boost</span><span class="o">::</span><span class="n">use_default</span><span class="p">,</span> <span class="n">gray_t</span><span class="p">,</span> <span class="n">mp11</span><span class="o">::</span><span class="n">mp_true</span><span class="o">&gt;::</span><span class="n">type</span><span class="p">;</span>
 </pre></div>
 </div>
 </div>
@@ -301,7 +301,7 @@ is basic, but a color converted view or a virtual view is not.</p>
     </div>
     </div>
     <div class="footer" role="contentinfo">
-      Last updated on 2022-04-06 21:04:50.
+      Last updated on 2022-08-04 02:08:16.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.6.
     </div>
   </body>

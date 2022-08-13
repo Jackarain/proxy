@@ -56,7 +56,7 @@ struct P3 {
     typedef int element_type;
 
     template<class>
-    struct rebind { };
+    using rebind = P3;
 };
 
 template<class T>

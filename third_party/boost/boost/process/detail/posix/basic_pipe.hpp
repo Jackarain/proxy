@@ -11,7 +11,7 @@
 #define BOOST_PROCESS_POSIX_PIPE_HPP
 
 
-#include <boost/filesystem.hpp>
+#include <boost/process/filesystem.hpp>
 #include <boost/process/detail/posix/compare_handles.hpp>
 #include <system_error>
 #include <array>
@@ -95,7 +95,7 @@ public:
     int_type read(char_type * data, int_type count)
     {
         int_type read_len;
-        while ((read_len = ::read(_source, data, count * sizeof(char_type))) == -1)
+        while ((read_len = static_cast<int_type>(::read(_source, data, count * sizeof(char_type)))) == -1)
         {
             //Try again if interrupted
             auto err = errno;

@@ -16,7 +16,7 @@
 #include <boost/process/env.hpp>
 #include <boost/process/cmd.hpp>
 
-#include <boost/filesystem/path.hpp>
+#include <boost/process/filesystem.hpp>
 #include <boost/filesystem/operations.hpp>
 
 #include <system_error>
@@ -27,7 +27,7 @@
 #include <cstdlib>
 
 namespace bp = boost::process;
-namespace fs = boost::filesystem;
+namespace fs = boost::process::filesystem;
 
 
 BOOST_AUTO_TEST_CASE(excplicit)

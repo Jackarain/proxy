@@ -8,6 +8,7 @@
 message(STATUS "Boost.GIL: Configuring tests in test/extension/dynamic_image")
 foreach(_name
   any_image
+  any_image_view
   subimage_view)
   set(_test t_ext_dynamic_image_${_name})
   set(_target test_ext_dynamic_image_${_name})

@@ -6,6 +6,7 @@
 #ifndef BOOST_PROCESS_DETAIL_ENV_HPP_
 #define BOOST_PROCESS_DETAIL_ENV_HPP_
 
+#include <boost/process/detail/traits/wchar_t.hpp>
 #include <boost/process/environment.hpp>
 #include <boost/none.hpp>
 

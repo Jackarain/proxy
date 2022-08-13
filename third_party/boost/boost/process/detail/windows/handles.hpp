@@ -11,6 +11,7 @@
 #include <boost/process/detail/windows/handle_workaround.hpp>
 #include <boost/process/detail/windows/handler.hpp>
 #include <boost/winapi/get_current_process_id.hpp>
+#include <boost/winapi/handles.hpp>
 
 namespace boost { namespace process { namespace detail {
 

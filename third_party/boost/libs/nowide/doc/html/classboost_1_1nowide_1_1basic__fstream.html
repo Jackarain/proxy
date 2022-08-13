@@ -66,6 +66,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ab04ad9ecd0bd4b535e26bff318ce911f"><td class="memItemLeft" align="right" valign="top"><a id="ab04ad9ecd0bd4b535e26bff318ce911f"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>basic_fstream</b> (const char *file_name, std::ios_base::openmode mode=std::ios_base::in|std::ios_base::out)</td></tr>
 <tr class="separator:ab04ad9ecd0bd4b535e26bff318ce911f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a11defa072edcb141520ffcef20b2b9a5"><td class="memItemLeft" align="right" valign="top"><a id="a11defa072edcb141520ffcef20b2b9a5"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>basic_fstream</b> (const wchar_t *file_name, std::ios_base::openmode mode=std::ios_base::in|std::ios_base::out)</td></tr>
+<tr class="separator:a11defa072edcb141520ffcef20b2b9a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aee5216995cf170505e9ebc06ff871ed3"><td class="memItemLeft" align="right" valign="top"><a id="aee5216995cf170505e9ebc06ff871ed3"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>basic_fstream</b> (const std::string &amp;file_name, std::ios_base::openmode mode=std::ios_base::in|std::ios_base::out)</td></tr>
 <tr class="separator:aee5216995cf170505e9ebc06ff871ed3"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -91,6 +94,7 @@ template&lt;typename Path &gt; </td></tr>
 class boost::nowide::basic_fstream&lt; CharType, Traits &gt;</h3>
 
 <p>Same as std::basic_fstream&lt;char&gt; but accepts UTF-8 strings under Windows. </p>
+<p>Affected by <a class="el" href="config_8hpp.html#a00bc772d2cae3efdcaf4044ce857c779" title="Define to 1 to use the class from &lt;filebuf.hpp&gt; that is used on Windows.">BOOST_NOWIDE_USE_FILEBUF_REPLACEMENT</a> and <a class="el" href="config_8hpp.html#a1c34b7fa978286d269d931ca0b7cce1d" title="Whether to use the wchar_t* overloads in fstream-classes.">BOOST_NOWIDE_USE_WCHAR_OVERLOADS</a> </p>
 </div><hr/>The documentation for this class was generated from the following file:<ul>
 <li>boost/nowide/<a class="el" href="fstream_8hpp_source.html">fstream.hpp</a></li>
 </ul>

@@ -9,8 +9,8 @@
 #include "./generators.hpp"
 #include "./list.hpp"
 #include "./metafunctions.hpp"
+#include <boost/type_traits/conditional.hpp>
 #include <algorithm>
-#include <boost/detail/select_type.hpp>
 
 namespace test {
   template <class X> struct unordered_generator_set
@@ -69,9 +69,8 @@ namespace test {
 
   template <class X>
   struct unordered_generator_base
-    : public boost::detail::if_true<test::is_set<X>::value>::
-        BOOST_NESTED_TEMPLATE then<test::unordered_generator_set<X>,
-          test::unordered_generator_map<X> >
+      : public boost::conditional<test::is_set<X>::value,
+          test::unordered_generator_set<X>, test::unordered_generator_map<X> >
   {
   };
 

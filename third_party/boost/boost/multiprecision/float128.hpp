@@ -15,7 +15,11 @@
 #error libquadmath only works on on i386, x86_64, IA-64, and hppa HP-UX, as well as on PowerPC GNU/Linux targets that enable the vector scalar (VSX) instruction set.
 #endif
 
+#include <memory>
+#include <climits>
+#include <cfloat>
 #include <tuple>
+#include <cstring>
 #include <boost/multiprecision/detail/standalone_config.hpp>
 #include <boost/multiprecision/number.hpp>
 #include <boost/multiprecision/detail/hash.hpp>
@@ -414,11 +418,12 @@ inline void eval_rsqrt(float128_backend& result, const float128_backend& arg)
    // error: __float128 and long double cannot be used in the same expression
    result.value() = 1 / sqrtq(arg.value());
 #else
-   using std::sqrt;
    if (arg.value() < std::numeric_limits<long double>::denorm_min() || arg.value() > (std::numeric_limits<long double>::max)()) {
       result.value() = 1/sqrtq(arg.value());
       return;
    }
+
+   using std::sqrt;
    float128_backend xk = 1/sqrt(static_cast<long double>(arg.value()));
 
    // Newton iteration for f(x) = arg.value() - 1/x^2.

@@ -83,9 +83,9 @@ same set of colors in the same order).</p>
 <div class="admonition seealso">
 <p class="first admonition-title">See also</p>
 <ul class="last simple">
-<li><a class="reference external" href="reference/structboost_1_1gil_1_1_color_space_concept.html">ColorSpaceConcept&lt;ColorSpace&gt;</a></li>
-<li><a class="reference external" href="reference/structboost_1_1gil_1_1_color_spaces_compatible_concept.html">ColorSpacesCompatibleConcept&lt;ColorSpace1,ColorSpace2&gt;</a></li>
-<li><a class="reference external" href="reference/structboost_1_1gil_1_1_channel_mapping_concept.html">ChannelMappingConcept&lt;Mapping&gt;</a></li>
+<li><a class="reference external" href="../reference/structboost_1_1gil_1_1_color_space_concept.html">ColorSpaceConcept&lt;ColorSpace&gt;</a></li>
+<li><a class="reference external" href="../reference/structboost_1_1gil_1_1_color_spaces_compatible_concept.html">ColorSpacesCompatibleConcept&lt;ColorSpace1,ColorSpace2&gt;</a></li>
+<li><a class="reference external" href="../reference/structboost_1_1gil_1_1_channel_mapping_concept.html">ChannelMappingConcept&lt;Mapping&gt;</a></li>
 </ul>
 </div>
 </div>
@@ -113,19 +113,17 @@ same set of colors in the same order).</p>
 <li><code class="docutils literal"><span class="pre">argb_layout_t</span></code></li>
 </ul>
 <p>As an example, here is how GIL defines the RGBA color space:</p>
-<div class="highlight-c++"><div class="highlight"><pre><span></span><span class="p">..</span> <span class="n">code</span><span class="o">-</span><span class="n">block</span><span class="o">::</span> <span class="n">cpp</span>
+<div class="highlight-cpp"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="n">red_t</span> <span class="p">{};</span>
+<span class="k">struct</span> <span class="n">green_t</span> <span class="p">{};</span>
+<span class="k">struct</span> <span class="n">blue_t</span> <span class="p">{};</span>
+<span class="k">struct</span> <span class="n">alpha_t</span> <span class="p">{};</span>
+<span class="n">rgba_t</span> <span class="o">=</span> <span class="k">using</span> <span class="n">mp11</span><span class="o">::</span><span class="n">mp_list</span><span class="o">&lt;</span><span class="n">red_t</span><span class="p">,</span> <span class="n">green_t</span><span class="p">,</span> <span class="n">blue_t</span><span class="p">,</span> <span class="n">alpha_t</span><span class="o">&gt;</span><span class="p">;</span>
 </pre></div>
 </div>
-<blockquote>
-<div>struct red_t {};
-struct green_t {};
-struct blue_t {};
-struct alpha_t {};
-rgba_t = using mpl::vector4&lt;red_t, green_t, blue_t, alpha_t&gt;;</div></blockquote>
 <p>The ordering of the channels in the color space definition specifies their
 semantic order. For example, <code class="docutils literal"><span class="pre">red_t</span></code> is the first semantic channel of
 <code class="docutils literal"><span class="pre">rgba_t</span></code>. While there is a unique semantic ordering of the channels in a
-color space, channels may vary in their physical ordering in memory</p>
+color space, channels may vary in their physical ordering in memory.</p>
 <p>The mapping of channels is specified by <code class="docutils literal"><span class="pre">ChannelMappingConcept</span></code>, which is
 an MPL random access sequence of integral types.
 A color space and its associated mapping are often used together.</p>
@@ -133,7 +131,7 @@ A color space and its associated mapping are often used together.</p>
 <div class="highlight-cpp"><div class="highlight"><pre><span></span><span class="k">template</span>
 <span class="o">&lt;</span>
     <span class="k">typename</span> <span class="n">ColorSpace</span><span class="p">,</span>
-    <span class="k">typename</span> <span class="n">ChannelMapping</span> <span class="o">=</span> <span class="n">mpl</span><span class="o">::</span><span class="n">range_c</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">mpl</span><span class="o">::</span><span class="n">size</span><span class="o">&lt;</span><span class="n">ColorSpace</span><span class="o">&gt;::</span><span class="n">value</span><span class="o">&gt;</span>
+    <span class="k">typename</span> <span class="n">ChannelMapping</span> <span class="o">=</span> <span class="n">mp11</span><span class="o">::</span><span class="n">make_integer_sequence</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">mp11</span><span class="o">::</span><span class="n">mp_size</span><span class="o">&lt;</span><span class="n">ColorSpace</span><span class="o">&gt;::</span><span class="n">value</span><span class="o">&gt;</span>
 <span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">layout</span>
 <span class="p">{</span>
@@ -144,9 +142,9 @@ A color space and its associated mapping are often used together.</p>
 </div>
 <p>Here is how to create layouts for the RGBA color space:</p>
 <div class="highlight-cpp"><div class="highlight"><pre><span></span><span class="k">using</span> <span class="n">rgba_layout_t</span> <span class="o">=</span> <span class="n">layout</span><span class="o">&lt;</span><span class="n">rgba_t</span><span class="o">&gt;</span><span class="p">;</span> <span class="c1">// default ordering is 0,1,2,3...</span>
-<span class="k">using</span> <span class="n">bgra_layout_t</span> <span class="o">=</span> <span class="n">layout</span><span class="o">&lt;</span><span class="n">rgba_t</span><span class="p">,</span> <span class="n">mpl</span><span class="o">::</span><span class="n">vector4_c</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="o">&gt;&gt;</span><span class="p">;</span>
-<span class="k">using</span> <span class="n">argb_layout_t</span> <span class="o">=</span> <span class="n">layout</span><span class="o">&lt;</span><span class="n">rgba_t</span><span class="p">,</span> <span class="n">mpl</span><span class="o">::</span><span class="n">vector4_c</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">0</span><span class="o">&gt;&gt;</span><span class="p">;</span>
-<span class="k">using</span> <span class="n">abgr_layout_t</span> <span class="o">=</span> <span class="n">layout</span><span class="o">&lt;</span><span class="n">rgba_t</span><span class="p">,</span> <span class="n">mpl</span><span class="o">::</span><span class="n">vector4_c</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="o">&gt;&gt;</span><span class="p">;</span>
+<span class="k">using</span> <span class="n">bgra_layout_t</span> <span class="o">=</span> <span class="n">layout</span><span class="o">&lt;</span><span class="n">rgba_t</span><span class="p">,</span> <span class="n">mp11</span><span class="o">::</span><span class="n">mp_list_c</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="o">&gt;&gt;</span><span class="p">;</span>
+<span class="k">using</span> <span class="n">argb_layout_t</span> <span class="o">=</span> <span class="n">layout</span><span class="o">&lt;</span><span class="n">rgba_t</span><span class="p">,</span> <span class="n">mp11</span><span class="o">::</span><span class="n">mp_list_c</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">0</span><span class="o">&gt;&gt;</span><span class="p">;</span>
+<span class="k">using</span> <span class="n">abgr_layout_t</span> <span class="o">=</span> <span class="n">layout</span><span class="o">&lt;</span><span class="n">rgba_t</span><span class="p">,</span> <span class="n">mp11</span><span class="o">::</span><span class="n">mp_list_c</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="o">&gt;&gt;</span><span class="p">;</span>
 </pre></div>
 </div>
 </div>
@@ -163,7 +161,7 @@ A color space and its associated mapping are often used together.</p>
     </div>
     </div>
     <div class="footer" role="contentinfo">
-      Last updated on 2022-04-06 21:04:50.
+      Last updated on 2022-08-04 02:08:16.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.6.
     </div>
   </body>

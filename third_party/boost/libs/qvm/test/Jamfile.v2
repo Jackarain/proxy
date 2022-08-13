@@ -38,8 +38,12 @@ headers-compile-test [ glob ../include/boost/qvm/*.hpp ]
 run math_test.cpp ;
 
 run mat_traits_array_test.cpp ;
+run mat_traits_std_array_test.cpp ;
 run vec_traits_array_test.cpp ;
+run vec_traits_gnuc_test.cpp ;
+run vec_traits_std_array_test.cpp ;
 run quat_traits_array_test.cpp ;
+run quat_traits_std_array_test.cpp ;
 
 run access_m_test.cpp ;
 compile-fail access_m_fail1.cpp ;

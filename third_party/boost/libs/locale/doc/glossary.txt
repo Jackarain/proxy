@@ -1,16 +1,13 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 filetype=cpp.doxygen
 /*!
 \page glossary Glossary
 
--   \anchor term_bmp <b>Basic Multilingual Plane (BMP)</b> -- a part of 
+-   \anchor term_bmp <b>Basic Multilingual Plane (BMP)</b> -- a part of
     the <i>Universal Character Set</i> with code points in the range U-0000--U-FFFF.
     The most commonly used UCS characters lay in this plane, including all Western, Cyrillic, Hebrew, Thai, Arabic and CJK characters.
     However there are many characters that lay outside the BMP and they are absolutely required for correct support of East Asian languages.
@@ -31,7 +28,7 @@
 -   \b Formatting - representation of various values according to locale preferences. For example, a number 1234.5 (C representation)
     should be displayed as 1,234.5 in the US locale and 1.234,5 in the Russian locale. The date November 1st, 2005 would be represented as
     11/01/2005 in the United States, and 01.11.2005 in Russia. This is an important part of localization.
-    \n 
+    \n
     For example: does "You have to bring 134,230 kg of rice on 04/01/2010" means "134 tons of rice on the first of April" or "134 kg 230 g
     of rice on January 4th"? That is quite different.
 -   \b Gettext - The GNU localization library used for message formatting. Today it is the de-facto standard localization library in the
@@ -52,7 +49,7 @@
     library.
 -   \b UCS-2 - a fixed-width Unicode encoding, capable of representing only code points in the <i>Basic Multilingual Plane (BMP)</i>.
     It is a legacy encoding and is not recommended for use.
--   \b Unicode -- the industry standard that defines the representation and manipulation of text suitable for most languages and countries. 
+-   \b Unicode -- the industry standard that defines the representation and manipulation of text suitable for most languages and countries.
     It should not be confused with the <i>Universal Character Set</i>, it is a much larger standard that also defines algorithms like
     bidirectional display order, Arabic shaping, etc.
 -   <b>Universal Character Set (UCS)</b> - an international standard that defines a set of characters for many scripts and their
@@ -75,5 +72,3 @@
     to "Hello World"
 
 */
-
-

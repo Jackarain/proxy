@@ -41,7 +41,7 @@ int main()
         BOOST_TEST( !r.has_value() );
         BOOST_TEST( r.has_error() );
 
-        BOOST_TEST_EQ( r.error(), std::error_code( EINVAL, generic_category() ) );
+        BOOST_TEST_EQ( r.error(), error_code( EINVAL, generic_category() ) );
     }
 
     {

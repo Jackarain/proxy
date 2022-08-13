@@ -11,6 +11,7 @@
 #include <boost/throw_exception.hpp>
 #include <boost/graph/distributed/mpi_process_group.hpp>
 #include <boost/property_map/property_map.hpp>
+#include <boost/property_map/parallel/parallel_property_maps.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <vector>
 #include <string>

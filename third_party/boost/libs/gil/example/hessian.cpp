@@ -1,3 +1,11 @@
+//
+// Copyright 2019 Olzhas Zhumabek <anonymous.from.applecity@gmail.com>
+//
+// Distributed under the Boost Software License, Version 1.0
+// See accompanying file LICENSE_1_0.txt or copy at
+// http://www.boost.org/LICENSE_1_0.txt
+//
+
 #include <boost/gil/image.hpp>
 #include <boost/gil/image_view.hpp>
 #include <boost/gil/image_processing/numeric.hpp>
@@ -10,6 +18,8 @@
 #include <fstream>
 
 namespace gil = boost::gil;
+
+// Demonstrates Hessian feature (blob) detection
 
 // some images might produce artifacts
 // when converted to grayscale,
@@ -60,15 +70,15 @@ gil::gray8_image_t to_grayscale(gil::rgb8_view_t original)
 
 void apply_gaussian_blur(gil::gray8_view_t input_view, gil::gray8_view_t output_view)
 {
-    constexpr static auto filter_height = 5ull;
-    constexpr static auto filter_width = 5ull;
+    constexpr static std::ptrdiff_t filter_height = 5ull;
+    constexpr static std::ptrdiff_t filter_width = 5ull;
     constexpr static double filter[filter_height][filter_width] =
     {
-        2,  4,  6,  4,  2,
-        4, 9, 12, 9,  4,
-        5, 12, 15, 12,  5,
-        4, 9, 12, 9,  4,
-        2,  4,  5,  4,  2,
+        { 2,  4,  6,  4,  2 },
+        { 4, 9, 12, 9,  4 },
+        { 5, 12, 15, 12,  5 },
+        { 4, 9, 12, 9,  4 },
+        { 2,  4,  5,  4,  2 }
     };
     constexpr double factor = 1.0 / 159;
     constexpr double bias = 0.0;

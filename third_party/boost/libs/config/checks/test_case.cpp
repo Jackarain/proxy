@@ -1,4 +1,4 @@
-//  This file was automatically generated on Thu Feb  3 18:10:41 2022
+//  This file was automatically generated on Sun Jun  5 16:50:18 2022
 //  by libs/config/tools/generate.cpp
 //  Copyright John Maddock 2002-21.
 //  Use, modification and distribution are subject to the 
@@ -544,6 +544,11 @@
 #ifdef TEST_BOOST_NO_CXX17
 #  ifdef BOOST_NO_CXX17
 #     error "Defect macro BOOST_NO_CXX17 is defined."
+#  endif
+#endif
+#ifdef TEST_BOOST_NO_CXX17_DEDUCTION_GUIDES
+#  ifdef BOOST_NO_CXX17_DEDUCTION_GUIDES
+#     error "Defect macro BOOST_NO_CXX17_DEDUCTION_GUIDES is defined."
 #  endif
 #endif
 #ifdef TEST_BOOST_NO_CXX17_FOLD_EXPRESSIONS

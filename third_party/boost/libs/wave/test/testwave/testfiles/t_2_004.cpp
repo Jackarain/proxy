@@ -28,7 +28,7 @@
 //H 01: t_2_004.cpp(13): FILE_NAME
 //H 02: "a_nonexisting_file.cpp"
 //H 03: "a_nonexisting_file.cpp"
-//H 17: 5 "a_nonexisting_file.cpp" (5, "a_nonexisting_file.cpp")
+//H 17: 5 "a_nonexisting_file.cpp"  (5, "a_nonexisting_file.cpp")
 //H 10: a_nonexisting_file.cpp(8): #error
 //H 16: This error should occur at line 8 of "a_nonexisting_file.cpp"
 //H 18: boost::wave::preprocess_exception

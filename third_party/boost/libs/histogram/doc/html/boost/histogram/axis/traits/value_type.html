@@ -35,14 +35,14 @@
 <span class="keyword">struct</span> <a class="link" href="value_type.html" title="Struct template value_type">value_type</a> <span class="special">{</span>
 <span class="special">}</span><span class="special">;</span></pre></div>
 <div class="refsect1">
-<a name="idm29327"></a><h2>Description</h2>
+<a name="idm28955"></a><h2>Description</h2>
 <p>Doxygen does not render this well. This is a meta-function (template alias), it accepts an axis type and returns the value type.</p>
 <p>The value type is deduced from the argument of the <code class="computeroutput">Axis::index</code> method. Const references are decayed to the their value types, for example, the type deduced for<code class="computeroutput">Axis::index(const int&amp;)</code> is<code class="computeroutput">int</code>.</p>
 <p>The deduction always succeeds if the axis type models the Axis concept correctly. Errors come from violations of the concept, in particular, an index method that is templated or overloaded is not allowed.</p>
 <p>
 </p>
 <div class="refsect2">
-<a name="idm29336"></a><h3>Template Parameters</h3>
+<a name="idm28964"></a><h3>Template Parameters</h3>
 <div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
 <pre class="literallayout"><span class="keyword">typename</span> Axis</pre>
 <p>axis type. </p>

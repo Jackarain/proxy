@@ -17,6 +17,9 @@
 #if defined(BOOST_CLANG)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wfloat-equal"
+#if (__clang_major__ >= 10)
+#pragma clang diagnostic ignored "-Wtautological-overlap-compare"
+#endif
 #elif BOOST_GCC >= 40700
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wfloat-equal"

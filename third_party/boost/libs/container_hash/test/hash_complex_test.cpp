@@ -29,6 +29,7 @@ int main() {}
                                 // 'const std::complex<float>::_Ty'
 #pragma warning(disable:4309)   // truncation of constant value
 #pragma warning(disable:4512)   // assignment operator could not be generated
+#pragma warning(disable:4996)   // std::complex<Integer> is deprecated
 #if BOOST_MSVC < 1400
 #pragma warning(disable:4267)   // conversion from 'size_t' to 'unsigned int',
                                 // possible loss of data

@@ -8,6 +8,16 @@ https://www.boost.org/LICENSE_1_0.txt
 # Revision History
 :idprefix:
 
+## Changes in Boost 1.80
+
+* When an `error_code` is converted to `std::error_code` and then back
+  to `error_code`, the original is now restored, if possible.
+* Reworked the conversion from `error_category` to `std::error_category`
+  to avoid the one-time allocation that shows up on leak checkers.
+* Added a constructor that allows replacing the source location of an
+  `error_code`, and a corresponding `assign`.
+* Added a converting constructor to `result`.
+
 ## Changes in Boost 1.79
 
 * Added a `boost::source_location` parameter to `throw_exception_from_error`.

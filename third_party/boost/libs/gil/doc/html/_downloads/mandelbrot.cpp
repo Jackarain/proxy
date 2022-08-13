@@ -5,11 +5,16 @@
 // See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt
 //
+
 #include <boost/gil/image.hpp>
 #include <boost/gil/typedefs.hpp>
 #include <boost/gil/extension/io/jpeg.hpp>
 
-// Example for convolve_rows() and convolve_cols() in the numeric extension
+// Creates a synthetic image defining the Mandelbrot set.
+// The example relies on a virtual_2d_locator to iterate over the pixels in the destination view.
+// The pixels (of type rgb8_pixel_t) are generated programmatically, and the code shows how to access
+// the colour channels and set them to arbitrary values.
+
 
 using namespace boost::gil;
 
@@ -40,7 +45,7 @@ struct mandelbrot_fn
         t=pow(t,0.2);
 
         value_type ret;
-        for (int k=0; k<num_channels<P>::value; ++k)
+        for (std::size_t k=0; k<num_channels<P>::value; ++k)
             ret[k]=(typename channel_type<P>::type)(_in_color[k]*t + _out_color[k]*(1-t));
         return ret;
     }

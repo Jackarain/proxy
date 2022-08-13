@@ -162,9 +162,22 @@ float3 vrot = m * v;
 
 User-defined quaternion types are similarly introduced to QVM by specializing the <<quat_traits,`quat_traits`>> template.
 
+[TIP]
+--
+In order to support vector types that can not provide access to elements by reference, the `write_element` / `write_element_idx` static member functions can be defined as `void` functions taking a scalar to write into an element, for example:
+[source,c++]
+----
+template <int I>
+static inline void write_element( float3 & v, scalar_type s ) {
+  v.a[I] = s;
+}
+----
+Boost QVM automatically detects which alternative is provided.
+--
+
 '''
 
-=== C Arrays
+=== C/{CPP} Arrays
 
 In `boost/qvm/quat_traits_array.hpp`, `vec_traits_array.hpp` and `mat_traits_array.hpp`, QVM defines appropriate <<quat_traits,`quat_traits`>>, <<vec_traits,`vec_traits`>> and <<mat_traits,`mat_traits`>> specializations that allow QVM functions to operate directly on plain old C arrays:
 
@@ -189,6 +202,8 @@ The <<vref,`vref`>> and <<mref,`mref`>> function templates can be used to work a
 float v[3] = {0,0,7};
 vref(v) *= 42;
 ----
+
+If {CPP}-11 is available, the same headers define appropriate `quat_traits`, `vec_traits` and `mat_traits` for `std::array` objects.
 
 '''
 
@@ -640,6 +655,11 @@ namespace boost { namespace qvm {
     template <int I>
     static inline scalar_type & write_element( Quaternion & q );
 
+    // Alternative signature for write_element:
+
+    template <int I>
+    static inline void write_element( Quaternion & q, scalar_type s );
+
   };
   */
 
@@ -658,7 +678,10 @@ In addition, valid specializations of the `quat_traits` template must define at 
 
 - `read_element`: the expression `quat_traits<Quaternion>::read_element<I>(q)` returns either a copy of or a `const` reference to the `I`-th element of `q`.
 
-- `write_element`: the expression `quat_traits<Quaternion>::write_element<I>(q)` returns mutable reference to the `I`-th element of `q`.
+- `write_element`: the expression `quat_traits<Quaternion>::write_element<I>(q)` returns mutable reference to the `I`-th 
+element of `q`.
+
+TIP: Alternatively, `write_element` may be defined as `void` function that takes (as the last argument) a scalar to write into the specified element. QVM automatically detects this case by examining the signature of the `write_element` template.
 
 NOTE: For the quaternion `a + bi + cj + dk`, the elements are assumed to be in the following order: `a`, `b`, `c`, `d`; that is, `I`=`0`/`1`/`2`/`3` would access `a`/`b`/`c`/`d`.
 
@@ -865,11 +888,19 @@ namespace boost { namespace qvm {
     template <int I>
     static inline scalar_type read_element( Vector const & v );
 
+    static inline scalar_type read_element_idx( int i, Vector const & v );
+
     template <int I>
     static inline scalar_type & write_element( Vector & v );
 
-    static inline scalar_type read_element_idx( int i, Vector const & v );
     static inline scalar_type & write_element_idx( int i, Vector & v );
+
+    // Alternative signature for write_element and write_element_idx:
+
+    template <int I>
+    static inline void write_element( Vector & v, scalar_type s );
+
+    static inline void write_element_idx( int i, Vector & v, scalar_type s );
 
   };
   */
@@ -891,11 +922,13 @@ In addition, valid specializations of the `vec_traits` template may define the f
 
 - `read_element`: the expression `vec_traits<Vector>::read_element<I>(v)` returns either a copy of or a const reference to the `I`-th element of `v`.
 
-- `write_element`: the expression `vec_traits<Vector>::write_element<I>(v)` returns mutable reference to the `I`-th element of `v`.
-
 - `read_element_idx`: the expression `vec_traits<Vector>::read_element_idx(i,v)` returns either a copy of or a `const` reference to the `i`-th element of `v`.
 
+- `write_element`: the expression `vec_traits<Vector>::write_element<I>(v)` returns mutable reference to the `I`-th element of `v`.
+
 - `write_element_idx`: the expression `vec_traits<Vector>::write_element_idx(i,v)` returns mutable reference to the `i`-th element of `v`.
+
+TIP: Alternatively, `write_element` and `write_element_idx` may be defined as `void` functions that take (as the last argument) a scalar to write into the specified element. QVM automatically detects this case by examining the signature of the `write_element` template.
 
 It is illegal to call any of the above functions unless `is_vec<Vector>::value` is true. Even then, vector types are allowed to define only a subset of the access functions. The general requirements are:
 
@@ -1136,11 +1169,19 @@ namespace boost { namespace qvm {
     template <int R,int C>
     static inline scalar_type read_element( Matrix const & m );
 
+    static inline scalar_typeread_element_idx( int r, int c, Matrix const & m );
+
     template <int R,int C>
     static inline scalar_type & write_element( Matrix & m );
 
-    static inline scalar_typeread_element_idx( int r, int c, Matrix const & m );
     static inline scalar_type & write_element_idx( int r, int c, Matrix & m );
+
+    // Alternative signature for write_element and write_element_idx:
+
+    template <int R,int C>
+    static inline void write_element( Matrix & m, scalar_type s );
+
+    static inline void write_element_idx( int r, int c, Matrix & m, scalar_type s );
 
   };
   */
@@ -1161,9 +1202,11 @@ The main `mat_traits` template members are not specified. Valid specializations 
 In addition, valid specializations of the `mat_traits` template may define the following access functions as static members, where `m` is an object of type `Matrix`, `R` and `C` are compile-time integer constants, and `r` and `c` are variables of type `int`:
 
 - `read_element`: the expression `mat_traits<Matrix>::read_element<R,C>(m)` returns either a copy of or a const reference to the element at row `R` and column `C` of `m`.
-- `write_element`: the expression `mat_traits<Matrix>::write_element<R,C>(m)` returns mutable reference to the element at row `R` and column `C` of `m`.
 - `read_element_idx`: the expression `mat_traits<Matrix>::read_element_idx(r,c,m)` returns either a copy of or a const reference to the element at row `r` and column `c` of `m`.
+- `write_element`: the expression `mat_traits<Matrix>::write_element<R,C>(m)` returns mutable reference to the element at row `R` and column `C` of `m`.
 - `write_element_idx`: the expression `mat_traits<Matrix>::write_element_idx(r,c,m)` returns mutable reference to the element at row `r` and column `c` of `m`.
+
+TIP: Alternatively, `write_element` and `write_element_idx` may be defined as `void` functions that take (as the last argument) a scalar to write into the specified element. QVM automatically detects this case by examining the signature of the `write_element` template.
 
 It is illegal to call any of the above functions unless `is_mat<Matrix>::value` is true. Even then, matrix types are allowed to define only a subset of the access functions. The general requirements are:
 
@@ -4861,7 +4904,7 @@ This exception indicates that an operation requires a matrix with non-zero deter
 ==== `INLINE`
 ===== `BOOST_QVM_INLINE`
 
-.#include <boost/qvm/inline.hpp>
+.#include <boost/qvm/config.hpp>
 [source,c++]
 ----
 namespace boost { namespace qvm {
@@ -4873,7 +4916,7 @@ namespace boost { namespace qvm {
 } }
 ----
 
-This macro is not used directly by QVM, except as the default value of other macros from `<boost/qvm/inline.hpp>`. A user-defined `BOOST_QVM_INLINE` should expand to a value that is valid substitution of the `inline` keyword in function definitions.
+This macro is not used directly by QVM, except as the default value of other macros from `<boost/qvm/config.hpp>`. A user-defined `BOOST_QVM_INLINE` should expand to a value that is valid substitution of the `inline` keyword in function definitions.
 
 '''
 
@@ -4881,7 +4924,7 @@ This macro is not used directly by QVM, except as the default value of other mac
 ==== `FORCE_INLINE`
 ===== `BOOST_QVM_FORCE_INLINE`
 
-.#include <boost/qvm/inline.hpp>
+.#include <boost/qvm/config.hpp>
 [source,c++]
 ----
 namespace boost { namespace qvm {
@@ -4893,7 +4936,7 @@ namespace boost { namespace qvm {
 } }
 ----
 
-This macro is not used directly by QVM, except as the default value of other macros from `<boost/qvm/inline.hpp>`. A user-defined `BOOST_QVM_FORCE_INLINE` should expand to a value that is valid substitution of the `inline` keyword in function definitions, to indicate that the compiler must inline the function. Of course, actual inlining may or may not occur.
+This macro is not used directly by QVM, except as the default value of other macros from `<boost/qvm/config.hpp>`. A user-defined `BOOST_QVM_FORCE_INLINE` should expand to a value that is valid substitution of the `inline` keyword in function definitions, to indicate that the compiler must inline the function. Of course, actual inlining may or may not occur.
 
 '''
 
@@ -4901,7 +4944,7 @@ This macro is not used directly by QVM, except as the default value of other mac
 ==== `INLINE_TRIVIAL`
 ===== `BOOST_QVM_INLINE_TRIVIAL`
 
-.#include <boost/qvm/inline.hpp>
+.#include <boost/qvm/config.hpp>
 [source,c++]
 ----
 namespace boost { namespace qvm {
@@ -4921,7 +4964,7 @@ QVM uses `BOOST_QVM_INLINE_TRIVIAL` in definitions of functions that are not cri
 ==== `INLINE_CRITICAL`
 ===== `BOOST_QVM_INLINE_CRITICAL`
 
-.#include <boost/qvm/inline.hpp>
+.#include <boost/qvm/config.hpp>
 [source,c++]
 ----
 namespace boost { namespace qvm {
@@ -4941,7 +4984,7 @@ QVM uses `BOOST_QVM_INLINE_CRITICAL` in definitions of functions that are critic
 ==== `INLINE_OPERATIONS`
 ===== `BOOST_QVM_INLINE_OPERATIONS`
 
-.#include <boost/qvm/inline.hpp>
+.#include <boost/qvm/config.hpp>
 [source,c++]
 ----
 namespace boost { namespace qvm {
@@ -4961,7 +5004,7 @@ QVM uses `BOOST_QVM_INLINE_OPERATIONS` in definitions of functions that implemen
 ==== `INLINE_RECURSION`
 ===== `BOOST_QVM_INLINE_RECURSION`
 
-.#include <boost/qvm/inline.hpp>
+.#include <boost/qvm/config.hpp>
 [source,c++]
 ----
 namespace boost { namespace qvm {

@@ -95,7 +95,7 @@ namespace detail
 #pragma GCC diagnostic pop
 #endif
   static constexpr unsigned long long test_uuid_parse = parse_uuid_from_array("430f1201-94fc-06c7-430f-120194fc06c7");
-  //static constexpr unsigned long long test_uuid_parse2 = parse_uuid_from_array("x30f1201-94fc-06c7-430f-120194fc06c7");
+  // static constexpr unsigned long long test_uuid_parse2 = parse_uuid_from_array("x30f1201-94fc-06c7-430f-120194fc06c7");
 }  // namespace detail
 
 /*! Abstract base class for a coding domain of a status code.
@@ -282,8 +282,8 @@ public:
     {
       mutable std::atomic<unsigned> count{1};
     };
-     _allocated_msg *&_msg() noexcept { return reinterpret_cast<_allocated_msg *&>(this->_state[0]); }  // NOLINT
-     const _allocated_msg *_msg() const noexcept { return reinterpret_cast<const _allocated_msg *>(this->_state[0]); }  // NOLINT
+    _allocated_msg *&_msg() noexcept { return reinterpret_cast<_allocated_msg *&>(this->_state[0]); }                  // NOLINT
+    const _allocated_msg *_msg() const noexcept { return reinterpret_cast<const _allocated_msg *>(this->_state[0]); }  // NOLINT
 
     static BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 void _refcounted_string_thunk(string_ref *_dest, const string_ref *_src, _thunk_op op) noexcept
     {
@@ -395,6 +395,23 @@ public:
   constexpr unique_id_type id() const noexcept { return _id; }
   //! Name of this category.
   BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual string_ref name() const noexcept = 0;
+  //! Information about the payload of the code for this domain
+  struct payload_info_t
+  {
+    size_t payload_size{0};     //!< The payload size in bytes
+    size_t total_size{0};       //!< The total status code size in bytes (includes domain pointer and mixins state)
+    size_t total_alignment{1};  //!< The total status code alignment in bytes
+
+    payload_info_t() = default;
+    constexpr payload_info_t(size_t _payload_size, size_t _total_size, size_t _total_alignment)
+        : payload_size(_payload_size)
+        , total_size(_total_size)
+        , total_alignment(_total_alignment)
+    {
+    }
+  };
+  //! Information about this domain's payload
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual payload_info_t payload_info() const noexcept = 0;
 
 protected:
   //! True if code means failure.
@@ -412,8 +429,19 @@ protected:
   // Keep a vtable slot for binary compatibility
   BOOST_OUTCOME_SYSTEM_ERROR2_NORETURN virtual void _do_throw_exception(const status_code<void> & /*code*/) const { abort(); }
 #endif
-  // For a `status_code<erased<T>>` only, copy from `src` to `dst`. Default implementation uses `memcpy()`.
-  virtual void _do_erased_copy(status_code<void> &dst, const status_code<void> &src, size_t bytes) const { memcpy(&dst, &src, bytes); }  // NOLINT
+  // For a `status_code<erased<T>>` only, copy from `src` to `dst`. Default implementation uses `memcpy()`. You should return false here if your payload is not trivially copyable or would not fit.
+  virtual bool _do_erased_copy(status_code<void> &dst, const status_code<void> &src, payload_info_t dstinfo) const
+  {
+    // Note that dst may not have its domain set
+    const auto srcinfo = payload_info();
+    if(dstinfo.total_size < srcinfo.total_size)
+    {
+      return false;
+    }
+    const auto tocopy = (dstinfo.total_size > srcinfo.total_size) ? srcinfo.total_size : dstinfo.total_size;
+    memcpy(&dst, &src, tocopy);
+    return true;
+  }  // NOLINT
   // For a `status_code<erased<T>>` only, destroy the erased value type. Default implementation does nothing.
   BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual void _do_erased_destroy(status_code<void> &code, size_t bytes) const noexcept  // NOLINT
   {

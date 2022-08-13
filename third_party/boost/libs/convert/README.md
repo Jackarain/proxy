@@ -3,5 +3,5 @@ The library builds on the `boost::lexical_cast` experience and takes those type 
 * to be useful and applicable in a wider range of deployment scenarios, 
 * to provide a flexible, extendible and configurable type-conversion framework. 
 
-**HTML documentation is available [here](http://boostorg.github.io/convert).**
+**HTML documentation is available [here](http://yet-another-user.github.io/convert).**
 

@@ -5,13 +5,17 @@
 // See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt
 //
+
 #ifdef WIN32
 #define _CRT_SECURE_NO_DEPRECATE 1
 #pragma warning(disable : 4244) //
 #pragma warning(disable : 4996) // MSFT declared it deprecated
 #endif
 
-// Example file to demonstrate how to create a model of a pixel iterator
+// Illustrates how to create a custom pixel reference and iterator.
+// Creates a GIL image view over user-supplied data without the need to cast to GIL pixel type.
+// The pixel iterator itself is implemented in interleaved_ptr.hpp, with the reference defined in interleaved_ref.hpp.
+
 
 // FIXME: Review and remove if possible: gcc doesn't compile unless we forward-declare at_c before we include gil...
 namespace boost { namespace gil {

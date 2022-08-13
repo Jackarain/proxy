@@ -10,7 +10,7 @@
 #define BOOST_USE_WINDOWS_H
 
 #include <boost/program_options.hpp>
-#include <boost/filesystem.hpp>
+#include <boost/process/filesystem.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/iterator_range.hpp>
 #include <boost/range/algorithm/transform.hpp>
@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
     }
     else if (vm["pwd"].as<bool>())
     {
-        std::cout << boost::filesystem::current_path().string() << std::endl;
+        std::cout << boost::process::filesystem::current_path().string() << std::endl;
     }
     else if (vm.count("query"))
     {

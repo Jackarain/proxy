@@ -33,6 +33,6 @@ If `T` is `Moveable` (both __MOVE_CONSTRUCTIBLE__ and `MoveAssignable`) then `op
 
 Similarly, if `T` is `Copyable` (both __COPY_CONSTRUCTIBLE__ and `CopyAssignable`) then `optional<T>` is also `Copyable` and additionally can be constructed and assigned from an lvalue of type `T`.
 
-`T` ['is not] required to be __SGI_DEFAULT_CONSTRUCTIBLE__.
+`T` ['is not] required to be __STD_DEFAULT_CONSTRUCTIBLE__.
 
 [endsect]

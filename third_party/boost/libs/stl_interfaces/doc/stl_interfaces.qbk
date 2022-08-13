@@ -36,10 +36,16 @@
 
 [/ View Examples ]
 [import ../example/drop_while_view.cpp]
+[import ../example/all_view.hpp]
+[import ../example/reverse_view.hpp]
+[import ../example/take_view.hpp]
 
 [/ Container Examples ]
 [import ../example/static_vector.hpp]
 [import ../example/static_vector.cpp]
+
+[/ Structs ]
+[import ../include/boost/stl_interfaces/view_adaptor.hpp]
 
 [/ Images ]
 
@@ -66,6 +72,8 @@
 [def _CRTP_                [@https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern CRTP]]
 [def _Iterator_            [@https://www.boost.org/doc/libs/release/libs/iterator Boost.Iterator]]
 [def _Container_           [@https://www.boost.org/doc/libs/release/libs/container Boost.Container]]
+[def _P2387_               [@https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p2387r3.html P2387]]
+
 
 [def _emdash_              \u2014]
 

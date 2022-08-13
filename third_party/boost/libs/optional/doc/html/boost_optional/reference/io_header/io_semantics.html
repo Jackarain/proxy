@@ -32,7 +32,8 @@
           <span class="special">&lt;</span><span class="keyword">class</span>
           <span class="identifier">CharType</span><span class="special">,</span>
           <span class="keyword">class</span> <span class="identifier">CharTrait</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span></code>
-          <br>     <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">basic_ostream</span><span class="special">&lt;</span><span class="identifier">CharType</span><span class="special">,</span> <span class="identifier">CharTrait</span><span class="special">&gt;&amp;</span></code> <br>     <code class="computeroutput"><span class="keyword">operator</span><span class="special">&lt;&lt;(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">basic_ostream</span><span class="special">&lt;</span><span class="identifier">CharType</span><span class="special">,</span> <span class="identifier">CharTrait</span><span class="special">&gt;&amp;</span>
+          <br> std::basic_ostream&lt;CharType, CharTrait&gt;&amp;<code class="computeroutput"> <span class="special">[</span><span class="identifier">br</span><span class="special">]</span>
+          <span class="keyword">operator</span><span class="special">&lt;&lt;(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">basic_ostream</span><span class="special">&lt;</span><span class="identifier">CharType</span><span class="special">,</span> <span class="identifier">CharTrait</span><span class="special">&gt;&amp;</span>
           <span class="identifier">out</span><span class="special">,</span>
           <span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">v</span><span class="special">);</span></code>
         </p>
@@ -53,8 +54,8 @@
         </p>
 <p>
           <code class="computeroutput"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">CharType</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">CharTrait</span><span class="special">,</span>
-          <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span></code> <br>     <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">basic_ostream</span><span class="special">&lt;</span><span class="identifier">CharType</span><span class="special">,</span> <span class="identifier">CharTrait</span><span class="special">&gt;&amp;</span></code>
-          <br>     <code class="computeroutput"><span class="keyword">operator</span><span class="special">&lt;&lt;(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">basic_ostream</span><span class="special">&lt;</span><span class="identifier">CharType</span><span class="special">,</span> <span class="identifier">CharTrait</span><span class="special">&gt;&amp;</span> <span class="identifier">out</span><span class="special">,</span> <span class="identifier">none_t</span><span class="special">);</span></code>
+          <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span></code> <br> std::basic_ostream&lt;CharType,
+          CharTrait&gt;&amp;<code class="computeroutput"> <span class="special">[</span><span class="identifier">br</span><span class="special">]</span> <span class="keyword">operator</span><span class="special">&lt;&lt;(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">basic_ostream</span><span class="special">&lt;</span><span class="identifier">CharType</span><span class="special">,</span> <span class="identifier">CharTrait</span><span class="special">&gt;&amp;</span> <span class="identifier">out</span><span class="special">,</span> <span class="identifier">none_t</span><span class="special">);</span></code>
         </p>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
 <li class="listitem">
@@ -70,13 +71,13 @@
         </p>
 <p>
           <code class="computeroutput"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">CharType</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">CharTrait</span><span class="special">,</span>
-          <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span></code> <br>     <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">basic_ostream</span><span class="special">&lt;</span><span class="identifier">CharType</span><span class="special">,</span> <span class="identifier">CharTrait</span><span class="special">&gt;&amp;</span></code>
-          <br>     <code class="computeroutput"><span class="keyword">operator</span><span class="special">&gt;&gt;(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">basic_istream</span><span class="special">&lt;</span><span class="identifier">CharType</span><span class="special">,</span> <span class="identifier">CharTrait</span><span class="special">&gt;&amp;</span> <span class="identifier">in</span><span class="special">,</span> <span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;&amp;</span> <span class="identifier">v</span><span class="special">);</span></code>
+          <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span></code> <br> std::basic_ostream&lt;CharType,
+          CharTrait&gt;&amp;<code class="computeroutput"> <span class="special">[</span><span class="identifier">br</span><span class="special">]</span> <span class="keyword">operator</span><span class="special">&gt;&gt;(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">basic_istream</span><span class="special">&lt;</span><span class="identifier">CharType</span><span class="special">,</span> <span class="identifier">CharTrait</span><span class="special">&gt;&amp;</span> <span class="identifier">in</span><span class="special">,</span> <span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;&amp;</span> <span class="identifier">v</span><span class="special">);</span></code>
         </p>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
 <li class="listitem">
               <span class="bold"><strong>Requires:</strong></span> <code class="computeroutput"><span class="identifier">T</span></code>
-              is <a href="http://www.sgi.com/tech/stl/DefaultConstructible.html" target="_top"><code class="computeroutput"><span class="identifier">DefaultConstructible</span></code></a> and
+              is <a href="https://en.cppreference.com/w/cpp/named_req/DefaultConstructible" target="_top"><code class="computeroutput"><span class="identifier">DefaultConstructible</span></code></a> and
               <code class="computeroutput"><span class="identifier">MoveConstructible</span></code>.
             </li>
 <li class="listitem">
@@ -98,7 +99,8 @@
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2003-2007 Fernando Luis Cacciola Carballal<br>Copyright © 2014-2021 Andrzej Krzemieński<p>
+<td align="right"><div class="copyright-footer">Copyright © 2003-2007 Fernando Luis Cacciola Carballal<br>Copyright © 2014-2022 Andrzej
+      Krzemieński<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>

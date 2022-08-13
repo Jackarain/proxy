@@ -106,9 +106,48 @@ Generate an increasing series
 Apply a functor to the elements of a sequence
 [endsect:for_each_n]
 
+[section:transform_inclusive_scan transform_inclusive_scan]
+[*[^[link boost.algorithm.transform_inclusive_scan                   transform_inclusive_scan]    ] ]
+Transform each element in a range then combine adjacent elements to create an output range. Inclusive scaning means that the nth input is present in the nth output.
+[endsect:transform_inclusive_scan]
+
+[section:transform_exclusive_scan transform_exclusive_scan]
+[*[^[link boost.algorithm.transform_exclusive_scan                   transform_exclusive_scan]    ] ]
+Transform each element in a range then combine adjacent elements to create an output range. Exclusive scanning means that the nth input is not present in the nth output.
+[endsect:transform_exclusive_scan]
+
 [endsect:CXX17_inner_algorithms]
 
 [endsect:CXX17]
+
+
+[section:Copy Variations on Copy]
+[section:variations_on_copy]
+
+[section:copy_until                copy_until                ]
+[*[^[link header.boost.algorithm.cxx11.copy_if_hpp                   copy_until]                  ] ]
+Copy all the elements from the start of the input range to the output range until the predicate is satisfied
+[endsect:copy_until]
+
+[section:copy_while                copy_while                ]
+[*[^[link header.boost.algorithm.cxx11.copy_if_hpp                   copy_while]                  ] ]
+Copy all the elements from the start of the input range to the output range while the predicate is satisfied
+[endsect:copy_while]
+
+[section:copy_if_until             copy_if_until             ]
+[*[^[link header.boost.algorithm.cxx11.copy_if_hpp                   copy_if_until                ] ]
+Copy all elements that satisfy the element predicate from the start of the input range to the output range until the termination predicate is satisfied
+
+[endsect:copy_if_until]
+
+[section:copy_if_while             copy_if_while             ]
+[*[^[link header.boost.algorithm.cxx11.copy_if_hpp                   copy_if_while                ] ]
+Copy all elements that satisfy the element predicate from the start of the input range to the output range while the termination predicate is satisfied
+
+[endsect:copy_if_while]
+
+[endsect:variations_on_copy]
+[endsect:Copy]
 
 
 [section:Misc Other Algorithms]
@@ -204,16 +243,6 @@ See below
 
 [include apply_permutation.qbk]
 
-[section:copy_until                copy_until                ]
-[*[^[link header.boost.algorithm.cxx11.copy_if_hpp                   copy_until]                  ] ]
-Copy all the elements at the start of the input range that do not satisfy the predicate to the output range
-[endsect:copy_until]
-
-[section:copy_while                copy_while                ]
-[*[^[link header.boost.algorithm.cxx11.copy_if_hpp                   copy_while]                  ] ]
-Copy all the elements at the start of the input range that satisfy the predicate to the output range
-[endsect:copy_while]
-
 [section:iota_n                    iota_n                    ]
 [*[^[link boost.algorithm.iota_n                                     iota_n]                      ] ]
 Write a sequence of n increasing values to an output iterator
@@ -234,8 +263,6 @@ Raise a value to an integral power ([^constexpr] since C++14)
 * [*[^[link header.boost.algorithm.cxx17.exclusive_scan_hpp            exclusive_scan]              ] ]
 * [*[^[link header.boost.algorithm.cxx17.inclusive_scan_hpp            inclusive_scan]              ] ]
 * [*[^[link header.boost.algorithm.cxx17.reduce_hpp                    reduce]                      ] ]
-* [*[^[link header.boost.algorithm.cxx17.transform_exclusive_scan_hpp  transform_exclusive_scan]    ] ]
-* [*[^[link header.boost.algorithm.cxx17.transform_inclusive_scan_hpp  transform_inclusive_scan]    ] ]
 * [*[^[link header.boost.algorithm.cxx17.transform_reduce_hpp          transform_reduce]            ] ]
 
 [endsect:not_yet_documented_cxx17_algos]

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2021 Mateusz Loskot <mateusz at loskot dot net>
+# Copyright (c) 2018-2022 Mateusz Loskot <mateusz at loskot dot net>
 #
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at
@@ -11,4 +11,5 @@ libpng/1.6.37
 libtiff/4.1.0
 
 [generators]
-cmake
+CMakeDeps
+CMakeToolchain

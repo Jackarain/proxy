@@ -1,19 +1,16 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 filetype=cpp.doxygen
 /*!
 \page charset_handling Character Set Conversions
 
 \section codecvt Convenience Interface
 
-Boost.Locale provides \ref boost::locale::conv::to_utf() "to_utf", \ref boost::locale::conv::from_utf() "from_utf" and 
-\ref boost::locale::conv::utf_to_utf() "utf_to_utf" functions in 
+Boost.Locale provides \ref boost::locale::conv::to_utf() "to_utf", \ref boost::locale::conv::from_utf() "from_utf" and
+\ref boost::locale::conv::utf_to_utf() "utf_to_utf" functions in
 the \c boost::locale::conv namespace. They are simple and
 convenient functions to convert a string to and from
 UTF-8/16/32 strings and strings using other encodings.
@@ -33,16 +30,16 @@ or use std::locale as a parameter to fetch this information from it.
 It also receives a policy parameter that tells it how to behave if the
 conversion can't be performed (i.e. an illegal or unsupported character is found).
 By default this function skips all illegal characters and tries to do the best it
-can, however, it is possible ask it to throw 
-a \ref boost::locale::conv::conversion_error "conversion_error" exception 
+can, however, it is possible ask it to throw
+a \ref boost::locale::conv::conversion_error "conversion_error" exception
 by passing the \c stop flag to it:
 
 \code
-std::wstring s=to_utf<wchar_t>("\xFF\xFF","UTF-8",stop); 
+std::wstring s=to_utf<wchar_t>("\xFF\xFF","UTF-8",stop);
 // Throws because this string is illegal in UTF-8
 \endcode
 
-\section codecvt_codecvt std::codecvt facet 
+\section codecvt_codecvt std::codecvt facet
 
 Boost.Locale provides stream codepage conversion facets based on the \c std::codecvt facet.
 This allows conversion between wide-character encodings and 8-bit encodings like UTF-8, ISO-8859 or Shift-JIS.
@@ -53,7 +50,7 @@ Most of compilers provide such facets, but:
 -   Under Linux the encodings are supported only if the required locales are generated. For example
     it may be impossible to create a \c he_IL.CP1255  locale even when the \c he_IL  locale is available.
 
-Thus Boost.Locale provides an option to generate code-page conversion facets for use with 
+Thus Boost.Locale provides an option to generate code-page conversion facets for use with
 Boost.Iostreams filters or \c std::wfstream. For example:
 
 \code
@@ -79,7 +76,7 @@ stream:
 
 \code
 #include <boost/iostreams/stream.hpp>
-#include <boost/iostreams/categories.hpp> 
+#include <boost/iostreams/categories.hpp>
 #include <boost/iostreams/code_converter.hpp>
 
 #include <boost/locale.hpp>
@@ -102,7 +99,7 @@ public:
 
 
 int main()
-{ 
+{
     // the device that converts wide characters
     // to narrow
     typedef io::code_converter<consumer> converter_device;
@@ -112,7 +109,7 @@ int main()
 
     consumer cons;
     // setup out converter to work
-    // with he_IL.UTF-8 locale 
+    // with he_IL.UTF-8 locale
     converter_device dev;
     boost::locale::generator gen;
     dev.imbue(gen("he_IL.UTF-8"));
@@ -121,7 +118,7 @@ int main()
     stream.open(dev);
     // Now wide characters that are written
     // to the stream would be given to
-    // our consumer as narrow characters 
+    // our consumer as narrow characters
     // in UTF-8 encoding
     stream << L"שלום" << std::flush;
 }
@@ -139,13 +136,11 @@ ISO-8859, and Shift-JIS, but not with stateful encodings like UTF-7 or SCSU.
 
 \b Recommendation: Prefer the Unicode UTF-8 encoding for \c char based strings and files in your application.
 
-\note 
+\note
 
-The implementation of codecvt for single byte encodings like ISO-8859-X and for UTF-8 is very efficent
+The implementation of codecvt for single byte encodings like ISO-8859-X and for UTF-8 is very efficient
 and would allow fast conversion of the content, however its performance may be sub-optimal for
 double-width encodings like Shift-JIS, due to the stateless problem described above.
 
 
 */
-
-

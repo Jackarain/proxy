@@ -66,7 +66,7 @@ Quite a lot of people expect that when an object that contains a value is moved 
 
 [section Mixed relational comparisons]
 
-Because `T` is convertible to `optional<T>` and because `optional<T>` is __SGI_LESS_THAN_COMPARABLE__ when `T` is __SGI_LESS_THAN_COMPARABLE__,
+Because `T` is convertible to `optional<T>` and because `optional<T>` is __STD_LESS_THAN_COMPARABLE__ when `T` is __STD_LESS_THAN_COMPARABLE__,
 you can sometimes get an unexpected runtime result where you would rather expect a compiler error:
 
     optional<double> Flight_plan::weight(); // sometimes no weight can be returned

@@ -82,3 +82,5 @@ run test_return_function.cpp return_function/<cxxstd>14 : : : <link>shared $(che
 run test_return_function.cpp return_function/<cxxstd>14 : : : <link>static $(check14) : return_function_static_14 ;
 
 run quick.cpp ;
+
+compile issue_42.cpp ;

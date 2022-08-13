@@ -61,9 +61,9 @@ Calculates the buffer of a geometry.
 The free function buffer calculates the buffer (a polygon being the spatial point set collection within a specified maximum distance from a geometry) of a geometry. 
 
 [heading Synopsis]
-``template<typename GeometryIn, typename MultiPolygon, typename DistanceStrategy, typename SideStrategy,
+``template<typename GeometryIn, typename GeometryOut, typename DistanceStrategy, typename SideStrategy,
          typename JoinStrategy, typename EndStrategy, typename PointStrategy>
-void buffer(GeometryIn const & geometry_in, MultiPolygon & geometry_out, DistanceStrategy const & distance_strategy,
+void buffer(GeometryIn const & geometry_in, GeometryOut & geometry_out, DistanceStrategy const & distance_strategy,
             SideStrategy const & side_strategy, JoinStrategy const & join_strategy, EndStrategy const & end_strategy,
             PointStrategy const & point_strategy)``
 
@@ -72,7 +72,7 @@ void buffer(GeometryIn const & geometry_in, MultiPolygon & geometry_out, Distanc
 [table
 [[Type] [Concept] [Name] [Description] ]
 [[GeometryIn const &] [Any type fulfilling a Geometry Concept ] [geometry_in] [A model of the specified concept ]]
-[[MultiPolygon &] [A type fulfilling the MultiPolygon Concept ] [geometry_out] [output multi polygon (or std:: collection of polygons), will contain a buffered version of the input geometry ]]
+[[GeometryOut &] [A type fulfilling the GeometryOut Concept ] [geometry_out] [output geometry, e.g. multi polygon, will contain a buffered version of the input geometry ]]
 [[DistanceStrategy const &] [A strategy defining distance (or radius) ] [distance_strategy] [The distance strategy to be used ]]
 [[SideStrategy const &] [A strategy defining creation along sides ] [side_strategy] [The side strategy to be used ]]
 [[JoinStrategy const &] [A strategy defining creation around convex corners ] [join_strategy] [The join strategy to be used ]]

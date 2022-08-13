@@ -6,7 +6,7 @@
         "Hailin Jin",
         "Christian Henning"
     ],
-    "description": "(C++11) Generic Image Library",
+    "description": "(C++14) Generic Image Library",
     "category": [
         "Algorithms",
         "Containers",
@@ -18,5 +18,6 @@
         "Stefan Seefeld <stefan -at- seefeld.name>",
         "Mateusz Loskot <mateusz -at- loskot.net>",
         "Pranam Lashkari <plashkari628 -at- gmail.com>"
-    ]
+    ],
+    "cxxstd": "14"
 }

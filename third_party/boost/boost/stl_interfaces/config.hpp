@@ -10,7 +10,8 @@
 #include <iterator>
 
 
-#if defined(__cpp_lib_concepts) && !defined(BOOST_STL_INTERFACES_DISABLE_CONCEPTS)
+#if defined(__cpp_lib_concepts) && defined(__cpp_lib_ranges) &&                \
+    !defined(BOOST_STL_INTERFACES_DISABLE_CONCEPTS)
 #define BOOST_STL_INTERFACES_USE_CONCEPTS 1
 #else
 #define BOOST_STL_INTERFACES_USE_CONCEPTS 0

@@ -29,7 +29,7 @@ foreach(_name
   set(_target test_ext_toolbox_${_name})
 
   add_executable(${_target} "")
-  target_sources(${_target} PRIVATE ${_name})
+  target_sources(${_target} PRIVATE "${_name}.cpp")
   target_link_libraries(${_target}
     PRIVATE
       gil_compile_options
@@ -50,7 +50,7 @@ foreach(_name
   set(_target test_ext_toolbox_${_name})
 
   add_executable(${_target} "")
-  target_sources(${_target} PRIVATE ${_name})
+  target_sources(${_target} PRIVATE "${_name}.cpp")
   target_link_libraries(${_target}
     PRIVATE
       gil_compile_options

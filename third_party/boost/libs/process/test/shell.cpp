@@ -7,6 +7,7 @@
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+
 #define BOOST_TEST_MAIN
 #define BOOST_TEST_IGNORE_SIGCHLD
 #include <boost/test/included/unit_test.hpp>
@@ -22,6 +23,7 @@
 #include <boost/process/shell.hpp>
 
 namespace bp = boost::process;
+
 
 BOOST_AUTO_TEST_CASE(shell_simple, *boost::unit_test::timeout(5))
 {
@@ -48,6 +50,8 @@ BOOST_AUTO_TEST_CASE(shell_simple, *boost::unit_test::timeout(5))
     BOOST_TEST_CHECKPOINT("Finished read");
 
     BOOST_CHECK_EQUAL(s, "hello");
+    c.wait();
+    BOOST_CHECK_EQUAL(c.exit_code(), 0);
 }
 
 BOOST_AUTO_TEST_CASE(shell_error, *boost::unit_test::timeout(5))
@@ -61,3 +65,4 @@ BOOST_AUTO_TEST_CASE(shell_error, *boost::unit_test::timeout(5))
     c2.wait();
     BOOST_CHECK(c2.exit_code() != 0);
 }
+

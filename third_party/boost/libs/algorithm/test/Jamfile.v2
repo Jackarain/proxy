@@ -29,6 +29,7 @@ alias unit_test_framework
 
 # Misc tests
      [ run clamp_test.cpp unit_test_framework         : : : : clamp_test ]
+     [ run is_clamped_test.cpp unit_test_framework    : : : : is_clamped_test ]
      [ run power_test.cpp unit_test_framework         : : : : power_test ]
      [ compile-fail power_fail1.cpp  : : : : ]
 
@@ -68,6 +69,7 @@ alias unit_test_framework
      [ run hex_test2.cpp unit_test_framework         : : : : hex_test2 ]
      [ run hex_test3.cpp unit_test_framework         : : : : hex_test3 ]
      [ run hex_test4.cpp unit_test_framework         : : : : hex_test4 ]
+     [ run mclow.cpp unit_test_framework             : : : : mclow     ]
      [ compile-fail hex_fail1.cpp ]
 
 # Gather tests

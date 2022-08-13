@@ -27,7 +27,7 @@
 <a name="geometry.reference.algorithms.simplify.simplify_3"></a><a class="link" href="simplify_3.html" title="simplify">simplify</a>
 </h5></div></div></div>
 <p>
-            <a class="indexterm" name="idm59939"></a>
+            <a class="indexterm" name="idm59942"></a>
 Simplify a geometry.
           </p>
 <h6>
@@ -36,8 +36,8 @@ Simplify a geometry.
           </h6>
 <p>
 </p>
-<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Geometry</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Distance</span><span class="special">&gt;</span>
-<span class="keyword">void</span> <span class="identifier">simplify</span><span class="special">(</span><span class="identifier">Geometry</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">geometry</span><span class="special">,</span> <span class="identifier">Geometry</span> <span class="special">&amp;</span> <span class="identifier">out</span><span class="special">,</span> <span class="identifier">Distance</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">max_distance</span><span class="special">)</span></pre>
+<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Geometry</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">GeometryOut</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Distance</span><span class="special">&gt;</span>
+<span class="keyword">void</span> <span class="identifier">simplify</span><span class="special">(</span><span class="identifier">Geometry</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">geometry</span><span class="special">,</span> <span class="identifier">GeometryOut</span> <span class="special">&amp;</span> <span class="identifier">out</span><span class="special">,</span> <span class="identifier">Distance</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">max_distance</span><span class="special">)</span></pre>
 <p>
           </p>
 <h6>
@@ -99,12 +99,12 @@ Simplify a geometry.
 <tr>
 <td>
                     <p>
-                      Geometry &amp;
+                      GeometryOut &amp;
                     </p>
                   </td>
 <td>
                     <p>
-                      Any type fulfilling a Geometry Concept
+                      The output geometry
                     </p>
                   </td>
 <td>
@@ -173,7 +173,7 @@ Simplify a geometry.
 </tr>
 <tr><td align="left" valign="top"><p>
               PostGIS contains an algorithm with the same name and the same functionality.
-              See the <a href="http://www.postgis.org/docs/ST_Simplify.html" target="_top">PostGIS
+              See the <a href="https://postgis.net/docs/ST_Simplify.html" target="_top">PostGIS
               documentation</a>.
             </p></td></tr>
 </table></div>

@@ -15,6 +15,7 @@
     "std": [ "proposal" ],    
     "category": [
       "Domain", "System"
-    ]
+    ],
+    "cxxstd": "03"
   }
 ]

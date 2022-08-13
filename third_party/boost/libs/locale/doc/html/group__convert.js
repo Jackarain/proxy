@@ -10,9 +10,9 @@ var group__convert =
       ] ]
     ] ],
     [ "converter", "classboost_1_1locale_1_1converter.html", [
-      [ "converter", "classboost_1_1locale_1_1converter.html#aa9bd91f48f4ce7b6c270c5281c8b0313", null ],
-      [ "convert", "classboost_1_1locale_1_1converter.html#a85ce9bf935c59b2fdd196ed40a6a5f85", null ],
-      [ "id", "classboost_1_1locale_1_1converter.html#ae18f930e621fbe9848d08a91138f37e1", null ]
+      [ "converter", "classboost_1_1locale_1_1converter.html#aba25fd4a18937543823cd61bef72c628", null ],
+      [ "convert", "classboost_1_1locale_1_1converter.html#a38dcc87504308ad5a51f3190e3c0da4b", null ],
+      [ "id", "classboost_1_1locale_1_1converter.html#a0ab17b265161bb2c5d7a233710d2740b", null ]
     ] ],
     [ "norm_type", "group__convert.html#ga6a595a415b83b8a0c8f14c34eb66cc9f", [
       [ "norm_nfd", "group__convert.html#gga6a595a415b83b8a0c8f14c34eb66cc9fa6648d0eabb931f2e9d258570b297e98f", null ],

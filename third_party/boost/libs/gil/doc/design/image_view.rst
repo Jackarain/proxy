@@ -151,13 +151,13 @@ compatible.
 
 .. seealso::
 
-   - `RandomAccessNDImageViewConcept<View> <reference/structboost_1_1gil_1_1_random_access_n_d_image_view_concept.html>`_
-   - `MutableRandomAccessNDImageViewConcept<View> <reference/structboost_1_1gil_1_1_mutable_random_access_n_d_image_view_concept.html>`_
-   - `RandomAccess2DImageViewConcept<View> <reference/structboost_1_1gil_1_1_random_access2_d_image_view_concept.html>`_
-   - `MutableRandomAccess2DImageViewConcept<View> <reference/structboost_1_1gil_1_1_mutable_random_access2_d_image_view_concept.html>`_
-   - `ImageViewConcept<View> <reference/structboost_1_1gil_1_1_image_view_concept.html>`_
-   - `MutableImageViewConcept<View> <reference/structboost_1_1gil_1_1_mutable_image_view_concept.html>`_
-   - `ViewsCompatibleConcept<View1,View2> <reference/structboost_1_1gil_1_1_views_compatible_concept.html>`_
+   - `RandomAccessNDImageViewConcept<View> <../reference/structboost_1_1gil_1_1_random_access_n_d_image_view_concept.html>`_
+   - `MutableRandomAccessNDImageViewConcept<View> <../reference/structboost_1_1gil_1_1_mutable_random_access_n_d_image_view_concept.html>`_
+   - `RandomAccess2DImageViewConcept<View> <../reference/structboost_1_1gil_1_1_random_access2_d_image_view_concept.html>`_
+   - `MutableRandomAccess2DImageViewConcept<View> <../reference/structboost_1_1gil_1_1_mutable_random_access2_d_image_view_concept.html>`_
+   - `ImageViewConcept<View> <../reference/structboost_1_1gil_1_1_image_view_concept.html>`_
+   - `MutableImageViewConcept<View> <../reference/structboost_1_1gil_1_1_mutable_image_view_concept.html>`_
+   - `ViewsCompatibleConcept<View1,View2> <../reference/structboost_1_1gil_1_1_views_compatible_concept.html>`_
 
 Models
 ------

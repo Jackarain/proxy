@@ -64,8 +64,15 @@ struct P2 {
 struct P3 {
     typedef int element_type;
 
+#if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
     template<class>
-    struct rebind { };
+    using rebind = P3;
+#else
+    template<class>
+    struct rebind {
+        typedef P3 other;
+    };
+#endif
 };
 
 template<class T>

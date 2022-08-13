@@ -43,14 +43,18 @@
 </pre>
 <p>
         This works because <code class="computeroutput"><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code>
-        is <a href="http://www.sgi.com/tech/stl/LessThanComparable.html" target="_top"><code class="computeroutput"><span class="identifier">LessThanComparable</span></code></a> whenever <code class="computeroutput"><span class="identifier">T</span></code> is <a href="http://www.sgi.com/tech/stl/LessThanComparable.html" target="_top"><code class="computeroutput"><span class="identifier">LessThanComparable</span></code></a>. In this case
+        is <a href="https://en.cppreference.com/w/cpp/named_req/LessThanComparable" target="_top"><code class="computeroutput"><span class="identifier">LessThanComparable</span></code></a> whenever <code class="computeroutput"><span class="identifier">T</span></code> is <a href="https://en.cppreference.com/w/cpp/named_req/LessThanComparable" target="_top"><code class="computeroutput"><span class="identifier">LessThanComparable</span></code></a>. In this case
         the state of being uninitialized is treated as a yet another value of <code class="computeroutput"><span class="identifier">T</span></code>, which is compared less than any value
-        of <code class="computeroutput"><span class="identifier">T</span></code>.
+        of <code class="computeroutput"><span class="identifier">T</span></code>. <code class="computeroutput"><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code>
+        can also be stored as a key in <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">unordered_map</span></code>
+        and <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">unordered_set</span></code> as it provides specializations
+        for <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">hash</span></code>.
       </p>
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2003-2007 Fernando Luis Cacciola Carballal<br>Copyright © 2014-2021 Andrzej Krzemieński<p>
+<td align="right"><div class="copyright-footer">Copyright © 2003-2007 Fernando Luis Cacciola Carballal<br>Copyright © 2014-2022 Andrzej
+      Krzemieński<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>

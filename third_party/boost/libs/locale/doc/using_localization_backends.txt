@@ -1,12 +1,9 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 filetype=cpp.doxygen
 /*!
 \page using_localization_backends Using Localization Backends
 
@@ -17,7 +14,7 @@ libraries, and ICU is by no means a small library.
 
 Boost.Locale provides an option to use non-ICU based localization
 backends. Although usually less powerful, these often provide all you need:
-message formatting, currency, date, time, number formatting, basic collation and 
+message formatting, currency, date, time, number formatting, basic collation and
 case manipulation. They are implemented using the standard OS API or a C or C++ library.
 
 \section when_to_use_non_icu_backends When to use non-ICU backends
@@ -83,7 +80,7 @@ problems with this.
 \note
 
 - If you using GCC compiler under Windows you need GCC-4.x series to use it, GCC-3.4 is not supported
-- Only UTF-8 as narrow locale encoding and UTF-16 as wide encoding are supported. 
+- Only UTF-8 as narrow locale encoding and UTF-16 as wide encoding are supported.
 
 \section supported_features_by_backends Supported Features
 
@@ -161,13 +158,13 @@ via the boost::locale::localization_backend_manager::global static member functi
 For example:
 
 \code
-    localization_backend_manager my = localization_backend_manager::global(); 
+    localization_backend_manager my = localization_backend_manager::global();
     // Get global backend
 
-    my.select("std"); 
+    my.select("std");
     // select std backend as default
 
-    generator gen(my); 
+    generator gen(my);
     // create a generator that uses this backend.
 
     localization_backend_manager::global(my);
@@ -182,15 +179,13 @@ for example \c icu for one kind of operation and \c std
 for all others:
 
 \code
-    localization_backend_manager my = localization_backend_manager::global(); 
+    localization_backend_manager my = localization_backend_manager::global();
     // Get global backend
 
-    my.select("std"); 
+    my.select("std");
     // select std backend as default for all categories
-    my.select("icu",boundary_facet); 
+    my.select("icu",boundary_facet);
     // select icu backend for boundary analysis (since it is not supported by \c std)
 \endcode
 
 */
-
-

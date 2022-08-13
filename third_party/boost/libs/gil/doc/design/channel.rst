@@ -86,11 +86,11 @@ such as support for arithmetic operations.
 
 .. seealso::
 
-  - `ChannelConcept<T> <reference/structboost_1_1gil_1_1_channel_concept.html>`_
-  - `ChannelValueConcept<T> <reference/structboost_1_1gil_1_1_channel_value_concept.html>`_
-  - `MutableChannelConcept<T> <reference/structboost_1_1gil_1_1_mutable_channel_concept.html>`_
-  - `ChannelsCompatibleConcept<T1,T2> <reference/structboost_1_1gil_1_1_channels_compatible_concept.html>`_
-  - `ChannelConvertibleConcept<SrcChannel,DstChannel> <reference/structboost_1_1gil_1_1_channel_convertible_concept.html>`_
+  - `ChannelConcept<T> <../reference/structboost_1_1gil_1_1_channel_concept.html>`_
+  - `ChannelValueConcept<T> <../reference/structboost_1_1gil_1_1_channel_value_concept.html>`_
+  - `MutableChannelConcept<T> <../reference/structboost_1_1gil_1_1_mutable_channel_concept.html>`_
+  - `ChannelsCompatibleConcept<T1,T2> <../reference/structboost_1_1gil_1_1_channels_compatible_concept.html>`_
+  - `ChannelConvertibleConcept<SrcChannel,DstChannel> <../reference/structboost_1_1gil_1_1_channel_convertible_concept.html>`_
 
 Models
 ------

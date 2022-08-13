@@ -1,10 +1,8 @@
 //
-//  Copyright (c) 2015 Artyom Beilis (Tonkikh)
+// Copyright (c) 2015 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/nowide/utf8_codecvt.hpp>
 
@@ -334,7 +332,7 @@ void test_codecvt_err()
         char* to = buf;
         char* to_end = buf + 32;
         char* to_next = to;
-        wchar_t err_buf[3] = {'1', 0xDC9E, 0}; // second surrogate not works both for UTF-16 and 32
+        wchar_t err_buf[] = {'1', 0xDC9E, 0}; // second value is invalid for UTF-16 and 32
         const wchar_t* err_utf = err_buf;
         {
             std::mbstate_t mb{};
@@ -344,7 +342,7 @@ void test_codecvt_err()
             TEST_EQ(cvt.out(mb, from, from_end, from_next, to, to_end, to_next), cvt_type::ok);
             TEST(from_next == from + 2);
             TEST(to_next == to + 4);
-            TEST_EQ(std::string(to, to_next), "1" + boost::nowide::narrow(wreplacement_str));
+            TEST_EQ(std::string(to, to_next), boost::nowide::narrow(err_buf));
         }
     }
 }
@@ -411,7 +409,7 @@ void test_codecvt_subst()
     run_all(codecvt_to_wide, codecvt_to_narrow);
 }
 
-// coverity [root_function]
+// coverity[root_function]
 void test_main(int, char**, char**)
 {
     test_codecvt_basic();

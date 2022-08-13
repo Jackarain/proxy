@@ -3,8 +3,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef BOOST_MATH_BN_MPFI_HPP
-#define BOOST_MATH_BN_MPFI_HPP
+#ifndef BOOST_MP_MPFI_HPP
+#define BOOST_MP_MPFI_HPP
 
 #include <algorithm>
 #include <cmath>
@@ -136,7 +136,7 @@ struct mpfi_float_imp
    {
       if (this != &o)
       {
-         if (m_data[0].left._mpfr_d == 0)
+         if (m_data[0].left._mpfr_d == nullptr)
             mpfi_init2(m_data, preserve_source_precision() ? mpfi_get_prec(o.m_data) : boost::multiprecision::detail::digits10_2_2(get_default_precision()));
          else if (preserve_source_precision() && (mpfi_get_prec(o.data()) != mpfi_get_prec(data())))
          {
@@ -159,7 +159,7 @@ struct mpfi_float_imp
 #ifdef _MPFR_H_HAVE_INTMAX_T
    mpfi_float_imp& operator=(unsigned long long i)
    {
-      if (m_data[0].left._mpfr_d == 0)
+      if (m_data[0].left._mpfr_d == nullptr)
          mpfi_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
       mpfr_set_uj(left_data(), i, GMP_RNDD);
       mpfr_set_uj(right_data(), i, GMP_RNDU);
@@ -167,7 +167,7 @@ struct mpfi_float_imp
    }
    mpfi_float_imp& operator=(long long i)
    {
-      if (m_data[0].left._mpfr_d == 0)
+      if (m_data[0].left._mpfr_d == nullptr)
          mpfi_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
       mpfr_set_sj(left_data(), i, GMP_RNDD);
       mpfr_set_sj(right_data(), i, GMP_RNDU);
@@ -176,7 +176,7 @@ struct mpfi_float_imp
 #else
    mpfi_float_imp& operator=(unsigned long long i)
    {
-      if (m_data[0].left._mpfr_d == 0)
+      if (m_data[0].left._mpfr_d == nullptr)
          mpfi_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
       unsigned long long mask  = ((((1uLL << (std::numeric_limits<unsigned long>::digits - 1)) - 1) << 1) | 1u);
       unsigned               shift = 0;
@@ -197,7 +197,7 @@ struct mpfi_float_imp
    }
    mpfi_float_imp& operator=(long long i)
    {
-      if (m_data[0].left._mpfr_d == 0)
+      if (m_data[0].left._mpfr_d == nullptr)
          mpfi_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
       bool neg = i < 0;
       *this    = boost::multiprecision::detail::unsigned_abs(i);
@@ -210,7 +210,7 @@ struct mpfi_float_imp
 #ifdef BOOST_HAS_INT128
    mpfi_float_imp& operator=(uint128_type i)
    {
-      if (m_data[0].left._mpfr_d == 0)
+      if (m_data[0].left._mpfr_d == nullptr)
          mpfi_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
       constexpr uint128_type mask = ((((static_cast<uint128_type>(1u) << (std::numeric_limits<unsigned long>::digits - 1)) - 1) << 1) | 1u);
       unsigned               shift = 0;
@@ -231,7 +231,7 @@ struct mpfi_float_imp
    }
    mpfi_float_imp& operator=(int128_type i)
    {
-      if (m_data[0].left._mpfr_d == 0)
+      if (m_data[0].left._mpfr_d == nullptr)
          mpfi_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
       bool neg = i < 0;
       *this = boost::multiprecision::detail::unsigned_abs(i);
@@ -242,28 +242,28 @@ struct mpfi_float_imp
 #endif
    mpfi_float_imp& operator=(unsigned long i)
    {
-      if (m_data[0].left._mpfr_d == 0)
+      if (m_data[0].left._mpfr_d == nullptr)
          mpfi_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
       mpfi_set_ui(m_data, i);
       return *this;
    }
    mpfi_float_imp& operator=(long i)
    {
-      if (m_data[0].left._mpfr_d == 0)
+      if (m_data[0].left._mpfr_d == nullptr)
          mpfi_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
       mpfi_set_si(m_data, i);
       return *this;
    }
    mpfi_float_imp& operator=(double d)
    {
-      if (m_data[0].left._mpfr_d == 0)
+      if (m_data[0].left._mpfr_d == nullptr)
          mpfi_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
       mpfi_set_d(m_data, d);
       return *this;
    }
    mpfi_float_imp& operator=(long double a)
    {
-      if (m_data[0].left._mpfr_d == 0)
+      if (m_data[0].left._mpfr_d == nullptr)
          mpfi_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
       mpfr_set_ld(left_data(), a, GMP_RNDD);
       mpfr_set_ld(right_data(), a, GMP_RNDU);
@@ -273,7 +273,7 @@ struct mpfi_float_imp
    mpfi_float_imp& operator=(float128_type a)
    {
       BOOST_MP_FLOAT128_USING
-      if (m_data[0].left._mpfr_d == 0)
+      if (m_data[0].left._mpfr_d == nullptr)
          mpfi_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
 
       if (a == 0)
@@ -323,7 +323,7 @@ struct mpfi_float_imp
    {
       using default_ops::eval_fpclassify;
 
-      if (m_data[0].left._mpfr_d == 0)
+      if (m_data[0].left._mpfr_d == nullptr)
          mpfi_init2(m_data, multiprecision::detail::digits10_2_2(digits10 ? digits10 : (unsigned)get_default_precision()));
 
       if (s && (*s == '{'))
@@ -333,7 +333,7 @@ struct mpfi_float_imp
          const char*                  p = ++s;
          while (*p && (*p != ',') && (*p != '}'))
             ++p;
-         part.assign(s + 1, p);
+         part.assign(s, p);
          a = part.c_str();
          s = p;
          if (*p && (*p != '}'))

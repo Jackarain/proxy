@@ -30,26 +30,32 @@
 <p>
             Construct a parser from another parser, changing the Body type.
           </p>
-<h7><a name="beast.ref.boost__beast__http__parser.parser.overload5.h0"></a>
+<h6>
+<a name="beast.ref.boost__beast__http__parser.parser.overload5.h0"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__http__parser.parser.overload5.synopsis"></a></span><a class="link" href="overload5.html#beast.ref.boost__beast__http__parser.parser.overload5.synopsis">Synopsis</a>
-          </h7><pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
+          </h6>
+<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
     <span class="keyword">class</span> <span class="identifier">OtherBody</span><span class="special">,</span>
     <span class="keyword">class</span><span class="special">...</span> <span class="identifier">Args</span><span class="special">&gt;</span>
 <span class="identifier">parser</span><span class="special">(</span>
     <span class="identifier">parser</span><span class="special">&lt;</span> <span class="identifier">isRequest</span><span class="special">,</span> <span class="identifier">OtherBody</span><span class="special">,</span> <span class="identifier">Allocator</span> <span class="special">&gt;&amp;&amp;</span> <span class="identifier">parser</span><span class="special">,</span>
     <span class="identifier">Args</span><span class="special">&amp;&amp;...</span> <span class="identifier">args</span><span class="special">);</span>
 </pre>
-<h7><a name="beast.ref.boost__beast__http__parser.parser.overload5.h1"></a>
+<h6>
+<a name="beast.ref.boost__beast__http__parser.parser.overload5.h1"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__http__parser.parser.overload5.description"></a></span><a class="link" href="overload5.html#beast.ref.boost__beast__http__parser.parser.overload5.description">Description</a>
-          </h7><p>
+          </h6>
+<p>
             This constructs a new parser by move constructing the header from another
             parser with a different body type. The constructed-from parser must not
             have any parsed body octets or initialized <span class="emphasis"><em>BodyReader</em></span>,
             otherwise an exception is generated.
           </p>
-<h7><a name="beast.ref.boost__beast__http__parser.parser.overload5.h2"></a>
+<h6>
+<a name="beast.ref.boost__beast__http__parser.parser.overload5.h2"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__http__parser.parser.overload5.example"></a></span><a class="link" href="overload5.html#beast.ref.boost__beast__http__parser.parser.overload5.example">Example</a>
-          </h7><pre class="programlisting"><span class="comment">// Deferred body type commitment</span>
+          </h6>
+<pre class="programlisting"><span class="comment">// Deferred body type commitment</span>
 <span class="identifier">request_parser</span><span class="special">&lt;</span><span class="identifier">empty_body</span><span class="special">&gt;</span> <span class="identifier">req0</span><span class="special">;</span>
 <span class="special">...</span>
 <span class="identifier">request_parser</span><span class="special">&lt;</span><span class="identifier">string_body</span><span class="special">&gt;</span> <span class="identifier">req</span><span class="special">{</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">move</span><span class="special">(</span><span class="identifier">req0</span><span class="special">)};</span>
@@ -58,9 +64,11 @@
             If an exception is thrown, the state of the constructed-from parser is
             undefined.
           </p>
-<h7><a name="beast.ref.boost__beast__http__parser.parser.overload5.h3"></a>
+<h6>
+<a name="beast.ref.boost__beast__http__parser.parser.overload5.h3"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__http__parser.parser.overload5.parameters"></a></span><a class="link" href="overload5.html#beast.ref.boost__beast__http__parser.parser.overload5.parameters">Parameters</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>
@@ -105,9 +113,11 @@
 </tr>
 </tbody>
 </table></div>
-<h7><a name="beast.ref.boost__beast__http__parser.parser.overload5.h4"></a>
+<h6>
+<a name="beast.ref.boost__beast__http__parser.parser.overload5.h4"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__http__parser.parser.overload5.exceptions"></a></span><a class="link" href="overload5.html#beast.ref.boost__beast__http__parser.parser.overload5.exceptions">Exceptions</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>
@@ -138,9 +148,11 @@
                   </td>
 </tr></tbody>
 </table></div>
-<h7><a name="beast.ref.boost__beast__http__parser.parser.overload5.h5"></a>
+<h6>
+<a name="beast.ref.boost__beast__http__parser.parser.overload5.h5"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__http__parser.parser.overload5.remarks"></a></span><a class="link" href="overload5.html#beast.ref.boost__beast__http__parser.parser.overload5.remarks">Remarks</a>
-          </h7><p>
+          </h6>
+<p>
             This function participates in overload resolution only if the other parser
             uses a different body type.
           </p>

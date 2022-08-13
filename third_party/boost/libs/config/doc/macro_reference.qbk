@@ -966,6 +966,10 @@ and must be defined for all translation units in the program, including Boost li
 This macro will no longer have any effect once an official Microsoft
 release supports the CTP features.
 ]]
+[[`BOOST_NULLPTR`][
+If `BOOST_NO_CXX11_NULLPTR` is not defined (i.e. C++11 compliant compilers), expands to `nullptr`,
+otherwise expands to `0`.
+]]
 ]
 
 [endsect]
@@ -1037,6 +1041,7 @@ that are not yet supported by a particular compiler or library.
 [[`BOOST_NO_CXX17_ITERATOR_TRAITS`][The compiler does not support SFINAE-friendly `std::iterator_traits`.]]
 [[`BOOST_NO_CXX17_IF_CONSTEXPR`][The compiler does not support `if constexpr`.]]
 [[`BOOST_NO_CXX17_INLINE_VARIABLES`][The compiler does not support `inline` variables.]]
+[[`BOOST_NO_CXX17_DEDUCTION_GUIDES`][The compiler does not support class template argument deduction (CTAD) guides.]]
 ]
 
 [endsect]
@@ -1066,7 +1071,7 @@ that are not yet supported by a particular compiler or library.
 [[Macro ][Description ]]
 [[`BOOST_NO_CXX20_HDR_BARRIER`][The compiler does not support the header `<barrier>`.]]
 [[`BOOST_NO_CXX20_HDR_FORMAT`][The compiler does not support the header `<format>`.]]
-[[`BOOST_NO_CXX20_HDR_SOURCE_LOCATION`][The compiler does not support the header `<format>`.]]
+[[`BOOST_NO_CXX20_HDR_SOURCE_LOCATION`][The compiler does not support the header `<source_location>`.]]
 [[`BOOST_NO_CXX20_HDR_BIT`][The compiler does not support the header `<bit>`.]]
 [[`BOOST_NO_CXX20_HDR_LATCH`][The compiler does not support the header `<latch>`.]]
 [[`BOOST_NO_CXX20_HDR_SPAN`][The compiler does not support the header `<span>`.]]
@@ -1074,7 +1079,7 @@ that are not yet supported by a particular compiler or library.
 [[`BOOST_NO_CXX20_HDR_NUMBERS`][The compiler does not support the header `<numbers>`.]]
 [[`BOOST_NO_CXX20_HDR_STOP_TOKEN`][The compiler does not support the header `<stop_token>`.]]
 [[`BOOST_NO_CXX20_HDR_CONCEPTS`][The compiler does not support the header `<concepts>`.]]
-[[`BOOST_NO_CXX20_HDR_RANGES`][The compiler does not support the header `<range>`.]]
+[[`BOOST_NO_CXX20_HDR_RANGES`][The compiler does not support the header `<ranges>`.]]
 [[`BOOST_NO_CXX20_HDR_SYNCSTREAM`][The compiler does not support the header `<syncstream>`.]]
 [[`BOOST_NO_CXX20_HDR_COROUTINE`][The compiler does not support the header `<coroutine>`.]]
 [[`BOOST_NO_CXX20_HDR_SEMAPHORE`][The compiler does not support the header `<semaphore>`.]]

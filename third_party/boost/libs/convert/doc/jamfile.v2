@@ -1,6 +1,6 @@
 # Convert documentation Jamfile
 
-#  Copyright (c) Vladimir Batov 2009-2020
+#  Copyright (c) Vladimir Batov 2009-2022
 #  Distributed under the Boost Software License, Version 1.0.
 #  See copy at http://www.boost.org/LICENSE_1_0.txt.
 
@@ -36,7 +36,7 @@ else
 
 doxygen convert_reference
   :
-    [ glob $(here)/../../../boost/convert.hpp $(here)/../../../boost/make_default.hpp $(here)/../../../boost/convert/*.hpp ]
+    [ glob $(here)/../include/boost/convert.hpp $(here)/../include/boost/make_default.hpp $(here)/../include/boost/convert/*.hpp ]
   :
     <doxygen:param>PROJECT_NAME="CONVERT"
     <doxygen:param>PROJECT_NUMBER=3

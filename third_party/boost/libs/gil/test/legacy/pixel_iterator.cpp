@@ -19,6 +19,11 @@
 #include <type_traits>
 #include <vector>
 
+#if defined(BOOST_CLANG)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
+#endif
+
 using namespace boost::gil;
 using namespace std;
 
@@ -353,3 +358,8 @@ int main()
         return EXIT_FAILURE;
     }
 }
+
+#if defined(BOOST_CLANG)
+#pragma clang diagnostic pop
+#endif
+

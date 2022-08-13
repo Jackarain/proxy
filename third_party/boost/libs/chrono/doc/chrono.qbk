@@ -775,7 +775,7 @@ You can use __duration_cast`<>` to convert the __duration into whatever units yo
 
     // d now holds the number of milliseconds from start to end.
 
-    std::cout << ms.count() << "ms\n";
+    std::cout << d.count() << "ms\n";
 
 We can convert to __nanoseconds, or some integral-based duration which __nanoseconds will always exactly convert to, then __duration_cast`<>` is unnecessary:
 
@@ -808,7 +808,7 @@ If you need to use __duration_cast`<>`, but want to round up, instead of down wh
     typedef boost::chrono::__milliseconds ms;
     ms d = round_up<ms>(end - start);
     // d now holds the number of milliseconds from start to end, rounded up.
-    std::cout << ms.count() << "ms\n";
+    std::cout << d.count() << "ms\n";
 
 [endsect]
 
@@ -1199,7 +1199,7 @@ You can use __thread_clock whenever you want to measure the time spent by the cu
     typedef boost::chrono::__milliseconds ms;
     ms d = boost::chrono::__thread_clock::now() - start;
     // d now holds the number of milliseconds from start to end.
-    std::cout << ms.count() << "ms\n";
+    std::cout << d.count() << "ms\n";
 
 If you need seconds with a floating-point representation you can do:
 

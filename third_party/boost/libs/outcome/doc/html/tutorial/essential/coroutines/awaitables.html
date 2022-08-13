@@ -18,14 +18,14 @@ Experimental Outcome). This adds into namespace <code>BOOST_OUTCOME_V2_NAMESPACE
 for returning from a Coroutinised function:</p>
 
 <ul>
-<li><a href="../../../reference/types/awaitables/eager.html" class="api-reference"><code>eager&lt;T&gt;</code></a>
+<li><a href="../../../reference/types/awaitables/eager.html" class="api-reference"><code>eager&lt;T, Executor = void&gt;</code></a>
 
 
 <p>An eagerly evaluated Coroutine: invoking <code>co_await</code> upon a function returning one
 of these immediately begins the execution of the function now. If the function never
 suspends, the overhead is similar to calling an ordinary function.</p></li>
 
-<li><a href="../../../reference/types/awaitables/lazy.html" class="api-reference"><code>lazy&lt;T&gt;</code></a>
+<li><a href="../../../reference/types/awaitables/lazy.html" class="api-reference"><code>lazy&lt;T, Executor = void&gt;</code></a>
 
 
 <p>A lazily evaluated Coroutine (often named <code>task&lt;T&gt;</code> in most C++ Coroutine
@@ -33,7 +33,13 @@ literature): invoking <code>co_await</code> upon a function returning one of the
 function to be immediately suspended as soon as execution begins. Only resuming
 the execution of the coroutine proceeds execution.</p></li>
 
-<li><p><code>atomic_eager&lt;T&gt;</code></p>
+<li><a href="../../../reference/types/awaitables/generator.html" class="api-reference"><code>generator&lt;T, Executor = void&gt;</code></a>
+
+
+<p>A lazily evaluated generator of values: the coroutine is resumed to generate
+the next value, upon which it is suspended until the next iteration.</p></li>
+
+<li><p><code>atomic_eager&lt;T, Executor = void&gt;</code></p>
 
 <p><code>eager&lt;T&gt;</code> does not employ thread synchronisation during resumption of dependent
 coroutines which is fine if you do not traverse kernel threads during a
@@ -41,13 +47,13 @@ suspend-resume cycle. If you do however potentially traverse kernel threads
 during suspend-resume, you ought to use <code>atomic_eager&lt;T&gt;</code> instead &ndash; this uses
 atomics to synchronise the setting and checking of state to ensure correctness.</p></li>
 
-<li><p><code>atomic_lazy&lt;T&gt;</code></p>
+<li><p><code>atomic_lazy&lt;T, Executor = void&gt;</code></p>
 
 <p>Same for <code>lazy&lt;T&gt;</code> as <code>atomic_eager&lt;T&gt;</code> is for <code>eager&lt;T&gt;</code>.</p></li>
 </ul>
 
 
-        </div><p><small>Last revised: April 07, 2020 at 10:22:38 &#43;0100</small></p>
+        </div><p><small>Last revised: March 18, 2022 at 14:45:32 UTC</small></p>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="../../../tutorial/essential/coroutines/try.html"><img src="../../../images/prev.png" alt="Prev"></a>

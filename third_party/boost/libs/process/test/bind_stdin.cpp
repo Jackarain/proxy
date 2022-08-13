@@ -19,7 +19,8 @@
 
 #include <system_error>
 #include <boost/system/error_code.hpp>
-#include <boost/filesystem.hpp>
+#include <boost/process/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 #include <boost/asio.hpp>
 #include <string>
@@ -41,7 +42,7 @@ typedef boost::asio::posix::stream_descriptor pipe_end;
 #endif
 
 
-namespace fs = boost::filesystem;
+namespace fs = boost::process::filesystem;
 namespace bp = boost::process;
 
 BOOST_AUTO_TEST_CASE(sync_io, *boost::unit_test::timeout(10))
@@ -177,7 +178,7 @@ BOOST_AUTO_TEST_CASE(file_io, *boost::unit_test::timeout(2))
     bp::ipstream is;
 
     {
-        boost::filesystem::ofstream fs(pth);
+        boost::process::filesystem::ofstream fs(pth);
         fs << 321 << std::endl;
         fs << 1.2345 << std::endl;
         fs << "some_string" << std::endl;
@@ -205,7 +206,7 @@ BOOST_AUTO_TEST_CASE(file_io, *boost::unit_test::timeout(2))
     BOOST_CHECK_EQUAL(s, "abcsome_string");
 
     c.wait();
-    boost::filesystem::remove(pth);
+    boost::process::filesystem::remove(pth);
 }
 
 BOOST_AUTO_TEST_CASE(file_io_C, *boost::unit_test::timeout(2))
@@ -220,7 +221,7 @@ BOOST_AUTO_TEST_CASE(file_io_C, *boost::unit_test::timeout(2))
     bp::ipstream is;
 
     {
-        boost::filesystem::ofstream fs(pth);
+        boost::process::filesystem::ofstream fs(pth);
         fs << 321 << std::endl;
         fs << 1.2345 << std::endl;
         fs << "some_string" << std::endl;
@@ -254,7 +255,7 @@ BOOST_AUTO_TEST_CASE(file_io_C, *boost::unit_test::timeout(2))
     BOOST_CHECK_EQUAL(s, "abcsome_string");
 
     c.wait();
-    boost::filesystem::remove(pth);
+    boost::process::filesystem::remove(pth);
 }
 
 BOOST_AUTO_TEST_SUITE_END();

@@ -73,9 +73,9 @@ because immutable images are not very useful.
 
 .. seealso::
 
-  - `RandomAccessNDImageConcept<Image> <reference/structboost_1_1gil_1_1_random_access_n_d_image_concept.html>`_
-  - `RandomAccess2DImageConcept<Image> <reference/structboost_1_1gil_1_1_random_access2_d_image_concept.html>`_
-  - `ImageConcept<Image> <reference/structboost_1_1gil_1_1_image_concept.html>`_
+  - `RandomAccessNDImageConcept<Image> <../reference/structboost_1_1gil_1_1_random_access_n_d_image_concept.html>`_
+  - `RandomAccess2DImageConcept<Image> <../reference/structboost_1_1gil_1_1_random_access2_d_image_concept.html>`_
+  - `ImageConcept<Image> <../reference/structboost_1_1gil_1_1_image_concept.html>`_
 
 Models
 ------

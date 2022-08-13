@@ -46,9 +46,9 @@ Calculates the buffer of a geometry.
           </h6>
 <p>
 </p>
-<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">GeometryIn</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">MultiPolygon</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">DistanceStrategy</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">SideStrategy</span><span class="special">,</span>
+<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">GeometryIn</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">GeometryOut</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">DistanceStrategy</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">SideStrategy</span><span class="special">,</span>
          <span class="keyword">typename</span> <span class="identifier">JoinStrategy</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">EndStrategy</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">PointStrategy</span><span class="special">&gt;</span>
-<span class="keyword">void</span> <span class="identifier">buffer</span><span class="special">(</span><span class="identifier">GeometryIn</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">geometry_in</span><span class="special">,</span> <span class="identifier">MultiPolygon</span> <span class="special">&amp;</span> <span class="identifier">geometry_out</span><span class="special">,</span> <span class="identifier">DistanceStrategy</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">distance_strategy</span><span class="special">,</span>
+<span class="keyword">void</span> <span class="identifier">buffer</span><span class="special">(</span><span class="identifier">GeometryIn</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">geometry_in</span><span class="special">,</span> <span class="identifier">GeometryOut</span> <span class="special">&amp;</span> <span class="identifier">geometry_out</span><span class="special">,</span> <span class="identifier">DistanceStrategy</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">distance_strategy</span><span class="special">,</span>
             <span class="identifier">SideStrategy</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">side_strategy</span><span class="special">,</span> <span class="identifier">JoinStrategy</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">join_strategy</span><span class="special">,</span> <span class="identifier">EndStrategy</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">end_strategy</span><span class="special">,</span>
             <span class="identifier">PointStrategy</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">point_strategy</span><span class="special">)</span></pre>
 <p>
@@ -112,12 +112,12 @@ Calculates the buffer of a geometry.
 <tr>
 <td>
                     <p>
-                      MultiPolygon &amp;
+                      GeometryOut &amp;
                     </p>
                   </td>
 <td>
                     <p>
-                      A type fulfilling the MultiPolygon Concept
+                      A type fulfilling the GeometryOut Concept
                     </p>
                   </td>
 <td>
@@ -127,8 +127,8 @@ Calculates the buffer of a geometry.
                   </td>
 <td>
                     <p>
-                      output multi polygon (or std:: collection of polygons), will
-                      contain a buffered version of the input geometry
+                      output geometry, e.g. multi polygon, will contain a buffered
+                      version of the input geometry
                     </p>
                   </td>
 </tr>

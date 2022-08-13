@@ -10,4 +10,6 @@ import testing ;
 
 compile concepts.cpp ;
 
+run alignment.cpp ;
+run empty_dimensions.cpp ;
 run image.cpp ;

@@ -1,5 +1,7 @@
 <?xml version="1.0" standalone="yes"?>
-<library-reference><header name="boost/process/args.hpp">
+<library-reference><header name="boost/process.hpp">
+<para>Convenience header which includes all public and platform-independent boost.process header files. </para></header>
+<header name="boost/process/args.hpp">
 <para>This header provides the <globalname alt="boost::process::args">args</globalname> property. It also provides the alternative name <globalname alt="boost::process::argv">argv</globalname> .</para><para> 
 <programlisting language="c++">
 namespace boost {
@@ -654,7 +656,7 @@ spawn("b2", e);
 <function name="native_handle"><type>native_handle_type</type><purpose>Get the native handle of the current process. </purpose></function>
 <function name="environment"><type>native_environment</type><purpose>Get the enviroment of the current process. </purpose></function>
 <function name="wenvironment"><type>wnative_environment</type><purpose>Get the enviroment of the current process. </purpose></function>
-<function name="path"><type>std::vector&lt; boost::filesystem::path &gt;</type><purpose>Get the path environment variable of the current process runs. </purpose></function>
+<function name="path"><type>std::vector&lt; boost::process::filesystem::path &gt;</type><purpose>Get the path environment variable of the current process runs. </purpose></function>
 </namespace>
 </namespace>
 </header>
@@ -718,7 +720,7 @@ namespace boost {
 <namespace name="filesystem">
 </namespace>
 <namespace name="process">
-<data-member name="exe"><type><emphasis>unspecified</emphasis></type><description><para>The exe property allows to explicitly set the executable.</para><para>The overload form applies when to the first, when several strings are passed to a launching function.</para><para>The following expressions are valid, with <computeroutput>value</computeroutput> being either a C-String or a <computeroutput>std::basic_string</computeroutput> with <computeroutput>char</computeroutput> or <computeroutput>wchar_t</computeroutput> or a <computeroutput>boost::filesystem::path</computeroutput>.</para><para><programlisting language="c++">exe="value";
+<data-member name="exe"><type><emphasis>unspecified</emphasis></type><description><para>The exe property allows to explicitly set the executable.</para><para>The overload form applies when to the first, when several strings are passed to a launching function.</para><para>The following expressions are valid, with <computeroutput>value</computeroutput> being either a C-String or a <computeroutput>std::basic_string</computeroutput> with <computeroutput>char</computeroutput> or <computeroutput>wchar_t</computeroutput> or a <computeroutput>boost::process::filesystem::path</computeroutput>.</para><para><programlisting language="c++">exe="value";
 exe(value);
 </programlisting></para><para>The property can only be used for assignments. </para></description></data-member>
 
@@ -1011,6 +1013,19 @@ else
 </namespace>
 </namespace>
 </header>
+<header name="boost/process/filesystem.hpp">
+<namespace name="boost">
+<namespace name="process">
+
+
+
+
+
+
+
+</namespace>
+</namespace>
+</header>
 <header name="boost/process/group.hpp">
 <para>Defines a group process class. For additional information see the platform specific implementations:</para><para><itemizedlist>
 <listitem><para><ulink url="https://msdn.microsoft.com/en-us/library/windows/desktop/ms684161.aspx">windows - job object</ulink></para>
@@ -1137,9 +1152,9 @@ namespace boost {
 </programlisting>
 </para><para><formalpara><title>File I/O</title><para/>
 </formalpara>
-The library allows full redirection of streams to files as shown below.</para><para><programlisting language="c++">boost::filesystem::path log    = "my_log_file.txt";
-boost::filesystem::path input  = "input.txt";
-boost::filesystem::path output = "output.txt";
+The library allows full redirection of streams to files as shown below.</para><para><programlisting language="c++">boost::process::filesystem::path log    = "my_log_file.txt";
+boost::process::filesystem::path input  = "input.txt";
+boost::process::filesystem::path output = "output.txt";
 system("my_prog", std_out&gt;output, std_in&lt;input, std_err&gt;log);
 </programlisting></para><para><formalpara><title>Synchronous Pipe I/O</title><para/>
 </formalpara>
@@ -1176,7 +1191,7 @@ Streams can be redirected to null, which means, that written date will be discar
 <title>File Input</title>
 <para>The file I/O simple redirects the stream to a file, for which the possible types are</para>
 <para><itemizedlist>
-<listitem><para><computeroutput>boost::filesystem::path</computeroutput></para>
+<listitem><para><computeroutput>boost::process::filesystem::path</computeroutput></para>
 </listitem><listitem><para><computeroutput>std::basic_string&lt;char_type&gt;</computeroutput></para>
 </listitem><listitem><para><computeroutput>const char_type*</computeroutput></para>
 </listitem><listitem><para><computeroutput>FILE*</computeroutput></para>
@@ -1279,7 +1294,7 @@ std_in.null();
 <title>File Input</title>
 <para>The file I/O simple redirects the stream to a file, for which the possible types are</para>
 <para><itemizedlist>
-<listitem><para><computeroutput>boost::filesystem::path</computeroutput></para>
+<listitem><para><computeroutput>boost::process::filesystem::path</computeroutput></para>
 </listitem><listitem><para><computeroutput>std::basic_string&lt;char_type&gt;</computeroutput></para>
 </listitem><listitem><para><computeroutput>const char_type*</computeroutput></para>
 </listitem><listitem><para><computeroutput>FILE*</computeroutput></para>
@@ -1610,7 +1625,7 @@ sig(handler);
 <namespace name="process">
 
 
-<function name="search_path"><type>boost::filesystem::path</type><parameter name="filename"><paramtype>const boost::filesystem::path &amp;</paramtype><description><para>The base of the filename to find</para></description></parameter><parameter name="path"><paramtype>const std::vector&lt; boost::filesystem::path &gt;</paramtype><default>::boost::this_process::path()</default><description><para>the set of paths to search, defaults to the "PATH" environment variable.</para></description></parameter><description><para>Searches for an executable in path.</para><para>filename must be a basename including the file extension. It must not include any directory separators (like a slash). On Windows the file extension may be omitted. The function will then try the various file extensions for executables on Windows to find filename.</para><para>
+<function name="search_path"><type>boost::process::filesystem::path</type><parameter name="filename"><paramtype>const boost::process::filesystem::path &amp;</paramtype><description><para>The base of the filename to find</para></description></parameter><parameter name="path"><paramtype>const std::vector&lt; boost::process::filesystem::path &gt;</paramtype><default>::boost::this_process::path()</default><description><para>the set of paths to search, defaults to the "PATH" environment variable.</para></description></parameter><description><para>Searches for an executable in path.</para><para>filename must be a basename including the file extension. It must not include any directory separators (like a slash). On Windows the file extension may be omitted. The function will then try the various file extensions for executables on Windows to find filename.</para><para>
 
 </para></description><returns><para>the absolute path to the executable filename or an empty string if filename isn't found </para>
 </returns></function>
@@ -1684,7 +1699,7 @@ namespace boost {
 <namespace name="process">
 <data-member name="start_dir"><type><emphasis>unspecified</emphasis></type><description><para>To set the start dir, the <computeroutput>start_dir</computeroutput> property is provided.</para><para>The valid operations are the following:</para><para><programlisting language="c++">start_dir=path
 start_dir(path)
-</programlisting></para><para>It can be used with <computeroutput>std::string</computeroutput>, <computeroutput>std::wstring</computeroutput> and <computeroutput>boost::filesystem::path</computeroutput>. </para></description></data-member>
+</programlisting></para><para>It can be used with <computeroutput>std::string</computeroutput>, <computeroutput>std::wstring</computeroutput> and <computeroutput>boost::process::filesystem::path</computeroutput>. </para></description></data-member>
 
 
 
@@ -1712,6 +1727,8 @@ When using this function with an asynchronous properties and NOT passing an io_c
 
 </namespace>
 </namespace>
+</header>
+<header name="boost/process/v2.hpp">
 </header>
 <header name="boost/process/windows.hpp">
 <para>Header which provides the windows extensions.</para><para> 

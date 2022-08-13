@@ -29,7 +29,7 @@
 #include <boost/process/async.hpp>
 #include <system_error>
 
-#include <boost/filesystem.hpp>
+#include <boost/process/filesystem.hpp>
 
 #include <atomic>
 #include <string>
@@ -37,7 +37,7 @@
 #include <istream>
 #include <cstdlib>
 
-namespace fs = boost::filesystem;
+namespace fs = boost::process::filesystem;
 namespace bp = boost::process;
 
 BOOST_AUTO_TEST_CASE(explicit_async_io, *boost::unit_test::timeout(2))

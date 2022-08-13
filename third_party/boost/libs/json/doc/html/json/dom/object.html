@@ -95,6 +95,29 @@
         Internally, the container computes a hash table over the keys so that the
         complexity of lookups is in constant time, on average.
       </p>
+<div class="warning"><table border="0" summary="Warning">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Warning]" src="../../../../../../doc/src/images/warning.png"></td>
+<th align="left">Warning</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+          Unlike traditional node based containers like <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">set</span></code>,
+          there is no guarantee of reference stability or iterator stability on insertions
+          and erasures.
+        </p></td></tr>
+</table></div>
+<p>
+        For example:
+      </p>
+<pre class="programlisting"><span class="identifier">object</span> <span class="identifier">obj</span><span class="special">{{</span><span class="string">"arr"</span><span class="special">,</span> <span class="special">{</span><span class="number">1</span><span class="special">,</span> <span class="number">11</span><span class="special">}}};</span>
+<span class="identifier">value</span><span class="special">&amp;</span> <span class="identifier">arr</span> <span class="special">=</span> <span class="identifier">obj</span><span class="special">.</span><span class="identifier">at</span><span class="special">(</span><span class="string">"arr"</span><span class="special">);</span>
+<span class="identifier">obj</span><span class="special">.</span><span class="identifier">emplace</span><span class="special">(</span><span class="string">"added"</span><span class="special">,</span> <span class="string">"value"</span><span class="special">);</span> <span class="comment">// invalidates arr</span>
+</pre>
+<p>
+        Using <code class="computeroutput"><span class="identifier">arr</span></code> after adding another
+        value to <code class="computeroutput"><span class="identifier">obj</span></code> results in undefined
+        behavior.
+      </p>
 <p>
         For the complete listing of all available member functions and nested types,
         see the reference page for <a class="link" href="../ref/boost__json__object.html" title="object"><code class="computeroutput"><span class="identifier">object</span></code></a>.

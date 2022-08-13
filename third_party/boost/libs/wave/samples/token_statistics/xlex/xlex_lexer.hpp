@@ -402,9 +402,9 @@ lexer<Iterator, Position>::init_data_cpp[] =
 
 ///////////////////////////////////////////////////////////////////////////////
 // C++11 only token definitions
-#define T_EXTCHARLIT      token_id(T_CHARLIT|AltTokenType)
-#define T_EXTSTRINGLIT    token_id(T_STRINGLIT|AltTokenType)
-#define T_EXTRAWSTRINGLIT token_id(T_RAWSTRINGLIT|AltTokenType)
+constexpr token_id T_EXTCHARLIT = T_CHARLIT | AltTokenType;
+constexpr token_id T_EXTSTRINGLIT = T_STRINGLIT | AltTokenType;
+constexpr token_id T_EXTRAWSTRINGLIT = T_RAWSTRINGLIT | AltTokenType;
 
 template <typename Iterator, typename Position>
 typename lexer<Iterator, Position>::lexer_data const
@@ -479,9 +479,6 @@ lexer<Iterator, Position>::init_data_cpp2a[] =
 #undef TOKEN_DATA
 #undef TOKEN_DATA_EX
 
-#undef T_EXTCHARLIT
-#undef T_EXTSTRINGLIT
-#undef T_EXTRAWSTRINGLIT
 ///////////////////////////////////////////////////////////////////////////////
 // initialize cpp lexer 
 template <typename Iterator, typename Position>

@@ -35,13 +35,13 @@
 <span class="keyword">struct</span> <a class="link" href="get_options.html" title="Struct template get_options">get_options</a> <span class="special">{</span>
 <span class="special">}</span><span class="special">;</span></pre></div>
 <div class="refsect1">
-<a name="idm28741"></a><h2>Description</h2>
+<a name="idm28369"></a><h2>Description</h2>
 <p>Doxygen does not render this well. This is a meta-function (template alias), it accepts an axis type and returns the <a class="link" href="../option/bitset.html" title="Struct template bitset">boost::histogram::axis::option::bitset</a>.</p>
 <p>If Axis::options() is valid and constexpr, <a class="link" href="get_options.html" title="Struct template get_options">get_options</a> is the corresponding option type. Otherwise, it is boost::histogram::axis::option::growth_t, if the axis has a method<code class="computeroutput">update</code>, else boost::histogram::axis::option::none_t.</p>
 <p>
 </p>
 <div class="refsect2">
-<a name="idm28749"></a><h3>Template Parameters</h3>
+<a name="idm28377"></a><h3>Template Parameters</h3>
 <div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
 <pre class="literallayout"><span class="keyword">typename</span> Axis</pre>
 <p>axis type </p>

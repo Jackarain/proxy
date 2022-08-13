@@ -30,22 +30,28 @@
 <p>
             Constructor.
           </p>
-<h7><a name="beast.ref.boost__beast__http__serializer.serializer.overload3.h0"></a>
+<h6>
+<a name="beast.ref.boost__beast__http__serializer.serializer.overload3.h0"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__http__serializer.serializer.overload3.synopsis"></a></span><a class="link" href="overload3.html#beast.ref.boost__beast__http__serializer.serializer.overload3.synopsis">Synopsis</a>
-          </h7><pre class="programlisting"><span class="identifier">serializer</span><span class="special">(</span>
+          </h6>
+<pre class="programlisting"><span class="identifier">serializer</span><span class="special">(</span>
     <span class="identifier">value_type</span><span class="special">&amp;</span> <span class="identifier">msg</span><span class="special">);</span>
 </pre>
-<h7><a name="beast.ref.boost__beast__http__serializer.serializer.overload3.h1"></a>
+<h6>
+<a name="beast.ref.boost__beast__http__serializer.serializer.overload3.h1"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__http__serializer.serializer.overload3.description"></a></span><a class="link" href="overload3.html#beast.ref.boost__beast__http__serializer.serializer.overload3.description">Description</a>
-          </h7><p>
+          </h6>
+<p>
             The implementation guarantees that the message passed on construction
             will not be accessed until the first call to <a class="link" href="../next.html" title="http::serializer::next"><code class="computeroutput"><span class="identifier">next</span></code></a>. This allows the message
             to be lazily created. For example, if the header is filled in before
             serialization.
           </p>
-<h7><a name="beast.ref.boost__beast__http__serializer.serializer.overload3.h2"></a>
+<h6>
+<a name="beast.ref.boost__beast__http__serializer.serializer.overload3.h2"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__http__serializer.serializer.overload3.parameters"></a></span><a class="link" href="overload3.html#beast.ref.boost__beast__http__serializer.serializer.overload3.parameters">Parameters</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>
@@ -78,9 +84,11 @@
                   </td>
 </tr></tbody>
 </table></div>
-<h7><a name="beast.ref.boost__beast__http__serializer.serializer.overload3.h3"></a>
+<h6>
+<a name="beast.ref.boost__beast__http__serializer.serializer.overload3.h3"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__http__serializer.serializer.overload3.remarks"></a></span><a class="link" href="overload3.html#beast.ref.boost__beast__http__serializer.serializer.overload3.remarks">Remarks</a>
-          </h7><p>
+          </h6>
+<p>
             This function participates in overload resolution only if Body::writer
             is constructible from a <code class="computeroutput"><span class="keyword">const</span></code>
             message reference.

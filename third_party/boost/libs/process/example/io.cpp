@@ -22,7 +22,7 @@ int main()
         bp::std_in < bp::null //null in
     );
 
-    boost::filesystem::path p = "input.txt";
+    boost::process::filesystem::path p = "input.txt";
 
     bp::system(
         "test.exe",

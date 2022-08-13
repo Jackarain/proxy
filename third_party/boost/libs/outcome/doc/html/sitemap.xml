@@ -169,7 +169,7 @@
   
   <url>
     <loc>/tutorial/essential/coroutines/awaitables.html</loc>
-    <lastmod>2020-04-07T10:22:38+01:00</lastmod>
+    <lastmod>2022-03-18T14:45:32+00:00</lastmod>
   </url>
   
   <url>
@@ -249,7 +249,7 @@
   
   <url>
     <loc>/tutorial/essential/coroutines.html</loc>
-    <lastmod>2020-04-07T10:22:38+01:00</lastmod>
+    <lastmod>2022-03-18T14:45:32+00:00</lastmod>
   </url>
   
   <url>
@@ -294,7 +294,7 @@
   
   <url>
     <loc>/tutorial/essential/coroutines/returning.html</loc>
-    <lastmod>2020-04-07T10:22:38+01:00</lastmod>
+    <lastmod>2022-03-18T14:45:32+00:00</lastmod>
   </url>
   
   <url>
@@ -494,7 +494,7 @@
   
   <url>
     <loc>/changelog.html</loc>
-    <lastmod>2022-04-03T22:50:27+01:00</lastmod>
+    <lastmod>2022-05-02T17:59:08+01:00</lastmod>
   </url>
   
   <url>
@@ -1400,7 +1400,7 @@
   
   <url>
     <loc>/tags/awaitables.html</loc>
-    <lastmod>2020-04-07T10:22:38+01:00</lastmod>
+    <lastmod>2022-03-18T14:45:32+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -1477,7 +1477,7 @@
   
   <url>
     <loc>/tags/coroutines.html</loc>
-    <lastmod>2020-04-07T10:22:38+01:00</lastmod>
+    <lastmod>2022-03-18T14:45:32+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -1513,7 +1513,7 @@
   
   <url>
     <loc>/tags/eager.html</loc>
-    <lastmod>2020-04-07T10:22:38+01:00</lastmod>
+    <lastmod>2022-03-18T14:45:32+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -1548,7 +1548,7 @@
   
   <url>
     <loc>/</loc>
-    <lastmod>2021-12-15T11:47:12+00:00</lastmod>
+    <lastmod>2022-03-18T14:45:32+00:00</lastmod>
   </url>
   
   <url>
@@ -1577,7 +1577,7 @@
   
   <url>
     <loc>/tags/lazy.html</loc>
-    <lastmod>2020-04-07T10:22:38+01:00</lastmod>
+    <lastmod>2022-03-18T14:45:32+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -1954,7 +1954,7 @@
   
   <url>
     <loc>/reference/types/awaitables/eager.html</loc>
-    <lastmod>2020-04-07T10:22:38+01:00</lastmod>
+    <lastmod>2022-03-18T14:45:32+00:00</lastmod>
   </url>
   
   <url>
@@ -1985,6 +1985,11 @@
   <url>
     <loc>/reference/types/failure_type.html</loc>
     <lastmod>2021-02-23T17:37:27+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/reference/types/awaitables/generator.html</loc>
+    <lastmod>2022-03-18T14:45:32+00:00</lastmod>
   </url>
   
   <url>
@@ -2039,7 +2044,7 @@
   
   <url>
     <loc>/reference/types/awaitables/lazy.html</loc>
-    <lastmod>2020-04-07T10:22:38+01:00</lastmod>
+    <lastmod>2022-03-18T14:45:32+00:00</lastmod>
   </url>
   
   <url>

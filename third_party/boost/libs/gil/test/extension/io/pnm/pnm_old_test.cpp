@@ -66,10 +66,13 @@ void test_old_write_view()
 
 void test_old_dynamic_image()
 {
-    using my_img_types =
-        mp11::mp_list<gil::gray8_image_t, gil::gray16_image_t, gil::rgb8_image_t, gil::gray1_image_t>;
-
-    gil::any_image<my_img_types> image;
+    gil::any_image
+    <
+        gil::gray8_image_t,
+        gil::gray16_image_t,
+        gil::rgb8_image_t,
+        gil::gray1_image_t
+    > image;
 
     gil::pnm_read_image(pnm_filename.c_str(), image);
 

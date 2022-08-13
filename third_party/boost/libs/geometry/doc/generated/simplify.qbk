@@ -19,8 +19,8 @@
 Simplify a geometry using a specified strategy. 
 
 [heading Synopsis]
-``template<typename Geometry, typename Distance, typename Strategy>
-void simplify(Geometry const & geometry, Geometry & out, Distance const & max_distance,
+``template<typename Geometry, typename GeometryOut, typename Distance, typename Strategy>
+void simplify(Geometry const & geometry, GeometryOut & out, Distance const & max_distance,
               Strategy const & strategy)``
 
 [heading Parameters]
@@ -28,9 +28,9 @@ void simplify(Geometry const & geometry, Geometry & out, Distance const & max_di
 [table
 [[Type] [Concept] [Name] [Description] ]
 [[Geometry const &] [Any type fulfilling a Geometry Concept ] [geometry] [input geometry, to be simplified ]]
-[[Geometry &] [Any type fulfilling a Geometry Concept ] [out] [output geometry, simplified version of the input geometry ]]
+[[GeometryOut &] [The output geometry ] [out] [output geometry, simplified version of the input geometry ]]
 [[Distance const &] [A numerical distance measure ] [max_distance] [distance (in units of input coordinates) of a vertex to other segments to be removed ]]
-[[Strategy const &] [A type fulfilling a SimplifyStrategy concept ] [strategy] [simplify strategy to be used for simplification, might include point-distance strategy]]
+[[Strategy const &] [A type fulfilling a SimplifyStrategy concept ] [strategy] [simplify strategy to be used for simplification ]]
 ]
 
 
@@ -53,16 +53,16 @@ Or
 Simplify a geometry. 
 
 [heading Synopsis]
-``template<typename Geometry, typename Distance>
-void simplify(Geometry const & geometry, Geometry & out, Distance const & max_distance)``
+``template<typename Geometry, typename GeometryOut, typename Distance>
+void simplify(Geometry const & geometry, GeometryOut & out, Distance const & max_distance)``
 
 [heading Parameters]
 
 [table
 [[Type] [Concept] [Name] [Description] ]
 [[Geometry const &] [Any type fulfilling a Geometry Concept ] [geometry] [input geometry, to be simplified ]]
-[[Geometry &] [Any type fulfilling a Geometry Concept ] [out] [output geometry, simplified version of the input geometry ]]
-[[Distance const &] [numerical type (int, double, ttmath, ...) ] [max_distance] [distance (in units of input coordinates) of a vertex to other segments to be removed]]
+[[GeometryOut &] [The output geometry ] [out] [output geometry, simplified version of the input geometry ]]
+[[Distance const &] [numerical type (int, double, ttmath, ...) ] [max_distance] [distance (in units of input coordinates) of a vertex to other segments to be removed ]]
 ]
 
 

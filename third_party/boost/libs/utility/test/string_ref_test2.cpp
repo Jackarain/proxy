@@ -7,8 +7,11 @@
     For more information, see http://www.boost.org
 */
 
+#include <cstddef>
 #include <iostream>
 #include <cstring>    // for std::strchr
+#include <string>
+#include <algorithm>
 
 #include <boost/utility/string_ref.hpp>
 
@@ -17,7 +20,7 @@
 typedef boost::string_ref string_ref;
 
 void ends_with ( const char *arg ) {
-    const size_t sz = std::strlen ( arg );
+    const std::size_t sz = std::strlen ( arg );
     string_ref sr ( arg );
     string_ref sr2 ( arg );
     const char *p = arg;
@@ -41,20 +44,19 @@ void ends_with ( const char *arg ) {
     char ch = sz == 0 ? '\0' : arg [ sz - 1 ];
     sr2 = arg;
     if ( sz > 0 )
-      BOOST_TEST ( sr2.ends_with ( ch ));
+        BOOST_TEST ( sr2.ends_with ( ch ));
     BOOST_TEST ( !sr2.ends_with ( ++ch ));
     BOOST_TEST ( sr2.ends_with ( string_ref ()));
     }
 
 void starts_with ( const char *arg ) {
-    const size_t sz = std::strlen ( arg );
+    const std::size_t sz = std::strlen ( arg );
     string_ref sr  ( arg );
     string_ref sr2 ( arg );
-    const char *p = arg + std::strlen ( arg ) - 1;
-    while ( p >= arg ) {
-        std::string foo ( arg, p + 1 );
+    std::string foo ( arg );
+    while ( !foo.empty ()) {
         BOOST_TEST ( sr.starts_with ( foo ));
-        --p;
+        foo.erase ( foo.end () - 1 );
         }
 
     while ( !sr2.empty ()) {
@@ -64,8 +66,8 @@ void starts_with ( const char *arg ) {
 
     char ch = *arg;
     sr2 = arg;
-  if ( sz > 0 )
-    BOOST_TEST ( sr2.starts_with ( ch ));
+    if ( sz > 0 )
+        BOOST_TEST ( sr2.starts_with ( ch ));
     BOOST_TEST ( !sr2.starts_with ( ++ch ));
     BOOST_TEST ( sr2.starts_with ( string_ref ()));
     }
@@ -93,7 +95,7 @@ void find ( const char *arg ) {
     string_ref sr2;
     const char *p;
 
-//	When we search for the empty string, we find it at position 0
+//  When we search for the empty string, we find it at position 0
     BOOST_TEST ( sr1.find (sr2) == 0 );
     BOOST_TEST ( sr1.rfind(sr2) == 0 );
 
@@ -207,7 +209,7 @@ void find ( const char *arg ) {
         string_ref::size_type pos2 = sr1.find_first_not_of(*p);
         BOOST_TEST ( pos1 != string_ref::npos && pos1 < sr1.size () && pos1 <= ptr_diff ( p, arg ));
         if ( pos2 != string_ref::npos ) {
-            for ( size_t i = 0 ; i < pos2; ++i )
+            for ( std::size_t i = 0 ; i < pos2; ++i )
                 BOOST_TEST ( sr1[i] == *p );
             BOOST_TEST ( sr1 [ pos2 ] != *p );
             }
@@ -233,7 +235,7 @@ void find ( const char *arg ) {
         BOOST_TEST ( pos1 != string_ref::npos && pos1 < sr1.size () && pos1 >= ptr_diff ( p, arg ));
         BOOST_TEST ( pos2 == string_ref::npos || pos1 < sr1.size ());
         if ( pos2 != string_ref::npos ) {
-            for ( size_t i = sr1.size () -1 ; i > pos2; --i )
+            for ( std::size_t i = sr1.size () -1 ; i > pos2; --i )
                 BOOST_TEST ( sr1[i] == *p );
             BOOST_TEST ( sr1 [ pos2 ] != *p );
             }

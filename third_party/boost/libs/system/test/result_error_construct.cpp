@@ -62,13 +62,13 @@ int main()
         BOOST_TEST( !r.has_value() );
         BOOST_TEST( r.has_error() );
 
-        BOOST_TEST_EQ( r.error(), std::error_code( EINVAL, generic_category() ) );
+        BOOST_TEST_EQ( r.error(), error_code( EINVAL, generic_category() ) );
     }
 
     {
         auto ec = make_error_code( errc::invalid_argument );
 
-        result<std::error_code> r( in_place_error, ec );
+        result<error_code> r( in_place_error, ec );
 
         BOOST_TEST( !r.has_value() );
         BOOST_TEST( r.has_error() );
@@ -77,12 +77,12 @@ int main()
     }
 
     {
-        result<std::error_code> r( in_place_error, EINVAL, generic_category() );
+        result<error_code> r( in_place_error, EINVAL, generic_category() );
 
         BOOST_TEST( !r.has_value() );
         BOOST_TEST( r.has_error() );
 
-        BOOST_TEST_EQ( r.error(), std::error_code( EINVAL, generic_category() ) );
+        BOOST_TEST_EQ( r.error(), error_code( EINVAL, generic_category() ) );
     }
 
     BOOST_TEST_EQ( X::instances, 0 );
@@ -140,8 +140,8 @@ int main()
     BOOST_TEST_EQ( X::instances, 0 );
 
     {
-        BOOST_TEST_TRAIT_TRUE((std::is_constructible<result<int>, std::error_code>));
-        BOOST_TEST_TRAIT_TRUE((std::is_convertible<std::error_code, result<int>>));
+        BOOST_TEST_TRAIT_TRUE((std::is_constructible<result<int>, error_code>));
+        BOOST_TEST_TRAIT_TRUE((std::is_convertible<error_code, result<int>>));
 
         BOOST_TEST_TRAIT_TRUE((std::is_constructible<result<std::string, X>, int>));
         BOOST_TEST_TRAIT_FALSE((std::is_convertible<int, result<std::string, X>>));
@@ -178,7 +178,7 @@ int main()
         BOOST_TEST( !r.has_value() );
         BOOST_TEST( r.has_error() );
 
-        BOOST_TEST_EQ( r.error(), std::error_code( EINVAL, generic_category() ) );
+        BOOST_TEST_EQ( r.error(), error_code( EINVAL, generic_category() ) );
     }
 
     return boost::report_errors();

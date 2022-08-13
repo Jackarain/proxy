@@ -12,6 +12,11 @@ struct X
 {
 };
 
+struct Y
+{
+    Y( int );
+};
+
 int main()
 {
     {
@@ -35,6 +40,18 @@ int main()
 
         BOOST_TEST( r.has_value() );
         BOOST_TEST( !r.has_error() );
+    }
+
+    {
+        BOOST_TEST_TRAIT_TRUE((std::is_default_constructible<result<int>>));
+        BOOST_TEST_TRAIT_TRUE((std::is_default_constructible<result<int, int>>));
+        BOOST_TEST_TRAIT_TRUE((std::is_default_constructible<result<X>>));
+        BOOST_TEST_TRAIT_TRUE((std::is_default_constructible<result<X, int>>));
+        BOOST_TEST_TRAIT_TRUE((std::is_default_constructible<result<void>>));
+        BOOST_TEST_TRAIT_TRUE((std::is_default_constructible<result<void, int>>));
+
+        BOOST_TEST_TRAIT_FALSE((std::is_default_constructible<result<Y>>));
+        BOOST_TEST_TRAIT_FALSE((std::is_default_constructible<result<Y, int>>));
     }
 
     return boost::report_errors();

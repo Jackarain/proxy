@@ -8,7 +8,7 @@ users who wish to run complete build of Boost.GIL tests and examples.
 Copy any of the provided user configuration files to `%HOME%\user-config.jam`
 on Windows or `$HOME/user-config.jam` on Linux.
 
-Refer to [Boost.Build User Manual](https://boostorg.github.io/build/)
+Refer to [B2 User Manual](https://www.bfgroup.xyz/b2/manual/release/index.html)
 for more details about use of configuration files.
 
 ## Examples

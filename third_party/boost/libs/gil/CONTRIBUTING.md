@@ -17,14 +17,14 @@ please follow the workflow explained in this document.
   - [5. Update your pull request](#5-update-your-pull-request)
 - [Development](#development)
   - [Install dependencies](#install-dependencies)
-  - [Using Boost.Build](#using-boostbuild)
+  - [Using B2](#using-b2)
   - [Using CMake](#using-cmake)
   - [Running clang-tidy](#running-clang-tidy)
 - [Guidelines](#guidelines)
 
 ## Prerequisites
 
-- C++11 compiler
+- C++14 compiler
 - Build and run-time dependencies for tests and examples:
   - Boost.Filesystem
   - Boost.Test
@@ -35,10 +35,12 @@ please follow the workflow explained in this document.
   it may be a good idea to skim through the
   [Boost Getting Started](https://www.boost.org/more/getting_started/index.html)
   chapters, especially if you are going to use
-  [Boost.Build](https://boostorg.github.io/build/) for the first time.
+  [B2](https://www.bfgroup.xyz/b2/) for the first time.
 
 ## Pull Requests
 
+
+- **DO** all your work in fork this repository. 
 - **DO** base your work against the `develop` branch, not the `master`.
 - **DO** submit all major changes to code via pull requests (PRs) rather than through
   a direct commit. PRs will be CI-checked first, then reviewed and potentially merged
@@ -61,12 +63,13 @@ please follow the workflow explained in this document.
 - **DO** ensure each commit successfully builds. The entire PR must pass all tests in
   the Continuous Integration (CI) system before it'll be merged.
 - **DO** ensure any new features or changes to existing behaviours are covered with test cases.
-- **DO** address PR feedback in an additional commit(s) rather than amending the existing
-  commits, and only rebase/squash them when necessary. This makes it easier for reviewers
-  to track changes.
+- **DO** address PR feedback in an additional commit(s) rather than amending the existing commits.
+  This makes it easier for reviewers to track changes.
+- **DO** sync your PR branch with the upstream `develop` branch frequently resolving any conflicts if necessary.
+  You can either `git merge upstream/develop` or `git rebase upstream/develop` with `git push --force` for the latter.
+  The merge may make it easier for reviewers to track changes though.
 - **DO** assume that the [Squash and Merge] will be used to merge your commit unless you
   request otherwise in the PR.
-- **DO** NOT fix merge conflicts using a merge commit. Prefer git rebase.
 - **DO** NOT submit changes to the original legacy tests, see
   [test/legacy/README.md](test/legacy/README.md).
 
@@ -123,7 +126,7 @@ The preparation involves the following steps:
     git submodule update --init --recursive --jobs 8
     ```
 
-3. Build the `b2` driver program for Boost.Build engine.
+3. Build the `b2` driver program for B2 engine.
 
     ```shell
     ./bootstrap.sh
@@ -310,15 +313,15 @@ Boost.GIL is a [header-only library](https://en.wikipedia.org/wiki/Header-only)
 which does not require sources compilation. Only test runners and
 [example](example/README.md) programs have to be compiled.
 
-By default, Boost.GIL uses Boost.Build to build all the executables.
+By default, Boost.GIL uses B2 to build all the executables.
 
 We also provide configuration for two alternative build systems:
 
 - [CMake](https://cmake.org)
 
 **NOTE:** The CMake is optional and the corresponding build configurations
-for Boost.GIL do not offer equivalents for all Boost.Build features.
-Most important difference to recognise is that Boost.Build will automatically
+for Boost.GIL do not offer equivalents for all B2 features.
+Most important difference to recognise is that B2 will automatically
 build any other Boost libraries required by Boost.GIL as dependencies.
 
 ### Install dependencies
@@ -332,9 +335,9 @@ sudo apt-get install libjpeg-dev libpng-dev libtiff5-dev libraw-dev
 
 **TIP:** On Windows, use vcpkg with `user-config.jam` configuration provided in [example/b2/user-config-windows-vcpkg.jam](example/b2/).
 
-### Using Boost.Build
+### Using B2
 
-The [b2 invocation](https://boostorg.github.io/build/manual/develop/index.html#bbv2.overview.invocation)
+The [b2 invocation](https://www.bfgroup.xyz/b2/manual/release/index.html#bbv2.overview.invocation)
 explains available options like `toolset`, `variant` and others.
 
 Simply, just execute `b2` to run all tests built using default
@@ -345,35 +348,36 @@ development environment.
 as they are executed. It is useful to inspect compilation flags.
 
 If no target or directory is specified, everything in the current directory
-is built. For example, all Boost.GIL tests can be built and run using:
+is built. For example, **all** Boost.GIL tests can be built and run using:
 
 ```shell
 cd libs/gil
-../../b2
+b2
 ```
 
 Run core tests only specifying location of directory with tests:
 
 ```shell
 cd libs/gil
-../../b2 cxxstd=11 test/core
+b2 cxxstd=14 test/core
 ```
 
 Run all tests for selected extension (from Boost root directory, as alternative):
 
 ```shell
-./b2 cxxstd=11 libs/gil/test/io
-./b2 cxxstd=11 libs/gil/test/numeric
-./b2 cxxstd=11 libs/gil/test/toolbox
+b2 cxxstd=14 libs/gil/test/extension/dynamic_image
+b2 cxxstd=14 libs/gil/test/extension/io
+b2 cxxstd=14 libs/gil/test/extension/numeric
+b2 cxxstd=14 libs/gil/test/extension/toolbox
 ```
 
 Run I/O extension tests bundled in target called `simple`:
 
 ```shell
-./b2 cxxstd=11 libs/gil/test/io//simple
+b2 cxxstd=14 libs/gil/test/io//simple
 ```
 
-**TIP:** Pass `b2` feature `cxxstd=11,14,17,2a` to request compilation for
+**TIP:** Pass `b2` feature `cxxstd=14,17,2a` to request compilation for
 multiple C++ standard versions in single build run.
 
 ### Using CMake
@@ -401,17 +405,17 @@ The provided CMake configuration allows a couple of ways to develop Boost.GIL:
 
 For CMake, you only need to build Boost libraries required by Boost.Test library
 which is used to run GIL tests. Since the `CMAKE_CXX_STANDARD` option in the current
-[CMakeLists.txt](CMakeLists.txt) defaults to C++11, pass the default `cxxstd=11` to `b2`:
+[CMakeLists.txt](CMakeLists.txt) defaults to C++14, pass the default `cxxstd=14` to `b2`:
 
   ```shell
   ./b2 headers
-  ./b2 variant=debug,release cxxstd=11 --with-filesystem stage
+  ./b2 variant=debug,release cxxstd=14 --with-filesystem stage
   ```
 
   or, depending on specific requirements, more complete build:
 
   ```shell
-  ./b2 variant=debug,release address-model=32,64 cxxstd=11 --layout=versioned --with-filesystem stage
+  ./b2 variant=debug,release address-model=32,64 cxxstd=14 --layout=versioned --with-filesystem stage
   ```
 
 If you wish to build tests using different C++ standard version, then adjust the `cxxstd` accordingly.
@@ -443,50 +447,52 @@ Here is an example of such lightweight workflow in Linux environment (Debian-bas
 - Configure build with CMake
 
     ```shell
-    mkdir _build
-    cd _build/
-    cmake ..
+    cmake -S . -B _build -DBoost_ADDITIONAL_VERSIONS=1.80 -DBoost_COMPILER=-gcc11 -DBoost_ARCHITECTURE=-x64
     ```
 
-    **TIP:** By default, tests and [examples](example/README.md) are compiled using
-    the minimum required C++11.
-    Specify `-DCMAKE_CXX_STANDARD=14|17|20` to use newer version.
+    By default, tests and [examples](example/README.md) are compiled using
+    the minimum required C++14.
+    Specify `-DCMAKE_CXX_STANDARD=17|20` to use newer version.
     For more CMake options available for GIL, check `option`-s defined
     in the top-level `CMakeLists.txt`.
 
-    **TIP:** If CMake is failing to find Boost libraries, especially built
-    with `--layout=versioned`, you can try a few hacks:
-      - option `-DBoost_ARCHITECTURE=-x64` to help CMake find Boost 1.66 and above
-        add an architecture tag to the library file names in versioned build
-        The option added in CMake 3.13.0.
+    CMake is failing to find Boost libraries, especially built with `--layout=versioned`,
+    you can try a few hacks as displayed in the command above:
       - option `-DBoost_COMPILER=-gcc5` or `-DBoost_COMPILER=-vc141` to help CMake earlier
         than 3.13 match your compiler with toolset used in the Boost library file names
         (i.e. `libboost_filesystem-gcc5-mt-x64-1_69` and not `-gcc55-`).
         Fixed in CMake 3.13.0.
+      - option `-DBoost_ARCHITECTURE=-x64` to help CMake find Boost 1.66 and above
+        add an architecture tag to the library file names in versioned build
+        The option added in CMake 3.13.0.
+      - option `-DDBoost_ADDITIONAL_VERSIONS=<unreleased Boost version>` is especially usefull
+        when testing GIL with staged build of Boost from its `develop` branch.
       - if CMake is still failing to find Boost, you may try `-DBoost_DEBUG=ON` to
         get detailed diagnostics output from `FindBoost.cmake` module.
 
 - List available CMake targets
 
     ```shell
-    cmake --build . --target help
+    cmake --build _build --target help
     ```
 
 - Build selected target with CMake
 
     ```shell
-    cmake --build . --target gil_test_pixel
+    cmake --build _build --target gil_test_pixel
     ```
 
 - List available CTest targets
 
     ```shell
+    cd __build
     ctest --show-only | grep Test
     ```
 
 - Run selected test with CTest
 
     ```shell
+    cd __build
     ctest -R gil.tests.core.pixel
     ```
 
@@ -563,10 +569,10 @@ Thus, below a few basic guidelines are listed.
 First and foremost, make sure you are familiar with the official
 [Boost Library Requirements and Guidelines](https://www.boost.org/development/requirements.html).
 
-Second, strive for writing idiomatic C++11, clean and elegant code.
+Second, strive for writing idiomatic C++14, clean and elegant code.
 
 **NOTE:** *The Boost.GIL source code does not necessary represent clean and elegant
-code to look up to. The library has recently entered the transition to C++11.
+code to look up to. The library has recently entered the transition to C++14.
 Major refactoring overhaul is ongoing.*
 
 Maintain structure your source code files according to the following guidelines:

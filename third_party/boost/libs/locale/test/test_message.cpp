@@ -1,10 +1,8 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/locale/generator.hpp>
 #include <boost/locale/localization_backend.hpp>
@@ -14,6 +12,7 @@
 #include "test_locale.hpp"
 #include "test_locale_tools.hpp"
 #include <fstream>
+#include <vector>
 
 namespace bl = boost::locale;
 
@@ -29,7 +28,7 @@ struct file_loader {
         if(!f)
             return buffer;
         f.seekg(0,std::ifstream::end);
-        size_t len = f.tellg();
+        size_t len = static_cast<size_t>(f.tellg());
         if(len == 0)
             return buffer;
         f.seekg(0);
@@ -309,227 +308,218 @@ void test_translate(std::string original,std::string expected,std::locale const 
 bool iso_8859_8_not_supported = false;
 
 
-int main(int argc,char **argv)
+void test_main(int argc, char **argv)
 {
-    try {
-        std::string def[] = {
-        #ifdef BOOST_LOCALE_WITH_ICU
-            "icu" , 
-        #endif
-        #ifndef BOOST_LOCALE_NO_STD_BACKEND
-            "std" ,
-        #endif
-        #ifndef BOOST_LOCALE_NO_POSIX_BACKEND
-            "posix",
-        #endif
-        #ifndef BOOST_LOCALE_NO_WINAPI_BACKEND
-            "winapi",
-        #endif
-        };
-        for(int type = 0 ; type < int(sizeof(def)/sizeof(def[0])) ; type ++ ) {
-            boost::locale::localization_backend_manager tmp_backend = boost::locale::localization_backend_manager::global();
-            tmp_backend.select(def[type]);
-            boost::locale::localization_backend_manager::global(tmp_backend);
-            
-            backend = def[type];
-            
-            std::cout << "Testing for backend --------- " << def[type] << std::endl;
+    std::string def[] = {
+    #ifdef BOOST_LOCALE_WITH_ICU
+        "icu" ,
+    #endif
+    #ifndef BOOST_LOCALE_NO_STD_BACKEND
+        "std" ,
+    #endif
+    #ifndef BOOST_LOCALE_NO_POSIX_BACKEND
+        "posix",
+    #endif
+    #ifndef BOOST_LOCALE_NO_WINAPI_BACKEND
+        "winapi",
+    #endif
+    };
+    for(int type = 0 ; type < int(sizeof(def)/sizeof(def[0])) ; type ++ ) {
+        boost::locale::localization_backend_manager tmp_backend = boost::locale::localization_backend_manager::global();
+        tmp_backend.select(def[type]);
+        boost::locale::localization_backend_manager::global(tmp_backend);
 
+        backend = def[type];
+
+        std::cout << "Testing for backend --------- " << def[type] << std::endl;
+
+        boost::locale::generator g;
+        g.add_messages_domain("simple");
+        g.add_messages_domain("full");
+        g.add_messages_domain("fall");
+        if(argc==2)
+            g.add_messages_path(argv[1]);
+        else
+            g.add_messages_path("./");
+        g.set_default_messages_domain("default");
+
+
+        std::string locales[] = { "he_IL.UTF-8", "he_IL.ISO8859-8" };
+
+        for(unsigned i=0;i<sizeof(locales)/sizeof(locales[0]);i++){
+            std::locale l;
+
+            if(i==1) {
+                try {
+                    l = g(locales[i]);
+                }
+                catch(boost::locale::conv::invalid_charset_error const &) {
+                    std::cout << "Looks like ISO-8859-8 is not supported! skipping" << std::endl;
+                    iso_8859_8_not_supported = true;
+                    continue;
+                }
+            }
+            else {
+                    l = g(locales[i]);
+            }
+
+            std::cout << "  Testing " << locales[i] << std::endl;
+            std::cout << "    single forms" << std::endl;
+
+            test_translate("hello","שלום",l,"default");
+            test_translate("hello","היי",l,"simple");
+            test_translate("hello","hello",l,"undefined");
+            test_translate("untranslated","untranslated",l,"default");
+            // Check removal of old "context" information
+            test_translate("#untranslated","#untranslated",l,"default");
+            test_translate("##untranslated","##untranslated",l,"default");
+            test_ctranslate("context","hello","שלום בהקשר אחר",l,"default");
+            test_translate("#hello","#שלום",l,"default");
+
+            std::cout << "    plural forms" << std::endl;
+
+            {
+                test_ntranslate("x day","x days",0,"x ימים",l,"default");
+                test_ntranslate("x day","x days",1,"יום x",l,"default");
+                test_ntranslate("x day","x days",2,"יומיים",l,"default");
+                test_ntranslate("x day","x days",3,"x ימים",l,"default");
+                test_ntranslate("x day","x days",20,"x יום",l,"default");
+
+                test_ntranslate("x day","x days",0,"x days",l,"undefined");
+                test_ntranslate("x day","x days",1,"x day",l,"undefined");
+                test_ntranslate("x day","x days",2,"x days",l,"undefined");
+                test_ntranslate("x day","x days",20,"x days",l,"undefined");
+            }
+            std::cout << "    plural forms with context" << std::endl;
+            {
+                std::string inp = "context";
+                std::string out = "בהקשר ";
+
+                test_cntranslate(inp,"x day","x days",0,out+"x ימים",l,"default");
+                test_cntranslate(inp,"x day","x days",1,out+"יום x",l,"default");
+                test_cntranslate(inp,"x day","x days",2,out+"יומיים",l,"default");
+                test_cntranslate(inp,"x day","x days",3,out+"x ימים",l,"default");
+                test_cntranslate(inp,"x day","x days",20,out+"x יום",l,"default");
+
+                test_cntranslate(inp,"x day","x days",0,"x days",l,"undefined");
+                test_cntranslate(inp,"x day","x days",1,"x day",l,"undefined");
+                test_cntranslate(inp,"x day","x days",2,"x days",l,"undefined");
+                test_cntranslate(inp,"x day","x days",20,"x days",l,"undefined");
+            }
+        }
+        std::cout << "  Testing fallbacks" << std::endl;
+        test_translate("test","he_IL",g("he_IL.UTF-8"),"full");
+        test_translate("test","he",g("he_IL.UTF-8"),"fall");
+
+        std::cout << "  Testing automatic conversions " << std::endl;
+        std::locale::global(g("he_IL.UTF-8"));
+
+
+        TEST(same_s(bl::translate("hello"))=="שלום");
+        TEST(same_w(bl::translate(to<wchar_t>("hello")))==to<wchar_t>("שלום"));
+
+        #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
+        if(backend=="icu" || backend=="std")
+            TEST(same_u16(bl::translate(to<char16_t>("hello")))==to<char16_t>("שלום"));
+        #endif
+
+        #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
+        if(backend=="icu" || backend=="std")
+            TEST(same_u32(bl::translate(to<char32_t>("hello")))==to<char32_t>("שלום"));
+        #endif
+
+    }
+
+    std::cout << "Testing custom file system support" << std::endl;
+    {
+        boost::locale::gnu_gettext::messages_info info;
+        info.language = "he";
+        info.country = "IL";
+        info.encoding="UTF-8";
+        if(argc==2)
+            info.paths.push_back(argv[1]);
+        else
+            info.paths.push_back("./");
+
+        info.domains.push_back(bl::gnu_gettext::messages_info::domain("default"));
+        info.callback = file_loader();
+
+        std::locale l(std::locale::classic(),boost::locale::gnu_gettext::create_messages_facet<char>(info));
+        TEST(file_loader_is_actually_called);
+        TEST(bl::translate("hello").str(l)=="שלום");
+    }
+    if(iso_8859_8_not_supported)
+    {
+        std::cout << "ISO 8859-8 not supported so skipping non-US-ASCII keys" << std::endl;
+    }
+    else
+    {
+        std::cout << "Testing non-US-ASCII keys" << std::endl;
+        std::cout << "  UTF-8 keys" << std::endl;
+        {
             boost::locale::generator g;
-            g.add_messages_domain("simple");
-            g.add_messages_domain("full");
-            g.add_messages_domain("fall");
+            g.add_messages_domain("default");
             if(argc==2)
                 g.add_messages_path(argv[1]);
             else
                 g.add_messages_path("./");
-            g.set_default_messages_domain("default");
 
-            
-            std::string locales[] = { "he_IL.UTF-8", "he_IL.ISO8859-8" };
+            std::locale l = g("he_IL.UTF-8");
 
-            for(unsigned i=0;i<sizeof(locales)/sizeof(locales[0]);i++){
-                std::locale l;
-                
-                if(i==1) {
-                    try {
-                        l = g(locales[i]);
-                    }
-                    catch(boost::locale::conv::invalid_charset_error const &e) {
-                        std::cout << "Looks like ISO-8859-8 is not supported! skipping" << std::endl;
-                        iso_8859_8_not_supported = true;
-                        continue;
-                    }
-                }
-                else {
-                        l = g(locales[i]);
-                }
-                
-                std::cout << "  Testing "<<locales[i]<<std::endl;
-                std::cout << "    single forms" << std::endl;
+            // narrow
+            TEST(bl::gettext("בדיקה",l)=="test");
+            TEST(bl::gettext("לא קיים",l)=="לא קיים");
 
-                test_translate("hello","שלום",l,"default");
-                test_translate("hello","היי",l,"simple");
-                test_translate("hello","hello",l,"undefined");
-                test_translate("untranslated","untranslated",l,"default");
-                // Check removal of old "context" information
-                test_translate("#untranslated","#untranslated",l,"default");
-                test_translate("##untranslated","##untranslated",l,"default");
-                test_ctranslate("context","hello","שלום בהקשר אחר",l,"default");
-                test_translate("#hello","#שלום",l,"default");
+            // wide
+            std::wstring wtest = bl::conv::to_utf<wchar_t>("בדיקה","UTF-8");
+            std::wstring wmiss = bl::conv::to_utf<wchar_t>("לא קיים","UTF-8");
+            TEST(bl::gettext(wtest.c_str(),l)==L"test");
+            TEST(bl::gettext(wmiss.c_str(),l)==wmiss);
 
-                std::cout << "    plural forms" << std::endl;
+            l=g("he_IL.ISO-8859-8");
 
-                {
-                    test_ntranslate("x day","x days",0,"x ימים",l,"default");
-                    test_ntranslate("x day","x days",1,"יום x",l,"default");
-                    test_ntranslate("x day","x days",2,"יומיים",l,"default");
-                    test_ntranslate("x day","x days",3,"x ימים",l,"default");
-                    test_ntranslate("x day","x days",20,"x יום",l,"default");
-                    
-                    test_ntranslate("x day","x days",0,"x days",l,"undefined");
-                    test_ntranslate("x day","x days",1,"x day",l,"undefined");
-                    test_ntranslate("x day","x days",2,"x days",l,"undefined");
-                    test_ntranslate("x day","x days",20,"x days",l,"undefined");
-                }
-                std::cout << "    plural forms with context" << std::endl;
-                {
-                    std::string inp = "context"; 
-                    std::string out = "בהקשר "; 
-
-                    test_cntranslate(inp,"x day","x days",0,out+"x ימים",l,"default");
-                    test_cntranslate(inp,"x day","x days",1,out+"יום x",l,"default");
-                    test_cntranslate(inp,"x day","x days",2,out+"יומיים",l,"default");
-                    test_cntranslate(inp,"x day","x days",3,out+"x ימים",l,"default");
-                    test_cntranslate(inp,"x day","x days",20,out+"x יום",l,"default");
-                    
-                    test_cntranslate(inp,"x day","x days",0,"x days",l,"undefined");
-                    test_cntranslate(inp,"x day","x days",1,"x day",l,"undefined");
-                    test_cntranslate(inp,"x day","x days",2,"x days",l,"undefined");
-                    test_cntranslate(inp,"x day","x days",20,"x days",l,"undefined");
-                }
-            }
-            std::cout << "  Testing fallbacks" <<std::endl;
-            test_translate("test","he_IL",g("he_IL.UTF-8"),"full");
-            test_translate("test","he",g("he_IL.UTF-8"),"fall");
-            
-            std::cout << "  Testing automatic conversions " << std::endl;
-            std::locale::global(g("he_IL.UTF-8"));
-
-
-            TEST(same_s(bl::translate("hello"))=="שלום");
-            TEST(same_w(bl::translate(to<wchar_t>("hello")))==to<wchar_t>("שלום"));
-            
-            #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
-            if(backend=="icu" || backend=="std")
-                TEST(same_u16(bl::translate(to<char16_t>("hello")))==to<char16_t>("שלום"));
-            #endif
-            
-            #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
-            if(backend=="icu" || backend=="std")
-                TEST(same_u32(bl::translate(to<char32_t>("hello")))==to<char32_t>("שלום"));
-            #endif
-
+            // conversion with substitution
+            TEST(bl::gettext("test-あにま-בדיקה",l)==bl::conv::from_utf("test--בדיקה","ISO-8859-8"));
         }
-        
-        std::cout << "Testing custom file system support" << std::endl;
+
+        std::cout << "  `ANSI' keys" << std::endl;
+
         {
-            boost::locale::gnu_gettext::messages_info info;
-            info.language = "he";
-            info.country = "IL";
-            info.encoding="UTF-8";
+            boost::locale::generator g;
+            g.add_messages_domain("default/ISO-8859-8");
             if(argc==2)
-                info.paths.push_back(argv[1]);
+                g.add_messages_path(argv[1]);
             else
-                info.paths.push_back("./");
+                g.add_messages_path("./");
 
-            info.domains.push_back(bl::gnu_gettext::messages_info::domain("default"));
-            info.callback = file_loader();
+            std::locale l = g("he_IL.UTF-8");
 
-            std::locale l(std::locale::classic(),boost::locale::gnu_gettext::create_messages_facet<char>(info));
-            TEST(file_loader_is_actually_called);
-            TEST(bl::translate("hello").str(l)=="שלום");
+            // narrow non-UTF-8 keys
+            // match
+            TEST(bl::gettext(bl::conv::from_utf("בדיקה","ISO-8859-8").c_str(),l)=="test");
+            // conversion
+            TEST(bl::gettext(bl::conv::from_utf("לא קיים","ISO-8859-8").c_str(),l)=="לא קיים");
         }
-        if(iso_8859_8_not_supported)
-        {
-            std::cout << "ISO 8859-8 not supported so skipping non-US-ASCII keys" << std::endl; 
-        }
-        else 
-        {
-            std::cout << "Testing non-US-ASCII keys" << std::endl; 
-            std::cout << "  UTF-8 keys" << std::endl; 
-            {
-                boost::locale::generator g;
-                g.add_messages_domain("default");
-                if(argc==2)
-                    g.add_messages_path(argv[1]);
-                else
-                    g.add_messages_path("./");
-                
-                std::locale l = g("he_IL.UTF-8");
-
-                // narrow
-                TEST(bl::gettext("בדיקה",l)=="test");
-                TEST(bl::gettext("לא קיים",l)=="לא קיים");
-                
-                // wide
-                std::wstring wtest = bl::conv::to_utf<wchar_t>("בדיקה","UTF-8");
-                std::wstring wmiss = bl::conv::to_utf<wchar_t>("לא קיים","UTF-8");
-                TEST(bl::gettext(wtest.c_str(),l)==L"test");
-                TEST(bl::gettext(wmiss.c_str(),l)==wmiss);
-
-                l=g("he_IL.ISO-8859-8");
-
-                // conversion with substitution
-                TEST(bl::gettext("test-あにま-בדיקה",l)==bl::conv::from_utf("test--בדיקה","ISO-8859-8"));
-            }
-            
-            std::cout << "  `ANSI' keys" << std::endl; 
-
-            {
-                boost::locale::generator g;
-                g.add_messages_domain("default/ISO-8859-8");
-                if(argc==2)
-                    g.add_messages_path(argv[1]);
-                else
-                    g.add_messages_path("./");
-                
-                std::locale l = g("he_IL.UTF-8");
-
-                // narrow non-UTF-8 keys
-                // match
-                TEST(bl::gettext(bl::conv::from_utf("בדיקה","ISO-8859-8").c_str(),l)=="test");
-                // conversion
-                TEST(bl::gettext(bl::conv::from_utf("לא קיים","ISO-8859-8").c_str(),l)=="לא קיים");
-            }
-        }
-        // Test compiles
-        {
-            bl::gettext("");
-            bl::gettext(L"");
-            bl::dgettext("","");
-            bl::dgettext("",L"");
-            bl::pgettext("","");
-            bl::pgettext(L"",L"");
-            bl::dpgettext("","","");
-            bl::dpgettext("",L"",L"");
-            bl::ngettext("","",1);
-            bl::ngettext(L"",L"",1);
-            bl::dngettext("","","",1);
-            bl::dngettext("",L"",L"",1);
-            bl::npgettext("","","",1);
-            bl::npgettext(L"",L"",L"",1);
-            bl::dnpgettext("","","","",1);
-            bl::dnpgettext("",L"",L"",L"",1);
-        }
-        
     }
-    catch(std::exception const &e) {
-        std::cerr << "Failed " << e.what() << std::endl;
-        return EXIT_FAILURE;
+    // Test compiles
+    {
+        bl::gettext("");
+        bl::gettext(L"");
+        bl::dgettext("","");
+        bl::dgettext("",L"");
+        bl::pgettext("","");
+        bl::pgettext(L"",L"");
+        bl::dpgettext("","","");
+        bl::dpgettext("",L"",L"");
+        bl::ngettext("","",1);
+        bl::ngettext(L"",L"",1);
+        bl::dngettext("","","",1);
+        bl::dngettext("",L"",L"",1);
+        bl::npgettext("","","",1);
+        bl::npgettext(L"",L"",L"",1);
+        bl::dnpgettext("","","","",1);
+        bl::dnpgettext("",L"",L"",L"",1);
     }
-    FINALIZE();
 }
 
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
-// boostinspect:noascii 
+// boostinspect:noascii

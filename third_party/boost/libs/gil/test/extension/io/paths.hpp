@@ -8,33 +8,13 @@
 #ifndef BOOST_GIL_TEST_EXTENSION_IO_PATHS_HPP
 #define BOOST_GIL_TEST_EXTENSION_IO_PATHS_HPP
 
-// Disable warning: conversion to 'std::atomic<int>::__integral_type {aka int}' from 'long int' may alter its value
-#if defined(BOOST_CLANG)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wshorten-64-to-32"
-#endif
-
-#if defined(BOOST_GCC) && (BOOST_GCC >= 40900)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wconversion"
-#endif
-
-#define BOOST_FILESYSTEM_VERSION 3
-#include <boost/filesystem.hpp>
-
-#if defined(BOOST_CLANG)
-#pragma clang diagnostic pop
-#endif
-
-#if defined(BOOST_GCC) && (BOOST_GCC >= 40900)
-#pragma GCC diagnostic pop
-#endif
+#include <boost/gil/io/detail/filesystem.hpp>
 
 #include <string>
 
 // `base` holds the path to ../.., i.e. the directory containing `images`
 static const std::string base =
-    (boost::filesystem::absolute(boost::filesystem::path(__FILE__)).parent_path().string()) + "/";
+    (boost::gil::detail::filesystem::absolute(boost::gil::detail::filesystem::path(__FILE__)).parent_path().string()) + "/";
 
 static const std::string bmp_in  = base + "images/bmp/";
 static const std::string bmp_out = base + "output/";

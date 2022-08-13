@@ -23,8 +23,8 @@ var appendix =
       [ "Using Cygwin", "gettext_for_windows.html#gettext_for_windows_cygwin", null ]
     ] ],
     [ "Glossary", "glossary.html", null ],
-    [ "Tested Compilers and Platforms", "tested_compilers_and_paltforms.html", [
-      [ "Known Issues", "tested_compilers_and_paltforms.html#tested_compilers_and_paltforms_issues", null ]
+    [ "Tested Compilers and Platforms", "tested_compilers_and_platforms.html", [
+      [ "Known Issues", "tested_compilers_and_platforms.html#tested_compilers_and_platforms_issues", null ]
     ] ],
     [ "Status of C++11 char16_t/char32_t support", "status_of_cpp0x_characters_support.html", [
       [ "GNU GCC 4.5/C++11 Status", "status_of_cpp0x_characters_support.html#status_of_cpp0x_characters_support_gnu", null ],

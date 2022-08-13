@@ -1,26 +1,27 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
-#include <iostream>
-#include <iomanip>
-#include <stdlib.h>
-#include <locale.h>
-#include <locale>
-#include <time.h>
-#include <stdexcept>
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
 
 #include <boost/locale.hpp>
+#include <cstdlib>
+#include <clocale>
+#include <ctime>
+#include <iostream>
+#include <iomanip>
+#include <locale>
+#include <stdexcept>
+
 #ifdef BOOST_LOCALE_WITH_ICU
 #include <unicode/uversion.h>
 #endif
 
 #include "test_locale_tools.hpp"
-
 
 char const *env(char const *s)
 {
@@ -32,7 +33,7 @@ char const *env(char const *s)
 
 void check_locale(char const **names)
 {
-    std::cout << "  " << std::setw(32) << "locale" << std::setw(4) << "C" << std::setw(4) << "C++" << std::endl;
+    std::cout << "  " << std::setw(32) << "locale" << std::setw(4) << "C" << std::setw(4) << "C++\n";
     while(*names) {
         char const *name = *names;
         std::cout << "  " << std::setw(32) << name << std::setw(4);
@@ -70,27 +71,31 @@ int main()
     #endif
     std::cout << std::endl;
     #ifdef BOOST_LOCALE_WITH_ICONV
-    std::cout << "- With iconv" << std::endl;
+    std::cout << "- With iconv\n";
     #else
-    std::cout << "- Without iconv" << std::endl;
+    std::cout << "- Without iconv\n";
     #endif
-    std::cout << "- Environment " << std::endl;
-    std::cout << "  LANG="<< env("LANG") << std::endl;
-    std::cout << "  LC_ALL="<< env("LC_ALL") << std::endl;
-    std::cout << "  LC_CTYPE="<< env("LC_CTYPE") << std::endl;
-    std::cout << "  TZ="<< env("TZ") << std::endl;
+    std::cout << "- Environment \n";
+    std::cout << "  LANG=" << env("LANG") << std::endl;
+    std::cout << "  LC_ALL=" << env("LC_ALL") << std::endl;
+    std::cout << "  LC_CTYPE=" << env("LC_CTYPE") << std::endl;
+    std::cout << "  TZ=" << env("TZ") << std::endl;
 
     char const *clocale=setlocale(LC_ALL,"");
     if(!clocale)
-        clocale= "undetected";
-    std::cout <<"- C locale: " << clocale << std::endl;
+        clocale= "undetected"; // LCOV_EXCL_LINE
+    std::cout << "- C locale: " << clocale << std::endl;
 
     try {
         std::locale loc("");
+#if defined(BOOST_CLANG) && BOOST_CLANG_VERSION < 30800
+        std::cout << "- C++ locale: n/a on Clang < 3.8\n";
+#else
         std::cout << "- C++ locale: " << loc.name() << std::endl;
+#endif
     }
     catch(std::exception const &) {
-        std::cout << "- C++ locale: is not supported" << std::endl;
+        std::cout << "- C++ locale: is not supported\n"; // LCOV_EXCL_LINE
     }
 
     char const *locales_to_check[] = {
@@ -122,12 +127,10 @@ int main()
         std::cout << std::use_facet<boost::locale::info>(l).name() << std::endl;
     }
     catch(std::exception const &) {
-        std::cout << " undetected" << std::endl;
-        return EXIT_FAILURE;
+        std::cout << " undetected\n"; // LCOV_EXCL_LINE
+        return EXIT_FAILURE;          // LCOV_EXCL_LINE
     }
     return EXIT_SUCCESS;
-
 }
 
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
-// boostinspect:noascii 
+// boostinspect:noascii

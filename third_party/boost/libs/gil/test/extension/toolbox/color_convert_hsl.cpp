@@ -12,23 +12,15 @@
 #include <boost/core/lightweight_test.hpp>
 
 #include <cstdint>
+#include <tuple>
+#include <vector>
 
 #include "test_utility_output_stream.hpp"
+#include "test_utility_with_tolerance.hpp"
 
 namespace gil = boost::gil;
 
-void test_rgb_to_hsl()
-{
-    gil::rgb8_pixel_t p{128, 0, 128};
-    gil::hsl32f_pixel_t h;
-    gil::color_convert(p, h);
-
-    BOOST_TEST_GT(gil::get_color(h, gil::hsl_color_space::hue_t()), 0.8);        // 0.83333331
-    BOOST_TEST_EQ(gil::get_color(h, gil::hsl_color_space::saturation_t()), 1.0); // 1.00000000
-    BOOST_TEST_GT(gil::get_color(h, gil::hsl_color_space::lightness_t()), 0.25); // 0.25098040
-}
-
-void test_hsl_to_rgb()
+void test_basic_hsl_to_rgb()
 {
     gil::rgb8_pixel_t p(64, 0, 64);
     gil::hsl32f_pixel_t h;
@@ -37,6 +29,43 @@ void test_hsl_to_rgb()
     gil::rgb8_pixel_t b;
     gil::color_convert(h, b);
     BOOST_TEST_EQ(b, p);
+}
+
+void test_colors_hsl_to_rgb()
+{
+    using color_t = std::tuple<float, float, float, std::uint8_t, std::uint8_t, std::uint8_t>;
+    std::vector<color_t> colors = {
+        color_t{0, 0, 0, 0, 0, 0},               // black
+        color_t{0, 0, 1, 255, 255, 255},         // white
+        color_t{0, 1, 0.5, 255, 0, 0},           // red
+        color_t{2 / 6.f, 1, 0.5, 0, 255, 0},     // lime
+        color_t{4 / 6.f, 1, 0.5, 0, 0, 255},     // blue
+        color_t{5 / 6.f, 1, 0.25, 128, 0, 128},  // purple
+        color_t{3 / 6.f, 1, 0.25, 0, 128, 128},  // teal
+        color_t{4 / 6.f, 1, 0.25, 0, 0, 128},    // navy
+    };
+
+    for (auto&& color : colors)
+    {
+        float h{0}, s{0}, l{0};
+        std::uint8_t r{0}, g{0}, b{0};
+        std::tie(h, s, l, r, g, b) = color;
+
+        gil::hsl32f_pixel_t hsl(h, s, l);
+        gil::rgb8_pixel_t rgb;
+        gil::color_convert(hsl, rgb);
+
+        float const abs_error = 1;
+        BOOST_TEST_WITH(
+            r, gil::get_color(rgb, gil::red_t()),
+            gil::test::utility::with_tolerance<double>(abs_error));
+        BOOST_TEST_WITH(
+            g, gil::get_color(rgb, gil::green_t()),
+            gil::test::utility::with_tolerance<double>(abs_error));
+        BOOST_TEST_WITH(
+            b, gil::get_color(rgb, gil::blue_t()),
+            gil::test::utility::with_tolerance<double>(abs_error));
+    }
 }
 
 void test_image_assign_hsl()
@@ -48,7 +77,7 @@ void test_image_assign_hsl()
     for (std::ptrdiff_t y = 0; y < h; y++)
     {
         gil::hsl32f_view_t::x_iterator hsl_x_it = view(hsl_img).row_begin(y);
-        float v = static_cast<float>(h - y) / h;
+        float v                                 = static_cast<float>(h - y) / h;
         for (std::ptrdiff_t x = 0; x < w; x++)
         {
             float const hue = (x + 1.f) / w;
@@ -59,29 +88,11 @@ void test_image_assign_hsl()
     }
 }
 
-void test_copy_pixels_rgb_to_hsl()
-{
-    gil::rgb8_image_t rgb_img(320, 240);
-    gil::rgb8_pixel_t rgb_pix(64, 32, 64);
-    gil::fill_pixels(view(rgb_img), rgb_pix);
-    gil::hsl32f_image_t hsl_img(view(rgb_img).dimensions());
-    gil::copy_pixels(gil::color_converted_view<gil::hsl32f_pixel_t>(view(rgb_img)), view(hsl_img));
-
-    auto view = gil::view(hsl_img);
-    for (auto it = view.begin(), end = view.end(); it != end; ++it)
-    {
-        gil::rgb8_pixel_t p;
-        gil::color_convert(*it, p);
-        BOOST_TEST_EQ(p, rgb_pix);
-    }
-}
-
 int main()
 {
-    test_rgb_to_hsl();
-    test_hsl_to_rgb();
+    test_basic_hsl_to_rgb();
+    test_colors_hsl_to_rgb();
     test_image_assign_hsl();
-    test_copy_pixels_rgb_to_hsl();
 
     return ::boost::report_errors();
 }

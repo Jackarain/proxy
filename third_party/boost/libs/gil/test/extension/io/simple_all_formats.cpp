@@ -16,8 +16,8 @@
 
 #include "paths.hpp"
 
+namespace fs  = boost::gil::detail::filesystem;
 namespace gil = boost::gil;
-namespace fs = boost::filesystem;
 
 // Test will include all format's headers and load and write some images.
 // This test is more of a compilation test.
@@ -74,6 +74,18 @@ void test_tiff()
     gil::write_view(tiff_out + "simple_all_format.tif", gil::view(img), gil::tiff_tag());
 }
 
+void test_tiff_tiled()
+{
+    gil::rgba8_image_t img;
+    gil::read_image(tiff_filename, img, gil::tiff_tag());
+
+    fs::create_directories(fs::path(tiff_out));
+    gil::image_write_info<gil::tiff_tag> info;
+    info._is_tiled = true;
+    info._tile_width = info._tile_length = 64; // must be multiples of 16
+    gil::write_view(tiff_out + "simple_all_format.tif", gil::view(img), info);
+}
+
 int main(int argc, char* argv[])
 {
     try
@@ -85,6 +97,7 @@ int main(int argc, char* argv[])
         // TODO: test_raw()
         test_targa();
         test_tiff();
+        test_tiff_tiled();
     }
     catch (std::exception const& e)
     {

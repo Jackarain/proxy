@@ -8,6 +8,7 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/process.hpp>
+#include <boost/process/extend.hpp>
 #include <boost/process/windows.hpp>
 #include <iostream>
 
@@ -22,9 +23,9 @@ int main()
 
 
     bp::system("test.exe",
-        bp::on_setup([](auto &e)
+        bp::extend::on_setup([](auto &e)
             { e.startup_info.dwFlags = STARTF_RUNFULLSCREEN; }),
-        bp::on_error([](auto&, const std::error_code & ec)
+        bp::extend::on_error([](auto&, const std::error_code & ec)
             { std::cerr << ec.message() << std::endl; })
         );
 }

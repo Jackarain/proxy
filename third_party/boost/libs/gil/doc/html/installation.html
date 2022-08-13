@@ -65,8 +65,8 @@
       
   <div class="section" id="installation">
 <h1>Installation</h1>
-<p>The latest version of GIL can be downloaded from <a class="reference external" href="https://github.com/boostorg/gil">https://github.com/boostorg/gil</a>.</p>
-<p>The GIL is a header-only library. Meaning, it consists of header files only,
+<p>The latest version of Boost.GIL can be downloaded from <a class="reference external" href="https://github.com/boostorg/gil">https://github.com/boostorg/gil</a>.</p>
+<p>The Boost.GIL is a header-only library. Meaning, it consists of header files only,
 it does not require Boost to be built and it does not require any libraries
 to link against.</p>
 <div class="admonition note">
@@ -75,8 +75,21 @@ to link against.</p>
 which requires client libraries implementing popular image formats
 like libpng, libjpeg, etc.</p>
 </div>
-<p>In order to use GIL, including <code class="docutils literal"><span class="pre">boost/gil.hpp</span></code> and telling your compiler
+<p>In order to use Boost.GIL, including <code class="docutils literal"><span class="pre">boost/gil.hpp</span></code> and telling your compiler
 where to find Boost and GIL headers should be sufficient for most projects.</p>
+<div class="section" id="compiling">
+<h2>Compiling</h2>
+<p>The Boost.GIL library source code should successfully compile with any
+compiler with complete C++14 support.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Boost.GIL requires C++14 compiler since ince Boost 1.80.</p>
+</div>
+<p>For the actual list of currently tested compilers, check results of the library CI
+builds linked from the <a class="reference external" href="https://github.com/boostorg/gil/blob/develop/README.md">README.md</a>
+or inspect the CI services configuration files in the <a class="reference external" href="https://github.com/boostorg/gil/tree/develop">develop branch</a>
+of the library repository.</p>
+</div>
 </div>
 
 
@@ -89,7 +102,7 @@ where to find Boost and GIL headers should be sufficient for most projects.</p>
     </div>
     </div>
     <div class="footer" role="contentinfo">
-      Last updated on 2022-04-06 21:04:50.
+      Last updated on 2022-08-04 02:08:16.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.6.
     </div>
   </body>

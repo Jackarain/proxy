@@ -162,7 +162,7 @@ a never valueless variant type, compatible with <code class="docutils literal"><
 <span class="p">};</span>
 </pre></div>
 </div>
-<p>Operations are invoked on variants via <code class="docutils literal"><span class="pre">apply_operation</span></code> passing a
+<p>Operations are invoked on variants via <code class="docutils literal"><span class="pre">variant2::visit</span></code> passing a
 function object to perform the operation. The code for every allowed
 type in the variant is instantiated and the appropriate instantiation
 is selected via a switch statement. Since image view algorithms
@@ -186,7 +186,7 @@ pixels. There is no &#8220;any_pixel&#8221; or &#8220;any_pixel_iterator&#8221; 
 constructs could be provided via the <code class="docutils literal"><span class="pre">variant</span></code> mechanism, but doing
 so would result in inefficient algorithms, since the type resolution
 would have to be performed per pixel. Image-level algorithms should be
-implemented via <code class="docutils literal"><span class="pre">apply_operation</span></code>. That said, many common operations
+implemented via <code class="docutils literal"><span class="pre">variant2::visit</span></code>. That said, many common operations
 are shared between the static and dynamic types. In addition, all of
 the image view transformations and many STL-like image view algorithms
 have overloads operating on <code class="docutils literal"><span class="pre">any_image_view</span></code>, as illustrated with
@@ -230,14 +230,13 @@ implemented:</p>
 <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">View</span><span class="o">&gt;</span>
 <span class="k">typename</span> <span class="n">dynamic_xy_step_type</span><span class="o">&lt;</span><span class="n">View</span><span class="o">&gt;::</span><span class="n">type</span> <span class="n">rotated180_view</span><span class="p">(</span><span class="k">const</span> <span class="n">View</span><span class="o">&amp;</span> <span class="n">src</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
 
-<span class="k">namespace</span> <span class="n">detail</span>
-<span class="p">{</span>
+<span class="k">namespace</span> <span class="n">detail</span> <span class="p">{</span>
   <span class="c1">// the function, wrapped inside a function object</span>
   <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Result</span><span class="o">&gt;</span> <span class="k">struct</span> <span class="n">rotated180_view_fn</span>
   <span class="p">{</span>
       <span class="k">typedef</span> <span class="n">Result</span> <span class="n">result_type</span><span class="p">;</span>
       <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">View</span><span class="o">&gt;</span> <span class="n">result_type</span> <span class="k">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">View</span><span class="o">&amp;</span> <span class="n">src</span><span class="p">)</span> <span class="k">const</span>
-<span class="p">{</span>
+      <span class="p">{</span>
           <span class="k">return</span> <span class="n">result_type</span><span class="p">(</span><span class="n">rotated180_view</span><span class="p">(</span><span class="n">src</span><span class="p">));</span>
       <span class="p">}</span>
   <span class="p">};</span>
@@ -245,10 +244,11 @@ implemented:</p>
 
 <span class="c1">// overloading of the function using variant. Takes and returns run-time bound view.</span>
 <span class="c1">// The returned view has a dynamic step</span>
-<span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">ViewTypes</span><span class="o">&gt;</span> <span class="kr">inline</span> <span class="c1">// Models MPL Random Access Container of models of ImageViewConcept</span>
-<span class="k">typename</span> <span class="n">dynamic_xy_step_type</span><span class="o">&lt;</span><span class="n">any_image_view</span><span class="o">&lt;</span><span class="n">ViewTypes</span><span class="o">&gt;</span> <span class="o">&gt;::</span><span class="n">type</span> <span class="n">rotated180_view</span><span class="p">(</span><span class="k">const</span> <span class="n">any_image_view</span><span class="o">&lt;</span><span class="n">ViewTypes</span><span class="o">&gt;&amp;</span> <span class="n">src</span><span class="p">)</span>
+<span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="p">...</span><span class="n">ViewTypes</span><span class="o">&gt;</span> <span class="kr">inline</span>
+<span class="k">typename</span> <span class="n">dynamic_xy_step_type</span><span class="o">&lt;</span><span class="n">any_image_view</span><span class="o">&lt;</span><span class="n">ViewTypes</span><span class="p">...</span><span class="o">&gt;&gt;::</span><span class="n">type</span> <span class="n">rotated180_view</span><span class="p">(</span><span class="k">const</span> <span class="n">any_image_view</span><span class="o">&lt;</span><span class="n">ViewTypes</span><span class="p">...</span><span class="o">&gt;&amp;</span> <span class="n">src</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="k">return</span> <span class="n">apply_operation</span><span class="p">(</span><span class="n">src</span><span class="p">,</span><span class="n">detail</span><span class="o">::</span><span class="n">rotated180_view_fn</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">dynamic_xy_step_type</span><span class="o">&lt;</span><span class="n">any_image_view</span><span class="o">&lt;</span><span class="n">ViewTypes</span><span class="o">&gt;</span> <span class="o">&gt;::</span><span class="n">type</span><span class="o">&gt;</span><span class="p">());</span>
+  <span class="k">using</span> <span class="n">result_view_t</span> <span class="o">=</span> <span class="k">typename</span> <span class="n">dynamic_xy_step_type</span><span class="o">&lt;</span><span class="n">any_image_view</span><span class="o">&lt;</span><span class="n">ViewTypes</span><span class="p">...</span><span class="o">&gt;&gt;::</span><span class="n">type</span><span class="p">;</span>
+  <span class="k">return</span> <span class="n">variant2</span><span class="o">::</span><span class="n">visit</span><span class="p">(</span><span class="n">detail</span><span class="o">::</span><span class="n">rotated180_view_fn</span><span class="o">&lt;</span><span class="n">result_view_t</span><span class="o">&gt;</span><span class="p">(),</span> <span class="n">src</span><span class="p">);</span>
 <span class="p">}</span>
 </pre></div>
 </div>
@@ -273,7 +273,7 @@ uniformly as a collection and store them in the same container.</p>
     </div>
     </div>
     <div class="footer" role="contentinfo">
-      Last updated on 2022-04-06 21:04:50.
+      Last updated on 2022-08-04 02:08:16.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.6.
     </div>
   </body>

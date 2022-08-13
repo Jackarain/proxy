@@ -210,6 +210,8 @@ public:
     dynamic_bitset&amp; <a href="#flip3">flip</a>(size_type n, size_type len);
     dynamic_bitset&amp; <a href="#flip2">flip</a>(size_type n);
     dynamic_bitset&amp; <a href="#flip1">flip</a>();
+    reference <a href="#at">at</a>(size_type n);
+    bool <a href="#const-at">at</a>(size_type n) const;
     bool <a href="#test">test</a>(size_type n) const;
     bool <a href="#test">test_set</a>(size_type n, bool val = true);
     bool <a href="#all">all</a>() const;
@@ -1249,6 +1251,24 @@ bool <a id="none">none</a>() const
 <b>Returns:</b> <tt>true</tt> if no bits are set, and otherwise
 returns <tt>false</tt>.<br />
 <b>Throws:</b> nothing.
+
+<hr />
+<pre>
+reference <a id="at">at</a>(size_type n)
+</pre>
+
+<b>Precondition:</b> <tt>n &lt; this-&gt;size()</tt>.<br />
+<b>Returns:</b> The same as <tt>operator[](n)</tt>.<br />
+<b>Throws:</b> <tt>std::out_of_range</tt> if that <tt>n</tt> is not within the range of the bitset.
+
+<hr />
+<pre>
+bool <a id="const-at">at</a>(size_type n) const
+</pre>
+
+<b>Precondition:</b> <tt>n &lt; this-&gt;size()</tt>.<br />
+<b>Returns:</b> The same as <tt>operator[](n)</tt>.<br />
+<b>Throws:</b> <tt>std::out_of_range</tt> if that <tt>n</tt> is not within the range of the bitset.
 
 <hr />
 <pre>

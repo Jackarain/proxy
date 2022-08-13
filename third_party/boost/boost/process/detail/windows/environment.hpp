@@ -232,6 +232,8 @@ basic_environment_impl<Char>::basic_environment_impl(const native_environment_im
 template<typename Char>
 inline auto basic_environment_impl<Char>::get(const string_type &id) -> string_type
 {
+    if (id.size() >= _data.size()) //ok, so it's impossible id is in there.
+        return string_type(_data.data());
 
     if (std::equal(id.begin(), id.end(), _data.begin()) && (_data[id.size()] == equal_sign<Char>()))
         return string_type(_data.data()); //null-char is handled by the string.

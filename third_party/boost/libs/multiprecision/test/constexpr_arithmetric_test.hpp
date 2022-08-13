@@ -9,11 +9,17 @@
 
 // clang-format off
 
+#ifdef BOOST_HAS_FLOAT128
+#define OR_IS_FLOAT128 || std::is_same<__float128, U>::value
+#else
+#define OR_IS_FLOAT128
+#endif
+
 template <class T, class U>
 BOOST_CXX14_CONSTEXPR T do_test_constexpr_add_subtract(T a, U b)
 {
    a = +b;
-   if constexpr(std::numeric_limits<U>::is_signed && std::numeric_limits<T>::is_signed)
+   if constexpr((std::numeric_limits<U>::is_signed OR_IS_FLOAT128) && std::numeric_limits<T>::is_signed)
       b = -b;
    a += b;
    a += a;
@@ -26,13 +32,13 @@ BOOST_CXX14_CONSTEXPR T do_test_constexpr_add_subtract(T a, U b)
    a += bb--;
    a = a + b;
    a += a - b;
-   if constexpr(std::numeric_limits<U>::is_signed && std::numeric_limits<T>::is_signed)
+   if constexpr((std::numeric_limits<U>::is_signed OR_IS_FLOAT128) && std::numeric_limits<T>::is_signed)
       a -= b - -a;
    a += b + a;
    if constexpr(std::numeric_limits<T>::is_signed)
    {
       a = -a;
-      if constexpr(std::numeric_limits<U>::is_signed)
+      if constexpr(std::numeric_limits<U>::is_signed OR_IS_FLOAT128)
          a -= b;
    }
    return a;

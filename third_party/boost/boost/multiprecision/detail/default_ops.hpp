@@ -4,8 +4,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef BOOST_MATH_BIG_NUM_DEF_OPS
-#define BOOST_MATH_BIG_NUM_DEF_OPS
+#ifndef BOOST_MP_DEFAULT_OPS
+#define BOOST_MP_DEFAULT_OPS
 
 #include <boost/multiprecision/detail/standalone_config.hpp>
 #include <boost/multiprecision/detail/no_exceptions_support.hpp>
@@ -1055,7 +1055,7 @@ inline BOOST_MP_CXX14_CONSTEXPR typename std::enable_if<boost::multiprecision::d
    eval_convert_to(&n, backend);
    BOOST_IF_CONSTEXPR(!boost::multiprecision::detail::is_unsigned<R>::value && std::numeric_limits<R>::is_specialized && std::numeric_limits<R>::is_bounded)
    {
-      if(n > (next_type)(std::numeric_limits<R>::max)())
+      if(n > static_cast<next_type>((std::numeric_limits<R>::max)()))
       {
          *result = (std::numeric_limits<R>::max)();
          return;
@@ -1063,7 +1063,7 @@ inline BOOST_MP_CXX14_CONSTEXPR typename std::enable_if<boost::multiprecision::d
    }
    BOOST_IF_CONSTEXPR(std::numeric_limits<R>::is_specialized&& std::numeric_limits<R>::is_bounded)
    {
-      if (n < (next_type)(std::numeric_limits<R>::min)())
+      if (n < static_cast<next_type>((std::numeric_limits<R>::min)()))
       {
          *result = (std::numeric_limits<R>::min)();
          return;
@@ -1164,6 +1164,9 @@ inline void last_chance_eval_convert_to(terminal<R>*, const B&, const std::integ
 template <class R, class B>
 inline void last_chance_eval_convert_to(terminal<R>* result, const B& backend, const std::integral_constant<bool, true>&)
 {
+   static_cast<void>(result);
+   static_cast<void>(backend);
+
    static_assert(sizeof(R) == 1, "This type can not be used in standalone mode. Please de-activate and file a bug at https://github.com/boostorg/multiprecision/");
 }
 #endif
@@ -1631,7 +1634,9 @@ inline BOOST_MP_CXX14_CONSTEXPR std::ptrdiff_t eval_msb(const T& val)
       eval_right_shift(t, 1);
       ++result;
    }
-   return --result;
+   --result;
+
+   return static_cast<std::ptrdiff_t>(result);
 }
 
 template <class T>
@@ -1774,7 +1779,7 @@ void BOOST_MP_CXX14_CONSTEXPR eval_integer_sqrt_bitwise(B& s, B& r, const B& x)
       r = ui_type(0u);
       return;
    }
-   std::ptrdiff_t g = eval_msb(x);
+   std::ptrdiff_t g = static_cast<std::ptrdiff_t>(eval_msb(x));
    if (g <= 1)
    {
       s = ui_type(1);
@@ -1786,28 +1791,28 @@ void BOOST_MP_CXX14_CONSTEXPR eval_integer_sqrt_bitwise(B& s, B& r, const B& x)
    r = x;
    g /= 2;
    std::ptrdiff_t org_g = g;
-   eval_bit_set(s, g);
-   eval_bit_set(t, 2 * g);
+   eval_bit_set(s, static_cast<std::size_t>(g));
+   eval_bit_set(t, static_cast<std::size_t>(2 * g));
    eval_subtract(r, x, t);
    --g;
    if (eval_get_sign(r) == 0)
       return;
-   std::ptrdiff_t msbr = eval_msb(r);
+   std::ptrdiff_t msbr = static_cast<std::ptrdiff_t>(eval_msb(r));
    do
    {
       if (msbr >= org_g + g + 1)
       {
          t = s;
-         eval_left_shift(t, g + 1);
-         eval_bit_set(t, 2 * g);
+         eval_left_shift(t, static_cast<std::size_t>(g + 1));
+         eval_bit_set(t, static_cast<std::size_t>(2 * g));
          if (t.compare(r) <= 0)
          {
             BOOST_MP_ASSERT(g >= 0);
-            eval_bit_set(s, g);
+            eval_bit_set(s, static_cast<std::size_t>(g));
             eval_subtract(r, t);
             if (eval_get_sign(r) == 0)
                return;
-            msbr = eval_msb(r);
+            msbr = static_cast<std::ptrdiff_t>(eval_msb(r));
          }
       }
       --g;

@@ -1263,7 +1263,7 @@
           to visualize 1d or 2d summaries of a high-dimensional histogram.
         </p>
 <p>
-          The library provides the <code class="computeroutput"><a class="link" href="../boost/histogram/algorithm/project_idm13600.html" title="Function template project">boost::histogram::algorithm::project</a></code>
+          The library provides the <code class="computeroutput"><a class="link" href="../boost/histogram/algorithm/project_idm13527.html" title="Function template project">boost::histogram::algorithm::project</a></code>
           function for this purpose. It accepts the original histogram and the indices
           (one or more) of the axes that are kept and returns the lower-dimensional
           histogram. If the histogram is static, meaning the axis configuration is
@@ -1327,7 +1327,7 @@
 </h4></div></div></div>
 <p>
           A projection removes an axis completely. A less drastic way to obtain a
-          smaller histogram is the <code class="computeroutput"><a class="link" href="../boost/histogram/algorithm/reduce_idm13754.html" title="Function template reduce">reduce</a></code>
+          smaller histogram is the <code class="computeroutput"><a class="link" href="../boost/histogram/algorithm/reduce_idm13681.html" title="Function template reduce">reduce</a></code>
           function, which allows one to <span class="emphasis"><em>slice</em></span>, <span class="emphasis"><em>shrink</em></span>
           or <span class="emphasis"><em>rebin</em></span> individual axes.
         </p>
@@ -1342,10 +1342,10 @@
           in one step is much more efficient than doing it in several steps.
         </p>
 <p>
-          The <code class="computeroutput"><a class="link" href="../boost/histogram/algorithm/reduce_idm13754.html" title="Function template reduce">reduce</a></code>
+          The <code class="computeroutput"><a class="link" href="../boost/histogram/algorithm/reduce_idm13681.html" title="Function template reduce">reduce</a></code>
           function does not change the total count if all modified axes in the histogram
           have underflow and overflow bins. Counts in removed bins are added to the
-          corresponding under- and overflow bins. As in case of the <code class="computeroutput"><a class="link" href="../boost/histogram/algorithm/project_idm13600.html" title="Function template project">project</a></code> function,
+          corresponding under- and overflow bins. As in case of the <code class="computeroutput"><a class="link" href="../boost/histogram/algorithm/project_idm13527.html" title="Function template project">project</a></code> function,
           such a histogram is guaranteed to be identical to one obtained from filling
           the original data.
         </p>

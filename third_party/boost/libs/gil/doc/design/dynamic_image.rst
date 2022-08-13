@@ -103,7 +103,7 @@ GIL ``any_image_view`` and ``any_image`` are subclasses of ``variant``:
     y_coord_t   height()        const;
   };
 
-Operations are invoked on variants via ``apply_operation`` passing a
+Operations are invoked on variants via ``variant2::visit`` passing a
 function object to perform the operation. The code for every allowed
 type in the variant is instantiated and the appropriate instantiation
 is selected via a switch statement. Since image view algorithms
@@ -129,7 +129,7 @@ pixels. There is no "any_pixel" or "any_pixel_iterator" in GIL. Such
 constructs could be provided via the ``variant`` mechanism, but doing
 so would result in inefficient algorithms, since the type resolution
 would have to be performed per pixel. Image-level algorithms should be
-implemented via ``apply_operation``. That said, many common operations
+implemented via ``variant2::visit``. That said, many common operations
 are shared between the static and dynamic types. In addition, all of
 the image view transformations and many STL-like image view algorithms
 have overloads operating on ``any_image_view``, as illustrated with
@@ -180,14 +180,13 @@ implemented:
   template <typename View>
   typename dynamic_xy_step_type<View>::type rotated180_view(const View& src) { ... }
 
-  namespace detail
-  {
+  namespace detail {
     // the function, wrapped inside a function object
     template <typename Result> struct rotated180_view_fn
     {
         typedef Result result_type;
         template <typename View> result_type operator()(const View& src) const
-  {
+        {
             return result_type(rotated180_view(src));
         }
     };
@@ -195,10 +194,11 @@ implemented:
 
   // overloading of the function using variant. Takes and returns run-time bound view.
   // The returned view has a dynamic step
-  template <typename ViewTypes> inline // Models MPL Random Access Container of models of ImageViewConcept
-  typename dynamic_xy_step_type<any_image_view<ViewTypes> >::type rotated180_view(const any_image_view<ViewTypes>& src)
+  template <typename ...ViewTypes> inline
+  typename dynamic_xy_step_type<any_image_view<ViewTypes...>>::type rotated180_view(const any_image_view<ViewTypes...>& src)
   {
-    return apply_operation(src,detail::rotated180_view_fn<typename dynamic_xy_step_type<any_image_view<ViewTypes> >::type>());
+    using result_view_t = typename dynamic_xy_step_type<any_image_view<ViewTypes...>>::type;
+    return variant2::visit(detail::rotated180_view_fn<result_view_t>(), src);
   }
 
 Variants should be used with caution (especially algorithms that take

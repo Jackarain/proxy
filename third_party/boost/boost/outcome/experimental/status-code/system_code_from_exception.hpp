@@ -33,6 +33,8 @@ DEALINGS IN THE SOFTWARE.
 
 #include "system_code.hpp"
 
+#include "status_error.hpp"
+
 #include <exception>     // for exception_ptr
 #include <stdexcept>     // for the exception types
 #include <system_error>  // for std::system_error
@@ -50,7 +52,31 @@ inline system_code system_code_from_exception(std::exception_ptr &&ep = std::cur
   }
   try
   {
-    std::rethrow_exception(ep);
+    try
+    {
+      std::rethrow_exception(ep);
+    }
+    catch(const status_error<void> &e)
+    {
+      try
+      {
+        system_code erased(e.code());
+        if(!erased.empty())
+        {
+          return erased;
+        }
+      }
+      catch(...)
+      {
+        // Source status code's do_erased_copy() routine refused to copy the original
+        // Process instead as if the source were not a status_error
+      }
+      throw;
+    }
+    catch(...)
+    {
+      throw;
+    }
   }
   catch(const std::invalid_argument & /*unused*/)
   {
@@ -89,7 +115,11 @@ inline system_code system_code_from_exception(std::exception_ptr &&ep = std::cur
 #ifdef _WIN32
       return win32_code(e.code().value());
 #else
+#ifndef BOOST_OUTCOME_SYSTEM_ERROR2_NOT_POSIX
       return posix_code(e.code().value());
+#else
+      return generic_code(static_cast<errc>(e.code().value()));
+#endif
 #endif
     }
     // Don't know this error code category, can't wrap it into std_error_code

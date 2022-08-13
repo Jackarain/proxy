@@ -30,40 +30,52 @@
 <p>
             Constructor.
           </p>
-<h7><a name="json.ref.boost__json__array.array.overload5.h0"></a>
+<h6>
+<a name="json.ref.boost__json__array.array.overload5.h0"></a>
             <span class="phrase"><a name="json.ref.boost__json__array.array.overload5.synopsis"></a></span><a class="link" href="overload5.html#json.ref.boost__json__array.array.overload5.synopsis">Synopsis</a>
-          </h7><pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
+          </h6>
+<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
     <span class="keyword">class</span> <span class="identifier">InputIt</span><span class="special">&gt;</span>
 <span class="identifier">array</span><span class="special">(</span>
     <span class="identifier">InputIt</span> <span class="identifier">first</span><span class="special">,</span>
     <span class="identifier">InputIt</span> <span class="identifier">last</span><span class="special">,</span>
     <span class="identifier">storage_ptr</span> <span class="identifier">sp</span> <span class="special">=</span> <span class="special">{});</span>
 </pre>
-<h7><a name="json.ref.boost__json__array.array.overload5.h1"></a>
+<h6>
+<a name="json.ref.boost__json__array.array.overload5.h1"></a>
             <span class="phrase"><a name="json.ref.boost__json__array.array.overload5.description"></a></span><a class="link" href="overload5.html#json.ref.boost__json__array.array.overload5.description">Description</a>
-          </h7><p>
+          </h6>
+<p>
             The array is constructed with the elements in the range <code class="computeroutput"><span class="special">{</span><span class="identifier">first</span><span class="special">,</span> <span class="identifier">last</span><span class="special">)</span></code>, preserving order, using the specified
             memory resource.
           </p>
-<h7><a name="json.ref.boost__json__array.array.overload5.h2"></a>
+<h6>
+<a name="json.ref.boost__json__array.array.overload5.h2"></a>
             <span class="phrase"><a name="json.ref.boost__json__array.array.overload5.constraints"></a></span><a class="link" href="overload5.html#json.ref.boost__json__array.array.overload5.constraints">Constraints</a>
-          </h7><pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">is_constructible_v</span><span class="special">&lt;</span><span class="identifier">value</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">iterator_traits</span><span class="special">&lt;</span><span class="identifier">InputIt</span><span class="special">&gt;::</span><span class="identifier">value_type</span><span class="special">&gt;</span>
+          </h6>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">is_constructible_v</span><span class="special">&lt;</span><span class="identifier">value</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">iterator_traits</span><span class="special">&lt;</span><span class="identifier">InputIt</span><span class="special">&gt;::</span><span class="identifier">value_type</span><span class="special">&gt;</span>
 </pre>
-<h7><a name="json.ref.boost__json__array.array.overload5.h3"></a>
+<h6>
+<a name="json.ref.boost__json__array.array.overload5.h3"></a>
             <span class="phrase"><a name="json.ref.boost__json__array.array.overload5.complexity"></a></span><a class="link" href="overload5.html#json.ref.boost__json__array.array.overload5.complexity">Complexity</a>
-          </h7><p>
+          </h6>
+<p>
             Linear in <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">distance</span><span class="special">(</span><span class="identifier">first</span><span class="special">,</span> <span class="identifier">last</span><span class="special">)</span></code>
           </p>
-<h7><a name="json.ref.boost__json__array.array.overload5.h4"></a>
+<h6>
+<a name="json.ref.boost__json__array.array.overload5.h4"></a>
             <span class="phrase"><a name="json.ref.boost__json__array.array.overload5.exception_safety"></a></span><a class="link" href="overload5.html#json.ref.boost__json__array.array.overload5.exception_safety">Exception
             Safety</a>
-          </h7><p>
+          </h6>
+<p>
             Strong guarantee. Calls to <code class="computeroutput"><span class="identifier">memory_resource</span><span class="special">::</span><span class="identifier">allocate</span></code>
             may throw.
           </p>
-<h7><a name="json.ref.boost__json__array.array.overload5.h5"></a>
+<h6>
+<a name="json.ref.boost__json__array.array.overload5.h5"></a>
             <span class="phrase"><a name="json.ref.boost__json__array.array.overload5.parameters"></a></span><a class="link" href="overload5.html#json.ref.boost__json__array.array.overload5.parameters">Parameters</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>
@@ -122,10 +134,12 @@
 </tr>
 </tbody>
 </table></div>
-<h7><a name="json.ref.boost__json__array.array.overload5.h6"></a>
+<h6>
+<a name="json.ref.boost__json__array.array.overload5.h6"></a>
             <span class="phrase"><a name="json.ref.boost__json__array.array.overload5.template_parameters"></a></span><a class="link" href="overload5.html#json.ref.boost__json__array.array.overload5.template_parameters">Template
             Parameters</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>

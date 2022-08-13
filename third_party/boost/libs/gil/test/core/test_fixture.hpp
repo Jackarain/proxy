@@ -8,8 +8,8 @@
 #ifndef BOOST_GIL_TEST_CORE_TEST_FIXTURE_HPP
 #define BOOST_GIL_TEST_CORE_TEST_FIXTURE_HPP
 
-#include <boost/gil/promote_integral.hpp>
 #include <boost/assert.hpp>
+#include <boost/gil/promote_integral.hpp>
 
 #include <cstdint>
 #include <initializer_list>
@@ -60,19 +60,30 @@ template <typename T>
 struct random_value
 {
     static_assert(std::is_integral<T>::value, "T must be integral type");
-    static constexpr auto range_min = std::numeric_limits<T>::min();
-    static constexpr auto range_max = std::numeric_limits<T>::max();
 
-    random_value() : rng_(rd_()), uid_(range_min, range_max) {}
+    random_value(T range_min = std::numeric_limits<T>::min(),
+                 T range_max = std::numeric_limits<T>::max())
+        : uid_(range_min, range_max)
+    {}
+
+    random_value(std::uint32_t seed, T minimum, T maximum) : rng_(seed), uid_(minimum, maximum)
+    {}
 
     T operator()()
     {
-        auto value = uid_(rng_);
-        BOOST_ASSERT(range_min <= value && value <= range_max);
-        return static_cast<T>(value);
+        return uid_(rng_);
     }
 
-    std::random_device rd_;
+    T range_min() const noexcept
+    {
+        return uid_.a();
+    }
+
+    T range_max() const noexcept
+    {
+        return uid_.b();
+    }
+
     std::mt19937 rng_;
     std::uniform_int_distribution<typename gil::promote_integral<T>::type> uid_;
 };

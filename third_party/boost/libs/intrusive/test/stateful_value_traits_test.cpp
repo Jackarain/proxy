@@ -113,8 +113,8 @@ int main()
    Slist my_slist(slist_traits(values, slist_hook_array));
    Set   my_set  (std::less<MyClass>(), rbtree_traits(values, rbtree_hook_array));
    Uset  my_uset ( Uset::bucket_traits(buckets, NumElements)
-                 , boost::hash<MyClass>()
-                 , std::equal_to<MyClass>()
+                 , Uset::hasher()
+                 , Uset::key_equal()
                  , slist_traits(values, uset_hook_array)
                  );
 

@@ -71,7 +71,7 @@ template<> void double_only::operator()<double>(double, boost::optional<string>&
 int
 main(int, char const* [])
 {
-    typedef std::function<void (string const& value_in, boost::optional<int>&)> boost_func;
+    using func_type = std::function<void (string const& value_in, boost::optional<int>&)>;
 
     char const* const str = "-12";
 
@@ -80,7 +80,7 @@ main(int, char const* [])
     int v01 = convert<int>(str, plain_old_func).value_or(-1);
     //]
     // Testing std::function-based converter.
-    int v02 = convert<int>(str, boost_func(plain_old_func)).value_or(-1);
+    int v02 = convert<int>(str, func_type(plain_old_func)).value_or(-1);
     // Testing crazy std::bind-based converter.
     //[callable_example3
     int v03 = convert<int>(str,

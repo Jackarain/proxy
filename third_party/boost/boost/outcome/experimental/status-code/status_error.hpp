@@ -1,5 +1,5 @@
 /* Proposed SG14 status_code
-(C) 2018 - 2021 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
+(C) 2018 - 2022 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
 File Created: Feb 2018
 
 
@@ -84,6 +84,41 @@ public:
   //! Constructs an instance
   explicit status_error(status_code<DomainType> code)
       : _code(static_cast<status_code<DomainType> &&>(code))
+      , _msgref(_code.message())
+  {
+  }
+
+  //! Return an explanatory string
+  virtual const char *what() const noexcept override { return _msgref.c_str(); }  // NOLINT
+
+  //! Returns a reference to the code
+  const status_code_type &code() const & { return _code; }
+  //! Returns a reference to the code
+  status_code_type &code() & { return _code; }
+  //! Returns a reference to the code
+  const status_code_type &&code() const && { return _code; }
+  //! Returns a reference to the code
+  status_code_type &&code() && { return _code; }
+};
+
+/*! Exception type representing a thrown erased status_code
+ */
+template <class ErasedType> class status_error<erased<ErasedType>> : public status_error<void>
+{
+  status_code<erased<ErasedType>> _code;
+  typename status_code_domain::string_ref _msgref;
+
+  virtual const status_code<erased<ErasedType>> &_do_code() const noexcept override final { return _code; }
+
+public:
+  //! The type of the status domain
+  using domain_type = void;
+  //! The type of the status code
+  using status_code_type = status_code<erased<ErasedType>>;
+
+  //! Constructs an instance
+  explicit status_error(status_code<erased<ErasedType>> code)
+      : _code(static_cast<status_code<erased<ErasedType>> &&>(code))
       , _msgref(_code.message())
   {
   }

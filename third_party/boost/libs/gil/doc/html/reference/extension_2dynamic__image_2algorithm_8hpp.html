@@ -44,6 +44,7 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
 <div class="title">extension/dynamic_image/algorithm.hpp File Reference</div>  </div>
@@ -54,21 +55,29 @@ $(function() {
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;boost/gil/extension/dynamic_image/any_image.hpp&gt;</code><br />
 <code>#include &lt;boost/gil/algorithm.hpp&gt;</code><br />
+<code>#include &lt;boost/variant2/variant.hpp&gt;</code><br />
 <code>#include &lt;functional&gt;</code><br />
+<code>#include &lt;utility&gt;</code><br />
 </div>
 <p><a href="extension_2dynamic__image_2algorithm_8hpp_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespaceboost"><td class="memItemLeft" align="right" valign="top"> &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceboost.html">boost</a></td></tr>
+<tr class="memdesc:namespaceboost"><td class="mdescLeft">&#160;</td><td class="mdescRight">defined(BOOST_NO_CXX17_HDR_MEMORY_RESOURCE) <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ga1012eaed87b0d3a15879f295567926ab"><td class="memTemplParams" colspan="2">template&lt;typename ... Types, typename View &gt; </td></tr>
-<tr class="memitem:ga1012eaed87b0d3a15879f295567926ab"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group___image_view_s_t_l_algorithms_equal_pixels.html#ga1012eaed87b0d3a15879f295567926ab">equal_pixels</a> (any_image_view&lt; Types... &gt; const &amp;src, View const &amp;dst)</td></tr>
-<tr class="separator:ga1012eaed87b0d3a15879f295567926ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga4bb8421d1fd022322240cb0d11ecbdf4"><td class="memTemplParams" colspan="2">template&lt;typename View , typename ... Types&gt; </td></tr>
-<tr class="memitem:ga4bb8421d1fd022322240cb0d11ecbdf4"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group___image_view_s_t_l_algorithms_equal_pixels.html#ga4bb8421d1fd022322240cb0d11ecbdf4">equal_pixels</a> (View const &amp;src, any_image_view&lt; Types... &gt; const &amp;dst)</td></tr>
-<tr class="separator:ga4bb8421d1fd022322240cb0d11ecbdf4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gafbe9418eaff97a6a08add93a786feb7c"><td class="memTemplParams" colspan="2">template&lt;typename ... Types1, typename ... Types2&gt; </td></tr>
-<tr class="memitem:gafbe9418eaff97a6a08add93a786feb7c"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group___image_view_s_t_l_algorithms_equal_pixels.html#gafbe9418eaff97a6a08add93a786feb7c">equal_pixels</a> (any_image_view&lt; Types1... &gt; const &amp;src, any_image_view&lt; Types2... &gt; const &amp;dst)</td></tr>
-<tr class="separator:gafbe9418eaff97a6a08add93a786feb7c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga71a33f99aad04a18e874ecb4f8d9a2c1"><td class="memTemplParams" colspan="2">template&lt;typename ... Types, typename View &gt; </td></tr>
+<tr class="memitem:ga71a33f99aad04a18e874ecb4f8d9a2c1"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group___image_view_s_t_l_algorithms_equal_pixels.html#ga71a33f99aad04a18e874ecb4f8d9a2c1">equal_pixels</a> (any_image_view&lt; Types... &gt; const &amp;src, View const &amp;dst) -&gt; bool</td></tr>
+<tr class="separator:ga71a33f99aad04a18e874ecb4f8d9a2c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga4128106d655eca5c41820f1ff9342af6"><td class="memTemplParams" colspan="2">template&lt;typename View , typename ... Types&gt; </td></tr>
+<tr class="memitem:ga4128106d655eca5c41820f1ff9342af6"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group___image_view_s_t_l_algorithms_equal_pixels.html#ga4128106d655eca5c41820f1ff9342af6">equal_pixels</a> (View const &amp;src, any_image_view&lt; Types... &gt; const &amp;dst) -&gt; bool</td></tr>
+<tr class="separator:ga4128106d655eca5c41820f1ff9342af6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gad8323f1bc508d5eb552b04b7bfbff1b6"><td class="memTemplParams" colspan="2">template&lt;typename ... Types1, typename ... Types2&gt; </td></tr>
+<tr class="memitem:gad8323f1bc508d5eb552b04b7bfbff1b6"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group___image_view_s_t_l_algorithms_equal_pixels.html#gad8323f1bc508d5eb552b04b7bfbff1b6">equal_pixels</a> (any_image_view&lt; Types1... &gt; const &amp;src, any_image_view&lt; Types2... &gt; const &amp;dst) -&gt; bool</td></tr>
+<tr class="separator:gad8323f1bc508d5eb552b04b7bfbff1b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gada4a0756a8f7d559adde9ee6cd057638"><td class="memTemplParams" colspan="2">template&lt;typename ... Types, typename View &gt; </td></tr>
 <tr class="memitem:gada4a0756a8f7d559adde9ee6cd057638"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group___image_view_s_t_l_algorithms_copy_pixels.html#gada4a0756a8f7d559adde9ee6cd057638">copy_pixels</a> (any_image_view&lt; Types... &gt; const &amp;src, View const &amp;dst)</td></tr>
 <tr class="separator:gada4a0756a8f7d559adde9ee6cd057638"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -100,6 +109,10 @@ Functions</h2></td></tr>
 <tr class="memitem:ga78e33877517a7a2f97a8a41eb7a09c2b"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group___image_view_s_t_l_algorithms_fill_pixels.html#ga78e33877517a7a2f97a8a41eb7a09c2b">fill_pixels</a> (any_image_view&lt; Types... &gt; const &amp;view, Value const &amp;val)</td></tr>
 <tr class="memdesc:ga78e33877517a7a2f97a8a41eb7a09c2b"><td class="mdescLeft">&#160;</td><td class="mdescRight">fill_pixels for any image view. The pixel to fill with must be compatible with the current view  <a href="group___image_view_s_t_l_algorithms_fill_pixels.html#ga78e33877517a7a2f97a8a41eb7a09c2b">More...</a><br /></td></tr>
 <tr class="separator:ga78e33877517a7a2f97a8a41eb7a09c2b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a55141de7a23849dfc41d342d849815d2"><td class="memTemplParams" colspan="2"><a id="a55141de7a23849dfc41d342d849815d2"></a>
+template&lt;typename ... Types, typename F &gt; </td></tr>
+<tr class="memitem:a55141de7a23849dfc41d342d849815d2"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>for_each_pixel</b> (any_image_view&lt; Types... &gt; const &amp;view, F fun) -&gt; F</td></tr>
+<tr class="separator:a55141de7a23849dfc41d342d849815d2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Some basic STL-style algorithms when applied to runtime type specified image views. </p>

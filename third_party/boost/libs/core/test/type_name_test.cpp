@@ -82,6 +82,11 @@ int main()
     TEST(long long);
     TEST(unsigned long long);
 
+#if defined(BOOST_HAS_INT128)
+    TEST(__int128);
+    TEST(unsigned __int128);
+#endif
+
     TEST(char);
     TEST(wchar_t);
 #if !defined(BOOST_NO_CXX11_CHAR16_T)

@@ -64,15 +64,14 @@ void test_old_write_view()
 
 void test_old_dynamic_image()
 {
-    using my_img_types = mp11::mp_list
+    gil::any_image
     <
         gil::gray8_image_t,
         gil::gray16_image_t,
         gil::rgb8_image_t,
         gil::rgba8_image_t
-    >;
+    > image;
 
-    gil::any_image<my_img_types> image;
     gil::targa_read_image(targa_filename.c_str(), image);
 
     targa_write_view(targa_out + "old_dynamic_image_test.tga", gil::view(image));

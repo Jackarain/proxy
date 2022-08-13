@@ -155,6 +155,12 @@
         semantic actions, <code class="computeroutput"><span class="identifier">on_success</span></code>
         handlers are cleanly separated from the actual grammar.
       </p>
+<p>
+        <span class="bold"><strong>Note:</strong></span> an <code class="computeroutput"><span class="identifier">on_success</span></code>
+        handler recieves a pre-skipped iterator even when the rule definition disables
+        pre-skipping via <code class="computeroutput"><span class="identifier">no_skip</span></code>
+        directive.
+      </p>
 <h5>
 <a name="spirit_x3.tutorials.annotation.h3"></a>
         <span class="phrase"><a name="spirit_x3.tutorials.annotation.annotation_handler"></a></span><a class="link" href="annotation.html#spirit_x3.tutorials.annotation.annotation_handler">Annotation

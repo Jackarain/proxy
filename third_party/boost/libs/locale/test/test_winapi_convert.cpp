@@ -1,15 +1,14 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
+
 #ifdef BOOST_LOCALE_NO_WINAPI_BACKEND
 #include <iostream>
 int main()
 {
-        std::cout << "WinAPI Backend is not build... Skipping" << std::endl;
+        std::cout << "WinAPI Backend is not build... Skipping\n";
 }
 #else
 
@@ -47,8 +46,8 @@ void test_char()
     std::cout << "- Testing " << name << std::endl;
     l=gen(name);
     test_one<CharType>(l,"Façade","façade","FAÇADE");
-    
-    
+
+
     name = "tr_TR.UTF-8";
     std::cout << "Testing " << name << std::endl;
     test_one<CharType>(gen(name),"i","i","İ");
@@ -71,38 +70,28 @@ void test_norm(std::string orig,std::string normal,boost::locale::norm_type type
     test_normc<wchar_t>(to<wchar_t>(orig),to<wchar_t>(normal),type);
 }
 
-int main()
+void test_main(int /*argc*/, char** /*argv*/)
 {
-    try {
-        boost::locale::localization_backend_manager mgr = boost::locale::localization_backend_manager::global();
-        mgr.select("winapi");
-        boost::locale::localization_backend_manager::global(mgr);
+    boost::locale::localization_backend_manager mgr = boost::locale::localization_backend_manager::global();
+    mgr.select("winapi");
+    boost::locale::localization_backend_manager::global(mgr);
 
-        std::cout << "Testing char" << std::endl;
-        test_char<char>();
-        std::cout << "Testing wchar_t" << std::endl;
-        test_char<wchar_t>();
-        
-        std::cout << "Testing Unicode normalization" << std::endl;
-        test_norm("\xEF\xAC\x81","\xEF\xAC\x81",boost::locale::norm_nfd); /// ligature fi
-        test_norm("\xEF\xAC\x81","\xEF\xAC\x81",boost::locale::norm_nfc);
-        #if defined(_WIN32_NT) && _WIN32_NT >= 0x600
-        test_norm("\xEF\xAC\x81","fi",boost::locale::norm_nfkd);
-        test_norm("\xEF\xAC\x81","fi",boost::locale::norm_nfkc);
-        #endif
-        test_norm("ä","ä",boost::locale::norm_nfd); // ä to a and accent
-        test_norm("ä","ä",boost::locale::norm_nfc);
-    }
-    catch(std::exception const &e) {
-        std::cerr << "Failed " << e.what() << std::endl;
-        return EXIT_FAILURE;
-    }
-    FINALIZE();
+    std::cout << "Testing char" << std::endl;
+    test_char<char>();
+    std::cout << "Testing wchar_t" << std::endl;
+    test_char<wchar_t>();
 
+    std::cout << "Testing Unicode normalization" << std::endl;
+    test_norm("\xEF\xAC\x81","\xEF\xAC\x81",boost::locale::norm_nfd); /// ligature fi
+    test_norm("\xEF\xAC\x81","\xEF\xAC\x81",boost::locale::norm_nfc);
+    #if defined(_WIN32_NT) && _WIN32_NT >= 0x600
+    test_norm("\xEF\xAC\x81","fi",boost::locale::norm_nfkd);
+    test_norm("\xEF\xAC\x81","fi",boost::locale::norm_nfkc);
+    #endif
+    test_norm("ä","ä",boost::locale::norm_nfd); // ä to a and accent
+    test_norm("ä","ä",boost::locale::norm_nfc);
 }
 
 #endif // no winapi
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 
-
-// boostinspect:noascii 
+// boostinspect:noascii

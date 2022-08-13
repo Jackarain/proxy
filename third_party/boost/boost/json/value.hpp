@@ -2368,8 +2368,7 @@ public:
     {
         error e;
         auto result = to_number<T>(e);
-        BOOST_STATIC_CONSTEXPR source_location loc = BOOST_JSON_SOURCE_POS;
-        BOOST_JSON_ASSIGN_ERROR_CODE(ec, e, &loc);
+        BOOST_JSON_FAIL(ec, e);
         return result;
     }
 
@@ -3180,11 +3179,19 @@ public:
 
         @return `this->as_object().at( key )`.
     */
+/** @{ */
+    value&
+    at(string_view key)
+    {
+        return as_object().at(key);
+    }
+
     value const&
     at(string_view key) const
     {
         return as_object().at(key);
     }
+/** @} */
 
     /** Access an element, with bounds checking.
 
@@ -3202,11 +3209,19 @@ public:
 
         @return `this->as_array().at( pos )`.
     */
+/** @{ */
+    value &
+    at(std::size_t pos)
+    {
+        return as_array().at(pos);
+    }
+
     value const&
     at(std::size_t pos) const
     {
         return as_array().at(pos);
     }
+/** @} */
 
     /** Access an element via JSON Pointer.
 

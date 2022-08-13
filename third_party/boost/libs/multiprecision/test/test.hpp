@@ -167,7 +167,7 @@ std::ostream& operator<<(std::ostream& os, unsigned __int128 val)
 }
 
 #endif
-#ifdef BOOST_HAS_FLOAT128
+#if defined(BOOST_HAS_FLOAT128) && !defined(BOOST_MP_HAVE_CSTDFLOAT)
 std::ostream& operator<<(std::ostream& os, __float128 f)
 {
    return os << static_cast<long double>(f);

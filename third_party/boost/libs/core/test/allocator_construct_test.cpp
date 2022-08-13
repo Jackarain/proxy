@@ -36,7 +36,7 @@ int main()
     }
 #if !defined(BOOST_NO_CXX11_ALLOCATOR)
     {
-        A1<int> a;
+        A2<int> a;
         int i = 0;
         boost::allocator_construct(a, &i, 5);
         BOOST_TEST_EQ(i, 6);

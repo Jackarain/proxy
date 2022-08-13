@@ -15,6 +15,7 @@
 #include <boost/graph/distributed/mpi_process_group.hpp>
 #include <boost/pending/queue.hpp>
 #include <boost/property_map/property_map.hpp>
+#include <boost/property_map/parallel/parallel_property_maps.hpp>
 #include <utility>
 #include <iostream>
 

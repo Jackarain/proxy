@@ -16,9 +16,10 @@ feature.compose <iterator_debugging>off
   ;
 
 project
+    : default-build
+      <link>static
     : requirements
       <library>/boost/test//boost_unit_test_framework
-      <link>static
       <include>../../..
       <toolset>msvc:<define>_SCL_SECURE_NO_DEPRECATE
       # MSVC's iterator debugging causes some tests to run forever.
@@ -35,7 +36,7 @@ alias accumulators_regular_tests
       [ run covariance.cpp ]
       [ run droppable.cpp ]
       [ run error_of.cpp ]
-      [ run extended_p_square.cpp ]
+      [ run extended_p_square.cpp : : : <toolset>msvc-14.2,<variant>release,<cxxstd>14:<build>no ]
       [ run extended_p_square_quantile.cpp ]
       [ run external_accumulator.cpp ]
       [ run external_weights.cpp ]
@@ -62,7 +63,7 @@ alias accumulators_regular_tests
       [ run variance.cpp ]
       [ run vector.cpp ]
       [ run weighted_covariance.cpp ]
-      [ run weighted_extended_p_square.cpp ]
+      [ run weighted_extended_p_square.cpp : : : <toolset>msvc-14.2,<variant>release,<address-model>32,<cxxstd>14:<build>no ]
       [ run weighted_kurtosis.cpp ]
       [ run weighted_mean.cpp ]
       [ run weighted_median.cpp ]

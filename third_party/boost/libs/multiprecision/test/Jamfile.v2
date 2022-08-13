@@ -819,6 +819,47 @@ test-suite conversions :
                [ check-target-builds ../config//has_float128 : : <build>no ]
               : test_fixed_zero_precision_io_float128 ]
 
+      [ run test_trailing_io_delim.cpp no_eh_support 
+              : # command line
+              : # input files
+              : # requirements
+              <define>TEST_CPP_INT
+              : test_trailing_io_delim_cpp ]
+      [ run test_trailing_io_delim.cpp no_eh_support gmp
+              : # command line
+              : # input files
+              : # requirements
+              <define>TEST_GMP
+              [ check-target-builds ../config//has_gmp : : <build>no ]
+              : test_trailing_io_delim_gmp ]
+      [ run test_trailing_io_delim.cpp no_eh_support tommath
+              : # command line
+              : # input files
+              : # requirements
+              <define>TEST_TOMMATH
+              [ check-target-builds ../config//has_tommath : : <build>no ]
+              : test_trailing_io_delim_tommath ]
+      [ run test_trailing_io_delim.cpp no_eh_support quadmath
+              : # command line
+              : # input files
+              : # requirements
+              <define>TEST_FLOAT128
+              [ check-target-builds ../config//has_float128 : : <build>no ]
+              : test_trailing_io_delim_float128 ]
+      [ run test_trailing_io_delim.cpp no_eh_support mpc mpfr gmp
+              : # command line
+              : # input files
+              : # requirements
+              <define>TEST_MPC
+              [ check-target-builds ../config//has_mpc : : <build>no ]
+              : test_trailing_io_delim_mpc ]
+      [ run test_trailing_io_delim.cpp no_eh_support mpfi mpfr gmp
+              : # command line
+              : # input files
+              : # requirements
+              <define>TEST_MPFI
+              [ check-target-builds ../config//has_mpfi : : <build>no ]
+              : test_trailing_io_delim_mpfi ]
 ;
 
 

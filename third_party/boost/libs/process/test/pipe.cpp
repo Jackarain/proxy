@@ -39,8 +39,7 @@ BOOST_AUTO_TEST_CASE(named, *boost::unit_test::timeout(2))
 #if defined( BOOST_WINDOWS_API )
     bp::pipe pipe("\\\\.\\pipe\\pipe_name");
 #elif defined( BOOST_POSIX_API )
-    const auto home_path = boost::this_process::environment()["HOME"].to_string();
-    bp::pipe pipe(home_path  + "/.boost_process_test_pipe");
+    bp::pipe pipe("./.boost_process_test_pipe");
 #endif
 
     std::string in  = "xyz";

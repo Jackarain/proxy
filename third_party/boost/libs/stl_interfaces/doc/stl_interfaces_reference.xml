@@ -27,6 +27,7 @@
 
 
 
+
 </namespace>
 </namespace>
 </header>
@@ -146,6 +147,7 @@
 
 
 
+
 <function name="operator=="><type>constexpr auto</type><template>
           <template-type-parameter name="IteratorInterface1"/>
           <template-type-parameter name="IteratorInterface2"/>
@@ -184,13 +186,14 @@
 <macro name="BOOST_STL_INTERFACES_STATIC_ASSERT_CONCEPT" kind="functionlike"><macro-parameter name="type"/><macro-parameter name="concept_name"/><description><para><computeroutput>static_asserts</computeroutput> that type <computeroutput>type</computeroutput> models concept <computeroutput>concept_name</computeroutput>. This is useful for checking that an iterator, view, etc. that you write using one of the *<computeroutput>_interface</computeroutput> templates models the right C++ concept.</para><para>For example: <computeroutput>BOOST_STL_INTERFACES_STATIC_ASSERT_CONCEPT(my_iter, std::input_iterator)</computeroutput>.</para><para><note><para>This macro expands to nothing when <computeroutput>__cpp_lib_concepts</computeroutput> is not defined. </para>
 </note>
 </para></description></macro>
-<macro name="BOOST_STL_INTERFACES_STATIC_ASSERT_ITERATOR_TRAITS" kind="functionlike"><macro-parameter name="iter"/><macro-parameter name="category"/><macro-parameter name="concept"/><macro-parameter name="value_type"/><macro-parameter name="reference"/><macro-parameter name="pointer"/><macro-parameter name="difference_type"/><description><para><computeroutput>static_asserts</computeroutput> that the types of all typedefs in <computeroutput>std::iterator_traits&lt;iter&gt;</computeroutput> match the remaining macro parameters. This is useful for checking that an iterator you write using <computeroutput>iterator_interface</computeroutput> has the correct iterator traits.</para><para>For example: <computeroutput>BOOST_STL_INTERFACES_STATIC_ASSERT_ITERATOR_TRAITS(my_iter, std::input_iterator_tag, std::input_iterator_tag, int, int &amp;, int *, std::ptrdiff_t)</computeroutput>.</para><para><note><para>This macro ignores the <computeroutput>concept</computeroutput> parameter when <computeroutput>__cpp_lib_concepts</computeroutput> is not defined. </para>
+<macro name="BOOST_STL_INTERFACES_STATIC_ASSERT_ITERATOR_TRAITS" kind="functionlike"><macro-parameter name="iter"/><macro-parameter name="category"/><macro-parameter name="concept"/><macro-parameter name="value_type"/><macro-parameter name="reference"/><macro-parameter name="pointer"/><macro-parameter name="difference_type"/><description><para><computeroutput>static_asserts</computeroutput> that the types of all typedefs in <computeroutput>std::iterator_traits&lt;iter&gt;</computeroutput> match the remaining macro parameters. This is useful for checking that an iterator you write using <computeroutput>iterator_interface</computeroutput> has the correct iterator traits.</para><para>For example: <computeroutput>BOOST_STL_INTERFACES_STATIC_ASSERT_ITERATOR_TRAITS(my_iter, std::input_iterator_tag, std::input_iterator, int, int &amp;, int *, std::ptrdiff_t)</computeroutput>.</para><para><note><para>This macro ignores the <computeroutput>concept</computeroutput> parameter when <computeroutput>__cpp_lib_concepts</computeroutput> is not defined. </para>
 </note>
 </para></description></macro>
 </header>
 <header name="boost/stl_interfaces/reverse_iterator.hpp">
 <namespace name="boost">
 <namespace name="stl_interfaces">
+
 
 
 
@@ -381,6 +384,7 @@
 
 </namespace>
 
+
 <function name="swap"><type>constexpr auto</type><template>
           <template-type-parameter name="ContainerInterface"/>
         </template><parameter name="lhs"><paramtype>ContainerInterface &amp;</paramtype></parameter><parameter name="rhs"><paramtype>ContainerInterface &amp;</paramtype></parameter><description><para>Implementation of free function <computeroutput>swap()</computeroutput> for all containers derived from <computeroutput><classname alt="boost::stl_interfaces::sequence_container_interface">sequence_container_interface</classname></computeroutput>. </para></description></function>
@@ -402,6 +406,66 @@
 <function name="operator&gt;="><type>constexpr auto</type><template>
           <template-type-parameter name="ContainerInterface"/>
         </template><parameter name="lhs"><paramtype>ContainerInterface const &amp;</paramtype></parameter><parameter name="rhs"><paramtype>ContainerInterface const &amp;</paramtype></parameter><description><para>Implementation of <computeroutput>operator&gt;=()</computeroutput> for all containers derived from <computeroutput><classname alt="boost::stl_interfaces::sequence_container_interface">sequence_container_interface</classname></computeroutput>. </para></description></function>
+
+
+
+
+
+
+
+
+
+
+
+</namespace>
+</namespace>
+</header>
+<header name="boost/stl_interfaces/view_adaptor.hpp">
+<namespace name="boost">
+<namespace name="stl_interfaces">
+<struct name="adaptor"><template>
+      <template-type-parameter name="F"/>
+    </template><description><para>Adapts an invocable <computeroutput>f</computeroutput> as a view adaptor. Calling <computeroutput>operator(args...)</computeroutput> will either: call <computeroutput>f(args...)</computeroutput> and return the result, if <computeroutput>f(args...)</computeroutput> is well-formed; or return <computeroutput>closure(stl_interfaces::bind_back(f, args...))</computeroutput> otherwise. </para></description><method-group name="public member functions">
+<method name="operator()" cv="const"><type>constexpr auto</type><template>
+          <template-nontype-parameter name="Args"><type>typename...</type></template-nontype-parameter>
+        </template><parameter name="args"><paramtype>Args &amp;&amp;...</paramtype></parameter></method>
+</method-group>
+<constructor><parameter name="f"><paramtype>F</paramtype></parameter></constructor>
+</struct><struct name="closure"><template>
+      <template-type-parameter name="F"/>
+    </template><inherit access="public">boost::stl_interfaces::range_adaptor_closure&lt; closure&lt; F &gt; &gt;</inherit><description><para>An invocable consisting of a contained invocable <computeroutput>f</computeroutput>. Calling <computeroutput>operator()</computeroutput> with some argument <computeroutput>t</computeroutput> calls <computeroutput>f(t)</computeroutput> and returns the result. This type is typically used to capture a the result of a call to <computeroutput>bind_back()</computeroutput>. </para></description><method-group name="public member functions">
+<method name="operator()" cv="const"><type>decltype(auto) constexpr</type><template>
+          <template-type-parameter name="T"/>
+          <template-type-parameter name="Enable"><default>std::enable_if_t&lt;detail::is_invocable_v&lt;F const &amp;, T&gt;&gt;</default></template-type-parameter>
+        </template><parameter name="t"><paramtype>T &amp;&amp;</paramtype></parameter></method>
+</method-group>
+<constructor><parameter name="f"><paramtype>F</paramtype></parameter></constructor>
+</struct><struct name="range_adaptor_closure"><template>
+      <template-type-parameter name="D"/>
+      <template-type-parameter name=""/>
+    </template><description><para>A backwards-compatible implementation of C++23's <computeroutput>std::ranges::range_adaptor_closure</computeroutput>. <computeroutput><classname alt="boost::stl_interfaces::range_adaptor_closure">range_adaptor_closure</classname></computeroutput> may be a struct template or may be an alias, as required to maintain compatability with the standard library's view adaptors. </para></description><typedef name="inheritance_tag_with_an_unlikely_name_"><type>int</type></typedef>
+<method-group name="public member functions">
+<method name="operator|"><type>frienddecltype(auto) constexpr</type><template>
+          <template-type-parameter name="T"/>
+          <template-type-parameter name="Enable"><default>std::enable_if_t&lt;detail::is_invocable_v&lt;D, T&gt;&gt;</default></template-type-parameter>
+        </template><parameter name="t"><paramtype>T &amp;&amp;</paramtype></parameter><parameter name="d"><paramtype>D &amp;&amp;</paramtype></parameter></method>
+<method name="operator|"><type>frienddecltype(auto) constexpr</type><template>
+          <template-type-parameter name="T"/>
+          <template-type-parameter name="Enable"><default>std::enable_if_t&lt;detail::is_invocable_v&lt;D const &amp;, T&gt;&gt;</default></template-type-parameter>
+        </template><parameter name="t"><paramtype>T &amp;&amp;</paramtype></parameter><parameter name="d"><paramtype>D const &amp;</paramtype></parameter></method>
+</method-group>
+</struct>
+<function name="bind_back"><type>constexpr auto</type><template>
+          <template-type-parameter name="Func"/>
+          <template-nontype-parameter name="Args"><type>typename...</type></template-nontype-parameter>
+        </template><parameter name="f"><paramtype>Func &amp;&amp;</paramtype></parameter><parameter name="args"><paramtype>Args &amp;&amp;...</paramtype></parameter><description><para>An implementation of <computeroutput>std::bind_back()</computeroutput> from C++23. </para></description></function>
+
+
+
+
+
+
+
 
 
 
@@ -487,6 +551,7 @@
 <function name="operator!="><type>constexpr auto</type><template>
           <template-type-parameter name="ViewInterface"/>
         </template><parameter name="lhs"><paramtype>ViewInterface</paramtype></parameter><parameter name="rhs"><paramtype>ViewInterface</paramtype></parameter><description><para>Implementation of <computeroutput>operator!=()</computeroutput> for all views derived from <computeroutput><classname alt="boost::stl_interfaces::view_interface">view_interface</classname></computeroutput>. </para></description></function>
+
 
 
 

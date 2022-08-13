@@ -240,6 +240,10 @@ run allocator_allocate_hint_test.cpp ;
 run allocator_deallocate_test.cpp ;
 run allocator_max_size_test.cpp ;
 run allocator_soccc_test.cpp ;
+run allocator_construct_test.cpp ;
+run allocator_destroy_test.cpp ;
+run allocator_construct_n_test.cpp ;
+run allocator_destroy_n_test.cpp ;
 run allocator_traits_test.cpp ;
 
 lib lib_typeid : lib_typeid.cpp : <link>shared:<define>LIB_TYPEID_DYN_LINK=1 ;
@@ -327,6 +331,7 @@ run span_constructible_test.cpp ;
 run span_deduction_guide_test.cpp ;
 run as_bytes_test.cpp ;
 run as_writable_bytes_test.cpp ;
+compile span_boost_begin_test.cpp ;
 
 run splitmix64_test.cpp
   : : : $(pedantic-errors) ;

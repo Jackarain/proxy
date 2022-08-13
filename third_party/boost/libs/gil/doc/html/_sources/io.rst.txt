@@ -205,9 +205,10 @@ If that's the case the user has to use the xxx_and_convert_xxx variants.
 
 All functions take the filename or a device as the first parameter.
 The filename can be anything from a C-string, ``std::string``,
-``std::wstring`` and ``boost::filesystem`` path. When using the path
-object the user needs to define the ADD_FS_PATH_SUPPORT compiler symbol to
-include the boost::filesystem dependency.
+``std::wstring`` to ``std::filesystem`` and ``boost::filesystem`` path.
+The availability of the ``std::filesystem`` is detected automatically,
+unless ``BOOST_GIL_IO_USE_BOOST_FILESYSTEM`` macro is defined that forces
+preference of the Boost.Filesystem.
 Devices could be a ``FILE*``, ``std::ifstream``, and ``TIFF*`` for TIFF images.
 
 The second parameter is either an image or view type depending on the
@@ -240,13 +241,11 @@ several image types. The IO extension would then pick the matching image type
 to the current image file.
 The following example shows this feature::
 
-    typedef mpl::vector< gray8_image_t
-                       , gray16_image_t
-                       , rgb8_image_t
-                       , rgba_image_t
-                       > my_img_types;
-
-    any_image< my_img_types > runtime_image;
+    any_image< gray8_image_t
+             , gray16_image_t
+             , rgb8_image_t
+             , rgba8_image_t
+             > my_img_types > runtime_image;
 
     read_image( filename
               , runtime_image
@@ -305,9 +304,10 @@ Write Interface
 There is only one function for writing out images, write_view.
 Similar to reading the first parameter is either a filename or a device.
 The filename can be anything from a C-string, ``std::string``,
-``std::wstring``, and ``boost::filesystem`` path. When using the path object
-the user needs to define the ``ADD_FS_PATH_SUPPORT`` compiler symbol to
-include the ``boost::filesystem`` dependency.
+``std::wstring`` to ``std::filesystem`` and ``boost::filesystem`` path.
+The availability of the ``std::filesystem`` is detected automatically,
+unless ``BOOST_GIL_IO_USE_BOOST_FILESYSTEM`` macro is defined that forces
+preference of the Boost.Filesystem.
 Devices could be ``FILE*``, ``std::ifstream``, and ``TIFF*`` for TIFF images.
 
 The second parameter is an view object to image being written.
@@ -319,14 +319,11 @@ the possible settings.
 
 Writing an any_image<...> is supported. See the following example::
 
-    typedef mpl::vector< gray8_image_t
-                       , gray16_image_t
-                       , rgb8_image_t
-                       , rgba_image_t
-                       > my_img_types;
-
-
-    any_image< my_img_types > runtime_image;
+    any_image< gray8_image_t
+             , gray16_image_t
+             , rgb8_image_t
+             , rgba8_image_t
+             > my_img_types > runtime_image;
 
     // fill any_image
 
@@ -347,7 +344,6 @@ that can be set by the user:
    Symbol                                                   Description
 ======================================================== ========================================================
 BOOST_GIL_IO_ENABLE_GRAY_ALPHA                           Enable the color space "gray_alpha".
-BOOST_GIL_IO_ADD_FS_PATH_SUPPORT                         Enable boost::filesystem 3.0 library.
 BOOST_GIL_IO_PNG_FLOATING_POINT_SUPPORTED                Use libpng in floating point mode. This symbol is incompatible with BOOST_GIL_IO_PNG_FIXED_POINT_SUPPORTED.
 BOOST_GIL_IO_PNG_FIXED_POINT_SUPPORTED                   Use libpng in integer mode. This symbol is incompatible with BOOST_GIL_IO_PNG_FLOATING_POINT_SUPPORTED.
 BOOST_GIL_IO_PNG_DITHERING_SUPPORTED                     Look up "dithering" in libpng manual for explanation.

@@ -66,6 +66,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a23f80f3f74c853d28702c7c4a00a2115"><td class="memItemLeft" align="right" valign="top"><a id="a23f80f3f74c853d28702c7c4a00a2115"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>basic_ofstream</b> (const char *file_name, std::ios_base::openmode mode=std::ios_base::out)</td></tr>
 <tr class="separator:a23f80f3f74c853d28702c7c4a00a2115"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac9e84cd093a08b057dff0e8cd66d752b"><td class="memItemLeft" align="right" valign="top"><a id="ac9e84cd093a08b057dff0e8cd66d752b"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>basic_ofstream</b> (const wchar_t *file_name, std::ios_base::openmode mode=std::ios_base::out)</td></tr>
+<tr class="separator:ac9e84cd093a08b057dff0e8cd66d752b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5af32d015c32bd1e32fac23389b99cf6"><td class="memItemLeft" align="right" valign="top"><a id="a5af32d015c32bd1e32fac23389b99cf6"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>basic_ofstream</b> (const std::string &amp;file_name, std::ios_base::openmode mode=std::ios_base::out)</td></tr>
 <tr class="separator:a5af32d015c32bd1e32fac23389b99cf6"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -91,6 +94,7 @@ template&lt;typename Path &gt; </td></tr>
 class boost::nowide::basic_ofstream&lt; CharType, Traits &gt;</h3>
 
 <p>Same as std::basic_ofstream&lt;char&gt; but accepts UTF-8 strings under Windows. </p>
+<p>Affected by <a class="el" href="config_8hpp.html#a00bc772d2cae3efdcaf4044ce857c779" title="Define to 1 to use the class from &lt;filebuf.hpp&gt; that is used on Windows.">BOOST_NOWIDE_USE_FILEBUF_REPLACEMENT</a> and <a class="el" href="config_8hpp.html#a1c34b7fa978286d269d931ca0b7cce1d" title="Whether to use the wchar_t* overloads in fstream-classes.">BOOST_NOWIDE_USE_WCHAR_OVERLOADS</a> </p>
 </div><hr/>The documentation for this class was generated from the following file:<ul>
 <li>boost/nowide/<a class="el" href="fstream_8hpp_source.html">fstream.hpp</a></li>
 </ul>

@@ -31,34 +31,44 @@
             Return a <a class="link" href="../../boost__json__string.html" title="string"><code class="computeroutput"><span class="identifier">string</span></code></a>
             pointer if this is a string, else return <code class="computeroutput"><span class="keyword">nullptr</span></code>
           </p>
-<h7><a name="json.ref.boost__json__value.if_string.overload1.h0"></a>
+<h6>
+<a name="json.ref.boost__json__value.if_string.overload1.h0"></a>
             <span class="phrase"><a name="json.ref.boost__json__value.if_string.overload1.synopsis"></a></span><a class="link" href="overload1.html#json.ref.boost__json__value.if_string.overload1.synopsis">Synopsis</a>
-          </h7><pre class="programlisting"><span class="identifier">string</span> <span class="keyword">const</span><span class="special">*</span>
+          </h6>
+<pre class="programlisting"><span class="identifier">string</span> <span class="keyword">const</span><span class="special">*</span>
 <span class="identifier">if_string</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;</span>
 </pre>
-<h7><a name="json.ref.boost__json__value.if_string.overload1.h1"></a>
+<h6>
+<a name="json.ref.boost__json__value.if_string.overload1.h1"></a>
             <span class="phrase"><a name="json.ref.boost__json__value.if_string.overload1.description"></a></span><a class="link" href="overload1.html#json.ref.boost__json__value.if_string.overload1.description">Description</a>
-          </h7><p>
+          </h6>
+<p>
             If <code class="computeroutput"><span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">kind</span><span class="special">()</span> <span class="special">==</span> <span class="identifier">kind</span><span class="special">::</span><span class="identifier">string</span></code>,
             returns a pointer to the underlying object. Otherwise, returns <code class="computeroutput"><span class="keyword">nullptr</span></code>.
           </p>
-<h7><a name="json.ref.boost__json__value.if_string.overload1.h2"></a>
+<h6>
+<a name="json.ref.boost__json__value.if_string.overload1.h2"></a>
             <span class="phrase"><a name="json.ref.boost__json__value.if_string.overload1.example"></a></span><a class="link" href="overload1.html#json.ref.boost__json__value.if_string.overload1.example">Example</a>
-          </h7><p>
+          </h6>
+<p>
             The return value is used in both a boolean context and to assign a variable:
           </p>
 <pre class="programlisting"><span class="keyword">if</span><span class="special">(</span> <span class="keyword">auto</span> <span class="identifier">p</span> <span class="special">=</span> <span class="identifier">jv</span><span class="special">.</span><span class="identifier">if_string</span><span class="special">()</span> <span class="special">)</span>
     <span class="keyword">return</span> <span class="special">*</span><span class="identifier">p</span><span class="special">;</span>
 </pre>
-<h7><a name="json.ref.boost__json__value.if_string.overload1.h3"></a>
+<h6>
+<a name="json.ref.boost__json__value.if_string.overload1.h3"></a>
             <span class="phrase"><a name="json.ref.boost__json__value.if_string.overload1.complexity"></a></span><a class="link" href="overload1.html#json.ref.boost__json__value.if_string.overload1.complexity">Complexity</a>
-          </h7><p>
+          </h6>
+<p>
             Constant.
           </p>
-<h7><a name="json.ref.boost__json__value.if_string.overload1.h4"></a>
+<h6>
+<a name="json.ref.boost__json__value.if_string.overload1.h4"></a>
             <span class="phrase"><a name="json.ref.boost__json__value.if_string.overload1.exception_safety"></a></span><a class="link" href="overload1.html#json.ref.boost__json__value.if_string.overload1.exception_safety">Exception
             Safety</a>
-          </h7><p>
+          </h6>
+<p>
             No-throw guarantee.
           </p>
 </div>

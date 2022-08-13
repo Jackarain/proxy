@@ -20,7 +20,6 @@ int main(int, char const* []) { return 0; }
 #include <boost/convert/lexical_cast.hpp>
 
 #include <libs/spirit/workbench/measure.hpp>
-#include <boost/spirit/include/qi.hpp>
 #include <vector>
 
 namespace

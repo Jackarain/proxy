@@ -16,7 +16,7 @@ project
   ;
 
 alias headers_concepts : [ generate_self_contained_headers concepts ] ;
-alias headers : [ generate_self_contained_headers : concepts extension io ] ;
+alias headers : [ generate_self_contained_headers : concepts extension ] ;
 
 run promote_integral.cpp ;
 run test_fixture.cpp ;
@@ -32,3 +32,4 @@ build-project image ;
 build-project image_view ;
 build-project algorithm ;
 build-project image_processing ;
+build-project histogram ;

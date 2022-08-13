@@ -12,7 +12,7 @@
 #include "test_data.hpp"
 #include <boost/ptr_container/detail/ptr_container_disable_deprecated.hpp>
 #include <boost/range/iterator_range.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 
 #if defined(BOOST_PTR_CONTAINER_DISABLE_DEPRECATED)
 #pragma GCC diagnostic push

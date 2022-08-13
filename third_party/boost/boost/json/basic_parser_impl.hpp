@@ -1064,6 +1064,9 @@ parse_unescaped(const char* p,
         }
         return maybe_suspend(cs.begin(), state::str1, total);
     }
+    // at this point all valid characters have been skipped, so any remaining
+    // if there are any more characters, they are either escaped, or incomplete
+    // utf8, or invalid utf8
     if(BOOST_JSON_UNLIKELY(*cs != '\x22')) // '"'
     {
         // sequence is invalid or incomplete
@@ -1891,6 +1894,7 @@ do_arr1:
         return maybe_suspend(cs.begin(), state::arr1, size);
     if(BOOST_JSON_LIKELY(*cs != ']'))
     {
+loop:
         if(allow_comments && *cs == '/')
         {
 do_arr2:
@@ -1899,7 +1903,6 @@ do_arr2:
                 return suspend_or_fail(state::arr2, size);
             goto do_arr1;
         }
-loop:
         if(BOOST_JSON_UNLIKELY(++size >
             Handler::max_array_size))
         {
@@ -2643,8 +2646,7 @@ fail(error_code ec) noexcept
     {
         // assign an arbitrary
         // error code to prevent UB
-        BOOST_STATIC_CONSTEXPR source_location loc = BOOST_JSON_SOURCE_POS;
-        BOOST_JSON_ASSIGN_ERROR_CODE(ec_, error::incomplete, &loc);
+        BOOST_JSON_FAIL(ec_, error::incomplete);
     }
     else
     {
@@ -2671,8 +2673,7 @@ write_some(
         // prevent UB
         if(! ec_)
         {
-            BOOST_STATIC_CONSTEXPR source_location loc = BOOST_JSON_SOURCE_POS;
-            BOOST_JSON_ASSIGN_ERROR_CODE(ec_, error::exception, &loc);
+            BOOST_JSON_FAIL(ec_, error::exception);
         }
     }
     if(ec_)
@@ -2717,9 +2718,7 @@ write_some(
         {
             if(! more_)
             {
-                BOOST_STATIC_CONSTEXPR source_location loc
-                    = BOOST_JSON_SOURCE_POS;
-                BOOST_JSON_ASSIGN_ERROR_CODE(ec_, error::incomplete, &loc);
+                BOOST_JSON_FAIL(ec_, error::incomplete);
             }
             else if(! st_.empty())
             {

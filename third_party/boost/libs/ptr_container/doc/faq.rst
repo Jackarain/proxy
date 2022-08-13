@@ -95,7 +95,7 @@ class with dummy implementations of the virtual functions. See `[13] <ptr_contai
 
 .. raw:: html 
 
-        <hr>
+        <hr/>
 
 :Copyright:     Thorsten Ottosen 2004-2006. Use, modification and distribution is subject to the Boost Software License, Version 1.0 (see LICENSE_1_0.txt__).
 

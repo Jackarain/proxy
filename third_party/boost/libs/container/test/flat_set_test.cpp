@@ -404,7 +404,7 @@ bool flat_tree_extract_adopt_test()
          fset.insert(static_cast<int>(i));
       }
 
-      flat_set<int> fset_copy(fset);
+      const flat_set<int> fset_copy(fset);
       flat_set<int>::sequence_type seq(fset.extract_sequence());
       if(!fset.empty())
          return false;
@@ -415,6 +415,8 @@ bool flat_tree_extract_adopt_test()
       boost::container::test::random_shuffle(seq.begin(), seq.end());
       fset.adopt_sequence(boost::move(seq));
       if(!CheckEqualContainers(fset, fset_copy))
+         return false;
+      if (!CheckEqualContainers(fset.sequence(), fset_copy.sequence()))
          return false;
    }
 
@@ -427,7 +429,7 @@ bool flat_tree_extract_adopt_test()
          fset.insert(static_cast<int>(i));
       }
 
-      flat_set<int> fset_copy(fset);
+      const flat_set<int> fset_copy(fset);
       flat_set<int>::sequence_type seq(fset.extract_sequence());
       if(!fset.empty())
          return false;
@@ -436,6 +438,8 @@ bool flat_tree_extract_adopt_test()
 
       fset.adopt_sequence(ordered_unique_range, boost::move(seq));
       if(!CheckEqualContainers(fset, fset_copy))
+         return false;
+      if (!CheckEqualContainers(fset.sequence(), fset_copy.sequence()))
          return false;
    }
 
@@ -449,7 +453,7 @@ bool flat_tree_extract_adopt_test()
          fmset.insert(static_cast<int>(i));
       }
 
-      flat_multiset<int> fmset_copy(fmset);
+      const flat_multiset<int> fmset_copy(fmset);
       flat_multiset<int>::sequence_type seq(fmset.extract_sequence());
       if(!fmset.empty())
          return false;
@@ -459,6 +463,8 @@ bool flat_tree_extract_adopt_test()
       boost::container::test::random_shuffle(seq.begin(), seq.end());
       fmset.adopt_sequence(boost::move(seq));
       if(!CheckEqualContainers(fmset, fmset_copy))
+         return false;
+      if (!CheckEqualContainers(fmset.sequence(), fmset_copy.sequence()))
          return false;
    }
 
@@ -472,7 +478,7 @@ bool flat_tree_extract_adopt_test()
          fmset.insert(static_cast<int>(i));
       }
 
-      flat_multiset<int> fmset_copy(fmset);
+      const flat_multiset<int> fmset_copy(fmset);
       flat_multiset<int>::sequence_type seq(fmset.extract_sequence());
       if(!fmset.empty())
          return false;
@@ -481,6 +487,8 @@ bool flat_tree_extract_adopt_test()
 
       fmset.adopt_sequence(ordered_range, boost::move(seq));
       if(!CheckEqualContainers(fmset, fmset_copy))
+         return false;
+      if (!CheckEqualContainers(fmset.sequence(), fmset_copy.sequence()))
          return false;
    }
 

@@ -5,7 +5,7 @@ A simple guide about writing and building documentation for Boost.GIL.
 ## Prerequisites
 
 - Python 3
-- [Install Sphinx](#install-sphinx) (see `requirements.txt`)
+- Install [Sphinx](https://www.sphinx-doc.org/en/master/index.html) (see `requirements.txt`)
 - Install [Doxygen](http://www.doxygen.org)
 
 

@@ -4,8 +4,20 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef BOOST_MATH_MP_TOMMATH_BACKEND_HPP
-#define BOOST_MATH_MP_TOMMATH_BACKEND_HPP
+#ifndef BOOST_MP_TOMMATH_HPP
+#define BOOST_MP_TOMMATH_HPP
+
+#include <cctype>
+#include <climits>
+#include <cmath>
+#include <cstdint>
+#include <cstddef>
+#include <cstdlib>
+#include <limits>
+#include <memory>
+#include <string>
+
+#include <tommath.h>
 
 #include <boost/multiprecision/detail/standalone_config.hpp>
 #include <boost/multiprecision/detail/fpclassify.hpp>
@@ -15,15 +27,6 @@
 #include <boost/multiprecision/detail/hash.hpp>
 #include <boost/multiprecision/detail/no_exceptions_support.hpp>
 #include <boost/multiprecision/detail/assert.hpp>
-#include <cstdint>
-#include <tommath.h>
-#include <cctype>
-#include <cmath>
-#include <limits>
-#include <climits>
-#include <cstddef>
-#include <cstdlib>
-#include <string>
 
 namespace boost {
 namespace multiprecision {

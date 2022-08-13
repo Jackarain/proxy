@@ -478,7 +478,7 @@ This example defines an `operator<<` overload for pointers to members.
 
 [source]
 ----
-include::../../example/pm_to_string.cpp[lines=5..-1]
+include::../../example/pm_to_string.cpp[lines=9..-1]
 ----
 
 Sample output:

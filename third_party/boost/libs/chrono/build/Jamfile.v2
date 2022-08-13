@@ -31,15 +31,13 @@ project boost/chrono
         #<toolset>gcc-mingw-4.4.0:<linkflags>--enable-auto-import
         #<toolset>gcc-mingw-4.5.0:<linkflags>--enable-auto-import
         <warnings>all
-        <toolset>gcc:<cxxflags>-Wextra
-        #<toolset>gcc:<cxxflags>-pedantic
-        <toolset>clang:<warnings>on
+        <toolset>gcc:<warnings>extra
+        #<toolset>gcc:<warnings>pedantic
         <toolset>gcc:<cxxflags>-Wno-long-long
         #<toolset>gcc:<cxxflags>-Wno-variadic-macros
         <toolset>gcc-4:<cxxflags>-Wno-variadic-macros
         <toolset>gcc-5:<cxxflags>-Wno-variadic-macros
-        <toolset>darwin:<cxxflags>-Wextra
-        <toolset>darwin:<cxxflags>-pedantic
+        <toolset>darwin:<warnings>pedantic
         <toolset>darwin:<cxxflags>-Wno-long-long
         #<toolset>darwin:<cxxflags>-Wno-variadic-macros
         <toolset>darwin-4:<cxxflags>-Wno-variadic-macros
@@ -47,8 +45,7 @@ project boost/chrono
         #<toolset>pathscale:<cxxflags>-Wextra
         <toolset>pathscale:<cxxflags>-Wno-long-long
         <toolset>pathscale:<cxxflags>-pedantic
-        <toolset>clang:<cxxflags>-Wextra
-        <toolset>clang:<cxxflags>-pedantic
+        <toolset>clang:<warnings>pedantic
         <toolset>clang:<cxxflags>-Wno-long-long
         <toolset>clang:<cxxflags>-Wno-variadic-macros
         <toolset>gcc-4.4.0,<target-os>windows:<cxxflags>-fdiagnostics-show-option 

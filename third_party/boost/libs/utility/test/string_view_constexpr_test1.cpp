@@ -30,12 +30,12 @@ struct constexpr_char_traits
     static constexpr bool eq(char_type c1, char_type c2) noexcept   { return c1 == c2; }
     static constexpr bool lt(char_type c1, char_type c2) noexcept   { return c1 < c2; }
 
-    static constexpr int              compare(const char_type* s1, const char_type* s2, size_t n) noexcept;
-    static constexpr size_t           length(const char_type* s) noexcept;
-    static constexpr const char_type* find(const char_type* s, size_t n, const char_type& a) noexcept;
-    static constexpr char_type*       move(char_type* s1, const char_type* s2, size_t n) noexcept;
-    static constexpr char_type*       copy(char_type* s1, const char_type* s2, size_t n) noexcept;
-    static constexpr char_type*       assign(char_type* s, size_t n, char_type a) noexcept;
+    static constexpr int              compare(const char_type* s1, const char_type* s2, std::size_t n) noexcept;
+    static constexpr std::size_t      length(const char_type* s) noexcept;
+    static constexpr const char_type* find(const char_type* s, std::size_t n, const char_type& a) noexcept;
+    static constexpr char_type*       move(char_type* s1, const char_type* s2, std::size_t n) noexcept;
+    static constexpr char_type*       copy(char_type* s1, const char_type* s2, std::size_t n) noexcept;
+    static constexpr char_type*       assign(char_type* s, std::size_t n, char_type a) noexcept;
 
     static constexpr int_type  not_eof(int_type c) noexcept { return eq_int_type(c, eof()) ? ~eof() : c; }
     static constexpr char_type to_char_type(int_type c) noexcept              { return char_type(c); }
@@ -49,7 +49,7 @@ struct constexpr_char_traits
 //      else, a negative value if, for some j in [0,n), X::lt(s1[j],s2[j]) is true and
 //          for each i in [0,j) X::eq(s2[i],s2[i]) is true;
 //      else a positive value.
-constexpr int constexpr_char_traits::compare(const char_type* s1, const char_type* s2, size_t n) noexcept
+constexpr int constexpr_char_traits::compare(const char_type* s1, const char_type* s2, std::size_t n) noexcept
 {
     for (; n != 0; --n, ++s1, ++s2)
     {
@@ -61,10 +61,10 @@ constexpr int constexpr_char_traits::compare(const char_type* s1, const char_typ
     return 0;
 }
 
-//	yields: the smallest i such that X::eq(s[i],charT()) is true.
-constexpr size_t constexpr_char_traits::length(const char_type* s) noexcept
+//  yields: the smallest i such that X::eq(s[i],charT()) is true.
+constexpr std::size_t constexpr_char_traits::length(const char_type* s) noexcept
 {
-    size_t len = 0;
+    std::size_t len = 0;
     for (; !eq(*s, char_type(0)); ++s)
         ++len;
     return len;
@@ -76,7 +76,7 @@ int main()
 {
     constexpr string_view sv1;
     constexpr string_view sv2{"abc", 3}; // ptr, len
-    constexpr string_view sv3{"def"}; 	 // ptr
+    constexpr string_view sv3{"def"};    // ptr
 
     constexpr const char *s1 = "";
     constexpr const char *s2 = "abc";

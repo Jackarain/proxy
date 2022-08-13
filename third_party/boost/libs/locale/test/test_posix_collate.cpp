@@ -1,15 +1,14 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
+
 #ifdef BOOST_LOCALE_NO_POSIX_BACKEND
 #include <iostream>
 int main()
 {
-        std::cout << "POSIX Backend is not build... Skipping" << std::endl;
+        std::cout << "POSIX Backend is not build... Skipping\n";
 }
 #else
 #include <boost/locale/config.hpp>
@@ -20,7 +19,6 @@ int main()
 #include <iomanip>
 #include "test_locale.hpp"
 #include "test_locale_tools.hpp"
-#include "test_posix_tools.hpp"
 #include <iostream>
 
 int get_sign(int x)
@@ -49,7 +47,7 @@ void test_one(std::locale const &l,std::string ia,std::string ib,int diff)
         TEST(!l(a,b));
         TEST(l(b,a));
     }
-    
+
     std::collate<CharType> const &col = std::use_facet<std::collate<CharType> >(l);
 
     TEST(diff == col.compare(a.c_str(),a.c_str()+a.size(),b.c_str(),b.c_str()+b.size()));
@@ -63,7 +61,7 @@ template<typename CharType>
 void test_char()
 {
     boost::locale::generator gen;
-    
+
     std::cout << "- Testing at least C" << std::endl;
 
     std::locale l = gen("en_US.UTF-8");
@@ -89,32 +87,22 @@ void test_char()
         }
     }
     #else
-    std::cout << "- Collation is broken on this OS C standard library, skipping" << std::endl;
+    std::cout << "- Collation is broken on this OS C standard library, skipping\n";
     #endif
 }
 
 
-int main()
+void test_main(int /*argc*/, char** /*argv*/)
 {
-    try {
-        boost::locale::localization_backend_manager mgr = boost::locale::localization_backend_manager::global();
-        mgr.select("posix");
-        boost::locale::localization_backend_manager::global(mgr);
+    boost::locale::localization_backend_manager mgr = boost::locale::localization_backend_manager::global();
+    mgr.select("posix");
+    boost::locale::localization_backend_manager::global(mgr);
 
-        std::cout << "Testing char" << std::endl;
-        test_char<char>();
-        std::cout << "Testing wchar_t" << std::endl;
-        test_char<wchar_t>();
-    }
-    catch(std::exception const &e) {
-        std::cerr << "Failed " << e.what() << std::endl;
-        return EXIT_FAILURE;
-    }
-    FINALIZE();
-
+    std::cout << "Testing char" << std::endl;
+    test_char<char>();
+    std::cout << "Testing wchar_t" << std::endl;
+    test_char<wchar_t>();
 }
 #endif  // NO POSIX
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 
-
-// boostinspect:noascii 
+// boostinspect:noascii

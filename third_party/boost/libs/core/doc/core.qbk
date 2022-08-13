@@ -43,7 +43,6 @@ criteria for inclusion is that the utility component be:
 [include addressof.qbk]
 [include allocator_access.qbk]
 [include allocator_traits.qbk]
-[include alloc_construct.qbk]
 [include bit.qbk]
 [include checked_delete.qbk]
 [include cmath.qbk]

@@ -24,12 +24,13 @@ generators.register-standard common.copy : XML : XMLPROCESSWORKAROUND ;
 xmlprocessworkaround posix_pseudocode   : posix_pseudocode.xml   ; 
 xmlprocessworkaround windows_pseudocode : windows_pseudocode.xml ;
 
+path-constant INCLUDES : ../../.. ;
 
 doxygen autodoc
 :
-  ../../../boost/process.hpp
-  [ glob ../../../boost/process/*.hpp ]
-:
+  $(INCLUDES)/boost/process.hpp
+  [ glob $(INCLUDES)/boost/process/*.hpp ]
+  :
   <doxygen:param>EXCLUDE_SYMBOLS=BOOST_ASIO_INITFN_RESULT_TYPE
   <doxygen:param>PREDEFINED=BOOST_PROCESS_DOXYGEN
   <doxygen:param>HIDE_UNDOC_CLASSES=YES
@@ -42,11 +43,49 @@ doxygen autodoc
 
 
 
+doxygen reference_v2
+:
+  $(INCLUDES)/boost/process/v2.hpp
+  [ glob $(INCLUDES)/boost/process/v2/*.hpp ]
+  :
+  <doxygen:param>EXCLUDE_SYMBOLS=BOOST_ASIO_INITFN_RESULT_TYPE
+  <doxygen:param>PROJECT_NAME="Process V2"
+  <doxygen:param>PROJECT_BRIEF="The process library"
+  <doxygen:param>MACRO_EXPANSION=YES
+  <doxygen:param>EXPAND_ONLY_PREDEF=YES
+  <doxygen:param>"PREDEFINED=\\
+    GENERATING_DOCUMENTATION=1 \\
+    BOOST_PROCESS_V2_ASIO_NAMESPACE=boost::asio \\
+    \"BOOST_PROCESS_V2_BEGIN_NAMESPACE=namespace boost { namespace process { namespace v2 { \" \\
+    \"BOOST_PROCESS_V2_END_NAMESPACE= } } }\" \\
+    BOOST_PROCESS_V2_NAMESPACE=boost::process::v2 \\
+    BOOST_PROCESS_V2_DECL \\
+    BOOST_PROCESS_V2_SOURCE \\
+    BOOST_PROCESS_V2_INITFN_AUTO_RESULT_TYPE(x,y)=deduced \\
+    BOOST_PROCESS_V2_COMPLETION_TOKEN_FOR(X)=Token \\
+    BOOST_PROCESS_V2_DEFAULT_COMPLETION_TOKEN_TYPE(E)=DEFAULT_TYPE \\
+    BOOST_ASIO_DEFAULT_COMPLETION_TOKEN=DEFAULT \\ 
+    BOOST_CONSTEXPR=constexpr \\
+    BOOST_CXX14_CONSTEXPR=constexpr \\
+    BOOST_ATTRIBUTE_NODISCARD=[[nodiscard]]
+    "
+  <doxygen.doxproc.id>reference_v2
+  <doxygen:param>SHOW_USED_FILES=NO
+  <doxygen:param>SHOW_FILES=NO
+  <doxygen:param>SHOW_NAMESPACES=YES
+  <doxygen:param>CLASS_DIAGRAMS=NO
+  <doxygen:param>SORT_MEMBERS_CTORS_1ST=YES
+  <doxygen:param>HIDE_UNDOC_CLASSES=NO
+  <xsl:path>.
+;
+
+
 boostbook standalone
 :
   process.qbk
 :
   <dependency>autodoc
+  <dependency>reference_v2
   <dependency>images
   <dependency>images_glob
   <xsl:param>boost.root=../../../..

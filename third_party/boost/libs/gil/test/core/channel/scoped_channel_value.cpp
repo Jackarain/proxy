@@ -2,7 +2,7 @@
 // Copyright 2005-2007 Adobe Systems Incorporated
 // Copyright 2018-2020 Mateusz Loskot <mateusz at loskot dot net>
 //
-// Distribtted under the Boost Software License, Version 1.0
+// Distributed under the Boost Software License, Version 1.0
 // See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt
 //

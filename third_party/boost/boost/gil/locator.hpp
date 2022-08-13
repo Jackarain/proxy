@@ -140,7 +140,7 @@ public:
 
     template <std::size_t D> typename axis<D>::iterator&       axis_iterator()                       { return detail::locator_axis<D,Loc>()(concrete()); }
     template <std::size_t D> typename axis<D>::iterator const& axis_iterator()                 const { return detail::locator_axis<D,Loc>()(concrete()); }
-    template <std::size_t D> typename axis<D>::iterator        axis_iterator(const point_t& p) const { return detail::locator_axis<D,Loc>()(concrete(),p); }
+    template <std::size_t D> typename axis<D>::iterator        axis_iterator(point_t const& p) const { return detail::locator_axis<D,Loc>()(concrete(),p); }
 
     reference         operator()(x_coord_t dx, y_coord_t dy) const { return *x_at(dx,dy); }
     reference         operator[](const difference_type& d)   const { return *x_at(d.x,d.y); }
@@ -176,8 +176,8 @@ namespace detail {
 
         inline iterator&        operator()(      Loc& loc)                   const { return loc.x(); }
         inline iterator  const& operator()(const Loc& loc)                   const { return loc.x(); }
-        inline iterator         operator()(      Loc& loc, const point_t& d) const { return loc.x_at(d); }
-        inline iterator         operator()(const Loc& loc, const point_t& d) const { return loc.x_at(d); }
+        inline iterator         operator()(      Loc& loc, point_t const& d) const { return loc.x_at(d); }
+        inline iterator         operator()(const Loc& loc, point_t const& d) const { return loc.x_at(d); }
     };
 
     template <typename Loc>
@@ -189,8 +189,8 @@ namespace detail {
 
         inline iterator&        operator()(      Loc& loc)               const { return loc.y(); }
         inline iterator const&  operator()(const Loc& loc)               const { return loc.y(); }
-        inline iterator     operator()(      Loc& loc, const point_t& d) const { return loc.y_at(d); }
-        inline iterator     operator()(const Loc& loc, const point_t& d) const { return loc.y_at(d); }
+        inline iterator     operator()(      Loc& loc, point_t const& d) const { return loc.y_at(d); }
+        inline iterator     operator()(const Loc& loc, point_t const& d) const { return loc.y_at(d); }
     };
 }
 

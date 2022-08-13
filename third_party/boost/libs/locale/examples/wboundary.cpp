@@ -1,10 +1,8 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
 //
 // ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! !
@@ -19,7 +17,7 @@
 // So, before you compile "wide" examples with MSVC, please convert them to text
 // files with BOM. There are two very simple ways to do it:
 //
-// 1. Open file with Notepad and save it from there. It would convert 
+// 1. Open file with Notepad and save it from there. It would convert
 //    it to file with BOM.
 // 2. In Visual Studio go File->Advances Save Options... and select
 //    Unicode (UTF-8  with signature) Codepage 65001
@@ -32,73 +30,73 @@
 //
 #include <boost/locale.hpp>
 #include <iostream>
-#include <cassert>
 #include <ctime>
 
 int main()
 {
     using namespace boost::locale;
-    using namespace std;
 
     // Create system default locale
     generator gen;
-    locale loc=gen("");
-    locale::global(loc); 
-    wcout.imbue(loc);
-    
+    std::locale loc=gen("");
+    // We need the boundary facet, currently only available via ICU
+    if(!std::has_facet<boundary::boundary_indexing<wchar_t>>(loc))
+    {
+        std::cout << "boundary detection not implemented in this environment\n";
+        return 0;
+    }
+    std::locale::global(loc);
+    std::wcout.imbue(loc);
+
     // This is needed to prevent C library to
-    // convert strings to narrow 
+    // convert strings to narrow
     // instead of C++ on some platforms
     std::ios_base::sync_with_stdio(false);
 
 
-    wstring text=L"Hello World! あにま! Linux2.6 and Windows7 is word and number. שָלוֹם עוֹלָם!";
+    std::wstring text=L"Hello World! あにま! Linux2.6 and Windows7 is word and number. שָלוֹם עוֹלָם!";
 
-    wcout<<text<<endl;
+    std::wcout << text << std::endl;
 
     boundary::wssegment_index index(boundary::word,text.begin(),text.end());
     boundary::wssegment_index::iterator p,e;
 
     for(p=index.begin(),e=index.end();p!=e;++p) {
-        wcout<<L"Part ["<<*p<<L"] has ";
+        std::wcout << L"Part [" << *p << L"] has ";
         if(p->rule() & boundary::word_number)
-            wcout<<L"number(s) ";
+            std::wcout << L"number(s) ";
         if(p->rule() & boundary::word_letter)
-            wcout<<L"letter(s) ";
+            std::wcout << L"letter(s) ";
         if(p->rule() & boundary::word_kana)
-            wcout<<L"kana character(s) ";
+            std::wcout << L"kana character(s) ";
         if(p->rule() & boundary::word_ideo)
-            wcout<<L"ideographic character(s) ";
+            std::wcout << L"ideographic character(s) ";
         if(p->rule() & boundary::word_none)
-            wcout<<L"no word characters";
-        wcout<<endl;
+            std::wcout << L"no word characters";
+        std::wcout << std::endl;
     }
 
     index.map(boundary::character,text.begin(),text.end());
 
     for(p=index.begin(),e=index.end();p!=e;++p) {
-        wcout<<L"|" <<*p ;
+        std::wcout << L"|" << *p ;
     }
-    wcout<<L"|\n\n";
+    std::wcout << L"|\n\n";
 
     index.map(boundary::line,text.begin(),text.end());
 
     for(p=index.begin(),e=index.end();p!=e;++p) {
-        wcout<<L"|" <<*p ;
+        std::wcout << L"|" << *p ;
     }
-    wcout<<L"|\n\n";
+    std::wcout << L"|\n\n";
 
     index.map(boundary::sentence,text.begin(),text.end());
 
     for(p=index.begin(),e=index.end();p!=e;++p) {
-        wcout<<L"|" <<*p ;
+        std::wcout << L"|" << *p;
     }
-    wcout<<"|\n\n";
-    
+    std::wcout << "|\n\n";
+
 }
 
-
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
-
 // boostinspect:noascii
-

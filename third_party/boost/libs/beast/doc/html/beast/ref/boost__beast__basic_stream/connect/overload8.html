@@ -30,9 +30,11 @@
 <p>
             Establishes a connection by trying each endpoint in a sequence.
           </p>
-<h7><a name="beast.ref.boost__beast__basic_stream.connect.overload8.h0"></a>
+<h6>
+<a name="beast.ref.boost__beast__basic_stream.connect.overload8.h0"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__basic_stream.connect.overload8.synopsis"></a></span><a class="link" href="overload8.html#beast.ref.boost__beast__basic_stream.connect.overload8.synopsis">Synopsis</a>
-          </h7><pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
+          </h6>
+<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
     <span class="keyword">class</span> <a href="../../../../../../../../doc/html/boost_asio/reference/EndpointSequence.html" target="_top"><span class="emphasis"><em>EndpointSequence</em></span></a><span class="special">,</span>
     <span class="keyword">class</span> <a href="../../../../../../../../doc/html/boost_asio/reference/ConnectCondition.html" target="_top"><span class="emphasis"><em>ConnectCondition</em></span></a><span class="special">&gt;</span>
 <span class="identifier">Protocol</span><span class="special">::</span><span class="identifier">endpoint</span>
@@ -41,9 +43,11 @@
     <span class="identifier">ConnectCondition</span> <span class="identifier">connect_condition</span><span class="special">,</span>
     <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span><span class="special">);</span>
 </pre>
-<h7><a name="beast.ref.boost__beast__basic_stream.connect.overload8.h1"></a>
+<h6>
+<a name="beast.ref.boost__beast__basic_stream.connect.overload8.h1"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__basic_stream.connect.overload8.description"></a></span><a class="link" href="overload8.html#beast.ref.boost__beast__basic_stream.connect.overload8.description">Description</a>
-          </h7><p>
+          </h6>
+<p>
             This function attempts to connect the stream to one of a sequence of
             endpoints by trying each endpoint until a connection is successfully
             established. The underlying socket is automatically opened if needed.
@@ -51,9 +55,11 @@
             failure. The algorithm, known as a <span class="emphasis"><em>composed operation</em></span>,
             is implemented in terms of calls to the underlying socket's <code class="computeroutput"><span class="identifier">connect</span></code> function.
           </p>
-<h7><a name="beast.ref.boost__beast__basic_stream.connect.overload8.h2"></a>
+<h6>
+<a name="beast.ref.boost__beast__basic_stream.connect.overload8.h2"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__basic_stream.connect.overload8.parameters"></a></span><a class="link" href="overload8.html#beast.ref.boost__beast__basic_stream.connect.overload8.parameters">Parameters</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>
@@ -125,10 +131,12 @@
 </tr>
 </tbody>
 </table></div>
-<h7><a name="beast.ref.boost__beast__basic_stream.connect.overload8.h3"></a>
+<h6>
+<a name="beast.ref.boost__beast__basic_stream.connect.overload8.h3"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__basic_stream.connect.overload8.return_value"></a></span><a class="link" href="overload8.html#beast.ref.boost__beast__basic_stream.connect.overload8.return_value">Return
             Value</a>
-          </h7><p>
+          </h6>
+<p>
             On success, the successfully connected endpoint. Otherwise, a default-constructed
             endpoint.
           </p>

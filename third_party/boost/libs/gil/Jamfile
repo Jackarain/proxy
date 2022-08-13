@@ -7,4 +7,5 @@
 #  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 # please order by name to ease maintenance
+build-project example ;
 build-project test ;

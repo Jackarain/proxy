@@ -46,7 +46,7 @@ int main(int, char *[])
 
     test_lock_free_enum_api< ipc_atomic_ref_wrapper >();
 
-#if !defined(BOOST_ATOMIC_DETAIL_NO_CXX17_DEDUCTION_GUIDES)
+#if !defined(BOOST_NO_CXX17_DEDUCTION_GUIDES)
     if (boost::ipc_atomic_ref< int >::is_always_lock_free)
     {
         aligned_object< int, boost::ipc_atomic_ref< int >::required_alignment > object(0);

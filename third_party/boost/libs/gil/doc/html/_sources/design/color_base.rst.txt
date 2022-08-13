@@ -132,7 +132,7 @@ bases:
 
 .. code-block:: cpp
 
-  // Metafunction returning an mpl::int_ equal to the number of elements in the color base
+  // Metafunction returning an integral constant equal to the number of elements in the color base
   template <class ColorBase> struct size;
 
   // Returns the type of the return value of semantic_at_c<K>(color_base)

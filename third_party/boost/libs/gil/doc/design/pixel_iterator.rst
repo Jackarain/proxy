@@ -36,8 +36,8 @@ plain iterators or adaptors over another pixel iterator:
 
 .. seealso::
 
-  - `PixelIteratorConcept<Iterator> <reference/group___pixel_iterator_concept_pixel_iterator.html>`_
-  - `MutablePixelIteratorConcept<Iterator> <reference/structboost_1_1gil_1_1_mutable_pixel_iterator_concept.html>`_
+  - `PixelIteratorConcept<Iterator> <../reference/group___pixel_iterator_concept_pixel_iterator.html>`_
+  - `MutablePixelIteratorConcept<Iterator> <../reference/structboost_1_1gil_1_1_mutable_pixel_iterator_concept.html>`_
 
 Models
 ^^^^^^
@@ -101,7 +101,7 @@ type, and a metafunction to rebind to another base iterator:
 
   concept IteratorAdaptorConcept<RandomAccessTraversalIteratorConcept Iterator>
   {
-    where SameType<is_iterator_adaptor<Iterator>::type, mpl::true_>;
+    where SameType<is_iterator_adaptor<Iterator>::type, mp11::mp_true>;
 
     typename iterator_adaptor_get_base<Iterator>;
         where Metafunction<iterator_adaptor_get_base<Iterator> >;
@@ -120,8 +120,8 @@ type, and a metafunction to rebind to another base iterator:
 
 .. seealso::
 
-  - `IteratorAdaptorConcept<Iterator> <reference/structboost_1_1gil_1_1_iterator_adaptor_concept.html>`_
-  - `MutableIteratorAdaptorConcept<Iterator> <reference/structboost_1_1gil_1_1_mutable_iterator_adaptor_concept.html>`_
+  - `IteratorAdaptorConcept<Iterator> <../reference/structboost_1_1gil_1_1_iterator_adaptor_concept.html>`_
+  - `MutableIteratorAdaptorConcept<Iterator> <../reference/structboost_1_1gil_1_1_mutable_iterator_adaptor_concept.html>`_
 
 Models
 ^^^^^^
@@ -262,10 +262,10 @@ support ``HasDynamicXStepTypeConcept``.
 
 .. seealso::
 
-  - `StepIteratorConcept<Iterator> <reference/structboost_1_1gil_1_1_step_iterator_concept.html>`_
-  - `MutableStepIteratorConcept<Iterator> <reference/structboost_1_1gil_1_1_mutable_step_iterator_concept.html>`_
-  - `MemoryBasedIteratorConcept<Iterator> <reference/structboost_1_1gil_1_1_memory_based_iterator_concept.html>`_
-  - `HasDynamicXStepTypeConcept<T> <reference/structboost_1_1gil_1_1_has_dynamic_x_step_type_concept.html>`_
+  - `StepIteratorConcept<Iterator> <../reference/structboost_1_1gil_1_1_step_iterator_concept.html>`_
+  - `MutableStepIteratorConcept<Iterator> <../reference/structboost_1_1gil_1_1_mutable_step_iterator_concept.html>`_
+  - `MemoryBasedIteratorConcept<Iterator> <../reference/structboost_1_1gil_1_1_memory_based_iterator_concept.html>`_
+  - `HasDynamicXStepTypeConcept<T> <../reference/structboost_1_1gil_1_1_has_dynamic_x_step_type_concept.html>`_
 
 Models
 ^^^^^^

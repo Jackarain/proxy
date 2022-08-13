@@ -1,7 +1,7 @@
 [/
     Boost.Optional
 
-    Copyright (c) 2015 - 2021 Andrzej Krzemienski
+    Copyright (c) 2015 - 2022 Andrzej Krzemienski
 
     Distributed under the Boost Software License, Version 1.0.
     (See accompanying file LICENSE_1_0.txt or copy at
@@ -10,6 +10,10 @@
 
 
 [section:relnotes Release Notes]
+
+[heading Boost Release 1.80]
+
+* [*Breaking change:] Added specializations for `std::hash<boost::opitonal<T>>`. This fixes [@https://github.com/boostorg/optional/issues/55 issue #55]. You may get compiler errors when your program provides specializations for `std::hash<boost::optional<T>>`. If this happens, define macro `BOOST_OPTIONAL_CONFIG_DO_NOT_SPECIALIZE_STD_HASH` to suppress the specializations of `std::hash` in this library.
 
 [heading Boost Release 1.79]
 

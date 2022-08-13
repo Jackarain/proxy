@@ -11,7 +11,7 @@ Here, having received an empty `vec` and having no `size_t` to return is not a [
 
 Another typical situation is to indicate that we do not have a value yet, but we expect to have it later. This notion can be used in implementing solutions like lazy initialization or a two-phase initialization.
 
-`optional` can be used to take a non-__SGI_DEFAULT_CONSTRUCTIBLE__ type `T` and create a sibling type with a default constructor. This is a way to add a ['null-state] to any type that doesn't have it already.
+`optional` can be used to take a non-__STD_DEFAULT_CONSTRUCTIBLE__ type `T` and create a sibling type with a default constructor. This is a way to add a ['null-state] to any type that doesn't have it already.
 
 Sometimes type `T` already provides a built-in null-state, but it may still be useful to wrap it into `optional`. Consider `std::string`. When you read a piece of text from a GUI form or a DB table, it is hardly ever that the empty string indicates anything else but a missing text. And some data bases do not even distinguish between a null string entry and a non-null string of length 0. Still, it may be practical to use `optional<string>` to indicate in the returned type that we want to treat the empty string in a special dedicated program path:
 

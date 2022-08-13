@@ -3,7 +3,38 @@ title = "Changelog"
 weight = 80
 +++
 
-## v2.2.3 1st April 2022 (Boost 1.79) [[release]](https://github.com/ned14/outcome/releases/tag/v2.2.3)
+---
+## v2.2.4 ? 2022 (Boost 1.80) [[release]](https://github.com/ned14/outcome/releases/tag/v2.2.4)
+
+### Enhancements:
+
+- Update to latest `status-code` in Experimental.Outcome, which has some breaking changes and important
+bug fixes.
+
+- Add {{<api "generator<T, Executor = void>" >}} to coroutine awaitables.
+
+- Add optional `Executor` template parameter to all Outcome awaitable types for improved compatibility
+with third party software such as [ASIO](https://think-async.com/Asio/).
+
+- To Experimental.Outcome add `clone()` for `basic_result` and `basic_outcome` types whose `EC` is
+a `status_code`. Erased status codes are move-only which makes the Result/Outcome type move-only, but
+they provide a cloning function, so this convenience function both clones the status code and propagates
+the spare storage so stack backtraces etc are also cloned.
+
+- Add type constraints to `success()` and `failure()` to disable them if they aren't available.
+
+- Work around a bug in GCC's C++ Coroutines implementation whereby one gets an ICE from `gimplify_expr`
+in any `BOOST_OUTCOME_CO_TRY` taking even a mildly complex expression, which obviously is a showstopper.
+The work around assigns the failure type to a stack temporary before `co_return`-ing that
+temporary. Thanks to RVO pre-17 and copy elision since, this should add no runtime overhead.
+
+### Bug fixes:
+
+[#261](https://github.com/ned14/outcome/issues/261)
+: Move assignable with move constructible not available did not work with `void`.
+
+---
+## v2.2.3 17th March 2022 (Boost 1.79) [[release]](https://github.com/ned14/outcome/releases/tag/v2.2.3)
 
 ### Enhancements:
 

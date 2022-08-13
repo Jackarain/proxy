@@ -9,11 +9,11 @@
 #include <boost/parameter/is_argument_pack.hpp>
 #include <boost/mpl/has_key.hpp>
 
-namespace boost { namespace cnv
+namespace boost::cnv
 {
-    enum class   adjust { left, right, center };
-    enum class     base { bin =2, oct =8, dec =10, hex =16 };
-    enum class notation { fixed, scientific };
+    enum class   adjust : uint8_t { left, right, center };
+    enum class     base : uint8_t { bin =2, oct =8, dec =10, hex =16 };
+    enum class notation : uint8_t { fixed, scientific, hex };
 
     namespace parameter
     {
@@ -28,6 +28,6 @@ namespace boost { namespace cnv
         BOOST_PARAMETER_NAME((lowercase, type) lowercase)
         BOOST_PARAMETER_NAME((    width, type)     width)
     }
-}}
+}
 
 #endif // BOOST_CONVERT_PARAMETERS_HPP

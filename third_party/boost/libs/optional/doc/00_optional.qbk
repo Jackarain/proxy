@@ -2,7 +2,7 @@
     [quickbook 1.4]
     [authors [Cacciola Carballal, Fernando Luis]]
     [copyright 2003-2007 Fernando Luis Cacciola Carballal]
-    [copyright 2014-2021 Andrzej Krzemie&#324;ski]
+    [copyright 2014-2022 Andrzej Krzemie&#324;ski]
     [category miscellaneous]
     [id optional]
     [dirname optional]
@@ -38,10 +38,10 @@ Distributed under the Boost Software License, Version 1.0.
 [/ Other web resources ]
 
 [def __HASKELL__ [@http://www.haskell.org/ Haskell]]
-[def __SGI_DEFAULT_CONSTRUCTIBLE__ [@http://www.sgi.com/tech/stl/DefaultConstructible.html `DefaultConstructible`]]
-[def __SGI_LESS_THAN_COMPARABLE__ [@http://www.sgi.com/tech/stl/LessThanComparable.html `LessThanComparable`]]
-[def __SGI_EQUALITY_COMPARABLE__ [@http://www.sgi.com/tech/stl/EqualityComparable.html `EqualityComparable`]]
-[def __SGI_GENERATOR__ [@http://www.sgi.com/tech/stl/Generator.html `Generator`]]
+[def __STD_DEFAULT_CONSTRUCTIBLE__ [@https://en.cppreference.com/w/cpp/named_req/DefaultConstructible `DefaultConstructible`]]
+[def __STD_LESS_THAN_COMPARABLE__ [@https://en.cppreference.com/w/cpp/named_req/LessThanComparable `LessThanComparable`]]
+[def __STD_EQUALITY_COMPARABLE__ [@https://en.cppreference.com/w/cpp/named_req/EqualityComparable `EqualityComparable`]]
+[def __SGI_GENERATOR__ [@http://www.rrsd.com/software_development/stl/stl/Generator.html `Generator`]]
 
 
 [/ Icons ]

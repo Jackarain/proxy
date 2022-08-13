@@ -30,51 +30,65 @@
 <p>
             Parse a buffer containing a complete JSON.
           </p>
-<h7><a name="json.ref.boost__json__parser.write.overload1.h0"></a>
+<h6>
+<a name="json.ref.boost__json__parser.write.overload1.h0"></a>
             <span class="phrase"><a name="json.ref.boost__json__parser.write.overload1.synopsis"></a></span><a class="link" href="overload1.html#json.ref.boost__json__parser.write.overload1.synopsis">Synopsis</a>
-          </h7><pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span>
+          </h6>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span>
 <span class="identifier">write</span><span class="special">(</span>
     <span class="keyword">char</span> <span class="keyword">const</span><span class="special">*</span> <span class="identifier">data</span><span class="special">,</span>
     <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">size</span><span class="special">,</span>
     <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span><span class="special">);</span>
 </pre>
-<h7><a name="json.ref.boost__json__parser.write.overload1.h1"></a>
+<h6>
+<a name="json.ref.boost__json__parser.write.overload1.h1"></a>
             <span class="phrase"><a name="json.ref.boost__json__parser.write.overload1.description"></a></span><a class="link" href="overload1.html#json.ref.boost__json__parser.write.overload1.description">Description</a>
-          </h7><p>
+          </h6>
+<p>
             This function parses a complete JSON contained in the specified character
             buffer. The entire buffer must be consumed; if there are additional characters
             past the end of the complete JSON, the parse fails and an error is returned.
           </p>
-<h7><a name="json.ref.boost__json__parser.write.overload1.h2"></a>
+<h6>
+<a name="json.ref.boost__json__parser.write.overload1.h2"></a>
             <span class="phrase"><a name="json.ref.boost__json__parser.write.overload1.example"></a></span><a class="link" href="overload1.html#json.ref.boost__json__parser.write.overload1.example">Example</a>
-          </h7><pre class="programlisting"><span class="identifier">parser</span> <span class="identifier">p</span><span class="special">;</span>                                       <span class="comment">// construct a parser</span>
+          </h6>
+<pre class="programlisting"><span class="identifier">parser</span> <span class="identifier">p</span><span class="special">;</span>                                       <span class="comment">// construct a parser</span>
 <span class="identifier">size_t</span> <span class="identifier">n</span> <span class="special">=</span> <span class="identifier">p</span><span class="special">.</span><span class="identifier">write</span><span class="special">(</span> <span class="string">"[1,2,3]"</span> <span class="special">);</span>                <span class="comment">// parse a complete JSON</span>
 <span class="identifier">assert</span><span class="special">(</span> <span class="identifier">n</span> <span class="special">==</span> <span class="number">7</span> <span class="special">);</span>                               <span class="comment">// all characters consumed</span>
 <span class="identifier">value</span> <span class="identifier">jv</span> <span class="special">=</span> <span class="identifier">p</span><span class="special">.</span><span class="identifier">release</span><span class="special">();</span>                         <span class="comment">// take ownership of the value</span>
 </pre>
-<h7><a name="json.ref.boost__json__parser.write.overload1.h3"></a>
+<h6>
+<a name="json.ref.boost__json__parser.write.overload1.h3"></a>
             <span class="phrase"><a name="json.ref.boost__json__parser.write.overload1.complexity"></a></span><a class="link" href="overload1.html#json.ref.boost__json__parser.write.overload1.complexity">Complexity</a>
-          </h7><p>
+          </h6>
+<p>
             Linear in <code class="computeroutput"><span class="identifier">size</span></code>.
           </p>
-<h7><a name="json.ref.boost__json__parser.write.overload1.h4"></a>
+<h6>
+<a name="json.ref.boost__json__parser.write.overload1.h4"></a>
             <span class="phrase"><a name="json.ref.boost__json__parser.write.overload1.exception_safety"></a></span><a class="link" href="overload1.html#json.ref.boost__json__parser.write.overload1.exception_safety">Exception
             Safety</a>
-          </h7><p>
+          </h6>
+<p>
             Basic guarantee. Calls to <code class="computeroutput"><span class="identifier">memory_resource</span><span class="special">::</span><span class="identifier">allocate</span></code>
             may throw. Upon error or exception, subsequent calls will fail until
             <a class="link" href="../reset.html" title="parser::reset"><code class="computeroutput"><span class="identifier">reset</span></code></a>
             is called to parse a new JSON.
           </p>
-<h7><a name="json.ref.boost__json__parser.write.overload1.h5"></a>
+<h6>
+<a name="json.ref.boost__json__parser.write.overload1.h5"></a>
             <span class="phrase"><a name="json.ref.boost__json__parser.write.overload1.return_value"></a></span><a class="link" href="overload1.html#json.ref.boost__json__parser.write.overload1.return_value">Return
             Value</a>
-          </h7><p>
+          </h6>
+<p>
             The number of characters consumed from the buffer.
           </p>
-<h7><a name="json.ref.boost__json__parser.write.overload1.h6"></a>
+<h6>
+<a name="json.ref.boost__json__parser.write.overload1.h6"></a>
             <span class="phrase"><a name="json.ref.boost__json__parser.write.overload1.parameters"></a></span><a class="link" href="overload1.html#json.ref.boost__json__parser.write.overload1.parameters">Parameters</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>

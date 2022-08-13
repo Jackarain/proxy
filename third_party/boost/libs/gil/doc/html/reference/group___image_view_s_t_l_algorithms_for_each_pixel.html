@@ -58,6 +58,7 @@ template&lt;typename View , typename F &gt; </td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <p>std::for_each for image views </p>
+<p>std::for_each for any image views</p>
 <p>For contiguous images (i.e. images that have no alignment gap at the end of each row) it is more efficient to use the underlying pixel iterator that does not check for the end of rows. For non-contiguous images for_each_pixel resolves to for_each of each row using the underlying pixel iterator, which is still faster </p>
 </div><!-- contents -->
      <!-- HTML footer for doxygen 1.8.13-->

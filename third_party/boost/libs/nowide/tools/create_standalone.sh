@@ -2,7 +2,7 @@
 
 # Copyright 2019 - 2020 Alexander Grund
 # Distributed under the Boost Software License, Version 1.0.
-# (See accompanying file LICENSE or copy at http://boost.org/LICENSE_1_0.txt)
+# https://www.boost.org/LICENSE_1_0.txt
 
 set -euo pipefail
 
@@ -29,9 +29,25 @@ mkdir -p "$targetFolder"/include
 
 cp -r include/boost/nowide "$targetFolder"/include
 cp -r config src test cmake CMakeLists.txt LICENSE README.md "$targetFolder"
-cp standalone/*.hpp "$targetFolder"/include/nowide
 mv "$targetFolder/cmake/BoostAddWarnings.cmake" "$targetFolder/cmake/NowideAddWarnings.cmake"
 find "$targetFolder" -name 'Jamfile*' -delete
+
+# Stitch config header together
+# Remove the boost headers, the important parts of config.hpp will be put in later
+config_hpp="$targetFolder/include/nowide/config.hpp"
+sed -E '/<boost\/[a-z_]+\.hpp>/d' -i "$config_hpp"
+# Put config replacement header below the doxygen marker
+lineTarget=$(grep -m 1 -n '//! @cond Doxygen_Suppress' "$config_hpp" | cut -d ":" -f 1)
+lineSrc=$(grep -n 'boost/config.hpp' "standalone/config.hpp" | cut -d ":" -f 1) # Skip the file header
+{ head -n $lineTarget "$config_hpp"; tail -n +$((lineSrc+2)) standalone/config.hpp; tail -n +$((lineTarget+1)) "$config_hpp"; } > "$config_hpp".new
+mv "$config_hpp".new "$config_hpp"
+sed -e '/Automatically link/,/auto-linking disabled/d' \
+    -e 's/defined(BOOST_ALL_DYN_LINK) || //' \
+    -e '/namespace boost/d' \
+    -e 's/ BOOST_FALLTHROUGH//' \
+    -i "$config_hpp"
+sed -E 's/BOOST_VERSION . [0-9]+ && //g' -i "$config_hpp" # Checks against BOOST_VERSION
+
 
 SOURCES=$(find "$targetFolder" -name '*.hpp' -or -name '*.cpp')
 SOURCES_NO_BOOST=$(echo "$SOURCES" | grep -v 'filesystem.hpp')
@@ -63,6 +79,7 @@ sed '/^if(NOT BOOST_SUPERPROJECT_SOURCE_DIR)/,/^endif/{/^if/d;/^endif/d}' -i "$t
 sed 's/NAMESPACE Nowide CONFIG_FILE.*$/NAMESPACE nowide)/' -i "$targetFolder/CMakeLists.txt"
 
 sed '/^if(NOT BOOST_SUPERPROJECT_SOURCE_DIR)/,/^endif/d' -i "$targetFolder/test/CMakeLists.txt"
+sed 's/ DEFINITIONS NOWIDE_TEST_BFS_PATH.*)/)/' -i "$targetFolder/test/CMakeLists.txt"
 sed '/Nowide::filesystem/d' -i "$targetFolder/test/CMakeLists.txt"
 
 sed '/^# Those 2 should work the same/,/^elseif/d' -i "$targetFolder/test/cmake_test/CMakeLists.txt"

@@ -30,30 +30,38 @@
 <p>
             Set the maximum incoming message size option.
           </p>
-<h7><a name="beast.ref.boost__beast__websocket__stream.read_message_max.overload1.h0"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.read_message_max.overload1.h0"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.read_message_max.overload1.synopsis"></a></span><a class="link" href="overload1.html#beast.ref.boost__beast__websocket__stream.read_message_max.overload1.synopsis">Synopsis</a>
-          </h7><pre class="programlisting"><span class="keyword">void</span>
+          </h6>
+<pre class="programlisting"><span class="keyword">void</span>
 <span class="identifier">read_message_max</span><span class="special">(</span>
     <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">amount</span><span class="special">);</span>
 </pre>
-<h7><a name="beast.ref.boost__beast__websocket__stream.read_message_max.overload1.h1"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.read_message_max.overload1.h1"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.read_message_max.overload1.description"></a></span><a class="link" href="overload1.html#beast.ref.boost__beast__websocket__stream.read_message_max.overload1.description">Description</a>
-          </h7><p>
+          </h6>
+<p>
             Sets the largest permissible incoming message size. Message frame fields
             indicating a size that would bring the total message size over this limit
             will cause a protocol failure. The default setting is 16 megabytes. A
             value of zero indicates a limit of the maximum value of a <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">uint64_t</span></code>.
           </p>
-<h7><a name="beast.ref.boost__beast__websocket__stream.read_message_max.overload1.h2"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.read_message_max.overload1.h2"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.read_message_max.overload1.example"></a></span><a class="link" href="overload1.html#beast.ref.boost__beast__websocket__stream.read_message_max.overload1.example">Example</a>
-          </h7><p>
+          </h6>
+<p>
             Setting the maximum read message size.
           </p>
 <pre class="programlisting"><span class="identifier">ws</span><span class="special">.</span><span class="identifier">read_message_max</span><span class="special">(</span><span class="number">65536</span><span class="special">);</span>
 </pre>
-<h7><a name="beast.ref.boost__beast__websocket__stream.read_message_max.overload1.h3"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.read_message_max.overload1.h3"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.read_message_max.overload1.parameters"></a></span><a class="link" href="overload1.html#beast.ref.boost__beast__websocket__stream.read_message_max.overload1.parameters">Parameters</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>

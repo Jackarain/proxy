@@ -1,16 +1,14 @@
 //
-//  Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
-//
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
 
 #ifdef BOOST_LOCALE_NO_WINAPI_BACKEND
 #include <iostream>
 int main()
 {
-        std::cout << "WinAPI Backend is not build... Skipping" << std::endl;
+        std::cout << "WinAPI Backend is not build... Skipping\n";
 }
 #else
 
@@ -36,7 +34,7 @@ void test_comp(std::locale l,std::basic_string<Char> left,std::basic_string<Char
         else if(expected == 0) {
             TEST(lt==rt);
         }
-        else 
+        else
             TEST(lt > rt);
         long lh=coll.hash(left.c_str(),left.c_str()+left.size());
         long rh=coll.hash(right.c_str(),right.c_str()+right.size());
@@ -54,7 +52,7 @@ void test_comp(std::locale l,std::basic_string<Char> left,std::basic_string<Char
         TEST(lt<rt);
     else if(expected == 0)
         TEST(lt==rt);
-    else 
+    else
         TEST(lt > rt);
     long lh=coll.hash(level,left.c_str(),left.c_str()+left.size());
     TEST(lh==coll.hash(level,left));
@@ -65,8 +63,8 @@ void test_comp(std::locale l,std::basic_string<Char> left,std::basic_string<Char
     else
         TEST(lh!=rh);
 
-}    
-        
+}
+
 #define TEST_COMP(c,_l,_r) test_comp<c>(l,_l,_r,level,expected)
 
 
@@ -109,25 +107,14 @@ void test_collate()
     compare("ä","a",identical,gt); //  a , ä
 }
 
-
-
-
-int main()
+void test_main(int /*argc*/, char** /*argv*/)
 {
-    try {
-        boost::locale::localization_backend_manager mgr = boost::locale::localization_backend_manager::global();
-        mgr.select("winapi");
-        boost::locale::localization_backend_manager::global(mgr);
+    boost::locale::localization_backend_manager mgr = boost::locale::localization_backend_manager::global();
+    mgr.select("winapi");
+    boost::locale::localization_backend_manager::global(mgr);
 
-        test_collate();
-    }
-    catch(std::exception const &e) {
-        std::cerr << "Failed " << e.what() << std::endl;
-        return EXIT_FAILURE;
-    }
-    FINALIZE();
-
+    test_collate();
 }
 #endif // NO WINAPI
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
-// boostinspect:noascii 
+
+// boostinspect:noascii

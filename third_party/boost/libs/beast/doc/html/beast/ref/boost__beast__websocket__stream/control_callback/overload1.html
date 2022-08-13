@@ -30,15 +30,19 @@
 <p>
             Set a callback to be invoked on each incoming control frame.
           </p>
-<h7><a name="beast.ref.boost__beast__websocket__stream.control_callback.overload1.h0"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.control_callback.overload1.h0"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.control_callback.overload1.synopsis"></a></span><a class="link" href="overload1.html#beast.ref.boost__beast__websocket__stream.control_callback.overload1.synopsis">Synopsis</a>
-          </h7><pre class="programlisting"><span class="keyword">void</span>
+          </h6>
+<pre class="programlisting"><span class="keyword">void</span>
 <span class="identifier">control_callback</span><span class="special">(</span>
     <span class="identifier">std</span><span class="special">::</span><span class="identifier">function</span><span class="special">&lt;</span> <span class="keyword">void</span><span class="special">(</span><span class="identifier">frame_type</span><span class="special">,</span> <span class="identifier">string_view</span><span class="special">)&gt;</span> <span class="identifier">cb</span><span class="special">);</span>
 </pre>
-<h7><a name="beast.ref.boost__beast__websocket__stream.control_callback.overload1.h1"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.control_callback.overload1.h1"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.control_callback.overload1.description"></a></span><a class="link" href="overload1.html#beast.ref.boost__beast__websocket__stream.control_callback.overload1.description">Description</a>
-          </h7><p>
+          </h6>
+<p>
             Sets the callback to be invoked whenever a ping, pong, or close control
             frame is received during a call to one of the following functions:
           </p>
@@ -63,9 +67,11 @@
             by reads. For close frames, the close reason code may be obtained by
             calling the function <a class="link" href="../reason.html" title="websocket::stream::reason"><code class="computeroutput"><span class="identifier">reason</span></code></a>.
           </p>
-<h7><a name="beast.ref.boost__beast__websocket__stream.control_callback.overload1.h2"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.control_callback.overload1.h2"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.control_callback.overload1.parameters"></a></span><a class="link" href="overload1.html#beast.ref.boost__beast__websocket__stream.control_callback.overload1.parameters">Parameters</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>
@@ -111,9 +117,11 @@
                   </td>
 </tr></tbody>
 </table></div>
-<h7><a name="beast.ref.boost__beast__websocket__stream.control_callback.overload1.h3"></a>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.control_callback.overload1.h3"></a>
             <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.control_callback.overload1.remarks"></a></span><a class="link" href="overload1.html#beast.ref.boost__beast__websocket__stream.control_callback.overload1.remarks">Remarks</a>
-          </h7><p>
+          </h6>
+<p>
             Incoming ping and close frames are automatically handled. Pings are responded
             to with pongs, and a close frame is responded to with a close frame leading
             to the closure of the stream. It is not necessary to manually send pings,

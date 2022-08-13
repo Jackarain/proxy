@@ -1,6 +1,6 @@
 # Copyright 2019 - 2021 Alexander Grund
 # Distributed under the Boost Software License, Version 1.0.
-# (See accompanying file LICENSE or copy at http://boost.org/LICENSE_1_0.txt)
+# https://www.boost.org/LICENSE_1_0.txt
 
 if(NOT DEFINED TEST_BINARY)
   if(CMAKE_ARGC GREATER 3)

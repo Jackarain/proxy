@@ -30,16 +30,20 @@
 <p>
             Insert elements before the specified location.
           </p>
-<h7><a name="json.ref.boost__json__array.insert.overload1.h0"></a>
+<h6>
+<a name="json.ref.boost__json__array.insert.overload1.h0"></a>
             <span class="phrase"><a name="json.ref.boost__json__array.insert.overload1.synopsis"></a></span><a class="link" href="overload1.html#json.ref.boost__json__array.insert.overload1.synopsis">Synopsis</a>
-          </h7><pre class="programlisting"><span class="identifier">iterator</span>
+          </h6>
+<pre class="programlisting"><span class="identifier">iterator</span>
 <span class="identifier">insert</span><span class="special">(</span>
     <span class="identifier">const_iterator</span> <span class="identifier">pos</span><span class="special">,</span>
     <span class="identifier">value</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">v</span><span class="special">);</span>
 </pre>
-<h7><a name="json.ref.boost__json__array.insert.overload1.h1"></a>
+<h6>
+<a name="json.ref.boost__json__array.insert.overload1.h1"></a>
             <span class="phrase"><a name="json.ref.boost__json__array.insert.overload1.description"></a></span><a class="link" href="overload1.html#json.ref.boost__json__array.insert.overload1.description">Description</a>
-          </h7><p>
+          </h6>
+<p>
             This inserts a copy of <code class="computeroutput"><span class="identifier">v</span></code>
             before <code class="computeroutput"><span class="identifier">pos</span></code>. If <code class="computeroutput"><span class="identifier">capacity</span><span class="special">()</span>
             <span class="special">&lt;</span> <span class="identifier">size</span><span class="special">()</span> <span class="special">+</span> <span class="number">1</span></code>, a reallocation occurs first, and all
@@ -47,21 +51,27 @@
             and references from the insertion point forward are invalidated. All
             past-the-end iterators are also invalidated.
           </p>
-<h7><a name="json.ref.boost__json__array.insert.overload1.h2"></a>
+<h6>
+<a name="json.ref.boost__json__array.insert.overload1.h2"></a>
             <span class="phrase"><a name="json.ref.boost__json__array.insert.overload1.complexity"></a></span><a class="link" href="overload1.html#json.ref.boost__json__array.insert.overload1.complexity">Complexity</a>
-          </h7><p>
+          </h6>
+<p>
             Constant plus linear in <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">distance</span><span class="special">(</span><span class="identifier">pos</span><span class="special">,</span> <span class="identifier">end</span><span class="special">())</span></code>.
           </p>
-<h7><a name="json.ref.boost__json__array.insert.overload1.h3"></a>
+<h6>
+<a name="json.ref.boost__json__array.insert.overload1.h3"></a>
             <span class="phrase"><a name="json.ref.boost__json__array.insert.overload1.exception_safety"></a></span><a class="link" href="overload1.html#json.ref.boost__json__array.insert.overload1.exception_safety">Exception
             Safety</a>
-          </h7><p>
+          </h6>
+<p>
             Strong guarantee. Calls to <code class="computeroutput"><span class="identifier">memory_resource</span><span class="special">::</span><span class="identifier">allocate</span></code>
             may throw.
           </p>
-<h7><a name="json.ref.boost__json__array.insert.overload1.h4"></a>
+<h6>
+<a name="json.ref.boost__json__array.insert.overload1.h4"></a>
             <span class="phrase"><a name="json.ref.boost__json__array.insert.overload1.parameters"></a></span><a class="link" href="overload1.html#json.ref.boost__json__array.insert.overload1.parameters">Parameters</a>
-          </h7><div class="informaltable"><table class="table">
+          </h6>
+<div class="informaltable"><table class="table">
 <colgroup>
 <col>
 <col>
@@ -108,10 +118,12 @@
 </tr>
 </tbody>
 </table></div>
-<h7><a name="json.ref.boost__json__array.insert.overload1.h5"></a>
+<h6>
+<a name="json.ref.boost__json__array.insert.overload1.h5"></a>
             <span class="phrase"><a name="json.ref.boost__json__array.insert.overload1.return_value"></a></span><a class="link" href="overload1.html#json.ref.boost__json__array.insert.overload1.return_value">Return
             Value</a>
-          </h7><p>
+          </h6>
+<p>
             An iterator to the inserted value
           </p>
 </div>

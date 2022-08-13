@@ -43,14 +43,14 @@ void test_persistency()
         acc(1);
         acc(0);
         acc(2);
-        BOOST_CHECK_EQUAL(2u, max(acc));
+        BOOST_CHECK_EQUAL(2, max(acc));
         boost::archive::text_oarchive oa(ss);
         acc.serialize(oa, 0);
     }
     accumulator_set<int, stats<tag::max> > acc;
     boost::archive::text_iarchive ia(ss);
     acc.serialize(ia, 0);
-    BOOST_CHECK_EQUAL(2u, max(acc));
+    BOOST_CHECK_EQUAL(2, max(acc));
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -362,18 +362,6 @@ void test_crend()
     BOOST_TEST_EQ((boost::span<int>(&a[0], 4).crend().base()), &a[0]);
 }
 
-void test_begin_span()
-{
-    int a[4];
-    BOOST_TEST_EQ((begin(boost::span<int>(&a[0], 4))), &a[0]);
-}
-
-void test_end_span()
-{
-    int a[4];
-    BOOST_TEST_EQ((end(boost::span<int>(&a[0], 4))), &a[4]);
-}
-
 int main()
 {
     test_extent();
@@ -421,8 +409,6 @@ int main()
     test_cend();
     test_crbegin();
     test_crend();
-    test_begin_span();
-    test_end_span();
     return boost::report_errors();
 }
 #else

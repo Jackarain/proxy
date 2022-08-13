@@ -20,8 +20,8 @@ BOOST_AUTO_TEST_CASE(test_main)
 }
 #else // BOOST_NO_CXX11_VARIADIC_TEMPLATES
 
+#include <boost/core/ref.hpp>
 #include <boost/optional.hpp>
-#include <boost/ref.hpp>
 #include <boost/signals2.hpp>
 #include <functional>
 

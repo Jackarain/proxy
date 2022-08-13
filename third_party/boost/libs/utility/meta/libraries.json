@@ -107,7 +107,7 @@
     },
     {
         "key": "utility/string_ref",
-        "name": "string_ref",
+        "name": "String Ref",
         "description": "String view templates.",
         "documentation": "doc/html/string_ref.html",
         "category": [

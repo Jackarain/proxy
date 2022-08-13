@@ -27,7 +27,7 @@ ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#include <boost/outcome/result.hpp>
+#include <boost/outcome/outcome.hpp>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/unit_test_monitor.hpp>
@@ -79,33 +79,122 @@ BOOST_OUTCOME_AUTO_TEST_CASE(issues_0259_test, "move assignable is not calculate
     ~NonDefaultConstructibleCopyAssignable() = default;
   };
 
-  BOOST_OUTCOME_V2_NAMESPACE::result<DefaultConstructibleMoveAssignable> test1(BOOST_OUTCOME_V2_NAMESPACE::success(5)), test1a(BOOST_OUTCOME_V2_NAMESPACE::success(6));
-  test1 = std::move(test1a);
-  static_assert(!std::is_copy_constructible<BOOST_OUTCOME_V2_NAMESPACE::result<DefaultConstructibleMoveAssignable>>::value, "");
-  static_assert(!std::is_move_constructible<BOOST_OUTCOME_V2_NAMESPACE::result<DefaultConstructibleMoveAssignable>>::value, "");
-  static_assert(!std::is_copy_assignable<BOOST_OUTCOME_V2_NAMESPACE::result<DefaultConstructibleMoveAssignable>>::value, "");
-  static_assert(std::is_move_assignable<BOOST_OUTCOME_V2_NAMESPACE::result<DefaultConstructibleMoveAssignable>>::value, "");
-  static_assert(std::is_destructible<BOOST_OUTCOME_V2_NAMESPACE::result<DefaultConstructibleMoveAssignable>>::value, "");
-
-  BOOST_OUTCOME_V2_NAMESPACE::result<DefaultConstructibleCopyAssignable> test2(BOOST_OUTCOME_V2_NAMESPACE::success(5)), test2a(BOOST_OUTCOME_V2_NAMESPACE::success(6));
-  test2 = test2a;
-  static_assert(!std::is_copy_constructible<BOOST_OUTCOME_V2_NAMESPACE::result<DefaultConstructibleCopyAssignable>>::value, "");
-  static_assert(!std::is_move_constructible<BOOST_OUTCOME_V2_NAMESPACE::result<DefaultConstructibleCopyAssignable>>::value, "");
-  static_assert(std::is_copy_assignable<BOOST_OUTCOME_V2_NAMESPACE::result<DefaultConstructibleCopyAssignable>>::value, "");
-  static_assert(std::is_move_assignable<BOOST_OUTCOME_V2_NAMESPACE::result<DefaultConstructibleCopyAssignable>>::value, "");
-  static_assert(std::is_destructible<BOOST_OUTCOME_V2_NAMESPACE::result<DefaultConstructibleCopyAssignable>>::value, "");
-
-  BOOST_OUTCOME_V2_NAMESPACE::result<NonDefaultConstructibleMoveAssignable> test3(BOOST_OUTCOME_V2_NAMESPACE::success(5)), test3a(BOOST_OUTCOME_V2_NAMESPACE::success(6));
-  static_assert(!std::is_copy_constructible<BOOST_OUTCOME_V2_NAMESPACE::result<NonDefaultConstructibleMoveAssignable>>::value, "");
-  static_assert(!std::is_move_constructible<BOOST_OUTCOME_V2_NAMESPACE::result<NonDefaultConstructibleMoveAssignable>>::value, "");
-  static_assert(!std::is_copy_assignable<BOOST_OUTCOME_V2_NAMESPACE::result<NonDefaultConstructibleMoveAssignable>>::value, "");
-  static_assert(!std::is_move_assignable<BOOST_OUTCOME_V2_NAMESPACE::result<NonDefaultConstructibleMoveAssignable>>::value, "");
-  static_assert(std::is_destructible<BOOST_OUTCOME_V2_NAMESPACE::result<NonDefaultConstructibleMoveAssignable>>::value, "");
-
-  BOOST_OUTCOME_V2_NAMESPACE::result<NonDefaultConstructibleCopyAssignable> test4(BOOST_OUTCOME_V2_NAMESPACE::success(5)), test4a(BOOST_OUTCOME_V2_NAMESPACE::success(6));
-  static_assert(!std::is_copy_constructible<BOOST_OUTCOME_V2_NAMESPACE::result<NonDefaultConstructibleCopyAssignable>>::value, "");
-  static_assert(!std::is_move_constructible<BOOST_OUTCOME_V2_NAMESPACE::result<NonDefaultConstructibleCopyAssignable>>::value, "");
-  static_assert(!std::is_copy_assignable<BOOST_OUTCOME_V2_NAMESPACE::result<NonDefaultConstructibleCopyAssignable>>::value, "");
-  static_assert(!std::is_move_assignable<BOOST_OUTCOME_V2_NAMESPACE::result<NonDefaultConstructibleCopyAssignable>>::value, "");
-  static_assert(std::is_destructible<BOOST_OUTCOME_V2_NAMESPACE::result<NonDefaultConstructibleCopyAssignable>>::value, "");
+  {
+    using type = BOOST_OUTCOME_V2_NAMESPACE::result<DefaultConstructibleMoveAssignable>;
+    type test1(BOOST_OUTCOME_V2_NAMESPACE::success(5)), test1a(BOOST_OUTCOME_V2_NAMESPACE::success(6));
+    test1 = std::move(test1a);
+    static_assert(!std::is_copy_constructible<type>::value, "");
+    static_assert(!std::is_move_constructible<type>::value, "");
+    static_assert(!std::is_copy_assignable<type>::value, "");
+    static_assert(std::is_move_assignable<type>::value, "");
+    static_assert(std::is_destructible<type>::value, "");
+  }
+  {
+    using type = BOOST_OUTCOME_V2_NAMESPACE::result<DefaultConstructibleCopyAssignable>;
+    type test1(BOOST_OUTCOME_V2_NAMESPACE::success(5)), test1a(BOOST_OUTCOME_V2_NAMESPACE::success(6));
+    test1 = std::move(test1a);
+    static_assert(!std::is_copy_constructible<type>::value, "");
+    static_assert(!std::is_move_constructible<type>::value, "");
+    static_assert(std::is_copy_assignable<type>::value, "");
+    static_assert(std::is_move_assignable<type>::value, "");
+    static_assert(std::is_destructible<type>::value, "");
+  }
+  {
+    using type = BOOST_OUTCOME_V2_NAMESPACE::result<NonDefaultConstructibleMoveAssignable>;
+    type test1(BOOST_OUTCOME_V2_NAMESPACE::success(5)), test1a(BOOST_OUTCOME_V2_NAMESPACE::success(6));
+    static_assert(!std::is_copy_constructible<type>::value, "");
+    static_assert(!std::is_move_constructible<type>::value, "");
+    static_assert(!std::is_copy_assignable<type>::value, "");
+    static_assert(!std::is_move_assignable<type>::value, "");
+    static_assert(std::is_destructible<type>::value, "");
+  }
+  {
+    using type = BOOST_OUTCOME_V2_NAMESPACE::result<NonDefaultConstructibleCopyAssignable>;
+    type test1(BOOST_OUTCOME_V2_NAMESPACE::success(5)), test1a(BOOST_OUTCOME_V2_NAMESPACE::success(6));
+    static_assert(!std::is_copy_constructible<type>::value, "");
+    static_assert(!std::is_move_constructible<type>::value, "");
+    static_assert(!std::is_copy_assignable<type>::value, "");
+    static_assert(!std::is_move_assignable<type>::value, "");
+    static_assert(std::is_destructible<type>::value, "");
+  }
+  {
+    using type = BOOST_OUTCOME_V2_NAMESPACE::result<void, DefaultConstructibleMoveAssignable>;
+    type test1(BOOST_OUTCOME_V2_NAMESPACE::failure(5)), test1a(BOOST_OUTCOME_V2_NAMESPACE::failure(6));
+    test1 = std::move(test1a);
+    static_assert(!std::is_copy_constructible<type>::value, "");
+    static_assert(!std::is_move_constructible<type>::value, "");
+    static_assert(!std::is_copy_assignable<type>::value, "");
+    static_assert(std::is_move_assignable<type>::value, "");
+    static_assert(std::is_destructible<type>::value, "");
+  }
+  {
+    using type = BOOST_OUTCOME_V2_NAMESPACE::result<void, DefaultConstructibleCopyAssignable>;
+    type test1(BOOST_OUTCOME_V2_NAMESPACE::failure(5)), test1a(BOOST_OUTCOME_V2_NAMESPACE::failure(6));
+    test1 = std::move(test1a);
+    static_assert(!std::is_copy_constructible<type>::value, "");
+    static_assert(!std::is_move_constructible<type>::value, "");
+    static_assert(std::is_copy_assignable<type>::value, "");
+    static_assert(std::is_move_assignable<type>::value, "");
+    static_assert(std::is_destructible<type>::value, "");
+  }
+  {
+    using type = BOOST_OUTCOME_V2_NAMESPACE::result<DefaultConstructibleMoveAssignable, void>;
+    type test1(BOOST_OUTCOME_V2_NAMESPACE::success(5)), test1a(BOOST_OUTCOME_V2_NAMESPACE::success(6));
+    test1 = std::move(test1a);
+    static_assert(!std::is_copy_constructible<type>::value, "");
+    static_assert(!std::is_move_constructible<type>::value, "");
+    static_assert(!std::is_copy_assignable<type>::value, "");
+    static_assert(std::is_move_assignable<type>::value, "");
+    static_assert(std::is_destructible<type>::value, "");
+  }
+  {
+    using type = BOOST_OUTCOME_V2_NAMESPACE::result<DefaultConstructibleCopyAssignable, void>;
+    type test1(BOOST_OUTCOME_V2_NAMESPACE::success(5)), test1a(BOOST_OUTCOME_V2_NAMESPACE::success(6));
+    test1 = std::move(test1a);
+    static_assert(!std::is_copy_constructible<type>::value, "");
+    static_assert(!std::is_move_constructible<type>::value, "");
+    static_assert(std::is_copy_assignable<type>::value, "");
+    static_assert(std::is_move_assignable<type>::value, "");
+    static_assert(std::is_destructible<type>::value, "");
+  }
+  {
+    using type = BOOST_OUTCOME_V2_NAMESPACE::outcome<int, double, DefaultConstructibleMoveAssignable>;
+    type test1(BOOST_OUTCOME_V2_NAMESPACE::success(5)), test1a(BOOST_OUTCOME_V2_NAMESPACE::success(6));
+    test1 = std::move(test1a);
+    static_assert(!std::is_copy_constructible<type>::value, "");
+    static_assert(!std::is_move_constructible<type>::value, "");
+    static_assert(!std::is_copy_assignable<type>::value, "");
+    static_assert(std::is_move_assignable<type>::value, "");
+    static_assert(std::is_destructible<type>::value, "");
+  }
+  {
+    using type = BOOST_OUTCOME_V2_NAMESPACE::outcome<int, double, DefaultConstructibleCopyAssignable>;
+    type test1(BOOST_OUTCOME_V2_NAMESPACE::success(5)), test1a(BOOST_OUTCOME_V2_NAMESPACE::success(6));
+    test1 = std::move(test1a);
+    static_assert(!std::is_copy_constructible<type>::value, "");
+    static_assert(!std::is_move_constructible<type>::value, "");
+    static_assert(std::is_copy_assignable<type>::value, "");
+    static_assert(std::is_move_assignable<type>::value, "");
+    static_assert(std::is_destructible<type>::value, "");
+  }
+  {
+    using type = BOOST_OUTCOME_V2_NAMESPACE::outcome<void, void, DefaultConstructibleMoveAssignable>;
+    type test1(BOOST_OUTCOME_V2_NAMESPACE::success()), test1a(BOOST_OUTCOME_V2_NAMESPACE::success());
+    test1 = std::move(test1a);
+    static_assert(!std::is_copy_constructible<type>::value, "");
+    static_assert(!std::is_move_constructible<type>::value, "");
+    static_assert(!std::is_copy_assignable<type>::value, "");
+    static_assert(std::is_move_assignable<type>::value, "");
+    static_assert(std::is_destructible<type>::value, "");
+  }
+  {
+    using type = BOOST_OUTCOME_V2_NAMESPACE::outcome<void, void, DefaultConstructibleCopyAssignable>;
+    type test1(BOOST_OUTCOME_V2_NAMESPACE::success()), test1a(BOOST_OUTCOME_V2_NAMESPACE::success());
+    test1 = std::move(test1a);
+    static_assert(!std::is_copy_constructible<type>::value, "");
+    static_assert(!std::is_move_constructible<type>::value, "");
+    static_assert(std::is_copy_assignable<type>::value, "");
+    static_assert(std::is_move_assignable<type>::value, "");
+    static_assert(std::is_destructible<type>::value, "");
+  }
 }
