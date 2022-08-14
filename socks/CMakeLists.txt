@@ -4,14 +4,35 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DENABLE_LOGGER -DDISABL
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -DENABLE_LOGGER -DDISABLE_LOGGER_TO_CONSOLE -DLOGGER_DBG_VIEW")
 set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -DENABLE_LOGGER -DDISABLE_LOGGER_TO_CONSOLE -DLOGGER_DBG_VIEW")
 
-file(GLOB libsocks_SRCS
-	include/socks/*.hpp
-	src/socks/*.cpp
+file(GLOB libsocks_HEADERS
+	include/socks/async_connect.hpp
+	include/socks/logging.hpp
+	include/socks/scoped_exit.hpp
+	include/socks/socks_client.hpp
+	include/socks/socks_enums.hpp
+	include/socks/socks_error_code.hpp
+	include/socks/socks_server.hpp
+	include/socks/use_awaitable.hpp
+)
+
+file(GLOB uri_HEADERS
+	include/uri/uri_view.hpp
+)
+
+file(GLOB socks_SRCS
+	src/socks/socks_client.cpp
+	src/socks/socks_error_code.cpp
+	src/socks/socks_server.cpp
 )
 
 add_library(libsocks
-	${libsocks_SRCS}
+	${libsocks_HEADERS}
+	${uri_HEADERS}
+	${socks_SRCS}
 )
+
+source_group("Header Files\\socks" FILES ${libsocks_HEADERS})
+source_group("Header Files\\uri" FILES ${uri_HEADERS})
 
 set_target_properties(libsocks PROPERTIES OUTPUT_NAME socks PREFIX "lib" CLEAN_DIRECT_OUTPUT 1)
 
