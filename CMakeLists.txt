@@ -128,7 +128,10 @@ elseif(WIN32)
 		-DBOOST_FILESYSTEM_STATIC_LINK
 		-DBOOST_USE_WINAPI_VERSION=0x0601
 	)
-	add_compile_options(/utf8)
+
+	if (NOT MINGW)
+		add_compile_options(/utf8)
+	endif()
 endif()
 
 CHECK_CXX_COMPILER_FLAG(-fvisibility-inlines-hidden COMPILER_HAS_VISIBILITY_INLINE_HIDDEN)
@@ -177,7 +180,11 @@ if (NOT MSVC)
 				set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 			endif()
 		elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+			if (MINGW)
+				set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libstdc++ -static-libgcc")
+			else()
+				set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+			endif()
 		endif()
 	endif()
 	if (ANDROID)
@@ -276,12 +283,21 @@ link_libraries(
 )
 
 if (WIN32)
-	link_libraries(
-		Secur32.lib
-		Bcrypt.lib
-		Winmm.lib
-		Mswsock.lib
-	)
+
+	if (MINGW)
+		link_libraries(
+			ws2_32
+			mswsock
+			bcrypt
+		)
+	else()
+		link_libraries(
+			Secur32.lib
+			Bcrypt.lib
+			Winmm.lib
+			Mswsock.lib
+		)
+	endif()
 endif()
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
