@@ -211,11 +211,11 @@ set(BUILD_ASIO_BEAST ON)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
 
-set(Boost_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost EXCLUDE_FROM_ALL)
+#set(Boost_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost EXCLUDE_FROM_ALL)
 
 
-add_definitions(-DBOOST_ASIO_SEPARATE_COMPILATION)
-add_definitions(-DBOOST_BEAST_SEPARATE_COMPILATION)
+#add_definitions(-DBOOST_ASIO_SEPARATE_COMPILATION)
+#add_definitions(-DBOOST_BEAST_SEPARATE_COMPILATION)
 
 add_definitions(-DBOOST_LOCALE_HIDE_AUTO_PTR)
 add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
@@ -235,10 +235,22 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	add_definitions(-DBOOST_ASIO_HAS_CO_AWAIT)
 endif()
 
-add_subdirectory(third_party/boost EXCLUDE_FROM_ALL)
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+
+find_package(Boost COMPONENTS thread date_time program_options regex system)
+
+message(STATUS "Boost_INCLUDE_DIRS = ${Boost_INCLUDE_DIRS}")
+message(STATUS "Boost_LIBRARIES = ${Boost_LIBRARIES}")
+message(STATUS "Boost_LIB_VERSION = ${Boost_LIB_VERSION}")
+
+
+#add_subdirectory(third_party/boost EXCLUDE_FROM_ALL)
 
 find_package(Threads)
-link_libraries(${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
+link_libraries(
+	${CMAKE_THREAD_LIBS_INIT}
+#	${CMAKE_DL_LIBS}
+)
 
 if (ENABLE_TCMALLOC_STATIC)
 	find_package(Tcmalloc)
@@ -258,7 +270,7 @@ else()
 	find_package(ZLIB REQUIRED)
 endif()
 
-
+add_definitions(-DFMT_STATIC_THOUSANDS_SEPARATOR)
 add_subdirectory(third_party/fmt)
 
 include_directories(third_party
@@ -266,12 +278,20 @@ include_directories(third_party
 )
 
 link_libraries(
+		ws2_32
+		Mswsock
+		Secur32
+		Bcrypt
+		Winmm
+		
 		Boost::thread
 		Boost::date_time
 		Boost::program_options
 		Boost::regex
 
 		fmt
+		stdc++
+		#c++_static
 		${ZLIB_LIBRARIES}
 )
 

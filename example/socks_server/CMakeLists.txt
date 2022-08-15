@@ -5,8 +5,8 @@ add_executable(socks_server
 
 target_link_libraries(socks_server
     libsocks
-	Boost::asio
-	Boost::beast
+#	Boost::asio
+#	Boost::beast
 )
 
 target_include_directories(socks_server PUBLIC ${BASE_SOURCE_DIR})
