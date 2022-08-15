@@ -213,7 +213,6 @@ set(Boost_USE_STATIC_RUNTIME ON)
 
 #set(Boost_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost EXCLUDE_FROM_ALL)
 
-
 #add_definitions(-DBOOST_ASIO_SEPARATE_COMPILATION)
 #add_definitions(-DBOOST_BEAST_SEPARATE_COMPILATION)
 
@@ -235,7 +234,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	add_definitions(-DBOOST_ASIO_HAS_CO_AWAIT)
 endif()
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libstdc++ -static-libgcc")
 
 find_package(Boost COMPONENTS thread date_time program_options regex system)
 
@@ -291,7 +290,6 @@ link_libraries(
 
 		fmt
 		stdc++
-		#c++_static
 		${ZLIB_LIBRARIES}
 )
 
