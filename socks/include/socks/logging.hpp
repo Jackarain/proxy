@@ -352,6 +352,23 @@ namespace logger_aux__ {
 		return false;
 	}
 
+#ifdef WIN32
+	inline bool string_wide(const std::string& src, std::wstring& wstr)
+	{
+		auto len = MultiByteToWideChar(CP_ACP, 0, src.c_str(), -1, NULL, 0);
+		if (len > 0)
+		{
+			wchar_t* tmp = (wchar_t*)malloc(sizeof(wchar_t) * len);
+			if (!tmp)
+				return false;
+			MultiByteToWideChar(CP_ACP, 0, src.c_str(), -1, tmp, len);
+			wstr.assign(tmp);
+			free(tmp);
+			return true;
+		}
+		return false;
+	}
+#else
 	inline bool string_wide(const std::string& src, std::wstring& wstr)
 	{
 		std::locale sys_locale("");
@@ -379,6 +396,7 @@ namespace logger_aux__ {
 
 		return false;
 	}
+#endif
 
 	inline std::string string_utf8(const std::string& str)
 	{
