@@ -411,8 +411,8 @@ namespace socks {
 		co_return;
 	}
 
-	namespace detail
-	{
+	namespace detail {
+
 		net::awaitable<boost::system::error_code>
 			do_socks_handshake(tcp::socket& socket, socks_client_option opt /*= {}*/)
 		{
