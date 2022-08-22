@@ -15,7 +15,7 @@ class scoped_exit
 public:
 	explicit scoped_exit(T&& f) : f_(std::move(f)), dismiss_(false) {}
 	explicit scoped_exit(const T& f) : f_(f), dismiss_(false) {}
-	inline void dismiss() { dismiss_ = true; }
+	inline void cancel() { dismiss_ = true; }
 	~scoped_exit() { if (dismiss_) return; f_(); }
 
 private:
