@@ -26,6 +26,6 @@ namespace asio_util
 		}
 	};
 
-	[[maybe_unused]] static asio_util::uawaitable_t use_awaitable;
+	[[maybe_unused]] inline asio_util::uawaitable_t use_awaitable;
 }
 
