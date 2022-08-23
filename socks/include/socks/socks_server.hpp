@@ -11,7 +11,7 @@
 #pragma once
 
 #include "socks/logging.hpp"
-#include "uri/uri_view.hpp"
+#include "url/url_view.hpp"
 
 #include <memory>
 #include <string>
@@ -83,7 +83,7 @@ namespace socks {
 		std::array<char, 2048> m_local_buffer{};
 		std::weak_ptr<socks_server_base> m_socks_server;
 		socks_server_option m_option;
-		std::unique_ptr<uri::uri_view> m_next_proxy;
+		std::unique_ptr<urls::url_view> m_next_proxy;
 		bool m_abort{ false };
 	};
 

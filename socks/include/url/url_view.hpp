@@ -15,7 +15,7 @@
 
 #include <boost/beast/core/string.hpp>
 
-namespace uri {
+namespace urls {
 
 	using boost::beast::string_view;
 
@@ -109,30 +109,30 @@ namespace uri {
 		}
 	}
 
-	class uri_view
+	class url_view
 	{
 	public:
-		uri_view() = default;
+		url_view() = default;
 
-		uri_view(const char* s)
+		url_view(const char* s)
 		{
 			if (!parse(s))
 				throw std::invalid_argument("URI malformed");
 		}
 
-		uri_view(const std::string& s)
+		url_view(const std::string& s)
 		{
 			if (!parse(s))
 				throw std::invalid_argument("URI malformed");
 		}
 
-		uri_view(string_view s)
+		url_view(string_view s)
 		{
 			if (!parse(s))
 				throw std::invalid_argument("URI malformed");
 		}
 
-		~uri_view() = default;
+		~url_view() = default;
 
 		string_view scheme() noexcept
 		{
@@ -637,7 +637,7 @@ namespace uri {
 
 		static std::string encodeURI(string_view str) noexcept
 		{
-			using namespace ::uri::detail;
+			using namespace ::urls::detail;
 			std::string result;
 
 			for (const auto& c : str)
@@ -658,7 +658,7 @@ namespace uri {
 
 		static std::string decodeURI(string_view str)
 		{
-			using namespace ::uri::detail;
+			using namespace ::urls::detail;
 			std::string result;
 
 			auto start = str.cbegin();
@@ -711,7 +711,7 @@ namespace uri {
 
 		static std::string encodeURIComponent(string_view str) noexcept
 		{
-			using namespace ::uri::detail;
+			using namespace ::urls::detail;
 			std::string result;
 
 			for (const auto& c : str)
@@ -732,7 +732,7 @@ namespace uri {
 
 		static std::string decodeURIComponent(string_view str)
 		{
-			using namespace ::uri::detail;
+			using namespace ::urls::detail;
 			std::string result;
 
 			auto start = str.cbegin();

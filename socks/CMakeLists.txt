@@ -15,8 +15,8 @@ file(GLOB libsocks_HEADERS
 	include/socks/use_awaitable.hpp
 )
 
-file(GLOB uri_HEADERS
-	include/uri/uri_view.hpp
+file(GLOB url_HEADERS
+	include/url/url_view.hpp
 )
 
 file(GLOB socks_SRCS
@@ -27,12 +27,12 @@ file(GLOB socks_SRCS
 
 add_library(libsocks
 	${libsocks_HEADERS}
-	${uri_HEADERS}
+	${url_HEADERS}
 	${socks_SRCS}
 )
 
 source_group("Header Files\\socks" FILES ${libsocks_HEADERS})
-source_group("Header Files\\uri" FILES ${uri_HEADERS})
+source_group("Header Files\\url" FILES ${url_HEADERS})
 
 set_target_properties(libsocks PROPERTIES OUTPUT_NAME socks PREFIX "lib" CLEAN_DIRECT_OUTPUT 1)
 

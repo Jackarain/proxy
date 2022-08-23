@@ -84,7 +84,7 @@ namespace socks {
 			try
 			{
 				m_next_proxy =
-					std::make_unique<uri::uri_view>(m_option.next_proxy_);
+					std::make_unique<urls::url_view>(m_option.next_proxy_);
 			}
 			catch (const std::exception& e)
 			{
