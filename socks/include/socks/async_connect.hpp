@@ -29,6 +29,8 @@
 #include <type_traits>
 
 
+namespace net = boost::asio;
+
 namespace asio_util {
 
 	namespace detail {
