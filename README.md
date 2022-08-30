@@ -1,4 +1,4 @@
-一个使用现代c++实现的socks4/5协议的实现
+一个使用现代c++实现的socks4/5协议的实现 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/Jackarain/libsocks/tree/master.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/Jackarain/libsocks/tree/master)
 =======================================
 
 使用c++20协程，支持socks4/socks4a/socks5的server/client实现.
