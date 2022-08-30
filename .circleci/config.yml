@@ -1,0 +1,34 @@
+version: 2.1
+
+jobs:
+  build:
+    docker:
+      - image: cimg/base:edge
+    steps:
+      - checkout
+      - run:
+         name: Update OS
+         command: "sudo apt-get update && sudo apt-get install -y && sudo rm -rf /var/lib/apt/lists/*"
+
+      - run:
+          name: Install CMake&Ninja
+          command: 'sudo apt-get update && sudo apt-get install -y cmake ninja-build'
+
+      - run:
+          name: Check versions
+          command: |
+            g++ --version
+            cmake --version
+
+      - run:
+          name: Build Classic
+          command: |
+            mkdir build
+            cd build
+            cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release
+            ninja -j4
+
+workflows:
+  build-workflow:
+    jobs:
+      - build
