@@ -1,0 +1,13 @@
+name: Build
+on: [push]
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+      - run: sudo apt install -y cmake gcc-11 g++-11 ninja-build
+      - run: sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 10
+      - run: sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 10
+      - run: mkdir build && cd build && cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release && ninja
+
