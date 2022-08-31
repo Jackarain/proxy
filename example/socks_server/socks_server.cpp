@@ -186,7 +186,7 @@ int main(int argc, char** argv)
 {
 	po::options_description desc("Options");
 	desc.add_options()
-		("socks_server", po::value<std::string>(&socks_listen)->default_value("[::0]:1080")->value_name("ip:port [ip:port ...]"), "For socks4/5 server listen.")
+		("socks_server", po::value<std::string>(&socks_listen)->default_value("[::0]:1080")->value_name("ip:port"), "For socks4/5 server listen.")
 		("socks_userid", po::value<std::string>(&socks_userid)->default_value("jack")->value_name("userid"), "Socks4/5 auth user id.")
 		("socks_passwd", po::value<std::string>(&socks_passwd)->default_value("1111")->value_name("passwd"), "Socks4/5 auth password.")
 		("socks_next_proxy", po::value<std::string>(&socks_next_proxy)->default_value("")->value_name(""), "Next socks4/5 proxy. (e.g: socks5://user:passwd@ip:port)")
