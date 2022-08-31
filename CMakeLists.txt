@@ -215,6 +215,9 @@ if (NOT MSVC)
 	endif()
 endif(NOT MSVC)
 
+find_package(Threads)
+link_libraries(${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
+
 ################################################################################
 
 if (ENABLE_SYSTEM_OPENSSL)
@@ -263,9 +266,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 endif()
 
 add_subdirectory(third_party/boost EXCLUDE_FROM_ALL)
-
-find_package(Threads)
-link_libraries(${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
 
 if (ENABLE_TCMALLOC_STATIC)
 	find_package(Tcmalloc)
