@@ -875,7 +875,7 @@ namespace socks {
 			client += ":" + std::to_string(endp.port());
 
 			// 用户认证逻辑.
-			bool verify_passed = true;
+			bool verify_passed = false;
 			auto server = m_socks_server.lock();
 
 			if (server)
@@ -892,10 +892,6 @@ namespace socks {
 					<< ", passwd: " << srv_opt.passwd_
 					<< " := " << passwd
 					<< ", client: " << client;
-			}
-			else
-			{
-				verify_passed = false;
 			}
 
 			p = m_local_buffer.data();
