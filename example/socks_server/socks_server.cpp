@@ -165,7 +165,7 @@ net::awaitable<void> start_socks_server(server_ptr& server)
 	socks_server_option opt;
 
 	opt.usrdid_ = socks_userid;
-	opt.passwd_ = socks_userid;
+	opt.passwd_ = socks_passwd;
 
 	opt.next_proxy_ = socks_next_proxy;
 	opt.next_proxy_use_ssl_ = socks_next_proxy_ssl;
