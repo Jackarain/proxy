@@ -53,7 +53,9 @@ option(ENABLE_GIT_VERSION			"Enable git version" ON)
 
 option(ENABLE_USE_IO_URING			"Enable auto use io_uring" ON)
 option(ENABLE_BUILD_WITH_LIBCXX		"Build with libc++" OFF)
+
 option(ENABLE_SYSTEM_ZLIB			"Build with system zlib support" OFF)
+option(ENABLE_SYSTEM_OPENSSL		"Build with system openssl support" OFF)
 
 option(ENABLE_MOLD					"build using mold" OFF)
 option(ENABLE_LLD					"build using lld" OFF)
@@ -213,13 +215,31 @@ if (NOT MSVC)
 	endif()
 endif(NOT MSVC)
 
+################################################################################
+
+if (ENABLE_SYSTEM_OPENSSL)
+	find_package(OpenSSL)
+else()
+	set(OpenSSL_FOUND TRUE)
+	add_subdirectory(third_party/openssl)
+	if (NOT MSVC AND NOT APPLE)
+		if (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
+			set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--exclude-libs,ALL ${CMAKE_SHARED_LINKER_FLAGS}")
+			set(CMAKE_MODULE_LINKER_FLAGS "-Wl,--exclude-libs,ALL ${CMAKE_MODULE_LINKER_FLAGS}")
+			set(CMAKE_EXE_LINKER_FLAGS "-Wl,--exclude-libs,ALL ${CMAKE_EXE_LINKER_FLAGS}")
+		endif()
+	endif()
+endif()
+include_directories(${OPENSSL_INCLUDE_DIR})
+
+################################################################################
+
 set(BUILD_ASIO_BEAST ON)
 
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
 
-set(Boost_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost EXCLUDE_FROM_ALL)
-
+set(Boost_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost)
 
 add_definitions(-DBOOST_ASIO_SEPARATE_COMPILATION)
 add_definitions(-DBOOST_BEAST_SEPARATE_COMPILATION)
