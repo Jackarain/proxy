@@ -30,17 +30,137 @@ using namespace socks;
 
 using server_ptr = std::shared_ptr<socks_server>;
 
+//////////////////////////////////////////////////////////////////////////
+
 std::string socks_userid;
 std::string socks_passwd;
 std::string socks_next_proxy;
 bool socks_next_proxy_ssl = false;
 std::string ssl_certificate_dir;
+std::string socks_listen;
+
+//////////////////////////////////////////////////////////////////////////
+
+inline bool is_space(const char c)
+{
+	if (c == ' ' ||
+		c == '\f' ||
+		c == '\n' ||
+		c == '\r' ||
+		c == '\t' ||
+		c == '\v')
+		return true;
+	return false;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+inline std::string_view string_trim(std::string_view sv)
+{
+	const char* b = sv.data();
+	const char* e = b + sv.size();
+
+	for (; b != e; b++)
+	{
+		if (!is_space(*b))
+			break;
+	}
+
+	for (; e != b; )
+	{
+		if (!is_space(*(--e)))
+		{
+			++e;
+			break;
+		}
+	}
+
+	return std::string_view(b, e - b);
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+inline bool parse_endpoint_string(std::string_view str,
+	std::string& host, std::string& port, bool& ipv6only)
+{
+	ipv6only = false;
+
+	auto address_string = string_trim(str);
+	auto it = address_string.begin();
+
+	bool is_ipv6_address = *it == '[';
+	if (is_ipv6_address)
+	{
+		auto host_end = std::find(it, address_string.end(), ']');
+		if (host_end == address_string.end())
+			return false;
+
+		it++;
+		for (auto first = it; first != host_end; first++)
+			host.push_back(*first);
+
+		std::advance(it, host_end - it);
+		it++;
+	}
+	else
+	{
+		auto host_end = std::find(it, address_string.end(), ':');
+		if (host_end == address_string.end())
+			return false;
+
+		for (auto first = it; first != host_end; first++)
+			host.push_back(*first);
+
+		// Skip host.
+		std::advance(it, host_end - it);
+	}
+
+	if (*it != ':')
+		return false;
+
+	it++;
+	for (; it != address_string.end(); it++)
+	{
+		if (*it >= '0' && *it <= '9')
+		{
+			port.push_back(*it);
+			continue;
+		}
+
+		break;
+	}
+
+	if (it != address_string.end())
+	{
+#ifdef __cpp_lib_to_address
+		auto opt = std::string_view(
+			std::to_address(it), address_string.end() - it);
+#else
+		auto opt = std::string(it, address_string.end());
+#endif
+		if (opt == "ipv6only" || opt == "-ipv6only")
+			ipv6only = true;
+	}
+
+	return true;
+}
+
+//////////////////////////////////////////////////////////////////////////
 
 net::awaitable<void> start_socks_server(server_ptr& server)
 {
-	tcp::endpoint socks_listen(
-		net::ip::address::from_string("0.0.0.0"),
-		1080);
+	std::string host, port;
+	bool v6only = false;
+
+	if (!parse_endpoint_string(socks_listen, host, port, v6only))
+	{
+		std::cerr << "Parse endpoint fail: " << socks_listen << std::endl;
+		co_return;
+	}
+
+	tcp::endpoint listen(
+		net::ip::address::from_string(host),
+			(unsigned short)atoi(port.c_str()));
 
 	socks_server_option opt;
 
@@ -54,16 +174,19 @@ net::awaitable<void> start_socks_server(server_ptr& server)
 	auto executor = co_await net::this_coro::executor;
 	server =
 		std::make_shared<socks_server>(
-			executor, socks_listen, opt);
+			executor, listen, opt);
 	server->start();
 
 	co_return;
 }
 
+//////////////////////////////////////////////////////////////////////////
+
 int main(int argc, char** argv)
 {
 	po::options_description desc("Options");
 	desc.add_options()
+		("socks_server", po::value<std::string>(&socks_listen)->default_value("[::0]:1080")->value_name("ip:port [ip:port ...]"), "For socks4/5 server listen.")
 		("socks_userid", po::value<std::string>(&socks_userid)->default_value("jack")->value_name("userid"), "Socks4/5 auth user id.")
 		("socks_passwd", po::value<std::string>(&socks_passwd)->default_value("1111")->value_name("passwd"), "Socks4/5 auth password.")
 		("socks_next_proxy", po::value<std::string>(&socks_next_proxy)->default_value("")->value_name(""), "Next socks4/5 proxy. (e.g: socks5://user:passwd@ip:port)")
