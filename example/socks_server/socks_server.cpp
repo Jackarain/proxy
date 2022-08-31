@@ -213,6 +213,8 @@ int main(int argc, char** argv)
 		return EXIT_SUCCESS;
 	}
 
+	LOG_DBG << "Start socks server...";
+
 	net::io_context ioc(1);
 	server_ptr server;
 
