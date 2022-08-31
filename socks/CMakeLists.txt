@@ -63,17 +63,3 @@ set(LIBSOCKS_INCLUDE_DIRS
 	${CMAKE_CURRENT_SOURCE_DIR}/include
 	PARENT_SCOPE
 )
-
-if(ENABLE_BUILD_WERROR)
-	if(MSVC)
-		target_compile_options(libsocks INTERFACE /W4 /WX)
-	elseif(UNIX AND NOT APPLE)
-		if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.1)
-			target_compile_options(libsocks PRIVATE -Werror -Wall -Wextra -Wno-unknown-pragmas -Wno-deprecated)
-		else()
-			target_compile_options(libsocks PRIVATE -Werror -Wall -Wextra -Wno-unknown-pragmas -Wno-deprecated -Wno-deprecated-copy -Wno-error=deprecated-copy -Wno-pessimizing-move)
-		endif()
-	endif()
-endif()
-
-install(TARGETS libsocks DESTINATION bin)
