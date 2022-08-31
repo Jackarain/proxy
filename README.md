@@ -47,49 +47,7 @@ net::awaitable<void> start_socks_server(server_ptr& server)
 	server =
 		std::make_shared<socks_server>(
 			executor, socks_listen, opt);
-	server->open();
-
-	co_return;
-}
-
-net::awaitable<void> start_socks_client()
-{
-	auto executor = co_await net::this_coro::executor;
-	tcp::socket s(executor);
-
-	tcp::endpoint server_addr(
-		net::ip::address::from_string("127.0.0.1"),
-		1080);
-
-	// tcp socket connect to socks server.
-	boost::system::error_code ec;
-	co_await s.async_connect(server_addr, asio_util::use_awaitable[ec]);
-	if (ec)
-	{
-		LOG_WARN << "client connect to server: " << ec.message();
-		co_return;
-	}
-
-	// handshake and tell to socks server target.
-	socks::socks_client_option opt;
-
-	opt.target_host = "www.baidu.com";
-	opt.target_port = 80;
-
-	opt.proxy_hostname = true;
-	opt.username = "jack";
-	opt.password = "1111";
-
-	co_await socks::async_socks_handshake(s, opt, asio_util::use_awaitable[ec]);
-	if (ec)
-	{
-		LOG_WARN << "client handshake to server: " << ec.message();
-		co_return;
-	}
-
-	LOG_DBG << "completed socks handshake.";
-
-	// Next, do some http stuff with socket...
+	server->start();
 
 	co_return;
 }
@@ -99,8 +57,7 @@ int main()
 	net::io_context ioc(1);
 	server_ptr server;
 
-	co_spawn(ioc, start_socks_server(server), net::detached);
-	co_spawn(ioc, start_socks_client(), net::detached);
+	net::co_spawn(ioc, start_socks_server(server), net::detached);
 
 	ioc.run();
 	return 0;
