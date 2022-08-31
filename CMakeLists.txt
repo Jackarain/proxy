@@ -4,10 +4,16 @@ set(CMAKE_POLICY_DEFAULT_CMP0077 NEW) # cmake_policy(SET CMP0077 NEW)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 project(socks)
 
-include(CheckCXXCompilerFlag)
-include(CheckLibraryExists)
+################################################################################
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/cmake")
+
+include(CheckCXXCompilerFlag)
+include(CheckLibraryExists)
+include(CheckCXXLinkerFlag)
+
+
+################################################################################
 
 if (ENABLE_GIT_VERSION)
 	find_package(Git)
@@ -46,7 +52,8 @@ endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "SYSTEM NAME: ${CMAKE_SYSTEM_NAME}")
 
-include(CheckCXXLinkerFlag)
+
+################################################################################
 
 option(ENABLE_BUILD_WERROR			"All warnings being treated as errors" ON)
 option(ENABLE_GIT_VERSION			"Enable git version" ON)
@@ -63,10 +70,14 @@ option(ENABLE_LLD					"build using lld" OFF)
 option(ENABLE_TCMALLOC_STATIC		"Build with Tcmalloc support" OFF)
 option(ENABLE_JEMALLOC_STATIC		"Build with Jemalloc support" OFF)
 
+################################################################################
+
 find_program(MOLD_LINKER mold)
 find_program(LLD_LINKER lld)
 
 set(CMAKE_C_STANDARD 11)
+
+################################################################################
 
 if (MSVC)
 	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
@@ -136,6 +147,8 @@ elseif(WIN32)
 	endif()
 endif()
 
+################################################################################
+
 CHECK_CXX_COMPILER_FLAG(-fvisibility-inlines-hidden COMPILER_HAS_VISIBILITY_INLINE_HIDDEN)
 CHECK_CXX_COMPILER_FLAG(-fvisibility=hidden COMPILER_HAS_VISIBILITY_HIDDEN)
 CHECK_CXX_COMPILER_FLAG(-fdiagnostics-color=always COMPILER_HAS_COLOR)
@@ -163,9 +176,11 @@ if (COMPILER_HAS_FCOROUTINES_TS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines-ts")
 endif()
 
-if (ENABLE_SYSTEMD_LOGGING )
+if (ENABLE_SYSTEMD_LOGGING)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_SYSTEMD_LOGGING")
 endif()
+
+################################################################################
 
 if (NOT MSVC)
 	if(NOT APPLE)
@@ -267,6 +282,8 @@ endif()
 
 add_subdirectory(third_party/boost EXCLUDE_FROM_ALL)
 
+################################################################################
+
 if (ENABLE_TCMALLOC_STATIC)
 	find_package(Tcmalloc)
 	link_libraries(${Tcmalloc_LIBRARY})
@@ -285,12 +302,17 @@ else()
 	find_package(ZLIB REQUIRED)
 endif()
 
+################################################################################
 
 add_subdirectory(third_party/fmt)
+
+################################################################################
 
 include_directories(third_party
 	${ZLIB_INCLUDE_DIRS}
 )
+
+################################################################################
 
 link_libraries(
 		Boost::thread
@@ -301,6 +323,8 @@ link_libraries(
 		fmt
 		${ZLIB_LIBRARIES}
 )
+
+################################################################################
 
 if (WIN32)
 
@@ -320,6 +344,8 @@ if (WIN32)
 	endif()
 endif()
 
+################################################################################
+
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -329,8 +355,12 @@ if (WIN32)
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin/release)
 endif()
 
+################################################################################
+
 add_subdirectory(socks)
 add_subdirectory(example)
+
+################################################################################
 
 configure_file(socks.service.in socks.service)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/socks.service DESTINATION /usr/lib/systemd/system/)
