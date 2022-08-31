@@ -6,7 +6,7 @@
 <BR>
 =======================================
 
-使用c++20协程，支持socks4/socks4a/socks5的server/client实现，client与server之间可通过ssl加密通信，可配置如下架构：
+使用 **C++20协程** ，支持socks4/socks4a/socks5的server/client实现，client与server之间可通过ssl加密通信，可配置如下架构：
 
 <BR>
 
