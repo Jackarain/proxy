@@ -234,7 +234,9 @@ namespace socks {
 
 					auto target_endpoints =
 						co_await resolver.async_resolve(
-							hostname, std::to_string(port), asio_util::use_awaitable[ec]);
+							hostname,
+							std::to_string(port),
+							asio_util::use_awaitable[ec]);
 					if (ec) co_return;
 
 					if (target_endpoints.empty())
@@ -300,8 +302,10 @@ namespace socks {
 			{
 				auto domain_length = read<uint8_t>(resp);
 
-				bytes = co_await net::async_read(socket, response,
-					net::transfer_exactly(domain_length - 3), asio_util::use_awaitable[ec]);
+				bytes = co_await net::async_read(socket,
+					response,
+					net::transfer_exactly(domain_length - 3),
+					asio_util::use_awaitable[ec]);
 				if (ec) co_return;
 			}
 
@@ -402,7 +406,9 @@ namespace socks {
 				auto error = ec;
 
 				auto target_endpoints = co_await resolver.async_resolve(
-					hostname, std::to_string(port), asio_util::use_awaitable[ec]);
+					hostname,
+					std::to_string(port),
+					asio_util::use_awaitable[ec]);
 				if (ec) co_return;
 
 				if (target_endpoints.empty())
@@ -435,7 +441,8 @@ namespace socks {
 			}
 
 			request.commit(bytes_to_write);
-			co_await net::async_write(socket, request, asio_util::use_awaitable[ec]);
+			co_await net::async_write(socket,
+				request, asio_util::use_awaitable[ec]);
 			if (ec) co_return;
 
 			net::streambuf response;

@@ -1282,7 +1282,8 @@ Connection: close
 			while (!m_abort)
 			{
 				tcp::socket socket(m_executor);
-				co_await a.async_accept(socket, asio_util::use_awaitable[error]);
+				co_await a.async_accept(
+					socket, asio_util::use_awaitable[error]);
 				if (error)
 				{
 					LOG_ERR << "start_socks_listen"
