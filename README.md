@@ -6,8 +6,20 @@
 <BR>
 =======================================
 
-使用c++20协程，支持socks4/socks4a/socks5的server/client实现.
+使用c++20协程，支持socks4/socks4a/socks5的server/client实现，client与server之间可通过ssl加密通信，可配置如下架构：
+
 <BR>
+
+~~~
+
+                  +--------------+     |      +--------------+
+  browser/app --> | socks server | ---ssl---> | socks server | --> target server
+                  +--------------+     |      +--------------+
+                                      GFW
+~~~
+
+同时socks server能伪装为web server来回应非socks协议的请求。
+
 <BR>
 
 ### 使用示例程序:
