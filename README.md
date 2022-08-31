@@ -15,7 +15,7 @@
                   +--------------+     |      +--------------+
   browser/app --> | socks server | ---ssl---> | socks server | --> target server
                   +--------------+     |      +--------------+
-                                      GFW
+                       local          GFW          remote
 ~~~
 
 同时socks server能伪装为web server来回应非socks协议的请求。
