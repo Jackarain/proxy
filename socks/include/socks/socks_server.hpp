@@ -875,7 +875,7 @@ namespace socks {
 			client += ":" + std::to_string(endp.port());
 
 			// 用户认证逻辑.
-			bool verify_passed = false;
+			bool verify_passed = true;
 			auto server = m_socks_server.lock();
 
 			if (server)
@@ -885,6 +885,17 @@ namespace socks {
 				verify_passed =
 					srv_opt.usrdid_ == uname && srv_opt.passwd_ == passwd;
 				server.reset();
+
+				LOG_DBG << "socks id: " << m_connection_id
+					<< ", auth: " << srv_opt.usrdid_
+					<< " with: " << uname
+					<< ", passwd: " << srv_opt.passwd_
+					<< " with: " << passwd
+					<< ", client: " << client;
+			}
+			else
+			{
+				verify_passed = false;
 			}
 
 			p = m_local_buffer.data();
@@ -915,7 +926,7 @@ namespace socks {
 				co_return false;
 			}
 
-			co_return true;
+			co_return verify_passed;
 		}
 
 		template<typename S1, typename S2>
