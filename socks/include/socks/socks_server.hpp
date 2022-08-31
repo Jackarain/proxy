@@ -888,9 +888,9 @@ namespace socks {
 
 				LOG_DBG << "socks id: " << m_connection_id
 					<< ", auth: " << srv_opt.usrdid_
-					<< " with: " << uname
+					<< " := " << uname
 					<< ", passwd: " << srv_opt.passwd_
-					<< " with: " << passwd
+					<< " := " << passwd
 					<< ", client: " << client;
 			}
 			else
