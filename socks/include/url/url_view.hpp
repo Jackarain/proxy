@@ -10,14 +10,13 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <stdexcept>
 #include <iterator>
 
-#include <boost/beast/core/string.hpp>
 
 namespace urls {
 
-	using boost::beast::string_view;
 
 	//--------------------------------------------------------------------------
 	// scheme:[//[user[:password]@]host[:port]][/path][?query][#fragment]
@@ -84,7 +83,13 @@ namespace urls {
 			return false;
 		}
 
-		static string_view to_hex(unsigned char c) noexcept
+		inline char ascii_tolower(char c)
+		{
+			return ((static_cast<unsigned>(c) - 65U) < 26) ?
+				c + 'a' - 'A' : c;
+		}
+
+		static std::string_view to_hex(unsigned char c) noexcept
 		{
 			static const char* hexstring[] = {
 				"00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "0a", "0b", "0c", "0d", "0e", "0f",
@@ -105,8 +110,38 @@ namespace urls {
 				"f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "fa", "fb", "fc", "fd", "fe", "ff"
 			};
 
-			return string_view(hexstring[c]);
+			return std::string_view(hexstring[c]);
 		}
+
+		inline bool iequals(std::string_view lhs, std::string_view rhs)
+		{
+			auto n = lhs.size();
+			if (rhs.size() != n)
+				return false;
+			auto p1 = lhs.data();
+			auto p2 = rhs.data();
+			char a, b;
+			// fast loop
+			while (n--)
+			{
+				a = *p1++;
+				b = *p2++;
+				if (a != b)
+					goto slow;
+			}
+			return true;
+		slow:
+			do
+			{
+				if (detail::ascii_tolower(a) !=
+					detail::ascii_tolower(b))
+					return false;
+				a = *p1++;
+				b = *p2++;
+			} while (n--);
+			return true;
+		}
+
 	}
 
 	class url_view
@@ -126,7 +161,7 @@ namespace urls {
 				throw std::invalid_argument("URI malformed");
 		}
 
-		url_view(string_view s)
+		url_view(std::string_view s)
 		{
 			if (!parse(s))
 				throw std::invalid_argument("URI malformed");
@@ -134,52 +169,51 @@ namespace urls {
 
 		~url_view() = default;
 
-		string_view scheme() noexcept
+		std::string_view scheme() noexcept
 		{
 			return scheme_;
 		}
 
-		string_view host() noexcept
+		std::string_view host() noexcept
 		{
 			return host_;
 		}
 
-		string_view port() noexcept
+		std::string_view port() noexcept
 		{
 			if (!port_.empty())
 				return port_;
 			return knownport();
 		}
 
-		string_view username() noexcept
+		std::string_view username() noexcept
 		{
 			return username_;
 		}
 
-		string_view password() noexcept
+		std::string_view password() noexcept
 		{
 			return password_;
 		}
 
-		string_view path() noexcept
+		std::string_view path() noexcept
 		{
 			return path_;
 		}
 
-		string_view query() noexcept
+		std::string_view query() noexcept
 		{
 			return query_;
 		}
 
-		string_view fragment() noexcept
+		std::string_view fragment() noexcept
 		{
 			return fragment_;
 		}
 
-		bool parse(string_view url) noexcept
+		bool parse(std::string_view url) noexcept
 		{
 			using namespace detail;
-			using boost::beast::iequals;
 
 			enum
 			{
@@ -204,7 +238,7 @@ namespace urls {
 			const char* v6_start = nullptr;
 			const char* v6_end = nullptr;
 			bool is_ipv6 = false;
-			string_view probe;
+			std::string_view probe;
 
 			while (b != e)
 			{
@@ -224,7 +258,7 @@ namespace urls {
 						continue;
 					if (c == ':')
 					{
-						scheme_ = string_view(part_start, b - part_start - 1);
+						scheme_ = std::string_view(part_start, b - part_start - 1);
 						state = slash_start;
 						continue;
 					}
@@ -251,12 +285,12 @@ namespace urls {
 				case urn:
 					if (b == e)
 					{
-						path_ = string_view(part_start, b - part_start);
+						path_ = std::string_view(part_start, b - part_start);
 						return true;
 					}
 					if (c == '?')
 					{
-						path_ = string_view(part_start, b - part_start - 1);
+						path_ = std::string_view(part_start, b - part_start - 1);
 						part_start = b;
 						state = query;
 						continue;
@@ -287,7 +321,7 @@ namespace urls {
 						{
 							v6_end = b - 1;
 							if (!probe.empty())
-								probe = string_view();
+								probe = std::string_view();
 						}
 						else
 							is_ipv6 = false;
@@ -297,12 +331,12 @@ namespace urls {
 						if (!probe.empty())
 						{
 							auto pwd = probe.data() + probe.size() + 1;
-							password_ = string_view(pwd, b - pwd - 1);
+							password_ = std::string_view(pwd, b - pwd - 1);
 							username_ = probe;
 						}
 						else
 						{
-							username_ = string_view(part_start, b - part_start - 1); // username
+							username_ = std::string_view(part_start, b - part_start - 1); // username
 						}
 
 						is_ipv6 = false;
@@ -315,7 +349,7 @@ namespace urls {
 					if (c == ':')
 					{
 						if (probe.empty())
-							probe = string_view(part_start, b - part_start - 1); // username or hostname
+							probe = std::string_view(part_start, b - part_start - 1); // username or hostname
 						continue;
 					}
 
@@ -326,11 +360,11 @@ namespace urls {
 							if (!v6_start || !v6_end || v6_start == v6_end)
 								return false;
 
-							host_ = string_view(v6_start, v6_end - v6_start); // hostname
+							host_ = std::string_view(v6_start, v6_end - v6_start); // hostname
 							if (!probe.empty()) // port
 							{
 								auto port = probe.data() + probe.size() + 1;
-								port_ = string_view(port, b - port - 1);
+								port_ = std::string_view(port, b - port - 1);
 							}
 						}
 						else
@@ -341,12 +375,12 @@ namespace urls {
 							if (!probe.empty()) // port
 							{
 								auto port = probe.data() + probe.size() + 1;
-								port_ = string_view(port, b - port - 1);
+								port_ = std::string_view(port, b - port - 1);
 								host_ = probe;
 							}
 							else // hostname
 							{
-								host_ = string_view(part_start, b - part_start - 1);
+								host_ = std::string_view(part_start, b - part_start - 1);
 							}
 						}
 
@@ -380,11 +414,11 @@ namespace urls {
 							if (!v6_start || !v6_end || v6_start == v6_end)
 								return false;
 
-							host_ = string_view(v6_start, v6_end - v6_start); // hostname
+							host_ = std::string_view(v6_start, v6_end - v6_start); // hostname
 							if (!probe.empty()) // port
 							{
 								auto port = probe.data() + probe.size() + 1;
-								port_ = string_view(port, b - port);
+								port_ = std::string_view(port, b - port);
 							}
 						}
 						else
@@ -395,12 +429,12 @@ namespace urls {
 							if (!probe.empty()) // port
 							{
 								auto port = probe.data() + probe.size() + 1;
-								port_ = string_view(port, b - port);
+								port_ = std::string_view(port, b - port);
 								host_ = probe; // hostname
 							}
 							else // hostname
 							{
-								host_ = string_view(part_start, b - part_start);
+								host_ = std::string_view(part_start, b - part_start);
 							}
 						}
 
@@ -445,18 +479,18 @@ namespace urls {
 
 						if (c == '/' || c == ']')
 						{
-							host_ = string_view(part_start, b - part_start - 1);
+							host_ = std::string_view(part_start, b - part_start - 1);
 							return true;
 						}
 
-						host_ = string_view(part_start, b - part_start);
+						host_ = std::string_view(part_start, b - part_start);
 						return true;
 					}
 					if (is_ipv6)
 					{
 						if (c == ']')
 						{
-							host_ = string_view(part_start, b - part_start - 1);
+							host_ = std::string_view(part_start, b - part_start - 1);
 							if (b == e)
 								return true;
 							if (*b == ':')
@@ -499,7 +533,7 @@ namespace urls {
 					{
 						if (c == ':')
 						{
-							host_ = string_view(part_start, b - part_start - 1);
+							host_ = std::string_view(part_start, b - part_start - 1);
 							part_start = b;
 							state = port_start;
 							continue;
@@ -507,7 +541,7 @@ namespace urls {
 					}
 					if (c == '/')
 					{
-						host_ = string_view(part_start, b - part_start - 1);
+						host_ = std::string_view(part_start, b - part_start - 1);
 						part_start = --b;
 						state = path;
 						continue;
@@ -516,7 +550,7 @@ namespace urls {
 						continue;
 					if (c == '?')
 					{
-						host_ = string_view(part_start, b - part_start - 1);
+						host_ = std::string_view(part_start, b - part_start - 1);
 						if (b == e)
 							return true;
 						part_start = b;
@@ -525,7 +559,7 @@ namespace urls {
 					}
 					if (c == '#')
 					{
-						host_ = string_view(part_start, b - part_start - 1);
+						host_ = std::string_view(part_start, b - part_start - 1);
 						if (b == e)
 							return true;
 						part_start = b;
@@ -543,14 +577,14 @@ namespace urls {
 				case port:
 					if (c == '/')
 					{
-						port_ = string_view(part_start, b - part_start - 1);
+						port_ = std::string_view(part_start, b - part_start - 1);
 						part_start = --b;
 						state = path;
 						continue;
 					}
 					if (c == '?')
 					{
-						port_ = string_view(part_start, b - part_start - 1);
+						port_ = std::string_view(part_start, b - part_start - 1);
 						if (b == e)
 							return true;
 						part_start = b;
@@ -559,7 +593,7 @@ namespace urls {
 					}
 					if (c == '#')
 					{
-						port_ = string_view(part_start, b - part_start - 1);
+						port_ = std::string_view(part_start, b - part_start - 1);
 						if (b == e)
 							return true;
 						part_start = b;
@@ -568,7 +602,7 @@ namespace urls {
 					}
 					if (b == e) // no path
 					{
-						port_ = string_view(part_start, b - part_start);
+						port_ = std::string_view(part_start, b - part_start);
 						return true;
 					}
 					if (isdigit(c))
@@ -577,7 +611,7 @@ namespace urls {
 				case path:
 					if (c == '?')
 					{
-						path_ = string_view(part_start, b - part_start - 1);
+						path_ = std::string_view(part_start, b - part_start - 1);
 						if (b == e)
 							return true;
 						part_start = b;
@@ -586,7 +620,7 @@ namespace urls {
 					}
 					if (c == '#')
 					{
-						path_ = string_view(part_start, b - part_start - 1);
+						path_ = std::string_view(part_start, b - part_start - 1);
 						if (b == e)
 							return true;
 						part_start = b;
@@ -595,7 +629,7 @@ namespace urls {
 					}
 					if (b == e)
 					{
-						path_ = string_view(part_start, b - part_start);
+						path_ = std::string_view(part_start, b - part_start);
 						return true;
 					}
 					if (isunreserved(c) || issubdelims(c) || c == '%' || c == '/' ||
@@ -605,7 +639,7 @@ namespace urls {
 				case query:
 					if (c == '#')
 					{
-						query_ = string_view(part_start, b - part_start - 1);
+						query_ = std::string_view(part_start, b - part_start - 1);
 						if (b == e)
 							return true;
 						part_start = b;
@@ -614,7 +648,7 @@ namespace urls {
 					}
 					if (b == e)
 					{
-						query_ = string_view(part_start, b - part_start);
+						query_ = std::string_view(part_start, b - part_start);
 						return true;
 					}
 					if (ishsegment(c) || issubdelims(c) || c == '/' || c == '?')
@@ -623,7 +657,7 @@ namespace urls {
 				case fragment:
 					if (b == e)
 					{
-						fragment_ = string_view(part_start, b - part_start);
+						fragment_ = std::string_view(part_start, b - part_start);
 						return true;
 					}
 					if (ishsegment(c) || issubdelims(c) || c == '/' || c == '?')
@@ -635,7 +669,7 @@ namespace urls {
 			return false;
 		}
 
-		static std::string encodeURI(string_view str) noexcept
+		static std::string encodeURI(std::string_view str) noexcept
 		{
 			using namespace ::urls::detail;
 			std::string result;
@@ -656,7 +690,7 @@ namespace urls {
 			return result;
 		}
 
-		static std::string decodeURI(string_view str)
+		static std::string decodeURI(std::string_view str)
 		{
 			using namespace ::urls::detail;
 			std::string result;
@@ -709,7 +743,7 @@ namespace urls {
 			return result;
 		}
 
-		static std::string encodeURIComponent(string_view str) noexcept
+		static std::string encodeURIComponent(std::string_view str) noexcept
 		{
 			using namespace ::urls::detail;
 			std::string result;
@@ -730,7 +764,7 @@ namespace urls {
 			return result;
 		}
 
-		static std::string decodeURIComponent(string_view str)
+		static std::string decodeURIComponent(std::string_view str)
 		{
 			using namespace ::urls::detail;
 			std::string result;
@@ -783,7 +817,7 @@ namespace urls {
 		class qs_iterator
 		{
 		public:
-			using value_type = std::pair<string_view, string_view>;
+			using value_type = std::pair<std::string_view, std::string_view>;
 			using difference_type = std::ptrdiff_t;
 			using reference = qs_iterator;
 			using pointer = const value_type*;
@@ -791,7 +825,7 @@ namespace urls {
 
 			qs_iterator() = default;
 
-			explicit qs_iterator(const string_view& s) : qs_(s)
+			explicit qs_iterator(const std::string_view& s) : qs_(s)
 			{
 				make_value();
 			}
@@ -834,12 +868,12 @@ namespace urls {
 				return !(*this == other);
 			}
 
-			string_view key() const noexcept
+			std::string_view key() const noexcept
 			{
 				return value_.first;
 			}
 
-			string_view value() const noexcept
+			std::string_view value() const noexcept
 			{
 				return value_.second;
 			}
@@ -848,15 +882,15 @@ namespace urls {
 			void make_value() noexcept
 			{
 				auto f = qs_.find_first_of('=');
-				if (f == string_view::npos)
+				if (f == std::string_view::npos)
 					return;
 
 				auto e = qs_.find_first_of('&');
-				if (e == string_view::npos)
+				if (e == std::string_view::npos)
 					e = qs_.size();
 
-				value_.first = string_view(qs_.data(), f);
-				value_.second = string_view(qs_.data() + f + 1, e - f - 1);
+				value_.first = std::string_view(qs_.data(), f);
+				value_.second = std::string_view(qs_.data() + f + 1, e - f - 1);
 			}
 
 			void increment()
@@ -869,12 +903,12 @@ namespace urls {
 				if (end <= second)
 					return;
 
-				qs_ = string_view(second, end - second);
+				qs_ = std::string_view(second, end - second);
 				make_value();
 			}
 
 		protected:
-			string_view qs_;
+			std::string_view qs_;
 			value_type value_;
 		};
 
@@ -890,49 +924,49 @@ namespace urls {
 
 	private:
 
-		string_view knownport() noexcept
+		std::string_view knownport() noexcept
 		{
-			using boost::beast::iequals;
+			using namespace detail;
 
 			if (iequals(scheme_, "ftp"))
-				return string_view("21");
+				return std::string_view("21");
 			else if (iequals(scheme_, "ssh"))
-				return string_view("22");
+				return std::string_view("22");
 			else if (iequals(scheme_, "telnet"))
-				return string_view("23");
+				return std::string_view("23");
 			else if (iequals(scheme_, "gopher"))
-				return string_view("70");
+				return std::string_view("70");
 			else if (iequals(scheme_, "http") || iequals(scheme_, "ws"))
-				return string_view("80");
+				return std::string_view("80");
 			else if (iequals(scheme_, "nntp"))
-				return string_view("119");
+				return std::string_view("119");
 			else if (iequals(scheme_, "ldap"))
-				return string_view("389");
+				return std::string_view("389");
 			else if (iequals(scheme_, "https") || iequals(scheme_, "wss"))
-				return string_view("443");
+				return std::string_view("443");
 			else if (iequals(scheme_, "rtsp"))
-				return string_view("554");
+				return std::string_view("554");
 			else if (iequals(scheme_, "socks") || iequals(scheme_, "socks4") || iequals(scheme_, "socks5"))
-				return string_view("1080");
+				return std::string_view("1080");
 			else if (iequals(scheme_, "sip"))
-				return string_view("5060");
+				return std::string_view("5060");
 			else if (iequals(scheme_, "sips"))
-				return string_view("5061");
+				return std::string_view("5061");
 			else if (iequals(scheme_, "xmpp"))
-				return string_view("5222");
+				return std::string_view("5222");
 			else
-				return string_view("0");
+				return std::string_view("0");
 		}
 
 	private:
-		string_view scheme_;
-		string_view username_;
-		string_view password_;
-		string_view host_;
-		string_view port_;
-		string_view path_;
-		string_view query_;
-		string_view fragment_;
+		std::string_view scheme_;
+		std::string_view username_;
+		std::string_view password_;
+		std::string_view host_;
+		std::string_view port_;
+		std::string_view path_;
+		std::string_view query_;
+		std::string_view fragment_;
 	};
 
 }
