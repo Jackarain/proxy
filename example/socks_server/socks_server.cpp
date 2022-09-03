@@ -53,15 +53,6 @@ using server_ptr = std::shared_ptr<socks_server>;
 
 //////////////////////////////////////////////////////////////////////////
 
-std::string socks_userid;
-std::string socks_passwd;
-std::string socks_next_proxy;
-bool socks_next_proxy_ssl = false;
-std::string ssl_certificate_dir;
-std::string socks_listen;
-
-//////////////////////////////////////////////////////////////////////////
-
 inline bool is_space(const char c)
 {
 	if (c == ' ' ||
@@ -225,6 +216,15 @@ inline int platform_init()
 
 	return 0;
 }
+
+//////////////////////////////////////////////////////////////////////////
+
+std::string socks_userid;
+std::string socks_passwd;
+std::string socks_next_proxy;
+bool socks_next_proxy_ssl = false;
+std::string ssl_certificate_dir;
+std::string socks_listen;
 
 //////////////////////////////////////////////////////////////////////////
 
