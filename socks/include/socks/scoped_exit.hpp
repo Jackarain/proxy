@@ -9,16 +9,50 @@
 
 #include <type_traits>
 
-template<class T>
+#ifdef __cpp_lib_concepts
+#	include <concepts>
+#endif
+
+
+template <typename T
+#if !defined(__cpp_lib_concepts)
+	, typename = std::enable_if<std::invocable<T>>::type
+#endif
+>
+#ifdef __cpp_lib_concepts
+	requires std::invocable<T>
+#endif
 class scoped_exit
 {
+	scoped_exit() = delete;
+	scoped_exit(scoped_exit const&) = delete;
+	scoped_exit& operator=(scoped_exit const&) = delete;
+	scoped_exit(scoped_exit&&) = delete;
+	scoped_exit& operator=(scoped_exit&&) = delete;
+
 public:
-	explicit scoped_exit(T&& f) : f_(std::move(f)), dismiss_(false) {}
-	explicit scoped_exit(const T& f) : f_(f), dismiss_(false) {}
-	inline void cancel() { dismiss_ = true; }
-	~scoped_exit() { if (dismiss_) return; f_(); }
+	explicit scoped_exit(T&& f)
+		: f_(std::move(f))
+	{}
+
+	explicit scoped_exit(const T& f)
+		: f_(f)
+	{}
+
+	~scoped_exit()
+	{
+		if (stop_token_)
+			return;
+
+		f_();
+	}
+
+	inline void cancel()
+	{
+		stop_token_ = true;
+	}
 
 private:
 	T f_;
-	bool dismiss_;
+	bool stop_token_{ false };
 };
