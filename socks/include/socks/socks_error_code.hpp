@@ -103,7 +103,7 @@ namespace socks {
 	class error_category_impl
 		: public boost::system::error_category
 	{
-		virtual const char* name() const BOOST_SYSTEM_NOEXCEPT override
+		virtual const char* name() const noexcept override
 		{
 			return "SOCKS";
 		}
