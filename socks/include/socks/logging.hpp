@@ -149,7 +149,8 @@ namespace logging_compress__ {
 		char* buf = bufs.get();
 		int len;
 
-		for (;;) {
+		for (;;)
+		{
 			len = (int)fread(buf, 1, sizeof(buf), in);
 			if (ferror(in))
 				return false;
@@ -159,11 +160,11 @@ namespace logging_compress__ {
 
 			int total = 0;
 			int ret;
-			while (total < len) {
+			while (total < len)
+			{
 				ret = gzwrite(out, buf + total, (unsigned)len - total);
-				if (ret <= 0) {
+				if (ret <= 0)
 					return false;	// detail error information see gzerror(out, &ret);
-				}
 				total += ret;
 			}
 		}
@@ -198,27 +199,31 @@ namespace logger_aux__ {
 	// Thread-safe replacement for std::localtime
 	inline bool localtime(std::time_t time, std::tm& tm)
 	{
-		struct LocalTime {
+		struct LocalTime
+		{
 			std::time_t time_;
 			std::tm tm_;
 
 			LocalTime(std::time_t t) : time_(t) {}
 
-			bool run() {
+			bool run()
+			{
 				using namespace internal;
 				return handle(localtime_r(&time_, &tm_));
 			}
 
 			bool handle(std::tm* tm) { return tm != nullptr; }
 
-			bool handle(internal::Null<>) {
+			bool handle(internal::Null<>)
+			{
 				using namespace internal;
 				return fallback(localtime_s(&tm_, &time_));
 			}
 
 			bool fallback(int res) { return res == 0; }
 
-			bool fallback(internal::Null<>) {
+			bool fallback(internal::Null<>)
+			{
 				using namespace internal;
 				std::tm* tm = std::localtime(&time_);
 				if (tm) tm_ = *tm;
@@ -227,7 +232,8 @@ namespace logger_aux__ {
 		};
 
 		LocalTime lt(time);
-		if (lt.run()) {
+		if (lt.run())
+		{
 			tm = lt.tm_;
 			return true;
 		}
@@ -237,7 +243,8 @@ namespace logger_aux__ {
 
 	inline uint32_t decode(uint32_t* state, uint32_t* codep, uint32_t byte)
 	{
-		static constexpr uint8_t utf8d[] = {
+		static constexpr uint8_t utf8d[] =
+		{
 			  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 00..1f
 			  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 20..3f
 			  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 40..5f
@@ -496,8 +503,10 @@ public:
 		if (last_hours != hours && LOG_MAXFILE_SIZE < 0)
 			condition = true;
 
-		while (condition) {
-			if (m_last_time == -1) {
+		while (condition)
+		{
+			if (m_last_time == -1)
+			{
 				m_last_time = time;
 				break;
 			}
@@ -510,11 +519,14 @@ public:
 			auto logpath = std::filesystem::path(m_log_path.parent_path());
 			std::filesystem::path filename;
 
-			if constexpr (LOG_MAXFILE_SIZE <= 0) {
+			if constexpr (LOG_MAXFILE_SIZE <= 0)
+			{
 				auto logfile = std::format("{:04d}{:02d}{:02d}-{:02d}.log",
 					ptm->tm_year + 1900, ptm->tm_mon + 1, ptm->tm_mday, ptm->tm_hour);
 				filename = logpath / logfile;
-			} else {
+			}
+			else
+			{
 				auto utc_time = std::mktime(ptm);
 				auto logfile = std::format("{:04d}{:02d}{:02d}-{}.log",
 					ptm->tm_year + 1900, ptm->tm_mon + 1, ptm->tm_mday, utc_time);
@@ -556,14 +568,16 @@ public:
 			break;
 		}
 
-		if (!m_ofstream) {
+		if (!m_ofstream)
+		{
 			m_ofstream.reset(new std::ofstream);
 			auto& ofstream = *m_ofstream;
 			ofstream.open(m_log_path.string().c_str(), std::ios_base::out | std::ios_base::app);
 			ofstream.sync_with_stdio(false);
 		}
 
-		if (m_ofstream->is_open()) {
+		if (m_ofstream->is_open())
+		{
 			m_log_size += size;
 			m_ofstream->write(str, size);
 			m_ofstream->flush();
