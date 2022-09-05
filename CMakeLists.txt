@@ -12,6 +12,7 @@ include(CheckCXXCompilerFlag)
 include(CheckLibraryExists)
 include(CheckCXXLinkerFlag)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 ################################################################################
 
@@ -318,7 +319,6 @@ link_libraries(
 		Boost::thread
 		Boost::date_time
 		Boost::program_options
-		Boost::regex
 
 		fmt
 		${ZLIB_LIBRARIES}
