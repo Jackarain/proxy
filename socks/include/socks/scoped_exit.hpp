@@ -16,7 +16,7 @@
 
 template <typename T
 #if !defined(__cpp_lib_concepts)
-	, typename = std::enable_if<std::invocable<T>>::type
+	, typename = typename std::enable_if<std::is_invocable_v<T>>::type
 #endif
 >
 #ifdef __cpp_lib_concepts
