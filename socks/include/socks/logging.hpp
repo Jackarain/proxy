@@ -292,7 +292,7 @@ namespace logger_aux__ {
 
 	inline std::string from_u8string(std::string&& s)
 	{
-		return std::move(s);
+		return s;
 	}
 
 #if defined(__cpp_lib_char8_t)
