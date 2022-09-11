@@ -887,7 +887,7 @@ inline std::shared_ptr<logger_aux__::async_logger___> global_logger_obj___ =
 	std::make_shared<logger_aux__::async_logger___>();
 
 #if defined(_WIN32) || defined(WIN32)
-static LONG WINAPI unexpectedExceptionHandling(EXCEPTION_POINTERS* info)
+static LONG WINAPI unexpectedExceptionHandling(EXCEPTION_POINTERS*)
 {
 	auto old = global_logger_obj___->oldUnhandledExceptionFilter();
 	SetUnhandledExceptionFilter(old);
