@@ -185,6 +185,8 @@ namespace logging_compress__ {
 
 #endif
 
+inline bool global_logging___ = true;
+
 namespace logger_aux__ {
 
 	inline int64_t gettime()
@@ -473,6 +475,10 @@ public:
 	auto_logger_file__()
 	{
 		m_log_path = m_log_path / (LOG_APPNAME + std::string(".log"));
+
+		if (!global_logging___)
+			return;
+
 		std::error_code ignore_ec;
 		if (!std::filesystem::exists(m_log_path, ignore_ec))
 			std::filesystem::create_directories(
@@ -487,6 +493,10 @@ public:
 	void open(const char* path)
 	{
 		m_log_path = path;
+
+		if (!global_logging___)
+			return;
+
 		std::error_code ignore_ec;
 		if (!std::filesystem::exists(m_log_path, ignore_ec))
 			std::filesystem::create_directories(
@@ -882,7 +892,6 @@ namespace logger_aux__ {
 	};
 }
 
-inline bool global_logging___ = true;
 inline std::shared_ptr<logger_aux__::async_logger___> global_logger_obj___ =
 	std::make_shared<logger_aux__::async_logger___>();
 
