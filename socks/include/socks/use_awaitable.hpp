@@ -21,12 +21,12 @@ namespace asio_util
 	{
 		inline boost::asio::redirect_error_t<
 			typename boost::decay<decltype(boost::asio::use_awaitable)>::type>
-			operator[](boost::system::error_code& ec) noexcept
+			operator[](boost::system::error_code& ec) const noexcept
 		{
 			return boost::asio::redirect_error(boost::asio::use_awaitable, ec);
 		}
 	};
 
-	[[maybe_unused]] inline asio_util::uawaitable_t use_awaitable;
+	[[maybe_unused]] inline constexpr asio_util::uawaitable_t use_awaitable;
 }
 
