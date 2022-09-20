@@ -27,6 +27,6 @@ namespace asio_util
 		}
 	};
 
-	[[maybe_unused]] inline constexpr asio_util::uawaitable_t use_awaitable;
+	constexpr asio_util::uawaitable_t use_awaitable;
 }
 
