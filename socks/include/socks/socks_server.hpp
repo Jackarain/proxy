@@ -1194,7 +1194,7 @@ Connection: close
 		socks_server& operator=(const socks_server&) = delete;
 
 	public:
-		socks_server(net::any_io_executor& executor,
+		socks_server(net::any_io_executor executor,
 			const tcp::endpoint& endp, socks_server_option opt = {})
 			: m_executor(executor)
 			, m_acceptor(executor, endp)
