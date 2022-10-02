@@ -345,13 +345,13 @@ namespace asio_util {
 	}
 
 	template <typename Stream,
-	typename Iterator, typename ConnectHandler>
-		BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ConnectHandler,
-		void(boost::system::error_code, Iterator))
-	async_connect(Stream& s, Iterator begin,
-		BOOST_ASIO_MOVE_ARG(ConnectHandler) handler,
-		typename net::enable_if<
-			!net::is_endpoint_sequence<Iterator>::value>::type* = 0)
+		typename Iterator, typename ConnectHandler>
+		inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ConnectHandler,
+			void(boost::system::error_code, Iterator))
+		async_connect(Stream& s, Iterator begin,
+			BOOST_ASIO_MOVE_ARG(ConnectHandler) handler,
+			typename net::enable_if<
+				!net::is_endpoint_sequence<Iterator>::value>::type* = 0)
 	{
 		return net::async_initiate<ConnectHandler,
 			void(boost::system::error_code, Iterator)>
@@ -390,14 +390,14 @@ namespace asio_util {
 	}
 
 	template <typename Stream,
-	typename Iterator, typename ConnectHandler, typename ConnectCondition>
-		BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ConnectHandler,
-		void(boost::system::error_code, Iterator))
-	async_connect(Stream& s, Iterator begin,
-		ConnectCondition connect_condition,
-		BOOST_ASIO_MOVE_ARG(ConnectHandler) handler,
-		typename net::enable_if<
-			!net::is_endpoint_sequence<Iterator>::value>::type* = 0)
+		typename Iterator, typename ConnectHandler, typename ConnectCondition>
+			inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ConnectHandler,
+				void(boost::system::error_code, Iterator))
+		async_connect(Stream& s, Iterator begin,
+			ConnectCondition connect_condition,
+			BOOST_ASIO_MOVE_ARG(ConnectHandler) handler,
+			typename net::enable_if<
+				!net::is_endpoint_sequence<Iterator>::value>::type* = 0)
 	{
 		return net::async_initiate<ConnectHandler,
 			void(boost::system::error_code, Iterator)>
