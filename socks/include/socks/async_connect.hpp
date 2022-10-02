@@ -54,14 +54,12 @@ namespace asio_util {
 			handle(error, result);
 		}
 
-		template <typename Stream, typename Handler,
+		template <typename Stream, typename Handler, typename Executor,
 			typename Iterator, typename ResultType = void>
-		void callback(Handler&& handler,
+		void callback(Handler&& handler, Executor ex,
 			Iterator& begin, const boost::system::error_code& error)
 		{
-			auto executor = net::get_associated_executor(handler);
-
-			net::post(executor,
+			net::post(ex,
 				[error, h = std::move(handler), begin]() mutable
 				{
 					if constexpr (std::is_same_v<ResultType,
@@ -135,11 +133,11 @@ namespace asio_util {
 					});
 			}
 
-			template <typename Stream, typename Handler,
+			template <typename Stream, typename Handler, typename Executor,
 				typename Iterator, typename ResultType = void>
 			bool check_connect_iterator(boost::local_shared_ptr<
 				connect_context<Stream, Handler>> &context,
-					Iterator begin, Iterator end)
+				Executor ex, Iterator begin, Iterator end)
 			{
 				context->flag_ = false;
 				context->num_ = std::distance(begin, end);
@@ -148,8 +146,8 @@ namespace asio_util {
 				{
 					boost::system::error_code error = net::error::not_found;
 
-					callback<Stream, Handler, Iterator, ResultType>(
-						std::move(context->handler_),
+					callback<Stream, Handler, Executor, Iterator, ResultType>(
+						std::move(context->handler_), ex,
 							begin, error);
 
 					return false;
@@ -175,11 +173,13 @@ namespace asio_util {
 					use_happy_eyeball = true;
 			}
 
-			template <typename Stream, typename Handler, typename Iterator,
-				typename ConnectCondition, typename ResultType = void>
+			template <typename Stream, typename Handler, typename Executor,
+				typename Iterator, typename ConnectCondition,
+				typename ResultType = void>
 			void do_connect(Iterator iter, Stream& stream,
 				boost::local_shared_ptr<
 					connect_context<Stream, Handler>> &context,
+						Executor ex,
 						boost::local_shared_ptr<Stream> sock,
 								ConnectCondition connect_condition)
 			{
@@ -189,8 +189,9 @@ namespace asio_util {
 					{
 						boost::system::error_code error = net::error::not_found;
 
-						callback<Stream, Handler, Iterator, ResultType>(
+						callback<Stream, Handler, Executor, Iterator, ResultType>(
 							std::forward<Handler>(context->handler_),
+							ex,
 							iter,
 							error);
 					}
@@ -199,7 +200,7 @@ namespace asio_util {
 				}
 
 				sock->async_connect(*iter,
-					[&stream, context, iter, sock]
+					[&stream, context, ex, iter, sock]
 					(const boost::system::error_code& error) mutable
 					{
 						if (!error)
@@ -230,8 +231,9 @@ namespace asio_util {
 							s->cancel(ignore_ec);
 						}
 
-						callback<Stream, Handler, Iterator, ResultType>(
+						callback<Stream, Handler, Executor, Iterator, ResultType>(
 							std::forward<Handler>(context->handler_),
+							ex,
 							iter,
 							error);
 					});
@@ -249,10 +251,14 @@ namespace asio_util {
 				// Process handler cancellation slot
 				cancellation_slot(context);
 
+				// Get executor from handler or stream.
+				auto executor = net::get_associated_executor(
+					context->handler_, stream.get_executor());
+
 				// Check connect iterator valid
 				if (!check_connect_iterator<
-					Stream, Handler, Iterator, ResultType>(
-						context, begin, end))
+					Stream, Handler, decltype(executor), Iterator, ResultType>(
+						context, executor, begin, end))
 					return;
 
 				// happy eyeballs detection
@@ -272,12 +278,13 @@ namespace asio_util {
 						iter = begin,
 						&stream,
 						context,
+						executor,
 						sock,
 						connect_condition]() mutable
 					{
-						do_connect<Stream, Handler, Iterator,
+						do_connect<Stream, Handler, decltype(executor), Iterator,
 							ConnectCondition, ResultType>(
-								iter, stream, context,
+								iter, stream, context, executor,
 									sock, connect_condition);
 					};
 
