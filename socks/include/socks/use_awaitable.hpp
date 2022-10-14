@@ -10,23 +10,29 @@
 
 #pragma once
 
-#include <boost/type_traits.hpp>
+#include <boost/asio/detail/type_traits.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/asio/redirect_error.hpp>
 
 namespace asio_util
 {
-	struct uawaitable_t
+	struct use_awaitable_redirect_error_t
 	{
 		inline boost::asio::redirect_error_t<
-			typename boost::decay<decltype(boost::asio::use_awaitable)>::type>
-			operator[](boost::system::error_code& ec) const noexcept
+			typename boost::asio::decay<
+				decltype(boost::asio::use_awaitable)>::type>
+		operator[](boost::system::error_code& ec) const noexcept
 		{
-			return boost::asio::redirect_error(boost::asio::use_awaitable, ec);
+			return boost::asio::redirect_error_t<
+				typename boost::asio::decay<
+					decltype(boost::asio::use_awaitable)>::type>(
+						BOOST_ASIO_MOVE_CAST(
+							decltype(boost::asio::use_awaitable))(
+								boost::asio::use_awaitable), ec);
 		}
 	};
 
-	constexpr asio_util::uawaitable_t use_awaitable;
+	constexpr use_awaitable_redirect_error_t use_awaitable;
 }
 
