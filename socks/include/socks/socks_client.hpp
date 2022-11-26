@@ -49,7 +49,7 @@ namespace socks {
 
 	struct socks_client_option
 	{
-		// socks server
+		// target server
 		std::string target_host;
 		uint16_t target_port;
 
