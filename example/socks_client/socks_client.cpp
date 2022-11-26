@@ -36,7 +36,7 @@ net::awaitable<void> start_socks_client()
 		1080);
 
 	boost::system::error_code ec;
-	co_await s.async_connect(server_addr, asio_util::use_awaitable[ec]);
+	co_await s.async_connect(server_addr, net_awaitable[ec]);
 	if (ec)
 	{
 		LOG_WARN << "client connect to server: " << ec.message();
@@ -50,7 +50,7 @@ net::awaitable<void> start_socks_client()
 	opt.username = "jack";
 	opt.password = "1111";
 
-	co_await socks::async_socks_handshake(s, opt, asio_util::use_awaitable[ec]);
+	co_await socks::async_socks_handshake(s, opt, net_awaitable[ec]);
 	if (ec)
 	{
 		LOG_WARN << "client 1' handshake to server: " << ec.message();

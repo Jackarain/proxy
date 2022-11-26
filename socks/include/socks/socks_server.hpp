@@ -196,7 +196,7 @@ namespace socks {
 					m_local_socket,
 					net::buffer(m_local_buffer),
 					net::transfer_exactly(2),
-					asio_util::use_awaitable[ec]);
+					net_awaitable[ec]);
 			if (ec)
 			{
 				LOG_ERR << "socks id: " << m_connection_id
@@ -227,7 +227,7 @@ namespace socks {
 					m_local_socket,
 					net::buffer(fake_webpage()),
 					net::transfer_all(),
-					asio_util::use_awaitable[ec]);
+					net_awaitable[ec]);
 			}
 
 			co_return;
@@ -258,7 +258,7 @@ namespace socks {
 			auto bytes = co_await net::async_read(m_local_socket,
 				net::buffer(m_local_buffer, nmethods),
 				net::transfer_exactly(nmethods),
-				asio_util::use_awaitable[ec]);
+				net_awaitable[ec]);
 			if (ec)
 			{
 				LOG_ERR << "socks id: " << m_connection_id
@@ -327,7 +327,7 @@ namespace socks {
 			bytes = co_await net::async_write(m_local_socket,
 				net::buffer(m_local_buffer, 2),
 				net::transfer_exactly(2),
-				asio_util::use_awaitable[ec]);
+				net_awaitable[ec]);
 			if (ec)
 			{
 				LOG_WARN << "socks id: " << m_connection_id
@@ -359,7 +359,7 @@ namespace socks {
 			bytes = co_await net::async_read(m_local_socket,
 				net::buffer(m_local_buffer, 5),
 				net::transfer_exactly(5),
-				asio_util::use_awaitable[ec]);
+				net_awaitable[ec]);
 			if (ec)
 			{
 				LOG_WARN << "socks id: " << m_connection_id
@@ -405,7 +405,7 @@ namespace socks {
 			bytes = co_await net::async_read(m_local_socket,
 				net::buffer(m_local_buffer.data() + prefix, length),
 				net::transfer_exactly(length),
-				asio_util::use_awaitable[ec]);
+				net_awaitable[ec]);
 			if (ec)
 			{
 				LOG_WARN << "socks id: " << m_connection_id
@@ -534,7 +534,7 @@ namespace socks {
 				bytes = co_await net::async_write(m_local_socket,
 					net::buffer(m_local_buffer, len),
 					net::transfer_exactly(len),
-					asio_util::use_awaitable[ec]);
+					net_awaitable[ec]);
 				if (ec)
 				{
 					LOG_WARN << "socks id: " << m_connection_id
@@ -590,7 +590,7 @@ namespace socks {
 			auto bytes = co_await net::async_read(m_local_socket,
 				net::buffer(m_local_buffer, 6),
 				net::transfer_exactly(6),
-				asio_util::use_awaitable[ec]);
+				net_awaitable[ec]);
 			if (ec)
 			{
 				LOG_WARN << "socks id: " << m_connection_id
@@ -618,7 +618,7 @@ namespace socks {
 			//                                          [                   ]
 			net::streambuf sbuf;
 			bytes = co_await net::async_read_until(m_local_socket,
-				sbuf, '\0', asio_util::use_awaitable[ec]);
+				sbuf, '\0', net_awaitable[ec]);
 			if (ec)
 			{
 				LOG_WARN << "socks id: " << m_connection_id
@@ -638,7 +638,7 @@ namespace socks {
 			if (socks4a)
 			{
 				bytes = co_await net::async_read_until(m_local_socket,
-					sbuf, '\0', asio_util::use_awaitable[ec]);
+					sbuf, '\0', net_awaitable[ec]);
 				if (ec)
 				{
 					LOG_WARN << "socks id: " << m_connection_id
@@ -694,7 +694,7 @@ namespace socks {
 				bytes = co_await net::async_write(m_local_socket,
 					net::buffer(m_local_buffer, 8),
 					net::transfer_exactly(8),
-					asio_util::use_awaitable[ec]);
+					net_awaitable[ec]);
 				if (ec)
 				{
 					LOG_WARN << "socks id: " << m_connection_id
@@ -752,7 +752,7 @@ namespace socks {
 			bytes = co_await net::async_write(m_local_socket,
 				net::buffer(m_local_buffer, 8),
 				net::transfer_exactly(8),
-				asio_util::use_awaitable[ec]);
+				net_awaitable[ec]);
 			if (ec)
 			{
 				LOG_WARN << "socks id: " << m_connection_id
@@ -788,7 +788,7 @@ namespace socks {
 			auto bytes = co_await net::async_read(m_local_socket,
 				net::buffer(m_local_buffer, 2),
 				net::transfer_exactly(2),
-				asio_util::use_awaitable[ec]);
+				net_awaitable[ec]);
 			if (ec)
 			{
 				LOG_WARN << "socks id: " << m_connection_id
@@ -823,7 +823,7 @@ namespace socks {
 			bytes = co_await net::async_read(m_local_socket,
 				net::buffer(m_local_buffer, name_length),
 				net::transfer_exactly(name_length),
-				asio_util::use_awaitable[ec]);
+				net_awaitable[ec]);
 			if (ec)
 			{
 				LOG_WARN << "socks id: " << m_connection_id
@@ -855,7 +855,7 @@ namespace socks {
 			bytes = co_await net::async_read(m_local_socket,
 				net::buffer(m_local_buffer, passwd_len),
 				net::transfer_exactly(passwd_len),
-				asio_util::use_awaitable[ec]);
+				net_awaitable[ec]);
 			if (ec)
 			{
 				LOG_WARN << "socks id: " << m_connection_id
@@ -914,7 +914,7 @@ namespace socks {
 			co_await net::async_write(m_local_socket,
 				net::buffer(m_local_buffer, 2),
 				net::transfer_exactly(2),
-				asio_util::use_awaitable[ec]);
+				net_awaitable[ec]);
 			if (ec)
 			{
 				LOG_WARN << "socks id: " << m_connection_id
@@ -934,7 +934,7 @@ namespace socks {
 			for (; !m_abort;)
 			{
 				auto bytes = co_await from.async_read_some(
-					net::buffer(data), asio_util::use_awaitable[ec]);
+					net::buffer(data), net_awaitable[ec]);
 				if (ec || m_abort)
 				{
 					to.shutdown(net::ip::tcp::socket::shutdown_send, ec);
@@ -942,7 +942,7 @@ namespace socks {
 				}
 
 				co_await net::async_write(to,
-					net::buffer(data, bytes), asio_util::use_awaitable[ec]);
+					net::buffer(data, bytes), net_awaitable[ec]);
 				if (ec || m_abort)
 				{
 					from.shutdown(net::ip::tcp::socket::shutdown_receive, ec);
@@ -998,7 +998,7 @@ namespace socks {
 				auto proxy_port = std::string(m_next_proxy->port());
 
 				auto targets = co_await resolver.async_resolve(
-					proxy_host, proxy_port, asio_util::use_awaitable[ec]);
+					proxy_host, proxy_port, net_awaitable[ec]);
 				if (ec)
 				{
 					LOG_WFMT("socks id: {},"
@@ -1012,7 +1012,7 @@ namespace socks {
 				}
 
 				co_await asio_util::async_connect(remote_socket,
-					targets, check_condition, asio_util::use_awaitable[ec]);
+					targets, check_condition, net_awaitable[ec]);
 				if (ec)
 				{
 					LOG_WFMT("socks id: {},"
@@ -1062,7 +1062,7 @@ namespace socks {
 						// do async handshake.
 						co_await ssl_socket.async_handshake(
 							net::ssl::stream_base::client,
-							asio_util::use_awaitable[ec]);
+							net_awaitable[ec]);
 						if (ec)
 						{
 							LOG_WFMT("socks id: {},"
@@ -1093,7 +1093,7 @@ namespace socks {
 					opt.version = socks4a_version;
 
 				co_await async_socks_handshake(
-					m_remote_socket, opt, asio_util::use_awaitable[ec]);
+					m_remote_socket, opt, net_awaitable[ec]);
 				if (ec)
 				{
 					LOG_WFMT("socks id: {},"
@@ -1114,7 +1114,7 @@ namespace socks {
 					targets = co_await resolver.async_resolve(
 						target_host,
 						std::to_string(target_port),
-						asio_util::use_awaitable[ec]);
+						net_awaitable[ec]);
 					if (ec)
 					{
 						LOG_WARN << "socks id: " << m_connection_id
@@ -1137,7 +1137,7 @@ namespace socks {
 				}
 
 				co_await asio_util::async_connect(remote_socket,
-					targets, check_condition, asio_util::use_awaitable[ec]);
+					targets, check_condition, net_awaitable[ec]);
 				if (ec)
 				{
 					LOG_WFMT("socks id: {}, connect to target {}:{} error: {}",
@@ -1290,7 +1290,7 @@ Connection: close
 			{
 				tcp::socket socket(m_executor);
 				co_await a.async_accept(
-					socket, asio_util::use_awaitable[error]);
+					socket, net_awaitable[error]);
 				if (error)
 				{
 					LOG_ERR << "start_socks_listen"
@@ -1325,7 +1325,7 @@ Connection: close
 
 				// 等待读取事件.
 				co_await socket.async_wait(
-					tcp::socket::wait_read, asio_util::use_awaitable[error]);
+					tcp::socket::wait_read, net_awaitable[error]);
 				if (error)
 				{
 					LOG_WARN << "socket.async_wait error: " << error.message();
@@ -1381,7 +1381,7 @@ Connection: close
 					// do async handshake.
 					co_await ssl_socket.async_handshake(
 						net::ssl::stream_base::server,
-						asio_util::use_awaitable[error]);
+						net_awaitable[error]);
 					if (error)
 					{
 						LOG_WARN << "ssl protocol handshake error: "
