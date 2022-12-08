@@ -189,15 +189,52 @@ inline bool global_logging___ = true;
 
 namespace logger_aux__ {
 
+	constexpr long long epoch___ = 0x19DB1DED53E8000LL;
+
 	inline int64_t gettime()
 	{
-		using std::chrono::system_clock;
+#ifdef WIN32
+		static std::tuple<LONGLONG, LONGLONG, LONGLONG>
+			static_start = []() ->
+			std::tuple<LONGLONG, LONGLONG, LONGLONG>
+		{
+			LARGE_INTEGER f;
+			QueryPerformanceFrequency(&f);
 
+			FILETIME ft;
+#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
+			GetSystemTimePreciseAsFileTime(&ft);
+#else
+			GetSystemTimeAsFileTime(&ft);
+#endif
+
+			auto now = (((static_cast<long long>(ft.dwHighDateTime)) << 32)
+				+ static_cast<long long>(ft.dwLowDateTime) - epoch___)
+				/ 10000;
+
+			LARGE_INTEGER start;
+			QueryPerformanceCounter(&start);
+
+			return { f.QuadPart / 1000, start.QuadPart, now };
+		}();
+
+		auto [freq, start, now] = static_start;
+
+		LARGE_INTEGER current;
+		QueryPerformanceCounter(&current);
+
+		auto elapsed = current.QuadPart - start;
+		elapsed /= freq;
+
+		return static_cast<int64_t>(now + elapsed);
+#else
+		using std::chrono::system_clock;
 		auto now = system_clock::now() -
 			system_clock::time_point(std::chrono::milliseconds(0));
 
 		return std::chrono::duration_cast<
 			std::chrono::milliseconds>(now).count();
+#endif
 	}
 
 	namespace internal {
@@ -486,6 +523,7 @@ public:
 	}
 	~auto_logger_file__()
 	{
+		m_last_time = 0;
 	}
 
 	typedef std::shared_ptr<std::ofstream> ofstream_ptr;
@@ -813,16 +851,12 @@ namespace logger_aux__ {
 			signal(SIGFPE, signalHandler);
 			signal(SIGSEGV, signalHandler);
 			signal(SIGILL, signalHandler);
-
-			m_bg_thread = std::thread([this]()
-				{
-					internal_work();
-				});
 		}
 		~async_logger___()
 		{
 			m_abort = true;
-			m_bg_thread.join();
+			if (m_bg_thread.joinable())
+				m_bg_thread.join();
 		}
 
 	public:
@@ -863,6 +897,12 @@ namespace logger_aux__ {
 		void post_log(const int& level,
 			std::string&& message, bool disable_cout = false)
 		{
+			[[maybe_unused]] static auto runthread =
+				&(m_bg_thread = std::thread([this]()
+					{
+						internal_work();
+					}));
+
 			auto time = logger_aux__::gettime();
 			std::unique_lock lock(m_bg_mutex);
 
