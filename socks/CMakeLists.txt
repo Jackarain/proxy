@@ -9,6 +9,7 @@ set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -DENABLE_LOGGER -D
 file(GLOB libsocks_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/include/socks/async_connect.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/socks/base_stream.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/socks/default_cert.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/socks/fileop.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/socks/logging.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/socks/scoped_exit.hpp

@@ -17,6 +17,7 @@
 #include "socks/async_connect.hpp"
 #include "socks/logging.hpp"
 #include "socks/base_stream.hpp"
+#include "socks/default_cert.hpp"
 #include "socks/fileop.hpp"
 
 #include "socks/socks_enums.hpp"
@@ -1045,19 +1046,49 @@ namespace socks {
 					}
 				}
 
-				auto instantiate_stream = [this, &remote_socket, &ec]() mutable
-					-> net::awaitable<socks_stream_type>
+				auto instantiate_stream =
+					[this, &proxy_host, &remote_socket, &ec]
+				() mutable -> net::awaitable<socks_stream_type>
 				{
 					ec = {};
 
 					if (m_option.next_proxy_use_ssl_)
 					{
+						m_ssl_context.set_verify_mode(net::ssl::verify_peer);
+						auto cert = default_root_certificates();
+						m_ssl_context.add_certificate_authority(
+							net::buffer(cert.data(), cert.size()),
+							ec);
+						if (ec)
+						{
+							LOG_WFMT("socks id: {},"
+								" add_certificate_authority error: {}",
+								m_connection_id, ec.message());
+						}
+
+						m_ssl_context.set_verify_callback(
+							net::ssl::rfc2818_verification(proxy_host), ec);
+						if (ec)
+						{
+							LOG_WFMT("socks id: {},"
+								" set_verify_callback error: {}",
+								m_connection_id, ec.message());
+						}
+
 						auto socks_stream = instantiate_socks_stream(
 							std::move(remote_socket), m_ssl_context);
 
 						// get origin ssl stream type.
 						ssl_stream& ssl_socket =
 							boost::variant2::get<ssl_stream>(socks_stream);
+
+						if (!SSL_set_tlsext_host_name(
+							ssl_socket.native_handle(), proxy_host.c_str()))
+						{
+							LOG_WFMT("socks id: {},"
+							" SSL_set_tlsext_host_name error: {}",
+								m_connection_id, ::ERR_get_error());
+						}
 
 						// do async handshake.
 						co_await ssl_socket.async_handshake(
@@ -1180,7 +1211,7 @@ Connection: close
 		std::weak_ptr<socks_server_base> m_socks_server;
 		socks_server_option m_option;
 		std::unique_ptr<urls::url_view> m_next_proxy;
-		net::ssl::context m_ssl_context{ net::ssl::context::sslv23 };
+		net::ssl::context m_ssl_context{ net::ssl::context::sslv23_client };
 		bool m_abort{ false };
 	};
 
@@ -1211,9 +1242,9 @@ Connection: close
 		void init_ssl_context()
 		{
 			m_ssl_context.set_options(
-				boost::asio::ssl::context::default_workarounds
-				| boost::asio::ssl::context::no_sslv2
-				| boost::asio::ssl::context::single_dh_use);
+				net::ssl::context::default_workarounds
+				| net::ssl::context::no_sslv2
+				| net::ssl::context::single_dh_use);
 
 			auto dir = std::filesystem::path(m_option.ssl_cert_path_);
 			auto pwd = dir / "ssl_crt.pwd";
