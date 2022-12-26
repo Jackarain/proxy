@@ -29,9 +29,8 @@
 #include <type_traits>
 
 
-namespace net = boost::asio;
-
 namespace asio_util {
+	namespace net = boost::asio;
 
 	namespace detail {
 		template <typename Stream, typename Handler>

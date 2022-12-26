@@ -31,9 +31,9 @@
 #include <boost/asio/read.hpp>
 #include <boost/asio/write.hpp>
 
-namespace net = boost::asio;
 
 namespace socks {
+	namespace net = boost::asio;
 
 	using net::ip::tcp;
 	using net::ip::udp;

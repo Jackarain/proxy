@@ -40,9 +40,9 @@
 #include <boost/asio/experimental/awaitable_operators.hpp>
 
 
-namespace net = boost::asio;
 
 namespace socks {
+	namespace net = boost::asio;
 
 	using namespace net::experimental::awaitable_operators;
 	using namespace util;

@@ -15,6 +15,7 @@
 #include <boost/asio/ssl.hpp>
 
 namespace util {
+	namespace net = boost::asio;
 
 	using tcp = net::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 	using udp = net::ip::udp;               // from <boost/asio/ip/udp.hpp>
