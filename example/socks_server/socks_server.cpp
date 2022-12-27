@@ -254,7 +254,7 @@ net::awaitable<void> start_socks_server(server_ptr& server)
 
 	auto executor = co_await net::this_coro::executor;
 	server =
-		std::make_shared<socks_server>(
+		std::make_shared<socks::socks_server>(
 			executor, listen, opt);
 	server->start();
 

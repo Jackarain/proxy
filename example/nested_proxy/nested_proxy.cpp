@@ -24,7 +24,7 @@ namespace net = boost::asio;
 using net::ip::tcp;
 using namespace socks;
 
-using server_ptr = std::shared_ptr<socks_server>;
+using server_ptr = std::shared_ptr<socks::socks_server>;
 
 net::awaitable<void> start_socks_server(server_ptr& server)
 {
@@ -38,7 +38,7 @@ net::awaitable<void> start_socks_server(server_ptr& server)
 
 	auto executor = co_await net::this_coro::executor;
 	server =
-		std::make_shared<socks_server>(
+		std::make_shared<socks::socks_server>(
 			executor, socks_listen, opt);
 	server->start();
 
@@ -50,14 +50,14 @@ net::awaitable<void> start_socks_client()
 	// nested proxy chain example...
 
 	auto executor = co_await net::this_coro::executor;
-	tcp::socket s(executor);
+	tcp::socket sock{ executor };
 
 	tcp::endpoint server_addr(
 		net::ip::address::from_string("127.0.0.1"),
 		1080);
 
 	boost::system::error_code ec;
-	co_await s.async_connect(server_addr, net_awaitable[ec]);
+	co_await sock.async_connect(server_addr, net_awaitable[ec]);
 	if (ec)
 	{
 		LOG_WARN << "client connect to server: " << ec.message();
@@ -71,7 +71,7 @@ net::awaitable<void> start_socks_client()
 	opt1.username = "jack";
 	opt1.password = "1111";
 
-	co_await socks::async_socks_handshake(s, opt1, net_awaitable[ec]);
+	co_await socks::async_socks_handshake(sock, opt1, net_awaitable[ec]);
 	if (ec)
 	{
 		LOG_WARN << "client 1' handshake to server: " << ec.message();
@@ -85,7 +85,7 @@ net::awaitable<void> start_socks_client()
 	opt2.username = "jack";
 	opt2.password = "1111";
 
-	co_await socks::async_socks_handshake(s, opt2, net_awaitable[ec]);
+	co_await socks::async_socks_handshake(sock, opt2, net_awaitable[ec]);
 	if (ec)
 	{
 		LOG_WARN << "client 2' handshake to server: " << ec.message();
@@ -102,8 +102,8 @@ int main()
 	net::io_context ioc(1);
 	server_ptr server;
 
-	co_spawn(ioc, start_socks_server(server), net::detached);
-	co_spawn(ioc, start_socks_client(), net::detached);
+	net::co_spawn(ioc, start_socks_server(server), net::detached);
+	net::co_spawn(ioc, start_socks_client(), net::detached);
 
 	ioc.run();
 	return 0;

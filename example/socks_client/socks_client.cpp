@@ -66,7 +66,7 @@ int main()
 {
 	net::io_context ioc(1);
 
-	co_spawn(ioc, start_socks_client(), net::detached);
+	net::co_spawn(ioc, start_socks_client(), net::detached);
 
 	ioc.run();
 
