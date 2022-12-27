@@ -25,17 +25,23 @@ file(GLOB url_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/include/url/url_view.hpp
 )
 
-add_library(libsocks INTERFACE)
+file(GLOB libsocks_SRCS
+	${CMAKE_CURRENT_SOURCE_DIR}/src/dummy.cpp
+)
+
+add_library(libsocks STATIC)
 
 target_sources(libsocks
 	PRIVATE
 
 	${libsocks_HEADERS}
 	${url_HEADERS}
+	${libsocks_SRCS}
 )
 
 source_group("Header Files\\socks" FILES ${libsocks_HEADERS})
 source_group("Header Files\\url" FILES ${url_HEADERS})
+#source_group("Source Files" FILES ${libsocks_SRCS})
 
 set_target_properties(libsocks PROPERTIES OUTPUT_NAME socks PREFIX "lib" CLEAN_DIRECT_OUTPUT 1)
 
@@ -54,7 +60,7 @@ set(BASE_SOURCE_DIR
 )
 
 target_include_directories(libsocks
-	INTERFACE
+	PUBLIC
 
 	${BASE_SOURCE_DIR}
 	${Boost_INCLUDE_DIRS}

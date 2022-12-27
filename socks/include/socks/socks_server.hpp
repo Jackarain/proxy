@@ -39,6 +39,9 @@
 #include <boost/asio/detached.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
 
+#include <boost/beast/core.hpp>
+#include <boost/beast/http.hpp>
+#include <boost/beast/ssl.hpp>
 
 
 namespace socks {
@@ -49,6 +52,9 @@ namespace socks {
 
 	using tcp = net::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 	using udp = net::ip::udp;               // from <boost/asio/ip/udp.hpp>
+
+	namespace beast = boost::beast;			// from <boost/beast.hpp>
+	namespace http = beast::http;           // from <boost/beast/http.hpp>
 
 	using ssl_stream = net::ssl::stream<tcp::socket>;
 
@@ -195,7 +201,7 @@ namespace socks {
 			[[maybe_unused]] auto bytes =
 				co_await net::async_read(
 					m_local_socket,
-					net::buffer(m_local_buffer),
+					m_local_buffer,
 					net::transfer_exactly(2),
 					net_awaitable[ec]);
 			if (ec)
@@ -206,29 +212,33 @@ namespace socks {
 			}
 			BOOST_ASSERT(bytes == 2);
 
-			char* p = m_local_buffer.data();
+			auto p = net::buffer_cast<const char*>(m_local_buffer.data());
 			int socks_version = read<uint8_t>(p);
-
-			LOG_DBG << "socks id: " << m_connection_id
-				<< ", socks version: " << socks_version;
 
 			if (socks_version == SOCKS_VERSION_5)
 			{
+				LOG_DBG << "connection id: " << m_connection_id
+					<< ", socks version: " << socks_version;
+
 				co_await socks_connect_v5();
 				co_return;
 			}
 			if (socks_version == SOCKS_VERSION_4)
 			{
+				LOG_DBG << "connection id: " << m_connection_id
+					<< ", socks version: " << socks_version;
+
 				co_await socks_connect_v4();
 				co_return;
 			}
 			if (socks_version == 'G')
 			{
-				co_await net::async_write(
-					m_local_socket,
-					net::buffer(fake_webpage()),
-					net::transfer_all(),
-					net_awaitable[ec]);
+				co_await http_proxy_connect();
+// 				co_await net::async_write(
+// 					m_local_socket,
+// 					net::buffer(fake_webpage()),
+// 					net::transfer_all(),
+// 					net_awaitable[ec]);
 			}
 
 			co_return;
@@ -236,7 +246,7 @@ namespace socks {
 
 		net::awaitable<void> socks_connect_v5()
 		{
-			char* p = m_local_buffer.data();
+			auto p = net::buffer_cast<const char*>(m_local_buffer.data());
 
 			auto socks_version = read<int8_t>(p);
 			BOOST_ASSERT(socks_version == SOCKS_VERSION_5);
@@ -254,10 +264,10 @@ namespace socks {
 			//  | 1  |    1     | 1 to 255 |
 			//  +----+----------+----------+
 			//                  [          ]
-
+			m_local_buffer.consume(m_local_buffer.size());
 			boost::system::error_code ec;
 			auto bytes = co_await net::async_read(m_local_socket,
-				net::buffer(m_local_buffer, nmethods),
+				m_local_buffer,
 				net::transfer_exactly(nmethods),
 				net_awaitable[ec]);
 			if (ec)
@@ -276,7 +286,7 @@ namespace socks {
 			auto auth_required = !srv_opt.usrdid_.empty();
 
 			// 循环读取客户端支持的代理方式.
-			p = m_local_buffer.data();
+			p = net::buffer_cast<const char*>(m_local_buffer.data());
 
 			int method = SOCKS5_AUTH_UNACCEPTABLE;
 			while (bytes != 0)
@@ -303,21 +313,24 @@ namespace socks {
 				bytes--;
 			}
 
+			net::streambuf wbuf;
+
 			// 客户端不支持认证, 而如果服务端需要认证, 回复客户端不接受.
 			if (method == SOCKS5_AUTH_UNACCEPTABLE)
 			{
 				// 回复客户端, 不接受客户端的的代理请求.
-				p = m_local_buffer.data();
-				write<uint8_t>(socks_version, p);
-				write<uint8_t>(SOCKS5_AUTH_UNACCEPTABLE, p);
+				auto wp = net::buffer_cast<char*>(wbuf.prepare(1024));
+				write<uint8_t>(socks_version, wp);
+				write<uint8_t>(SOCKS5_AUTH_UNACCEPTABLE, wp);
 			}
 			else
 			{
 				// 回复客户端, server所选择的代理方式.
-				p = m_local_buffer.data();
-				write<uint8_t>(socks_version, p);
-				write<uint8_t>((uint8_t)method, p);
+				auto wp = net::buffer_cast<char*>(wbuf.prepare(1024));
+				write<uint8_t>(socks_version, wp);
+				write<uint8_t>((uint8_t)method, wp);
 			}
+			wbuf.commit(2);
 
 			//  +----+--------+
 			//  |VER | METHOD |
@@ -326,7 +339,7 @@ namespace socks {
 			//  +----+--------+
 			//  [             ]
 			bytes = co_await net::async_write(m_local_socket,
-				net::buffer(m_local_buffer, 2),
+				wbuf,
 				net::transfer_exactly(2),
 				net_awaitable[ec]);
 			if (ec)
@@ -357,8 +370,9 @@ namespace socks {
 			//  | 1  |  1  | X'00' |  1   | Variable |    2     |
 			//  +----+-----+-------+------+----------+----------+
 			//  [                          ]
+			m_local_buffer.consume(m_local_buffer.size());
 			bytes = co_await net::async_read(m_local_socket,
-				net::buffer(m_local_buffer, 5),
+				m_local_buffer,
 				net::transfer_exactly(5),
 				net_awaitable[ec]);
 			if (ec)
@@ -368,7 +382,7 @@ namespace socks {
 				co_return;
 			}
 
-			p = m_local_buffer.data();
+			p = net::buffer_cast<const char*>(m_local_buffer.data());
 			auto ver = read<int8_t>(p);
 			if (ver != SOCKS_VERSION_5)
 			{
@@ -390,21 +404,22 @@ namespace socks {
 			int length = 0;
 			int prefix = 1;
 
-			// 保存第一个字节.
-			m_local_buffer[0] = m_local_buffer[4];
+			// 消费掉前4个字节, 保存第1个字节.
+			m_local_buffer.consume(4);
 
 			if (atyp == SOCKS5_ATYP_IPV4)
 				length = 5; // 6 - 1
 			else if (atyp == SOCKS5_ATYP_DOMAINNAME)
 			{
 				length = read<uint8_t>(p) + 2;
+				m_local_buffer.consume(1);
 				prefix = 0;
 			}
 			else if (atyp == SOCKS5_ATYP_IPV6)
 				length = 17; // 18 - 1
 
 			bytes = co_await net::async_read(m_local_socket,
-				net::buffer(m_local_buffer.data() + prefix, length),
+				m_local_buffer,
 				net::transfer_exactly(length),
 				net_awaitable[ec]);
 			if (ec)
@@ -421,7 +436,7 @@ namespace socks {
 
 			auto executor = co_await net::this_coro::executor;
 
-			p = m_local_buffer.data();
+			p = net::buffer_cast<const char*>(m_local_buffer.data());
 			if (atyp == SOCKS5_ATYP_IPV4)
 			{
 				dst_endpoint.address(net::ip::address_v4(read<uint32_t>(p)));
@@ -494,46 +509,49 @@ namespace socks {
 				//  +----+-----+-------+------+----------+----------+
 				//  [                                               ]
 
-				p = m_local_buffer.data();
+				wbuf.consume(wbuf.size());
+				auto wp = net::buffer_cast<char*>(
+					wbuf.prepare(64 + domain.size()));
 
-				write<uint8_t>(SOCKS_VERSION_5, p); // VER
-				write<uint8_t>(error_code, p);		// REP
-				write<uint8_t>(0x00, p);			// RSV
+				write<uint8_t>(SOCKS_VERSION_5, wp); // VER
+				write<uint8_t>(error_code, wp);		// REP
+				write<uint8_t>(0x00, wp);			// RSV
 
 				if (dst_endpoint.address().is_v4())
 				{
 					auto uaddr = dst_endpoint.address().to_v4().to_uint();
 
-					write<uint8_t>(SOCKS5_ATYP_IPV4, p);
-					write<uint32_t>(uaddr, p);
-					write<uint16_t>(dst_endpoint.port(), p);
+					write<uint8_t>(SOCKS5_ATYP_IPV4, wp);
+					write<uint32_t>(uaddr, wp);
+					write<uint16_t>(dst_endpoint.port(), wp);
 				}
 				else if (dst_endpoint.address().is_v6())
 				{
-					write<uint8_t>(SOCKS5_ATYP_IPV6, p);
+					write<uint8_t>(SOCKS5_ATYP_IPV6, wp);
 					auto data = dst_endpoint.address().to_v6().to_bytes();
 					for (auto c : data)
-						write<uint8_t>(c, p);
-					write<uint16_t>(dst_endpoint.port(), p);
+						write<uint8_t>(c, wp);
+					write<uint16_t>(dst_endpoint.port(), wp);
 				}
 				else if (!domain.empty())
 				{
-					write<uint8_t>(SOCKS5_ATYP_DOMAINNAME, p);
-					write<uint8_t>(static_cast<int8_t>(domain.size()), p);
-					std::copy(domain.begin(), domain.end(), p);
-					p += domain.size();
-					write<uint16_t>(port, p);
+					write<uint8_t>(SOCKS5_ATYP_DOMAINNAME, wp);
+					write<uint8_t>(static_cast<int8_t>(domain.size()), wp);
+					std::copy(domain.begin(), domain.end(), wp);
+					wp += domain.size();
+					write<uint16_t>(port, wp);
 				}
 				else
 				{
-					write<uint8_t>(0x1, p);
-					write<uint32_t>(0, p);
-					write<uint16_t>(0, p);
+					write<uint8_t>(0x1, wp);
+					write<uint32_t>(0, wp);
+					write<uint16_t>(0, wp);
 				}
 
-				auto len = p - m_local_buffer.data();
+				auto len = wp - net::buffer_cast<const char*>(wbuf.data());
+				wbuf.commit(len);
 				bytes = co_await net::async_write(m_local_socket,
-					net::buffer(m_local_buffer, len),
+					wbuf,
 					net::transfer_exactly(len),
 					net_awaitable[ec]);
 				if (ec)
@@ -574,7 +592,7 @@ namespace socks {
 		net::awaitable<void> socks_connect_v4()
 		{
 			auto self = shared_from_this();
-			char* p = m_local_buffer.data();
+			auto p = net::buffer_cast<const char*>(m_local_buffer.data());
 
 			[[maybe_unused]] auto socks_version = read<int8_t>(p);
 			BOOST_ASSERT(socks_version == SOCKS_VERSION_4);
@@ -586,10 +604,10 @@ namespace socks {
 			//  | 1  | 1  |    2    |         4         | variable     | 1  |
 			//  +----+----+----+----+----+----+----+----+----+----+....+----+
 			//            [                             ]
-
+			m_local_buffer.consume(m_local_buffer.size());
 			boost::system::error_code ec;
 			auto bytes = co_await net::async_read(m_local_socket,
-				net::buffer(m_local_buffer, 6),
+				m_local_buffer,
 				net::transfer_exactly(6),
 				net_awaitable[ec]);
 			if (ec)
@@ -600,7 +618,7 @@ namespace socks {
 			}
 
 			tcp::endpoint dst_endpoint;
-			p = m_local_buffer.data();
+			p = net::buffer_cast<const char*>(m_local_buffer.data());
 
 			auto port = read<uint16_t>(p);
 			dst_endpoint.port(port);
@@ -617,9 +635,9 @@ namespace socks {
 			//  | 1  | 1  |    2    |         4         | variable     | 1  |
 			//  +----+----+----+----+----+----+----+----+----+----+....+----+
 			//                                          [                   ]
-			net::streambuf sbuf;
+			m_local_buffer.consume(m_local_buffer.size());
 			bytes = co_await net::async_read_until(m_local_socket,
-				sbuf, '\0', net_awaitable[ec]);
+				m_local_buffer, '\0', net_awaitable[ec]);
 			if (ec)
 			{
 				LOG_WARN << "socks id: " << m_connection_id
@@ -631,15 +649,15 @@ namespace socks {
 			if (bytes > 1)
 			{
 				userid.resize(bytes - 1);
-				sbuf.sgetn(&userid[0], bytes - 1);
+				m_local_buffer.sgetn(&userid[0], bytes - 1);
 			}
-			sbuf.consume(1); // consume `null`
+			m_local_buffer.consume(1); // consume `null`
 
 			std::string hostname;
 			if (socks4a)
 			{
 				bytes = co_await net::async_read_until(m_local_socket,
-					sbuf, '\0', net_awaitable[ec]);
+					m_local_buffer, '\0', net_awaitable[ec]);
 				if (ec)
 				{
 					LOG_WARN << "socks id: " << m_connection_id
@@ -650,7 +668,7 @@ namespace socks {
 				if (bytes > 1)
 				{
 					hostname.resize(bytes - 1);
-					sbuf.sgetn(&hostname[0], bytes - 1);
+					m_local_buffer.sgetn(&hostname[0], bytes - 1);
 				}
 			}
 
@@ -685,15 +703,17 @@ namespace socks {
 				//  +----+----+----+----+----+----+----+----+
 				//  [                                       ]
 
-				p = m_local_buffer.data();
-				write<uint8_t>(0, p);
-				write<uint8_t>(SOCKS4_REQUEST_REJECTED_USER_NO_ALLOW, p);
+				net::streambuf wbuf;
+				auto wp = net::buffer_cast<char*>(wbuf.prepare(16));
 
-				write<uint16_t>(dst_endpoint.port(), p);
-				write<uint32_t>(dst_endpoint.address().to_v4().to_ulong(), p);
+				write<uint8_t>(0, wp);
+				write<uint8_t>(SOCKS4_REQUEST_REJECTED_USER_NO_ALLOW, wp);
+
+				write<uint16_t>(dst_endpoint.port(), wp);
+				write<uint32_t>(dst_endpoint.address().to_v4().to_ulong(), wp);
 
 				bytes = co_await net::async_write(m_local_socket,
-					net::buffer(m_local_buffer, 8),
+					wbuf,
 					net::transfer_exactly(8),
 					net_awaitable[ec]);
 				if (ec)
@@ -742,16 +762,20 @@ namespace socks {
 			//  | 1  | 1  |    2    |         4         |
 			//  +----+----+----+----+----+----+----+----+
 			//  [                                       ]
-			p = m_local_buffer.data();
-			write<uint8_t>(0, p);
-			write<uint8_t>((uint8_t)error_code, p);
+
+			net::streambuf wbuf;
+			auto wp = net::buffer_cast<char*>(wbuf.prepare(16));
+
+			write<uint8_t>(0, wp);
+			write<uint8_t>((uint8_t)error_code, wp);
 
 			// 返回IP:PORT.
-			write<uint16_t>(dst_endpoint.port(), p);
-			write<uint32_t>(dst_endpoint.address().to_v4().to_ulong(), p);
+			write<uint16_t>(dst_endpoint.port(), wp);
+			write<uint32_t>(dst_endpoint.address().to_v4().to_ulong(), wp);
 
+			wbuf.commit(8);
 			bytes = co_await net::async_write(m_local_socket,
-				net::buffer(m_local_buffer, 8),
+				m_local_buffer,
 				net::transfer_exactly(8),
 				net_awaitable[ec]);
 			if (ec)
@@ -775,6 +799,28 @@ namespace socks {
 			co_return;
 		}
 
+		net::awaitable<void> http_proxy_connect()
+		{
+			// beast::flat_buffer buffer;
+			http::request<http::string_body> req;
+			boost::system::error_code ec;
+			net::streambuf bufs;
+			// m_local_buffer
+
+			co_await http::async_read(
+				m_local_socket, bufs, req, net_awaitable[ec]);
+
+			auto m = req.method();
+			auto mth = req.method_string();
+			auto target = std::string{ req.target() };
+
+			LOG_DBG << "Request: " << static_cast<int>(m)
+				<< ", method: " << mth
+				<< ", target: " << target;
+
+			co_return;
+		}
+
 		net::awaitable<bool> socks_auth()
 		{
 			//  +----+------+----------+------+----------+
@@ -785,9 +831,9 @@ namespace socks {
 			//  [           ]
 
 			boost::system::error_code ec;
-
+			m_local_buffer.consume(m_local_buffer.size());
 			auto bytes = co_await net::async_read(m_local_socket,
-				net::buffer(m_local_buffer, 2),
+				m_local_buffer,
 				net::transfer_exactly(2),
 				net_awaitable[ec]);
 			if (ec)
@@ -797,7 +843,7 @@ namespace socks {
 				co_return false;
 			}
 
-			auto p = m_local_buffer.data();
+			auto p = net::buffer_cast<const char*>(m_local_buffer.data());
 			int auth_version = read<int8_t>(p);
 			if (auth_version != 1)
 			{
@@ -820,9 +866,9 @@ namespace socks {
 			//  | 1  |  1   | 1 to 255 |  1   | 1 to 255 |
 			//  +----+------+----------+------+----------+
 			//              [                 ]
-
+			m_local_buffer.consume(m_local_buffer.size());
 			bytes = co_await net::async_read(m_local_socket,
-				net::buffer(m_local_buffer, name_length),
+				m_local_buffer,
 				net::transfer_exactly(name_length),
 				net_awaitable[ec]);
 			if (ec)
@@ -834,7 +880,7 @@ namespace socks {
 
 			std::string uname;
 
-			p = m_local_buffer.data();
+			p = net::buffer_cast<const char*>(m_local_buffer.data());
 			for (size_t i = 0; i < bytes - 1; i++)
 				uname.push_back(read<int8_t>(p));
 
@@ -852,9 +898,9 @@ namespace socks {
 			//  | 1  |  1   | 1 to 255 |  1   | 1 to 255 |
 			//  +----+------+----------+------+----------+
 			//                                [          ]
-
+			m_local_buffer.consume(m_local_buffer.size());
 			bytes = co_await net::async_read(m_local_socket,
-				net::buffer(m_local_buffer, passwd_len),
+				m_local_buffer,
 				net::transfer_exactly(passwd_len),
 				net_awaitable[ec]);
 			if (ec)
@@ -866,7 +912,7 @@ namespace socks {
 
 			std::string passwd;
 
-			p = m_local_buffer.data();
+			p = net::buffer_cast<const char*>(m_local_buffer.data());
 			for (size_t i = 0; i < bytes; i++)
 				passwd.push_back(read<int8_t>(p));
 
@@ -895,15 +941,16 @@ namespace socks {
 					<< ", client: " << client;
 			}
 
-			p = m_local_buffer.data();
-			write<uint8_t>(0x01, p);			// version 只能是1.
+			net::streambuf wbuf;
+			auto wp = net::buffer_cast<char*>(wbuf.prepare(16));
+			write<uint8_t>(0x01, wp);			// version 只能是1.
 			if (verify_passed)
 			{
-				write<uint8_t>(0x00, p);		// 认证通过返回0x00, 其它值为失败.
+				write<uint8_t>(0x00, wp);		// 认证通过返回0x00, 其它值为失败.
 			}
 			else
 			{
-				write<uint8_t>(0x01, p);		// 认证返回0x01为失败.
+				write<uint8_t>(0x01, wp);		// 认证返回0x01为失败.
 			}
 
 			// 返回认证状态.
@@ -912,8 +959,9 @@ namespace socks {
 			//  +----+--------+
 			//  | 1  |   1    |
 			//  +----+--------+
+			wbuf.commit(2);
 			co_await net::async_write(m_local_socket,
-				net::buffer(m_local_buffer, 2),
+				wbuf,
 				net::transfer_exactly(2),
 				net_awaitable[ec]);
 			if (ec)
@@ -1207,7 +1255,8 @@ Connection: close
 		socks_stream_type m_local_socket;
 		socks_stream_type m_remote_socket;
 		size_t m_connection_id;
-		std::array<char, 2048> m_local_buffer{};
+		net::streambuf m_local_buffer{};
+		// std::array<char, 2048> m_local_buffer{};
 		std::weak_ptr<socks_server_base> m_socks_server;
 		socks_server_option m_option;
 		std::unique_ptr<urls::url_view> m_next_proxy;
@@ -1384,8 +1433,8 @@ Connection: close
 				// socks4/5 protocol.
 				if (detect[0] == 0x05 || detect[0] == 0x04)
 				{
-					LOG_DBG << "socks protocol: " << detect[0]
-						<< ", connection id: " << connection_id;
+					LOG_DBG << "socks protocol:"
+						" connection id: " << connection_id;
 
 					auto new_session =
 						std::make_shared<socks_session>(
@@ -1398,8 +1447,8 @@ Connection: close
 				}
 				else if (detect[0] == 0x16) // socks5 with ssl protocol.
 				{
-					LOG_DBG << "socks protocol: " << detect[0]
-						<< ", connection id: " << connection_id;
+					LOG_DBG << "ssl protocol"
+						", connection id: " << connection_id;
 
 					// instantiate socks stream with ssl context.
 					auto ssl_socks_stream = instantiate_socks_stream(
@@ -1430,7 +1479,8 @@ Connection: close
 				}
 				else if (detect[0] == 0x47 || detect[0] == 0x50)
 				{
-					// http protocol, return fake webpage.
+					LOG_DBG << "http protocol"
+						", connection id: " << connection_id;
 
 					auto new_session =
 						std::make_shared<socks_session>(

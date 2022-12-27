@@ -297,7 +297,7 @@ int main(int argc, char** argv)
 		return EXIT_SUCCESS;
 	}
 
-	LOG_DBG << "Start socks server...";
+	LOG_DBG << "Start socks server: " << socks_listen;
 
 	net::io_context ioc(1);
 	server_ptr server;
