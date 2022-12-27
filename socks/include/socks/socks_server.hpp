@@ -415,7 +415,6 @@ namespace socks {
 			//  +----+-----+-------+------+----------+----------+
 			//                              [                   ]
 			int length = 0;
-			int prefix = 1;
 
 			// 消费掉前4个字节, 保存第1个字节.
 			m_local_buffer.consume(4);
@@ -426,7 +425,6 @@ namespace socks {
 			{
 				length = read<uint8_t>(p) + 2;
 				m_local_buffer.consume(1);
-				prefix = 0;
 			}
 			else if (atyp == SOCKS5_ATYP_IPV6)
 				length = 17; // 18 - 1
