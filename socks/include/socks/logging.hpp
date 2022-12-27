@@ -28,10 +28,10 @@
 
 #ifndef LOGGING_DISABLE_ASIO_ENDPOINT
 
-#	include <boost/asio/ip/tcp.hpp>
-#	include <boost/asio/ip/udp.hpp>
 #	include <boost/asio/ip/address.hpp>
 #	include <boost/asio/ip/basic_endpoint.hpp>
+#	include <boost/asio/ip/tcp.hpp>
+#	include <boost/asio/ip/udp.hpp>
 
 #endif // !LOGGING_DISABLE_ASIO_ENDPOINT
 

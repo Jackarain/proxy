@@ -12,6 +12,7 @@
 
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/connect.hpp>
+#include <boost/asio/ip/tcp.hpp>
 
 #include <boost/asio/cancellation_signal.hpp>
 #include <boost/asio/associated_cancellation_slot.hpp>
@@ -31,6 +32,7 @@
 
 namespace asio_util {
 	namespace net = boost::asio;
+	namespace ip = net::ip;
 
 	namespace detail {
 		template <typename Stream, typename Handler>
