@@ -819,8 +819,8 @@ namespace socks {
 			co_await http::async_read(
 				m_local_socket, m_local_buffer, req, net_awaitable[ec]);
 
-			auto mth = req.method_string();
-			auto target_view = req.target();
+			auto mth = std::string(req.method_string());
+			auto target_view = std::string(req.target());
 			auto pa = std::string(req[http::field::proxy_authorization]);
 
 			LOG_DBG << "http proxy id: "
