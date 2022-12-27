@@ -79,26 +79,28 @@ $(document).ready(function(){initNavTree('structboost_1_1locale_1_1comparator.ht
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:af40ee48c6c93b6e5d91492a3e0cb96a8"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structboost_1_1locale_1_1comparator.html#af40ee48c6c93b6e5d91492a3e0cb96a8">comparator</a> (std::locale const &amp;l=std::locale(), <a class="el" href="classboost_1_1locale_1_1collator__base.html#a73c12de809733273304fef7f0af28b22">collator_base::level_type</a> level=default_level)</td></tr>
-<tr class="separator:af40ee48c6c93b6e5d91492a3e0cb96a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afe018bfde6a585d8e242595ab43ed4ad"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structboost_1_1locale_1_1comparator.html#afe018bfde6a585d8e242595ab43ed4ad">operator()</a> (std::basic_string&lt; CharType &gt; const &amp;left, std::basic_string&lt; CharType &gt; const &amp;right) const</td></tr>
-<tr class="separator:afe018bfde6a585d8e242595ab43ed4ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8e38839817e4c8142baa2d159e325dff"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structboost_1_1locale_1_1comparator.html#a8e38839817e4c8142baa2d159e325dff">comparator</a> (const std::locale &amp;l=std::locale(), <a class="el" href="group__collation.html#gaa3a9b33c6acdb1809ff44c56e3ad0ad4">collate_level</a> level=default_level)</td></tr>
+<tr class="separator:a8e38839817e4c8142baa2d159e325dff"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad6a332a9c204d896d59ac7549eb1894c"><td class="memItemLeft" align="right" valign="top"><a id="ad6a332a9c204d896d59ac7549eb1894c"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structboost_1_1locale_1_1comparator.html#ad6a332a9c204d896d59ac7549eb1894c">operator()</a> (const std::basic_string&lt; CharType &gt; &amp;left, const std::basic_string&lt; CharType &gt; &amp;right) const</td></tr>
+<tr class="memdesc:ad6a332a9c204d896d59ac7549eb1894c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compare two strings &ndash; equivalent to return left &lt; right according to collation rules. <br /></td></tr>
+<tr class="separator:ad6a332a9c204d896d59ac7549eb1894c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><h3>template&lt;typename CharType, collator_base::level_type default_level = collator_base::identical&gt;<br />
+<div class="textblock"><h3>template&lt;typename CharType, collate_level default_level = collate_level::identical&gt;<br />
 struct boost::locale::comparator&lt; CharType, default_level &gt;</h3>
 
 <p>This class can be used in STL algorithms and containers for comparison of strings with a level other than primary. </p>
 <p>For example:</p>
-<div class="fragment"><div class="line">std::map&lt;std::string,std::string,comparator&lt;char,collator_base::secondary&gt; &gt; data;</div></div><!-- fragment --><p>Would create a map the keys of which are sorted using secondary collation level </p>
+<div class="fragment"><div class="line">std::map&lt;std::string,std::string,comparator&lt;char,collate_level::secondary&gt; &gt; data;</div></div><!-- fragment --><p>Would create a map the keys of which are sorted using secondary collation level </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="af40ee48c6c93b6e5d91492a3e0cb96a8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af40ee48c6c93b6e5d91492a3e0cb96a8">&#9670;&nbsp;</a></span>comparator()</h2>
+<a id="a8e38839817e4c8142baa2d159e325dff"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8e38839817e4c8142baa2d159e325dff">&#9670;&nbsp;</a></span>comparator()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename CharType , collator_base::level_type default_level = collator_base::identical&gt; </div>
+template&lt;typename CharType , collate_level default_level = collate_level::identical&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
@@ -106,13 +108,13 @@ template&lt;typename CharType , collator_base::level_type default_level = collat
         <tr>
           <td class="memname"><a class="el" href="structboost_1_1locale_1_1comparator.html">boost::locale::comparator</a>&lt; CharType, default_level &gt;::<a class="el" href="structboost_1_1locale_1_1comparator.html">comparator</a> </td>
           <td>(</td>
-          <td class="paramtype">std::locale const &amp;&#160;</td>
+          <td class="paramtype">const std::locale &amp;&#160;</td>
           <td class="paramname"><em>l</em> = <code>std::locale()</code>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classboost_1_1locale_1_1collator__base.html#a73c12de809733273304fef7f0af28b22">collator_base::level_type</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="group__collation.html#gaa3a9b33c6acdb1809ff44c56e3ad0ad4">collate_level</a>&#160;</td>
           <td class="paramname"><em>level</em> = <code>default_level</code>&#160;</td>
         </tr>
         <tr>
@@ -129,46 +131,6 @@ template&lt;typename CharType , collator_base::level_type default_level = collat
 </div><div class="memdoc">
 <p>Create a comparator class for locale <em>l</em> and with collation leval <em>level</em> </p>
 <dl class="section note"><dt>Note</dt><dd>throws std::bad_cast if l does not have <a class="el" href="classboost_1_1locale_1_1collator.html">collator</a> facet installed </dd></dl>
-
-</div>
-</div>
-<h2 class="groupheader">Member Function Documentation</h2>
-<a id="afe018bfde6a585d8e242595ab43ed4ad"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afe018bfde6a585d8e242595ab43ed4ad">&#9670;&nbsp;</a></span>operator()()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename CharType , collator_base::level_type default_level = collator_base::identical&gt; </div>
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool <a class="el" href="structboost_1_1locale_1_1comparator.html">boost::locale::comparator</a>&lt; CharType, default_level &gt;::operator() </td>
-          <td>(</td>
-          <td class="paramtype">std::basic_string&lt; CharType &gt; const &amp;&#160;</td>
-          <td class="paramname"><em>left</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::basic_string&lt; CharType &gt; const &amp;&#160;</td>
-          <td class="paramname"><em>right</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Compare two strings &ndash; equivalent to return left &lt; right according to collation rules </p>
 
 </div>
 </div>

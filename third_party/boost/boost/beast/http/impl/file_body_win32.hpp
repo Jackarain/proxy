@@ -162,7 +162,7 @@ struct basic_file_body<file_win32>
                 return boost::none;
             if (nread == 0)
             {
-                ec = error::short_read;
+                BOOST_BEAST_ASSIGN_EC(ec, error::short_read);
                 return boost::none;
             }
             BOOST_ASSERT(nread != 0);
@@ -434,7 +434,7 @@ public:
             static_cast<boost::winapi::DWORD_>(
             (std::min<std::uint64_t>)(
                 (std::min<std::uint64_t>)(w.body_.last_ - w.pos_, sr_.limit()),
-                (std::numeric_limits<boost::winapi::DWORD_>::max)()));
+                (std::numeric_limits<boost::winapi::INT_>::max)() - 1));
         net::windows::overlapped_ptr overlapped{
             sock_.get_executor(), std::move(*this)};
         // Note that we have moved *this, so we cannot access
@@ -562,7 +562,7 @@ write_some(
         static_cast<boost::winapi::DWORD_>(
         (std::min<std::uint64_t>)(
             (std::min<std::uint64_t>)(w.body_.last_ - w.pos_, sr.limit()),
-            (std::numeric_limits<boost::winapi::DWORD_>::max)()));
+            (std::numeric_limits<boost::winapi::INT_>::max)() - 1));
     auto const bSuccess = ::TransmitFile(
         sock.native_handle(),
         w.body_.file_.native_handle(),

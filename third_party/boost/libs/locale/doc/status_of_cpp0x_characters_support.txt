@@ -7,9 +7,9 @@
 /*!
 \page status_of_cpp0x_characters_support Status of C++11 char16_t/char32_t support
 
-The support of C++11 \c char16_t and \c char32_t is experimental, mostly does not work and not
-intended to be used in production with current latest compilers: GCC-4.5, MSVC10 till major
-compiler's flaws would be fixed.
+The support of C++11 \c char16_t and \c char32_t is experimental, mostly does not work, and is not
+intended to be used in production with the latest compilers: GCC-4.5, MSVC10 until major
+compiler flaws are fixed.
 
 \section status_of_cpp0x_characters_support_gnu GNU GCC 4.5/C++11 Status
 

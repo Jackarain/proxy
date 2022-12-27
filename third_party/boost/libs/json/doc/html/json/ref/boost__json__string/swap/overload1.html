@@ -54,14 +54,17 @@
           </p>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
 <li class="listitem">
-                If <code class="computeroutput"><span class="special">*</span><span class="identifier">lhs</span><span class="special">.</span><span class="identifier">storage</span><span class="special">()</span> <span class="special">==</span> <span class="special">*</span><span class="identifier">rhs</span><span class="special">.</span><span class="identifier">storage</span><span class="special">()</span></code>, ownership of the underlying memory
-                is swapped in constant time, with no possibility of exceptions. All
-                iterators and references remain valid.
+                If <code class="computeroutput"><span class="special">&amp;</span><span class="identifier">lhs</span>
+                <span class="special">==</span> <span class="special">&amp;</span><span class="identifier">rhs</span></code>, do nothing. Otherwise,
               </li>
 <li class="listitem">
-                If <code class="computeroutput"><span class="special">*</span><span class="identifier">lhs</span><span class="special">.</span><span class="identifier">storage</span><span class="special">()</span> <span class="special">!=</span> <span class="special">*</span><span class="identifier">rhs</span><span class="special">.</span><span class="identifier">storage</span><span class="special">()</span></code>, the contents are logically swapped
-                by making a copy, which can throw. In this case all iterators and
-                references are invalidated.
+                if <code class="computeroutput"><span class="special">*</span><span class="identifier">lhs</span><span class="special">.</span><span class="identifier">storage</span><span class="special">()</span> <span class="special">==</span> <span class="special">*</span><span class="identifier">rhs</span><span class="special">.</span><span class="identifier">storage</span><span class="special">()</span></code>, ownership of the underlying memory
+                is swapped in constant time, with no possibility of exceptions. All
+                iterators and references remain valid. Otherwise,
+              </li>
+<li class="listitem">
+                the contents are logically swapped by making a copy, which can throw.
+                In this case all iterators and references are invalidated.
               </li>
 </ul></div>
 <h6>
@@ -128,9 +131,7 @@
                   </td>
 <td>
                     <p>
-                      The string to exchange. If <code class="computeroutput"><span class="special">&amp;</span><span class="identifier">lhs</span> <span class="special">==</span>
-                      <span class="special">&amp;</span><span class="identifier">rhs</span></code>,
-                      this function call has no effect.
+                      The string to exchange.
                     </p>
                   </td>
 </tr>
@@ -149,7 +150,7 @@
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<p>
+<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>

@@ -12,7 +12,7 @@
 
 #include <boost/filesystem/config.hpp>
 #include <boost/filesystem/path.hpp>
-#include <boost/filesystem/path_traits.hpp> // codecvt_error_category()
+#include <boost/filesystem/detail/path_traits.hpp> // codecvt_error_category()
 #include <boost/scoped_array.hpp>
 #include <boost/system/error_category.hpp> // for BOOST_SYSTEM_HAS_CONSTEXPR
 #include <boost/assert.hpp>
@@ -152,25 +152,6 @@ inline void first_element(string_type const& src, size_type& element_pos, size_t
 namespace boost {
 namespace filesystem {
 
-BOOST_FILESYSTEM_DECL void path::append_v3(path const& p)
-{
-    if (!p.empty())
-    {
-        if (BOOST_LIKELY(this != &p))
-        {
-            if (!detail::is_directory_separator(*p.m_pathname.begin()))
-                append_separator_if_needed();
-            m_pathname += p.m_pathname;
-        }
-        else
-        {
-            // self-append
-            path rhs(p);
-            append_v3(rhs);
-        }
-    }
-}
-
 BOOST_FILESYSTEM_DECL void path::append_v3(const value_type* begin, const value_type* end)
 {
     if (begin != end)
@@ -184,69 +165,9 @@ BOOST_FILESYSTEM_DECL void path::append_v3(const value_type* begin, const value_
         else
         {
             // overlapping source
-            path rhs(begin, end);
-            append_v3(rhs);
+            string_type rhs(begin, end);
+            append_v3(rhs.data(), rhs.data() + rhs.size());
         }
-    }
-}
-
-BOOST_FILESYSTEM_DECL void path::append_v4(path const& p)
-{
-    if (!p.empty())
-    {
-        if (BOOST_LIKELY(this != &p))
-        {
-            const size_type that_size = p.m_pathname.size();
-            size_type that_root_name_size = 0;
-            size_type that_root_dir_pos = find_root_directory_start(p.m_pathname.c_str(), that_size, that_root_name_size);
-
-            // if (p.is_absolute())
-            if
-            (
-#if defined(BOOST_WINDOWS_API) && !defined(UNDER_CE)
-                that_root_name_size > 0 &&
-#endif
-                that_root_dir_pos < that_size
-            )
-            {
-            return_assign:
-                assign(p);
-                return;
-            }
-
-            size_type this_root_name_size = 0;
-            find_root_directory_start(m_pathname.c_str(), m_pathname.size(), this_root_name_size);
-
-            if
-            (
-                that_root_name_size > 0 &&
-                (that_root_name_size != this_root_name_size || std::memcmp(m_pathname.c_str(), p.m_pathname.c_str(), this_root_name_size * sizeof(value_type)) != 0)
-            )
-            {
-                goto return_assign;
-            }
-
-            if (that_root_dir_pos < that_size)
-            {
-                // Remove root directory (if any) and relative path to replace with those from p
-                m_pathname.erase(m_pathname.begin() + this_root_name_size, m_pathname.end());
-            }
-
-            const value_type* const that_path = p.m_pathname.c_str() + that_root_name_size;
-            if (!detail::is_directory_separator(*that_path))
-                append_separator_if_needed();
-            m_pathname.append(that_path, that_size - that_root_name_size);
-        }
-        else
-        {
-            // self-append
-            path rhs(p);
-            append_v4(rhs);
-        }
-    }
-    else if (has_filename_v4())
-    {
-        m_pathname.push_back(preferred_separator);
     }
 }
 
@@ -300,8 +221,8 @@ BOOST_FILESYSTEM_DECL void path::append_v4(const value_type* begin, const value_
         else
         {
             // overlapping source
-            path rhs(begin, end);
-            append_v4(rhs);
+            string_type rhs(begin, end);
+            append_v4(rhs.data(), rhs.data() + rhs.size());
         }
     }
     else if (has_filename_v4())
@@ -321,12 +242,12 @@ BOOST_FILESYSTEM_DECL path path::generic_path() const
 
 #endif // BOOST_WINDOWS_API
 
-BOOST_FILESYSTEM_DECL int path::compare_v3(path const& p) const BOOST_NOEXCEPT
+BOOST_FILESYSTEM_DECL int path::compare_v3(path const& p) const
 {
     return detail::lex_compare_v3(begin(), end(), p.begin(), p.end());
 }
 
-BOOST_FILESYSTEM_DECL int path::compare_v4(path const& p) const BOOST_NOEXCEPT
+BOOST_FILESYSTEM_DECL int path::compare_v4(path const& p) const
 {
     return detail::lex_compare_v4(begin(), end(), p.begin(), p.end());
 }

@@ -22,6 +22,7 @@ Table of Contents:
     - \ref alternative
     - \ref main_reading
 - \ref using
+    - \ref building
     - \ref using_standard
     - \ref using_custom
     - \ref using_integration
@@ -154,6 +155,18 @@ Hence under some circumstances (and hopefully always somewhen in the future) thi
 - <a href="http://alfps.wordpress.com/2011/11/22/unicode-part-1-windows-console-io-approaches/">Windows console I/O approaches</a>
 
 \section using Using The Library
+\subsection building Building the library
+
+Boost.Nowide is usually build as part of Boost via `b2`.   
+It requires C++11 features and if any are missing the library will **not** be build.
+
+If that happens unexpectatly watch the configuration check output for anything like `cxx11_constexpr : no`.   
+This means your compiler doesn't use C++11 (or higher), e.g. because it defaults to C++03.
+You can pass `cxxstd=11` to `b2` to build in C++11 mode.
+
+Experimental support for building with the Boost CMake build system is also available.   
+For that run e.g. `cmake -DBOOST_INCLUDE_LIBRARIES=nowide <path-to-boost-root> <other options>`.
+
 \subsection using_standard Standard Features
 
 As a developer you are expected to use \c boost::nowide functions instead of the functions available in the

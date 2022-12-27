@@ -1016,8 +1016,8 @@ __note_ref_wrappers__, __fusion_pair__
 
 [section Tiers]
 
-Tiers are sequences, where all elements are non-const reference types. They
-are constructed with a call to a couple of /tie/ function templates. The
+Tiers are sequences, where all elements are reference types. They are
+constructed with a call to a couple of /tie/ function templates. The
 succeeding sections document the various /tier/ flavors.
 
 * __list_tie__
@@ -2005,7 +2005,7 @@ __fusion_pair__s. There may be no duplicate __fusion_pair__ key types.
     as_map(__make_vector__(
         __fusion_make_pair__<int>('X')
       , __fusion_make_pair__<double>("Men")))
-    
+
     // from associative sequence
     namespace ns
     {
@@ -2222,7 +2222,7 @@ __fusion_pair__s. There may be no duplicate __fusion_pair__ key types.
     result_of::as_map<__vector__<
         __fusion_pair__<int, char>
       , __fusion_pair__<double, std::string> > >::type
-    
+
     // from associative sequence
     namespace ns
     {

@@ -84,53 +84,29 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a77f96b74594000cacbbfa8e05817e2af"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab914afa4fa8a3f46e3b28098d36b5bcf"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1util_1_1base__converter.html#ab914afa4fa8a3f46e3b28098d36b5bcf">is_thread_safe</a> () const</td></tr>
 <tr class="separator:ab914afa4fa8a3f46e3b28098d36b5bcf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a752099ed155db99567073b3d6084cdd8"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="classboost_1_1locale_1_1util_1_1base__converter.html">base_converter</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1util_1_1base__converter.html#a752099ed155db99567073b3d6084cdd8">clone</a> () const</td></tr>
+<tr class="memitem:a752099ed155db99567073b3d6084cdd8"><td class="memItemLeft" align="right" valign="top"><a id="a752099ed155db99567073b3d6084cdd8"></a>
+virtual <a class="el" href="classboost_1_1locale_1_1util_1_1base__converter.html">base_converter</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1util_1_1base__converter.html#a752099ed155db99567073b3d6084cdd8">clone</a> () const</td></tr>
+<tr class="memdesc:a752099ed155db99567073b3d6084cdd8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a polymorphic copy of this object, usually called only if <a class="el" href="classboost_1_1locale_1_1util_1_1base__converter.html#ab914afa4fa8a3f46e3b28098d36b5bcf">is_thread_safe()</a> return false. <br /></td></tr>
 <tr class="separator:a752099ed155db99567073b3d6084cdd8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a27181b314e09f62ae9ea8fcd30d4e7c4"><td class="memItemLeft" align="right" valign="top">virtual uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1util_1_1base__converter.html#a27181b314e09f62ae9ea8fcd30d4e7c4">to_unicode</a> (char const *&amp;begin, char const *end)</td></tr>
-<tr class="separator:a27181b314e09f62ae9ea8fcd30d4e7c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afeecf1ee2699c26960cbf2d7d6d71d41"><td class="memItemLeft" align="right" valign="top">virtual uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1util_1_1base__converter.html#afeecf1ee2699c26960cbf2d7d6d71d41">from_unicode</a> (uint32_t u, char *begin, char const *end)</td></tr>
-<tr class="separator:afeecf1ee2699c26960cbf2d7d6d71d41"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6e8f1b9ada8e09d890eef1f850e8af9e"><td class="memItemLeft" align="right" valign="top">virtual uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1util_1_1base__converter.html#a6e8f1b9ada8e09d890eef1f850e8af9e">to_unicode</a> (const char *&amp;begin, const char *end)</td></tr>
+<tr class="separator:a6e8f1b9ada8e09d890eef1f850e8af9e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a55be9f64af89bccb6a95b7a4e5ca082b"><td class="memItemLeft" align="right" valign="top">virtual uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1util_1_1base__converter.html#a55be9f64af89bccb6a95b7a4e5ca082b">from_unicode</a> (uint32_t u, char *begin, const char *end)</td></tr>
+<tr class="separator:a55be9f64af89bccb6a95b7a4e5ca082b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-static-attribs"></a>
 Static Public Attributes</h2></td></tr>
-<tr class="memitem:aa02e2dfd8ddc2b40a8705c6ea7fa8d48"><td class="memItemLeft" align="right" valign="top">static const uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1util_1_1base__converter.html#aa02e2dfd8ddc2b40a8705c6ea7fa8d48">illegal</a> =utf::illegal</td></tr>
-<tr class="separator:aa02e2dfd8ddc2b40a8705c6ea7fa8d48"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa78dd2bae2783e31a00849a4e74aeb1e"><td class="memItemLeft" align="right" valign="top">static const uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1util_1_1base__converter.html#aa78dd2bae2783e31a00849a4e74aeb1e">incomplete</a> =utf::incomplete</td></tr>
-<tr class="separator:aa78dd2bae2783e31a00849a4e74aeb1e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8e5e30801859f66661151d26e8b58fc2"><td class="memItemLeft" align="right" valign="top">static constexpr uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1util_1_1base__converter.html#a8e5e30801859f66661151d26e8b58fc2">illegal</a> = utf::illegal</td></tr>
+<tr class="separator:a8e5e30801859f66661151d26e8b58fc2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8ec4f4c5018c7673433365275a25d27f"><td class="memItemLeft" align="right" valign="top">static constexpr uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1util_1_1base__converter.html#a8ec4f4c5018c7673433365275a25d27f">incomplete</a> = utf::incomplete</td></tr>
+<tr class="separator:a8ec4f4c5018c7673433365275a25d27f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>This class represent a simple stateless converter from UCS-4 and to UCS-4 for each single code point. </p>
 <p>This class is used for creation of std::codecvt facet for converting utf-16/utf-32 encoding to encoding supported by this converter</p>
 <p>Please note, this converter should be fully stateless. Fully stateless means it should never assume that it is called in any specific order on the text. Even if the encoding itself seems to be stateless like windows-1255 or shift-jis, some encoders (most notably iconv) can actually compose several code-point into one or decompose them in case composite characters are found. So be very careful when implementing these converters for certain character set. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="a752099ed155db99567073b3d6084cdd8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a752099ed155db99567073b3d6084cdd8">&#9670;&nbsp;</a></span>clone()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual <a class="el" href="classboost_1_1locale_1_1util_1_1base__converter.html">base_converter</a>* boost::locale::util::base_converter::clone </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Create a polymorphic copy of this object, usually called only if <a class="el" href="classboost_1_1locale_1_1util_1_1base__converter.html#ab914afa4fa8a3f46e3b28098d36b5bcf">is_thread_safe()</a> return false </p>
-
-</div>
-</div>
-<a id="afeecf1ee2699c26960cbf2d7d6d71d41"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afeecf1ee2699c26960cbf2d7d6d71d41">&#9670;&nbsp;</a></span>from_unicode()</h2>
+<a id="a55be9f64af89bccb6a95b7a4e5ca082b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a55be9f64af89bccb6a95b7a4e5ca082b">&#9670;&nbsp;</a></span>from_unicode()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -153,7 +129,7 @@ Static Public Attributes</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">char const *&#160;</td>
+          <td class="paramtype">const char *&#160;</td>
           <td class="paramname"><em>end</em>&#160;</td>
         </tr>
         <tr>
@@ -231,8 +207,8 @@ Static Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a27181b314e09f62ae9ea8fcd30d4e7c4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a27181b314e09f62ae9ea8fcd30d4e7c4">&#9670;&nbsp;</a></span>to_unicode()</h2>
+<a id="a6e8f1b9ada8e09d890eef1f850e8af9e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6e8f1b9ada8e09d890eef1f850e8af9e">&#9670;&nbsp;</a></span>to_unicode()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -243,13 +219,13 @@ Static Public Attributes</h2></td></tr>
         <tr>
           <td class="memname">virtual uint32_t boost::locale::util::base_converter::to_unicode </td>
           <td>(</td>
-          <td class="paramtype">char const *&amp;&#160;</td>
+          <td class="paramtype">const char *&amp;&#160;</td>
           <td class="paramname"><em>begin</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">char const *&#160;</td>
+          <td class="paramtype">const char *&#160;</td>
           <td class="paramname"><em>end</em>&#160;</td>
         </tr>
         <tr>
@@ -272,8 +248,8 @@ Static Public Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Data Documentation</h2>
-<a id="aa02e2dfd8ddc2b40a8705c6ea7fa8d48"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa02e2dfd8ddc2b40a8705c6ea7fa8d48">&#9670;&nbsp;</a></span>illegal</h2>
+<a id="a8e5e30801859f66661151d26e8b58fc2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8e5e30801859f66661151d26e8b58fc2">&#9670;&nbsp;</a></span>illegal</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -282,7 +258,7 @@ Static Public Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">const uint32_t boost::locale::util::base_converter::illegal =utf::illegal</td>
+          <td class="memname">constexpr uint32_t boost::locale::util::base_converter::illegal = utf::illegal</td>
         </tr>
       </table>
   </td>
@@ -295,8 +271,8 @@ Static Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="aa78dd2bae2783e31a00849a4e74aeb1e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa78dd2bae2783e31a00849a4e74aeb1e">&#9670;&nbsp;</a></span>incomplete</h2>
+<a id="a8ec4f4c5018c7673433365275a25d27f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8ec4f4c5018c7673433365275a25d27f">&#9670;&nbsp;</a></span>incomplete</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -305,7 +281,7 @@ Static Public Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">const uint32_t boost::locale::util::base_converter::incomplete =utf::incomplete</td>
+          <td class="memname">constexpr uint32_t boost::locale::util::base_converter::incomplete = utf::incomplete</td>
         </tr>
       </table>
   </td>

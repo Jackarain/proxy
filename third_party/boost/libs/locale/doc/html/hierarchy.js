@@ -20,9 +20,6 @@ var hierarchy =
     [ "collate", null, [
       [ "boost::locale::collator< CharType >", "classboost_1_1locale_1_1collator.html", null ]
     ] ],
-    [ "boost::locale::collator_base", "classboost_1_1locale_1_1collator__base.html", [
-      [ "boost::locale::collator< CharType >", "classboost_1_1locale_1_1collator.html", null ]
-    ] ],
     [ "boost::locale::comparator< CharType, default_level >", "structboost_1_1locale_1_1comparator.html", null ],
     [ "boost::locale::converter_base", "classboost_1_1locale_1_1converter__base.html", [
       [ "boost::locale::converter< Char >", "classboost_1_1locale_1_1converter.html", null ]

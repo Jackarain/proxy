@@ -39,7 +39,7 @@ var NAVTREE =
         [ "winapi - Win32 API.", "using_localization_backends.html#winapi_backend", null ]
       ] ],
       [ "Supported Features", "using_localization_backends.html#supported_features_by_backends", null ],
-      [ "Using Localization Backends", "using_localization_backends.html#using_localization_backends", null ]
+      [ "Using Localization Backends", "using_localization_backends.html#using_localization_backends_sec", null ]
     ] ],
     [ "Recommendations and Myths", "recommendations_and_myths.html", [
       [ "Recommendations", "recommendations_and_myths.html#recommendations", null ],
@@ -48,7 +48,7 @@ var NAVTREE =
         [ "UTF-16 is the best encoding to work with.", "recommendations_and_myths.html#myths_utf16", null ]
       ] ]
     ] ],
-    [ "Building The library", "building_boost_locale.html", [
+    [ "Building the Library", "building_boost_locale.html", [
       [ "Building Boost.Locale", "building_boost_locale.html#building_boost_locale_bb", [
         [ "Dependencies", "building_boost_locale.html#bb_building_deps", null ],
         [ "Platform Notes", "building_boost_locale.html#bb_platform_opts", null ],
@@ -94,9 +94,10 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 ".html",
-"classboost_1_1locale_1_1generator.html#a767403ea3f6259fd184a6e355caf62f2",
-"group__boundary.html#ga1f813e25280a6165cc270ced46bc8c58",
-"group__message.html#ga529423e08fc9a8ca9ceef5c56181c6d3"
+"classboost_1_1locale_1_1generator.html#a99fb69f05b0d3f86e37f52b8282c2f18",
+"group__boundary.html#ga097dde150d04bc71adcbd3ca825f00ad",
+"group__message.html#ga303a6a6d42413cc91bdcc9a6491b2447",
+"using_localization_backends.html#posix_backend"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

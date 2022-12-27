@@ -85,9 +85,11 @@ class basic_file_body<File>::value_type
     // This body container holds a handle to the file
     // when it is open, and also caches the size when set.
 
+#ifndef BOOST_BEAST_DOXYGEN
     friend class reader;
     friend class writer;
     friend struct basic_file_body;
+#endif
 
     // This represents the open file
     File file_;
@@ -365,7 +367,7 @@ get(error_code& ec) ->
 
     if (nread == 0)
     {
-        ec = error::short_read;
+        BOOST_BEAST_ASSIGN_EC(ec, error::short_read);
         return boost::none;
     }
 

@@ -27,34 +27,34 @@
 </span>
 <span class="keyword">struct</span> <a class="link" href="collector.html" title="Struct collector">collector</a> <span class="special">{</span>
   <span class="comment">// <a class="link" href="collector.html#boost.log.sinks.file.collectorconstruct-copy-destruct">construct/copy/destruct</a></span>
-  <a class="link" href="collector.html#idm34002-bb"><span class="identifier">collector</span></a><span class="special">(</span><a class="link" href="collector.html" title="Struct collector">collector</a> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span> <span class="special">=</span> <span class="keyword">delete</span><span class="special">;</span>
-  <a class="link" href="collector.html" title="Struct collector">collector</a> <span class="special">&amp;</span> <a class="link" href="collector.html#idm34006-bb"><span class="keyword">operator</span><span class="special">=</span></a><span class="special">(</span><a class="link" href="collector.html" title="Struct collector">collector</a> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span> <span class="special">=</span> <span class="keyword">delete</span><span class="special">;</span>
+  <a class="link" href="collector.html#idm34059-bb"><span class="identifier">collector</span></a><span class="special">(</span><a class="link" href="collector.html" title="Struct collector">collector</a> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span> <span class="special">=</span> <span class="keyword">delete</span><span class="special">;</span>
+  <a class="link" href="collector.html" title="Struct collector">collector</a> <span class="special">&amp;</span> <a class="link" href="collector.html#idm34063-bb"><span class="keyword">operator</span><span class="special">=</span></a><span class="special">(</span><a class="link" href="collector.html" title="Struct collector">collector</a> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span> <span class="special">=</span> <span class="keyword">delete</span><span class="special">;</span>
 
-  <span class="comment">// <a class="link" href="collector.html#idm33942-bb">public member functions</a></span>
-  <span class="keyword">virtual</span> <span class="keyword">void</span> <a class="link" href="collector.html#idm33943-bb"><span class="identifier">store_file</span></a><span class="special">(</span><span class="identifier">filesystem</span><span class="special">::</span><span class="identifier">path</span> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span>
-  <span class="keyword">virtual</span> <span class="keyword">bool</span> <a class="link" href="collector.html#idm33954-bb"><span class="identifier">is_in_storage</span></a><span class="special">(</span><span class="identifier">filesystem</span><span class="special">::</span><span class="identifier">path</span> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span> <span class="keyword">const</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span>
+  <span class="comment">// <a class="link" href="collector.html#idm33999-bb">public member functions</a></span>
+  <span class="keyword">virtual</span> <span class="keyword">void</span> <a class="link" href="collector.html#idm34000-bb"><span class="identifier">store_file</span></a><span class="special">(</span><span class="identifier">filesystem</span><span class="special">::</span><span class="identifier">path</span> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span>
+  <span class="keyword">virtual</span> <span class="keyword">bool</span> <a class="link" href="collector.html#idm34011-bb"><span class="identifier">is_in_storage</span></a><span class="special">(</span><span class="identifier">filesystem</span><span class="special">::</span><span class="identifier">path</span> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span> <span class="keyword">const</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span>
   <span class="keyword">virtual</span> <a class="link" href="scan_result.html" title="Struct scan_result">scan_result</a> 
-  <a class="link" href="collector.html#idm33963-bb"><span class="identifier">scan_for_files</span></a><span class="special">(</span><span class="identifier">scan_method</span><span class="special">,</span> <span class="identifier">filesystem</span><span class="special">::</span><span class="identifier">path</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="special">=</span> <span class="identifier">filesystem</span><span class="special">::</span><span class="identifier">path</span><span class="special">(</span><span class="special">)</span><span class="special">)</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span>
+  <a class="link" href="collector.html#idm34020-bb"><span class="identifier">scan_for_files</span></a><span class="special">(</span><span class="identifier">scan_method</span><span class="special">,</span> <span class="identifier">filesystem</span><span class="special">::</span><span class="identifier">path</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="special">=</span> <span class="identifier">filesystem</span><span class="special">::</span><span class="identifier">path</span><span class="special">(</span><span class="special">)</span><span class="special">)</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span>
 <span class="special">}</span><span class="special">;</span></pre></div>
 <div class="refsect1">
-<a name="idm69551"></a><h2>Description</h2>
+<a name="idm69608"></a><h2>Description</h2>
 <p>All file collectors, supported by file sink backends, should inherit this class. </p>
 <div class="refsect2">
-<a name="idm69554"></a><h3>
+<a name="idm69611"></a><h3>
 <a name="boost.log.sinks.file.collectorconstruct-copy-destruct"></a><code class="computeroutput">collector</code> 
         public
        construct/copy/destruct</h3>
 <div class="orderedlist"><ol class="orderedlist" type="1">
-<li class="listitem"><pre class="literallayout"><a name="idm34002-bb"></a><span class="identifier">collector</span><span class="special">(</span><a class="link" href="collector.html" title="Struct collector">collector</a> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span> <span class="special">=</span> <span class="keyword">delete</span><span class="special">;</span></pre></li>
-<li class="listitem"><pre class="literallayout"><a class="link" href="collector.html" title="Struct collector">collector</a> <span class="special">&amp;</span> <a name="idm34006-bb"></a><span class="keyword">operator</span><span class="special">=</span><span class="special">(</span><a class="link" href="collector.html" title="Struct collector">collector</a> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span> <span class="special">=</span> <span class="keyword">delete</span><span class="special">;</span></pre></li>
+<li class="listitem"><pre class="literallayout"><a name="idm34059-bb"></a><span class="identifier">collector</span><span class="special">(</span><a class="link" href="collector.html" title="Struct collector">collector</a> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span> <span class="special">=</span> <span class="keyword">delete</span><span class="special">;</span></pre></li>
+<li class="listitem"><pre class="literallayout"><a class="link" href="collector.html" title="Struct collector">collector</a> <span class="special">&amp;</span> <a name="idm34063-bb"></a><span class="keyword">operator</span><span class="special">=</span><span class="special">(</span><a class="link" href="collector.html" title="Struct collector">collector</a> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span> <span class="special">=</span> <span class="keyword">delete</span><span class="special">;</span></pre></li>
 </ol></div>
 </div>
 <div class="refsect2">
-<a name="idm69588"></a><h3>
-<a name="idm33942-bb"></a><code class="computeroutput">collector</code> public member functions</h3>
+<a name="idm69645"></a><h3>
+<a name="idm33999-bb"></a><code class="computeroutput">collector</code> public member functions</h3>
 <div class="orderedlist"><ol class="orderedlist" type="1">
 <li class="listitem">
-<pre class="literallayout"><span class="keyword">virtual</span> <span class="keyword">void</span> <a name="idm33943-bb"></a><span class="identifier">store_file</span><span class="special">(</span><span class="identifier">filesystem</span><span class="special">::</span><span class="identifier">path</span> <span class="keyword">const</span> <span class="special">&amp;</span> src_path<span class="special">)</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span></pre>
+<pre class="literallayout"><span class="keyword">virtual</span> <span class="keyword">void</span> <a name="idm34000-bb"></a><span class="identifier">store_file</span><span class="special">(</span><span class="identifier">filesystem</span><span class="special">::</span><span class="identifier">path</span> <span class="keyword">const</span> <span class="special">&amp;</span> src_path<span class="special">)</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span></pre>
 <p>Default constructor</p>
 <p>Virtual destructor</p>
 <p>The function stores the specified file in the storage. May lead to an older file deletion and a long file moving.</p>
@@ -81,7 +81,7 @@
 </table></div>
 </li>
 <li class="listitem">
-<pre class="literallayout"><span class="keyword">virtual</span> <span class="keyword">bool</span> <a name="idm33954-bb"></a><span class="identifier">is_in_storage</span><span class="special">(</span><span class="identifier">filesystem</span><span class="special">::</span><span class="identifier">path</span> <span class="keyword">const</span> <span class="special">&amp;</span> src_path<span class="special">)</span> <span class="keyword">const</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span></pre>
+<pre class="literallayout"><span class="keyword">virtual</span> <span class="keyword">bool</span> <a name="idm34011-bb"></a><span class="identifier">is_in_storage</span><span class="special">(</span><span class="identifier">filesystem</span><span class="special">::</span><span class="identifier">path</span> <span class="keyword">const</span> <span class="special">&amp;</span> src_path<span class="special">)</span> <span class="keyword">const</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span></pre>
 <p>The function checks if the specified path refers to an existing file in the storage.</p>
 <p>
 </p>
@@ -107,7 +107,7 @@
 </li>
 <li class="listitem">
 <pre class="literallayout"><span class="keyword">virtual</span> <a class="link" href="scan_result.html" title="Struct scan_result">scan_result</a> 
-<a name="idm33963-bb"></a><span class="identifier">scan_for_files</span><span class="special">(</span><span class="identifier">scan_method</span> method<span class="special">,</span> 
+<a name="idm34020-bb"></a><span class="identifier">scan_for_files</span><span class="special">(</span><span class="identifier">scan_method</span> method<span class="special">,</span> 
                <span class="identifier">filesystem</span><span class="special">::</span><span class="identifier">path</span> <span class="keyword">const</span> <span class="special">&amp;</span> pattern <span class="special">=</span> <span class="identifier">filesystem</span><span class="special">::</span><span class="identifier">path</span><span class="special">(</span><span class="special">)</span><span class="special">)</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span></pre>
 <p>Scans the target directory for the files that have already been stored. The found files are added to the collector in order to be tracked and erased, if needed.</p>
 <p>The function may scan the directory in two ways: it will either consider every file in the directory a log file, or will only consider files with names that match the specified pattern. The pattern may contain the following placeholders:</p>
@@ -169,7 +169,7 @@ All other placeholders are not supported.</p>
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2007-2021 Andrey Semashev<p>
+<td align="right"><div class="copyright-footer">Copyright © 2007-2022 Andrey Semashev<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>).
       </p>

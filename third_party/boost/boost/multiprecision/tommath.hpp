@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-//  Copyright 2011 John Maddock. 
+//  Copyright 2011 John Maddock.
 //  Copyright 2021 Matt Borland. Distributed under the Boost
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -77,7 +77,7 @@ struct tommath_int
    }
    tommath_int& operator=(const tommath_int& o)
    {
-      if (m_data.dp == 0)
+      if (m_data.dp == nullptr)
          detail::check_tommath_result(mp_init(&m_data));
       if (o.m_data.dp)
          detail::check_tommath_result(mp_copy(const_cast< ::mp_int*>(&o.m_data), &m_data));
@@ -87,7 +87,7 @@ struct tommath_int
    // Pick off 32 bit chunks for mp_set_int:
    tommath_int& operator=(unsigned long long i)
    {
-      if (m_data.dp == 0)
+      if (m_data.dp == nullptr)
          detail::check_tommath_result(mp_init(&m_data));
       unsigned long long mask = ((1uLL << 32) - 1);
       unsigned shift = 0;
@@ -110,7 +110,7 @@ struct tommath_int
    // Pick off 64 bit chunks for mp_set_u64:
    tommath_int& operator=(unsigned long long i)
    {
-      if (m_data.dp == 0)
+      if (m_data.dp == nullptr)
          detail::check_tommath_result(mp_init(&m_data));
       if(sizeof(unsigned long long) * CHAR_BIT == 64)
       {
@@ -137,7 +137,7 @@ struct tommath_int
 #else
    tommath_int& operator=(unsigned long long i)
    {
-      if (m_data.dp == 0)
+      if (m_data.dp == nullptr)
          detail::check_tommath_result(mp_init(&m_data));
       mp_set_u64(&m_data, i);
       return *this;
@@ -145,7 +145,7 @@ struct tommath_int
 #endif
    tommath_int& operator=(long long i)
    {
-      if (m_data.dp == 0)
+      if (m_data.dp == nullptr)
          detail::check_tommath_result(mp_init(&m_data));
       bool neg = i < 0;
       *this    = boost::multiprecision::detail::unsigned_abs(i);
@@ -157,7 +157,7 @@ struct tommath_int
    // Pick off 64 bit chunks for mp_set_u64:
    tommath_int& operator=(uint128_type i)
    {
-      if (m_data.dp == 0)
+      if (m_data.dp == nullptr)
          detail::check_tommath_result(mp_init(&m_data));
 
       int128_type  mask  = ((static_cast<uint128_type>(1u) << 64) - 1);
@@ -183,7 +183,7 @@ struct tommath_int
    }
    tommath_int& operator=(int128_type i)
    {
-      if (m_data.dp == 0)
+      if (m_data.dp == nullptr)
          detail::check_tommath_result(mp_init(&m_data));
       bool neg = i < 0;
       *this    = boost::multiprecision::detail::unsigned_abs(i);
@@ -199,7 +199,7 @@ struct tommath_int
    //
    tommath_int& operator=(std::uint32_t i)
    {
-      if (m_data.dp == 0)
+      if (m_data.dp == nullptr)
          detail::check_tommath_result(mp_init(&m_data));
 #ifndef mp_get_u32
       detail::check_tommath_result((mp_set_int(&m_data, i)));
@@ -210,7 +210,7 @@ struct tommath_int
    }
    tommath_int& operator=(std::int32_t i)
    {
-      if (m_data.dp == 0)
+      if (m_data.dp == nullptr)
          detail::check_tommath_result(mp_init(&m_data));
       bool neg = i < 0;
       *this    = boost::multiprecision::detail::unsigned_abs(i);
@@ -223,7 +223,7 @@ struct tommath_int
    {
       BOOST_MP_FLOAT128_USING using std::floor; using std::frexp; using std::ldexp;
 
-      if (m_data.dp == 0)
+      if (m_data.dp == nullptr)
          detail::check_tommath_result(mp_init(&m_data));
 
       if (a == 0)
@@ -321,7 +321,7 @@ struct tommath_int
       //
       // We don't use libtommath's own routine because it doesn't error check the input :-(
       //
-      if (m_data.dp == 0)
+      if (m_data.dp == nullptr)
          detail::check_tommath_result(mp_init(&m_data));
       std::size_t n  = s ? std::strlen(s) : 0;
       *this          = static_cast<std::uint32_t>(0u);
@@ -441,7 +441,7 @@ struct tommath_int
       //
       if ((base != 10) && m_data.sign)
          BOOST_MP_THROW_EXCEPTION(std::runtime_error("Formatted output in bases 8 or 16 is only available for positive numbers"));
-      
+
       int s;
       detail::check_tommath_result(mp_radix_size(const_cast< ::mp_int*>(&m_data), base, &s));
       std::unique_ptr<char[]> a(new char[s + 1]);
@@ -695,8 +695,8 @@ inline void eval_complement(tommath_int& result, const tommath_int& u)
    //
    unsigned shift = result.data().used * DIGIT_BIT;    // How many bits we're actually using
    // How many bits we actually need, reduced by one to account for a mythical sign bit:
-   int padding = result.data().used * std::numeric_limits<mp_digit>::digits - shift - 1; 
-   while(padding >= std::numeric_limits<mp_digit>::digits) 
+   int padding = result.data().used * std::numeric_limits<mp_digit>::digits - shift - 1;
+   while(padding >= std::numeric_limits<mp_digit>::digits)
       padding -= std::numeric_limits<mp_digit>::digits;
 
    // Create a mask providing the extra bits we need and add to result:

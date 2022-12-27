@@ -139,7 +139,7 @@ struct exe_cmd_init<char> : boost::process::detail::api::handler_base_ext
     }
     static exe_cmd_init cmd_shell(std::string&& cmd)
     {
-        std::vector<std::string> args = {"-c", "\"" + cmd + "\""};
+        std::vector<std::string> args = {"-c", cmd};
         std::string sh = shell().string();
 
         return exe_cmd_init(

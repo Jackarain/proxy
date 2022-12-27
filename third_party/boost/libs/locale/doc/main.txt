@@ -11,7 +11,7 @@
 \section main_intro What is Boost.Locale?
 
 Boost.Locale is a library that provides high quality
-localization facilities in a C++ way. It was originally designed
+localization facilities in C++. It was originally designed
 a part of <a href="http://cppcms.sourceforge.net/">CppCMS</a> - C++ Web Framework
 project and then contributed to Boost.
 
@@ -19,7 +19,7 @@ Boost.Locale gives powerful tools for development of cross platform
 localized software - the software that talks to user
 in its language.
 
-Provided Features:
+Features:
 
 -   Correct case conversion, case folding and normalization.
 -   Collation (sorting), including support for 4 Unicode
@@ -34,17 +34,16 @@ Provided Features:
 -   Powerful message formatting (string translation)
     including support for plural forms, using GNU catalogs.
 -   Character set conversion.
--   Transparent support for 8-bit character sets like Latin1
--   Support for \c char and \c wchar_t
--   Experimental support for C++0x \c char16_t and \c char32_t
+-   Transparent support for 8-bit character sets like Latin1.
+-   Support for \c char and \c wchar_t.
+-   Experimental support for C++11 \c char16_t and \c char32_t
     strings and streams.
 
-Boost.Locale enhances and unifies the standard library's API
-the way it becomes useful and convenient for development
-of cross platform and "cross-culture" software.
+Boost.Local complements the standard library's API, making it easy
+to write cross platform and "cross culture" software.
 
-In order to achieve this goal Boost.Locale uses
-the-state-of-the-art Unicode and Localization
+In order to achieve this goal, Boost.Locale uses the
+state-of-the-art Unicode and Localization
 library: <a href="http://icu-project.org/">ICU</a> - International Components for Unicode.
 
 Boost.Locale creates the natural glue between the C++ locales
@@ -53,8 +52,7 @@ framework, iostreams, and the powerful ICU library.
 Boost.Locale provides non-ICU based localization support as well.
 It is based on the operating system native API or on the standard
 C++ library support. Sacrificing some less important features,
-Boost.Locale becomes less powerful but lighter and easier to deploy
-and use library.
+Boost.Locale becomes less powerful but lighter and easier to deploy.
 
 
 \section main_tutorial Tutorials

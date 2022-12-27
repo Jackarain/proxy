@@ -84,7 +84,7 @@ problems with this.
 
 \section supported_features_by_backends Supported Features
 
-<table border="1" sellpadding="5" sellspacing="3">
+<table border="1" cellpadding="5" cellspacing="3">
 <tr>
   <th>Backend</th>
   <th>icu</th><th>posix</th><th>winapi</th><th>std</th>
@@ -134,7 +134,7 @@ problems with this.
   <td>Yes</td><td>No</td><td>Vista and above</td><td>No</td>
 </tr>
 <tr>
-  <th>C++0x characters</th>
+  <th>C++11 characters</th>
   <td>Yes</td><td>No</td><td>No</td><td>Yes</td>
 </tr>
 <tr>
@@ -148,7 +148,7 @@ problems with this.
 </table>
 
 
-\section using_localization_backends Using Localization Backends
+\section using_localization_backends_sec Using Localization Backends
 
 Accessing a localization backend is done via the boost::locale::localization_backend_manager class.
 

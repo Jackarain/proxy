@@ -703,7 +703,7 @@ public:
         failgrind<P>(c(",\r\n"),                            error::bad_content_length);
         failgrind<P>(c("0,\r\n"),                           error::bad_content_length);
         failgrind<P>(m("Content-Length: 0\r\n"
-                        "Content-Length: 100\r\n"),         error::bad_content_length);
+                        "Content-Length: 100\r\n"),         error::multiple_content_length);
     }
 
     void
@@ -1136,7 +1136,7 @@ public:
         auto const grind =
         [&](string_view s)
         {
-            static_string<100> ss{s};
+            static_string<100> ss(s.data(), s.size());
             test::fuzz_rand r;
             test::fuzz(ss, 4, 5, r,
             [&](string_view s)

@@ -82,7 +82,7 @@ To use Unicode in my application I should use wide strings everywhere.</h2>
 <p>Unicode is not limited to wide strings. Both <code>std::string</code> and <code>std::wstring</code> can hold and process Unicode text. More than that, the semantics of <code>std::string</code> are much cleaner in multi-platform applications, because all "Unicode" strings are UTF-8. "Wide" strings may be encoded in "UTF-16" or "UTF-32", depending on the platform, so they may be even less convenient when dealing with Unicode than <code>char</code> based strings.</p>
 <h2><a class="anchor" id="myths_utf16"></a>
 UTF-16 is the best encoding to work with.</h2>
-<p>There is common assumption that UTF-16 is the best encoding for storing information because it gives "shortest" representation of strings.</p>
+<p>There is common assumption that UTF-16 is the best encoding for storing information because it gives the "shortest" representation of strings.</p>
 <p>In fact, it is probably the most error-prone encoding to work with. The biggest issue is code points that lay outside of the BMP, which must be represented with surrogate pairs. These characters are very rare and many applications are not tested with them.</p>
 <p>For example:</p>
 <ul>

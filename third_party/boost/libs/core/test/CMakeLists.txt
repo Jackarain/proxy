@@ -27,6 +27,10 @@ set(BOOST_TEST_LINK_LIBRARIES Boost::core Boost::utility)
 
 boost_test(TYPE run SOURCES sv_conversion_test2.cpp)
 
+set(BOOST_TEST_LINK_LIBRARIES Boost::core Boost::config Boost::move Boost::smart_ptr)
+
+boost_test(TYPE run SOURCES fclose_deleter_test.cpp)
+
 endif()
 
 add_subdirectory(swap)

@@ -8,36 +8,36 @@
 \page gettext_for_windows  Using Gettext Tools on Windows
 
 In order to get the Gettext tools like \c msgfmt, \c msgmerge, \c xgettext for Windows you have
-basically several options:
+several options:
 
-- Download the package from <a href="http://cppcms.sourceforge.net">CppCMS</a> project (where the Boost.Locale was developed originally)
-- Download the a set of packages from MinGW project
+- Download the package from <a href="http://cppcms.sourceforge.net">CppCMS</a> (where the Boost.Locale was developed originally)
+- Download the a set of packages from the MinGW project
 - Build it on your own
 - Use Cygwin's packages
 
-\section gettext_for_windows_cppcms Getting gettext utilities from CppCMS project
+\section gettext_for_windows_cppcms Getting Gettext Utilities from CppCMS
 
-Boost.Locale was developed for needs of <a href="http://cppcms.sourceforge.net">CppCMS</a> project
-and thus CppCMS hosts a convince package for Windows users of pre-build, statically liked \c gettext
+Boost.Locale was developed for needs of <a href="http://cppcms.sourceforge.net">CppCMS</a>
+and thus CppCMS hosts a convenience package for Windows users of pre-built, statically liked \c gettext
 runtime utilities like \c xgettext, \c msgfmt, etc.
 
-So you can download a zip file \c gettext-tools-static-XXX.zip from a CppCMS downloads page
+You can download a zip file \c gettext-tools-static-XXX.zip from the CppCMS downloads page
 under <a href="https://sourceforge.net/projects/cppcms/files/boost_locale/gettext_for_windows/">boost_locale/gettext_for_windows</a>.
 
 Extract the file and use the executable files inside.
 
-\section gettext_for_windows_mingw Getting Gettext via MinGW project
+\section gettext_for_windows_mingw Getting Gettext via MinGW
 
 MinGW project provides GNU tools for Windows, including GNU compilers and various runtime utilities.
 Thus you can always install full MinGW distribution including gettext tools. However, if you
 a want minimalistic runtime version that allows you to extract messages and create catalogs
 you need to download several packages manually.
 
-In order to install Gettext via MinGW distributing you need to download, a GCC's runtime,
-iconv library and gettext itself.
+In order to install Gettext via MinGW you need to download a GCC runtime,
+an iconv library and Gettext itself.
 
-So visit a <a href="https://sourceforge.net/projects/mingw/files/">downloads page</a> of MinGW project
-and download following files (chose the latest versions of each package):
+So visit MinGW's <a href="https://sourceforge.net/projects/mingw/files/">downloads page</a>
+and download the following files (chose the latest versions of each package):
 
 -   From: \c MinGW/BaseSystem/GCC/Version4/gcc-xxx/ \n
     File: \c libgcc-xxx-mingw32-dll-1.tar.lzma
@@ -55,16 +55,17 @@ For example, at June 23, 2011 it was:
 - \c gettext: \c libintl-0.17-1-mingw32-dll-8.tar.lzma, \c libgettextpo-0.17-1-mingw32-dll-0.tar.lzma and \c gettext-0.17-1-mingw32-dev.tar.lzma.
 
 After you download the packages, extract all the files to the same directory using tools like
-\c 7zip and you'll get all the executables and \c dll's you need under \c bin subdirectory.
+\c 7zip and you'll get all the executables and \c dll's you need under the \c bin subdirectory.
 
-\note the version on MinGW site is slightly outdated (0.17.1) while gettext provides currently 0.18.1.
+\note The version on MinGW site is slightly outdated (0.17.1) while Gettext provides currently 0.18.1.
 
-\section gettext_for_windows_build Building latest version on your own.
+\section gettext_for_windows_build Building the latest version on your own.
 
-You can build your own version of GNU Gettext using MinGW environment, you'll need to have up-to-date gcc compiler
-and the shell, you'll need to install iconv first and then build a gettext with it.
+You can build your own version of GNU Gettext using the MinGW environment.
+You'll need to have an up-to-date gcc compiler and the shell.
+You'll need to install iconv first and then build Gettext with it.
 
-Basic and simplest way would be to open a MinGW shell
+The simplest way would be to open a MinGW shell.
 
 Build \c iconv:
 
@@ -80,11 +81,10 @@ make
 make install
 \endcode
 
-And now you have in <tt>c:\\mygettext\\bin</tt> all appropriate executable files
-to use.
+And now you have all appropriate executable files ready to use in <tt>c:\\mygettext\\bin</tt>.
 
 \section gettext_for_windows_cygwin Using Cygwin
 
-If you already have Cygwin - just use gettext tools provided with it.
+If you already have Cygwin - just use the Gettext tools provided with it.
 
 */

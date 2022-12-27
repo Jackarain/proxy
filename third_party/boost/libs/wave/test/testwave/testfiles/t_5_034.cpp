@@ -33,6 +33,23 @@ true
 true
 #endif
 
+// Test the use of conditionally supported character literals \e and \E
+//R #line 40 "t_5_034.cpp"
+//R true
+#if '\e' > '\n'
+true
+#else
+    "Bad evaluation of ESC escape sequence."
+#endif
+
+//R #line 50 "t_5_034.cpp"
+//R true
+#if '\E' < '\n'
+    "Bad evaluation of ESC escape sequence."
+#else
+true
+#endif
+
 /*-
  * Copyright (c) 1998, 2002-2005 Kiyoshi Matsui <kmatsui@t3.rim.or.jp>
  * All rights reserved.

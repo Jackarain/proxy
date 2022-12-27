@@ -120,7 +120,7 @@ namespace boost
     }
 }
 
-namespace boost::cnv
+namespace boost { namespace cnv
 {
     template<typename Converter, typename TypeOut, typename TypeIn>
     struct reference
@@ -204,6 +204,6 @@ namespace boost::cnv
     {
         return cnv::reference<Converter, TypeOut, void>(cnv);
     }
-}
+}}
 
 #endif // BOOST_CONVERT_HPP

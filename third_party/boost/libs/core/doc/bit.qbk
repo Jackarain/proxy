@@ -45,7 +45,7 @@ template<class T>
 constexpr T bit_floor(T x) noexcept;
 
 template<class T>
-constexpr T bit_width(T x) noexcept;
+constexpr int bit_width(T x) noexcept;
 
 // Rotating
 
@@ -119,7 +119,7 @@ constant expression context.
 * *Requires:* `T` must be an unsigned integer type.
 * *Returns:* If `x == 0`, 0; otherwise the maximal value `y` such that `has_single_bit(y)` is `true` and `y <= x`.
 
-`template<class T> constexpr T bit_width(T x) noexcept;`
+`template<class T> constexpr int bit_width(T x) noexcept;`
 
 * *Requires:* `T` must be an unsigned integer type.
 * *Returns:* If `x == 0`, 0; otherwise one plus the base-2 logarithm of `x`, with any fractional part discarded.

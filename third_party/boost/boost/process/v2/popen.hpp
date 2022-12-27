@@ -74,8 +74,6 @@ struct basic_popen : basic_process<Executor>
     {
     }
 
-
-
     /// Construct a child from a property list and launch it using the default process launcher.
     template<typename ... Inits>
     explicit basic_popen(
@@ -85,30 +83,66 @@ struct basic_popen : basic_process<Executor>
             Inits&&... inits)
             : basic_process<Executor>(executor)
     {
-        *static_cast<basic_process<Executor>*>(this) =
+        this->basic_process<Executor>::operator=(
             default_process_launcher()(
                     this->get_executor(), exe, args,
                     std::forward<Inits>(inits)...,
                     process_stdio{stdin_, stdout_}
-                    );
+                    ));
+    }
 
+    /// Construct a child from a property list and launch it using the default process launcher.
+    template<typename Launcher, typename ... Inits>
+    explicit basic_popen(
+            Launcher && launcher,
+            executor_type executor,
+            const filesystem::path& exe,
+            std::initializer_list<string_view> args,
+            Inits&&... inits)
+            : basic_process<Executor>(executor)
+    {
+        this->basic_process<Executor>::operator=(
+            std::forward<Launcher>(launcher)(
+                    this->get_executor(), exe, args,
+                    std::forward<Inits>(inits)...,
+                    process_stdio{stdin_, stdout_}
+                    ));
     }
 
     /// Construct a child from a property list and launch it using the default process launcher.
     template<typename ... Inits>
     explicit basic_popen(
             executor_type executor,
-    const filesystem::path& exe,
+            const filesystem::path& exe,
             std::initializer_list<wstring_view> args,
             Inits&&... inits)
             : basic_process<Executor>(executor)
     {
-        *static_cast<basic_process<Executor>*>(this) =
+        this->basic_process<Executor>::operator=(
                 default_process_launcher()(
                         this->get_executor(), exe, args,
                         std::forward<Inits>(inits)...,
                         process_stdio{stdin_, stdout_}
-                );
+                ));
+    }
+
+
+    /// Construct a child from a property list and launch it using the default process launcher.
+    template<typename Launcher, typename ... Inits>
+    explicit basic_popen(
+            Launcher && launcher, 
+            executor_type executor,
+            const filesystem::path& exe,
+            std::initializer_list<wstring_view> args,
+            Inits&&... inits)
+            : basic_process<Executor>(executor)
+    {
+        this->basic_process<Executor>::operator=(
+                std::forward<Launcher>(launcher)(
+                        this->get_executor(), exe, args,
+                        std::forward<Inits>(inits)...,
+                        process_stdio{stdin_, stdout_}
+                ));
     }
 
     /// Construct a child from a property list and launch it using the default process launcher.
@@ -119,52 +153,111 @@ struct basic_popen : basic_process<Executor>
             Args&& args, Inits&&... inits)
             : basic_process<Executor>(executor)
     {
-        *static_cast<basic_process<Executor>*>(this) =
+        this->basic_process<Executor>::operator=(
                 default_process_launcher()(
                         std::move(executor), exe, args,
                         std::forward<Inits>(inits)...,
                         process_stdio{stdin_, stdout_}
-                );
+                ));
+    }
+
+    /// Construct a child from a property list and launch it using the default process launcher.
+    template<typename Launcher, typename Args, typename ... Inits>
+    explicit basic_popen(
+            Launcher && launcher, 
+            executor_type executor,
+            const filesystem::path& exe,
+            Args&& args, Inits&&... inits)
+            : basic_process<Executor>(executor)
+    {
+        this->basic_process<Executor>::operator=(
+                std::forward<Launcher>(launcher)(
+                        std::move(executor), exe, args,
+                        std::forward<Inits>(inits)...,
+                        process_stdio{stdin_, stdout_}
+                ));
     }
 
     /// Construct a child from a property list and launch it using the default process launcher.
     template<typename ExecutionContext, typename ... Inits>
     explicit basic_popen(
             ExecutionContext & context,
-    typename std::enable_if<
-            std::is_convertible<ExecutionContext&,
+            typename std::enable_if<
+                std::is_convertible<ExecutionContext&,
                     BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context&>::value,
             const filesystem::path&>::type exe,
             std::initializer_list<string_view> args,
-    Inits&&... inits)
+            Inits&&... inits)
             : basic_process<Executor>(context)
     {
-        *static_cast<basic_process<Executor>*>(this) =
+        this->basic_process<Executor>::operator=(
                 default_process_launcher()(
                         this->get_executor(), exe, args,
                         std::forward<Inits>(inits)...,
                         process_stdio{stdin_, stdout_}
-                );
+                ));
+    }
+
+        /// Construct a child from a property list and launch it using the default process launcher.
+    template<typename Launcher, typename ExecutionContext, typename ... Inits>
+    explicit basic_popen(
+            Launcher && launcher, 
+            ExecutionContext & context,
+            typename std::enable_if<
+                std::is_convertible<ExecutionContext&,
+                    BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context&>::value,
+            const filesystem::path&>::type exe,
+            std::initializer_list<string_view> args,
+            Inits&&... inits)
+            : basic_process<Executor>(context)
+    {
+        this->basic_process<Executor>::operator=(
+                std::forward<Launcher>(launcher)(
+                        this->get_executor(), exe, args,
+                        std::forward<Inits>(inits)...,
+                        process_stdio{stdin_, stdout_}
+                ));
     }
 
     /// Construct a child from a property list and launch it using the default process launcher.
     template<typename ExecutionContext, typename Args, typename ... Inits>
     explicit basic_popen(
             ExecutionContext & context,
-    typename std::enable_if<
-            std::is_convertible<ExecutionContext&,
+            typename std::enable_if<
+                std::is_convertible<ExecutionContext&,
                     BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context&>::value,
             const filesystem::path&>::type exe,
             Args&& args, Inits&&... inits)
             : basic_process<Executor>(context)
     {
-        *static_cast<basic_process<Executor>*>(this) =
+        this->basic_process<Executor>::operator=(
                 default_process_launcher()(
                         this->get_executor(), exe, args,
                         std::forward<Inits>(inits)...,
                         process_stdio{stdin_, stdout_}
-                );
+                ));
     }
+
+        /// Construct a child from a property list and launch it using the default process launcher.
+    template<typename Launcher, typename ExecutionContext, typename Args, typename ... Inits>
+    explicit basic_popen(
+            Launcher && launcher, 
+            ExecutionContext & context,
+            typename std::enable_if<
+                std::is_convertible<ExecutionContext&,
+                    BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context&>::value,
+            const filesystem::path&>::type exe,
+            Args&& args, Inits&&... inits)
+            : basic_process<Executor>(context)
+    {
+        this->basic_process<Executor>::operator=(
+                std::forward<Launcher>(launcher)(
+                        this->get_executor(), exe, args,
+                        std::forward<Inits>(inits)...,
+                        process_stdio{stdin_, stdout_}
+                ));
+    }
+
 
     /// The type used for stdin on the parent process side.
     using stdin_type = BOOST_PROCESS_V2_ASIO_NAMESPACE::basic_writable_pipe<Executor>;

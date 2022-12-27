@@ -1,14 +1,10 @@
 
 // Copyright 2006-2009 Daniel James.
+// Copyright (C) 2022 Christian Mazakas
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-// clang-format off
-#include "../helpers/prefix.hpp"
-#include <boost/unordered_set.hpp>
-#include <boost/unordered_map.hpp>
-#include "../helpers/postfix.hpp"
-// clang-format on
+#include "../helpers/unordered.hpp"
 
 #include "../helpers/test.hpp"
 #include "../objects/test.hpp"
@@ -43,6 +39,23 @@ namespace copy_tests {
       BOOST_TEST(x.max_load_factor() == y.max_load_factor());
       BOOST_TEST(test::selected_count(y.get_allocator()) ==
                  (allocator_type::is_select_on_copy));
+      BOOST_TEST(test::detail::tracker.count_allocations == 0);
+      test::check_equivalent_keys(y);
+    }
+
+    {
+      test::check_instances check_;
+
+      T x(0);
+      T y(x);
+      BOOST_TEST(y.empty());
+      BOOST_TEST(test::equivalent(y.hash_function(), hf));
+      BOOST_TEST(test::equivalent(y.key_eq(), eq));
+      BOOST_TEST(test::equivalent(y.get_allocator(), al));
+      BOOST_TEST(x.max_load_factor() == y.max_load_factor());
+      BOOST_TEST(test::selected_count(y.get_allocator()) ==
+                 (allocator_type::is_select_on_copy));
+      BOOST_TEST(test::detail::tracker.count_allocations == 0);
       test::check_equivalent_keys(y);
     }
 
@@ -94,6 +107,22 @@ namespace copy_tests {
     {
       test::check_instances check_;
 
+      T x(0, hf, eq, al);
+      T y(x);
+      BOOST_TEST(y.empty());
+      BOOST_TEST(test::equivalent(y.hash_function(), hf));
+      BOOST_TEST(test::equivalent(y.key_eq(), eq));
+      BOOST_TEST(test::equivalent(y.get_allocator(), al));
+      BOOST_TEST(x.max_load_factor() == y.max_load_factor());
+      BOOST_TEST(test::selected_count(y.get_allocator()) ==
+                 (allocator_type::is_select_on_copy));
+      BOOST_TEST(test::detail::tracker.count_allocations == 0);
+      test::check_equivalent_keys(y);
+    }
+
+    {
+      test::check_instances check_;
+
       T x(10000, hf, eq, al);
       T y(x);
       BOOST_TEST(y.empty());
@@ -103,6 +132,21 @@ namespace copy_tests {
       BOOST_TEST(x.max_load_factor() == y.max_load_factor());
       BOOST_TEST(test::selected_count(y.get_allocator()) ==
                  (allocator_type::is_select_on_copy));
+      test::check_equivalent_keys(y);
+    }
+
+    {
+      test::check_instances check_;
+
+      T x(0, hf, eq, al);
+      T y(x, al2);
+      BOOST_TEST(y.empty());
+      BOOST_TEST(test::equivalent(y.hash_function(), hf));
+      BOOST_TEST(test::equivalent(y.key_eq(), eq));
+      BOOST_TEST(test::equivalent(y.get_allocator(), al2));
+      BOOST_TEST(x.max_load_factor() == y.max_load_factor());
+      BOOST_TEST(test::selected_count(y.get_allocator()) == 0);
+      BOOST_TEST(test::detail::tracker.count_allocations == 0);
       test::check_equivalent_keys(y);
     }
 
@@ -123,6 +167,22 @@ namespace copy_tests {
     {
       test::check_instances check_;
 
+      test::random_values<T> v;
+
+      T x(v.begin(), v.end(), 0, hf, eq, al);
+      T y(x);
+      test::unordered_equivalence_tester<T> equivalent(x);
+      BOOST_TEST(equivalent(y));
+      test::check_equivalent_keys(y);
+      BOOST_TEST(test::selected_count(y.get_allocator()) ==
+                 (allocator_type::is_select_on_copy));
+      BOOST_TEST(test::equivalent(y.get_allocator(), al));
+      BOOST_TEST(test::detail::tracker.count_allocations == 0);
+    }
+
+    {
+      test::check_instances check_;
+
       test::random_values<T> v(1000, generator);
 
       T x(v.begin(), v.end(), 0, hf, eq, al);
@@ -133,6 +193,21 @@ namespace copy_tests {
       BOOST_TEST(test::selected_count(y.get_allocator()) ==
                  (allocator_type::is_select_on_copy));
       BOOST_TEST(test::equivalent(y.get_allocator(), al));
+    }
+
+    {
+      test::check_instances check_;
+
+      test::random_values<T> v;
+
+      T x(v.begin(), v.end(), 0, hf, eq, al);
+      T y(x, al2);
+      test::unordered_equivalence_tester<T> equivalent(x);
+      BOOST_TEST(equivalent(y));
+      test::check_equivalent_keys(y);
+      BOOST_TEST(test::selected_count(y.get_allocator()) == 0);
+      BOOST_TEST(test::equivalent(y.get_allocator(), al2));
+      BOOST_TEST(test::detail::tracker.count_allocations == 0);
     }
 
     {
@@ -150,6 +225,38 @@ namespace copy_tests {
     }
   }
 
+  using test::default_generator;
+  using test::generate_collisions;
+  using test::limited_range;
+
+#ifdef BOOST_UNORDERED_FOA_TESTS
+  boost::unordered_flat_set<test::object, test::hash, test::equal_to,
+    test::allocator1<test::object> >* test_set;
+  boost::unordered_flat_map<test::object, test::object, test::hash,
+    test::equal_to, test::allocator1<test::object> >* test_map;
+
+  boost::unordered_flat_set<test::object, test::hash, test::equal_to,
+    test::cxx11_allocator<test::object, test::select_copy> >*
+    test_set_select_copy;
+  boost::unordered_flat_map<test::object, test::object, test::hash,
+    test::equal_to, test::cxx11_allocator<test::object, test::select_copy> >*
+    test_map_select_copy;
+
+  boost::unordered_flat_set<test::object, test::hash, test::equal_to,
+    test::cxx11_allocator<test::object, test::no_select_copy> >*
+    test_set_no_select_copy;
+  boost::unordered_flat_map<test::object, test::object, test::hash,
+    test::equal_to, test::cxx11_allocator<test::object, test::no_select_copy> >*
+    test_map_no_select_copy;
+
+  UNORDERED_TEST(copy_construct_tests1,
+    ((test_set)(test_map)(test_set_select_copy)(test_map_select_copy)(test_set_no_select_copy)(test_map_no_select_copy))(
+      (default_generator)(generate_collisions)(limited_range)))
+
+  UNORDERED_TEST(copy_construct_tests2,
+    ((test_set)(test_map)(test_set_select_copy)(test_map_select_copy)(test_set_no_select_copy)(test_map_no_select_copy))(
+      (default_generator)(generate_collisions)(limited_range)))
+#else
   boost::unordered_set<test::object, test::hash, test::equal_to,
     test::allocator1<test::object> >* test_set;
   boost::unordered_multiset<test::object, test::hash, test::equal_to,
@@ -185,25 +292,14 @@ namespace copy_tests {
     test::equal_to, test::cxx11_allocator<test::object, test::no_select_copy> >*
     test_multimap_no_select_copy;
 
-  using test::default_generator;
-  using test::generate_collisions;
-  using test::limited_range;
-
   UNORDERED_TEST(copy_construct_tests1,
-    ((test_set)(test_multiset)(test_map)(test_multimap)(test_set_select_copy)(
-      test_multiset_select_copy)(test_map_select_copy)(
-      test_multimap_select_copy)(test_set_no_select_copy)(
-      test_multiset_no_select_copy)(test_map_no_select_copy)(
-      test_multimap_no_select_copy))(
+    ((test_set)(test_multiset)(test_map)(test_multimap)(test_set_select_copy)(test_multiset_select_copy)(test_map_select_copy)(test_multimap_select_copy)(test_set_no_select_copy)(test_multiset_no_select_copy)(test_map_no_select_copy)(test_multimap_no_select_copy))(
       (default_generator)(generate_collisions)(limited_range)))
 
   UNORDERED_TEST(copy_construct_tests2,
-    ((test_set)(test_multiset)(test_map)(test_multimap)(test_set_select_copy)(
-      test_multiset_select_copy)(test_map_select_copy)(
-      test_multimap_select_copy)(test_set_no_select_copy)(
-      test_multiset_no_select_copy)(test_map_no_select_copy)(
-      test_multimap_no_select_copy))(
+    ((test_set)(test_multiset)(test_map)(test_multimap)(test_set_select_copy)(test_multiset_select_copy)(test_map_select_copy)(test_multimap_select_copy)(test_set_no_select_copy)(test_multiset_no_select_copy)(test_map_no_select_copy)(test_multimap_no_select_copy))(
       (default_generator)(generate_collisions)(limited_range)))
-}
+#endif
+} // namespace copy_tests
 
 RUN_TESTS()

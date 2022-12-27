@@ -6,7 +6,7 @@
 
 /*!
 
-\page formatting_and_parsing Numbers, Time and Currency formatting and parsing
+\page formatting_and_parsing Numbers, Time and Currency Formatting and Parsing
 
 All formatting and parsing is performed via the standard I/O streams. Each of the above information types is represented as a number.
 The formatting information is set using iostream manipulators. All manipulators are placed in the boost::locale::as namespace.
@@ -21,16 +21,16 @@ For example:
 \endcode
 
 There is a special manipulator \c as::posix that "unsets" locale-specific settings and returns them to the default \c iostream formatting
-and parsing methods. Please note, such formats may still be localized by the default \c std::num_put and \c std::num_get facets.
+and parsing methods. Please note, such formats may still be localized by the default e.g. \c std::num_put and \c std::num_get facets.
 
-\section numbers_formatting Numbers and number manipulators
+\section numbers_formatting Numbers and Number Manipulators
 
 Here are the manipulators for number formatting:
 
--   \c as::number -- format number according to local specifications, it takes into account various \c std::ios_base flags like scientific
+-   \c as::number -- format numbers according to local specifications. Takes into account various \c std::ios_base flags like scientific
     format and precision.
     \n
--   \c as::percent -- format number as "percent" format. For example:
+-   \c as::percent -- format numbers as percents. For example:
     \code
         cout << as::percent << 0.25 <<endl;
     \endcode
@@ -40,12 +40,12 @@ Here are the manipulators for number formatting:
     \endverbatim
     \n
 -   \c as::spellout -- spell the number. For example, under the English locale, 103 may be displayed as "one hundred three".
-    \b Note: not all locales provide rules for spelling numbers. In such a case the number would be displayed in decimal format.
+    \b Note: not all locales provide rules for spelling numbers. In such cases, the number would be displayed in decimal format.
     \n
 -   \c as::ordinal -- display an order-of element. For example "2" would be displayed as "2nd" under the English locale. As in
     the above case, not all locales provide ordinal rules.
 
-\section currency_formatting Currency formatting
+\section currency_formatting Currency Formatting
 
 These are the manipulators for currency formatting:
 
@@ -58,7 +58,7 @@ These are the manipulators for currency formatting:
 \note \c as::currency_XYZ  manipulators have no effect on general formatting, only on the currency format. You must use both currency
 and number manipulators to use a non-default format.
 
-\section date_and_time_formatting Date and Time formatting
+\section date_and_time_formatting Date and Time Formatting
 
 Dates and times are represented as POSIX time. When date-time formatting is turned on in the \c iostream, each number is treated as a
 POSIX time. The number may be an integer or a double.
@@ -105,7 +105,7 @@ For example:
     cout << as::time_zone("EST") << "Eastern Standard Time is: "<< now <<endl;
 \endcode
 
-There is a list of supported \c strftime flags by ICU backend:
+Here is a list of supported \c strftime flags by ICU backend:
 
 -   \c \%a  -- Abbreviated  weekday (Sun.)
 -   \c \%A  -- Full weekday (Sunday)
@@ -134,10 +134,10 @@ There is a list of supported \c strftime flags by ICU backend:
 -   \c \%Z  -- Time Zone
 -   \c \%\%  -- Percent symbol
 
-Unsupported \c strftime flags are: \c \%C , \c \%u , \c \%U , \c \%V , \c \%w , \c \%W . Also, the \c O and \c E modifiers are not supported.
+Unsupported \c strftime flags are: \c \%C , \c \%u , \c \%U , \c \%V , \c \%w , \c \%W , \c O , and \c E modifiers are not supported.
 
 
-\b General \b recommendations
+\b General \b Recommendations
 
 - Prefer using generic date-time manipulators rather than specifying the full format using \c as::ftime.
 - Remember that current calendars may be not Gregorian.

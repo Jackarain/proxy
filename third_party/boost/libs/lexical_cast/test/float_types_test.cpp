@@ -31,6 +31,7 @@
 void test_conversion_from_to_float();
 void test_conversion_from_to_double();
 void test_conversion_from_to_long_double();
+void test_volatile_floats();
 
 using namespace boost;
 
@@ -42,6 +43,7 @@ unit_test::test_suite *init_unit_test_suite(int, char *[])
     suite->add(BOOST_TEST_CASE(&test_conversion_from_to_float));
     suite->add(BOOST_TEST_CASE(&test_conversion_from_to_double));
     suite->add(BOOST_TEST_CASE(&test_conversion_from_to_long_double));
+    suite->add(BOOST_TEST_CASE(&test_volatile_floats));
 
     return suite;
 }
@@ -525,3 +527,25 @@ void test_conversion_from_to_long_double()
     BOOST_CHECK(true);
 }
 
+
+template <typename Float>
+double make_volatile_float_roundtrip() {
+    volatile Float v = 1.0;
+    return static_cast<double>(boost::lexical_cast<Float>(v));
+}
+
+void test_volatile_floats()
+{
+    // Inspired by test case from https://github.com/boostorg/lexical_cast/issues/50
+    BOOST_CHECK_EQUAL(make_volatile_float_roundtrip<float>(), 1.0);
+    BOOST_CHECK_EQUAL(make_volatile_float_roundtrip<double>(), 1.0);
+#if !defined(BOOST_LEXICAL_CAST_NO_LONG_DOUBLE_MATH_FUNCTIONS)
+    BOOST_CHECK_EQUAL(make_volatile_float_roundtrip<long double>(), 1.0);
+#endif
+
+    volatile float v = 1.0;
+    BOOST_CHECK_EQUAL(boost::lexical_cast<float>(v), 1.0f);
+#if !defined(BOOST_LEXICAL_CAST_NO_LONG_DOUBLE_MATH_FUNCTIONS)
+    BOOST_CHECK_EQUAL(boost::lexical_cast<long double>(v), 1.0);
+#endif
+}

@@ -2,12 +2,7 @@
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-// clang-format off
-#include "../helpers/prefix.hpp"
-#include <boost/unordered_set.hpp>
-#include <boost/unordered_map.hpp>
-#include "../helpers/postfix.hpp"
-// clang-format on
+#include "../helpers/unordered.hpp"
 
 #include "../helpers/test.hpp"
 
@@ -23,36 +18,13 @@
 namespace test {
   struct is_even
   {
-    is_even() {}
-
-#if BOOST_CXX_VERSION >= 201703L
-    // immovable for C++17
-    is_even(is_even const&) = delete;
-    is_even(is_even&&) = delete;
-
-    is_even& operator=(is_even const&) = delete;
-    is_even& operator=(is_even&&) = delete;
-#elif BOOST_CXX_VERSION >= 201103L
-    // move-only for C++11
-    is_even(is_even const&) = delete;
-    is_even(is_even&&) = default;
-
-    is_even& operator=(is_even const&) = delete;
-    is_even& operator=(is_even&&) = default;
-#else
-    // copyable otherwise
-    is_even(is_even const&) {}
-    is_even& operator=(is_even const&) { return *this; }
-#endif
-
-    bool operator()(
-      std::pair<std::string const, int>& key_value) UNORDERED_LVALUE_QUAL
+    bool operator()(std::pair<std::string const, int>& key_value)
     {
       int const v = key_value.second;
       return (v % 2 == 0);
     }
 
-    bool operator()(int const& value) UNORDERED_LVALUE_QUAL
+    bool operator()(int const& value)
     {
       int const v = value;
       return (v % 2 == 0);
@@ -61,37 +33,13 @@ namespace test {
 
   struct is_too_large
   {
-    is_too_large() {}
-
-#if BOOST_CXX_VERSION >= 201703L
-    // immovable for C++17
-    is_too_large(is_too_large const&) = delete;
-    is_too_large(is_too_large&&) = delete;
-
-    is_too_large& operator=(is_too_large const&) = delete;
-    is_too_large& operator=(is_too_large&&) = delete;
-#elif BOOST_CXX_VERSION >= 201103L
-    // move-only for C++11
-    is_too_large(is_too_large const&) = delete;
-    is_too_large(is_too_large&&) = default;
-
-    is_too_large& operator=(is_too_large const&) = delete;
-    is_too_large& operator=(is_too_large&&) = default;
-#else
-    // copyable otherwise
-    is_too_large(is_too_large const&) {}
-
-    is_too_large& operator=(is_too_large const&) { return *this; }
-#endif
-
-    bool operator()(
-      std::pair<std::string const, int>& key_value) UNORDERED_LVALUE_QUAL
+    bool operator()(std::pair<std::string const, int>& key_value)
     {
       int const v = key_value.second;
       return v >= 1000;
     }
 
-    bool operator()(int const& value) UNORDERED_LVALUE_QUAL
+    bool operator()(int const& value)
     {
       int const v = value;
       return v >= 1000;
@@ -159,11 +107,16 @@ template <class UnorderedSet> void test_set_erase_if()
 }
 
 UNORDERED_AUTO_TEST (unordered_erase_if) {
+#ifdef BOOST_UNORDERED_FOA_TESTS
+  test_map_erase_if<boost::unordered_flat_map<std::string, int> >();
+  test_set_erase_if<boost::unordered_flat_set<int> >();
+#else
   test_map_erase_if<boost::unordered_map<std::string, int> >();
   test_map_erase_if<boost::unordered_multimap<std::string, int> >();
 
   test_set_erase_if<boost::unordered_set<int> >();
   test_set_erase_if<boost::unordered_multiset<int> >();
+#endif
 }
 
 RUN_TESTS()

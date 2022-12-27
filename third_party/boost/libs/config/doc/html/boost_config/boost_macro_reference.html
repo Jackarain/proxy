@@ -4877,8 +4877,8 @@
 <span class="keyword">case</span> <span class="number">41</span><span class="special">:</span>
    <span class="keyword">if</span> <span class="special">(</span><span class="identifier">truth_is_out_there</span><span class="special">)</span> <span class="special">{</span>
       <span class="special">++</span><span class="identifier">x</span><span class="special">;</span>
-      <span class="identifier">BOOST_FALLTHROUGH</span><span class="special">;</span>  <span class="comment">// Use instead of/along with annotations in </span>
-      <span class="comment">// comments. </span>
+      <span class="identifier">BOOST_FALLTHROUGH</span><span class="special">;</span>  <span class="comment">// Use instead of/along with annotations in</span>
+      <span class="comment">// comments.</span>
    <span class="special">}</span> <span class="keyword">else</span> <span class="special">{</span>
      <span class="keyword">return</span> <span class="identifier">x</span><span class="special">;</span>
    <span class="special">}</span>
@@ -5290,6 +5290,45 @@
 <tr>
 <td>
                 <p>
+                  <code class="computeroutput"><span class="identifier">BOOST_DEPRECATED</span><span class="special">(</span><span class="identifier">M</span><span class="special">)</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  Expands to an attribute for a symbol that generates warnings when
+                  that symbol is used in code. The warnings may contain a message
+                  <code class="computeroutput"><span class="identifier">M</span></code>, which must be
+                  a string literal. This attribute may be applied to types, functions
+                  or objects and is typically used to mark parts of the API as deprecated
+                  with a recommendation of replacement.
+                </p>
+                <p>
+                  Example:
+</p>
+<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="identifier">BOOST_DEPRECATED</span><span class="special">(</span><span class="string">"Use bar() instead."</span><span class="special">)</span>
+<span class="keyword">void</span> <span class="identifier">foo</span><span class="special">();</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span> <span class="keyword">typename</span> <span class="identifier">T</span> <span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">BOOST_DEPRECATED</span><span class="special">(</span><span class="string">"Use std::unique_ptr instead."</span><span class="special">)</span> <span class="identifier">auto_ptr</span>
+<span class="special">{</span>
+<span class="special">};</span>
+
+<span class="identifier">BOOST_DEPRECATED</span><span class="special">(</span><span class="string">"Use std::numeric_limits&lt;int&gt;::max() instead."</span><span class="special">)</span>
+<span class="keyword">const</span> <span class="keyword">int</span> <span class="identifier">max_int</span> <span class="special">=</span> <span class="number">0x7fffffff</span><span class="special">;</span>
+</pre>
+<p>
+                </p>
+                <p>
+                  The warnings issued by <code class="computeroutput"><span class="identifier">BOOST_DEPRECATED</span></code>
+                  can be suppressed by defining <code class="computeroutput"><span class="identifier">BOOST_ALLOW_DEPRECATED_SYMBOLS</span></code>
+                  or <code class="computeroutput"><span class="identifier">BOOST_ALLOW_DEPRECATED</span></code>
+                  macros.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
                   <code class="computeroutput"><span class="identifier">BOOST_PRAGMA_MESSAGE</span><span class="special">(</span><span class="identifier">M</span><span class="special">)</span></code>
                 </p>
               </td>
@@ -5331,7 +5370,9 @@
                 </p>
                 <p>
                   The messages issued by <code class="computeroutput"><span class="identifier">BOOST_HEADER_DEPRECATED</span></code>
-                  can be suppressed by defining the macro <code class="computeroutput"><span class="identifier">BOOST_ALLOW_DEPRECATED_HEADERS</span></code>.
+                  can be suppressed by defining <code class="computeroutput"><span class="identifier">BOOST_ALLOW_DEPRECATED_HEADERS</span></code>
+                  or <code class="computeroutput"><span class="identifier">BOOST_ALLOW_DEPRECATED</span></code>
+                  macros.
                 </p>
               </td>
 </tr>
@@ -6932,6 +6973,26 @@
                     symbols from shared libraries. <span class="emphasis"><em>Deprecated. This macro
                     is no longer necessary since BOOST_SYMBOL_EXPORT and BOOST_SYMBOL_IMPORT
                     are now supplied. It is provided to support legacy code.</em></span>
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    <code class="computeroutput"><span class="identifier">BOOST_DISABLE_EXPLICIT_SYMBOL_VISIBILITY</span></code>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    Disables the effect of the BOOST_SYMBOL_EXPORT, BOOST_SYMBOL_IMPORT
+                    and BOOST_SYMBOL_VISIBLE macros, in order to revert to the default
+                    compiler behaviour. Note that this option should never be used
+                    if Boost libraries are being linking against dynamically, or
+                    if you are building a shared library that exposes Boost types
+                    in its public API. It is however advisable when statically-linking
+                    against Boost to prevent Boost symbols from leaking from the
+                    binary: for instance because you are building a plug-in for a
+                    software which may itself use Boost which could cause ODR conflicts.
                   </p>
                 </td>
 </tr>

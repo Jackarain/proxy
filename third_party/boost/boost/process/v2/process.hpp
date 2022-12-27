@@ -19,9 +19,11 @@
 
 #if defined(BOOST_PROCESS_V2_STANDALONE)
 #include <asio/any_io_executor.hpp>
+#include <asio/post.hpp>
 #include <utility>
 #else
 #include <boost/asio/any_io_executor.hpp>
+#include <boost/asio/post.hpp>
 #include <boost/core/exchange.hpp>
 #endif
 
@@ -164,7 +166,7 @@ struct basic_process
                          typename std::enable_if<
                             std::is_convertible<ExecutionContext&, 
                                 BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context&>::value, void *>::type = nullptr)
-      : process_handle_(context, pid, native_handle) {}
+      : process_handle_(context.get_executor(), pid, native_handle) {}
 
   /// Create an invalid handle
   template <typename ExecutionContext>
@@ -172,7 +174,7 @@ struct basic_process
                          typename std::enable_if<
                              is_convertible<ExecutionContext&, 
                                 BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context&>::value, void *>::type = nullptr)
-     : process_handle_(context) {}
+     : process_handle_(context.get_executor()) {}
 
 
 
@@ -339,7 +341,7 @@ private:
         };
 
         BOOST_PROCESS_V2_ASIO_NAMESPACE::post(handle.get_executor(),
-                                              completer{res, std::move(self)});
+                                              completer{static_cast<int>(res), std::move(self)});
       }
       else
         handle.async_wait(std::move(self));

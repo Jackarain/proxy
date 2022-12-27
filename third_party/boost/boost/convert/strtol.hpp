@@ -11,7 +11,7 @@
 #include <climits>
 #include <cstdlib>
 
-namespace boost::cnv { struct strtol; }
+namespace boost { namespace cnv { struct strtol; }}
 
 /// @brief std::strtol-based extended converter
 /// @details The converter offers a fairly decent overall performance and moderate formatting facilities.

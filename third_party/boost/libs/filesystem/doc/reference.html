@@ -213,17 +213,6 @@ and directories.</p>
   </tr>
   <tr>
     <td width="35%" align="left">
-    <p>New character types</td>
-    <td width="65%" align="left">
-    <p>The <code>boost::filesystem</code> interface doesn't use the
-    new types directly. It does use <code>u16string</code> and <code>u32string</code>
-    in namespace <code>boost</code>. These are typedefs to <code>std::u16string</code>
-    and <code>std::u32string</code> for C++11, or to <code>
-    std::basic_string&lt;boost::u16_t&gt;</code> and <code>
-    std::basic_string&lt;boost::u32_t&gt;</code> for C++03.</td>
-  </tr>
-  <tr>
-    <td width="35%" align="left">
     <p>Defaulted and deleted functions</td>
     <td width="65%" align="left">
     <p>Workaround replacement functions provided.</td>
@@ -1142,8 +1131,6 @@ system or for a particular file system.</p>
           String  <a href="#string-template">string</a>(const codecvt_type&amp; cvt=codecvt()) const;
         string    <a href="#string">string</a>(const codecvt_type&amp; cvt=codecvt()) const;
         wstring   <a href="#wstring">wstring</a>(const codecvt_type&amp; cvt=codecvt()) const;
-        u16string <a href="#u16string">u16string</a>() const;
-        u32string <a href="#u32wstring">u32string</a>() const;
 
         // <a href="#path-generic-format-observers">generic format observers</a>
         template &lt;class String&gt;
@@ -1151,8 +1138,6 @@ system or for a particular file system.</p>
 
         string    <a href="#generic_string">generic_string</a>(const codecvt_type&amp; cvt=codecvt()) const;
         wstring   <a href="#generic_wstring">generic_wstring</a>(const codecvt_type&amp; cvt=codecvt()) const;
-        u16string <a href="#generic_u16string">generic_u16string</a>()
-        u32string <a href="#generic_u32wstring">generic_u32string</a>()
 
         // <a href="#path-compare">compare</a>
         int   <a href="#path-compare">compare</a>(const path&amp; p) const noexcept;
@@ -1275,7 +1260,7 @@ always be able to distinguish between native format and generic format arguments
 This is by design as it simplifies use for operating systems that do not require
 disambiguation. Should an implementation encounter an
 operating system where disambiguation is required, an implementation can defined
-an extension to distinguish between the formats. <i>
+an extension to distinguish between the formats.<i>
 —end note</i>]</p>
 </blockquote>
 
@@ -1288,7 +1273,7 @@ otherwise it shall be treated as a regular file path.</p>
 path</code> argument encoding conversions</a>
 [path.arg.encoding.cvt]</h5>
 <p>For member function arguments that take character sequences representing
-paths, if the value type of the argument is not <code>value_type and </code>one
+paths, if the value type of the argument is not <code>value_type</code> and one
 of the value types is <code>char</code> and the other is <code>wchar_t</code>, conversion to <code>value_type</code>
 shall be performed by the <code>path::codecvt()</code> facet. ([<a href="#path-imbued-locale">path.imbued.locale</a>]).</p>
 <h4><a name="path-Conversions-to-generic-format"><code>path</code> Conversions
@@ -1297,20 +1282,20 @@ to generic format</a> [fs.cvt.to.generic]</h4>
 shall return strings formatted according to the <a href="#generic-pathname-format">generic pathname format</a>
 using <i>preferred-separator</i>. See [<a href="#Operating-system-examples">fs.os.examples</a>].</p>
 <h3><a name="path-Requirements"><code>path</code> Requirements</a> [path.req]</h3>
-<p>Template parameters named <code><a name="InputIterator">InputIterator</a></code> are required meet the
-requirements for a C++ standard library <code>RandomIterator</code> compliant iterator. The iterator's value type is required to be <code>char</code>, <code>wchar_t</code>, <code>char16_t</code>, or <code>char32_t</code>.</p>
+<p>Template parameters named <code><a name="InputIterator">InputIterator</a></code> are required to meet the
+requirements for a C++ standard library <code>InputIterator</code> compliant iterator. The iterator's value type is required
+to be one of: <code>char</code>, <code>wchar_t</code>. Collectively, these types are referred to as supported path character types.</p>
 <p>Template parameters named <code><a name="Source">Source</a></code> are required to be one of:</p>
 <ul>
   <li>
-  <p>A container with a value type of <code>char</code>, <code>
-  wchar_t</code>, <code>char16_t</code>, or <code>char32_t</code>.</li>
+  <p>A <code>std::basic_string</code>, <code>std::basic_string_view</code>, <code>boost::container::basic_string</code> or <code>boost::basic_string_view</code> specialization with a value type of one of the supported path character types.</li>
   <li>
-  <p>An iterator for a null terminated byte-string. The value type is required
-  to be <code>char</code>, <code>wchar_t</code>, <code>char16_t</code>, or <code>
-  char32_t</code>.</li>
+  <p><b>v3, deprecated:</b> A container with a value type of one of the supported path character types.</li>
   <li>
-  <p>A C-array. The value type is required to be <code>char</code>, <code>
-  wchar_t</code>, <code>char16_t</code>, or <code>char32_t</code>.</li>
+  <p>A pointer into a null terminated string. The value type is required
+  to be a supported path character type.</li>
+  <li>
+  <p>A C-array of supported path character type containing a null terminated string.</li>
   <li>
   <p>A <code>boost::filesystem::directory_entry</code>.</li>
 </ul>
@@ -1327,7 +1312,7 @@ path(InputIterator begin, InputIterator end, const codecvt_type&amp; cvt=codecvt
 
 <blockquote>
   <p><i>Effects:</i> Stores the contents [<code>begin</code>,<code>end</code>)
-  or <code>source</code> in <code>pathname</code>, converting format and
+  of <code>source</code> in <code>pathname</code>, converting format and
   encoding if required ([<a href="#path.arg.convert">path.arg.convert</a>]).</p>
 </blockquote>
 <h3> <a name="path-assignments"> <code>
@@ -1602,9 +1587,7 @@ String <a name="string-template">string</a>(const codecvt_type&amp; cvt=codecvt(
 </blockquote>
 
 <pre>string <a name="string">string</a>(const codecvt_type&amp; cvt=codecvt()) const;
-wstring <a name="wstring">wstring</a>(const codecvt_type&amp; cvt=codecvt()) const;
-u16string <a name="u16string">u16string</a>() const;
-u32wstring <a name="u32wstring">u32wstring</a>() const; </pre>
+wstring <a name="wstring">wstring</a>(const codecvt_type&amp; cvt=codecvt()) const;</pre>
 
 <blockquote>
 <p><i>Returns:</i> <code>pathname</code>.</p>
@@ -1625,9 +1608,7 @@ String <a name="generic_string-template">generic_string</a>(const codecvt_type&a
 </blockquote>
 
 <pre>string <a name="generic_string">generic_string</a>(const codecvt_type&amp; cvt=codecvt()) const;
-wstring <a name="generic_wstring">generic_wstring</a>(const codecvt_type&amp; cvt=codecvt()) const;
-u16string <a name="generic_u16string">generic_u16string</a>() const;
-u32wstring <a name="generic_u32wstring">generic_u32wstring</a>() const; </pre>
+wstring <a name="generic_wstring">generic_wstring</a>(const codecvt_type&amp; cvt=codecvt()) const;</pre>
 
 <blockquote>
 <p><i>Returns:</i> <code>pathname</code>.</p>

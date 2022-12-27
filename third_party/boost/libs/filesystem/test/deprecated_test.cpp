@@ -12,9 +12,13 @@
 //  important to preserve existing code that uses the old names.
 
 #define BOOST_FILESYSTEM_DEPRECATED
+#define BOOST_FILESYSTEM_ALLOW_DEPRECATED
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/string_file.hpp>
+
+#include <list>
+#include <vector>
 
 #include <boost/core/lightweight_test.hpp>
 #include <boost/detail/lightweight_main.hpp>
@@ -27,6 +31,11 @@ using boost::filesystem::path;
 namespace {
 std::string platform(BOOST_PLATFORM);
 
+std::list< char > l;       // see main() for initialization to s, t, r, i, n, g
+std::list< wchar_t > wl;   // see main() for initialization to w, s, t, r, i, n, g
+std::vector< char > v;     // see main() for initialization to f, u, z
+std::vector< wchar_t > wv; // see main() for initialization to w, f, u, z
+
 void check(const fs::path& source, const std::string& expected, int line)
 {
     if (source.generic_string() == expected)
@@ -34,7 +43,7 @@ void check(const fs::path& source, const std::string& expected, int line)
 
     ++::boost::detail::test_errors();
 
-    std::cout << '(' << line << ") source.string(): \"" << source.string()
+    std::cout << __FILE__ << '(' << line << ") source.string(): \"" << source.string()
               << "\" != expected: \"" << expected
               << "\"" << std::endl;
 }
@@ -158,6 +167,29 @@ void misc_test()
     p.directory_string();
 }
 
+//  path_container_ctor_test ---------------------------------------------------------//
+
+void path_container_ctor_test()
+{
+    path x4v(v); // std::vector<char>
+    PATH_CHECK(x4v, "fuz");
+    BOOST_TEST_EQ(x4v.native().size(), 3U);
+
+    path x5v(wv); // std::vector<wchar_t>
+    PATH_CHECK(x5v, "wfuz");
+    BOOST_TEST_EQ(x5v.native().size(), 4U);
+
+    // non-contiguous containers
+    path x10(l); // std::list<char>
+    PATH_CHECK(x10, "string");
+    BOOST_TEST_EQ(x10.native().size(), 6U);
+
+    path xll(wl); // std::list<wchar_t>
+    PATH_CHECK(xll, "wstring");
+    BOOST_TEST_EQ(xll.native().size(), 7U);
+}
+
+
 //  path_rename_test -----------------------------------------------------------------//
 
 void path_rename_test()
@@ -206,6 +238,30 @@ int cpp_main(int /*argc*/, char* /*argv*/[])
     platform = (platform == "Win32" || platform == "Win64" || platform == "Cygwin") ? "Windows" : "POSIX";
     std::cout << "Platform is " << platform << '\n';
 
+    l.push_back('s');
+    l.push_back('t');
+    l.push_back('r');
+    l.push_back('i');
+    l.push_back('n');
+    l.push_back('g');
+
+    wl.push_back(L'w');
+    wl.push_back(L's');
+    wl.push_back(L't');
+    wl.push_back(L'r');
+    wl.push_back(L'i');
+    wl.push_back(L'n');
+    wl.push_back(L'g');
+
+    v.push_back('f');
+    v.push_back('u');
+    v.push_back('z');
+
+    wv.push_back(L'w');
+    wv.push_back(L'f');
+    wv.push_back(L'u');
+    wv.push_back(L'z');
+
     BOOST_TEST(fs::initial_path() == fs::current_path());
 
     //path::default_name_check(fs::no_check);
@@ -227,6 +283,7 @@ int cpp_main(int /*argc*/, char* /*argv*/[])
     fs::create_directory(temp_dir);
 
     misc_test();
+    path_container_ctor_test();
     path_rename_test();
     normalize_test();
     string_file_tests(temp_dir);

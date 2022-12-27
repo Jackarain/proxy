@@ -29,6 +29,11 @@ When `BOOST_SYSTEM_USE_UTF8` is defined, on Windows the library returns
 UTF-8 messages using code page `CP_UTF8` instead of the default `CP_ACP`.
 This macro has no effect on POSIX.
 
+When `BOOST_SYSTEM_DISABLE_THREADS` is defined, the library assumes that
+the current platform doesn't support multiple threads and disables the use
+of the standard header `<mutex>`, eliminating the mutex locks. The single
+threaded `libstdc++` is one such platform.
+
 ## Deprecated Names
 
 In the process of adding Boost.System to the {cpp}11 standard library, the
@@ -1595,6 +1600,12 @@ template<class T, class E = error_code> class result
 {
 public:
 
+    using value_type = T;
+    using error_type = E;
+
+    static constexpr in_place_value_t in_place_value{};
+    static constexpr in_place_error_t in_place_error{};
+
     // constructors
 
     constexpr result();
@@ -1647,6 +1658,11 @@ public:
     // error access
 
     constexpr E error() const;
+
+    // emplace
+
+    template<class... A>
+      constexpr T& emplace( A&&... a );
 
     // swap
 
@@ -1843,6 +1859,20 @@ constexpr E error() const;
 Effects: ::
   If `*this` holds an error, returns it. Otherwise, returns `E()`.
 
+#### emplace
+
+```
+template<class... A>
+  constexpr T& emplace( A&&... a );
+```
+[none]
+* {blank}
++
+Ensures: ::
+  `*this` holds the value `T( std::forward<A>(a)... )`.
+Returns: ::
+  A reference to the contained value.
+
 #### swap
 
 ```
@@ -1911,6 +1941,12 @@ template<class E> class result<void, E>
 {
 public:
 
+    using value_type = void;
+    using error_type = E;
+
+    static constexpr in_place_value_t in_place_value{};
+    static constexpr in_place_error_t in_place_error{};
+
     // constructors
 
     constexpr result() noexcept;
@@ -1944,6 +1980,10 @@ public:
     // error access
 
     constexpr E error() const;
+
+    // emplace
+
+    constexpr void emplace();
 
     // swap
 
@@ -2087,6 +2127,17 @@ constexpr E error() const;
 +
 Effects: ::
   If `*this` holds an error, returns it. Otherwise, returns `E()`.
+
+#### emplace
+
+```
+constexpr void emplace();
+```
+[none]
+* {blank}
++
+Ensures: ::
+  `*this` holds an unspecified value.
 
 #### swap
 

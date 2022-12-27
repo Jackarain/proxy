@@ -27,7 +27,7 @@
 <a name="beast.ref.boost__beast__http__async_read_some"></a><a class="link" href="boost__beast__http__async_read_some.html" title="http::async_read_some">http::async_read_some</a>
 </h4></div></div></div>
 <p>
-        <a class="indexterm" name="idm84544"></a>
+        <a class="indexterm" name="idm76291"></a>
       </p>
 <p>
         Read part of a message asynchronously from a stream using a parser.
@@ -196,6 +196,24 @@
         The completion handler will receive as a parameter the total number of bytes
         transferred from the stream. This may be zero for the case where there is
         sufficient pre-existing message data in the dynamic buffer.
+      </p>
+<h5>
+<a name="beast.ref.boost__beast__http__async_read_some.h4"></a>
+        <span class="phrase"><a name="beast.ref.boost__beast__http__async_read_some.per_operation_cancellation"></a></span><a class="link" href="boost__beast__http__async_read_some.html#beast.ref.boost__beast__http__async_read_some.per_operation_cancellation">Per-Operation
+        Cancellation</a>
+      </h5>
+<p>
+        This asynchronous operation supports cancellation for the following net::cancellation_type
+        values:
+      </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+            <code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">cancellation_type</span><span class="special">::</span><span class="identifier">terminal</span></code>
+          </li></ul></div>
+<p>
+        if the <code class="computeroutput"><span class="identifier">stream</span></code> also supports
+        terminal cancellation. <code class="computeroutput"><span class="identifier">terminal</span></code>
+        cancellation leaves the stream in an undefined state, so that only closing
+        it is guaranteed to succeed.
       </p>
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>

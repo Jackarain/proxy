@@ -11,10 +11,11 @@
 #include <vector>
 #include <deque>
 #include <boost/container/vector.hpp>
-#include <boost/container/devector.hpp>
 #include <boost/container/deque.hpp>
+#include <boost/container/devector.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/container/stable_vector.hpp>
+#include <iomanip>
 
 #include <memory>    //std::allocator
 #include <iostream>  //std::cout, std::endl
@@ -137,6 +138,19 @@ struct push_back
    {  return "push_back"; }
 };
 
+struct emplace_back
+{
+   BOOST_CONTAINER_FORCEINLINE std::size_t capacity_multiplier() const
+   {  return 1;  }
+
+   template<class C>
+   BOOST_CONTAINER_FORCEINLINE void operator()(C &c, int i)
+   {  c.emplace_back(i); }
+
+   BOOST_CONTAINER_FORCEINLINE const char *name() const
+   {  return "emplace_back"; }
+};
+
 struct insert_near_end_repeated
 {
    BOOST_CONTAINER_FORCEINLINE std::size_t capacity_multiplier() const
@@ -185,32 +199,49 @@ struct insert_near_end
    {  return "insert_near_end"; }
 };
 
+struct emplace_near_end
+{
+   BOOST_CONTAINER_FORCEINLINE std::size_t capacity_multiplier() const
+   {
+      return 1;
+   }
+
+   template<class C>
+   BOOST_CONTAINER_FORCEINLINE void operator()(C& c, int i)
+   {
+      typedef typename C::iterator it_t;
+      it_t it(c.end());
+      it -= static_cast<typename C::difference_type>(c.size() >= 2) * 2;
+      c.emplace(it, i);
+   }
+
+   BOOST_CONTAINER_FORCEINLINE const char* name() const
+   {
+      return "emplace_near_end";
+   }
+};
 
 template<class Container, class Operation>
-void vector_test_template(std::size_t num_iterations, std::size_t num_elements, const char *cont_name)
+void vector_test_template(std::size_t num_iterations, std::size_t num_elements, const char *cont_name, bool prereserve = true)
 {
    typedef capacity_wrapper<Container> cpw_t;
 
-   Container c;
-   cpw_t::set_reserve(c, num_elements);
-
    Operation op;
    const typename Container::size_type multiplier = op.capacity_multiplier();
-
-   //Warm-up operation
-   for(std::size_t e = 0, max = num_elements/multiplier; e != max; ++e){
-      op(c, static_cast<int>(e));
+   Container c;
+   if (prereserve) {
+      cpw_t::set_reserve(c, num_elements);
    }
-   c.clear();
 
    cpu_timer timer;
 
    const std::size_t max = num_elements/multiplier;
    for(std::size_t r = 0; r != num_iterations; ++r){
 
-      //Unrolll the loop to avoid noise from loop code
+      //Unroll the loop to avoid noise from loop code
       int i = 0;
-      timer.resume();
+      if (r > 0)  //Exclude first iteration to avoid noise
+         timer.resume();
       for(std::size_t e = 0; e < max/16; ++e){
          op(c, static_cast<int>(i++));
          op(c, static_cast<int>(i++));
@@ -230,7 +261,8 @@ void vector_test_template(std::size_t num_iterations, std::size_t num_elements, 
          op(c, static_cast<int>(i++));
       }
 
-      timer.stop();
+      if (r > 0)
+         timer.stop();
       c.clear();
    }
 
@@ -241,10 +273,11 @@ void vector_test_template(std::size_t num_iterations, std::size_t num_elements, 
    nanosecond_type nseconds = timer.elapsed().wall;
 
    std::cout   << cont_name << "->" << op.name() <<" ns: "
-               << float(nseconds)/float(num_iterations*num_elements)
+               << std::setw(8)
+               << float(nseconds)/float((num_iterations-1)*num_elements)
                << '\t'
                << "Capacity: " << capacity
-               << "\n";
+               << std::endl;
 }
 
 template<class Operation>
@@ -254,14 +287,14 @@ void test_vectors()
    #define SIMPLE_IT
    #ifdef SINGLE_TEST
       #ifdef NDEBUG
-      std::size_t numit [] = { 100 };
+      std::size_t numit [] = { 1000 };
       #else
       std::size_t numit [] = { 20 };
       #endif
-      std::size_t numele [] = { 10000 };
+      std::size_t numele [] = { 100000 };
    #elif defined SIMPLE_IT
       std::size_t numit [] = { 100 };
-      std::size_t numele [] = { 10000 };
+      std::size_t numele [] = { 100000 };
    #else
       #ifdef NDEBUG
       unsigned int numit []  = { 1000, 10000, 100000, 1000000 };
@@ -271,16 +304,26 @@ void test_vectors()
       unsigned int numele [] = { 10000, 1000,   100,     10       };
    #endif
 
-   for(unsigned int i = 0; i < sizeof(numele)/sizeof(numele[0]); ++i){
-      vector_test_template< std::vector<MyInt, std::allocator<MyInt> >, Operation >(numit[i], numele[i]           , "std::vector  ");
-      vector_test_template< bc::vector<MyInt, std::allocator<MyInt> >, Operation >(numit[i], numele[i]            , "vector       ");
-      vector_test_template< bc::devector<MyInt, std::allocator<MyInt> >, Operation >(numit[i], numele[i]          , "devector     ");
-      vector_test_template< bc::small_vector<MyInt, 0, std::allocator<MyInt> >, Operation >(numit[i], numele[i]   , "small_vector ");
-      vector_test_template< std::deque<MyInt, std::allocator<MyInt> >, Operation >(numit[i], numele[i]            , "std::deque   ");
-      vector_test_template< bc::deque<MyInt, std::allocator<MyInt> >, Operation >(numit[i], numele[i]             , "deque        ");
-   }
+   //#define PRERESERVE_ONLY
+   #ifdef PRERESERVE_ONLY
+   #define P_INIT 1
+   #else
+   #define P_INIT 0
+   #endif
 
-   std::cout   << "---------------------------------\n---------------------------------\n";
+   for (unsigned p = P_INIT; p != 2; ++p) {
+      std::cout << Operation().name() << ", prereserve: " << (p ? "1" : "0") << "\n" << std::endl;
+      const bool bp =p != 0;
+      for(unsigned int i = 0; i < sizeof(numele)/sizeof(numele[0]); ++i){
+         vector_test_template< std::vector<MyInt, std::allocator<MyInt> >, Operation >(numit[i], numele[i], "std::vector  ", bp);
+         vector_test_template< bc::vector<MyInt, std::allocator<MyInt> >, Operation >(numit[i], numele[i]        ,  "vector       ", bp);
+         vector_test_template< bc::small_vector<MyInt, 0, std::allocator<MyInt> >, Operation >(numit[i], numele[i], "small_vector ", bp);
+         vector_test_template< bc::devector<MyInt, std::allocator<MyInt> >, Operation >(numit[i], numele[i],        "devector     ", bp);
+         //vector_test_template< std::deque<MyInt, std::allocator<MyInt> >, Operation >(numit[i], numele[i],          "std::deque   ", bp);
+         vector_test_template< bc::deque<MyInt, std::allocator<MyInt> >, Operation >(numit[i], numele[i],           "deque        ", bp);
+      }
+      std::cout << "---------------------------------\n---------------------------------\n";
+   }
 }
 
 int main()
@@ -293,6 +336,10 @@ int main()
    test_vectors<insert_near_end>();
    test_vectors<insert_near_end_range>();
    test_vectors<insert_near_end_repeated>();
+   #if BOOST_CXX_VERSION  >= 201103L 
+   test_vectors<emplace_back>();
+   test_vectors<emplace_near_end>();
+   #endif
 
    return 0;
 }

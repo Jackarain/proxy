@@ -1,14 +1,10 @@
 
 // Copyright 2016 Daniel James.
+// Copyright 2022 Christian Mazakas.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-// clang-format off
-#include "../helpers/prefix.hpp"
-#include <boost/unordered_set.hpp>
-#include <boost/unordered_map.hpp>
-#include "../helpers/postfix.hpp"
-// clang-format on
+#include "../helpers/unordered.hpp"
 
 #include "../helpers/test.hpp"
 #include "../helpers/invariants.hpp"
@@ -17,6 +13,7 @@
 #include <set>
 
 namespace insert_hint {
+#ifndef BOOST_UNORDERED_FOA_TESTS
   UNORDERED_AUTO_TEST (insert_hint_empty) {
     typedef boost::unordered_multiset<int> container;
     container x;
@@ -90,9 +87,13 @@ namespace insert_hint {
       }
     }
   }
-
+#endif
   UNORDERED_AUTO_TEST (insert_hint_unique) {
+#ifdef BOOST_UNORDERED_FOA_TESTS
+    typedef boost::unordered_flat_set<int> container;
+#else
     typedef boost::unordered_set<int> container;
+#endif
     container x;
     x.insert(x.cbegin(), 10);
     BOOST_TEST_EQ(x.size(), 1u);
@@ -101,7 +102,11 @@ namespace insert_hint {
   }
 
   UNORDERED_AUTO_TEST (insert_hint_unique_single) {
+#ifdef BOOST_UNORDERED_FOA_TESTS
+    typedef boost::unordered_flat_set<int> container;
+#else
     typedef boost::unordered_set<int> container;
+#endif
     container x;
     x.insert(10);
 

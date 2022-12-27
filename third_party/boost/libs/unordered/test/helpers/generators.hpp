@@ -12,7 +12,9 @@
 #define BOOST_UNORDERED_TEST_HELPERS_GENERATORS_HEADER
 
 #include "./fwd.hpp"
+#include <boost/assert.hpp>
 #include <boost/type_traits/add_const.hpp>
+#include <climits>
 #include <cstdlib>
 #include <stdexcept>
 #include <string>
@@ -34,8 +36,18 @@ namespace test {
     return static_cast<std::size_t>(rand()) % max;
   }
 
+  static int origin = 0;
+
+  void reset_sequence() { origin = 0; }
+
   inline int generate(int const*, random_generator g)
   {
+    if (g == sequential) {
+      BOOST_ASSERT_MSG(
+        origin < INT_MAX, "test::reset_sequence() should be invoked");
+      return origin++;
+    }
+
     using namespace std;
     int value = rand();
     if (g == limited_range) {

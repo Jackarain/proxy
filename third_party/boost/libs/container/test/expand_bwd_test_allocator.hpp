@@ -137,6 +137,7 @@ class expand_bwd_test_allocator
       if(m_allocations == 0){
          if((m_offset + limit_size) > m_size){
             assert(0);
+            throw_bad_alloc();
          }
          ++m_allocations;
          reuse = 0;

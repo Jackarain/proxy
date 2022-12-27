@@ -125,7 +125,7 @@ return `nullptr` if demangling failed.
 
 [endsect]
 
-[section Acknowledgments]
+[section Acknowledgements]
 
 The implementation of `core::demangle` was taken from
 `boost/exception/detail/type_info.hpp`, which in turn was adapted

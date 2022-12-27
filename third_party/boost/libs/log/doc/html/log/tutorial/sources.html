@@ -26,9 +26,9 @@
       </h5>
 <p>
         Now that we have defined where and how the log is to be stored, it's time
-        to go on and try logging. In order to do this one has to create a logging
-        source. This would be a logger object in our case and it is as simple as
-        that:
+        to see how we emit log records. In order to be able to make log records one
+        has to create a logging source first. This would be a logger object in our
+        case and it is as simple as that:
       </p>
 <pre class="programlisting"><span class="identifier">src</span><span class="special">::</span><span class="identifier">logger</span> <span class="identifier">lg</span><span class="special">;</span>
 </pre>
@@ -38,9 +38,9 @@
 <th align="left">Note</th>
 </tr>
 <tr><td align="left" valign="top"><p>
-          A curious reader could have noticed that we did not create any loggers
-          for trivial logging. In fact the logger is provided by the library and
-          is used behind the scenes.
+          A mindful reader could have noticed that we did not create any loggers
+          when we tried trivial logging. In that case the logger is provided by the
+          library and is used behind the scenes.
         </p></td></tr>
 </table></div>
 <p>
@@ -51,7 +51,7 @@
         write logs through different instances of loggers and thus there should be
         a separate logger for each thread that writes logs. The thread-safe counterparts
         can be accessed from different threads concurrently, but this will involve
-        locking and may slow things down in case of intense logging. The thread-safe
+        locking and may slow things down in case of intense contention. The thread-safe
         logger types have the <code class="computeroutput"><span class="identifier">_mt</span></code>
         suffix in their name.
       </p>
@@ -103,7 +103,7 @@
 <pre class="programlisting"><span class="identifier">src</span><span class="special">::</span><span class="identifier">logger_mt</span><span class="special">&amp;</span> <span class="identifier">lg</span> <span class="special">=</span> <span class="identifier">my_logger</span><span class="special">::</span><span class="identifier">get</span><span class="special">();</span>
 </pre>
 <p>
-        The <code class="computeroutput"><span class="identifier">lg</span></code> will refer to the
+        Then, <code class="computeroutput"><span class="identifier">lg</span></code> will refer to the
         one and only instance of the logger throughout the application, even if the
         application consists of multiple modules. The <code class="computeroutput"><span class="identifier">get</span></code>
         function itself is thread-safe, so there is no need in additional synchronization
@@ -150,15 +150,16 @@
 <p>
         Looks a bit shorter, doesn't it? The <code class="computeroutput"><span class="identifier">BOOST_LOG</span></code>
         macro, along with other similar ones, is defined by the library. It automatically
-        provides an STL-like stream in order to format the message with ordinary
-        insertion expressions. Having all that code written, compiled and executed
-        you should be able to see the "Hello, World!" record in the "sample.log"
-        file. You will find the full code of this section <a href="../../../../../../libs/log/example/doc/tutorial_logging.cpp" target="_top">here</a>.
+        provides a standard library-like output stream in order to format the message
+        with ordinary insertion expressions. Having all that code written, compiled
+        and executed you should be able to see the "Hello, World!" record
+        in the "sample.log" file. You will find the full code of this section
+        <a href="../../../../../../libs/log/example/doc/tutorial_logging.cpp" target="_top">here</a>.
       </p>
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2007-2021 Andrey Semashev<p>
+<td align="right"><div class="copyright-footer">Copyright © 2007-2022 Andrey Semashev<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>).
       </p>

@@ -1217,6 +1217,7 @@ test-suite misc :
       [ run git_issue_426.cpp : : : [ check-target-builds ../config//has_mpfr : <source>gmp <source>mpfr <define>TEST_MPFR ] [ check-target-builds ../config//has_float128 : <source>quadmath <define>TEST_FLOAT128 ] ]
       [ run git_issue_277.cpp ]
       [ run git_issue_313.cpp ]
+      [ run git_issue_488.cpp ]
       [ compile git_issue_98.cpp : 
          [ check-target-builds ../config//has_float128 : <define>TEST_FLOAT128 <source>quadmath : ]
          [ check-target-builds ../config//has_gmp : <define>TEST_GMP <source>gmp : ]

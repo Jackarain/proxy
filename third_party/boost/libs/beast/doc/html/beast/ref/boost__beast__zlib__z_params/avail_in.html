@@ -27,7 +27,7 @@
 <a name="beast.ref.boost__beast__zlib__z_params.avail_in"></a><a class="link" href="avail_in.html" title="zlib::z_params::avail_in">zlib::z_params::avail_in</a>
 </h5></div></div></div>
 <p>
-          <a class="indexterm" name="idm66651"></a>
+          <a class="indexterm" name="idm59752"></a>
         </p>
 <p>
           The number of bytes of input available at <code class="computeroutput"><span class="identifier">next_in</span></code>.
@@ -43,7 +43,9 @@
           <span class="phrase"><a name="beast.ref.boost__beast__zlib__z_params.avail_in.description"></a></span><a class="link" href="avail_in.html#beast.ref.boost__beast__zlib__z_params.avail_in.description">Description</a>
         </h6>
 <p>
-          If there is no more input, this should be set to zero.
+          If there is no more input, this should be set to zero. The application
+          must update <code class="computeroutput"><span class="identifier">next_in</span></code> and
+          <code class="computeroutput"><span class="identifier">avail_in</span></code> when <code class="computeroutput"><span class="identifier">avail_in</span></code> has dropped to zero.
         </p>
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>

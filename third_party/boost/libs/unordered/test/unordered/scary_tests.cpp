@@ -2,14 +2,8 @@
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-// clang-format off
-#include "../helpers/prefix.hpp"
-#include <boost/unordered_set.hpp>
-#include <boost/unordered_map.hpp>
-#include "../helpers/postfix.hpp"
-// clang-format on
-
 #include "../helpers/test.hpp"
+#include "../helpers/unordered.hpp"
 #include "../objects/test.hpp"
 
 #include <memory>
@@ -107,8 +101,7 @@ public:
   // ever using it with an int with has a trivial destructor so it eliminates
   // the code and generates a warning about an unused variable
   //
-  template <class U>
-  void destroy(U* p)
+  template <class U> void destroy(U* p)
   {
     (void)p;
     p->~U();
@@ -192,8 +185,7 @@ public:
   // ever using it with an int with has a trivial destructor so it eliminates
   // the code and generates a warning about an unused variable
   //
-  template <class U>
-  void destroy(U* p)
+  template <class U> void destroy(U* p)
   {
     (void)p;
     p->~U();
@@ -224,13 +216,15 @@ template <class C1, class C2> void scary_test()
   typename C2::const_iterator cbegin(x.cbegin());
   BOOST_TEST(cbegin == x.cend());
 
-  BOOST_ASSERT(x.bucket_count() > 0);
+  BOOST_TEST_EQ(x.bucket_count(), 0u);
 
+#ifndef BOOST_UNORDERED_FOA_TESTS
   typename C2::local_iterator lbegin(x.begin(0));
   BOOST_TEST(lbegin == x.end(0));
 
   typename C2::const_local_iterator clbegin(x.cbegin(0));
   BOOST_TEST(clbegin == x.cend(0));
+#endif
 }
 
 template <
@@ -316,11 +310,16 @@ void set_scary_test()
 }
 
 UNORDERED_AUTO_TEST (scary_tests) {
+#ifdef BOOST_UNORDERED_FOA_TESTS
+  map_scary_test<boost::unordered_flat_map>();
+  set_scary_test<boost::unordered_flat_set>();
+#else
   map_scary_test<boost::unordered_map>();
   map_scary_test<boost::unordered_multimap>();
 
   set_scary_test<boost::unordered_set>();
   set_scary_test<boost::unordered_multiset>();
+#endif
 }
 
 RUN_TESTS()

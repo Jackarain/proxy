@@ -288,5 +288,39 @@ int main()
     BOOST_TEST_EQ( Z1::instances, 0 );
     BOOST_TEST_EQ( Z2::instances, 0 );
 
+    {
+        variant<monostate, monostate> v;
+        BOOST_TEST_EQ( v.index(), 0 );
+
+        v.emplace<0>();
+        BOOST_TEST_EQ( v.index(), 0 );
+
+        v.emplace<1>();
+        BOOST_TEST_EQ( v.index(), 1 );
+
+        v.emplace<1>();
+        BOOST_TEST_EQ( v.index(), 1 );
+
+        v.emplace<0>();
+        BOOST_TEST_EQ( v.index(), 0 );
+    }
+
+    {
+        variant<monostate, int> v;
+        BOOST_TEST_EQ( v.index(), 0 );
+
+        v.emplace<0>();
+        BOOST_TEST_EQ( v.index(), 0 );
+
+        v.emplace<1>();
+        BOOST_TEST_EQ( v.index(), 1 );
+
+        v.emplace<1>();
+        BOOST_TEST_EQ( v.index(), 1 );
+
+        v.emplace<0>();
+        BOOST_TEST_EQ( v.index(), 0 );
+    }
+
     return boost::report_errors();
 }

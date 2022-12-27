@@ -7,7 +7,7 @@
 <link rel="home" href="../index.html" title="Chapter 1. Boost.Beast">
 <link rel="up" href="../index.html" title="Chapter 1. Boost.Beast">
 <link rel="prev" href="ref/boost__beast__zlib__deflate_upper_bound.html" title="zlib::deflate_upper_bound">
-<link rel="next" href="introduction.html" title="Introduction">
+<link rel="next" href="beast_api_version.html" title="Beast API Version">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -20,7 +20,7 @@
 </tr></table>
 <hr>
 <div class="spirit-nav">
-<a accesskey="p" href="ref/boost__beast__zlib__deflate_upper_bound.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="introduction.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+<a accesskey="p" href="ref/boost__beast__zlib__deflate_upper_bound.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="beast_api_version.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
 </div>
 <div class="section">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
@@ -28,6 +28,132 @@
 </h2></div></div></div>
 <h4>
 <a name="beast.release_notes.h0"></a>
+      <span class="phrase"><a name="beast.release_notes.boost_1_81"></a></span><a class="link" href="release_notes.html#beast.release_notes.boost_1_81">Boost
+      1.81</a>
+    </h4>
+<p>
+      <span class="bold"><strong>Features</strong></span>
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Add <code class="computeroutput"><span class="identifier">buffers_generator</span></code>
+        </li>
+<li class="listitem">
+          Add <a class="link" href="ref/boost__beast__http__message_generator.html" title="http::message_generator"><code class="computeroutput"><span class="identifier">http</span><span class="special">::</span><span class="identifier">message_generator</span></code></a>
+        </li>
+<li class="listitem">
+          Add <a class="link" href="ref/boost__beast__buffer_ref.html" title="buffer_ref"><code class="computeroutput"><span class="identifier">buffer_ref</span></code></a>
+        </li>
+<li class="listitem">
+          Support for per-operation cancellation
+        </li>
+</ul></div>
+<p>
+      <span class="bold"><strong>Fixes</strong></span>
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          <a href="https://github.com/boostorg/beast/issues/2439" target="_top">#2439</a> Fix CVE-2018-25032 in zlib streams
+        </li>
+<li class="listitem">
+          <a href="https://github.com/boostorg/beast/issues/264" target="_top">#264</a> Websocket support continue in upgrade
+        </li>
+<li class="listitem">
+          <a href="https://github.com/boostorg/beast/issues/471" target="_top">#471</a> Unquote takes s by reference
+        </li>
+</ul></div>
+<p>
+      <span class="bold"><strong>Improvements</strong></span>
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          <a href="https://github.com/boostorg/beast/issues/2104" target="_top">#2104</a> C++20 awaitable examples.
+        </li>
+<li class="listitem">
+          <a href="https://github.com/boostorg/beast/issues/226" target="_top">#226</a>, <a href="https://github.com/boostorg/beast/issues/227" target="_top">#227</a> per-message compression options
+        </li>
+<li class="listitem">
+          <a href="https://github.com/boostorg/beast/issues/2449" target="_top">#2449</a> websocket timeout option api
+        </li>
+<li class="listitem">
+          <a href="https://github.com/boostorg/beast/issues/2468" target="_top">#2468</a> multiple content length error
+        </li>
+</ul></div>
+<p>
+      <span class="bold"><strong>Miscellaneous</strong></span>
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Use <code class="computeroutput"><span class="identifier">span</span></code> from Boost.Core
+        </li>
+<li class="listitem">
+          Use <code class="computeroutput"><span class="identifier">static_string</span></code> from
+          Boost.StaticString
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">serializer</span><span class="special">::</span><span class="identifier">is_done</span></code> is <code class="computeroutput"><span class="keyword">const</span></code>
+        </li>
+<li class="listitem">
+          Support for default-completion and rebind
+        </li>
+<li class="listitem">
+          <a href="https://github.com/boostorg/beast/issues/2469" target="_top">#2469</a> s390x architecture support
+        </li>
+</ul></div>
+<p>
+      <span class="bold"><strong>Documentation</strong></span>
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          <a href="https://github.com/boostorg/beast/issues/891" target="_top">#891</a> Feature table for buffers
+        </li>
+<li class="listitem">
+          <a href="https://github.com/boostorg/beast/issues/516" target="_top">#516</a> Case-insensitivity for fields is stated
+        </li>
+<li class="listitem">
+          <a href="https://github.com/boostorg/beast/issues/298" target="_top">#298</a> api version is documented
+        </li>
+</ul></div>
+<h4>
+<a name="beast.release_notes.h1"></a>
+      <span class="phrase"><a name="beast.release_notes.boost_1_80"></a></span><a class="link" href="release_notes.html#beast.release_notes.boost_1_80">Boost
+      1.80</a>
+    </h4>
+<p>
+      <span class="bold"><strong>Miscellaneous</strong></span>
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          <a href="https://github.com/boostorg/beast/issues/2363" target="_top">#2363</a> Remove <code class="computeroutput"><span class="identifier">BOOST_BEAST_USE_STD_STRING_VIEW</span></code>
+        </li>
+<li class="listitem">
+          <a href="https://github.com/boostorg/beast/issues/2417" target="_top">#2417</a> use boost::core::string_view. This improves inter-conversion between
+          string_view implementations. Some observable differences for users:
+          <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; ">
+<li class="listitem">
+                <code class="computeroutput"><span class="identifier">core</span><span class="special">::</span><span class="identifier">string_view</span></code> no longer supports
+                the <code class="computeroutput"><span class="special">.</span><span class="identifier">to_string</span><span class="special">()</span></code> or <code class="computeroutput"><span class="special">.</span><span class="identifier">clear</span><span class="special">()</span></code>
+                extensions from Utility
+              </li>
+<li class="listitem">
+                code that relied on <code class="computeroutput"><span class="special">.</span><span class="identifier">max_size</span><span class="special">()</span></code>
+                returning <code class="computeroutput"><span class="special">.</span><span class="identifier">size</span><span class="special">(),</span></code> needs to be fixed to use <code class="computeroutput"><span class="special">.</span><span class="identifier">size</span><span class="special">()</span></code> instead
+              </li>
+<li class="listitem">
+                <code class="computeroutput"><span class="identifier">remove_suffix</span><span class="special">()</span></code>
+                and <code class="computeroutput"><span class="identifier">remove_prefix</span><span class="special">()</span></code> were more lenient than the standard
+                specs; be sure you don't rely on it clamping the argument to valid
+                range
+              </li>
+<li class="listitem">
+                <code class="computeroutput"><span class="identifier">BOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS</span></code>
+                no longer suppresses conversions to <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span></code>
+              </li>
+</ul></div>
+        </li>
+</ul></div>
+<h4>
+<a name="beast.release_notes.h2"></a>
       <span class="phrase"><a name="beast.release_notes.boost_1_79"></a></span><a class="link" href="release_notes.html#beast.release_notes.boost_1_79">Boost
       1.79</a>
     </h4>
@@ -78,7 +204,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="beast.release_notes.h1"></a>
+<a name="beast.release_notes.h3"></a>
       <span class="phrase"><a name="beast.release_notes.boost_1_78"></a></span><a class="link" href="release_notes.html#beast.release_notes.boost_1_78">Boost
       1.78</a>
     </h4>
@@ -117,7 +243,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="beast.release_notes.h2"></a>
+<a name="beast.release_notes.h4"></a>
       <span class="phrase"><a name="beast.release_notes.boost_1_77"></a></span><a class="link" href="release_notes.html#beast.release_notes.boost_1_77">Boost
       1.77</a>
     </h4>
@@ -154,7 +280,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="beast.release_notes.h3"></a>
+<a name="beast.release_notes.h5"></a>
       <span class="phrase"><a name="beast.release_notes.boost_1_76"></a></span><a class="link" href="release_notes.html#beast.release_notes.boost_1_76">Boost
       1.76</a>
     </h4>
@@ -202,7 +328,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="beast.release_notes.h4"></a>
+<a name="beast.release_notes.h6"></a>
       <span class="phrase"><a name="beast.release_notes.boost_1_75"></a></span><a class="link" href="release_notes.html#beast.release_notes.boost_1_75">Boost
       1.75</a>
     </h4>
@@ -270,7 +396,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="beast.release_notes.h5"></a>
+<a name="beast.release_notes.h7"></a>
       <span class="phrase"><a name="beast.release_notes.boost_1_74"></a></span><a class="link" href="release_notes.html#beast.release_notes.boost_1_74">Boost
       1.74</a>
     </h4>
@@ -325,10 +451,23 @@
                 is disabled by default.
               </li>
 <li class="listitem">
-                The following deprecated functions have been removed: - <code class="computeroutput"><span class="identifier">websocket</span><span class="special">::</span><span class="identifier">async_accept_ex</span></code> - <code class="computeroutput"><span class="identifier">websocket</span><span class="special">::</span><span class="identifier">async_handshake_ex</span></code> - <code class="computeroutput"><span class="identifier">websocket</span><span class="special">::</span><span class="identifier">accept_ex</span></code> - <code class="computeroutput"><span class="identifier">websocket</span><span class="special">::</span><span class="identifier">handshake_ex</span></code>
-                Programs still using these names should be refactored to use the
-                <code class="computeroutput"><span class="identifier">decorator</span></code> feature
-                and the remaining handshake and accept functions.
+                The following deprecated functions have been removed:
+                <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: square; ">
+<li class="listitem">
+                      <code class="computeroutput"><span class="identifier">websocket</span><span class="special">::</span><span class="identifier">async_accept_ex</span></code>
+                    </li>
+<li class="listitem">
+                      <code class="computeroutput"><span class="identifier">websocket</span><span class="special">::</span><span class="identifier">async_handshake_ex</span></code>
+                    </li>
+<li class="listitem">
+                      <code class="computeroutput"><span class="identifier">websocket</span><span class="special">::</span><span class="identifier">accept_ex</span></code>
+                    </li>
+<li class="listitem">
+                      <code class="computeroutput"><span class="identifier">websocket</span><span class="special">::</span><span class="identifier">handshake_ex</span></code> Programs still
+                      using these names should be refactored to use the <code class="computeroutput"><span class="identifier">decorator</span></code> feature and the
+                      remaining handshake and accept functions.
+                    </li>
+</ul></div>
               </li>
 <li class="listitem">
                 <code class="computeroutput"><span class="identifier">websocket</span><span class="special">::</span><span class="identifier">role_type</span></code> has been removed. Users
@@ -344,11 +483,24 @@
 <li class="listitem">
                 Code that depends on <code class="computeroutput"><span class="identifier">mutable_data_type</span></code>
                 should be refactored to use <code class="computeroutput"><span class="identifier">mutable_buffers_type</span></code>.
-                Classes affected are: - <code class="computeroutput"><span class="identifier">buffers_adaptor</span></code>
-                - <code class="computeroutput"><span class="identifier">flat_buffer</span></code> -
-                <code class="computeroutput"><span class="identifier">flat_static_buffer</span></code>
-                - <code class="computeroutput"><span class="identifier">multi_buffer</span></code> -
-                <code class="computeroutput"><span class="identifier">static_buffer</span></code>
+                Classes affected are:
+                <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: square; ">
+<li class="listitem">
+                      <code class="computeroutput"><span class="identifier">buffers_adaptor</span></code>
+                    </li>
+<li class="listitem">
+                      <code class="computeroutput"><span class="identifier">flat_buffer</span></code>
+                    </li>
+<li class="listitem">
+                      <code class="computeroutput"><span class="identifier">flat_static_buffer</span></code>
+                    </li>
+<li class="listitem">
+                      <code class="computeroutput"><span class="identifier">multi_buffer</span></code>
+                    </li>
+<li class="listitem">
+                      <code class="computeroutput"><span class="identifier">static_buffer</span></code>
+                    </li>
+</ul></div>
               </li>
 <li class="listitem">
                 The <code class="computeroutput"><span class="identifier">reset</span></code> function
@@ -441,7 +593,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="beast.release_notes.h6"></a>
+<a name="beast.release_notes.h8"></a>
       <span class="phrase"><a name="beast.release_notes.boost_1_73"></a></span><a class="link" href="release_notes.html#beast.release_notes.boost_1_73">Boost
       1.73</a>
     </h4>
@@ -450,9 +602,24 @@
     </p>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
           Nested <code class="computeroutput"><span class="identifier">mutable_data_type</span></code>
-          in Beast dynamic buffers is deprecated. Affected types: - <code class="computeroutput"><span class="identifier">buffers_adaptor</span></code> - <code class="computeroutput"><span class="identifier">flat_buffer</span></code>
-          - <code class="computeroutput"><span class="identifier">flat_static_buffer</span></code> -
-          <code class="computeroutput"><span class="identifier">multi_buffer</span></code> - <code class="computeroutput"><span class="identifier">static_buffer</span></code>
+          in Beast dynamic buffers is deprecated. Affected types:
+          <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; ">
+<li class="listitem">
+                <code class="computeroutput"><span class="identifier">buffers_adaptor</span></code>
+              </li>
+<li class="listitem">
+                <code class="computeroutput"><span class="identifier">flat_buffer</span></code>
+              </li>
+<li class="listitem">
+                <code class="computeroutput"><span class="identifier">flat_static_buffer</span></code>
+              </li>
+<li class="listitem">
+                <code class="computeroutput"><span class="identifier">multi_buffer</span></code>
+              </li>
+<li class="listitem">
+                <code class="computeroutput"><span class="identifier">static_buffer</span></code>
+              </li>
+</ul></div>
         </li></ul></div>
 <p>
       <span class="bold"><strong>Changes Required</strong></span>
@@ -559,7 +726,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="beast.release_notes.h7"></a>
+<a name="beast.release_notes.h9"></a>
       <span class="phrase"><a name="beast.release_notes.boost_1_72"></a></span><a class="link" href="release_notes.html#beast.release_notes.boost_1_72">Boost
       1.72</a>
     </h4>
@@ -631,7 +798,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="beast.release_notes.h8"></a>
+<a name="beast.release_notes.h10"></a>
       <span class="phrase"><a name="beast.release_notes.boost_1_71"></a></span><a class="link" href="release_notes.html#beast.release_notes.boost_1_71">Boost
       1.71</a>
     </h4>
@@ -793,7 +960,7 @@
           Documentation is built with SaxonHE instead of xsltproc
         </li></ul></div>
 <h4>
-<a name="beast.release_notes.h9"></a>
+<a name="beast.release_notes.h11"></a>
       <span class="phrase"><a name="beast.release_notes.boost_1_70"></a></span><a class="link" href="release_notes.html#beast.release_notes.boost_1_70">Boost
       1.70</a>
     </h4>
@@ -1084,9 +1251,12 @@
         </li>
 <li class="listitem">
           <code class="computeroutput"><span class="identifier">file_mode</span><span class="special">::</span><span class="identifier">append_new</span></code> is removed, as it makes no
-          sense. <span class="emphasis"><em>Actions Required</em></span>: - Replace <code class="computeroutput"><span class="identifier">file_mode</span><span class="special">::</span><span class="identifier">append_new</span></code>
-          with either <code class="computeroutput"><span class="identifier">file_mode</span><span class="special">::</span><span class="identifier">append</span></code> or <code class="computeroutput"><span class="identifier">file_mode</span><span class="special">::</span><span class="identifier">append_existing</span></code>
-          as needed.
+          sense. <span class="emphasis"><em>Actions Required</em></span>:
+          <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; "><li class="listitem">
+                Replace <code class="computeroutput"><span class="identifier">file_mode</span><span class="special">::</span><span class="identifier">append_new</span></code>
+                with either <code class="computeroutput"><span class="identifier">file_mode</span><span class="special">::</span><span class="identifier">append</span></code>
+                or <code class="computeroutput"><span class="identifier">file_mode</span><span class="special">::</span><span class="identifier">append_existing</span></code> as needed.
+              </li></ul></div>
         </li>
 <li class="listitem">
           <code class="computeroutput"><span class="identifier">role_type</span></code> is moved from
@@ -1095,9 +1265,12 @@
 <li class="listitem">
           <code class="computeroutput"><span class="identifier">buffers_range_ref</span></code> is preferred
           to <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">reference_wrapper</span></code>. <span class="emphasis"><em>Actions
-          Required</em></span>: - Call <code class="computeroutput"><span class="identifier">buffers_range_ref</span></code>
-          with the buffer, instead of calling <code class="computeroutput"><span class="identifier">buffers_range</span></code>
-          with a reference wrapper constructed from the buffer.
+          Required</em></span>:
+          <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; "><li class="listitem">
+                Call <code class="computeroutput"><span class="identifier">buffers_range_ref</span></code>
+                with the buffer, instead of calling <code class="computeroutput"><span class="identifier">buffers_range</span></code>
+                with a reference wrapper constructed from the buffer.
+              </li></ul></div>
         </li>
 <li class="listitem">
           Nested <code class="computeroutput"><span class="identifier">lowest_layer</span></code> and
@@ -1109,12 +1282,24 @@
           WebSocket decorator is a socket option:
           <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; "><li class="listitem">
                 Overloads of the following functions which accept a Decorator are
-                deprecated: - <code class="computeroutput"><span class="identifier">accept</span></code>,
-                <code class="computeroutput"><span class="identifier">accept_ex</span></code> - <code class="computeroutput"><span class="identifier">handshake</span></code>, <code class="computeroutput"><span class="identifier">handshake_ex</span></code>
-                - <code class="computeroutput"><span class="identifier">async_accept</span></code>,
-                <code class="computeroutput"><span class="identifier">async_accept_ex</span></code> -
-                <code class="computeroutput"><span class="identifier">async_handshake</span></code>,
-                <code class="computeroutput"><span class="identifier">async_handshake_ex</span></code>
+                deprecated:
+                <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: square; ">
+<li class="listitem">
+                      <code class="computeroutput"><span class="identifier">accept</span></code>, <code class="computeroutput"><span class="identifier">accept_ex</span></code>
+                    </li>
+<li class="listitem">
+                      <code class="computeroutput"><span class="identifier">handshake</span></code>,
+                      <code class="computeroutput"><span class="identifier">handshake_ex</span></code>
+                    </li>
+<li class="listitem">
+                      <code class="computeroutput"><span class="identifier">async_accept</span></code>,
+                      <code class="computeroutput"><span class="identifier">async_accept_ex</span></code>
+                    </li>
+<li class="listitem">
+                      <code class="computeroutput"><span class="identifier">async_handshake</span></code>,
+                      <code class="computeroutput"><span class="identifier">async_handshake_ex</span></code>
+                    </li>
+</ul></div>
               </li></ul></div>
         </li>
 <li class="listitem">
@@ -1249,7 +1434,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="beast.release_notes.h10"></a>
+<a name="beast.release_notes.h12"></a>
       <span class="phrase"><a name="beast.release_notes.boost_1_69"></a></span><a class="link" href="release_notes.html#beast.release_notes.boost_1_69">Boost
       1.69</a>
     </h4>
@@ -1312,7 +1497,7 @@
           Add <code class="computeroutput"><span class="identifier">timeout_socket</span></code>
         </li></ul></div>
 <h4>
-<a name="beast.release_notes.h11"></a>
+<a name="beast.release_notes.h13"></a>
       <span class="phrase"><a name="beast.release_notes.boost_1_68"></a></span><a class="link" href="release_notes.html#beast.release_notes.boost_1_68">Boost
       1.68</a>
     </h4>
@@ -1465,7 +1650,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="beast.release_notes.h12"></a>
+<a name="beast.release_notes.h14"></a>
       <span class="phrase"><a name="beast.release_notes.boost_1_67"></a></span><a class="link" href="release_notes.html#beast.release_notes.boost_1_67">Boost
       1.67</a>
     </h4>
@@ -1664,7 +1849,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="beast.release_notes.h13"></a>
+<a name="beast.release_notes.h15"></a>
       <span class="phrase"><a name="beast.release_notes.boost_1_66"></a></span><a class="link" href="release_notes.html#beast.release_notes.boost_1_66">Boost
       1.66</a>
     </h4>
@@ -1683,7 +1868,7 @@
 </tr></table>
 <hr>
 <div class="spirit-nav">
-<a accesskey="p" href="ref/boost__beast__zlib__deflate_upper_bound.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="introduction.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+<a accesskey="p" href="ref/boost__beast__zlib__deflate_upper_bound.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="beast_api_version.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
 </div>
 </body>
 </html>

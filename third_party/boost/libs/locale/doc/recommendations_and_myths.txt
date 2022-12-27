@@ -33,7 +33,7 @@ on the platform, so they may be even less convenient when dealing with Unicode t
 
 \subsection myths_utf16 UTF-16 is the best encoding to work with.
 
-There is common assumption that UTF-16 is the best encoding for storing information because it gives "shortest" representation
+There is common assumption that UTF-16 is the best encoding for storing information because it gives the "shortest" representation
 of strings.
 
 In fact, it is probably the most error-prone encoding to work with. The biggest issue is code points that lay outside of the BMP,

@@ -1,23 +1,41 @@
 
 // Copyright 2006-2009 Daniel James.
+// Copyright 2022 Christian Mazakas.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 // This test creates the containers with members that meet their minimum
 // requirements. Makes sure everything compiles and is defined correctly.
 
-// clang-format off
-#include "../helpers/prefix.hpp"
-#include <boost/unordered_map.hpp>
-#include "../helpers/postfix.hpp"
-// clang-format on
+#include "../helpers/unordered.hpp"
 
 #include "../helpers/test.hpp"
 #include "../objects/minimal.hpp"
 #include "./compile_tests.hpp"
 
 // Explicit instantiation to catch compile-time errors
+#ifdef BOOST_UNORDERED_FOA_TESTS
 
+// emulates what was already done for previous tests but without leaking to
+// the detail namespace
+//
+template <typename K, typename T, typename H, typename P, typename A>
+class instantiate_flat_map
+{
+  typedef boost::unordered_flat_map<K, T, H, P, A> container;
+  container x;
+};
+
+template class instantiate_flat_map<int, int, boost::hash<int>,
+  std::equal_to<int>, test::minimal::allocator<int> >;
+
+template class instantiate_flat_map<test::minimal::assignable const,
+  test::minimal::default_assignable const,
+  test::minimal::hash<test::minimal::assignable>,
+  test::minimal::equal_to<test::minimal::assignable>,
+  test::minimal::allocator<int> >;
+
+#else
 #define INSTANTIATE(type)                                                      \
   template class boost::unordered::detail::instantiate_##type
 
@@ -35,6 +53,7 @@ INSTANTIATE(multimap)<test::minimal::assignable, test::minimal::assignable,
   test::minimal::hash<test::minimal::assignable>,
   test::minimal::equal_to<test::minimal::assignable>,
   test::minimal::allocator<int> >;
+#endif
 
 UNORDERED_AUTO_TEST (test0) {
   test::minimal::constructor_param x;
@@ -45,6 +64,19 @@ UNORDERED_AUTO_TEST (test0) {
 
   BOOST_LIGHTWEIGHT_TEST_OSTREAM << "Test unordered_map.\n";
 
+#ifdef BOOST_UNORDERED_FOA_TESTS
+  boost::unordered_flat_map<int, int> int_map;
+
+  boost::unordered_flat_map<int, int, boost::hash<int>, std::equal_to<int>,
+    test::minimal::cxx11_allocator<std::pair<int const, int> > >
+    int_map2;
+
+  boost::unordered_flat_map<test::minimal::assignable,
+    test::minimal::assignable, test::minimal::hash<test::minimal::assignable>,
+    test::minimal::equal_to<test::minimal::assignable>,
+    test::minimal::allocator<value_type> >
+    map;
+#else
   boost::unordered_map<int, int> int_map;
 
   boost::unordered_map<int, int, boost::hash<int>, std::equal_to<int>,
@@ -56,11 +88,13 @@ UNORDERED_AUTO_TEST (test0) {
     test::minimal::equal_to<test::minimal::assignable>,
     test::minimal::allocator<value_type> >
     map;
+#endif
 
   container_test(int_map, std::pair<int const, int>(0, 0));
   container_test(int_map2, std::pair<int const, int>(0, 0));
   container_test(map, value);
 
+#ifndef BOOST_UNORDERED_FOA_TESTS
   BOOST_LIGHTWEIGHT_TEST_OSTREAM << "Test unordered_multimap.\n";
 
   boost::unordered_multimap<int, int> int_multimap;
@@ -78,6 +112,7 @@ UNORDERED_AUTO_TEST (test0) {
   container_test(int_multimap, std::pair<int const, int>(0, 0));
   container_test(int_multimap2, std::pair<int const, int>(0, 0));
   container_test(multimap, value);
+#endif
 }
 
 UNORDERED_AUTO_TEST (equality_tests) {
@@ -85,6 +120,22 @@ UNORDERED_AUTO_TEST (equality_tests) {
     test::minimal::copy_constructible_equality_comparable>
     value_type;
 
+#ifdef BOOST_UNORDERED_FOA_TESTS
+  boost::unordered_flat_map<int, int> int_map;
+
+  boost::unordered_flat_map<int, int, boost::hash<int>, std::equal_to<int>,
+    test::minimal::cxx11_allocator<std::pair<int const, int> > >
+    int_map2;
+
+  boost::unordered_flat_map<
+    test::minimal::copy_constructible_equality_comparable,
+    test::minimal::copy_constructible_equality_comparable,
+    test::minimal::hash<test::minimal::copy_constructible_equality_comparable>,
+    test::minimal::equal_to<
+      test::minimal::copy_constructible_equality_comparable>,
+    test::minimal::allocator<value_type> >
+    map;
+#else
   boost::unordered_map<int, int> int_map;
 
   boost::unordered_map<int, int, boost::hash<int>, std::equal_to<int>,
@@ -98,11 +149,13 @@ UNORDERED_AUTO_TEST (equality_tests) {
       test::minimal::copy_constructible_equality_comparable>,
     test::minimal::allocator<value_type> >
     map;
+#endif
 
   equality_test(int_map);
   equality_test(int_map2);
   equality_test(map);
 
+#ifndef BOOST_UNORDERED_FOA_TESTS
   boost::unordered_multimap<int, int> int_multimap;
 
   boost::unordered_multimap<int, int, boost::hash<int>, std::equal_to<int>,
@@ -121,6 +174,7 @@ UNORDERED_AUTO_TEST (equality_tests) {
   equality_test(int_multimap);
   equality_test(int_multimap2);
   equality_test(multimap);
+#endif
 }
 
 UNORDERED_AUTO_TEST (test1) {
@@ -131,11 +185,19 @@ UNORDERED_AUTO_TEST (test1) {
 
   BOOST_LIGHTWEIGHT_TEST_OSTREAM << "Test unordered_map.\n";
 
+#ifdef BOOST_UNORDERED_FOA_TESTS
+  boost::unordered_flat_map<int, int> map;
+
+  boost::unordered_flat_map<int, int, boost::hash<int>, std::equal_to<int>,
+    test::minimal::cxx11_allocator<std::pair<int const, int> > >
+    map2;
+#else
   boost::unordered_map<int, int> map;
 
   boost::unordered_map<int, int, boost::hash<int>, std::equal_to<int>,
     test::minimal::cxx11_allocator<std::pair<int const, int> > >
     map2;
+#endif
 
   unordered_unique_test(map, map_value);
   unordered_map_test(map, value, value);
@@ -147,6 +209,7 @@ UNORDERED_AUTO_TEST (test1) {
   unordered_copyable_test(map2, value, map_value, hash, equal_to);
   unordered_map_functions(map2, value, value);
 
+#ifndef BOOST_UNORDERED_FOA_TESTS
   BOOST_LIGHTWEIGHT_TEST_OSTREAM << "Test unordered_multimap.\n";
 
   boost::unordered_multimap<int, int> multimap;
@@ -162,6 +225,7 @@ UNORDERED_AUTO_TEST (test1) {
   unordered_equivalent_test(multimap2, map_value);
   unordered_map_test(multimap2, value, value);
   unordered_copyable_test(multimap2, value, map_value, hash, equal_to);
+#endif
 }
 
 UNORDERED_AUTO_TEST (test2) {
@@ -178,28 +242,46 @@ UNORDERED_AUTO_TEST (test2) {
 
   BOOST_LIGHTWEIGHT_TEST_OSTREAM << "Test unordered_map.\n";
 
+#ifdef BOOST_UNORDERED_FOA_TESTS
+  boost::unordered_flat_map<test::minimal::assignable,
+    test::minimal::assignable, test::minimal::hash<test::minimal::assignable>,
+    test::minimal::equal_to<test::minimal::assignable>,
+    test::minimal::allocator<map_value_type> >
+    map;
+#else
   boost::unordered_map<test::minimal::assignable, test::minimal::assignable,
     test::minimal::hash<test::minimal::assignable>,
     test::minimal::equal_to<test::minimal::assignable>,
     test::minimal::allocator<map_value_type> >
     map;
+#endif
 
   unordered_unique_test(map, map_value);
   unordered_map_test(map, assignable, assignable);
   unordered_copyable_test(map, assignable, map_value, hash, equal_to);
   unordered_map_member_test(map, map_value);
 
+#ifdef BOOST_UNORDERED_FOA_TESTS
+  boost::unordered_flat_map<test::minimal::assignable,
+    test::minimal::default_assignable,
+    test::minimal::hash<test::minimal::assignable>,
+    test::minimal::equal_to<test::minimal::assignable>,
+    test::minimal::allocator<map_value_type> >
+    map2;
+#else
   boost::unordered_map<test::minimal::assignable,
     test::minimal::default_assignable,
     test::minimal::hash<test::minimal::assignable>,
     test::minimal::equal_to<test::minimal::assignable>,
     test::minimal::allocator<map_value_type> >
     map2;
+#endif
 
   test::minimal::default_assignable default_assignable;
 
   unordered_map_functions(map2, assignable, default_assignable);
 
+#ifndef BOOST_UNORDERED_FOA_TESTS
   BOOST_LIGHTWEIGHT_TEST_OSTREAM << "Test unordered_multimap.\n";
 
   boost::unordered_multimap<test::minimal::assignable,
@@ -212,6 +294,7 @@ UNORDERED_AUTO_TEST (test2) {
   unordered_map_test(multimap, assignable, assignable);
   unordered_copyable_test(multimap, assignable, map_value, hash, equal_to);
   unordered_map_member_test(multimap, map_value);
+#endif
 }
 
 // Test for ambiguity when using key convertible from iterator
@@ -232,6 +315,11 @@ std::size_t hash_value(lwg2059_key x)
 bool operator==(lwg2059_key x, lwg2059_key y) { return x.value == y.value; }
 
 UNORDERED_AUTO_TEST (lwg2059) {
+#ifdef BOOST_UNORDERED_FOA_TESTS
+  boost::unordered_flat_map<lwg2059_key, int> x;
+  x.emplace(lwg2059_key(10), 5);
+  x.erase(x.begin());
+#else
   {
     boost::unordered_map<lwg2059_key, int> x;
     x.emplace(lwg2059_key(10), 5);
@@ -243,6 +331,7 @@ UNORDERED_AUTO_TEST (lwg2059) {
     x.emplace(lwg2059_key(10), 5);
     x.erase(x.begin());
   }
+#endif
 }
 
 RUN_TESTS()

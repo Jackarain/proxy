@@ -1,12 +1,10 @@
 
 // Copyright 2016 Daniel James.
+// Copyright 2022 Christian Mazakas.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#include "../helpers/postfix.hpp"
-#include "../helpers/prefix.hpp"
-#include <boost/unordered_map.hpp>
-#include <boost/unordered_set.hpp>
+#include "../helpers/unordered.hpp"
 
 #include "../helpers/count.hpp"
 #include "../helpers/helpers.hpp"
@@ -19,8 +17,13 @@
 namespace merge_tests {
 
   UNORDERED_AUTO_TEST (merge_set) {
+#ifdef BOOST_UNORDERED_FOA_TESTS
+    boost::unordered_flat_set<int> x;
+    boost::unordered_flat_set<int> y;
+#else
     boost::unordered_set<int> x;
     boost::unordered_set<int> y;
+#endif
 
     x.merge(y);
     BOOST_TEST(x.empty());
@@ -57,6 +60,7 @@ namespace merge_tests {
     test::check_equivalent_keys(y);
   }
 
+#ifndef BOOST_UNORDERED_FOA_TESTS
   UNORDERED_AUTO_TEST (merge_multiset) {
     boost::unordered_multiset<int> x;
     boost::unordered_multiset<int> y;
@@ -134,6 +138,7 @@ namespace merge_tests {
     test::check_equivalent_keys(x);
     test::check_equivalent_keys(y);
   }
+#endif
 
   template <class X1, class X2>
   void merge_empty_test(X1*, X2*, test::random_generator generator)
@@ -228,6 +233,82 @@ namespace merge_tests {
     test::check_equivalent_keys(x2);
   }
 
+  using test::default_generator;
+  using test::generate_collisions;
+
+#ifdef BOOST_UNORDERED_FOA_TESTS
+  boost::unordered_flat_set<test::movable, test::hash, test::equal_to,
+    std::allocator<test::movable> >* test_set_std_alloc;
+
+
+  boost::unordered_flat_map<test::object, test::object, test::hash, test::equal_to,
+    std::allocator<test::object> >* test_map_std_alloc;
+
+
+  boost::unordered_flat_set<test::object, test::hash, test::equal_to,
+    test::allocator1<test::object> >* test_set;
+
+
+  boost::unordered_flat_map<test::movable, test::movable, test::hash, test::equal_to,
+    test::allocator2<test::movable> >* test_map;
+
+  // clang-format off
+UNORDERED_TEST(merge_empty_test,
+    ((test_set_std_alloc))
+    ((test_set_std_alloc))
+    ((default_generator)(generate_collisions)))
+UNORDERED_TEST(merge_empty_test,
+    ((test_map_std_alloc))
+    ((test_map_std_alloc))
+    ((default_generator)(generate_collisions)))
+UNORDERED_TEST(merge_empty_test,
+    ((test_set))
+    ((test_set))
+    ((default_generator)(generate_collisions)))
+UNORDERED_TEST(merge_empty_test,
+    ((test_map))
+    ((test_map))
+    ((default_generator)(generate_collisions)))
+
+UNORDERED_TEST(merge_into_empty_test,
+    ((test_set_std_alloc))
+    ((default_generator)(generate_collisions)))
+UNORDERED_TEST(merge_into_empty_test,
+    ((test_map_std_alloc))
+    ((default_generator)(generate_collisions)))
+UNORDERED_TEST(merge_into_empty_test,
+    ((test_set))
+    ((default_generator)(generate_collisions)))
+UNORDERED_TEST(merge_into_empty_test,
+    ((test_map))
+    ((default_generator)(generate_collisions)))
+
+UNORDERED_TEST(merge_into_unique_keys_test,
+    ((test_set_std_alloc))
+    ((test_set_std_alloc))
+    ((0)(1)(2))
+    ((0)(1)(2))
+    ((default_generator)(generate_collisions)))
+UNORDERED_TEST(merge_into_unique_keys_test,
+    ((test_map_std_alloc))
+    ((test_map_std_alloc))
+    ((0)(1)(2))
+    ((0)(1)(2))
+    ((default_generator)(generate_collisions)))
+UNORDERED_TEST(merge_into_unique_keys_test,
+    ((test_set))
+    ((test_set))
+    ((0)(1)(2))
+    ((0)(1)(2))
+    ((default_generator)(generate_collisions)))
+UNORDERED_TEST(merge_into_unique_keys_test,
+    ((test_map))
+    ((test_map))
+    ((0)(1)(2))
+    ((0)(1)(2))
+    ((default_generator)(generate_collisions)))
+  // clang-format on
+#else
   boost::unordered_set<test::movable, test::hash, test::equal_to,
     std::allocator<test::movable> >* test_set_std_alloc;
   boost::unordered_multiset<test::movable, test::hash, test::equal_to,
@@ -247,9 +328,6 @@ namespace merge_tests {
     test::allocator2<test::movable> >* test_map;
   boost::unordered_multimap<test::movable, test::movable, test::hash,
     test::equal_to, test::allocator2<test::movable> >* test_multimap;
-
-  using test::default_generator;
-  using test::generate_collisions;
 
   // clang-format off
 UNORDERED_TEST(merge_empty_test,
@@ -332,6 +410,8 @@ UNORDERED_TEST(merge_into_equiv_keys_test,
     ((0)(1)(2))
     ((default_generator)(generate_collisions)))
   // clang-format on
+#endif
+
 }
 
 RUN_TESTS()

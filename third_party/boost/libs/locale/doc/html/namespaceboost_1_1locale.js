@@ -12,7 +12,6 @@ var namespaceboost_1_1locale =
     [ "calendar", "classboost_1_1locale_1_1calendar.html", "classboost_1_1locale_1_1calendar" ],
     [ "calendar_facet", "classboost_1_1locale_1_1calendar__facet.html", "classboost_1_1locale_1_1calendar__facet" ],
     [ "collator", "classboost_1_1locale_1_1collator.html", "classboost_1_1locale_1_1collator" ],
-    [ "collator_base", "classboost_1_1locale_1_1collator__base.html", "classboost_1_1locale_1_1collator__base" ],
     [ "comparator", "structboost_1_1locale_1_1comparator.html", "structboost_1_1locale_1_1comparator" ],
     [ "converter", "classboost_1_1locale_1_1converter.html", "classboost_1_1locale_1_1converter" ],
     [ "converter_base", "classboost_1_1locale_1_1converter__base.html", "classboost_1_1locale_1_1converter__base" ],

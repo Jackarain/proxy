@@ -1,13 +1,16 @@
 enable_testing()
 
 add_library(boost_process_v2_test_impl test_impl.cpp)
-target_link_libraries(boost_process_v2_test_impl Boost::unit_test_framework Boost::process)
+target_link_libraries(boost_process_v2_test_impl Boost::process Boost::unit_test_framework Boost::process)
 target_compile_definitions(boost_process_v2_test_impl PUBLIC -DBOOST_PROCESS_V2_SEPARATE_COMPILATION=1)
-target_include_directories(boost_process_v2_test_impl PUBLIC ../../include)
+
+if (WIN32)
+    target_compile_definitions(boost_process_v2_test_impl PUBLIC WIN32_LEAN_AND_MEAN=1)
+endif()
 
 function(boost_process_v2_standalone_test name)
     add_executable(boost_process_v2_${name} ${name}.cpp)
-    target_link_libraries(boost_process_v2_${name} Boost::system Boost::filesystem boost_process_v2_test_impl)
+    target_link_libraries(boost_process_v2_${name} Boost::process Boost::system Boost::filesystem boost_process_v2_test_impl)
     add_test(NAME boost_process_v2_${name} COMMAND $<TARGET_FILE:boost_process_v2_${name}> )
 endfunction()
 
@@ -15,16 +18,16 @@ boost_process_v2_standalone_test(utf8)
 boost_process_v2_standalone_test(cstring_ref)
 boost_process_v2_standalone_test(pid)
 boost_process_v2_standalone_test(environment)
+boost_process_v2_standalone_test(shell)
 
 add_library(boost_process_v2_header_test header_1.cpp header_2.cpp)
-
+target_link_libraries(boost_process_v2_header_test PUBLIC Boost::process)
 add_executable(boost_process_v2_test_target target.cpp)
-target_link_libraries(boost_process_v2_test_target PUBLIC Boost::system)
-target_include_directories(boost_process_v2_test_target PUBLIC ../../../..)
+target_link_libraries(boost_process_v2_test_target PUBLIC Boost::process Boost::system)
 
 function(boost_process_v2_test_with_target name)
     add_executable(boost_process_v2_${name} ${name}.cpp)
-    target_link_libraries(boost_process_v2_${name} Boost::system Boost::filesystem boost_process_v2_test_impl)
+    target_link_libraries(boost_process_v2_${name} Boost::process Boost::system Boost::filesystem boost_process_v2_test_impl)
     add_dependencies(boost_process_v2_${name} boost_process_v2_test_target)
     add_test(NAME boost_process_v2_${name} COMMAND $<TARGET_FILE:boost_process_v2_${name}>
                                                 -- $<TARGET_FILE:boost_process_v2_test_target>)

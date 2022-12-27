@@ -319,6 +319,8 @@
         Every completion handler (also referred to as a <a href="https://en.wikipedia.org/wiki/Continuation" target="_top"><span class="emphasis"><em>continuation</em></span></a>)
         has both an <a href="../../../../../../doc/html/boost_asio/overview/core/allocation.html" target="_top"><span class="emphasis"><em>associated
         allocator</em></span></a> returned by <a href="../../../../../../doc/html/boost_asio/reference/get_associated_allocator.html" target="_top"><code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">get_associated_allocator</span></code></a>,
+        , an <a href="../../../../../../doc/html/boost_asio/reference/associated_cancellation_slot.html" target="_top"><span class="emphasis"><em>associated
+        cancellation slot</em></span></a> returned by <a href="../../../../../../doc/html/boost_asio/reference/associated_cancellation_slot.html" target="_top"><code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">get_associated_cancellation_slot</span></code></a>.
         and an <a href="../../../../../../doc/html/boost_asio/reference/associated_executor.html" target="_top"><span class="emphasis"><em>associated
         executor</em></span></a> returned by <a href="../../../../../../doc/html/boost_asio/reference/get_associated_executor.html" target="_top"><code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">get_associated_executor</span></code></a>.
         These associations may be specified intrusively:
@@ -334,12 +336,16 @@
     <span class="keyword">using</span> <span class="identifier">executor_type</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">io_context</span><span class="special">::</span><span class="identifier">executor_type</span><span class="special">;</span>
     <span class="identifier">executor_type</span> <span class="identifier">get_executor</span><span class="special">()</span> <span class="keyword">const</span> <span class="keyword">noexcept</span><span class="special">;</span>
 
+    <span class="keyword">using</span> <span class="identifier">cancellation_slot_type</span> <span class="special">=</span>  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">cancellation_slot</span><span class="special">;</span>
+    <span class="identifier">cancellation_slot_type</span> <span class="identifier">get_cancellation_slot</span><span class="special">()</span> <span class="keyword">const</span> <span class="keyword">noexcept</span><span class="special">;</span>
+
     <span class="keyword">void</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">beast</span><span class="special">::</span><span class="identifier">error_code</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span><span class="special">);</span>
 <span class="special">};</span>
 </pre>
 <p>
         Or these associations may be specified non-intrusively, by specializing the
         class templates <a href="../../../../../../doc/html/boost_asio/reference/associated_allocator.html" target="_top"><code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">associated_allocator</span></code></a>
+        , <a href="../../../../../../doc/html/boost_asio/reference/associated_cancellation_slot.html" target="_top"><code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">associated_cancellation_slot</span></code></a>
         and <a href="../../../../../../doc/html/boost_asio/reference/associated_executor.html" target="_top"><code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">associated_executor</span></code></a>:
       </p>
 <pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span> <span class="special">{</span>
@@ -367,6 +373,18 @@
         <span class="identifier">Executor</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">ex</span> <span class="special">=</span> <span class="identifier">Executor</span><span class="special">{})</span> <span class="keyword">noexcept</span><span class="special">;</span>
 <span class="special">};</span>
 
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">CancellationSlot</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">associated_cancellation_slot</span><span class="special">&lt;</span><span class="identifier">handler</span><span class="special">,</span> <span class="identifier">CancellationSlot</span><span class="special">&gt;</span>
+<span class="special">{</span>
+    <span class="keyword">using</span> <span class="identifier">type</span> <span class="special">=</span> <span class="identifier">cancellation_slot</span><span class="special">;</span>
+
+    <span class="keyword">static</span>
+    <span class="identifier">type</span>
+    <span class="identifier">get</span><span class="special">(</span><span class="identifier">handler</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">h</span><span class="special">,</span>
+        <span class="identifier">CancellationSlot</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">cs</span> <span class="special">=</span> <span class="identifier">CancellationSlot</span><span class="special">{})</span> <span class="keyword">noexcept</span><span class="special">;</span>
+<span class="special">};</span>
+
+
 <span class="special">}</span> <span class="comment">// boost</span>
 <span class="special">}</span> <span class="comment">// asio</span>
 </pre>
@@ -383,6 +401,40 @@
         customized by the caller, a completion handler defaults to using <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">allocator</span><span class="special">&lt;</span><span class="keyword">void</span><span class="special">&gt;</span></code>
         and the executor of the corresponding I/O object.
       </p>
+<p>
+        The function <a href="../../../../../../doc/html/boost_asio/reference/bind_allocator.html" target="_top"><code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">bind_allocator</span></code></a>
+        can be used whent he caller wants to assign a custom allocator to the operation.
+      </p>
+<p>
+        A completion token's associated cancellation_slot can be used to cancel single
+        operations. This is often passed through by the completion token such as
+        <a href="../../../../../../doc/html/boost_asio/reference/use_awaitable.html" target="_top"><code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">use_awaitable</span></code></a>
+        or <a href="../../../../../../doc/html/boost_asio/reference/yield_context.html" target="_top"><code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">yield_context</span></code></a>
+        .
+      </p>
+<p>
+        The available <a href="../../../../../../doc/html/boost_asio/reference/cancellation_type.html" target="_top">cancellation
+        types</a> are listed below.
+      </p>
+<div class="orderedlist"><ol class="orderedlist" type="1">
+<li class="listitem">
+            <code class="computeroutput"><span class="identifier">terminal</span></code> Requests cancellation
+            where, following a successful cancellation, the only safe operations
+            on the I/O object are closure or destruction.
+          </li>
+<li class="listitem">
+            <code class="computeroutput"><span class="identifier">partial</span></code> Requests cancellation
+            where a successful cancellation may result in partial side effects or
+            no side effects. Following cancellation, the I/O object is in a well-known
+            state, and may be used for further operations.
+          </li>
+<li class="listitem">
+            <code class="computeroutput"><span class="identifier">total</span></code> Requests cancellation
+            where a successful cancellation results in no apparent side effects.
+            Following cancellation, the I/O object is in the same observable state
+            as it was prior to the operation.
+          </li>
+</ol></div>
 <p>
         Networking prescribes facilities to determine the context in which handlers
         run. Every I/O object refers to an <a href="../../../../../../doc/html/boost_asio/reference/ExecutionContext.html" target="_top"><span class="emphasis"><em>ExecutionContext</em></span></a>

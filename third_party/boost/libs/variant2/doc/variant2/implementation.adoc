@@ -16,7 +16,7 @@ This implementation only depends on Boost.Config, Boost.Assert, and Boost.Mp11.
 
 * GCC 4.8 or later with `-std=c++11` or above
 * Clang 3.9 or later with `-std=c++11` or above
-* Visual Studio 2015, 2017, 2019
+* Visual Studio 2015 or later
 
 Tested on https://github.com/boostorg/variant2/actions[Github Actions] and
 https://ci.appveyor.com/project/pdimov/variant2-fkab9[Appveyor].

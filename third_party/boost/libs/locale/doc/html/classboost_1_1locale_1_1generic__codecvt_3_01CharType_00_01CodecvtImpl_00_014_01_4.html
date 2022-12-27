@@ -97,6 +97,7 @@ typedef CharType&#160;</td><td class="memItemRight" valign="bottom"><b>uchar</b>
 <tr class="memitem:af28c4b64af6cbf2eb01c444e2cdf08c3 inherit pub_types_classboost_1_1locale_1_1generic__codecvt__base"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1generic__codecvt__base.html#af28c4b64af6cbf2eb01c444e2cdf08c3">initial_convertion_state</a> { <a class="el" href="classboost_1_1locale_1_1generic__codecvt__base.html#af28c4b64af6cbf2eb01c444e2cdf08c3a07029d87e1c62675db6b857d7b6214ec">to_unicode_state</a>, 
 <a class="el" href="classboost_1_1locale_1_1generic__codecvt__base.html#af28c4b64af6cbf2eb01c444e2cdf08c3a2386c685ac9676370a20d2802184fed1">from_unicode_state</a>
  }</td></tr>
+<tr class="memdesc:af28c4b64af6cbf2eb01c444e2cdf08c3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initial state for converting to or from unicode code points, used by initial_state in derived classes.  <a href="classboost_1_1locale_1_1generic__codecvt__base.html#af28c4b64af6cbf2eb01c444e2cdf08c3">More...</a><br /></td></tr>
 <tr class="separator:af28c4b64af6cbf2eb01c444e2cdf08c3 inherit pub_types_classboost_1_1locale_1_1generic__codecvt__base"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
@@ -104,33 +105,33 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:adc4f372fcfd1274ec6cd7a8c20b0f23e"><td class="memItemLeft" align="right" valign="top"><a id="adc4f372fcfd1274ec6cd7a8c20b0f23e"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>generic_codecvt</b> (size_t refs=0)</td></tr>
 <tr class="separator:adc4f372fcfd1274ec6cd7a8c20b0f23e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a62f3c8d87ff528c478153f0cdb7968cb"><td class="memItemLeft" align="right" valign="top"><a id="a62f3c8d87ff528c478153f0cdb7968cb"></a>
-CodecvtImpl const  &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>implementation</b> () const</td></tr>
-<tr class="separator:a62f3c8d87ff528c478153f0cdb7968cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1c5a7f3bd02bb0192eaf39c52d3eb6d2"><td class="memItemLeft" align="right" valign="top"><a id="a1c5a7f3bd02bb0192eaf39c52d3eb6d2"></a>
+const CodecvtImpl &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>implementation</b> () const</td></tr>
+<tr class="separator:a1c5a7f3bd02bb0192eaf39c52d3eb6d2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-methods"></a>
 Protected Member Functions</h2></td></tr>
-<tr class="memitem:a76f027bbd1956de96ea24067110a913a"><td class="memItemLeft" align="right" valign="top"><a id="a76f027bbd1956de96ea24067110a913a"></a>
-std::codecvt_base::result&#160;</td><td class="memItemRight" valign="bottom"><b>do_unshift</b> (std::mbstate_t &amp;, char *from, char *, char *&amp;next) const BOOST_OVERRIDE</td></tr>
-<tr class="separator:a76f027bbd1956de96ea24067110a913a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8e7adfb765fe9b6665b9a18740e9fbbb"><td class="memItemLeft" align="right" valign="top"><a id="a8e7adfb765fe9b6665b9a18740e9fbbb"></a>
-int&#160;</td><td class="memItemRight" valign="bottom"><b>do_encoding</b> () const BOOST_NOEXCEPT_OR_NOTHROW BOOST_OVERRIDE</td></tr>
-<tr class="separator:a8e7adfb765fe9b6665b9a18740e9fbbb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa68b04160b24b21465ce89f61de2e5fc"><td class="memItemLeft" align="right" valign="top"><a id="aa68b04160b24b21465ce89f61de2e5fc"></a>
-int&#160;</td><td class="memItemRight" valign="bottom"><b>do_max_length</b> () const BOOST_NOEXCEPT_OR_NOTHROW BOOST_OVERRIDE</td></tr>
-<tr class="separator:aa68b04160b24b21465ce89f61de2e5fc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8b720fa365043cef21531c243f47fa7e"><td class="memItemLeft" align="right" valign="top"><a id="a8b720fa365043cef21531c243f47fa7e"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>do_always_noconv</b> () const BOOST_NOEXCEPT_OR_NOTHROW BOOST_OVERRIDE</td></tr>
-<tr class="separator:a8b720fa365043cef21531c243f47fa7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6ab4ce8cfcd6d09d3a27366a4dbda194"><td class="memItemLeft" align="right" valign="top"><a id="a6ab4ce8cfcd6d09d3a27366a4dbda194"></a>
-int&#160;</td><td class="memItemRight" valign="bottom"><b>do_length</b> (std::mbstate_t &amp;, char const *from, char const *from_end, size_t max) const BOOST_OVERRIDE</td></tr>
-<tr class="separator:a6ab4ce8cfcd6d09d3a27366a4dbda194"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a73a26d7afbeea339672667b70d1d3760"><td class="memItemLeft" align="right" valign="top"><a id="a73a26d7afbeea339672667b70d1d3760"></a>
-std::codecvt_base::result&#160;</td><td class="memItemRight" valign="bottom"><b>do_in</b> (std::mbstate_t &amp;, char const *from, char const *from_end, char const *&amp;from_next, uchar *to, uchar *to_end, uchar *&amp;to_next) const BOOST_OVERRIDE</td></tr>
-<tr class="separator:a73a26d7afbeea339672667b70d1d3760"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a302dfdac546aa2c47fab73fd686f0de5"><td class="memItemLeft" align="right" valign="top"><a id="a302dfdac546aa2c47fab73fd686f0de5"></a>
-std::codecvt_base::result&#160;</td><td class="memItemRight" valign="bottom"><b>do_out</b> (std::mbstate_t &amp;, uchar const *from, uchar const *from_end, uchar const *&amp;from_next, char *to, char *to_end, char *&amp;to_next) const BOOST_OVERRIDE</td></tr>
-<tr class="separator:a302dfdac546aa2c47fab73fd686f0de5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9aea50900476a157eda8a8334d3a1faf"><td class="memItemLeft" align="right" valign="top"><a id="a9aea50900476a157eda8a8334d3a1faf"></a>
+std::codecvt_base::result&#160;</td><td class="memItemRight" valign="bottom"><b>do_unshift</b> (std::mbstate_t &amp;, char *from, char *, char *&amp;next) const override</td></tr>
+<tr class="separator:a9aea50900476a157eda8a8334d3a1faf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a95aeb5e307233b934b238bb5310025e4"><td class="memItemLeft" align="right" valign="top"><a id="a95aeb5e307233b934b238bb5310025e4"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>do_encoding</b> () const noexcept override</td></tr>
+<tr class="separator:a95aeb5e307233b934b238bb5310025e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af20f153b791b88c55906b25418b9d269"><td class="memItemLeft" align="right" valign="top"><a id="af20f153b791b88c55906b25418b9d269"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>do_max_length</b> () const noexcept override</td></tr>
+<tr class="separator:af20f153b791b88c55906b25418b9d269"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a831783cd0440b129a922f115a6f32e3e"><td class="memItemLeft" align="right" valign="top"><a id="a831783cd0440b129a922f115a6f32e3e"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>do_always_noconv</b> () const noexcept override</td></tr>
+<tr class="separator:a831783cd0440b129a922f115a6f32e3e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af24a9daa90f871e42d524f4e89f7a2a8"><td class="memItemLeft" align="right" valign="top"><a id="af24a9daa90f871e42d524f4e89f7a2a8"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>do_length</b> (std::mbstate_t &amp;, const char *from, const char *from_end, size_t max) const override</td></tr>
+<tr class="separator:af24a9daa90f871e42d524f4e89f7a2a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af61c5bf6ec27875f8c543c012c858bd6"><td class="memItemLeft" align="right" valign="top"><a id="af61c5bf6ec27875f8c543c012c858bd6"></a>
+std::codecvt_base::result&#160;</td><td class="memItemRight" valign="bottom"><b>do_in</b> (std::mbstate_t &amp;, const char *from, const char *from_end, const char *&amp;from_next, uchar *to, uchar *to_end, uchar *&amp;to_next) const override</td></tr>
+<tr class="separator:af61c5bf6ec27875f8c543c012c858bd6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a94f8b95efb54bad981a9664bf878b678"><td class="memItemLeft" align="right" valign="top"><a id="a94f8b95efb54bad981a9664bf878b678"></a>
+std::codecvt_base::result&#160;</td><td class="memItemRight" valign="bottom"><b>do_out</b> (std::mbstate_t &amp;, const uchar *from, const uchar *from_end, const uchar *&amp;from_next, char *to, char *to_end, char *&amp;to_next) const override</td></tr>
+<tr class="separator:a94f8b95efb54bad981a9664bf878b678"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><h3>template&lt;typename CharType, typename CodecvtImpl&gt;<br />

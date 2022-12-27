@@ -16,7 +16,7 @@
 #endif
 
 #include <memory>
-#include <boost/noncopyable.hpp>
+#include <boost/core/noncopyable.hpp>
 
 #include <boost/mpl/int.hpp>
 

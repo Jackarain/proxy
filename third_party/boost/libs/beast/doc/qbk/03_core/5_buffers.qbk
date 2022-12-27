@@ -96,6 +96,16 @@ transferred.
     This function converts a buffer sequence to a `std::string`. It can
     be used for diagnostic purposes and tests.
 ]]
+[[
+ [link beast.ref.boost__beast__buffer_ref `buffer_ref`]
+ [link beast.ref.boost__beast__ref `ref`]
+
+][
+    This function converts a beast buffer, that is to be passed by reference,
+    into a buffer reference, that can be passed by value into asio functions.
+
+    It implements the __DynamicBuffer__v2__ concept.
+]]
 ]
 
 The __DynamicBuffer__ concept introduced in __Asio__ models a buffer
@@ -155,6 +165,31 @@ set of additional implementations of the dynamic buffer concept:
     The storage for the sequences are kept in the class; the implementation
     does not perform heap allocations.
 ]]
+]
+
+The buffers provide different guarantees regarding the allocated memory; stable means that existing
+mutable and const_buffers obtained by calling `data` or `prepare`, will remain valid.
+
+Note that copies always requires a new call to `data` and `prepare`.`
+
+[table Memory stability
+[[Name] [Allocation] [buffer sequence length] [Max Size] [Movable] [prepare/commit] [consume]]
+[
+    [[link beast.ref.boost__beast__flat_buffer `flat_buffer`]]
+    [dynamic] [1] [dynamic] [yes] [invalidating] [invalidating]
+]
+[
+    [[link beast.ref.boost__beast__multi_buffer `multi_buffer`]]
+    [dynamic] [dynamic] [stable] [yesy] [invalidating]
+]
+[
+    [[link beast.ref.boost__beast__flat_static_buffer `flat_static_buffer`]]
+    [static] [1] [static] [no] [invalidating]
+]
+[
+    [[link beast.ref.boost__beast__static_buffer `static_buffer`]]
+    [static] [1-2] [static] [no] [may invalidate]
+]
 ]
 
 These two functions facilitate buffer interoperability with standard

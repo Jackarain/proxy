@@ -5,15 +5,14 @@
 // https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/locale.hpp>
-#include <iostream>
-
 #include <ctime>
+#include <iostream>
 
 int main()
 {
     using namespace boost::locale;
     generator gen;
-    std::locale loc=gen("");
+    std::locale loc = gen("");
     // Create system default locale
 
     std::locale::global(loc);
@@ -22,8 +21,7 @@ int main()
     std::cout.imbue(loc);
     // Set as default locale for output
 
-    std::cout << format("Today {1,date} at {1,time} we had run our first localization example") % time(0)
-              << std::endl;
+    std::cout << format("Today {1,date} at {1,time} we had run our first localization example") % time(0) << std::endl;
 
     std::cout << "This is how we show numbers in this locale " << as::number << 103.34 << std::endl;
     std::cout << "This is how we show currency in this locale " << as::currency << 103.34 << std::endl;
@@ -33,6 +31,4 @@ int main()
     std::cout << "This is lower case " << to_lower("Hello World!") << std::endl;
     std::cout << "This is title case " << to_title("Hello World!") << std::endl;
     std::cout << "This is fold case " << fold_case("Hello World!") << std::endl;
-
 }
-

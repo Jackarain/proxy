@@ -118,11 +118,11 @@
     <span class="identifier">empty_value</span><span class="special">()</span> <span class="special">=</span> <span class="keyword">default</span><span class="special">;</span>
 
     <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span><span class="special">...</span> <span class="identifier">Args</span><span class="special">&gt;</span>
-    <span class="identifier">empty_value</span><span class="special">(</span><span class="identifier">empty_init_t</span><span class="special">,</span> <span class="identifier">Args</span><span class="special">&amp;&amp;...</span> <span class="identifier">args</span><span class="special">);</span>
+    <span class="identifier">constepxr</span> <span class="identifier">empty_value</span><span class="special">(</span><span class="identifier">empty_init_t</span><span class="special">,</span> <span class="identifier">Args</span><span class="special">&amp;&amp;...</span> <span class="identifier">args</span><span class="special">);</span>
 
-    <span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">get</span><span class="special">()</span> <span class="keyword">const</span> <span class="keyword">noexcept</span><span class="special">;</span>
+    <span class="identifier">constepxr</span> <span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">get</span><span class="special">()</span> <span class="keyword">const</span> <span class="keyword">noexcept</span><span class="special">;</span>
 
-    <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">get</span><span class="special">()</span> <span class="keyword">noexcept</span><span class="special">;</span>
+    <span class="identifier">constepxr</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">get</span><span class="special">()</span> <span class="keyword">noexcept</span><span class="special">;</span>
 <span class="special">};</span>
 
 <span class="keyword">inline</span> <span class="keyword">constexpr</span> <span class="identifier">empty_init_t</span> <span class="identifier">empty_init</span><span class="special">{</span> <span class="special">};</span>
@@ -173,15 +173,12 @@
 <div class="variablelist">
 <p class="title"><b></b></p>
 <dl class="variablelist">
-<dt><span class="term"><code class="computeroutput"><span class="identifier">empty_value</span><span class="special">()</span>
-            <span class="special">=</span> <span class="keyword">default</span><span class="special">;</span></code></span></dt>
+<dt><span class="term"><code class="computeroutput"><span class="identifier">constepxr</span> <span class="identifier">empty_value</span><span class="special">()</span> <span class="special">=</span> <span class="keyword">default</span><span class="special">;</span></code></span></dt>
 <dd><p>
                 Default initialize the value
               </p></dd>
 <dt><span class="term"><code class="computeroutput"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span><span class="special">...</span> <span class="identifier">Args</span><span class="special">&gt;</span>
-            <span class="identifier">empty_value</span><span class="special">(</span><span class="identifier">empty_init_t</span><span class="special">,</span>
-            <span class="identifier">Args</span><span class="special">&amp;&amp;...</span>
-            <span class="identifier">args</span><span class="special">);</span></code></span></dt>
+            <span class="identifier">constepxr</span> <span class="identifier">empty_value</span><span class="special">(</span><span class="identifier">empty_init_t</span><span class="special">,</span> <span class="identifier">Args</span><span class="special">&amp;&amp;...</span> <span class="identifier">args</span><span class="special">);</span></code></span></dt>
 <dd><p>
                 Initialize the value with <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">forward</span><span class="special">&lt;</span><span class="identifier">Args</span><span class="special">&gt;(</span><span class="identifier">args</span><span class="special">)...</span></code>
               </p></dd>
@@ -196,13 +193,14 @@
 <div class="variablelist">
 <p class="title"><b></b></p>
 <dl class="variablelist">
-<dt><span class="term"><code class="computeroutput"><span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">get</span><span class="special">()</span> <span class="keyword">const</span> <span class="keyword">noexcept</span><span class="special">;</span></code></span></dt>
+<dt><span class="term"><code class="computeroutput"><span class="identifier">constepxr</span> <span class="keyword">const</span>
+            <span class="identifier">T</span><span class="special">&amp;</span>
+            <span class="identifier">get</span><span class="special">()</span>
+            <span class="keyword">const</span> <span class="keyword">noexcept</span><span class="special">;</span></code></span></dt>
 <dd><p>
                 Returns the value
               </p></dd>
-<dt><span class="term"><code class="computeroutput"><span class="identifier">T</span><span class="special">&amp;</span>
-            <span class="identifier">get</span><span class="special">()</span>
-            <span class="keyword">noexcept</span><span class="special">;</span></code></span></dt>
+<dt><span class="term"><code class="computeroutput"><span class="identifier">constepxr</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">get</span><span class="special">()</span> <span class="keyword">noexcept</span><span class="special">;</span></code></span></dt>
 <dd><p>
                 Returns the value
               </p></dd>

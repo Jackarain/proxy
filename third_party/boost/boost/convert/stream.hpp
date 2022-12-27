@@ -30,13 +30,13 @@
         typename mpl::has_key<              \
             argument_pack, cnv::parameter::type::param_name>::type());
 
-namespace boost::cnv
+namespace boost { namespace cnv
 {
     template<class Char> struct basic_stream;
 
     using cstream = boost::cnv::basic_stream<char>;
     using wstream = boost::cnv::basic_stream<wchar_t>;
-}
+}}
 
 template<class Char>
 struct boost::cnv::basic_stream

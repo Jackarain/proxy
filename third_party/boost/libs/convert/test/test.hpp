@@ -7,7 +7,7 @@
 
 #include <boost/convert/detail/config.hpp>
 
-#if defined(BOOST_CONVERT_IS_NOT_SUPPORTED)
+#if !defined(BOOST_CONVERT_CXX14)
 #else
 
 #include <boost/make_default.hpp>

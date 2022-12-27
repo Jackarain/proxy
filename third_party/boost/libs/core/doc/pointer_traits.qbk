@@ -124,7 +124,7 @@ also not defined (`pointer_traits` is SFINAE-friendly).
 [[`static pointer pointer_traits::pointer_to(element_type& v);`]
 [[variablelist
 [[Remark]
-[If `element_type` is a void type, or if `T::pointer_to(v)` is not well formed,
+[If `element_type` is a void type, or if `T::pointer_to(v)` is not well-formed,
   this member is not defined.]]
 [[Returns]
 [A pointer to `v` obtained by calling `T::pointer_to(v)`.]]]]]
@@ -165,7 +165,7 @@ also not defined (`pointer_traits` is SFINAE-friendly).
 
 [endsect]
 
-[section Acknowledgments]
+[section Acknowledgements]
 
 Glen Fernandes implemented `pointer_traits` and `to_address` with reviews and
 guidance from Peter Dimov.

@@ -336,25 +336,33 @@ capacity() const noexcept ->
 
 auto
 object::
-at(string_view key) ->
+at(string_view key) & ->
     value&
 {
     auto it = find(key);
     if(it == end())
         detail::throw_out_of_range(
-            BOOST_JSON_SOURCE_POS);
+            BOOST_CURRENT_LOCATION);
     return it->value();
 }
 
 auto
 object::
-at(string_view key) const ->
+at(string_view key) && ->
+    value&&
+{
+    return std::move( at(key) );
+}
+
+auto
+object::
+at(string_view key) const& ->
     value const&
 {
     auto it = find(key);
     if(it == end())
         detail::throw_out_of_range(
-            BOOST_JSON_SOURCE_POS);
+            BOOST_CURRENT_LOCATION);
     return it->value();
 }
 
@@ -492,7 +500,7 @@ insert(
     if(n > max_size() - n0)
         detail::throw_length_error(
             "object too large",
-            BOOST_JSON_SOURCE_POS);
+            BOOST_CURRENT_LOCATION);
     reserve(n0 + n);
     revert_insert r(*this);
     while(first != last)

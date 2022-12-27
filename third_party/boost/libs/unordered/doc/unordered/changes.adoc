@@ -6,6 +6,11 @@
 :github-pr-url: https://github.com/boostorg/unordered/pull
 :cpp: C++
 
+== Release 1.81.0 - Major update
+
+* Added fast containers `boost::unordered_flat_map` and `boost::unordered_flat_set`
+  based on open addressing.
+
 == Release 1.80.0 - Major update
 
 * Refactor internal implementation to be dramatically faster

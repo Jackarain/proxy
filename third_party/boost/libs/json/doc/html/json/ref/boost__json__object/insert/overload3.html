@@ -43,10 +43,14 @@
             <span class="phrase"><a name="json.ref.boost__json__object.insert.overload3.description"></a></span><a class="link" href="overload3.html#json.ref.boost__json__object.insert.overload3.description">Description</a>
           </h6>
 <p>
-            The elements in the initializer list whose keys are unique are inserted
-            one at a time, in order. If there are elements with duplicate keys; that
-            is, if multiple elements in the range have keys that compare equal, only
-            the first equivalent element will be inserted.
+            The elements in the initializer list are inserted one at a time, in order.
+            Any element with key that is a duplicate of a key already present in
+            container will be skipped. This also means, that if there are two keys
+            within the initializer list that are equal to each other, only the first
+            will be inserted. If the size necessary to accomodate elements from the
+            initializer list exceeds <a class="link" href="../capacity.html" title="object::capacity"><code class="computeroutput"><span class="identifier">capacity</span><span class="special">()</span></code></a>,
+            a rehashing can occur. In that case all iterators and references are
+            invalidated. Otherwise, they are not affected.
           </p>
 <h6>
 <a name="json.ref.boost__json__object.insert.overload3.h2"></a>
@@ -61,7 +65,7 @@
             Safety</a>
           </h6>
 <p>
-            Strong guarantee. Calls to <code class="computeroutput"><span class="identifier">memory_resource</span><span class="special">::</span><span class="identifier">allocate</span></code>
+            Basic guarantee. Calls to <code class="computeroutput"><span class="identifier">memory_resource</span><span class="special">::</span><span class="identifier">allocate</span></code>
             may throw.
           </p>
 <h6>
@@ -101,7 +105,7 @@
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<p>
+<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>

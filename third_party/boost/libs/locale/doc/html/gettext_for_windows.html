@@ -68,23 +68,23 @@ $(document).ready(function(){initNavTree('gettext_for_windows.html','');});
 <div class="title">Using Gettext Tools on Windows </div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p>In order to get the Gettext tools like <code>msgfmt</code>, <code>msgmerge</code>, <code>xgettext</code> for Windows you have basically several options:</p>
+<div class="textblock"><p>In order to get the Gettext tools like <code>msgfmt</code>, <code>msgmerge</code>, <code>xgettext</code> for Windows you have several options:</p>
 <ul>
-<li>Download the package from <a href="http://cppcms.sourceforge.net">CppCMS</a> project (where the Boost.Locale was developed originally)</li>
-<li>Download the a set of packages from MinGW project</li>
+<li>Download the package from <a href="http://cppcms.sourceforge.net">CppCMS</a> (where the Boost.Locale was developed originally)</li>
+<li>Download the a set of packages from the MinGW project</li>
 <li>Build it on your own</li>
 <li>Use Cygwin's packages</li>
 </ul>
 <h1><a class="anchor" id="gettext_for_windows_cppcms"></a>
-Getting gettext utilities from CppCMS project</h1>
-<p>Boost.Locale was developed for needs of <a href="http://cppcms.sourceforge.net">CppCMS</a> project and thus CppCMS hosts a convince package for Windows users of pre-build, statically liked <code>gettext</code> runtime utilities like <code>xgettext</code>, <code>msgfmt</code>, etc.</p>
-<p>So you can download a zip file <code>gettext-tools-static-XXX.zip</code> from a CppCMS downloads page under <a href="https://sourceforge.net/projects/cppcms/files/boost_locale/gettext_for_windows/">boost_locale/gettext_for_windows</a>.</p>
+Getting Gettext Utilities from CppCMS</h1>
+<p>Boost.Locale was developed for needs of <a href="http://cppcms.sourceforge.net">CppCMS</a> and thus CppCMS hosts a convenience package for Windows users of pre-built, statically liked <code>gettext</code> runtime utilities like <code>xgettext</code>, <code>msgfmt</code>, etc.</p>
+<p>You can download a zip file <code>gettext-tools-static-XXX.zip</code> from the CppCMS downloads page under <a href="https://sourceforge.net/projects/cppcms/files/boost_locale/gettext_for_windows/">boost_locale/gettext_for_windows</a>.</p>
 <p>Extract the file and use the executable files inside.</p>
 <h1><a class="anchor" id="gettext_for_windows_mingw"></a>
-Getting Gettext via MinGW project</h1>
+Getting Gettext via MinGW</h1>
 <p>MinGW project provides GNU tools for Windows, including GNU compilers and various runtime utilities. Thus you can always install full MinGW distribution including gettext tools. However, if you a want minimalistic runtime version that allows you to extract messages and create catalogs you need to download several packages manually.</p>
-<p>In order to install Gettext via MinGW distributing you need to download, a GCC's runtime, iconv library and gettext itself.</p>
-<p>So visit a <a href="https://sourceforge.net/projects/mingw/files/">downloads page</a> of MinGW project and download following files (chose the latest versions of each package):</p>
+<p>In order to install Gettext via MinGW you need to download a GCC runtime, an iconv library and Gettext itself.</p>
+<p>So visit MinGW's <a href="https://sourceforge.net/projects/mingw/files/">downloads page</a> and download the following files (chose the latest versions of each package):</p>
 <ul>
 <li>From: <code>MinGW/BaseSystem/GCC/Version4/gcc-xxx/</code> <br />
  File: <code>libgcc-xxx-mingw32-dll-1.tar.lzma</code> </li>
@@ -99,17 +99,17 @@ Getting Gettext via MinGW project</h1>
 <li><code>iconv:</code> <code>libiconv-1.13.1-1-mingw32-dll-2.tar.lzma</code> and <code>libcharset-1.13.1-1-mingw32-dll-1.tar.lzma</code> </li>
 <li><code>gettext:</code> <code>libintl-0.17-1-mingw32-dll-8.tar.lzma</code>, <code>libgettextpo-0.17-1-mingw32-dll-0.tar.lzma</code> and <code>gettext-0.17-1-mingw32-dev.tar.lzma</code>.</li>
 </ul>
-<p>After you download the packages, extract all the files to the same directory using tools like <code>7zip</code> and you'll get all the executables and <code>dll's</code> you need under <code>bin</code> subdirectory.</p>
-<dl class="section note"><dt>Note</dt><dd>the version on MinGW site is slightly outdated (0.17.1) while gettext provides currently 0.18.1.</dd></dl>
+<p>After you download the packages, extract all the files to the same directory using tools like <code>7zip</code> and you'll get all the executables and <code>dll's</code> you need under the <code>bin</code> subdirectory.</p>
+<dl class="section note"><dt>Note</dt><dd>The version on MinGW site is slightly outdated (0.17.1) while Gettext provides currently 0.18.1.</dd></dl>
 <h1><a class="anchor" id="gettext_for_windows_build"></a>
-Building latest version on your own.</h1>
-<p>You can build your own version of GNU Gettext using MinGW environment, you'll need to have up-to-date gcc compiler and the shell, you'll need to install iconv first and then build a gettext with it.</p>
-<p>Basic and simplest way would be to open a MinGW shell</p>
+Building the latest version on your own.</h1>
+<p>You can build your own version of GNU Gettext using the MinGW environment. You'll need to have an up-to-date gcc compiler and the shell. You'll need to install iconv first and then build Gettext with it.</p>
+<p>The simplest way would be to open a MinGW shell.</p>
 <p>Build <code>iconv:</code> </p>
-<div class="fragment"><div class="line">cd libiconv-SOMEVERSION</div><div class="line">./configure --prefix=c:/mygettext --disable-shared</div><div class="line">make</div><div class="line">make install</div><div class="line">cd ..</div><div class="line">cd <a class="code" href="group__message.html#ga1121f0001ff0f3b9455390b6412c6a2c">gettext</a>-SOMEVERSION</div><div class="line">./configure --prefix=c:/mygettext --disable-shared --with-libiconv-prefix=c:/mygettext</div><div class="line">make</div><div class="line">make install</div></div><!-- fragment --><p>And now you have in <code>c:\mygettext\bin</code> all appropriate executable files to use.</p>
+<div class="fragment"><div class="line">cd libiconv-SOMEVERSION</div><div class="line">./configure --prefix=c:/mygettext --disable-shared</div><div class="line">make</div><div class="line">make install</div><div class="line">cd ..</div><div class="line">cd <a class="code" href="group__message.html#ga501ad3a1fbaee5f3544b62df572aa889">gettext</a>-SOMEVERSION</div><div class="line">./configure --prefix=c:/mygettext --disable-shared --with-libiconv-prefix=c:/mygettext</div><div class="line">make</div><div class="line">make install</div></div><!-- fragment --><p>And now you have all appropriate executable files ready to use in <code>c:\mygettext\bin</code>.</p>
 <h1><a class="anchor" id="gettext_for_windows_cygwin"></a>
 Using Cygwin</h1>
-<p>If you already have Cygwin - just use gettext tools provided with it. </p>
+<p>If you already have Cygwin - just use the Gettext tools provided with it. </p>
 </div></div><!-- PageDoc -->
 </div><!-- contents -->
 </div><!-- doc-content -->

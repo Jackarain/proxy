@@ -58,6 +58,7 @@ phoenix/modules/bind/compatibility_with_boost_bind.html
 phoenix/modules/stl.html
 phoenix/modules/stl/container.html
 phoenix/modules/stl/algorithm.html
+phoenix/modules/stl/tuple.html
 phoenix/inside.html
 phoenix/inside/actor.html
 phoenix/inside/expression.html

@@ -31,9 +31,7 @@
         presents a view of its underlying sequence given a unary function object
         or function pointer. The binary version of <code class="computeroutput"><span class="identifier">transform_view</span></code>
         presents a view of 2 underlying sequences, given a binary function object
-        or function pointer. The <code class="computeroutput"><span class="identifier">transform_view</span></code>
-        inherits the traversal characteristics (see <a class="link" href="../sequence/concepts.html#fusion.sequence.concepts.traversal">Sequence
-        Traversal Concept</a>) of its underlying sequence or sequences.
+        or function pointer.
       </p>
 <h5>
 <a name="fusion.view.transform_view.h0"></a>
@@ -174,14 +172,21 @@
         <span class="phrase"><a name="fusion.view.transform_view.model_of"></a></span><a class="link" href="transform_view.html#fusion.view.transform_view.model_of">Model
         of</a>
       </h5>
-<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
             <a class="link" href="../sequence/concepts/forward_sequence.html" title="Forward Sequence">Forward Sequence</a>,
             <a class="link" href="../sequence/concepts/bidirectional_sequence.html" title="Bidirectional Sequence">Bidirectional
             Sequence</a> or <a class="link" href="../sequence/concepts/random_access_sequence.html" title="Random Access Sequence">Random
             Access Sequence</a> depending on the traversal characteristics (see
             <a class="link" href="../sequence/concepts.html#fusion.sequence.concepts.traversal">Sequence Traversal
-            Concept</a>) of its underlying sequence.
-          </li></ul></div>
+            Concept</a>) of its underlying sequence or sequences.
+          </li>
+<li class="listitem">
+            <a class="link" href="../sequence/concepts/associative_sequence.html" title="Associative Sequence">Associative
+            Sequence</a> if underlying sequence implements the <a class="link" href="../sequence/concepts/associative_sequence.html" title="Associative Sequence">Associative
+            Sequence</a> model(available only with unary version of <code class="computeroutput"><span class="identifier">transform_view</span></code>).
+          </li>
+</ul></div>
 <div class="variablelist">
 <p class="title"><b>Notation</b></p>
 <dl class="variablelist">
@@ -232,11 +237,7 @@
       </h5>
 <p>
         Semantics of an expression is defined only where it differs from, or is not
-        defined in <a class="link" href="../sequence/concepts/forward_sequence.html" title="Forward Sequence">Forward
-        Sequence</a>, <a class="link" href="../sequence/concepts/bidirectional_sequence.html" title="Bidirectional Sequence">Bidirectional
-        Sequence</a> or <a class="link" href="../sequence/concepts/random_access_sequence.html" title="Random Access Sequence">Random
-        Access Sequence</a> depending on the traversal characteristics (see <a class="link" href="../sequence/concepts.html#fusion.sequence.concepts.traversal">Sequence Traversal Concept</a>)
-        of its underlying sequence or sequences.
+        defined in the implemented models.
       </p>
 <div class="informaltable"><table class="table">
 <colgroup>

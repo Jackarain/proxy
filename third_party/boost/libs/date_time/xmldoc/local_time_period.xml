@@ -328,7 +328,7 @@ mar_mst.shift(hours(48));
           <!-- TODO: the streaming operators have not bee changed from time_period to local_time_period
           <row>
 	    <entry valign="top" morerows="1"><screen>operator&lt;&lt;</screen></entry>
-            <entry>Output streaming operator for time duration. Uses facet to output [date time_of_day/date time_of_day]. The default is format is <code>[YYYY-mmm-DD hh:mm:ss.fffffffff/YYYY-mmm-DD hh:mm:ss.fffffffff]</code> string where <code>mmm</code> is 3 char month name and the fractional seconds are left out when zero.</entry>
+            <entry>Output streaming operator for time duration. Uses facet to output [date time_of_day/date time_of_day]. The default is format is <code>[YYYY-mmm-DD hh:mm:ss.fffffffff/YYYY-mmm-DD hh:mm:ss.fffffffff]</code> string where <code>mmm</code> is 3 char month name and the fractional seconds are only included if non-zero.</entry>
 	  </row>
 	  <row>
             <entry><screen>[2002-Jan-01 01:25:10.000000001/ \
@@ -337,7 +337,7 @@ mar_mst.shift(hours(48));
 
 	  <row>
 	    <entry valign="top" morerows="1"><screen>operator&gt;&gt;</screen></entry>
-            <entry>Input streaming operator for time duration. Uses facet to read [date time_of_day/date time_of_day]. The default is format is <code>[YYYY-mmm-DD hh:mm:ss.fffffffff/YYYY-mmm-DD hh:mm:ss.fffffffff]</code> string where <code>mmm</code> is 3 char month name and the fractional seconds are left out when zero.</entry>
+            <entry>Input streaming operator for time duration. Uses facet to read [date time_of_day/date time_of_day]. The default is format is <code>[YYYY-mmm-DD hh:mm:ss.fffffffff/YYYY-mmm-DD hh:mm:ss.fffffffff]</code> string where <code>mmm</code> is 3 char month name and the fractional seconds are only included if non-zero.</entry>
 	  </row>
 	  <row>
             <entry><screen>[2002-Jan-01 01:25:10.000000001/ \

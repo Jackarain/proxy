@@ -65,7 +65,12 @@
             </li>
 </ul></div>
 <p>
-          In all cases, the conversion is done by calling an overload of <code class="computeroutput"><span class="identifier">tag_invoke</span></code> found by argument-dependent
+          Out of the box the function supports types satisfying <a href="https://en.cppreference.com/w/cpp/named_req/SequenceContainer" target="_top"><span class="emphasis"><em>SequenceContainer</em></span></a>,
+          arrays, arithmetic types, <code class="computeroutput"><span class="keyword">bool</span></code>,
+          <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">tuple</span></code>, <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span></code>,
+          <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">variant</span></code>, <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">optional</span></code>,
+          <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">monostate</span></code>, and <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">nullopt_t</span></code>.
+          Conversion of other types is done by calling an overload of <code class="computeroutput"><span class="identifier">tag_invoke</span></code> found by argument-dependent
           lookup. Its signature should be similar to:
         </p>
 <pre class="programlisting"><span class="identifier">T</span> <span class="identifier">tag_invoke</span><span class="special">(</span> <span class="identifier">value_to_tag</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;,</span> <span class="identifier">value</span> <span class="special">);</span>
@@ -182,7 +187,7 @@
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<p>
+<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>

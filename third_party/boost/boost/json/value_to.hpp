@@ -1,6 +1,7 @@
 //
 // Copyright (c) 2019 Vinnie Falco (vinnie.falco@gmail.com)
 // Copyright (c) 2020 Krystian Stasiowski (sdkrystian@gmail.com)
+// Copyright (c) 2022 Dmitry Arkhipov (grisumbras@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -11,26 +12,9 @@
 #ifndef BOOST_JSON_VALUE_TO_HPP
 #define BOOST_JSON_VALUE_TO_HPP
 
-#include <boost/json/detail/config.hpp>
-#include <boost/json/value.hpp>
 #include <boost/json/detail/value_to.hpp>
 
 BOOST_JSON_NS_BEGIN
-
-/** Customization point tag type.
-
-    This tag type is used by the function
-    @ref value_to to select overloads
-    of `tag_invoke`.
-
-    @note This type is empty; it has no members.
-
-    @see @ref value_from, @ref value_from_tag, @ref value_to,
-    <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p1895r0.pdf">
-        tag_invoke: A general pattern for supporting customisable functions</a>
-*/
-template<class T>
-struct value_to_tag;
 
 /** Convert a @ref value to an object of type `T`.
 
@@ -43,9 +27,13 @@ struct value_to_tag;
 
     @li a user-provided overload of `tag_invoke`.
 
-    In all cases, the conversion is done by calling
-    an overload of `tag_invoke` found by argument-dependent
-    lookup. Its signature should be similar to:
+    Out of the box the function supports types satisfying
+    <a href="https://en.cppreference.com/w/cpp/named_req/SequenceContainer"><em>SequenceContainer</em></a>,
+    arrays, arithmetic types, `bool`, `std::tuple`, `std::pair`,
+    `std::variant`, `std::optional`, `std::monostate`, and `std::nullopt_t`.
+
+    Conversion of other types is done by calling an overload of `tag_invoke`
+    found by argument-dependent lookup. Its signature should be similar to:
 
     @code
     T tag_invoke( value_to_tag<T>, value );
@@ -78,8 +66,70 @@ T
 value_to(const value& jv)
 {
     BOOST_STATIC_ASSERT(! std::is_reference<T>::value);
+    using bare_T = detail::remove_cvref<T>;
+    BOOST_STATIC_ASSERT(detail::conversion_round_trips<
+        bare_T, detail::value_to_conversion>::value);
+    using impl = detail::value_to_implementation<bare_T>;
+    return detail::value_to_impl(value_to_tag<bare_T>(), jv, impl());
+}
+
+/** Convert a @ref value to a @ref result of `T`.
+
+    This function attempts to convert a @ref value
+    to `result<T>` using
+
+    @li one of @ref value's accessors, or
+
+    @li a library-provided generic conversion, or
+
+    @li a user-provided overload of `tag_invoke`.
+
+    Out of the box the function supports types satisfying
+    <a href="https://en.cppreference.com/w/cpp/named_req/SequenceContainer"><em>SequenceContainer</em></a>,
+    arrays, arithmetic types, `bool`, `std::tuple`, `std::pair`,
+    `std::variant`, `std::optional`, `std::monostate`, and `std::nullopt_t`.
+
+    Conversion of other types is done by calling an overload of `tag_invoke`
+    found by argument-dependent lookup. Its signature should be similar to:
+
+    @code
+    result<T> tag_invoke( try_value_to_tag<T>, value const& );
+    @endcode
+
+    If an error occurs during conversion, the result will store the error code
+    associated with the error. If an exception is thrown, the function will
+    attempt to retrieve the associated error code and return it, otherwise it
+    will return `error::exception`.
+
+    @par Constraints
+    @code
+    ! std::is_reference< T >::value
+    @endcode
+
+    @par Exception Safety
+    Strong guarantee.
+
+    @tparam T The type to convert to.
+
+    @param jv The @ref value to convert.
+
+    @returns `jv` converted to `result<T>`.
+
+    @see @ref value_to_tag, @ref value_to, @ref value_from,
+    <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p1895r0.pdf">
+        tag_invoke: A general pattern for supporting customisable functions</a>
+*/
+template<class T>
+typename result_for<T, value>::type
+try_value_to(const value& jv)
+{
+    BOOST_STATIC_ASSERT(! std::is_reference<T>::value);
+    using bare_T = detail::remove_cvref<T>;
+    BOOST_STATIC_ASSERT(detail::conversion_round_trips<
+        bare_T, detail::value_to_conversion>::value);
+    using impl = detail::value_to_implementation<bare_T>;
     return detail::value_to_impl(
-        value_to_tag<typename std::remove_cv<T>::type>(), jv);
+        try_value_to_tag<bare_T>(), jv, impl());
 }
 
 /** Convert a @ref value to an object of type `T`.
@@ -113,18 +163,9 @@ value_to(U const& jv) = delete;
 template<class T>
 using has_value_to = __see_below__;
 #else
-template<class T, class>
-struct has_value_to
-    : std::false_type { };
-
 template<class T>
-struct has_value_to<T, detail::void_t<decltype(
-    detail::value_to_impl(
-        value_to_tag<detail::remove_cvref<T>>(),
-        std::declval<const value&>())),
-    typename std::enable_if<
-        ! std::is_reference<T>::value>::type
-    > > : std::true_type { };
+using has_value_to = detail::can_convert<
+    detail::remove_cvref<T>, detail::value_to_conversion>;
 #endif
 
 BOOST_JSON_NS_END

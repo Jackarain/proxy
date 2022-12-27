@@ -12,6 +12,11 @@
 #pragma warning(disable:4245) // signed/unsigned mismatch
 #endif
 
+#if defined(__GNUC__) && __GNUC__ == 8
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wsign-conversion"
+#endif
+
 namespace HASH_TEST_CAT(CONTAINER_TYPE, _tests)
 {
     template <class T>
@@ -67,6 +72,10 @@ namespace HASH_TEST_CAT(CONTAINER_TYPE, _tests)
         integer_tests((CONTAINER_TYPE<double>*) 0);
     }
 }
+
+#if defined(__GNUC__) && __GNUC__ == 8
+# pragma GCC diagnostic pop
+#endif
 
 #if defined(BOOST_MSVC)
 #pragma warning(pop)

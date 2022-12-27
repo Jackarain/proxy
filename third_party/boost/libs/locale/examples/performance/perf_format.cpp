@@ -4,17 +4,17 @@
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
-#include <iostream>
-#include <string>
-#include <set>
-#include <ctime>
 #include <boost/locale.hpp>
+#include <ctime>
+#include <iostream>
+#include <set>
+#include <string>
 
 using namespace boost::locale;
 
-int main(int argc,char **argv)
+int main(int argc, char** argv)
 {
-    if(argc!=2) {
+    if(argc != 2) {
         std::cerr << "Usage backend locale\n";
         return 1;
     }
@@ -24,13 +24,12 @@ int main(int argc,char **argv)
     std::locale::global(gen(argv[2]));
     /// Set global locale to requested
 
-    for(int i=0;i<100000;i++) {
+    for(int i = 0; i < 100000; i++) {
         std::ostringstream ss;
-        for(int j=0;j<5;j++) {
+        for(int j = 0; j < 5; j++) {
             ss << boost::locale::as::datetime << std::time(0) << " " << boost::locale::as::number << 13456.345 << "\n";
         }
-        if(i==0)
+        if(i == 0)
             std::cout << ss.str() << std::endl;
     }
-
 }

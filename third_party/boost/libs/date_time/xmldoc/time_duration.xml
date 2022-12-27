@@ -479,7 +479,7 @@ td3.is_special(); // --> false</screen></entry>
 	<tbody>
           <row>
 	    <entry valign="top" morerows="1"><screen>std::string to_simple_string(time_duration)</screen></entry>
-            <entry>To <code>HH:MM:SS.fffffffff</code> were <code>fff</code> is fractional seconds that are only included if non-zero.</entry>
+            <entry>To <code>HH:MM:SS.fffffffff</code> where <code>fffffffff</code> is fractional seconds that are only included if non-zero.</entry>
 	  </row>
 	  <row>
 	    <entry><screen>10:00:01.123456789</screen></entry>
@@ -487,10 +487,10 @@ td3.is_special(); // --> false</screen></entry>
 
 	  <row>
 	    <entry valign="top" morerows="1"><screen>std::string to_iso_string(time_duration)</screen></entry>
-            <entry>Convert to form <code>HHMMSS,fffffffff</code>.</entry>
+            <entry>Convert to form <code>HHMMSS.fffffffff</code> where the fractional seconds are only included if non-zero.</entry>
 	  </row>
           <row>
-	    <entry><screen>100001,123456789</screen></entry>
+	    <entry><screen>100001.123456789</screen></entry>
 	  </row>
 	</tbody>
       </tgroup>

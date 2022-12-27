@@ -130,10 +130,10 @@
         functions are described in <a class="link" href="../detailed/utilities.html#log.detailed.utilities.setup.convenience" title="Convenience functions">this</a>
         section.
       </p>
-<div class="note"><table border="0" summary="Note">
+<div class="tip"><table border="0" summary="Tip">
 <tr>
-<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../../doc/src/images/note.png"></td>
-<th align="left">Note</th>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="../../../../../../doc/src/images/tip.png"></td>
+<th align="left">Tip</th>
 </tr>
 <tr><td align="left" valign="top"><p>
           You can register more than one sink. Each sink will receive and process
@@ -198,9 +198,9 @@
       </p>
 <p>
         The <a class="link" href="../detailed/sink_backends.html#log.detailed.sink_backends.text_ostream" title="Text stream backend"><code class="computeroutput"><span class="identifier">text_ostream_backend</span></code></a> class writes
-        formatted log records into STL-compatible streams. We have used a file stream
-        above but we could have used any type of stream. For example, adding output
-        to console could look as follows:
+        formatted log records into standard library-compatible streams. We have used
+        a file stream above but we could have used any type of stream. For example,
+        adding output to console could look as follows:
       </p>
 <pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">core</span><span class="special">/</span><span class="identifier">null_deleter</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 
@@ -240,17 +240,17 @@
 <p>
         The last thing worth noting here is the <code class="computeroutput"><span class="identifier">locked_backend</span></code>
         member function call to access the sink backend. It is used to get thread-safe
-        access to the backend and is provided by all sink frontends. This function
-        returns a smart-pointer to the backend and as long as it exists the backend
-        is locked (which means even if another thread tries to log and the log record
-        is passed to the sink, it will not be logged until you release the backend).
-        The only exception is the <a class="link" href="../detailed/sink_frontends.html#log.detailed.sink_frontends.unlocked" title="Unlocked sink frontend"><code class="computeroutput"><span class="identifier">unlocked_sink</span></code></a> frontend which does
+        exclusive access to the backend and is provided by all sink frontends. This
+        function returns a smart-pointer to the backend and as long as it exists
+        the backend is locked (which means even if another thread tries to log and
+        the log record is passed to the sink, it will not be logged until you release
+        the backend). The only exception is the <a class="link" href="../detailed/sink_frontends.html#log.detailed.sink_frontends.unlocked" title="Unlocked sink frontend"><code class="computeroutput"><span class="identifier">unlocked_sink</span></code></a> frontend which does
         not synchronize at all and simply returns an unlocked pointer to the backend.
       </p>
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2007-2021 Andrey Semashev<p>
+<td align="right"><div class="copyright-footer">Copyright © 2007-2022 Andrey Semashev<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>).
       </p>

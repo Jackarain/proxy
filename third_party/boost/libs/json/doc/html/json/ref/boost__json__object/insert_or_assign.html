@@ -27,7 +27,7 @@
 <a name="json.ref.boost__json__object.insert_or_assign"></a><a class="link" href="insert_or_assign.html" title="object::insert_or_assign">object::insert_or_assign</a>
 </h5></div></div></div>
 <p>
-          <a class="indexterm" name="idm26236"></a>
+          <a class="indexterm" name="idm27980"></a>
         </p>
 <p>
           Insert an element or assign to the current element if the key already exists.
@@ -49,14 +49,12 @@
         </h6>
 <p>
           If the key equivalent to <code class="computeroutput"><span class="identifier">key</span></code>
-          already exists in the container. assigns <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">forward</span><span class="special">&lt;</span><span class="identifier">M</span><span class="special">&gt;(</span><span class="identifier">obj</span><span class="special">)</span></code> to the <code class="computeroutput"><span class="identifier">mapped</span>
-          <span class="identifier">type</span></code> corresponding to the key.
-          Otherwise, inserts the new value at the end as if by insert, constructing
-          it from <code class="computeroutput"><span class="identifier">value_type</span><span class="special">(</span><span class="identifier">key</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">forward</span><span class="special">&lt;</span><span class="identifier">M</span><span class="special">&gt;(</span><span class="identifier">obj</span><span class="special">))</span></code>.
-          If the insertion occurs and results in a rehashing of the container, all
-          iterators are invalidated. Otherwise, iterators are not affected. References
-          are not invalidated. Rehashing occurs only if the new number of elements
-          is greater than <a class="link" href="capacity.html" title="object::capacity"><code class="computeroutput"><span class="identifier">capacity</span><span class="special">()</span></code></a>.
+          already exists in the container, assigns <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">forward</span><span class="special">&lt;</span><span class="identifier">M</span><span class="special">&gt;(</span><span class="identifier">m</span><span class="special">)</span></code> to the <code class="computeroutput"><span class="identifier">mapped_type</span></code>
+          corresponding to the key. Otherwise, inserts the new value at the end as
+          if by insert, constructing it from <code class="computeroutput"><span class="identifier">value_type</span><span class="special">(</span><span class="identifier">key</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">forward</span><span class="special">&lt;</span><span class="identifier">M</span><span class="special">&gt;(</span><span class="identifier">m</span><span class="special">))</span></code>. If the insertion occurs and results
+          in a rehashing of the container, all iterators and references are invalidated.
+          Otherwise, they are not affected. Rehashing occurs only if the new number
+          of elements is greater than <a class="link" href="capacity.html" title="object::capacity"><code class="computeroutput"><span class="identifier">capacity</span><span class="special">()</span></code></a>.
         </p>
 <h6>
 <a name="json.ref.boost__json__object.insert_or_assign.h2"></a>
@@ -171,7 +169,7 @@
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<p>
+<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>

@@ -95,9 +95,9 @@ BOOST_AUTO_TEST_CASE(environment)
 #else
     std::unordered_map<std::wstring, std::wstring> custom_env = 
         {
-            L"HOME", L"/home/byzantium",
-            L"HOMEDRIVE", L"X:",
-            L"HOMEPATH", L"\\users\\theodora"
+            {L"HOME", L"/home/byzantium"},
+            {L"HOMEDRIVE", L"X:"},
+            {L"HOMEPATH", L"\\users\\theodora"}
         };
 
     std::vector<std::wstring> custom_env2 = 
@@ -106,8 +106,8 @@ BOOST_AUTO_TEST_CASE(environment)
             {L"HOMEDRIVE=X:"},
             {L"HOMEPATH=\\users\\theodora"}
         };
-    BOOST_CHECK_EQUAL(bpe::home(custom_env), L"X:\\Users\\theodora");
-    BOOST_CHECK_EQUAL(bpe::home(custom_env2), L"X:\\Users\\theodora");
+    BOOST_CHECK_EQUAL(bpe::home(custom_env), "X:\\users\\theodora");
+    BOOST_CHECK_EQUAL(bpe::home(custom_env2), "X:\\users\\theodora");
 
 #endif
 

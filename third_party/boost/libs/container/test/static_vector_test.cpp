@@ -13,6 +13,7 @@
 #include <boost/container/list.hpp>
 #include <boost/container/detail/iterator.hpp>
 #include "../../intrusive/test/iterator_test.hpp"
+#include <boost/container/detail/config_begin.hpp>
 
 #include "static_vector_test.hpp"
 
@@ -792,45 +793,5 @@ int main(int, char* [])
    return boost::report_errors();
 }
 
-/*
+#include <boost/container/detail/config_end.hpp>
 
-#include <boost/container/small_vector.hpp>
-#include <type_traits>
-
-struct S_trivial {
-int i;
-};
-static_assert(std::is_nothrow_move_constructible<S_trivial>::value, "");
-static_assert(std::is_nothrow_move_assignable<S_trivial>::value, "");
-
-struct S1 {
-int i = 0;
-};
-static_assert(std::is_nothrow_move_constructible<S1>::value, "");
-static_assert(std::is_nothrow_move_assignable<S1>::value, "");
-
-struct S2 {
-int i = 0;
-S2(S2&&) noexcept;
-S2& operator=(S2&&) noexcept;
-};
-static_assert(std::is_nothrow_move_constructible<S2>::value, "");
-static_assert(std::is_nothrow_move_assignable<S2>::value, "");
-
-// Succeed
-static_assert(std::is_nothrow_move_constructible<boost::container::small_vector<S_trivial, 1>>::value, "");
-static_assert(std::is_nothrow_move_assignable<boost::container::small_vector<S_trivial, 1>>::value, "");
-
-// Fail
-static_assert(std::is_nothrow_move_constructible<boost::container::small_vector<S1, 1>>::value, "");
-static_assert(std::is_nothrow_move_assignable<boost::container::small_vector<S1, 1>>::value, "");
-
-// Fail
-static_assert(std::is_nothrow_move_constructible<boost::container::small_vector<S2, 1>>::value, "");
-static_assert(std::is_nothrow_move_assignable<boost::container::small_vector<S2, 1>>::value, "");
-
-int main()
-{
-   return 0;
-}
-*/

@@ -37,14 +37,23 @@ void* operator new[](std::size_t count)
    ++alloc_count;
    return std::malloc(count);
 }
-void operator delete(void * p)noexcept
+void operator delete(void* p)noexcept
 {
    return std::free(p);
+}
+void operator delete(void* p, std::size_t)
+{
+   return ::operator delete(p);
 }
 void operator delete[](void* p)noexcept
 {
    return std::free(p);
 }
+void operator delete[](void* p, std::size_t)
+{
+   return ::operator delete[](p);
+}
+
 
 
 template <class From, class To>
@@ -204,8 +213,8 @@ int main()
 {
    using namespace boost::multiprecision;
    //
-   // Our "From" type has the MinBits argument as small as possible, 
-   // should it be larger than the default used in cpp_int then we 
+   // Our "From" type has the MinBits argument as small as possible,
+   // should it be larger than the default used in cpp_int then we
    // may get allocations causing the tests above to fail since the
    // internal cache in type From is larger than that of cpp_int and so
    // allocation may be needed even on a move.

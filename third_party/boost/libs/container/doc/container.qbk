@@ -468,10 +468,52 @@ while also providing the regular features of `vector`, in particular the contigu
 
 Unlike `vector`, devector can have free capacity both before and after the elements. This enables efficient
 implementation of methods that modify the devector at the front. In general, `devector`'s available methods
-are a superset of those of `vector` with identical behaviour, barring a couple of iterator invalidation
+are a superset of those of `vector` with similar behaviour, barring a couple of iterator invalidation
 guarantees that differ.
 
-The overhead for devector is one extra `size_t` per container: Usually sizeof(devector) == 4*sizeof(T*).
+The static size overhead for boost's devector is one extra `size_t` per container: Usually sizeof(devector) == 4*sizeof(T*).
+
+There are different strategies when elements are to be inserted at one extreme of the container and there is
+no room for additional elements at that extreme. One simple strategy would be to reallocate a bigger buffer
+and move all elements to the new memory. However, this would lead to unbounded memory waste when elements are
+inserted predominantly on one extreme (e.g. pushed at one extreme and popped from the other, like a LIFO pattern).
+
+To avoid unbounded memory waste, Boost.Container's `devector` uses a different strategy:
+
+* If elements are inserted near a extreme and there is free space on that extreme, the insertion is performed
+  without any additional data movement (only the elements between the insertion point and the extreme are moved.
+  
+* If elements are inserted near one extreme and the free space on that extreme is exhausted, all existing elements
+  are relocated (moved) to the center of the internal memory buffer. This makes room in the exhausted extreme
+  to insert more elements whihout allocating a new buffer.
+
+* Potentially, the maximum number of possible relocations (movements) reusing the memory buffer are Olog(N),
+  but that would lead non-amortized constant-time insertion at the extremes. In consequence, the number of
+  relocations must be limited ('relocation limit') and a reallocation (allocation of a new memory buffer) will be
+  performed if the load-factor of the container defined as (size()/length_of_buffer) surpasses the relocation limit (see
+  Lars Greger Nordland Hagen's [href http://larshagencpp.github.io/blog/2016/05/22/devector"Double-ended vector - is it useful?"]
+  article for more details.
+
+* This approach offers a reasonable balance between a reasonable memory overhead and performance.
+
+However, this strategy has also some downsides:
+
+* Insertions at the extremes have no strong exception guarantee as data has to be move inside the existing buffer.
+
+* Due to the memory relocation vs reallocation strategy explained above:
+    * `capacity()` can no longer tell the maximum number of elements that the container can hold and, at the same time,
+        the number of insertions to perform before a reallocation is performed. Depending on which extreme a insertion
+        takes place, a reallocation might occur or not (maybe there is free capacity at that extreme)
+
+   * Instead of removing the `capacity()` member or renaming it to "minimum_capacity()", the definition has been changed
+     to tell the *minimum* number of elements that can be inserted without reallocating. This allows the typical pattern
+     where:
+        * If `reserve(n)` is called, `capacity() >= n`
+        * If `capacity() == n` it is guaranteed that if `size() <= n` no reallocation will occur.
+
+   * However the usual container invariant where `size() <= capacity()` does not hold. `size()` can be bigger than
+    `capacity()` because elements can be always inserted at a extreme with free capacity without reallocation.
+
 
 [endsect]
 
@@ -685,7 +727,7 @@ used to customize these containers:
 
 [endsect]
 
-[section:configurable_vectors Configurable vectors]
+[section:configurable_vector Configurable vector]
 
 The configuration for [classref boost::container::vector vector] is passed as
 the last template parameter and defined using the utility class
@@ -697,8 +739,8 @@ the last template parameter and defined using the utility class
    A higher growth factor will make it faster as it will require less data movement, but it will have a greater memory
    impact (on average, more memory will be unused). A user can provide a custom implementation of the growth factor and some
    predefined policies are available: [classref boost::container::growth_factor_50 growth_factor_50],
-   [classref boost::container::growth_factor_60 growth_factor_60] and
-   [classref boost::container::growth_factor_50 growth_factor_100].
+   [classref boost::container::growth_factor_60 growth_factor_60] (usually the default) and
+   [classref boost::container::growth_factor_100 growth_factor_100].
 
 *  [classref boost::container::stored_size stored_size]: the type that will be used to store size-related
    parameters inside of the vector. Sometimes, when the maximum capacity to be used is much less than the
@@ -707,35 +749,10 @@ the last template parameter and defined using the utility class
    performance might be improved. See [classref boost::container::stored_size stored_size] for more details.
 
 See the following example to see how [classref boost::container::vector_options vector_options] can be
-used to customize `vector` container:
+used to customize `vector`:
 
 [import ../example/doc_custom_vector.cpp]
 [doc_custom_vector]
-
-[endsect]
-
-[section:configurable_deques Configurable deques]
-
-The configuration for [classref boost::container::deque deque] is passed as
-the last template parameter and defined using the utility class
-[classref boost::container::deque_options deque_options]. The following parameters can be configured:
-
-Parameters that control the size of deque's 'block' (deque allocates contiguous chunks of elements, called 'blocks').
-Only one of these paratemers can be specified:
-
-*  [classref boost::container::block_bytes block_bytes]: the number of bytes deque will allocate for store
-   elements contiguously: `deque::get_block_size()` will return aproximately `block_bytes/sizeof(value_type)`.
-   A value of zero means the default value.
-
-*  [classref boost::container::block_size  block_size]: the number of elements deque will allocate contiguously.
-   If this option is specified, `deque::get_block_size()` will return the specified `block_size`.
-   A value of zero means the default value.
-
-See the following example to see how [classref boost::container::deque_options deque_options] can be
-used to customize `deque` container:
-
-[import ../example/doc_custom_deque.cpp]
-[doc_custom_deque]
 
 [endsect]
 
@@ -754,7 +771,7 @@ the last template parameter and defined using the utility class
    does not throw or abort, undefined behavior is triggered.
 
 See the following example to see how [classref boost::container::static_vector_options static_vector_options] can be
-used to customize `static_vector` container:
+used to customize `static_vector`:
 
 [import ../example/doc_custom_static_vector.cpp]
 [doc_custom_static_vector]
@@ -781,10 +798,68 @@ the last template parameter and defined using the utility class
    [classref boost::container::growth_factor_50 growth_factor_100].
 
 See the following example to see how [classref boost::container::small_vector_options small_vector_options] can be
-used to customize `small_vector` container:
+used to customize `small_vector`:
 
 [import ../example/doc_custom_small_vector.cpp]
 [doc_custom_small_vector]
+
+[endsect]
+
+[section:configurable_deques Configurable deques]
+
+The configuration for [classref boost::container::deque deque] is passed as
+the last template parameter and defined using the utility class
+[classref boost::container::deque_options deque_options]. The following parameters can be configured:
+
+Parameters that control the size of deque's 'block' (deque allocates contiguous chunks of elements, called 'blocks').
+Only one of these paratemers can be specified:
+
+*  [classref boost::container::block_bytes block_bytes]: the number of bytes deque will allocate for store
+   elements contiguously: `deque::get_block_size()` will return aproximately `block_bytes/sizeof(value_type)`.
+   A value of zero means the default value.
+
+*  [classref boost::container::block_size  block_size]: the number of elements deque will allocate contiguously.
+   If this option is specified, `deque::get_block_size()` will return the specified `block_size`.
+   A value of zero means the default value.
+
+See the following example to see how [classref boost::container::deque_options deque_options] can be
+used to customize `deque`:
+
+[import ../example/doc_custom_deque.cpp]
+[doc_custom_deque]
+
+[endsect]
+
+[section:configurable_devector Configurable devector]
+
+The configuration for [classref boost::container::devector devector] is passed as
+the last template parameter and defined using the utility class
+[classref boost::container::devector_options devector_options]. The following parameters can be configured:
+
+*  [classref boost::container::growth_factor growth_factor]: the growth policy of the devector.
+   The rate at which the capacity of a devector grows is implementation dependent and
+   implementations choose exponential growth in order to meet the amortized constant time requirement for push_back.
+   A higher growth factor will make it faster as it will require less data movement, but it will have a greater memory
+   impact (on average, more memory will be unused). A user can provide a custom implementation of the growth factor and some
+   predefined policies are available: [classref boost::container::growth_factor_50 growth_factor_50],
+   [classref boost::container::growth_factor_60 growth_factor_60] (usually the default) and
+   [classref boost::container::growth_factor_100 growth_factor_100].
+
+*  [classref boost::container::stored_size stored_size]: the type that will be used to store size-related
+   parameters inside of the devector. Sometimes, when the maximum capacity to be used is much less than the
+   theoretical maximum that a devector can hold, it's interesting to use smaller unsigned integer types to represent
+   `size()` and `capacity()` inside devector, so that the size of an empty devector is minimized and cache 
+   performance might be improved. See [classref boost::container::stored_size stored_size] for more details.
+
+*  [classref boost::container::relocate_on_66 relocate_on_XX]: load factor limit that will determine if
+   new memory should be allocated or elements should relocated inside existing memory, when the free space
+   is exhausted at one end of the container.
+
+See the following example to see how [classref boost::container::devector_options devector_options] can be
+used to customize `devector`:
+
+[import ../example/doc_custom_devector.cpp]
+[doc_custom_devector]
 
 [endsect]
 
@@ -1323,8 +1398,8 @@ use [*Boost.Container]? There are several reasons for that:
 *  `static_vector` was based on Andrew Hundt's and Adam Wulkiewicz's high-performance `varray` class.
    Many performance improvements of `vector` were also inspired by their implementation. Thanks!
 
-*  `devector` is based on Thaler Benedek's high-performance `devector` implementation, then
-   adapted for [*Boost.Container]. Also inspired by similar implemenations by Orson Peters and Lars Hagen.
+*  `devector`'s initial implementation is based on Thaler Benedek's high-performance `devector` implementation,
+   then adapted for [*Boost.Container]. Also inspired by similar implemenations by Orson Peters and Lars Hagen.
    Thanks for such a great code and documentation!
 
 *  Howard Hinnant's help and advices were essential when implementing move semantics,
@@ -1337,6 +1412,15 @@ use [*Boost.Container]? There are several reasons for that:
 [endsect]
 
 [section:release_notes Release Notes]
+
+[section:release_notes_boost_1_81_00 Boost 1.81 Release]
+
+* [classref boost::container::devector devector]'s insertion logic has been reimplemented to move elements to the center of the devector if an insertion at one end
+  has no free capacity but there is free capacity on the other end. Current implementation keeps reallocating memory when only inserting at one end and poping from the
+  other, provoking very high memory usage. The new strategy is based on the article
+  [@http://larshagencpp.github.io/blog/2016/05/22/devector Double-ended vector - is it useful?] by Lars Greger Nordland Hagen.
+
+[endsect]
 
 [section:release_notes_boost_1_80_00 Boost 1.80 Release]
 

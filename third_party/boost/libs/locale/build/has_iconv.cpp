@@ -8,6 +8,6 @@
 
 int main()
 {
-    iconv_t d = iconv_open(0,0);
+    iconv_t d = iconv_open(0, 0);
     (void)(d);
 }

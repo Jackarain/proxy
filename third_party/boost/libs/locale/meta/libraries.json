@@ -12,5 +12,5 @@
         "Artyom Beilis <artyomtnk -at- yahoo.com>",
         "Alexander Grund <alex -at- grundis.de>"
     ],
-    "cxxstd": "03"
+    "cxxstd": "11"
 }

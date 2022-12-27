@@ -28,7 +28,9 @@
 #define BOOST_NOWIDE_TEST_STD_PATH
 #endif
 #if defined(__cpp_lib_experimental_filesystem)
+#ifndef _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
 #define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
+#endif
 #include <experimental/filesystem>
 #define BOOST_NOWIDE_TEST_STD_EXPERIMENTAL_PATH
 #endif

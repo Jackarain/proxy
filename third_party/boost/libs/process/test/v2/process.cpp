@@ -24,6 +24,7 @@
 #include <boost/process/v2/start_dir.hpp>
 #include <boost/process/v2/execute.hpp>
 #include <boost/process/v2/stdio.hpp>
+#include <boost/process/v2/bind_launcher.hpp>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/asio/io_context.hpp>
@@ -159,11 +160,17 @@ BOOST_AUTO_TEST_CASE(request_exit)
 
   auto sh = closable();
   BOOST_CHECK_MESSAGE(!sh.empty(), sh);
-  bpv::process proc(ctx, sh, {}
+
+  asio::readable_pipe rp{ctx};
+  asio::writable_pipe wp{ctx};
+  asio::connect_pipe(rp, wp);
+
+  bpv::process proc(ctx, sh, {}, bpv::process_stdio{wp}
 #if defined(ASIO_WINDOWS)
     , asio::windows::show_window_minimized_not_active
 #endif
     );
+  BOOST_CHECK(proc.running());
   std::this_thread::sleep_for(std::chrono::milliseconds(250));
   proc.request_exit();
   proc.wait();
@@ -188,6 +195,8 @@ void trim_end(std::string & str)
 {
     auto itr = std::find_if(str.rbegin(), str.rend(), &std::char_traits<char>::not_eof);
     str.erase(itr.base(), str.end());
+    if (!str.empty() && str.back() == '\r')
+      str.pop_back();
 }
 
 BOOST_AUTO_TEST_CASE(print_args_out)
@@ -354,18 +363,18 @@ BOOST_AUTO_TEST_CASE(popen)
 
 
     // default CWD
-    bpv::popen proc(ctx, pth, {"echo"});
+    bpv::popen proc(/*bpv::default_process_launcher(), */ctx, pth, {"echo"});
 
     asio::write(proc, asio::buffer("FOOBAR"));
-
     proc.get_stdin().close();
 
     std::string res;
     boost::system::error_code ec;
     std::size_t n = asio::read(proc, asio::dynamic_buffer(res), ec);
-    res.resize(n - 1);
-    BOOST_CHECK_EQUAL(ec, asio::error::eof);
+    BOOST_CHECK_MESSAGE(ec == asio::error::eof || ec == asio::error::broken_pipe, ec.message());
+    BOOST_REQUIRE_GE(n, 1u);
     // remove EOF
+    res.pop_back();
     BOOST_CHECK_EQUAL(res, "FOOBAR");
 
     proc.wait();
@@ -429,7 +438,7 @@ std::string read_env(const char * name, Inits && ... inits)
   BOOST_CHECK_MESSAGE((ec == asio::error::broken_pipe) || (ec == asio::error::eof), ec.message());
   out.resize(sz);
   trim_end(out);
-  printf("Read env (%ld) %s: '%s'\n", sz, name, out.c_str());
+  printf("Read env (%ld) %s: '%s'\n", static_cast<long>(sz), name, out.c_str());
 
   proc.wait();
   BOOST_CHECK_EQUAL(proc.exit_code(), 0);
@@ -449,12 +458,12 @@ BOOST_AUTO_TEST_CASE(environment)
   BOOST_CHECK_EQUAL("FOO-BAR", read_env("FOOBAR", bpv::process_environment{sub_env}));
   
   sub_env.push_back("XYZ=ZYX");
-  auto itr = std::find_if(sub_env.begin(), sub_env.end(), [](const bpv::environment::key_value_pair & kv) {return kv.key() == "PATH";});
+  auto itr = std::find_if(sub_env.begin(), sub_env.end(), [](const bpv::environment::key_value_pair & kv) {return kv.key() == bpv::environment::key("PATH");});
   path += static_cast<char>(bpv::environment::delimiter);
   path += "/bar/foo";
   bpv::environment::value pval = itr->value();
   pval.push_back("/bar/foo");
-  *itr = bpv::environment::key_value_pair("PATH", pval);
+  *itr = bpv::environment::key_value_pair(bpv::environment::key("PATH"), pval);
   BOOST_CHECK_EQUAL(path, read_env("PATH", bpv::process_environment{sub_env}));
 
 #if defined(BOOST_PROCESS_V2_WINDOWS)
@@ -462,12 +471,70 @@ BOOST_AUTO_TEST_CASE(environment)
   BOOST_CHECK_EQUAL("FOO-BAR", read_env("FOOBAR", bpv::process_environment{L"FOOBAR=FOO-BAR", wpath.c_str()}));
   wpath += bpv::environment::delimiter;
   wpath += L"C:\\bar\\foo";
-  BOOST_CHECK_EQUAL(wpath.substr(5), read_env("pATH",   bpv::process_environment{wpath.c_str(), std::wstring(L"XYZ=ZYX")}));
+  BOOST_CHECK_EQUAL(
+    bpv::detail::conv_string<char>(wpath.c_str() + 5, wpath.size() - 5)
+    , read_env("pATH",   bpv::process_environment{wpath.c_str(), std::wstring(L"XYZ=ZYX")}));
 #endif
 
   BOOST_CHECK_EQUAL(read_env("PATH", bpv::process_environment(bpv::environment::current())), ::getenv("PATH"));
 }
 
+BOOST_AUTO_TEST_CASE(exit_code_as_error)
+{
+  using boost::unit_test::framework::master_test_suite;
+  const auto pth = bpv::filesystem::absolute(master_test_suite().argv[1]);
+
+  asio::io_context ctx;
+
+  bpv::process proc1(ctx, pth, {"exit-code", "0"});
+  bpv::process proc2(ctx, pth, {"exit-code", "2"});
+  bpv::process proc3(ctx, pth, {"sleep", "2000"});
+
+  int called = 0;
+  
+  proc3.terminate();
+
+  proc1.async_wait(bpv::code_as_error([&](bpv::error_code ec){called ++; BOOST_CHECK(!ec);}));
+  proc2.async_wait(bpv::code_as_error([&](bpv::error_code ec){called ++; BOOST_CHECK_MESSAGE(ec, ec.message());}));
+  proc3.async_wait(bpv::code_as_error([&](bpv::error_code ec){called ++; BOOST_CHECK_MESSAGE(ec, ec.message());}));
+
+  ctx.run();
+  BOOST_CHECK_EQUAL(called, 3);
+
+}
+
+BOOST_AUTO_TEST_CASE(bind_launcher)
+{
+  using boost::unit_test::framework::master_test_suite;
+  const auto pth = bpv::filesystem::absolute(master_test_suite().argv[1]);
+
+  asio::io_context ctx;
+
+  asio::readable_pipe rp{ctx};
+  asio::writable_pipe wp{ctx};
+  asio::connect_pipe(rp, wp);
+
+  auto target = bpv::filesystem::canonical(bpv::filesystem::temp_directory_path());
+
+  auto l = bpv::bind_default_launcher(bpv::process_start_dir(target));
+
+  std::vector<std::string> args = {"print-cwd"};
+  // default CWD
+  bpv::process proc = l(ctx, pth, args, bpv::process_stdio{/*.in=*/{}, /*.out=*/wp});
+  wp.close();
+
+  std::string out;
+  bpv::error_code ec;
+
+  auto sz = asio::read(rp, asio::dynamic_buffer(out),  ec);
+  BOOST_CHECK(sz != 0);
+  BOOST_CHECK_MESSAGE((ec == asio::error::broken_pipe) || (ec == asio::error::eof), ec.message());
+  BOOST_CHECK_MESSAGE(bpv::filesystem::path(out) == target,
+                      bpv::filesystem::path(out) << " != " << target);
+
+  proc.wait();
+  BOOST_CHECK_MESSAGE(proc.exit_code() == 0, proc.exit_code() << " from " << proc.native_exit_code());
+}
 
 BOOST_AUTO_TEST_SUITE_END();
 

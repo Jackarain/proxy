@@ -1803,6 +1803,10 @@ public:
                   val = 10u + static_cast<unsigned>(*s - 'A');
                else
                {
+                  #if defined(BOOST_NO_EXCEPTIONS)
+                  val = static_cast<unsigned>('0');
+                  #endif
+
                   BOOST_MP_THROW_EXCEPTION(std::runtime_error("Unexpected content found while parsing character string."));
                }
                limb  = bitcount / (sizeof(limb_type) * CHAR_BIT);
@@ -1837,6 +1841,10 @@ public:
                   val = static_cast<unsigned>(*s - '0');
                else
                {
+                  #if defined(BOOST_NO_EXCEPTIONS)
+                  val = static_cast<unsigned>('0');
+                  #endif
+
                   BOOST_MP_THROW_EXCEPTION(std::runtime_error("Unexpected content found while parsing character string."));
                }
                limb  = bitcount / (sizeof(limb_type) * CHAR_BIT);
@@ -1879,7 +1887,13 @@ public:
                   if (*s >= '0' && *s <= '9')
                      val = static_cast<limb_type>(*s - '0');
                   else
+                  {
+                     #if defined(BOOST_NO_EXCEPTIONS)
+                     val = static_cast<unsigned>('0');
+                     #endif
+
                      BOOST_MP_THROW_EXCEPTION(std::runtime_error("Unexpected character encountered in input."));
+                  }
                   block *= 10;
                   block += val;
                   if (!*++s)

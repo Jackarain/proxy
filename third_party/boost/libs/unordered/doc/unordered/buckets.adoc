@@ -5,7 +5,7 @@
 = The Data Structure
 
 The containers are made up of a number of 'buckets', each of which can contain
-any number of elements. For example, the following diagram shows an <<unordered_set,unordered_set>> with 7 buckets containing 5 elements, `A`,
+any number of elements. For example, the following diagram shows a <<unordered_set,`boost::unordered_set`>> with 7 buckets containing 5 elements, `A`,
 `B`, `C`, `D` and `E` (this is just for illustration, containers will typically
 have more buckets).
 
@@ -31,20 +31,34 @@ equality predicates in the next section>>.
 
 You can see in the diagram that `A` & `D` have been placed in the same bucket.
 When looking for elements in this bucket up to 2 comparisons are made, making
-the search slower. This is known as a collision. To keep things fast we try to
+the search slower. This is known as a *collision*. To keep things fast we try to
 keep collisions to a minimum.
+
+If instead of `boost::unordered_set` we had used <<unordered_flat_set,`boost::unordered_flat_set`>>, the
+diagram would look as follows:
+
+image::buckets-oa.png[]
+
+In open-addressing containers, buckets can hold at most one element; if a collision happens
+(like is the case of `D` in the example), the element uses some other available bucket in
+the vicinity of the original position. Given this simpler scenario, Boost.Unordered
+open-addressing containers offer a very limited API for accessing buckets.
 
 [caption=, title='Table {counter:table-counter}. Methods for Accessing Buckets']
 [cols="1,.^1", frame=all, grid=rows]
 |===
-|Method |Description
+2+^h| *All containers*
+h|*Method* h|*Description*
 
 |`size_type bucket_count() const` 
 |The number of buckets.
 
+2+^h| *Closed-addressing containers only* +
+`boost::unordered_[multi]set`, `boost::unordered_[multi]map` 
+h|*Method* h|*Description*
+
 |`size_type max_bucket_count() const` 
 |An upper bound on the number of buckets.
-
 |`size_type bucket_size(size_type n) const` 
 |The number of elements in bucket `n`.
 
@@ -69,14 +83,14 @@ keep collisions to a minimum.
 == Controlling the number of buckets
 
 As more elements are added to an unordered associative container, the number
-of elements in the buckets will increase causing performance to degrade.
+of collisions will increase causing performance to degrade.
 To combat this the containers increase the bucket count as elements are inserted.
 You can also tell the container to change the bucket count (if required) by
 calling `rehash`.
 
 The standard leaves a lot of freedom to the implementer to decide how the
 number of buckets is chosen, but it does make some requirements based on the
-container's 'load factor', the average number of elements per bucket.
+container's 'load factor', the number of elements divided by the number of buckets.
 Containers also have a 'maximum load factor' which they should try to keep the
 load factor below.
 
@@ -97,7 +111,8 @@ or close to the hint - unless your hint is unreasonably small or large.
 [caption=, title='Table {counter:table-counter}. Methods for Controlling Bucket Size']
 [cols="1,.^1", frame=all, grid=rows]
 |===
-|Method |Description
+2+^h| *All containers*
+h|*Method* h|*Description*
 
 |`X(size_type n)` 
 |Construct an empty container with at least `n` buckets (`X` is the container type).
@@ -112,22 +127,44 @@ or close to the hint - unless your hint is unreasonably small or large.
 |Returns the current maximum load factor.
 
 |`float max_load_factor(float z)`
-|Changes the container's maximum load factor, using `z` as a hint.
+|Changes the container's maximum load factor, using `z` as a hint. +
+**Open-addressing containers:** this function does nothing: users are not allowed to change the maximum load factor.
 
 |`void rehash(size_type n)`
 |Changes the number of buckets so that there at least `n` buckets, and so that the load factor is less than the maximum load factor.
 
+2+^h| *Open-addressing containers only* +
+`boost::unordered_flat_set`, `boost::unordered_flat_map` 
+h|*Method* h|*Description*
+
+|`size_type max_load() const`
+|Returns the maximum number of allowed elements in the container before rehash.
+
 |===
+
+A note on `max_load` for open-addressing containers: the maximum load will be 
+(`max_load_factor() * bucket_count()`) right after `rehash` or on container creation, but may
+slightly decrease when erasing elements in high-load situations. For instance, if we
+have a <<unordered_flat_map,`boost::unordered_flat_map`>> with `size()` almost
+at `max_load()` level and then erase 1,000 elements, `max_load()` may decrease by around a
+few dozen elements. This is done internally by Boost.Unordered in order
+to keep its performance stable, and must be taken into account when planning for rehash-free insertions.
 
 == Iterator Invalidation
 
 It is not specified how member functions other than `rehash` and `reserve` affect
-the bucket count, although `insert` is only allowed to invalidate iterators
-when the insertion causes the load factor to be greater than or equal to the
-maximum load factor. For most implementations this means that `insert` will only
-change the number of buckets when this happens. While iterators can be
-invalidated by calls to `insert`, `rehash` and `reserve`, pointers and references to the
-container's elements are never invalidated.
+the bucket count, although `insert` can only invalidate iterators
+when the insertion causes the container's load to be greater than the maximum allowed.
+For most implementations this means that `insert` will only
+change the number of buckets when this happens. Iterators can be
+invalidated by calls to `insert`, `rehash` and `reserve`.
+
+As for pointers and references,
+they are never invalidated for closed-addressing containers (`boost::unordered_[multi]set`, `boost::unordered_[multi]map`),
+but they will when rehashing occurs for open-addressing
+`boost::unordered_flat_set` and `boost::unordered_flat_map`: this is because
+these containers store elements directly into their holding buckets, so
+when allocating a new bucket array the elements must be transferred by means of move construction.
 
 In a similar manner to using `reserve` for ``vector``s, it can be a good idea
 to call `reserve` before inserting a large number of elements. This will get

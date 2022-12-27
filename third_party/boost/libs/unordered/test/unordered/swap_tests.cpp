@@ -1,14 +1,10 @@
 
 // Copyright 2006-2009 Daniel James.
+// Copyright 2022 Christian Mazakas.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-// clang-format off
-#include "../helpers/prefix.hpp"
-#include <boost/unordered_set.hpp>
-#include <boost/unordered_map.hpp>
-#include "../helpers/postfix.hpp"
-// clang-format on
+#include "../helpers/unordered.hpp"
 
 #include <boost/config.hpp>
 #include <algorithm>
@@ -139,6 +135,53 @@ namespace swap_tests {
     }
   }
 
+  using test::default_generator;
+  using test::generate_collisions;
+  using test::limited_range;
+
+  template <typename T> bool is_propagate(T*)
+  {
+    return T::allocator_type::is_propagate_on_swap;
+  }
+
+#ifdef BOOST_UNORDERED_FOA_TESTS
+  boost::unordered_flat_map<test::object, test::object, test::hash,
+    test::equal_to, std::allocator<test::object> >* test_map_std_alloc;
+
+  boost::unordered_flat_set<test::object, test::hash, test::equal_to,
+    test::allocator1<test::object> >* test_set;
+  boost::unordered_flat_map<test::object, test::object, test::hash,
+    test::equal_to, test::allocator1<test::object> >* test_map;
+
+  boost::unordered_flat_set<test::object, test::hash, test::equal_to,
+    test::cxx11_allocator<test::object, test::propagate_swap> >*
+    test_set_prop_swap;
+  boost::unordered_flat_map<test::object, test::object, test::hash,
+    test::equal_to, test::cxx11_allocator<test::object, test::propagate_swap> >*
+    test_map_prop_swap;
+
+  boost::unordered_flat_set<test::object, test::hash, test::equal_to,
+    test::cxx11_allocator<test::object, test::no_propagate_swap> >*
+    test_set_no_prop_swap;
+  boost::unordered_flat_map<test::object, test::object, test::hash,
+    test::equal_to,
+    test::cxx11_allocator<test::object, test::no_propagate_swap> >*
+    test_map_no_prop_swap;
+
+  UNORDERED_AUTO_TEST (check_traits) {
+    BOOST_TEST(!is_propagate(test_set));
+    BOOST_TEST(is_propagate(test_set_prop_swap));
+    BOOST_TEST(!is_propagate(test_set_no_prop_swap));
+  }
+
+  UNORDERED_TEST(swap_tests1,
+    ((test_map_std_alloc)(test_set)(test_map)(test_set_prop_swap)(test_map_prop_swap)(test_set_no_prop_swap)(test_map_no_prop_swap))(
+      (default_generator)(generate_collisions)(limited_range)))
+
+  UNORDERED_TEST(swap_tests2,
+    ((test_set)(test_map)(test_set_prop_swap)(test_map_prop_swap)(test_set_no_prop_swap)(test_map_no_prop_swap))(
+      (default_generator)(generate_collisions)(limited_range)))
+#else
   boost::unordered_map<test::object, test::object, test::hash, test::equal_to,
     std::allocator<test::object> >* test_map_std_alloc;
 
@@ -178,15 +221,6 @@ namespace swap_tests {
     test::cxx11_allocator<test::object, test::no_propagate_swap> >*
     test_multimap_no_prop_swap;
 
-  template <typename T> bool is_propagate(T*)
-  {
-    return T::allocator_type::is_propagate_on_swap;
-  }
-
-  using test::default_generator;
-  using test::generate_collisions;
-  using test::limited_range;
-
   UNORDERED_AUTO_TEST (check_traits) {
     BOOST_TEST(!is_propagate(test_set));
     BOOST_TEST(is_propagate(test_set_prop_swap));
@@ -207,5 +241,6 @@ namespace swap_tests {
       test_set_no_prop_swap)(test_multiset_no_prop_swap)(test_map_no_prop_swap)(
       test_multimap_no_prop_swap))(
       (default_generator)(generate_collisions)(limited_range)))
+#endif
 }
 RUN_TESTS()

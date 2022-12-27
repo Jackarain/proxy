@@ -46,6 +46,7 @@
 #include <cstring>
 #include <cwchar>
 #include <locale>
+#include <vector>
 #include <list>
 
 namespace fs = boost::filesystem;
@@ -180,14 +181,6 @@ void test_constructors()
     PATH_IS(x5, L"std::wstring");
     BOOST_TEST_EQ(x5.native().size(), 12U);
 
-    path x4v(v); // std::vector<char>
-    PATH_IS(x4v, L"fuz");
-    BOOST_TEST_EQ(x4v.native().size(), 3U);
-
-    path x5v(wv); // std::vector<wchar_t>
-    PATH_IS(x5v, L"wfuz");
-    BOOST_TEST_EQ(x5v.native().size(), 4U);
-
     path x6("array char"); // array char
     PATH_IS(x6, L"array char");
     BOOST_TEST_EQ(x6.native().size(), 10U);
@@ -223,15 +216,6 @@ void test_constructors()
     path x9nc(const_cast< wchar_t* >(ws.c_str())); // wchar_t* null terminated
     PATH_IS(x9nc, L"wstring");
     BOOST_TEST_EQ(x9nc.native().size(), 7U);
-
-    // non-contiguous containers
-    path x10(l); // std::list<char>
-    PATH_IS(x10, L"string");
-    BOOST_TEST_EQ(x10.native().size(), 6U);
-
-    path xll(wl); // std::list<wchar_t>
-    PATH_IS(xll, L"wstring");
-    BOOST_TEST_EQ(xll.native().size(), 7U);
 
     // easy-to-make coding errors
     // path e1(x0, path::codecvt());  // fails to compile, and that is OK
@@ -1115,82 +1099,6 @@ void test_error_handling()
     std::cout << "  testing error handling complete" << std::endl;
 }
 
-#if 0
-
-// //  test_locales  --------------------------------------------------------------------//
-//
-// void test_locales()
-// {
-//     std::cout << "testing locales..." << std::endl;
-//
-// }
-
-//  test_user_supplied_type  ---------------------------------------------------------//
-
-typedef std::basic_string<int> user_string;
-
-}  // unnamed namespace
-
-namespace boost {
-namespace filesystem {
-namespace path_traits {
-
-template<> struct is_iterator< const user_string::value_type* > { static const bool value = true; };
-template<> struct is_iterator< user_string::value_type* > { static const bool value = true; };
-template<> struct is_iterator< user_string::iterator > { static const bool value = true; };
-template<> struct is_iterator< user_string::const_iterator > { static const bool value = true; };
-template<> struct is_container< user_string > { static const bool value = true; };
-
-template<>
-void append< user_string::value_type >(const user_string::value_type* begin,
-    const user_string::value_type* end, string_type& target, system::error_code& ec)
-{
-    for (; begin != end && *begin; ++begin)
-        target += *begin + 1;  // change so that results distinguishable from char cvts
-}
-
-#ifdef __GNUC__
-//  This specialization shouldn't be needed, and VC++, Intel, and others work
-//  fine without it. But gcc 4.3.2, and presumably other versions, need it.
-template<>
-void append< user_string::value_type >(const user_string::value_type* begin,
-    string_type& target, system::error_code& ec)
-{
-    path_traits::append<user_string::value_type>(begin,
-      static_cast<const user_string::value_type *>(0), target, ec);
-}
-#endif
-
-template<>
-user_string convert< user_string >(string_type const& source, system::error_code& ec)
-{
-    user_string temp;
-    for (string_type::const_iterator it = source.begin(); it != source.end(); ++it)
-        temp += *it - 1;
-    return temp;
-}
-
-}  // namespace path_traits
-}  // namespace filesystem
-}  // namespace boost
-
-namespace {
-
-void test_user_supplied_type()
-{
-    std::cout << "testing user supplied type..." << std::endl;
-
-    user_string::value_type usr_c_str[] = { 'a', 'b', 'c', 0 };
-    user_string usr(usr_c_str);
-
-    path p1(usr.c_str());
-    CHECK(p1 == path("bcd"));
-    CHECK(p1 == "bcd");
-    user_string s1(p1.string<user_string>());
-    CHECK(s1 == usr);
-}
-
-#endif
 
 inline const char* macro_value(const char* name, const char* value)
 {

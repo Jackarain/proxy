@@ -215,7 +215,7 @@
       <template-type-parameter name="T"/>
       <template-type-parameter name="calendar"/>
       <template-type-parameter name="duration_type_"/>
-    </template><inherit access="private">boost::less_than_comparable&lt; T, boost::equality_comparable&lt; T &gt; &gt;</inherit><purpose>Representation of timepoint at the one day level resolution. </purpose><description><para>The date template represents an interface shell for a date class that is based on a year-month-day system such as the gregorian or iso systems. It provides basic operations to enable calculation and comparisons.</para><para><emphasis role="bold">Theory</emphasis></para><para>This date representation fundamentally departs from the C tm struct approach. The goal for this type is to provide efficient date operations (add, subtract) and storage (minimize space to represent) in a concrete class. Thus, the date uses a count internally to represent a particular date. The calendar parameter defines the policies for converting the the year-month-day and internal counted form here. Applications that need to perform heavy formatting of the same date repeatedly will perform better by using the year-month-day representation.</para><para>Internally the date uses a day number to represent the date. This is a monotonic time representation. This representation allows for fast comparison as well as simplifying the creation of writing numeric operations. Essentially, the internal day number is like adjusted julian day. The adjustment is determined by the Epoch date which is represented as day 1 of the calendar. Day 0 is reserved for negative infinity so that any actual date is automatically greater than negative infinity. When a date is constructed from a date or formatted for output, the appropriate conversions are applied to create the year, month, day representations. </para></description><typedef name="date_type"><type>T</type></typedef>
+    </template><inherit access="private">boost::less_than_comparable&lt; T, boost::equality_comparable&lt; T &gt; &gt;</inherit><purpose>Representation of timepoint at the one day level resolution. </purpose><description><para>The date template represents an interface shell for a date class that is based on a year-month-day system such as the gregorian or ISO 8601 systems. It provides basic operations to enable calculation and comparisons.</para><para><emphasis role="bold">Theory</emphasis></para><para>This date representation fundamentally departs from the C tm struct approach. The goal for this type is to provide efficient date operations (add, subtract) and storage (minimize space to represent) in a concrete class. Thus, the date uses a count internally to represent a particular date. The calendar parameter defines the policies for converting the the year-month-day and internal counted form here. Applications that need to perform heavy formatting of the same date repeatedly will perform better by using the year-month-day representation.</para><para>Internally the date uses a day number to represent the date. This is a monotonic time representation. This representation allows for fast comparison as well as simplifying the creation of writing numeric operations. Essentially, the internal day number is like adjusted julian day. The adjustment is determined by the Epoch date which is represented as day 1 of the calendar. Day 0 is reserved for negative infinity so that any actual date is automatically greater than negative infinity. When a date is constructed from a date or formatted for output, the appropriate conversions are applied to create the year, month, day representations. </para></description><typedef name="date_type"><type>T</type></typedef>
 <typedef name="calendar_type"><type>calendar</type></typedef>
 <typedef name="traits_type"><type>calendar::date_traits_type</type></typedef>
 <typedef name="duration_type"><type>duration_type_</type></typedef>
@@ -2116,23 +2116,23 @@ pg.get_date(2000); // returns 2000-2-29
 </method-group>
 </class><class name="iso_format"><template>
       <template-type-parameter name="charT"/>
-    </template><inherit access="public">boost::date_time::iso_format_base&lt; charT &gt;</inherit><purpose>Format description for iso normal YYYYMMDD. </purpose><method-group name="public static functions">
+    </template><inherit access="public">boost::date_time::iso_format_base&lt; charT &gt;</inherit><purpose>Format description for ISO 8601 normal YYYYMMDD. </purpose><method-group name="public static functions">
 <method name="has_date_sep_chars" specifiers="static"><type>bool</type><purpose>The ios standard format doesn't use char separators. </purpose></method>
 </method-group>
 </class><class name="iso_format_base"><template>
       <template-type-parameter name="charT"/>
-    </template><purpose>Class to provide common iso formatting spec. </purpose><method-group name="public static functions">
-<method name="month_format" specifiers="static"><type>month_format_spec</type><purpose>Describe month format – its an integer in iso format. </purpose></method>
+    </template><purpose>Class to provide common ISO 8601 formatting spec. </purpose><method-group name="public static functions">
+<method name="month_format" specifiers="static"><type>month_format_spec</type><purpose>Describe month format – its an integer in ISO 8601 format. </purpose></method>
 <method name="not_a_date" specifiers="static"><type>const charT *</type><purpose>String used printed is date is invalid. </purpose></method>
 <method name="pos_infinity" specifiers="static"><type>const charT *</type><purpose>String used to for positive infinity value. </purpose></method>
 <method name="neg_infinity" specifiers="static"><type>const charT *</type><purpose>String used to for positive infinity value. </purpose></method>
-<method name="year_sep_char" specifiers="static"><type>charT</type><purpose>ISO char for a year – used in durations. </purpose></method>
-<method name="month_sep_char" specifiers="static"><type>charT</type><purpose>ISO char for a month. </purpose></method>
-<method name="day_sep_char" specifiers="static"><type>charT</type><purpose>ISO char for a day. </purpose></method>
+<method name="year_sep_char" specifiers="static"><type>charT</type><purpose>ISO 8601 char for a year – used in durations. </purpose></method>
+<method name="month_sep_char" specifiers="static"><type>charT</type><purpose>ISO 8601 char for a month. </purpose></method>
+<method name="day_sep_char" specifiers="static"><type>charT</type><purpose>ISO 8601 char for a day. </purpose></method>
 <method name="hour_sep_char" specifiers="static"><type>charT</type><purpose>char for minute </purpose></method>
 <method name="minute_sep_char" specifiers="static"><type>charT</type><purpose>char for minute </purpose></method>
 <method name="second_sep_char" specifiers="static"><type>charT</type><purpose>char for second </purpose></method>
-<method name="period_start_char" specifiers="static"><type>charT</type><purpose>ISO char for a period. </purpose></method>
+<method name="period_start_char" specifiers="static"><type>charT</type><purpose>ISO 8601 char for a period. </purpose></method>
 <method name="time_start_char" specifiers="static"><type>charT</type><purpose>Used in time in mixed strings to set start of time. </purpose></method>
 <method name="week_start_char" specifiers="static"><type>charT</type><purpose>Used in mixed strings to identify start of a week number. </purpose></method>
 <method name="period_sep_char" specifiers="static"><type>charT</type><purpose>Separators for periods. </purpose></method>
@@ -2144,18 +2144,18 @@ pg.get_date(2000); // returns 2000-2-29
 <method name="element_sep_char" specifiers="static"><type>charT</type></method>
 </method-group>
 </class><class-specialization name="iso_format_base"><template>
-    </template><specialization><template-arg>wchar_t</template-arg></specialization><purpose>Class to provide common iso formatting spec. </purpose><method-group name="public static functions">
-<method name="month_format" specifiers="static"><type>month_format_spec</type><purpose>Describe month format – its an integer in iso format. </purpose></method>
+    </template><specialization><template-arg>wchar_t</template-arg></specialization><purpose>Class to provide common ISO 8601 formatting spec. </purpose><method-group name="public static functions">
+<method name="month_format" specifiers="static"><type>month_format_spec</type><purpose>Describe month format – its an integer in ISO 8601 format. </purpose></method>
 <method name="not_a_date" specifiers="static"><type>const wchar_t *</type><purpose>String used printed is date is invalid. </purpose></method>
 <method name="pos_infinity" specifiers="static"><type>const wchar_t *</type><purpose>String used to for positive infinity value. </purpose></method>
 <method name="neg_infinity" specifiers="static"><type>const wchar_t *</type><purpose>String used to for positive infinity value. </purpose></method>
-<method name="year_sep_char" specifiers="static"><type>wchar_t</type><purpose>ISO char for a year – used in durations. </purpose></method>
-<method name="month_sep_char" specifiers="static"><type>wchar_t</type><purpose>ISO char for a month. </purpose></method>
-<method name="day_sep_char" specifiers="static"><type>wchar_t</type><purpose>ISO char for a day. </purpose></method>
+<method name="year_sep_char" specifiers="static"><type>wchar_t</type><purpose>ISO 8601 char for a year – used in durations. </purpose></method>
+<method name="month_sep_char" specifiers="static"><type>wchar_t</type><purpose>ISO 8601 char for a month. </purpose></method>
+<method name="day_sep_char" specifiers="static"><type>wchar_t</type><purpose>ISO 8601 char for a day. </purpose></method>
 <method name="hour_sep_char" specifiers="static"><type>wchar_t</type><purpose>char for minute </purpose></method>
 <method name="minute_sep_char" specifiers="static"><type>wchar_t</type><purpose>char for minute </purpose></method>
 <method name="second_sep_char" specifiers="static"><type>wchar_t</type><purpose>char for second </purpose></method>
-<method name="period_start_char" specifiers="static"><type>wchar_t</type><purpose>ISO char for a period. </purpose></method>
+<method name="period_start_char" specifiers="static"><type>wchar_t</type><purpose>ISO 8601 char for a period. </purpose></method>
 <method name="time_start_char" specifiers="static"><type>wchar_t</type><purpose>Used in time in mixed strings to set start of time. </purpose></method>
 <method name="week_start_char" specifiers="static"><type>wchar_t</type><purpose>Used in mixed strings to identify start of a week number. </purpose></method>
 <method name="period_sep_char" specifiers="static"><type>wchar_t</type><purpose>Separators for periods. </purpose></method>
@@ -2890,7 +2890,7 @@ special_value_formatter svf(&amp;special_value_names[0], &amp;special_value_name
 <constructor><parameter name="nadt_str"><paramtype>const string_type &amp;</paramtype></parameter><parameter name="neg_inf_str"><paramtype>const string_type &amp;</paramtype></parameter><parameter name="pos_inf_str"><paramtype>const string_type &amp;</paramtype></parameter><parameter name="min_dt_str"><paramtype>const string_type &amp;</paramtype></parameter><parameter name="max_dt_str"><paramtype>const string_type &amp;</paramtype></parameter><purpose>Creates a <classname alt="boost::date_time::special_values_parser">special_values_parser</classname> using a user defined set of element strings. </purpose></constructor>
 <constructor><parameter name="beg"><paramtype>typename collection_type::iterator</paramtype></parameter><parameter name="end"><paramtype>typename collection_type::iterator</paramtype></parameter></constructor>
 <method-group name="public static functions">
-<method name="likely" specifiers="static"><type>bool</type><parameter name="str"><paramtype>const string_type &amp;</paramtype><description><para>the string to check </para></description></parameter><description><para>The parser is expensive to create, and not thread-safe so it cannot be static therefore given a string, determine if it is likely to be a special value. A negative response is a definite no, whereas a positive is only likely and match() should be called and return value checked. 
+<method name="should_call_match" specifiers="static"><type>bool</type><parameter name="str"><paramtype>const string_type &amp;</paramtype><description><para>the string to check </para></description></parameter><description><para>The parser is expensive to create, and not thread-safe so it cannot be static therefore given a string, determine if it is likely to be a special value. A negative response is a definite no, whereas a positive is only likely and match() should be called and return value checked. 
 
 </para></description><returns><para>false if it is definitely not a special value </para>
 </returns></method>
@@ -3708,7 +3708,7 @@ special_value_formatter svf(&amp;special_value_names[0], &amp;special_value_name
         </template><parameter name="s"><paramtype>const std::string &amp;</paramtype></parameter><parameter name="sep"><paramtype>char</paramtype></parameter></function>
 <function name="parse_undelimited_time_duration"><type><classname>time_duration</classname></type><template>
           <template-type-parameter name="time_duration"/>
-        </template><parameter name="s"><paramtype>const std::string &amp;</paramtype></parameter><purpose>Parse time duration part of an iso time of form: [-]hhmmss<ulink url="eg: 120259.123 is 12 hours, 2 min, 59 seconds, 123000 microseconds">.fff...</ulink> </purpose></function>
+        </template><parameter name="s"><paramtype>const std::string &amp;</paramtype></parameter><purpose>Parse time duration part of an ISO 8601 time of form: [-]hhmmss<ulink url="eg: 120259.123 is 12 hours, 2 min, 59 seconds, 123000 microseconds">.fff...</ulink> </purpose></function>
 <function name="parse_iso_time"><type>time_type</type><template>
           <template-type-parameter name="time_type"/>
         </template><parameter name="s"><paramtype>const std::string &amp;</paramtype></parameter><parameter name="sep"><paramtype>char</paramtype></parameter><purpose>Parse time string of form YYYYMMDDThhmmss where T is delimeter between date and time. </purpose></function>

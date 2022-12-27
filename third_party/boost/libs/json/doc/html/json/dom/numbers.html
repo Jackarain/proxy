@@ -78,18 +78,11 @@
 <p>
         In cases where you know that a <a class="link" href="../ref/boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a> contains a number but don't
         know its <a class="link" href="../ref/boost__json__kind.html" title="kind"><code class="computeroutput"><span class="identifier">kind</span></code></a>,
-        <a class="link" href="../ref/boost__json__value_to.html" title="value_to"><code class="computeroutput"><span class="identifier">value_to</span></code></a>
-        can be used to convert the <a class="link" href="../ref/boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a> to an arithmetic type:
+        <code class="computeroutput"><span class="identifier">value</span><span class="special">::</span><span class="identifier">to_number</span></code> can be used to convert the <a class="link" href="../ref/boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a>
+        to an arithmetic type:
       </p>
-<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">convert_int64</span>
-<span class="special">{</span>
-    <span class="identifier">value</span> <span class="identifier">jv</span><span class="special">;</span>
-
-    <span class="keyword">operator</span> <span class="keyword">int</span><span class="special">()</span> <span class="keyword">const</span>
-    <span class="special">{</span>
-        <span class="keyword">return</span> <span class="identifier">value_to</span><span class="special">&lt;</span> <span class="keyword">int</span> <span class="special">&gt;(</span> <span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">jv</span> <span class="special">);</span>
-    <span class="special">}</span>
-<span class="special">};</span>
+<pre class="programlisting"><span class="identifier">value</span> <span class="identifier">jv</span> <span class="special">=</span> <span class="number">1</span><span class="special">;</span>
+<span class="identifier">assert</span><span class="special">(</span> <span class="identifier">jv</span><span class="special">.</span><span class="identifier">to_number</span><span class="special">&lt;</span> <span class="keyword">int</span> <span class="special">&gt;()</span> <span class="special">==</span> <span class="number">1</span> <span class="special">);</span>
 </pre>
 <p>
         If the <a class="link" href="../ref/boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a>
@@ -102,35 +95,33 @@
 <span class="identifier">assert</span><span class="special">(</span> <span class="identifier">jv1</span><span class="special">.</span><span class="identifier">is_int64</span><span class="special">()</span> <span class="special">);</span>
 
 <span class="comment">// ok, identity conversion</span>
-<span class="identifier">std</span><span class="special">::</span><span class="identifier">int64_t</span> <span class="identifier">r1</span> <span class="special">=</span> <span class="identifier">value_to</span><span class="special">&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">int64_t</span> <span class="special">&gt;(</span> <span class="identifier">jv1</span> <span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">int64_t</span> <span class="identifier">r1</span> <span class="special">=</span> <span class="identifier">jv1</span><span class="special">.</span><span class="identifier">to_number</span><span class="special">&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">int64_t</span> <span class="special">&gt;(</span> <span class="special">);</span>
 
 <span class="comment">// loss of data, throws system_error</span>
-<span class="keyword">char</span> <span class="identifier">r2</span> <span class="special">=</span> <span class="identifier">value_to</span><span class="special">&lt;</span> <span class="keyword">char</span> <span class="special">&gt;(</span> <span class="identifier">jv1</span> <span class="special">);</span>
+<span class="keyword">char</span> <span class="identifier">r2</span> <span class="special">=</span> <span class="identifier">jv1</span><span class="special">.</span><span class="identifier">to_number</span><span class="special">&lt;</span> <span class="keyword">char</span> <span class="special">&gt;();</span>
 
 <span class="comment">// ok, no loss of data</span>
-<span class="keyword">double</span> <span class="identifier">r3</span> <span class="special">=</span> <span class="identifier">value_to</span><span class="special">&lt;</span> <span class="keyword">double</span> <span class="special">&gt;(</span> <span class="identifier">jv1</span> <span class="special">);</span>
+<span class="keyword">double</span> <span class="identifier">r3</span> <span class="special">=</span> <span class="identifier">jv1</span><span class="special">.</span><span class="identifier">to_number</span><span class="special">&lt;</span> <span class="keyword">double</span> <span class="special">&gt;();</span>
 
 <span class="identifier">value</span> <span class="identifier">jv2</span> <span class="special">=</span> <span class="number">1.23</span><span class="special">;</span>
 
 <span class="identifier">assert</span><span class="special">(</span> <span class="identifier">jv1</span><span class="special">.</span><span class="identifier">is_double</span><span class="special">()</span> <span class="special">);</span>
 
 <span class="comment">// ok, same as static_cast&lt;float&gt;( jv2.get_double() )</span>
-<span class="keyword">float</span> <span class="identifier">r4</span> <span class="special">=</span> <span class="identifier">value_to</span><span class="special">&lt;</span> <span class="keyword">float</span> <span class="special">&gt;(</span> <span class="identifier">jv2</span> <span class="special">);</span>
+<span class="keyword">float</span> <span class="identifier">r4</span> <span class="special">=</span> <span class="identifier">jv2</span><span class="special">.</span><span class="identifier">to_number</span><span class="special">&lt;</span> <span class="keyword">float</span> <span class="special">&gt;();</span>
 
 <span class="comment">// not exact, throws system_error</span>
-<span class="keyword">int</span> <span class="identifier">r5</span> <span class="special">=</span> <span class="identifier">value_to</span><span class="special">&lt;</span> <span class="keyword">int</span> <span class="special">&gt;(</span> <span class="identifier">jv2</span> <span class="special">);</span>
+<span class="keyword">int</span> <span class="identifier">r5</span> <span class="special">=</span> <span class="identifier">jv2</span><span class="special">.</span><span class="identifier">to_number</span><span class="special">&lt;</span> <span class="keyword">int</span> <span class="special">&gt;();</span>
 
 <span class="identifier">value</span> <span class="identifier">jv3</span> <span class="special">=</span> <span class="special">{</span><span class="number">1</span><span class="special">,</span> <span class="number">2</span><span class="special">,</span> <span class="number">3</span><span class="special">};</span>
 
 <span class="identifier">assert</span><span class="special">(</span> <span class="special">!</span> <span class="identifier">jv3</span><span class="special">.</span><span class="identifier">is_number</span><span class="special">()</span> <span class="special">);</span>
 
 <span class="comment">// not a number, throws system_error</span>
-<span class="keyword">int</span> <span class="identifier">r6</span> <span class="special">=</span> <span class="identifier">value_to</span><span class="special">&lt;</span> <span class="keyword">int</span> <span class="special">&gt;(</span> <span class="identifier">jv3</span> <span class="special">);</span>
+<span class="keyword">int</span> <span class="identifier">r6</span> <span class="special">=</span> <span class="identifier">jv3</span><span class="special">.</span><span class="identifier">to_number</span><span class="special">&lt;</span> <span class="keyword">int</span> <span class="special">&gt;();</span>
 </pre>
 <p>
-        Arithmetic conversions done by <a class="link" href="../ref/boost__json__value_to.html" title="value_to"><code class="computeroutput"><span class="identifier">value_to</span></code></a> delegate to <code class="computeroutput"><span class="identifier">value</span><span class="special">::</span><span class="identifier">to_number</span></code>. In settings where exceptions
-        cannot be used, an overload of <code class="computeroutput"><span class="identifier">value</span><span class="special">::</span><span class="identifier">to_number</span></code>
-        accepting <a class="link" href="../ref/boost__json__error_code.html" title="error_code"><code class="computeroutput"><span class="identifier">error_code</span></code></a> can be used instead with
+        In settings where exceptions cannot be used, an overload of <code class="computeroutput"><span class="identifier">value</span><span class="special">::</span><span class="identifier">to_number</span></code> accepting <a class="link" href="../ref/boost__json__error_code.html" title="error_code"><code class="computeroutput"><span class="identifier">error_code</span></code></a> can be used instead with
         identical semantics to its throwing counterpart:
       </p>
 <pre class="programlisting"><span class="identifier">value</span> <span class="identifier">jv</span> <span class="special">=</span> <span class="number">10.5</span><span class="special">;</span>
@@ -201,7 +192,7 @@
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<p>
+<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>

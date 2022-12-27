@@ -15,6 +15,7 @@ macro(system_run s1)
   boost_test(SOURCES ${s1} ${ARGN})
   boost_test(SOURCES ${s1} ${ARGN} COMPILE_DEFINITIONS BOOST_NO_ANSI_APIS NAME ${n1}_no_ansi)
   boost_test(SOURCES ${s1} ${ARGN} COMPILE_DEFINITIONS BOOST_SYSTEM_USE_UTF8 NAME ${n1}_utf8)
+  boost_test(SOURCES ${s1} ${ARGN} COMPILE_DEFINITIONS BOOST_SYSTEM_DISABLE_THREADS NAME ${n1}_nthr)
 
 endmacro()
 
@@ -124,6 +125,11 @@ boost_test(TYPE run SOURCES std_interop_test14.cpp)
 boost_test(TYPE run SOURCES ec_location_test3.cpp)
 boost_test(TYPE run SOURCES ec_location_test4.cpp)
 
+boost_test(TYPE compile SOURCES constexpr_test2.cpp)
+
+boost_test(TYPE run SOURCES error_code_test3.cpp)
+boost_test(TYPE run SOURCES std_interop_test15.cpp)
+
 # result
 
 set(BOOST_TEST_COMPILE_FEATURES cxx_std_11)
@@ -143,3 +149,6 @@ boost_test(TYPE run SOURCES result_range_for.cpp)
 boost_test(TYPE run SOURCES result_value_construct2.cpp)
 boost_test(TYPE run SOURCES result_error_construct2.cpp)
 boost_test(TYPE run SOURCES result_convert_construct.cpp)
+boost_test(TYPE run SOURCES result_typedefs.cpp)
+boost_test(TYPE run SOURCES result_value_construct3.cpp)
+boost_test(TYPE run SOURCES result_error_construct3.cpp)

@@ -10,6 +10,7 @@
 
 #include "boost/container/set.hpp"
 #include "boost/container/flat_set.hpp"
+#include "boost/container/devector.hpp"
 #include "bench_set.hpp"
 
 int main()
@@ -24,6 +25,10 @@ int main()
       ("flat_multiset<int>", "multiset<int>");
    launch_tests< flat_multiset<string> , multiset<string> >
       ("flat_multiset<string>", "multiset<string>");
-
+   //flat_multiset vs flat_multiset(devector)
+   launch_tests< flat_multiset<int>, flat_multiset<int, std::less<int>, devector<int> > >
+      ("flat_multiset<int>", "flat_multiset(devector)<int>");
+   launch_tests< flat_multiset<string>, flat_multiset<string, std::less<string>, devector<string> > >
+      ("flat_multiset<string>", "flat_multiset(devector)<string>");
    return 0;
 }

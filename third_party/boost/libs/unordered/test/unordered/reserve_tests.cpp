@@ -2,12 +2,7 @@
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-// clang-format off
-#include "../helpers/prefix.hpp"
-#include <boost/unordered_set.hpp>
-#include <boost/unordered_map.hpp>
-#include "../helpers/postfix.hpp"
-// clang-format on
+#include "../helpers/unordered.hpp"
 
 #include "../helpers/test.hpp"
 
@@ -113,8 +108,8 @@ template <class UnorderedContainer> void reserve_tests()
     s.max_load_factor(0.37f);
     s.reserve(count);
 
-    std::size_t expected_bucket_count =
-      static_cast<std::size_t>(std::ceil(static_cast<float>(count) / 0.37f));
+    std::size_t expected_bucket_count = static_cast<std::size_t>(
+      std::ceil(static_cast<float>(count) / s.max_load_factor()));
 
     BOOST_TEST_GE(total_allocation, expected_bucket_count * sizeof(void*));
     BOOST_TEST_GE(s.bucket_count(), expected_bucket_count);
@@ -173,6 +168,12 @@ template <class UnorderedContainer> void rehash_tests()
     // note, the test is vulnerable to cases where the next calculated bucket
     // count can exceed `prev_count + count`
     //
+#ifdef BOOST_UNORDERED_FOA_TESTS
+    BOOST_TEST_LT(s.bucket_count(), prev_count + count);
+    BOOST_TEST_LE(total_allocation,
+      (prev_count + count) * sizeof(typename UnorderedContainer::value_type) +
+        ((prev_count + count) / 15 + 1) * 16);
+#else
     std::size_t const estimated_bucket_group_size =
       3 * sizeof(void*) + sizeof(std::size_t);
     std::size_t const estimated_bucket_groups =
@@ -182,6 +183,7 @@ template <class UnorderedContainer> void rehash_tests()
     BOOST_TEST_LE(total_allocation,
       (prev_count + count) * sizeof(void*) +
         estimated_bucket_group_size * estimated_bucket_groups);
+#endif
   }
 
   BOOST_TEST_GT(num_allocations, 0u);
@@ -214,6 +216,28 @@ UNORDERED_AUTO_TEST (unordered_set_reserve) {
     BOOST_ASSERT(A<int>(b) == a);
   }
 
+#ifdef BOOST_UNORDERED_FOA_TESTS
+  typedef boost::unordered_flat_set<int*, boost::hash<int*>,
+    std::equal_to<int*>, A<int*> >
+    unordered_set;
+
+  typedef boost::unordered_flat_map<int*, int*, boost::hash<int*>,
+    std::equal_to<int*>, A<std::pair<int const*, int*> > >
+    unordered_map;
+
+  bucket_count_constructor<unordered_set>();
+  bucket_count_constructor<unordered_map>();
+
+  range_bucket_constructor<unordered_set>();
+  range_bucket_constructor<unordered_map>();
+
+  reserve_tests<unordered_set>();
+  reserve_tests<unordered_map>();
+
+  rehash_tests<unordered_set>();
+  rehash_tests<unordered_map>();
+
+#else
   typedef boost::unordered_set<int, boost::hash<int>, std::equal_to<int>,
     A<int> >
     unordered_set;
@@ -249,6 +273,7 @@ UNORDERED_AUTO_TEST (unordered_set_reserve) {
   rehash_tests<unordered_map>();
   rehash_tests<unordered_multiset>();
   rehash_tests<unordered_multimap>();
+#endif
 }
 
 RUN_TESTS()

@@ -1,6 +1,13 @@
+////
+Copyright 2005-2008 Daniel James
+Copyright 2022 Christian Mazakas
+Copyright 2022 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
 [#thanks]
 = Acknowledgements
-
 :idprefix: thanks_
 
 This library is based on the design by Peter Dimov. During the initial development Joaquín M López Muñoz made many useful suggestions and contributed fixes.
@@ -12,3 +19,5 @@ The implementation of the hash function for pointers is based on suggestions mad
 Some useful improvements to the floating point hash algorithm were suggested by Daniel Krügler.
 
 The original implementation came from Jeremy B. Maitin-Shepard's hash table library, although this is a complete rewrite.
+
+The documentation was converted from Quickbook to AsciiDoc by Christian Mazakas.

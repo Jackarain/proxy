@@ -304,8 +304,8 @@ depends on the template arguments of the class. Note that
 again, the second argument to `enable_if` is not needed; the
 default (`void`) is the correct value.
 
-The `enable_if_has_type` template is usable this scenario but instead of
-using a type traits to enable or disable a specialization, it use a
+The `enable_if_has_type` template is usable in this scenario but instead of
+using a type trait to enable or disable a specialization, it uses a
 SFINAE context to check for the existence of a dependent type inside
 its parameter. For example, the following structure extracts a dependent
 `value_type` from T if and only if `T::value_type` exists.

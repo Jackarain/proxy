@@ -63,7 +63,7 @@ For example:
 
 \code
     generator gen;
-    gen.characters(wchar_t_facet);
+    gen.characters(char_facet_t::wchar_f);
     gen.categories(collation_facet | formatting_facet);
     std::locale::global(gen("de_DE.UTF-8"));
 \endcode

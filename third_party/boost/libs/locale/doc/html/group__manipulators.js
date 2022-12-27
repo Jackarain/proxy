@@ -11,9 +11,9 @@ var group__manipulators =
     [ "date_medium", "group__manipulators.html#ga3b9dcc64afbd67883603cfa7bb67e6c4", null ],
     [ "date_short", "group__manipulators.html#ga295c7b48ce2732c196df31a70660b7b9", null ],
     [ "datetime", "group__manipulators.html#ga820edf843e20847a0c4ccb8da0c4acd8", null ],
-    [ "domain", "group__manipulators.html#gab522188e3d82f1d2898b290b9132925e", null ],
-    [ "ftime", "group__manipulators.html#ga84cc8985e5305ef54394e84c10223866", null ],
-    [ "ftime", "group__manipulators.html#gae7814e66e9b73b632c28f9cdc58592eb", null ],
+    [ "domain", "group__manipulators.html#gad113c401778a4ee37958844326e49fff", null ],
+    [ "ftime", "group__manipulators.html#ga2cbed7992bd001c4094275a980ddf4b3", null ],
+    [ "ftime", "group__manipulators.html#gab392da3c743299efc5129f3433611c1f", null ],
     [ "gmt", "group__manipulators.html#gac90c969d876305b8584def8632ae1808", null ],
     [ "local_time", "group__manipulators.html#gac6cb5458543daf651cd6b48812891541", null ],
     [ "number", "group__manipulators.html#gaee05db73f5525d9a010cdc3aa02f634f", null ],
@@ -28,6 +28,6 @@ var group__manipulators =
     [ "time_long", "group__manipulators.html#gad6590ea48c57d53899b90d3464cf3c0b", null ],
     [ "time_medium", "group__manipulators.html#ga3f3cc44eeeaffc3b90bebe7660b3e853", null ],
     [ "time_short", "group__manipulators.html#gada3d88eef293c9495a3f7d756d369fd3", null ],
-    [ "time_zone", "group__manipulators.html#gad51fbdc634fe0c81e5183915e9eeb238", null ],
-    [ "time_zone", "group__manipulators.html#ga4348099506fc7c52945e639683398a20", null ]
+    [ "time_zone", "group__manipulators.html#ga5f0197fc0f1b01a77857c827b5d95102", null ],
+    [ "time_zone", "group__manipulators.html#ga73f5406dac16dac2ae83bbd0f718649a", null ]
 ];

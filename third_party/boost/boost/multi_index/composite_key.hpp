@@ -14,6 +14,7 @@
 #endif
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
+#include <boost/core/enable_if.hpp>
 #include <boost/functional/hash_fwd.hpp>
 #include <boost/multi_index/detail/access_specifier.hpp>
 #include <boost/mpl/eval_if.hpp>
@@ -28,7 +29,6 @@
 #include <boost/static_assert.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/type_traits/is_same.hpp>
-#include <boost/utility/enable_if.hpp>
 #include <functional>
 
 #if !defined(BOOST_NO_FUNCTION_TEMPLATE_ORDERING)

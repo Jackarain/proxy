@@ -38,8 +38,7 @@ BOOST_JSON_NS_BEGIN
 /** The type used to represent any JSON value
 
     This is a
-    <a href="https://en.cppreference.com/w/cpp/concepts/regular"><em>Regular</em></a>.
-    <em>Regular</em>
+    <a href="https://en.cppreference.com/w/cpp/concepts/regular"><em>Regular</em></a>
     type which works like
     a variant of the basic JSON data types: array,
     object, string, number, boolean, and null.
@@ -2440,7 +2439,7 @@ public:
         error_code ec;
         auto result = to_number<T>(ec);
         if(ec)
-            detail::throw_system_error(ec, BOOST_JSON_SOURCE_POS);
+            detail::throw_system_error(ec, BOOST_CURRENT_LOCATION);
         return result;
     }
 
@@ -2501,39 +2500,33 @@ public:
 
         @throw std::invalid_argument `! this->is_object()`
     */
+    /* @{ */
     object&
-    as_object()
+    as_object() &
     {
         if(! is_object())
             detail::throw_invalid_argument(
                 "not an object",
-                BOOST_JSON_SOURCE_POS);
+                BOOST_CURRENT_LOCATION);
         return obj_;
     }
 
-    /** Return a reference to the underlying `object`, or throw an exception.
+    object&&
+    as_object() &&
+    {
+        return std::move( as_object() );
+    }
 
-        If @ref is_object() is `true`, returns
-        a reference to the underlying @ref object,
-        otherwise throws an exception.
-
-        @par Complexity
-        Constant.
-
-        @par Exception Safety
-        Strong guarantee.
-
-        @throw std::invalid_argument `! this->is_object()`
-    */
     object const&
-    as_object() const
+    as_object() const&
     {
         if(! is_object())
             detail::throw_invalid_argument(
                 "not an object",
-                BOOST_JSON_SOURCE_POS);
+                BOOST_CURRENT_LOCATION);
         return obj_;
     }
+    /* @} */
 
     /** Return a reference to the underlying @ref array, or throw an exception.
 
@@ -2549,39 +2542,33 @@ public:
 
         @throw std::invalid_argument `! this->is_array()`
     */
+    /* @{ */
     array&
-    as_array()
+    as_array() &
     {
         if(! is_array())
             detail::throw_invalid_argument(
                 "array required",
-                BOOST_JSON_SOURCE_POS);
+                BOOST_CURRENT_LOCATION);
         return arr_;
     }
 
-    /** Return a reference to the underlying `array`, or throw an exception.
+    array&&
+    as_array() &&
+    {
+        return std::move( as_array() );
+    }
 
-        If @ref is_array() is `true`, returns
-        a reference to the underlying @ref array,
-        otherwise throws an exception.
-
-        @par Complexity
-        Constant.
-
-        @par Exception Safety
-        Strong guarantee.
-
-        @throw std::invalid_argument `! this->is_array()`
-    */
     array const&
-    as_array() const
+    as_array() const&
     {
         if(! is_array())
             detail::throw_invalid_argument(
                 "array required",
-                BOOST_JSON_SOURCE_POS);
+                BOOST_CURRENT_LOCATION);
         return arr_;
     }
+    /* @} */
 
     /** Return a reference to the underlying `string`, or throw an exception.
 
@@ -2597,39 +2584,33 @@ public:
 
         @throw std::invalid_argument `! this->is_string()`
     */
+    /* @{ */
     string&
-    as_string()
+    as_string() &
     {
         if(! is_string())
             detail::throw_invalid_argument(
                 "not a string",
-                BOOST_JSON_SOURCE_POS);
+                BOOST_CURRENT_LOCATION);
         return str_;
     }
 
-    /** Return a reference to the underlying `string`, or throw an exception.
+    string&&
+    as_string() &&
+    {
+        return std::move( as_string() );
+    }
 
-        If @ref is_string() is `true`, returns
-        a reference to the underlying @ref string,
-        otherwise throws an exception.
-
-        @par Complexity
-        Constant.
-
-        @par Exception Safety
-        Strong guarantee.
-
-        @throw std::invalid_argument `! this->is_string()`
-    */
     string const&
-    as_string() const
+    as_string() const&
     {
         if(! is_string())
             detail::throw_invalid_argument(
                 "not a string",
-                BOOST_JSON_SOURCE_POS);
+                BOOST_CURRENT_LOCATION);
         return str_;
     }
+    /* @} */
 
     /** Return a reference to the underlying `std::int64_t`, or throw an exception.
 
@@ -2651,7 +2632,7 @@ public:
         if(! is_int64())
             detail::throw_invalid_argument(
                 "not an int64",
-                BOOST_JSON_SOURCE_POS);
+                BOOST_CURRENT_LOCATION);
         return sca_.i;
     }
 
@@ -2675,7 +2656,7 @@ public:
         if(! is_int64())
             detail::throw_invalid_argument(
                 "not an int64",
-                BOOST_JSON_SOURCE_POS);
+                BOOST_CURRENT_LOCATION);
         return sca_.i;
     }
 
@@ -2699,7 +2680,7 @@ public:
         if(! is_uint64())
             detail::throw_invalid_argument(
                 "not a uint64",
-                BOOST_JSON_SOURCE_POS);
+                BOOST_CURRENT_LOCATION);
         return sca_.u;
     }
 
@@ -2723,7 +2704,7 @@ public:
         if(! is_uint64())
             detail::throw_invalid_argument(
                 "not a uint64",
-                BOOST_JSON_SOURCE_POS);
+                BOOST_CURRENT_LOCATION);
         return sca_.u;
     }
 
@@ -2747,7 +2728,7 @@ public:
         if(! is_double())
             detail::throw_invalid_argument(
                 "not a double",
-                BOOST_JSON_SOURCE_POS);
+                BOOST_CURRENT_LOCATION);
         return sca_.d;
     }
 
@@ -2771,7 +2752,7 @@ public:
         if(! is_double())
             detail::throw_invalid_argument(
                 "not a double",
-                BOOST_JSON_SOURCE_POS);
+                BOOST_CURRENT_LOCATION);
         return sca_.d;
     }
 
@@ -2795,7 +2776,7 @@ public:
         if(! is_bool())
             detail::throw_invalid_argument(
                 "bool required",
-                BOOST_JSON_SOURCE_POS);
+                BOOST_CURRENT_LOCATION);
         return sca_.b;
     }
 
@@ -2819,7 +2800,7 @@ public:
         if(! is_bool())
             detail::throw_invalid_argument(
                 "bool required",
-                BOOST_JSON_SOURCE_POS);
+                BOOST_CURRENT_LOCATION);
         return sca_.b;
     }
 
@@ -2842,36 +2823,28 @@ public:
         @par Exception Safety
         No-throw guarantee.
     */
+    /* @{ */
     object&
-    get_object() noexcept
+    get_object() & noexcept
     {
         BOOST_ASSERT(is_object());
         return obj_;
     }
 
-    /** Return a reference to the underlying `object`, without checking.
+    object&&
+    get_object() && noexcept
+    {
+        BOOST_ASSERT(is_object());
+        return std::move(obj_);
+    }
 
-        This is the fastest way to access the underlying
-        representation when the kind is known in advance.
-
-        @par Preconditions
-
-        @code
-        this->is_object()
-        @endcode
-
-        @par Complexity
-        Constant.
-
-        @par Exception Safety
-        No-throw guarantee.
-    */
     object const&
-    get_object() const noexcept
+    get_object() const& noexcept
     {
         BOOST_ASSERT(is_object());
         return obj_;
     }
+    /* @} */
 
     /** Return a reference to the underlying `array`, without checking.
 
@@ -2890,36 +2863,28 @@ public:
         @par Exception Safety
         No-throw guarantee.
     */
+    /* @{ */
     array&
-    get_array() noexcept
+    get_array() & noexcept
     {
         BOOST_ASSERT(is_array());
         return arr_;
     }
 
-    /** Return a reference to the underlying `array`, without checking.
+    array&&
+    get_array() && noexcept
+    {
+        BOOST_ASSERT(is_array());
+        return std::move(arr_);
+    }
 
-        This is the fastest way to access the underlying
-        representation when the kind is known in advance.
-
-        @par Preconditions
-
-        @code
-        this->is_array()
-        @endcode
-
-        @par Complexity
-        Constant.
-
-        @par Exception Safety
-        No-throw guarantee.
-    */
     array const&
-    get_array() const noexcept
+    get_array() const& noexcept
     {
         BOOST_ASSERT(is_array());
         return arr_;
     }
+    /* @} */
 
     /** Return a reference to the underlying `string`, without checking.
 
@@ -2938,36 +2903,28 @@ public:
         @par Exception Safety
         No-throw guarantee.
     */
+    /* @{ */
     string&
-    get_string() noexcept
+    get_string() & noexcept
     {
         BOOST_ASSERT(is_string());
         return str_;
     }
 
-    /** Return a reference to the underlying `string`, without checking.
+    string&&
+    get_string() && noexcept
+    {
+        BOOST_ASSERT(is_string());
+        return std::move(str_);
+    }
 
-        This is the fastest way to access the underlying
-        representation when the kind is known in advance.
-
-        @par Preconditions
-
-        @code
-        this->is_string()
-        @endcode
-
-        @par Complexity
-        Constant.
-
-        @par Exception Safety
-        No-throw guarantee.
-    */
     string const&
-    get_string() const noexcept
+    get_string() const& noexcept
     {
         BOOST_ASSERT(is_string());
         return str_;
     }
+    /* @} */
 
     /** Return a reference to the underlying `std::int64_t`, without checking.
 
@@ -3181,13 +3138,19 @@ public:
     */
 /** @{ */
     value&
-    at(string_view key)
+    at(string_view key) &
     {
         return as_object().at(key);
     }
 
+    value&&
+    at(string_view key) &&
+    {
+        return std::move( as_object() ).at(key);
+    }
+
     value const&
-    at(string_view key) const
+    at(string_view key) const&
     {
         return as_object().at(key);
     }
@@ -3211,13 +3174,19 @@ public:
     */
 /** @{ */
     value &
-    at(std::size_t pos)
+    at(std::size_t pos) &
     {
         return as_array().at(pos);
     }
 
+    value&&
+    at(std::size_t pos) &&
+    {
+        return std::move( as_array() ).at(pos);
+    }
+
     value const&
-    at(std::size_t pos) const
+    at(std::size_t pos) const&
     {
         return as_array().at(pos);
     }
@@ -3247,11 +3216,15 @@ public:
 /** @{ */
     BOOST_JSON_DECL
     value const&
-    at_pointer(string_view ptr) const;
+    at_pointer(string_view ptr) const&;
 
-    BOOST_JSON_DECL
+    inline
+    value&&
+    at_pointer(string_view ptr) &&;
+
+    inline
     value&
-    at_pointer(string_view ptr);
+    at_pointer(string_view ptr) &;
 /** @} */
 
     /** Access an element via JSON Pointer.
@@ -3341,6 +3314,65 @@ public:
     {
         return ! (lhs == rhs);
     }
+
+    /** Serialize @ref value to an output stream.
+
+        This function serializes a `value` as JSON into the output stream.
+
+        @return Reference to `os`.
+
+        @par Complexity
+        Constant or linear in the size of `jv`.
+
+        @par Exception Safety
+        Strong guarantee.
+        Calls to `memory_resource::allocate` may throw.
+
+        @param os The output stream to serialize to.
+
+        @param jv The value to serialize.
+    */
+    BOOST_JSON_DECL
+    friend
+    std::ostream&
+    operator<<(
+        std::ostream& os,
+        value const& jv);
+
+    /** Parse @ref value from an input stream.
+
+        This function parses JSON from an input stream into a `value`. If
+        parsing fails, `std::ios_base::failbit` will be set for `is` and
+        `jv` will be left unchanged.<br>
+
+        Note: this operator cannot assume that the stream only contains a
+        single JSON document, which results in **very underwhelming
+        performance**. If you know that your input consists of a single
+        JSON document, consider using @ref parse function instead.
+
+        @return Reference to `is`.
+
+        @par Complexity
+        Linear in the size of JSON data.
+
+        @par Exception Safety
+        Basic guarantee.
+        Calls to `memory_resource::allocate` may throw.
+        The stream may throw as described by
+        [`std::ios::exceptions`](https://en.cppreference.com/w/cpp/io/basic_ios/exceptions).
+
+        @param is The input stream to parse from.
+
+        @param jv The value to parse into.
+
+        @see @ref parse.
+    */
+    BOOST_JSON_DECL
+    friend
+    std::istream&
+    operator>>(
+        std::istream& is,
+        value& jv);
 
 private:
     static
@@ -3666,7 +3698,7 @@ public:
         if(key.size() > string::max_size())
             detail::throw_length_error(
                 "key too large",
-                BOOST_JSON_SOURCE_POS);
+                BOOST_CURRENT_LOCATION);
         auto s = reinterpret_cast<
             char*>(value_.storage()->
                 allocate(key.size() + 1, alignof(char)));
@@ -3793,25 +3825,25 @@ public:
         @par Exception Safety
         No-throw guarantee.
     */
+    /* @{ */
     json::value const&
-    value() const noexcept
+    value() const& noexcept
     {
         return value_;
     }
 
-    /** Return the value of this element.
+    json::value&&
+    value() && noexcept
+    {
+        return std::move( value() );
+    }
 
-        @par Complexity
-        Constant.
-
-        @par Exception Safety
-        No-throw guarantee.
-    */
     json::value&
-    value() noexcept
+    value() & noexcept
     {
         return value_;
     }
+    /* @} */
 
 private:
     json::value value_;
@@ -4046,6 +4078,7 @@ struct hash< ::boost::json::value > {
 #include <boost/json/detail/impl/array.hpp>
 #include <boost/json/impl/array.hpp>
 #include <boost/json/impl/object.hpp>
+#include <boost/json/impl/value.hpp>
 
 // These must come after array and object
 #include <boost/json/impl/value_ref.hpp>

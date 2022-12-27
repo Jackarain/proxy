@@ -283,6 +283,7 @@ public:
         , pg_()
         , b_(b)
     {
+        this->set_allowed_cancellation(net::cancellation_type::all);
         if (buffer_bytes(b_) == 0 && state().pending)
         {
             // Workaround:
@@ -326,7 +327,7 @@ public:
                 if(state().timer.expiry() <= clock_type::now())
                 {
                     impl_->close();
-                    ec = beast::error::timeout;
+                    BOOST_BEAST_ASSIGN_EC(ec, beast::error::timeout);
                 }
                 goto upcall;
             }
@@ -371,7 +372,7 @@ public:
                     if(state().timeout)
                     {
                         // yes, socket already closed
-                        ec = beast::error::timeout;
+                        BOOST_BEAST_ASSIGN_EC(ec, beast::error::timeout);
                         state().timeout = false;
                     }
                     goto upcall;
@@ -407,7 +408,7 @@ public:
                     if(state().timeout)
                     {
                         // yes, socket already closed
-                        ec = beast::error::timeout;
+                        BOOST_BEAST_ASSIGN_EC(ec, beast::error::timeout);
                         state().timeout = false;
                     }
                 }
@@ -452,6 +453,7 @@ public:
         , pg0_(impl_->read.pending)
         , pg1_(impl_->write.pending)
     {
+        this->set_allowed_cancellation(net::cancellation_type::all);
         if(state().timer.expiry() != stream_base::never())
         {
             BOOST_ASIO_HANDLER_LOCATION((
@@ -489,6 +491,7 @@ public:
         , pg0_(impl_->read.pending)
         , pg1_(impl_->write.pending)
     {
+        this->set_allowed_cancellation(net::cancellation_type::all);
         if(state().timer.expiry() != stream_base::never())
         {
             BOOST_ASIO_HANDLER_LOCATION((
@@ -526,6 +529,7 @@ public:
         , pg0_(impl_->read.pending)
         , pg1_(impl_->write.pending)
     {
+        this->set_allowed_cancellation(net::cancellation_type::all);
         if(state().timer.expiry() != stream_base::never())
         {
             BOOST_ASIO_HANDLER_LOCATION((
@@ -566,7 +570,7 @@ public:
                 if(state().timeout)
                 {
                     // yes, socket already closed
-                    ec = beast::error::timeout;
+                    BOOST_BEAST_ASSIGN_EC(ec, beast::error::timeout);
                     state().timeout = false;
                 }
             }
@@ -762,6 +766,14 @@ basic_stream(basic_stream&& other)
     // * the socket shall not be open
     // We provide the same guarantee by moving the impl rather than the pointer
     // controlling its lifetime.
+}
+
+template<class Protocol, class Executor, class RatePolicy>
+template<class Executor_>
+basic_stream<Protocol, Executor, RatePolicy>::
+basic_stream(basic_stream<Protocol, Executor_, RatePolicy> && other)
+    : impl_(boost::make_shared<impl_type>(std::false_type{}, std::move(other.impl_->socket)))
+{
 }
 
 //------------------------------------------------------------------------------

@@ -99,6 +99,15 @@ int main()
     for(std::size_t i = 0; i != 10; ++i)
         BOOST_TEST_EQ(generated[i], static_cast<int>(42 + i));
 
+    // Test that incrementing the iterator returns a reference to the iterator type
+    {
+        typedef boost::iterators::function_input_iterator<counter, int> function_counter_iterator_t;
+        function_counter_iterator_t it1(counter_generator, 0);
+        function_counter_iterator_t it2(++it1);
+        function_counter_iterator_t it3(it2++);
+        BOOST_TEST_EQ(*it3, 54);
+    }
+
 #if !defined(BOOST_NO_CXX11_LAMBDAS) && !defined(BOOST_NO_CXX11_AUTO_DECLARATIONS) \
     && defined(BOOST_RESULT_OF_USE_DECLTYPE)
     // test the iterator with lambda expressions

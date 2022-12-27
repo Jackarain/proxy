@@ -21,6 +21,10 @@
 #include <boost/static_assert.hpp>
 #include "tree.hpp"
 
+#ifdef _MSC_VER
+#  pragma warning(push)
+#  pragma warning(disable: 4512) // assignment operator could not be generated.
+#endif
 struct ostream_fun
 {
     ostream_fun(std::ostream &sout)
@@ -34,6 +38,9 @@ struct ostream_fun
 private:
     std::ostream & sout_;
 };
+#ifdef _MSC_VER
+#  pragma warning(pop)
+#endif
 
 template<typename Tree>
 void

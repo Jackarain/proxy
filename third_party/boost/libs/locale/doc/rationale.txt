@@ -18,9 +18,9 @@
 - \ref why_abstract_api
 - \ref why_no_special_character_type
 
-\section rationale_why Why is it needed?
+\section rationale_why Why do I need Boost.Locale?
 
-Why do we need a localization library, when standard C++ facets (should) provide most of the required functionality:
+Why do we need a localization library, when standard C++ facets (should) provide most of the required functionality?
 
 - Case conversion is done using the \c std::ctype facet
 - Collation is supported by \c std::collate and has nice integration with \c std::locale
@@ -28,11 +28,11 @@ Why do we need a localization library, when standard C++ facets (should) provide
     time, and currency formatting and parsing.
 - There is a \c std::messages class that supports localized message formatting.
 
-So why do we need such library if we have all the functionality within the standard library?
+So why do we need such a library if we have all the functionality within the standard library?
 
 Almost every(!) facet has design flaws:
 
--  \c std::collate supports only one level of collation, not allowing you to choose whether case- or accent-sensitive comparisons
+-  \c std::collate supports only one level of collation; it does not allow you to choose whether case- or accent-sensitive comparisons
     should be performed.
 
 -  \c std::ctype, which is responsible for case conversion, assumes that all conversions can be done on a per-character basis. This is
@@ -61,7 +61,7 @@ Almost every(!) facet has design flaws:
     -# They always use a global time zone, not allowing specification of the time zone for formatting. The standard \c std::tm doesn't
        even include a timezone field at all.
     -# \c std::time_get is not symmetric with \c std::time_put, so you cannot parse dates and times created with \c std::time_put .
-       (This issue is addressed in C++0x and some STL implementation like the Apache standard C++ library.)
+       (This issue is addressed in C++11 and some STL implementation like the Apache standard C++ library.)
 -   \c std::messages does not provide support for plural forms, making it impossible to correctly localize such simple strings as
        "There are X files in the directory".
 
@@ -176,17 +176,17 @@ to provide all the required information.
 - ICU fully understands POSIX locales and knows how to treat them correctly.
 - They are native locale names for most operating system APIs (with the exception of Windows)
 
-\section why_linear_chunks Why most parts of Boost.Locale work only on linear/contiguous chunks of text
+\section why_linear_chunks Why do most parts of Boost.Locale work only on linear/contiguous chunks of text?
 
 There are two reasons:
 
 - Boost.Locale relies heavily on the third-party APIs like ICU, POSIX or Win32 API, all of them
   work only on linear chunks of text, so providing non-linear API would just hide the
-  real situation and would not bring real performance advantage.
+  real situation and would hurt performance.
 - In fact, all known libraries that work with Unicode: ICU, Qt, Glib, Win32 API, POSIX API
-  and others accept an input as single linear chunk of text and there is a good reason for this:
+  and others accept an input as single linear chunks of text and there is a good reason for this:
   \n
-  -#  Most of supported operations on text like collation, case handling usually work on small
+  -#  Most supported operations on text like collation, case handling usually work on small
       chunks of text. For example: you probably would never want to compare two chapters of a book, but rather
       their titles.
   -#  We should remember that even very large texts require quite a small amount of memory, for example
@@ -201,7 +201,7 @@ However:
    on large chunks of text, will provide an interface for non-linear text handling.
 
 
-\section why_abstract_api Why all Boost.Locale implementation is hidden behind abstract interfaces and does not use template metaprogramming?
+\section why_abstract_api Why is all Boost.Locale implementation hidden behind abstract interfaces instead of using template metaprogramming?
 
 There are several major reasons:
 
@@ -212,21 +212,21 @@ There are several major reasons:
 - This approach reduces compilation times significantly. This is very important for library that may be
   used in almost every part of specific program.
 
-\section why_no_special_character_type Why Boost.Locale does not provide char16_t/char32_t for non-C++0x platforms.
+\section why_no_special_character_type Why doesn't Boost.Locale provide char16_t/char32_t for non-C++11 platforms?
 
 There are several reasons:
 
-- C++0x defines \c char16_t and \c char32_t as distinct types, so substituting is with something like \c uint16_t or \c uint32_t
+- C++11 defines \c char16_t and \c char32_t as distinct types, so substituting it with something like \c uint16_t or \c uint32_t
   would not work as for example writing \c uint16_t to \c uint32_t stream would write a number to stream.
 - The C++ locales system would work only if standard facets like \c std::num_put are installed into the
   existing instance of \c std::locale, however in the many standard C++ libraries these facets are specialized for each
   specific character that the standard library supports, so an attempt to create a new facet would
   fail as it is not specialized.
 
-These are exactly the reasons why Boost.Locale fails with current limited C++0x characters support on GCC-4.5 (the second reason)
+These are exactly the reasons why Boost.Locale fails with current limited C++11 characters support on GCC-4.5 (the second reason)
 and MSVC-2010 (the first reason)
 
-So basically it is impossible to use non-C++ characters with the C++'s locales framework.
+Basically it is impossible to use non-C++ characters with the C++'s locales framework.
 
 The best and the most portable solution is to use the C++'s \c char type and UTF-8 encodings.
 

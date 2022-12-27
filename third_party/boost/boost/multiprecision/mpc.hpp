@@ -422,13 +422,13 @@ struct mpc_complex_backend : public detail::mpc_complex_imp<digits10>
    mpc_complex_backend(mpc_complex_backend&& o) : detail::mpc_complex_imp<digits10>(static_cast<detail::mpc_complex_imp<digits10>&&>(o))
    {}
    template <unsigned D>
-   mpc_complex_backend(const mpc_complex_backend<D>& val, typename std::enable_if<D <= digits10>::type* = 0)
+   mpc_complex_backend(const mpc_complex_backend<D>& val, typename std::enable_if<D <= digits10>::type* = nullptr)
        : detail::mpc_complex_imp<digits10>()
    {
       mpc_set(this->m_data, val.data(), GMP_RNDN);
    }
    template <unsigned D>
-   explicit mpc_complex_backend(const mpc_complex_backend<D>& val, typename std::enable_if<!(D <= digits10)>::type* = 0)
+   explicit mpc_complex_backend(const mpc_complex_backend<D>& val, typename std::enable_if<!(D <= digits10)>::type* = nullptr)
        : detail::mpc_complex_imp<digits10>()
    {
       mpc_set(this->m_data, val.data(), GMP_RNDN);
@@ -519,12 +519,12 @@ struct mpc_complex_backend : public detail::mpc_complex_imp<digits10>
       return *this;
    }
    template <unsigned D10, mpfr_allocation_type AllocationType>
-   mpc_complex_backend(mpfr_float_backend<D10, AllocationType> const& val, typename std::enable_if<D10 <= digits10>::type* = 0) : detail::mpc_complex_imp<digits10>()
+   mpc_complex_backend(mpfr_float_backend<D10, AllocationType> const& val, typename std::enable_if<D10 <= digits10>::type* = nullptr) : detail::mpc_complex_imp<digits10>()
    {
       mpc_set_fr(this->m_data, val.data(), GMP_RNDN);
    }
    template <unsigned D10, mpfr_allocation_type AllocationType>
-   explicit mpc_complex_backend(mpfr_float_backend<D10, AllocationType> const& val, typename std::enable_if<!(D10 <= digits10)>::type* = 0) : detail::mpc_complex_imp<digits10>()
+   explicit mpc_complex_backend(mpfr_float_backend<D10, AllocationType> const& val, typename std::enable_if<!(D10 <= digits10)>::type* = nullptr) : detail::mpc_complex_imp<digits10>()
    {
       mpc_set_fr(this->m_data, val.data(), GMP_RNDN);
    }

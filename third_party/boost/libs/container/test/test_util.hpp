@@ -36,6 +36,7 @@ template <typename Container>
 void get_range(int count, Container &c)
 {
    c.clear();
+   c.reserve(static_cast<std::size_t>(count));
 
    for (int i = 1; i <= count; ++i)
    {

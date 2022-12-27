@@ -1,3 +1,101 @@
+Version 344:
+
+* Internal fixes adopting to asio changes.
+
+
+--------------------------------------------------------------------------------
+
+
+Version 343:
+
+* Beast IO-objects support rebinding constructors
+* C++20 coroutine examples
+
+--------------------------------------------------------------------------------
+
+Version 342:
+
+* Support per operation cancellation
+
+--------------------------------------------------------------------------------
+
+Version 341:
+
+*  Expect header field with the "100-continue" is handled in upgrade.
+
+--------------------------------------------------------------------------------
+
+Version 340:
+
+* buffers have a features table in the docs
+* buffer_ref allows using beast buffers with asio
+* buffer_adaptor works with multi-buffer
+
+--------------------------------------------------------------------------------
+
+Version 339:
+
+* BOOST_BEAST_USE_STD_STRING_VIEW is replaced by boost/core string_view.
+* defining BOOST_BEAST_USE_STD_STRING_VIEW yields a deprecation warning
+
+--------------------------------------------------------------------------------
+
+Version 338:
+
+* Added per message compression options.
+
+--------------------------------------------------------------------------------
+
+Version 337:
+
+* Added timeout option to websocket
+
+--------------------------------------------------------------------------------
+
+Version 336:
+
+* Remove incorrect ASSERT in WebSocket read.
+
+--------------------------------------------------------------------------------
+
+Version 335:
+
+* Reduce size of multi_buffer.
+* Upgrade OS on some drone CI jobs.
+
+--------------------------------------------------------------------------------
+
+Version 334:
+
+* Fix version number in CML.
+
+--------------------------------------------------------------------------------
+
+Version 333:
+
+* Workaround TSAN CI bug.
+
+--------------------------------------------------------------------------------
+
+Version 332:
+
+* Fix beast::zlib warnings
+* Improve documentation
+
+--------------------------------------------------------------------------------
+
+Version 331:
+
+* Using core::string_view instead of utility::string_view
+* Use static_string from Boost.StaticString
+* Use span from Boost.Core
+* Fix CVE-2018-25032 in zlib streams
+* Add http::message_generator
+* Add buffers_generator
+* serializer::is_done is const
+
+--------------------------------------------------------------------------------
+
 Version 330:
 
 * Update release notes for Boost 1.79.

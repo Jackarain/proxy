@@ -11,7 +11,7 @@
 #include <boost/config.hpp>
 #include <boost/core/lightweight_test.hpp>
 
-#if BOOST_HASH_HAS_VARIANT
+#if !defined(BOOST_NO_CXX17_HDR_VARIANT)
 
 #include <variant>
 #include <string>
@@ -90,7 +90,7 @@ void test_variant_unique_types()
 
 int main()
 {
-#if BOOST_HASH_HAS_VARIANT
+#if !defined(BOOST_NO_CXX17_HDR_VARIANT)
     test_variant_int();
     test_variant_unique_types();
 #else

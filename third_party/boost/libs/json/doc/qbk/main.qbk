@@ -12,13 +12,14 @@
     [quickbook 1.6]
     [copyright 2019 - 2020 Vinnie Falco]
     [copyright 2020 Krystian Stasiowski]
+    [copyright 2022 Dmitry Arkhipov]
     [purpose JSON Library]
     [license
         Distributed under the Boost Software License, Version 1.0.
         (See accompanying file LICENSE_1_0.txt or copy at
         [@http://www.boost.org/LICENSE_1_0.txt])
     ]
-    [authors [Falco, Vinnie], [Stasiowski, Krystian]]
+    [authors [Falco, Vinnie], [Stasiowski, Krystian], [Arkhipov, Dmitry]]
     [category template]
     [category generic]
 ]
@@ -76,6 +77,7 @@
 [def __system_error__           [link json.ref.boost__json__system_error `system_error`]]
 [def __value__                  [link json.ref.boost__json__value `value`]]
 [def __value_from__             [link json.ref.boost__json__value_from `value_from`]]
+[def __value_ref__              [link json.ref.boost__json__value_ref `value_ref`]]
 [def __value_stack__            [link json.ref.boost__json__value_stack `value_stack`]]
 [def __value_to__               [link json.ref.boost__json__value_to `value_to`]]
 

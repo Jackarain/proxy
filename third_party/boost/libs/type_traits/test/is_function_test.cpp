@@ -43,7 +43,7 @@ typedef void foo1_t(int);
 typedef void foo2_t(int&, double);
 typedef void foo3_t(int&, bool, int, int);
 typedef void foo4_t(int, bool, int*, int[], int, int, int, int, int);
-#if __cpp_noexcept_function_type
+#ifdef __cpp_noexcept_function_type
 typedef int foo5_t(void)noexcept;
 typedef int foo6_t(double)noexcept(false);
 typedef int foo7_t(int, double)noexcept(true);

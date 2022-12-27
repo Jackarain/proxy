@@ -127,7 +127,7 @@ ptime t(time_from_string(ts))</screen></entry>
 
 	  <row>
 	    <entry valign="top" morerows="1"><screen>ptime from_iso_string(std::string)</screen></entry>
-	    <entry>From non delimited iso form string.</entry>
+	    <entry>From non delimited ISO 8601 form string.</entry>
 	  </row>
           <row>
 	    <entry><screen>std::string ts("20020131T235959");
@@ -136,7 +136,7 @@ ptime t(from_iso_string(ts))</screen></entry>
 
 	  <row>
 	    <entry valign="top" morerows="1"><screen>ptime from_iso_extended_string(std::string)</screen></entry>
-	    <entry>From delimited iso form string.</entry>
+	    <entry>From delimited ISO 8601 form string.</entry>
 	  </row>
           <row>
 	    <entry><screen>std::string ts("2020-01-31T23:59:59.123");
@@ -345,7 +345,7 @@ pt3.is_special(); // --> false</screen></entry>
 	<tbody>
           <row>
 	    <entry valign="top" morerows="1"><screen>std::string to_simple_string(ptime)</screen></entry>
-            <entry>To <code>YYYY-mmm-DD HH:MM:SS.fffffffff</code> string where <code>mmm</code> 3 char month name. Fractional seconds only included if non-zero.</entry>
+            <entry>To <code>YYYY-mmm-DD HH:MM:SS.fffffffff</code> string where <code>mmm</code> 3 char month name and the fractional seconds are only included if non-zero.</entry>
 	  </row>
 	  <row>
 	    <entry><screen>2002-Jan-01 10:00:01.123456789</screen></entry>
@@ -353,18 +353,18 @@ pt3.is_special(); // --> false</screen></entry>
 
 	  <row>
 	    <entry valign="top" morerows="1"><screen>std::string to_iso_string(ptime)</screen></entry>
-            <entry>Convert to form <code>YYYYMMDDTHHMMSS,fffffffff</code> where <code>T</code> is the date-time separator</entry>
+            <entry>Convert to form <code>YYYYMMDDTHHMMSS.fffffffff</code> where <code>T</code> is the date-time separator and the fractional seconds are only included if non-zero.</entry>
 	  </row>
 	  <row>
-	    <entry><screen>20020131T100001,123456789</screen></entry>
+	    <entry><screen>20020131T100001.123456789</screen></entry>
           </row>
           
           <row>
 	    <entry valign="top" morerows="1"><screen>std::string to_iso_extended_string(ptime)</screen></entry>
-            <entry>Convert to form <code>YYYY-MM-DDTHH:MM:SS,fffffffff</code> where <code>T</code> is the date-time separator</entry>
+            <entry>Convert to form <code>YYYY-MM-DDTHH:MM:SS.fffffffff</code> where <code>T</code> is the date-time separator and the fractional seconds are only included if non-zero.</entry>
 	  </row>
 	  <row>
-	    <entry><screen>2002-01-31T10:00:01,123456789</screen></entry>
+	    <entry><screen>2002-01-31T10:00:01.123456789</screen></entry>
 	  </row>
 	</tbody>
       </tgroup>

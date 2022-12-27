@@ -10,5 +10,6 @@
     "description": "A C++14 lambda library.",
     "category": [
         "Function-objects"
-    ]
+    ],
+    "cxxstd": "14"
 }

@@ -27,23 +27,27 @@
 <a name="beast.ref.boost__beast__test__handler.handler"></a><a class="link" href="handler.html" title="test::handler::handler">test::handler::handler</a>
 </h5></div></div></div>
 <p>
-          <a class="indexterm" name="idm30358"></a>
+          <a class="indexterm" name="idm30876"></a>
         </p>
-<pre class="programlisting"><a class="link" href="handler/overload1.html" title="test::handler::handler (1 of 4 overloads)">handler</a><span class="special">();</span>
+<pre class="programlisting"><a class="link" href="handler/overload1.html" title="test::handler::handler (1 of 4 overloads)">handler</a><span class="special">(</span>
+    <span class="identifier">boost</span><span class="special">::</span><span class="identifier">source_location</span> <span class="identifier">loc</span> <span class="special">=</span> <span class="identifier">BOOST_CURRENT_LOCATION</span><span class="special">);</span>
   <span class="emphasis"><em>» <a class="link" href="handler/overload1.html" title="test::handler::handler (1 of 4 overloads)"><code class="computeroutput"><span class="identifier">more</span><span class="special">...</span></code></a></em></span>
 
 <span class="keyword">explicit</span>
 <a class="link" href="handler/overload2.html" title="test::handler::handler (2 of 4 overloads)">handler</a><span class="special">(</span>
-    <span class="identifier">error_code</span> <span class="identifier">ec</span><span class="special">);</span>
+    <span class="identifier">error_code</span> <span class="identifier">ec</span><span class="special">,</span>
+    <span class="identifier">boost</span><span class="special">::</span><span class="identifier">source_location</span> <span class="identifier">loc</span> <span class="special">=</span> <span class="identifier">BOOST_CURRENT_LOCATION</span><span class="special">);</span>
   <span class="emphasis"><em>» <a class="link" href="handler/overload2.html" title="test::handler::handler (2 of 4 overloads)"><code class="computeroutput"><span class="identifier">more</span><span class="special">...</span></code></a></em></span>
 
 <span class="keyword">explicit</span>
 <a class="link" href="handler/overload3.html" title="test::handler::handler (3 of 4 overloads)">handler</a><span class="special">(</span>
-    <span class="identifier">boost</span><span class="special">::</span><span class="identifier">none_t</span><span class="special">);</span>
+    <span class="identifier">boost</span><span class="special">::</span><span class="identifier">none_t</span><span class="special">,</span>
+    <span class="identifier">boost</span><span class="special">::</span><span class="identifier">source_location</span> <span class="identifier">loc</span> <span class="special">=</span> <span class="identifier">BOOST_CURRENT_LOCATION</span><span class="special">);</span>
   <span class="emphasis"><em>» <a class="link" href="handler/overload3.html" title="test::handler::handler (3 of 4 overloads)"><code class="computeroutput"><span class="identifier">more</span><span class="special">...</span></code></a></em></span>
 
 <a class="link" href="handler/overload4.html" title="test::handler::handler (4 of 4 overloads)">handler</a><span class="special">(</span>
-    <span class="identifier">handler</span><span class="special">&amp;&amp;</span> <span class="identifier">other</span><span class="special">);</span>
+    <span class="identifier">handler</span><span class="special">&amp;&amp;</span> <span class="identifier">other</span><span class="special">,</span>
+    <span class="identifier">boost</span><span class="special">::</span><span class="identifier">source_location</span> <span class="identifier">loc</span> <span class="special">=</span> <span class="identifier">BOOST_CURRENT_LOCATION</span><span class="special">);</span>
   <span class="emphasis"><em>» <a class="link" href="handler/overload4.html" title="test::handler::handler (4 of 4 overloads)"><code class="computeroutput"><span class="identifier">more</span><span class="special">...</span></code></a></em></span>
 </pre>
 </div>

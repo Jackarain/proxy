@@ -36,12 +36,12 @@
           </h6>
 <pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
     <span class="keyword">class</span> <a href="../../../../../../../../doc/html/boost_asio/reference/ConstBufferSequence.html" target="_top"><span class="emphasis"><em>ConstBufferSequence</em></span></a><span class="special">,</span>
-    <span class="keyword">class</span> <span class="identifier">BufferedHandshakeHandler</span><span class="special">&gt;</span>
+    <span class="keyword">class</span> <span class="identifier">BufferedHandshakeHandler</span> <span class="special">=</span> <span class="identifier">net</span><span class="special">::</span><span class="identifier">default_completion_token_t</span><span class="special">&lt;</span><a class="link" href="../executor_type.html" title="ssl_stream::executor_type">executor_type</a><span class="special">&gt;&gt;</span>
 <a href="../../../../../../../../doc/html/boost_asio/reference/asynchronous_operations.html#boost_asio.reference.asynchronous_operations.automatic_deduction_of_initiating_function_return_type" target="_top"><span class="emphasis"><em>DEDUCED</em></span></a>
 <span class="identifier">async_handshake</span><span class="special">(</span>
     <span class="identifier">handshake_type</span> <span class="identifier">type</span><span class="special">,</span>
     <span class="identifier">ConstBufferSequence</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">buffers</span><span class="special">,</span>
-    <span class="identifier">BOOST_ASIO_MOVE_ARG</span><span class="special">(</span><span class="identifier">BufferedHandshakeHandler</span><span class="special">)</span> <span class="identifier">handler</span><span class="special">);</span>
+    <span class="identifier">BOOST_ASIO_MOVE_ARG</span><span class="special">(</span><span class="identifier">BufferedHandshakeHandler</span><span class="special">)</span> <span class="identifier">handler</span> <span class="special">=</span> <span class="identifier">net</span><span class="special">::</span><span class="identifier">default_completion_token_t</span><span class="special">&lt;</span> <a class="link" href="../executor_type.html" title="ssl_stream::executor_type">executor_type</a> <span class="special">&gt;{});</span>
 </pre>
 <h6>
 <a name="beast.ref.boost__beast__ssl_stream.async_handshake.overload2.h1"></a>

@@ -1,14 +1,10 @@
 
 // Copyright 2006-2009 Daniel James.
+// Copyright 2022 Christian Mazakas.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-// clang-format off
-#include "../helpers/prefix.hpp"
-#include <boost/unordered_set.hpp>
-#include <boost/unordered_map.hpp>
-#include "../helpers/postfix.hpp"
-// clang-format on
+#include "../helpers/unordered.hpp"
 
 #include "../helpers/test.hpp"
 #include "../objects/test.hpp"
@@ -27,7 +23,9 @@ namespace erase_tests {
   template <class Container>
   void erase_tests1(Container*, test::random_generator generator)
   {
+#ifndef BOOST_UNORDERED_FOA_TESTS
     typedef typename Container::iterator iterator;
+#endif
     typedef typename Container::const_iterator c_iterator;
 
     BOOST_LIGHTWEIGHT_TEST_OSTREAM << "Erase by key.\n";
@@ -61,9 +59,13 @@ namespace erase_tests {
       while (size > 0 && !x.empty()) {
         typename Container::key_type key = test::get_key<Container>(*x.begin());
         std::size_t count = x.count(key);
+#ifdef BOOST_UNORDERED_FOA_TESTS
+        x.erase(x.begin());
+#else
         iterator pos = x.erase(x.begin());
-        --size;
         BOOST_TEST(pos == x.begin());
+#endif
+        --size;
         BOOST_TEST(x.count(key) == count - 1);
         BOOST_TEST(x.size() == size);
         if (++iterations % 20 == 0)
@@ -93,10 +95,15 @@ namespace erase_tests {
         typename Container::key_type key = test::get_key<Container>(*pos);
         std::size_t count = x.count(key);
         BOOST_TEST(count > 0);
+#ifdef BOOST_UNORDERED_FOA_TESTS
+        x.erase(pos);
+        --size;
+#else
         BOOST_TEST(next == x.erase(pos));
         --size;
         if (size > 0)
           BOOST_TEST(index == 0 ? next == x.begin() : next == test::next(prev));
+#endif
         BOOST_TEST(x.count(key) == count - 1);
         if (x.count(key) != count - 1) {
           BOOST_LIGHTWEIGHT_TEST_OSTREAM << count << " => " << x.count(key)
@@ -185,7 +192,11 @@ namespace erase_tests {
       while (size > 0 && !x.empty()) {
         typename Container::key_type key = test::get_key<Container>(*x.begin());
         std::size_t count = x.count(key);
+#ifdef BOOST_UNORDERED_FOA_TESTS
+        x.erase(x.begin());
+#else
         x.quick_erase(x.begin());
+#endif
         --size;
         BOOST_TEST(x.count(key) == count - 1);
         BOOST_TEST(x.size() == size);
@@ -216,7 +227,11 @@ namespace erase_tests {
         typename Container::key_type key = test::get_key<Container>(*pos);
         std::size_t count = x.count(key);
         BOOST_TEST(count > 0);
+#ifdef BOOST_UNORDERED_FOA_TESTS
+        x.erase(pos);
+#else
         x.quick_erase(pos);
+#endif
         --size;
         if (size > 0)
           BOOST_TEST(index == 0 ? next == x.begin() : next == test::next(prev));
@@ -246,6 +261,20 @@ namespace erase_tests {
     BOOST_LIGHTWEIGHT_TEST_OSTREAM << "\n";
   }
 
+  using test::default_generator;
+  using test::generate_collisions;
+  using test::limited_range;
+
+#ifdef BOOST_UNORDERED_FOA_TESTS
+  boost::unordered_flat_set<test::object, test::hash, test::equal_to,
+    test::allocator1<test::object> >* test_set;
+  boost::unordered_flat_map<test::object, test::object, test::hash,
+    test::equal_to, test::allocator1<test::object> >* test_map;
+
+  UNORDERED_TEST(
+    erase_tests1, ((test_set)(test_map))(
+                    (default_generator)(generate_collisions)(limited_range)))
+#else
   boost::unordered_set<test::object, test::hash, test::equal_to,
     test::allocator1<test::object> >* test_set;
   boost::unordered_multiset<test::object, test::hash, test::equal_to,
@@ -255,13 +284,11 @@ namespace erase_tests {
   boost::unordered_multimap<test::object, test::object, test::hash,
     test::equal_to, test::allocator2<test::object> >* test_multimap;
 
-  using test::default_generator;
-  using test::generate_collisions;
-  using test::limited_range;
 
   UNORDERED_TEST(
     erase_tests1, ((test_set)(test_multiset)(test_map)(test_multimap))(
                     (default_generator)(generate_collisions)(limited_range)))
+#endif
 }
 
 RUN_TESTS()

@@ -19,7 +19,7 @@
 #endif
 
 #include <boost/lexical_cast.hpp>
-#include <boost/noncopyable.hpp>
+#include <boost/core/noncopyable.hpp>
 #include <boost/test/unit_test.hpp>
 
 using namespace boost;

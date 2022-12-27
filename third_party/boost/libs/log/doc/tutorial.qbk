@@ -1,5 +1,5 @@
 [/
-              Copyright Andrey Semashev 2007 - 2015.
+              Copyright Andrey Semashev 2007 - 2022.
      Distributed under the Boost Software License, Version 1.0.
         (See accompanying file LICENSE_1_0.txt or copy at
               http://www.boost.org/LICENSE_1_0.txt)
@@ -13,7 +13,7 @@ In this section we shall walk through the essential steps to get started with th
 
 [section:trivial Trivial logging]
 
-For those who don't want to read tons of clever manuals and just need a simple tool for logging, here you go:
+For those who don't want to read tons of abstruse manuals and just need a simple tool for logging, here you go:
 
 [example_tutorial_trivial]
 
@@ -25,7 +25,7 @@ The `BOOST_LOG_TRIVIAL` macro accepts a severity level and results in a stream-l
 # It is safe to write logs from different threads concurrently, log messages will not be corrupted.
 # As will be shown later, filtering can be applied.
 
-It must be said that the macro, along with other similar macros provided by the library, is not the only interface the library offers. It is possible to issue log records without using any macros at all.
+It must be said that the macro, along with other similar macros provided by the library, is not the only interface the library offers. As will be shown later, it is possible to issue log records without using any macros at all.
 
 [endsect]
 
@@ -69,7 +69,7 @@ The added piece is the call to the [link log.detailed.utilities.setup.convenienc
 
 You can see that the options are passed to the function in the named form. This approach is also taken in many other places of the library. You'll get used to it. The meaning of the parameters is mostly self-explaining and is documented in this manual (see [link log.detailed.sink_backends.text_file here] for what regards the text file sink). This and other convenience initialization functions are described in [link log.detailed.utilities.setup.convenience this] section.
 
-[note You can register more than one sink. Each sink will receive and process log records as you emit them independently from others.]
+[tip You can register more than one sink. Each sink will receive and process log records as you emit them independently from others.]
 
 [heading Sinks in depth: More sinks]
 
@@ -85,7 +85,7 @@ Ok, the first thing you may have noticed about sinks is that they are composed o
 
 The [link log.detailed.sink_frontends.sync `synchronous_sink`] class template above indicates that the sink is synchronous, that is, it allows for several threads to log simultaneously and will block in case of contention. This means that the backend [link log.detailed.sink_backends.text_ostream `text_ostream_backend`] doesn't have to worry about multithreading at all. There are other sink frontends available, you can read more about them [link log.detailed.sink_frontends here].
 
-The [link log.detailed.sink_backends.text_ostream `text_ostream_backend`] class writes formatted log records into STL-compatible streams. We have used a file stream above but we could have used any type of stream. For example, adding output to console could look as follows:
+The [link log.detailed.sink_backends.text_ostream `text_ostream_backend`] class writes formatted log records into standard library-compatible streams. We have used a file stream above but we could have used any type of stream. For example, adding output to console could look as follows:
 
     #include <boost/core/null_deleter.hpp>
 
@@ -99,7 +99,7 @@ The [link log.detailed.sink_backends.text_ostream `text_ostream_backend`] suppor
 
 The library provides a number of [link log.detailed.sink_backends backends] that provide different log processing logic. For instance, by specifying the [link log.detailed.sink_backends.syslog syslog] backend you can send log records over the network to the syslog server, or by setting up the [link log.detailed.sink_backends.event_log Windows NT event log] backend you can monitor your application run time with the standard Windows tools.
 
-The last thing worth noting here is the `locked_backend` member function call to access the sink backend. It is used to get thread-safe access to the backend and is provided by all sink frontends. This function returns a smart-pointer to the backend and as long as it exists the backend is locked (which means even if another thread tries to log and the log record is passed to the sink, it will not be logged until you release the backend). The only exception is the [link log.detailed.sink_frontends.unlocked `unlocked_sink`] frontend which does not synchronize at all and simply returns an unlocked pointer to the backend.
+The last thing worth noting here is the `locked_backend` member function call to access the sink backend. It is used to get thread-safe exclusive access to the backend and is provided by all sink frontends. This function returns a smart-pointer to the backend and as long as it exists the backend is locked (which means even if another thread tries to log and the log record is passed to the sink, it will not be logged until you release the backend). The only exception is the [link log.detailed.sink_frontends.unlocked `unlocked_sink`] frontend which does not synchronize at all and simply returns an unlocked pointer to the backend.
 
 [endsect]
 
@@ -107,13 +107,13 @@ The last thing worth noting here is the `locked_backend` member function call to
 
 [heading Dedicated logger objects]
 
-Now that we have defined where and how the log is to be stored, it's time to go on and try logging. In order to do this one has to create a logging source. This would be a logger object in our case and it is as simple as that:
+Now that we have defined where and how the log is to be stored, it's time to see how we emit log records. In order to be able to make log records one has to create a logging source first. This would be a logger object in our case and it is as simple as that:
 
     src::logger lg;
 
-[note A curious reader could have noticed that we did not create any loggers for trivial logging. In fact the logger is provided by the library and is used behind the scenes.]
+[note A mindful reader could have noticed that we did not create any loggers when we tried trivial logging. In that case the logger is provided by the library and is used behind the scenes.]
 
-Unlike sinks, sources need not be registered anywhere since they interact directly with the logging core. Also note that there are two versions of loggers provided by the library: the thread-safe ones and the non-thread-safe ones. For the non-thread-safe loggers it is safe for different threads to write logs through different instances of loggers and thus there should be a separate logger for each thread that writes logs. The thread-safe counterparts can be accessed from different threads concurrently, but this will involve locking and may slow things down in case of intense logging. The thread-safe logger types have the `_mt` suffix in their name.
+Unlike sinks, sources need not be registered anywhere since they interact directly with the logging core. Also note that there are two versions of loggers provided by the library: the thread-safe ones and the non-thread-safe ones. For the non-thread-safe loggers it is safe for different threads to write logs through different instances of loggers and thus there should be a separate logger for each thread that writes logs. The thread-safe counterparts can be accessed from different threads concurrently, but this will involve locking and may slow things down in case of intense contention. The thread-safe logger types have the `_mt` suffix in their name.
 
 Regardless of the thread safety, all loggers provided by the library are default and copy-constructible and support swapping, so there should be no problem in making a logger a member of your class. As you will see later, such approach can give you additional benefits.
 
@@ -133,7 +133,7 @@ Later on you can acquire the logger like this:
 
     src::logger_mt& lg = my_logger::get();
 
-The `lg` will refer to the one and only instance of the logger throughout the application, even if the application consists of multiple modules. The `get` function itself is thread-safe, so there is no need in additional synchronization around it.
+Then, `lg` will refer to the one and only instance of the logger throughout the application, even if the application consists of multiple modules. The `get` function itself is thread-safe, so there is no need in additional synchronization around it.
 
 [heading Writing logs]
 
@@ -147,7 +147,7 @@ Of course, the above syntax can easily be wrapped in a macro and, in fact, users
 
     BOOST_LOG(lg) << "Hello, World!";
 
-Looks a bit shorter, doesn't it? The `BOOST_LOG` macro, along with other similar ones, is defined by the library. It automatically provides an STL-like stream in order to format the message with ordinary insertion expressions. Having all that code written, compiled and executed you should be able to see the "Hello, World!" record in the "sample.log" file. You will find the full code of this section [@boost:/libs/log/example/doc/tutorial_logging.cpp here].
+Looks a bit shorter, doesn't it? The `BOOST_LOG` macro, along with other similar ones, is defined by the library. It automatically provides a standard library-like output stream in order to format the message with ordinary insertion expressions. Having all that code written, compiled and executed you should be able to see the "Hello, World!" record in the "sample.log" file. You will find the full code of this section [@boost:/libs/log/example/doc/tutorial_logging.cpp here].
 
 [endsect]
 
@@ -155,7 +155,7 @@ Looks a bit shorter, doesn't it? The `BOOST_LOG` macro, along with other similar
 
 In previous sections we mentioned attributes and attribute values several times. Here we will discover how attributes can be used to add more data to log records.
 
-Each log record can have a number of named attribute values attached. Attributes can represent any essential information about the conditions in which the log record occurred, such as position in the code, executable module name, current date and time, or any piece of data relevant to your particular application and execution environment. An attribute may behave as a value generator, in which case it would return a different value for each log record it's involved in. As soon as the attribute generates the value, the latter becomes independent from the creator and can be used by filters, formatters and sinks. But in order to use the attribute value one has to know its name and type, or at least a set of types it may have. There are a number of commonly used attributes implemented in the library, you can find the types of their values in the documentation.
+Each log record can have a number of named attribute values attached. Attributes can represent any essential information about the conditions in which the log record occurred, such as position in code, executable module name, current date and time, or any piece of data relevant to your particular application and execution environment. An attribute may behave as a value generator, in which case it would return a different value for each log record it's involved in. As soon as the attribute generates the value, the latter becomes independent from the creator and can be used by filters, formatters and sinks. But in order to use the attribute value one has to know its name and type, or at least a set of types it may have. There are a number of commonly used attributes implemented in the library, you can find the types of their values in the documentation.
 
 Aside from that, as described in the [link log.design Design overview] section, there are three possible scopes of attributes: source-specific, thread-specific and global. When a log record is made, attribute values from these three sets are joined into a single set and passed to sinks. This implies that the origin of the attribute makes no difference for sinks. Any attribute can be registered in any scope. When registered, an attribute is given a unique name in order to make it possible to search for it. If it happens that the same named attribute is found in several scopes, the attribute from the most specific scope is taken into consideration in any further processing, including filtering and formatting. Such behavior makes it possible to override global or thread-scoped attributes with the ones registered in your local logger, thus reducing thread interference.
 
@@ -314,7 +314,7 @@ Here `CharT` is the target character type. The formatter will be invoked wheneve
 
 [tip Record views are very similar to records. The notable distinction is that the view is immutable and implements shallow copy. Formatters and sinks only operate on record views, which prevents them from modifying the record while it can be still in use by other sinks in other threads.]
 
-The formatted record should be composed by insertion into STL-compatible output stream `strm`. Here's an example of a custom formatter function usage:
+The formatted record should be composed by insertion into standard library-compatible output stream `strm`. Here's an example of a custom formatter function usage:
 
 [example_tutorial_formatters_custom]
 

@@ -55,6 +55,7 @@ $(function() {
 </ul>
 </li>
 <li><a class="el" href="index.html#using">Using The Library</a><ul>
+<li><a class="el" href="index.html#building">Building the library</a></li>
 <li><a class="el" href="index.html#using_standard">Standard Features</a></li>
 <li><a class="el" href="index.html#using_custom">Custom API</a></li>
 <li><a class="el" href="index.html#using_integration">Integration with Boost.Filesystem</a></li>
@@ -152,6 +153,14 @@ Further Reading</h2>
 </ul>
 <h1><a class="anchor" id="using"></a>
 Using The Library</h1>
+<h2><a class="anchor" id="building"></a>
+Building the library</h2>
+<p>Boost.Nowide is usually build as part of Boost via <code>b2</code>.</p>
+<p>It requires C++11 features and if any are missing the library will <b>not</b> be build.</p>
+<p>If that happens unexpectatly watch the configuration check output for anything like <code>cxx11_constexpr : no</code>.</p>
+<p>This means your compiler doesn't use C++11 (or higher), e.g. because it defaults to C++03. You can pass <code>cxxstd=11</code> to <code>b2</code> to build in C++11 mode.</p>
+<p>Experimental support for building with the Boost CMake build system is also available.</p>
+<p>For that run e.g. <code>cmake -DBOOST_INCLUDE_LIBRARIES=nowide &lt;path-to-boost-root&gt; &lt;other options&gt;</code>.</p>
 <h2><a class="anchor" id="using_standard"></a>
 Standard Features</h2>
 <p>As a developer you are expected to use <code><a class="el" href="namespaceboost_1_1nowide.html" title="This namespace includes implementations of the standard library functions and classes such that they ...">boost::nowide</a></code> functions instead of the functions available in the <code>std</code> namespace.</p>

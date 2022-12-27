@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE(wait_for)
 
 
     BOOST_CHECK(!c.wait_for(std::chrono::milliseconds(200)));
-    BOOST_CHECK( c.wait_for(std::chrono::milliseconds(1000)));
+    BOOST_CHECK( c.wait_for(std::chrono::milliseconds(2000)));
 
     auto timeout_t = std::chrono::system_clock::now();
 

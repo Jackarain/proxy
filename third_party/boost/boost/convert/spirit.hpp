@@ -10,7 +10,7 @@
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/karma.hpp>
 
-namespace boost::cnv { struct spirit; }
+namespace boost { namespace cnv { struct spirit; }}
 
 struct boost::cnv::spirit : boost::cnv::cnvbase<boost::cnv::spirit>
 {

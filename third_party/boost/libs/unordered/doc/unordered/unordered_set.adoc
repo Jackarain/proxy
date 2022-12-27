@@ -9,7 +9,7 @@
 
 [listing,subs="+macros,+quotes"]
 -----
-// #include <boost/unordered_set.hpp>
+// #include <boost/unordered/unordered_set.hpp>
 
 namespace boost {
   template<class Key,
@@ -52,6 +52,8 @@ namespace boost {
                     const allocator_type& a = allocator_type());
     xref:#unordered_set_copy_constructor[unordered_set](const unordered_set& other);
     xref:#unordered_set_move_constructor[unordered_set](unordered_set&& other);
+    template<class InputIterator>
+      xref:#unordered_set_iterator_range_constructor_with_allocator[unordered_set](InputIterator f, InputIterator l, const allocator_type& a);
     explicit xref:#unordered_set_allocator_constructor[unordered_set](const Allocator& a);
     xref:#unordered_set_copy_constructor_with_allocator[unordered_set](const unordered_set& other, const Allocator& a);
     xref:#unordered_set_move_constructor_with_allocator[unordered_set](unordered_set&& other, const Allocator& a);
@@ -67,6 +69,7 @@ namespace boost {
     template<class InputIterator>
       xref:#unordered_set_iterator_range_constructor_with_bucket_count_and_hasher[unordered_set](InputIterator f, InputIterator l, size_type n, const hasher& hf,
                     const allocator_type& a);
+    xref:#unordered_set_initializer_list_constructor_with_allocator[unordered_set](std::initializer_list<value_type> il, const allocator_type& a);
     xref:#unordered_set_initializer_list_constructor_with_bucket_count_and_allocator[unordered_set](std::initializer_list<value_type> il, size_type n, const allocator_type& a);
     xref:#unordered_set_initializer_list_constructor_with_bucket_count_and_hasher_and_allocator[unordered_set](std::initializer_list<value_type> il, size_type n, const hasher& hf,
                   const allocator_type& a);
@@ -278,7 +281,7 @@ Is identical to the difference type of `iterator` and `const_iterator`.
 typedef _implementation-defined_ iterator;
 ----
 
-An iterator whose value type is `value_type`.
+A constant iterator whose value type is `value_type`.
 
 The iterator category is at least a forward iterator.
 
@@ -420,6 +423,19 @@ So, for example, you can't return the container from a function.
 
 ---
 
+==== Iterator Range Constructor with Allocator
+```c++
+template<class InputIterator>
+  unordered_set(InputIterator f, InputIterator l, const allocator_type& a);
+```
+
+Constructs an empty container using `a` as the allocator, with the default hash function and key equality predicate and a maximum load factor of `1.0` and inserts the elements from `[f, l)` into it.
+
+[horizontal]
+Requires:;; `hasher`, `key_equal` need to be https://en.cppreference.com/w/cpp/named_req/DefaultConstructible[DefaultConstructible^].
+
+---
+
 ==== Allocator Constructor
 ```c++
 explicit unordered_set(const Allocator& a);
@@ -520,6 +536,19 @@ Constructs an empty container with at least `n` buckets, using `hf` as the hash 
 
 [horizontal]
 Requires:;; `key_equal` needs to be https://en.cppreference.com/w/cpp/named_req/DefaultConstructible[DefaultConstructible^].
+
+---
+
+==== initializer_list Constructor with Allocator
+
+```c++
+unordered_set(std::initializer_list<value_type> il, const allocator_type& a);
+```
+
+Constructs an empty container using `a` as the allocator and a maximum load factor of 1.0 and inserts the elements from `il` into it.
+
+[horizontal]
+Requires:;; `hasher` and `key_equal` need to be https://en.cppreference.com/w/cpp/named_req/DefaultConstructible[DefaultConstructible^].
 
 ---
 
@@ -1329,7 +1358,9 @@ Effects:;; Changes the container's maximum load factor, using `z` as a hint.
 void rehash(size_type n);
 ```
 
-Changes the number of buckets so that there at least `n` buckets, and so that the load factor is less than the maximum load factor.
+Changes the number of buckets so that there are at least `n` buckets, and so that the load factor is less than or equal to the maximum load factor. When applicable, this will either grow or shrink the `bucket_count()` associated with the container.
+
+When `size() == 0`, `rehash(0)` will deallocate the underlying buckets array.
 
 Invalidates iterators, and changes the order of elements. Pointers and references to elements are not invalidated.
 
@@ -1343,10 +1374,15 @@ Throws:;; The function has no effect if an exception is thrown, unless it is thr
 void reserve(size_type n);
 ```
 
+Equivalent to `a.rehash(ceil(n / a.max_load_factor()))`, or `a.rehash(1)` if `n > 0` and `a.max_load_factor() == std::numeric_limits<float>::infinity()`.
+
+Similar to `rehash`, this function can be used to grow or shrink the number of buckets in the container.
+
 Invalidates iterators, and changes the order of elements. Pointers and references to elements are not invalidated.
 
 [horizontal]
 Throws:;; The function has no effect if an exception is thrown, unless it is thrown by the container's hash function or comparison function.
+
 
 === Equality Comparisons
 

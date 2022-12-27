@@ -25,6 +25,7 @@ project : requirements
    <toolset>gcc:<cxxflags>-Wno-uninitialized
    <toolset>gcc:<cxxflags>-Wno-int-in-bool-context
    <toolset>gcc:<cxxflags>-Wno-bool-operation
+   <toolset>gcc:<cxxflags>-Wundef
    <toolset>gcc:<warnings-as-errors>on
    <toolset>intel:<warnings-as-errors>on
    <toolset>sun:<warnings-as-errors>on

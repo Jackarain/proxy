@@ -12,7 +12,7 @@
 #include <string>
 #include <cstdio>
 
-namespace boost::cnv { struct printf; }
+namespace boost { namespace cnv { struct printf; }}
 
 struct boost::cnv::printf : boost::cnv::cnvbase<boost::cnv::printf>
 {

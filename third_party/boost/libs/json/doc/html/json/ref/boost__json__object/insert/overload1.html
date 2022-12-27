@@ -45,8 +45,12 @@
             <span class="phrase"><a name="json.ref.boost__json__object.insert.overload1.description"></a></span><a class="link" href="overload1.html#json.ref.boost__json__object.insert.overload1.description">Description</a>
           </h6>
 <p>
-            Inserts <code class="computeroutput"><span class="identifier">p</span></code>, from which
-            <a class="link" href="../value_type.html" title="object::value_type"><code class="computeroutput"><span class="identifier">value_type</span></code></a> must be constructible.
+            Inserts <code class="computeroutput"><span class="identifier">p</span></code> if <code class="computeroutput"><span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">contains</span><span class="special">(</span><span class="identifier">value_type</span><span class="special">(</span><span class="identifier">p</span><span class="special">).</span><span class="identifier">key</span><span class="special">())</span></code>
+            is <code class="computeroutput"><span class="keyword">false</span></code>. <a class="link" href="../value_type.html" title="object::value_type"><code class="computeroutput"><span class="identifier">value_type</span></code></a> must be constructible
+            from <code class="computeroutput"><span class="identifier">p</span></code>. If the insertion
+            occurs and results in a rehashing of the container, all iterators and
+            references are invalidated. Otherwise, they are not affected. Rehashing
+            occurs only if the new number of elements is greater than <a class="link" href="../capacity.html" title="object::capacity"><code class="computeroutput"><span class="identifier">capacity</span><span class="special">()</span></code></a>.
           </p>
 <h6>
 <a name="json.ref.boost__json__object.insert.overload1.h2"></a>
@@ -162,13 +166,12 @@
             A pair where <code class="computeroutput"><span class="identifier">first</span></code> is
             an iterator to the existing or inserted element, and <code class="computeroutput"><span class="identifier">second</span></code>
             is <code class="computeroutput"><span class="keyword">true</span></code> if the insertion
-            took place or <code class="computeroutput"><span class="keyword">false</span></code> if the
-            assignment took place.
+            took place or <code class="computeroutput"><span class="keyword">false</span></code> otherwise.
           </p>
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<p>
+<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>

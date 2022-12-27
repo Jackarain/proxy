@@ -6,7 +6,7 @@
 <meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
 <link rel="home" href="../../index.html" title="Chapter 1. Boost.Beast">
 <link rel="up" href="../ref.html" title="This Page Intentionally Left Blank 2/2">
-<link rel="prev" href="boost__beast__static_string/swap/overload2.html" title="static_string::swap (2 of 2 overloads)">
+<link rel="prev" href="boost__beast__static_buffer_base/consume.html" title="static_buffer_base::consume">
 <link rel="next" href="boost__beast__websocket__stream/is_deflate_supported.html" title="websocket::stream::is_deflate_supported">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
@@ -20,7 +20,7 @@
 </tr></table>
 <hr>
 <div class="spirit-nav">
-<a accesskey="p" href="boost__beast__static_string/swap/overload2.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../ref.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="boost__beast__websocket__stream/is_deflate_supported.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+<a accesskey="p" href="boost__beast__static_buffer_base/consume.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../ref.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="boost__beast__websocket__stream/is_deflate_supported.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
 </div>
 <div class="section">
 <div class="titlepage"><div><div><h4 class="title">
@@ -34,7 +34,7 @@
         <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.synopsis"></a></span><a class="link" href="boost__beast__websocket__stream.html#beast.ref.boost__beast__websocket__stream.synopsis">Synopsis</a>
       </h5>
 <p>
-        Defined in header <code class="literal">&lt;<a href="../../../../../../boost/beast/websocket/stream_fwd.hpp" target="_top">boost/beast/websocket/stream_fwd.hpp</a>&gt;</code>
+        Defined in header <code class="literal">&lt;<a href="../../../../../../boost/beast/websocket/stream.hpp" target="_top">boost/beast/websocket/stream.hpp</a>&gt;</code>
       </p>
 <pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
     <span class="keyword">class</span> <span class="identifier">NextLayer</span><span class="special">,</span>
@@ -99,6 +99,18 @@
                 </p>
               </td>
 </tr>
+<tr>
+<td>
+                <p>
+                  <span class="bold"><strong><a class="link" href="boost__beast__websocket__stream__rebind_executor.html" title="websocket::stream::rebind_executor">rebind_executor</a></strong></span>
+                </p>
+              </td>
+<td>
+                <p>
+                  Rebinds the stream type to another executor.
+                </p>
+              </td>
+</tr>
 </tbody>
 </table></div>
 <h5>
@@ -132,9 +144,9 @@
               </td>
 <td>
                 <p>
-                  Perform the WebSocket handshake in the server role. <br> <span class="silver">—</span><br> Read and respond to a WebSocket
-                  HTTP Upgrade request. <br> <span class="silver">—</span><br>
-                  Respond to a WebSocket HTTP Upgrade request.
+                  Perform the WebSocket handshake in the server role. <br><span class="silver">—</span><br>Read
+                  and respond to a WebSocket HTTP Upgrade request. <br><span class="silver">—</span><br>Respond
+                  to a WebSocket HTTP Upgrade request.
                 </p>
               </td>
 </tr>
@@ -254,9 +266,9 @@
               </td>
 <td>
                 <p>
-                  Set the automatic fragmentation option. <br> <span class="silver">—</span><br>
-                  Returns <code class="computeroutput"><span class="keyword">true</span></code> if the
-                  automatic fragmentation option is set.
+                  Set the automatic fragmentation option. <br><span class="silver">—</span><br>Returns
+                  <code class="computeroutput"><span class="keyword">true</span></code> if the automatic
+                  fragmentation option is set.
                 </p>
               </td>
 </tr>
@@ -268,9 +280,9 @@
               </td>
 <td>
                 <p>
-                  Set the binary message write option. <br> <span class="silver">—</span><br>
-                  Returns <code class="computeroutput"><span class="keyword">true</span></code> if the
-                  binary message write option is set.
+                  Set the binary message write option. <br><span class="silver">—</span><br>Returns
+                  <code class="computeroutput"><span class="keyword">true</span></code> if the binary
+                  message write option is set.
                 </p>
               </td>
 </tr>
@@ -289,14 +301,26 @@
 <tr>
 <td>
                 <p>
+                  <span class="bold"><strong><a class="link" href="boost__beast__websocket__stream/compress.html" title="websocket::stream::compress">compress</a></strong></span>
+                </p>
+              </td>
+<td>
+                <p>
+                  Set the compress message write option. <br><span class="silver">—</span><br>Returns
+                  <code class="computeroutput"><span class="keyword">true</span></code> if the compress
+                  message write option is set.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
                   <span class="bold"><strong><a class="link" href="boost__beast__websocket__stream/control_callback.html" title="websocket::stream::control_callback">control_callback</a></strong></span>
                 </p>
               </td>
 <td>
                 <p>
-                  Set a callback to be invoked on each incoming control frame. <br>
-                  <span class="silver">—</span><br> Reset the control frame
-                  callback.
+                  Set a callback to be invoked on each incoming control frame. <br><span class="silver">—</span><br>Reset the control frame callback.
                 </p>
               </td>
 </tr>
@@ -320,7 +344,8 @@
               </td>
 <td>
                 <p>
-                  <br> <span class="silver">—</span><br> Get the permessage-deflate
+                  Get the option value. <br><span class="silver">—</span><br>Get the
+                  timeout option. <br><span class="silver">—</span><br>Get the permessage-deflate
                   extension options.
                 </p>
               </td>
@@ -457,8 +482,8 @@
               </td>
 <td>
                 <p>
-                  Set the maximum incoming message size option. <br> <span class="silver">—</span><br>
-                  Returns the maximum incoming message size setting.
+                  Set the maximum incoming message size option. <br><span class="silver">—</span><br>Returns
+                  the maximum incoming message size setting.
                 </p>
               </td>
 </tr>
@@ -518,7 +543,8 @@
               </td>
 <td>
                 <p>
-                  <br> <span class="silver">—</span><br> Set the permessage-deflate
+                  Set the option value. <br><span class="silver">—</span><br>Set the
+                  timeout option. <br><span class="silver">—</span><br>Set the permessage-deflate
                   extension options.
                 </p>
               </td>
@@ -531,7 +557,7 @@
               </td>
 <td>
                 <p>
-                  Constructor.
+                  Constructor. <br><span class="silver">—</span><br>Rebinding constructor.
                 </p>
               </td>
 </tr>
@@ -543,9 +569,9 @@
               </td>
 <td>
                 <p>
-                  Set the text message write option. <br> <span class="silver">—</span><br>
-                  Returns <code class="computeroutput"><span class="keyword">true</span></code> if the
-                  text message write option is set.
+                  Set the text message write option. <br><span class="silver">—</span><br>Returns
+                  <code class="computeroutput"><span class="keyword">true</span></code> if the text message
+                  write option is set.
                 </p>
               </td>
 </tr>
@@ -569,8 +595,8 @@
               </td>
 <td>
                 <p>
-                  Set the write buffer size option. <br> <span class="silver">—</span><br>
-                  Returns the size of the write buffer.
+                  Set the write buffer size option. <br><span class="silver">—</span><br>Returns
+                  the size of the write buffer.
                 </p>
               </td>
 </tr>
@@ -759,7 +785,7 @@
 </tr></table>
 <hr>
 <div class="spirit-nav">
-<a accesskey="p" href="boost__beast__static_string/swap/overload2.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../ref.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="boost__beast__websocket__stream/is_deflate_supported.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+<a accesskey="p" href="boost__beast__static_buffer_base/consume.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../ref.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="boost__beast__websocket__stream/is_deflate_supported.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
 </div>
 </body>
 </html>

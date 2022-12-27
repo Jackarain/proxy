@@ -103,7 +103,7 @@
     us_facet->format("%m/%d/%Y");
     std::cout << d1 << std::endl; //  10/01/2002
     
-    // English names, iso order (year-month-day), '-' separator
+    // English names, ISO 8601 order (year-month-day), '-' separator
     us_facet->format("%Y-%b-%d");
     std::cout << d1 << std::endl; //  2002-Oct-01
     

@@ -29,6 +29,7 @@ target_link_libraries(boost_beast
     Boost::optional
     Boost::smart_ptr
     Boost::static_assert
+    Boost::static_string
     Boost::system
     Boost::throw_exception
     Boost::type_traits
@@ -82,7 +83,7 @@ endfunction()
 #
 #-------------------------------------------------------------------------------
 
-project (Beast VERSION 330)
+project (Beast VERSION 336)
 
 set_property (GLOBAL PROPERTY USE_FOLDERS ON)
 option (Beast_BUILD_EXAMPLES "Build examples" ON)

@@ -414,11 +414,18 @@ void test_pair_unordered_associative_container(Container & c, const Data & d)
         {
             const Container & const_c = c;
 
-#if !defined(_M_IX86) // fails on Windows x86 (collisions?)
+            // This used to test that the bucket size was equal to 1, but
+            // it failed with the old boost::hash for msvc/x86, and failed
+            // with the new boost::hash for msvc/x64, because of a bucket
+            // collision. E.g.
+            //
+            // "c": hash = 3a10055ae7ea9884, hash mod 53 = 8
+            // "a": hash = d53c452e09f39b66, hash mod 53 = 8
+            // "b": hash = fb6a785761bd4e37, hash mod 53 = 16
+            // "d": hash = adb5bf47769d562b, hash mod 53 = 27
 
-            BOOST_TEST_EQ( const_c.bucket_size(const_c.bucket(di->first)), 1 );
-
-#endif
+            BOOST_TEST_GE( const_c.bucket_size(const_c.bucket(di->first)), 1 );
+            BOOST_TEST_LE( const_c.bucket_size(const_c.bucket(di->first)), 2 );
 
             typename Container::size_type nb =
                 const_c.bucket(const_c.find(di->first)->first);

@@ -722,7 +722,7 @@
             <span class="special">}</span>
 
             <span class="comment">// Restore the saved error code</span>
-            <span class="identifier">ec</span> <span class="special">=</span> <span class="identifier">ec_</span><span class="special">;</span>
+            <span class="identifier">BOOST_BEAST_ASSIGN_EC</span><span class="special">(</span><span class="identifier">ec</span><span class="special">,</span> <span class="identifier">ec_</span><span class="special">);</span>
         <span class="special">}</span>
 
         <span class="comment">// Invoke the final handler.</span>

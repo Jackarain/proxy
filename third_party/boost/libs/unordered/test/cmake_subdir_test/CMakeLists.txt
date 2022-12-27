@@ -28,8 +28,7 @@ type_traits
 
 # Secondary dependencies
 
-detail
-integer
+describe
 static_assert
 winapi
 )

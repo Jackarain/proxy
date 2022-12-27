@@ -88,44 +88,73 @@ Public Types</h2></td></tr>
 <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#af786b3e65294d70769f2826ef95c7bd5ab5d1af0b2698fee942a1486dfcc6552b">absolute_maximum</a>
 <br />
  }</td></tr>
+<tr class="memdesc:af786b3e65294d70769f2826ef95c7bd5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type that defines how to fetch the value.  <a href="classboost_1_1locale_1_1abstract__calendar.html#af786b3e65294d70769f2826ef95c7bd5">More...</a><br /></td></tr>
 <tr class="separator:af786b3e65294d70769f2826ef95c7bd5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a92cf9485b91d60b70ef00e183bdf4e95"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a92cf9485b91d60b70ef00e183bdf4e95">update_type</a> { <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a92cf9485b91d60b70ef00e183bdf4e95aac5f9cb6e12a121b47b51434a3655c81">move</a>, 
 <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a92cf9485b91d60b70ef00e183bdf4e95a704e0e917603c2a88de22f3426a3e20b">roll</a>
  }</td></tr>
+<tr class="memdesc:a92cf9485b91d60b70ef00e183bdf4e95"><td class="mdescLeft">&#160;</td><td class="mdescRight">A way to update the value.  <a href="classboost_1_1locale_1_1abstract__calendar.html#a92cf9485b91d60b70ef00e183bdf4e95">More...</a><br /></td></tr>
 <tr class="separator:a92cf9485b91d60b70ef00e183bdf4e95"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5f1927f4c71fafa4712265e6b68958b5"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a5f1927f4c71fafa4712265e6b68958b5">calendar_option_type</a> { <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a5f1927f4c71fafa4712265e6b68958b5add910815d1ad0e97275b781223e869a9">is_gregorian</a>, 
 <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a5f1927f4c71fafa4712265e6b68958b5a69f0c20e321e3b914883869466122c61">is_dst</a>
  }</td></tr>
+<tr class="memdesc:a5f1927f4c71fafa4712265e6b68958b5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Information about calendar.  <a href="classboost_1_1locale_1_1abstract__calendar.html#a5f1927f4c71fafa4712265e6b68958b5">More...</a><br /></td></tr>
 <tr class="separator:a5f1927f4c71fafa4712265e6b68958b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a73bc2d023be4c6ac6a6f441f74ded2f9"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html">abstract_calendar</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a73bc2d023be4c6ac6a6f441f74ded2f9">clone</a> () const =0</td></tr>
+<tr class="memitem:a73bc2d023be4c6ac6a6f441f74ded2f9"><td class="memItemLeft" align="right" valign="top"><a id="a73bc2d023be4c6ac6a6f441f74ded2f9"></a>
+virtual <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html">abstract_calendar</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a73bc2d023be4c6ac6a6f441f74ded2f9">clone</a> () const =0</td></tr>
+<tr class="memdesc:a73bc2d023be4c6ac6a6f441f74ded2f9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Make a polymorphic copy of the calendar. <br /></td></tr>
 <tr class="separator:a73bc2d023be4c6ac6a6f441f74ded2f9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a13d068ea5b491898ee1a64fa1d551972"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a13d068ea5b491898ee1a64fa1d551972">set_value</a> (<a class="el" href="namespaceboost_1_1locale_1_1period_1_1marks.html#a1536eaff4b2a880782128fc127f40d3a">period::marks::period_mark</a> m, int value)=0</td></tr>
 <tr class="separator:a13d068ea5b491898ee1a64fa1d551972"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa06fef77acaa6104e3cd2bc80ccc76d9"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#aa06fef77acaa6104e3cd2bc80ccc76d9">normalize</a> ()=0</td></tr>
+<tr class="memitem:aa06fef77acaa6104e3cd2bc80ccc76d9"><td class="memItemLeft" align="right" valign="top"><a id="aa06fef77acaa6104e3cd2bc80ccc76d9"></a>
+virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#aa06fef77acaa6104e3cd2bc80ccc76d9">normalize</a> ()=0</td></tr>
+<tr class="memdesc:aa06fef77acaa6104e3cd2bc80ccc76d9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Recalculate all periods after setting them, should be called after use of <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a13d068ea5b491898ee1a64fa1d551972">set_value()</a> function. <br /></td></tr>
 <tr class="separator:aa06fef77acaa6104e3cd2bc80ccc76d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aab88e44a19162f45c2d5cbe6849e6de3"><td class="memItemLeft" align="right" valign="top">virtual int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#aab88e44a19162f45c2d5cbe6849e6de3">get_value</a> (<a class="el" href="namespaceboost_1_1locale_1_1period_1_1marks.html#a1536eaff4b2a880782128fc127f40d3a">period::marks::period_mark</a> m, <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#af786b3e65294d70769f2826ef95c7bd5">value_type</a> v) const =0</td></tr>
+<tr class="memitem:aab88e44a19162f45c2d5cbe6849e6de3"><td class="memItemLeft" align="right" valign="top"><a id="aab88e44a19162f45c2d5cbe6849e6de3"></a>
+virtual int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#aab88e44a19162f45c2d5cbe6849e6de3">get_value</a> (<a class="el" href="namespaceboost_1_1locale_1_1period_1_1marks.html#a1536eaff4b2a880782128fc127f40d3a">period::marks::period_mark</a> m, <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#af786b3e65294d70769f2826ef95c7bd5">value_type</a> v) const =0</td></tr>
+<tr class="memdesc:aab88e44a19162f45c2d5cbe6849e6de3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get specific value for period <em>p</em> according to a value_type <em>v</em>. <br /></td></tr>
 <tr class="separator:aab88e44a19162f45c2d5cbe6849e6de3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acb01268c84f27a8a736b715ab9e9557a"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#acb01268c84f27a8a736b715ab9e9557a">set_time</a> (<a class="el" href="structboost_1_1locale_1_1posix__time.html">posix_time</a> const &amp;p)=0</td></tr>
-<tr class="separator:acb01268c84f27a8a736b715ab9e9557a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8900097c0b687393b053bc0420070815"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="structboost_1_1locale_1_1posix__time.html">posix_time</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a8900097c0b687393b053bc0420070815">get_time</a> () const =0</td></tr>
+<tr class="memitem:ae95fea3dee649c3432844dcf7b400a0e"><td class="memItemLeft" align="right" valign="top"><a id="ae95fea3dee649c3432844dcf7b400a0e"></a>
+virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#ae95fea3dee649c3432844dcf7b400a0e">set_time</a> (const <a class="el" href="structboost_1_1locale_1_1posix__time.html">posix_time</a> &amp;p)=0</td></tr>
+<tr class="memdesc:ae95fea3dee649c3432844dcf7b400a0e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set current time point. <br /></td></tr>
+<tr class="separator:ae95fea3dee649c3432844dcf7b400a0e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8900097c0b687393b053bc0420070815"><td class="memItemLeft" align="right" valign="top"><a id="a8900097c0b687393b053bc0420070815"></a>
+virtual <a class="el" href="structboost_1_1locale_1_1posix__time.html">posix_time</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a8900097c0b687393b053bc0420070815">get_time</a> () const =0</td></tr>
+<tr class="memdesc:a8900097c0b687393b053bc0420070815"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get current time point. <br /></td></tr>
 <tr class="separator:a8900097c0b687393b053bc0420070815"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9265206013005d9ac30cf723a7ffe032"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a9265206013005d9ac30cf723a7ffe032">set_option</a> (<a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a5f1927f4c71fafa4712265e6b68958b5">calendar_option_type</a> opt, int v)=0</td></tr>
+<tr class="memitem:aee7627ecf4f78c7cc68508533c606f2a"><td class="memItemLeft" align="right" valign="top"><a id="aee7627ecf4f78c7cc68508533c606f2a"></a>
+virtual double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#aee7627ecf4f78c7cc68508533c606f2a">get_time_ms</a> () const =0</td></tr>
+<tr class="memdesc:aee7627ecf4f78c7cc68508533c606f2a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get current time since epoch in milliseconds. <br /></td></tr>
+<tr class="separator:aee7627ecf4f78c7cc68508533c606f2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9265206013005d9ac30cf723a7ffe032"><td class="memItemLeft" align="right" valign="top"><a id="a9265206013005d9ac30cf723a7ffe032"></a>
+virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a9265206013005d9ac30cf723a7ffe032">set_option</a> (<a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a5f1927f4c71fafa4712265e6b68958b5">calendar_option_type</a> opt, int v)=0</td></tr>
+<tr class="memdesc:a9265206013005d9ac30cf723a7ffe032"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set option for calendar, for future use. <br /></td></tr>
 <tr class="separator:a9265206013005d9ac30cf723a7ffe032"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0c034dd6f135b7d9b6faad08d49715a8"><td class="memItemLeft" align="right" valign="top">virtual int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a0c034dd6f135b7d9b6faad08d49715a8">get_option</a> (<a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a5f1927f4c71fafa4712265e6b68958b5">calendar_option_type</a> opt) const =0</td></tr>
+<tr class="memitem:a0c034dd6f135b7d9b6faad08d49715a8"><td class="memItemLeft" align="right" valign="top"><a id="a0c034dd6f135b7d9b6faad08d49715a8"></a>
+virtual int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a0c034dd6f135b7d9b6faad08d49715a8">get_option</a> (<a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a5f1927f4c71fafa4712265e6b68958b5">calendar_option_type</a> opt) const =0</td></tr>
+<tr class="memdesc:a0c034dd6f135b7d9b6faad08d49715a8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get option for calendar, currently only check if it is Gregorian calendar. <br /></td></tr>
 <tr class="separator:a0c034dd6f135b7d9b6faad08d49715a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acc0e2e3edb7e774c35e0a01964d10c02"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#acc0e2e3edb7e774c35e0a01964d10c02">adjust_value</a> (<a class="el" href="namespaceboost_1_1locale_1_1period_1_1marks.html#a1536eaff4b2a880782128fc127f40d3a">period::marks::period_mark</a> m, <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a92cf9485b91d60b70ef00e183bdf4e95">update_type</a> u, int <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a331a9af8204b60751d284e4bfa190d9b">difference</a>)=0</td></tr>
+<tr class="memitem:acc0e2e3edb7e774c35e0a01964d10c02"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#acc0e2e3edb7e774c35e0a01964d10c02">adjust_value</a> (<a class="el" href="namespaceboost_1_1locale_1_1period_1_1marks.html#a1536eaff4b2a880782128fc127f40d3a">period::marks::period_mark</a> m, <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a92cf9485b91d60b70ef00e183bdf4e95">update_type</a> u, int <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a4770b99780933148b737e911595c0b85">difference</a>)=0</td></tr>
 <tr class="separator:acc0e2e3edb7e774c35e0a01964d10c02"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a331a9af8204b60751d284e4bfa190d9b"><td class="memItemLeft" align="right" valign="top">virtual int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a331a9af8204b60751d284e4bfa190d9b">difference</a> (<a class="el" href="classboost_1_1locale_1_1abstract__calendar.html">abstract_calendar</a> const *other, <a class="el" href="namespaceboost_1_1locale_1_1period_1_1marks.html#a1536eaff4b2a880782128fc127f40d3a">period::marks::period_mark</a> m) const =0</td></tr>
-<tr class="separator:a331a9af8204b60751d284e4bfa190d9b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa17f0fd2e88d3da8fe7b12e98ad2d6c3"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#aa17f0fd2e88d3da8fe7b12e98ad2d6c3">set_timezone</a> (std::string const &amp;tz)=0</td></tr>
-<tr class="separator:aa17f0fd2e88d3da8fe7b12e98ad2d6c3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a51f4b91d0dc2f9afa3920a771307d92f"><td class="memItemLeft" align="right" valign="top">virtual std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a51f4b91d0dc2f9afa3920a771307d92f">get_timezone</a> () const =0</td></tr>
+<tr class="memitem:a4770b99780933148b737e911595c0b85"><td class="memItemLeft" align="right" valign="top"><a id="a4770b99780933148b737e911595c0b85"></a>
+virtual int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a4770b99780933148b737e911595c0b85">difference</a> (const <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html">abstract_calendar</a> &amp;other, <a class="el" href="namespaceboost_1_1locale_1_1period_1_1marks.html#a1536eaff4b2a880782128fc127f40d3a">period::marks::period_mark</a> m) const =0</td></tr>
+<tr class="memdesc:a4770b99780933148b737e911595c0b85"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate the difference between this calendar and <em>other</em> in <em>p</em> units. <br /></td></tr>
+<tr class="separator:a4770b99780933148b737e911595c0b85"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7a3f0e3392cee1f8623ecc4eafe6ee41"><td class="memItemLeft" align="right" valign="top"><a id="a7a3f0e3392cee1f8623ecc4eafe6ee41"></a>
+virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a7a3f0e3392cee1f8623ecc4eafe6ee41">set_timezone</a> (const std::string &amp;tz)=0</td></tr>
+<tr class="memdesc:a7a3f0e3392cee1f8623ecc4eafe6ee41"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set time zone, empty - use system. <br /></td></tr>
+<tr class="separator:a7a3f0e3392cee1f8623ecc4eafe6ee41"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a51f4b91d0dc2f9afa3920a771307d92f"><td class="memItemLeft" align="right" valign="top"><a id="a51f4b91d0dc2f9afa3920a771307d92f"></a>
+virtual std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a51f4b91d0dc2f9afa3920a771307d92f">get_timezone</a> () const =0</td></tr>
+<tr class="memdesc:a51f4b91d0dc2f9afa3920a771307d92f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get current time zone, empty - system one. <br /></td></tr>
 <tr class="separator:a51f4b91d0dc2f9afa3920a771307d92f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa20ae19bca185cc0fa4ab69d7f3c5883"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#aa20ae19bca185cc0fa4ab69d7f3c5883">same</a> (<a class="el" href="classboost_1_1locale_1_1abstract__calendar.html">abstract_calendar</a> const *other) const =0</td></tr>
-<tr class="separator:aa20ae19bca185cc0fa4ab69d7f3c5883"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2f7ba0401405c8793d746988a5bad506"><td class="memItemLeft" align="right" valign="top"><a id="a2f7ba0401405c8793d746988a5bad506"></a>
+virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a2f7ba0401405c8793d746988a5bad506">same</a> (const <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html">abstract_calendar</a> *other) const =0</td></tr>
+<tr class="memdesc:a2f7ba0401405c8793d746988a5bad506"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check of two calendars have same rules. <br /></td></tr>
+<tr class="separator:a2f7ba0401405c8793d746988a5bad506"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>This class defines generic calendar class, it is used by <a class="el" href="classboost_1_1locale_1_1date__time.html" title="this class represents a date time and allows to perform various operation according to the locale set...">date_time</a> and calendar objects internally. It is less useful for end users, but it is build for localization backend implementation </p>
@@ -141,7 +170,8 @@ Public Member Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Information about calendar </p>
+
+<p>Information about calendar. </p>
 <table class="fieldtable">
 <tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a5f1927f4c71fafa4712265e6b68958b5add910815d1ad0e97275b781223e869a9"></a>is_gregorian&#160;</td><td class="fielddoc"><p>Check if the calendar is Gregorian. </p>
 </td></tr>
@@ -162,7 +192,8 @@ Public Member Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>A way to update the value </p>
+
+<p>A way to update the value. </p>
 <table class="fieldtable">
 <tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a92cf9485b91d60b70ef00e183bdf4e95aac5f9cb6e12a121b47b51434a3655c81"></a>move&#160;</td><td class="fielddoc"><p>Change the value up or down effecting others for example 1990-12-31 + 1 day = 1991-01-01. </p>
 </td></tr>
@@ -183,7 +214,8 @@ Public Member Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Type that defines how to fetch the value </p>
+
+<p>Type that defines how to fetch the value. </p>
 <table class="fieldtable">
 <tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="af786b3e65294d70769f2826ef95c7bd5a28694319e58f559df9ca41b22f03427e"></a>absolute_minimum&#160;</td><td class="fielddoc"><p>Absolute possible minimum for the value, for example for day is 1. </p>
 </td></tr>
@@ -247,329 +279,6 @@ Public Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a73bc2d023be4c6ac6a6f441f74ded2f9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a73bc2d023be4c6ac6a6f441f74ded2f9">&#9670;&nbsp;</a></span>clone()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html">abstract_calendar</a>* boost::locale::abstract_calendar::clone </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Make a polymorphic copy of the calendar </p>
-
-</div>
-</div>
-<a id="a331a9af8204b60751d284e4bfa190d9b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a331a9af8204b60751d284e4bfa190d9b">&#9670;&nbsp;</a></span>difference()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual int boost::locale::abstract_calendar::difference </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html">abstract_calendar</a> const *&#160;</td>
-          <td class="paramname"><em>other</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="namespaceboost_1_1locale_1_1period_1_1marks.html#a1536eaff4b2a880782128fc127f40d3a">period::marks::period_mark</a>&#160;</td>
-          <td class="paramname"><em>m</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Calculate the difference between this calendar and <em>other</em> in <em>p</em> units </p>
-
-</div>
-</div>
-<a id="a0c034dd6f135b7d9b6faad08d49715a8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0c034dd6f135b7d9b6faad08d49715a8">&#9670;&nbsp;</a></span>get_option()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual int boost::locale::abstract_calendar::get_option </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a5f1927f4c71fafa4712265e6b68958b5">calendar_option_type</a>&#160;</td>
-          <td class="paramname"><em>opt</em></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Get option for calendar, currently only check if it is Gregorian calendar </p>
-
-</div>
-</div>
-<a id="a8900097c0b687393b053bc0420070815"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8900097c0b687393b053bc0420070815">&#9670;&nbsp;</a></span>get_time()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual <a class="el" href="structboost_1_1locale_1_1posix__time.html">posix_time</a> boost::locale::abstract_calendar::get_time </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Get current time point </p>
-
-</div>
-</div>
-<a id="a51f4b91d0dc2f9afa3920a771307d92f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a51f4b91d0dc2f9afa3920a771307d92f">&#9670;&nbsp;</a></span>get_timezone()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual std::string boost::locale::abstract_calendar::get_timezone </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Get current time zone, empty - system one </p>
-
-</div>
-</div>
-<a id="aab88e44a19162f45c2d5cbe6849e6de3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aab88e44a19162f45c2d5cbe6849e6de3">&#9670;&nbsp;</a></span>get_value()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual int boost::locale::abstract_calendar::get_value </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="namespaceboost_1_1locale_1_1period_1_1marks.html#a1536eaff4b2a880782128fc127f40d3a">period::marks::period_mark</a>&#160;</td>
-          <td class="paramname"><em>m</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#af786b3e65294d70769f2826ef95c7bd5">value_type</a>&#160;</td>
-          <td class="paramname"><em>v</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Get specific value for period <em>p</em> according to a value_type <em>v</em> </p>
-
-</div>
-</div>
-<a id="aa06fef77acaa6104e3cd2bc80ccc76d9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa06fef77acaa6104e3cd2bc80ccc76d9">&#9670;&nbsp;</a></span>normalize()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual void boost::locale::abstract_calendar::normalize </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Recalculate all periods after setting them, should be called after use of <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a13d068ea5b491898ee1a64fa1d551972">set_value()</a> function. </p>
-
-</div>
-</div>
-<a id="aa20ae19bca185cc0fa4ab69d7f3c5883"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa20ae19bca185cc0fa4ab69d7f3c5883">&#9670;&nbsp;</a></span>same()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual bool boost::locale::abstract_calendar::same </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html">abstract_calendar</a> const *&#160;</td>
-          <td class="paramname"><em>other</em></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Check of two calendars have same rules </p>
-
-</div>
-</div>
-<a id="a9265206013005d9ac30cf723a7ffe032"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9265206013005d9ac30cf723a7ffe032">&#9670;&nbsp;</a></span>set_option()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual void boost::locale::abstract_calendar::set_option </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#a5f1927f4c71fafa4712265e6b68958b5">calendar_option_type</a>&#160;</td>
-          <td class="paramname"><em>opt</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>v</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Set option for calendar, for future use </p>
-
-</div>
-</div>
-<a id="acb01268c84f27a8a736b715ab9e9557a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#acb01268c84f27a8a736b715ab9e9557a">&#9670;&nbsp;</a></span>set_time()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual void boost::locale::abstract_calendar::set_time </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="structboost_1_1locale_1_1posix__time.html">posix_time</a> const &amp;&#160;</td>
-          <td class="paramname"><em>p</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Set current time point </p>
-
-</div>
-</div>
-<a id="aa17f0fd2e88d3da8fe7b12e98ad2d6c3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa17f0fd2e88d3da8fe7b12e98ad2d6c3">&#9670;&nbsp;</a></span>set_timezone()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual void boost::locale::abstract_calendar::set_timezone </td>
-          <td>(</td>
-          <td class="paramtype">std::string const &amp;&#160;</td>
-          <td class="paramname"><em>tz</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Set time zone, empty - use system </p>
-
-</div>
-</div>
 <a id="a13d068ea5b491898ee1a64fa1d551972"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a13d068ea5b491898ee1a64fa1d551972">&#9670;&nbsp;</a></span>set_value()</h2>
 
@@ -604,8 +313,8 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 <p>Set specific <em>value</em> for period <em>p</em>, note not all values are settable.</p>
-<p>After call of set_value you may want to call <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#aa06fef77acaa6104e3cd2bc80ccc76d9">normalize()</a> function to make sure vall periods are updated, if you set sereral fields that are part of single date/time representation you should call set_value several times and then call <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#aa06fef77acaa6104e3cd2bc80ccc76d9">normalize()</a>.</p>
-<p>If <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#aa06fef77acaa6104e3cd2bc80ccc76d9">normalize()</a> is not called after set_value, the behavior is undefined </p>
+<p>After calling set_value you may want to call <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#aa06fef77acaa6104e3cd2bc80ccc76d9" title="Recalculate all periods after setting them, should be called after use of set_value() function.">normalize()</a> function to make sure all periods are updated, if you set several fields that are part of a single date/time representation you should call set_value several times and then call <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#aa06fef77acaa6104e3cd2bc80ccc76d9" title="Recalculate all periods after setting them, should be called after use of set_value() function.">normalize()</a>.</p>
+<p>If <a class="el" href="classboost_1_1locale_1_1abstract__calendar.html#aa06fef77acaa6104e3cd2bc80ccc76d9" title="Recalculate all periods after setting them, should be called after use of set_value() function.">normalize()</a> is not called after set_value, the behavior is undefined </p>
 
 </div>
 </div>

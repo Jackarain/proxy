@@ -364,4 +364,21 @@ when linking against Boost binaries.
 [endsect]
 
 
+[section:stack_protect Support for stack protection]
+
+Compiler switch `-fstack-protector` changes the default context switching logic.
+Users must define `BOOST_CONTEXT_TLS_STACK_PROTECTOR` before including any
+Boost.Context headers if stack protection is enabled.
+
+[endsect]
+
+[section:shadow_stack Support for shadow stack protection]
+
+Shadow stack is part of Intel's Control-Flow Enforcement Technology. Users must
+check if syscall 'map_shadow_stack' exists, which is no.451 and then define
+`SHADOW_STACK_SYSCALL` before including any Boost.Context headers
+if shadow stack protection is enabled.
+
+[endsect]
+
 [endsect]

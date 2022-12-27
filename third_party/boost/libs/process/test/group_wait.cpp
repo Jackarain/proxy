@@ -16,7 +16,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-
+#include <boost/scope_exit.hpp>
 #include <boost/process/error.hpp>
 #include <boost/process/io.hpp>
 #include <boost/process/args.hpp>
@@ -45,6 +45,10 @@ BOOST_AUTO_TEST_CASE(wait_group_test, *boost::unit_test::timeout(5))
             BOOST_REQUIRE(done.load());
         }};
 
+    BOOST_SCOPE_EXIT_ALL(&) {    
+        done.store(true);
+        thr.join();
+    };
 
     using boost::unit_test::framework::master_test_suite;
 
@@ -78,9 +82,6 @@ BOOST_AUTO_TEST_CASE(wait_group_test, *boost::unit_test::timeout(5))
 
     BOOST_CHECK(!c1.running());
     BOOST_CHECK(!c2.running());
-
-    done.store(true);
-    thr.join();
 }
 
 

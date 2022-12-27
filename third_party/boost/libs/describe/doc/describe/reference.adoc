@@ -210,7 +210,7 @@ enum modifiers
     mod_function = 32,
     mod_any_member = 64,
     mod_inherited = 128,
-    mod_hidden = 256,
+    mod_hidden = 256
 };
 
 constexpr modifiers mod_any_access = static_cast<modifiers>( mod_public | mod_protected | mod_private );
@@ -233,6 +233,12 @@ following flags:
 * `mod_any_member` - overrides `mod_static` and `mod_function` and returns all members regardless of kind
 * `mod_inherited` - includes members of base classes
 * `mod_hidden` - includes hidden inherited members
+
+## <boost/describe/{zwsp}modifier_description.hpp>
+
+The header `modifier_description.hpp` includes `modifiers.hpp` and invokes
+`BOOST_DESCRIBE_ENUM` on `modifiers`, allowing `describe_enumerators<modifiers>`
+to work.
 
 ## <boost/describe/bases.hpp>
 

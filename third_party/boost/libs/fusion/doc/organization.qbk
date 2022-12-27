@@ -60,6 +60,7 @@ link against.
     * single_view
     * transform_view
     * zip_view
+    * identity_view
 * container
     * deque
     * list

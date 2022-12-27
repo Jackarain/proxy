@@ -1,4 +1,4 @@
-# Copyright 2018, 2019 Peter Dimov
+# Copyright 2018, 2019, 2022 Peter Dimov
 # Distributed under the Boost Software License, Version 1.0.
 # See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt
 
@@ -21,7 +21,7 @@ include_directories(../../..) # for `include <libs/preprocessor/...>` to work
 
 foreach(test IN LISTS tests_c)
 
-  boost_test(TYPE compile SOURCES ${test}.c)
+  boost_test(TYPE compile SOURCES ${test}.c NAME ${test}_c)
 
 endforeach()
 
@@ -33,7 +33,7 @@ endforeach()
 
 foreach(test IN LISTS tests_common_fail)
 
-  boost_test(TYPE compile-fail SOURCES ${test}.c)
+  boost_test(TYPE compile-fail SOURCES ${test}.c NAME ${test}_c)
   boost_test(TYPE compile-fail SOURCES ${test}.cpp)
 
 endforeach()

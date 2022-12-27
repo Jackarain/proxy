@@ -14,6 +14,8 @@ project : requirements
   <warnings>extra
   <toolset>msvc:<warnings-as-errors>on
   <toolset>clang:<warnings-as-errors>on
+  # https://github.com/boostorg/type_traits/issues/173
+  <toolset>clang-15:<cxxflags>-Wno-deprecated-builtins
   <toolset>gcc:<warnings-as-errors>on
   <toolset>gcc-4.4:<cxxflags>-Wno-sign-compare ;
 
@@ -174,7 +176,7 @@ run demangle_test.cpp
 run demangled_name_test.cpp
   : : : <test-info>always_show_run_output ;
 
-run demangled_name_test.cpp  : : : <rtti>off <test-info>always_show_run_output : demangled_name_test_no_rtti ;
+run demangled_name_test.cpp : : : <rtti>off <test-info>always_show_run_output : demangled_name_test_no_rtti ;
 
 run scoped_enum.cpp ;
 compile-fail scoped_enum_compile_fail_conv_from_int.cpp
@@ -183,6 +185,8 @@ compile-fail scoped_enum_compile_fail_conv_to_int.cpp
   : $(warning-as-errors-off) ;
 
 run underlying_type.cpp ;
+
+run fclose_deleter_test.cpp : : : <target-os>windows:<define>_CRT_SECURE_NO_WARNINGS <target-os>windows:<define>_CRT_SECURE_NO_DEPRECATE ;
 
 run pointer_traits_pointer_test.cpp ;
 run pointer_traits_element_type_test.cpp ;
@@ -203,6 +207,7 @@ compile first_scalar_constexpr_test.cpp ;
 run empty_value_test.cpp ;
 run empty_value_size_test.cpp ;
 run empty_value_final_test.cpp ;
+run empty_value_constexpr_test.cpp ;
 
 run quick_exit_test.cpp ;
 run-fail quick_exit_fail.cpp ;
@@ -293,6 +298,9 @@ run bit_popcount_test.cpp
 run bit_endian_test.cpp
   : : : $(pedantic-errors) ;
 
+compile-fail bit_width_fail.cpp
+  : <warnings>off ;
+
 run type_name_test.cpp ;
 
 run sv_types_test.cpp ;
@@ -324,6 +332,8 @@ run sv_conversion_test2.cpp : ;
 run sv_common_reference_test.cpp ;
 compile sv_common_reference_test2.cpp ;
 compile sv_windows_h_test.cpp ;
+compile-fail sv_nullptr_fail.cpp
+  : $(warning-as-errors-off) ;
 
 run span_test.cpp ;
 run span_types_test.cpp ;

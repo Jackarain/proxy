@@ -110,7 +110,7 @@ winapi - Win32 API.</h2>
 </ul>
 <h1><a class="anchor" id="supported_features_by_backends"></a>
 Supported Features</h1>
-<table border="1" sellpadding="5" sellspacing="3">
+<table border="1" cellpadding="5" cellspacing="3">
 <tr>
 <th>Backend </th><th>icu</th><th>posix</th><th>winapi</th><th>std  </th></tr>
 <tr>
@@ -137,17 +137,17 @@ Mac OS X - broken</td><td>3 levels</td><td>1 level  </td></tr>
 <tr>
 <th>Unicode Normalization </th><td>Yes</td><td>No</td><td>Vista and above</td><td>No  </td></tr>
 <tr>
-<th>C++0x characters </th><td>Yes</td><td>No</td><td>No</td><td>Yes  </td></tr>
+<th>C++11 characters </th><td>Yes</td><td>No</td><td>No</td><td>Yes  </td></tr>
 <tr>
 <th>OS Support </th><td>Any</td><td>Linux, Mac OS X</td><td>Windows, Cygwin</td><td>Any  </td></tr>
 <tr>
 <th>Useful on </th><td>Any Platform</td><td>Linux and Mac OS X</td><td>Windows/MinGW/Cygwin</td><td>Linux with GCC or Intel<br />
 Windows with MSVC  </td></tr>
 </table>
-<h1><a class="anchor" id="using_localization_backends"></a>
+<h1><a class="anchor" id="using_localization_backends_sec"></a>
 Using Localization Backends</h1>
 <p>Accessing a localization backend is done via the <a class="el" href="classboost_1_1locale_1_1localization__backend__manager.html" title="Localization backend manager is a class that holds various backend and allows creation of their combi...">boost::locale::localization_backend_manager</a> class.</p>
-<p>You can create your own <a class="el" href="classboost_1_1locale_1_1localization__backend__manager.html" title="Localization backend manager is a class that holds various backend and allows creation of their combi...">boost::locale::localization_backend_manager</a> by starting with a global backend via the <a class="el" href="classboost_1_1locale_1_1localization__backend__manager.html#a65649bc161a0cc160da9b40a9ad14e20">boost::locale::localization_backend_manager::global</a> static member function and modifying it.</p>
+<p>You can create your own <a class="el" href="classboost_1_1locale_1_1localization__backend__manager.html" title="Localization backend manager is a class that holds various backend and allows creation of their combi...">boost::locale::localization_backend_manager</a> by starting with a global backend via the <a class="el" href="classboost_1_1locale_1_1localization__backend__manager.html#a32ebf101e8ada9e826e9d70ab156c519">boost::locale::localization_backend_manager::global</a> static member function and modifying it.</p>
 <p>For example:</p>
 <div class="fragment"><div class="line">localization_backend_manager my = localization_backend_manager::global();</div><div class="line"><span class="comment">// Get global backend</span></div><div class="line"></div><div class="line">my.select(<span class="stringliteral">&quot;std&quot;</span>);</div><div class="line"><span class="comment">// select std backend as default</span></div><div class="line"></div><div class="line">generator gen(my);</div><div class="line"><span class="comment">// create a generator that uses this backend.</span></div><div class="line"></div><div class="line">localization_backend_manager::global(my);</div><div class="line"><span class="comment">// set this backend globally</span></div><div class="line"></div><div class="line">generator gen2();</div><div class="line"><span class="comment">// now this one would use the new global backend.</span></div></div><!-- fragment --><p>You can also create a mixture of several backends, using for example <code>icu</code> for one kind of operation and <code>std</code> for all others:</p>
 <div class="fragment"><div class="line">localization_backend_manager my = localization_backend_manager::global();</div><div class="line"><span class="comment">// Get global backend</span></div><div class="line"></div><div class="line">my.select(<span class="stringliteral">&quot;std&quot;</span>);</div><div class="line"><span class="comment">// select std backend as default for all categories</span></div><div class="line">my.select(<span class="stringliteral">&quot;icu&quot;</span>,boundary_facet);</div><div class="line"><span class="comment">// select icu backend for boundary analysis (since it is not supported by \c std)</span></div></div><!-- fragment --> </div></div><!-- PageDoc -->

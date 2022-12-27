@@ -27,7 +27,7 @@
 <a name="beast.ref.boost__beast__test__any_handler"></a><a class="link" href="boost__beast__test__any_handler.html" title="test::any_handler">test::any_handler</a>
 </h4></div></div></div>
 <p>
-        <a class="indexterm" name="idm87716"></a>
+        <a class="indexterm" name="idm79530"></a>
       </p>
 <p>
         Return a test CompletionHandler which requires invocation.
@@ -40,7 +40,8 @@
         Defined in header <code class="literal">&lt;<a href="../../../../../../boost/beast/_experimental/test/handler.hpp" target="_top">boost/beast/_experimental/test/handler.hpp</a>&gt;</code>
       </p>
 <pre class="programlisting"><span class="identifier">handler</span>
-<span class="identifier">any_handler</span><span class="special">();</span>
+<span class="identifier">any_handler</span><span class="special">(</span>
+    <span class="identifier">boost</span><span class="special">::</span><span class="identifier">source_location</span> <span class="identifier">loc</span> <span class="special">=</span> <span class="identifier">BOOST_CURRENT_LOCATION</span><span class="special">);</span>
 </pre>
 <h5>
 <a name="beast.ref.boost__beast__test__any_handler.h1"></a>

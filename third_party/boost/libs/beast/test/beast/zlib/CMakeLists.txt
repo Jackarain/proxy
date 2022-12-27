@@ -8,7 +8,7 @@
 #
 
 GroupSources (include/boost/beast beast)
-GroupSources (test/extern/zlib-1.2.11 zlib)
+GroupSources (test/extern/zlib-1.2.12 zlib)
 GroupSources (test/beast/zlib "/")
 
 if (MSVC)
@@ -33,4 +33,4 @@ target_link_libraries(tests-beast-zlib
 
 set_property(TARGET tests-beast-zlib PROPERTY FOLDER "tests")
 
-build_individual_tests(tests-beast-zlib LIBS lib-asio lib-beast lib-test lib-zlib)
+#build_individual_tests(tests-beast-zlib LIBS lib-asio lib-beast lib-test lib-zlib)

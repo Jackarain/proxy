@@ -19,7 +19,9 @@ class point
 {
     int x;
     int y;
+
 public:
+
     point() : x(0), y(0) {}
     point(int x, int y) : x(x), y(y) {}
 
@@ -31,6 +33,7 @@ public:
     friend std::size_t hash_value(point const& p)
     {
         std::size_t seed = 0;
+
         boost::hash_combine(seed, p.x);
         boost::hash_combine(seed, p.y);
 

@@ -11,9 +11,20 @@
 #define BOOST_MP_STANDALONE_CONFIG_HPP
 
 #include <climits>
+
 // Boost.Config is dependency free so it is considered a requirement to use Boost.Multiprecision in standalone mode
-#include <boost/config.hpp>
-#include <boost/config/workaround.hpp>
+#ifdef __has_include
+#  if __has_include(<boost/config.hpp>)
+#    include <boost/config.hpp>
+#    include <boost/config/workaround.hpp>
+#  else
+#    error "Boost.Config is considered a requirement to use Boost.Multiprecision in standalone mode. A package is provided at https://github.com/boostorg/multiprecision/releases"
+#  endif
+#else
+// Provides the less helpful fatal error: 'boost/config.hpp' file not found if not available
+#  include <boost/config.hpp>
+#  include <boost/config/workaround.hpp>
+#endif
 
 // Minimum language standard transition
  #ifdef _MSVC_LANG

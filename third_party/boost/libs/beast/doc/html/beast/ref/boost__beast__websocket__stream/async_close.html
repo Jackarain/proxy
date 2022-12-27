@@ -27,7 +27,7 @@
 <a name="beast.ref.boost__beast__websocket__stream.async_close"></a><a class="link" href="async_close.html" title="websocket::stream::async_close">websocket::stream::async_close</a>
 </h5></div></div></div>
 <p>
-          <a class="indexterm" name="idm59638"></a>
+          <a class="indexterm" name="idm54594"></a>
         </p>
 <p>
           Send a websocket close control frame asynchronously.
@@ -138,6 +138,37 @@
 </table></div>
 <h6>
 <a name="beast.ref.boost__beast__websocket__stream.async_close.h3"></a>
+          <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.async_close.per_operation_cancellation"></a></span><a class="link" href="async_close.html#beast.ref.boost__beast__websocket__stream.async_close.per_operation_cancellation">Per-Operation
+          Cancellation</a>
+        </h6>
+<p>
+          This asynchronous operation supports cancellation for the following net::cancellation_type
+          values:
+        </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+              <code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">cancellation_type</span><span class="special">::</span><span class="identifier">terminal</span></code>
+            </li>
+<li class="listitem">
+              <code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">cancellation_type</span><span class="special">::</span><span class="identifier">total</span></code>
+            </li>
+</ul></div>
+<p>
+          <code class="computeroutput"><span class="identifier">total</span></code>cancellation succeeds
+          if the operation is suspended due to ongoing control operations such as
+          a ping/pong. <code class="computeroutput"><span class="identifier">terminal</span></code> cancellation
+          succeeds when supported by the underlying stream.
+        </p>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.async_close.h4"></a>
+          <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.async_close.remarks"></a></span><a class="link" href="async_close.html#beast.ref.boost__beast__websocket__stream.async_close.remarks">Remarks</a>
+        </h6>
+<p>
+          <code class="computeroutput"><span class="identifier">terminal</span></code> cancellation will
+          may close the underlying socket.
+        </p>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.async_close.h5"></a>
           <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.async_close.see_also"></a></span><a class="link" href="async_close.html#beast.ref.boost__beast__websocket__stream.async_close.see_also">See
           Also</a>
         </h6>

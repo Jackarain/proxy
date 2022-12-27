@@ -176,7 +176,7 @@ int main()
 #endif
 
     generic_string_tests((std::string*) 0);
-#if BOOST_HASH_HAS_STRING_VIEW
+#if !defined(BOOST_NO_CXX17_HDR_STRING_VIEW)
     generic_string_tests((std::string_view*) 0);
 #endif
 

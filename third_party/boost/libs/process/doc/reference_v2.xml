@@ -1,6 +1,87 @@
 <?xml version="1.0" standalone="yes"?>
 <library-reference><header name="boost/process/v2.hpp">
 </header>
+<header name="boost/process/v2/bind_launcher.hpp">
+<namespace name="boost">
+<namespace name="process">
+<namespace name="v2">
+<struct name="bound_launcher"><template>
+      <template-type-parameter name="Launcher"><purpose><para>The inner launcher to be used </para></purpose></template-type-parameter>
+      <template-nontype-parameter name="Init"><type>typename ...</type></template-nontype-parameter>
+    </template><purpose>Utility class to bind initializers to a launcher. </purpose><description><para>
+This can be used when multiple processes shared some settings, e.g. </para></description><method-group name="public member functions">
+<method name="operator()"><type>auto</type><template>
+          <template-type-parameter name="ExecutionContext"/>
+          <template-type-parameter name="Args"/>
+          <template-nontype-parameter name="Inits"><type>typename ...</type></template-nontype-parameter>
+        </template><parameter name="context"><paramtype>ExecutionContext &amp;</paramtype></parameter><parameter name="executable"><paramtype>const typename std::enable_if&lt; std::is_convertible&lt; ExecutionContext &amp;, boost::asio::execution_context &amp; &gt;::value, filesystem::path &gt;::type &amp;</paramtype></parameter><parameter name="args"><paramtype>Args &amp;&amp;</paramtype></parameter><parameter name="inits"><paramtype>Inits &amp;&amp;...</paramtype></parameter></method>
+<method name="operator()"><type>auto</type><template>
+          <template-type-parameter name="ExecutionContext"/>
+          <template-type-parameter name="Args"/>
+          <template-nontype-parameter name="Inits"><type>typename ...</type></template-nontype-parameter>
+        </template><parameter name="context"><paramtype>ExecutionContext &amp;</paramtype></parameter><parameter name="ec"><paramtype>error_code &amp;</paramtype></parameter><parameter name="executable"><paramtype>const typename std::enable_if&lt; std::is_convertible&lt; ExecutionContext &amp;, boost::asio::execution_context &amp; &gt;::value, filesystem::path &gt;::type &amp;</paramtype></parameter><parameter name="args"><paramtype>Args &amp;&amp;</paramtype></parameter><parameter name="inits"><paramtype>Inits &amp;&amp;...</paramtype></parameter></method>
+<method name="operator()"><type>auto</type><template>
+          <template-type-parameter name="Executor"/>
+          <template-type-parameter name="Args"/>
+          <template-nontype-parameter name="Inits"><type>typename ...</type></template-nontype-parameter>
+        </template><parameter name="exec"><paramtype>Executor</paramtype></parameter><parameter name="executable"><paramtype>const typename std::enable_if&lt; boost::asio::execution::is_executor&lt; Executor &gt;::value||boost::asio::is_executor&lt; Executor &gt;::value, filesystem::path &gt;::type &amp;</paramtype></parameter><parameter name="args"><paramtype>Args &amp;&amp;</paramtype></parameter><parameter name="inits"><paramtype>Inits &amp;&amp;...</paramtype></parameter></method>
+<method name="operator()"><type>auto</type><template>
+          <template-type-parameter name="Executor"/>
+          <template-type-parameter name="Args"/>
+          <template-nontype-parameter name="Inits"><type>typename ...</type></template-nontype-parameter>
+        </template><parameter name="exec"><paramtype>Executor</paramtype></parameter><parameter name="ec"><paramtype>error_code &amp;</paramtype></parameter><parameter name="executable"><paramtype>const typename std::enable_if&lt; boost::asio::execution::is_executor&lt; Executor &gt;::value||boost::asio::is_executor&lt; Executor &gt;::value, filesystem::path &gt;::type &amp;</paramtype></parameter><parameter name="args"><paramtype>Args &amp;&amp;</paramtype></parameter><parameter name="inits"><paramtype>Inits &amp;&amp;...</paramtype></parameter></method>
+</method-group>
+<constructor><template>
+          <template-type-parameter name="Launcher_"/>
+          <template-nontype-parameter name="Init_"><type>typename ...</type></template-nontype-parameter>
+        </template><parameter name="l"><paramtype>Launcher_ &amp;&amp;</paramtype></parameter><parameter name="init"><paramtype>Init_ &amp;&amp;...</paramtype></parameter></constructor>
+<method-group name="private member functions">
+<method name="invoke"><type>auto</type><template>
+          <template-nontype-parameter name="Idx"><type>std::size_t ...</type></template-nontype-parameter>
+          <template-type-parameter name="ExecutionContext"/>
+          <template-type-parameter name="Args"/>
+          <template-nontype-parameter name="Inits"><type>typename ...</type></template-nontype-parameter>
+        </template><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter><parameter name="context"><paramtype>ExecutionContext &amp;</paramtype></parameter><parameter name="executable"><paramtype>const typename std::enable_if&lt; std::is_convertible&lt; ExecutionContext &amp;, boost::asio::execution_context &amp; &gt;::value, filesystem::path &gt;::type &amp;</paramtype></parameter><parameter name="args"><paramtype>Args &amp;&amp;</paramtype></parameter><parameter name="inits"><paramtype>Inits &amp;&amp;...</paramtype></parameter></method>
+<method name="invoke"><type>auto</type><template>
+          <template-nontype-parameter name="Idx"><type>std::size_t ...</type></template-nontype-parameter>
+          <template-type-parameter name="ExecutionContext"/>
+          <template-type-parameter name="Args"/>
+          <template-nontype-parameter name="Inits"><type>typename ...</type></template-nontype-parameter>
+        </template><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter><parameter name="context"><paramtype>ExecutionContext &amp;</paramtype></parameter><parameter name="ec"><paramtype>error_code &amp;</paramtype></parameter><parameter name="executable"><paramtype>const typename std::enable_if&lt; std::is_convertible&lt; ExecutionContext &amp;, boost::asio::execution_context &amp; &gt;::value, filesystem::path &gt;::type &amp;</paramtype></parameter><parameter name="args"><paramtype>Args &amp;&amp;</paramtype></parameter><parameter name="inits"><paramtype>Inits &amp;&amp;...</paramtype></parameter></method>
+<method name="invoke"><type>auto</type><template>
+          <template-nontype-parameter name="Idx"><type>std::size_t ...</type></template-nontype-parameter>
+          <template-type-parameter name="Executor"/>
+          <template-type-parameter name="Args"/>
+          <template-nontype-parameter name="Inits"><type>typename ...</type></template-nontype-parameter>
+        </template><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter><parameter name="exec"><paramtype>Executor</paramtype></parameter><parameter name="executable"><paramtype>const typename std::enable_if&lt; boost::asio::execution::is_executor&lt; Executor &gt;::value||boost::asio::is_executor&lt; Executor &gt;::value, filesystem::path &gt;::type &amp;</paramtype></parameter><parameter name="args"><paramtype>Args &amp;&amp;</paramtype></parameter><parameter name="inits"><paramtype>Inits &amp;&amp;...</paramtype></parameter></method>
+<method name="invoke"><type>auto</type><template>
+          <template-nontype-parameter name="Idx"><type>std::size_t ...</type></template-nontype-parameter>
+          <template-type-parameter name="Executor"/>
+          <template-type-parameter name="Args"/>
+          <template-nontype-parameter name="Inits"><type>typename ...</type></template-nontype-parameter>
+        </template><parameter name=""><paramtype><emphasis>unspecified</emphasis></paramtype></parameter><parameter name="exec"><paramtype>Executor</paramtype></parameter><parameter name="ec"><paramtype>error_code &amp;</paramtype></parameter><parameter name="executable"><paramtype>const typename std::enable_if&lt; boost::asio::execution::is_executor&lt; Executor &gt;::value||boost::asio::is_executor&lt; Executor &gt;::value, filesystem::path &gt;::type &amp;</paramtype></parameter><parameter name="args"><paramtype>Args &amp;&amp;</paramtype></parameter><parameter name="inits"><paramtype>Inits &amp;&amp;...</paramtype></parameter></method>
+</method-group>
+</struct>
+
+
+
+
+
+
+
+
+
+<function name="bind_launcher"><type>auto</type><template>
+          <template-type-parameter name="Launcher"/>
+          <template-nontype-parameter name="Init"><type>typename ...</type></template-nontype-parameter>
+        </template><parameter name="launcher"><paramtype>Launcher &amp;&amp;</paramtype></parameter><parameter name="init"><paramtype>Init &amp;&amp;...</paramtype></parameter></function>
+<function name="bind_default_launcher"><type>auto</type><template>
+          <template-nontype-parameter name="Init"><type>typename ...</type></template-nontype-parameter>
+        </template><parameter name="init"><paramtype>Init &amp;&amp;...</paramtype></parameter></function>
+</namespace>
+</namespace>
+</namespace>
+</header>
 <header name="boost/process/v2/cstring_ref.hpp">
 <namespace name="boost">
 <namespace name="process">
@@ -77,6 +158,8 @@
 
 
 
+
+
 <function name="operator&lt;&lt;"><type>std::basic_ostream&lt; charT, traits &gt; &amp;</type><template>
           <template-type-parameter name="charT"/>
           <template-type-parameter name="traits"/>
@@ -85,6 +168,8 @@
           <template-type-parameter name="charT"/>
           <template-type-parameter name="traits"/>
         </template><parameter name="s"><paramtype>basic_string_view&lt; charT, traits &gt;</paramtype></parameter></function>
+
+
 </namespace>
 </namespace>
 </namespace>
@@ -97,6 +182,10 @@
 // equivalent to
 process prod = default_launcher()("test", {});
 </programlisting> </para></description><type>implementation_defined</type></typedef>
+
+
+
+
 
 
 
@@ -240,6 +329,7 @@ process proc2(executor, exe, {"BAR"}, env);
 <method name="native_view" cv="const noexcept"><type><classname>string_view_type</classname></type></method>
 <method name="conversion-operator" cv="const"><type>string_type</type></method>
 <method name="conversion-operator" cv="const"><type>string_view_type</type></method>
+<method name="conversion-operator" cv="const"><type>typename string_view_type::string_view_type</type></method>
 <method name="conversion-operator" cv="const"><type>key_value_pair_view</type></method>
 <method name="compare" cv="const noexcept"><type>int</type><parameter name="p"><paramtype>const <classname>key_value_pair</classname> &amp;</paramtype></parameter></method>
 <method name="compare" cv="const"><type>int</type><parameter name="str"><paramtype>const string_type &amp;</paramtype></parameter></method>
@@ -585,6 +675,10 @@ The environment type passed in must be a range with value T that fulfills the fo
 
 
 
+
+
+
+
 </namespace>
 </namespace>
 </namespace>
@@ -650,6 +744,10 @@ The environment type passed in must be a range with value T that fulfills the fo
 
 
 
+
+
+
+
 </namespace>
 </namespace>
 </namespace>
@@ -658,6 +756,8 @@ The environment type passed in must be a range with value T that fulfills the fo
 <namespace name="boost">
 <namespace name="process">
 <namespace name="v2">
+
+
 
 
 
@@ -683,18 +783,75 @@ The environment type passed in must be a range with value T that fulfills the fo
 </para><para>It is to note that <computeroutput>async_execute</computeroutput> will us the lowest seelected cancellation type. A subprocess might ignore anything not terminal. </para></description></function>
 
 
+
+
 </namespace>
 </namespace>
 </namespace>
 </header>
 <header name="boost/process/v2/exit_code.hpp">
 <namespace name="boost">
+<namespace name="asio">
+<struct-specialization name="associator"><template>
+      <template-nontype-parameter name="Associator"><type>template&lt; typename, typename &gt; class</type></template-nontype-parameter>
+      <template-type-parameter name="Handler"/>
+      <template-type-parameter name="DefaultCandidate"/>
+    </template><specialization><template-arg>Associator</template-arg><template-arg>boost::process::v2::detail::code_as_error_handler&lt; Handler &gt;</template-arg><template-arg>DefaultCandidate</template-arg></specialization><inherit access="public">Associator&lt; Handler, DefaultCandidate &gt;</inherit><method-group name="public static functions">
+<method name="get" cv="noexcept" specifiers="static"><type>Associator&lt; Handler, DefaultCandidate &gt;::type</type><parameter name="h"><paramtype><emphasis>unspecified</emphasis></paramtype></parameter><parameter name="c"><paramtype>const DefaultCandidate &amp;</paramtype><default>DefaultCandidate()</default></parameter></method>
+</method-group>
+</struct-specialization><struct-specialization name="async_result"><template>
+      <template-type-parameter name="CompletionToken"/>
+    </template><specialization><template-arg>boost::process::v2::code_as_error_t&lt; CompletionToken &gt;</template-arg><template-arg>void(boost::process::v2::error_code</template-arg><template-arg>boost::process::v2::native_exit_code_type)</template-arg></specialization><struct name="init_wrapper"><template>
+      <template-type-parameter name="Initiation"/>
+    </template><data-member name="initiation_"><type>Initiation</type></data-member>
+<method-group name="public member functions">
+<method name="operator()"><type>void</type><template>
+          <template-type-parameter name="Handler"/>
+          <template-nontype-parameter name="Args"><type>typename...</type></template-nontype-parameter>
+        </template><parameter name="handler"><paramtype>Handler &amp;&amp;</paramtype></parameter><parameter name="cat"><paramtype>const boost::process::v2::error_category &amp;</paramtype></parameter><parameter name="args"><paramtype>Args &amp;&amp;...</paramtype></parameter></method>
+</method-group>
+<constructor><parameter name="init"><paramtype>Initiation</paramtype></parameter></constructor>
+</struct><typedef name="signature"><type>void(boost::process::v2::error_code)</type></typedef>
+<typedef name="return_type"><type>typename async_result&lt; CompletionToken, void(boost::process::v2::error_code)&gt;::return_type</type></typedef>
+<data-member name="token"><type>RawCompletionToken &amp;&amp;</type></data-member>
+<data-member name="args"><type>RawCompletionToken Args &amp;&amp;</type></data-member>
+<method-group name="public static functions">
+<method name="BOOST_PROCESS_V2_INITFN_DEDUCED_RESULT_TYPE" specifiers="static"><type>static</type><template>
+          <template-type-parameter name="Initiation"/>
+          <template-type-parameter name="RawCompletionToken"/>
+          <template-nontype-parameter name="Args"><type>typename...</type></template-nontype-parameter>
+        </template><parameter name=""><paramtype>CompletionToken</paramtype></parameter><parameter name=""><paramtype>signature</paramtype></parameter><parameter name=""><paramtype>(async_initiate&lt; CompletionToken, signature &gt;(declval&lt; init_wrapper&lt; typename decay&lt; Initiation &gt;::type &gt; &gt;(), declval&lt; CompletionToken &amp; &gt;(), declval&lt; BOOST_ASIO_MOVE_ARG(Args)&gt;()...))</paramtype></parameter></method>
+</method-group>
+</struct-specialization></namespace>
 <namespace name="process">
 <namespace name="v2">
-<typedef name="native_exit_code_type"><purpose>The native exit-code type, usually an integral value. </purpose><description><para>The OS may have a value different from <computeroutput>int</computeroutput> to represent the exit codes of subprocesses. It might also contain additional information. </para></description><type>implementation_defined</type></typedef>
+<struct name="code_as_error_t"><template>
+      <template-type-parameter name="CompletionToken"/>
+    </template><description><para>Convert the exit-code in a completion into an error if the actual error isn't set. <programlisting language="c++">process proc{ctx, "exit", {"1"}};
+
+proc.async_wait(code_as_error(
+   [](error_code ec)
+   {
+     assert(ec.value() == 10);
+     assert(ec.category() == error::get_exit_code_category());
+   }));
+</programlisting> </para></description><data-member name="token_"><type>CompletionToken</type></data-member>
+<data-member name="category"><type>const error_category &amp;</type></data-member>
+<method-group name="public member functions">
+</method-group>
+<constructor><template>
+          <template-type-parameter name="Token_"/>
+        </template><parameter name="token"><paramtype>Token_ &amp;&amp;</paramtype></parameter><parameter name="category"><paramtype>const error_category &amp;</paramtype></parameter></constructor>
+</struct><typedef name="native_exit_code_type"><purpose>The native exit-code type, usually an integral value. </purpose><description><para>The OS may have a value different from <computeroutput>int</computeroutput> to represent the exit codes of subprocesses. It might also contain additional information. </para></description><type>implementation_defined</type></typedef>
+
 
 <function name="process_is_running"><type>bool</type><parameter name="code"><paramtype>native_exit_code_type</paramtype></parameter><purpose>Check if the native exit code indicates the process is still running. </purpose></function>
 <function name="evaluate_exit_code"><type>int</type><parameter name="code"><paramtype>native_exit_code_type</paramtype></parameter><purpose>Obtain the portable part of the exit code, i.e. what the subprocess has returned from main. </purpose></function>
+<function name="code_as_error"><type><classname>code_as_error_t</classname>&lt; CompletionToken &gt;</type><template>
+          <template-type-parameter name="CompletionToken"/>
+        </template><parameter name="token"><paramtype>CompletionToken &amp;&amp;</paramtype></parameter><parameter name="category"><paramtype>const error_category &amp;</paramtype><default>error::get_exit_code_category()</default></parameter><purpose>Deduction function for <classname alt="boost::process::v2::code_as_error_t">code_as_error_t</classname>. </purpose></function>
+
+
 
 
 
@@ -709,7 +866,11 @@ The environment type passed in must be a range with value T that fulfills the fo
 <namespace name="process">
 <namespace name="v2">
 <typedef name="pid_type"><type>implementation_defined</type></typedef>
+
 <function name="current_pid"><type>pid_type</type><purpose>Get the process id of the current process. </purpose></function>
+
+
+
 
 
 
@@ -825,22 +986,50 @@ asio::read_until(proc, asio::dynamic_buffer(line), '\n');
           <template-nontype-parameter name="Inits"><type>typename ...</type></template-nontype-parameter>
         </template><parameter name="executor"><paramtype>executor_type</paramtype></parameter><parameter name="exe"><paramtype>const filesystem::path &amp;</paramtype></parameter><parameter name="args"><paramtype>std::initializer_list&lt; string_view &gt;</paramtype></parameter><parameter name="inits"><paramtype>Inits &amp;&amp;...</paramtype></parameter><purpose>Construct a child from a property list and launch it using the default process launcher. </purpose></constructor>
 <constructor specifiers="explicit"><template>
+          <template-type-parameter name="Launcher"/>
+          <template-nontype-parameter name="Inits"><type>typename ...</type></template-nontype-parameter>
+        </template><parameter name="launcher"><paramtype>Launcher &amp;&amp;</paramtype></parameter><parameter name="executor"><paramtype>executor_type</paramtype></parameter><parameter name="exe"><paramtype>const filesystem::path &amp;</paramtype></parameter><parameter name="args"><paramtype>std::initializer_list&lt; string_view &gt;</paramtype></parameter><parameter name="inits"><paramtype>Inits &amp;&amp;...</paramtype></parameter><purpose>Construct a child from a property list and launch it using the default process launcher. </purpose></constructor>
+<constructor specifiers="explicit"><template>
           <template-nontype-parameter name="Inits"><type>typename ...</type></template-nontype-parameter>
         </template><parameter name="executor"><paramtype>executor_type</paramtype></parameter><parameter name="exe"><paramtype>const filesystem::path &amp;</paramtype></parameter><parameter name="args"><paramtype>std::initializer_list&lt; wstring_view &gt;</paramtype></parameter><parameter name="inits"><paramtype>Inits &amp;&amp;...</paramtype></parameter><purpose>Construct a child from a property list and launch it using the default process launcher. </purpose></constructor>
+<constructor specifiers="explicit"><template>
+          <template-type-parameter name="Launcher"/>
+          <template-nontype-parameter name="Inits"><type>typename ...</type></template-nontype-parameter>
+        </template><parameter name="launcher"><paramtype>Launcher &amp;&amp;</paramtype></parameter><parameter name="executor"><paramtype>executor_type</paramtype></parameter><parameter name="exe"><paramtype>const filesystem::path &amp;</paramtype></parameter><parameter name="args"><paramtype>std::initializer_list&lt; wstring_view &gt;</paramtype></parameter><parameter name="inits"><paramtype>Inits &amp;&amp;...</paramtype></parameter><purpose>Construct a child from a property list and launch it using the default process launcher. </purpose></constructor>
 <constructor specifiers="explicit"><template>
           <template-type-parameter name="Args"/>
           <template-nontype-parameter name="Inits"><type>typename ...</type></template-nontype-parameter>
         </template><parameter name="executor"><paramtype>executor_type</paramtype></parameter><parameter name="exe"><paramtype>const filesystem::path &amp;</paramtype></parameter><parameter name="args"><paramtype>Args &amp;&amp;</paramtype></parameter><parameter name="inits"><paramtype>Inits &amp;&amp;...</paramtype></parameter><purpose>Construct a child from a property list and launch it using the default process launcher. </purpose></constructor>
 <constructor specifiers="explicit"><template>
+          <template-type-parameter name="Launcher"/>
+          <template-type-parameter name="Args"/>
+          <template-nontype-parameter name="Inits"><type>typename ...</type></template-nontype-parameter>
+        </template><parameter name="launcher"><paramtype>Launcher &amp;&amp;</paramtype></parameter><parameter name="executor"><paramtype>executor_type</paramtype></parameter><parameter name="exe"><paramtype>const filesystem::path &amp;</paramtype></parameter><parameter name="args"><paramtype>Args &amp;&amp;</paramtype></parameter><parameter name="inits"><paramtype>Inits &amp;&amp;...</paramtype></parameter><purpose>Construct a child from a property list and launch it using the default process launcher. </purpose></constructor>
+<constructor specifiers="explicit"><template>
           <template-type-parameter name="ExecutionContext"/>
           <template-nontype-parameter name="Inits"><type>typename ...</type></template-nontype-parameter>
         </template><parameter name="context"><paramtype>ExecutionContext &amp;</paramtype></parameter><parameter name="exe"><paramtype>typename std::enable_if&lt; std::is_convertible&lt; ExecutionContext &amp;, boost::asio::execution_context &amp; &gt;::value, const filesystem::path &amp; &gt;::type</paramtype></parameter><parameter name="args"><paramtype>std::initializer_list&lt; string_view &gt;</paramtype></parameter><parameter name="inits"><paramtype>Inits &amp;&amp;...</paramtype></parameter><purpose>Construct a child from a property list and launch it using the default process launcher. </purpose></constructor>
+<constructor specifiers="explicit"><template>
+          <template-type-parameter name="Launcher"/>
+          <template-type-parameter name="ExecutionContext"/>
+          <template-nontype-parameter name="Inits"><type>typename ...</type></template-nontype-parameter>
+        </template><parameter name="launcher"><paramtype>Launcher &amp;&amp;</paramtype></parameter><parameter name="context"><paramtype>ExecutionContext &amp;</paramtype></parameter><parameter name="exe"><paramtype>typename std::enable_if&lt; std::is_convertible&lt; ExecutionContext &amp;, boost::asio::execution_context &amp; &gt;::value, const filesystem::path &amp; &gt;::type</paramtype></parameter><parameter name="args"><paramtype>std::initializer_list&lt; string_view &gt;</paramtype></parameter><parameter name="inits"><paramtype>Inits &amp;&amp;...</paramtype></parameter><purpose>Construct a child from a property list and launch it using the default process launcher. </purpose></constructor>
 <constructor specifiers="explicit"><template>
           <template-type-parameter name="ExecutionContext"/>
           <template-type-parameter name="Args"/>
           <template-nontype-parameter name="Inits"><type>typename ...</type></template-nontype-parameter>
         </template><parameter name="context"><paramtype>ExecutionContext &amp;</paramtype></parameter><parameter name="exe"><paramtype>typename std::enable_if&lt; std::is_convertible&lt; ExecutionContext &amp;, boost::asio::execution_context &amp; &gt;::value, const filesystem::path &amp; &gt;::type</paramtype></parameter><parameter name="args"><paramtype>Args &amp;&amp;</paramtype></parameter><parameter name="inits"><paramtype>Inits &amp;&amp;...</paramtype></parameter><purpose>Construct a child from a property list and launch it using the default process launcher. </purpose></constructor>
+<constructor specifiers="explicit"><template>
+          <template-type-parameter name="Launcher"/>
+          <template-type-parameter name="ExecutionContext"/>
+          <template-type-parameter name="Args"/>
+          <template-nontype-parameter name="Inits"><type>typename ...</type></template-nontype-parameter>
+        </template><parameter name="launcher"><paramtype>Launcher &amp;&amp;</paramtype></parameter><parameter name="context"><paramtype>ExecutionContext &amp;</paramtype></parameter><parameter name="exe"><paramtype>typename std::enable_if&lt; std::is_convertible&lt; ExecutionContext &amp;, boost::asio::execution_context &amp; &gt;::value, const filesystem::path &amp; &gt;::type</paramtype></parameter><parameter name="args"><paramtype>Args &amp;&amp;</paramtype></parameter><parameter name="inits"><paramtype>Inits &amp;&amp;...</paramtype></parameter><purpose>Construct a child from a property list and launch it using the default process launcher. </purpose></constructor>
 </struct><typedef name="popen"><purpose>A popen object with the default executor. </purpose><type><classname>basic_popen</classname>&lt;&gt;</type></typedef>
+
+
+
+
 
 
 
@@ -948,6 +1137,10 @@ asio::read_until(proc, asio::dynamic_buffer(line), '\n');
 
 
 
+
+
+
+
 </namespace>
 </namespace>
 </namespace>
@@ -1001,6 +1194,69 @@ asio::read_until(proc, asio::dynamic_buffer(line), '\n');
 
 
 
+
+
+
+
+</namespace>
+</namespace>
+</namespace>
+</header>
+<header name="boost/process/v2/shell.hpp">
+<namespace name="boost">
+<namespace name="process">
+<namespace name="v2">
+<struct name="shell"><purpose>Utility to parse commands. </purpose><description><para>This utility class parses command lines into tokens and allows users to executed based on textual inputs.</para><para>In v1, this was possible directly when starting a process, but has been removed based on the security risks associated with this.</para><para>By making the shell parsing explicity, it is encouraged that a user runs a sanity check on the executable before launching it.</para><para><formalpara><title>Example</title><para><programlisting language="c++">asio::io_context ctx;
+
+auto cmd = shell("my-app --help");
+auto exe = cmd.exe();
+check_if_malicious(exe);
+
+process proc{ctx, exe, cmd.args()};
+</programlisting> </para>
+</formalpara>
+</para></description><typedef name="char_type"><type>char</type></typedef>
+<typedef name="args_type"><type>const char **</type></typedef>
+<method-group name="public member functions">
+<method name="argc" cv="const"><type>int</type></method>
+<method name="argv" cv="const"><type>char_type **</type></method>
+<method name="begin" cv="const"><type>char_type **</type></method>
+<method name="end" cv="const"><type>char_type **</type></method>
+<method name="empty" cv="const"><type>bool</type></method>
+<method name="size" cv="const"><type>std::size_t</type></method>
+<method name="args" cv="const"><type>args_type</type><purpose>Native representation of the arguments to be used - excluding the executable. </purpose></method>
+<method name="exe" cv="const"><type>filesystem::path</type><template>
+          <template-type-parameter name="Environment"><default><classname alt="boost::process::v2::environment::current_view">environment::current_view</classname></default></template-type-parameter>
+        </template><parameter name="env"><paramtype>Environment &amp;&amp;</paramtype><default>environment::current()</default></parameter></method>
+</method-group>
+<constructor cv="= default"/>
+<constructor><template>
+          <template-type-parameter name="Char"/>
+          <template-type-parameter name="Traits"/>
+        </template><parameter name="input"><paramtype>basic_string_view&lt; Char, Traits &gt;</paramtype></parameter></constructor>
+<constructor><parameter name="input"><paramtype><classname>basic_cstring_ref</classname>&lt; char_type &gt;</paramtype></parameter></constructor>
+<constructor><parameter name="input"><paramtype>basic_string_view&lt; typename std::conditional&lt; std::is_same&lt; char_type, char &gt;::value, wchar_t, char &gt;::type &gt;</paramtype></parameter></constructor>
+<constructor cv="= delete"><parameter name=""><paramtype>const <classname>shell</classname> &amp;</paramtype></parameter></constructor>
+<copy-assignment cv="= delete"><type><classname>shell</classname> &amp;</type><parameter name=""><paramtype>const <classname>shell</classname> &amp;</paramtype></parameter></copy-assignment>
+<constructor cv="noexcept"><parameter name="lhs"><paramtype><classname>shell</classname> &amp;&amp;</paramtype></parameter></constructor>
+<copy-assignment cv="noexcept"><type><classname>shell</classname> &amp;</type><parameter name="lhs"><paramtype><classname>shell</classname> &amp;&amp;</paramtype></parameter></copy-assignment>
+<destructor/>
+<method-group name="private member functions">
+<method name="parse_"><type>void</type></method>
+</method-group>
+</struct><data-member name="shell_category" specifiers="static"><type>const error_category &amp;</type></data-member>
+<function name="get_shell_category"><type>const error_category &amp;</type><purpose>Error category used by the shell parser. </purpose></function>
+
+
+
+
+
+
+
+
+
+
+
 </namespace>
 </namespace>
 </namespace>
@@ -1018,6 +1274,10 @@ asio::read_until(proc, asio::dynamic_buffer(line), '\n');
 </method-group>
 <constructor><parameter name="start_dir"><paramtype>filesystem::path</paramtype></parameter></constructor>
 </struct>
+
+
+
+
 
 
 
@@ -1062,6 +1322,10 @@ v2::process proc17(ctx, "/bin/bash", {}, v2::process_stdio{ {}, {}, nullptr});
 <method name="on_exec_setup"><type>error_code</type><parameter name="launcher"><paramtype>posix::default_launcher &amp;</paramtype></parameter><parameter name=""><paramtype>const filesystem::path &amp;</paramtype></parameter><parameter name=""><paramtype>const char *const *</paramtype></parameter></method>
 </method-group>
 </struct>
+
+
+
+
 
 
 

@@ -146,6 +146,7 @@ fusion/view/reverse_view.html
 fusion/view/nview.html
 fusion/view/repetitive_view.html
 fusion/view/flatten_view.html
+fusion/view/identity_view.html
 fusion/adapted.html
 fusion/adapted/array.html
 fusion/adapted/std__pair.html

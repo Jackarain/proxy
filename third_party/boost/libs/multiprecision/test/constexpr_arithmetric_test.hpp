@@ -60,12 +60,12 @@ BOOST_CXX14_CONSTEXPR T test_constexpr_add_subtract(T a)
    a += do_test_constexpr_add_subtract(a, static_cast<long long>(2));
    a += do_test_constexpr_add_subtract(a, static_cast<unsigned long long>(2));
 #if defined(BOOST_HAS_INT128) && !defined(BOOST_NO_CXX17_IF_CONSTEXPR)
-   if constexpr (std::is_constructible<T, __int128>::value)
+   if constexpr (std::is_constructible<T, boost::int128_type>::value)
    {
-      a += do_test_constexpr_add_subtract(a, static_cast<__int128>(2));
-      a += do_test_constexpr_add_subtract(a, static_cast<unsigned __int128>(2));
-      a -= do_test_constexpr_add_subtract(a, static_cast<__int128>(2));
-      a -= do_test_constexpr_add_subtract(a, static_cast<unsigned __int128>(2));
+      a += do_test_constexpr_add_subtract(a, static_cast<boost::int128_type>(2));
+      a += do_test_constexpr_add_subtract(a, static_cast<boost::uint128_type>(2));
+      a -= do_test_constexpr_add_subtract(a, static_cast<boost::int128_type>(2));
+      a -= do_test_constexpr_add_subtract(a, static_cast<boost::uint128_type>(2));
    }
 #endif
 
@@ -124,12 +124,12 @@ BOOST_CXX14_CONSTEXPR T test_constexpr_mul_divide(T a)
    a += do_test_constexpr_mul_divide(a, static_cast<long long>(2));
    a += do_test_constexpr_mul_divide(a, static_cast<unsigned long long>(2));
 #if defined(BOOST_HAS_INT128) && !defined(BOOST_NO_CXX17_IF_CONSTEXPR)
-   if constexpr (std::is_constructible<T, __int128>::value)
+   if constexpr (std::is_constructible<T, boost::int128_type>::value)
    {
-      a += do_test_constexpr_mul_divide(a, static_cast<__int128>(2));
-      a += do_test_constexpr_mul_divide(a, static_cast<unsigned __int128>(2));
-      a -= do_test_constexpr_mul_divide(a, static_cast<__int128>(2));
-      a -= do_test_constexpr_mul_divide(a, static_cast<unsigned __int128>(2));
+      a += do_test_constexpr_mul_divide(a, static_cast<boost::int128_type>(2));
+      a += do_test_constexpr_mul_divide(a, static_cast<boost::uint128_type>(2));
+      a -= do_test_constexpr_mul_divide(a, static_cast<boost::int128_type>(2));
+      a -= do_test_constexpr_mul_divide(a, static_cast<boost::uint128_type>(2));
    }
 #endif
 
@@ -169,7 +169,7 @@ BOOST_CXX14_CONSTEXPR T do_test_constexpr_bitwise(T a, U b)
    a = a >> 2;
 
    return a;
-} 
+}
 
 template <class T>
 BOOST_CXX14_CONSTEXPR T test_constexpr_bitwise(T a)
@@ -187,10 +187,10 @@ BOOST_CXX14_CONSTEXPR T test_constexpr_bitwise(T a)
    a += do_test_constexpr_bitwise(a, static_cast<long long>(2));
    a += do_test_constexpr_bitwise(a, static_cast<unsigned long long>(2));
 #if defined(BOOST_HAS_INT128) && !defined(BOOST_NO_CXX17_IF_CONSTEXPR)
-   if constexpr (std::is_constructible<T, __int128>::value)
+   if constexpr (std::is_constructible<T, boost::int128_type>::value)
    {
-      a += do_test_constexpr_bitwise(a, static_cast<__int128>(2));
-      a += do_test_constexpr_bitwise(a, static_cast<unsigned __int128>(2));
+      a += do_test_constexpr_bitwise(a, static_cast<boost::int128_type>(2));
+      a += do_test_constexpr_bitwise(a, static_cast<boost::uint128_type>(2));
    }
 #endif
 
@@ -214,7 +214,7 @@ BOOST_CXX14_CONSTEXPR T do_test_constexpr_logical(T a, U b)
    if(!a)
       ++result;
    return result;
-} 
+}
 
 template <class T>
 BOOST_CXX14_CONSTEXPR T test_constexpr_logical(T a)
@@ -232,12 +232,12 @@ BOOST_CXX14_CONSTEXPR T test_constexpr_logical(T a)
    a += do_test_constexpr_logical(a, static_cast<long long>(2));
    a += do_test_constexpr_logical(a, static_cast<unsigned long long>(2));
 #if defined(BOOST_HAS_INT128) && !defined(BOOST_NO_CXX17_IF_CONSTEXPR)
-   if constexpr (std::is_constructible<T, __int128>::value)
+   if constexpr (std::is_constructible<T, boost::int128_type>::value)
    {
-      a += do_test_constexpr_logical(a, static_cast<__int128>(2));
-      a += do_test_constexpr_logical(a, static_cast<unsigned __int128>(2));
-      a -= do_test_constexpr_logical(a, static_cast<__int128>(2));
-      a -= do_test_constexpr_logical(a, static_cast<unsigned __int128>(2));
+      a += do_test_constexpr_logical(a, static_cast<boost::int128_type>(2));
+      a += do_test_constexpr_logical(a, static_cast<boost::uint128_type>(2));
+      a -= do_test_constexpr_logical(a, static_cast<boost::int128_type>(2));
+      a -= do_test_constexpr_logical(a, static_cast<boost::uint128_type>(2));
    }
 #endif
 
@@ -278,7 +278,7 @@ BOOST_CXX14_CONSTEXPR T do_test_constexpr_compare(T a, U b)
       ++result;
 
    return result;
-} 
+}
 
 template <class T>
 BOOST_CXX14_CONSTEXPR T test_constexpr_compare(T a)
@@ -296,12 +296,12 @@ BOOST_CXX14_CONSTEXPR T test_constexpr_compare(T a)
    a += do_test_constexpr_compare(a, static_cast<long long>(2));
    a += do_test_constexpr_compare(a, static_cast<unsigned long long>(2));
 #if defined(BOOST_HAS_INT128) && !defined(BOOST_NO_CXX17_IF_CONSTEXPR)
-   if constexpr (std::is_constructible<T, __int128>::value)
+   if constexpr (std::is_constructible<T, boost::int128_type>::value)
    {
-      a += do_test_constexpr_compare(a, static_cast<__int128>(2));
-      a += do_test_constexpr_compare(a, static_cast<unsigned __int128>(2));
-      a -= do_test_constexpr_compare(a, static_cast<__int128>(2));
-      a -= do_test_constexpr_compare(a, static_cast<unsigned __int128>(2));
+      a += do_test_constexpr_compare(a, static_cast<boost::int128_type>(2));
+      a += do_test_constexpr_compare(a, static_cast<boost::uint128_type>(2));
+      a -= do_test_constexpr_compare(a, static_cast<boost::int128_type>(2));
+      a -= do_test_constexpr_compare(a, static_cast<boost::uint128_type>(2));
    }
 #endif
 

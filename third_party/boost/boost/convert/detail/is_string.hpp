@@ -7,7 +7,7 @@
 
 #include <boost/convert/detail/range.hpp>
 
-namespace boost::cnv
+namespace boost { namespace cnv
 {
     namespace detail
     {
@@ -31,6 +31,6 @@ namespace boost::cnv
         typename std::remove_const<T>::type,
         std::is_class<T>::value && cnv::is_range<T>::value>
     {};
-}
+}}
 
 #endif // BOOST_CONVERT_DETAIL_IS_STRING_HPP

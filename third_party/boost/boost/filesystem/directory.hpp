@@ -4,7 +4,7 @@
 //  Copyright Jan Langer 2002
 //  Copyright Dietmar Kuehl 2001
 //  Copyright Vladimir Prus 2002
-//  Copyright Andrey Semashev 2019
+//  Copyright Andrey Semashev 2019, 2022
 
 //  Distributed under the Boost Software License, Version 1.0.
 //  See http://www.boost.org/LICENSE_1_0.txt
@@ -19,11 +19,11 @@
 #include <boost/filesystem/config.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/file_status.hpp>
+#include <boost/filesystem/detail/path_traits.hpp>
 
 #include <cstddef>
 #include <string>
 #include <vector>
-#include <utility> // std::move
 
 #include <boost/assert.hpp>
 #include <boost/core/scoped_enum.hpp>
@@ -87,37 +87,55 @@ public:
 
 #if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
     directory_entry(directory_entry&& rhs) BOOST_NOEXCEPT :
-        m_path(std::move(rhs.m_path)),
-        m_status(std::move(rhs.m_status)),
-        m_symlink_status(std::move(rhs.m_symlink_status))
+        m_path(static_cast< boost::filesystem::path&& >(rhs.m_path)),
+        m_status(static_cast< file_status&& >(rhs.m_status)),
+        m_symlink_status(static_cast< file_status&& >(rhs.m_symlink_status))
     {
     }
 
     directory_entry& operator=(directory_entry&& rhs) BOOST_NOEXCEPT
     {
-        m_path = std::move(rhs.m_path);
-        m_status = std::move(rhs.m_status);
-        m_symlink_status = std::move(rhs.m_symlink_status);
+        m_path = static_cast< boost::filesystem::path&& >(rhs.m_path);
+        m_status = static_cast< file_status&& >(rhs.m_status);
+        m_symlink_status = static_cast< file_status&& >(rhs.m_symlink_status);
         return *this;
+    }
+
+    void assign(boost::filesystem::path&& p, file_status st = file_status(), file_status symlink_st = file_status())
+    {
+        m_path = static_cast< boost::filesystem::path&& >(p);
+        m_status = static_cast< file_status&& >(st);
+        m_symlink_status = static_cast< file_status&& >(symlink_st);
     }
 #endif
 
     void assign(boost::filesystem::path const& p, file_status st = file_status(), file_status symlink_st = file_status())
     {
         m_path = p;
+#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
+        m_status = static_cast< file_status&& >(st);
+        m_symlink_status = static_cast< file_status&& >(symlink_st);
+#else
         m_status = st;
         m_symlink_status = symlink_st;
+#endif
     }
 
     void replace_filename(boost::filesystem::path const& p, file_status st = file_status(), file_status symlink_st = file_status())
     {
         m_path.remove_filename();
         m_path /= p;
+#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
+        m_status = static_cast< file_status&& >(st);
+        m_symlink_status = static_cast< file_status&& >(symlink_st);
+#else
         m_status = st;
         m_symlink_status = symlink_st;
+#endif
     }
 
 #ifndef BOOST_FILESYSTEM_NO_DEPRECATED
+    BOOST_FILESYSTEM_DETAIL_DEPRECATED("Use directory_entry::replace_filename() instead")
     void replace_leaf(boost::filesystem::path const& p, file_status st, file_status symlink_st)
     {
         replace_filename(p, st, symlink_st);
@@ -150,6 +168,20 @@ private:
     mutable file_status m_status;         // stat()-like
     mutable file_status m_symlink_status; // lstat()-like
 };                                        // directory_entry
+
+namespace detail {
+namespace path_traits {
+
+// Dispatch function for integration with path class
+template< typename Callback >
+BOOST_FORCEINLINE void dispatch(directory_entry const& de, Callback cb, const codecvt_type* cvt, directory_entry_tag)
+{
+    boost::filesystem::path::string_type const& source = de.path().native();
+    cb(source.data(), source.data() + source.size(), cvt);
+}
+
+} // namespace path_traits
+} // namespace detail
 
 //--------------------------------------------------------------------------------------//
 //                                                                                      //
@@ -228,9 +260,10 @@ inline bool is_other(directory_entry const& e, system::error_code& ec) BOOST_NOE
     return filesystem::is_other(e.status(ec));
 }
 #ifndef BOOST_FILESYSTEM_NO_DEPRECATED
+BOOST_FILESYSTEM_DETAIL_DEPRECATED("Use is_regular_file() instead")
 inline bool is_regular(directory_entry const& e)
 {
-    return filesystem::is_regular(e.status());
+    return filesystem::is_regular_file(e);
 }
 #endif
 
@@ -336,13 +369,13 @@ public:
 
 #if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
     directory_iterator(directory_iterator&& that) BOOST_NOEXCEPT :
-        m_imp(std::move(that.m_imp))
+        m_imp(static_cast< boost::intrusive_ptr< detail::dir_itr_imp >&& >(that.m_imp))
     {
     }
 
     directory_iterator& operator=(directory_iterator&& that) BOOST_NOEXCEPT
     {
-        m_imp = std::move(that.m_imp);
+        m_imp = static_cast< boost::intrusive_ptr< detail::dir_itr_imp >&& >(that.m_imp);
         return *this;
     }
 #endif // !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
@@ -540,11 +573,13 @@ public:
 
 #if !defined(BOOST_FILESYSTEM_NO_DEPRECATED)
     // Deprecated constructors
+    BOOST_FILESYSTEM_DETAIL_DEPRECATED("Use directory_options instead of symlink_option")
     recursive_directory_iterator(path const& dir_path, BOOST_SCOPED_ENUM_NATIVE(symlink_option) opts)
     {
         detail::recursive_directory_iterator_construct(*this, dir_path, static_cast< unsigned int >(opts), NULL);
     }
 
+    BOOST_FILESYSTEM_DETAIL_DEPRECATED("Use directory_options instead of symlink_option")
     recursive_directory_iterator(path const& dir_path, BOOST_SCOPED_ENUM_NATIVE(symlink_option) opts, system::error_code& ec) BOOST_NOEXCEPT
     {
         detail::recursive_directory_iterator_construct(*this, dir_path, static_cast< unsigned int >(opts), &ec);
@@ -556,13 +591,13 @@ public:
 
 #if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
     recursive_directory_iterator(recursive_directory_iterator&& that) BOOST_NOEXCEPT :
-        m_imp(std::move(that.m_imp))
+        m_imp(static_cast< boost::intrusive_ptr< detail::recur_dir_itr_imp >&& >(that.m_imp))
     {
     }
 
     recursive_directory_iterator& operator=(recursive_directory_iterator&& that) BOOST_NOEXCEPT
     {
-        m_imp = std::move(that.m_imp);
+        m_imp = static_cast< boost::intrusive_ptr< detail::recur_dir_itr_imp >&& >(that.m_imp);
         return *this;
     }
 #endif // !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
@@ -586,6 +621,7 @@ public:
     }
 
 #ifndef BOOST_FILESYSTEM_NO_DEPRECATED
+    BOOST_FILESYSTEM_DETAIL_DEPRECATED("Use recursive_directory_iterator::depth() instead")
     int level() const BOOST_NOEXCEPT
     {
         return depth();
@@ -614,6 +650,7 @@ public:
     }
 
 #ifndef BOOST_FILESYSTEM_NO_DEPRECATED
+    BOOST_FILESYSTEM_DETAIL_DEPRECATED("Use recursive_directory_iterator::disable_recursion_pending() instead")
     void no_push(bool value = true) BOOST_NOEXCEPT
     {
         disable_recursion_pending(value);
@@ -664,6 +701,7 @@ private:
 };
 
 #if !defined(BOOST_FILESYSTEM_NO_DEPRECATED)
+BOOST_FILESYSTEM_DETAIL_DEPRECATED("Use recursive_directory_iterator instead")
 typedef recursive_directory_iterator wrecursive_directory_iterator;
 #endif
 

@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(creation_flags)
     BOOST_CHECK_EQUAL(proc.wait() & ~EXTENDED_STARTUPINFO_PRESENT, 0);
 
     proc = bpv::process{ctx, master_test_suite().argv[1], {"creation-flags"}, bpv::windows::process_creation_flags<STARTF_TITLEISAPPID>()};
-    BOOST_CHECK(proc);
+    BOOST_CHECK(proc.running());
     BOOST_CHECK_EQUAL(proc.wait() & ~EXTENDED_STARTUPINFO_PRESENT, STARTF_TITLEISAPPID);
 }
 

@@ -9,7 +9,7 @@
 #include <boost/convert/detail/char.hpp>
 #include <boost/range/iterator.hpp>
 
-namespace boost::cnv
+namespace boost { namespace cnv
 {
     namespace detail
     {
@@ -112,6 +112,6 @@ namespace boost::cnv
     {
         range (T* b, T* e =0) : range<T*>(b, e) {}
     };
-}
+}}
 
 #endif // BOOST_CONVERT_DETAIL_RANGE_HPP

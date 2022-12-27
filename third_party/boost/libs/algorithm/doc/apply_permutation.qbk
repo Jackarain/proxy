@@ -16,12 +16,12 @@ The routine `apply_permutation` takes a item sequence and a order sequence. It r
 The routine `apply_reverse_permutation` takes a item sequence and a order sequence. It will reshuffle item sequence according to order sequence. Every value in order sequence means where the item goes to. Order sequence needs to be exactly a permutation of the sequence [0, 1, ... , N], where N is the biggest index in the item sequence (zero-indexed).
 
 Implementations are based on these articles:
-https://blogs.msdn.microsoft.com/oldnewthing/20170102-00/?p=95095
-https://blogs.msdn.microsoft.com/oldnewthing/20170103-00/?p=95105
-https://blogs.msdn.microsoft.com/oldnewthing/20170104-00/?p=95115
-https://blogs.msdn.microsoft.com/oldnewthing/20170109-00/?p=95145
-https://blogs.msdn.microsoft.com/oldnewthing/20170110-00/?p=95155
-https://blogs.msdn.microsoft.com/oldnewthing/20170111-00/?p=95165
+https://devblogs.microsoft.com/oldnewthing/20170102-00/?p=95095
+https://devblogs.microsoft.com/oldnewthing/20170103-00/?p=95105
+https://devblogs.microsoft.com/oldnewthing/20170104-00/?p=95115
+https://devblogs.microsoft.com/oldnewthing/20170109-00/?p=95145
+https://devblogs.microsoft.com/oldnewthing/20170110-00/?p=95155
+https://devblogs.microsoft.com/oldnewthing/20170111-00/?p=95165
 
 The routines come in 2 forms; the first one takes two iterators to define the item range and one iterator to define the beginning of index range. The second form takes range to define the item sequence and range to define index sequence.
 

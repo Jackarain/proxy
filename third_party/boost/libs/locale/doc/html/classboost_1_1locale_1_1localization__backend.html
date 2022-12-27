@@ -66,6 +66,7 @@ $(document).ready(function(){initNavTree('classboost_1_1locale_1_1localization__
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pro-methods">Protected Member Functions</a> &#124;
 <a href="classboost_1_1locale_1_1localization__backend-members.html">List of all members</a>  </div>
   <div class="headertitle">
 <div class="title">boost::locale::localization_backend Class Reference<span class="mlabels"><span class="mlabel">abstract</span></span></div>  </div>
@@ -79,14 +80,31 @@ $(document).ready(function(){initNavTree('classboost_1_1locale_1_1localization__
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ab89828234ca84d4b43f3692bfbb08b25"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="classboost_1_1locale_1_1localization__backend.html">localization_backend</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1localization__backend.html#ab89828234ca84d4b43f3692bfbb08b25">clone</a> () const =0</td></tr>
+<tr class="memitem:ab89828234ca84d4b43f3692bfbb08b25"><td class="memItemLeft" align="right" valign="top"><a id="ab89828234ca84d4b43f3692bfbb08b25"></a>
+virtual <a class="el" href="classboost_1_1locale_1_1localization__backend.html">localization_backend</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1localization__backend.html#ab89828234ca84d4b43f3692bfbb08b25">clone</a> () const =0</td></tr>
+<tr class="memdesc:ab89828234ca84d4b43f3692bfbb08b25"><td class="mdescLeft">&#160;</td><td class="mdescRight">Make a polymorphic copy of the backend. <br /></td></tr>
 <tr class="separator:ab89828234ca84d4b43f3692bfbb08b25"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3dc9028eb813001f6cdd8fca937837ef"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1localization__backend.html#a3dc9028eb813001f6cdd8fca937837ef">set_option</a> (std::string const &amp;name, std::string const &amp;value)=0</td></tr>
-<tr class="separator:a3dc9028eb813001f6cdd8fca937837ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a631af306f8652dcf7874b0bb38ab8891"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1localization__backend.html#a631af306f8652dcf7874b0bb38ab8891">clear_options</a> ()=0</td></tr>
+<tr class="memitem:ac90deb4d537679efd27dbd5f2a40015f"><td class="memItemLeft" align="right" valign="top"><a id="ac90deb4d537679efd27dbd5f2a40015f"></a>
+virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1localization__backend.html#ac90deb4d537679efd27dbd5f2a40015f">set_option</a> (const std::string &amp;name, const std::string &amp;value)=0</td></tr>
+<tr class="memdesc:ac90deb4d537679efd27dbd5f2a40015f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set option for backend, for example "locale" or "encoding". <br /></td></tr>
+<tr class="separator:ac90deb4d537679efd27dbd5f2a40015f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a631af306f8652dcf7874b0bb38ab8891"><td class="memItemLeft" align="right" valign="top"><a id="a631af306f8652dcf7874b0bb38ab8891"></a>
+virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1localization__backend.html#a631af306f8652dcf7874b0bb38ab8891">clear_options</a> ()=0</td></tr>
+<tr class="memdesc:a631af306f8652dcf7874b0bb38ab8891"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clear all options. <br /></td></tr>
 <tr class="separator:a631af306f8652dcf7874b0bb38ab8891"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5992c75d469f775ce1d18a0912bfa8a1"><td class="memItemLeft" align="right" valign="top">virtual std::locale&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1localization__backend.html#a5992c75d469f775ce1d18a0912bfa8a1">install</a> (std::locale const &amp;base, <a class="el" href="namespaceboost_1_1locale.html#a32e8cb87d2f68a5577dbb7ce55c0d2b1">locale_category_type</a> category, <a class="el" href="namespaceboost_1_1locale.html#a8c993aaf15e683e97d062560ccf914d8">character_facet_type</a> type=<a class="el" href="namespaceboost_1_1locale.html#a330a4c5134eb5110b33a0b4f986f34be">nochar_facet</a>)=0</td></tr>
-<tr class="separator:a5992c75d469f775ce1d18a0912bfa8a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6520d7d52141a5232dcb94cf61575feb"><td class="memItemLeft" align="right" valign="top"><a id="a6520d7d52141a5232dcb94cf61575feb"></a>
+virtual std::locale&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1localization__backend.html#a6520d7d52141a5232dcb94cf61575feb">install</a> (const std::locale &amp;base, <a class="el" href="namespaceboost_1_1locale.html#aacab728d9d00542295bbd3c95a142629">category_t</a> category, <a class="el" href="namespaceboost_1_1locale.html#a662f2b6ccb8e8123e50f0704fec0cef6">char_facet_t</a> type)=0</td></tr>
+<tr class="memdesc:a6520d7d52141a5232dcb94cf61575feb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a facet for category <em>category</em> and character type <em>type</em>. <br /></td></tr>
+<tr class="separator:a6520d7d52141a5232dcb94cf61575feb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-methods"></a>
+Protected Member Functions</h2></td></tr>
+<tr class="memitem:a8a03eda0cfaed28f9c316ec22d26ae99"><td class="memItemLeft" align="right" valign="top"><a id="a8a03eda0cfaed28f9c316ec22d26ae99"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>localization_backend</b> (const <a class="el" href="classboost_1_1locale_1_1localization__backend.html">localization_backend</a> &amp;)=default</td></tr>
+<tr class="separator:a8a03eda0cfaed28f9c316ec22d26ae99"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ade4448d66b03064c23dabd2d782dab2d"><td class="memItemLeft" align="right" valign="top"><a id="ade4448d66b03064c23dabd2d782dab2d"></a>
+<a class="el" href="classboost_1_1locale_1_1localization__backend.html">localization_backend</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="classboost_1_1locale_1_1localization__backend.html">localization_backend</a> &amp;)=default</td></tr>
+<tr class="separator:ade4448d66b03064c23dabd2d782dab2d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>this class represents a localization backend that can be used for localizing your application. </p>
@@ -98,141 +116,8 @@ Public Member Functions</h2></td></tr>
 <li><code>message_path</code> - path to the location of message catalogs (vector of strings)</li>
 <li><code>message_application</code> - the name of applications that use message catalogs (vector of strings)</li>
 </ol>
-<p>Each backend can be installed with a different default priotiry so when you work with two different backends, you can specify priotiry so this backend will be chosen according to their priority. </p>
-</div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="a631af306f8652dcf7874b0bb38ab8891"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a631af306f8652dcf7874b0bb38ab8891">&#9670;&nbsp;</a></span>clear_options()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual void boost::locale::localization_backend::clear_options </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Clear all options </p>
-
-</div>
-</div>
-<a id="ab89828234ca84d4b43f3692bfbb08b25"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab89828234ca84d4b43f3692bfbb08b25">&#9670;&nbsp;</a></span>clone()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual <a class="el" href="classboost_1_1locale_1_1localization__backend.html">localization_backend</a>* boost::locale::localization_backend::clone </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Make a polymorphic copy of the backend </p>
-
-</div>
-</div>
-<a id="a5992c75d469f775ce1d18a0912bfa8a1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5992c75d469f775ce1d18a0912bfa8a1">&#9670;&nbsp;</a></span>install()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual std::locale boost::locale::localization_backend::install </td>
-          <td>(</td>
-          <td class="paramtype">std::locale const &amp;&#160;</td>
-          <td class="paramname"><em>base</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="namespaceboost_1_1locale.html#a32e8cb87d2f68a5577dbb7ce55c0d2b1">locale_category_type</a>&#160;</td>
-          <td class="paramname"><em>category</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="namespaceboost_1_1locale.html#a8c993aaf15e683e97d062560ccf914d8">character_facet_type</a>&#160;</td>
-          <td class="paramname"><em>type</em> = <code><a class="el" href="namespaceboost_1_1locale.html#a330a4c5134eb5110b33a0b4f986f34be">nochar_facet</a></code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Create a facet for category <em>category</em> and character type <em>type</em> </p>
-
-</div>
-</div>
-<a id="a3dc9028eb813001f6cdd8fca937837ef"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3dc9028eb813001f6cdd8fca937837ef">&#9670;&nbsp;</a></span>set_option()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual void boost::locale::localization_backend::set_option </td>
-          <td>(</td>
-          <td class="paramtype">std::string const &amp;&#160;</td>
-          <td class="paramname"><em>name</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::string const &amp;&#160;</td>
-          <td class="paramname"><em>value</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Set option for backend, for example "locale" or "encoding" </p>
-
-</div>
-</div>
-<hr/>The documentation for this class was generated from the following file:<ul>
+<p>Each backend can be installed with a different default priority so when you work with two different backends, you can specify priority so this backend will be chosen according to their priority. </p>
+</div><hr/>The documentation for this class was generated from the following file:<ul>
 <li>boost/locale/<a class="el" href="localization__backend_8hpp_source.html">localization_backend.hpp</a></li>
 </ul>
 </div><!-- contents -->

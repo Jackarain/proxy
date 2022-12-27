@@ -2,7 +2,7 @@
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
-cmake_minimum_required(VERSION 3.5...3.20)
+cmake_minimum_required(VERSION 3.11...3.20)
 
 project(boost_locale VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
 
@@ -36,20 +36,17 @@ add_library(boost_locale
 add_library(Boost::locale ALIAS boost_locale)
 
 target_include_directories(boost_locale PUBLIC include PRIVATE src)
+target_compile_features(boost_locale PUBLIC cxx_std_11)
 
 target_link_libraries(boost_locale
   PUBLIC
     Boost::assert
     Boost::config
-    Boost::function
     Boost::iterator
-    Boost::smart_ptr
-    Boost::static_assert
-    Boost::type_traits
   PRIVATE
-    Boost::thread
-    Boost::unordered
+    Boost::core
     Boost::predef
+    Boost::thread
 )
 
 target_compile_definitions(boost_locale
@@ -65,22 +62,41 @@ endif()
 
 # Build Options
 
-find_package(Iconv QUIET) # requires CMake 3.11
 find_package(ICU COMPONENTS data i18n uc QUIET)
+option(BOOST_LOCALE_ENABLE_ICU "Boost.Locale: enable ICU backend" ${ICU_FOUND})
 
-set(_default_posix OFF)
+# Workaround for an issue e.g. on FreeBSD where including ICU may change the used libiconv
+if(UNIX AND NOT DEFINED Iconv_INCLUDE_DIR AND BOOST_LOCALE_ENABLE_ICU AND EXISTS "${ICU_INCLUDE_DIRS}/iconv.h")
+  set(Iconv_INCLUDE_DIR "${ICU_INCLUDE_DIRS}" CACHE PATH "Path to iconv headers")
+  find_package(Iconv QUIET)
+  if(NOT Iconv_FOUND)
+    # Unset and retry below
+    unset(Iconv_INCLUDE_DIR CACHE)
+    unset(Iconv_LIBRARY CACHE)
+    unset(Iconv_IS_BUILT_IN CACHE)
+    unset(Iconv_IS_BUILT_IN)
+  endif()
+endif()
+
+find_package(Iconv QUIET)
+option(BOOST_LOCALE_ENABLE_ICONV "Boost.Locale: enable iconv backend" ${Iconv_FOUND})
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux|Darwin")
   set(_default_posix ON)
+elseif(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+  include (CheckIncludeFileCXX)
+  check_include_file_cxx ("xlocale.h" HAVE_XLOCALE_H)
+  set(_default_posix ${HAVE_XLOCALE_H})
+else()
+  set(_default_posix OFF)
 endif()
 
-option(BOOST_LOCALE_ENABLE_ICONV "Boost.Locale: enable iconv backend" ${ICONV_FOUND})
-option(BOOST_LOCALE_ENABLE_ICU "Boost.Locale: enable ICU backend" ${ICU_FOUND})
 option(BOOST_LOCALE_ENABLE_POSIX "Boost.Locale: enable POSIX backend" ${_default_posix})
+unset(_default_posix)
+
 option(BOOST_LOCALE_ENABLE_STD "Boost.Locale: enable std::locale backend" ON)
 option(BOOST_LOCALE_ENABLE_WINAPI "Boost.Locale: enable Windows API backend" ${WIN32})
 
-unset(_default_posix)
 
 if(BOOST_LOCALE_ENABLE_ICONV)
 
@@ -112,11 +128,12 @@ if(BOOST_LOCALE_ENABLE_ICU)
     src/boost/locale/icu/date_time.cpp
     src/boost/locale/icu/formatter.cpp
     src/boost/locale/icu/formatter.hpp
+    src/boost/locale/icu/formatters_cache.cpp
+    src/boost/locale/icu/formatters_cache.hpp
     src/boost/locale/icu/icu_backend.cpp
     src/boost/locale/icu/icu_backend.hpp
     src/boost/locale/icu/icu_util.hpp
     src/boost/locale/icu/numeric.cpp
-    src/boost/locale/icu/predefined_formatters.hpp
     src/boost/locale/icu/time_zone.cpp
     src/boost/locale/icu/time_zone.hpp
     src/boost/locale/icu/uconv.hpp
@@ -197,6 +214,15 @@ if(BOOST_LOCALE_ENABLE_WINAPI OR BOOST_LOCALE_ENABLE_STD OR BOOST_LOCALE_ENABLE_
 
 endif()
 
+get_target_property(sources boost_locale SOURCES)
+set(sources_src ${sources})
+list(FILTER sources_src INCLUDE REGEX "^src/")
+set(sources_inc ${sources})
+list(FILTER sources_inc EXCLUDE REGEX "^src/")
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src/boost/locale" PREFIX "sources" FILES ${sources_src})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/include/boost/locale" PREFIX "headers" FILES ${sources_inc})
+source_group("headers" FILES "include/boost/locale.hpp")
+
 message(STATUS "Boost.Locale: "
   "iconv ${BOOST_LOCALE_ENABLE_ICONV}, "
   "ICU ${BOOST_LOCALE_ENABLE_ICU}, "
@@ -205,6 +231,7 @@ message(STATUS "Boost.Locale: "
   "winapi ${BOOST_LOCALE_ENABLE_WINAPI}"
 )
 
+option(BOOST_LOCALE_WERROR "Treat warnings as errors in Boost.Locale" ${BOOST_LOCALE_WERROR})
 if(MSVC)
     set(BOOST_LOCALE_WARNING_OPTIONS /W4)
     if(BOOST_LOCALE_WERROR)
@@ -219,6 +246,11 @@ elseif(NOT DEFINED BOOST_LOCALE_WARNING_OPTIONS)
     set(BOOST_LOCALE_WARNING_OPTIONS "")
 endif()
 target_compile_options(boost_locale PRIVATE ${BOOST_LOCALE_WARNING_OPTIONS})
+
+option(BOOST_LOCALE_ENABLE_CXX11_CHAR_TYPES "Enable C++11 char16/char32 type support (experimental)" OFF)
+if(BOOST_LOCALE_ENABLE_CXX11_CHAR_TYPES)
+    target_compile_definitions(boost_locale PUBLIC BOOST_LOCALE_ENABLE_CHAR16_T BOOST_LOCALE_ENABLE_CHAR32_T)
+endif()
 
 # Testing
 

@@ -1,17 +1,20 @@
-// Copyright 2021 Peter Dimov
+// Copyright 2021, 2022 Peter Dimov
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
+#include <boost/container_hash/hash.hpp>
 #include <boost/describe.hpp>
 #include <boost/mp11.hpp>
-#include <boost/container_hash/hash.hpp>
 #include <boost/variant2/variant.hpp>
+#include <boost/version.hpp>
 #include <vector>
 
 using namespace boost::describe;
 
 namespace app
 {
+
+#if BOOST_VERSION < 108100
 
 template<class T,
     class Bd = describe_bases<T, mod_any_access>,
@@ -36,6 +39,8 @@ template<class T,
 
     return r;
 }
+
+#endif
 
 struct A
 {

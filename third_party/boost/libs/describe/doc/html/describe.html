@@ -665,6 +665,7 @@ pre.rouge {
 <li><a href="#overview">Overview</a></li>
 <li><a href="#changes">Revision History</a>
 <ul class="sectlevel2">
+<li><a href="#changes_in_boost_1_81_0">Changes in Boost 1.81.0</a></li>
 <li><a href="#changes_in_boost_1_79_0">Changes in Boost 1.79.0</a></li>
 <li><a href="#changes_in_boost_1_78_0">Changes in Boost 1.78.0</a></li>
 </ul>
@@ -734,6 +735,7 @@ pre.rouge {
 <li><a href="#ref_modifiers">modifiers</a></li>
 </ul>
 </li>
+<li><a href="#ref_boostdescribemodifier_description_hpp">&lt;boost/describe/&#8203;modifier_description.hpp&gt;</a></li>
 <li><a href="#ref_boostdescribebases_hpp">&lt;boost/describe/bases.hpp&gt;</a>
 <ul class="sectlevel3">
 <li><a href="#ref_describe_basest_m">describe_bases&lt;T, M&gt;</a></li>
@@ -822,6 +824,21 @@ the types, making manual macro annotation unnecessary.</p>
 <div class="sect1">
 <h2 id="changes">Revision History</h2>
 <div class="sectionbody">
+<div class="sect2">
+<h3 id="changes_in_boost_1_81_0">Changes in Boost 1.81.0</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>To allow the inclusion of <code>enumerators.hpp</code>, <code>bases.hpp</code>, and <code>members.hpp</code>
+when the option <code>-pedantic</code> is used, the invocation of <code>BOOST_DESCRIBE_ENUM</code>
+has been moved from <code>modifiers.hpp</code> into a separate header,
+<code>modifier_description.hpp</code>. As a consequence, <code>modifiers.hpp</code> no longer
+includes <code>enum.hpp</code>. Code that has been relying on this implicit inclusion
+may fail, and will need to be fixed to include <code>enum.hpp</code>.</p>
+</li>
+</ul>
+</div>
+</div>
 <div class="sect2">
 <h3 id="changes_in_boost_1_79_0">Changes in Boost 1.79.0</h3>
 <div class="ulist">
@@ -1579,12 +1596,30 @@ calling <code>boost::hash_combine</code> on each.</p>
 <p>The overload is defined in namespace <code>app</code> in order to apply
 to all annotated classes also defined in <code>app</code>.</p>
 </div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+Since release 1.81.0, Boost.ContainerHash provides its
+own, built-in, support for described classes, by having an
+overload of <code>boost::hash_value</code> very similar to the one given
+below. Consequently, when using Boost 1.81.0 or later, you
+don&#8217;t need the below <code>hash_value</code> function, as it will cause
+an ambiguity.
+</td>
+</tr>
+</table>
+</div>
 <div class="listingblock">
 <div class="content">
-<pre class="rouge highlight"><code data-lang="c++"><span class="cp">#include &lt;boost/describe.hpp&gt;
+<pre class="rouge highlight"><code data-lang="c++"><span class="cp">#include &lt;boost/container_hash/hash.hpp&gt;
+#include &lt;boost/describe.hpp&gt;
 #include &lt;boost/mp11.hpp&gt;
-#include &lt;boost/container_hash/hash.hpp&gt;
 #include &lt;boost/variant2/variant.hpp&gt;
+#include &lt;boost/version.hpp&gt;
 #include &lt;vector&gt;
 </span>
 <span class="k">using</span> <span class="k">namespace</span> <span class="n">boost</span><span class="o">::</span><span class="n">describe</span><span class="p">;</span>
@@ -1592,6 +1627,8 @@ to all annotated classes also defined in <code>app</code>.</p>
 <span class="k">namespace</span> <span class="n">app</span>
 <span class="p">{</span>
 
+<span class="cp">#if BOOST_VERSION &lt; 108100
+</span>
 <span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">T</span><span class="p">,</span>
     <span class="k">class</span> <span class="nc">Bd</span> <span class="o">=</span> <span class="n">describe_bases</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">mod_any_access</span><span class="p">&gt;,</span>
     <span class="k">class</span> <span class="nc">Md</span> <span class="o">=</span> <span class="n">describe_members</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">mod_any_access</span><span class="o">&gt;</span><span class="p">,</span>
@@ -1616,6 +1653,8 @@ to all annotated classes also defined in <code>app</code>.</p>
     <span class="k">return</span> <span class="n">r</span><span class="p">;</span>
 <span class="p">}</span>
 
+<span class="cp">#endif
+</span>
 <span class="k">struct</span> <span class="nc">A</span>
 <span class="p">{</span>
     <span class="kt">int</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
@@ -3144,7 +3183,7 @@ list of private members.</p>
     <span class="n">mod_function</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
     <span class="n">mod_any_member</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
     <span class="n">mod_inherited</span> <span class="o">=</span> <span class="mi">128</span><span class="p">,</span>
-    <span class="n">mod_hidden</span> <span class="o">=</span> <span class="mi">256</span><span class="p">,</span>
+    <span class="n">mod_hidden</span> <span class="o">=</span> <span class="mi">256</span>
 <span class="p">};</span>
 
 <span class="k">constexpr</span> <span class="n">modifiers</span> <span class="n">mod_any_access</span> <span class="o">=</span> <span class="k">static_cast</span><span class="o">&lt;</span><span class="n">modifiers</span><span class="o">&gt;</span><span class="p">(</span> <span class="n">mod_public</span> <span class="o">|</span> <span class="n">mod_protected</span> <span class="o">|</span> <span class="n">mod_private</span> <span class="p">);</span>
@@ -3190,6 +3229,14 @@ following flags:</p>
 </li>
 </ul>
 </div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="ref_boostdescribemodifier_description_hpp">&lt;boost/describe/&#8203;modifier_description.hpp&gt;</h3>
+<div class="paragraph">
+<p>The header <code>modifier_description.hpp</code> includes <code>modifiers.hpp</code> and invokes
+<code>BOOST_DESCRIBE_ENUM</code> on <code>modifiers</code>, allowing <code>describe_enumerators&lt;modifiers&gt;</code>
+to work.</p>
 </div>
 </div>
 <div class="sect2">
@@ -3556,7 +3603,7 @@ the <a href="http://www.boost.org/LICENSE_1_0.txt">Boost Software License, Versi
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2022-08-04 02:47:10 UTC
+Last updated 2022-11-16 19:50:27 UTC
 </div>
 </div>
 <style>

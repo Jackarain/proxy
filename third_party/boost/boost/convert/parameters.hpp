@@ -9,7 +9,7 @@
 #include <boost/parameter/is_argument_pack.hpp>
 #include <boost/mpl/has_key.hpp>
 
-namespace boost::cnv
+namespace boost { namespace cnv
 {
     enum class   adjust : uint8_t { left, right, center };
     enum class     base : uint8_t { bin =2, oct =8, dec =10, hex =16 };
@@ -28,6 +28,6 @@ namespace boost::cnv
         BOOST_PARAMETER_NAME((lowercase, type) lowercase)
         BOOST_PARAMETER_NAME((    width, type)     width)
     }
-}
+}}
 
 #endif // BOOST_CONVERT_PARAMETERS_HPP

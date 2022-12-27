@@ -27,7 +27,7 @@
 <a name="json.ref.boost__json__error"></a><a class="link" href="boost__json__error.html" title="error">error</a>
 </h4></div></div></div>
 <p>
-        <a class="indexterm" name="idm61047"></a>
+        <a class="indexterm" name="idm63742"></a>
       </p>
 <p>
         Error codes returned by JSON operations.
@@ -222,36 +222,24 @@
 <tr>
 <td>
                 <p>
+                  <code class="computeroutput"><span class="identifier">input_error</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  error occured when trying to read input
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
                   <code class="computeroutput"><span class="identifier">exception</span></code>
                 </p>
               </td>
 <td>
                 <p>
-                  The parser encountered an exception and must be reset.
-                </p>
-              </td>
-</tr>
-<tr>
-<td>
-                <p>
-                  <code class="computeroutput"><span class="identifier">not_number</span></code>
-                </p>
-              </td>
-<td>
-                <p>
-                  not a number
-                </p>
-              </td>
-</tr>
-<tr>
-<td>
-                <p>
-                  <code class="computeroutput"><span class="identifier">not_exact</span></code>
-                </p>
-              </td>
-<td>
-                <p>
-                  number cast is not exact
+                  An exception was thrown during operation.
                 </p>
               </td>
 </tr>
@@ -351,6 +339,126 @@
                 </p>
               </td>
 </tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">not_number</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  JSON number was expected during conversion.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">not_exact</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  number cast is not exact
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">not_null</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  JSON null was expected during conversion.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">not_bool</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  JSON bool was expected during conversion.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">not_array</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  JSON array was expected during conversion.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">not_object</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  JSON object was expected during conversion.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">not_string</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  JSON string was expected during conversion.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">size_mismatch</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  JSON array has size incompatible with target.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">exhausted_variants</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  none of the possible conversions were successful
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">unknown_name</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  the key does not correspond to a known name
+                </p>
+              </td>
+</tr>
 </tbody>
 </table></div>
 <p>
@@ -359,7 +467,7 @@
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<p>
+<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>

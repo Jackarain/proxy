@@ -27,7 +27,7 @@
 <a name="beast.ref.boost__beast__basic_stream.async_read_some"></a><a class="link" href="async_read_some.html" title="basic_stream::async_read_some">basic_stream::async_read_some</a>
 </h5></div></div></div>
 <p>
-          <a class="indexterm" name="idm14672"></a>
+          <a class="indexterm" name="idm14831"></a>
         </p>
 <p>
           Read some data asynchronously.
@@ -146,6 +146,30 @@
           function <code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">async_read</span></code> if you need to ensure that
           the requested amount of data is read before the asynchronous operation
           completes.
+        </p>
+<h6>
+<a name="beast.ref.boost__beast__basic_stream.async_read_some.h4"></a>
+          <span class="phrase"><a name="beast.ref.boost__beast__basic_stream.async_read_some.per_operation_cancellation"></a></span><a class="link" href="async_read_some.html#beast.ref.boost__beast__basic_stream.async_read_some.per_operation_cancellation">Per-Operation
+          Cancellation</a>
+        </h6>
+<p>
+          This asynchronous operation supports cancellation for the following net::cancellation_type
+          values:
+        </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+              <code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">cancellation_type</span><span class="special">::</span><span class="identifier">terminal</span></code>
+            </li>
+<li class="listitem">
+              <code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">cancellation_type</span><span class="special">::</span><span class="identifier">partial</span></code>
+            </li>
+<li class="listitem">
+              <code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">cancellation_type</span><span class="special">::</span><span class="identifier">total</span></code>
+            </li>
+</ul></div>
+<p>
+          if they are also supported by the socket's <code class="computeroutput"><span class="identifier">async_read_some</span></code>
+          operation.
         </p>
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>

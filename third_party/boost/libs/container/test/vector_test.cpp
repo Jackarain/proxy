@@ -266,10 +266,10 @@ int main()
       return 1;
    }
 
-   {
+   {  //Test enum container
       typedef vector<Test, std::allocator<Test> > MyEnumCont;
       MyEnumCont v;
-      Test t;
+      Test t = Test();
       v.push_back(t);
       v.push_back(::boost::move(t));
       v.push_back(Test());

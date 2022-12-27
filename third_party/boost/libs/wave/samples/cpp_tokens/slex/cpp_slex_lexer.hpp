@@ -157,8 +157,13 @@ private:
 #define EXTCHAR_SPEC        "(" "[uU]" OR "u8" ")"
 
 #define BACKSLASH           "(" Q("\\") OR TRI(Q("/")) ")"
+#if BOOST_WAVE_USE_STRICT_LEXER != 0
+#define ESCAPECHARS         "[abfnrtv?'\"]"
+#else
+#define ESCAPECHARS         "[abeEfnrtv?'\"]"
+#endif
 #define ESCAPESEQ           "(" BACKSLASH "(" \
-                                "[abfnrtv?'\"]" OR \
+                                ESCAPECHARS OR \
                                 BACKSLASH OR \
                                 "x" HEXDIGIT "+" OR \
                                 OCTALDIGIT OCTALDIGIT "?" OCTALDIGIT "?" \
@@ -506,6 +511,7 @@ lexer<IteratorT, PositionT>::init_data_cpp2a[INIT_DATA_CPP2A_SIZE] =
 #undef CHAR_SPEC
 #undef BACKSLASH
 #undef ESCAPESEQ
+#undef ESCAPECHARS
 #undef HEXQUAD
 #undef UNIVERSALCHAR
 #undef PP_NUMBERDEF

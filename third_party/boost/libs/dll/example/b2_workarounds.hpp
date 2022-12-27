@@ -47,6 +47,12 @@ inline bool is_shared_library(const boost::filesystem::path& p) {
     return b2_workarounds::is_shared_library(p.string());
 }
 
+#ifdef BOOST_DLL_USE_STD_FS
+inline bool is_shared_library(const std::filesystem::path& p) {
+    return b2_workarounds::is_shared_library(p.string());
+}
+#endif
+
 inline boost::dll::fs::path first_lib_from_argv(int argc, char* argv[]) {
     BOOST_ASSERT(argc > 1);
     (void)argc;

@@ -40,6 +40,27 @@ T min_of()
     return (std::numeric_limits<T>::min)();
 }
 
+class throwing_buffer
+    : public std::streambuf
+{
+protected:
+    int_type
+    underflow() override
+    {
+        // make sure we don't throw before the parser had the chance to start
+        if( !gptr()  )
+        {
+            setg(buf_, buf_, buf_ + 1);
+            return *buf_;
+        }
+
+        throw std::invalid_argument("this buffer throws");
+    }
+
+private:
+    char buf_[1] = {'t'};
+};
+
 } // (anon)
 
 class value_test
@@ -844,6 +865,13 @@ public:
                 BOOST_TEST(jv.is_array());
                 BOOST_TEST(*jv.storage() == *sp);
             }
+            {
+                value jv(sp);
+                array const arr;
+                jv = arr;
+                BOOST_TEST(jv.is_array());
+                BOOST_TEST(*jv.storage() == *sp);
+            }
         }
 
         // operator=(object)
@@ -857,6 +885,13 @@ public:
             {
                 value jv(sp);
                 jv = object();
+                BOOST_TEST(jv.is_object());
+                BOOST_TEST(*jv.storage() == *sp);
+            }
+            {
+                value jv(sp);
+                object const obj;
+                jv = obj;
                 BOOST_TEST(jv.is_object());
                 BOOST_TEST(*jv.storage() == *sp);
             }
@@ -1683,7 +1718,7 @@ public:
         auto const& cboo(boo);
         auto const& cnul(nul);
 
-        // as_object()
+        // as_object() &
         {
                   object& x = obj.as_object();
             BOOST_TEST_THROWS(arr.as_object(), std::invalid_argument);
@@ -1696,7 +1731,7 @@ public:
             (void)x;
         }
 
-        // as_object() const
+        // as_object() const&
         {
             object const& x = cobj.as_object();
             BOOST_TEST_THROWS(carr.as_object(), std::invalid_argument);
@@ -1709,7 +1744,20 @@ public:
             (void)x;
         }
 
-        // as_array()
+        // as_object() &&
+        {
+            object&& x = std::move(obj).as_object();
+            BOOST_TEST_THROWS(std::move(arr).as_object(), std::invalid_argument);
+            BOOST_TEST_THROWS(std::move(str).as_object(), std::invalid_argument);
+            BOOST_TEST_THROWS(std::move(i64).as_object(), std::invalid_argument);
+            BOOST_TEST_THROWS(std::move(u64).as_object(), std::invalid_argument);
+            BOOST_TEST_THROWS(std::move(dub).as_object(), std::invalid_argument);
+            BOOST_TEST_THROWS(std::move(boo).as_object(), std::invalid_argument);
+            BOOST_TEST_THROWS(std::move(nul).as_object(), std::invalid_argument);
+            (void)x;
+        }
+
+        // as_array() &
         {
             BOOST_TEST_THROWS(obj.as_array(), std::invalid_argument);
                    array& x = arr.as_array();
@@ -1722,7 +1770,7 @@ public:
             (void)x;
         }
 
-        // as_array() const
+        // as_array() const&
         {
             BOOST_TEST_THROWS(cobj.as_array(), std::invalid_argument);
              array const& x = carr.as_array();
@@ -1735,7 +1783,20 @@ public:
             (void)x;
         }
 
-        // as_string()
+        // as_array() &&
+        {
+            BOOST_TEST_THROWS(std::move(obj).as_array(), std::invalid_argument);
+            array&& x = std::move(arr).as_array();
+            BOOST_TEST_THROWS(std::move(str).as_array(), std::invalid_argument);
+            BOOST_TEST_THROWS(std::move(i64).as_array(), std::invalid_argument);
+            BOOST_TEST_THROWS(std::move(u64).as_array(), std::invalid_argument);
+            BOOST_TEST_THROWS(std::move(dub).as_array(), std::invalid_argument);
+            BOOST_TEST_THROWS(std::move(boo).as_array(), std::invalid_argument);
+            BOOST_TEST_THROWS(std::move(nul).as_array(), std::invalid_argument);
+            (void)x;
+        }
+
+        // as_string() &
         {
             BOOST_TEST_THROWS(obj.as_string(), std::invalid_argument);
             BOOST_TEST_THROWS(arr.as_string(), std::invalid_argument);
@@ -1748,7 +1809,7 @@ public:
             (void)x;
         }
 
-        // as_string() const
+        // as_string() const&
         {
             BOOST_TEST_THROWS(cobj.as_string(), std::invalid_argument);
             BOOST_TEST_THROWS(carr.as_string(), std::invalid_argument);
@@ -1758,6 +1819,19 @@ public:
             BOOST_TEST_THROWS(cdub.as_string(), std::invalid_argument);
             BOOST_TEST_THROWS(cboo.as_string(), std::invalid_argument);
             BOOST_TEST_THROWS(cnul.as_string(), std::invalid_argument);
+            (void)x;
+        }
+
+        // as_string() const&
+        {
+            BOOST_TEST_THROWS(std::move(obj).as_string(), std::invalid_argument);
+            BOOST_TEST_THROWS(std::move(arr).as_string(), std::invalid_argument);
+            string&& x = std::move(str).as_string();
+            BOOST_TEST_THROWS(std::move(i64).as_string(), std::invalid_argument);
+            BOOST_TEST_THROWS(std::move(u64).as_string(), std::invalid_argument);
+            BOOST_TEST_THROWS(std::move(dub).as_string(), std::invalid_argument);
+            BOOST_TEST_THROWS(std::move(boo).as_string(), std::invalid_argument);
+            BOOST_TEST_THROWS(std::move(nul).as_string(), std::invalid_argument);
             (void)x;
         }
 
@@ -1885,9 +1959,9 @@ public:
         auto const& cdub(dub);
         auto const& cboo(boo);
 
-        // get_object()
-        // get_array()
-        // get_string()
+        // get_object() &
+        // get_array() &
+        // get_string() &
         // get_int64()
         // get_uint64()
         // get_double()
@@ -1910,9 +1984,9 @@ public:
             (void)(xboo);
         }
 
-        // get_object() const
-        // get_array() const
-        // get_string() const
+        // get_object() const&
+        // get_array() const&
+        // get_string() const&
         // get_int64() const
         // get_uint64() const
         // get_double() const
@@ -1936,23 +2010,47 @@ public:
             (void)(xdub);
             (void)(xboo);
         }
+
+        // get_object() &&
+        // get_array() &&
+        // get_string() &&
+        {
+            object&& xobj = std::move(obj).get_object();
+            array&&  xarr = std::move(arr).get_array();
+            string&& xstr = std::move(str).get_string();
+
+            (void)(xobj);
+            (void)(xarr);
+            (void)(xstr);
+        }
     }
 
     void
     testAt()
     {
         // object
-        BOOST_TEST(value(
-            {{"k1", "value"}, {"k2", nullptr}}
-                ).at("k1").as_string() == "value");
-        BOOST_TEST_THROWS(value(
-            {{"k1", "value"}, {"k2", nullptr}}
-                ).at("null"),
-            std::out_of_range);
+        value jvo{{"k1", "value"}, {"k2", nullptr}};
+        value const& cjvo = jvo;
+        BOOST_TEST( cjvo.at("k1").as_string() == "value" );
+
+        jvo.at("k1") = {1, 2, 3};
+        BOOST_TEST( cjvo.at("k1") == array({1, 2, 3}) );
+
+        auto&& elem1 = std::move(jvo).at("k1");
+        BOOST_TEST( &elem1 == &jvo.at("k1") );
+
+        BOOST_TEST_THROWS(cjvo.at("null"), std::out_of_range);
 
         // array
-        BOOST_TEST(
-            value({true,2,"3"}).at(1).as_int64() == 2);
+        value jva{true,2,"3"};
+        value const& cjva = jva;
+        BOOST_TEST( cjva.at(1).as_int64() == 2 );
+
+        jva.at(1) = "item";
+        BOOST_TEST( cjva.at(1) == "item" );
+
+        auto&& elem2 = std::move(jva).at(1);
+        BOOST_TEST( &elem2 == &jva.at(1) );
 
         BOOST_TEST_THROWS( value({false,2,false}).at(4), std::out_of_range );
         BOOST_TEST_THROWS( value({false,2,"3"}).at(4), std::out_of_range );
@@ -1961,15 +2059,6 @@ public:
         BOOST_TEST_THROWS( value({false,2,"3",nullptr}).at(4), std::out_of_range );
         BOOST_TEST_THROWS( value({2,false,"3"}).at(4), std::out_of_range );
         BOOST_TEST_THROWS( value({true,2,"3"}).at(4), std::out_of_range );
-
-        // non-const .at() overloads
-        value jv({{"k1", nullptr}});
-        jv.at("k1") = {1, 2, 3};
-        BOOST_TEST(
-            jv.at("k1") == array({1, 2, 3}));
-        jv.at("k1").at(1) = "item";
-        BOOST_TEST(
-            jv.at("k1") == array({1, "item", 3}));
     }
 
     //------------------------------------------------------
@@ -2165,6 +2254,56 @@ public:
             value({{"a", "b"}})));
     }
 
+    void
+    testIstream()
+    {
+        std::istringstream ss(
+            R"({ "x": 1
+               , "y": 2
+               , "z": [77, null, true, "qwerty uiop"]
+               } 12)");
+        value jv;
+
+        ss >> jv;
+        BOOST_TEST( !!ss );
+        BOOST_TEST((
+            jv == value{
+                {"x", 1},
+                {"y", 2},
+                {"z", {77, nullptr, true, "qwerty uiop"}}} ));
+
+        // check we didn't consume any extra characters
+        std::string s;
+        std::getline(ss, s);
+        BOOST_TEST( s == " 12" );
+
+        ss.clear();
+        ss.str("23");
+        ss >> jv;
+        BOOST_TEST( jv == 23 );
+
+        ss.clear();
+        ss.str("");
+        ss >> jv;
+        BOOST_TEST( ss.rdstate() == (std::ios::failbit | std::ios::eofbit) );
+
+        ss.clear();
+        ss.str("nu");
+        ss >> jv;
+        BOOST_TEST( ss.rdstate() == (std::ios::failbit | std::ios::eofbit) );
+
+        ss.clear();
+        ss.str("[1,2,3,4,]");
+        ss >> jv;
+        BOOST_TEST( ss.rdstate() == std::ios::failbit );
+
+        {
+            throwing_buffer buf;
+            std::istream is(&buf);
+            BOOST_TEST_THROWS( is >> jv, std::exception );
+        }
+    }
+
     //------------------------------------------------------
 
     void
@@ -2187,6 +2326,7 @@ public:
         testInitList();
         testEquality();
         testHash();
+        testIstream();
     }
 };
 

@@ -40,10 +40,10 @@
         </p>
 <pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
     <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
-<span class="keyword">void</span>
+<span class="identifier">value</span>
 <span class="identifier">value_from</span><span class="special">(</span>
     <span class="identifier">T</span><span class="special">&amp;&amp;</span> <span class="identifier">t</span><span class="special">,</span>
-    <span class="identifier">value</span><span class="special">&amp;</span> <span class="identifier">jv</span><span class="special">);</span>
+    <span class="identifier">storage_ptr</span> <span class="identifier">sp</span> <span class="special">=</span> <span class="special">{});</span>
 </pre>
 <h6>
 <a name="json.ref.boost__json__value_from.overload2.h1"></a>
@@ -67,11 +67,21 @@
             </li>
 </ul></div>
 <p>
-          In all cases, the conversion is done by calling an overload of <code class="computeroutput"><span class="identifier">tag_invoke</span></code> found by argument-dependent
+          Out of the box the function supports types satisfying <a href="https://en.cppreference.com/w/cpp/named_req/SequenceContainer" target="_top"><span class="emphasis"><em>SequenceContainer</em></span></a>,
+          arrays, arithmetic types, <code class="computeroutput"><span class="keyword">bool</span></code>,
+          <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">tuple</span></code>, <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span></code>,
+          <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">variant</span></code>, <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">optional</span></code>,
+          <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">monostate</span></code>, and <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">nullopt_t</span></code>.
+          Conversion of other types is done by calling an overload of <code class="computeroutput"><span class="identifier">tag_invoke</span></code> found by argument-dependent
           lookup. Its signature should be similar to:
         </p>
 <pre class="programlisting"><span class="keyword">void</span> <span class="identifier">tag_invoke</span><span class="special">(</span> <span class="identifier">value_from_tag</span><span class="special">,</span> <span class="identifier">value</span><span class="special">&amp;,</span> <span class="identifier">T</span> <span class="special">);</span>
 </pre>
+<p>
+          A <a class="link" href="../boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a>
+          constructed with the <a class="link" href="../boost__json__storage_ptr.html" title="storage_ptr"><code class="computeroutput"><span class="identifier">storage_ptr</span></code></a> passed to <a class="link" href="../boost__json__value_from.html" title="value_from"><code class="computeroutput"><span class="identifier">value_from</span></code></a> is passed as the second
+          argument to ensure that the memory resource is correctly propagated.
+        </p>
 <h6>
 <a name="json.ref.boost__json__value_from.overload2.h2"></a>
           <span class="phrase"><a name="json.ref.boost__json__value_from.overload2.exception_safety"></a></span><a class="link" href="overload2.html#json.ref.boost__json__value_from.overload2.exception_safety">Exception
@@ -117,6 +127,14 @@
 </table></div>
 <h6>
 <a name="json.ref.boost__json__value_from.overload2.h4"></a>
+          <span class="phrase"><a name="json.ref.boost__json__value_from.overload2.return_value"></a></span><a class="link" href="overload2.html#json.ref.boost__json__value_from.overload2.return_value">Return
+          Value</a>
+        </h6>
+<p>
+          <code class="computeroutput"><span class="identifier">t</span></code> converted to <a class="link" href="../boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a>.
+        </p>
+<h6>
+<a name="json.ref.boost__json__value_from.overload2.h5"></a>
           <span class="phrase"><a name="json.ref.boost__json__value_from.overload2.parameters"></a></span><a class="link" href="overload2.html#json.ref.boost__json__value_from.overload2.parameters">Parameters</a>
         </h6>
 <div class="informaltable"><table class="table">
@@ -152,20 +170,21 @@
 <tr>
 <td>
                   <p>
-                    <code class="computeroutput"><span class="identifier">jv</span></code>
+                    <code class="computeroutput"><span class="identifier">sp</span></code>
                   </p>
                 </td>
 <td>
                   <p>
-                    <a class="link" href="../boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a>
-                    out parameter.
+                    A storage pointer referring to the memory resource to use for
+                    the returned <a class="link" href="../boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a>. The default argument
+                    for this parameter is <code class="computeroutput"><span class="special">{}</span></code>.
                   </p>
                 </td>
 </tr>
 </tbody>
 </table></div>
 <h6>
-<a name="json.ref.boost__json__value_from.overload2.h5"></a>
+<a name="json.ref.boost__json__value_from.overload2.h6"></a>
           <span class="phrase"><a name="json.ref.boost__json__value_from.overload2.see_also"></a></span><a class="link" href="overload2.html#json.ref.boost__json__value_from.overload2.see_also">See Also</a>
         </h6>
 <p>
@@ -180,7 +199,7 @@
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<p>
+<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>

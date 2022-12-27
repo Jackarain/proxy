@@ -40,9 +40,10 @@ int main() {}
 #pragma GCC diagnostic ignored "-Wfloat-equal"
 #endif
 
+#include <boost/limits.hpp>
 #include <complex>
 #include <sstream>
-#include <boost/limits.hpp>
+#include <set>
 
 template <class T>
 void generic_complex_tests(std::complex<T> v)
@@ -89,6 +90,21 @@ void complex_integral_tests(Integer*)
     generic_complex_tests(complex(Integer(-543),Integer(763)));
 }
 
+template<class T> void complex_grid_test( short N )
+{
+    std::set<std::size_t> hashes;
+
+    for( short i = 0; i < N; ++i )
+    {
+        for( short j = 0; j < N; ++j )
+        {
+            hashes.insert( boost::hash< std::complex<T> >()( std::complex<T>( i, j ) ) );
+        }
+    }
+
+    BOOST_TEST_EQ( hashes.size(), static_cast<std::size_t>( N * N ) );
+}
+
 int main()
 {
     // I've comments out the short and unsigned short tests
@@ -104,6 +120,11 @@ int main()
     //complex_integral_tests((unsigned short*) 0);
     complex_integral_tests((unsigned int*) 0);
     complex_integral_tests((unsigned long*) 0);
+
+    complex_grid_test<int>( 16 );
+    complex_grid_test<float>( 16 );
+    complex_grid_test<double>( 16 );
+    complex_grid_test<long double>( 16 );
 
     return boost::report_errors();
 }

@@ -210,10 +210,10 @@ int main()
 
 \subsection plural_forms Plural Forms
 
-GNU Gettext catalogs have simple, robust and yet powerful plural forms support. We recommend to read the
+GNU Gettext catalogs have simple, robust and yet powerful plural forms support. We recommend reading the
 original GNU documentation <a href="http://www.gnu.org/software/gettext/manual/gettext.html#Plural-forms">here</a>.
 
-Let's try to solve a simple problem, displaying a message to the user:
+Let's try to solve a simple problem: displaying a message to the user.
 
 \code
     if(files == 1)
@@ -244,7 +244,7 @@ For example, the Slavic language family has 3 plural forms, that can be chosen u
     plural=n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;
 \endcode
 
-Such equation is stored in the message catalog itself and it is evaluated during translation to supply the correct form.
+Such an equation is stored in the message catalog itself and it is evaluated during translation to supply the correct form.
 
 So the code above would display 3 different forms in Russian locale for values of 1, 3 and 5:
 
@@ -401,7 +401,7 @@ xgettext --keyword=translate:1,1t --keyword=translate:1c,2,2t       \
          source_file_1.cpp ... source_file_N.cpp
 \endcode
 
-Of course, if you do not use "gettext" like translation you
+Of course, if you do not use "gettext"-like translations, you
 may ignore some of these parameters.
 
 \subsection custom_file_system_support Custom Filesystem Support

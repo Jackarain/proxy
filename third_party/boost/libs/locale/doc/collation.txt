@@ -8,7 +8,7 @@
 \page collation Collation
 
 Boost.Locale provides a \ref boost::locale::collator "collator" class, derived from \c std::collate, that adds support for
-primary, secondary, tertiary, quaternary and identical comparison levels. They can be approximately defined as:
+primary, secondary, tertiary, quaternary, and identical comparison levels. They can be approximately defined as:
 
 -# Primary -- ignore accents and character case, comparing base letters only. For example "facade" and "Façade" are the same.
 -# Secondary -- ignore character case but consider accents. "facade" and "façade" are different but "Façade" and "façade" are the same.
@@ -16,7 +16,7 @@ primary, secondary, tertiary, quaternary and identical comparison levels. They c
 -# Quaternary -- consider all case, accents, and punctuation. The words must be identical in terms of Unicode representation.
 -# Identical -- as quaternary, but compare code points as well.
 
-There are two ways of using the \ref boost::locale::collator "collator" facet: directly, by calling its member functions \ref boost::locale::collator::compare() "compare", \ref boost::locale::collator::transform() "transform" and \ref
+There are two ways of using the \ref boost::locale::collator "collator" facet: directly: by calling its member functions \ref boost::locale::collator::compare() "compare", \ref boost::locale::collator::transform() "transform", and \ref
 boost::locale::collator::hash() "hash", or indirectly by using the \ref boost::locale::comparator "comparator" template
 class in STL algorithms.
 

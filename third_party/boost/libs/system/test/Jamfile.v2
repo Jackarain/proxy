@@ -33,6 +33,7 @@ rule system-run ( sources + )
     result += [ run $(sources) : : : <library>/boost/system//boost_system <link>shared : $(sources[1]:B)_shared ] ;
     result += [ run $(sources) : : : <define>BOOST_NO_ANSI_APIS : $(sources[1]:B)_no_ansi ] ;
     result += [ run $(sources) : : : <define>BOOST_SYSTEM_USE_UTF8 : $(sources[1]:B)_utf8 ] ;
+    result += [ run $(sources) : : : <define>BOOST_SYSTEM_DISABLE_THREADS : $(sources[1]:B)_nthr ] ;
 
     return $(result) ;
 }
@@ -152,6 +153,11 @@ run std_interop_test14.cpp ;
 run ec_location_test3.cpp ;
 run ec_location_test4.cpp ;
 
+compile constexpr_test2.cpp ;
+
+run error_code_test3.cpp ;
+run std_interop_test15.cpp ;
+
 # result
 
 import ../../config/checks/config : requires ;
@@ -174,3 +180,7 @@ run result_value_construct2.cpp : : : $(CPP11) ;
 run result_error_construct2.cpp : : : $(CPP11) ;
 run result_errc_construct.cpp : : : $(CPP11) ;
 run result_convert_construct.cpp : : : $(CPP11) ;
+run result_typedefs.cpp : : : $(CPP11) ;
+run result_value_construct3.cpp : : : $(CPP11) ;
+run result_error_construct3.cpp : : : $(CPP11) ;
+run result_emplace.cpp : : : $(CPP11) ;

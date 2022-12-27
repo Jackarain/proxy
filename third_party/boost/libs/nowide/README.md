@@ -29,9 +29,10 @@ This is different to the version available prior to the inclusion in Boost.
 
 ### Requirements (All versions)
 
-* C++11 (or higher) compatible compiler
+* **C++11** (or higher) compatible compiler
     * MSVC 2015 and up work
     * libstdc++ < 5 is unsupported as it is silently lacking C++11 features
+    * When building with B2 pass e.g. `cxxstd=11` if your compiler defaults to C++03
 
 ### Requirements (Boost version)
 

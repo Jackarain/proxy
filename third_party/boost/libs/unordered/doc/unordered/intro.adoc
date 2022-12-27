@@ -18,12 +18,12 @@ or isn't practical. In contrast, a hash table only needs an equality function
 and a hash function for the key.
 
 With this in mind, unordered associative containers were added to the {cpp}
-standard. This is an implementation of the containers described in {cpp}11,
+standard. Boost.Unordered provides an implementation of the containers described in {cpp}11,
 with some <<compliance,deviations from the standard>> in
 order to work with non-{cpp}11 compilers and libraries.
 
 `unordered_set` and `unordered_multiset` are defined in the header
-`<boost/unordered_set.hpp>`
+`<boost/unordered/unordered_set.hpp>`
 [source,c++]
 ----  
 namespace boost {
@@ -44,7 +44,7 @@ namespace boost {
 ----
 
 `unordered_map` and `unordered_multimap` are defined in the header
-`<boost/unordered_map.hpp>`
+`<boost/unordered/unordered_map.hpp>`
 
 [source,c++]
 ----
@@ -65,10 +65,51 @@ namespace boost {
 }
 ----
 
-When using Boost.TR1, these classes are included from `<unordered_set>` and
-`<unordered_map>`, with the classes added to the `std::tr1` namespace.
+These containers, and all other implementations of standard unordered associative
+containers, use an approach to its internal data structure design called
+*closed addressing*. Starting in Boost 1.81, Boost.Unordered also provides containers
+`boost::unordered_flat_set` and `boost::unordered_flat_map`, which use a
+different data structure strategy commonly known as *open addressing* and depart in
+a small number of ways from the standard so as to offer much better performance
+in exchange (more than 2 times faster in typical scenarios):
 
-The containers are used in a similar manner to the normal associative
+
+[source,c++]
+----
+// #include <boost/unordered/unordered_flat_set.hpp>
+//
+// Note: no multiset version
+
+namespace boost {
+    template <
+        class Key,
+        class Hash = boost::hash<Key>,
+        class Pred = std::equal_to<Key>,
+        class Alloc = std::allocator<Key> >
+    class unordered_flat_set;
+}
+----
+
+[source,c++]
+----
+// #include <boost/unordered/unordered_flat_map.hpp>
+//
+// Note: no multimap version
+
+namespace boost {
+    template <
+        class Key, class Mapped,
+        class Hash = boost::hash<Key>,
+        class Pred = std::equal_to<Key>,
+        class Alloc = std::allocator<std::pair<Key const, Mapped> > >
+    class unordered_flat_map;
+}
+----
+
+`boost::unordered_flat_set` and `boost::unordered_flat_map` require a
+reasonably compliant C++11 compiler.
+
+Boost.Unordered containers are used in a similar manner to the normal associative
 containers:
 
 [source,cpp]
@@ -87,7 +128,7 @@ But since the elements aren't ordered, the output of:
 
 [source,c++]
 ----
-BOOST_FOREACH(map::value_type i, x) {
+for(const map::value_type& i: x) {
     std::cout<<i.first<<","<<i.second<<"\n";
 }
 ----

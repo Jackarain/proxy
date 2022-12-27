@@ -51,7 +51,7 @@ int fun( int foo, int bar )
 
 [endsect]
 
-[section Acknowledgments]
+[section Acknowledgements]
 
 `boost::ignore_unused()` was contributed by Adam Wulkiewicz.
 

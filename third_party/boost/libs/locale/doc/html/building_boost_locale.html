@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.15"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Boost.Locale: Building The library</title>
+<title>Boost.Locale: Building the Library</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -65,7 +65,7 @@ $(document).ready(function(){initNavTree('building_boost_locale.html','');});
 <div id="doc-content">
 <div class="PageDoc"><div class="header">
   <div class="headertitle">
-<div class="title">Building The library </div>  </div>
+<div class="title">Building the Library </div>  </div>
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><ul>
@@ -84,22 +84,22 @@ Building Boost.Locale</h1>
 Dependencies</h2>
 <ul>
 <li>ICU library 3.6 or above is strongly recommended</li>
-<li>If no ICU library is given, iconv support is required under POSIX platforms.</li>
+<li>If no ICU library is given, iconv support is required on POSIX platforms.</li>
 </ul>
 <h2><a class="anchor" id="bb_platform_opts"></a>
 Platform Notes</h2>
 <ul>
-<li>If you use Boost.Locale on Windows with MinGW/GCC &lt; 4.5 you'll be able to use static version only. Mingw/GCC prior to 4.5 have no support of dynamic runtime linking.<br />
- Using Boost.Locale DLL's with MinGW gcc also requires dynamic linking with the runtime libraries libstdc++ and libgcc. Some gcc builds use static linking by default so make sure you use correct link options with your compiler when you build your own programs.</li>
-<li>The AIX's iconv misses important character sets that Boost.Locale requires, so you need to either use GNU iconv or link with ICU library.</li>
-<li>If iconv library is not found on Darwin/Mac OS X builds make sure there is no multiple iconv installations and provide -sICONV_PATH build option to point to correct location of iconv library.</li>
+<li>If you use Boost.Locale on Windows with MinGW/GCC &lt; 4.5 you'll be able to use the static version only. Mingw/GCC prior to 4.5 has no support for dynamic runtime linking.<br />
+ Using Boost.Locale DLL's with MinGW gcc also requires dynamic linking with the runtime libraries libstdc++ and libgcc. Some gcc builds use static linking by default so make sure you use the correct link options.</li>
+<li>The AIX's iconv misses important character sets that Boost.Locale requires, so you need to either use GNU iconv or link with the ICU library.</li>
+<li>If the iconv library is not found on Darwin/Mac OS X builds make sure there are not multiple iconv installations and provide the -sICONV_PATH build option to point to the correct location of the iconv library.</li>
 </ul>
 <h2><a class="anchor" id="bb_building_proc"></a>
 Building Process</h2>
-<p>Now all you need to do is invoke bjam command:</p>
+<p>Now all you need to do is to invoke bjam:</p>
 <pre class="fragment">./bjam --with-locale stage
 </pre><p>Or on Windows </p><pre class="fragment">.\bjam --with-locale stage
-</pre><p>If you are using custom ICU build or you are using Microsoft Windows you need to provide a path to location of ICU library using <code>-sICU_PATH</code> option</p>
+</pre><p>If you are using a custom ICU build or you are using Microsoft Windows, you need to provide a path to the location of the ICU library using the <code>-sICU_PATH</code> option</p>
 <p>For example:</p>
 <ul>
 <li>If your icu build is placed at <code>/opt/icu46</code> such that the files are placed like<br />
@@ -122,34 +122,34 @@ Building Process</h2>
  <code>...</code> <br />
  then you need to provide an option <code>-sICU_PATH=c:\icu46</code> <pre class="fragment">    .\bjam --with-locale -sICU_PATH=c:\icu46  stage</pre></li>
 </ul>
-<dl class="section note"><dt>Note</dt><dd>Don't forget to put both debug and release versions of ICU libraries in this path when using Microsoft Visual Studio so Boost.Build will link correctly debug and release versions of boost_locale library.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Don't forget to put both debug and release versions of ICU libraries in this path when using Microsoft Visual Studio so Boost.Build will correctly link debug and release versions of Boost.Locale.</dd></dl>
 <h1><a class="anchor" id="bb_build_opts"></a>
 Build Options</h1>
-<p>Boost.Locale supports following options with values <code>off</code> or <code>on</code> </p>
+<p>Boost.Locale supports the following options with values <code>off</code> or <code>on</code> </p>
 <ul>
-<li><code>boost.locale.icu=off</code> disable build of ICU backend even if ICU library exists</li>
-<li><code>boost.locale.iconv=off</code> or <code>boost.locale.iconv=on</code> enable or disable use of iconv library. It is off by default on Windows and Solaris</li>
-<li><code>boost.locale.winapi=off</code> - disable winapi backend, it is on by default on Windows and Cygwin</li>
-<li><code>boost.locale.std=off</code> or <code>boost.locale.winapi=on</code> Disable or enable std backends. <code>std</code> backend is disabled by default when using Sun Studio.</li>
-<li><code>boost.locale.posix=on</code> or <code>boost.locale.posix=off</code> Enable or disable support of POSIX backend, it is on by default on Linux and Mac OS X</li>
+<li><code>boost.locale.icu=off</code> prevents building the ICU backend even if the ICU library exists</li>
+<li><code>boost.locale.iconv</code> enables or disables the iconv backend. It is off by default on Windows and Solaris</li>
+<li><code>boost.locale.winapi=off</code> disables the winapi backend. It is on by default on Windows and Cygwin</li>
+<li><code>boost.locale.std</code> enables or disables the std backend. The std backend is disabled by default when using Sun Studio.</li>
+<li><code>boost.locale.posix</code> enables or disables support of the POSIX backend. It is on by default on Linux and Mac OS X</li>
 </ul>
-<p>Also Boost.Locale supports following options</p>
+<p>Also Boost.Locale supports the following options</p>
 <ul>
-<li><code>-sICU_PATH=/path/to/location/of/icu</code> - the location of custom ICU library</li>
-<li><code>-sICONV_PATH=/path/to/location/of/iconv</code> - the location of custom iconv library</li>
+<li><code>-sICU_PATH=/path/to/location/of/icu</code> - the location of the ICU library</li>
+<li><code>-sICONV_PATH=/path/to/location/of/iconv</code> - the location of the iconv library</li>
 </ul>
 <p>For example:</p>
 <ul>
-<li>Build the library on Windows with ICU backend only: <pre class="fragment">    .\bjam boost.locale.winapi=off boost.locale.std=off -sICU_PATH=c:\icu46 --with-locale stage</pre></li>
-<li>Build the library on Linux with std backend only <pre class="fragment">    .\bjam boost.locale.posix=off boost.locale.icu=off --with-locale stage</pre></li>
+<li>Build the library on Windows with the ICU backend only: <pre class="fragment">    .\bjam boost.locale.winapi=off boost.locale.std=off -sICU_PATH=c:\icu46 --with-locale stage</pre></li>
+<li>Build the library on Linux with the std backend only <pre class="fragment">    .\bjam boost.locale.posix=off boost.locale.icu=off --with-locale stage</pre></li>
 </ul>
 <h1><a class="anchor" id="bb_build_test"></a>
 Running Unit Tests</h1>
-<p>You can run unit tests by invoking <code>bjam</code> with <code>libs/locale/test</code> project parameter </p><pre class="fragment">./bjam libs/locale/test
+<p>You can run unit tests by invoking <code>bjam</code> with the <code>libs/locale/test</code> project parameter </p><pre class="fragment">./bjam libs/locale/test
 </pre><h1><a class="anchor" id="binary_compatibility"></a>
 Binary Compatibility</h1>
-<p>Boost.Locale is built with binary compatibility in mind. Switching localization back ends on or off, or using iconv or not, does not affect binary compatibility. So if a dynamic library was built with all possible backends, other dynamic libraries compiled with, for example, only the <code>std</code>, <code>posix</code> or <code>winapi</code> backends would still be binary-compatible with it.</p>
-<p>However this definitely has an effect on some features. For example, if you try to use boundary analysis or a calendar facet when the library does not support the icu backend you would get an exception. </p>
+<p>Boost.Locale is built with binary compatibility in mind. Switching localization back ends on or off, or using iconv or not, does not affect binary compatibility. So if a dynamic library was built with all possible backends, other dynamic libraries compiled with, for example, only the <code>std</code>, <code>posix</code> or <code>winapi</code> backends would still be binary-compatible.</p>
+<p>Using a feature not included in the binary will result in an exception. For example, if you try to use boundary analysis or a calendar facet when the library does not support the ICU backend, you will get an exception. </p>
 </div></div><!-- PageDoc -->
 </div><!-- contents -->
 </div><!-- doc-content -->

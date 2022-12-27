@@ -802,6 +802,13 @@ Special thanks to:
 
 [section:release_notes Release Notes]
 
+[section:release_notes_boost_1_81 Boost 1.81 Release]
+
+*  Fixed bugs:
+   *  [@https://github.com/boostorg/move/issues/49 Git Issue #49: ['"clang-15 warnings about deprecated type traits intrinsics"]].
+
+[endsect]
+
 [section:release_notes_boost_1_79 Boost 1.79 Release]
 
 *  The library now compiles without warnings with GCC's -Wcast-align=strict

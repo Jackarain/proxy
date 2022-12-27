@@ -60,6 +60,7 @@ criteria for inclusion is that the utility component be:
 [include noinit_adaptor.qbk]
 [include noncopyable.qbk]
 [include null_deleter.qbk]
+[include fclose_deleter.qbk]
 [include nvp.qbk]
 [include pointer_traits.qbk]
 [include quick_exit.qbk]

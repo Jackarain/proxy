@@ -84,9 +84,9 @@ test-suite config
      [ run config_info.cpp : : : <test-info>always_show_run_output <threading>single <toolset>msvc:<runtime-link>static <toolset>msvc:<link>static <toolset>msvc:<warnings-as-errors>on <toolset>gcc:<warnings-as-errors>on <toolset>clang:<warnings-as-errors>on ]
      [ run config_info.cpp : : : <test-info>always_show_run_output <threading>multi <toolset>msvc:<warnings-as-errors>on <toolset>gcc:<warnings-as-errors>on <toolset>clang:<warnings-as-errors>on : config_info_threaded ]
      [ run config_info.cpp : : : <test-info>always_show_run_output <rtti>off <toolset>msvc:<warnings-as-errors>on <toolset>gcc:<warnings-as-errors>on <toolset>clang:<warnings-as-errors>on : config_info_no_rtti ]
-     [ run config_info.cpp : : : <test-info>always_show_run_output <exception-handling>off 
-     		<target-os>vxworks:<build>no      
-     		: config_info_no_except ]
+     [ run config_info.cpp : : : <test-info>always_show_run_output <exception-handling>off
+          <target-os>vxworks:<build>no
+          : config_info_no_except ]
      [ run math_info.cpp : : : <test-info>always_show_run_output <toolset>borland:<runtime-link>static <toolset>borland:<link>static ]
      [ run abi/abi_test.cpp abi/main.cpp ]
      [ run limits_test.cpp ]
@@ -113,11 +113,12 @@ test-suite config
     [ run helper_macros_test.cpp ]
     [ compile pragma_message_test.cpp ]
     [ compile header_deprecated_test.cpp ]
+    [ compile symbol_deprecated_test.cpp ]
     [ compile boost_override_test.cpp ]
   ;
 
 obj has_clang_implicit_fallthrough : cmd_line_check.cpp :
-		<toolset>clang:<cxxflags>"-std=c++11 -Wimplicit-fallthrough" <warnings-as-errors>on <warnings>all ;
+    <toolset>clang:<cxxflags>"-std=c++11 -Wimplicit-fallthrough" <warnings-as-errors>on <warnings>all ;
 
 explicit has_clang_implicit_fallthrough ;
 
@@ -128,9 +129,9 @@ explicit math_info_printer ;
 
 actions print-run
 {
-      echo With Standard Version $(STANDARD:E=default)
-      echo =====================================================================
-      $(>)
+    echo With Standard Version $(STANDARD:E=default)
+    echo =====================================================================
+    $(>)
 }
 
 rule print-run ( target : sources * : properties * )
@@ -147,4 +148,3 @@ explicit print_math_info ;
 exe config_info_travis : config_info.cpp ;
 install config_info_travis_install : config_info_travis : <location>. ;
 explicit config_info_travis_install ;
-

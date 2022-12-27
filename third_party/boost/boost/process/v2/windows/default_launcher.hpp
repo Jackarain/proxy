@@ -398,6 +398,11 @@ struct default_launcher
     return build_command_line_impl(pt, args, *std::begin(args));
   }
 
+  static std::wstring build_command_line(const filesystem::path & pt, const wchar_t * args)
+  {
+    return args;
+  }
+
 };
 
 

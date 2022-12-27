@@ -11,7 +11,7 @@
 #include <boost/config.hpp>
 #include <boost/core/lightweight_test.hpp>
 
-#if BOOST_HASH_HAS_OPTIONAL
+#if !defined(BOOST_NO_CXX17_HDR_OPTIONAL)
 
 #include <optional>
 #include <string>
@@ -60,7 +60,7 @@ void test_optional_string()
 
 int main()
 {
-#if BOOST_HASH_HAS_OPTIONAL
+#if !defined(BOOST_NO_CXX17_HDR_OPTIONAL)
     test_optional_int();
     test_optional_string();
 #else

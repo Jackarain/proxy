@@ -70,7 +70,7 @@
 
 #include <unistd.h>
 #include <fcntl.h>
-#if _POSIX_C_SOURCE < 200809L
+#if !defined(BOOST_FILESYSTEM_HAS_POSIX_AT_APIS)
 #include <utime.h>
 #endif
 #include <limits.h>
@@ -3119,7 +3119,7 @@ bool create_directories(path const& p, system::error_code* ec)
         parent /= fname;
         if (!fname.empty() && fname != dot_p && fname != dot_dot_p)
         {
-            created = create_directory(parent, NULL, &local_ec);
+            created = detail::create_directory(parent, NULL, &local_ec);
             if (BOOST_UNLIKELY(!!local_ec))
             {
                 if (!ec)

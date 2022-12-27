@@ -599,27 +599,19 @@ public:
 
         @throw std::out_of_range `pos >= size()`
     */
+    /* @{ */
     inline
     value&
-    at(std::size_t pos);
+    at(std::size_t pos) &;
 
-    /** Access an element, with bounds checking.
+    inline
+    value&&
+    at(std::size_t pos) &&;
 
-        Returns a reference to the element specified at
-        location `pos`, with bounds checking. If `pos` is
-        not within the range of the container, an exception
-        of type `std::out_of_range` is thrown.
-
-        @par Complexity
-        Constant.
-
-        @param pos A zero-based index.
-
-        @throw std::out_of_range `pos >= size()`
-    */
     inline
     value const&
-    at(std::size_t pos) const;
+    at(std::size_t pos) const&;
+    /* @} */
 
     /** Access an element.
 
@@ -634,26 +626,19 @@ public:
 
         @param pos A zero-based index
     */
+    /* @{ */
     inline
     value&
-    operator[](std::size_t pos) noexcept;
+    operator[](std::size_t pos) & noexcept;
 
-    /** Access an element.
+    inline
+    value&&
+    operator[](std::size_t pos) && noexcept;
 
-        Returns a reference to the element specified at
-        location `pos`. No bounds checking is performed.
-
-        @par Precondition
-        `pos < size()`
-
-        @par Complexity
-        Constant.
-
-        @param pos A zero-based index
-    */
     inline
     value const&
-    operator[](std::size_t pos) const noexcept;
+    operator[](std::size_t pos) const& noexcept;
+    /* @} */
 
     /** Access the first element.
 
@@ -665,23 +650,19 @@ public:
         @par Complexity
         Constant.
     */
+    /* @{ */
     inline
     value&
-    front() noexcept;
+    front() & noexcept;
 
-    /** Access the first element.
+    inline
+    value&&
+    front() && noexcept;
 
-        Returns a reference to the first element.
-
-        @par Precondition
-        `not empty()`
-
-        @par Complexity
-        Constant.
-    */
     inline
     value const&
-    front() const noexcept;
+    front() const& noexcept;
+    /* @} */
 
     /** Access the last element.
 
@@ -693,23 +674,19 @@ public:
         @par Complexity
         Constant.
     */
+    /* @{ */
     inline
     value&
-    back() noexcept;
+    back() & noexcept;
 
-    /** Access the last element.
+    inline
+    value&&
+    back() && noexcept;
 
-        Returns a reference to the last element.
-
-        @par Precondition
-        `not empty()`
-
-        @par Complexity
-        Constant.
-    */
     inline
     value const&
-    back() const noexcept;
+    back() const& noexcept;
+    /* @} */
 
     /** Access the underlying array directly.
 
@@ -1681,6 +1658,30 @@ public:
     {
         return ! (lhs == rhs);
     }
+
+    /** Serialize @ref array to an output stream.
+
+        This function serializes an `array` as JSON into the output stream.
+
+        @return Reference to `os`.
+
+        @par Complexity
+        Constant or linear in the size of `arr`.
+
+        @par Exception Safety
+        Strong guarantee.
+        Calls to `memory_resource::allocate` may throw.
+
+        @param os The output stream to serialize to.
+
+        @param arr The value to serialize.
+    */
+    BOOST_JSON_DECL
+    friend
+    std::ostream&
+    operator<<(
+        std::ostream& os,
+        array const& arr);
 
 private:
     template<class It>

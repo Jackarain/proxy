@@ -20,7 +20,7 @@
 #include <boost/type_traits/is_function.hpp>
 #include <boost/type_traits/is_pointer.hpp>
 #include <boost/type_traits/remove_pointer.hpp>
-#include <boost/utility/addressof.hpp>
+#include <boost/core/addressof.hpp>
 
 namespace boost
 {

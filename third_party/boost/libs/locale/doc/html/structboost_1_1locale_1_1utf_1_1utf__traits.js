@@ -8,5 +8,5 @@ var structboost_1_1locale_1_1utf_1_1utf__traits =
     [ "is_trail", "structboost_1_1locale_1_1utf_1_1utf__traits.html#ae2cb78fcb8a58bed3e0ce1d6528a719a", null ],
     [ "trail_length", "structboost_1_1locale_1_1utf_1_1utf__traits.html#a8a6b72ba87a817652f522018df51a9a7", null ],
     [ "width", "structboost_1_1locale_1_1utf_1_1utf__traits.html#a26c106ec8816f48431f882017ab46763", null ],
-    [ "max_width", "structboost_1_1locale_1_1utf_1_1utf__traits.html#abb4cb63a924d19505c2cb6e930c68a13", null ]
+    [ "max_width", "structboost_1_1locale_1_1utf_1_1utf__traits.html#aab9bcd711355e87bfd0fd55c319879af", null ]
 ];

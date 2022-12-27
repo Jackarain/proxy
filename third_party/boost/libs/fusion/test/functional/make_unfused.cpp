@@ -9,7 +9,7 @@
 #include <boost/fusion/functional/generation/make_unfused.hpp>
 #include <boost/detail/lightweight_test.hpp>
 
-#include <boost/noncopyable.hpp>
+#include <boost/core/noncopyable.hpp>
 
 #include <boost/mpl/empty_base.hpp>
 #include <boost/mpl/if.hpp>
@@ -19,11 +19,11 @@
 
 #include <boost/utility/result_of.hpp>
 #include <boost/core/enable_if.hpp>
+#include <boost/core/ref.hpp>
 
 #include <boost/fusion/sequence/intrinsic/empty.hpp>
 #include <boost/fusion/algorithm/iteration/fold.hpp>
 
-#include <boost/ref.hpp>
 
 namespace fusion = boost::fusion;
 namespace mpl = boost::mpl;

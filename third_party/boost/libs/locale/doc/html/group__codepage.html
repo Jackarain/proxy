@@ -76,7 +76,7 @@ $(document).ready(function(){initNavTree('group__codepage.html','');});
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1conv_1_1conversion__error.html">boost::locale::conv::conversion_error</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The excepton that is thrown in case of conversion error.  <a href="classboost_1_1locale_1_1conv_1_1conversion__error.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The exception that is thrown in case of conversion error.  <a href="classboost_1_1locale_1_1conv_1_1conversion__error.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1conv_1_1invalid__charset__error.html">boost::locale::conv::invalid_charset_error</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">This exception is thrown in case of use of unsupported or invalid character set.  <a href="classboost_1_1locale_1_1conv_1_1invalid__charset__error.html#details">More...</a><br /></td></tr>
@@ -88,61 +88,86 @@ Enumerations</h2></td></tr>
 <a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84aab08f9ee241c405ef40bd3cedb43b383">boost::locale::conv::stop</a> = 1, 
 <a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">boost::locale::conv::default_method</a> = skip
  }</td></tr>
+<tr class="memdesc:ga8e3c5a274f57107ec5745e227c26ba84"><td class="mdescLeft">&#160;</td><td class="mdescRight">enum that defines conversion policy  <a href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">More...</a><br /></td></tr>
 <tr class="separator:ga8e3c5a274f57107ec5745e227c26ba84"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ga2ca59a735ca28c9d5103e37ef2373ca1"><td class="memTemplParams" colspan="2">template&lt;typename CharType &gt; </td></tr>
-<tr class="memitem:ga2ca59a735ca28c9d5103e37ef2373ca1"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharType &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga2ca59a735ca28c9d5103e37ef2373ca1">boost::locale::conv::to_utf</a> (char const *begin, char const *end, std::string const &amp;charset, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
-<tr class="separator:ga2ca59a735ca28c9d5103e37ef2373ca1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaef8fb7771dce60511d081770547a4139"><td class="memTemplParams" colspan="2">template&lt;typename CharType &gt; </td></tr>
-<tr class="memitem:gaef8fb7771dce60511d081770547a4139"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#gaef8fb7771dce60511d081770547a4139">boost::locale::conv::from_utf</a> (CharType const *begin, CharType const *end, std::string const &amp;charset, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
-<tr class="separator:gaef8fb7771dce60511d081770547a4139"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga5ae3d72f015dc847ddfd688a0a40ff66"><td class="memTemplParams" colspan="2">template&lt;typename CharType &gt; </td></tr>
-<tr class="memitem:ga5ae3d72f015dc847ddfd688a0a40ff66"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharType &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga5ae3d72f015dc847ddfd688a0a40ff66">boost::locale::conv::to_utf</a> (char const *begin, char const *end, std::locale const &amp;loc, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
-<tr class="separator:ga5ae3d72f015dc847ddfd688a0a40ff66"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga0eee2960f0d6d15491c5b95dd3054d9a"><td class="memTemplParams" colspan="2">template&lt;typename CharType &gt; </td></tr>
-<tr class="memitem:ga0eee2960f0d6d15491c5b95dd3054d9a"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga0eee2960f0d6d15491c5b95dd3054d9a">boost::locale::conv::from_utf</a> (CharType const *begin, CharType const *end, std::locale const &amp;loc, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
-<tr class="separator:ga0eee2960f0d6d15491c5b95dd3054d9a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga25227e4e43f6c695dac13844a94741ea"><td class="memTemplParams" colspan="2">template&lt;typename CharType &gt; </td></tr>
-<tr class="memitem:ga25227e4e43f6c695dac13844a94741ea"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharType &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga25227e4e43f6c695dac13844a94741ea">boost::locale::conv::to_utf</a> (std::string const &amp;text, std::string const &amp;charset, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
-<tr class="separator:ga25227e4e43f6c695dac13844a94741ea"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga17c2c9d8659281848db73822fcc38092"><td class="memTemplParams" colspan="2">template&lt;typename CharType &gt; </td></tr>
-<tr class="memitem:ga17c2c9d8659281848db73822fcc38092"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga17c2c9d8659281848db73822fcc38092">boost::locale::conv::from_utf</a> (std::basic_string&lt; CharType &gt; const &amp;text, std::string const &amp;charset, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
-<tr class="separator:ga17c2c9d8659281848db73822fcc38092"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga2be733c3e2028aa43e4b35100bdb1322"><td class="memTemplParams" colspan="2">template&lt;typename CharType &gt; </td></tr>
-<tr class="memitem:ga2be733c3e2028aa43e4b35100bdb1322"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharType &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga2be733c3e2028aa43e4b35100bdb1322">boost::locale::conv::to_utf</a> (char const *text, std::string const &amp;charset, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
-<tr class="separator:ga2be733c3e2028aa43e4b35100bdb1322"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gab784637ee28adb9538b8002dadf0b273"><td class="memTemplParams" colspan="2">template&lt;typename CharType &gt; </td></tr>
-<tr class="memitem:gab784637ee28adb9538b8002dadf0b273"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#gab784637ee28adb9538b8002dadf0b273">boost::locale::conv::from_utf</a> (CharType const *text, std::string const &amp;charset, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
-<tr class="separator:gab784637ee28adb9538b8002dadf0b273"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga4c22a2bcb97338274752f95e2d265442"><td class="memTemplParams" colspan="2">template&lt;typename CharType &gt; </td></tr>
-<tr class="memitem:ga4c22a2bcb97338274752f95e2d265442"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharType &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga4c22a2bcb97338274752f95e2d265442">boost::locale::conv::to_utf</a> (std::string const &amp;text, std::locale const &amp;loc, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
-<tr class="separator:ga4c22a2bcb97338274752f95e2d265442"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga85cc81b352a88e12191926b95eb39aeb"><td class="memTemplParams" colspan="2">template&lt;typename CharType &gt; </td></tr>
-<tr class="memitem:ga85cc81b352a88e12191926b95eb39aeb"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga85cc81b352a88e12191926b95eb39aeb">boost::locale::conv::from_utf</a> (std::basic_string&lt; CharType &gt; const &amp;text, std::locale const &amp;loc, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
-<tr class="separator:ga85cc81b352a88e12191926b95eb39aeb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gac298fcddef144915332f031f4565feb0"><td class="memTemplParams" colspan="2">template&lt;typename CharType &gt; </td></tr>
-<tr class="memitem:gac298fcddef144915332f031f4565feb0"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharType &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#gac298fcddef144915332f031f4565feb0">boost::locale::conv::to_utf</a> (char const *text, std::locale const &amp;loc, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
-<tr class="separator:gac298fcddef144915332f031f4565feb0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga2a41ad85803d97f7e1906d5c0561eefa"><td class="memTemplParams" colspan="2">template&lt;typename CharType &gt; </td></tr>
-<tr class="memitem:ga2a41ad85803d97f7e1906d5c0561eefa"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga2a41ad85803d97f7e1906d5c0561eefa">boost::locale::conv::from_utf</a> (CharType const *text, std::locale const &amp;loc, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
-<tr class="separator:ga2a41ad85803d97f7e1906d5c0561eefa"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga7eda9058b8cbac9b05886bcc894faeff"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga7eda9058b8cbac9b05886bcc894faeff">boost::locale::conv::between</a> (char const *begin, char const *end, std::string const &amp;to_encoding, std::string const &amp;from_encoding, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
-<tr class="separator:ga7eda9058b8cbac9b05886bcc894faeff"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga612607a8616add30cf21ceb086e664d5"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga612607a8616add30cf21ceb086e664d5">boost::locale::conv::between</a> (char const *text, std::string const &amp;to_encoding, std::string const &amp;from_encoding, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
-<tr class="separator:ga612607a8616add30cf21ceb086e664d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gad7f6c33cf95749ab48174ccafddf7b62"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__codepage.html#gad7f6c33cf95749ab48174ccafddf7b62">boost::locale::conv::between</a> (std::string const &amp;text, std::string const &amp;to_encoding, std::string const &amp;from_encoding, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
-<tr class="separator:gad7f6c33cf95749ab48174ccafddf7b62"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaf0ad39959911b000706e0538ec059d44"><td class="memTemplParams" colspan="2">template&lt;typename CharOut , typename CharIn &gt; </td></tr>
-<tr class="memitem:gaf0ad39959911b000706e0538ec059d44"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharOut &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#gaf0ad39959911b000706e0538ec059d44">boost::locale::conv::utf_to_utf</a> (CharIn const *begin, CharIn const *end, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
-<tr class="separator:gaf0ad39959911b000706e0538ec059d44"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaa4de44e37cbe5ec4a4b79e1d9bbaf4a7"><td class="memTemplParams" colspan="2">template&lt;typename CharOut , typename CharIn &gt; </td></tr>
-<tr class="memitem:gaa4de44e37cbe5ec4a4b79e1d9bbaf4a7"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharOut &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#gaa4de44e37cbe5ec4a4b79e1d9bbaf4a7">boost::locale::conv::utf_to_utf</a> (CharIn const *str, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
-<tr class="separator:gaa4de44e37cbe5ec4a4b79e1d9bbaf4a7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga1951228e7f528a20e40258d73cf17f5c"><td class="memTemplParams" colspan="2">template&lt;typename CharOut , typename CharIn &gt; </td></tr>
-<tr class="memitem:ga1951228e7f528a20e40258d73cf17f5c"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharOut &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga1951228e7f528a20e40258d73cf17f5c">boost::locale::conv::utf_to_utf</a> (std::basic_string&lt; CharIn &gt; const &amp;str, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
-<tr class="separator:ga1951228e7f528a20e40258d73cf17f5c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga11dbb8fd52e33a943f563d7c6ccd7aa9"><td class="memTemplParams" colspan="2"><a id="ga11dbb8fd52e33a943f563d7c6ccd7aa9"></a>
+template&lt;typename CharType &gt; </td></tr>
+<tr class="memitem:ga11dbb8fd52e33a943f563d7c6ccd7aa9"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharType &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga11dbb8fd52e33a943f563d7c6ccd7aa9">boost::locale::conv::to_utf</a> (const char *begin, const char *end, const std::string &amp;charset, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
+<tr class="memdesc:ga11dbb8fd52e33a943f563d7c6ccd7aa9"><td class="mdescLeft">&#160;</td><td class="mdescRight">convert text in range [begin,end) encoded with <em>charset</em> to UTF string according to policy <em>how</em> <br /></td></tr>
+<tr class="separator:ga11dbb8fd52e33a943f563d7c6ccd7aa9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga98328f49a84cc89c2b238e3d7c66613a"><td class="memTemplParams" colspan="2"><a id="ga98328f49a84cc89c2b238e3d7c66613a"></a>
+template&lt;typename CharType &gt; </td></tr>
+<tr class="memitem:ga98328f49a84cc89c2b238e3d7c66613a"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga98328f49a84cc89c2b238e3d7c66613a">boost::locale::conv::from_utf</a> (const CharType *begin, const CharType *end, const std::string &amp;charset, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
+<tr class="memdesc:ga98328f49a84cc89c2b238e3d7c66613a"><td class="mdescLeft">&#160;</td><td class="mdescRight">convert UTF text in range [begin,end) to a text encoded with <em>charset</em> according to policy <em>how</em> <br /></td></tr>
+<tr class="separator:ga98328f49a84cc89c2b238e3d7c66613a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga9baf88b227c28e603f5d363f705cf08e"><td class="memTemplParams" colspan="2">template&lt;typename CharType &gt; </td></tr>
+<tr class="memitem:ga9baf88b227c28e603f5d363f705cf08e"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharType &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga9baf88b227c28e603f5d363f705cf08e">boost::locale::conv::to_utf</a> (const char *begin, const char *end, const std::locale &amp;loc, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
+<tr class="separator:ga9baf88b227c28e603f5d363f705cf08e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga12af6b5a26421ead30965788813edd6d"><td class="memTemplParams" colspan="2">template&lt;typename CharType &gt; </td></tr>
+<tr class="memitem:ga12af6b5a26421ead30965788813edd6d"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga12af6b5a26421ead30965788813edd6d">boost::locale::conv::from_utf</a> (const CharType *begin, const CharType *end, const std::locale &amp;loc, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
+<tr class="separator:ga12af6b5a26421ead30965788813edd6d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga48c63a686ddc33f31336f64c9ef14d01"><td class="memTemplParams" colspan="2"><a id="ga48c63a686ddc33f31336f64c9ef14d01"></a>
+template&lt;typename CharType &gt; </td></tr>
+<tr class="memitem:ga48c63a686ddc33f31336f64c9ef14d01"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharType &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga48c63a686ddc33f31336f64c9ef14d01">boost::locale::conv::to_utf</a> (const std::string &amp;text, const std::string &amp;charset, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
+<tr class="memdesc:ga48c63a686ddc33f31336f64c9ef14d01"><td class="mdescLeft">&#160;</td><td class="mdescRight">convert a string <em>text</em> encoded with <em>charset</em> to UTF string <br /></td></tr>
+<tr class="separator:ga48c63a686ddc33f31336f64c9ef14d01"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga979046cea19e8e010bf4e70b78cd475f"><td class="memTemplParams" colspan="2"><a id="ga979046cea19e8e010bf4e70b78cd475f"></a>
+template&lt;typename CharType &gt; </td></tr>
+<tr class="memitem:ga979046cea19e8e010bf4e70b78cd475f"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga979046cea19e8e010bf4e70b78cd475f">boost::locale::conv::from_utf</a> (const std::basic_string&lt; CharType &gt; &amp;text, const std::string &amp;charset, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
+<tr class="memdesc:ga979046cea19e8e010bf4e70b78cd475f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a <em>text</em> from <em>charset</em> to UTF string. <br /></td></tr>
+<tr class="separator:ga979046cea19e8e010bf4e70b78cd475f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga2d4f9bdeb063a1a20bebda58085c8047"><td class="memTemplParams" colspan="2"><a id="ga2d4f9bdeb063a1a20bebda58085c8047"></a>
+template&lt;typename CharType &gt; </td></tr>
+<tr class="memitem:ga2d4f9bdeb063a1a20bebda58085c8047"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharType &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga2d4f9bdeb063a1a20bebda58085c8047">boost::locale::conv::to_utf</a> (const char *text, const std::string &amp;charset, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
+<tr class="memdesc:ga2d4f9bdeb063a1a20bebda58085c8047"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a <em>text</em> from <em>charset</em> to UTF string. <br /></td></tr>
+<tr class="separator:ga2d4f9bdeb063a1a20bebda58085c8047"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga80b8d5eae44a2fe3ccd3f10aa9a5920f"><td class="memTemplParams" colspan="2"><a id="ga80b8d5eae44a2fe3ccd3f10aa9a5920f"></a>
+template&lt;typename CharType &gt; </td></tr>
+<tr class="memitem:ga80b8d5eae44a2fe3ccd3f10aa9a5920f"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga80b8d5eae44a2fe3ccd3f10aa9a5920f">boost::locale::conv::from_utf</a> (const CharType *text, const std::string &amp;charset, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
+<tr class="memdesc:ga80b8d5eae44a2fe3ccd3f10aa9a5920f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a <em>text</em> from UTF to <em>charset</em>. <br /></td></tr>
+<tr class="separator:ga80b8d5eae44a2fe3ccd3f10aa9a5920f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga86b6f49b40408e675f646731cbebe63a"><td class="memTemplParams" colspan="2">template&lt;typename CharType &gt; </td></tr>
+<tr class="memitem:ga86b6f49b40408e675f646731cbebe63a"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharType &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga86b6f49b40408e675f646731cbebe63a">boost::locale::conv::to_utf</a> (const std::string &amp;text, const std::locale &amp;loc, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
+<tr class="separator:ga86b6f49b40408e675f646731cbebe63a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga8c66f87a4810e0260576f8c25e019832"><td class="memTemplParams" colspan="2">template&lt;typename CharType &gt; </td></tr>
+<tr class="memitem:ga8c66f87a4810e0260576f8c25e019832"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga8c66f87a4810e0260576f8c25e019832">boost::locale::conv::from_utf</a> (const std::basic_string&lt; CharType &gt; &amp;text, const std::locale &amp;loc, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
+<tr class="separator:ga8c66f87a4810e0260576f8c25e019832"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga5001438f3021e1ea6bedd8240074bc0b"><td class="memTemplParams" colspan="2">template&lt;typename CharType &gt; </td></tr>
+<tr class="memitem:ga5001438f3021e1ea6bedd8240074bc0b"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharType &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga5001438f3021e1ea6bedd8240074bc0b">boost::locale::conv::to_utf</a> (const char *text, const std::locale &amp;loc, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
+<tr class="separator:ga5001438f3021e1ea6bedd8240074bc0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gafaaece11b16abdae829f4b3341a37e6d"><td class="memTemplParams" colspan="2">template&lt;typename CharType &gt; </td></tr>
+<tr class="memitem:gafaaece11b16abdae829f4b3341a37e6d"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#gafaaece11b16abdae829f4b3341a37e6d">boost::locale::conv::from_utf</a> (const CharType *text, const std::locale &amp;loc, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
+<tr class="separator:gafaaece11b16abdae829f4b3341a37e6d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gad313dab0cfbc7658b37b51ff5667f60b"><td class="memItemLeft" align="right" valign="top"><a id="gad313dab0cfbc7658b37b51ff5667f60b"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__codepage.html#gad313dab0cfbc7658b37b51ff5667f60b">boost::locale::conv::between</a> (const char *begin, const char *end, const std::string &amp;to_encoding, const std::string &amp;from_encoding, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
+<tr class="memdesc:gad313dab0cfbc7658b37b51ff5667f60b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a text in range [begin,end) to <em>to_encoding</em> from <em>from_encoding</em>. <br /></td></tr>
+<tr class="separator:gad313dab0cfbc7658b37b51ff5667f60b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga3e3a82f5410f50496a924e35ffd3e621"><td class="memItemLeft" align="right" valign="top"><a id="ga3e3a82f5410f50496a924e35ffd3e621"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga3e3a82f5410f50496a924e35ffd3e621">boost::locale::conv::between</a> (const char *text, const std::string &amp;to_encoding, const std::string &amp;from_encoding, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
+<tr class="memdesc:ga3e3a82f5410f50496a924e35ffd3e621"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a <em>text</em> to <em>to_encoding</em> from <em>from_encoding</em>. <br /></td></tr>
+<tr class="separator:ga3e3a82f5410f50496a924e35ffd3e621"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga7e649799cc17b25a073e0417a3b03a60"><td class="memItemLeft" align="right" valign="top"><a id="ga7e649799cc17b25a073e0417a3b03a60"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga7e649799cc17b25a073e0417a3b03a60">boost::locale::conv::between</a> (const std::string &amp;text, const std::string &amp;to_encoding, const std::string &amp;from_encoding, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
+<tr class="memdesc:ga7e649799cc17b25a073e0417a3b03a60"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a <em>text</em> to <em>to_encoding</em> from <em>from_encoding</em>. <br /></td></tr>
+<tr class="separator:ga7e649799cc17b25a073e0417a3b03a60"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaaa066b8d9a3cb89d1ea993330575264d"><td class="memTemplParams" colspan="2"><a id="gaaa066b8d9a3cb89d1ea993330575264d"></a>
+template&lt;typename CharOut , typename CharIn &gt; </td></tr>
+<tr class="memitem:gaaa066b8d9a3cb89d1ea993330575264d"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharOut &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#gaaa066b8d9a3cb89d1ea993330575264d">boost::locale::conv::utf_to_utf</a> (const CharIn *begin, const CharIn *end, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
+<tr class="memdesc:gaaa066b8d9a3cb89d1ea993330575264d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a Unicode text in range [begin,end) to other Unicode encoding. <br /></td></tr>
+<tr class="separator:gaaa066b8d9a3cb89d1ea993330575264d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gae32357c31106698ec448a1ae4cb64fea"><td class="memTemplParams" colspan="2"><a id="gae32357c31106698ec448a1ae4cb64fea"></a>
+template&lt;typename CharOut , typename CharIn &gt; </td></tr>
+<tr class="memitem:gae32357c31106698ec448a1ae4cb64fea"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharOut &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#gae32357c31106698ec448a1ae4cb64fea">boost::locale::conv::utf_to_utf</a> (const CharIn *str, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
+<tr class="memdesc:gae32357c31106698ec448a1ae4cb64fea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a Unicode NULL terminated string <em>str</em> other Unicode encoding. <br /></td></tr>
+<tr class="separator:gae32357c31106698ec448a1ae4cb64fea"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga87fe1fb8ccc3c9a3c7a02953a3be7a9f"><td class="memTemplParams" colspan="2"><a id="ga87fe1fb8ccc3c9a3c7a02953a3be7a9f"></a>
+template&lt;typename CharOut , typename CharIn &gt; </td></tr>
+<tr class="memitem:ga87fe1fb8ccc3c9a3c7a02953a3be7a9f"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharOut &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__codepage.html#ga87fe1fb8ccc3c9a3c7a02953a3be7a9f">boost::locale::conv::utf_to_utf</a> (const std::basic_string&lt; CharIn &gt; &amp;str, <a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a> how=<a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a>)</td></tr>
+<tr class="memdesc:ga87fe1fb8ccc3c9a3c7a02953a3be7a9f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert a Unicode string <em>str</em> other Unicode encoding. <br /></td></tr>
+<tr class="separator:ga87fe1fb8ccc3c9a3c7a02953a3be7a9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <h2 class="groupheader">Enumeration Type Documentation</h2>
@@ -157,11 +182,12 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
 <p>enum that defines conversion policy </p>
 <table class="fieldtable">
-<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="gga8e3c5a274f57107ec5745e227c26ba84ae9b554a2955deddf714757788819edf9"></a>skip&#160;</td><td class="fielddoc"><p>Skip illegal/unconvertable characters. </p>
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="gga8e3c5a274f57107ec5745e227c26ba84ae9b554a2955deddf714757788819edf9"></a>skip&#160;</td><td class="fielddoc"><p>Skip illegal/unconvertible characters. </p>
 </td></tr>
-<tr><td class="fieldname"><a id="gga8e3c5a274f57107ec5745e227c26ba84aab08f9ee241c405ef40bd3cedb43b383"></a>stop&#160;</td><td class="fielddoc"><p>Stop conversion and throw <a class="el" href="classboost_1_1locale_1_1conv_1_1conversion__error.html" title="The excepton that is thrown in case of conversion error.">conversion_error</a>. </p>
+<tr><td class="fieldname"><a id="gga8e3c5a274f57107ec5745e227c26ba84aab08f9ee241c405ef40bd3cedb43b383"></a>stop&#160;</td><td class="fielddoc"><p>Stop conversion and throw <a class="el" href="classboost_1_1locale_1_1conv_1_1conversion__error.html" title="The exception that is thrown in case of conversion error.">conversion_error</a>. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559"></a>default_method&#160;</td><td class="fielddoc"><p>Default method - skip. </p>
 </td></tr>
@@ -170,153 +196,8 @@ Functions</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="ga7eda9058b8cbac9b05886bcc894faeff"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga7eda9058b8cbac9b05886bcc894faeff">&#9670;&nbsp;</a></span>between() <span class="overload">[1/3]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string boost::locale::conv::between </td>
-          <td>(</td>
-          <td class="paramtype">char const *&#160;</td>
-          <td class="paramname"><em>begin</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">char const *&#160;</td>
-          <td class="paramname"><em>end</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::string const &amp;&#160;</td>
-          <td class="paramname"><em>to_encoding</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::string const &amp;&#160;</td>
-          <td class="paramname"><em>from_encoding</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a>&#160;</td>
-          <td class="paramname"><em>how</em> = <code><a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a></code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Convert a text in range [begin,end) to <em>to_encoding</em> from <em>from_encoding</em> </p>
-
-</div>
-</div>
-<a id="ga612607a8616add30cf21ceb086e664d5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga612607a8616add30cf21ceb086e664d5">&#9670;&nbsp;</a></span>between() <span class="overload">[2/3]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string boost::locale::conv::between </td>
-          <td>(</td>
-          <td class="paramtype">char const *&#160;</td>
-          <td class="paramname"><em>text</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::string const &amp;&#160;</td>
-          <td class="paramname"><em>to_encoding</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::string const &amp;&#160;</td>
-          <td class="paramname"><em>from_encoding</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a>&#160;</td>
-          <td class="paramname"><em>how</em> = <code><a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a></code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Convert a <em>text</em> to <em>to_encoding</em> from <em>from_encoding</em> </p>
-
-</div>
-</div>
-<a id="gad7f6c33cf95749ab48174ccafddf7b62"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gad7f6c33cf95749ab48174ccafddf7b62">&#9670;&nbsp;</a></span>between() <span class="overload">[3/3]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string boost::locale::conv::between </td>
-          <td>(</td>
-          <td class="paramtype">std::string const &amp;&#160;</td>
-          <td class="paramname"><em>text</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::string const &amp;&#160;</td>
-          <td class="paramname"><em>to_encoding</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::string const &amp;&#160;</td>
-          <td class="paramname"><em>from_encoding</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a>&#160;</td>
-          <td class="paramname"><em>how</em> = <code><a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a></code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Convert a <em>text</em> to <em>to_encoding</em> from <em>from_encoding</em> </p>
-
-</div>
-</div>
-<a id="gaef8fb7771dce60511d081770547a4139"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaef8fb7771dce60511d081770547a4139">&#9670;&nbsp;</a></span>from_utf() <span class="overload">[1/6]</span></h2>
+<a id="ga12af6b5a26421ead30965788813edd6d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga12af6b5a26421ead30965788813edd6d">&#9670;&nbsp;</a></span>from_utf() <span class="overload">[1/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -326,62 +207,19 @@ template&lt;typename CharType &gt; </div>
         <tr>
           <td class="memname">std::string boost::locale::conv::from_utf </td>
           <td>(</td>
-          <td class="paramtype">CharType const *&#160;</td>
+          <td class="paramtype">const CharType *&#160;</td>
           <td class="paramname"><em>begin</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">CharType const *&#160;</td>
+          <td class="paramtype">const CharType *&#160;</td>
           <td class="paramname"><em>end</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::string const &amp;&#160;</td>
-          <td class="paramname"><em>charset</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a>&#160;</td>
-          <td class="paramname"><em>how</em> = <code><a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a></code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>convert UTF text in range [begin,end) to a text encoded with <em>charset</em> according to policy <em>how</em> </p>
-
-</div>
-</div>
-<a id="ga0eee2960f0d6d15491c5b95dd3054d9a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga0eee2960f0d6d15491c5b95dd3054d9a">&#9670;&nbsp;</a></span>from_utf() <span class="overload">[2/6]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename CharType &gt; </div>
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string boost::locale::conv::from_utf </td>
-          <td>(</td>
-          <td class="paramtype">CharType const *&#160;</td>
-          <td class="paramname"><em>begin</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">CharType const *&#160;</td>
-          <td class="paramname"><em>end</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::locale const &amp;&#160;</td>
+          <td class="paramtype">const std::locale &amp;&#160;</td>
           <td class="paramname"><em>loc</em>, </td>
         </tr>
         <tr>
@@ -402,8 +240,8 @@ template&lt;typename CharType &gt; </div>
 
 </div>
 </div>
-<a id="ga17c2c9d8659281848db73822fcc38092"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga17c2c9d8659281848db73822fcc38092">&#9670;&nbsp;</a></span>from_utf() <span class="overload">[3/6]</span></h2>
+<a id="ga8c66f87a4810e0260576f8c25e019832"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga8c66f87a4810e0260576f8c25e019832">&#9670;&nbsp;</a></span>from_utf() <span class="overload">[2/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -413,87 +251,13 @@ template&lt;typename CharType &gt; </div>
         <tr>
           <td class="memname">std::string boost::locale::conv::from_utf </td>
           <td>(</td>
-          <td class="paramtype">std::basic_string&lt; CharType &gt; const &amp;&#160;</td>
+          <td class="paramtype">const std::basic_string&lt; CharType &gt; &amp;&#160;</td>
           <td class="paramname"><em>text</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::string const &amp;&#160;</td>
-          <td class="paramname"><em>charset</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a>&#160;</td>
-          <td class="paramname"><em>how</em> = <code><a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a></code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Convert a <em>text</em> from <em>charset</em> to UTF string </p>
-
-</div>
-</div>
-<a id="gab784637ee28adb9538b8002dadf0b273"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gab784637ee28adb9538b8002dadf0b273">&#9670;&nbsp;</a></span>from_utf() <span class="overload">[4/6]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename CharType &gt; </div>
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string boost::locale::conv::from_utf </td>
-          <td>(</td>
-          <td class="paramtype">CharType const *&#160;</td>
-          <td class="paramname"><em>text</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::string const &amp;&#160;</td>
-          <td class="paramname"><em>charset</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a>&#160;</td>
-          <td class="paramname"><em>how</em> = <code><a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a></code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Convert a <em>text</em> from UTF to <em>charset</em> </p>
-
-</div>
-</div>
-<a id="ga85cc81b352a88e12191926b95eb39aeb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga85cc81b352a88e12191926b95eb39aeb">&#9670;&nbsp;</a></span>from_utf() <span class="overload">[5/6]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename CharType &gt; </div>
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string boost::locale::conv::from_utf </td>
-          <td>(</td>
-          <td class="paramtype">std::basic_string&lt; CharType &gt; const &amp;&#160;</td>
-          <td class="paramname"><em>text</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::locale const &amp;&#160;</td>
+          <td class="paramtype">const std::locale &amp;&#160;</td>
           <td class="paramname"><em>loc</em>, </td>
         </tr>
         <tr>
@@ -514,8 +278,8 @@ template&lt;typename CharType &gt; </div>
 
 </div>
 </div>
-<a id="ga2a41ad85803d97f7e1906d5c0561eefa"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga2a41ad85803d97f7e1906d5c0561eefa">&#9670;&nbsp;</a></span>from_utf() <span class="overload">[6/6]</span></h2>
+<a id="gafaaece11b16abdae829f4b3341a37e6d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gafaaece11b16abdae829f4b3341a37e6d">&#9670;&nbsp;</a></span>from_utf() <span class="overload">[3/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -525,13 +289,13 @@ template&lt;typename CharType &gt; </div>
         <tr>
           <td class="memname">std::string boost::locale::conv::from_utf </td>
           <td>(</td>
-          <td class="paramtype">CharType const *&#160;</td>
+          <td class="paramtype">const CharType *&#160;</td>
           <td class="paramname"><em>text</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::locale const &amp;&#160;</td>
+          <td class="paramtype">const std::locale &amp;&#160;</td>
           <td class="paramname"><em>loc</em>, </td>
         </tr>
         <tr>
@@ -552,8 +316,8 @@ template&lt;typename CharType &gt; </div>
 
 </div>
 </div>
-<a id="ga2ca59a735ca28c9d5103e37ef2373ca1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga2ca59a735ca28c9d5103e37ef2373ca1">&#9670;&nbsp;</a></span>to_utf() <span class="overload">[1/6]</span></h2>
+<a id="ga9baf88b227c28e603f5d363f705cf08e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga9baf88b227c28e603f5d363f705cf08e">&#9670;&nbsp;</a></span>to_utf() <span class="overload">[1/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -563,62 +327,19 @@ template&lt;typename CharType &gt; </div>
         <tr>
           <td class="memname">std::basic_string&lt;CharType&gt; boost::locale::conv::to_utf </td>
           <td>(</td>
-          <td class="paramtype">char const *&#160;</td>
+          <td class="paramtype">const char *&#160;</td>
           <td class="paramname"><em>begin</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">char const *&#160;</td>
+          <td class="paramtype">const char *&#160;</td>
           <td class="paramname"><em>end</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::string const &amp;&#160;</td>
-          <td class="paramname"><em>charset</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a>&#160;</td>
-          <td class="paramname"><em>how</em> = <code><a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a></code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>convert string to UTF string from text in range [begin,end) encoded with <em>charset</em> according to policy <em>how</em> </p>
-
-</div>
-</div>
-<a id="ga5ae3d72f015dc847ddfd688a0a40ff66"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga5ae3d72f015dc847ddfd688a0a40ff66">&#9670;&nbsp;</a></span>to_utf() <span class="overload">[2/6]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename CharType &gt; </div>
-      <table class="memname">
-        <tr>
-          <td class="memname">std::basic_string&lt;CharType&gt; boost::locale::conv::to_utf </td>
-          <td>(</td>
-          <td class="paramtype">char const *&#160;</td>
-          <td class="paramname"><em>begin</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">char const *&#160;</td>
-          <td class="paramname"><em>end</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::locale const &amp;&#160;</td>
+          <td class="paramtype">const std::locale &amp;&#160;</td>
           <td class="paramname"><em>loc</em>, </td>
         </tr>
         <tr>
@@ -639,8 +360,8 @@ template&lt;typename CharType &gt; </div>
 
 </div>
 </div>
-<a id="ga25227e4e43f6c695dac13844a94741ea"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga25227e4e43f6c695dac13844a94741ea">&#9670;&nbsp;</a></span>to_utf() <span class="overload">[3/6]</span></h2>
+<a id="ga86b6f49b40408e675f646731cbebe63a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga86b6f49b40408e675f646731cbebe63a">&#9670;&nbsp;</a></span>to_utf() <span class="overload">[2/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -650,87 +371,13 @@ template&lt;typename CharType &gt; </div>
         <tr>
           <td class="memname">std::basic_string&lt;CharType&gt; boost::locale::conv::to_utf </td>
           <td>(</td>
-          <td class="paramtype">std::string const &amp;&#160;</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
           <td class="paramname"><em>text</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::string const &amp;&#160;</td>
-          <td class="paramname"><em>charset</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a>&#160;</td>
-          <td class="paramname"><em>how</em> = <code><a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a></code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>convert a string <em>text</em> encoded with <em>charset</em> to UTF string </p>
-
-</div>
-</div>
-<a id="ga2be733c3e2028aa43e4b35100bdb1322"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga2be733c3e2028aa43e4b35100bdb1322">&#9670;&nbsp;</a></span>to_utf() <span class="overload">[4/6]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename CharType &gt; </div>
-      <table class="memname">
-        <tr>
-          <td class="memname">std::basic_string&lt;CharType&gt; boost::locale::conv::to_utf </td>
-          <td>(</td>
-          <td class="paramtype">char const *&#160;</td>
-          <td class="paramname"><em>text</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::string const &amp;&#160;</td>
-          <td class="paramname"><em>charset</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a>&#160;</td>
-          <td class="paramname"><em>how</em> = <code><a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a></code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Convert a <em>text</em> from <em>charset</em> to UTF string </p>
-
-</div>
-</div>
-<a id="ga4c22a2bcb97338274752f95e2d265442"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga4c22a2bcb97338274752f95e2d265442">&#9670;&nbsp;</a></span>to_utf() <span class="overload">[5/6]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename CharType &gt; </div>
-      <table class="memname">
-        <tr>
-          <td class="memname">std::basic_string&lt;CharType&gt; boost::locale::conv::to_utf </td>
-          <td>(</td>
-          <td class="paramtype">std::string const &amp;&#160;</td>
-          <td class="paramname"><em>text</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::locale const &amp;&#160;</td>
+          <td class="paramtype">const std::locale &amp;&#160;</td>
           <td class="paramname"><em>loc</em>, </td>
         </tr>
         <tr>
@@ -751,8 +398,8 @@ template&lt;typename CharType &gt; </div>
 
 </div>
 </div>
-<a id="gac298fcddef144915332f031f4565feb0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gac298fcddef144915332f031f4565feb0">&#9670;&nbsp;</a></span>to_utf() <span class="overload">[6/6]</span></h2>
+<a id="ga5001438f3021e1ea6bedd8240074bc0b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga5001438f3021e1ea6bedd8240074bc0b">&#9670;&nbsp;</a></span>to_utf() <span class="overload">[3/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -762,13 +409,13 @@ template&lt;typename CharType &gt; </div>
         <tr>
           <td class="memname">std::basic_string&lt;CharType&gt; boost::locale::conv::to_utf </td>
           <td>(</td>
-          <td class="paramtype">char const *&#160;</td>
+          <td class="paramtype">const char *&#160;</td>
           <td class="paramname"><em>text</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::locale const &amp;&#160;</td>
+          <td class="paramtype">const std::locale &amp;&#160;</td>
           <td class="paramname"><em>loc</em>, </td>
         </tr>
         <tr>
@@ -786,105 +433,6 @@ template&lt;typename CharType &gt; </div>
 </div><div class="memdoc">
 <p>Convert a <em>text</em> in locale encoding given by <em>loc</em> to UTF</p>
 <dl class="section note"><dt>Note</dt><dd>throws std::bad_cast if the loc does not have <a class="el" href="classboost_1_1locale_1_1info.html">info</a> facet installed </dd></dl>
-
-</div>
-</div>
-<a id="gaf0ad39959911b000706e0538ec059d44"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaf0ad39959911b000706e0538ec059d44">&#9670;&nbsp;</a></span>utf_to_utf() <span class="overload">[1/3]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename CharOut , typename CharIn &gt; </div>
-      <table class="memname">
-        <tr>
-          <td class="memname">std::basic_string&lt;CharOut&gt; boost::locale::conv::utf_to_utf </td>
-          <td>(</td>
-          <td class="paramtype">CharIn const *&#160;</td>
-          <td class="paramname"><em>begin</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">CharIn const *&#160;</td>
-          <td class="paramname"><em>end</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a>&#160;</td>
-          <td class="paramname"><em>how</em> = <code><a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a></code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Convert a Unicode text in range [begin,end) to other Unicode encoding </p>
-
-</div>
-</div>
-<a id="gaa4de44e37cbe5ec4a4b79e1d9bbaf4a7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaa4de44e37cbe5ec4a4b79e1d9bbaf4a7">&#9670;&nbsp;</a></span>utf_to_utf() <span class="overload">[2/3]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename CharOut , typename CharIn &gt; </div>
-      <table class="memname">
-        <tr>
-          <td class="memname">std::basic_string&lt;CharOut&gt; boost::locale::conv::utf_to_utf </td>
-          <td>(</td>
-          <td class="paramtype">CharIn const *&#160;</td>
-          <td class="paramname"><em>str</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a>&#160;</td>
-          <td class="paramname"><em>how</em> = <code><a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a></code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Convert a Unicode NUL terminated string <em>str</em> other Unicode encoding </p>
-
-</div>
-</div>
-<a id="ga1951228e7f528a20e40258d73cf17f5c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga1951228e7f528a20e40258d73cf17f5c">&#9670;&nbsp;</a></span>utf_to_utf() <span class="overload">[3/3]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename CharOut , typename CharIn &gt; </div>
-      <table class="memname">
-        <tr>
-          <td class="memname">std::basic_string&lt;CharOut&gt; boost::locale::conv::utf_to_utf </td>
-          <td>(</td>
-          <td class="paramtype">std::basic_string&lt; CharIn &gt; const &amp;&#160;</td>
-          <td class="paramname"><em>str</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="group__codepage.html#ga8e3c5a274f57107ec5745e227c26ba84">method_type</a>&#160;</td>
-          <td class="paramname"><em>how</em> = <code><a class="el" href="group__codepage.html#gga8e3c5a274f57107ec5745e227c26ba84adcdc34a57dd2a3ca917f73c13f18b559">default_method</a></code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Convert a Unicode string <em>str</em> other Unicode encoding </p>
 
 </div>
 </div>

@@ -1,5 +1,5 @@
 ////
-Copyright 2019-2021 Peter Dimov
+Copyright 2019-2022 Peter Dimov
 Distributed under the Boost Software License, Version 1.0.
 https://www.boost.org/LICENSE_1_0.txt
 ////
@@ -7,6 +7,10 @@ https://www.boost.org/LICENSE_1_0.txt
 [#changelog]
 # Revision History
 :idprefix: changelog_
+
+## Changes in 1.81.0
+
+* Added support for `boost::json::value_from` and `boost::json::value_to`.
 
 ## Changes in 1.79.0
 

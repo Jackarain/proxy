@@ -25,7 +25,7 @@ main()
     date d(from_simple_string(s));
     std::cout << to_simple_string(d) << std::endl;
     
-    //Read ISO Standard(CCYYMMDD) and output ISO Extended
+    //Read ISO 8601 Standard(CCYYMMDD) and output ISO 8601 Extended
     std::string ud("20011009"); //2001-Oct-09
     date d1(from_undelimited_string(ud));
     std::cout << to_iso_extended_string(d1) << std::endl;

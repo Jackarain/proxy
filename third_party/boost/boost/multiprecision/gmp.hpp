@@ -566,7 +566,7 @@ public:
    {
       mp_get_memory_functions(&alloc_func_ptr, &realloc_func_ptr, &free_func_ptr);
    }
-   ~gmp_char_ptr() noexcept 
+   ~gmp_char_ptr() noexcept
    {
       (*free_func_ptr)((void*)ptr_val, sizeof(*ptr_val));
       ptr_val = nullptr;
@@ -588,9 +588,9 @@ struct gmp_float : public detail::gmp_float_imp<digits10>
    }
    gmp_float(const gmp_float& o) : detail::gmp_float_imp<digits10>(o) {}
    template <unsigned D>
-   gmp_float(const gmp_float<D>& o, typename std::enable_if<D <= digits10>::type* = 0);
+   gmp_float(const gmp_float<D>& o, typename std::enable_if<D <= digits10>::type* = nullptr);
    template <unsigned D>
-   explicit gmp_float(const gmp_float<D>& o, typename std::enable_if<!(D <= digits10)>::type* = 0);
+   explicit gmp_float(const gmp_float<D>& o, typename std::enable_if<!(D <= digits10)>::type* = nullptr);
    gmp_float(const gmp_int& o);
    gmp_float(const gmp_rational& o);
    gmp_float(const mpf_t val)
@@ -829,7 +829,7 @@ struct gmp_float<0> : public detail::gmp_float_imp<0>
    }
    //
    // Variable precision options:
-   // 
+   //
    static variable_precision_options default_variable_precision_options()noexcept
    {
       return get_global_default_options();
@@ -3010,7 +3010,7 @@ inline void eval_convert_to(float128_type* result, const gmp_rational& val)
 
    eval_convert_to(&fn, n);
    eval_convert_to(&fd, d);
-   
+
    *result = fn / fd;
 }
 #endif
@@ -3340,7 +3340,7 @@ struct transcendental_reduction_type<boost::multiprecision::backends::gmp_float<
    // As a practical measure the largest argument supported is 1/eps, as supporting larger
    // arguments requires the division of argument by PI/2 to also be done at higher precision,
    // otherwise the result (an integer) can not be represented exactly.
-   // 
+   //
    // See ARGUMENT REDUCTION FOR HUGE ARGUMENTS. K C Ng.
    //
    using type = boost::multiprecision::backends::gmp_float<Digits10 * 3>;

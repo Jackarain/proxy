@@ -130,6 +130,7 @@
 [def __reverse_view__           [link fusion.view.reverse_view `reverse_view`]]
 [def __zip_view__               [link fusion.view.zip_view `zip_view`]]
 [def __flatten_view__           [link fusion.view.flatten_view `flatten_view`]]
+[def __identity_view__          [link fusion.view.identity_view `identity_view`]]
 
 [def __array__                  [link fusion.adapted.array array]]
 [def __std_pair__               [link fusion.adapted.std__pair `std::pair`]]

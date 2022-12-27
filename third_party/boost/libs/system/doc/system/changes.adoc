@@ -8,6 +8,14 @@ https://www.boost.org/LICENSE_1_0.txt
 # Revision History
 :idprefix:
 
+## Changes in Boost 1.81
+
+* The macro `BOOST_SYSTEM_DISABLE_THREADS` can now be defined to disable
+  the use of `<mutex>` (e.g. on single-threaded libstdc++).
+* Added `value_type`, `error_type`, `in_place_value`, `in_place_error`
+  to `result<>`.
+* Added `emplace` to `result<>`.
+
 ## Changes in Boost 1.80
 
 * When an `error_code` is converted to `std::error_code` and then back

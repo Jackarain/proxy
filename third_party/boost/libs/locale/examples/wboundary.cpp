@@ -29,8 +29,8 @@
 // ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! !
 //
 #include <boost/locale.hpp>
-#include <iostream>
 #include <ctime>
+#include <iostream>
 
 int main()
 {
@@ -38,30 +38,27 @@ int main()
 
     // Create system default locale
     generator gen;
-    std::locale loc=gen("");
+    std::locale loc = gen("");
     // We need the boundary facet, currently only available via ICU
-    if(!std::has_facet<boundary::boundary_indexing<wchar_t>>(loc))
-    {
+    if(!std::has_facet<boundary::boundary_indexing<wchar_t>>(loc)) {
         std::cout << "boundary detection not implemented in this environment\n";
         return 0;
     }
     std::locale::global(loc);
     std::wcout.imbue(loc);
 
-    // This is needed to prevent C library to
-    // convert strings to narrow
-    // instead of C++ on some platforms
+    // This is needed to prevent the C stdio library from
+    // converting strings to narrow on some platforms
     std::ios_base::sync_with_stdio(false);
 
-
-    std::wstring text=L"Hello World! あにま! Linux2.6 and Windows7 is word and number. שָלוֹם עוֹלָם!";
+    std::wstring text = L"Hello World! あにま! Linux2.6 and Windows7 is word and number. שָלוֹם עוֹלָם!";
 
     std::wcout << text << std::endl;
 
-    boundary::wssegment_index index(boundary::word,text.begin(),text.end());
-    boundary::wssegment_index::iterator p,e;
+    boundary::wssegment_index index(boundary::word, text.begin(), text.end());
+    boundary::wssegment_index::iterator p, e;
 
-    for(p=index.begin(),e=index.end();p!=e;++p) {
+    for(p = index.begin(), e = index.end(); p != e; ++p) {
         std::wcout << L"Part [" << *p << L"] has ";
         if(p->rule() & boundary::word_number)
             std::wcout << L"number(s) ";
@@ -76,27 +73,26 @@ int main()
         std::wcout << std::endl;
     }
 
-    index.map(boundary::character,text.begin(),text.end());
+    index.map(boundary::character, text.begin(), text.end());
 
-    for(p=index.begin(),e=index.end();p!=e;++p) {
-        std::wcout << L"|" << *p ;
+    for(p = index.begin(), e = index.end(); p != e; ++p) {
+        std::wcout << L"|" << *p;
     }
     std::wcout << L"|\n\n";
 
-    index.map(boundary::line,text.begin(),text.end());
+    index.map(boundary::line, text.begin(), text.end());
 
-    for(p=index.begin(),e=index.end();p!=e;++p) {
-        std::wcout << L"|" << *p ;
+    for(p = index.begin(), e = index.end(); p != e; ++p) {
+        std::wcout << L"|" << *p;
     }
     std::wcout << L"|\n\n";
 
-    index.map(boundary::sentence,text.begin(),text.end());
+    index.map(boundary::sentence, text.begin(), text.end());
 
-    for(p=index.begin(),e=index.end();p!=e;++p) {
+    for(p = index.begin(), e = index.end(); p != e; ++p) {
         std::wcout << L"|" << *p;
     }
     std::wcout << "|\n\n";
-
 }
 
 // boostinspect:noascii

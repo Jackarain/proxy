@@ -1,10 +1,18 @@
+////
+Copyright 2005-2008 Daniel James
+Copyright 2022 Christian Mazakas
+Copyright 2022 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
 [#copyright]
 = Copyright and License
+:idprefix:
 
-:idprefix: copyright_
+This documentation is
 
-*Daniel James*
+* Copyright 2005-2008 Daniel James
+* Copyright 2022 Peter Dimov
 
-Copyright (C) 2005-2008 Daniel James
-
-Distributed under the Boost Software License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+and is distributed under the http://www.boost.org/LICENSE_1_0.txt[Boost Software License, Version 1.0].

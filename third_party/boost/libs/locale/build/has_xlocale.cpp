@@ -7,5 +7,5 @@
 #include <xlocale.h>
 int main()
 {
-    newlocale(LC_ALL_MASK,"",0);
+    newlocale(LC_ALL_MASK, "", 0);
 }

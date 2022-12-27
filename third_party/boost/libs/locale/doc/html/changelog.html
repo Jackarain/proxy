@@ -69,6 +69,27 @@ $(document).ready(function(){initNavTree('changelog.html','');});
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><ul>
+<li>1.81.0<ul>
+<li>Breaking changes<ul>
+<li>Require C++11 or higher</li>
+<li>Modernize code (C++11 features instead of Boost replacements, consistent formatting)</li>
+<li>Error on use of <code>-sICU_LINK_LOCALE</code> and <code>-sICU_LINK</code>, use <code>-sICU_*_NAME</code> when <code>-sICU_PATH</code> is not enough</li>
+<li>Convert <code>character_facet_type</code> &amp; <code>locale_category_type</code> to the enum classes <code>char_facet_t</code> &amp; <code>category_t</code></li>
+</ul>
+</li>
+<li>Other improvements and fixes<ul>
+<li>Fix build on macOS with iconv</li>
+<li>Fix int-overflow on negative roll of years in <code>date_time</code></li>
+<li>Assume and use UTF-16 encoding for Windows <code>wchar_t-codecvt</code></li>
+<li>Fix rounding issues with calendar time</li>
+<li>Make <code>basic_format</code> movable allowing it to be returned from functions</li>
+<li>Fix conversion of e.g. codepage iso-2022-jp on Windows</li>
+<li>Add more Windows codepages, e.g. cp1025, and various ISO and IBM codepages</li>
+<li>Performance improvements</li>
+</ul>
+</li>
+</ul>
+</li>
 <li>1.80.0<ul>
 <li>Deprecated support for C++03 and earlier, C++11 will be required in the next release</li>
 <li>Provide <code>-sICU_LINK_LOCALE</code> as a temporary replacement for <code>-sICU_LINK</code> which is incompatible with Boost.Regex.</li>
@@ -82,7 +103,7 @@ $(document).ready(function(){initNavTree('changelog.html','');});
 </ul>
 </li>
 <li>1.67.0<ul>
-<li>Added support of unique_ptr interface in addition to C++2003 auto_ptr - in order to support C++2017, now you can use BOOST_LOCALE_HIDE_AUTO_PTR definiton to remove auto_ptr from the interfaces and prevent deprecated watnings</li>
+<li>Added support of unique_ptr interface in addition to C++2003 auto_ptr - in order to support C++2017, now you can use BOOST_LOCALE_HIDE_AUTO_PTR definition to remove auto_ptr from the interfaces and prevent deprecated watnings</li>
 <li>Fixed test problem with ICU &gt;60.1</li>
 <li>Fix of solaris build</li>
 <li>Fixed wired FreeBSD/clang issue on optimized build. Probably compiler workaround</li>

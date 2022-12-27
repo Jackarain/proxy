@@ -1,5 +1,5 @@
 [/
-              Copyright Andrey Semashev 2007 - 2015.
+              Copyright Andrey Semashev 2007 - 2022.
      Distributed under the Boost Software License, Version 1.0.
         (See accompanying file LICENSE_1_0.txt or copy at
               http://www.boost.org/LICENSE_1_0.txt)
@@ -91,7 +91,7 @@ There were other issues, like having an attribute set iterator that points to on
 
 [section:why_weak_record_ordering Why log records are weakly ordered in a multithreaded application?]
 
-Although the library guarantees that log records made in a given thread are always delivered to sinks in the same order as they were made in, the library cannot provide such guarantee for different threads. For instance, it is possible that thread A emits a log record and gets preempted, then thread B emits its log record and manages to deliver it to a sink before being preempted. The resulting log will contain log record from thread B before the record made in thread A. However, attribute values attached to the records will always be actual with regard to the moment of emitting the record and not the moment of passing the record to the sink. This is the reason for a strange, at first glance, situation when a log record with an earlier time stamp follows a record with a later time stamp. The problem appears quite rarely, usually when thread contention on logging is very high.
+Although the library guarantees that log records made in a given thread are always delivered to sinks in the same order as they were made in, the library cannot provide such guarantee for different threads. For instance, it is possible that thread A emits a log record and gets preempted, then thread B emits its log record and manages to deliver it to a sink before being preempted. The resulting log will contain log record from thread B before the record made in thread A. However, attribute values attached to the records will always be actual with regard to the moment of emitting the record and not the moment of passing the record to the sink. This is the reason for a strange, at first glance, situation when a log record with an earlier time stamp follows a record with a later time stamp. The problem appears quite rarely, usually when thread contention on logging is rather high.
 
 There are few possible ways to cope with the problem:
 
@@ -221,6 +221,36 @@ Namespace mangling may lead to linking errors if the application is misconfigure
 If you have several versions of Visual Studio installed and trying to build the library with Visual Studio 2010, the compilation may fail with linker error LNK1123. This seems to be a [@http://stackoverflow.com/questions/10888391/link-fatal-error-lnk1123-failure-during-conversion-to-coff-file-invalid-or-c known problem] caused by some conflict between Visual Studio 2010 and .NET Framework 4.5, which is installed with Visual Studio 2012.
 
 The suggested solution is to upgrade Visual Studio 2010 to Visual Studio 2010 SP1 or overwrite [^"C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\cvtres.exe"] with the one of Visual Studio 2010 SP1 or 2012.
+
+[endsect]
+
+[section:how_to_use_in_libraries How to use Boost.Log in libraries?]
+
+When using Boost.Log with libraries, there are several recommendadions to follow. First, as noted in the [link log.installation.config library configuration] section, using the library in multiple modules (including libraries and the application itself) requires Boost.Log to be built as a shared library. This is needed because Boost.Log maintains a number of process-wide singletons and may not function correctly if these singletons are duplicated. If building Boost.Log as a shared library is not desirable, it is possible to encapsulate it in a single user's shared library and link the rest of the modules with that library. In this case, Boost.Log can be built as a shared library and linked into user's shared library. The shared library API and other modules must not use Boost.Log components, including:
+
+* Logging core
+* Sinks
+* Loggers
+* Attributes, including named scope markup
+* Library configuration helpers, including filter, formatter and settings parsers
+
+However, user's shared library may provide its own API that will implement similar functionality, using relevant Boost.Log facilities internally.
+
+Next, it is important to ensure that logging configuration is coordinated between all modules. For example, if a file log is needed, only one file sink must be added, regardless of how many libraries are using logging. The preferred way to achieve this is perform logging configuration only in the main application, for the following reasons:
+
+* Logging configuration should be performed early in the `main` function, which is implemented in the application. Using global constructors in libraries can be problematic due to undefined order of global initialization and the possibility of dynamic loading and unloading of the libraries.
+* Libraries are normally "serving the needs" of the main application, and conceptually it is the application that must decide how the library exposes its diagnostic information such as logs. One application may want to output its logs to console, another one store it in a file, and a third one may want to completely suppress any logging. A well-behaving library should transparently support any such use case and Boost.Log allows to achieve exactly that.
+
+It should be noted that having logging configured by the application implies that the application is written in C++ and can use Boost.Log. If this is not the case, libraries should still allow for this design and offer an API for configuring logging on behalf of the application. Alternatively, a separate library written in C++ can be used for the sole purpose of configuring logging. This way logging set up decisions are still made by the application, indirectly through the library API.
+
+To implement this design, here are recommendations for library writers:
+
+* Libraries should refrain from adding or configuring sinks, filters or formatters, including using library configuration helpers. The exception is the aforementioned API that configures logging on behalf of the application, but this configuretion should not be performed by default.
+* Libraries should be careful about adding or removing global and thread-specific attributes in the logging core - any such actions must be clearly documented.
+* Libraries can freely create loggers, modify their attributes and emit log records.
+* Libraries may use named scope markup, even if they don't register [link log.detailed.attributes.named_scope `named_scope`] attribute themselves. The application can add and configure this attribute, which will enable this information in the output.
+* Libraries should document the attributes it uses, incliding their names and value types, so that the application can configure filters and formatters accordingly. This includes the message text attribute - in particular, it is important to know the type of the attribute value (e.g. `std::string` vs. `std::wstring`) and what character encoding it uses. If possible, declare [link log.detailed.expressions.attr_keywords attribute keywords] for all attributes used by the library in a public header.
+* Libraries are recommended to mark all log records they emit with an attribute. For example, all log records could be made in a specific [link log.detailed.sources.channel_logger channel]. This way the application will be able to configure logging specifically for the library (for example, extract log records from the library to a separate file or apply a different severity level threshold).
 
 [endsect]
 

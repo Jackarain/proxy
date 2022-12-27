@@ -21,7 +21,7 @@
 #include <charconv>
 #include <type_traits>
 
-namespace boost::cnv { struct charconv; }
+namespace boost { namespace cnv { struct charconv; }}
 
 /// @brief std::to/from_chars-based extended converter
 /// @details The converter offers good overall performance and moderate formatting facilities.

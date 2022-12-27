@@ -1199,41 +1199,41 @@ struct foo{
 Normally evaluates to nothing, but evaluates to return x; if the compiler
 requires a return, even when it can never be reached.
 ]]
-[[`BOOST_FALLTHROUGH`][ 
-The BOOST_FALLTHROUGH macro can be used to annotate implicit fall-through 
-between switch labels: 
-`` 
- switch (x) { 
- case 40: 
- case 41: 
-    if (truth_is_out_there) { 
-       ++x; 
-       BOOST_FALLTHROUGH;  // Use instead of/along with annotations in 
-       // comments. 
-    } else { 
-      return x; 
-    } 
-    case 42: 
-       ... 
-`` 
-As shown in the example above, the BOOST_FALLTHROUGH macro should be 
-followed by a semicolon. It is designed to mimic control-flow statements 
-like 'break;', so it can be placed in most places where 'break;' can, but 
-only if there are no statements on the execution path between it and the 
-next switch label. 
+[[`BOOST_FALLTHROUGH`][
+The BOOST_FALLTHROUGH macro can be used to annotate implicit fall-through
+between switch labels:
+``
+ switch (x) {
+ case 40:
+ case 41:
+    if (truth_is_out_there) {
+       ++x;
+       BOOST_FALLTHROUGH;  // Use instead of/along with annotations in
+       // comments.
+    } else {
+      return x;
+    }
+    case 42:
+       ...
+``
+As shown in the example above, the BOOST_FALLTHROUGH macro should be
+followed by a semicolon. It is designed to mimic control-flow statements
+like 'break;', so it can be placed in most places where 'break;' can, but
+only if there are no statements on the execution path between it and the
+next switch label.
 
-When compiled with Clang >3.2 in C++11 mode, the BOOST_FALLTHROUGH macro is 
-expanded to `[[clang::fallthrough]]` attribute, which is analysed when 
-performing switch labels fall-through diagnostic ('-Wimplicit-fallthrough'). 
-See clang [@http://clang.llvm.org/docs/LanguageExtensions.html#clang__fallthrough 
-documentation on language extensions for details.] 
+When compiled with Clang >3.2 in C++11 mode, the BOOST_FALLTHROUGH macro is
+expanded to `[[clang::fallthrough]]` attribute, which is analysed when
+performing switch labels fall-through diagnostic ('-Wimplicit-fallthrough').
+See clang [@http://clang.llvm.org/docs/LanguageExtensions.html#clang__fallthrough
+documentation on language extensions for details.]
 
-When used with unsupported compilers, the BOOST_FALLTHROUGH macro has no 
-effect on diagnostics. 
+When used with unsupported compilers, the BOOST_FALLTHROUGH macro has no
+effect on diagnostics.
 
-In either case this macro has no effect on runtime behavior and performance 
-of code. 
-]] 
+In either case this macro has no effect on runtime behavior and performance
+of code.
+]]
 [[`BOOST_EXPLICIT_TEMPLATE_TYPE(t)`
 
   `BOOST_EXPLICIT_TEMPLATE_NON_TYPE(t,v)`
@@ -1405,11 +1405,11 @@ Usage example:
     handle_error("ptr is NULL");
 ``
 ]]
-[[`BOOST_ATTRIBUTE_UNUSED`][Expands to `__attribute__((unused))` when this is available - 
+[[`BOOST_ATTRIBUTE_UNUSED`][Expands to `__attribute__((unused))` when this is available -
 can be used to disable compiler warnings relating to unused types or variables.]]
-[[`BOOST_ATTRIBUTE_NODISCARD`][Expands to `[[nodiscard]]` when this is available - 
+[[`BOOST_ATTRIBUTE_NODISCARD`][Expands to `[[nodiscard]]` when this is available -
 can be used to create a warning when a type or variable is unused.]]
-[[`BOOST_ATTRIBUTE_NO_UNIQUE_ADDRESS`][Expands to `[[no_unique_address]]` when this is available - 
+[[`BOOST_ATTRIBUTE_NO_UNIQUE_ADDRESS`][Expands to `[[no_unique_address]]` when this is available -
 can be used to indicate that a non-static data member need not have a unique address (for example empty classes).]]
 [[`BOOST_MAY_ALIAS`, `BOOST_NO_MAY_ALIAS`][
 `BOOST_MAY_ALIAS` expands to a type attribute that can be used to mark types that may
@@ -1423,6 +1423,27 @@ Usage example:
   typedef unsigned int BOOST_MAY_ALIAS aliasing_uint;
 ``
 ]]
+[[`BOOST_DEPRECATED(M)`][Expands to an attribute for a symbol that generates warnings when that
+symbol is used in code. The warnings may contain a message `M`, which must be a string literal.
+This attribute may be applied to types, functions or objects and is typically used to mark
+parts of the API as deprecated with a recommendation of replacement.
+
+Example:
+``
+BOOST_DEPRECATED("Use bar() instead.")
+void foo();
+
+template< typename T >
+class BOOST_DEPRECATED("Use std::unique_ptr instead.") auto_ptr
+{
+};
+
+BOOST_DEPRECATED("Use std::numeric_limits<int>::max() instead.")
+const int max_int = 0x7fffffff;
+``
+
+The warnings issued by `BOOST_DEPRECATED` can be suppressed by defining
+`BOOST_ALLOW_DEPRECATED_SYMBOLS` or `BOOST_ALLOW_DEPRECATED` macros.]]
 [[`BOOST_PRAGMA_MESSAGE(M)`][Defined in header `<boost/config/pragma_message.hpp>`,
 this macro expands to the equivalent of `#pragma message(M)`. `M` must be a string
 literal.
@@ -1438,8 +1459,8 @@ this macro issues the message "This header is deprecated. Use `A` instead." via
 
 Example: `BOOST_HEADER_DEPRECATED("<boost/config/workaround.hpp>")`
 
-The messages issued by `BOOST_HEADER_DEPRECATED` can be suppressed by defining the macro
-`BOOST_ALLOW_DEPRECATED_HEADERS`.]]
+The messages issued by `BOOST_HEADER_DEPRECATED` can be suppressed by defining
+`BOOST_ALLOW_DEPRECATED_HEADERS` or `BOOST_ALLOW_DEPRECATED` macros.]]
 ]
 
 [endsect]
@@ -1663,6 +1684,15 @@ The compiler has C++ extensions `__declspec(dllexport)` and `__declspec(dllimpor
 export/import of symbols from shared libraries.
 ['Deprecated. This macro is no longer necessary since BOOST_SYMBOL_EXPORT and BOOST_SYMBOL_IMPORT
 are now supplied. It is provided to support legacy code.]
+]]
+[[`BOOST_DISABLE_EXPLICIT_SYMBOL_VISIBILITY`][
+Disables the effect of the BOOST_SYMBOL_EXPORT, BOOST_SYMBOL_IMPORT and BOOST_SYMBOL_VISIBLE macros, 
+in order to revert to the default compiler behaviour.
+Note that this option should never be used if Boost libraries are being linking against dynamically, 
+or if you are building a shared library that exposes Boost types in its public API. 
+It is however advisable when statically-linking against Boost to prevent Boost symbols from leaking from the binary: 
+for instance because you are building a plug-in for a software which may itself use Boost which could cause 
+ODR conflicts.
 ]]
 ]
 

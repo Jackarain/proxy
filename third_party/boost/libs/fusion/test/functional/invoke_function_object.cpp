@@ -17,7 +17,7 @@
 #include <boost/type_traits/is_same.hpp>
 
 #include <memory>
-#include <boost/noncopyable.hpp>
+#include <boost/core/noncopyable.hpp>
 
 #include <boost/mpl/int.hpp>
 

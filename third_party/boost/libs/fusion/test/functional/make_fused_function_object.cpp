@@ -9,7 +9,7 @@
 #include <boost/fusion/functional/generation/make_fused_function_object.hpp>
 #include <boost/detail/lightweight_test.hpp>
 
-#include <boost/noncopyable.hpp>
+#include <boost/core/noncopyable.hpp>
 #include <boost/mpl/empty_base.hpp>
 
 #include <boost/fusion/container/generation/make_vector.hpp>

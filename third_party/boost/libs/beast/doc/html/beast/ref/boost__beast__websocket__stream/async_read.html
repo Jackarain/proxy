@@ -27,7 +27,7 @@
 <a name="beast.ref.boost__beast__websocket__stream.async_read"></a><a class="link" href="async_read.html" title="websocket::stream::async_read">websocket::stream::async_read</a>
 </h5></div></div></div>
 <p>
-          <a class="indexterm" name="idm60574"></a>
+          <a class="indexterm" name="idm55618"></a>
         </p>
 <p>
           Read a complete message asynchronously.
@@ -156,6 +156,31 @@
 </tr>
 </tbody>
 </table></div>
+<h6>
+<a name="beast.ref.boost__beast__websocket__stream.async_read.h3"></a>
+          <span class="phrase"><a name="beast.ref.boost__beast__websocket__stream.async_read.per_operation_cancellation"></a></span><a class="link" href="async_read.html#beast.ref.boost__beast__websocket__stream.async_read.per_operation_cancellation">Per-Operation
+          Cancellation</a>
+        </h6>
+<p>
+          This asynchronous operation supports cancellation for the following net::cancellation_type
+          values:
+        </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+              <code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">cancellation_type</span><span class="special">::</span><span class="identifier">terminal</span></code>
+            </li>
+<li class="listitem">
+              <code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">cancellation_type</span><span class="special">::</span><span class="identifier">total</span></code>
+            </li>
+</ul></div>
+<p>
+          <code class="computeroutput"><span class="identifier">total</span></code>cancellation succeeds
+          if the operation is suspended due to ongoing control operations such as
+          a ping/pong. <code class="computeroutput"><span class="identifier">terminal</span></code> cancellation
+          succeeds when supported by the underlying stream. <code class="computeroutput"><span class="identifier">terminal</span></code>
+          cancellation leaves the stream in an undefined state, so that only closing
+          it is guaranteed to succeed.
+        </p>
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>

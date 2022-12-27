@@ -688,6 +688,7 @@ pre.rouge {
 </li>
 <li><a href="#changes">Revision History</a>
 <ul class="sectlevel2">
+<li><a href="#changes_in_boost_1_81">Changes in Boost 1.81</a></li>
 <li><a href="#changes_in_boost_1_80">Changes in Boost 1.80</a></li>
 <li><a href="#changes_in_boost_1_79">Changes in Boost 1.79</a></li>
 <li><a href="#changes_in_boost_1_78">Changes in Boost 1.78</a></li>
@@ -796,6 +797,7 @@ pre.rouge {
 <li><a href="#ref_checked_value_access">Checked Value Access</a></li>
 <li><a href="#ref_unchecked_value_access">Unchecked Value Access</a></li>
 <li><a href="#ref_error_access">Error Access</a></li>
+<li><a href="#ref_emplace">emplace</a></li>
 <li><a href="#ref_swap">swap</a></li>
 <li><a href="#ref_equality">Equality</a></li>
 <li><a href="#ref_stream_insertion_3">Stream Insertion</a></li>
@@ -808,6 +810,7 @@ pre.rouge {
 <li><a href="#ref_checked_value_access_2">Checked Value Access</a></li>
 <li><a href="#ref_unchecked_value_access_2">Unchecked Value Access</a></li>
 <li><a href="#ref_error_access_2">Error Access</a></li>
+<li><a href="#ref_emplace_2">emplace</a></li>
 <li><a href="#ref_swap_2">swap</a></li>
 <li><a href="#ref_equality_2">Equality</a></li>
 <li><a href="#ref_stream_insertion_4">Stream Insertion</a></li>
@@ -2539,6 +2542,24 @@ image format" condition.</p>
 <h2 id="changes">Revision History</h2>
 <div class="sectionbody">
 <div class="sect2">
+<h3 id="changes_in_boost_1_81">Changes in Boost 1.81</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>The macro <code>BOOST_SYSTEM_DISABLE_THREADS</code> can now be defined to disable
+the use of <code>&lt;mutex&gt;</code> (e.g. on single-threaded libstdc++).</p>
+</li>
+<li>
+<p>Added <code>value_type</code>, <code>error_type</code>, <code>in_place_value</code>, <code>in_place_error</code>
+to <code>result&lt;&gt;</code>.</p>
+</li>
+<li>
+<p>Added <code>emplace</code> to <code>result&lt;&gt;</code>.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
 <h3 id="changes_in_boost_1_80">Changes in Boost 1.80</h3>
 <div class="ulist">
 <ul>
@@ -2824,6 +2845,12 @@ disappear.</p>
 <p>When <code>BOOST_SYSTEM_USE_UTF8</code> is defined, on Windows the library returns
 UTF-8 messages using code page <code>CP_UTF8</code> instead of the default <code>CP_ACP</code>.
 This macro has no effect on POSIX.</p>
+</div>
+<div class="paragraph">
+<p>When <code>BOOST_SYSTEM_DISABLE_THREADS</code> is defined, the library assumes that
+the current platform doesn&#8217;t support multiple threads and disables the use
+of the standard header <code>&lt;mutex&gt;</code>, eliminating the mutex locks. The single
+threaded <code>libstdc++</code> is one such platform.</p>
 </div>
 </div>
 <div class="sect2">
@@ -5631,6 +5658,12 @@ to <code>error_code</code>. In a typical use, functions that can fail return <co
 <span class="p">{</span>
 <span class="nl">public:</span>
 
+    <span class="k">using</span> <span class="n">value_type</span> <span class="o">=</span> <span class="n">T</span><span class="p">;</span>
+    <span class="k">using</span> <span class="n">error_type</span> <span class="o">=</span> <span class="n">E</span><span class="p">;</span>
+
+    <span class="k">static</span> <span class="k">constexpr</span> <span class="n">in_place_value_t</span> <span class="n">in_place_value</span><span class="p">{};</span>
+    <span class="k">static</span> <span class="k">constexpr</span> <span class="n">in_place_error_t</span> <span class="n">in_place_error</span><span class="p">{};</span>
+
     <span class="c1">// constructors</span>
 
     <span class="k">constexpr</span> <span class="n">result</span><span class="p">();</span>
@@ -5683,6 +5716,11 @@ to <code>error_code</code>. In a typical use, functions that can fail return <co
     <span class="c1">// error access</span>
 
     <span class="k">constexpr</span> <span class="n">E</span> <span class="n">error</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span>
+
+    <span class="c1">// emplace</span>
+
+    <span class="k">template</span><span class="o">&lt;</span><span class="k">class</span><span class="o">...</span> <span class="nc">A</span><span class="p">&gt;</span>
+      <span class="k">constexpr</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">emplace</span><span class="p">(</span> <span class="n">A</span><span class="o">&amp;&amp;</span><span class="p">...</span> <span class="n">a</span> <span class="p">);</span>
 
     <span class="c1">// swap</span>
 
@@ -6067,6 +6105,34 @@ the held error, and <code>loc</code>.</p>
 </div>
 </div>
 <div class="sect4">
+<h5 id="ref_emplace">emplace</h5>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span><span class="o">...</span> <span class="nc">A</span><span class="p">&gt;</span>
+  <span class="k">constexpr</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">emplace</span><span class="p">(</span> <span class="n">A</span><span class="o">&amp;&amp;</span><span class="p">...</span> <span class="n">a</span> <span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="ulist none">
+<ul class="none">
+<li>
+<p></p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Ensures: </dt>
+<dd>
+<p><code>*this</code> holds the value <code>T( std::forward&lt;A&gt;(a)&#8230;&#8203; )</code>.</p>
+</dd>
+<dt class="hdlist1">Returns: </dt>
+<dd>
+<p>A reference to the contained value.</p>
+</dd>
+</dl>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect4">
 <h5 id="ref_swap">swap</h5>
 <div class="listingblock">
 <div class="content">
@@ -6214,6 +6280,12 @@ the held error, and <code>loc</code>.</p>
 <span class="p">{</span>
 <span class="nl">public:</span>
 
+    <span class="k">using</span> <span class="n">value_type</span> <span class="o">=</span> <span class="kt">void</span><span class="p">;</span>
+    <span class="k">using</span> <span class="n">error_type</span> <span class="o">=</span> <span class="n">E</span><span class="p">;</span>
+
+    <span class="k">static</span> <span class="k">constexpr</span> <span class="n">in_place_value_t</span> <span class="n">in_place_value</span><span class="p">{};</span>
+    <span class="k">static</span> <span class="k">constexpr</span> <span class="n">in_place_error_t</span> <span class="n">in_place_error</span><span class="p">{};</span>
+
     <span class="c1">// constructors</span>
 
     <span class="k">constexpr</span> <span class="n">result</span><span class="p">()</span> <span class="k">noexcept</span><span class="p">;</span>
@@ -6247,6 +6319,10 @@ the held error, and <code>loc</code>.</p>
     <span class="c1">// error access</span>
 
     <span class="k">constexpr</span> <span class="n">E</span> <span class="n">error</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span>
+
+    <span class="c1">// emplace</span>
+
+    <span class="k">constexpr</span> <span class="kt">void</span> <span class="n">emplace</span><span class="p">();</span>
 
     <span class="c1">// swap</span>
 
@@ -6533,6 +6609,29 @@ passing it a reference to the held error, and <code>loc</code>.</p>
 </div>
 </div>
 <div class="sect4">
+<h5 id="ref_emplace_2">emplace</h5>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">constexpr</span> <span class="kt">void</span> <span class="nf">emplace</span><span class="p">();</span></code></pre>
+</div>
+</div>
+<div class="ulist none">
+<ul class="none">
+<li>
+<p></p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Ensures: </dt>
+<dd>
+<p><code>*this</code> holds an unspecified value.</p>
+</dd>
+</dl>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect4">
 <h5 id="ref_swap_2">swap</h5>
 <div class="listingblock">
 <div class="content">
@@ -6740,7 +6839,7 @@ paper. Johan Nilsson&#8217;s comments led to several of the refinements in N2066
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2022-08-04 02:47:17 UTC
+Last updated 2022-11-16 19:50:34 UTC
 </div>
 </div>
 <style>

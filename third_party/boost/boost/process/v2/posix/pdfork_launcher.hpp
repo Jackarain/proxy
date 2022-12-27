@@ -99,6 +99,7 @@ struct pdfork_launcher : default_launcher
                 detail::on_error(*this, executable, argv, ec, inits...);
                 return basic_process<Executor>(exec);
             }
+            fd_whitelist.push_back(pg.p[1]);
 
             auto & ctx = BOOST_PROCESS_V2_ASIO_NAMESPACE::query(
                     exec, BOOST_PROCESS_V2_ASIO_NAMESPACE::execution::context);
@@ -121,7 +122,6 @@ struct pdfork_launcher : default_launcher
                 ec = detail::on_exec_setup(*this, executable, argv, inits...);
                 if (!ec)
                 {
-                    fd_whitelist.push_back(pg.p[1]);
                     close_all_fds(ec);
                 }                
                 if (!ec)

@@ -130,7 +130,7 @@ chlid c2("ls", ios, on_exit=exit_code);
 <header name="boost/process/async_pipe.hpp">
 <namespace name="boost">
 <namespace name="process">
-<class name="async_pipe"><description><para>Class implementing and asnychronous I/O-Object for use with boost.asio. It is based on the corresponding I/O Object, that is either boost::asio::windows::stream_handle or boost::asio::posix::stream_descriptor.</para><para>It can be used directly with boost::asio::async_read or async_write.</para><para><note><para>The object is copyable, but that does invoke a handle duplicate. </para>
+<class name="async_pipe"><description><para>Class implementing an asnychronous I/O-Object for use with boost.asio. It is based on the corresponding I/O Object, that is either boost::asio::windows::stream_handle or boost::asio::posix::stream_descriptor.</para><para>It can be used directly with boost::asio::async_read or async_write.</para><para><note><para>The object is copyable, but that does invoke a handle duplicate. </para>
 </note>
 </para></description><typedef name="native_handle_type"><description><para>Typedef for the native handle representation. <note><para>This is the handle on the system, not the boost.asio class. </para>
 </note>

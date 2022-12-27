@@ -222,6 +222,17 @@
         <span class="special">.</span><span class="identifier">allow_invalid_utf8</span> <span class="special">=</span> <span class="keyword">true</span>          <span class="comment">// skip utf-8 validation of keys and strings</span>
     <span class="special">});</span>
 </pre>
+<div class="caution"><table border="0" summary="Caution">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Caution]" src="../../../../../doc/src/images/caution.png"></td>
+<th align="left">Caution</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+          When enabling comment support take extra care not to drop whitespace when
+          reading the input. For example, <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">getline</span></code>
+          removes the endline characters from the string it produces.
+        </p></td></tr>
+</table></div>
 <h5>
 <a name="json.input_output.parsing.h1"></a>
         <span class="phrase"><a name="json.input_output.parsing.parser"></a></span><a class="link" href="input_output.html#json.input_output.parsing.parser">Parser</a>
@@ -344,6 +355,16 @@
         time. Error codes are used instead. The function <a class="link" href="ref/boost__json__stream_parser/finish.html" title="stream_parser::finish"><code class="computeroutput"><span class="identifier">finish</span></code></a> is used to indicate the end
         of the input:
       </p>
+<div class="caution"><table border="0" summary="Caution">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Caution]" src="../../../../../doc/src/images/caution.png"></td>
+<th align="left">Caution</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+          This example will break, if comments are enabled, because of <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">getline</span></code> use (see the warning in <a class="link" href="input_output.html#json.input_output.parsing.non_standard_json">Non-Standard JSON</a>
+          section).
+        </p></td></tr>
+</table></div>
 <pre class="programlisting"><span class="identifier">value</span> <span class="identifier">read_json</span><span class="special">(</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">istream</span><span class="special">&amp;</span> <span class="identifier">is</span><span class="special">,</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">)</span>
 <span class="special">{</span>
     <span class="identifier">stream_parser</span> <span class="identifier">p</span><span class="special">;</span>
@@ -675,8 +696,8 @@
 </pre>
 <p>
         In situations where serializing a <a class="link" href="ref/boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a> in its entirety is inefficient
-        or even impossible, <a class="link" href="ref/boost__json__serializer.html" title="serializer"><code class="computeroutput"><span class="identifier">serializer</span></code></a> can be used to incrementally
-        serialize a <a class="link" href="ref/boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a>
+        or even impossible, <a class="link" href="ref/boost__json__serializer.html" title="serializer"><code class="computeroutput"><span class="identifier">serializer</span></code></a> can be used to serialize
+        a <a class="link" href="ref/boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a>
         incrementally. This may be done for a variety of reasons, such as to avoid
         buffering the entire output, or to ensure that a fixed amount of work is
         performed in each cycle. Instances of <a class="link" href="ref/boost__json__serializer.html" title="serializer"><code class="computeroutput"><span class="identifier">serializer</span></code></a> maintain an output state
@@ -718,7 +739,7 @@
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<p>
+<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>

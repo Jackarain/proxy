@@ -91,13 +91,16 @@ struct bind_fd
     {
     }
 
+    error_code on_setup(posix::default_launcher & launcher, const filesystem::path &, const char * const *)
+    {
+        launcher.fd_whitelist.push_back(target);
+    }
+
     /// Implementation of the initialization function.
     error_code on_exec_setup(posix::default_launcher & launcher, const filesystem::path &, const char * const *)
     {
         if (::dup2(fd, target) == -1)
             return error_code(errno, system_category());
-        
-        launcher.fd_whitelist.push_back(target);
         return error_code ();
     }
 };

@@ -5,85 +5,72 @@
 // https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/locale/utf.hpp>
+#include <boost/locale/util/string.hpp>
+#include "boostLocale/test/tools.hpp"
+#include "boostLocale/test/unit_test.hpp"
 #include <boost/detail/workaround.hpp>
-#include <boost/static_assert.hpp>
 #include <cstring>
-#include "test_locale.hpp"
-#include "test_locale_tools.hpp"
 
 using namespace boost::locale::utf;
 
-boost::uint32_t const *u32_seq(boost::uint32_t a)
+const boost::uint32_t* u32_seq(boost::uint32_t a)
 {
     static boost::uint32_t buf[2];
-    buf[0]=a;
-    buf[1]=0;
+    buf[0] = a;
+    buf[1] = 0;
     return buf;
 }
 
-boost::uint16_t const *u16_seq(boost::uint16_t a)
+const boost::uint16_t* u16_seq(boost::uint16_t a)
 {
     static boost::uint16_t buf[2];
-    buf[0]=a;
-    buf[1]=0;
+    buf[0] = a;
+    buf[1] = 0;
     return buf;
 }
 
-boost::uint16_t const *u16_seq(boost::uint16_t a,boost::uint16_t b)
+const boost::uint16_t* u16_seq(boost::uint16_t a, boost::uint16_t b)
 {
     static boost::uint16_t buf[3];
-    buf[0]=a;
-    buf[1]=b;
-    buf[2]=0;
+    buf[0] = a;
+    buf[1] = b;
+    buf[2] = 0;
     return buf;
 }
 
-#ifndef BOOST_NO_CXX11_CHAR16_T
-char16_t const* c16_seq(boost::uint16_t a)
+const char16_t* c16_seq(boost::uint16_t a)
 {
     static char16_t buf[2];
     buf[0] = static_cast<char16_t>(a);
     buf[1] = 0;
     return buf;
 }
-#endif
-#ifndef BOOST_NO_CXX11_CHAR32_T
-char32_t const* c32_seq(boost::uint32_t a)
+
+const char32_t* c32_seq(boost::uint32_t a)
 {
     static char32_t buf[2];
     buf[0] = static_cast<char32_t>(a);
     buf[1] = 0;
     return buf;
 }
-#endif
-
-
-// Get end of C-String, i.e. the NULL byte
-template<typename CharType>
-CharType const* str_end(CharType const *s)
-{
-    while(*s)
-        s++;
-    return s;
-}
 
 template<typename CharType>
-void test_from_utf(CharType const * const s,unsigned codepoint)
+void test_from_utf(const CharType* const s, unsigned codepoint)
 {
-    CharType const *cur = s;
-    CharType const * const end = str_end(s);
+    const CharType* cur = s;
+    const CharType* const end = boost::locale::util::str_end(s);
 
     typedef utf_traits<CharType> tr;
 
-    BOOST_STATIC_ASSERT(tr::max_width == 4 / sizeof(CharType));
+    static_assert(tr::max_width == 4 / sizeof(CharType), "Wrong max_width");
 
-    TEST(tr::template decode<CharType const *>(cur,end) == codepoint);
+    TEST(tr::template decode<const CharType*>(cur, end) == codepoint);
 
     if(codepoint != illegal)
         TEST(cur == end);
 
     if(codepoint == incomplete) {
-        TEST(*s== 0 || tr::trail_length(*s) > 0);
+        TEST(*s == 0 || tr::trail_length(*s) > 0);
         TEST(tr::trail_length(*s) >= end - s);
     }
 
@@ -95,7 +82,7 @@ void test_from_utf(CharType const * const s,unsigned codepoint)
             TEST(tr::is_trail(*cur));
             TEST(!tr::is_lead(*cur));
         }
-        TEST(tr::width(codepoint)==end - s);
+        TEST(tr::width(codepoint) == end - s);
         TEST(tr::trail_length(*s) == tr::width(codepoint) - 1);
         cur = s;
         TEST(tr::decode_valid(cur) == codepoint);
@@ -104,20 +91,20 @@ void test_from_utf(CharType const * const s,unsigned codepoint)
 }
 
 template<typename CharType>
-void test_to_utf(CharType const *str,unsigned codepoint)
+void test_to_utf(const CharType* str, unsigned codepoint)
 {
-    CharType buf[5] = {1,1,1,1,1};
-    CharType *p=buf;
-    p = utf_traits<CharType>::template encode<CharType *>(codepoint,p);
-    CharType const * const end = str_end(str);
+    CharType buf[5] = {1, 1, 1, 1, 1};
+    CharType* p = buf;
+    p = utf_traits<CharType>::template encode<CharType*>(codepoint, p);
+    const CharType* const end = boost::locale::util::str_end(str);
     TEST(end - str == p - buf);
     TEST(*p);
-    *p=0;
-    TEST(memcmp(str,buf,sizeof(CharType) * (end-str))==0);
+    *p = 0;
+    TEST(memcmp(str, buf, sizeof(CharType) * (end - str)) == 0);
 }
 
 template<typename CharType>
-void test_valid_utf(CharType const* str, unsigned codepoint)
+void test_valid_utf(const CharType* str, unsigned codepoint)
 {
     test_from_utf(str, codepoint);
     test_to_utf(str, codepoint);
@@ -147,10 +134,10 @@ void test_utf8()
     test_from_utf(make4(0x10ffff), 0x10ffff);
 
     std::cout << "-- Too big" << std::endl;
-    test_from_utf("\xf4\x9f\x80\x80", illegal); //  11 0000
-    test_from_utf("\xfb\xbf\xbf\xbf", illegal); // 3ff ffff
-    test_from_utf("\xf8\x90\x80\x80\x80", illegal);  // 400 0000
-    test_from_utf("\xfd\xbf\xbf\xbf\xbf\xbf", illegal);  // 7fff ffff
+    test_from_utf("\xf4\x9f\x80\x80", illegal);         //  11 0000
+    test_from_utf("\xfb\xbf\xbf\xbf", illegal);         // 3ff ffff
+    test_from_utf("\xf8\x90\x80\x80\x80", illegal);     // 400 0000
+    test_from_utf("\xfd\xbf\xbf\xbf\xbf\xbf", illegal); // 7fff ffff
 
     std::cout << "-- Invalid length" << std::endl;
 
@@ -226,7 +213,6 @@ void test_utf16()
     test_from_utf(u16_seq(0xD800), incomplete);
     test_from_utf(u16_seq(0xDBFF), incomplete);
 
-#ifndef BOOST_NO_CXX11_CHAR16_T
     std::cout << "-- Test char16_t" << std::endl;
 #if BOOST_WORKAROUND(BOOST_GCC_VERSION, < 50000)
     test_valid_utf(u"\x0010", 0x10);
@@ -239,7 +225,6 @@ void test_utf16()
     test_valid_utf(u"\U0010FFFF", 0x10FFFF);
     test_from_utf(c16_seq(0xDFFF), illegal);
     test_from_utf(c16_seq(0xDC00), illegal);
-#endif
 }
 
 void test_utf32()
@@ -262,7 +247,6 @@ void test_utf32()
     std::cout << "-- Incomplete" << std::endl;
     test_from_utf(u32_seq(0), incomplete);
 
-#ifndef BOOST_NO_CXX11_CHAR32_T
     std::cout << "-- Test char32_t" << std::endl;
 #if BOOST_WORKAROUND(BOOST_GCC_VERSION, < 50000)
     test_valid_utf(U"\x0010", 0x10);
@@ -277,7 +261,6 @@ void test_utf32()
     test_from_utf(c32_seq(0xDFFF), illegal);
     test_from_utf(c32_seq(0xDC00), illegal);
     test_from_utf(c32_seq(0x110000), illegal);
-#endif
 }
 
 void test_main(int /*argc*/, char** /*argv*/)

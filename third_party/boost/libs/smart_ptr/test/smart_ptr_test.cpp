@@ -296,8 +296,6 @@ void test()
     BOOST_TEST( sup2.use_count() == 2 );
 
     std::cout << "OK\n";
-
-    new char[12345]; // deliberate memory leak to verify leaks detected
 }
 
 int main()

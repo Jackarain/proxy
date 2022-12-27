@@ -22,5 +22,6 @@
 #include <boost/process/v2/impl/default_launcher.ipp>
 #include <boost/process/v2/impl/environment.ipp>
 #include <boost/process/v2/impl/process_handle.ipp>
+#include <boost/process/v2/impl/shell.ipp>
 
 #endif //BOOST_PROCESS_V2_SRC_HPP

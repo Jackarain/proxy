@@ -13,7 +13,7 @@
 
 #include <boost/mpl/equal.hpp>
 
-#include <boost/ref.hpp>
+#include <boost/core/ref.hpp>
 #ifndef BOOST_NO_CXX11_HDR_FUNCTIONAL
 #include <functional>
 #endif

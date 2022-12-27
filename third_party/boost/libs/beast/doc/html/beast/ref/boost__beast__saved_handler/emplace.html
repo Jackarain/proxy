@@ -27,7 +27,7 @@
 <a name="beast.ref.boost__beast__saved_handler.emplace"></a><a class="link" href="emplace.html" title="saved_handler::emplace">saved_handler::emplace</a>
 </h5></div></div></div>
 <p>
-          <a class="indexterm" name="idm42714"></a>
+          <a class="indexterm" name="idm43146"></a>
         </p>
 <p>
           Store a completion handler in the container.
@@ -38,14 +38,16 @@
 <span class="keyword">void</span>
 <a class="link" href="emplace/overload1.html" title="saved_handler::emplace (1 of 2 overloads)">emplace</a><span class="special">(</span>
     <span class="identifier">Handler</span><span class="special">&amp;&amp;</span> <span class="identifier">handler</span><span class="special">,</span>
-    <span class="identifier">Allocator</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">alloc</span><span class="special">);</span>
+    <span class="identifier">Allocator</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">alloc</span><span class="special">,</span>
+    <span class="identifier">net</span><span class="special">::</span><span class="identifier">cancellation_type</span> <span class="identifier">cancel_type</span> <span class="special">=</span> <span class="identifier">net</span><span class="special">::</span><span class="identifier">cancellation_type</span><span class="special">::</span><span class="identifier">terminal</span><span class="special">);</span>
   <span class="emphasis"><em>» <a class="link" href="emplace/overload1.html" title="saved_handler::emplace (1 of 2 overloads)"><code class="computeroutput"><span class="identifier">more</span><span class="special">...</span></code></a></em></span>
 
 <span class="keyword">template</span><span class="special">&lt;</span>
     <span class="keyword">class</span> <a href="../../../../../../../doc/html/boost_asio/reference/Handler.html" target="_top"><span class="emphasis"><em>Handler</em></span></a><span class="special">&gt;</span>
 <span class="keyword">void</span>
 <a class="link" href="emplace/overload2.html" title="saved_handler::emplace (2 of 2 overloads)">emplace</a><span class="special">(</span>
-    <span class="identifier">Handler</span><span class="special">&amp;&amp;</span> <span class="identifier">handler</span><span class="special">);</span>
+    <span class="identifier">Handler</span><span class="special">&amp;&amp;</span> <span class="identifier">handler</span><span class="special">,</span>
+    <span class="identifier">net</span><span class="special">::</span><span class="identifier">cancellation_type</span> <span class="identifier">cancel_type</span> <span class="special">=</span> <span class="identifier">net</span><span class="special">::</span><span class="identifier">cancellation_type</span><span class="special">::</span><span class="identifier">terminal</span><span class="special">);</span>
   <span class="emphasis"><em>» <a class="link" href="emplace/overload2.html" title="saved_handler::emplace (2 of 2 overloads)"><code class="computeroutput"><span class="identifier">more</span><span class="special">...</span></code></a></em></span>
 </pre>
 </div>

@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <cstring>
 
-namespace boost::cnv { template<typename> struct cnvbase; }
+namespace boost { namespace cnv { template<typename> struct cnvbase; }}
 
 #define BOOST_CNV_TO_STRING                                                 \
     template<typename string_type>                                          \

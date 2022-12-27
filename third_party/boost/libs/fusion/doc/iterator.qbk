@@ -254,6 +254,7 @@ expressions must be valid:
 * __iterator_range__ iterator (where adapted iterators are __associative_iterator__\ s)
 * __joint_view__ iterator (where adapted sequences are __associative_sequence__\ s and __forward_sequence__\ s)
 * __reverse_view__ iterator (where adapted sequence is an __associative_sequence__ and a __bidirectional_sequence__)
+* __transform_view__ iterator (where adapted sequence is an __associative_sequence__ and a __forward_sequence__)
 
 [endsect]
 

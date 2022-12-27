@@ -19,13 +19,13 @@ int main()
       constexpr float128 b = test_constexpr_add_subtract(a);
 
       constexpr __float128 f128 = (__float128)b;
-      static_assert(f128 == -134.0f);
+      static_assert(f128 == -108.0f);
 
       constexpr int i = (int)b;
-      static_assert(i == -134);
+      static_assert(i == -108);
 
       constexpr short s = (short)b;
-      static_assert(s == -134);
+      static_assert(s == -108);
    }
    {
       constexpr float128 a(22);

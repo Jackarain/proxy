@@ -113,3 +113,17 @@ BOOST_AUTO_TEST_CASE(ignore_error)
         BOOST_CHECK_NO_THROW(bp::child c("doesnt-exit", bp::ignore_error));
     }
 }
+
+
+BOOST_AUTO_TEST_CASE(not_found)
+{
+    try
+    {
+        bp::child c("doesnt-exit");
+        BOOST_CHECK_MESSAGE(false, "Should throw");
+    }
+    catch( bp::process_error & se)
+    {
+        BOOST_CHECK(se.code());
+    }
+}

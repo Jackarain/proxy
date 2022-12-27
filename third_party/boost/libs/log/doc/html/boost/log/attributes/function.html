@@ -42,51 +42,51 @@
   <span class="keyword">class</span> <a class="link" href="function/impl_template.html" title="Class template impl_template">impl_template</a> <span class="special">:</span> <span class="keyword">public</span> <span class="identifier">function</span><span class="special">&lt;</span> <span class="identifier">R</span> <span class="special">&gt;</span><span class="special">::</span><span class="identifier">impl</span> <span class="special">{</span>
   <span class="keyword">public</span><span class="special">:</span>
     <span class="comment">// <a class="link" href="function/impl_template.html#boost.log.attributes.function.impl_templateconstruct-copy-destruct">construct/copy/destruct</a></span>
-    <span class="keyword">explicit</span> <a class="link" href="function/impl_template.html#idm25296-bb"><span class="identifier">impl_template</span></a><span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span><span class="special">;</span>
+    <span class="keyword">explicit</span> <a class="link" href="function/impl_template.html#idm25353-bb"><span class="identifier">impl_template</span></a><span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span><span class="special">;</span>
 
-    <span class="comment">// <a class="link" href="function/impl_template.html#idm25288-bb">public member functions</a></span>
-    <span class="keyword">virtual</span> <a class="link" href="../attribute_value.html" title="Class attribute_value">attribute_value</a> <a class="link" href="function/impl_template.html#idm25289-bb"><span class="identifier">get_value</span></a><span class="special">(</span><span class="special">)</span><span class="special">;</span>
+    <span class="comment">// <a class="link" href="function/impl_template.html#idm25345-bb">public member functions</a></span>
+    <span class="keyword">virtual</span> <a class="link" href="../attribute_value.html" title="Class attribute_value">attribute_value</a> <a class="link" href="function/impl_template.html#idm25346-bb"><span class="identifier">get_value</span></a><span class="special">(</span><span class="special">)</span><span class="special">;</span>
   <span class="special">}</span><span class="special">;</span>
 
   <span class="comment">// <a class="link" href="function.html#boost.log.attributes.functionconstruct-copy-destruct">construct/copy/destruct</a></span>
-  <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> T<span class="special">&gt;</span> <span class="keyword">explicit</span> <a class="link" href="function.html#idm25312-bb"><span class="identifier">function</span></a><span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span><span class="special">;</span>
-  <span class="keyword">explicit</span> <a class="link" href="function.html#idm25319-bb"><span class="identifier">function</span></a><span class="special">(</span><a class="link" href="cast_source.html" title="Class cast_source">cast_source</a> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span><span class="special">;</span>
+  <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> T<span class="special">&gt;</span> <span class="keyword">explicit</span> <a class="link" href="function.html#idm25369-bb"><span class="identifier">function</span></a><span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span><span class="special">;</span>
+  <span class="keyword">explicit</span> <a class="link" href="function.html#idm25376-bb"><span class="identifier">function</span></a><span class="special">(</span><a class="link" href="cast_source.html" title="Class cast_source">cast_source</a> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span><span class="special">;</span>
 
-  <span class="comment">// <a class="link" href="function.html#idm25304-bb">private member functions</a></span>
-   <a class="link" href="function.html#idm25305-bb"><span class="identifier">BOOST_STATIC_ASSERT_MSG</span></a><span class="special">(</span><span class="special">!</span><span class="identifier">is_void</span><span class="special">&lt;</span> <span class="identifier">R</span> <span class="special">&gt;</span><span class="special">::</span><span class="identifier">value</span><span class="special">,</span> 
+  <span class="comment">// <a class="link" href="function.html#idm25361-bb">private member functions</a></span>
+   <a class="link" href="function.html#idm25362-bb"><span class="identifier">BOOST_STATIC_ASSERT_MSG</span></a><span class="special">(</span><span class="special">!</span><span class="identifier">is_void</span><span class="special">&lt;</span> <span class="identifier">R</span> <span class="special">&gt;</span><span class="special">::</span><span class="identifier">value</span><span class="special">,</span> 
                            <span class="string">"Boost.Log: Function object return type must not be void"</span><span class="special">)</span><span class="special">;</span>
 <span class="special">}</span><span class="special">;</span></pre></div>
 <div class="refsect1">
-<a name="idm33446"></a><h2>Description</h2>
+<a name="idm33503"></a><h2>Description</h2>
 <p>The attribute calls a stored nullary function object to acquire each value. The result type of the function object is the attribute value type.</p>
 <p>It is not recommended to use this class directly. Use <code class="computeroutput">make_function</code> convenience functions to construct the attribute instead. </p>
 <div class="refsect2">
-<a name="idm33451"></a><h3>
+<a name="idm33508"></a><h3>
 <a name="boost.log.attributes.functionconstruct-copy-destruct"></a><code class="computeroutput">function</code> 
         public
        construct/copy/destruct</h3>
 <div class="orderedlist"><ol class="orderedlist" type="1">
 <li class="listitem">
-<pre class="literallayout"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> T<span class="special">&gt;</span> <span class="keyword">explicit</span> <a name="idm25312-bb"></a><span class="identifier">function</span><span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> fun<span class="special">)</span><span class="special">;</span></pre>
+<pre class="literallayout"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> T<span class="special">&gt;</span> <span class="keyword">explicit</span> <a name="idm25369-bb"></a><span class="identifier">function</span><span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> fun<span class="special">)</span><span class="special">;</span></pre>
 <p>Initializing constructor </p>
 </li>
 <li class="listitem">
-<pre class="literallayout"><span class="keyword">explicit</span> <a name="idm25319-bb"></a><span class="identifier">function</span><span class="special">(</span><a class="link" href="cast_source.html" title="Class cast_source">cast_source</a> <span class="keyword">const</span> <span class="special">&amp;</span> source<span class="special">)</span><span class="special">;</span></pre>
+<pre class="literallayout"><span class="keyword">explicit</span> <a name="idm25376-bb"></a><span class="identifier">function</span><span class="special">(</span><a class="link" href="cast_source.html" title="Class cast_source">cast_source</a> <span class="keyword">const</span> <span class="special">&amp;</span> source<span class="special">)</span><span class="special">;</span></pre>
 <p>Constructor for casting support </p>
 </li>
 </ol></div>
 </div>
 <div class="refsect2">
-<a name="idm33486"></a><h3>
-<a name="idm25304-bb"></a><code class="computeroutput">function</code> private member functions</h3>
-<div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><pre class="literallayout"> <a name="idm25305-bb"></a><span class="identifier">BOOST_STATIC_ASSERT_MSG</span><span class="special">(</span><span class="special">!</span><span class="identifier">is_void</span><span class="special">&lt;</span> <span class="identifier">R</span> <span class="special">&gt;</span><span class="special">::</span><span class="identifier">value</span><span class="special">,</span> 
+<a name="idm33543"></a><h3>
+<a name="idm25361-bb"></a><code class="computeroutput">function</code> private member functions</h3>
+<div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><pre class="literallayout"> <a name="idm25362-bb"></a><span class="identifier">BOOST_STATIC_ASSERT_MSG</span><span class="special">(</span><span class="special">!</span><span class="identifier">is_void</span><span class="special">&lt;</span> <span class="identifier">R</span> <span class="special">&gt;</span><span class="special">::</span><span class="identifier">value</span><span class="special">,</span> 
                          <span class="string">"Boost.Log: Function object return type must not be void"</span><span class="special">)</span><span class="special">;</span></pre></li></ol></div>
 </div>
 </div>
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2007-2021 Andrey Semashev<p>
+<td align="right"><div class="copyright-footer">Copyright © 2007-2022 Andrey Semashev<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>).
       </p>

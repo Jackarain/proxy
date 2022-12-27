@@ -1,5 +1,5 @@
 [/
-              Copyright Andrey Semashev 2007 - 2015.
+              Copyright Andrey Semashev 2007 - 2022.
      Distributed under the Boost Software License, Version 1.0.
         (See accompanying file LICENSE_1_0.txt or copy at
               http://www.boost.org/LICENSE_1_0.txt)
@@ -172,6 +172,8 @@ One of the "must-have" features of any logging library is support for attaching 
         src::logger_mt& lg = get_my_logger();
         BOOST_LOG(lg) << "This record has a time stamp";
     }
+
+[note As any other attribute, the value of the wall clock attribute is obtained at the point of the log record creation, not at the point of its processing in a sink. This means that (a) timetamps attached to log records always reflect the time point of the event occurrence, not the time of storing the log record, and (b) if the same log record is processed by multiple sinks, even at different points in time, these sinks will process (e.g. store in their respective files) the same timestamp. This is a useful property of the wall clock attribute, although it may result in [link log.rationale.why_weak_record_ordering weak ordering of log records] in the output.]
 
 [endsect]
 
@@ -364,7 +366,7 @@ This attribute is a simple wrapper around a user-defined function object. Each a
         logging::core::get()->add_global_attribute("MyRandomAttr", attrs::make_function(&std::rand));
     }
 
-Auto-generated function objects, like the ones defined in __boost_bind__ or STL, are also supported.
+Auto-generated function objects, like the ones defined in __boost_bind__ or C++ standard library, are also supported.
 
 [note Some deficient compilers may not support `result_of` construct properly. This metafunction is used in the `make_function` function to automatically detect the return type of the function object. If `result_of` breaks or detects incorrect type, one can try to explicitly specify the return type of the function object as a template argument to the `make_function` function.]
 
@@ -392,7 +394,7 @@ The [class_log_attribute_name] class supports an empty (uninitialized) state whe
 
     #include <``[boost_log_attributes_attribute_set_hpp]``>
 
-Attribute set is an unordered associative container that maps [link log.detailed.attributes.related_components.attribute_name attribute names] to [link log.detailed.attributes attributes]. It is used in [link log.detailed.sources loggers] and the [link log.detailed.core.core logging core] to store source-specific, thread-specific and global attributes. The interface is very similar to STL associative containers and is described in the [class_log_attribute_set] class reference.
+Attribute set is an unordered associative container that maps [link log.detailed.attributes.related_components.attribute_name attribute names] to [link log.detailed.attributes attributes]. It is used in [link log.detailed.sources loggers] and the [link log.detailed.core.core logging core] to store source-specific, thread-specific and global attributes. The interface is very similar to standard library associative containers and is described in the [class_log_attribute_set] class reference.
 
 [endsect]
 

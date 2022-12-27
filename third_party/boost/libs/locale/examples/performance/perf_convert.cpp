@@ -12,9 +12,9 @@
 
 using namespace boost::locale;
 
-int main(int argc,char **argv)
+int main(int argc, char** argv)
 {
-    if(argc!=2) {
+    if(argc != 2) {
         std::cerr << "Usage backend locale\n";
         return 1;
     }
@@ -23,13 +23,13 @@ int main(int argc,char **argv)
     /// Create a set that includes all strings sorted according to ABC order
     /// std::locale can be used as object for comparison
     std::vector<std::string> all;
-    typedef std::set<std::string,std::locale> set_type;
+    typedef std::set<std::string, std::locale> set_type;
     set_type all_strings;
 
     /// Read all strings into the set
     while(!std::cin.eof()) {
         std::string tmp;
-        getline(std::cin,tmp);
+        getline(std::cin, tmp);
         all.push_back(tmp);
     }
 
@@ -38,16 +38,15 @@ int main(int argc,char **argv)
         mgr.select(argv[1]);
         generator gen(mgr);
         std::locale::global(gen(argv[2]));
-        for(int i=0;i<10000;i++) {
-            for(unsigned j=0;j<all.size();j++) {
+        for(int i = 0; i < 10000; i++) {
+            for(unsigned j = 0; j < all.size(); j++) {
                 boost::locale::to_upper(all[j]);
                 boost::locale::to_lower(all[j]);
-                if(i==0) {
+                if(i == 0) {
                     std::cout << boost::locale::to_upper(all[j]) << std::endl;
                     std::cout << boost::locale::to_lower(all[j]) << std::endl;
                 }
             }
         }
     }
-
 }

@@ -155,8 +155,8 @@ class executor
     void write_error(const std::error_code & ec, const char * msg)
     {
         //I am the child
-        const auto len = std::strlen(msg);
-        int data[2] = {ec.value(), static_cast<int>(len + 1)};
+        const auto len = static_cast<int>(std::strlen(msg));
+        int data[2] = {ec.value(), len + 1};
 
         boost::ignore_unused(::write(_pipe_sink, &data[0], sizeof(int) * 2));
         boost::ignore_unused(::write(_pipe_sink, msg, len));
@@ -444,6 +444,8 @@ child executor<Sequence>::invoke(boost::mpl::false_, boost::mpl::false_)
     }
     if (_ec)
     {
+        //if an error occured we need to reap the child process
+        ::waitpid(this->pid, nullptr, WNOHANG);
         boost::fusion::for_each(seq, call_on_error(*this, _ec));
         return child();
     }
@@ -537,6 +539,7 @@ child executor<Sequence>::invoke(boost::mpl::false_, boost::mpl::true_)
 
     if (_ec)
     {
+        ::waitpid(this->pid, nullptr, WNOHANG);
         boost::fusion::for_each(seq, call_on_error(*this, _ec));
         return child();
     }

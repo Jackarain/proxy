@@ -995,7 +995,7 @@ public:
     }
 
     size_type max_size() const
-    { return get_allocator().max_size(); }
+    { return boost::allocator_max_size(get_allocator()); }
 
     size_type capacity() const
     { return Small() ? maxSmallString : GetStorage().capacity(); }

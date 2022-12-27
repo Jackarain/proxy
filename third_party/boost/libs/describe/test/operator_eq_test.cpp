@@ -20,9 +20,11 @@ namespace app
 
 struct X
 {
+    void f() const {}
+    static void g() {}
 };
 
-BOOST_DESCRIBE_STRUCT(X, (), ())
+BOOST_DESCRIBE_STRUCT(X, (), (f, g))
 
 using boost::describe::operators::operator==;
 using boost::describe::operators::operator<<;

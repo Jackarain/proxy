@@ -77,14 +77,14 @@ static BOOL CALLBACK enum_window(HWND hwnd, LPARAM param)
     auto data = reinterpret_cast<enum_windows_data_t*>(param);
     DWORD pid{0u};
     GetWindowThreadProcessId(hwnd, &pid);
-
     if (pid != data->pid)
       return TRUE;
-
+    
     LRESULT res = ::SendMessageW(hwnd, WM_CLOSE, 0, 0);
-    if (!res)
+
+    if (res)
       data->ec = detail::get_last_error();
-    return res != 0;
+    return res == 0;
   }
 
 void request_exit_(pid_type pid_, error_code & ec)

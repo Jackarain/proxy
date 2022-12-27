@@ -42,6 +42,10 @@ test-suite phoenix_stdlib :
     [ run stdlib/cmath.cpp ]
     ;
 
+test-suite phoenix_tuple :
+    [ run tuple/tuple_test.cpp ]
+    ;
+
 test-suite phoenix_operator :
     [ run operator/arithmetic_tests.cpp ]
     [ run operator/bitwise_tests.cpp ]

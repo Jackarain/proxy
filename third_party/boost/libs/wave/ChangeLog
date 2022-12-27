@@ -18,6 +18,10 @@ TODO (known issues):
 
 CHANGELOG
 
+Boost V1.81:
+  - Fixed #174: Non-standard escape sequences in string not supported
+  - Fixed #175: Possible buffer overflow issue
+
 Boost V1.80:
   - Fixed #24: Line numbers wrong after conditional section
   - Fixed #160: one test fails with error C2660 and error C2440 under msvc /permissive- mode

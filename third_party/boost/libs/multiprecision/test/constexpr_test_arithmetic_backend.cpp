@@ -10,7 +10,7 @@ template <class T>
 constexpr int expected_1()
 {
 #ifdef BOOST_HAS_INT128
-   if constexpr (std::is_constructible<T, __int128>::value)
+   if constexpr (std::is_constructible<T, boost::int128_type>::value)
       return 230;
    else
 #endif
@@ -20,7 +20,7 @@ template <class T>
 constexpr int expected_2()
 {
 #ifdef BOOST_HAS_INT128
-   if constexpr (std::is_constructible<T, __int128>::value)
+   if constexpr (std::is_constructible<T, boost::int128_type>::value)
       return 120;
    else
 #endif

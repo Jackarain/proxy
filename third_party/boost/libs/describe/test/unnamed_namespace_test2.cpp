@@ -2,6 +2,8 @@
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
+// Tests that -Wunneeded-internal-declaration is not emitted under Clang
+
 #include <boost/describe.hpp>
 
 #if !defined(BOOST_DESCRIBE_CXX14)

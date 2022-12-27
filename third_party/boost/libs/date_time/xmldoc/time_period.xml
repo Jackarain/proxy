@@ -191,7 +191,7 @@ tp.last();// --> 2002-Jan-01 09:59:59.999999999</screen>
 ptime t1(d, seconds(10)); //10 sec after midnight
 ptime t2(d, hours(10)); //10 hours after midnight
 time_period tp(t1, t2);
-tp.last(); // --> 2002-Jan-01 10:00:00</screen>
+tp.end(); // --> 2002-Jan-01 10:00:00</screen>
 	    </entry>
           </row>
           
@@ -311,7 +311,7 @@ tp2.intersects(tp1); // --> true</screen>
           <row>
             <entry valign="top" morerows="1"><screen>std::string 
   to_simple_string(time_period dp)</screen></entry>
-            <entry>To <code>[YYYY-mmm-DD hh:mm:ss.fffffffff/YYYY-mmm-DD hh:mm:ss.fffffffff]</code> string where <code>mmm</code> is 3 char month name.</entry>
+            <entry>To <code>[YYYY-mmm-DD hh:mm:ss.fffffffff/YYYY-mmm-DD hh:mm:ss.fffffffff]</code> string where <code>mmm</code> is 3 char month name and the fractional seconds are only included if non-zero.</entry>
           </row>
           <row>
             <entry><screen>[2002-Jan-01 01:25:10.000000001/
@@ -341,7 +341,7 @@ tp2.intersects(tp1); // --> true</screen>
 	<tbody>
           <row>
 	    <entry valign="top" morerows="1"><screen>operator&lt;&lt;</screen></entry>
-            <entry>Output streaming operator for time duration. Uses facet to output [date time_of_day/date time_of_day]. The default is format is <code>[YYYY-mmm-DD hh:mm:ss.fffffffff/YYYY-mmm-DD hh:mm:ss.fffffffff]</code> string where <code>mmm</code> is 3 char month name and the fractional seconds are left out when zero.</entry>
+            <entry>Output streaming operator for time duration. Uses facet to output [date time_of_day/date time_of_day]. The default is format is <code>[YYYY-mmm-DD hh:mm:ss.fffffffff/YYYY-mmm-DD hh:mm:ss.fffffffff]</code> string where <code>mmm</code> is 3 char month name and the fractional seconds are only included if non-zero.</entry>
 	  </row>
 	  <row>
             <entry><screen>[2002-Jan-01 01:25:10.000000001/ \
@@ -350,7 +350,7 @@ tp2.intersects(tp1); // --> true</screen>
 
 	  <row>
 	    <entry valign="top" morerows="1"><screen>operator&gt;&gt;</screen></entry>
-            <entry>Input streaming operator for time duration. Uses facet to read [date time_of_day/date time_of_day]. The default is format is <code>[YYYY-mmm-DD hh:mm:ss.fffffffff/YYYY-mmm-DD hh:mm:ss.fffffffff]</code> string where <code>mmm</code> is 3 char month name and the fractional seconds are left out when zero.</entry>
+            <entry>Input streaming operator for time duration. Uses facet to read [date time_of_day/date time_of_day]. The default is format is <code>[YYYY-mmm-DD hh:mm:ss.fffffffff/YYYY-mmm-DD hh:mm:ss.fffffffff]</code> string where <code>mmm</code> is 3 char month name and the fractional seconds are only included if non-zero.</entry>
 	  </row>
 	  <row>
             <entry><screen>[2002-Jan-01 01:25:10.000000001/ \

@@ -87,11 +87,13 @@ struct order_move_type
    order_move_type(BOOST_RV_REF(order_move_type) other)
       : key(other.key), val(other.val)
    {
+      BOOST_ASSERT(this != &other);
       other.key = other.val = std::size_t(-1);
    }
 
    order_move_type & operator=(BOOST_RV_REF(order_move_type) other)
    {
+      BOOST_ASSERT(this != &other);
       key = other.key;
       val = other.val;
       other.key = other.val = std::size_t(-2);

@@ -101,7 +101,7 @@ test-suite with-valgrind :
     [ run group.cpp     system thread filesystem              : [ test-options group ] : sub_launch ]
     [ run group.cpp          system thread filesystem         : [ test-options group ] : sub_launch : <build>no <target-os>windows:<build>yes <define>BOOST_USE_WINDOWS_H=1 : group-windows-h ]
     [ run group_wait.cpp     system thread filesystem         : [ test-options group_wait ] : sparring_partner : <target-os>darwin:<build>no ]
-	[ run limit_fd.cpp     program_options system filesystem  : [ test-options limit_fd ] : sparring_partner ]
+	[ run limit_fd.cpp     program_options system filesystem  : [ test-options limit_fd ] : sparring_partner : <target-os>freebsd:<build>no ]
     [ run run_exe.cpp filesystem                              : : sparring_partner ]
     [ run run_exe_path.cpp filesystem                         : [ test-options run_exe_path ] : sparring_partner ]
     [ run search_path.cpp filesystem system                   : [ test-options search_path ] : : <target-os>windows:<source>shell32 ]

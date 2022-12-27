@@ -658,10 +658,10 @@
           <template-type-parameter name="charT"/>
         </template><parameter name="t"><paramtype><classname>ptime</classname></paramtype></parameter></function>
 <function name="to_simple_wstring"><type>std::wstring</type><parameter name="td"><paramtype><classname>time_duration</classname></paramtype></parameter><purpose>Time duration to wstring -hh::mm::ss.fffffff. Example: 10:09:03.0123456. </purpose></function>
-<function name="to_iso_wstring"><type>std::wstring</type><parameter name="td"><paramtype><classname>time_duration</classname></paramtype></parameter><purpose>Time duration in iso format -hhmmss,fffffff Example: 10:09:03,0123456. </purpose></function>
+<function name="to_iso_wstring"><type>std::wstring</type><parameter name="td"><paramtype><classname>time_duration</classname></paramtype></parameter><purpose>Time duration in ISO 8601 format -hhmmss.fffffff. Example: 10:09:03.0123456. </purpose></function>
 <function name="to_simple_wstring"><type>std::wstring</type><parameter name="t"><paramtype><classname>ptime</classname></paramtype></parameter></function>
 <function name="to_simple_wstring"><type>std::wstring</type><parameter name="tp"><paramtype>time_period</paramtype></parameter><purpose>Convert to wstring of form [YYYY-mmm-DD HH:MM::SS.ffffff/YYYY-mmm-DD HH:MM::SS.fffffff]. </purpose></function>
-<function name="to_iso_wstring"><type>std::wstring</type><parameter name="t"><paramtype><classname>ptime</classname></paramtype></parameter><purpose>Convert iso short form YYYYMMDDTHHMMSS where T is the date-time separator. </purpose></function>
+<function name="to_iso_wstring"><type>std::wstring</type><parameter name="t"><paramtype><classname>ptime</classname></paramtype></parameter><purpose>Convert ISO 8601 short form YYYYMMDDTHHMMSS where T is the date-time separator. </purpose></function>
 <function name="to_iso_extended_wstring"><type>std::wstring</type><parameter name="t"><paramtype><classname>ptime</classname></paramtype></parameter><purpose>Convert to form YYYY-MM-DDTHH:MM:SS where T is the date-time separator. </purpose></function>
 
 
@@ -701,10 +701,10 @@
 
 
 <function name="to_simple_string"><type>std::string</type><parameter name="td"><paramtype><classname>time_duration</classname></paramtype></parameter><purpose>Time duration to string -hh::mm::ss.fffffff. Example: 10:09:03.0123456. </purpose></function>
-<function name="to_iso_string"><type>std::string</type><parameter name="td"><paramtype><classname>time_duration</classname></paramtype></parameter><purpose>Time duration in iso format -hhmmss,fffffff Example: 10:09:03,0123456. </purpose></function>
+<function name="to_iso_string"><type>std::string</type><parameter name="td"><paramtype><classname>time_duration</classname></paramtype></parameter><purpose>Time duration in ISO 8601 format -hhmmss.fffffff. Example: 10:09:03.0123456. </purpose></function>
 <function name="to_simple_string"><type>std::string</type><parameter name="t"><paramtype><classname>ptime</classname></paramtype></parameter><purpose>Time to simple format CCYY-mmm-dd hh:mm:ss.fffffff. </purpose></function>
 <function name="to_simple_string"><type>std::string</type><parameter name="tp"><paramtype>time_period</paramtype></parameter><purpose>Convert to string of form [YYYY-mmm-DD HH:MM::SS.ffffff/YYYY-mmm-DD HH:MM::SS.fffffff]. </purpose></function>
-<function name="to_iso_string"><type>std::string</type><parameter name="t"><paramtype><classname>ptime</classname></paramtype></parameter><purpose>Convert iso short form YYYYMMDDTHHMMSS where T is the date-time separator. </purpose></function>
+<function name="to_iso_string"><type>std::string</type><parameter name="t"><paramtype><classname>ptime</classname></paramtype></parameter><purpose>Convert ISO 8601 short form YYYYMMDDTHHMMSS where T is the date-time separator. </purpose></function>
 <function name="to_iso_extended_string"><type>std::string</type><parameter name="t"><paramtype><classname>ptime</classname></paramtype></parameter><purpose>Convert to form YYYY-MM-DDTHH:MM:SS where T is the date-time separator. </purpose></function>
 
 

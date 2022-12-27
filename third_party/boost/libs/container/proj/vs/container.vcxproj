@@ -49,6 +49,7 @@
     <ClInclude Include="..\..\include\boost\container\detail\flat_tree.hpp" />
     <ClInclude Include="..\..\include\boost\container\detail\function_detector.hpp" />
     <ClInclude Include="..\..\include\boost\container\detail\guards_dended.hpp" />
+    <ClInclude Include="..\..\include\boost\container\detail\hash_table.hpp" />
     <ClInclude Include="..\..\include\boost\container\detail\is_container.hpp" />
     <ClInclude Include="..\..\include\boost\container\detail\is_contiguous_container.hpp" />
     <ClInclude Include="..\..\include\boost\container\detail\is_sorted.hpp" />
@@ -85,6 +86,8 @@
     <ClInclude Include="..\..\include\boost\container\devector.hpp" />
     <ClInclude Include="..\..\include\boost\container\flat_map.hpp" />
     <ClInclude Include="..\..\include\boost\container\flat_set.hpp" />
+    <ClInclude Include="..\..\include\boost\container\hash_map.hpp" />
+    <ClInclude Include="..\..\include\boost\container\hash_set.hpp" />
     <ClInclude Include="..\..\include\boost\container\list.hpp" />
     <ClInclude Include="..\..\include\boost\container\map.hpp" />
     <ClInclude Include="..\..\include\boost\container\new_allocator.hpp" />
@@ -123,6 +126,35 @@
     <ClInclude Include="..\..\include\boost\container\uses_allocator.hpp" />
     <ClInclude Include="..\..\include\boost\container\uses_allocator_fwd.hpp" />
     <ClInclude Include="..\..\include\boost\container\vector.hpp" />
+    <ClInclude Include="..\..\test\allocator_argument_tester.hpp" />
+    <ClInclude Include="..\..\test\check_equal_containers.hpp" />
+    <ClInclude Include="..\..\test\comparison_test.hpp" />
+    <ClInclude Include="..\..\test\container_common_tests.hpp" />
+    <ClInclude Include="..\..\test\default_init_test.hpp" />
+    <ClInclude Include="..\..\test\derived_from_memory_resource.hpp" />
+    <ClInclude Include="..\..\test\dummy_test_allocator.hpp" />
+    <ClInclude Include="..\..\test\emplace_test.hpp" />
+    <ClInclude Include="..\..\test\expand_bwd_test_allocator.hpp" />
+    <ClInclude Include="..\..\test\expand_bwd_test_template.hpp" />
+    <ClInclude Include="..\..\test\fca_simple_unordered.hpp" />
+    <ClInclude Include="..\..\test\fca_unordered.hpp" />
+    <ClInclude Include="..\..\test\fxa_common.hpp" />
+    <ClInclude Include="..\..\test\input_from_forward_iterator.hpp" />
+    <ClInclude Include="..\..\test\input_iterator.hpp" />
+    <ClInclude Include="..\..\test\insert_test.hpp" />
+    <ClInclude Include="..\..\test\list_test.hpp" />
+    <ClInclude Include="..\..\test\map_test.hpp" />
+    <ClInclude Include="..\..\test\memory_resource_logger.hpp" />
+    <ClInclude Include="..\..\test\movable_int.hpp" />
+    <ClInclude Include="..\..\test\pool_resource_test.hpp" />
+    <ClInclude Include="..\..\test\print_container.hpp" />
+    <ClInclude Include="..\..\test\propagate_allocator_test.hpp" />
+    <ClInclude Include="..\..\test\propagation_test_allocator.hpp" />
+    <ClInclude Include="..\..\test\set_test.hpp" />
+    <ClInclude Include="..\..\test\static_vector_test.hpp" />
+    <ClInclude Include="..\..\test\test_elem.hpp" />
+    <ClInclude Include="..\..\test\test_util.hpp" />
+    <ClInclude Include="..\..\test\vector_test.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\doc\container.qbk" />

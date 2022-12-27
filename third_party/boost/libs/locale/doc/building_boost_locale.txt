@@ -5,7 +5,7 @@
 // https://www.boost.org/LICENSE_1_0.txt
 
 /*!
-\page building_boost_locale Building The library
+\page building_boost_locale Building the Library
 
 - \ref building_boost_locale_bb
     - \ref bb_building_deps
@@ -20,26 +20,25 @@
 \subsection bb_building_deps Dependencies
 
 - ICU library 3.6 or above is strongly recommended
-- If no ICU library is given, iconv support is required under POSIX platforms.
+- If no ICU library is given, iconv support is required on POSIX platforms.
 
 \subsection bb_platform_opts Platform Notes
 
 -   If you use Boost.Locale on Windows with MinGW/GCC < 4.5 you'll be
-    able to use static version only. Mingw/GCC prior to 4.5 have no
-    support of dynamic runtime linking.\n
+    able to use the static version only. Mingw/GCC prior to 4.5 has no
+    support for dynamic runtime linking.\n
     Using Boost.Locale DLL's with MinGW gcc also requires dynamic linking
     with the runtime libraries libstdc++ and libgcc. Some gcc builds use
-    static linking by default so make sure you use correct link options
-    with your compiler when you build your own programs.
+    static linking by default so make sure you use the correct link options.
 -   The AIX's iconv misses important character sets that Boost.Locale requires,
-    so you need to either use GNU iconv or link with ICU library.
--   If iconv library is not found on Darwin/Mac OS X builds make sure there
-    is no multiple iconv installations and provide -sICONV_PATH build option
-    to point to correct location of iconv library.
+    so you need to either use GNU iconv or link with the ICU library.
+-   If the iconv library is not found on Darwin/Mac OS X builds make sure there
+    are not multiple iconv installations and provide the -sICONV_PATH build option
+    to point to the correct location of the iconv library.
 
 \subsection bb_building_proc Building Process
 
-Now all you need to do is invoke bjam command:
+Now all you need to do is to invoke bjam:
 
 \verbatim
 ./bjam --with-locale stage
@@ -50,8 +49,8 @@ Or on Windows
 .\bjam --with-locale stage
 \endverbatim
 
-If you are using custom ICU build or you are using Microsoft Windows
-you need to provide a path to location of ICU library using \c -sICU_PATH option
+If you are using a custom ICU build or you are using Microsoft Windows,
+you need to provide a path to the location of the ICU library using the \c -sICU_PATH option
 
 For example:
 
@@ -82,42 +81,41 @@ For example:
     \endverbatim
 
 \note Don't forget to put both debug and release versions of ICU libraries in this path
-when using Microsoft Visual Studio  so Boost.Build will link correctly debug and release
-versions of boost_locale library.
+when using Microsoft Visual Studio so Boost.Build will correctly link debug and release
+versions of Boost.Locale.
 
 \section bb_build_opts Build Options
 
-Boost.Locale supports following options with values \c off or \c on
+Boost.Locale supports the following options with values \c off or \c on
 
-- \c boost.locale.icu=off disable build of ICU backend even if ICU library exists
-- \c boost.locale.iconv=off or \c boost.locale.iconv=on enable or disable use of iconv
-     library. It is off by default on Windows and Solaris
-- \c boost.locale.winapi=off - disable winapi backend, it is on by default on Windows and Cygwin
-- \c boost.locale.std=off or \c boost.locale.winapi=on Disable or enable std backends. \c std backend
+- \c boost.locale.icu=off prevents building the ICU backend even if the ICU library exists
+- \c boost.locale.iconv enables or disables the iconv backend. It is off by default on Windows and Solaris
+- \c boost.locale.winapi=off disables the winapi backend. It is on by default on Windows and Cygwin
+- \c boost.locale.std enables or disables the std backend. The std backend
      is disabled by default when using Sun Studio.
-- \c boost.locale.posix=on or \c boost.locale.posix=off Enable or disable support of POSIX backend,
-     it is on by default on Linux and Mac OS X
+- \c boost.locale.posix enables or disables support of the POSIX backend.
+     It is on by default on Linux and Mac OS X
 
-Also Boost.Locale supports following options
+Also Boost.Locale supports the following options
 
-- \c -sICU_PATH=/path/to/location/of/icu - the location of custom ICU library
-- \c -sICONV_PATH=/path/to/location/of/iconv - the location of custom iconv library
+- \c -sICU_PATH=/path/to/location/of/icu - the location of the ICU library
+- \c -sICONV_PATH=/path/to/location/of/iconv - the location of the iconv library
 
 
 For example:
 
--   Build the library on Windows with ICU backend only:
+-   Build the library on Windows with the ICU backend only:
     \verbatim
     .\bjam boost.locale.winapi=off boost.locale.std=off -sICU_PATH=c:\icu46 --with-locale stage
     \endverbatim
--   Build the library on Linux with std backend only
+-   Build the library on Linux with the std backend only
     \verbatim
     .\bjam boost.locale.posix=off boost.locale.icu=off --with-locale stage
     \endverbatim
 
 \section bb_build_test Running Unit Tests
 
-You can run unit tests by invoking \c bjam with \c libs/locale/test project parameter
+You can run unit tests by invoking \c bjam with the \c libs/locale/test project parameter
 \verbatim
 ./bjam libs/locale/test
 \endverbatim
@@ -127,10 +125,11 @@ You can run unit tests by invoking \c bjam with \c libs/locale/test project para
 Boost.Locale is built with binary compatibility in mind. Switching localization back ends on or off,
 or using iconv or not, does not affect binary compatibility. So if a dynamic library was built
 with all possible backends, other dynamic libraries compiled with, for example, only the \c std, \c posix
-or \c winapi backends would still be binary-compatible with it.
+or \c winapi backends would still be binary-compatible.
 
-However this definitely has an effect on some features. For example, if you
-try to use boundary analysis or a calendar facet when the library does not support the icu backend
-you would get an exception.
+
+Using a feature not included in the binary will result in an exception.
+For example, if you try to use boundary analysis or a calendar facet when the library does not support the ICU backend,
+you will get an exception.
 
 */

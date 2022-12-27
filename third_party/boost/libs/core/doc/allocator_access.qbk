@@ -293,7 +293,7 @@ returns `a`.]]]
 
 [endsect]
 
-[section Acknowledgments]
+[section Acknowledgements]
 
 Glen Fernandes implemented the allocator access utilities.
 

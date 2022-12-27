@@ -27,7 +27,7 @@
 <a name="json.ref.boost__json__object.emplace"></a><a class="link" href="emplace.html" title="object::emplace">object::emplace</a>
 </h5></div></div></div>
 <p>
-          <a class="indexterm" name="idm26384"></a>
+          <a class="indexterm" name="idm28127"></a>
         </p>
 <p>
           Construct an element in-place.
@@ -49,11 +49,11 @@
         </h6>
 <p>
           Inserts a new element into the container constructed in-place with the
-          given argument if there is no element with the key in the container. The
-          element is inserted after all the existing elements. If the insertion occurs
-          and results in a rehashing of the container, all iterators are invalidated.
-          Otherwise, iterators are not affected. References are not invalidated.
-          Rehashing occurs only if the new number of elements is greater than <a class="link" href="capacity.html" title="object::capacity"><code class="computeroutput"><span class="identifier">capacity</span><span class="special">()</span></code></a>.
+          given argument if there is no element with the <code class="computeroutput"><span class="identifier">key</span></code>
+          in the container. If the insertion occurs and results in a rehashing of
+          the container, all iterators and references are invalidated. Otherwise,
+          they are not affected. Rehashing occurs only if the new number of elements
+          is greater than <a class="link" href="capacity.html" title="object::capacity"><code class="computeroutput"><span class="identifier">capacity</span><span class="special">()</span></code></a>.
         </p>
 <h6>
 <a name="json.ref.boost__json__object.emplace.h2"></a>
@@ -80,8 +80,7 @@
           A <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span></code> where <code class="computeroutput"><span class="identifier">first</span></code>
           is an iterator to the existing or inserted element, and <code class="computeroutput"><span class="identifier">second</span></code>
           is <code class="computeroutput"><span class="keyword">true</span></code> if the insertion took
-          place or <code class="computeroutput"><span class="keyword">false</span></code> if the assignment
-          took place.
+          place or <code class="computeroutput"><span class="keyword">false</span></code> otherwise.
         </p>
 <h6>
 <a name="json.ref.boost__json__object.emplace.h5"></a>
@@ -170,7 +169,7 @@
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<p>
+<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>

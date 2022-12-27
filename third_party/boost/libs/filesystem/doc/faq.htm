@@ -72,8 +72,7 @@ readability. There was no apparent upside benefit.</p>
 <p><b>Why do path decomposition functions yielding a single element return a
 path rather than a string?</b></p>
 <p>Interface simplicity. If they returned strings, flavors would be needed for
-<code>string</code>, <code>wstring</code>, <code>u16string</code>,
-<code>u32string</code>, and generic strings.</p>
+different string and character types.</p>
 <p><b>Why don't path member functions have overloads with error_code&amp; arguments?</b></p>
 <p>They have not been requested by users; the need for error reporting via
 error_code seems limited to operations failures rather than path failures.</p>

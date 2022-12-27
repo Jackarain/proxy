@@ -38,7 +38,8 @@
     <span class="keyword">class</span> <a href="../../../../../../../../doc/html/boost_asio/reference/Handler.html" target="_top"><span class="emphasis"><em>Handler</em></span></a><span class="special">&gt;</span>
 <span class="keyword">void</span>
 <span class="identifier">emplace</span><span class="special">(</span>
-    <span class="identifier">Handler</span><span class="special">&amp;&amp;</span> <span class="identifier">handler</span><span class="special">);</span>
+    <span class="identifier">Handler</span><span class="special">&amp;&amp;</span> <span class="identifier">handler</span><span class="special">,</span>
+    <span class="identifier">net</span><span class="special">::</span><span class="identifier">cancellation_type</span> <span class="identifier">cancel_type</span> <span class="special">=</span> <span class="identifier">net</span><span class="special">::</span><span class="identifier">cancellation_type</span><span class="special">::</span><span class="identifier">terminal</span><span class="special">);</span>
 </pre>
 <h6>
 <a name="beast.ref.boost__beast__saved_handler.emplace.overload2.h1"></a>
@@ -70,7 +71,8 @@
                     </p>
                   </th>
 </tr></thead>
-<tbody><tr>
+<tbody>
+<tr>
 <td>
                     <p>
                       <code class="computeroutput"><span class="identifier">handler</span></code>
@@ -82,7 +84,20 @@
                       of the handler by performing a decay-copy.
                     </p>
                   </td>
-</tr></tbody>
+</tr>
+<tr>
+<td>
+                    <p>
+                      <code class="computeroutput"><span class="identifier">cancel_type</span></code>
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      The type of cancellation allowed to complete this op.
+                    </p>
+                  </td>
+</tr>
+</tbody>
 </table></div>
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>

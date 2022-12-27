@@ -1,5 +1,6 @@
 
 // Copyright 2017-2018 Daniel James.
+// Copyright 2022 Christian Mazakas.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -52,6 +53,53 @@ void merge_exception_test(T1 const*, T2 const*, std::size_t count12, int tag12,
   EXCEPTION_LOOP(merge_exception_test(x, y))
 }
 
+using test::default_generator;
+using test::generate_collisions;
+using test::limited_range;
+
+#ifdef BOOST_UNORDERED_FOA_TESTS
+boost::unordered_flat_set<test::exception::object, test::exception::hash,
+  test::exception::equal_to,
+  test::exception::allocator<test::exception::object> >* test_set_;
+boost::unordered_flat_map<test::exception::object, test::exception::object,
+  test::exception::hash, test::exception::equal_to,
+  test::exception::allocator2<test::exception::object> >* test_map_;
+
+// clang-format off
+UNORDERED_MULTI_TEST(set_merge, merge_exception_test,
+    ((test_set_))
+    ((test_set_))
+    ((0x0000)(0x6400)(0x0064)(0x0a64)(0x3232))
+    ((0x0000)(0x0001)(0x0102))
+    ((default_generator)(limited_range))
+    ((default_generator)(limited_range))
+)
+UNORDERED_MULTI_TEST(map_merge, merge_exception_test,
+    ((test_map_))
+    ((test_map_))
+    ((0x0000)(0x6400)(0x0064)(0x0a64)(0x3232))
+    ((0x0101)(0x0200)(0x0201))
+    ((default_generator)(limited_range))
+    ((default_generator)(limited_range))
+)
+// Run fewer generate_collisions tests, as they're slow.
+UNORDERED_MULTI_TEST(set_merge_collisions, merge_exception_test,
+    ((test_set_))
+    ((test_set_))
+    ((0x0a0a))
+    ((0x0202)(0x0100)(0x0201))
+    ((generate_collisions))
+    ((generate_collisions))
+)
+UNORDERED_MULTI_TEST(map_merge_collisions, merge_exception_test,
+    ((test_map_))
+    ((test_map_))
+    ((0x0a0a))
+    ((0x0000)(0x0002)(0x0102))
+    ((generate_collisions))
+    ((generate_collisions))
+)
+#else
 boost::unordered_set<test::exception::object, test::exception::hash,
   test::exception::equal_to,
   test::exception::allocator<test::exception::object> >* test_set_;
@@ -64,10 +112,6 @@ boost::unordered_map<test::exception::object, test::exception::object,
 boost::unordered_multimap<test::exception::object, test::exception::object,
   test::exception::hash, test::exception::equal_to,
   test::exception::allocator2<test::exception::object> >* test_multimap_;
-
-using test::default_generator;
-using test::generate_collisions;
-using test::limited_range;
 
 // clang-format off
 UNORDERED_MULTI_TEST(set_merge, merge_exception_test,
@@ -104,5 +148,6 @@ UNORDERED_MULTI_TEST(map_merge_collisions, merge_exception_test,
     ((generate_collisions))
 )
 // clang-format on
+#endif
 
 RUN_TESTS_QUIET()

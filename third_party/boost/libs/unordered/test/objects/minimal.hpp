@@ -11,6 +11,7 @@
 #if !defined(BOOST_UNORDERED_OBJECTS_MINIMAL_HEADER)
 #define BOOST_UNORDERED_OBJECTS_MINIMAL_HEADER
 
+#include <boost/core/addressof.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <boost/core/pointer_traits.hpp>
 #include <boost/move/move.hpp>
@@ -320,7 +321,7 @@ namespace test {
       bool operator!() const { return !ptr_; }
 
       static ptr pointer_to(T& p) {
-        return ptr(&p);
+        return ptr(boost::addressof(p));
       }
 
       // I'm not using the safe bool idiom because the containers should be

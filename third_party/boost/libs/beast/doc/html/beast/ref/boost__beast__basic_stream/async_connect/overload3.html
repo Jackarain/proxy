@@ -175,6 +175,30 @@
     <span class="special">}</span>
 <span class="special">};</span>
 </pre>
+<h6>
+<a name="beast.ref.boost__beast__basic_stream.async_connect.overload3.h4"></a>
+            <span class="phrase"><a name="beast.ref.boost__beast__basic_stream.async_connect.overload3.per_operation_cancellation"></a></span><a class="link" href="overload3.html#beast.ref.boost__beast__basic_stream.async_connect.overload3.per_operation_cancellation">Per-Operation
+            Cancellation</a>
+          </h6>
+<p>
+            This asynchronous operation supports cancellation for the following net::cancellation_type
+            values:
+          </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+                <code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">cancellation_type</span><span class="special">::</span><span class="identifier">terminal</span></code>
+              </li>
+<li class="listitem">
+                <code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">cancellation_type</span><span class="special">::</span><span class="identifier">partial</span></code>
+              </li>
+<li class="listitem">
+                <code class="computeroutput"><span class="identifier">net</span><span class="special">::</span><span class="identifier">cancellation_type</span><span class="special">::</span><span class="identifier">total</span></code>
+              </li>
+</ul></div>
+<p>
+            if they are also supported by the socket's <code class="computeroutput"><span class="identifier">async_connect</span></code>
+            operation.
+          </p>
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>

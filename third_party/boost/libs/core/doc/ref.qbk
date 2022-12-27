@@ -68,7 +68,7 @@ The type-expression `boost::unwrap_reference<T>::type` is
 
 [xinclude ref_reference.xml]
 
-[section Acknowledgments]
+[section Acknowledgements]
 
 `ref` and `cref` were originally part of the Tuple library by
 Jaakko J\u00E4rvi. They were "promoted to `boost::` status" by

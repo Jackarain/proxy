@@ -241,4 +241,30 @@ semantics.
 
 [endsect]
 
+[section Tuple]
+[important This module is only available with C++ 14 and above.]
+
+    #include <boost/phoenix/stl/tuple.hpp>
+
+The tuple module provides a lazy version of `std::get` called `get_`. In addition to `std::tuple` (and `std::pair`) the `get_<int>` syntax can also
+be used with `std::array`, and the `get_<type>` syntax with `std::variant`. An example is below:
+
+    // using namespace boost::phoenix;
+    auto get_first_item = get_<0>(placeholders::arg1);
+    auto get_double = get_<double>(placeholders::arg1);
+
+[tip Other types may also be supported if `get` is implemented for them.]
+
+It also provides additional placeholders `uarg1`..`uargN` which unpack the first argument. These are defined as:
+
+    namespace placeholders {
+    auto uarg1 = boost::phoenix::get_<0>(arg1);
+    auto uarg2 = boost::phoenix::get_<1>(arg1);
+    ...
+    auto uarg10 = boost::phoenix::get_<9>(arg1);
+    }
+
+
+[endsect]
+
 [endsect]

@@ -9,14 +9,12 @@ build-project container_fwd ;
 
 project detail/test
   : requirements
+    <c++-template-depth>300
     <toolset>clang:<cxxflags>-Wno-unused
     <toolset>clang:<cxxflags>-Wno-tautological-compare
-    <toolset>clang:<cxxflags>-ftemplate-depth-300
-    <toolset>gcc:<cxxflags>-ftemplate-depth-300
     <toolset>gcc:<define>_STLP_DEBUG
     # Do not enable libstdc++ debug mode because of gcc 10.1 bug https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95289
     # <toolset>gcc:<define>_GLIBCXX_DEBUG
-    <toolset>darwin:<cxxflags>-ftemplate-depth-300
   ;
 
 # import rules for testing conditional on config file variables

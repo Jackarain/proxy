@@ -20,6 +20,7 @@
 #include <boost/core/lightweight_test.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/core/null_deleter.hpp>
+#include <boost/core/fclose_deleter.hpp>
 #include <boost/core/pointer_traits.hpp>
 #include <boost/ref.hpp>
 #include <boost/core/scoped_enum.hpp>

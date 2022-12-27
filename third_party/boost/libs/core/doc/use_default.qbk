@@ -11,7 +11,7 @@ Distributed under the Boost Software License, Version 1.0.
 [section Overview]
 
 The header <boost/core/use_default.hpp> provides the type `boost::use_default`
-which is used by other Boost libraries as a sentinel type in a templates to
+which is used by other Boost libraries as a sentinel type in templates to
 indicate defaults.
 
 [endsect]

@@ -54,7 +54,7 @@
         The meaning of the nested types is as follows
       </p>
 <div class="table">
-<a name="beast.using_http.custom_body_types.body_type_members"></a><p class="title"><b>Table 1.28. Body Type Members</b></p>
+<a name="beast.using_http.custom_body_types.body_type_members"></a><p class="title"><b>Table 1.29. Body Type Members</b></p>
 <div class="table-contents"><table class="table" summary="Body Type Members">
 <colgroup>
 <col>
@@ -131,16 +131,15 @@
         <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">list</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&gt;</span></code>. A custom body may even set the value
         type to something that is not a container for body octets, such as a <a href="../../../../../../libs/filesystem/doc/reference.html#class-path" target="_top"><code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">filesystem</span><span class="special">::</span><span class="identifier">path</span></code></a>. Or, a more structured container
         may be chosen. This declares a body's value type as a JSON tree structure
-        produced from a <a href="../../../../../../doc/html/property_tree/parsers.html#property_tree.parsers.json_parser" target="_top"><code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">property_tree</span><span class="special">::</span><span class="identifier">json_parser</span></code></a>:
+        produced from a <a href="../../../../../../doc/html/json/input_output.html#json.input_output.parsing.streaming_parser" target="_top"><code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">json</span><span class="special">::</span><span class="identifier">stream_parser</span></code></a>:
       </p>
-<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">property_tree</span><span class="special">/</span><span class="identifier">ptree</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
-<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">property_tree</span><span class="special">/</span><span class="identifier">json_parser</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">json</span><span class="special">/</span><span class="identifier">stream_parser</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 
 <span class="keyword">struct</span> <span class="identifier">Body</span>
 <span class="special">{</span>
-    <span class="keyword">using</span> <span class="identifier">value_type</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">property_tree</span><span class="special">::</span><span class="identifier">ptree</span><span class="special">;</span>
+    <span class="keyword">using</span> <span class="identifier">value_type</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">json</span><span class="special">::</span><span class="identifier">value</span><span class="special">;</span>
 
-    <span class="keyword">class</span> <span class="identifier">reader</span>
+    <span class="keyword">class</span> <span class="identifier">reader</span><span class="special">;</span>
     <span class="keyword">class</span> <span class="identifier">writer</span><span class="special">;</span>
 <span class="special">};</span>
 </pre>
@@ -231,9 +230,11 @@
     <span class="comment">// This body container holds a handle to the file</span>
     <span class="comment">// when it is open, and also caches the size when set.</span>
 
+<span class="preprocessor">#ifndef</span> <span class="identifier">BOOST_BEAST_DOXYGEN</span>
     <span class="keyword">friend</span> <span class="keyword">class</span> <span class="identifier">reader</span><span class="special">;</span>
     <span class="keyword">friend</span> <span class="keyword">class</span> <span class="identifier">writer</span><span class="special">;</span>
     <span class="keyword">friend</span> <span class="keyword">struct</span> <span class="identifier">basic_file_body</span><span class="special">;</span>
+<span class="preprocessor">#endif</span>
 
     <span class="comment">// This represents the open file</span>
     <span class="identifier">File</span> <span class="identifier">file_</span><span class="special">;</span>
@@ -512,7 +513,7 @@
 
     <span class="keyword">if</span> <span class="special">(</span><span class="identifier">nread</span> <span class="special">==</span> <span class="number">0</span><span class="special">)</span>
     <span class="special">{</span>
-        <span class="identifier">ec</span> <span class="special">=</span> <span class="identifier">error</span><span class="special">::</span><span class="identifier">short_read</span><span class="special">;</span>
+        <span class="identifier">BOOST_BEAST_ASSIGN_EC</span><span class="special">(</span><span class="identifier">ec</span><span class="special">,</span> <span class="identifier">error</span><span class="special">::</span><span class="identifier">short_read</span><span class="special">);</span>
         <span class="keyword">return</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">none</span><span class="special">;</span>
     <span class="special">}</span>
 

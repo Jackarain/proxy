@@ -4,18 +4,20 @@
 
 = Implementation Rationale
 
-The intent of this library is to implement the unordered
-containers in the standard, so the interface was fixed. But there are
+== boost::unordered_[multi]set and boost::unordered_[multi]map
+
+These containers adhere to the standard requirements for unordered associative
+containers, so the interface was fixed. But there are
 still some implementation decisions to make. The priorities are
 conformance to the standard and portability.
 
 The http://en.wikipedia.org/wiki/Hash_table[Wikipedia article on hash tables^]
 has a good summary of the implementation issues for hash tables in general.
 
-== Data Structure
+=== Data Structure
 
 By specifying an interface for accessing the buckets of the container the
-standard pretty much requires that the hash table uses chained addressing.
+standard pretty much requires that the hash table uses closed addressing.
 
 It would be conceivable to write a hash table that uses another method. For
 example, it could use open addressing, and use the lookup chain to act as a
@@ -32,12 +34,12 @@ bucket but there are some serious problems with this:
   restrictions could prevent a rehash when it's really needed. The maximum load
   factor could be set to a fairly low value to work around this - but the
   standard requires that it is initially set to 1.0.
-* And since the standard is written with a eye towards chained
+* And since the standard is written with a eye towards closed
   addressing, users will be surprised if the performance doesn't reflect that.
 
-So chained addressing is used.
+So closed addressing is used.
 
-== Number of Buckets
+=== Number of Buckets
 
 There are two popular methods for choosing the number of buckets in a hash
 table. One is to have a prime number of buckets, another is to use a power
@@ -70,3 +72,44 @@ distribution.
 Since release 1.80.0, prime numbers are chosen for the number of buckets in
 tandem with sophisticated modulo arithmetic. This removes the need for "mixing"
 the result of the user's hash function as was used for release 1.79.0.
+
+== boost::unordered_flat_set and boost::unordered_flat_map
+
+The C++ standard specification of unordered associative containers impose
+severe limitations on permissible implementations, the most important being
+that closed addressing is implicitly assumed. Slightly relaxing this specification
+opens up the possibility of providing container variations taking full
+advantage of open-addressing techniques.
+
+The design of `boost::unordered_flat_set` and `boost::unordered_flat_map` has been
+guided by Peter Dimov's https://pdimov.github.io/articles/unordered_dev_plan.html[Development Plan for Boost.Unordered^].
+We discuss here the most relevant principles.
+
+=== Hash function
+
+Given its rich functionality and cross-platform interoperability,
+`boost::hash` remains the default hash function of `boost::unordered_flat_set` and `boost::unordered_flat_map`.
+As it happens, `boost::hash` for integral and other basic types does not possess
+the statistical properties required by open addressing; to cope with this,
+we implement a post-mixing stage:
+
+*  64-bit architectures: we use the `xmx` function defined in
+Jon Maiga's http://jonkagstrom.com/bit-mixer-construction/index.html[The construct of a bit mixer^].
+*  32-bit architectures: the mixer used was selected from a set generated with https://github.com/skeeto/hash-prospector[Hash Function Prospector^]
+as the best overall performer in our internal benchmarks. Score assigned by Hash Prospector is 333.7934929677524.
+
+When using a hash function directly suitable for open addressing, post-mixing can be opted out by via a dedicated <<hash_traits_hash_is_avalanching,`hash_is_avalanching`>>trait.
+`boost::hash` specializations for string types are marked as avalanching.
+
+=== Platform interoperability
+
+The observable behavior of `boost::unordered_flat_set` and `boost::unordered_flat_map` is deterministically
+identical across different compilers as long as their ``std::size_type``s are the same size and the user-provided
+hash function and equality predicate are also interoperable
+&#8212;this includes elements being ordered in exactly the same way for the same sequence of
+operations.
+
+Although the implementation internally uses SIMD technologies, such as https://en.wikipedia.org/wiki/SSE2[SSE2^]
+and https://en.wikipedia.org/wiki/ARM_architecture_family#Advanced_SIMD_(NEON)[Neon^], when available,
+this does not affect interoperatility. For instance, the behavior is the same
+for Visual Studio on an x64-mode Intel CPU with SSE2 and for GCC on an IBM s390x without any supported SIMD technology.

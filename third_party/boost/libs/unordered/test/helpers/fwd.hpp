@@ -12,7 +12,8 @@ namespace test {
   typedef enum {
     default_generator,
     generate_collisions,
-    limited_range
+    limited_range,
+    sequential
   } random_generator;
 
   int generate(int const*, random_generator);

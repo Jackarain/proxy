@@ -156,6 +156,7 @@ project
         : <define>BOOST_FUSION_DISABLE_VARIADIC_VECTOR
         : tuple_traits__no_variadic ]
     [ run sequence/transform_view.cpp ]
+    [ run sequence/identity_view.cpp ]
     [ run sequence/vector_comparison.cpp ]
     [ run sequence/vector_construction.cpp ]
     [ run sequence/vector_conversion.cpp ]

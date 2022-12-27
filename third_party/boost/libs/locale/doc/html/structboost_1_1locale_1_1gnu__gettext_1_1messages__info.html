@@ -89,8 +89,8 @@ Classes</h2></td></tr>
 Public Types</h2></td></tr>
 <tr class="memitem:ac3bfe22cf949ed3f87ee28fa0c983502"><td class="memItemLeft" align="right" valign="top">typedef std::vector&lt; <a class="el" href="structboost_1_1locale_1_1gnu__gettext_1_1messages__info_1_1domain.html">domain</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structboost_1_1locale_1_1gnu__gettext_1_1messages__info.html#ac3bfe22cf949ed3f87ee28fa0c983502">domains_type</a></td></tr>
 <tr class="separator:ac3bfe22cf949ed3f87ee28fa0c983502"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4dfe37c5a392e5106e65b396a5288b76"><td class="memItemLeft" align="right" valign="top">typedef function&lt; std::vector&lt; char &gt; std::string const &amp;file_name, std::string const &amp;<a class="el" href="structboost_1_1locale_1_1gnu__gettext_1_1messages__info.html#a4a7406581c6c7975c90db9d2d157d384">encoding</a>) &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structboost_1_1locale_1_1gnu__gettext_1_1messages__info.html#a4dfe37c5a392e5106e65b396a5288b76">callback_type</a></td></tr>
-<tr class="separator:a4dfe37c5a392e5106e65b396a5288b76"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab4fb477df72eb95f7c330f12a96b6072"><td class="memItemLeft" align="right" valign="top">typedef std::function&lt; std::vector&lt; char &gt;const std::string &amp;file_name, const std::string &amp;<a class="el" href="structboost_1_1locale_1_1gnu__gettext_1_1messages__info.html#a4a7406581c6c7975c90db9d2d157d384">encoding</a>)&gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structboost_1_1locale_1_1gnu__gettext_1_1messages__info.html#ab4fb477df72eb95f7c330f12a96b6072">callback_type</a></td></tr>
+<tr class="separator:ab4fb477df72eb95f7c330f12a96b6072"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
@@ -114,21 +114,21 @@ std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hre
 <tr class="separator:a1ca79b90b4b8dbc924e5eb1b42188311"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a263d9d2c359ae7730e6d5bba54bb3022"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structboost_1_1locale_1_1gnu__gettext_1_1messages__info.html#a263d9d2c359ae7730e6d5bba54bb3022">paths</a></td></tr>
 <tr class="separator:a263d9d2c359ae7730e6d5bba54bb3022"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a63bd8b01ca532a2657186bab3fa396a2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structboost_1_1locale_1_1gnu__gettext_1_1messages__info.html#a4dfe37c5a392e5106e65b396a5288b76">callback_type</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structboost_1_1locale_1_1gnu__gettext_1_1messages__info.html#a63bd8b01ca532a2657186bab3fa396a2">callback</a></td></tr>
+<tr class="memitem:a63bd8b01ca532a2657186bab3fa396a2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structboost_1_1locale_1_1gnu__gettext_1_1messages__info.html#ab4fb477df72eb95f7c330f12a96b6072">callback_type</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structboost_1_1locale_1_1gnu__gettext_1_1messages__info.html#a63bd8b01ca532a2657186bab3fa396a2">callback</a></td></tr>
 <tr class="separator:a63bd8b01ca532a2657186bab3fa396a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>This structure holds all information required for creating gnu-gettext message catalogs,. </p>
 <p>The user is expected to set its parameters to load these catalogs correctly. This structure also allows providing functions for charset conversion. Note, you need to provide them, so this structure is not useful for wide characters without subclassing and it will also ignore gettext catalogs that use a charset different from <em>encoding</em>. </p>
 </div><h2 class="groupheader">Member Typedef Documentation</h2>
-<a id="a4dfe37c5a392e5106e65b396a5288b76"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4dfe37c5a392e5106e65b396a5288b76">&#9670;&nbsp;</a></span>callback_type</h2>
+<a id="ab4fb477df72eb95f7c330f12a96b6072"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab4fb477df72eb95f7c330f12a96b6072">&#9670;&nbsp;</a></span>callback_type</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">typedef function&lt; std::vector&lt;char&gt; std::string const &amp;file_name, std::string const &amp;<a class="el" href="structboost_1_1locale_1_1gnu__gettext_1_1messages__info.html#a4a7406581c6c7975c90db9d2d157d384">encoding</a> ) &gt; <a class="el" href="structboost_1_1locale_1_1gnu__gettext_1_1messages__info.html#a4dfe37c5a392e5106e65b396a5288b76">boost::locale::gnu_gettext::messages_info::callback_type</a></td>
+          <td class="memname">typedef std::function&lt;std::vector&lt;char&gt;const std::string&amp; file_name, const std::string&amp; <a class="el" href="structboost_1_1locale_1_1gnu__gettext_1_1messages__info.html#a4a7406581c6c7975c90db9d2d157d384">encoding</a>)&gt; <a class="el" href="structboost_1_1locale_1_1gnu__gettext_1_1messages__info.html#ab4fb477df72eb95f7c330f12a96b6072">boost::locale::gnu_gettext::messages_info::callback_type</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -164,7 +164,7 @@ std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hre
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="structboost_1_1locale_1_1gnu__gettext_1_1messages__info.html#a4dfe37c5a392e5106e65b396a5288b76">callback_type</a> boost::locale::gnu_gettext::messages_info::callback</td>
+          <td class="memname"><a class="el" href="structboost_1_1locale_1_1gnu__gettext_1_1messages__info.html#ab4fb477df72eb95f7c330f12a96b6072">callback_type</a> boost::locale::gnu_gettext::messages_info::callback</td>
         </tr>
       </table>
 </div><div class="memdoc">

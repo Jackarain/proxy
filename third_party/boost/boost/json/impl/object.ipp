@@ -449,7 +449,7 @@ insert(
     if(init.size() > max_size() - n0)
         detail::throw_length_error(
             "object too large",
-            BOOST_JSON_SOURCE_POS);
+            BOOST_CURRENT_LOCATION);
     reserve(n0 + init.size());
     revert_insert r(*this);
     if(t_->is_small())
@@ -508,40 +508,17 @@ object::
 erase(const_iterator pos) noexcept ->
     iterator
 {
-    auto p = begin() + (pos - begin());
-    if(t_->is_small())
-    {
-        p->~value_type();
-        --t_->size;
-        auto const pb = end();
-        if(p != end())
-        {
+    return do_erase(pos,
+        [this](iterator p) {
             // the casts silence warnings
             std::memcpy(
                 static_cast<void*>(p),
-                static_cast<void const*>(pb),
+                static_cast<void const*>(end()),
                 sizeof(*p));
-        }
-        return p;
-    }
-    remove(t_->bucket(p->key()), *p);
-    p->~value_type();
-    --t_->size;
-    auto const pb = end();
-    if(p != end())
-    {
-        auto& head = t_->bucket(pb->key());
-        remove(head, *pb);
-        // the casts silence warnings
-        std::memcpy(
-            static_cast<void*>(p),
-            static_cast<void const*>(pb),
-            sizeof(*p));
-        access::next(*p) = head;
-        head = static_cast<
-            index_t>(p - begin());
-    }
-    return p;
+        },
+        [this](iterator p) {
+            reindex_relocate(end(), p);
+        });
 }
 
 auto
@@ -553,6 +530,39 @@ erase(string_view key) noexcept ->
     if(it == end())
         return 0;
     erase(it);
+    return 1;
+}
+
+auto
+object::
+stable_erase(const_iterator pos) noexcept ->
+    iterator
+{
+    return do_erase(pos,
+        [this](iterator p) {
+            // the casts silence warnings
+            std::memmove(
+                static_cast<void*>(p),
+                static_cast<void const*>(p + 1),
+                sizeof(*p) * (end() - p));
+        },
+        [this](iterator p) {
+            for (; p != end(); ++p)
+            {
+                reindex_relocate(p + 1, p);
+            }
+        });
+}
+
+auto
+object::
+stable_erase(string_view key) noexcept ->
+    std::size_t
+{
+    auto it = find(key);
+    if(it == end())
+        return 0;
+    stable_erase(it);
     return 1;
 }
 
@@ -777,7 +787,7 @@ growth(
     if(new_size > max_size())
         detail::throw_length_error(
             "object too large",
-            BOOST_JSON_SOURCE_POS);
+            BOOST_CURRENT_LOCATION);
     std::size_t const old = capacity();
     if(old > max_size() - old / 2)
         return new_size;
@@ -828,6 +838,55 @@ destroy(
     BOOST_ASSERT(! sp_.is_not_shared_and_deallocate_is_trivial());
     while(last != first)
         (--last)->~key_value_pair();
+}
+
+template<class FS, class FB>
+auto
+object::
+do_erase(
+    const_iterator pos,
+    FS small_reloc,
+    FB big_reloc) noexcept
+    -> iterator
+{
+    auto p = begin() + (pos - begin());
+    if(t_->is_small())
+    {
+        p->~value_type();
+        --t_->size;
+        if(p != end())
+        {
+            small_reloc(p);
+        }
+        return p;
+    }
+    remove(t_->bucket(p->key()), *p);
+    p->~value_type();
+    --t_->size;
+    if(p != end())
+    {
+        big_reloc(p);
+    }
+    return p;
+}
+
+void
+object::
+reindex_relocate(
+    key_value_pair* src,
+    key_value_pair* dst) noexcept
+{
+    BOOST_ASSERT(! t_->is_small());
+    auto& head = t_->bucket(src->key());
+    remove(head, *src);
+    // the casts silence warnings
+    std::memcpy(
+        static_cast<void*>(dst),
+        static_cast<void const*>(src),
+        sizeof(*dst));
+    access::next(*dst) = head;
+    head = static_cast<
+        index_t>(dst - begin());
 }
 
 BOOST_JSON_NS_END

@@ -9,7 +9,7 @@
 #include <cctype>
 #include <cwctype>
 
-namespace boost::cnv
+namespace boost { namespace cnv
 {
     using  char_type = char;
     using uchar_type = unsigned char;
@@ -33,7 +33,7 @@ namespace boost::cnv
     template<> inline  char_type to_upper ( char_type c) { return std::toupper(static_cast<uchar_type>(c)); }
     template<> inline uchar_type to_upper (uchar_type c) { return std::toupper(c); }
     template<> inline wchar_type to_upper (wchar_type c) { return std::towupper(c); }
-}
+}}
 
 #endif // BOOST_CONVERT_DETAIL_IS_CHAR_HPP
 

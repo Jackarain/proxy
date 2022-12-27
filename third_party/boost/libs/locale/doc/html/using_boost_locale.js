@@ -13,10 +13,10 @@ var using_boost_locale =
       [ "Unicode Normalization", "conversions.html#conversions_normalization", null ],
       [ "Notes", "conversions.html#conversions_notes", null ]
     ] ],
-    [ "Numbers, Time and Currency formatting and parsing", "formatting_and_parsing.html", [
-      [ "Numbers and number manipulators", "formatting_and_parsing.html#numbers_formatting", null ],
-      [ "Currency formatting", "formatting_and_parsing.html#currency_formatting", null ],
-      [ "Date and Time formatting", "formatting_and_parsing.html#date_and_time_formatting", null ],
+    [ "Numbers, Time and Currency Formatting and Parsing", "formatting_and_parsing.html", [
+      [ "Numbers and Number Manipulators", "formatting_and_parsing.html#numbers_formatting", null ],
+      [ "Currency Formatting", "formatting_and_parsing.html#currency_formatting", null ],
+      [ "Date and Time Formatting", "formatting_and_parsing.html#date_and_time_formatting", null ],
       [ "Internals", "formatting_and_parsing.html#formatting_internals", null ]
     ] ],
     [ "Messages Formatting (Translation)", "messages_formatting.html", [

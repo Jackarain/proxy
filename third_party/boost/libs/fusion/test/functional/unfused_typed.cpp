@@ -9,7 +9,7 @@
 #include <boost/fusion/functional/adapter/unfused_typed.hpp>
 #include <boost/detail/lightweight_test.hpp>
 
-#include <boost/noncopyable.hpp>
+#include <boost/core/noncopyable.hpp>
 
 #include <boost/mpl/empty_base.hpp>
 #include <boost/mpl/identity.hpp>

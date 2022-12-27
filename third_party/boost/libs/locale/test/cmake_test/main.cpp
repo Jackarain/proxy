@@ -12,26 +12,19 @@
 int main()
 {
     // Simple test that including a library header and using an exported function works
-    #ifndef BOOST_NO_CXX11_SMART_PTR
     std::cout << "create_utf8_converter_unique_ptr" << std::endl;
     std::unique_ptr<boost::locale::util::base_converter> cvt = boost::locale::util::create_utf8_converter_unique_ptr();
-    #elif BOOST_LOCALE_USE_AUTO_PTR
     std::cout << "create_utf8_converter" << std::endl;
-    std::auto_ptr<boost::locale::util::base_converter> cvt = boost::locale::util::create_utf8_converter();
-    #else
-    std::cout << "create_utf8_converter_new_ptr" << std::endl;
-    boost::locale::hold_ptr<boost::locale::util::base_converter> cvt(boost::locale::util::create_utf8_converter_new_ptr());
-    #endif
+    cvt = boost::locale::util::create_utf8_converter();
+    cvt.reset(boost::locale::util::create_utf8_converter_new_ptr());
 
-    if(cvt.get())
-    {
+    if(cvt) {
         std::cout << "Created..." << std::endl;
         BOOST_ASSERT(cvt->is_thread_safe());
         BOOST_ASSERT(cvt->max_len() == 4);
-    }else
-    {
+    } else {
         std::cout << "Failed creation..." << std::endl;
     }
 
-    return cvt.get() ? 0 : 1;
+    return cvt ? 0 : 1;
 }

@@ -14,8 +14,8 @@
 #include <boost/core/lightweight_test.hpp>
 #include "./compile_time.hpp"
 
-void void_func1() { static int x = 1; ++x; }
-void void_func2() { static int x = 2; --x; }
+void void_func1() { static int x = 1; ++x; (void)x; }
+void void_func2() { static int x = 2; --x; (void)x; }
 int int_func1(int) { return 0; }
 int int_func2(int) { return 1; }
 

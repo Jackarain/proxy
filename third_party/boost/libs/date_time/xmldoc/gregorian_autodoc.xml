@@ -243,8 +243,8 @@
 
 <function name="to_simple_string"><type>std::string</type><parameter name="d"><paramtype>const <classname>date</classname> &amp;</paramtype></parameter><purpose>To YYYY-mmm-DD string where mmm 3 char month name. Example: 2002-Jan-01. </purpose></function>
 <function name="to_simple_string"><type>std::string</type><parameter name="d"><paramtype>const date_period &amp;</paramtype></parameter><purpose>Convert date period to simple string. Example: [2002-Jan-01/2002-Jan-02]. </purpose></function>
-<function name="to_iso_string"><type>std::string</type><parameter name="d"><paramtype>const date_period &amp;</paramtype></parameter><purpose>Date period to iso standard format CCYYMMDD/CCYYMMDD. Example: 20021225/20021231. </purpose></function>
-<function name="to_iso_extended_string"><type>std::string</type><parameter name="d"><paramtype>const <classname>date</classname> &amp;</paramtype></parameter><purpose>Convert to iso extended format string CCYY-MM-DD. Example 2002-12-31. </purpose></function>
+<function name="to_iso_string"><type>std::string</type><parameter name="d"><paramtype>const date_period &amp;</paramtype></parameter><purpose>Date period to ISO 8601 standard format CCYYMMDD/CCYYMMDD. Example: 20021225/20021231. </purpose></function>
+<function name="to_iso_extended_string"><type>std::string</type><parameter name="d"><paramtype>const <classname>date</classname> &amp;</paramtype></parameter><purpose>Convert to ISO 8601 extended format string CCYY-MM-DD. Example 2002-12-31. </purpose></function>
 <function name="to_sql_string"><type>std::string</type><parameter name="d"><paramtype>const <classname>date</classname> &amp;</paramtype></parameter></function>
 
 
@@ -367,7 +367,7 @@
 <method name="julian_day" cv="const"><type>BOOST_CXX14_CONSTEXPR date_int_type</type><purpose>Return the Julian Day number for the date. </purpose></method>
 <method name="day_of_year" cv="const"><type>BOOST_CXX14_CONSTEXPR day_of_year_type</type><purpose>Return the day of year 1..365 or 1..366 (for leap year) </purpose></method>
 <method name="modjulian_day" cv="const"><type>BOOST_CXX14_CONSTEXPR date_int_type</type><purpose>Return the Modified Julian Day number for the date. </purpose></method>
-<method name="week_number" cv="const"><type>BOOST_CXX14_CONSTEXPR int</type><purpose>Return the iso 8601 week number 1..53. </purpose></method>
+<method name="week_number" cv="const"><type>BOOST_CXX14_CONSTEXPR int</type><purpose>Return the ISO 8601 week number 1..53. </purpose></method>
 <method name="day_number" cv="const"><type>BOOST_CXX14_CONSTEXPR date_int_type</type><purpose>Return the day number from the calendar. </purpose></method>
 <method name="end_of_month" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>date</classname></type><purpose>Return the last day of the current month. </purpose></method>
 </method-group>
@@ -377,6 +377,9 @@
 <constructor specifiers="explicit"><parameter name="rhs"><paramtype>const date_int_type &amp;</paramtype></parameter><purpose>Needed copy constructor. </purpose></constructor>
 <constructor specifiers="explicit"><parameter name="rhs"><paramtype>date_rep_type</paramtype></parameter><purpose>Needed copy constructor. </purpose></constructor>
 <constructor specifiers="explicit"><parameter name="sv"><paramtype>special_values</paramtype></parameter><purpose>Constructor for infinities, not a date, max and min date. </purpose></constructor>
+<method-group name="private member functions">
+<method name="from_special_adjusted"><type>BOOST_CXX14_CONSTEXPR date_rep_type</type><parameter name="sv"><paramtype>special_values</paramtype></parameter></method>
+</method-group>
 </class>
 
 
@@ -1122,7 +1125,7 @@
 
 
 
-<function name="to_iso_string"><type>std::string</type><parameter name=""><paramtype>const <classname>date</classname> &amp;</paramtype></parameter><purpose>Convert to iso standard string YYYYMMDD. Example: 20021231. </purpose></function>
+<function name="to_iso_string"><type>std::string</type><parameter name=""><paramtype>const <classname>date</classname> &amp;</paramtype></parameter><purpose>Convert to ISO 8601 standard string YYYYMMDD. Example: 20021231. </purpose></function>
 
 
 
@@ -1853,8 +1856,8 @@
 <function name="from_simple_string"><type><classname>date</classname></type><parameter name="s"><paramtype>const std::string &amp;</paramtype></parameter><purpose>From delimited date string where with order year-month-day eg: 2002-1-25 or 2003-Jan-25 (full month name is also accepted) </purpose></function>
 <function name="from_us_string"><type><classname>date</classname></type><parameter name="s"><paramtype>const std::string &amp;</paramtype></parameter><purpose>From delimited date string where with order year-month-day eg: 1-25-2003 or Jan-25-2003 (full month name is also accepted) </purpose></function>
 <function name="from_uk_string"><type><classname>date</classname></type><parameter name="s"><paramtype>const std::string &amp;</paramtype></parameter><purpose>From delimited date string where with order day-month-year eg: 25-1-2002 or 25-Jan-2003 (full month name is also accepted) </purpose></function>
-<function name="from_undelimited_string"><type><classname>date</classname></type><parameter name="s"><paramtype>const std::string &amp;</paramtype></parameter><purpose>From iso type date string where with order year-month-day eg: 20020125. </purpose></function>
-<function name="date_from_iso_string"><type><classname>date</classname></type><parameter name="s"><paramtype>const std::string &amp;</paramtype></parameter><purpose>From iso type date string where with order year-month-day eg: 20020125. </purpose></function>
+<function name="from_undelimited_string"><type><classname>date</classname></type><parameter name="s"><paramtype>const std::string &amp;</paramtype></parameter><purpose>From ISO 8601 type date string where with order year-month-day eg: 20020125. </purpose></function>
+<function name="date_from_iso_string"><type><classname>date</classname></type><parameter name="s"><paramtype>const std::string &amp;</paramtype></parameter><purpose>From ISO 8601 type date string where with order year-month-day eg: 20020125. </purpose></function>
 <function name="from_stream"><type><classname>date</classname></type><template>
           <template-type-parameter name="iterator_type"/>
         </template><parameter name="beg"><paramtype>iterator_type</paramtype></parameter><parameter name="end"><paramtype>iterator_type</paramtype></parameter><purpose>Stream should hold a date in the form of: 2002-1-25. Month number, abbrev, or name are accepted. </purpose></function>

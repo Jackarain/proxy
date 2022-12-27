@@ -11,3 +11,6 @@ build-project server ;
 
 # SSL
 build-project server-flex ;
+
+# C++20
+build-project server-flex-awaitable ;

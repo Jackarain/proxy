@@ -242,14 +242,16 @@ inline bool is_symlink(path const& p, system::error_code& ec)
 }
 
 #ifndef BOOST_FILESYSTEM_NO_DEPRECATED
+BOOST_FILESYSTEM_DETAIL_DEPRECATED("Use is_regular_file() instead")
 inline bool is_regular(path const& p)
 {
-    return is_regular(detail::status(p));
+    return filesystem::is_regular_file(p);
 }
 
+BOOST_FILESYSTEM_DETAIL_DEPRECATED("Use is_regular_file() instead")
 inline bool is_regular(path const& p, system::error_code& ec)
 {
-    return is_regular(detail::status(p, &ec));
+    return filesystem::is_regular_file(p, ec);
 }
 #endif
 
@@ -347,11 +349,13 @@ inline path canonical(path const& p, path const& base, system::error_code& ec)
 }
 
 #ifndef BOOST_FILESYSTEM_NO_DEPRECATED
+BOOST_FILESYSTEM_DETAIL_DEPRECATED("Use absolute() instead")
 inline path complete(path const& p)
 {
     return absolute(p, initial_path());
 }
 
+BOOST_FILESYSTEM_DETAIL_DEPRECATED("Use absolute() instead")
 inline path complete(path const& p, path const& base)
 {
     return absolute(p, base);
@@ -379,11 +383,13 @@ inline void copy(path const& from, path const& to, BOOST_SCOPED_ENUM_NATIVE(copy
 }
 
 #if !defined(BOOST_FILESYSTEM_NO_DEPRECATED)
+BOOST_FILESYSTEM_DETAIL_DEPRECATED("Use create_directory() instead")
 inline void copy_directory(path const& from, path const& to)
 {
     detail::copy_directory(from, to);
 }
 
+BOOST_FILESYSTEM_DETAIL_DEPRECATED("Use create_directory() instead")
 inline void copy_directory(path const& from, path const& to, system::error_code& ec) BOOST_NOEXCEPT
 {
     detail::copy_directory(from, to, &ec);
@@ -413,12 +419,14 @@ inline bool copy_file(path const& from, path const& to, // See ticket #2925
 }
 
 #if !defined(BOOST_FILESYSTEM_NO_DEPRECATED)
+BOOST_FILESYSTEM_DETAIL_DEPRECATED("Use copy_options instead of copy_option")
 inline bool copy_file(path const& from, path const& to, // See ticket #2925
                       BOOST_SCOPED_ENUM_NATIVE(copy_option) options)
 {
     return detail::copy_file(from, to, static_cast< unsigned int >(options));
 }
 
+BOOST_FILESYSTEM_DETAIL_DEPRECATED("Use copy_options instead of copy_option")
 inline bool copy_file(path const& from, path const& to, // See ticket #2925
                       BOOST_SCOPED_ENUM_NATIVE(copy_option) options, system::error_code& ec) BOOST_NOEXCEPT
 {
@@ -646,6 +654,7 @@ inline space_info space(path const& p, system::error_code& ec) BOOST_NOEXCEPT
 }
 
 #ifndef BOOST_FILESYSTEM_NO_DEPRECATED
+BOOST_FILESYSTEM_DETAIL_DEPRECATED("Use is_symlink(symlink_status(path)) instead")
 inline bool symbolic_link_exists(path const& p)
 {
     return is_symlink(filesystem::symlink_status(p));

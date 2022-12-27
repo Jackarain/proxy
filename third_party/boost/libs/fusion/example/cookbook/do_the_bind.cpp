@@ -46,7 +46,7 @@
 #include <boost/mpl/max.hpp>
 #include <boost/mpl/next.hpp>
 
-#include <boost/ref.hpp>
+#include <boost/core/ref.hpp>
 #include <iostream>
 #include <typeinfo>
 

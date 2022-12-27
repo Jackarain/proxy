@@ -12,10 +12,10 @@
 
 include::unordered/intro.adoc[]
 include::unordered/buckets.adoc[]
-include::unordered/benchmarks.adoc[]
 include::unordered/hash_equality.adoc[]
 include::unordered/comparison.adoc[]
 include::unordered/compliance.adoc[]
+include::unordered/benchmarks.adoc[]
 include::unordered/rationale.adoc[]
 include::unordered/ref.adoc[]
 include::unordered/changes.adoc[]

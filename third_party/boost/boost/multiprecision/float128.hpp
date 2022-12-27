@@ -193,7 +193,7 @@ struct float128_backend
       return *this;
    }
    template <class T>
-   constexpr float128_backend(const T& i, const typename std::enable_if<std::is_convertible<T, float128_type>::value>::type* = 0) noexcept(noexcept(std::declval<float128_type&>() = std::declval<const T&>()))
+   constexpr float128_backend(const T& i, const typename std::enable_if<std::is_convertible<T, float128_type>::value>::type* = nullptr) noexcept(noexcept(std::declval<float128_type&>() = std::declval<const T&>()))
        : m_value(i) {}
    template <class T>
    BOOST_MP_CXX14_CONSTEXPR typename std::enable_if<boost::multiprecision::detail::is_arithmetic<T>::value || std::is_convertible<T, float128_type>::value, float128_backend&>::type operator=(const T& i) noexcept(noexcept(std::declval<float128_type&>() = std::declval<const T&>()))
@@ -203,8 +203,10 @@ struct float128_backend
    }
    BOOST_MP_CXX14_CONSTEXPR float128_backend(long double const& f) : m_value(f)
    {
-      if (::fabsl(f) > LDBL_MAX)
-         m_value = (f < 0) ? -static_cast<float128_type>(HUGE_VAL) : static_cast<float128_type>(HUGE_VAL);
+      if (f > LDBL_MAX)
+         m_value = static_cast<float128_type>(HUGE_VAL);
+      else if (-f > LDBL_MAX)
+         m_value = -static_cast<float128_type>(HUGE_VAL);
    }
    BOOST_MP_CXX14_CONSTEXPR float128_backend& operator=(long double const& f)
    {
@@ -440,7 +442,7 @@ inline void eval_rsqrt(float128_backend& result, const float128_backend& arg)
 #endif
 }
 #ifndef BOOST_MP_NO_CONSTEXPR_DETECTION
-inline BOOST_MP_CXX14_CONSTEXPR 
+inline BOOST_MP_CXX14_CONSTEXPR
 #else
 inline
 #endif
@@ -556,7 +558,7 @@ inline void eval_trunc(float128_backend& result, const float128_backend& arg)
    result.value() = truncq(arg.value());
 }
 /*
-// 
+//
 // This doesn't actually work... rely on our own default version instead.
 //
 inline void eval_round(float128_backend& result, const float128_backend& arg)
@@ -564,9 +566,9 @@ inline void eval_round(float128_backend& result, const float128_backend& arg)
    if(isnanq(arg.value()) || isinf(arg.value()))
    {
       result = boost::math::policies::raise_rounding_error(
-            "boost::multiprecision::trunc<%1%>(%1%)", 0, 
-            number<float128_backend, et_off>(arg), 
-            number<float128_backend, et_off>(arg), 
+            "boost::multiprecision::trunc<%1%>(%1%)", nullptr,
+            number<float128_backend, et_off>(arg),
+            number<float128_backend, et_off>(arg),
             boost::math::policies::policy<>()).backend();
       return;
    }

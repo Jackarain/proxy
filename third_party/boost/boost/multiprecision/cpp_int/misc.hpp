@@ -246,7 +246,8 @@ eval_convert_to(R* result, const cpp_int_backend<MinBits1, MaxBits1, SignType1, 
             #ifdef BOOST_MP_MATH_AVAILABLE
             *result = boost::math::float_next(*result);
             #else
-            *result = std::nextafter(*result, *result * 2);
+            using std::nextafter; BOOST_MP_FLOAT128_USING
+            *result = nextafter(*result, *result * 2);
             #endif
          }
       }

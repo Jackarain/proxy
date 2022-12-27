@@ -1,21 +1,21 @@
 
 // Copyright 2009 Daniel James.
+// Copyright 2022 Christian Mazakas.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-// clang-format off
-#include "../helpers/prefix.hpp"
-#include <boost/unordered_map.hpp>
-#include <boost/unordered_set.hpp>
-#include "../helpers/postfix.hpp"
-// clang-format on
+#include "../helpers/unordered.hpp"
 
 #include <utility>
 
 namespace x {
   struct D
   {
+#ifdef BOOST_UNORDERED_FOA_TESTS
+    boost::unordered_flat_map<D, D> x;
+#else
     boost::unordered_map<D, D> x;
+#endif
   };
 }
 
@@ -29,6 +29,17 @@ namespace incomplete_test {
 
   // Declare some instances
 
+#ifdef BOOST_UNORDERED_FOA_TESTS
+  typedef boost::unordered_flat_map<value, value, hash, equals,
+    allocator<std::pair<value const, value> > >
+    map;
+  typedef boost::unordered_flat_map<value, value, hash, equals,
+    allocator<std::pair<value const, value> > >
+    multimap;
+  typedef boost::unordered_flat_set<value, hash, equals, allocator<value> > set;
+  typedef boost::unordered_flat_set<value, hash, equals, allocator<value> >
+    multiset;
+#else
   typedef boost::unordered_map<value, value, hash, equals,
     allocator<std::pair<value const, value> > >
     map;
@@ -38,6 +49,7 @@ namespace incomplete_test {
   typedef boost::unordered_set<value, hash, equals, allocator<value> > set;
   typedef boost::unordered_multiset<value, hash, equals, allocator<value> >
     multiset;
+#endif
 
   // Now define the types which are stored as members, as they are needed for
   // declaring struct members.
@@ -76,7 +88,28 @@ namespace incomplete_test {
   //
   // Incomplete hash, equals and allocator aren't here supported at the
   // moment.
-
+#ifdef BOOST_UNORDERED_FOA_TESTS
+  struct struct1
+  {
+    boost::unordered_flat_map<struct1, struct1, hash, equals,
+      allocator<std::pair<struct1 const, struct1> > >
+      x;
+  };
+  struct struct2
+  {
+    boost::unordered_flat_map<struct2, struct2, hash, equals,
+      allocator<std::pair<struct2 const, struct2> > >
+      x;
+  };
+  struct struct3
+  {
+    boost::unordered_flat_set<struct3, hash, equals, allocator<struct3> > x;
+  };
+  struct struct4
+  {
+    boost::unordered_flat_set<struct4, hash, equals, allocator<struct4> > x;
+  };
+#else
   struct struct1
   {
     boost::unordered_map<struct1, struct1, hash, equals,
@@ -97,7 +130,7 @@ namespace incomplete_test {
   {
     boost::unordered_multiset<struct4, hash, equals, allocator<struct4> > x;
   };
-
+#endif
   // Now define the value type.
 
   struct value

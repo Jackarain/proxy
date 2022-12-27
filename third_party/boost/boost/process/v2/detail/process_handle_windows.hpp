@@ -87,17 +87,16 @@ struct basic_process_handle_win
     {
     }
 
-    basic_process_handle_win(basic_process_handle_win && handle)
+    basic_process_handle_win(basic_process_handle_win && handle) 
+        :  pid_(handle.id()), handle_(std::move(handle.handle_))
     {
-        pid_ = handle.id();
-        handle_ = std::move(handle.handle_);
         handle.pid_ = static_cast<DWORD>(-1);
     }
 
     basic_process_handle_win& operator=(basic_process_handle_win && handle)
     {
         pid_ = handle.pid_;
-        handle_ = std::mopve(handle_))
+        handle_ = std::move(handle.handle_);
         handle.pid_ = static_cast<DWORD>(-1);
         return *this;
     }
@@ -166,7 +165,6 @@ struct basic_process_handle_win
     {
         if (!detail::check_pid_(pid_, ec))
             return;
-
         detail::request_exit_(pid_, ec);
     }
 

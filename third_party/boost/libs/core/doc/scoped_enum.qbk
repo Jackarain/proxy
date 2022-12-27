@@ -46,7 +46,7 @@ The user can portably declare such enumeration as follows:
     }
     BOOST_SCOPED_ENUM_DECLARE_END(future_errc)
 
-These macros allows to use `future_errc` in almost all the cases as an scoped enum.
+These macros allow using `future_errc` in almost all the cases as a scoped enum.
 
     future_errc ev = future_errc::no_state;
 
@@ -179,7 +179,7 @@ such cases.
 
 [endsect]
 
-[section Acknowledgments]
+[section Acknowledgements]
 
 This scoped enum emulation was developed by Beman Dawes, Vicente J. Botet Escriba and Anthony Williams.
 

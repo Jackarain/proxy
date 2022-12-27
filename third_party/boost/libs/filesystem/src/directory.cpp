@@ -134,38 +134,6 @@ file_status directory_entry::get_symlink_status(system::error_code* ec) const
     return m_symlink_status;
 }
 
-//  dispatch directory_entry supplied here rather than in
-//  <boost/filesystem/path_traits.hpp>, thus avoiding header circularity.
-//  test cases are in operations_unit_test.cpp
-
-namespace path_traits {
-
-BOOST_FILESYSTEM_DECL
-void dispatch(directory_entry const& de,
-#ifdef BOOST_WINDOWS_API
-              std::wstring& to,
-#else
-              std::string& to,
-#endif
-              codecvt_type const&)
-{
-    to = de.path().native();
-}
-
-BOOST_FILESYSTEM_DECL
-void dispatch(directory_entry const& de,
-#ifdef BOOST_WINDOWS_API
-              std::wstring& to
-#else
-              std::string& to
-#endif
-)
-{
-    to = de.path().native();
-}
-
-} // namespace path_traits
-
 //--------------------------------------------------------------------------------------//
 //                                                                                      //
 //                               directory_iterator                                     //

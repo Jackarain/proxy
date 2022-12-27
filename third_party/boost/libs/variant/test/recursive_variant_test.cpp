@@ -33,6 +33,8 @@
 #include <tuple>
 #endif // !defined(BOOST_VARIANT_DO_NOT_USE_VARIADIC_TEMPLATES) && !defined(BOOST_NO_CXX11_HDR_TUPLE)
 
+struct Nil {};
+
 struct printer
     : boost::static_visitor<std::string>
 {
@@ -355,10 +357,21 @@ void test_recursive_variant_over()
     BOOST_TEST(result5 == "( 3.5 ( 3 5 ( 3 5 ) 7 ) 17.25 ) ");
 }
 
+void test_recursive_variant_from_variant()
+{
+    // See https://github.com/boostorg/variant/issues/100
+    typedef boost::variant<Nil, double> Atom;
+    typedef boost::variant<Nil, boost::recursive_wrapper<Atom> > Variant;
+
+    BOOST_STATIC_ASSERT(!boost::is_constructible<Variant, Atom>::value);
+    BOOST_STATIC_ASSERT(boost::is_constructible<boost::variant<Nil, Atom>, Atom>::value);
+}
+
 int main()
 {
     test_recursive_variant();
     test_recursive_variant_over();
+    test_recursive_variant_from_variant();
 
     return boost::report_errors();
 }

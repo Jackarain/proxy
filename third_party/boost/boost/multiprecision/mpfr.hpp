@@ -323,8 +323,16 @@ struct mpfr_float_imp<digits10, allocate_dynamic>
          return *this;
       }
 
-      BOOST_MP_ASSERT(!BOOST_MP_ISINF(a));
-      BOOST_MP_ASSERT(!BOOST_MP_ISNAN(a));
+      if (BOOST_MP_ISINF(a))
+      {
+         mpfr_set_inf(m_data, a < 0 ? -1 : 1);
+         return *this;
+      }
+      if (BOOST_MP_ISNAN(a))
+      {
+         mpfr_set_nan(m_data);
+         return *this;
+      }
 
       int        e;
       float128_type f, term;
@@ -739,8 +747,16 @@ struct mpfr_float_imp<digits10, allocate_stack>
          return *this;
       }
 
-      BOOST_MP_ASSERT(!BOOST_MP_ISINF(a));
-      BOOST_MP_ASSERT(!BOOST_MP_ISNAN(a));
+      if (BOOST_MP_ISINF(a))
+      {
+         mpfr_set_inf(m_data, a < 0 ? -1 : 1);
+         return *this;
+      }
+      if (BOOST_MP_ISNAN(a))
+      {
+         mpfr_set_nan(m_data);
+         return *this;
+      }
 
       int        e;
       float128_type f, term;
@@ -953,25 +969,25 @@ struct mpfr_float_backend : public detail::mpfr_float_imp<digits10, AllocationTy
    mpfr_float_backend(mpfr_float_backend&& o) noexcept : detail::mpfr_float_imp<digits10, AllocationType>(static_cast<detail::mpfr_float_imp<digits10, AllocationType>&&>(o))
    {}
    template <unsigned D, mpfr_allocation_type AT>
-   mpfr_float_backend(const mpfr_float_backend<D, AT>& val, typename std::enable_if<D <= digits10>::type* = 0)
+   mpfr_float_backend(const mpfr_float_backend<D, AT>& val, typename std::enable_if<D <= digits10>::type* = nullptr)
        : detail::mpfr_float_imp<digits10, AllocationType>()
    {
       mpfr_set(this->m_data, val.data(), GMP_RNDN);
    }
    template <unsigned D, mpfr_allocation_type AT>
-   explicit mpfr_float_backend(const mpfr_float_backend<D, AT>& val, typename std::enable_if<!(D <= digits10)>::type* = 0)
+   explicit mpfr_float_backend(const mpfr_float_backend<D, AT>& val, typename std::enable_if<!(D <= digits10)>::type* = nullptr)
        : detail::mpfr_float_imp<digits10, AllocationType>()
    {
       mpfr_set(this->m_data, val.data(), GMP_RNDN);
    }
    template <unsigned D>
-   mpfr_float_backend(const gmp_float<D>& val, typename std::enable_if<D <= digits10>::type* = 0)
+   mpfr_float_backend(const gmp_float<D>& val, typename std::enable_if<D <= digits10>::type* = nullptr)
        : detail::mpfr_float_imp<digits10, AllocationType>()
    {
       mpfr_set_f(this->m_data, val.data(), GMP_RNDN);
    }
    template <unsigned D>
-   mpfr_float_backend(const gmp_float<D>& val, typename std::enable_if<!(D <= digits10)>::type* = 0)
+   mpfr_float_backend(const gmp_float<D>& val, typename std::enable_if<!(D <= digits10)>::type* = nullptr)
        : detail::mpfr_float_imp<digits10, AllocationType>()
    {
       mpfr_set_f(this->m_data, val.data(), GMP_RNDN);
@@ -1322,7 +1338,7 @@ struct mpfr_float_backend<0, allocate_dynamic> : public detail::mpfr_float_imp<0
    }
    //
    // Variable precision options:
-   // 
+   //
    static variable_precision_options default_variable_precision_options()noexcept
    {
       return get_global_default_options();
@@ -1915,7 +1931,7 @@ inline void eval_log2(mpfr_float_backend<Digits10, AllocateType>& result, const 
 template <unsigned Digits10, mpfr_allocation_type AllocateType>
 inline void eval_modf(mpfr_float_backend<Digits10, AllocateType>& result, const mpfr_float_backend<Digits10, AllocateType>& arg, mpfr_float_backend<Digits10, AllocateType>* pipart)
 {
-   if (0 == pipart)
+   if (pipart == nullptr)
    {
       mpfr_float_backend<Digits10, AllocateType> ipart;
       mpfr_modf(ipart.data(), result.data(), arg.data(), GMP_RNDN);
@@ -2381,13 +2397,8 @@ struct constant_pi<boost::multiprecision::number<boost::multiprecision::backends
    template <int N>
    static inline const result_type& get(const std::integral_constant<int, N>&)
    {
-      static result_type result;
-      static bool        has_init = false;
-      if (!has_init)
-      {
-         mpfr_const_pi(result.backend().value().data(), GMP_RNDN);
-         has_init = true;
-      }
+      // C++11 thread safe static initialization:
+      static result_type result{get(std::integral_constant<int, 0>())};
       return result;
    }
    static inline const result_type get(const std::integral_constant<int, 0>&)
@@ -2404,13 +2415,8 @@ struct constant_ln_two<boost::multiprecision::number<boost::multiprecision::back
    template <int N>
    static inline const result_type& get(const std::integral_constant<int, N>&)
    {
-      static result_type result;
-      static bool        init = false;
-      if (!init)
-      {
-         mpfr_const_log2(result.backend().value().data(), GMP_RNDN);
-         init = true;
-      }
+      // C++11 thread safe static initialization:
+      static result_type result{get(std::integral_constant<int, 0>())};
       return result;
    }
    static inline const result_type get(const std::integral_constant<int, 0>&)
@@ -2427,13 +2433,8 @@ struct constant_euler<boost::multiprecision::number<boost::multiprecision::backe
    template <int N>
    static inline const result_type& get(const std::integral_constant<int, N>&)
    {
-      static result_type result;
-      static bool        init = false;
-      if (!init)
-      {
-         mpfr_const_euler(result.backend().value().data(), GMP_RNDN);
-         init = true;
-      }
+      // C++11 thread safe static initialization:
+      static result_type result{get(std::integral_constant<int, 0>())};
       return result;
    }
    static inline const result_type get(const std::integral_constant<int, 0>&)
@@ -2450,13 +2451,8 @@ struct constant_catalan<boost::multiprecision::number<boost::multiprecision::bac
    template <int N>
    static inline const result_type& get(const std::integral_constant<int, N>&)
    {
-      static result_type result;
-      static bool        init = false;
-      if (!init)
-      {
-         mpfr_const_catalan(result.backend().value().data(), GMP_RNDN);
-         init = true;
-      }
+      // C++11 thread safe static initialization:
+      static result_type result{get(std::integral_constant<int, 0>())};
       return result;
    }
    static inline const result_type get(const std::integral_constant<int, 0>&)
@@ -2778,7 +2774,7 @@ inline boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<D
    boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> result;
    mpfr_asinh(result.backend().data(), arg.backend().data(), GMP_RNDN);
    if (mpfr_inf_p(result.backend().data()))
-      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("asinh<%1%>(%1%)", 0, Policy());
+      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("asinh<%1%>(%1%)", nullptr, Policy());
    if (mpfr_nan_p(result.backend().data()))
       return policies::raise_evaluation_error("asinh<%1%>(%1%)", "Unknown error, result is a NaN", result, Policy());
    return result;
@@ -2797,7 +2793,7 @@ inline boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<D
    boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> result;
    mpfr_acosh(result.backend().data(), arg.backend().data(), GMP_RNDN);
    if (mpfr_inf_p(result.backend().data()))
-      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("acosh<%1%>(%1%)", 0, Policy());
+      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("acosh<%1%>(%1%)", nullptr, Policy());
    if (mpfr_nan_p(result.backend().data()))
       return policies::raise_evaluation_error("acosh<%1%>(%1%)", "Unknown error, result is a NaN", result, Policy());
    return result;
@@ -2816,7 +2812,7 @@ inline boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<D
    boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> result;
    mpfr_atanh(result.backend().data(), arg.backend().data(), GMP_RNDN);
    if (mpfr_inf_p(result.backend().data()))
-      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("atanh<%1%>(%1%)", 0, Policy());
+      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("atanh<%1%>(%1%)", nullptr, Policy());
    if (mpfr_nan_p(result.backend().data()))
       return policies::raise_evaluation_error("atanh<%1%>(%1%)", "Unknown error, result is a NaN", result, Policy());
    return result;
@@ -2835,7 +2831,7 @@ inline boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<D
    boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> result;
    mpfr_cbrt(result.backend().data(), arg.backend().data(), GMP_RNDN);
    if (mpfr_inf_p(result.backend().data()))
-      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("cbrt<%1%>(%1%)", 0, Policy());
+      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("cbrt<%1%>(%1%)", nullptr, Policy());
    if (mpfr_nan_p(result.backend().data()))
       return policies::raise_evaluation_error("cbrt<%1%>(%1%)", "Unknown error, result is a NaN", result, Policy());
    return result;
@@ -2854,7 +2850,7 @@ inline boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<D
    boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> result;
    mpfr_erf(result.backend().data(), arg.backend().data(), GMP_RNDN);
    if (mpfr_inf_p(result.backend().data()))
-      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("erf<%1%>(%1%)", 0, pol);
+      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("erf<%1%>(%1%)", nullptr, pol);
    if (mpfr_nan_p(result.backend().data()))
       return policies::raise_evaluation_error("erf<%1%>(%1%)", "Unknown error, result is a NaN", result, pol);
    return result;
@@ -2873,7 +2869,7 @@ inline boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<D
    boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> result;
    mpfr_erfc(result.backend().data(), arg.backend().data(), GMP_RNDN);
    if (mpfr_inf_p(result.backend().data()))
-      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("erfc<%1%>(%1%)", 0, pol);
+      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("erfc<%1%>(%1%)", nullptr, pol);
    if (mpfr_nan_p(result.backend().data()))
       return policies::raise_evaluation_error("erfc<%1%>(%1%)", "Unknown error, result is a NaN", result, pol);
    return result;
@@ -2892,7 +2888,7 @@ inline boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<D
    boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> result;
    mpfr_expm1(result.backend().data(), arg.backend().data(), GMP_RNDN);
    if (mpfr_inf_p(result.backend().data()))
-      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("expm1<%1%>(%1%)", 0, pol);
+      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("expm1<%1%>(%1%)", nullptr, pol);
    if (mpfr_nan_p(result.backend().data()))
       return policies::raise_evaluation_error("expm1<%1%>(%1%)", "Unknown error, result is a NaN", result, pol);
    return result;
@@ -2941,7 +2937,7 @@ inline boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<D
       }
    }
    if (mpfr_inf_p(result.backend().data()))
-      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("lgamma<%1%>(%1%)", 0, pol);
+      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("lgamma<%1%>(%1%)", nullptr, pol);
    if (mpfr_nan_p(result.backend().data()))
       return policies::raise_evaluation_error("lgamma<%1%>(%1%)", "Unknown error, result is a NaN", result, pol);
    return result;
@@ -2971,7 +2967,7 @@ inline typename std::enable_if<boost::math::policies::is_policy<Policy>::value, 
    boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> result;
    mpfr_gamma(result.backend().data(), arg.backend().data(), GMP_RNDN);
    if (mpfr_inf_p(result.backend().data()))
-      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("tgamma<%1%>(%1%)", 0, pol);
+      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("tgamma<%1%>(%1%)", nullptr, pol);
    if (mpfr_nan_p(result.backend().data()))
       return policies::raise_evaluation_error("tgamma<%1%>(%1%)", "Unknown error, result is a NaN", result, pol);
    return result;
@@ -2990,7 +2986,7 @@ inline boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<D
    boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> result;
    mpfr_log1p(result.backend().data(), arg.backend().data(), GMP_RNDN);
    if (mpfr_inf_p(result.backend().data()))
-      return (arg == -1 ? -1 : 1) * policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("log1p<%1%>(%1%)", 0, pol);
+      return (arg == -1 ? -1 : 1) * policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("log1p<%1%>(%1%)", nullptr, pol);
    if (mpfr_nan_p(result.backend().data()))
       return policies::raise_evaluation_error("log1p<%1%>(%1%)", "Unknown error, result is a NaN", result, pol);
    return result;
@@ -3009,7 +3005,7 @@ inline boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<D
    boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> result;
    mpfr_rec_sqrt(result.backend().data(), arg.backend().data(), GMP_RNDN);
    if (mpfr_inf_p(result.backend().data()))
-      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("rsqrt<%1%>(%1%)", 0, pol);
+      return policies::raise_overflow_error<boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates> >("rsqrt<%1%>(%1%)", nullptr, pol);
    if (mpfr_nan_p(result.backend().data()))
       return policies::raise_evaluation_error("rsqrt<%1%>(%1%)", "Negative argument, result is a NaN", result, pol);
    return result;

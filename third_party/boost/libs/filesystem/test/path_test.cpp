@@ -53,12 +53,17 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/exception.hpp>
 
+#include <boost/config.hpp>
 #include <boost/next_prior.hpp>
+#include <boost/utility/string_view.hpp>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
 #include <cstring>
+#if !defined(BOOST_NO_CXX17_HDR_STRING_VIEW)
+#include <string_view>
+#endif
 #include <boost/core/lightweight_test.hpp>
 #include <boost/detail/lightweight_main.hpp>
 
@@ -130,6 +135,57 @@ public:
 
     operator fs::path() const { return m_path; }
 };
+
+template< typename Char >
+class basic_custom_string
+{
+public:
+    typedef std::basic_string< Char > string_type;
+    typedef typename string_type::size_type size_type;
+    typedef typename string_type::difference_type difference_type;
+    typedef typename string_type::value_type value_type;
+    typedef typename string_type::reference reference;
+    typedef typename string_type::const_reference const_reference;
+    typedef typename string_type::pointer pointer;
+    typedef typename string_type::const_pointer const_pointer;
+    typedef typename string_type::iterator iterator;
+    typedef typename string_type::const_iterator const_iterator;
+
+private:
+    string_type m_str;
+
+public:
+    basic_custom_string() {}
+    explicit basic_custom_string(const_pointer str) : m_str(str) {}
+    explicit basic_custom_string(string_type const& str) : m_str(str) {}
+    template< typename OtherChar >
+    explicit basic_custom_string(const OtherChar* str)
+    {
+        // Do a simple character code conversion; only valid for ASCII characters
+        while (*str != static_cast< OtherChar >(0))
+        {
+            m_str.push_back(static_cast< value_type >(*str));
+            ++str;
+        }
+    }
+
+    bool empty() const { return m_str.empty(); }
+    size_type size() const { return m_str.size(); }
+
+    const_pointer data() const { return m_str.data(); }
+    const_pointer c_str() const { return m_str.c_str(); }
+
+    iterator begin() { return m_str.begin(); }
+    const_iterator begin() const { return m_str.begin(); }
+    iterator end() { return m_str.end(); }
+    const_iterator end() const { return m_str.end(); }
+
+    operator string_type() const { return m_str; }
+};
+
+typedef basic_custom_string< char > custom_string;
+typedef basic_custom_string< wchar_t > wcustom_string;
+typedef basic_custom_string< fs::path::value_type > pcustom_string;
 
 
 std::string platform(BOOST_PLATFORM);
@@ -2038,9 +2094,26 @@ void construction_tests()
     PATH_TEST_EQ("././..", "././..");
     PATH_TEST_EQ("./../.", "./../.");
     PATH_TEST_EQ(".././.", ".././.");
+
+    PATH_TEST_EQ(derived_from_path("foo"), "foo");
+    PATH_TEST_EQ(convertible_to_path("foo"), "foo");
+    PATH_TEST_EQ(fs::path(pcustom_string("foo")), "foo");
+    PATH_TEST_EQ(boost::string_view("foo"), "foo");
+#if !defined(BOOST_NO_CXX17_HDR_STRING_VIEW)
+    PATH_TEST_EQ(std::string_view("foo"), "foo");
+#endif
 }
 
 //  append_tests  --------------------------------------------------------------------//
+
+#if !defined(BOOST_NO_CXX17_HDR_STRING_VIEW)
+#define APPEND_TEST_STD_STRING_VIEW(appnd, expected)\
+        path p6(p);\
+        p6 /= std::string_view(appnd);\
+        PATH_TEST_EQ(p6, expected);
+#else
+#define APPEND_TEST_STD_STRING_VIEW(appnd, expected)
+#endif
 
 #define APPEND_TEST(pth, appnd, expected)\
     {\
@@ -2060,8 +2133,15 @@ void construction_tests()
         p3 /= convertible_to_path(appnd);\
         PATH_TEST_EQ(p3, expected);\
         path p4(p);\
-        p4.append(s.begin(), s.end());\
-        PATH_TEST_EQ(p4.string(), expected);\
+        p4 /= pcustom_string(appnd);\
+        PATH_TEST_EQ(p4, expected);\
+        path p5(p);\
+        p5 /= boost::string_view(appnd);\
+        PATH_TEST_EQ(p5, expected);\
+        APPEND_TEST_STD_STRING_VIEW(appnd, expected)\
+        path p7(p);\
+        p7.append(s.begin(), s.end());\
+        PATH_TEST_EQ(p7.string(), expected);\
     }
 
 void append_tests()
@@ -2172,6 +2252,15 @@ void append_tests()
 
 //  concat_tests  --------------------------------------------------------------------//
 
+#if !defined(BOOST_NO_CXX17_HDR_STRING_VIEW)
+#define CONCAT_TEST_STD_STRING_VIEW(appnd, expected)\
+        path p9(p);\
+        p9 += std::string_view(appnd);\
+        PATH_TEST_EQ(p9, expected);
+#else
+#define CONCAT_TEST_STD_STRING_VIEW(appnd, expected)
+#endif
+
 #define CONCAT_TEST(pth, appnd, expected)\
     {\
         const path p(pth);\
@@ -2195,8 +2284,15 @@ void append_tests()
         p6 += convertible_to_path(appnd);\
         PATH_TEST_EQ(p6, expected);\
         path p7(p);\
-        p7.concat(s.begin(), s.end());\
-        PATH_TEST_EQ(p7.string(), expected);\
+        p7 += pcustom_string(appnd);\
+        PATH_TEST_EQ(p7, expected);\
+        path p8(p);\
+        p8 += boost::string_view(appnd);\
+        PATH_TEST_EQ(p8, expected);\
+        CONCAT_TEST_STD_STRING_VIEW(appnd, expected)\
+        path p10(p);\
+        p10.concat(s.begin(), s.end());\
+        PATH_TEST_EQ(p10.string(), expected);\
     }
 
 void concat_tests()
@@ -2557,6 +2653,51 @@ void lexically_normal_tests()
     }
 }
 
+//  compare_tests  -------------------------------------------------------------------//
+
+#define COMPARE_TEST(pth1, pth2)\
+    {\
+        BOOST_TEST_EQ(fs::path(pth1).compare(pth1), 0);\
+        BOOST_TEST_LT(fs::path(pth1).compare(pth2), 0);\
+        BOOST_TEST_GT(fs::path(pth2).compare(pth1), 0);\
+        BOOST_TEST(fs::path(pth1) == pth1);\
+        BOOST_TEST(pth1 == fs::path(pth1));\
+        BOOST_TEST(fs::path(pth1) != pth2);\
+        BOOST_TEST(pth1 != fs::path(pth2));\
+        BOOST_TEST(fs::path(pth1) < pth2);\
+        BOOST_TEST(pth1 < fs::path(pth2));\
+        BOOST_TEST(fs::path(pth2) > pth1);\
+        BOOST_TEST(pth2 > fs::path(pth1));\
+        BOOST_TEST(fs::path(pth1) <= pth1);\
+        BOOST_TEST(pth1 <= fs::path(pth2));\
+        BOOST_TEST(fs::path(pth1) >= pth1);\
+        BOOST_TEST(pth2 >= fs::path(pth1));\
+    }
+
+void compare_tests()
+{
+    COMPARE_TEST(fs::path("foo"), fs::path("zoo"))
+    COMPARE_TEST("foo", "zoo")
+    COMPARE_TEST(std::string("foo"), std::string("zoo"))
+    COMPARE_TEST(derived_from_path("foo"), derived_from_path("zoo"))
+    COMPARE_TEST(pcustom_string("foo"), pcustom_string("zoo"))
+    COMPARE_TEST(boost::string_view("foo"), boost::string_view("zoo"))
+#if !defined(BOOST_NO_CXX17_HDR_STRING_VIEW)
+    COMPARE_TEST(std::string_view("foo"), std::string_view("zoo"))
+#endif
+
+    COMPARE_TEST("/foo", "foo")
+    COMPARE_TEST("/a/b", "foo")
+    COMPARE_TEST("/foo", "/zoo")
+    COMPARE_TEST("/foo", "/foo/bar")
+
+    if (platform == "Windows")
+    {
+        COMPARE_TEST("c:\\foo", "d:\\foo")
+        COMPARE_TEST("c:\\foo", "c:\\zoo")
+    }
+}
+
 inline void odr_use(const path::value_type& c)
 {
     static const path::value_type dummy = '\0';
@@ -2606,6 +2747,7 @@ int cpp_main(int, char*[])
     replace_extension_tests();
     make_preferred_tests();
     lexically_normal_tests();
+    compare_tests();
 
     // verify deprecated names still available
 

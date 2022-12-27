@@ -76,7 +76,7 @@
         <span class="keyword">return</span><span class="special">;</span>
 
     <span class="comment">// Check for the Expect field value</span>
-    <span class="keyword">if</span><span class="special">(</span><span class="identifier">parser</span><span class="special">.</span><span class="identifier">get</span><span class="special">()[</span><span class="identifier">field</span><span class="special">::</span><span class="identifier">expect</span><span class="special">]</span> <span class="special">==</span> <span class="string">"100-continue"</span><span class="special">)</span>
+    <span class="keyword">if</span><span class="special">(</span><span class="identifier">beast</span><span class="special">::</span><span class="identifier">iequals</span><span class="special">(</span><span class="identifier">parser</span><span class="special">.</span><span class="identifier">get</span><span class="special">()[</span><span class="identifier">field</span><span class="special">::</span><span class="identifier">expect</span><span class="special">],</span> <span class="string">"100-continue"</span><span class="special">))</span>
     <span class="special">{</span>
         <span class="comment">// send 100 response</span>
         <span class="identifier">response</span><span class="special">&lt;</span><span class="identifier">empty_body</span><span class="special">&gt;</span> <span class="identifier">res</span><span class="special">;</span>

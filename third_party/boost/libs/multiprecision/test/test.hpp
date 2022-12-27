@@ -14,6 +14,7 @@
 #include <boost/detail/lightweight_test.hpp>
 #include <boost/current_function.hpp>
 #include <boost/multiprecision/number.hpp>
+#include <boost/multiprecision/detail/standalone_config.hpp>
 
 namespace detail {
 
@@ -152,14 +153,14 @@ void report_unexpected_exception(const E& e, int severity, const char* file, int
 
 #ifdef BOOST_HAS_INT128
 
-std::ostream& operator<<(std::ostream& os, __int128 val)
+std::ostream& operator<<(std::ostream& os, boost::int128_type val)
 {
    std::stringstream ss;
-   ss << std::hex << "0x" << static_cast<std::uint64_t>(static_cast<unsigned __int128>(val) >> 64) << static_cast<std::uint64_t>(val);
+   ss << std::hex << "0x" << static_cast<std::uint64_t>(static_cast<boost::uint128_type>(val) >> 64) << static_cast<std::uint64_t>(val);
    return os << ss.str();
 }
 
-std::ostream& operator<<(std::ostream& os, unsigned __int128 val)
+std::ostream& operator<<(std::ostream& os, boost::uint128_type val)
 {
    std::stringstream ss;
    ss << std::hex << "0x" << static_cast<std::uint64_t>(val >> 64) << static_cast<std::uint64_t>(val);

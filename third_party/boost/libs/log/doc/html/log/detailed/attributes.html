@@ -311,6 +311,23 @@
     <span class="identifier">BOOST_LOG</span><span class="special">(</span><span class="identifier">lg</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="string">"This record has a time stamp"</span><span class="special">;</span>
 <span class="special">}</span>
 </pre>
+<div class="note"><table border="0" summary="Note">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../../doc/src/images/note.png"></td>
+<th align="left">Note</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+            As any other attribute, the value of the wall clock attribute is obtained
+            at the point of the log record creation, not at the point of its processing
+            in a sink. This means that (a) timetamps attached to log records always
+            reflect the time point of the event occurrence, not the time of storing
+            the log record, and (b) if the same log record is processed by multiple
+            sinks, even at different points in time, these sinks will process (e.g.
+            store in their respective files) the same timestamp. This is a useful
+            property of the wall clock attribute, although it may result in <a class="link" href="../rationale/why_weak_record_ordering.html" title="Why log records are weakly ordered in a multithreaded application?">weak ordering of log
+            records</a> in the output.
+          </p></td></tr>
+</table></div>
 </div>
 <div class="section">
 <div class="titlepage"><div><div><h4 class="title">
@@ -672,7 +689,7 @@
 </pre>
 <p>
           Auto-generated function objects, like the ones defined in <a href="http://www.boost.org/doc/libs/release/libs/bind/bind.html" target="_top">Boost.Bind</a>
-          or STL, are also supported.
+          or C++ standard library, are also supported.
         </p>
 <div class="note"><table border="0" summary="Note">
 <tr>
@@ -770,8 +787,8 @@
             It is used in <a class="link" href="sources.html" title="Logging sources">loggers</a> and
             the <a class="link" href="../detailed.html#log.detailed.core.core" title="Logging core">logging core</a> to store
             source-specific, thread-specific and global attributes. The interface
-            is very similar to STL associative containers and is described in the
-            <code class="computeroutput"><a class="link" href="../../boost/log/attribute_set.html" title="Class attribute_set">attribute_set</a></code>
+            is very similar to standard library associative containers and is described
+            in the <code class="computeroutput"><a class="link" href="../../boost/log/attribute_set.html" title="Class attribute_set">attribute_set</a></code>
             class reference.
           </p>
 </div>
@@ -857,7 +874,7 @@
               matches the expectation.
             </p>
 <p>
-              In order to apply the visitor, one should call the <code class="computeroutput"><a class="link" href="../../boost/log/visit_idm26678.html" title="Function template visit">visit</a></code> function on
+              In order to apply the visitor, one should call the <code class="computeroutput"><a class="link" href="../../boost/log/visit_idm26735.html" title="Function template visit">visit</a></code> function on
               the attribute value. Let's see an example:
             </p>
 <p>
@@ -1005,7 +1022,7 @@
 <p>
               As it has been mentioned, visitation can also be applied to log records
               and attribute value sets. The syntax is the same, except that the attribute
-              name also has to be specified. The <code class="computeroutput"><a class="link" href="../../boost/log/visit_idm26678.html" title="Function template visit">visit</a></code> algorithm will
+              name also has to be specified. The <code class="computeroutput"><a class="link" href="../../boost/log/visit_idm26735.html" title="Function template visit">visit</a></code> algorithm will
               try to find the attribute value by name and then apply the visitor
               to the found element.
             </p>
@@ -1072,7 +1089,7 @@
             </p>
 <p>
               In this example we expect the attribute value to have the stored type
-              <code class="computeroutput"><span class="keyword">int</span></code>. The <code class="computeroutput"><a class="link" href="../../boost/log/extract_idm25983.html" title="Function template extract">extract</a></code>
+              <code class="computeroutput"><span class="keyword">int</span></code>. The <code class="computeroutput"><a class="link" href="../../boost/log/extract_idm26040.html" title="Function template extract">extract</a></code>
               function attempts to extract a reference to the stored value and returns
               the filled <a class="link" href="utilities.html#log.detailed.utilities.value_ref" title="Value reference wrapper"><code class="computeroutput"><span class="identifier">value_ref</span></code></a> object if succeeded.
             </p>
@@ -1192,9 +1209,9 @@
 <p>
             </p>
 <p>
-              In addition the library provides two special variants of the <code class="computeroutput"><a class="link" href="../../boost/log/extract_idm25983.html" title="Function template extract">extract</a></code>
-              function: <code class="computeroutput"><a class="link" href="../../boost/log/extract_or_throw_idm26068.html" title="Function template extract_or_throw">extract_or_throw</a></code> and
-              <code class="computeroutput"><a class="link" href="../../boost/log/extract_or_defaul_idm26165.html" title="Function template extract_or_default">extract_or_default</a></code>.
+              In addition the library provides two special variants of the <code class="computeroutput"><a class="link" href="../../boost/log/extract_idm26040.html" title="Function template extract">extract</a></code>
+              function: <code class="computeroutput"><a class="link" href="../../boost/log/extract_or_throw_idm26125.html" title="Function template extract_or_throw">extract_or_throw</a></code> and
+              <code class="computeroutput"><a class="link" href="../../boost/log/extract_or_defaul_idm26222.html" title="Function template extract_or_default">extract_or_default</a></code>.
               As the naming implies, the functions provide different behavior in
               case if the attribute value cannot be extracted. The former one throws
               an exception if the value cannot be extracted and the latter one returns
@@ -1206,11 +1223,11 @@
 <th align="left">Warning</th>
 </tr>
 <tr><td align="left" valign="top"><p>
-                Care must be taken with the <code class="computeroutput"><a class="link" href="../../boost/log/extract_or_defaul_idm26165.html" title="Function template extract_or_default">extract_or_default</a></code>
+                Care must be taken with the <code class="computeroutput"><a class="link" href="../../boost/log/extract_or_defaul_idm26222.html" title="Function template extract_or_default">extract_or_default</a></code>
                 function. The function accepts the default value is accepted by constant
-                reference, and this reference can eventually be returned from <code class="computeroutput"><a class="link" href="../../boost/log/extract_or_defaul_idm26165.html" title="Function template extract_or_default">extract_or_default</a></code>.
+                reference, and this reference can eventually be returned from <code class="computeroutput"><a class="link" href="../../boost/log/extract_or_defaul_idm26222.html" title="Function template extract_or_default">extract_or_default</a></code>.
                 If a temporary object as used for the default value, user must ensure
-                that the result of <code class="computeroutput"><a class="link" href="../../boost/log/extract_or_defaul_idm26165.html" title="Function template extract_or_default">extract_or_default</a></code>
+                that the result of <code class="computeroutput"><a class="link" href="../../boost/log/extract_or_defaul_idm26222.html" title="Function template extract_or_default">extract_or_default</a></code>
                 is saved by value and not by reference. Otherwise the saved reference
                 may become dangling when the temporary is destroyed.
               </p></td></tr>
@@ -1239,8 +1256,8 @@
             are registered in the beginning of a scope and unregistered on the end
             of the scope. The mechanism includes the following macros:
           </p>
-<pre class="programlisting"><code class="computeroutput"><a class="link" href="../../BOOST_LOG_SCOPED__idm25888.html" title="Macro BOOST_LOG_SCOPED_LOGGER_ATTR">BOOST_LOG_SCOPED_LOGGER_ATTR</a></code><span class="special">(</span><span class="identifier">logger</span><span class="special">,</span> <span class="identifier">attr_name</span><span class="special">,</span> <span class="identifier">attr</span><span class="special">);</span>
-<code class="computeroutput"><a class="link" href="../../BOOST_LOG_SCOPED__idm25898.html" title="Macro BOOST_LOG_SCOPED_THREAD_ATTR">BOOST_LOG_SCOPED_THREAD_ATTR</a></code><span class="special">(</span><span class="identifier">attr_name</span><span class="special">,</span> <span class="identifier">attr</span><span class="special">);</span>
+<pre class="programlisting"><code class="computeroutput"><a class="link" href="../../BOOST_LOG_SCOPED__idm25945.html" title="Macro BOOST_LOG_SCOPED_LOGGER_ATTR">BOOST_LOG_SCOPED_LOGGER_ATTR</a></code><span class="special">(</span><span class="identifier">logger</span><span class="special">,</span> <span class="identifier">attr_name</span><span class="special">,</span> <span class="identifier">attr</span><span class="special">);</span>
+<code class="computeroutput"><a class="link" href="../../BOOST_LOG_SCOPED__idm25955.html" title="Macro BOOST_LOG_SCOPED_THREAD_ATTR">BOOST_LOG_SCOPED_THREAD_ATTR</a></code><span class="special">(</span><span class="identifier">attr_name</span><span class="special">,</span> <span class="identifier">attr</span><span class="special">);</span>
 </pre>
 <p>
             The first macro registers a source-specific attribute in the <code class="computeroutput"><span class="identifier">logger</span></code> logger object. The attribute
@@ -1321,12 +1338,12 @@
             value in order to be able to filter the records later. The library provides
             two convenience macros just for this purpose:
           </p>
-<pre class="programlisting"><code class="computeroutput"><a class="link" href="../../BOOST_LOG_SCOPED__idm25893.html" title="Macro BOOST_LOG_SCOPED_LOGGER_TAG">BOOST_LOG_SCOPED_LOGGER_TAG</a></code><span class="special">(</span><span class="identifier">logger</span><span class="special">,</span> <span class="identifier">tag_name</span><span class="special">,</span> <span class="identifier">tag_value</span><span class="special">);</span>
-<code class="computeroutput"><a class="link" href="../../BOOST_LOG_SCOPED__idm25902.html" title="Macro BOOST_LOG_SCOPED_THREAD_TAG">BOOST_LOG_SCOPED_THREAD_TAG</a></code><span class="special">(</span><span class="identifier">tag_name</span><span class="special">,</span> <span class="identifier">tag_value</span><span class="special">);</span>
+<pre class="programlisting"><code class="computeroutput"><a class="link" href="../../BOOST_LOG_SCOPED__idm25950.html" title="Macro BOOST_LOG_SCOPED_LOGGER_TAG">BOOST_LOG_SCOPED_LOGGER_TAG</a></code><span class="special">(</span><span class="identifier">logger</span><span class="special">,</span> <span class="identifier">tag_name</span><span class="special">,</span> <span class="identifier">tag_value</span><span class="special">);</span>
+<code class="computeroutput"><a class="link" href="../../BOOST_LOG_SCOPED__idm25959.html" title="Macro BOOST_LOG_SCOPED_THREAD_TAG">BOOST_LOG_SCOPED_THREAD_TAG</a></code><span class="special">(</span><span class="identifier">tag_name</span><span class="special">,</span> <span class="identifier">tag_value</span><span class="special">);</span>
 </pre>
 <p>
-            The macros are effectively wrappers around <code class="computeroutput"><a class="link" href="../../BOOST_LOG_SCOPED__idm25888.html" title="Macro BOOST_LOG_SCOPED_LOGGER_ATTR">BOOST_LOG_SCOPED_LOGGER_ATTR</a></code>
-            and <code class="computeroutput"><a class="link" href="../../BOOST_LOG_SCOPED__idm25898.html" title="Macro BOOST_LOG_SCOPED_THREAD_ATTR">BOOST_LOG_SCOPED_THREAD_ATTR</a></code>,
+            The macros are effectively wrappers around <code class="computeroutput"><a class="link" href="../../BOOST_LOG_SCOPED__idm25945.html" title="Macro BOOST_LOG_SCOPED_LOGGER_ATTR">BOOST_LOG_SCOPED_LOGGER_ATTR</a></code>
+            and <code class="computeroutput"><a class="link" href="../../BOOST_LOG_SCOPED__idm25955.html" title="Macro BOOST_LOG_SCOPED_THREAD_ATTR">BOOST_LOG_SCOPED_THREAD_ATTR</a></code>,
             respectively. For example, the "Tag" scoped attribute from
             the example above can be registered like this:
           </p>
@@ -1387,7 +1404,7 @@
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2007-2021 Andrey Semashev<p>
+<td align="right"><div class="copyright-footer">Copyright © 2007-2022 Andrey Semashev<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>).
       </p>

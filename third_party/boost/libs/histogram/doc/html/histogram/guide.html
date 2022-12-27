@@ -706,20 +706,20 @@
 </h3></div></div></div>
 <p>
         A histogram has been created and now you want to insert values. This is done
-        with the flexible <code class="computeroutput"><a class="link" href="../boost/histogram/histogram.html#idm11418-bb">call
-        operator</a></code> or the <code class="computeroutput"><a class="link" href="../boost/histogram/histogram.html#idm11456-bb">fill
-        method</a></code>, which you typically call in a loop. The <code class="computeroutput"><a class="link" href="../boost/histogram/histogram.html#idm11418-bb">call operator</a></code>
+        with the flexible <code class="computeroutput"><a class="link" href="../boost/histogram/histogram.html#idm11591-bb">call
+        operator</a></code> or the <code class="computeroutput"><a class="link" href="../boost/histogram/histogram.html#idm11629-bb">fill
+        method</a></code>, which you typically call in a loop. The <code class="computeroutput"><a class="link" href="../boost/histogram/histogram.html#idm11591-bb">call operator</a></code>
         accepts <code class="computeroutput"><span class="identifier">N</span></code> arguments or a
         <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">tuple</span></code> with <code class="computeroutput"><span class="identifier">N</span></code>
         elements, where <code class="computeroutput"><span class="identifier">N</span></code> is equal
         to the number of axes of the histogram. It finds the corresponding bin for
-        the input and increments the bin counter by one. The <code class="computeroutput"><a class="link" href="../boost/histogram/histogram.html#idm11456-bb">fill
+        the input and increments the bin counter by one. The <code class="computeroutput"><a class="link" href="../boost/histogram/histogram.html#idm11629-bb">fill
         method</a></code> accepts a single iterable over other iterables (which
         must have have elements contiguous in memory) or values, see the method documentation
         for details.
       </p>
 <p>
-        After the histogram has been filled, use the <code class="computeroutput"><a class="link" href="../boost/histogram/histogram.html#idm11596-bb">at
+        After the histogram has been filled, use the <code class="computeroutput"><a class="link" href="../boost/histogram/histogram.html#idm11773-bb">at
         method</a></code> (in analogy to <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">::</span><span class="identifier">at</span></code>) to
         access the cell values. It accepts integer indices, one for each axis of
         the histogram.
@@ -804,7 +804,7 @@
 <p>
         When the weights come from a stochastic process, it is useful to keep track
         of the variance of the sum of weights per cell. A specialized histogram can
-        be generated with the <code class="computeroutput"><a class="link" href="../boost/histogram/make_weighted_his_idm12312.html" title="Function template make_weighted_histogram">make_weighted_histogram</a></code>
+        be generated with the <code class="computeroutput"><a class="link" href="../boost/histogram/make_weighted_his_idm12489.html" title="Function template make_weighted_histogram">make_weighted_histogram</a></code>
         factory function which does that.
       </p>
 <pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">histogram</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
@@ -835,7 +835,7 @@
 <span class="special">}</span>
 </pre>
 <p>
-        To iterate over all cells, the <code class="computeroutput"><a class="link" href="../boost/histogram/indexed_idm11941.html" title="Function template indexed">indexed</a></code>
+        To iterate over all cells, the <code class="computeroutput"><a class="link" href="../boost/histogram/indexed_idm12118.html" title="Function template indexed">indexed</a></code>
         range generator is very convenient and also efficient. For almost all configurations,
         the range generator iterates <span class="emphasis"><em>faster</em></span> than a naive for-loop.
         Under- and overflow are skipped by default.
@@ -918,7 +918,7 @@
         Histograms from this library can do more than counting, they can hold arbitrary
         accumulators which accept samples. We call a histogram with accumulators
         that compute the mean of samples in each cell a <span class="emphasis"><em>profile</em></span>.
-        Profiles can be generated with the factory function <code class="computeroutput"><a class="link" href="../boost/histogram/make_profile_idm12360.html" title="Function template make_profile">make_profile</a></code>.
+        Profiles can be generated with the factory function <code class="computeroutput"><a class="link" href="../boost/histogram/make_profile_idm12537.html" title="Function template make_profile">make_profile</a></code>.
       </p>
 <pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">format</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">histogram</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
@@ -973,11 +973,11 @@
         Weights and samples may be combined, if the accumulators can handle weights.
         When both <code class="computeroutput"><a class="link" href="../boost/histogram/weight.html" title="Function template weight">weight()</a></code>
         and <code class="computeroutput"><a class="link" href="../boost/histogram/sample.html" title="Function template sample">sample()</a></code>
-        appear in the <code class="computeroutput"><a class="link" href="../boost/histogram/histogram.html#idm11418-bb">call
-        operator</a></code> or the <code class="computeroutput"><a class="link" href="../boost/histogram/histogram.html#idm11456-bb">fill
+        appear in the <code class="computeroutput"><a class="link" href="../boost/histogram/histogram.html#idm11591-bb">call
+        operator</a></code> or the <code class="computeroutput"><a class="link" href="../boost/histogram/histogram.html#idm11629-bb">fill
         method</a></code>, they can be in any order with respect to other, but
         they must be the first or last arguments. To make a profile which can compute
-        weighted means with proper uncertainty estimates, use the <code class="computeroutput"><a class="link" href="../boost/histogram/make_weighted_pro_idm12403.html" title="Function template make_weighted_profile">make_weighted_profile</a></code>
+        weighted means with proper uncertainty estimates, use the <code class="computeroutput"><a class="link" href="../boost/histogram/make_weighted_pro_idm12580.html" title="Function template make_weighted_profile">make_weighted_profile</a></code>
         factory function.
       </p>
 <pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">format</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
@@ -1162,7 +1162,7 @@
 <li class="listitem">
               The histogram iterators also walk over the under- and overflow bins,
               if they are present. To skip the extra bins one should use the fast
-              iterators from the <code class="computeroutput"><a class="link" href="../boost/histogram/indexed_idm11941.html" title="Function template indexed">boost::histogram::indexed</a></code>
+              iterators from the <code class="computeroutput"><a class="link" href="../boost/histogram/indexed_idm12118.html" title="Function template indexed">boost::histogram::indexed</a></code>
               range generator instead.
             </li>
 <li class="listitem">
@@ -1263,7 +1263,7 @@
           to visualize 1d or 2d summaries of a high-dimensional histogram.
         </p>
 <p>
-          The library provides the <code class="computeroutput"><a class="link" href="../boost/histogram/algorithm/project_idm13527.html" title="Function template project">boost::histogram::algorithm::project</a></code>
+          The library provides the <code class="computeroutput"><a class="link" href="../boost/histogram/algorithm/project_idm13788.html" title="Function template project">boost::histogram::algorithm::project</a></code>
           function for this purpose. It accepts the original histogram and the indices
           (one or more) of the axes that are kept and returns the lower-dimensional
           histogram. If the histogram is static, meaning the axis configuration is
@@ -1327,7 +1327,7 @@
 </h4></div></div></div>
 <p>
           A projection removes an axis completely. A less drastic way to obtain a
-          smaller histogram is the <code class="computeroutput"><a class="link" href="../boost/histogram/algorithm/reduce_idm13681.html" title="Function template reduce">reduce</a></code>
+          smaller histogram is the <code class="computeroutput"><a class="link" href="../boost/histogram/algorithm/reduce_idm13942.html" title="Function template reduce">reduce</a></code>
           function, which allows one to <span class="emphasis"><em>slice</em></span>, <span class="emphasis"><em>shrink</em></span>
           or <span class="emphasis"><em>rebin</em></span> individual axes.
         </p>
@@ -1342,10 +1342,10 @@
           in one step is much more efficient than doing it in several steps.
         </p>
 <p>
-          The <code class="computeroutput"><a class="link" href="../boost/histogram/algorithm/reduce_idm13681.html" title="Function template reduce">reduce</a></code>
+          The <code class="computeroutput"><a class="link" href="../boost/histogram/algorithm/reduce_idm13942.html" title="Function template reduce">reduce</a></code>
           function does not change the total count if all modified axes in the histogram
           have underflow and overflow bins. Counts in removed bins are added to the
-          corresponding under- and overflow bins. As in case of the <code class="computeroutput"><a class="link" href="../boost/histogram/algorithm/project_idm13527.html" title="Function template project">project</a></code> function,
+          corresponding under- and overflow bins. As in case of the <code class="computeroutput"><a class="link" href="../boost/histogram/algorithm/project_idm13788.html" title="Function template project">project</a></code> function,
           such a histogram is guaranteed to be identical to one obtained from filling
           the original data.
         </p>
@@ -1834,7 +1834,7 @@
           Users who work exclusively with weighted histograms should chose a <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span></code>,
           it will be faster. If they also want to track the variance of the sum of
           weights, a vector-based storage of <code class="computeroutput"><a class="link" href="../boost/histogram/accumulators/weighted_sum.html" title="Class template weighted_sum">weighted_sum</a></code>
-          accumulators should be used. The factory function <code class="computeroutput"><a class="link" href="../boost/histogram/make_weighted_his_idm12312.html" title="Function template make_weighted_histogram">make_weighted_histogram</a></code>
+          accumulators should be used. The factory function <code class="computeroutput"><a class="link" href="../boost/histogram/make_weighted_his_idm12489.html" title="Function template make_weighted_histogram">make_weighted_histogram</a></code>
           is a convenient way to generate a histogram with this storage.
         </p>
 <p>
@@ -2008,6 +2008,16 @@
         </p>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
 <li class="listitem">
+              <code class="computeroutput"><a class="link" href="../boost/histogram/accumulators/count.html" title="Class template count">count</a></code>
+              accepts no samples, but accepts a weight. It is an alternative to a
+              plain arithmetic type as a counter. It has two benefits. Firstly, users
+              can derive from count to attach arbitrary metadata to each bin. Secondly,
+              count has a template option to make increments atomic and thus thread-safe,
+              which then allows one to fill a histogram concurrently without locking,
+              if the storage also supports this (the <code class="computeroutput"><span class="identifier">dense_storage</span></code>
+              does, for example).
+            </li>
+<li class="listitem">
               <code class="computeroutput"><a class="link" href="../boost/histogram/accumulators/sum.html" title="Class template sum">sum</a></code>
               accepts no samples, but accepts a weight. It is an alternative to a
               plain arithmetic type as a counter. It provides an advantage when histograms
@@ -2020,18 +2030,32 @@
               <code class="computeroutput"><a class="link" href="../boost/histogram/accumulators/weighted_sum.html" title="Class template weighted_sum">weighted_sum</a></code>
               accepts no samples, but accepts a weight. It computes the sum of weights
               and the sum of weights squared, the variance estimate of the sum of
-              weights. This type is used by the <code class="computeroutput"><a class="link" href="../boost/histogram/make_weighted_his_idm12312.html" title="Function template make_weighted_histogram">make_weighted_histogram</a></code>.
+              weights. This type is used by the <code class="computeroutput"><a class="link" href="../boost/histogram/make_weighted_his_idm12489.html" title="Function template make_weighted_histogram">make_weighted_histogram</a></code>.
             </li>
 <li class="listitem">
               <code class="computeroutput"><a class="link" href="../boost/histogram/accumulators/mean.html" title="Class template mean">mean</a></code>
-              accepts a sample and computes the mean of the samples. <code class="computeroutput"><a class="link" href="../boost/histogram/make_profile_idm12360.html" title="Function template make_profile">make_profile</a></code> uses
+              accepts a sample and computes the mean of the samples. <code class="computeroutput"><a class="link" href="../boost/histogram/make_profile_idm12537.html" title="Function template make_profile">make_profile</a></code> uses
               this accumulator.
             </li>
 <li class="listitem">
               <code class="computeroutput"><a class="link" href="../boost/histogram/accumulators/weighted_mean.html" title="Class template weighted_mean">weighted_mean</a></code>
               accepts a sample and a weight. It computes the weighted mean of the
-              samples. <code class="computeroutput"><a class="link" href="../boost/histogram/make_weighted_pro_idm12403.html" title="Function template make_weighted_profile">make_weighted_profile</a></code>
+              samples. <code class="computeroutput"><a class="link" href="../boost/histogram/make_weighted_pro_idm12580.html" title="Function template make_weighted_profile">make_weighted_profile</a></code>
               uses this accumulator.
+            </li>
+<li class="listitem">
+              <code class="computeroutput"><a class="link" href="../boost/histogram/accumulators/fraction.html" title="Class template fraction">fraction</a></code>
+              accepts a boolean sample that represents success or failure of a binomial
+              trial. It computes the fraction of successes. One can access the number
+              of successes and failures, the fraction, the estimated variance of
+              the fraction, and a confidence interval. The standard confidence interval
+              is the Wilson score interval, but more interval computers are implemented
+              in <code class="computeroutput"><span class="identifier">boost</span><span class="special">/</span><span class="identifier">histogram</span><span class="special">/</span><span class="identifier">utility</span></code>. Beware: one cannot pass
+              <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">bool</span><span class="special">&gt;</span></code>
+              to <code class="computeroutput"><a class="link" href="../boost/histogram/histogram.html" title="Class template histogram">histogram::fill</a></code>,
+              because it is not a contiguous sequence of boolean values, but any
+              other container of booleans works and any sequence of values convertible
+              to bool.
             </li>
 </ul></div>
 <p>

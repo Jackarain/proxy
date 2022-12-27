@@ -389,7 +389,7 @@ operators and functions associated with the index (vg. comparison and
 <span class=special>&gt;::</span><span class=identifier>type</span><span class=special>&amp;</span>
 <span class=identifier>get</span><span class=special>(</span><span class=identifier>multi_index_container</span><span class=special>&lt;</span><span class=identifier>Value</span><span class=special>,</span><span class=identifier>IndexSpecifierList</span><span class=special>,</span><span class=identifier>Allocator</span><span class=special>&gt;&amp;</span> <span class=identifier>m</span><span class=special>)</span><span class=keyword>noexcept</span>
 <span class=special>{</span>
-  <span class=keyword>return</span> <span class=identifier>m</span><span class=special>.</span><span class=identifier>get</span><span class=special>&lt;</span><span class=identifier>N</span><span class=special>&gt;();</span>
+  <span class=keyword>return</span> <span class=identifier>m</span><span class=special>.</span><span class=keyword>template</span> <span class=identifier>get</span><span class=special>&lt;</span><span class=identifier>N</span><span class=special>&gt;();</span>
 <span class=special>}</span>
 
 <span class=keyword>template</span><span class=special>&lt;</span>
@@ -400,7 +400,7 @@ operators and functions associated with the index (vg. comparison and
 <span class=special>&gt;::</span><span class=identifier>type</span><span class=special>&amp;</span>
 <span class=identifier>get</span><span class=special>(</span><span class=keyword>const</span> <span class=identifier>multi_index_container</span><span class=special>&lt;</span><span class=identifier>Value</span><span class=special>,</span><span class=identifier>IndexSpecifierList</span><span class=special>,</span><span class=identifier>Allocator</span><span class=special>&gt;&amp;</span> <span class=identifier>m</span><span class=special>)</span><span class=keyword>noexcept</span>
 <span class=special>{</span>
-  <span class=keyword>return</span> <span class=identifier>m</span><span class=special>.</span><span class=identifier>get</span><span class=special>&lt;</span><span class=identifier>N</span><span class=special>&gt;();</span>
+  <span class=keyword>return</span> <span class=identifier>m</span><span class=special>.</span><span class=keyword>template</span> <span class=identifier>get</span><span class=special>&lt;</span><span class=identifier>N</span><span class=special>&gt;();</span>
 <span class=special>}</span>
 
 <span class=keyword>template</span><span class=special>&lt;</span>
@@ -411,7 +411,7 @@ operators and functions associated with the index (vg. comparison and
 <span class=special>&gt;::</span><span class=identifier>type</span><span class=special>&amp;</span>
 <span class=identifier>get</span><span class=special>(</span><span class=identifier>multi_index_container</span><span class=special>&lt;</span><span class=identifier>Value</span><span class=special>,</span><span class=identifier>IndexSpecifierList</span><span class=special>,</span><span class=identifier>Allocator</span><span class=special>&gt;&amp;</span> <span class=identifier>m</span><span class=special>)</span><span class=keyword>noexcept</span>
 <span class=special>{</span>
-  <span class=keyword>return</span> <span class=identifier>m</span><span class=special>.</span><span class=identifier>get</span><span class=special>&lt;</span><span class=identifier>Tag</span><span class=special>&gt;();</span>
+  <span class=keyword>return</span> <span class=identifier>m</span><span class=special>.</span><span class=keyword>template</span> <span class=identifier>get</span><span class=special>&lt;</span><span class=identifier>Tag</span><span class=special>&gt;();</span>
 <span class=special>}</span>
 
 <span class=keyword>template</span><span class=special>&lt;</span>
@@ -422,7 +422,7 @@ operators and functions associated with the index (vg. comparison and
 <span class=special>&gt;::</span><span class=identifier>type</span><span class=special>&amp;</span>
 <span class=identifier>get</span><span class=special>(</span><span class=keyword>const</span> <span class=identifier>multi_index_container</span><span class=special>&lt;</span><span class=identifier>Value</span><span class=special>,</span><span class=identifier>IndexSpecifierList</span><span class=special>,</span><span class=identifier>Allocator</span><span class=special>&gt;&amp;</span> <span class=identifier>m</span><span class=special>)</span><span class=keyword>noexcept</span>
 <span class=special>{</span>
-  <span class=keyword>return</span> <span class=identifier>m</span><span class=special>.</span><span class=identifier>get</span><span class=special>&lt;</span><span class=identifier>Tag</span><span class=special>&gt;();</span>
+  <span class=keyword>return</span> <span class=identifier>m</span><span class=special>.</span><span class=keyword>template</span> <span class=identifier>get</span><span class=special>&lt;</span><span class=identifier>Tag</span><span class=special>&gt;();</span>
 <span class=special>}</span>
 
 <span class=comment>// multi_index_container global functions for projection of iterators:</span>
@@ -1082,9 +1082,9 @@ Index reference
 
 <br>
 
-<p>Revised May 9th 2020</p>
+<p>Revised August 15th 2022</p>
 
-<p>&copy; Copyright 2003-2020 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
+<p>&copy; Copyright 2003-2022 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
 Distributed under the Boost Software 
 License, Version 1.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">
 LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">

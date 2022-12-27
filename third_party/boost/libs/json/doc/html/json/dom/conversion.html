@@ -288,8 +288,6 @@
 
     <span class="identifier">customer</span><span class="special">(</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">uint64_t</span> <span class="identifier">i</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&amp;</span> <span class="identifier">n</span><span class="special">,</span> <span class="keyword">bool</span> <span class="identifier">l</span> <span class="special">)</span>
         <span class="special">:</span> <span class="identifier">id</span><span class="special">(</span> <span class="identifier">i</span> <span class="special">),</span> <span class="identifier">name</span><span class="special">(</span> <span class="identifier">n</span> <span class="special">),</span> <span class="identifier">late</span><span class="special">(</span> <span class="identifier">l</span> <span class="special">)</span> <span class="special">{</span> <span class="special">}</span>
-
-    <span class="keyword">explicit</span> <span class="identifier">customer</span><span class="special">(</span> <span class="identifier">value</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="special">);</span>
 <span class="special">};</span>
 
 <span class="keyword">void</span> <span class="identifier">tag_invoke</span><span class="special">(</span> <span class="keyword">const</span> <span class="identifier">value_from_tag</span><span class="special">&amp;,</span> <span class="identifier">value</span><span class="special">&amp;</span> <span class="identifier">jv</span><span class="special">,</span> <span class="identifier">customer</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">c</span> <span class="special">)</span>
@@ -422,9 +420,8 @@
       </p>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
 <li class="listitem">
-            <code class="computeroutput"><span class="identifier">T</span></code> is <a class="link" href="../ref/boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a>, <a class="link" href="../ref/boost__json__object.html" title="object"><code class="computeroutput"><span class="identifier">object</span></code></a>, <a class="link" href="../ref/boost__json__array.html" title="array"><code class="computeroutput"><span class="identifier">array</span></code></a>, <a class="link" href="../ref/boost__json__string.html" title="string"><code class="computeroutput"><span class="identifier">string</span></code></a>, <a class="link" href="../ref/boost__json__string_view.html" title="string_view"><code class="computeroutput"><span class="identifier">string_view</span></code></a>, __value_ref__,
-            <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">initializer_list</span><span class="special">&lt;</span><span class="identifier">value_ref</span><span class="special">&gt;</span></code>
-            or <code class="computeroutput"><span class="keyword">bool</span></code>, or if <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">is_arithmetic</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">value</span></code> is <code class="computeroutput"><span class="keyword">true</span></code>,
+            <code class="computeroutput"><span class="identifier">T</span></code> is <a class="link" href="../ref/boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a>, <a class="link" href="../ref/boost__json__object.html" title="object"><code class="computeroutput"><span class="identifier">object</span></code></a>, <a class="link" href="../ref/boost__json__array.html" title="array"><code class="computeroutput"><span class="identifier">array</span></code></a>, <a class="link" href="../ref/boost__json__string.html" title="string"><code class="computeroutput"><span class="identifier">string</span></code></a>, <a class="link" href="../ref/boost__json__string_view.html" title="string_view"><code class="computeroutput"><span class="identifier">string_view</span></code></a>, <a class="link" href="../ref/boost__json__value_ref.html" title="value_ref"><code class="computeroutput"><span class="identifier">value_ref</span></code></a>, <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">initializer_list</span><span class="special">&lt;</span><span class="identifier">value_ref</span><span class="special">&gt;</span></code> or <code class="computeroutput"><span class="keyword">bool</span></code>,
+            or if <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">is_arithmetic</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">value</span></code> is <code class="computeroutput"><span class="keyword">true</span></code>,
             or
           </li>
 <li class="listitem">
@@ -453,7 +450,8 @@
         is added to the set of user-provided overloads found by argument-dependent
         lookup. As with <a class="link" href="../ref/boost__json__value_from.html" title="value_from"><code class="computeroutput"><span class="identifier">value_from</span></code></a>, it performs the conversion
         corresponding to first condition met by <code class="computeroutput"><span class="identifier">T</span></code>
-        in the above list. Given the following definition of <code class="computeroutput"><span class="identifier">customer</span><span class="special">::</span><span class="identifier">customer</span><span class="special">(</span> <span class="keyword">const</span> <span class="identifier">value</span><span class="special">&amp;</span> <span class="special">)</span></code>:
+        in the above list. Otherwise an overload similar to the following can be
+        provided by the user:
       </p>
 <pre class="programlisting"><span class="identifier">customer</span> <span class="identifier">tag_invoke</span><span class="special">(</span> <span class="keyword">const</span> <span class="identifier">value_to_tag</span><span class="special">&lt;</span><span class="identifier">customer</span><span class="special">&gt;&amp;,</span> <span class="keyword">const</span> <span class="identifier">value</span><span class="special">&amp;</span> <span class="identifier">jv</span> <span class="special">)</span>
 <span class="special">{</span>
@@ -983,7 +981,7 @@
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<p>
+<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>

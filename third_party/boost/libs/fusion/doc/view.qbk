@@ -1,6 +1,7 @@
 [/==============================================================================
     Copyright (C) 2001-2011 Joel de Guzman
     Copyright (C) 2006 Dan Marsden
+    Copyright (c) 2022 Denis Mikhailov
 
     Use, modification and distribution is subject to the Boost Software
     License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
@@ -328,9 +329,7 @@ defined in __forward_sequence__.
 The unary version of `transform_view` presents a view of its underlying
 sequence given a unary function object or function pointer. The binary
 version of `transform_view` presents a view of 2 underlying sequences,
-given a binary function object or function pointer. The `transform_view`
-inherits the traversal characteristics (see __traversal_concept__)  of
-its underlying sequence or sequences.
+given a binary function object or function pointer.
 
 [heading Header]
 
@@ -364,7 +363,8 @@ its underlying sequence or sequences.
 
 * __forward_sequence__, __bidirectional_sequence__ or
 __random_access_sequence__ depending on the traversal characteristics (see
-__traversal_concept__) of its underlying sequence.
+__traversal_concept__) of its underlying sequence or sequences.
+* __associative_sequence__ if underlying sequence implements the __associative_sequence__ model(available only with unary version of `transform_view`).
 
 [variablelist Notation
     [[`TV`]             [A `transform_view` type]]
@@ -381,9 +381,7 @@ __traversal_concept__) of its underlying sequence.
 [heading Expression Semantics]
 
 Semantics of an expression is defined only where it differs from, or is not
-defined in __forward_sequence__, __bidirectional_sequence__ or
-__random_access_sequence__ depending on the traversal characteristics (see
-__traversal_concept__) of its underlying sequence or sequences.
+defined in the implemented models.
 
 [table
     [[Expression]           [Semantics]]
@@ -664,6 +662,62 @@ defined in __forward_sequence__.
     __flatten_view__<sequence_type> flattened(seq);
     __copy__(__make_vector__(1, 2, 3, 4, 5), flattened);
     assert(seq == __make_vector__(1, 2, __make_vector__(3, 4), 5));
+
+[endsect]
+
+[section identity_view]
+
+[heading Description]
+
+`identity_view` presents underlying sequence unchanged.
+
+[heading Header]
+
+    #include <boost/fusion/view/identity_view.hpp>
+    #include <boost/fusion/include/identity_view.hpp>
+
+[heading Synopsis]
+
+    template <typename Sequence>
+    struct identity_view;
+
+[heading Template parameters]
+
+[table
+    [[Parameter]            [Description]                   [Default]]
+    [[`Sequence`]           [A __forward_sequence__]        []]
+]
+
+[heading Model of]
+
+* A model of __forward_sequence__ if `Sequence` is a __forward_sequence__ else, __bidirectional_sequence__ if `Sequence` is a __bidirectional_sequence__
+else, __random_access_sequence__ if `Sequence` is a __random_access_sequence__.
+* __associative_sequence__ if `Sequence` implements the __associative_sequence__ model.
+
+[variablelist Notation
+    [[`IV`]             [An `identity_view` type]]
+    [[`s`]              [An instance of `Sequence`]]
+    [[`iv`, `iv2`]      [Instances of `identity_view`]]
+]
+
+[heading Expression Semantics]
+
+Semantics of an expression is defined only where it differs from, or is not
+defined in the implemented models.
+
+[table
+    [[Expression]           [Semantics]]
+    [[`IV(s)`]              [Creates an `identity_view` given sequence, `s`.]]
+    [[`IV(iv)`]             [Copy constructs an `identity_view` from another `identity_view`, `iv`.]]
+    [[`iv = iv2`]           [Assigns to an `identity_view`, `iv`, from another `identity_view`, `iv2`.]]
+]
+
+[heading Example]
+    typedef __vector__<int, short, double> vector_type;
+    vector_type vec(2, 5, 3.3);
+
+    __identity_view__<vector_type> identity(vec);
+    std::cout << identity << std::endl; // (2 5 3.3)
 
 [endsect]
 

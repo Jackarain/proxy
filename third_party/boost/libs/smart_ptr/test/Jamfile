@@ -64,7 +64,13 @@ run spinlock_pool_test.cpp
   <toolset>msvc-9.0,<variant>release:<build>no ;
 
 run make_shared_test.cpp ;
-run make_shared_move_emulation_test.cpp ;
+run make_shared_move_emulation_test.cpp
+  : : :
+  <toolset>clang-3.5,<cxxstd>03:<build>no
+  <toolset>clang-3.6,<cxxstd>03:<build>no
+  <toolset>clang-3.7,<cxxstd>03:<build>no
+  ;
+
 run make_shared_perfect_forwarding_test.cpp ;
 run shared_ptr_convertible_test.cpp ;
 run wp_convertible_test.cpp ;
@@ -366,7 +372,9 @@ compile sp_pedantic_test.cpp
   : <warnings>pedantic
     <toolset>msvc:<warnings-as-errors>on
     <toolset>gcc:<warnings-as-errors>on
-    <toolset>clang:<warnings-as-errors>on ;
+    <toolset>clang:<warnings-as-errors>on
+    <toolset>clang-15:<cxxflags>-Wno-deprecated-builtins
+    ;
 
 run sp_owner_before_test.cpp ;
 run sp_owner_equals_test.cpp ;

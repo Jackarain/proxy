@@ -150,17 +150,16 @@ date_time now;
 std::cout << now << std::endl;
 \endcode
 
-Would print in the default format, something like:
+Would print something like this (using the default format):
 
 \verbatim
 2/3/2011 12:00 am
 \endverbatim
 
 However if you need to change the default behavior (for example show only date),
-then you need to use specific iostream manipulator in order to display current date or time,
-it would override the default formatting.
+then you need to use specific iostream manipulators in order to display current date or time.
 
-For example
+For example:
 
 \code
 using namespace boost::locale;
@@ -180,7 +179,7 @@ of the \c iostream's locale and time zone and not in the context of specific \c 
 \section dates_times_timezones_qna Questions and Answers
 
 
-<b>Why should I use Boost.Locale over Boost.DateTime when I need Gregorian calendar only?</b>
+<b>Why should I use Boost.Locale over Boost.DateTime when I only need the Gregorian calendar?</b>
 
 -   Boost.DateTime is locale agnostic library and ignores the fact that the first day of week
     varies by the locale.
@@ -189,13 +188,13 @@ of the \c iostream's locale and time zone and not in the context of specific \c 
     local times and time-zones handling.
     \n
     For example, <tt>date_time(some_time.time() + 3600)</tt> may be not equal to
-    <tt>some_time + hour()</tt>, because of the daylight savings time.
+    <tt>some_time + hour()</tt> because of daylight savings time.
 
 <b>Why don't you use Boost.DateTime time zone support?</b>
 
 Boost.DateTime's time zone support is broken. Time zones can not be represented with
 a simple table of rules where daylight saving depend only on certain n'th day of week in month.
-The daylight savings time may vary by year, political issues and many other things.
+The daylight savings time may vary by year, political issues, and many other things.
 
 Most of the modern operating systems (Linux, *BSD, Mac OS X, OpenVMS) and many important software packages
 (ICU, Java, Python) use so called Olson database in order to handle daylight saving time

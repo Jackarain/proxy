@@ -63,16 +63,15 @@ enum class error
     /// A string is too large
     string_too_large,
 
-    /// The parser encountered an exception and must be reset
+    /// error occured when trying to read input
+    input_error,
+
+    //
+    // generic errors
+    //
+
+    /// An exception was thrown during operation
     exception,
-
-    //----------------------------------
-
-    /// not a number
-    not_number,
-
-    /// number cast is not exact
-    not_exact,
 
     /// test failure
     test_failure,
@@ -101,6 +100,40 @@ enum class error
 
     /// past-the-end index is not supported
     past_the_end,
+
+    //
+    // Conversion errors
+    //
+
+    /// JSON number was expected during conversion
+    not_number,
+
+    /// number cast is not exact
+    not_exact,
+
+    /// JSON null was expected during conversion
+    not_null,
+
+    /// JSON bool was expected during conversion
+    not_bool,
+
+    /// JSON array was expected during conversion
+    not_array,
+
+    /// JSON object was expected during conversion
+    not_object,
+
+    /// JSON string was expected during conversion
+    not_string,
+
+    /// JSON array has size incompatible with target
+    size_mismatch,
+
+    /// none of the possible conversions were successful
+    exhausted_variants,
+
+    /// the key does not correspond to a known name
+    unknown_name,
 };
 
 /** Error conditions corresponding to JSON errors
@@ -110,14 +143,17 @@ enum class condition
     /// A parser-related error
     parse_error = 1,
 
-    /// An error on assignment to or from a JSON value
-    assign_error,
-
     /// An error related to parsing JSON pointer string
     pointer_parse_error,
 
     /// An error related to applying JSON pointer string to a value
     pointer_use_error,
+
+    /// A conversion error
+    conversion_error,
+
+    /// A generic error
+    generic_error,
 };
 
 BOOST_JSON_NS_END

@@ -11,7 +11,7 @@
 #include <boost/function_types/function_arity.hpp>
 #include <boost/function_types/result_type.hpp>
 
-namespace boost::cnv
+namespace boost { namespace cnv
 {
     using yes_type = ::boost::type_traits::yes_type;
     using  no_type = ::boost::type_traits:: no_type;
@@ -51,7 +51,7 @@ namespace boost::cnv
 
         BOOST_STATIC_CONSTANT(bool, value = (is_convertible<func_type, out_type>::value));
     };
-}
+}}
 
 #endif // BOOST_CONVERT_IS_FUNCTION_HPP
 

@@ -40,12 +40,19 @@ BOOST_AUTO_TEST_CASE(leak_test, *boost::unit_test::timeout(5))
 {
     using boost::unit_test::framework::master_test_suite;
 
+    
+
 #if defined(BOOST_WINDOWS_API)
     const auto get_handle       = [](FILE * f)                       {return reinterpret_cast<bt::native_handle_type>(_get_osfhandle(_fileno(f)));};
     const auto socket_to_handle = [](::boost::winapi::UINT_PTR_ sock){return reinterpret_cast<::boost::winapi::HANDLE_>(sock);};
 #else
     const auto get_handle = [](FILE * f) {return fileno(f);};
     const auto socket_to_handle = [](int i){ return i;};
+
+#if !defined(__linux__)
+    return ;
+#endif
+
 #endif
 
     std::error_code ec;

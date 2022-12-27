@@ -163,6 +163,13 @@ calling `boost::hash_combine` on each.
 The overload is defined in namespace `app` in order to apply
 to all annotated classes also defined in `app`.
 
+NOTE: Since release 1.81.0, Boost.ContainerHash provides its
+own, built-in, support for described classes, by having an
+overload of `boost::hash_value` very similar to the one given
+below. Consequently, when using Boost 1.81.0 or later, you
+don't need the below `hash_value` function, as it will cause
+an ambiguity.
+
 [source]
 ----
 include::../../example/hash_value.cpp[lines=5..-1]

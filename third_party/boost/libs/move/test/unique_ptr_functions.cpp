@@ -192,7 +192,7 @@ void test()
    reset_counters();
    {
       bml::unique_ptr<A[]> p(bml::make_unique<A[]>(10));
-      BOOST_TEST(A::count == 10u);
+      BOOST_TEST(A::count == 10);
       for(std::size_t i = 0; i != 10u; ++i){
          BOOST_TEST(p[i].a == 999);
          BOOST_TEST(p[i].b == 1000);
@@ -202,7 +202,7 @@ void test()
    BOOST_TEST(A::count == 0);
    {
       bml::unique_ptr<A[]> p(bml::make_unique_nothrow<A[]>(10));
-      BOOST_TEST(A::count == 10u);
+      BOOST_TEST(A::count == 10);
       for(std::size_t i = 0; i != 10u; ++i){
          BOOST_TEST(p[i].a == 999);
          BOOST_TEST(p[i].b == 1000);

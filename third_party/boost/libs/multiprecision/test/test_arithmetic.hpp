@@ -39,7 +39,7 @@ struct is_checked_cpp_int : public std::integral_constant<bool, false>
 
 //
 // This works around some platforms which have missing typeinfo
-// for __int128 and/or __float128:
+// for boost::int128_type and/or __float128:
 //
 template <class T>
 inline const char* name_of()
@@ -48,14 +48,14 @@ inline const char* name_of()
 }
 #ifdef BOOST_HAS_INT128
 template <>
-inline const char* name_of<__int128>()
+inline const char* name_of<boost::int128_type>()
 {
-   return "__int128";
+   return "boost::int128_type";
 }
 template <>
-inline const char* name_of<unsigned __int128>()
+inline const char* name_of<boost::uint128_type>()
 {
-   return "unsigned __int128";
+   return "boost::uint128_type";
 }
 #endif
 #ifdef BOOST_HAS_FLOAT128
@@ -157,7 +157,7 @@ typename std::enable_if<boost::multiprecision::is_number<Real>::value>::type tes
 }
 
 template <class Real>
-typename std::enable_if<!boost::multiprecision::is_number<Real>::value>::type test_enum_conversions() 
+typename std::enable_if<!boost::multiprecision::is_number<Real>::value>::type test_enum_conversions()
 {}
 
 template <class Real, class Val>
@@ -1581,7 +1581,7 @@ void test_float_ops(const std::integral_constant<int, boost::multiprecision::num
    {
       v = 20.25;
       r = std::numeric_limits<Real>::infinity();
-      
+
       #ifndef BOOST_MP_STANDALONE
       BOOST_CHECK((boost::math::isinf)(v + r));
       BOOST_CHECK((boost::math::isinf)(r + v));
@@ -2116,7 +2116,7 @@ struct is_definitely_unsigned_int
 {};
 #ifdef BOOST_HAS_INT128
 template <>
-struct is_definitely_unsigned_int<unsigned __int128>
+struct is_definitely_unsigned_int<boost::uint128_type>
     : public std::true_type
 {};
 #endif
@@ -2263,9 +2263,9 @@ void test_mixed(const std::integral_constant<bool, true>&)
    r = static_cast<cast_type>(Num(4) * n4) / Real(4);
    BOOST_CHECK_EQUAL(r, static_cast<cast_type>(n4));
 
-   typedef std::integral_constant<bool, 
-       (!std::numeric_limits<Num>::is_specialized || std::numeric_limits<Num>::is_signed) 
-      && (!std::numeric_limits<Real>::is_specialized || std::numeric_limits<Real>::is_signed) 
+   typedef std::integral_constant<bool,
+       (!std::numeric_limits<Num>::is_specialized || std::numeric_limits<Num>::is_signed)
+      && (!std::numeric_limits<Real>::is_specialized || std::numeric_limits<Real>::is_signed)
       && !is_definitely_unsigned_int<Num>::value>
        signed_tag;
 
@@ -3143,10 +3143,10 @@ void test()
    test_mixed<Real, unsigned long long>(tag);
 #endif
 #if defined(BOOST_HAS_INT128) && !defined(BOOST_NO_CXX17_IF_CONSTEXPR)
-   if constexpr (std::is_constructible<Real, __int128>::value)
+   if constexpr (std::is_constructible<Real, boost::int128_type>::value)
    {
-      test_mixed<Real, __int128>(tag);
-      test_mixed<Real, unsigned __int128>(tag);
+      test_mixed<Real, boost::int128_type>(tag);
+      test_mixed<Real, boost::uint128_type>(tag);
    }
 #endif
    test_mixed<Real, float>(tag);

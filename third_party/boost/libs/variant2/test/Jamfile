@@ -126,3 +126,8 @@ run variant_visit_by_index.cpp ;
 
 run variant_ostream_insert.cpp ;
 run is_output_streamable.cpp ;
+
+local JSON = <library>/boost//json/<warnings>off "<toolset>msvc-14.0:<build>no" "<toolset>msvc-14.2:<cxxflags>-wd5104" ;
+
+run variant_json_value_from.cpp : : : $(JSON) ;
+run variant_json_value_to.cpp : : : $(JSON) ;

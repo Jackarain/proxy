@@ -4,7 +4,7 @@
 
 #include "../test/test.hpp"
 
-#if defined(BOOST_CONVERT_IS_NOT_SUPPORTED)
+#if !defined(BOOST_CONVERT_CXX14)
 int main(int, char const* []) { return 0; }
 #else
 
@@ -25,8 +25,6 @@ struct boost::cnv::by_default : boost::cnv::cstream {};
 namespace cnv = boost::cnv;
 namespace arg = boost::cnv::parameter;
 //]
-
-#include "../test/test.hpp"
 
 static
 void

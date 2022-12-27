@@ -229,6 +229,7 @@ inline BOOST_CONSTEXPR bool is_other(file_status f) BOOST_NOEXCEPT
 }
 
 #ifndef BOOST_FILESYSTEM_NO_DEPRECATED
+BOOST_FILESYSTEM_DETAIL_DEPRECATED("Use is_regular_file() instead")
 inline bool is_regular(file_status f) BOOST_NOEXCEPT
 {
     return filesystem::is_regular_file(f);

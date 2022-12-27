@@ -7,10 +7,10 @@
 /*!
 \page localized_text_formatting Localized Text Formatting
 
-The \c iostream manipulators are very useful, but when we create a messages for the user, sometimes we need something
+The \c iostream manipulators are very useful, but when we create messages for the user, sometimes we need something
 like good old \c printf or \c boost::format.
 
-Unfortunately \c boost::format has several limitations in context of localization:
+Unfortunately \c boost::format has several limitations in the context of localization:
 
 -#  It renders all parameters using global locale rather than target \c ostream locale. For example:
     \n
@@ -20,18 +20,18 @@ Unfortunately \c boost::format has several limitations in context of localizatio
     output << boost::format("%1%") % 1234.345;
     \endcode
     \n
-    This would write "1,234.235" to output, instead of the "1.234,234" that is expected for "de_DE" locale
--#  It knows nothing about the new Boost.Locale manipulators.
+    This would write "1,234.235" to output, instead of the "1.234,234" that is expected for "de_DE" locale.
+-#  It knows nothing about the Boost.Locale manipulators.
 -#  The \c printf-like syntax is very limited for formatting complex localized data, not allowing
     the formatting of dates, times, or currencies
 
-Thus a new class, boost::locale::format, was introduced. For example:
+Thus a new class, boost::locale::format, is introduced. For example:
 
 \code
     wcout << wformat(L"Today {1,date} I would meet {2} at home") % time(0) % name <<endl;
 \endcode
 
-Each format specifier is enclosed within \c {} brackets, is separated with a comma "," and
+Each format specifier is enclosed within \c {} brackets, is separated with a comma ",", and
 may have an additional option after an equals symbol '='. This option may be simple ASCII text or single-quoted localized text.
 If a single-quote should be inserted within the text, it may be represented with a pair of single-quote characters.
 
@@ -41,7 +41,7 @@ Here is an example of a format string:
     "Ms. {1} had arrived at {2,ftime='%I o''clock'} at home. The exact time is {2,time=full}"
 \endverbatim
 
-The syntax is described by following grammar:
+The syntax is described by the following grammar:
 
 \verbatim
     format : '{' parameters '}'
@@ -54,14 +54,14 @@ The syntax is described by following grammar:
 \endverbatim
 
 
-You can include literal '{' and '}' by inserting double "{{" or "}}"
-to the text.
+You can include a literal '{' and '}' by inserting double "{{" or "}}"
+into the text.
 
 \code
 cout << format(translate("Unexpected `{{' in line {1} in file {2}")) % pos % file;
 \endcode
 
-Would display something like
+Would display something like:
 
 \verbatim
 Unexpected `{' in line 5 in file source.cpp
