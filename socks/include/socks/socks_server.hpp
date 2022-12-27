@@ -1543,7 +1543,14 @@ Connection: close
 				static std::atomic_size_t id{ 1 };
 				size_t connection_id = id++;
 
-				LOG_DBG << "start client incoming id: " << connection_id;
+				auto endp = socket.remote_endpoint();
+				auto client = endp.address().to_string();
+				client += ":" + std::to_string(endp.port());
+
+				LOG_DBG << "start client incoming id: "
+					<< connection_id
+					<< ", client: "
+					<< client;
 
 				// 等待读取事件.
 				co_await socket.async_wait(
