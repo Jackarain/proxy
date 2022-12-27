@@ -8,8 +8,8 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#include "socks/socks_server.hpp"
 #include "socks/socks_client.hpp"
+#include "socks/socks_server.hpp"
 #include "socks/logging.hpp"
 
 #include "socks/use_awaitable.hpp"
@@ -57,6 +57,7 @@ net::awaitable<void> start_socks_client()
 		1080);
 
 	boost::system::error_code ec;
+
 	co_await sock.async_connect(server_addr, net_awaitable[ec]);
 	if (ec)
 	{
