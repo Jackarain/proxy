@@ -42,6 +42,8 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/ssl.hpp>
+#include <boost/beast/version.hpp>
+#include <boost/beast/core/detail/base64.hpp>
 
 
 namespace socks {
@@ -233,12 +235,23 @@ namespace socks {
 			}
 			if (socks_version == 'G')
 			{
-				co_await http_proxy_connect();
-// 				co_await net::async_write(
-// 					m_local_socket,
-// 					net::buffer(fake_webpage()),
-// 					net::transfer_all(),
-// 					net_awaitable[ec]);
+				co_await net::async_write(
+					m_local_socket,
+					net::buffer(fake_web_page()),
+					net::transfer_all(),
+					net_awaitable[ec]);
+			}
+			else if (socks_version == 'C')
+			{
+				auto ret = co_await http_proxy_connect();
+				if (!ret)
+				{
+					co_await net::async_write(
+						m_local_socket,
+						net::buffer(bad_request_page()),
+						net::transfer_all(),
+						net_awaitable[ec]);
+				}
 			}
 
 			co_return;
@@ -712,6 +725,7 @@ namespace socks {
 				write<uint16_t>(dst_endpoint.port(), wp);
 				write<uint32_t>(dst_endpoint.address().to_v4().to_ulong(), wp);
 
+				wbuf.commit(8);
 				bytes = co_await net::async_write(m_local_socket,
 					wbuf,
 					net::transfer_exactly(8),
@@ -775,7 +789,7 @@ namespace socks {
 
 			wbuf.commit(8);
 			bytes = co_await net::async_write(m_local_socket,
-				m_local_buffer,
+				wbuf,
 				net::transfer_exactly(8),
 				net_awaitable[ec]);
 			if (ec)
@@ -799,26 +813,143 @@ namespace socks {
 			co_return;
 		}
 
-		net::awaitable<void> http_proxy_connect()
+		net::awaitable<bool> http_proxy_connect()
 		{
-			// beast::flat_buffer buffer;
 			http::request<http::string_body> req;
 			boost::system::error_code ec;
-			net::streambuf bufs;
-			// m_local_buffer
 
 			co_await http::async_read(
-				m_local_socket, bufs, req, net_awaitable[ec]);
+				m_local_socket, m_local_buffer, req, net_awaitable[ec]);
 
-			auto m = req.method();
 			auto mth = req.method_string();
-			auto target = std::string{ req.target() };
+			auto target_view = req.target();
+			auto pa = std::string(req[http::field::proxy_authorization]);
 
-			LOG_DBG << "Request: " << static_cast<int>(m)
+			LOG_DBG << "http proxy id: "
+				<< m_connection_id
 				<< ", method: " << mth
-				<< ", target: " << target;
+				<< ", target: " << target_view
+				<< (pa.empty() ? std::string()
+					: ", proxy_authorization: " + pa);
 
-			co_return;
+			if (!m_option.usrdid_.empty())
+			{
+				if (pa.empty())
+				{
+					LOG_ERR << "http proxy id: "
+						<< m_connection_id
+						<< ", missing proxy auth";
+					co_return false;
+				}
+
+				auto pos = pa.find(' ');
+				if (pos == std::string::npos)
+				{
+					LOG_ERR << "http proxy id: "
+						<< m_connection_id
+						<< ", illegal proxy type: "
+						<< pa;
+					co_return false;
+				}
+
+				auto type = pa.substr(0, pos);
+				auto auth = pa.substr(pos + 1);
+
+				if (type != "Basic")
+				{
+					LOG_ERR << "http proxy id: "
+						<< m_connection_id
+						<< ", illegal proxy type: "
+						<< pa;
+					co_return false;
+				}
+
+				std::string userinfo(
+					beast::detail::base64::decoded_size(auth.size()), 0);
+				auto [len, _] = beast::detail::base64::decode(
+					(char*)userinfo.data(),
+					auth.c_str(),
+					auth.size());
+				userinfo.resize(len);
+
+				pos = userinfo.find(':');
+				std::string uname = userinfo.substr(0, pos);
+				std::string passwd = userinfo.substr(pos + 1);
+
+				bool verify_passed =
+					m_option.usrdid_ == uname &&
+					m_option.passwd_ == passwd;
+
+				auto endp = m_local_socket.remote_endpoint();
+				auto client = endp.address().to_string();
+				client += ":" + std::to_string(endp.port());
+
+				LOG_DBG << "socks id: " << m_connection_id
+					<< ", auth: " << m_option.usrdid_
+					<< " := " << uname
+					<< ", passwd: " << m_option.passwd_
+					<< " := " << passwd
+					<< ", client: " << client;
+
+				if (!verify_passed)
+					co_return false;
+			}
+
+			auto pos = target_view.find(':');
+			if (pos == std::string::npos)
+			{
+				LOG_ERR  << "http proxy id: "
+					<< m_connection_id
+					<< ", illegal target: "
+					<< target_view;
+				co_return false;
+			}
+
+			std::string host(target_view.substr(0, pos));
+			std::string port(target_view.substr(pos + 1));
+
+			co_await connect_host(host,
+				static_cast<uint16_t>(std::atol(port.c_str())), ec, true);
+			if (ec)
+			{
+				LOG_WFMT("http proxy id: {},"
+					" connect to target {}:{} error: {}",
+					m_connection_id,
+					host,
+					port,
+					ec.message());
+				co_return false;
+			}
+
+			http::response<http::empty_body> res{
+				http::status::ok, req.version() };
+			res.reason("Connection established");
+
+			co_await http::async_write(
+				m_local_socket,
+				res,
+				net_awaitable[ec]);
+			if (ec)
+			{
+				LOG_WFMT("http proxy id: {},"
+					" async write response {}:{} error: {}",
+					m_connection_id,
+					host,
+					port,
+					ec.message());
+				co_return false;
+			}
+
+			co_await(
+				transfer(m_local_socket, m_remote_socket)
+				&&
+				transfer(m_remote_socket, m_local_socket)
+				);
+
+			LOG_DBG << "http proxy id: " << m_connection_id
+				<< ", transfer completed";
+
+			co_return true;
 		}
 
 		net::awaitable<bool> socks_auth()
@@ -1233,7 +1364,7 @@ namespace socks {
 			co_return;
 		}
 
-		const std::string& fake_webpage() const
+		const std::string& fake_web_page() const
 		{
 			static std::string fake_content =
 R"xxxxxx(HTTP/1.1 404 Not Found
@@ -1251,12 +1382,25 @@ Connection: close
 			return fake_content;
 		}
 
+		const std::string& bad_request_page() const
+		{
+			static std::string fake_content =
+R"xxxxxx(HTTP/1.1 400 Bad Request
+Server: nginx
+Date: Tue, 27 Dec 2022 01:36:17 GMT
+Content-Type: text/html
+Content-Length: 150
+Connection: close
+
+)xxxxxx";
+			return fake_content;
+		}
+
 	private:
 		socks_stream_type m_local_socket;
 		socks_stream_type m_remote_socket;
 		size_t m_connection_id;
 		net::streambuf m_local_buffer{};
-		// std::array<char, 2048> m_local_buffer{};
 		std::weak_ptr<socks_server_base> m_socks_server;
 		socks_server_option m_option;
 		std::unique_ptr<urls::url_view> m_next_proxy;
@@ -1477,7 +1621,9 @@ Connection: close
 
 					new_session->start();
 				}
-				else if (detect[0] == 0x47 || detect[0] == 0x50)
+				else if (detect[0] == 0x47
+					|| detect[0] == 0x50
+					|| detect[0] == 0x43)
 				{
 					LOG_DBG << "http protocol"
 						", connection id: " << connection_id;
