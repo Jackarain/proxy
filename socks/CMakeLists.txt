@@ -19,6 +19,7 @@ file(GLOB libsocks_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/include/socks/socks_io.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/socks/socks_server.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/socks/use_awaitable.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/socks/http_proxy_client.hpp
 )
 
 file(GLOB url_HEADERS
