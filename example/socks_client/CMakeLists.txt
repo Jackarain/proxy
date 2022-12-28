@@ -9,10 +9,8 @@ add_executable(socks_client
 )
 
 target_link_libraries(socks_client
-    libproxy
+    ${PROXY_LIBRARIES}
 )
-
-target_include_directories(socks_client PUBLIC ${BASE_SOURCE_DIR})
 
 set_property(TARGET socks_client PROPERTY FOLDER "example/socks_client")
 

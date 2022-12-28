@@ -9,10 +9,8 @@ add_executable(nested_proxy
 )
 
 target_link_libraries(nested_proxy
-    libproxy
+    ${PROXY_LIBRARIES}
 )
-
-target_include_directories(nested_proxy PUBLIC ${BASE_SOURCE_DIR})
 
 set_property(TARGET nested_proxy PROPERTY FOLDER "example/nested_proxy")
 

@@ -9,10 +9,8 @@ add_executable(http_proxy_client
 )
 
 target_link_libraries(http_proxy_client
-    libproxy
+    ${PROXY_LIBRARIES}
 )
-
-target_include_directories(http_proxy_client PUBLIC ${BASE_SOURCE_DIR})
 
 set_property(TARGET http_proxy_client PROPERTY FOLDER "example/http_proxy_client")
 
