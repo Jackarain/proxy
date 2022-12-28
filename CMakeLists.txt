@@ -2,7 +2,7 @@
 cmake_policy(SET CMP0091 NEW) # for CMAKE_MSVC_RUNTIME_LIBRARY
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW) # cmake_policy(SET CMP0077 NEW)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-project(socks)
+project(proxy)
 
 ################################################################################
 
@@ -18,8 +18,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (ENABLE_GIT_VERSION)
 	find_package(Git)
-	gitGetVersion(${CMAKE_CURRENT_SOURCE_DIR} socks)
-	set(VERSION_GIT ${socks_WC_REVISION_HASH})
+	gitGetVersion(${CMAKE_CURRENT_SOURCE_DIR} proxy)
+	set(VERSION_GIT ${proxy_WC_REVISION_HASH})
 	string(TIMESTAMP PVERSION "%Y%m%d-${VERSION_GIT}-${CMAKE_SYSTEM_NAME}")
 endif()
 
@@ -357,10 +357,10 @@ endif()
 
 ################################################################################
 
-add_subdirectory(socks)
+add_subdirectory(proxy)
 add_subdirectory(example)
 
 ################################################################################
 
-configure_file(socks.service.in socks.service)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/socks.service DESTINATION /usr/lib/systemd/system/)
+configure_file(proxy.service.in proxy.service)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/proxy.service DESTINATION /usr/lib/systemd/system/)
