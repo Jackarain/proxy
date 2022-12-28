@@ -1,5 +1,5 @@
 ﻿//
-// socks_server.cpp
+// proxy_server.cpp
 // ~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2022 Jack (jack dot wgm at gmail dot com)
