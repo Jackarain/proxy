@@ -10,8 +10,6 @@ add_executable(socks_client
 
 target_link_libraries(socks_client
     libproxy
-	Boost::asio
-	Boost::beast
 )
 
 target_include_directories(socks_client PUBLIC ${BASE_SOURCE_DIR})

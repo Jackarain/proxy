@@ -71,6 +71,9 @@ option(ENABLE_LLD					"build using lld" OFF)
 option(ENABLE_TCMALLOC_STATIC		"Build with Tcmalloc support" OFF)
 option(ENABLE_JEMALLOC_STATIC		"Build with Jemalloc support" OFF)
 
+option(ENABLE_BUILD_TESTS			"build animals's unit tests" OFF)
+option(ENABLE_LINKE_TO_LIBATOMIC	"link to libatomic.so - some platform requires it" OFF)
+
 ################################################################################
 
 find_program(MOLD_LINKER mold)
@@ -231,9 +234,6 @@ if (NOT MSVC)
 	endif()
 endif(NOT MSVC)
 
-find_package(Threads)
-link_libraries(${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
-
 ################################################################################
 
 if (ENABLE_SYSTEM_OPENSSL)
@@ -253,20 +253,29 @@ include_directories(${OPENSSL_INCLUDE_DIR})
 
 ################################################################################
 
-set(BUILD_ASIO_BEAST ON)
+if (ENABLE_BUILD_TESTS)
+	set(USE_BOOST_TEST ON)
+endif()
 
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
 
-set(Boost_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost)
+#独立编译asio时, 必须要在使用者项目定义, 否则会将
+#定义BOOST_ASIO_HEADER_ONLY, 使用者将会导致符号冲突.
 
 add_definitions(-DBOOST_ASIO_SEPARATE_COMPILATION)
 add_definitions(-DBOOST_BEAST_SEPARATE_COMPILATION)
+
+#此BOOST_ASIO_DYN_LINK只有在编译asio为动态链接的时候
+#才能启用, 它在msvc下将BOOST_ASIO_DECL分别自动作为
+#dllimport、dllexport添加.
+#add_definitions(-DBOOST_ASIO_DYN_LINK)
 
 add_definitions(-DBOOST_LOCALE_HIDE_AUTO_PTR)
 add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 add_definitions(-DBOOST_DISABLE_PRAGMA_MESSAGE)
 add_definitions(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING)
+add_definitions(-DBOOST_PROCESS_USE_STD_FS)
 if (ENABLE_USE_IO_URING)
 	find_package(IOUring)
 
@@ -281,7 +290,13 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	add_definitions(-DBOOST_ASIO_HAS_CO_AWAIT)
 endif()
 
+set(Boost_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost)
 add_subdirectory(third_party/boost EXCLUDE_FROM_ALL)
+
+################################################################################
+
+find_package(Threads)
+link_libraries(${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
 
 ################################################################################
 
@@ -297,8 +312,12 @@ endif()
 
 if (WIN32 OR NOT ENABLE_SYSTEM_ZLIB)
 	add_subdirectory(third_party/zlib EXCLUDE_FROM_ALL)
+
 	set(ZLIB_LIBRARIES zlibstatic)
-	set(ZLIB_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/zlib ${CMAKE_CURRENT_SOURCE_DIR}/third_party/zlib/contrib/minizip)
+	set(ZLIB_INCLUDE_DIRS
+		${CMAKE_CURRENT_SOURCE_DIR}/third_party/zlib
+		${CMAKE_CURRENT_SOURCE_DIR}/third_party/zlib/contrib/minizip
+	)
 else()
 	find_package(ZLIB REQUIRED)
 endif()
@@ -309,8 +328,13 @@ add_subdirectory(third_party/fmt)
 
 ################################################################################
 
+add_subdirectory(proxy)
+
+################################################################################
+
 include_directories(third_party
 	${ZLIB_INCLUDE_DIRS}
+	${PROXY_INCLUDE_DIRS}
 )
 
 ################################################################################
@@ -320,8 +344,13 @@ link_libraries(
 		Boost::date_time
 		Boost::program_options
 
+		Boost::url
+
 		fmt
+
+		${OPENSSL_LIBRARIES}
 		${ZLIB_LIBRARIES}
+		${PROXY_LIBRARIES}
 )
 
 ################################################################################
@@ -330,9 +359,11 @@ if (WIN32)
 
 	if (MINGW)
 		link_libraries(
+			secur32
 			ws2_32
 			mswsock
 			bcrypt
+			iphlpapi
 		)
 	else()
 		link_libraries(
@@ -342,6 +373,20 @@ if (WIN32)
 			Mswsock.lib
 		)
 	endif()
+elseif (UNIX AND NOT APPLE)
+	# aviod link std::filesystem fail.
+	set(std_fs_workaround "")
+	if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+		set(std_fs_workaround stdc++fs)
+	endif()
+
+	link_libraries(
+		${std_fs_workaround}
+	)
+endif()
+
+if (ENABLE_LINKE_TO_LIBATOMIC)
+	link_libraries(atomic)
 endif()
 
 ################################################################################
@@ -357,8 +402,17 @@ endif()
 
 ################################################################################
 
-add_subdirectory(proxy)
 add_subdirectory(example)
+
+################################################################################
+
+if (ENABLE_BUILD_TESTS)
+	link_libraries(Boost::test)
+
+	enable_testing()
+	include_directories(${CMAKE_CURRENT_SOURCE_DIR}/proxy/include)
+	#add_subdirectory(unittests)
+endif()
 
 ################################################################################
 

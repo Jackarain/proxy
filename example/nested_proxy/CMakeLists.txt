@@ -10,8 +10,6 @@ add_executable(nested_proxy
 
 target_link_libraries(nested_proxy
     libproxy
-	Boost::asio
-	Boost::beast
 )
 
 target_include_directories(nested_proxy PUBLIC ${BASE_SOURCE_DIR})

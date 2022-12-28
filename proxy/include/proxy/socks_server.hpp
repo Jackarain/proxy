@@ -10,8 +10,6 @@
 
 #pragma once
 
-#include "url/url_view.hpp"
-
 #include "proxy/use_awaitable.hpp"
 #include "proxy/scoped_exit.hpp"
 #include "proxy/async_connect.hpp"
@@ -45,6 +43,8 @@
 #include <boost/beast/version.hpp>
 #include <boost/beast/core/detail/base64.hpp>
 
+#include <boost/url.hpp>
+
 
 namespace proxy {
 
@@ -58,6 +58,8 @@ namespace proxy {
 
 	namespace beast = boost::beast;			// from <boost/beast.hpp>
 	namespace http = beast::http;           // from <boost/beast/http.hpp>
+
+	namespace urls = boost::urls;			// form <boost/url.hpp>
 
 	using ssl_stream = net::ssl::stream<tcp::socket>;
 
@@ -1293,7 +1295,7 @@ namespace proxy {
 				opt.target_host = target_host;
 				opt.target_port = target_port;
 				opt.proxy_hostname = true;
-				opt.username = std::string(m_next_proxy->username());
+				opt.username = std::string(m_next_proxy->user());
 				opt.password = std::string(m_next_proxy->password());
 
 				if (m_next_proxy->scheme() == "socks4")
