@@ -18,6 +18,7 @@ libstream/include/version.hpp
 [Rr]eleases/
 [Xx]64/
 [Xx]86/
+[Xx]86_64/
 [Bb]uild/
 bld/
 [Bb]in/
