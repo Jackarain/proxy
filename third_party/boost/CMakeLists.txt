@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.1)
+﻿cmake_minimum_required(VERSION 3.16)
 project(Boost)
 
 include(CMakeDetermineASMCompiler)
@@ -270,6 +270,10 @@ set(BOOST_JSON_SRC
 	libs/json/src/src.cpp
 )
 
+set(BOOST_URL_SRC
+	libs/url/src/src.cpp
+)
+
 set(BOOST_TIMER_SRC
 	libs/timer/src/auto_timers_construction.cpp
 	libs/timer/src/cpu_timer.cpp
@@ -486,6 +490,14 @@ else()
 	add_library(Boost::json ALIAS boost_json_dll)
 endif()
 
+if (Boost_USE_STATIC_LIBS)
+	add_library(boost_url_static STATIC ${BOOST_URL_SRC} )
+	add_library(Boost::url ALIAS boost_url_static)
+else()
+	add_library(boost_url_dll SHARED ${BOOST_URL_SRC})
+	add_library(Boost::url ALIAS boost_url_dll)
+endif()
+
 if (USE_BOOST_FIBER)
 	if (Boost_USE_STATIC_LIBS)
 		add_library(boost_fiber_static STATIC ${BOOST_FIBER_SRC})
@@ -552,6 +564,9 @@ endif()
 target_compile_definitions(boost_json_static PUBLIC -DBOOST_JSON_SOURCE -DBOOST_JSON_STATIC_LINK)
 target_compile_definitions(boost_json_static PRIVATE -DBOOST_JSON_SOURCE -DBOOST_JSON_STATIC_LINK)
 
+target_compile_definitions(boost_url_static PUBLIC -DBOOST_URL_SOURCE -DBOOST_URL_STATIC_LINK)
+target_compile_definitions(boost_url_static PRIVATE -DBOOST_URL_SOURCE -DBOOST_URL_STATIC_LINK)
+
 if (USE_BOOST_TEST)
 	if (Boost_USE_STATIC_LIBS)
 		target_compile_definitions(boost_test_static PUBLIC -DBOOST_TEST_STATIC_LINK)
@@ -577,6 +592,7 @@ if (Boost_USE_STATIC_LIBS)
 		target_link_libraries(boost_fiber_static boost_context_static boost_header)
 	endif()
 	target_link_libraries(boost_json_static boost_header)
+	target_link_libraries(boost_url_static boost_header)
 	target_link_libraries(boost_coroutine_static boost_context_static boost_header)
 	target_link_libraries(boost_chrono_static boost_header)
 	if (USE_BOOST_LOCALE)
@@ -608,6 +624,7 @@ else()
 		target_link_libraries(boost_fiber_dll boost_context_static boost_header)
 	endif()
 	target_link_libraries(boost_json_dll boost_header)
+	target_link_libraries(boost_url_dll boost_header)
 	target_link_libraries(boost_chrono_dll boost_header)
 	if (USE_BOOST_LOCALE)
 		target_link_libraries(boost_locale_dll boost_header)
@@ -642,6 +659,7 @@ set(BOOST_LIBRARIES
 	Boost::context
 	Boost::fiber
 	Boost::json
+	Boost::url
 	Boost::coroutine
 	Boost::chrono
 	Boost::date_time
@@ -675,6 +693,7 @@ if (Boost_USE_STATIC_LIBS)
 		set_target_properties(boost_fiber_static PROPERTIES FOLDER "third_party/boost")
 	endif()
 	set_target_properties(boost_json_static PROPERTIES FOLDER "third_party/boost")
+	set_target_properties(boost_url_static PROPERTIES FOLDER "third_party/boost")
 	set_target_properties(boost_coroutine_static PROPERTIES FOLDER "third_party/boost")
 	set_target_properties(boost_chrono_static PROPERTIES FOLDER "third_party/boost")
 	if (USE_BOOST_LOCALE)
@@ -703,6 +722,7 @@ else()
 	set_target_properties(boost_context_dll PROPERTIES FOLDER "third_party/boost")
 	set_target_properties(boost_fiber_dll PROPERTIES FOLDER "third_party/boost")
 	set_target_properties(boost_json_dll PROPERTIES FOLDER "third_party/boost")
+	set_target_properties(boost_url_dll PROPERTIES FOLDER "third_party/boost")
 	set_target_properties(boost_coroutine_dll PROPERTIES FOLDER "third_party/boost")
 	set_target_properties(boost_chrono_dll PROPERTIES FOLDER "third_party/boost")
 	if (USE_BOOST_LOCALE)
