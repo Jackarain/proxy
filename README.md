@@ -1,4 +1,4 @@
-一个使用现代c++实现的socks4/5协议的实现
+一个使用现代 c++ 实现的 proxy 的实现
 <BR>
 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/Jackarain/libsocks/tree/master.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/Jackarain/libsocks/tree/master)
 [![actions workflow](https://github.com/jackarain/libsocks/actions/workflows/Build.yml/badge.svg)](https://github.com/Jackarain/libsocks/actions)
@@ -6,75 +6,31 @@
 <BR>
 =======================================
 
-使用 **C++20协程** ，支持标准socks4/socks4a/socks5的server/client实现，并且client与server之间可配置通过ssl加密通信，可配置如下架构：
+使用 **C++20协程** ，支持标准socks4/socks4a/socks5/http的server/client proxy实现，并且client与server之间可配置通过ssl加密通信，可配置如下架构：
 
 <BR>
 
 ~~~
 
                   +--------------+     |      +--------------+
-  browser/app --> | socks server | ---ssl---> | socks server | --> target server
+  browser/app --> | proxy server | ---ssl---> | proxy server | --> target server
                   +--------------+     |      +--------------+
                        local          GFW          remote
 ~~~
+<BR>
+以及比 trojan 更通用的 https proxy 服务，因为 https proxy 在很多环境下可以直接使用而不需要安装任何东西就可以使用，如 shell 中声名 HTTPS_PROXY 环境变量就可以了，这时的 proxy server 将伪装成一个 nginx 服务。
 
-同时socks server能伪装为web server来回应非socks协议的请求。
+~~~
+                      |            +--------------+
+  browser/app --> https proxy ---> | proxy server | --> target server
+                      |            +--------------+
+    local            GFW               remote
+~~~
 
+同时 proxy server 能接收 socks/http 代理请求。
 <BR>
 
-### 使用示例程序:
+具体使用参考 example，里面提供了较完整功能的 proxy 程序及编程示例。
+
 <BR>
-
-```
-#include "socks/logging.hpp"
-
-#include "socks/socks_server.hpp"
-#include "socks/socks_client.hpp"
-
-#include "socks/use_awaitable.hpp"
-
-#include <boost/asio/io_context.hpp>
-#include <boost/asio/co_spawn.hpp>
-#include <boost/asio/detached.hpp>
-
-#include <memory>
-
-namespace net = boost::asio;
-using net::ip::tcp;
-using namespace socks;
-
-using server_ptr = std::shared_ptr<socks_server>;
-
-net::awaitable<void> start_socks_server(server_ptr& server)
-{
-	tcp::endpoint socks_listen(
-		net::ip::address::from_string("0.0.0.0"),
-		1080);
-
-	socks_server_option opt;
-	opt.usrdid_ = "jack";
-	opt.passwd_ = "1111";
-
-	auto executor = co_await net::this_coro::executor;
-	server =
-		std::make_shared<socks_server>(
-			executor, socks_listen, opt);
-	server->start();
-
-	co_return;
-}
-
-int main()
-{
-	net::io_context ioc(1);
-	server_ptr server;
-
-	net::co_spawn(ioc, start_socks_server(server), net::detached);
-
-	ioc.run();
-	return 0;
-}
-```
-<BR>
-
 有任何问题可加tg账号: https://t.me/jackarain 或tg群组: https://t.me/joinchat/C3WytT4RMvJ4lqxiJiIVhg
