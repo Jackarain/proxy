@@ -22,7 +22,7 @@ namespace po = boost::program_options;
 
 namespace net = boost::asio;
 using net::ip::tcp;
-using namespace socks;
+using namespace proxy;
 
 
 net::awaitable<void> start_http_proxy_client()
@@ -42,13 +42,13 @@ net::awaitable<void> start_http_proxy_client()
 		co_return;
 	}
 
-	socks::http_proxy_client_option opt;
+	proxy::http_proxy_client_option opt;
 	opt.target_host = "api.ipify.org";
 	opt.target_port = 443;
 	opt.username = "jack";
 	opt.password = "1111";
 
-	co_await socks::async_http_proxy_handshake(sock, opt, net_awaitable[ec]);
+	co_await proxy::async_http_proxy_handshake(sock, opt, net_awaitable[ec]);
 	if (ec)
 	{
 		LOG_WARN << "client 1' handshake to server: " << ec.message();

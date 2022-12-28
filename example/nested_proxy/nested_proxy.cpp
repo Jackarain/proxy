@@ -22,9 +22,9 @@
 
 namespace net = boost::asio;
 using net::ip::tcp;
-using namespace socks;
+using namespace proxy;
 
-using server_ptr = std::shared_ptr<socks::socks_server>;
+using server_ptr = std::shared_ptr<proxy::socks_server>;
 
 net::awaitable<void> start_socks_server(server_ptr& server)
 {
@@ -38,7 +38,7 @@ net::awaitable<void> start_socks_server(server_ptr& server)
 
 	auto executor = co_await net::this_coro::executor;
 	server =
-		std::make_shared<socks::socks_server>(
+		std::make_shared<proxy::socks_server>(
 			executor, socks_listen, opt);
 	server->start();
 
@@ -65,28 +65,28 @@ net::awaitable<void> start_socks_client()
 		co_return;
 	}
 
-	socks::socks_client_option opt1;
+	proxy::socks_client_option opt1;
 	opt1.target_host = "127.0.0.1";
 	opt1.target_port = 1080;
 	opt1.proxy_hostname = true;
 	opt1.username = "jack";
 	opt1.password = "1111";
 
-	co_await socks::async_socks_handshake(sock, opt1, net_awaitable[ec]);
+	co_await proxy::async_socks_handshake(sock, opt1, net_awaitable[ec]);
 	if (ec)
 	{
 		LOG_WARN << "client 1' handshake to server: " << ec.message();
 		co_return;
 	}
 
-	socks::socks_client_option opt2;
+	proxy::socks_client_option opt2;
 	opt2.target_host = "www.baidu.com";
 	opt2.target_port = 80;
 	opt2.proxy_hostname = true;
 	opt2.username = "jack";
 	opt2.password = "1111";
 
-	co_await socks::async_socks_handshake(sock, opt2, net_awaitable[ec]);
+	co_await proxy::async_socks_handshake(sock, opt2, net_awaitable[ec]);
 	if (ec)
 	{
 		LOG_WARN << "client 2' handshake to server: " << ec.message();

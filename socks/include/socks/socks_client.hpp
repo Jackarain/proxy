@@ -32,7 +32,8 @@
 #include <boost/asio/write.hpp>
 
 
-namespace socks {
+namespace proxy {
+
 	namespace net = boost::asio;
 
 	using net::ip::tcp;
@@ -128,7 +129,7 @@ namespace socks {
 
 			if (version != SOCKS_VERSION_5)
 			{
-				ec = socks::errc::socks_unsupported_version;
+				ec = proxy::errc::socks_unsupported_version;
 				co_return;
 			}
 
@@ -136,7 +137,7 @@ namespace socks {
 			{
 				if (username.empty())
 				{
-					ec = socks::errc::socks_username_required;
+					ec = proxy::errc::socks_username_required;
 					co_return;
 				}
 
@@ -186,7 +187,7 @@ namespace socks {
 				auto status = read<uint8_t>(resp);
 				if (version != 0x01)	// auth version.
 				{
-					ec = socks::errc::socks_unsupported_authentication_version;
+					ec = proxy::errc::socks_unsupported_authentication_version;
 					co_return;
 				}
 
@@ -202,7 +203,7 @@ namespace socks {
 			}
 			else
 			{
-				ec = socks::errc::socks_unsupported_authentication_version;
+				ec = proxy::errc::socks_unsupported_authentication_version;
 				co_return;
 			}
 
@@ -516,7 +517,7 @@ namespace socks {
 			}
 			else
 			{
-				ec = socks::errc::socks_unsupported_version;
+				ec = proxy::errc::socks_unsupported_version;
 			}
 
 			co_return ec;

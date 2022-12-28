@@ -12,7 +12,7 @@
 
 #include <boost/system/error_code.hpp>
 
-namespace socks {
+namespace proxy {
 
 	class error_category_impl;
 
@@ -27,7 +27,7 @@ namespace socks {
 
 	inline const boost::system::error_category& error_category()
 	{
-		return error_category_single<socks::error_category_impl>();
+		return error_category_single<proxy::error_category_impl>();
 	}
 
 	namespace errc {
@@ -96,7 +96,7 @@ namespace socks {
 		inline boost::system::error_code make_error_code(errc_t e)
 		{
 			return boost::system::error_code(
-				static_cast<int>(e), socks::error_category());
+				static_cast<int>(e), proxy::error_category());
 		}
 	}
 
@@ -162,7 +162,7 @@ namespace socks {
 
 namespace boost::system {
 	template <>
-	struct is_error_code_enum<socks::errc::errc_t>
+	struct is_error_code_enum<proxy::errc::errc_t>
 	{
 		static const inline bool value = true;
 	};

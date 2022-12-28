@@ -10,7 +10,7 @@
 
 #pragma once
 
-namespace socks {
+namespace proxy {
 
 	enum {
 		SOCKS_VERSION_4 = 4,

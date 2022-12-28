@@ -46,7 +46,8 @@
 #include <boost/beast/core/detail/base64.hpp>
 
 
-namespace socks {
+namespace proxy {
+
 	namespace net = boost::asio;
 
 	using namespace net::experimental::awaitable_operators;

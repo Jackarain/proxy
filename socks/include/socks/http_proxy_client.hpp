@@ -33,7 +33,8 @@
 #include <boost/beast/version.hpp>
 #include <boost/beast/core/detail/base64.hpp>
 
-namespace socks {
+namespace proxy {
+
 	namespace net = boost::asio;
 
 	using tcp = net::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
