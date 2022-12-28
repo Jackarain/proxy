@@ -9,7 +9,7 @@ add_executable(socks_client
 )
 
 target_link_libraries(socks_client
-    libsocks
+    libproxy
 	Boost::asio
 	Boost::beast
 )

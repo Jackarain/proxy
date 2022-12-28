@@ -12,17 +12,17 @@
 
 #include "url/url_view.hpp"
 
-#include "socks/use_awaitable.hpp"
-#include "socks/scoped_exit.hpp"
-#include "socks/async_connect.hpp"
-#include "socks/logging.hpp"
-#include "socks/base_stream.hpp"
-#include "socks/default_cert.hpp"
-#include "socks/fileop.hpp"
+#include "proxy/use_awaitable.hpp"
+#include "proxy/scoped_exit.hpp"
+#include "proxy/async_connect.hpp"
+#include "proxy/logging.hpp"
+#include "proxy/base_stream.hpp"
+#include "proxy/default_cert.hpp"
+#include "proxy/fileop.hpp"
 
-#include "socks/socks_enums.hpp"
-#include "socks/socks_client.hpp"
-#include "socks/socks_io.hpp"
+#include "proxy/socks_enums.hpp"
+#include "proxy/socks_client.hpp"
+#include "proxy/socks_io.hpp"
 
 #include <memory>
 #include <string>

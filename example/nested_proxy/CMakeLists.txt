@@ -9,7 +9,7 @@ add_executable(nested_proxy
 )
 
 target_link_libraries(nested_proxy
-    libsocks
+    libproxy
 	Boost::asio
 	Boost::beast
 )

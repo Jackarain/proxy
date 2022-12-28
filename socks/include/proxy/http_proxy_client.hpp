@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "socks/use_awaitable.hpp"
+#include "proxy/use_awaitable.hpp"
 
 #include <cstdlib>
 #include <string>

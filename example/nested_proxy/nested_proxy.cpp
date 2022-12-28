@@ -8,11 +8,11 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#include "socks/socks_client.hpp"
-#include "socks/socks_server.hpp"
-#include "socks/logging.hpp"
+#include "proxy/socks_client.hpp"
+#include "proxy/socks_server.hpp"
+#include "proxy/logging.hpp"
 
-#include "socks/use_awaitable.hpp"
+#include "proxy/use_awaitable.hpp"
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/co_spawn.hpp>
