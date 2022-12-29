@@ -1230,13 +1230,19 @@ namespace proxy {
 					}
 				}
 
+				auto scheme = m_next_proxy->scheme();
+
 				auto instantiate_stream =
-					[this, &proxy_host, &remote_socket, &ec]
+					[this,
+					scheme,
+					&proxy_host,
+					&remote_socket,
+					&ec]
 				() mutable -> net::awaitable<proxy_stream_type>
 				{
 					ec = {};
 
-					if (m_option.next_proxy_use_ssl_)
+					if (m_option.next_proxy_use_ssl_ || scheme == "https")
 					{
 						m_ssl_context.set_verify_mode(net::ssl::verify_peer);
 						auto cert = default_root_certificates();
@@ -1297,7 +1303,6 @@ namespace proxy {
 				};
 
 				m_remote_socket = std::move(co_await instantiate_stream());
-				auto scheme = m_next_proxy->scheme();
 
 				if (scheme.starts_with("socks"))
 				{
