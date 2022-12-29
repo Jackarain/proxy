@@ -1234,7 +1234,7 @@ namespace proxy {
 
 				auto instantiate_stream =
 					[this,
-					scheme,
+					&scheme,
 					&proxy_host,
 					&remote_socket,
 					&ec]
