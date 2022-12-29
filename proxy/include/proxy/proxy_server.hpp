@@ -20,6 +20,7 @@
 
 #include "proxy/socks_enums.hpp"
 #include "proxy/socks_client.hpp"
+#include "proxy/http_proxy_client.hpp"
 #include "proxy/socks_io.hpp"
 
 #include <memory>
@@ -1292,26 +1293,48 @@ namespace proxy {
 				};
 
 				m_remote_socket = std::move(co_await instantiate_stream());
+				auto scheme = m_next_proxy->scheme();
 
-				socks_client_option opt;
+				if (scheme.starts_with("socks"))
+				{
+					socks_client_option opt;
 
-				opt.target_host = target_host;
-				opt.target_port = target_port;
-				opt.proxy_hostname = true;
-				opt.username = std::string(m_next_proxy->user());
-				opt.password = std::string(m_next_proxy->password());
+					opt.target_host = target_host;
+					opt.target_port = target_port;
+					opt.proxy_hostname = true;
+					opt.username = std::string(m_next_proxy->user());
+					opt.password = std::string(m_next_proxy->password());
 
-				if (m_next_proxy->scheme() == "socks4")
-					opt.version = socks4_version;
-				else if (m_next_proxy->scheme() == "socks4a")
-					opt.version = socks4a_version;
+					if (scheme == "socks4")
+						opt.version = socks4_version;
+					else if (scheme == "socks4a")
+						opt.version = socks4a_version;
 
-				co_await async_socks_handshake(
-					m_remote_socket, opt, net_awaitable[ec]);
+					co_await async_socks_handshake(
+						m_remote_socket,
+						opt,
+						net_awaitable[ec]);
+				}
+				else if (scheme.starts_with("http"))
+				{
+					http_proxy_client_option opt;
+
+					opt.target_host = target_host;
+					opt.target_port = target_port;
+					opt.username = std::string(m_next_proxy->user());
+					opt.password = std::string(m_next_proxy->password());
+
+					co_await async_http_proxy_handshake(
+						m_remote_socket,
+						opt,
+						net_awaitable[ec]);
+				}
+
 				if (ec)
 				{
-					LOG_WFMT("socks id: {},"
+					LOG_WFMT("{} id: {},"
 						" connect to next host {}:{} error: {}",
+						std::string(scheme),
 						m_connection_id,
 						target_host,
 						target_port,
