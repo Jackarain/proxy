@@ -8,7 +8,7 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#include "proxy/socks_server.hpp"
+#include "proxy/proxy_server.hpp"
 #include "proxy/socks_client.hpp"
 #include "proxy/logging.hpp"
 
@@ -48,7 +48,7 @@ namespace net = boost::asio;
 using net::ip::tcp;
 using namespace proxy;
 
-using server_ptr = std::shared_ptr<socks_server>;
+using server_ptr = std::shared_ptr<proxy_server>;
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -227,7 +227,7 @@ std::string socks_listen;
 
 //////////////////////////////////////////////////////////////////////////
 
-net::awaitable<void> start_socks_server(server_ptr& server)
+net::awaitable<void> start_proxy_server(server_ptr& server)
 {
 	std::string host, port;
 	bool v6only = false;
@@ -242,7 +242,7 @@ net::awaitable<void> start_socks_server(server_ptr& server)
 		net::ip::address::from_string(host),
 			(unsigned short)atoi(port.c_str()));
 
-	socks_server_option opt;
+	proxy_server_option opt;
 
 	opt.usrdid_ = socks_userid;
 	opt.passwd_ = socks_passwd;
@@ -253,7 +253,7 @@ net::awaitable<void> start_socks_server(server_ptr& server)
 
 	auto executor = co_await net::this_coro::executor;
 	server =
-		std::make_shared<proxy::socks_server>(
+		std::make_shared<proxy::proxy_server>(
 			executor, listen, opt);
 	server->start();
 
@@ -301,7 +301,7 @@ int main(int argc, char** argv)
 	net::io_context ioc(1);
 	server_ptr server;
 
-	net::co_spawn(ioc, start_socks_server(server), net::detached);
+	net::co_spawn(ioc, start_proxy_server(server), net::detached);
 
 	ioc.run();
 

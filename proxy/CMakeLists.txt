@@ -20,11 +20,11 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/socks_enums.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/socks_error_code.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/socks_io.hpp
-	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/socks_server.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/proxy_server.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/use_awaitable.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/http_proxy_client.hpp
 
-	#${CMAKE_CURRENT_SOURCE_DIR}/src/dummy.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/dummy.cpp
 )
 
 target_include_directories(libproxy
@@ -42,7 +42,7 @@ target_link_libraries(libproxy
 #source_group("Header Files\\proxy" FILES ${libproxy_HEADERS})
 #source_group("Source Files" FILES ${libproxy_SRCS})
 
-set_target_properties(libproxy PROPERTIES OUTPUT_NAME socks PREFIX "lib" CLEAN_DIRECT_OUTPUT 1)
+set_target_properties(libproxy PROPERTIES OUTPUT_NAME proxy PREFIX "lib" CLEAN_DIRECT_OUTPUT 1)
 
 if (MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.29.30129 AND CMAKE_VERSION VERSION_GREATER 3.20.3)
 	set_property(TARGET libproxy PROPERTY CXX_STANDARD 23)

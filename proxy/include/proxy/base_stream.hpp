@@ -120,37 +120,37 @@ namespace util {
 	};
 
 	using ssl_stream = net::ssl::stream<tcp::socket>;
-	using socks_stream_type = base_stream<tcp::socket, ssl_stream>;
+	using proxy_stream_type = base_stream<tcp::socket, ssl_stream>;
 
 
-	inline socks_stream_type instantiate_socks_stream(
-		socks_stream_type& s)
+	inline proxy_stream_type instantiate_proxy_stream(
+		proxy_stream_type& s)
 	{
-		return socks_stream_type(tcp::socket(s.get_executor()));
+		return proxy_stream_type(tcp::socket(s.get_executor()));
 	}
 
-	inline socks_stream_type instantiate_socks_stream(
+	inline proxy_stream_type instantiate_proxy_stream(
 		net::any_io_executor executor)
 	{
-		return socks_stream_type(tcp::socket(executor));
+		return proxy_stream_type(tcp::socket(executor));
 	}
 
-	inline socks_stream_type instantiate_socks_stream(
+	inline proxy_stream_type instantiate_proxy_stream(
 		net::io_context& ioc)
 	{
-		return socks_stream_type(tcp::socket(ioc));
+		return proxy_stream_type(tcp::socket(ioc));
 	}
 
-	inline socks_stream_type instantiate_socks_stream(
+	inline proxy_stream_type instantiate_proxy_stream(
 		tcp::socket&& s)
 	{
-		return socks_stream_type(std::move(s));
+		return proxy_stream_type(std::move(s));
 	}
 
-	inline socks_stream_type instantiate_socks_stream(
+	inline proxy_stream_type instantiate_proxy_stream(
 		tcp::socket&& s, net::ssl::context& sslctx)
 	{
-		return socks_stream_type(ssl_stream(
+		return proxy_stream_type(ssl_stream(
 			std::forward<tcp::socket>(s), sslctx));
 	}
 

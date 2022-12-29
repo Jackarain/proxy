@@ -9,7 +9,7 @@
 //
 
 #include "proxy/socks_client.hpp"
-#include "proxy/socks_server.hpp"
+#include "proxy/proxy_server.hpp"
 #include "proxy/logging.hpp"
 
 #include "proxy/use_awaitable.hpp"
@@ -24,21 +24,21 @@ namespace net = boost::asio;
 using net::ip::tcp;
 using namespace proxy;
 
-using server_ptr = std::shared_ptr<proxy::socks_server>;
+using server_ptr = std::shared_ptr<proxy::proxy_server>;
 
-net::awaitable<void> start_socks_server(server_ptr& server)
+net::awaitable<void> start_proxy_server(server_ptr& server)
 {
 	tcp::endpoint socks_listen(
 		net::ip::address::from_string("0.0.0.0"),
 		1080);
 
-	socks_server_option opt;
+	proxy_server_option opt;
 	opt.usrdid_ = "jack";
 	opt.passwd_ = "1111";
 
 	auto executor = co_await net::this_coro::executor;
 	server =
-		std::make_shared<proxy::socks_server>(
+		std::make_shared<proxy::proxy_server>(
 			executor, socks_listen, opt);
 	server->start();
 
@@ -103,7 +103,7 @@ int main()
 	net::io_context ioc(1);
 	server_ptr server;
 
-	net::co_spawn(ioc, start_socks_server(server), net::detached);
+	net::co_spawn(ioc, start_proxy_server(server), net::detached);
 	net::co_spawn(ioc, start_socks_client(), net::detached);
 
 	ioc.run();

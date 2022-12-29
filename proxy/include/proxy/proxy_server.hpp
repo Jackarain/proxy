@@ -66,20 +66,23 @@ namespace proxy {
 	using io_util::read;
 	using io_util::write;
 
-	// socks server 参数选项.
-	struct socks_server_option
+	// proxy server 参数选项.
+	struct proxy_server_option
 	{
-		// 指定当前socks server认证用户id名称.
+		// 指定当前proxy server认证用户id名称.
 		std::string usrdid_;
-		// 指定当前socks server认证密码.
+		// 指定当前proxy server认证密码.
 		std::string passwd_;
 
-		// 指定当前socks server向外发起连接时, 绑定到哪个本地地址.
+		// 指定当前proxy server向外发起连接时, 绑定到哪个本地地址.
 		std::string bind_addr_;
 
-		// 多层代理模式, 下一个代理服务器.
+		// 多层代理, 当前服务器级连下一个服务器, 对于 client 而言
+		// 是无感的, 这是当前服务器通过 next_proxy_ 指定的下一个
+		// 代理服务器, 为 client 实现多层代理.
 		// 例如: socks5://user:passwd@proxy.server.com:1080
-		// 默认使用hostname模式, dns解析在远程执行.
+		// 或:   https://user:passwd@proxy.server.com:1080
+		// socks5 默认使用 hostname 模式, 即 dns 解析在远程执行.
 		std::string next_proxy_;
 
 		// 多层代理模式中, 与下一个代理服务器是否使用tls加密(ssl).
@@ -89,48 +92,48 @@ namespace proxy {
 		std::string ssl_cert_path_;
 	};
 
-	// socks server 虚基类, 任何socks server的实现, 必须基于这个基类.
-	// 这样 socks_session 才能通过虚基类指针访问socks server的具体实
+	// proxy server 虚基类, 任何 proxy server 的实现, 必须基于这个基类.
+	// 这样 proxy_session 才能通过虚基类指针访问proxy server的具体实
 	// 现以及虚函数方法.
-	class socks_server_base {
+	class proxy_server_base {
 	public:
-		virtual ~socks_server_base() {}
+		virtual ~proxy_server_base() {}
 		virtual void remove_client(size_t id) = 0;
-		virtual const socks_server_option& option() = 0;
+		virtual const proxy_server_option& option() = 0;
 	};
 
-	// socks session 虚基类.
-	class socks_session_base {
+	// proxy session 虚基类.
+	class proxy_session_base {
 	public:
-		virtual ~socks_session_base() {}
+		virtual ~proxy_session_base() {}
 		virtual void start() = 0;
 		virtual void close() = 0;
 	};
 
-	// socks_session 抽象类, 它被设计为一个模板抽象类, 模板参数Stream
+	// proxy_session 抽象类, 它被设计为一个模板抽象类, 模板参数Stream
 	// 指定与本地通信的stream对象, 默认使用tcp::socket, 可根据此
 	// async_read/async_write等接口实现专用的stream类, 比如实现加密.
-	class socks_session
-		: public socks_session_base
-		, public std::enable_shared_from_this<socks_session>
+	class proxy_session
+		: public proxy_session_base
+		, public std::enable_shared_from_this<proxy_session>
 	{
-		socks_session(const socks_session&) = delete;
-		socks_session& operator=(const socks_session&) = delete;
+		proxy_session(const proxy_session&) = delete;
+		proxy_session& operator=(const proxy_session&) = delete;
 
 	public:
-		socks_session(socks_stream_type&& socket,
-			size_t id, std::weak_ptr<socks_server_base> server)
+		proxy_session(proxy_stream_type&& socket,
+			size_t id, std::weak_ptr<proxy_server_base> server)
 			: m_local_socket(std::move(socket))
-			, m_remote_socket(instantiate_socks_stream(
+			, m_remote_socket(instantiate_proxy_stream(
 				m_local_socket.get_executor()))
 			, m_connection_id(id)
-			, m_socks_server(server)
+			, m_proxy_server(server)
 		{
 		}
 
-		~socks_session()
+		~proxy_session()
 		{
-			auto server = m_socks_server.lock();
+			auto server = m_proxy_server.lock();
 			if (!server)
 				return;
 
@@ -140,7 +143,7 @@ namespace proxy {
 	public:
 		virtual void start() override
 		{
-			auto server = m_socks_server.lock();
+			auto server = m_proxy_server.lock();
 			if (!server)
 				return;
 
@@ -293,7 +296,7 @@ namespace proxy {
 				co_return;
 			}
 
-			auto server = m_socks_server.lock();
+			auto server = m_proxy_server.lock();
 			if (!server)
 				co_return;
 
@@ -692,7 +695,7 @@ namespace proxy {
 
 			// 用户认证逻辑.
 			bool verify_passed = false;
-			auto server = m_socks_server.lock();
+			auto server = m_proxy_server.lock();
 
 			if (server)
 			{
@@ -1055,7 +1058,7 @@ namespace proxy {
 
 			// 用户认证逻辑.
 			bool verify_passed = false;
-			auto server = m_socks_server.lock();
+			auto server = m_proxy_server.lock();
 
 			if (server)
 			{
@@ -1228,7 +1231,7 @@ namespace proxy {
 
 				auto instantiate_stream =
 					[this, &proxy_host, &remote_socket, &ec]
-				() mutable -> net::awaitable<socks_stream_type>
+				() mutable -> net::awaitable<proxy_stream_type>
 				{
 					ec = {};
 
@@ -1255,7 +1258,7 @@ namespace proxy {
 								m_connection_id, ec.message());
 						}
 
-						auto socks_stream = instantiate_socks_stream(
+						auto socks_stream = instantiate_proxy_stream(
 							std::move(remote_socket), m_ssl_context);
 
 						// get origin ssl stream type.
@@ -1284,7 +1287,7 @@ namespace proxy {
 						co_return socks_stream;
 					}
 
-					co_return instantiate_socks_stream(
+					co_return instantiate_proxy_stream(
 						std::move(remote_socket));
 				};
 
@@ -1358,7 +1361,7 @@ namespace proxy {
 						ec.message());
 				}
 
-				m_remote_socket = instantiate_socks_stream(
+				m_remote_socket = instantiate_proxy_stream(
 					std::move(remote_socket));
 			}
 
@@ -1398,12 +1401,12 @@ Connection: close
 		}
 
 	private:
-		socks_stream_type m_local_socket;
-		socks_stream_type m_remote_socket;
+		proxy_stream_type m_local_socket;
+		proxy_stream_type m_remote_socket;
 		size_t m_connection_id;
 		net::streambuf m_local_buffer{};
-		std::weak_ptr<socks_server_base> m_socks_server;
-		socks_server_option m_option;
+		std::weak_ptr<proxy_server_base> m_proxy_server;
+		proxy_server_option m_option;
 		std::unique_ptr<urls::url_view> m_next_proxy;
 		net::ssl::context m_ssl_context{ net::ssl::context::sslv23_client };
 		bool m_abort{ false };
@@ -1411,16 +1414,16 @@ Connection: close
 
 	//////////////////////////////////////////////////////////////////////////
 
-	class socks_server
-		: public socks_server_base
-		, public std::enable_shared_from_this<socks_server>
+	class proxy_server
+		: public proxy_server_base
+		, public std::enable_shared_from_this<proxy_server>
 	{
-		socks_server(const socks_server&) = delete;
-		socks_server& operator=(const socks_server&) = delete;
+		proxy_server(const proxy_server&) = delete;
+		proxy_server& operator=(const proxy_server&) = delete;
 
 	public:
-		socks_server(net::any_io_executor executor,
-			const tcp::endpoint& endp, socks_server_option opt = {})
+		proxy_server(net::any_io_executor executor,
+			const tcp::endpoint& endp, proxy_server_option opt = {})
 			: m_executor(executor)
 			, m_acceptor(executor, endp)
 			, m_option(std::move(opt))
@@ -1431,7 +1434,7 @@ Connection: close
 			m_acceptor.listen(net::socket_base::max_listen_connections, ec);
 		}
 
-		virtual ~socks_server() = default;
+		virtual ~proxy_server() = default;
 
 		void init_ssl_context()
 		{
@@ -1470,11 +1473,11 @@ Connection: close
 	public:
 		inline void start()
 		{
-			// 同时启动32个连接协程, 开始为socks client提供服务.
+			// 同时启动32个连接协程, 开始为proxy client提供服务.
 			for (int i = 0; i < 32; i++)
 			{
 				net::co_spawn(m_executor,
-					start_socks_listen(m_acceptor), net::detached);
+					start_proxy_listen(m_acceptor), net::detached);
 			}
 		}
 
@@ -1500,13 +1503,13 @@ Connection: close
 			m_clients.erase(id);
 		}
 
-		virtual const socks_server_option& option() override
+		virtual const proxy_server_option& option() override
 		{
 			return m_option;
 		}
 
 	private:
-		inline net::awaitable<void> start_socks_listen(tcp::acceptor& a)
+		inline net::awaitable<void> start_proxy_listen(tcp::acceptor& a)
 		{
 			auto self = shared_from_this();
 			boost::system::error_code error;
@@ -1518,7 +1521,7 @@ Connection: close
 					socket, net_awaitable[error]);
 				if (error)
 				{
-					LOG_ERR << "start_socks_listen"
+					LOG_ERR << "start_proxy_listen"
 						", async_accept: " << error.message();
 
 					if (error == net::error::operation_aborted ||
@@ -1589,8 +1592,8 @@ Connection: close
 						" connection id: " << connection_id;
 
 					auto new_session =
-						std::make_shared<socks_session>(
-							instantiate_socks_stream(std::move(socket)),
+						std::make_shared<proxy_session>(
+							instantiate_proxy_stream(std::move(socket)),
 								connection_id, self);
 
 					m_clients[connection_id] = new_session;
@@ -1603,7 +1606,7 @@ Connection: close
 						", connection id: " << connection_id;
 
 					// instantiate socks stream with ssl context.
-					auto ssl_socks_stream = instantiate_socks_stream(
+					auto ssl_socks_stream = instantiate_proxy_stream(
 						std::move(socket), m_ssl_context);
 
 					// get origin ssl stream type.
@@ -1623,7 +1626,7 @@ Connection: close
 
 					// make socks session shared ptr.
 					auto new_session =
-						std::make_shared<socks_session>(
+						std::make_shared<proxy_session>(
 							std::move(ssl_socks_stream), connection_id, self);
 					m_clients[connection_id] = new_session;
 
@@ -1637,8 +1640,8 @@ Connection: close
 						", connection id: " << connection_id;
 
 					auto new_session =
-						std::make_shared<socks_session>(
-							instantiate_socks_stream(std::move(socket)),
+						std::make_shared<proxy_session>(
+							instantiate_proxy_stream(std::move(socket)),
 								connection_id, self);
 					m_clients[connection_id] = new_session;
 
@@ -1646,17 +1649,17 @@ Connection: close
 				}
 			}
 
-			LOG_WARN << "start_socks_listen exit ...";
+			LOG_WARN << "start_proxy_listen exit ...";
 			co_return;
 		}
 
 	private:
 		net::any_io_executor m_executor;
 		tcp::acceptor m_acceptor;
-		socks_server_option m_option;
-		using socks_session_weak_ptr =
-			std::weak_ptr<socks_session>;
-		std::unordered_map<size_t, socks_session_weak_ptr> m_clients;
+		proxy_server_option m_option;
+		using proxy_session_weak_ptr =
+			std::weak_ptr<proxy_session>;
+		std::unordered_map<size_t, proxy_session_weak_ptr> m_clients;
 		net::ssl::context m_ssl_context{ net::ssl::context::sslv23 };
 		bool m_abort{ false };
 	};
