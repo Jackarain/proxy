@@ -1245,7 +1245,7 @@ namespace proxy {
 							ec);
 						if (ec)
 						{
-							LOG_WFMT("socks id: {},"
+							LOG_WFMT("proxy id: {},"
 								" add_certificate_authority error: {}",
 								m_connection_id, ec.message());
 						}
@@ -1254,7 +1254,7 @@ namespace proxy {
 							net::ssl::rfc2818_verification(proxy_host), ec);
 						if (ec)
 						{
-							LOG_WFMT("socks id: {},"
+							LOG_WFMT("proxy id: {},"
 								" set_verify_callback error: {}",
 								m_connection_id, ec.message());
 						}
@@ -1269,7 +1269,7 @@ namespace proxy {
 						if (!SSL_set_tlsext_host_name(
 							ssl_socket.native_handle(), proxy_host.c_str()))
 						{
-							LOG_WFMT("socks id: {},"
+							LOG_WFMT("proxy id: {},"
 							" SSL_set_tlsext_host_name error: {}",
 								m_connection_id, ::ERR_get_error());
 						}
@@ -1280,10 +1280,14 @@ namespace proxy {
 							net_awaitable[ec]);
 						if (ec)
 						{
-							LOG_WFMT("socks id: {},"
+							LOG_WFMT("proxy id: {},"
 								" ssl protocol handshake error: {}",
 								m_connection_id, ec.message());
 						}
+
+						LOG_FMT("proxy id: {}, ssl handshake: {}",
+							m_connection_id,
+							proxy_host);
 
 						co_return socks_stream;
 					}
