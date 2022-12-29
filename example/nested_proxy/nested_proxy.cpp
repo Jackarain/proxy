@@ -9,6 +9,7 @@
 //
 
 #include "proxy/socks_client.hpp"
+#include "proxy/http_proxy_client.hpp"
 #include "proxy/proxy_server.hpp"
 #include "proxy/logging.hpp"
 
@@ -30,7 +31,7 @@ net::awaitable<void> start_proxy_server(server_ptr& server)
 {
 	tcp::endpoint socks_listen(
 		net::ip::address::from_string("0.0.0.0"),
-		1080);
+		10800);
 
 	proxy_server_option opt;
 	opt.usrdid_ = "jack";
@@ -54,7 +55,7 @@ net::awaitable<void> start_socks_client()
 
 	tcp::endpoint server_addr(
 		net::ip::address::from_string("127.0.0.1"),
-		1080);
+		10800);
 
 	boost::system::error_code ec;
 
@@ -67,7 +68,7 @@ net::awaitable<void> start_socks_client()
 
 	proxy::socks_client_option opt1;
 	opt1.target_host = "127.0.0.1";
-	opt1.target_port = 1080;
+	opt1.target_port = 10800;
 	opt1.proxy_hostname = true;
 	opt1.username = "jack";
 	opt1.password = "1111";
@@ -79,14 +80,13 @@ net::awaitable<void> start_socks_client()
 		co_return;
 	}
 
-	proxy::socks_client_option opt2;
+	proxy::http_proxy_client_option opt2;
 	opt2.target_host = "www.baidu.com";
 	opt2.target_port = 80;
-	opt2.proxy_hostname = true;
 	opt2.username = "jack";
 	opt2.password = "1111";
 
-	co_await proxy::async_socks_handshake(sock, opt2, net_awaitable[ec]);
+	co_await proxy::async_http_proxy_handshake(sock, opt2, net_awaitable[ec]);
 	if (ec)
 	{
 		LOG_WARN << "client 2' handshake to server: " << ec.message();

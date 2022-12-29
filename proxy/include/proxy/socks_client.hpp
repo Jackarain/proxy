@@ -523,7 +523,7 @@ namespace proxy {
 			co_return ec;
 		}
 
-		struct initiate_do_something
+		struct initiate_do_socks_proxy
 		{
 			template <typename Stream, typename Handler>
 			void operator()(Handler&& handler,
@@ -549,7 +549,7 @@ namespace proxy {
 	{
 		return net::async_initiate<Handler,
 			void(boost::system::error_code)>(
-				detail::initiate_do_something(), handler, &socket, opt);
+				detail::initiate_do_socks_proxy(), handler, &socket, opt);
 	}
 
 }
