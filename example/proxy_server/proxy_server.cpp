@@ -18,6 +18,7 @@
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 
+#include <boost/algorithm/string/join.hpp>
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
@@ -262,20 +263,76 @@ net::awaitable<void> start_proxy_server(server_ptr& server)
 
 //////////////////////////////////////////////////////////////////////////
 
+void print_args(int argc, char** argv,
+	const po::variables_map& vm)
+{
+	LOG_INFO << "Current directory: "
+		<< std::filesystem::current_path().string();
+
+	if (!vm.count("config"))
+	{
+		std::vector<std::string> print_args;
+		print_args.assign(argv, argv + argc);
+		LOG_INFO << "Run: "
+			<< boost::algorithm::join(print_args, " ");
+
+		return;
+	}
+
+	for (const auto& cfg : vm)
+	{
+		if (cfg.second.empty() || cfg.first == "config")
+			continue;
+
+		auto& var = cfg.second.value();
+		try {
+			const auto& s = boost::any_cast<std::string>(var);
+			LOG_INFO << cfg.first
+				<< " = "
+				<< s;
+			continue;
+		}
+		catch (const std::exception&) {}
+
+		try {
+			const auto& v = boost::any_cast<bool>(var);
+			LOG_INFO << cfg.first
+				<< " = "
+				<< v;
+			continue;
+		}
+		catch (const std::exception&) {}
+
+		try {
+			const auto& v = boost::any_cast<int>(var);
+			LOG_INFO << cfg.first
+				<< " = "
+				<< v;
+			continue;
+		}
+		catch (const std::exception&) {}
+	}
+}
+
+
 int main(int argc, char** argv)
 {
 	platform_init();
 
+	std::string config;
+
 	po::options_description desc("Options");
 	desc.add_options()
 		("help,h", "Help message.")
+		("config", po::value<std::string>(&config)->value_name("config.conf"), "Load config options from file.")
+
 		("socks_server", po::value<std::string>(&socks_listen)->default_value("[::0]:1080")->value_name("ip:port"), "For socks4/5 server listen.")
 		("socks_userid", po::value<std::string>(&socks_userid)->default_value("jack")->value_name("userid"), "Socks4/5 auth user id.")
 		("socks_passwd", po::value<std::string>(&socks_passwd)->default_value("1111")->value_name("passwd"), "Socks4/5 auth password.")
 		("socks_next_proxy", po::value<std::string>(&socks_next_proxy)->default_value("")->value_name(""), "Next socks4/5 proxy. (e.g: socks5://user:passwd@ip:port)")
 		("socks_next_proxy_ssl", po::value<bool>(&socks_next_proxy_ssl)->default_value(false, "false")->value_name(""), "Next socks4/5 proxy with ssl.")
 
-		("ssl_certificate_dir", po::value<std::string>(&ssl_certificate_dir)->default_value("")->value_name("path"), "SSL certificate dir.")
+		("ssl_certificate_dir", po::value<std::string>(&ssl_certificate_dir)->value_name("path"), "SSL certificate dir.")
 	;
 
 	// 解析命令行.
@@ -295,6 +352,22 @@ int main(int argc, char** argv)
 		std::cout << desc;
 		return EXIT_SUCCESS;
 	}
+
+	if (vm.count("config"))
+	{
+		if (!std::filesystem::exists(config))
+		{
+			LOG_ERR << "No such config file: " << config;
+			return EXIT_FAILURE;
+		}
+
+		LOG_DBG << "Load config file: " << config;
+		auto cfg = po::parse_config_file(config.c_str(), desc, false);
+		po::store(cfg, vm);
+		po::notify(vm);
+	}
+
+	print_args(argc, argv, vm);
 
 	LOG_DBG << "Start socks server: " << socks_listen;
 
