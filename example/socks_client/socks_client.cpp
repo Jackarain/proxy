@@ -28,14 +28,14 @@ using namespace proxy;
 net::awaitable<void> start_socks_client()
 {
 	auto executor = co_await net::this_coro::executor;
-	tcp::socket s(executor);
+	tcp::socket sock(executor);
 
 	tcp::endpoint server_addr(
 		net::ip::address::from_string("127.0.0.1"),
 		1080);
 
 	boost::system::error_code ec;
-	co_await s.async_connect(server_addr, net_awaitable[ec]);
+	co_await sock.async_connect(server_addr, net_awaitable[ec]);
 	if (ec)
 	{
 		LOG_WARN << "client connect to server: " << ec.message();
@@ -49,14 +49,14 @@ net::awaitable<void> start_socks_client()
 	opt.username = "jack";
 	opt.password = "1111";
 
-	co_await proxy::async_socks_handshake(s, opt, net_awaitable[ec]);
+	co_await proxy::async_socks_handshake(sock, opt, net_awaitable[ec]);
 	if (ec)
 	{
 		LOG_WARN << "client 1' handshake to server: " << ec.message();
 		co_return;
 	}
 
-	// Usg socket 's' do something...
+	// Usg socket 'sock' do something...
 
 	co_return;
 }
