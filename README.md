@@ -7,7 +7,6 @@
 =======================================
 
 使用 **C++20协程** ，支持标准socks4/socks4a/socks5/http的server/client proxy实现，并且client与server之间可配置通过ssl加密通信，可配置如下架构：
-
 <BR>
 
 ~~~
@@ -18,7 +17,9 @@
                        local          GFW          remote
 ~~~
 <BR>
+
 以及比 trojan 更通用的 https proxy 服务，因为 https proxy 在很多环境下可以直接使用而不需要安装任何东西就可以使用，如 shell 中声名 HTTPS_PROXY 环境变量就可以了，这时的 proxy server 将伪装成一个 nginx 服务。
+<BR>
 
 ~~~
                       |            +--------------+
