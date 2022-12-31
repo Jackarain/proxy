@@ -1,7 +1,7 @@
 一个使用现代 c++ 实现的 proxy 的实现
 <BR>
-[![CircleCI](https://dl.circleci.com/status-badge/img/gh/Jackarain/libsocks/tree/master.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/Jackarain/libsocks/tree/master)
-[![actions workflow](https://github.com/jackarain/libsocks/actions/workflows/Build.yml/badge.svg)](https://github.com/Jackarain/libsocks/actions)
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/Jackarain/proxy/tree/master.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/Jackarain/proxy/tree/master)
+[![actions workflow](https://github.com/jackarain/proxy/actions/workflows/Build.yml/badge.svg)](https://github.com/Jackarain/proxy/actions)
 <BR>
 <BR>
 =======================================
