@@ -1619,10 +1619,12 @@ namespace proxy {
 
 				if (!ec)
 				{
-					const auto stime =
-						chrono::clock_cast<chrono::system_clock>(ftime);
+					const auto stime = chrono::time_point_cast<
+						chrono::system_clock::duration>(ftime
+						- fs::file_time_type::clock::now()
+						+ chrono::system_clock::now());
 					const auto write_time =
-						std::chrono::system_clock::to_time_t(stime);
+						chrono::system_clock::to_time_t(stime);
 
 					char tmbuf[64] = { 0 };
 					auto tm = std::localtime(&write_time);
