@@ -1714,6 +1714,7 @@ namespace proxy {
 			static std::map<std::string, std::string> mimes =
 			{
 				{ ".html", "text/html; charset=utf-8" },
+				{ ".htm", "text/html; charset=utf-8" },
 				{ ".js", "application/javascript" },
 				{ ".h", "text/javascript"},
 				{ ".hpp", "text/javascript"},
