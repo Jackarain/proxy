@@ -17,6 +17,7 @@
 #include "proxy/base_stream.hpp"
 #include "proxy/default_cert.hpp"
 #include "proxy/fileop.hpp"
+#include "proxy/strutil.hpp"
 
 #include "proxy/socks_enums.hpp"
 #include "proxy/socks_client.hpp"
@@ -40,12 +41,18 @@
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
+#include <boost/beast/websocket.hpp>
 #include <boost/beast/ssl.hpp>
 #include <boost/beast/version.hpp>
 #include <boost/beast/core/detail/base64.hpp>
 
 #include <boost/url.hpp>
+#include <boost/regex.hpp>
 
+#include <boost/nowide/convert.hpp>
+
+#include <fmt/xchar.h>
+#include <fmt/format.h>
 
 namespace proxy {
 
@@ -53,6 +60,7 @@ namespace proxy {
 
 	using namespace net::experimental::awaitable_operators;
 	using namespace util;
+	using namespace strutil;
 
 	using tcp = net::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 	using udp = net::ip::udp;               // from <boost/asio/ip/udp.hpp>
@@ -62,10 +70,23 @@ namespace proxy {
 
 	namespace urls = boost::urls;			// form <boost/url.hpp>
 
+	using string_body = http::string_body;
+	using dynamic_body = http::dynamic_body;
+	using buffer_body = http::buffer_body;
+
+	using dynamic_request = http::request<dynamic_body>;
+	using string_response = http::response<string_body>;
+	using buffer_response = http::response<buffer_body>;
+
+	using request_parser = http::request_parser<dynamic_request::body_type>;
+	using response_serializer = http::response_serializer<buffer_body, http::fields>;
+
 	using ssl_stream = net::ssl::stream<tcp::socket>;
 
 	using io_util::read;
 	using io_util::write;
+
+	const inline std::string version_string = "nginx/1.20.2";
 
 	// proxy server 参数选项.
 	struct proxy_server_option
@@ -91,6 +112,9 @@ namespace proxy {
 
 		// 使用ssl的时候, 指定证书目录.
 		std::string ssl_cert_path_;
+
+		// http doc 目录, 用于伪装成web站点.
+		std::string doc_directory_;
 	};
 
 	// proxy server 虚基类, 任何 proxy server 的实现, 必须基于这个基类.
@@ -120,6 +144,14 @@ namespace proxy {
 	{
 		proxy_session(const proxy_session&) = delete;
 		proxy_session& operator=(const proxy_session&) = delete;
+
+		struct http_context
+		{
+			std::vector<std::string> command_;
+			dynamic_request& request_;
+			request_parser& parser_;
+			beast::flat_buffer& buffer_;
+		};
 
 	public:
 		proxy_session(proxy_stream_type&& socket,
@@ -159,9 +191,12 @@ namespace proxy {
 				}
 				catch (const std::exception& e)
 				{
-					LOG_ERR << "socks id: " << m_connection_id
-						<< ", params next_proxy error: " << m_option.next_proxy_
-						<< ", exception: " << e.what();
+					LOG_ERR << "socks id: "
+						<< m_connection_id
+						<< ", params next_proxy error: "
+						<< m_option.next_proxy_
+						<< ", exception: "
+						<< e.what();
 					return;
 				}
 			}
@@ -242,11 +277,8 @@ namespace proxy {
 			}
 			if (socks_version == 'G')
 			{
-				co_await net::async_write(
-					m_local_socket,
-					net::buffer(fake_web_page()),
-					net::transfer_all(),
-					net_awaitable[ec]);
+				co_await web_server();
+				co_return;
 			}
 			else if (socks_version == 'C')
 			{
@@ -1395,6 +1427,464 @@ namespace proxy {
 
 				m_remote_socket = instantiate_proxy_stream(
 					std::move(remote_socket));
+			}
+
+			co_return;
+		}
+
+		net::awaitable<void> web_server()
+		{
+			namespace fs = std::filesystem;
+
+			boost::system::error_code ec;
+
+			if (m_option.doc_directory_.empty())
+			{
+				co_await net::async_write(
+					m_local_socket,
+					net::buffer(fake_web_page()),
+					net::transfer_all(),
+					net_awaitable[ec]);
+				co_return;
+			}
+
+			bool keep_alive = false;
+			const auto httpd_buffer_size = 5 * 1024 * 1024;
+
+			beast::flat_buffer buffer;
+			buffer.reserve(httpd_buffer_size);
+
+			for (; !m_abort;)
+			{
+				request_parser parser;
+				parser.body_limit(std::numeric_limits<uint64_t>::max());
+
+				co_await http::async_read_header(m_local_socket,
+					buffer,
+					parser,
+					net_awaitable[ec]);
+				if (ec)
+				{
+					LOG_DBG << "start_web_connect, id: "
+						<< m_connection_id
+						<< ", async_read_header: "
+						<< ec.message();
+					co_return;
+				}
+
+				if (parser.get()[http::field::expect] == "100-continue")
+				{
+					http::response<http::empty_body> res;
+					res.version(11);
+					res.result(http::status::continue_);
+
+					co_await http::async_write(m_local_socket,
+						res,
+						net_awaitable[ec]);
+					if (ec)
+					{
+						LOG_DBG << "start_web_connect, id: "
+							<< m_connection_id
+							<< ", expect async_write: "
+							<< ec.message();
+						co_return;
+					}
+				}
+
+				auto req = parser.release();
+				keep_alive = req.keep_alive();
+
+				if (beast::websocket::is_upgrade(req))
+				{
+					co_await net::async_write(
+						m_local_socket,
+						net::buffer(fake_web_page()),
+						net::transfer_all(),
+						net_awaitable[ec]);
+					co_return;
+				}
+
+				std::string target = req.target();
+				unescape(std::string(target), target);
+
+				boost::smatch what;
+				http_context http_ctx{ {}, req, parser, buffer };
+
+				#define BEGIN_HTTP_ROUTE() if (false) {}
+				#define ON_HTTP_ROUTE(exp, func) \
+				else if (boost::regex_match( \
+					target, what, boost::regex{ exp })) { \
+					for (auto i = 1; i < static_cast<int>(what.size()); i++) \
+						http_ctx.command_.emplace_back(what[i]); \
+					co_await func(http_ctx); \
+				}
+				#define END_HTTP_ROUTE() else { \
+					co_await default_http_route( \
+						http_ctx, \
+						"Illegal request", \
+						http::status::bad_request ); }
+
+				BEGIN_HTTP_ROUTE()
+					ON_HTTP_ROUTE("^/getfile/(.*)$", on_get)
+					ON_HTTP_ROUTE("^.*?$", on_http_root)
+				END_HTTP_ROUTE()
+
+				if (!keep_alive) break;
+				continue;
+			}
+
+			co_return;
+		}
+
+		net::awaitable<void> on_http_root(
+			const http_context& hctx)
+		{
+			namespace fs = std::filesystem;
+			namespace chrono = std::chrono;
+
+			const static std::wstring head_fmt =
+				LR"(<html><head><meta charset="UTF-8"><title>Index of {}</title></head><body bgcolor="white"><h1>Index of {}</h1><hr><pre>)";
+			const static std::wstring tail_fmt =
+				L"</pre><hr></body></html>";
+			const static std::wstring body_fmt =
+				L"<a href=\"{}\">{}</a>{}{}              {}\r\n";
+
+			auto& request = hctx.request_;
+
+			boost::system::error_code ec;
+			std::string target;
+			unescape(request.target(), target);
+
+			if (!strutil::ends_with(target, "/"))
+			{
+				co_await on_get(hctx, target);
+				co_return;
+			}
+
+			std::wstring h = fmt::format(head_fmt,
+				boost::nowide::widen(target), boost::nowide::widen(target));
+
+			std::wstring body =
+				fmt::format(body_fmt, L"../", L"../", L"", L"", L"");
+			boost::ireplace_first(target, "/", "");
+
+			auto doc_path = boost::nowide::widen(m_option.doc_directory_);
+			auto path = fs::path{ doc_path } /
+				boost::nowide::widen(target);
+
+			fs::directory_iterator end;
+			fs::directory_iterator it(path, ec);
+			if (ec)
+			{
+				string_response res{ http::status::found, request.version() };
+				res.set(http::field::server, version_string);
+				res.set(http::field::location, "/");
+				res.keep_alive(request.keep_alive());
+				res.prepare_payload();
+
+				http::serializer<false, string_body, http::fields> sr(res);
+				co_await http::async_write(
+					m_local_socket,
+					sr,
+					net_awaitable[ec]);
+				if (ec)
+					LOG_WARN << "start_web_connect, id: "
+					<< m_connection_id
+					<< ", err: "
+					<< ec.message();
+
+				co_return;
+			}
+
+			std::vector<std::wstring> item;
+			for (; it != end && !m_abort; it++)
+			{
+				const auto& sub = it->path();
+				fs::path unc_path;
+				std::wstring time_string;
+
+				auto ftime = fs::last_write_time(sub, ec);
+				if (ec)
+				{
+#ifdef WIN32
+					if (sub.string().size() > MAX_PATH)
+					{
+						auto str = sub.string();
+						replace_all(str, "/", "\\");
+						unc_path = "\\\\?\\" + str;
+						ftime = fs::last_write_time(unc_path, ec);
+					}
+#endif
+				}
+
+				if (!ec)
+				{
+					const auto stime =
+						chrono::clock_cast<chrono::system_clock>(ftime);
+					const auto write_time =
+						std::chrono::system_clock::to_time_t(stime);
+
+					char tmbuf[64] = { 0 };
+					auto tm = std::localtime(&write_time);
+					std::strftime(tmbuf,
+						sizeof(tmbuf),
+						"%m-%d-%Y %H:%M",
+						tm);
+
+					time_string = boost::nowide::widen(tmbuf);
+				}
+
+				auto name = boost::ireplace_first_copy(
+					sub.wstring(), doc_path, "");
+
+				if (fs::is_directory(sub, ec))
+				{
+					auto leaf = fs::path(name).filename().string();
+					name = fs::path(name).filename().wstring() + L"/";
+
+					int width = 50 - ((int)leaf.size() + 1);
+					width = width < 0 ? 10 : width;
+					std::wstring space(width, L' ');
+					auto str = fmt::format(body_fmt,
+						name,
+						name,
+						space,
+						time_string,
+						L"[DIRECTORY]");
+					item.push_back(str);
+				}
+				else
+				{
+					name = fs::path(name).filename().wstring();
+					auto leaf = fs::path(name).filename().string();
+					int width = 50 - (int)leaf.size();
+					width = width < 0 ? 10 : width;
+					std::wstring space(width, L' ');
+					std::wstring filesize;
+					if (unc_path.empty())
+						unc_path = sub;
+					auto sz = static_cast<float>(fs::file_size(
+						unc_path, ec));
+					if (ec)
+						sz = 0;
+					filesize = boost::nowide::widen(
+						add_suffix(sz));
+					auto str = fmt::format(body_fmt,
+						name,
+						name,
+						space,
+						time_string,
+						filesize);
+					item.push_back(str);
+				}
+			}
+
+			std::sort(item.begin(), item.end());
+			for (auto& s : item)
+				body += s;
+			body = h + body + tail_fmt;
+
+			string_response res{ http::status::ok, request.version() };
+			res.set(http::field::server, version_string);
+			res.keep_alive(request.keep_alive());
+			res.body() = boost::nowide::narrow(body);
+			res.prepare_payload();
+
+			http::serializer<false, string_body, http::fields> sr(res);
+			co_await http::async_write(
+				m_local_socket,
+				sr,
+				net_awaitable[ec]);
+			if (ec)
+				LOG_WARN << "start_web_connect, id: "
+				<< m_connection_id
+				<< ", err: "
+				<< ec.message();
+
+			co_return;
+		}
+
+		net::awaitable<void> on_get(
+			const http_context& hctx, std::string filename = "")
+		{
+			namespace fs = std::filesystem;
+
+			static std::map<std::string, std::string> mimes =
+			{
+				{ ".html", "text/html; charset=utf-8" },
+				{ ".js", "application/javascript" },
+				{ ".h", "text/javascript"},
+				{ ".hpp", "text/javascript"},
+				{ ".cpp", "text/javascript"},
+				{ ".cxx", "text/javascript"},
+				{ ".cc", "text/javascript"},
+				{ ".c", "text/javascript"},
+				{ ".json", "application/json" },
+				{ ".css", "text/css" },
+				{ ".woff", "application/x-font-woff" },
+				{ ".pdf", "application/pdf" },
+				{ ".png", "image/png" },
+				{ ".jpg", "image/jpg" },
+				{ ".jpeg", "image/jpg" },
+				{ ".gif", "image/gif" },
+				{ ".svg", "image/svg+xml" },
+				{ ".wav", "audio/x-wav" },
+				{ ".ogg", "video/ogg" },
+				{ ".mp4", "video/mp4" },
+				{ ".webm", "video/webm	"}
+			};
+
+			boost::system::error_code ec;
+
+			auto& request = hctx.request_;
+			if (request.method() == http::verb::get &&
+				hctx.command_.size() > 0 &&
+				filename.empty())
+				filename = hctx.command_[0];
+
+			if (filename.empty())
+			{
+				LOG_WARN << "on_get, id: "
+					<< m_connection_id
+					<< ", bad request filename";
+
+				co_await default_http_route(hctx,
+					"bad request filename",
+					http::status::bad_request);
+				co_return;
+			}
+
+			auto doc_root = m_option.doc_directory_;
+			if (doc_root.back() == '\\')
+				doc_root.resize(doc_root.size() - 1);
+
+#ifdef WIN32
+			replace_all(filename, "/", "\\");
+			auto len = doc_root.size() + filename.size();
+			if (len > MAX_PATH)
+				doc_root = "\\\\?\\" + doc_root;
+#endif
+			fs::path path = boost::nowide::widen(doc_root + filename);
+
+			if (!fs::exists(path))
+			{
+				LOG_WARN << "on_get, id: "
+					<< m_connection_id
+					<< ", "
+					<< filename
+					<< " file not exists";
+
+				co_await default_http_route(hctx,
+					"file not exists",
+					http::status::bad_request);
+				co_return;
+			}
+
+			std::fstream file(path,
+				std::ios_base::binary |
+				std::ios_base::in |
+				std::ios_base::out);
+
+			LOG_DBG << "on_get, id: "
+				<< m_connection_id
+				<< ", file: "
+				<< filename
+				<< ", size: "
+				<< fs::file_size(path);
+
+			buffer_response res{ http::status::ok, request.version() };
+
+			res.set(http::field::server, version_string);
+			auto ext = to_lower(fs::path(path).extension().string());
+
+			if (mimes.count(ext))
+				res.set(http::field::content_type, mimes[ext]);
+			else
+				res.set(http::field::content_type, "text/plain");
+
+			res.keep_alive(hctx.request_.keep_alive());
+			res.content_length(fs::file_size(path));
+
+			response_serializer sr(res);
+
+			res.body().data = nullptr;
+			res.body().more = false;
+
+			co_await http::async_write_header(
+				m_local_socket,
+				sr,
+				net_awaitable[ec]);
+			if (ec)
+			{
+				LOG_WARN << "on_get, id: "
+					<< m_connection_id
+					<< ", async_write_header: "
+					<< ec.message();
+				co_return;
+			}
+
+			const auto buf_size = 5 * 1024 * 1024;
+			char buf[buf_size];
+
+			do
+			{
+				auto bytes_transferred = fileop::read(file, buf);
+				if (bytes_transferred == 0)
+				{
+					res.body().data = nullptr;
+					res.body().more = false;
+				}
+				else
+				{
+					res.body().data = buf;
+					res.body().size = bytes_transferred;
+					res.body().more = true;
+				}
+
+				co_await http::async_write(
+					m_local_socket,
+					sr,
+					net_awaitable[ec]);
+				if (ec == http::error::need_buffer)
+				{
+					ec = {};
+					continue;
+				}
+				if (ec)
+				{
+					LOG_WARN << "on_get, id: "
+						<< m_connection_id
+						<< ", async_write: "
+						<< ec.message();
+					co_return;
+				}
+			} while (!sr.is_done());
+
+			co_return;
+		}
+
+		net::awaitable<void> default_http_route(
+			const http_context& hctx, std::string response, http::status status)
+		{
+			auto& request = hctx.request_;
+
+			boost::system::error_code ec;
+			string_response res{ status, request.version() };
+			res.set(http::field::server, version_string);
+			res.set(http::field::content_type, "text/html");
+
+			res.keep_alive(false);
+			res.body() = response;
+			res.prepare_payload();
+
+			http::serializer<false, string_body, http::fields> sr(res);
+			co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
+			if (ec)
+			{
+				LOG_WARN << "default_http_route, id: "
+					<< m_connection_id
+					<< ", err: "
+					<< ec.message();
 			}
 
 			co_return;

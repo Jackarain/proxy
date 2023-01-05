@@ -225,6 +225,7 @@ std::string socks_next_proxy;
 bool socks_next_proxy_ssl = false;
 std::string ssl_certificate_dir;
 std::string socks_listen;
+std::string doc_directory;
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -251,6 +252,7 @@ net::awaitable<void> start_proxy_server(server_ptr& server)
 	opt.next_proxy_ = socks_next_proxy;
 	opt.next_proxy_use_ssl_ = socks_next_proxy_ssl;
 	opt.ssl_cert_path_ = ssl_certificate_dir;
+	opt.doc_directory_ = doc_directory;
 
 	auto executor = co_await net::this_coro::executor;
 	server =
@@ -327,12 +329,16 @@ int main(int argc, char** argv)
 		("config", po::value<std::string>(&config)->value_name("config.conf"), "Load config options from file.")
 
 		("socks_server", po::value<std::string>(&socks_listen)->default_value("[::0]:1080")->value_name("ip:port"), "For socks4/5 server listen.")
+
 		("socks_userid", po::value<std::string>(&socks_userid)->default_value("jack")->value_name("userid"), "Socks4/5 auth user id.")
 		("socks_passwd", po::value<std::string>(&socks_passwd)->default_value("1111")->value_name("passwd"), "Socks4/5 auth password.")
+
 		("socks_next_proxy", po::value<std::string>(&socks_next_proxy)->default_value("")->value_name(""), "Next socks4/5 proxy. (e.g: socks5://user:passwd@ip:port)")
 		("socks_next_proxy_ssl", po::value<bool>(&socks_next_proxy_ssl)->default_value(false, "false")->value_name(""), "Next socks4/5 proxy with ssl.")
 
 		("ssl_certificate_dir", po::value<std::string>(&ssl_certificate_dir)->value_name("path"), "SSL certificate dir.")
+
+		("http_doc", po::value<std::string>(&doc_directory)->value_name("doc"), "Http server doc root.")
 	;
 
 	// 解析命令行.
