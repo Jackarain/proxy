@@ -1539,6 +1539,7 @@ namespace proxy {
 		net::awaitable<void> on_http_root(
 			const http_context& hctx)
 		{
+			using namespace std::literals;
 			namespace fs = std::filesystem;
 			namespace chrono = std::chrono;
 
@@ -1561,19 +1562,25 @@ namespace proxy {
 				co_return;
 			}
 
-			std::wstring h = fmt::format(head_fmt,
-				boost::nowide::widen(target), boost::nowide::widen(target));
+			auto wtarget = boost::nowide::widen(target);
+			std::wstring head = fmt::format(head_fmt,
+				wtarget,
+				wtarget);
 
-			std::wstring body =
-				fmt::format(body_fmt, L"../", L"../", L"", L"", L"");
-			boost::ireplace_first(target, "/", "");
+			std::wstring body = fmt::format(body_fmt,
+				L"../",
+				L"../",
+				L"",
+				L"",
+				L"");
 
-			auto doc_path = boost::nowide::widen(m_option.doc_directory_);
-			auto path = fs::path{ doc_path } /
-				boost::nowide::widen(target);
+			boost::ireplace_first(wtarget, L"/", L"");
+
+			auto wdoc_path = boost::nowide::widen(m_option.doc_directory_);
+			fs::path current_path(boost::nowide::narrow(wdoc_path + wtarget));
 
 			fs::directory_iterator end;
-			fs::directory_iterator it(path, ec);
+			fs::directory_iterator it(current_path, ec);
 			if (ec)
 			{
 				string_response res{ http::status::found, request.version() };
@@ -1596,21 +1603,22 @@ namespace proxy {
 				co_return;
 			}
 
-			std::vector<std::wstring> item;
+			std::vector<std::wstring> path_set;
+
 			for (; it != end && !m_abort; it++)
 			{
-				const auto& sub = it->path();
+				const auto& item = it->path();
 				fs::path unc_path;
 				std::wstring time_string;
 
-				auto ftime = fs::last_write_time(sub, ec);
+				auto ftime = fs::last_write_time(item, ec);
 				if (ec)
 				{
 #ifdef WIN32
-					if (sub.string().size() > MAX_PATH)
+					if (item.string().size() > MAX_PATH)
 					{
-						auto str = sub.string();
-						replace_all(str, "/", "\\");
+						auto str = item.string();
+						boost::replace_all(str, "/", "\\");
 						unc_path = "\\\\?\\" + str;
 						ftime = fs::last_write_time(unc_path, ec);
 					}
@@ -1636,35 +1644,36 @@ namespace proxy {
 					time_string = boost::nowide::widen(tmbuf);
 				}
 
-				auto name = boost::ireplace_first_copy(
-					sub.wstring(), doc_path, "");
+				auto relative_path = boost::ireplace_first_copy(
+					item.wstring(), wdoc_path, L"");
 
-				if (fs::is_directory(sub, ec))
+				if (fs::is_directory(item, ec))
 				{
-					auto leaf = fs::path(name).filename().string();
-					name = fs::path(name).filename().wstring() + L"/";
-
+					auto leaf = fs::path(relative_path).filename().u16string();
+					leaf = leaf + u"/";
+					relative_path.assign(leaf.begin(), leaf.end());
 					int width = 50 - ((int)leaf.size() + 1);
 					width = width < 0 ? 10 : width;
 					std::wstring space(width, L' ');
 					auto str = fmt::format(body_fmt,
-						name,
-						name,
+						relative_path,
+						relative_path,
 						space,
 						time_string,
 						L"[DIRECTORY]");
-					item.push_back(str);
+
+					path_set.push_back(str);
 				}
 				else
 				{
-					name = fs::path(name).filename().wstring();
-					auto leaf = fs::path(name).filename().string();
+					auto leaf = fs::path(relative_path).filename().u16string();
+					relative_path.assign(leaf.begin(), leaf.end());
 					int width = 50 - (int)leaf.size();
 					width = width < 0 ? 10 : width;
 					std::wstring space(width, L' ');
 					std::wstring filesize;
 					if (unc_path.empty())
-						unc_path = sub;
+						unc_path = item;
 					auto sz = static_cast<float>(fs::file_size(
 						unc_path, ec));
 					if (ec)
@@ -1672,19 +1681,20 @@ namespace proxy {
 					filesize = boost::nowide::widen(
 						add_suffix(sz));
 					auto str = fmt::format(body_fmt,
-						name,
-						name,
+						relative_path,
+						relative_path,
 						space,
 						time_string,
 						filesize);
-					item.push_back(str);
+
+					path_set.push_back(str);
 				}
 			}
 
-			std::sort(item.begin(), item.end());
-			for (auto& s : item)
+			std::sort(path_set.begin(), path_set.end());
+			for (auto& s : path_set)
 				body += s;
-			body = h + body + tail_fmt;
+			body = head + body + tail_fmt;
 
 			string_response res{ http::status::ok, request.version() };
 			res.set(http::field::server, version_string);
@@ -1716,12 +1726,12 @@ namespace proxy {
 				{ ".html", "text/html; charset=utf-8" },
 				{ ".htm", "text/html; charset=utf-8" },
 				{ ".js", "application/javascript" },
-				{ ".h", "text/javascript"},
-				{ ".hpp", "text/javascript"},
-				{ ".cpp", "text/javascript"},
-				{ ".cxx", "text/javascript"},
-				{ ".cc", "text/javascript"},
-				{ ".c", "text/javascript"},
+				{ ".h", "text/javascript" },
+				{ ".hpp", "text/javascript" },
+				{ ".cpp", "text/javascript" },
+				{ ".cxx", "text/javascript" },
+				{ ".cc", "text/javascript" },
+				{ ".c", "text/javascript" },
 				{ ".json", "application/json" },
 				{ ".css", "text/css" },
 				{ ".woff", "application/x-font-woff" },
@@ -1734,7 +1744,7 @@ namespace proxy {
 				{ ".wav", "audio/x-wav" },
 				{ ".ogg", "video/ogg" },
 				{ ".mp4", "video/mp4" },
-				{ ".webm", "video/webm	"}
+				{ ".webm", "video/webm" }
 			};
 
 			boost::system::error_code ec;
@@ -1754,20 +1764,22 @@ namespace proxy {
 				co_await default_http_route(hctx,
 					"bad request filename",
 					http::status::bad_request);
+
 				co_return;
 			}
 
-			auto doc_root = m_option.doc_directory_;
-			if (doc_root.back() == '\\')
-				doc_root.resize(doc_root.size() - 1);
+			auto wdoc_root = boost::nowide::widen(m_option.doc_directory_);
+			if (wdoc_root.back() == L'\\')
+				wdoc_root.resize(wdoc_root.size() - 1);
 
 #ifdef WIN32
-			replace_all(filename, "/", "\\");
-			auto len = doc_root.size() + filename.size();
+			boost::replace_all(filename, "/", "\\");
+			auto len = wdoc_root.size() + filename.size();
 			if (len > MAX_PATH)
-				doc_root = "\\\\?\\" + doc_root;
+				wdoc_root = L"\\\\?\\" + wdoc_root;
 #endif
-			fs::path path = boost::nowide::widen(doc_root + filename);
+			auto wfilename = boost::nowide::widen(filename);
+			fs::path path = wdoc_root + wfilename;
 
 			if (!fs::exists(path))
 			{
@@ -1780,13 +1792,13 @@ namespace proxy {
 				co_await default_http_route(hctx,
 					"file not exists",
 					http::status::bad_request);
+
 				co_return;
 			}
 
-			std::fstream file(path,
+			std::fstream file(path.string(),
 				std::ios_base::binary |
-				std::ios_base::in |
-				std::ios_base::out);
+				std::ios_base::in);
 
 			LOG_DBG << "on_get, id: "
 				<< m_connection_id
@@ -1823,6 +1835,7 @@ namespace proxy {
 					<< m_connection_id
 					<< ", async_write_header: "
 					<< ec.message();
+
 				co_return;
 			}
 
