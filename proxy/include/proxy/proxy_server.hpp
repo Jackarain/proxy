@@ -1747,6 +1747,42 @@ namespace proxy {
 				{ ".webm", "video/webm" }
 			};
 
+			using ranges = std::vector<std::pair<int64_t, int64_t>>;
+			static auto get_ranges = [](std::string range) -> ranges
+			{
+				range = strutil::remove_spaces(range);
+				boost::ireplace_first(range, "bytes=", "");
+
+				boost::sregex_iterator it(
+					range.begin(), range.end(),
+					boost::regex{ "((\\d+)-(\\d+))+" });
+
+				ranges result;
+				std::for_each(it, {}, [&result](const auto& what) mutable
+					{
+						result.emplace_back(
+							std::make_pair(
+								std::atoll(what[2].str().c_str()),
+								std::atoll(what[3].str().c_str())));
+					});
+
+				if (result.empty())
+				{
+					if (range.front() == '-')
+					{
+						auto r = std::atoll(range.c_str());
+						result.emplace_back(std::make_pair(r, -1));
+					}
+					else if (range.back() == '-')
+					{
+						auto r = std::atoll(range.c_str());
+						result.emplace_back(std::make_pair(r, -1));
+					}
+				}
+
+				return result;
+			};
+
 			boost::system::error_code ec;
 
 			auto& request = hctx.request_;
@@ -1800,14 +1836,39 @@ namespace proxy {
 				std::ios_base::binary |
 				std::ios_base::in);
 
+			size_t content_length = fs::file_size(path);
+
 			LOG_DBG << "on_get, id: "
 				<< m_connection_id
 				<< ", file: "
 				<< filename
 				<< ", size: "
-				<< fs::file_size(path);
+				<< content_length;
 
-			buffer_response res{ http::status::ok, request.version() };
+			auto range = get_ranges(request["Range"]);
+			http::status st = http::status::ok;
+			if (!range.empty())
+			{
+				st = http::status::partial_content;
+				auto& r = range.front();
+
+				if (r.second == -1)
+				{
+					if (r.first < 0)
+					{
+						r.first = content_length + r.first;
+						r.second = content_length - 1;
+					}
+					else if (r.first >= 0)
+					{
+						r.second = content_length - 1;
+					}
+				}
+
+				file.seekg(r.first, std::ios_base::beg);
+			}
+
+			buffer_response res{ st, request.version() };
 
 			res.set(http::field::server, version_string);
 			auto ext = to_lower(fs::path(path).extension().string());
@@ -1817,8 +1878,23 @@ namespace proxy {
 			else
 				res.set(http::field::content_type, "text/plain");
 
+			if (st == http::status::ok)
+				res.set(http::field::accept_ranges, "bytes");
+
+			if (st == http::status::partial_content)
+			{
+				const auto& r = range.front();
+				std::string content_range = fmt::format(
+					"bytes {}-{}/{}",
+					r.first,
+					r.second,
+					content_length);
+				content_length = r.second - r.first + 1;
+				res.set(http::field::content_range, content_range);
+			}
+
 			res.keep_alive(hctx.request_.keep_alive());
-			res.content_length(fs::file_size(path));
+			res.content_length(content_length);
 
 			response_serializer sr(res);
 
@@ -1841,11 +1917,17 @@ namespace proxy {
 
 			const auto buf_size = 5 * 1024 * 1024;
 			char buf[buf_size];
+			std::streamsize total = 0;
 
 			do
 			{
 				auto bytes_transferred = fileop::read(file, buf);
-				if (bytes_transferred == 0)
+				bytes_transferred = std::min<std::streamsize>(
+					bytes_transferred,
+					content_length - total
+				);
+				if (bytes_transferred == 0 ||
+					total >= (std::streamsize)content_length)
 				{
 					res.body().data = nullptr;
 					res.body().more = false;
@@ -1861,6 +1943,7 @@ namespace proxy {
 					m_local_socket,
 					sr,
 					net_awaitable[ec]);
+				total += bytes_transferred;
 				if (ec == http::error::need_buffer)
 				{
 					ec = {};
@@ -1875,6 +1958,12 @@ namespace proxy {
 					co_return;
 				}
 			} while (!sr.is_done());
+
+			LOG_DBG << "on_get, id: "
+				<< m_connection_id
+				<< ", request: "
+				<< filename
+				<< ", completed";
 
 			co_return;
 		}
