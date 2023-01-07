@@ -1892,6 +1892,22 @@ namespace proxy {
 			if (st == http::status::partial_content)
 			{
 				const auto& r = range.front();
+
+				if (r.second < r.first && r.second >= 0)
+				{
+					co_await default_http_route(hctx,
+						R"(<html>
+<head><title>416 Requested Range Not Satisfiable</title></head>
+<body>
+<center><h1>416 Requested Range Not Satisfiable</h1></center>
+<hr><center>nginx/1.20.2</center>
+</body>
+</html>
+)",
+						http::status::range_not_satisfiable);
+					co_return;
+				}
+
 				std::string content_range = fmt::format(
 					"bytes {}-{}/{}",
 					r.first,
