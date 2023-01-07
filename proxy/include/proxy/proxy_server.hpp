@@ -1448,18 +1448,17 @@ namespace proxy {
 				co_return;
 			}
 
-			bool keep_alive = false;
-			const auto httpd_buffer_size = 5 * 1024 * 1024;
-
 			beast::flat_buffer buffer;
-			buffer.reserve(httpd_buffer_size);
+			buffer.reserve(5 * 1024 * 1024);
 
+			bool keep_alive = false;
 			for (; !m_abort;)
 			{
 				request_parser parser;
 				parser.body_limit(std::numeric_limits<uint64_t>::max());
 
-				co_await http::async_read_header(m_local_socket,
+				co_await http::async_read_header(
+					m_local_socket,
 					buffer,
 					parser,
 					net_awaitable[ec]);
@@ -1478,7 +1477,8 @@ namespace proxy {
 					res.version(11);
 					res.result(http::status::continue_);
 
-					co_await http::async_write(m_local_socket,
+					co_await http::async_write(
+						m_local_socket,
 						res,
 						net_awaitable[ec]);
 					if (ec)
@@ -1525,7 +1525,7 @@ namespace proxy {
 						http::status::bad_request ); }
 
 				BEGIN_HTTP_ROUTE()
-					ON_HTTP_ROUTE("^/getfile/(.*)$", on_get)
+					ON_HTTP_ROUTE("^/getfile/(.*)$", on_http_get)
 					ON_HTTP_ROUTE("^.*?$", on_http_root)
 				END_HTTP_ROUTE()
 
@@ -1558,7 +1558,7 @@ namespace proxy {
 
 			if (!strutil::ends_with(target, "/"))
 			{
-				co_await on_get(hctx, target);
+				co_await on_http_get(hctx, target);
 				co_return;
 			}
 
@@ -1716,7 +1716,7 @@ namespace proxy {
 			co_return;
 		}
 
-		net::awaitable<void> on_get(
+		net::awaitable<void> on_http_get(
 			const http_context& hctx, std::string filename = "")
 		{
 			namespace fs = std::filesystem;
