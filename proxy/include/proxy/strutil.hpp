@@ -222,6 +222,22 @@ namespace strutil
         return str;
     }
 
+    static inline std::string remove_spaces(std::string str)
+    {
+        str.erase(std::remove_if(
+            str.begin(),str.end(), [](auto c) { return std::isspace(c); }),
+            str.end());
+        return str;
+    }
+
+	static inline std::wstring remove_spaces(std::wstring str)
+	{
+        str.erase(std::remove_if(
+            str.begin(), str.end(), [](auto c) { return std::isspace(c); }),
+            str.end());
+		return str;
+	}
+
     /**
      * @brief Replaces (in-place) the first occurance of target with replacement.
      *        Taken from: http://stackoverflow.com/questions/3418231/c-replace-part-of-a-string-with-another-string.
