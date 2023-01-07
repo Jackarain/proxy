@@ -1577,7 +1577,11 @@ namespace proxy {
 			boost::ireplace_first(wtarget, L"/", L"");
 
 			auto wdoc_path = boost::nowide::widen(m_option.doc_directory_);
+#ifdef WIN32
 			fs::path current_path(wdoc_path + wtarget);
+#else
+			fs::path current_path(boost::nowide::narrow(wdoc_path + wtarget));
+#endif // WIN32
 
 			fs::directory_iterator end;
 			fs::directory_iterator it(current_path, ec);
