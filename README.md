@@ -33,8 +33,12 @@
 
 具体使用参考 example，里面提供了较完整功能的 proxy 程序及编程示例。
 
+proxy server 不仅是一个 proxy 服务器，同时还可以做为一个真实的 静态文件 http 服务，运行效果（浏览器打开）：
+
 <BR>
-proxy server 不仅是一个 proxy 服务器，同时还可以做为一个真实的 静态文件 http 服务。
+
+![image](https://user-images.githubusercontent.com/378220/211153949-74a84038-f899-4e48-99c7-bd6af6bef82d.png)
+
 
 <BR>
 有任何问题可加tg账号: https://t.me/jackarain 或tg群组: https://t.me/joinchat/C3WytT4RMvJ4lqxiJiIVhg
