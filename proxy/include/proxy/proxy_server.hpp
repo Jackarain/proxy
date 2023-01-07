@@ -1819,7 +1819,11 @@ namespace proxy {
 				wdoc_root = L"\\\\?\\" + wdoc_root;
 #endif
 			auto wfilename = boost::nowide::widen(filename);
+#if WIN32
 			fs::path path = wdoc_root + wfilename;
+#else
+			fs::path path = boost::nowide::narrow(wdoc_root + wfilename);
+#endif
 
 			if (!fs::exists(path))
 			{
