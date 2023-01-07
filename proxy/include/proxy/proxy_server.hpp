@@ -1577,7 +1577,7 @@ namespace proxy {
 			boost::ireplace_first(wtarget, L"/", L"");
 
 			auto wdoc_path = boost::nowide::widen(m_option.doc_directory_);
-			fs::path current_path(boost::nowide::narrow(wdoc_path + wtarget));
+			fs::path current_path(wdoc_path + wtarget);
 
 			fs::directory_iterator end;
 			fs::directory_iterator it(current_path, ec);
@@ -1766,7 +1766,7 @@ namespace proxy {
 								std::atoll(what[3].str().c_str())));
 					});
 
-				if (result.empty())
+				if (result.empty() && !range.empty())
 				{
 					if (range.front() == '-')
 					{
