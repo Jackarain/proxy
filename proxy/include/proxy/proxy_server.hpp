@@ -1748,6 +1748,19 @@ namespace proxy {
 				{ ".wav", "audio/x-wav" },
 				{ ".ogg", "video/ogg" },
 				{ ".mp4", "video/mp4" },
+				{ ".flv", "video/x-flv" },
+				{ ".f4v", "video/x-f4v" },
+				{ ".ts", "video/MP2T" },
+				{ ".mov", "video/quicktime" },
+				{ ".avi", "video/x-msvideo" },
+				{ ".wmv", "video/x-ms-wmv" },
+				{ ".3gp", "video/3gpp" },
+				{ ".mkv", "video/x-matroska" },
+				{ ".7z", "application/x-7z-compressed" },
+				{ ".ppt", "application/vnd.ms-powerpoint" },
+				{ ".zip", "application/zip" },
+				{ ".xz", "application/x-xz" },
+				{ ".xml", "application/xml" },
 				{ ".webm", "video/webm" }
 			};
 
