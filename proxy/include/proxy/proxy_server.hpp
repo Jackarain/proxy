@@ -1744,6 +1744,7 @@ namespace proxy {
 				{ ".jpg", "image/jpg" },
 				{ ".jpeg", "image/jpg" },
 				{ ".gif", "image/gif" },
+				{ ".webp", "image/webp" },
 				{ ".svg", "image/svg+xml" },
 				{ ".wav", "audio/x-wav" },
 				{ ".ogg", "video/ogg" },
