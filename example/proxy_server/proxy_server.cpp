@@ -255,9 +255,8 @@ net::awaitable<void> start_proxy_server(server_ptr& server)
 	opt.doc_directory_ = doc_directory;
 
 	auto executor = co_await net::this_coro::executor;
-	server =
-		std::make_shared<proxy::proxy_server>(
-			executor, listen, opt);
+	server = proxy_server::make(
+		executor, listen, opt);
 	server->start();
 
 	co_return;

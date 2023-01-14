@@ -2086,9 +2086,8 @@ Connection: close
 		proxy_server(const proxy_server&) = delete;
 		proxy_server& operator=(const proxy_server&) = delete;
 
-	public:
 		proxy_server(net::any_io_executor executor,
-			const tcp::endpoint& endp, proxy_server_option opt = {})
+			const tcp::endpoint& endp, proxy_server_option opt)
 			: m_executor(executor)
 			, m_acceptor(executor, endp)
 			, m_option(std::move(opt))
@@ -2099,9 +2098,19 @@ Connection: close
 			m_acceptor.listen(net::socket_base::max_listen_connections, ec);
 		}
 
+	public:
+		inline static std::shared_ptr<proxy_server> make(
+			net::any_io_executor executor,
+			const tcp::endpoint& endp,
+			proxy_server_option opt)
+		{
+			return std::shared_ptr<proxy_server>(new
+				proxy_server(executor, std::cref(endp), opt));
+		}
+
 		virtual ~proxy_server() = default;
 
-		void init_ssl_context()
+		inline void init_ssl_context()
 		{
 			m_ssl_context.set_options(
 				net::ssl::context::default_workarounds

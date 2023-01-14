@@ -38,8 +38,7 @@ net::awaitable<void> start_proxy_server(server_ptr& server)
 	opt.passwd_ = "1111";
 
 	auto executor = co_await net::this_coro::executor;
-	server =
-		std::make_shared<proxy::proxy_server>(
+	server = proxy_server::make(
 			executor, socks_listen, opt);
 	server->start();
 
