@@ -1,4 +1,4 @@
-一个使用现代 c++ 实现的 proxy 的实现
+一个使用 c++20 的 proxy 的实现
 <BR>
 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/Jackarain/proxy/tree/master.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/Jackarain/proxy/tree/master)
 [![actions workflow](https://github.com/jackarain/proxy/actions/workflows/Build.yml/badge.svg)](https://github.com/Jackarain/proxy/actions)
@@ -6,7 +6,7 @@
 <BR>
 =======================================
 
-使用 **C++20协程** ，支持标准socks4/socks4a/socks5/http的server/client proxy实现，并且client与server之间可配置通过ssl加密通信，可配置如下架构：
+使用 **C++20协程** 通过编写为数不多的代码，实现支持标准 socks4/socks4a/socks5/http/https 的 server/client proxy 实现，并且 client 与 server 之间可配置通过 ssl 加密通信，可配置多级代理，如下架构：
 <BR>
 
 ~~~
@@ -18,7 +18,7 @@
 ~~~
 <BR>
 
-以及比 trojan 更通用的 https proxy 服务，因为 https proxy 在很多环境下可以直接使用而不需要安装任何东西就可以使用，如 shell 中声名 HTTPS_PROXY 环境变量就可以了，这时的 proxy server 将伪装成一个 nginx 服务。
+以及比 trojan 更通用的 https proxy 服务，因为 https proxy 在很多环境下可以直接使用而不需要安装任何东西就可以使用，如 shell 中声名 HTTPS_PROXY 环境变量就可以了，如果（配置了认证参数，无论访问的是 socks 或是 http）认证出错，这时的 proxy server 将伪装成一个 nginx 服务，返回 nginx 页面信息。
 <BR>
 
 ~~~
@@ -28,10 +28,10 @@
     local            GFW               remote
 ~~~
 
-同时 proxy server 能接收 socks/http 代理请求。
+同时 proxy server 能接收 socks/http 代理请求，也能同时接受正常 http 请求，且所有功能（socks、http）亦可运行在同一端口上，由 server 主动探测协议类型。
 <BR>
 
-具体使用参考 example，里面提供了较完整功能的 proxy 程序及编程示例。
+具体使用参考 example 中的 proxy server，它提供了较完整功能的 proxy server，它可以非常完美的作为 tun2socks 后级用于科学上网等事宜，example 中还有几个其它编程参考示例。
 
 proxy server 不仅是一个 proxy 服务器，同时还可以做为一个真实的 静态文件 http 服务，运行效果（浏览器打开）：
 
