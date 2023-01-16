@@ -1536,6 +1536,36 @@ namespace proxy {
 			co_return;
 		}
 
+		inline std::filesystem::path path_cat(
+			const std::wstring& doc, const std::wstring& target)
+		{
+			size_t start_pos = 0;
+			for (auto& c : target)
+			{
+				if (!(c == L'/' || c == '\\'))
+					break;
+
+				start_pos++;
+			}
+
+			std::wstring_view sv;
+			std::wstring slash = L"/";
+
+			if (start_pos < target.size())
+				sv = std::wstring_view(target.c_str() + start_pos);
+#ifdef WIN32
+			if (doc.back() == L'/' ||
+				doc.back() == L'\\')
+				slash = L"";
+			return std::filesystem::path(doc + slash + std::wstring(sv));
+#else
+			if (doc.back() == L'/')
+				slash = L"";
+			return std::filesystem::path(
+				boost::nowide::narrow(doc + slash + std::wstring(sv)));
+#endif // WIN32
+		};
+
 		net::awaitable<void> on_http_root(
 			const http_context& hctx)
 		{
@@ -1552,7 +1582,6 @@ namespace proxy {
 
 			auto& request = hctx.request_;
 
-			boost::system::error_code ec;
 			std::string target;
 			unescape(request.target(), target);
 
@@ -1562,34 +1591,11 @@ namespace proxy {
 				co_return;
 			}
 
-			auto wtarget = boost::nowide::widen(target);
-			std::wstring head = fmt::format(head_fmt,
-				wtarget,
-				wtarget);
+			auto doc_path = boost::nowide::widen(m_option.doc_directory_);
+			auto current_path = path_cat(
+				doc_path, boost::nowide::widen(target));
 
-			std::wstring body = fmt::format(body_fmt,
-				L"../",
-				L"../",
-				L"",
-				L"",
-				L"");
-
-			boost::ireplace_first(wtarget, L"/", L"");
-
-			auto wdoc_path = boost::nowide::widen(m_option.doc_directory_);
-			std::wstring slash = L"/";
-#ifdef WIN32
-			if (wdoc_path.back() == L'/' ||
-				wdoc_path.back() == L'\\')
-				slash = L"";
-			fs::path current_path(wdoc_path + slash + wtarget);
-#else
-			if (wdoc_path.back() == L'/')
-				slash = L"";
-			fs::path current_path(
-				boost::nowide::narrow(wdoc_path + slash + wtarget));
-#endif // WIN32
-
+			boost::system::error_code ec;
 			fs::directory_iterator end;
 			fs::directory_iterator it(current_path, ec);
 			if (ec)
@@ -1614,7 +1620,7 @@ namespace proxy {
 				co_return;
 			}
 
-			std::vector<std::wstring> path_set;
+			std::vector<std::wstring> path_list;
 
 			for (; it != end && !m_abort; it++)
 			{
@@ -1655,30 +1661,29 @@ namespace proxy {
 					time_string = boost::nowide::widen(tmbuf);
 				}
 
-				auto relative_path = boost::ireplace_first_copy(
-					item.wstring(), wdoc_path, L"");
+				std::wstring rpath;
 
 				if (fs::is_directory(item, ec))
 				{
-					auto leaf = fs::path(relative_path).filename().u16string();
+					auto leaf = item.filename().u16string();
 					leaf = leaf + u"/";
-					relative_path.assign(leaf.begin(), leaf.end());
+					rpath.assign(leaf.begin(), leaf.end());
 					int width = 50 - ((int)leaf.size() + 1);
 					width = width < 0 ? 10 : width;
 					std::wstring space(width, L' ');
 					auto str = fmt::format(body_fmt,
-						relative_path,
-						relative_path,
+						rpath,
+						rpath,
 						space,
 						time_string,
 						L"[DIRECTORY]");
 
-					path_set.push_back(str);
+					path_list.push_back(str);
 				}
 				else
 				{
-					auto leaf = fs::path(relative_path).filename().u16string();
-					relative_path.assign(leaf.begin(), leaf.end());
+					auto leaf = item.filename().u16string();
+					rpath.assign(leaf.begin(), leaf.end());
 					int width = 50 - (int)leaf.size();
 					width = width < 0 ? 10 : width;
 					std::wstring space(width, L' ');
@@ -1692,18 +1697,30 @@ namespace proxy {
 					filesize = boost::nowide::widen(
 						add_suffix(sz));
 					auto str = fmt::format(body_fmt,
-						relative_path,
-						relative_path,
+						rpath,
+						rpath,
 						space,
 						time_string,
 						filesize);
 
-					path_set.push_back(str);
+					path_list.push_back(str);
 				}
 			}
 
-			std::sort(path_set.begin(), path_set.end());
-			for (auto& s : path_set)
+			auto target_path = boost::nowide::widen(target);
+			std::wstring head = fmt::format(head_fmt,
+				target_path,
+				target_path);
+
+			std::wstring body = fmt::format(body_fmt,
+				L"../",
+				L"../",
+				L"",
+				L"",
+				L"");
+
+			std::sort(path_list.begin(), path_list.end());
+			for (auto& s : path_list)
 				body += s;
 			body = head + body + tail_fmt;
 
@@ -1829,22 +1846,16 @@ namespace proxy {
 				co_return;
 			}
 
-			auto wdoc_root = boost::nowide::widen(m_option.doc_directory_);
-			if (wdoc_root.back() == L'\\')
-				wdoc_root.resize(wdoc_root.size() - 1);
+			auto doc_path = boost::nowide::widen(m_option.doc_directory_);
 
 #ifdef WIN32
 			boost::replace_all(filename, "/", "\\");
-			auto len = wdoc_root.size() + filename.size();
+			auto len = doc_path.size() + filename.size();
 			if (len > MAX_PATH)
-				wdoc_root = L"\\\\?\\" + wdoc_root;
+				doc_path = L"\\\\?\\" + doc_path;
 #endif
-			auto wfilename = boost::nowide::widen(filename);
-#if WIN32
-			fs::path path = wdoc_root + wfilename;
-#else
-			fs::path path = boost::nowide::narrow(wdoc_root + wfilename);
-#endif
+			auto path = path_cat(
+				doc_path, boost::nowide::widen(filename));
 
 			if (!fs::exists(path))
 			{
