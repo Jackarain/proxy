@@ -174,6 +174,8 @@ namespace proxy {
 				return;
 
 			server->remove_client(m_connection_id);
+
+			LOG_DBG << "socks id: " << m_connection_id << ", destroyed";
 		}
 
 	public:
