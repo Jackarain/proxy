@@ -1835,7 +1835,7 @@ namespace proxy {
 
 			if (filename.empty())
 			{
-				LOG_WARN << "on_get, id: "
+				LOG_WARN << "on_http_get, id: "
 					<< m_connection_id
 					<< ", bad request filename";
 
@@ -1859,7 +1859,7 @@ namespace proxy {
 
 			if (!fs::exists(path))
 			{
-				LOG_WARN << "on_get, id: "
+				LOG_WARN << "on_http_get, id: "
 					<< m_connection_id
 					<< ", "
 					<< filename
@@ -1878,7 +1878,7 @@ namespace proxy {
 
 			size_t content_length = fs::file_size(path);
 
-			LOG_DBG << "on_get, id: "
+			LOG_DBG << "on_http_get, id: "
 				<< m_connection_id
 				<< ", file: "
 				<< filename
@@ -1963,7 +1963,7 @@ namespace proxy {
 				net_awaitable[ec]);
 			if (ec)
 			{
-				LOG_WARN << "on_get, id: "
+				LOG_WARN << "on_http_get, id: "
 					<< m_connection_id
 					<< ", async_write_header: "
 					<< ec.message();
@@ -2007,7 +2007,7 @@ namespace proxy {
 				}
 				if (ec)
 				{
-					LOG_WARN << "on_get, id: "
+					LOG_WARN << "on_http_get, id: "
 						<< m_connection_id
 						<< ", async_write: "
 						<< ec.message();
@@ -2015,7 +2015,7 @@ namespace proxy {
 				}
 			} while (!sr.is_done());
 
-			LOG_DBG << "on_get, id: "
+			LOG_DBG << "on_http_get, id: "
 				<< m_connection_id
 				<< ", request: "
 				<< filename
