@@ -220,7 +220,7 @@ namespace proxy {
 		}
 
 	private:
-		net::awaitable<void> start_socks_proxy()
+		inline net::awaitable<void> start_socks_proxy()
 		{
 			// 保持整个生命周期在协程栈上.
 			auto self = shared_from_this();
@@ -296,7 +296,7 @@ namespace proxy {
 			co_return;
 		}
 
-		net::awaitable<void> socks_connect_v5()
+		inline net::awaitable<void> socks_connect_v5()
 		{
 			auto p = net::buffer_cast<const char*>(m_local_buffer.data());
 
@@ -639,7 +639,7 @@ namespace proxy {
 			co_return;
 		}
 
-		net::awaitable<void> socks_connect_v4()
+		inline net::awaitable<void> socks_connect_v4()
 		{
 			auto self = shared_from_this();
 			auto p = net::buffer_cast<const char*>(m_local_buffer.data());
@@ -850,7 +850,7 @@ namespace proxy {
 			co_return;
 		}
 
-		net::awaitable<bool> http_proxy_connect()
+		inline net::awaitable<bool> http_proxy_connect()
 		{
 			http::request<http::string_body> req;
 			boost::system::error_code ec;
@@ -989,7 +989,7 @@ namespace proxy {
 			co_return true;
 		}
 
-		net::awaitable<bool> socks_auth()
+		inline net::awaitable<bool> socks_auth()
 		{
 			//  +----+------+----------+------+----------+
 			//  |VER | ULEN |  UNAME   | PLEN |  PASSWD  |
@@ -1168,7 +1168,7 @@ namespace proxy {
 			}
 		}
 
-		net::awaitable<void> connect_host(
+		inline net::awaitable<void> connect_host(
 			std::string target_host, uint16_t target_port,
 			boost::system::error_code& ec, bool resolve = false)
 		{
@@ -1432,7 +1432,7 @@ namespace proxy {
 			co_return;
 		}
 
-		net::awaitable<void> web_server()
+		inline net::awaitable<void> web_server()
 		{
 			namespace fs = std::filesystem;
 
@@ -1566,7 +1566,7 @@ namespace proxy {
 #endif // WIN32
 		};
 
-		net::awaitable<void> on_http_root(
+		inline net::awaitable<void> on_http_root(
 			const http_context& hctx)
 		{
 			using namespace std::literals;
@@ -1744,7 +1744,7 @@ namespace proxy {
 			co_return;
 		}
 
-		net::awaitable<void> on_http_get(
+		inline net::awaitable<void> on_http_get(
 			const http_context& hctx, std::string filename = "")
 		{
 			namespace fs = std::filesystem;
@@ -2024,7 +2024,7 @@ namespace proxy {
 			co_return;
 		}
 
-		net::awaitable<void> default_http_route(
+		inline net::awaitable<void> default_http_route(
 			const http_context& hctx, std::string response, http::status status)
 		{
 			auto& request = hctx.request_;
@@ -2051,7 +2051,7 @@ namespace proxy {
 			co_return;
 		}
 
-		const std::string& fake_web_page() const
+		inline const std::string& fake_web_page() const
 		{
 			static std::string fake_content =
 R"xxxxxx(HTTP/1.1 404 Not Found
@@ -2069,7 +2069,7 @@ Connection: close
 			return fake_content;
 		}
 
-		const std::string& bad_request_page() const
+		inline const std::string& bad_request_page() const
 		{
 			static std::string fake_content =
 R"xxxxxx(HTTP/1.1 400 Bad Request
