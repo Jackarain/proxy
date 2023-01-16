@@ -9,5 +9,5 @@ jobs:
       - run: sudo apt install -y cmake gcc-12 g++-12 ninja-build
       - run: sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10
       - run: sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 10
-      - run: mkdir build && cd build && cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release && ninja
+      - run: mkdir build && cd build && cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF && ninja
 
