@@ -755,7 +755,7 @@ namespace proxy {
 
 				auto rp = rbuf;
 
-				if (remote_endp == m_client_endp)
+				if (remote_endp.address() == m_client_endp.address())
 				{
 					//  +----+------+------+----------+-----------+----------+
 					//  |RSV | FRAG | ATYP | DST.ADDR | DST.PORT  |   DATA   |
@@ -863,6 +863,9 @@ namespace proxy {
 				}
 			}
 
+			LOG_DBG << "socks id: " << m_connection_id
+				<< ", forward_udp quit";
+
 			co_return;
 		}
 
@@ -890,6 +893,9 @@ namespace proxy {
 					break;
 				}
 			}
+
+			LOG_DBG << "socks id: " << m_connection_id
+				<< ", udp expired timer quit";
 
 			co_return;
 		}
