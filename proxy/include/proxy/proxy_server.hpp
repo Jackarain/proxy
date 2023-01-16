@@ -87,6 +87,7 @@ namespace proxy {
 	using io_util::write;
 
 	const inline std::string version_string = "nginx/1.20.2";
+	const inline int udp_session_expired_time = 600;
 
 	// proxy server 参数选项.
 	struct proxy_server_option
@@ -159,6 +160,8 @@ namespace proxy {
 			: m_local_socket(std::move(socket))
 			, m_remote_socket(instantiate_proxy_stream(
 				m_local_socket.get_executor()))
+			, m_udp_socket(m_local_socket.get_executor())
+			, m_timer(m_local_socket.get_executor())
 			, m_connection_id(id)
 			, m_proxy_server(server)
 		{
@@ -492,30 +495,22 @@ namespace proxy {
 				dst_endpoint.address(net::ip::address_v4(read<uint32_t>(p)));
 				dst_endpoint.port(read<uint16_t>(p));
 
+				domain = dst_endpoint.address().to_string();
+				port = dst_endpoint.port();
+
 				LOG_DBG << "socks id: " << m_connection_id
 					<< ", " << m_local_socket.remote_endpoint()
 					<< " use ipv4: " << dst_endpoint;
-
-				if (command == SOCKS_CMD_CONNECT)
-				{
-					co_await connect_host(
-						dst_endpoint.address().to_string(),
-						dst_endpoint.port(), ec);
-				}
 			}
 			else if (atyp == SOCKS5_ATYP_DOMAINNAME)
 			{
 				for (size_t i = 0; i < bytes - 2; i++)
 					domain.push_back(read<int8_t>(p));
 				port = read<uint16_t>(p);
+
 				LOG_DBG << "socks id: " << m_connection_id
 					<< ", " << m_local_socket.remote_endpoint()
 					<< " use domain: " << domain << ":" << port;
-
-				if (command == SOCKS_CMD_CONNECT)
-				{
-					co_await connect_host(domain, port, ec, true);
-				}
 			}
 			else if (atyp == SOCKS5_ATYP_IPV6)
 			{
@@ -528,18 +523,114 @@ namespace proxy {
 
 				dst_endpoint.address(net::ip::address_v6(addr));
 				dst_endpoint.port(read<uint16_t>(p));
+
+				domain = dst_endpoint.address().to_string();
+				port = dst_endpoint.port();
+
 				LOG_DBG << "socks id: " << m_connection_id
 					<< ", " << m_local_socket.remote_endpoint()
 					<< " use ipv6: " << dst_endpoint;
-
-				if (command == SOCKS_CMD_CONNECT)
-				{
-					co_await connect_host(
-						dst_endpoint.address().to_string(),
-						dst_endpoint.port(),
-						ec);
-				}
 			}
+
+			if (command == SOCKS_CMD_CONNECT)
+			{
+				// 连接目标主机.
+				co_await connect_host(
+					domain, port, ec, atyp == SOCKS5_ATYP_DOMAINNAME);
+			}
+			else if (command == SOCKS5_CMD_UDP)
+			do {
+				if (atyp == SOCKS5_ATYP_DOMAINNAME)
+				{
+					tcp::resolver resolver{ executor };
+
+					auto targets = co_await resolver.async_resolve(
+						domain,
+						std::to_string(port),
+						net_awaitable[ec]);
+					if (ec)
+						break;
+
+					for (const auto& target : targets)
+					{
+						dst_endpoint = target.endpoint();
+						break;
+					}
+				}
+
+				// 创建UDP端口.
+				auto protocol = dst_endpoint.address().is_v4()
+					? udp::v4() : udp::v6();
+				m_udp_socket.open(protocol, ec);
+				if (ec)
+					break;
+
+				m_udp_socket.bind(udp::endpoint(protocol, 0), ec);
+				if (ec)
+					break;
+
+				auto remote_endp = m_local_socket.remote_endpoint();
+
+				// 所有发向 udp socket 的数据, 都将转发到 m_client_endp
+				// 除非是 m_client_endp 本身除外.
+				m_client_endp.address(remote_endp.address());
+				m_client_endp.port(port);
+
+				LOG_DBG << "socks id: " << m_connection_id
+					<< ", client: " << m_client_endp;
+
+				// 开启udp socket数据接收, 并计时, 如果在一定时间内没有接收到数据包
+				// 则关闭 udp socket 等相关资源.
+				net::co_spawn(executor,
+					tick(), net::detached);
+
+				net::co_spawn(executor,
+					forward_udp(), net::detached);
+
+				wbuf.consume(wbuf.size());
+				auto wp = net::buffer_cast<char*>(
+					wbuf.prepare(64 + domain.size()));
+
+				write<uint8_t>(SOCKS_VERSION_5, wp);	// VER
+				write<uint8_t>(0, wp);					// REP
+				write<uint8_t>(0x00, wp);				// RSV
+
+				auto local_endp = m_udp_socket.local_endpoint(ec);
+				if (ec)
+					break;
+
+				if (local_endp.address().is_v4())
+				{
+					auto uaddr = local_endp.address().to_v4().to_uint();
+
+					write<uint8_t>(SOCKS5_ATYP_IPV4, wp);
+					write<uint32_t>(uaddr, wp);
+					write<uint16_t>(local_endp.port(), wp);
+				}
+				else if (local_endp.address().is_v6())
+				{
+					write<uint8_t>(SOCKS5_ATYP_IPV6, wp);
+					auto data = local_endp.address().to_v6().to_bytes();
+					for (auto c : data)
+						write<uint8_t>(c, wp);
+					write<uint16_t>(local_endp.port(), wp);
+				}
+
+				auto len = wp - net::buffer_cast<const char*>(wbuf.data());
+				wbuf.commit(len);
+				bytes = co_await net::async_write(m_local_socket,
+					wbuf,
+					net::transfer_exactly(len),
+					net_awaitable[ec]);
+				if (ec)
+				{
+					LOG_WARN << "socks id: " << m_connection_id
+						<< ", write server response error: " << ec.message();
+					co_return;
+				}
+
+				co_return;
+			} while (0);
 
 			// 连接成功或失败.
 			{
@@ -634,6 +725,170 @@ namespace proxy {
 			{
 				LOG_WARN << "socks id: " << m_connection_id
 					<< ", SOCKS_CMD_BIND and SOCKS5_CMD_UDP is unsupported";
+			}
+
+			co_return;
+		}
+
+		inline net::awaitable<void> forward_udp()
+		{
+			[[maybe_unused]] auto self = shared_from_this();
+			boost::system::error_code ec;
+			udp::endpoint remote_endp;
+			char read_buffer[4096];
+			const char* rbuf = &read_buffer[96];
+			char* wbuf = &read_buffer[86];
+			auto executor = co_await net::this_coro::executor;
+
+			while (!m_abort)
+			{
+				m_timeout = udp_session_expired_time;
+
+				auto bytes = co_await m_udp_socket.async_receive_from(
+					net::buffer(read_buffer, 1500),
+					remote_endp,
+					net_awaitable[ec]);
+				if (ec)
+				{
+					break;
+				}
+
+				auto rp = rbuf;
+
+				if (remote_endp == m_client_endp)
+				{
+					//  +----+------+------+----------+-----------+----------+
+					//  |RSV | FRAG | ATYP | DST.ADDR | DST.PORT  |   DATA   |
+					//  +----+------+------+----------+-----------+----------+
+					//  | 2  |  1   |  1   | Variable |    2      | Variable |
+					//  +----+------+------+----------+-----------+----------+
+
+					// 去掉包头转发至远程主机.
+					read<uint16_t>(rp); // rsv
+					auto frag = read<uint8_t>(rp);  // frag
+
+					// 不支持udp分片.
+					if (frag != 0)
+						continue;
+
+					auto atyp = read<uint8_t>(rp);
+
+					if (atyp == SOCKS5_ATYP_IPV4)
+					{
+						remote_endp.address(
+							net::ip::address_v4(read<uint32_t>(rp)));
+						remote_endp.port(read<uint16_t>(rp));
+					}
+					else if (atyp == SOCKS5_ATYP_DOMAINNAME)
+					{
+						auto length = read<uint8_t>(rp);
+						std::string domain;
+
+						for (size_t i = 0; i < length; i++)
+							domain.push_back(read<int8_t>(rp));
+						auto port = read<uint16_t>(rp);
+
+						udp::resolver resolver{ executor };
+
+						auto targets =
+							co_await resolver.async_resolve(
+							domain,
+							std::to_string(port),
+							net_awaitable[ec]);
+						if (ec)
+							break;
+
+						for (const auto& target : targets)
+						{
+							remote_endp = target.endpoint();
+							break;
+						}
+					}
+					else if (atyp == SOCKS5_ATYP_IPV6)
+					{
+						net::ip::address_v6::bytes_type addr;
+						for (auto i = addr.begin();
+							i != addr.end(); ++i)
+						{
+							*i = read<int8_t>(rp);
+						}
+
+						remote_endp.address(net::ip::address_v6(addr));
+						remote_endp.port(read<uint16_t>(rp));
+					}
+
+					auto head_size = rp - rbuf;
+					auto udp_size = bytes - head_size;
+
+					co_await m_udp_socket.async_send_to(
+						net::buffer(rp, udp_size),
+						remote_endp,
+						net_awaitable[ec]);
+				}
+				else
+				{
+					auto wp = wbuf;
+
+					if (remote_endp.address().is_v6())
+						wp = wbuf - 12;
+
+					write<uint16_t>(0x0, wp); // rsv
+					write<uint8_t>(0x0, wp); // frag
+
+					if (remote_endp.address().is_v4())
+					{
+						auto uaddr = remote_endp.address().to_v4().to_uint();
+						write<uint8_t>(SOCKS5_ATYP_IPV4, wp); // atyp
+
+						write<uint32_t>(uaddr, wp);
+						write<uint16_t>(remote_endp.port(), wp);
+					}
+					if (remote_endp.address().is_v6())
+					{
+						write<uint8_t>(SOCKS5_ATYP_IPV6, wp); // atyp
+
+						auto data = remote_endp.address().to_v6().to_bytes();
+						for (auto c : data)
+							write<uint8_t>(c, wp);
+						write<uint16_t>(remote_endp.port(), wp);
+					}
+
+					auto head_size = wp - wbuf;
+					auto udp_size = bytes + head_size;
+
+					co_await m_udp_socket.async_send_to(
+						net::buffer(wbuf, udp_size),
+						m_client_endp,
+						net_awaitable[ec]);
+				}
+			}
+
+			co_return;
+		}
+
+		inline net::awaitable<void> tick()
+		{
+			[[maybe_unused]] auto self = shared_from_this();
+			boost::system::error_code ec;
+
+			while (!m_abort)
+			{
+				m_timer.expires_from_now(std::chrono::seconds(1));
+				co_await m_timer.async_wait(net_awaitable[ec]);
+				if (ec)
+				{
+					LOG_WARN << "socks id: " << m_connection_id
+						<< ", ec: " << ec.message();
+					break;
+				}
+
+				if (--m_timeout <= 0)
+				{
+					LOG_DBG << "socks id: " << m_connection_id
+						<< ", udp socket expired";
+					m_udp_socket.close(ec);
+					break;
+				}
 			}
 
 			co_return;
@@ -2086,6 +2341,10 @@ Connection: close
 	private:
 		proxy_stream_type m_local_socket;
 		proxy_stream_type m_remote_socket;
+		udp::socket m_udp_socket;
+		udp::endpoint m_client_endp;
+		net::steady_timer m_timer;
+		int m_timeout{ udp_session_expired_time };
 		size_t m_connection_id;
 		net::streambuf m_local_buffer{};
 		std::weak_ptr<proxy_server_base> m_proxy_server;
