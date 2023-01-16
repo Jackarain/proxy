@@ -577,7 +577,7 @@ namespace proxy {
 				m_client_endp.port(port);
 
 				LOG_DBG << "socks id: " << m_connection_id
-					<< ", client: " << m_client_endp;
+					<< ", udp client: " << m_client_endp;
 
 				// 开启udp socket数据接收, 并计时, 如果在一定时间内没有接收到数据包
 				// 则关闭 udp socket 等相关资源.
