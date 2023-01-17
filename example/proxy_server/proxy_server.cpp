@@ -226,6 +226,7 @@ bool socks_next_proxy_ssl = false;
 std::string ssl_certificate_dir;
 std::string socks_listen;
 std::string doc_directory;
+std::string log_directory;
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -338,6 +339,7 @@ int main(int argc, char** argv)
 		("ssl_certificate_dir", po::value<std::string>(&ssl_certificate_dir)->value_name("path"), "SSL certificate dir.")
 
 		("http_doc", po::value<std::string>(&doc_directory)->value_name("doc"), "Http server doc root.")
+		("logs_path", po::value<std::string>(&log_directory)->value_name(""), "Logs dirctory.")
 	;
 
 	// 解析命令行.
@@ -357,6 +359,8 @@ int main(int argc, char** argv)
 		std::cout << desc;
 		return EXIT_SUCCESS;
 	}
+
+	init_logging(log_directory);
 
 	if (vm.count("config"))
 	{
