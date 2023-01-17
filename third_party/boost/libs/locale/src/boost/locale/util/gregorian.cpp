@@ -20,10 +20,6 @@
 #include <memory>
 #include <string>
 
-#ifdef BOOST_MSVC
-#    pragma warning(disable : 4996)
-#endif
-
 namespace boost { namespace locale { namespace util {
     namespace {
 

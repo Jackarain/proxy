@@ -4,14 +4,11 @@
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
-#ifdef _MSC_VER
-#    define _CRT_SECURE_NO_WARNINGS
-#endif
-
 #include <boost/locale/date_time.hpp>
 #include <boost/locale/formatting.hpp>
 #include <boost/locale/generator.hpp>
 #include <boost/locale/localization_backend.hpp>
+#include "boostLocale/test/tools.hpp"
 #include "boostLocale/test/unit_test.hpp"
 #include <ctime>
 #include <iomanip>
@@ -509,7 +506,7 @@ void test_main(int /*argc*/, char** /*argv*/)
                 TEST_GE(time_point_time, current_time);
                 TEST_EQ(static_cast<time_t>(time_point_time / 3600), current_time / 3600); // Roughly match
                 // However at least the date should match
-                const tm current_time_gmt = *std::gmtime(&current_time);
+                const tm current_time_gmt = *gmtime_wrap(&current_time);
                 TEST_EQ(time_point_default.get(year()), current_time_gmt.tm_year + 1900);
                 TEST_EQ(time_point_default.get(month()), current_time_gmt.tm_mon);
                 TEST_EQ(time_point_default.get(day()), current_time_gmt.tm_mday);

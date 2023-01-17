@@ -109,8 +109,8 @@ object BOOST_PYTHON_DECL exec_file(char const *filename, object global, object l
   PyObject *fo = Py_BuildValue("s", f);
   PyObject *fb = Py_None;
   PyUnicode_FSConverter(fo, &fb);
-  f = PyBytes_AsString(fb);
-  FILE *fs = fopen(f, "r");
+  char *f_as_uft = PyBytes_AsString(fb);
+  FILE *fs = fopen(f_as_uft, "r");
   Py_DECREF(fo);
   Py_DECREF(fb);
 #elif PY_VERSION_HEX >= 0x03000000
@@ -129,6 +129,7 @@ object BOOST_PYTHON_DECL exec_file(char const *filename, object global, object l
                 f,
                 Py_file_input,
 		global.ptr(), local.ptr());
+  fclose(fs);
   if (!result) throw_error_already_set();
   return object(detail::new_reference(result));
 }

@@ -4,11 +4,6 @@
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
-#ifdef _MSC_VER
-#    define _CRT_SECURE_NO_WARNINGS
-// Disable this "security crap"
-#endif
-
 #include <boost/locale/format.hpp>
 #include <boost/locale/formatting.hpp>
 #include <boost/locale/generator.hpp>
@@ -37,7 +32,7 @@ void test_main(int /*argc*/, char** /*argv*/)
         ss << boost::locale::format("{1,ftime='%H %M %S'}") % point;
         int icu_hour = 0, icu_min = 0, icu_sec = 0;
         ss >> icu_hour >> icu_min >> icu_sec;
-        std::tm* tm = localtime(&point);
+        std::tm* tm = localtime_wrap(&point);
         TEST(icu_hour == tm->tm_hour);
         TEST(icu_min == tm->tm_min);
         TEST(icu_sec == tm->tm_sec);

@@ -19,11 +19,6 @@
 
 #include "boost/locale/util/timezone.hpp"
 
-// This is internal header so disable crappy "unsecure functions" for all
-#ifdef BOOST_MSVC
-#    pragma warning(disable : 4996)
-#endif
-
 namespace boost { namespace locale { namespace util {
 
     template<typename CharType>

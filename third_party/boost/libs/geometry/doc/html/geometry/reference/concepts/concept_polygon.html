@@ -62,19 +62,27 @@
               as type
             </li>
 <li class="listitem">
-              there must be a specialization of <code class="computeroutput"><span class="identifier">traits</span><span class="special">::</span><span class="identifier">ring_type</span></code>
-              defining the type of its exterior ring and interior rings as type
+              there must be a specialization of <code class="computeroutput"><span class="identifier">traits</span><span class="special">::</span><span class="identifier">ring_mutable_type</span></code>
+              defining the mutable types of its exterior and interior rings as type
             </li>
 <li class="listitem">
-              this type defined by <code class="computeroutput"><span class="identifier">ring_type</span></code>
-              must fulfill the <a class="link" href="concept_ring.html" title="Ring Concept">Ring
-              Concept</a>
+              there must be a specialization of <code class="computeroutput"><span class="identifier">traits</span><span class="special">::</span><span class="identifier">ring_const_type</span></code>
+              defining the constant types of its exterior and interior rings as type
             </li>
 <li class="listitem">
-              there must be a specialization of <code class="computeroutput"><span class="identifier">traits</span><span class="special">::</span><span class="identifier">interior_type</span></code>
-              defining the type of the collection of its interior rings as type;
-              this collection itself must fulfill a Boost.Range Random Access Range
-              Concept
+              <code class="computeroutput"><span class="identifier">traits</span><span class="special">::</span><span class="identifier">ring_mutable_type</span></code> and <code class="computeroutput"><span class="identifier">traits</span><span class="special">::</span><span class="identifier">ring_const_type</span></code> must fulfill the
+              <a class="link" href="concept_ring.html" title="Ring Concept">Ring Concept</a>
+            </li>
+<li class="listitem">
+              there must be a specialization of <code class="computeroutput"><span class="identifier">traits</span><span class="special">::</span><span class="identifier">interior_mutable_type</span></code>
+              defining the mutable type of the collection of its interior rings as
+              type;
+            </li>
+<li class="listitem">
+              there must be a specialization of <code class="computeroutput"><span class="identifier">traits</span><span class="special">::</span><span class="identifier">interior_const_type</span></code>
+              defining the constant type of the collection of its interior rings
+              as type; each of these collections itself must fulfill a Boost.Range
+              Random Access Range Concept
             </li>
 <li class="listitem">
               there must be a specialization of <code class="computeroutput"><span class="identifier">traits</span><span class="special">::</span><span class="identifier">exterior_ring</span></code>

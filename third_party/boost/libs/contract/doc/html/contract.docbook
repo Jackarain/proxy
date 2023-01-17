@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN" "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
-<chapter xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" id="boost_contract" rev:last-revision="$Date: 2022/11/16 19:58:22 $">
+<chapter xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" id="boost_contract" rev:last-revision="$Date: 2022/12/08 01:09:57 $">
   <chapterinfo><author>
       <firstname>Lorenzo</firstname> <surname>Caminiti <email>lorcaminiti@gmail.com</email></surname>
     </author><copyright>

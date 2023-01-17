@@ -29,7 +29,7 @@ namespace boost { namespace locale { namespace impl_win {
         {}
         winapi_localization_backend* clone() const override { return new winapi_localization_backend(*this); }
 
-        void set_option(const std::string& name, const std::string& value)
+        void set_option(const std::string& name, const std::string& value) override
         {
             invalid_ = true;
             if(name == "locale")
@@ -39,7 +39,7 @@ namespace boost { namespace locale { namespace impl_win {
             else if(name == "message_application")
                 domains_.push_back(value);
         }
-        void clear_options()
+        void clear_options() override
         {
             invalid_ = true;
             locale_id_.clear();

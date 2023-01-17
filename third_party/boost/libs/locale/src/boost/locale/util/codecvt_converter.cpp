@@ -16,7 +16,7 @@
 #include "boost/locale/encoding/conv.hpp"
 
 #ifdef BOOST_MSVC
-#    pragma warning(disable : 4244 4996) // loose data
+#    pragma warning(disable : 4244) // loose data
 #endif
 
 namespace boost { namespace locale { namespace util {

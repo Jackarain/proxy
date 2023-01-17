@@ -31,6 +31,8 @@ protected:
     {
     }
 
+    virtual ~any_segments_iter() = default;
+
 public:
     // this is adjusted
     // when self-intersecting
@@ -76,6 +78,8 @@ struct BOOST_SYMBOL_VISIBLE
     path_iter
     : any_segments_iter
 {
+    virtual ~path_iter() = default;
+
     explicit
     path_iter(
         string_view s) noexcept;
@@ -97,6 +101,8 @@ struct BOOST_SYMBOL_VISIBLE
     path_encoded_iter
     : public path_iter
 {
+    virtual ~path_encoded_iter() = default;
+
     explicit
     path_encoded_iter(
         pct_string_view s) noexcept;
@@ -118,6 +124,8 @@ struct BOOST_SYMBOL_VISIBLE
     segment_iter
     : any_segments_iter
 {
+    virtual ~segment_iter() = default;
+
     explicit
     segment_iter(
         string_view s) noexcept;
@@ -228,6 +236,8 @@ struct BOOST_SYMBOL_VISIBLE
     segment_encoded_iter
     : any_segments_iter
 {
+    virtual ~segment_encoded_iter() = default;
+
     explicit
     segment_encoded_iter(
         pct_string_view const& s) noexcept;

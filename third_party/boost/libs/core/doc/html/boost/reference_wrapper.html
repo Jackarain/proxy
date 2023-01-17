@@ -38,21 +38,21 @@
   <span class="keyword">typedef</span> <span class="identifier">T</span> <a class="link" href="reference_wrapper.html#boost.reference_wrapper.type"><span class="identifier">type</span></a><span class="special">;</span>
 
   <span class="comment">// <a class="link" href="reference_wrapper.html#boost.reference_wrapperconstruct-copy-destruct">construct/copy/destruct</a></span>
-  <span class="keyword">explicit</span> <a class="link" href="reference_wrapper.html#idm10382-bb"><span class="identifier">reference_wrapper</span></a><span class="special">(</span><span class="identifier">T</span> <span class="special">&amp;</span><span class="special">)</span><span class="special">;</span>
-  <a class="link" href="reference_wrapper.html#idm10392-bb"><span class="identifier">reference_wrapper</span></a><span class="special">(</span><span class="identifier">T</span> <span class="special">&amp;&amp;</span><span class="special">)</span> <span class="special">=</span> <span class="keyword">delete</span><span class="special">;</span>
+  <span class="keyword">explicit</span> <a class="link" href="reference_wrapper.html#idm10484-bb"><span class="identifier">reference_wrapper</span></a><span class="special">(</span><span class="identifier">T</span> <span class="special">&amp;</span><span class="special">)</span><span class="special">;</span>
+  <a class="link" href="reference_wrapper.html#idm10494-bb"><span class="identifier">reference_wrapper</span></a><span class="special">(</span><span class="identifier">T</span> <span class="special">&amp;&amp;</span><span class="special">)</span> <span class="special">=</span> <span class="keyword">delete</span><span class="special">;</span>
   <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> Y<span class="special">&gt;</span> 
-    <a class="link" href="reference_wrapper.html#idm10398-bb"><span class="identifier">reference_wrapper</span></a><span class="special">(</span><a class="link" href="reference_wrapper.html" title="Class template reference_wrapper">reference_wrapper</a><span class="special">&lt;</span> <span class="identifier">Y</span> <span class="special">&gt;</span><span class="special">,</span> <span class="emphasis"><em><span class="identifier">unspecified</span></em></span> <span class="special">=</span> <span class="emphasis"><em><span class="identifier">unspecified</span></em></span><span class="special">)</span><span class="special">;</span>
+    <a class="link" href="reference_wrapper.html#idm10500-bb"><span class="identifier">reference_wrapper</span></a><span class="special">(</span><a class="link" href="reference_wrapper.html" title="Class template reference_wrapper">reference_wrapper</a><span class="special">&lt;</span> <span class="identifier">Y</span> <span class="special">&gt;</span><span class="special">,</span> <span class="emphasis"><em><span class="identifier">unspecified</span></em></span> <span class="special">=</span> <span class="emphasis"><em><span class="identifier">unspecified</span></em></span><span class="special">)</span><span class="special">;</span>
 
-  <span class="comment">// <a class="link" href="reference_wrapper.html#idm10360-bb">public member functions</a></span>
-  <a class="link" href="reference_wrapper.html#idm10361-bb"><span class="keyword">operator</span> <span class="identifier">T</span> <span class="special">&amp;</span></a><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
-  <span class="identifier">T</span> <span class="special">&amp;</span> <a class="link" href="reference_wrapper.html#idm10368-bb"><span class="identifier">get</span></a><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
-  <span class="identifier">T</span> <span class="special">*</span> <a class="link" href="reference_wrapper.html#idm10375-bb"><span class="identifier">get_pointer</span></a><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+  <span class="comment">// <a class="link" href="reference_wrapper.html#idm10462-bb">public member functions</a></span>
+  <a class="link" href="reference_wrapper.html#idm10463-bb"><span class="keyword">operator</span> <span class="identifier">T</span> <span class="special">&amp;</span></a><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+  <span class="identifier">T</span> <span class="special">&amp;</span> <a class="link" href="reference_wrapper.html#idm10470-bb"><span class="identifier">get</span></a><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+  <span class="identifier">T</span> <span class="special">*</span> <a class="link" href="reference_wrapper.html#idm10477-bb"><span class="identifier">get_pointer</span></a><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
 <span class="special">}</span><span class="special">;</span></pre></div>
 <div class="refsect1">
-<a name="idm10584"></a><h2>Description</h2>
+<a name="idm10686"></a><h2>Description</h2>
 <p><code class="computeroutput"><a class="link" href="reference_wrapper.html" title="Class template reference_wrapper">reference_wrapper</a></code> is primarily used to "feed" references to function templates (algorithms) that take their parameter by value. It provides an implicit conversion to <code class="computeroutput">T&amp;</code>, which usually allows the function templates to work on references unmodified. </p>
 <div class="refsect2">
-<a name="idm10590"></a><h3>
+<a name="idm10692"></a><h3>
 <a name="boost.reference_wrappertypes"></a><code class="computeroutput">reference_wrapper</code> 
         public
        types</h3>
@@ -63,13 +63,13 @@
 </li></ol></div>
 </div>
 <div class="refsect2">
-<a name="idm10604"></a><h3>
+<a name="idm10706"></a><h3>
 <a name="boost.reference_wrapperconstruct-copy-destruct"></a><code class="computeroutput">reference_wrapper</code> 
         public
        construct/copy/destruct</h3>
 <div class="orderedlist"><ol class="orderedlist" type="1">
 <li class="listitem">
-<pre class="literallayout"><span class="keyword">explicit</span> <a name="idm10382-bb"></a><span class="identifier">reference_wrapper</span><span class="special">(</span><span class="identifier">T</span> <span class="special">&amp;</span> t<span class="special">)</span><span class="special">;</span></pre>
+<pre class="literallayout"><span class="keyword">explicit</span> <a name="idm10484-bb"></a><span class="identifier">reference_wrapper</span><span class="special">(</span><span class="identifier">T</span> <span class="special">&amp;</span> t<span class="special">)</span><span class="special">;</span></pre>
 <p>Constructs a <code class="computeroutput"><code class="computeroutput"><a class="link" href="reference_wrapper.html" title="Class template reference_wrapper">reference_wrapper</a></code></code> object that stores a reference to <code class="computeroutput">t</code>.</p>
 <p>Does not throw. </p>
 <p>
@@ -77,7 +77,7 @@
 </p>
 </li>
 <li class="listitem">
-<pre class="literallayout"><a name="idm10392-bb"></a><span class="identifier">reference_wrapper</span><span class="special">(</span><span class="identifier">T</span> <span class="special">&amp;&amp;</span> t<span class="special">)</span> <span class="special">=</span> <span class="keyword">delete</span><span class="special">;</span></pre>
+<pre class="literallayout"><a name="idm10494-bb"></a><span class="identifier">reference_wrapper</span><span class="special">(</span><span class="identifier">T</span> <span class="special">&amp;&amp;</span> t<span class="special">)</span> <span class="special">=</span> <span class="keyword">delete</span><span class="special">;</span></pre>
 <p>Construction from a temporary object is disabled. </p>
 <p>
 
@@ -85,7 +85,7 @@
 </li>
 <li class="listitem">
 <pre class="literallayout"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> Y<span class="special">&gt;</span> 
-  <a name="idm10398-bb"></a><span class="identifier">reference_wrapper</span><span class="special">(</span><a class="link" href="reference_wrapper.html" title="Class template reference_wrapper">reference_wrapper</a><span class="special">&lt;</span> <span class="identifier">Y</span> <span class="special">&gt;</span> r<span class="special">,</span> <span class="emphasis"><em><span class="identifier">unspecified</span></em></span> <span class="special">=</span> <span class="emphasis"><em><span class="identifier">unspecified</span></em></span><span class="special">)</span><span class="special">;</span></pre>
+  <a name="idm10500-bb"></a><span class="identifier">reference_wrapper</span><span class="special">(</span><a class="link" href="reference_wrapper.html" title="Class template reference_wrapper">reference_wrapper</a><span class="special">&lt;</span> <span class="identifier">Y</span> <span class="special">&gt;</span> r<span class="special">,</span> <span class="emphasis"><em><span class="identifier">unspecified</span></em></span> <span class="special">=</span> <span class="emphasis"><em><span class="identifier">unspecified</span></em></span><span class="special">)</span><span class="special">;</span></pre>
 <p>Constructs a <code class="computeroutput"><code class="computeroutput"><a class="link" href="reference_wrapper.html" title="Class template reference_wrapper">reference_wrapper</a></code></code> object that stores the reference stored in the compatible <code class="computeroutput"><code class="computeroutput"><a class="link" href="reference_wrapper.html" title="Class template reference_wrapper">reference_wrapper</a></code></code> <code class="computeroutput">r</code>.</p>
 <p>Only enabled when <code class="computeroutput">Y*</code> is convertible to <code class="computeroutput">T*</code>. </p>
 <p>
@@ -99,11 +99,11 @@
 </ol></div>
 </div>
 <div class="refsect2">
-<a name="idm10676"></a><h3>
-<a name="idm10360-bb"></a><code class="computeroutput">reference_wrapper</code> public member functions</h3>
+<a name="idm10778"></a><h3>
+<a name="idm10462-bb"></a><code class="computeroutput">reference_wrapper</code> public member functions</h3>
 <div class="orderedlist"><ol class="orderedlist" type="1">
 <li class="listitem">
-<pre class="literallayout"><a name="idm10361-bb"></a><span class="keyword">operator</span> <span class="identifier">T</span> <span class="special">&amp;</span><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span></pre>
+<pre class="literallayout"><a name="idm10463-bb"></a><span class="keyword">operator</span> <span class="identifier">T</span> <span class="special">&amp;</span><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span></pre>
 <p>
 </p>
 <p>Does not throw. </p>
@@ -122,7 +122,7 @@
 </table></div>
 </li>
 <li class="listitem">
-<pre class="literallayout"><span class="identifier">T</span> <span class="special">&amp;</span> <a name="idm10368-bb"></a><span class="identifier">get</span><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span></pre>
+<pre class="literallayout"><span class="identifier">T</span> <span class="special">&amp;</span> <a name="idm10470-bb"></a><span class="identifier">get</span><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span></pre>
 <p>
 </p>
 <p>Does not throw. </p>
@@ -141,7 +141,7 @@
 </table></div>
 </li>
 <li class="listitem">
-<pre class="literallayout"><span class="identifier">T</span> <span class="special">*</span> <a name="idm10375-bb"></a><span class="identifier">get_pointer</span><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span></pre>
+<pre class="literallayout"><span class="identifier">T</span> <span class="special">*</span> <a name="idm10477-bb"></a><span class="identifier">get_pointer</span><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span></pre>
 <p>
 </p>
 <p>Does not throw. </p>

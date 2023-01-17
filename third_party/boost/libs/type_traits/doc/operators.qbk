@@ -247,7 +247,11 @@ All traits are implemented the same way using preprocessor macros to avoid code
 duplication.
 The main files are in [^boost/type_traits/detail]: [^has_binary_operator.hpp],
 [^has_prefix_operator.hpp] and [^has_postfix_operator.hpp].
-The example of prefix `operator-` is presented below:
+
+Given a sufficiently conforming C++11 compiler, these traits are implemented in a rather
+compact and straightforward way that should always give accurate answers.
+
+In C++03 there is a legacy implementation, by way of example the prefix `operator-` is presented below:
 
 ``
 namespace boost {
@@ -416,11 +420,11 @@ struct has_unary_minus : ::boost::integral_constant<bool,(::boost::detail::has_u
 
 [heading Limitation]
 
-* Requires a compiler with working SFINAE.
+* Prior to C++11, requires a compiler with working SFINAE.
 
 [heading Known issues]
 
-* These traits cannot detect whether the operators are public or not:
+* Prior to C++11, these traits cannot detect whether the operators are public or not:
 if an operator is defined as a private member of type `T` then
 the instantiation of the corresponding trait will produce a compiler error.
 For this reason these traits cannot be used to determine whether a type has a
@@ -430,7 +434,7 @@ struct A { private: A operator-(); };
 boost::has_unary_minus<A>::value; // error: A::operator-() is private
 ``
 
-* There is an issue if the operator exists only for type `A` and `B` is
+* Prior to C++11, there is an issue if the operator exists only for type `A` and `B` is
 convertible to `A`. In this case, the compiler will report an ambiguous overload
 because both the existing operator and the one we provide (with argument of type
 `any`) need type conversion, so that none is preferred.

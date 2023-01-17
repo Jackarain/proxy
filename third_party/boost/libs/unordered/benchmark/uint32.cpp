@@ -6,9 +6,6 @@
 
 #include <boost/unordered_map.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/hashed_index.hpp>
-#include <boost/multi_index/member.hpp>
 #include <boost/endian/conversion.hpp>
 #include <boost/core/detail/splitmix64.hpp>
 #include <boost/config.hpp>
@@ -284,24 +281,6 @@ template<template<class...> class Map> BOOST_NOINLINE void test( char const* lab
     times.push_back( rec );
 }
 
-// multi_index emulation of unordered_map
-
-template<class K, class V> struct pair
-{
-    K first;
-    mutable V second;
-};
-
-using namespace boost::multi_index;
-
-template<class K, class V> using multi_index_map = multi_index_container<
-  pair<K, V>,
-  indexed_by<
-    hashed_unique< member<pair<K, V>, K, &pair<K, V>::first> >
-  >,
-  ::allocator< pair<K, V> >
->;
-
 // aliases using the counting allocator
 
 template<class K, class V> using allocator_for = ::allocator< std::pair<K const, V> >;
@@ -352,7 +331,6 @@ int main()
     test<std_unordered_map>( "std::unordered_map" );
     test<boost_unordered_map>( "boost::unordered_map" );
     test<boost_unordered_flat_map>( "boost::unordered_flat_map" );
-    test<multi_index_map>( "multi_index_map" );
 
 #ifdef HAVE_ABSEIL
 

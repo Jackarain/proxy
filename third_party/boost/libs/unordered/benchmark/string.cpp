@@ -6,9 +6,6 @@
 
 #include <boost/unordered_map.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/hashed_index.hpp>
-#include <boost/multi_index/member.hpp>
 #include <boost/core/detail/splitmix64.hpp>
 #include <boost/config.hpp>
 #ifdef HAVE_ABSEIL
@@ -267,24 +264,6 @@ template<template<class...> class Map> BOOST_NOINLINE void test( char const* lab
     times.push_back( rec );
 }
 
-// multi_index emulation of unordered_map
-
-template<class K, class V> struct pair
-{
-    K first;
-    mutable V second;
-};
-
-using namespace boost::multi_index;
-
-template<class K, class V> using multi_index_map = multi_index_container<
-  pair<K, V>,
-  indexed_by<
-    hashed_unique< member<pair<K, V>, K, &pair<K, V>::first> >
-  >,
-  ::allocator< pair<K, V> >
->;
-
 // aliases using the counting allocator
 
 template<class K, class V> using allocator_for = ::allocator< std::pair<K const, V> >;
@@ -384,14 +363,6 @@ template<class K, class V> using boost_unordered_map_fnv1a =
 template<class K, class V> using boost_unordered_flat_map_fnv1a =
     boost::unordered_flat_map<K, V, fnv1a_hash, std::equal_to<K>, allocator_for<K, V>>;
 
-template<class K, class V> using multi_index_map_fnv1a = multi_index_container<
-  pair<K, V>,
-  indexed_by<
-    hashed_unique< member<pair<K, V>, K, &pair<K, V>::first>, fnv1a_hash >
-  >,
-  ::allocator< pair<K, V> >
->;
-
 #ifdef HAVE_ABSEIL
 
 template<class K, class V> using absl_node_hash_map_fnv1a =
@@ -428,12 +399,9 @@ int main()
 {
     init_indices();
 
-#if 1
-
     test<std_unordered_map>( "std::unordered_map" );
     test<boost_unordered_map>( "boost::unordered_map" );
     test<boost_unordered_flat_map>( "boost::unordered_flat_map" );
-    test<multi_index_map>( "multi_index_map" );
 
 #ifdef HAVE_ABSEIL
 
@@ -456,12 +424,9 @@ int main()
 
 #endif
 
-#endif
-
     test<std_unordered_map_fnv1a>( "std::unordered_map, FNV-1a" );
     test<boost_unordered_map_fnv1a>( "boost::unordered_map, FNV-1a" );
     test<boost_unordered_flat_map_fnv1a>( "boost::unordered_flat_map, FNV-1a" );
-    test<multi_index_map_fnv1a>( "multi_index_map, FNV-1a" );
 
 #ifdef HAVE_ABSEIL
 

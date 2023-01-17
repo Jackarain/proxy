@@ -284,6 +284,13 @@ namespace boost { namespace stl_interfaces { BOOST_STL_INTERFACES_NAMESPACE_V1 {
         using difference_type = DifferenceType;
 
         template<typename D = Derived>
+        constexpr auto operator*()
+            noexcept(noexcept(*access::base(std::declval<D &>())))
+                -> decltype(*access::base(std::declval<D &>()))
+        {
+            return *access::base(derived());
+        }
+        template<typename D = Derived>
         constexpr auto operator*() const
             noexcept(noexcept(*access::base(std::declval<D const &>())))
                 -> decltype(*access::base(std::declval<D const &>()))
@@ -291,6 +298,14 @@ namespace boost { namespace stl_interfaces { BOOST_STL_INTERFACES_NAMESPACE_V1 {
             return *access::base(derived());
         }
 
+        template<typename D = Derived>
+        constexpr auto operator-> () noexcept(
+            noexcept(detail::make_pointer<pointer>(*std::declval<D &>())))
+            -> decltype(
+                detail::make_pointer<pointer>(*std::declval<D &>()))
+        {
+            return detail::make_pointer<pointer>(*derived());
+        }
         template<typename D = Derived>
         constexpr auto operator-> () const noexcept(
             noexcept(detail::make_pointer<pointer>(*std::declval<D const &>())))

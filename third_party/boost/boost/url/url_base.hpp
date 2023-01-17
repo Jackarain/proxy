@@ -87,6 +87,7 @@ class BOOST_SYMBOL_VISIBLE
         char* old = nullptr;
     };
 
+    virtual ~url_base() noexcept = default;
     url_base() noexcept = default;
     url_base(detail::url_impl const&) noexcept;
     explicit url_base(string_view);

@@ -664,6 +664,7 @@ pre.rouge {
 <li><a href="#buckets_controlling_the_number_of_buckets">Controlling the number of buckets</a></li>
 <li><a href="#buckets_iterator_invalidation">Iterator Invalidation</a></li>
 <li><a href="#buckets_fast_closed_addressing_implementation">Fast Closed Addressing Implementation</a></li>
+<li><a href="#buckets_open_addressing_implementation">Open Addressing Implementation</a></li>
 </ul>
 </li>
 <li><a href="#hash_equality">Equality Predicates and Hash Functions</a>
@@ -742,6 +743,7 @@ pre.rouge {
 <li><a href="#unordered_map_lookup">Lookup</a></li>
 <li><a href="#unordered_map_bucket_interface">Bucket Interface</a></li>
 <li><a href="#unordered_map_hash_policy">Hash Policy</a></li>
+<li><a href="#unordered_map_deduction_guides">Deduction Guides</a></li>
 <li><a href="#unordered_map_equality_comparisons">Equality Comparisons</a></li>
 <li><a href="#unordered_map_swap_2">Swap</a></li>
 <li><a href="#unordered_map_erase_if">erase_if</a></li>
@@ -762,6 +764,7 @@ pre.rouge {
 <li><a href="#unordered_multimap_lookup">Lookup</a></li>
 <li><a href="#unordered_multimap_bucket_interface">Bucket Interface</a></li>
 <li><a href="#unordered_multimap_hash_policy">Hash Policy</a></li>
+<li><a href="#unordered_multimap_deduction_guides">Deduction Guides</a></li>
 <li><a href="#unordered_multimap_equality_comparisons">Equality Comparisons</a></li>
 <li><a href="#unordered_multimap_swap_2">Swap</a></li>
 <li><a href="#unordered_multimap_erase_if">erase_if</a></li>
@@ -782,6 +785,7 @@ pre.rouge {
 <li><a href="#unordered_set_lookup">Lookup</a></li>
 <li><a href="#unordered_set_bucket_interface">Bucket Interface</a></li>
 <li><a href="#unordered_set_hash_policy">Hash Policy</a></li>
+<li><a href="#unordered_set_deduction_guides">Deduction Guides</a></li>
 <li><a href="#unordered_set_equality_comparisons">Equality Comparisons</a></li>
 <li><a href="#unordered_set_swap_2">Swap</a></li>
 <li><a href="#unordered_set_erase_if">erase_if</a></li>
@@ -802,6 +806,7 @@ pre.rouge {
 <li><a href="#unordered_multiset_lookup">Lookup</a></li>
 <li><a href="#unordered_multiset_bucket_interface">Bucket Interface</a></li>
 <li><a href="#unordered_multiset_hash_policy">Hash Policy</a></li>
+<li><a href="#unordered_multiset_deduction_guides">Deduction Guides</a></li>
 <li><a href="#unordered_multiset_equality_comparisons">Equality Comparisons</a></li>
 <li><a href="#unordered_multiset_swap_2">Swap</a></li>
 <li><a href="#unordered_multiset_erase_if">erase_if</a></li>
@@ -828,6 +833,7 @@ pre.rouge {
 <li><a href="#unordered_flat_map_lookup">Lookup</a></li>
 <li><a href="#unordered_flat_map_bucket_interface">Bucket Interface</a></li>
 <li><a href="#unordered_flat_map_hash_policy">Hash Policy</a></li>
+<li><a href="#unordered_flat_map_deduction_guides">Deduction Guides</a></li>
 <li><a href="#unordered_flat_map_equality_comparisons">Equality Comparisons</a></li>
 <li><a href="#unordered_flat_map_swap_2">Swap</a></li>
 <li><a href="#unordered_flat_map_erase_if">erase_if</a></li>
@@ -848,6 +854,7 @@ pre.rouge {
 <li><a href="#unordered_flat_set_lookup">Lookup</a></li>
 <li><a href="#unordered_flat_set_bucket_interface">Bucket Interface</a></li>
 <li><a href="#unordered_flat_set_hash_policy">Hash Policy</a></li>
+<li><a href="#unordered_flat_set_deduction_guides">Deduction Guides</a></li>
 <li><a href="#unordered_flat_set_equality_comparisons">Equality Comparisons</a></li>
 <li><a href="#unordered_flat_set_swap_2">Swap</a></li>
 <li><a href="#unordered_flat_set_erase_if">erase_if</a></li>
@@ -1405,7 +1412,101 @@ number of available buckets, this function is logically equivalent to:</p>
 <p>Thus container-wide iteration is turned into traversing the non-empty bucket groups (an operation with constant time complexity) which reduces the time complexity back to <code>O(size())</code>. In total, a bucket group is only 4 words in size and it views <code>sizeof(std::size_t) * CHAR_BIT</code> buckets meaning that for all common implementations, there&#8217;s only 4 bits of space overhead per bucket introduced by the bucket groups.</p>
 </div>
 <div class="paragraph">
-<p>For more information on implementation rationale, read the <a href="#rationale">corresponding section</a>.</p>
+<p>A more detailed description of Boost.Unordered&#8217;s closed-addressing implementation is
+given in an
+<a href="https://bannalia.blogspot.com/2022/06/advancing-state-of-art-for.html">external article</a>.
+For more information on implementation rationale, read the
+<a href="#rationale_boostunordered_multiset_and_boostunordered_multimap">corresponding section</a>.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="buckets_open_addressing_implementation"><a class="link" href="#buckets_open_addressing_implementation">Open Addressing Implementation</a></h3>
+<div class="paragraph">
+<p>The diagram shows the basic internal layout of <code>boost::unordered_flat_map</code> and
+<code>boost:unordered_flat_set</code>.</p>
+</div>
+<div id="img-foa-layout" class="imageblock text-center">
+<div class="content">
+<img src="../diagrams/foa.png" alt="foa">
+</div>
+<div class="title">Figure 4. Open-addressing layout used by Boost.Unordered.</div>
+</div>
+<div class="paragraph">
+<p>As with all open-addressing containers, elements are stored directly in the bucket array.
+This array is logically divided into 2<sup><em>n</em></sup> <em>groups</em> of 15 elements each.
+In addition to the bucket array, there is an associated <em>metadata array</em> with 2<sup><em>n</em></sup>
+16-byte words.</p>
+</div>
+<div id="img-foa-metadata" class="imageblock text-center">
+<div class="content">
+<img src="../diagrams/foa-metadata.png" alt="foa metadata">
+</div>
+<div class="title">Figure 5. Breakdown of a metadata word.</div>
+</div>
+<div class="paragraph">
+<p>A metadata word is divided into 15 <em>h</em><sub><em>i</em></sub> bytes (one for each associated
+bucket), and an <em>overflow byte</em> (<em>ofw</em> in the diagram). The value of <em>h</em><sub><em>i</em></sub> is:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>0 if the corresponding bucket is empty.</p>
+</li>
+<li>
+<p>1 to encode a special empty bucket called a <em>sentinel</em>, which is used internally to
+stop iteration when the container has been fully traversed.</p>
+</li>
+<li>
+<p>If the bucket is occupied, a <em>reduced hash value</em> obtained from the hash value of
+the element.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>When looking for an element with hash value <em>h</em>, SIMD technologies such as
+<a href="https://en.wikipedia.org/wiki/SSE2">SSE2</a> and
+<a href="https://en.wikipedia.org/wiki/ARM_architecture_family#Advanced_SIMD_(Neon)">Neon</a> allow us
+to very quickly inspect the full metadata word and look for the reduced value of <em>h</em> among all the
+15 buckets with just a handful of CPU instructions: non-matching buckets can be
+readily discarded, and those whose reduced hash value matches need be inspected via full
+comparison with the corresponding element. If the looked-for element is not present,
+the overflow byte is inspected:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>If the bit in the position <em>h</em> mod 8 is zero, lookup terminates (and the
+element is not present).</p>
+</li>
+<li>
+<p>If the bit is set to 1 (the group has been <em>overflowed</em>), further groups are
+checked using <a href="https://en.wikipedia.org/wiki/Quadratic_probing"><em>quadratic probing</em></a>, and
+the process is repeated.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Insertion is algorithmically similar: empty buckets are located using SIMD,
+and when going past a full group its corresponding overflow bit is set to 1.</p>
+</div>
+<div class="paragraph">
+<p>In architectures without SIMD support, the logical layout stays the same, but the metadata
+word is codified using a technique we call <em>bit interleaving</em>: this layout allows us
+to emulate SIMD with reasonably good performance using only standard arithmetic and
+logical operations.</p>
+</div>
+<div id="img-foa-metadata-interleaving" class="imageblock text-center">
+<div class="content">
+<img src="../diagrams/foa-metadata-interleaving.png" alt="foa metadata interleaving">
+</div>
+<div class="title">Figure 6. Bit-interleaved metadata word.</div>
+</div>
+<div class="paragraph">
+<p>A more detailed description of Boost.Unordered&#8217;s open-addressing implementation is
+given in an
+<a href="https://bannalia.blogspot.com/2022/11/inside-boostunorderedflatmap.html">external article</a>.
+For more information on implementation rationale, read the
+<a href="#rationale_boostunordered_flat_set_and_boostunordered_flat_map">corresponding section</a>.</p>
 </div>
 </div>
 </div>
@@ -3196,26 +3297,75 @@ namespace boost {
     void <a href="#unordered_map_rehash">rehash</a>(size_type n);
     void <a href="#unordered_map_reserve">reserve</a>(size_type n);
   };
-}
 
-// Equality Comparisons
-template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
-  bool <a href="#unordered_map_operator_2">operator==</a>(const unordered_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
-                  const unordered_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y);
+  // Deduction Guides
+  template&lt;class InputIterator,
+           class Hash = boost::hash&lt;<a href="#unordered_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;,
+           class Pred = std::equal_to&lt;<a href="#unordered_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;,
+           class Allocator = std::allocator&lt;<a href="#unordered_map_iter_to_alloc_type"><em>iter-to-alloc-type</em></a>&lt;InputIterator&gt;&gt;&gt;
+    unordered_map(InputIterator, InputIterator, typename <a href="#unordered_map_deduction_guides"><em>see below</em></a>::size_type = <a href="#unordered_map_deduction_guides"><em>see below</em></a>,
+                  Hash = Hash(), Pred = Pred(), Allocator = Allocator())
+      -&gt; unordered_map&lt;<a href="#unordered_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;, <a href="#unordered_map_iter_mapped_type"><em>iter-mapped-type</em></a>&lt;InputIterator&gt;, Hash, Pred,
+                       Allocator&gt;;
 
-template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
-  bool <a href="#unordered_map_operator_3">operator!=</a>(const unordered_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
-                  const unordered_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y);
+  template&lt;class Key, class T, class Hash = boost::hash&lt;Key&gt;,
+           class Pred = std::equal_to&lt;Key&gt;,
+           class Allocator = std::allocator&lt;std::pair&lt;const Key, T&gt;&gt;&gt;
+    unordered_map(std::initializer_list&lt;std::pair&lt;Key, T&gt;&gt;,
+                  typename <a href="#unordered_map_deduction_guides"><em>see below</em></a>::size_type = <a href="#unordered_map_deduction_guides"><em>see below</em></a>, Hash = Hash(),
+                  Pred = Pred(), Allocator = Allocator())
+      -&gt; unordered_map&lt;Key, T, Hash, Pred, Allocator&gt;;
 
-// swap
-template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
-  void <a href="#unordered_map_swap_2">swap</a>(unordered_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
-            unordered_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y)
-    noexcept(noexcept(x.swap(y)));
+  template&lt;class InputIterator, class Allocator&gt;
+    unordered_map(InputIterator, InputIterator, typename <a href="#unordered_map_deduction_guides"><em>see below</em></a>::size_type, Allocator)
+      -&gt; unordered_map&lt;<a href="#unordered_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;, <a href="#unordered_map_iter_mapped_type"><em>iter-mapped-type</em></a>&lt;InputIterator&gt;,
+                       boost::hash&lt;<a href="#unordered_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;,
+                       std::equal_to&lt;<a href="#unordered_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;, Allocator&gt;;
 
-template&lt;class K, class T, class H, class P, class A, class Predicate&gt;
-  typename unordered_map&lt;K, T, H, P, A&gt;::size_type
-     <a href="#unordered_map_erase_if">erase_if</a>(unordered_map&lt;K, T, H, P, A&gt;&amp; c, Predicate pred);</pre>
+  template&lt;class InputIterator, class Allocator&gt;
+    unordered_map(InputIterator, InputIterator, Allocator)
+      -&gt; unordered_map&lt;<a href="#unordered_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;, <a href="#unordered_map_iter_mapped_type"><em>iter-mapped-type</em></a>&lt;InputIterator&gt;,
+                       boost::hash&lt;<a href="#unordered_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;,
+                       std::equal_to&lt;<a href="#unordered_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;, Allocator&gt;;
+
+  template&lt;class InputIterator, class Hash, class Allocator&gt;
+    unordered_map(InputIterator, InputIterator, typename <a href="#unordered_map_deduction_guides"><em>see below</em></a>::size_type, Hash, Allocator)
+      -&gt; unordered_map&lt;<a href="#unordered_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;, <a href="#unordered_map_iter_mapped_type"><em>iter-mapped-type</em></a>&lt;InputIterator&gt;, Hash,
+                       std::equal_to&lt;<a href="#unordered_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;, Allocator&gt;;
+
+  template&lt;class Key, class T, class Allocator&gt;
+    unordered_map(std::initializer_list&lt;std::pair&lt;Key, T&gt;&gt;, typename <a href="#unordered_map_deduction_guides"><em>see below</em></a>::size_type,
+                  Allocator)
+      -&gt; unordered_map&lt;Key, T, boost::hash&lt;Key&gt;, std::equal_to&lt;Key&gt;, Allocator&gt;;
+
+  template&lt;class Key, class T, class Allocator&gt;
+    unordered_map(std::initializer_list&lt;std::pair&lt;Key, T&gt;&gt;, Allocator)
+      -&gt; unordered_map&lt;Key, T, boost::hash&lt;Key&gt;, std::equal_to&lt;Key&gt;, Allocator&gt;;
+
+  template&lt;class Key, class T, class Hash, class Allocator&gt;
+    unordered_map(std::initializer_list&lt;std::pair&lt;Key, T&gt;&gt;, typename <a href="#unordered_map_deduction_guides"><em>see below</em></a>::size_type, Hash,
+                  Allocator)
+      -&gt; unordered_map&lt;Key, T, Hash, std::equal_to&lt;Key&gt;, Allocator&gt;;
+
+  // Equality Comparisons
+  template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
+    bool <a href="#unordered_map_operator_2">operator==</a>(const unordered_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
+                    const unordered_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y);
+
+  template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
+    bool <a href="#unordered_map_operator_3">operator!=</a>(const unordered_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
+                    const unordered_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y);
+
+  // swap
+  template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
+    void <a href="#unordered_map_swap_2">swap</a>(unordered_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
+              unordered_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y)
+      noexcept(noexcept(x.swap(y)));
+
+  template&lt;class K, class T, class H, class P, class A, class Predicate&gt;
+    typename unordered_map&lt;K, T, H, P, A&gt;::size_type
+       <a href="#unordered_map_erase_if">erase_if</a>(unordered_map&lt;K, T, H, P, A&gt;&amp; c, Predicate pred);
+}</pre>
 </div>
 </div>
 <hr>
@@ -6110,6 +6260,74 @@ Throws:
 </div>
 </div>
 <div class="sect3">
+<h4 id="unordered_map_deduction_guides"><a class="link" href="#unordered_map_deduction_guides">Deduction Guides</a></h4>
+<div class="paragraph">
+<p>A deduction guide will not participate in overload resolution if any of the following are true:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>It has an <code>InputIterator</code> template parameter and a type that does not qualify as an input iterator is deduced for that parameter.</p>
+</li>
+<li>
+<p>It has an <code>Allocator</code> template parameter and a type that does not qualify as an allocator is deduced for that parameter.</p>
+</li>
+<li>
+<p>It has a <code>Hash</code> template parameter and an integral type or a type that qualifies as an allocator is deduced for that parameter.</p>
+</li>
+<li>
+<p>It has a <code>Pred</code> template parameter and a type that qualifies as an allocator is deduced for that parameter.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>A <code>size_­type</code> parameter type in a deduction guide refers to the <code>size_­type</code> member type of the
+container type deduced by the deduction guide. Its default value coincides with the default value
+of the constructor selected.</p>
+</div>
+<div class="sect4">
+<h5 id="unordered_map_iter_value_type"><a class="link" href="#unordered_map_iter_value_type"><em>iter-value-type</em></a></h5>
+<div class="listingblock">
+<div class="content">
+<pre>template&lt;class InputIterator&gt;
+  using <em>iter-value-type</em> =
+    typename std::iterator_traits&lt;InputIterator&gt;::value_type; // exposition only</pre>
+</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="unordered_map_iter_key_type"><a class="link" href="#unordered_map_iter_key_type"><em>iter-key-type</em></a></h5>
+<div class="listingblock">
+<div class="content">
+<pre>template&lt;class InputIterator&gt;
+  using <em>iter-key-type</em> = std::remove_const_t&lt;
+    std::tuple_element_t&lt;0, <a href="#unordered_map_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;&gt;; // exposition only</pre>
+</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="unordered_map_iter_mapped_type"><a class="link" href="#unordered_map_iter_mapped_type"><em>iter-mapped-type</em></a></h5>
+<div class="listingblock">
+<div class="content">
+<pre>template&lt;class InputIterator&gt;
+  using <em>iter-mapped-type</em> =
+    std::tuple_element_t&lt;1, <a href="#unordered_map_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;;  // exposition only</pre>
+</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="unordered_map_iter_to_alloc_type"><a class="link" href="#unordered_map_iter_to_alloc_type"><em>iter-to-alloc-type</em></a></h5>
+<div class="listingblock">
+<div class="content">
+<pre>template&lt;class InputIterator&gt;
+  using <em>iter-to-alloc-type</em> = std::pair&lt;
+    std::add_const_t&lt;std::tuple_element_t&lt;0, <a href="#unordered_map_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;&gt;,
+    std::tuple_element_t&lt;1, <a href="#unordered_map_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;&gt;; // exposition only</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect3">
 <h4 id="unordered_map_equality_comparisons"><a class="link" href="#unordered_map_equality_comparisons">Equality Comparisons</a></h4>
 <div class="sect4">
 <h5 id="unordered_map_operator_2"><a class="link" href="#unordered_map_operator_2">operator==</a></h5>
@@ -6449,26 +6667,76 @@ namespace boost {
     void <a href="#unordered_multimap_rehash">rehash</a>(size_type n);
     void <a href="#unordered_multimap_reserve">reserve</a>(size_type n);
   };
-}
 
-// Equality Comparisons
-template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
-  bool <a href="#unordered_multimap_operator">operator==</a>(const unordered_multimap&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
-                  const unordered_multimap&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y);
+  // Deduction Guides
+  template&lt;class InputIterator,
+           class Hash = boost::hash&lt;<a href="#unordered_multimap_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;,
+           class Pred = std::equal_to&lt;<a href="#unordered_multimap_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;,
+           class Allocator = std::allocator&lt;<a href="#unordered_multimap_iter_to_alloc_type"><em>iter-to-alloc-type</em></a>&lt;InputIterator&gt;&gt;&gt;
+    unordered_multimap(InputIterator, InputIterator, typename <a href="#unordered_multimap_deduction_guides"><em>see below</em></a>::size_type = <a href="#unordered_multimap_deduction_guides"><em>see below</em></a>,
+                       Hash = Hash(), Pred = Pred(), Allocator = Allocator())
+      -&gt; unordered_multimap&lt;<a href="#unordered_multimap_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;, <a href="#unordered_multimap_iter_mapped_type"><em>iter-mapped-type</em></a>&lt;InputIterator&gt;, Hash,
+                            Pred, Allocator&gt;;
 
-template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
-  bool <a href="#unordered_multimap_operator_2">operator!=</a>(const unordered_multimap&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
-                  const unordered_multimap&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y);
+  template&lt;class Key, class T, class Hash = boost::hash&lt;Key&gt;,
+           class Pred = std::equal_to&lt;Key&gt;,
+           class Allocator = std::allocator&lt;std::pair&lt;const Key, T&gt;&gt;&gt;
+    unordered_multimap(std::initializer_list&lt;std::pair&lt;Key, T&gt;&gt;,
+                       typename <a href="#unordered_multimap_deduction_guides"><em>see below</em></a>::size_type = <a href="#unordered_multimap_deduction_guides"><em>see below</em></a>, Hash = Hash(),
+                       Pred = Pred(), Allocator = Allocator())
+      -&gt; unordered_multimap&lt;Key, T, Hash, Pred, Allocator&gt;;
 
-// swap
-template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
-  void <a href="#unordered_multimap_swap_2">swap</a>(unordered_multimap&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
-            unordered_multimap&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y)
-    noexcept(noexcept(x.swap(y)));
+  template&lt;class InputIterator, class Allocator&gt;
+    unordered_multimap(InputIterator, InputIterator, typename <a href="#unordered_multimap_deduction_guides"><em>see below</em></a>::size_type, Allocator)
+      -&gt; unordered_multimap&lt;<a href="#unordered_multimap_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;, <a href="#unordered_multimap_iter_mapped_type"><em>iter-mapped-type</em></a>&lt;InputIterator&gt;,
+                            boost::hash&lt;<a href="#unordered_multimap_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;,
+                            std::equal_to&lt;<a href="#unordered_multimap_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;, Allocator&gt;;
 
-template&lt;class K, class T, class H, class P, class A, class Predicate&gt;
-  typename unordered_multimap&lt;K, T, H, P, A&gt;::size_type
-    <a href="#unordered_multimap_erase_if">erase_if</a>(unordered_multimap&lt;K, T, H, P, A&gt;&amp; c, Predicate pred);</pre>
+  template&lt;class InputIterator, class Allocator&gt;
+    unordered_multimap(InputIterator, InputIterator, Allocator)
+      -&gt; unordered_multimap&lt;<a href="#unordered_multimap_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;, <a href="#unordered_multimap_iter_mapped_type"><em>iter-mapped-type</em></a>&lt;InputIterator&gt;,
+                            boost::hash&lt;<a href="#unordered_multimap_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;,
+                            std::equal_to&lt;<a href="#unordered_multimap_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;, Allocator&gt;;
+
+  template&lt;class InputIterator, class Hash, class Allocator&gt;
+    unordered_multimap(InputIterator, InputIterator, typename <a href="#unordered_multimap_deduction_guides"><em>see below</em></a>::size_type, Hash,
+                       Allocator)
+      -&gt; unordered_multimap&lt;<a href="#unordered_multimap_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;, <a href="#unordered_multimap_iter_mapped_type"><em>iter-mapped-type</em></a>&lt;InputIterator&gt;, Hash,
+                            std::equal_to&lt;<a href="#unordered_multimap_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;, Allocator&gt;;
+
+  template&lt;class Key, class T, class Allocator&gt;
+    unordered_multimap(std::initializer_list&lt;std::pair&lt;Key, T&gt;&gt;, typename <a href="#unordered_multimap_deduction_guides"><em>see below</em></a>::size_type,
+                       Allocator)
+      -&gt; unordered_multimap&lt;Key, T, boost::hash&lt;Key&gt;, std::equal_to&lt;Key&gt;, Allocator&gt;;
+
+  template&lt;class Key, class T, class Allocator&gt;
+    unordered_multimap(std::initializer_list&lt;std::pair&lt;Key, T&gt;&gt;, Allocator)
+      -&gt; unordered_multimap&lt;Key, T, boost::hash&lt;Key&gt;, std::equal_to&lt;Key&gt;, Allocator&gt;;
+
+  template&lt;class Key, class T, class Hash, class Allocator&gt;
+    unordered_multimap(std::initializer_list&lt;std::pair&lt;Key, T&gt;&gt;, typename <a href="#unordered_multimap_deduction_guides"><em>see below</em></a>::size_type,
+                       Hash, Allocator)
+      -&gt; unordered_multimap&lt;Key, T, Hash, std::equal_to&lt;Key&gt;, Allocator&gt;;
+
+  // Equality Comparisons
+  template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
+    bool <a href="#unordered_multimap_operator">operator==</a>(const unordered_multimap&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
+                    const unordered_multimap&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y);
+
+  template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
+    bool <a href="#unordered_multimap_operator_2">operator!=</a>(const unordered_multimap&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
+                    const unordered_multimap&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y);
+
+  // swap
+  template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
+    void <a href="#unordered_multimap_swap_2">swap</a>(unordered_multimap&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
+              unordered_multimap&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y)
+      noexcept(noexcept(x.swap(y)));
+
+  template&lt;class K, class T, class H, class P, class A, class Predicate&gt;
+    typename unordered_multimap&lt;K, T, H, P, A&gt;::size_type
+      <a href="#unordered_multimap_erase_if">erase_if</a>(unordered_multimap&lt;K, T, H, P, A&gt;&amp; c, Predicate pred);
+}</pre>
 </div>
 </div>
 <hr>
@@ -8973,6 +9241,74 @@ Throws:
 </div>
 </div>
 <div class="sect3">
+<h4 id="unordered_multimap_deduction_guides"><a class="link" href="#unordered_multimap_deduction_guides">Deduction Guides</a></h4>
+<div class="paragraph">
+<p>A deduction guide will not participate in overload resolution if any of the following are true:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>It has an <code>InputIterator</code> template parameter and a type that does not qualify as an input iterator is deduced for that parameter.</p>
+</li>
+<li>
+<p>It has an <code>Allocator</code> template parameter and a type that does not qualify as an allocator is deduced for that parameter.</p>
+</li>
+<li>
+<p>It has a <code>Hash</code> template parameter and an integral type or a type that qualifies as an allocator is deduced for that parameter.</p>
+</li>
+<li>
+<p>It has a <code>Pred</code> template parameter and a type that qualifies as an allocator is deduced for that parameter.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>A <code>size_­type</code> parameter type in a deduction guide refers to the <code>size_­type</code> member type of the
+container type deduced by the deduction guide. Its default value coincides with the default value
+of the constructor selected.</p>
+</div>
+<div class="sect4">
+<h5 id="unordered_multimap_iter_value_type"><a class="link" href="#unordered_multimap_iter_value_type"><em>iter-value-type</em></a></h5>
+<div class="listingblock">
+<div class="content">
+<pre>template&lt;class InputIterator&gt;
+  using <em>iter-value-type</em> =
+    typename std::iterator_traits&lt;InputIterator&gt;::value_type; // exposition only</pre>
+</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="unordered_multimap_iter_key_type"><a class="link" href="#unordered_multimap_iter_key_type"><em>iter-key-type</em></a></h5>
+<div class="listingblock">
+<div class="content">
+<pre>template&lt;class InputIterator&gt;
+  using <em>iter-key-type</em> = std::remove_const_t&lt;
+    std::tuple_element_t&lt;0, <a href="#unordered_map_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;&gt;; // exposition only</pre>
+</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="unordered_multimap_iter_mapped_type"><a class="link" href="#unordered_multimap_iter_mapped_type"><em>iter-mapped-type</em></a></h5>
+<div class="listingblock">
+<div class="content">
+<pre>template&lt;class InputIterator&gt;
+  using <em>iter-mapped-type</em> =
+    std::tuple_element_t&lt;1, <a href="#unordered_map_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;;  // exposition only</pre>
+</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="unordered_multimap_iter_to_alloc_type"><a class="link" href="#unordered_multimap_iter_to_alloc_type"><em>iter-to-alloc-type</em></a></h5>
+<div class="listingblock">
+<div class="content">
+<pre>template&lt;class InputIterator&gt;
+  using <em>iter-to-alloc-type</em> = std::pair&lt;
+    std::add_const_t&lt;std::tuple_element_t&lt;0, <a href="#unordered_map_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;&gt;,
+    std::tuple_element_t&lt;1, <a href="#unordered_map_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;&gt;; // exposition only</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect3">
 <h4 id="unordered_multimap_equality_comparisons"><a class="link" href="#unordered_multimap_equality_comparisons">Equality Comparisons</a></h4>
 <div class="sect4">
 <h5 id="unordered_multimap_operator"><a class="link" href="#unordered_multimap_operator">operator==</a></h5>
@@ -9309,26 +9645,70 @@ namespace boost {
     void <a href="#unordered_set_rehash">rehash</a>(size_type n);
     void <a href="#unordered_set_reserve">reserve</a>(size_type n);
   };
-}
 
-// Equality Comparisons
-template&lt;class Key, class Hash, class Pred, class Alloc&gt;
-  bool <a href="#unordered_set_operator">operator==</a>(const unordered_set&lt;Key, Hash, Pred, Alloc&gt;&amp; x,
-                  const unordered_set&lt;Key, Hash, Pred, Alloc&gt;&amp; y);
+  // Deduction Guides
+  template&lt;class InputIterator,
+           class Hash = boost::hash&lt;<a href="#unordered_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;,
+           class Pred = std::equal_to&lt;<a href="#unordered_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;,
+           class Allocator = std::allocator&lt;<a href="#unordered_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;&gt;
+    unordered_set(InputIterator, InputIterator, typename <a href="#unordered_set_deduction_guides"><em>see below</em></a>::size_type = <a href="#unordered_set_deduction_guides"><em>see below</em></a>,
+                  Hash = Hash(), Pred = Pred(), Allocator = Allocator())
+      -&gt; unordered_set&lt;<a href="#unordered_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;, Hash, Pred, Allocator&gt;;
 
-template&lt;class Key, class Hash, class Pred, class Alloc&gt;
-  bool <a href="#unordered_set_operator_2">operator!=</a>(const unordered_set&lt;Key, Hash, Pred, Alloc&gt;&amp; x,
-                  const unordered_set&lt;Key, Hash, Pred, Alloc&gt;&amp; y);
+  template&lt;class T, class Hash = boost::hash&lt;T&gt;, class Pred = std::equal_to&lt;T&gt;,
+           class Allocator = std::allocator&lt;T&gt;&gt;
+    unordered_set(std::initializer_list&lt;T&gt;, typename <a href="#unordered_set_deduction_guides"><em>see below</em></a>::size_type = <a href="#unordered_set_deduction_guides"><em>see below</em></a>,
+                  Hash = Hash(), Pred = Pred(), Allocator = Allocator())
+      -&gt; unordered_set&lt;T, Hash, Pred, Allocator&gt;;
 
-// swap
-template&lt;class Key, class Hash, class Pred, class Alloc&gt;
-  void <a href="#unordered_set_swap_2">swap</a>(unordered_set&lt;Key, Hash, Pred, Alloc&gt;&amp; x,
-            unordered_set&lt;Key, Hash, Pred, Alloc&gt;&amp; y)
-    noexcept(noexcept(x.swap(y)));
+  template&lt;class InputIterator, class Allocator&gt;
+    unordered_set(InputIterator, InputIterator, typename <a href="#unordered_set_deduction_guides"><em>see below</em></a>::size_type, Allocator)
+      -&gt; unordered_set&lt;<a href="#unordered_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;,
+                       boost::hash&lt;<a href="#unordered_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;,
+                       std::equal_to&lt;<a href="#unordered_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;, Allocator&gt;;
 
-template&lt;class K, class H, class P, class A, class Predicate&gt;
-  typename unordered_set&lt;K, H, P, A&gt;::size_type
-    <a href="#unordered_set_erase_if">erase_if</a>(unordered_set&lt;K, H, P, A&gt;&amp; c, Predicate pred);</pre>
+  template&lt;class InputIterator, class Allocator&gt;
+    unordered_set(InputIterator, InputIterator, Allocator)
+      -&gt; unordered_set&lt;<a href="#unordered_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;,
+                       boost::hash&lt;<a href="#unordered_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;,
+                       std::equal_to&lt;<a href="#unordered_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;, Allocator&gt;;
+
+  template&lt;class InputIterator, class Hash, class Allocator&gt;
+    unordered_set(InputIterator, InputIterator, typename <a href="#unordered_set_deduction_guides"><em>see below</em></a>::size_type, Hash, Allocator)
+      -&gt; unordered_set&lt;<a href="#unordered_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;, Hash,
+                       std::equal_to&lt;<a href="#unordered_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;, Allocator&gt;;
+
+  template&lt;class T, class Allocator&gt;
+    unordered_set(std::initializer_list&lt;T&gt;, typename <a href="#unordered_set_deduction_guides"><em>see below</em></a>::size_type, Allocator)
+      -&gt; unordered_set&lt;T, boost::hash&lt;T&gt;, std::equal_to&lt;T&gt;, Allocator&gt;;
+
+  template&lt;class T, class Allocator&gt;
+    unordered_set(std::initializer_list&lt;T&gt;, Allocator)
+      -&gt; unordered_set&lt;T, boost::hash&lt;T&gt;, std::equal_to&lt;T&gt;, Allocator&gt;;
+
+  template&lt;class T, class Hash, class Allocator&gt;
+    unordered_set(std::initializer_list&lt;T&gt;, typename <a href="#unordered_set_deduction_guides"><em>see below</em></a>::size_type, Hash, Allocator)
+      -&gt; unordered_set&lt;T, Hash, std::equal_to&lt;T&gt;, Allocator&gt;;
+
+  // Equality Comparisons
+  template&lt;class Key, class Hash, class Pred, class Alloc&gt;
+    bool <a href="#unordered_set_operator">operator==</a>(const unordered_set&lt;Key, Hash, Pred, Alloc&gt;&amp; x,
+                    const unordered_set&lt;Key, Hash, Pred, Alloc&gt;&amp; y);
+
+  template&lt;class Key, class Hash, class Pred, class Alloc&gt;
+    bool <a href="#unordered_set_operator_2">operator!=</a>(const unordered_set&lt;Key, Hash, Pred, Alloc&gt;&amp; x,
+                    const unordered_set&lt;Key, Hash, Pred, Alloc&gt;&amp; y);
+
+  // swap
+  template&lt;class Key, class Hash, class Pred, class Alloc&gt;
+    void <a href="#unordered_set_swap_2">swap</a>(unordered_set&lt;Key, Hash, Pred, Alloc&gt;&amp; x,
+              unordered_set&lt;Key, Hash, Pred, Alloc&gt;&amp; y)
+      noexcept(noexcept(x.swap(y)));
+
+  template&lt;class K, class H, class P, class A, class Predicate&gt;
+    typename unordered_set&lt;K, H, P, A&gt;::size_type
+      <a href="#unordered_set_erase_if">erase_if</a>(unordered_set&lt;K, H, P, A&gt;&amp; c, Predicate pred);
+}</pre>
 </div>
 </div>
 <hr>
@@ -11787,6 +12167,43 @@ Throws:
 </div>
 </div>
 <div class="sect3">
+<h4 id="unordered_set_deduction_guides"><a class="link" href="#unordered_set_deduction_guides">Deduction Guides</a></h4>
+<div class="paragraph">
+<p>A deduction guide will not participate in overload resolution if any of the following are true:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>It has an <code>InputIterator</code> template parameter and a type that does not qualify as an input iterator is deduced for that parameter.</p>
+</li>
+<li>
+<p>It has an <code>Allocator</code> template parameter and a type that does not qualify as an allocator is deduced for that parameter.</p>
+</li>
+<li>
+<p>It has a <code>Hash</code> template parameter and an integral type or a type that qualifies as an allocator is deduced for that parameter.</p>
+</li>
+<li>
+<p>It has a <code>Pred</code> template parameter and a type that qualifies as an allocator is deduced for that parameter.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>A <code>size_­type</code> parameter type in a deduction guide refers to the <code>size_­type</code> member type of the
+container type deduced by the deduction guide. Its default value coincides with the default value
+of the constructor selected.</p>
+</div>
+<div class="sect4">
+<h5 id="unordered_set_iter_value_type"><a class="link" href="#unordered_set_iter_value_type"><em>iter-value-type</em></a></h5>
+<div class="listingblock">
+<div class="content">
+<pre>template&lt;class InputIterator&gt;
+  using <em>iter-value-type</em> =
+    typename std::iterator_traits&lt;InputIterator&gt;::value_type; // exposition only</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect3">
 <h4 id="unordered_set_equality_comparisons"><a class="link" href="#unordered_set_equality_comparisons">Equality Comparisons</a></h4>
 <div class="sect4">
 <h5 id="unordered_set_operator"><a class="link" href="#unordered_set_operator">operator==</a></h5>
@@ -12123,26 +12540,71 @@ namespace boost {
     void <a href="#unordered_multiset_rehash">rehash</a>(size_type n);
     void <a href="#unordered_multiset_reserve">reserve</a>(size_type n);
   };
-}
 
-// Equality Comparisons
-template&lt;class Key, class Hash, class Pred, class Alloc&gt;
-  bool <a href="#unordered_multiset_operator">operator==</a>(const unordered_multiset&lt;Key, Hash, Pred, Alloc&gt;&amp; x,
-                  const unordered_multiset&lt;Key, Hash, Pred, Alloc&gt;&amp; y);
+  // Deduction Guides
+  template&lt;class InputIterator,
+           class Hash = boost::hash&lt;<a href="#unordered_multiset_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;,
+           class Pred = std::equal_to&lt;<a href="#unordered_multiset_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;,
+           class Allocator = std::allocator&lt;<a href="#unordered_multiset_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;&gt;
+    unordered_multiset(InputIterator, InputIterator, typename <a href="#unordered_multiset_deduction_guides"><em>see below</em></a>::size_type = <a href="#unordered_multiset_deduction_guides"><em>see below</em></a>,
+                       Hash = Hash(), Pred = Pred(), Allocator = Allocator())
+      -&gt; unordered_multiset&lt;<a href="#unordered_multiset_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;, Hash, Pred, Allocator&gt;;
 
-template&lt;class Key, class Hash, class Pred, class Alloc&gt;
-  bool <a href="#unordered_multiset_operator_2">operator!=</a>(const unordered_multiset&lt;Key, Hash, Pred, Alloc&gt;&amp; x,
-                  const unordered_multiset&lt;Key, Hash, Pred, Alloc&gt;&amp; y);
+  template&lt;class T, class Hash = boost::hash&lt;T&gt;, class Pred = std::equal_to&lt;T&gt;,
+           class Allocator = std::allocator&lt;T&gt;&gt;
+    unordered_multiset(std::initializer_list&lt;T&gt;, typename <a href="#unordered_multiset_deduction_guides"><em>see below</em></a>::size_type = <a href="#unordered_multiset_deduction_guides"><em>see below</em></a>,
+                       Hash = Hash(), Pred = Pred(), Allocator = Allocator())
+      -&gt; unordered_multiset&lt;T, Hash, Pred, Allocator&gt;;
 
-// swap
-template&lt;class Key, class Hash, class Pred, class Alloc&gt;
-  void <a href="#unordered_multiset_swap_2">swap</a>(unordered_multiset&lt;Key, Hash, Pred, Alloc&gt;&amp; x,
-            unordered_multiset&lt;Key, Hash, Pred, Alloc&gt;&amp; y)
-    noexcept(noexcept(x.swap(y)));
+  template&lt;class InputIterator, class Allocator&gt;
+    unordered_multiset(InputIterator, InputIterator, typename <a href="#unordered_multiset_deduction_guides"><em>see below</em></a>::size_type, Allocator)
+      -&gt; unordered_multiset&lt;<a href="#unordered_multiset_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;,
+                            boost::hash&lt;<a href="#unordered_multiset_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;,
+                            std::equal_to&lt;<a href="#unordered_multiset_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;, Allocator&gt;;
 
-template&lt;class K, class H, class P, class A, class Predicate&gt;
-  typename unordered_multiset&lt;K, H, P, A&gt;::size_type
-    <a href="#unordered_multiset_erase_if">erase_if</a>(unordered_multiset&lt;K, H, P, A&gt;&amp; c, Predicate pred);</pre>
+  template&lt;class InputIterator, class Allocator&gt;
+    unordered_multiset(InputIterator, InputIterator, Allocator)
+      -&gt; unordered_multiset&lt;<a href="#unordered_multiset_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;,
+                            boost::hash&lt;<a href="#unordered_multiset_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;,
+                            std::equal_to&lt;<a href="#unordered_multiset_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;, Allocator&gt;;
+
+  template&lt;class InputIterator, class Hash, class Allocator&gt;
+    unordered_multiset(InputIterator, InputIterator, typename <a href="#unordered_multiset_deduction_guides"><em>see below</em></a>::size_type, Hash,
+                       Allocator)
+      -&gt; unordered_multiset&lt;<a href="#unordered_multiset_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;, Hash,
+                            std::equal_to&lt;<a href="#unordered_multiset_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;, Allocator&gt;;
+
+  template&lt;class T, class Allocator&gt;
+    unordered_multiset(std::initializer_list&lt;T&gt;, typename <a href="#unordered_multiset_deduction_guides"><em>see below</em></a>::size_type, Allocator)
+      -&gt; unordered_multiset&lt;T, boost::hash&lt;T&gt;, std::equal_to&lt;T&gt;, Allocator&gt;;
+
+  template&lt;class T, class Allocator&gt;
+    unordered_multiset(std::initializer_list&lt;T&gt;, Allocator)
+      -&gt; unordered_multiset&lt;T, boost::hash&lt;T&gt;, std::equal_to&lt;T&gt;, Allocator&gt;;
+
+  template&lt;class T, class Hash, class Allocator&gt;
+    unordered_multiset(std::initializer_list&lt;T&gt;, typename <a href="#unordered_multiset_deduction_guides"><em>see below</em></a>::size_type, Hash, Allocator)
+      -&gt; unordered_multiset&lt;T, Hash, std::equal_to&lt;T&gt;, Allocator&gt;;
+
+  // Equality Comparisons
+  template&lt;class Key, class Hash, class Pred, class Alloc&gt;
+    bool <a href="#unordered_multiset_operator">operator==</a>(const unordered_multiset&lt;Key, Hash, Pred, Alloc&gt;&amp; x,
+                    const unordered_multiset&lt;Key, Hash, Pred, Alloc&gt;&amp; y);
+
+  template&lt;class Key, class Hash, class Pred, class Alloc&gt;
+    bool <a href="#unordered_multiset_operator_2">operator!=</a>(const unordered_multiset&lt;Key, Hash, Pred, Alloc&gt;&amp; x,
+                    const unordered_multiset&lt;Key, Hash, Pred, Alloc&gt;&amp; y);
+
+  // swap
+  template&lt;class Key, class Hash, class Pred, class Alloc&gt;
+    void <a href="#unordered_multiset_swap_2">swap</a>(unordered_multiset&lt;Key, Hash, Pred, Alloc&gt;&amp; x,
+              unordered_multiset&lt;Key, Hash, Pred, Alloc&gt;&amp; y)
+      noexcept(noexcept(x.swap(y)));
+
+  template&lt;class K, class H, class P, class A, class Predicate&gt;
+    typename unordered_multiset&lt;K, H, P, A&gt;::size_type
+      <a href="#unordered_multiset_erase_if">erase_if</a>(unordered_multiset&lt;K, H, P, A&gt;&amp; c, Predicate pred);
+}</pre>
 </div>
 </div>
 <hr>
@@ -14574,6 +15036,43 @@ Throws:
 </div>
 </div>
 <div class="sect3">
+<h4 id="unordered_multiset_deduction_guides"><a class="link" href="#unordered_multiset_deduction_guides">Deduction Guides</a></h4>
+<div class="paragraph">
+<p>A deduction guide will not participate in overload resolution if any of the following are true:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>It has an <code>InputIterator</code> template parameter and a type that does not qualify as an input iterator is deduced for that parameter.</p>
+</li>
+<li>
+<p>It has an <code>Allocator</code> template parameter and a type that does not qualify as an allocator is deduced for that parameter.</p>
+</li>
+<li>
+<p>It has a <code>Hash</code> template parameter and an integral type or a type that qualifies as an allocator is deduced for that parameter.</p>
+</li>
+<li>
+<p>It has a <code>Pred</code> template parameter and a type that qualifies as an allocator is deduced for that parameter.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>A <code>size_­type</code> parameter type in a deduction guide refers to the <code>size_­type</code> member type of the
+container type deduced by the deduction guide. Its default value coincides with the default value
+of the constructor selected.</p>
+</div>
+<div class="sect4">
+<h5 id="unordered_multiset_iter_value_type"><a class="link" href="#unordered_multiset_iter_value_type"><em>iter-value-type</em></a></h5>
+<div class="listingblock">
+<div class="content">
+<pre>template&lt;class InputIterator&gt;
+  using <em>iter-value-type</em> =
+    typename std::iterator_traits&lt;InputIterator&gt;::value_type; // exposition only</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect3">
 <h4 id="unordered_multiset_equality_comparisons"><a class="link" href="#unordered_multiset_equality_comparisons">Equality Comparisons</a></h4>
 <div class="sect4">
 <h5 id="unordered_multiset_operator"><a class="link" href="#unordered_multiset_operator">operator==</a></h5>
@@ -15001,26 +15500,76 @@ namespace boost {
     void <a href="#unordered_flat_map_rehash">rehash</a>(size_type n);
     void <a href="#unordered_flat_map_reserve">reserve</a>(size_type n);
   };
-}
 
-// Equality Comparisons
-template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
-  bool <a href="#unordered_flat_map_operator_2">operator==</a>(const unordered_flat_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
-                  const unordered_flat_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y);
+  // Deduction Guides
+  template&lt;class InputIterator,
+           class Hash = boost::hash&lt;<a href="#unordered_flat_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;,
+           class Pred = std::equal_to&lt;<a href="#unordered_flat_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;,
+           class Allocator = std::allocator&lt;<a href="#unordered_flat_map_iter_to_alloc_type"><em>iter-to-alloc-type</em></a>&lt;InputIterator&gt;&gt;&gt;
+    unordered_flat_map(InputIterator, InputIterator, typename <a href="#unordered_flat_map_deduction_guides"><em>see below</em></a>::size_type = <a href="#unordered_flat_map_deduction_guides"><em>see below</em></a>,
+                       Hash = Hash(), Pred = Pred(), Allocator = Allocator())
+      -&gt; unordered_flat_map&lt;<a href="#unordered_flat_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;, <a href="#unordered_flat_map_iter_mapped_type"><em>iter-mapped-type</em></a>&lt;InputIterator&gt;, Hash,
+                            Pred, Allocator&gt;;
 
-template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
-  bool <a href="#unordered_flat_map_operator_3">operator!=</a>(const unordered_flat_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
-                  const unordered_flat_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y);
+  template&lt;class Key, class T, class Hash = boost::hash&lt;Key&gt;,
+           class Pred = std::equal_to&lt;Key&gt;,
+           class Allocator = std::allocator&lt;std::pair&lt;const Key, T&gt;&gt;&gt;
+    unordered_flat_map(std::initializer_list&lt;std::pair&lt;Key, T&gt;&gt;,
+                       typename <a href="#unordered_flat_map_deduction_guides"><em>see below</em></a>::size_type = <a href="#unordered_flat_map_deduction_guides"><em>see below</em></a>, Hash = Hash(),
+                       Pred = Pred(), Allocator = Allocator())
+      -&gt; unordered_flat_map&lt;Key, T, Hash, Pred, Allocator&gt;;
 
-// swap
-template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
-  void <a href="#unordered_flat_map_swap_2">swap</a>(unordered_flat_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
-            unordered_flat_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y)
-    noexcept(noexcept(x.swap(y)));
+  template&lt;class InputIterator, class Allocator&gt;
+    unordered_flat_map(InputIterator, InputIterator, typename <a href="#unordered_flat_map_deduction_guides"><em>see below</em></a>::size_type, Allocator)
+      -&gt; unordered_flat_map&lt;<a href="#unordered_flat_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;, <a href="#unordered_flat_map_iter_mapped_type"><em>iter-mapped-type</em></a>&lt;InputIterator&gt;,
+                            boost::hash&lt;<a href="#unordered_flat_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;,
+                            std::equal_to&lt;<a href="#unordered_flat_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;, Allocator&gt;;
 
-template&lt;class K, class T, class H, class P, class A, class Predicate&gt;
-  typename unordered_flat_map&lt;K, T, H, P, A&gt;::size_type
-     <a href="#unordered_flat_map_erase_if">erase_if</a>(unordered_flat_map&lt;K, T, H, P, A&gt;&amp; c, Predicate pred);</pre>
+  template&lt;class InputIterator, class Allocator&gt;
+    unordered_flat_map(InputIterator, InputIterator, Allocator)
+      -&gt; unordered_flat_map&lt;<a href="#unordered_flat_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;, <a href="#unordered_flat_map_iter_mapped_type"><em>iter-mapped-type</em></a>&lt;InputIterator&gt;,
+                            boost::hash&lt;<a href="#unordered_flat_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;,
+                            std::equal_to&lt;<a href="#unordered_flat_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;, Allocator&gt;;
+
+  template&lt;class InputIterator, class Hash, class Allocator&gt;
+    unordered_flat_map(InputIterator, InputIterator, typename <a href="#unordered_flat_map_deduction_guides"><em>see below</em></a>::size_type, Hash,
+                       Allocator)
+      -&gt; unordered_flat_map&lt;<a href="#unordered_flat_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;, <a href="#unordered_flat_map_iter_mapped_type"><em>iter-mapped-type</em></a>&lt;InputIterator&gt;, Hash,
+                            std::equal_to&lt;<a href="#unordered_flat_map_iter_key_type"><em>iter-key-type</em></a>&lt;InputIterator&gt;&gt;, Allocator&gt;;
+
+  template&lt;class Key, class T, class Allocator&gt;
+    unordered_flat_map(std::initializer_list&lt;std::pair&lt;Key, T&gt;&gt;, typename <a href="#unordered_flat_map_deduction_guides"><em>see below</em></a>::size_type,
+                       Allocator)
+      -&gt; unordered_flat_map&lt;Key, T, boost::hash&lt;Key&gt;, std::equal_to&lt;Key&gt;, Allocator&gt;;
+
+  template&lt;class Key, class T, class Allocator&gt;
+    unordered_flat_map(std::initializer_list&lt;std::pair&lt;Key, T&gt;&gt;, Allocator)
+      -&gt; unordered_flat_map&lt;Key, T, boost::hash&lt;Key&gt;, std::equal_to&lt;Key&gt;, Allocator&gt;;
+
+  template&lt;class Key, class T, class Hash, class Allocator&gt;
+    unordered_flat_map(std::initializer_list&lt;std::pair&lt;Key, T&gt;&gt;, typename <a href="#unordered_flat_map_deduction_guides"><em>see below</em></a>::size_type,
+                       Hash, Allocator)
+      -&gt; unordered_flat_map&lt;Key, T, Hash, std::equal_to&lt;Key&gt;, Allocator&gt;;
+
+  // Equality Comparisons
+  template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
+    bool <a href="#unordered_flat_map_operator_2">operator==</a>(const unordered_flat_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
+                    const unordered_flat_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y);
+
+  template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
+    bool <a href="#unordered_flat_map_operator_3">operator!=</a>(const unordered_flat_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
+                    const unordered_flat_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y);
+
+  // swap
+  template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
+    void <a href="#unordered_flat_map_swap_2">swap</a>(unordered_flat_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
+              unordered_flat_map&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y)
+      noexcept(noexcept(x.swap(y)));
+
+  template&lt;class K, class T, class H, class P, class A, class Predicate&gt;
+    typename unordered_flat_map&lt;K, T, H, P, A&gt;::size_type
+       <a href="#unordered_flat_map_erase_if">erase_if</a>(unordered_flat_map&lt;K, T, H, P, A&gt;&amp; c, Predicate pred);
+}</pre>
 </div>
 </div>
 <hr>
@@ -17103,6 +17652,74 @@ Throws:
 </div>
 </div>
 <div class="sect3">
+<h4 id="unordered_flat_map_deduction_guides"><a class="link" href="#unordered_flat_map_deduction_guides">Deduction Guides</a></h4>
+<div class="paragraph">
+<p>A deduction guide will not participate in overload resolution if any of the following are true:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>It has an <code>InputIterator</code> template parameter and a type that does not qualify as an input iterator is deduced for that parameter.</p>
+</li>
+<li>
+<p>It has an <code>Allocator</code> template parameter and a type that does not qualify as an allocator is deduced for that parameter.</p>
+</li>
+<li>
+<p>It has a <code>Hash</code> template parameter and an integral type or a type that qualifies as an allocator is deduced for that parameter.</p>
+</li>
+<li>
+<p>It has a <code>Pred</code> template parameter and a type that qualifies as an allocator is deduced for that parameter.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>A <code>size_­type</code> parameter type in a deduction guide refers to the <code>size_­type</code> member type of the
+container type deduced by the deduction guide. Its default value coincides with the default value
+of the constructor selected.</p>
+</div>
+<div class="sect4">
+<h5 id="unordered_flat_map_iter_value_type"><a class="link" href="#unordered_flat_map_iter_value_type"><em>iter-value-type</em></a></h5>
+<div class="listingblock">
+<div class="content">
+<pre>template&lt;class InputIterator&gt;
+  using <em>iter-value-type</em> =
+    typename std::iterator_traits&lt;InputIterator&gt;::value_type; // exposition only</pre>
+</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="unordered_flat_map_iter_key_type"><a class="link" href="#unordered_flat_map_iter_key_type"><em>iter-key-type</em></a></h5>
+<div class="listingblock">
+<div class="content">
+<pre>template&lt;class InputIterator&gt;
+  using <em>iter-key-type</em> = std::remove_const_t&lt;
+    std::tuple_element_t&lt;0, <a href="#unordered_map_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;&gt;; // exposition only</pre>
+</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="unordered_flat_map_iter_mapped_type"><a class="link" href="#unordered_flat_map_iter_mapped_type"><em>iter-mapped-type</em></a></h5>
+<div class="listingblock">
+<div class="content">
+<pre>template&lt;class InputIterator&gt;
+  using <em>iter-mapped-type</em> =
+    std::tuple_element_t&lt;1, <a href="#unordered_map_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;;  // exposition only</pre>
+</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="unordered_flat_map_iter_to_alloc_type"><a class="link" href="#unordered_flat_map_iter_to_alloc_type"><em>iter-to-alloc-type</em></a></h5>
+<div class="listingblock">
+<div class="content">
+<pre>template&lt;class InputIterator&gt;
+  using <em>iter-to-alloc-type</em> = std::pair&lt;
+    std::add_const_t&lt;std::tuple_element_t&lt;0, <a href="#unordered_map_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;&gt;,
+    std::tuple_element_t&lt;1, <a href="#unordered_map_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;&gt;; // exposition only</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect3">
 <h4 id="unordered_flat_map_equality_comparisons"><a class="link" href="#unordered_flat_map_equality_comparisons">Equality Comparisons</a></h4>
 <div class="sect4">
 <h5 id="unordered_flat_map_operator_2"><a class="link" href="#unordered_flat_map_operator_2">operator==</a></h5>
@@ -17433,26 +18050,71 @@ namespace boost {
     void <a href="#unordered_flat_set_rehash">rehash</a>(size_type n);
     void <a href="#unordered_flat_set_reserve">reserve</a>(size_type n);
   };
-}
 
-// Equality Comparisons
-template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
-  bool <a href="#unordered_flat_set_operator_2">operator!=</a>(const unordered_flat_set&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
-                  const unordered_flat_set&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y);
+  // Deduction Guides
+  template&lt;class InputIterator,
+           class Hash = boost::hash&lt;<a href="#unordered_flat_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;,
+           class Pred = std::equal_to&lt;<a href="#unordered_flat_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;,
+           class Allocator = std::allocator&lt;<a href="#unordered_flat_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;&gt;
+    unordered_flat_set(InputIterator, InputIterator, typename <a href="#unordered_flat_set_deduction_guides"><em>see below</em></a>::size_type = <a href="#unordered_flat_set_deduction_guides"><em>see below</em></a>,
+                       Hash = Hash(), Pred = Pred(), Allocator = Allocator())
+      -&gt; unordered_flat_set&lt;<a href="#unordered_flat_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;, Hash, Pred, Allocator&gt;;
 
-template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
-  bool <a href="#unordered_flat_set_operator_3">operator!=</a>(const unordered_flat_set&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
-                  const unordered_flat_set&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y);
+  template&lt;class T, class Hash = boost::hash&lt;T&gt;, class Pred = std::equal_to&lt;T&gt;,
+           class Allocator = std::allocator&lt;T&gt;&gt;
+    unordered_flat_set(std::initializer_list&lt;T&gt;, typename <a href="#unordered_flat_set_deduction_guides"><em>see below</em></a>::size_type = <a href="#unordered_flat_set_deduction_guides"><em>see below</em></a>,
+                       Hash = Hash(), Pred = Pred(), Allocator = Allocator())
+      -&gt; unordered_flat_set&lt;T, Hash, Pred, Allocator&gt;;
 
-// swap
-template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
-  void <a href="#unordered_flat_set_swap_2">swap</a>(unordered_flat_set&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
-            unordered_flat_set&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y)
-    noexcept(noexcept(x.swap(y)));
+  template&lt;class InputIterator, class Allocator&gt;
+    unordered_flat_set(InputIterator, InputIterator, typename <a href="#unordered_flat_set_deduction_guides"><em>see below</em></a>::size_type, Allocator)
+      -&gt; unordered_flat_set&lt;<a href="#unordered_flat_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;,
+                            boost::hash&lt;<a href="#unordered_flat_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;,
+                            std::equal_to&lt;<a href="#unordered_flat_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;, Allocator&gt;;
 
-template&lt;class K, class T, class H, class P, class A, class Predicate&gt;
-  typename unordered_flat_set&lt;K, T, H, P, A&gt;::size_type
-     <a href="#unordered_flat_set_erase_if">erase_if</a>(unordered_flat_set&lt;K, T, H, P, A&gt;&amp; c, Predicate pred);</pre>
+  template&lt;class InputIterator, class Allocator&gt;
+    unordered_flat_set(InputIterator, InputIterator, Allocator)
+      -&gt; unordered_flat_set&lt;<a href="#unordered_flat_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;,
+                            boost::hash&lt;<a href="#unordered_flat_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;,
+                            std::equal_to&lt;<a href="#unordered_flat_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;, Allocator&gt;;
+
+  template&lt;class InputIterator, class Hash, class Allocator&gt;
+    unordered_flat_set(InputIterator, InputIterator, typename <a href="#unordered_flat_set_deduction_guides"><em>see below</em></a>::size_type, Hash,
+                       Allocator)
+      -&gt; unordered_flat_set&lt;<a href="#unordered_flat_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;, Hash,
+                            std::equal_to&lt;<a href="#unordered_flat_set_iter_value_type"><em>iter-value-type</em></a>&lt;InputIterator&gt;&gt;, Allocator&gt;;
+
+  template&lt;class T, class Allocator&gt;
+    unordered_flat_set(std::initializer_list&lt;T&gt;, typename <a href="#unordered_flat_set_deduction_guides"><em>see below</em></a>::size_type, Allocator)
+      -&gt; unordered_flat_set&lt;T, boost::hash&lt;T&gt;, std::equal_to&lt;T&gt;, Allocator&gt;;
+
+  template&lt;class T, class Allocator&gt;
+    unordered_flat_set(std::initializer_list&lt;T&gt;, Allocator)
+      -&gt; unordered_flat_set&lt;T, boost::hash&lt;T&gt;, std::equal_to&lt;T&gt;, Allocator&gt;;
+
+  template&lt;class T, class Hash, class Allocator&gt;
+    unordered_flat_set(std::initializer_list&lt;T&gt;, typename <a href="#unordered_flat_set_deduction_guides"><em>see below</em></a>::size_type, Hash, Allocator)
+      -&gt; unordered_flat_set&lt;T, Hash, std::equal_to&lt;T&gt;, Allocator&gt;;
+
+  // Equality Comparisons
+  template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
+    bool <a href="#unordered_flat_set_operator_2">operator!=</a>(const unordered_flat_set&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
+                    const unordered_flat_set&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y);
+
+  template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
+    bool <a href="#unordered_flat_set_operator_3">operator!=</a>(const unordered_flat_set&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
+                    const unordered_flat_set&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y);
+
+  // swap
+  template&lt;class Key, class T, class Hash, class Pred, class Alloc&gt;
+    void <a href="#unordered_flat_set_swap_2">swap</a>(unordered_flat_set&lt;Key, T, Hash, Pred, Alloc&gt;&amp; x,
+              unordered_flat_set&lt;Key, T, Hash, Pred, Alloc&gt;&amp; y)
+      noexcept(noexcept(x.swap(y)));
+
+  template&lt;class K, class T, class H, class P, class A, class Predicate&gt;
+    typename unordered_flat_set&lt;K, T, H, P, A&gt;::size_type
+       <a href="#unordered_flat_set_erase_if">erase_if</a>(unordered_flat_set&lt;K, T, H, P, A&gt;&amp; c, Predicate pred);
+}</pre>
 </div>
 </div>
 <hr>
@@ -19186,6 +19848,43 @@ Throws:
 </div>
 </div>
 <div class="sect3">
+<h4 id="unordered_flat_set_deduction_guides"><a class="link" href="#unordered_flat_set_deduction_guides">Deduction Guides</a></h4>
+<div class="paragraph">
+<p>A deduction guide will not participate in overload resolution if any of the following are true:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>It has an <code>InputIterator</code> template parameter and a type that does not qualify as an input iterator is deduced for that parameter.</p>
+</li>
+<li>
+<p>It has an <code>Allocator</code> template parameter and a type that does not qualify as an allocator is deduced for that parameter.</p>
+</li>
+<li>
+<p>It has a <code>Hash</code> template parameter and an integral type or a type that qualifies as an allocator is deduced for that parameter.</p>
+</li>
+<li>
+<p>It has a <code>Pred</code> template parameter and a type that qualifies as an allocator is deduced for that parameter.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>A <code>size_­type</code> parameter type in a deduction guide refers to the <code>size_­type</code> member type of the
+container type deduced by the deduction guide. Its default value coincides with the default value
+of the constructor selected.</p>
+</div>
+<div class="sect4">
+<h5 id="unordered_flat_set_iter_value_type"><a class="link" href="#unordered_flat_set_iter_value_type"><em>iter-value-type</em></a></h5>
+<div class="listingblock">
+<div class="content">
+<pre>template&lt;class InputIterator&gt;
+  using <em>iter-value-type</em> =
+    typename std::iterator_traits&lt;InputIterator&gt;::value_type; // exposition only</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect3">
 <h4 id="unordered_flat_set_equality_comparisons"><a class="link" href="#unordered_flat_set_equality_comparisons">Equality Comparisons</a></h4>
 <div class="sect4">
 <h5 id="unordered_flat_set_operator"><a class="link" href="#unordered_flat_set_operator">operator==</a></h5>
@@ -19337,6 +20036,12 @@ Notes:
 <li>
 <p>Added fast containers <code>boost::unordered_flat_map</code> and <code>boost::unordered_flat_set</code>
 based on open addressing.</p>
+</li>
+<li>
+<p>Added CTAD deduction guides for all containers.</p>
+</li>
+<li>
+<p>Added missing constructors as specified in <a href="https://cplusplus.github.io/LWG/issue2713">LWG issue 2713</a>.</p>
 </li>
 </ul>
 </div>

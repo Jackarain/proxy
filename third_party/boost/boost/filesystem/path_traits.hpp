@@ -33,4 +33,6 @@ namespace path_traits = boost::filesystem::detail::path_traits;
 
 #include <boost/filesystem/detail/footer.hpp>
 
+#endif // !defined(BOOST_FILESYSTEM_NO_DEPRECATED)
+
 #endif // BOOST_FILESYSTEM_PATH_TRAITS_HPP

@@ -27,6 +27,8 @@
 <a name="core.revision_history"></a><a class="link" href="revision_history.html" title="Revision History">Revision History</a>
 </h2></div></div></div>
 <div class="toc"><dl class="toc">
+<dt><span class="section"><a href="revision_history.html#core.revision_history.changes_in_1_81_0">Changes in 1.81.0</a></span></dt>
+<dt><span class="section"><a href="revision_history.html#core.revision_history.changes_in_1_80_0">Changes in 1.80.0</a></span></dt>
 <dt><span class="section"><a href="revision_history.html#core.revision_history.changes_in_1_79_0">Changes in 1.79.0</a></span></dt>
 <dt><span class="section"><a href="revision_history.html#core.revision_history.changes_in_1_78_0">Changes in 1.78.0</a></span></dt>
 <dt><span class="section"><a href="revision_history.html#core.revision_history.changes_in_1_77_0">Changes in 1.77.0</a></span></dt>
@@ -37,6 +39,63 @@
 <dt><span class="section"><a href="revision_history.html#core.revision_history.changes_in_1_67_0">Changes in 1.67.0</a></span></dt>
 <dt><span class="section"><a href="revision_history.html#core.revision_history.changes_in_1_65_0">Changes in 1.65.0</a></span></dt>
 </dl></div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="core.revision_history.changes_in_1_81_0"></a><a class="link" href="revision_history.html#core.revision_history.changes_in_1_81_0" title="Changes in 1.81.0">Changes in 1.81.0</a>
+</h3></div></div></div>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+            <a class="link" href="empty_value.html" title="empty_value"><code class="computeroutput"><span class="identifier">empty_value</span></code></a>
+            members are now marked as <code class="computeroutput"><span class="keyword">constexpr</span></code>.
+          </li>
+<li class="listitem">
+            Added <a class="link" href="fclose_deleter.html" title="fclose_deleter"><code class="computeroutput"><span class="identifier">fclose_deleter</span></code></a>,
+            a deleter that calls <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">fclose</span></code>
+            on a pointer to <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">FILE</span></code>.
+          </li>
+<li class="listitem">
+            Bit manipulation utilities in <a class="link" href="bit.html" title="bit"><code class="computeroutput"><span class="identifier">boost</span><span class="special">/</span><span class="identifier">core</span><span class="special">/</span><span class="identifier">bit</span><span class="special">.</span><span class="identifier">hpp</span></code></a> now explicitly require unsigned
+            integers on input. (<a href="https://github.com/boostorg/core/issues/129" target="_top">#129</a>)
+          </li>
+<li class="listitem">
+            <code class="computeroutput"><span class="identifier">bit_width</span></code> now returns
+            <code class="computeroutput"><span class="keyword">int</span></code> instead of a value of
+            the input argument type. This follows the resolution of <a href="https://cplusplus.github.io/LWG/issue3656" target="_top">LWG3656</a>.
+          </li>
+</ul></div>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="core.revision_history.changes_in_1_80_0"></a><a class="link" href="revision_history.html#core.revision_history.changes_in_1_80_0" title="Changes in 1.80.0">Changes in 1.80.0</a>
+</h3></div></div></div>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+            In <a class="link" href="allocator_access.html" title="allocator_access"><code class="computeroutput"><span class="identifier">boost</span><span class="special">/</span><span class="identifier">core</span><span class="special">/</span><span class="identifier">allocator_access</span><span class="special">.</span><span class="identifier">hpp</span></code></a>,
+            added detection of <code class="computeroutput"><span class="identifier">construct</span></code>
+            and <code class="computeroutput"><span class="identifier">destroy</span></code> members of
+            an allocator.
+          </li>
+<li class="listitem">
+            <code class="computeroutput"><span class="identifier">boost</span><span class="special">/</span><span class="identifier">core</span><span class="special">/</span><span class="identifier">alloc_construct</span><span class="special">.</span><span class="identifier">hpp</span></code> header is now deprecated and will
+            be removed in a future release. Its functionality was moved to <a class="link" href="allocator_access.html" title="allocator_access"><code class="computeroutput"><span class="identifier">boost</span><span class="special">/</span><span class="identifier">core</span><span class="special">/</span><span class="identifier">allocator_access</span><span class="special">.</span><span class="identifier">hpp</span></code></a>.
+            In particular, new methods <code class="computeroutput"><span class="identifier">allocator_construct_n</span></code>
+            and <code class="computeroutput"><span class="identifier">allocator_destroy_n</span></code>
+            were added for allocating and destroying arrays.
+          </li>
+<li class="listitem">
+            Worked around MSVC bug that failed to compile <a class="link" href="span.html" title="span"><code class="computeroutput"><span class="identifier">span</span></code></a> in C++17 mode when Boost.Range
+            headers were included. (<a href="https://github.com/boostorg/core/issues/105" target="_top">#105</a>,
+            <a href="https://github.com/boostorg/core/pull/115" target="_top">PR#115</a>)
+          </li>
+<li class="listitem">
+            Added support for 128-bit integer types in <a class="link" href="type_name.html" title="type_name"><code class="computeroutput"><span class="identifier">type_name</span></code></a>.
+          </li>
+<li class="listitem">
+            In <a class="link" href="pointer_traits.html" title="pointer_traits"><code class="computeroutput"><span class="identifier">pointer_traits</span></code></a>,
+            pointer rebinding now supports C++03 compilers.
+          </li>
+</ul></div>
+</div>
 <div class="section">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="core.revision_history.changes_in_1_79_0"></a><a class="link" href="revision_history.html#core.revision_history.changes_in_1_79_0" title="Changes in 1.79.0">Changes in 1.79.0</a>
@@ -51,11 +110,11 @@
           </li>
 <li class="listitem">
             <code class="computeroutput"><span class="identifier">boost</span><span class="special">/</span><span class="identifier">iterator</span><span class="special">.</span><span class="identifier">hpp</span></code> is deprecated and will be removed
-            in a future release. The header defines <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">iterator</span></code>
+            in a future release. The header defines the <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">iterator</span></code>
             template, which is equivalent to <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">iterator</span></code>
-            in <code class="computeroutput"><span class="special">&lt;</span><span class="identifier">iterator</span><span class="special">&gt;</span></code> header. However, since <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">iterator</span></code> is itself deprecated in C++17,
-            users are advised to remove <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">iterator</span></code>
-            or <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">iterator</span></code> use from their code.
+            in the <code class="computeroutput"><span class="special">&lt;</span><span class="identifier">iterator</span><span class="special">&gt;</span></code> header. However, since <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">iterator</span></code> is itself deprecated in C++17,
+            users are advised to remove the use of <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">iterator</span></code>
+            or <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">iterator</span></code> from their code.
           </li>
 <li class="listitem">
             Added <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">core</span><span class="special">::</span><span class="identifier">verbose_terminate_handler</span></code>, a utility

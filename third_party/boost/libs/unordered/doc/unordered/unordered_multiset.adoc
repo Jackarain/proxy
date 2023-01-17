@@ -182,26 +182,71 @@ namespace boost {
     void xref:#unordered_multiset_rehash[rehash](size_type n);
     void xref:#unordered_multiset_reserve[reserve](size_type n);
   };
+
+  // Deduction Guides
+  template<class InputIterator,
+           class Hash = boost::hash<xref:#unordered_multiset_iter_value_type[__iter-value-type__]<InputIterator>>,
+           class Pred = std::equal_to<xref:#unordered_multiset_iter_value_type[__iter-value-type__]<InputIterator>>,
+           class Allocator = std::allocator<xref:#unordered_multiset_iter_value_type[__iter-value-type__]<InputIterator>>>
+    unordered_multiset(InputIterator, InputIterator, typename xref:#unordered_multiset_deduction_guides[__see below__]::size_type = xref:#unordered_multiset_deduction_guides[__see below__],
+                       Hash = Hash(), Pred = Pred(), Allocator = Allocator())
+      -> unordered_multiset<xref:#unordered_multiset_iter_value_type[__iter-value-type__]<InputIterator>, Hash, Pred, Allocator>;
+
+  template<class T, class Hash = boost::hash<T>, class Pred = std::equal_to<T>,
+           class Allocator = std::allocator<T>>
+    unordered_multiset(std::initializer_list<T>, typename xref:#unordered_multiset_deduction_guides[__see below__]::size_type = xref:#unordered_multiset_deduction_guides[__see below__],
+                       Hash = Hash(), Pred = Pred(), Allocator = Allocator())
+      -> unordered_multiset<T, Hash, Pred, Allocator>;
+
+  template<class InputIterator, class Allocator>
+    unordered_multiset(InputIterator, InputIterator, typename xref:#unordered_multiset_deduction_guides[__see below__]::size_type, Allocator)
+      -> unordered_multiset<xref:#unordered_multiset_iter_value_type[__iter-value-type__]<InputIterator>,
+                            boost::hash<xref:#unordered_multiset_iter_value_type[__iter-value-type__]<InputIterator>>,
+                            std::equal_to<xref:#unordered_multiset_iter_value_type[__iter-value-type__]<InputIterator>>, Allocator>;
+
+  template<class InputIterator, class Allocator>
+    unordered_multiset(InputIterator, InputIterator, Allocator)
+      -> unordered_multiset<xref:#unordered_multiset_iter_value_type[__iter-value-type__]<InputIterator>,
+                            boost::hash<xref:#unordered_multiset_iter_value_type[__iter-value-type__]<InputIterator>>,
+                            std::equal_to<xref:#unordered_multiset_iter_value_type[__iter-value-type__]<InputIterator>>, Allocator>;
+
+  template<class InputIterator, class Hash, class Allocator>
+    unordered_multiset(InputIterator, InputIterator, typename xref:#unordered_multiset_deduction_guides[__see below__]::size_type, Hash,
+                       Allocator)
+      -> unordered_multiset<xref:#unordered_multiset_iter_value_type[__iter-value-type__]<InputIterator>, Hash,
+                            std::equal_to<xref:#unordered_multiset_iter_value_type[__iter-value-type__]<InputIterator>>, Allocator>;
+
+  template<class T, class Allocator>
+    unordered_multiset(std::initializer_list<T>, typename xref:#unordered_multiset_deduction_guides[__see below__]::size_type, Allocator)
+      -> unordered_multiset<T, boost::hash<T>, std::equal_to<T>, Allocator>;
+
+  template<class T, class Allocator>
+    unordered_multiset(std::initializer_list<T>, Allocator)
+      -> unordered_multiset<T, boost::hash<T>, std::equal_to<T>, Allocator>;
+
+  template<class T, class Hash, class Allocator>
+    unordered_multiset(std::initializer_list<T>, typename xref:#unordered_multiset_deduction_guides[__see below__]::size_type, Hash, Allocator)
+      -> unordered_multiset<T, Hash, std::equal_to<T>, Allocator>;
+      
+  // Equality Comparisons
+  template<class Key, class Hash, class Pred, class Alloc>
+    bool xref:#unordered_multiset_operator[operator++==++](const unordered_multiset<Key, Hash, Pred, Alloc>& x,
+                    const unordered_multiset<Key, Hash, Pred, Alloc>& y);
+
+  template<class Key, class Hash, class Pred, class Alloc>
+    bool xref:#unordered_multiset_operator_2[operator!=](const unordered_multiset<Key, Hash, Pred, Alloc>& x,
+                    const unordered_multiset<Key, Hash, Pred, Alloc>& y);
+
+  // swap
+  template<class Key, class Hash, class Pred, class Alloc>
+    void xref:#unordered_multiset_swap_2[swap](unordered_multiset<Key, Hash, Pred, Alloc>& x,
+              unordered_multiset<Key, Hash, Pred, Alloc>& y)
+      noexcept(noexcept(x.swap(y)));
+
+  template<class K, class H, class P, class A, class Predicate>
+    typename unordered_multiset<K, H, P, A>::size_type
+      xref:#unordered_multiset_erase_if[erase_if](unordered_multiset<K, H, P, A>& c, Predicate pred);
 }
-
-// Equality Comparisons
-template<class Key, class Hash, class Pred, class Alloc>
-  bool xref:#unordered_multiset_operator[operator++==++](const unordered_multiset<Key, Hash, Pred, Alloc>& x,
-                  const unordered_multiset<Key, Hash, Pred, Alloc>& y);
-
-template<class Key, class Hash, class Pred, class Alloc>
-  bool xref:#unordered_multiset_operator_2[operator!=](const unordered_multiset<Key, Hash, Pred, Alloc>& x,
-                  const unordered_multiset<Key, Hash, Pred, Alloc>& y);
-
-// swap
-template<class Key, class Hash, class Pred, class Alloc>
-  void xref:#unordered_multiset_swap_2[swap](unordered_multiset<Key, Hash, Pred, Alloc>& x,
-            unordered_multiset<Key, Hash, Pred, Alloc>& y)
-    noexcept(noexcept(x.swap(y)));
-
-template<class K, class H, class P, class A, class Predicate>
-  typename unordered_multiset<K, H, P, A>::size_type
-    xref:#unordered_multiset_erase_if[erase_if](unordered_multiset<K, H, P, A>& c, Predicate pred);
 -----
 
 ---
@@ -1363,6 +1408,26 @@ Throws:;; The function has no effect if an exception is thrown, unless it is thr
 
 
 ---
+
+=== Deduction Guides
+A deduction guide will not participate in overload resolution if any of the following are true:
+
+  - It has an `InputIterator` template parameter and a type that does not qualify as an input iterator is deduced for that parameter.
+  - It has an `Allocator` template parameter and a type that does not qualify as an allocator is deduced for that parameter.
+  - It has a `Hash` template parameter and an integral type or a type that qualifies as an allocator is deduced for that parameter.
+  - It has a `Pred` template parameter and a type that qualifies as an allocator is deduced for that parameter.
+
+A `size_­type` parameter type in a deduction guide refers to the `size_­type` member type of the
+container type deduced by the deduction guide. Its default value coincides with the default value
+of the constructor selected.
+
+==== __iter-value-type__
+[listings,subs="+macros,+quotes"]
+-----
+template<class InputIterator>
+  using __iter-value-type__ =
+    typename std::iterator_traits<InputIterator>::value_type; // exposition only
+-----
 
 === Equality Comparisons
 

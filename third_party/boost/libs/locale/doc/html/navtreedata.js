@@ -95,9 +95,9 @@ var NAVTREEINDEX =
 [
 ".html",
 "classboost_1_1locale_1_1generator.html#a99fb69f05b0d3f86e37f52b8282c2f18",
-"group__boundary.html#ga097dde150d04bc71adcbd3ca825f00ad",
-"group__message.html#ga303a6a6d42413cc91bdcc9a6491b2447",
-"using_localization_backends.html#posix_backend"
+"group__boundary.html#ga0f144a68688caf101e88f6824e1f0130",
+"group__message.html#ga33bdf7fbb164a96a8685b5747afc2b45",
+"using_localization_backends.html#supported_features_by_backends"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

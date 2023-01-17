@@ -22,6 +22,8 @@ make_error_code(
 {
     struct codes : error_category
     {
+        virtual ~codes() = default;
+
         codes() noexcept
             : error_category(
                 0x0536e50a30f9e9f2)
@@ -77,6 +79,8 @@ make_error_condition(
 {
     struct codes : error_category
     {
+        virtual ~codes() = default;
+
         codes() noexcept
             : error_category(
                 0x809a015e2fe509bd)

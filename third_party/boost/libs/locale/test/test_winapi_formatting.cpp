@@ -35,11 +35,9 @@ void test_by_char(const std::locale& l, std::string name, int lcid)
         ss_type ss;
         ss.imbue(l);
 
-        ss << 1045.45;
-        TEST(ss);
+        TEST(ss << 1045.45);
         double n;
-        ss >> n;
-        TEST(ss);
+        TEST(ss >> n);
         TEST(n == 1045.45);
         TEST_EQ(to_utf8(ss.str()), "1045.45");
     }
@@ -50,11 +48,9 @@ void test_by_char(const std::locale& l, std::string name, int lcid)
         ss.imbue(l);
 
         ss << as::number;
-        ss << 1045.45;
-        TEST(ss);
+        TEST(ss << 1045.45);
         double n;
-        ss >> n;
-        TEST(ss);
+        TEST(ss >> n);
         TEST_EQ(n, 1045.45);
 
         if(name == "ru_RU.UTF-8") {
@@ -77,8 +73,7 @@ void test_by_char(const std::locale& l, std::string name, int lcid)
         ss.imbue(l);
 
         ss << as::currency;
-        ss << 1043.34;
-        TEST(ss);
+        TEST(ss << 1043.34);
 
 #ifndef BOOST_LOCALE_NO_WINAPI_BACKEND
         wchar_t buf[256];

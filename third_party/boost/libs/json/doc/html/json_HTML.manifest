@@ -7,9 +7,13 @@ json/dom/string.html
 json/dom/array.html
 json/dom/object.html
 json/dom/numbers.html
-json/dom/conversion.html
 json/dom/initializer_lists.html
 json/dom/nested_access.html
+json/conversion.html
+json/conversion/custom_conversions.html
+json/conversion/non_throwing_conversions.html
+json/conversion/allocation_control.html
+json/conversion/avoiding_physical_dependency.html
 json/allocators.html
 json/allocators/background.html
 json/allocators/storage_ptr.html

@@ -244,4 +244,69 @@ image::fca.png[align=center]
 
 Thus container-wide iteration is turned into traversing the non-empty bucket groups (an operation with constant time complexity) which reduces the time complexity back to `O(size())`. In total, a bucket group is only 4 words in size and it views `sizeof(std::size_t) * CHAR_BIT` buckets meaning that for all common implementations, there's only 4 bits of space overhead per bucket introduced by the bucket groups.
 
-For more information on implementation rationale, read the <<Implementation Rationale, corresponding section>>.
+A more detailed description of Boost.Unordered's closed-addressing implementation is
+given in an
+https://bannalia.blogspot.com/2022/06/advancing-state-of-art-for.html[external article].
+For more information on implementation rationale, read the
+xref:#rationale_boostunordered_multiset_and_boostunordered_multimap[corresponding section].
+
+== Open Addressing Implementation
+
+The diagram shows the basic internal layout of `boost::unordered_flat_map` and
+`boost:unordered_flat_set`.
+
+
+[#img-foa-layout]
+.Open-addressing layout used by Boost.Unordered.
+image::foa.png[align=center]
+
+As with all open-addressing containers, elements are stored directly in the bucket array.
+This array is logically divided into 2^_n_^ _groups_ of 15 elements each.
+In addition to the bucket array, there is an associated _metadata array_ with 2^_n_^
+16-byte words.
+
+[#img-foa-metadata]
+.Breakdown of a metadata word.
+image::foa-metadata.png[align=center]
+
+A metadata word is divided into 15 _h_~_i_~ bytes (one for each associated
+bucket), and an _overflow byte_ (_ofw_ in the diagram). The value of _h_~_i_~ is:
+
+  - 0 if the corresponding bucket is empty.
+  - 1 to encode a special empty bucket called a _sentinel_, which is used internally to
+  stop iteration when the container has been fully traversed.
+  - If the bucket is occupied, a _reduced hash value_ obtained from the hash value of
+  the element.
+
+When looking for an element with hash value _h_, SIMD technologies such as
+https://en.wikipedia.org/wiki/SSE2[SSE2] and
+https://en.wikipedia.org/wiki/ARM_architecture_family#Advanced_SIMD_(Neon)[Neon] allow us
+to very quickly inspect the full metadata word and look for the reduced value of _h_ among all the
+15 buckets with just a handful of CPU instructions: non-matching buckets can be
+readily discarded, and those whose reduced hash value matches need be inspected via full
+comparison with the corresponding element. If the looked-for element is not present,
+the overflow byte is inspected:
+
+- If the bit in the position _h_ mod 8 is zero, lookup terminates (and the
+element is not present).
+- If the bit is set to 1 (the group has been _overflowed_), further groups are
+checked using https://en.wikipedia.org/wiki/Quadratic_probing[_quadratic probing_], and
+the process is repeated.
+
+Insertion is algorithmically similar: empty buckets are located using SIMD,
+and when going past a full group its corresponding overflow bit is set to 1.
+
+In architectures without SIMD support, the logical layout stays the same, but the metadata
+word is codified using a technique we call _bit interleaving_: this layout allows us
+to emulate SIMD with reasonably good performance using only standard arithmetic and
+logical operations.
+
+[#img-foa-metadata-interleaving]
+.Bit-interleaved metadata word.
+image::foa-metadata-interleaving.png[align=center]
+
+A more detailed description of Boost.Unordered's open-addressing implementation is
+given in an
+https://bannalia.blogspot.com/2022/11/inside-boostunorderedflatmap.html[external article].
+For more information on implementation rationale, read the
+xref:#rationale_boostunordered_flat_set_and_boostunordered_flat_map[corresponding section].

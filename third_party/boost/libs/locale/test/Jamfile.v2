@@ -37,6 +37,7 @@ run show_config.cpp : : : <test-info>always_show_run_output ;
 # Shared
 run test_utf.cpp ;
 run test_date_time.cpp ;
+run test_ios_info.cpp ;
 run test_ios_prop.cpp ;
 run test_codecvt.cpp ;
 run test_codepage_converter.cpp ;

@@ -64,8 +64,6 @@ namespace boost { namespace locale {
             date_long = 3 << 10,
             date_full = 4 << 10,
             date_flags_mask = 7 << 10,
-
-            datetime_flags_mask = date_flags_mask | time_flags_mask
         };
 
         /// Special string patterns that can be used for text formatting
@@ -81,7 +79,7 @@ namespace boost { namespace locale {
 
     } // namespace flags
 
-    /// \brief This class holds an external data - beyond existing fmtflags that std::ios_base holds
+    /// \brief This class holds external data beyond existing fmtflags that std::ios_base holds
     ///
     /// You should almost never create this object directly. Instead, you should access it via
     /// ios_info::get(stream_object) static member function. It automatically creates default formatting data for that
@@ -98,56 +96,43 @@ namespace boost { namespace locale {
         /// Get ios_info instance for specific stream object
         static ios_info& get(std::ios_base& ios);
 
-        /// Set a flags that define a way for format data like number, spell, currency etc.
+        /// Set flags that define how to format data, e.g. number, spell, currency etc.
         void display_flags(uint64_t flags);
+        /// Get flags that define how to format data, e.g. number, spell, currency etc.
+        uint64_t display_flags() const;
 
-        /// Set a flags that define how to format currency
+        /// Set flags that define how to format currency
         void currency_flags(uint64_t flags);
+        /// Get flags that define how to format currency
+        uint64_t currency_flags() const;
 
-        /// Set a flags that define how to format date
+        /// Set flags that define how to format date
         void date_flags(uint64_t flags);
+        /// Get flags that define how to format date
+        uint64_t date_flags() const;
 
-        /// Set a flags that define how to format time
+        /// Set flags that define how to format time
         void time_flags(uint64_t flags);
-
-        /// Set a flags that define how to format both date and time
-        void datetime_flags(uint64_t flags);
+        /// Get flags that define how to format time
+        uint64_t time_flags() const;
 
         /// Set special message domain identification
         void domain_id(int);
+        /// Get special message domain identification
+        int domain_id() const;
 
         /// Set time zone for formatting dates and time
         void time_zone(const std::string&);
+        /// Get time zone for formatting dates and time
+        std::string time_zone() const;
 
         /// Set date/time pattern (strftime like)
         template<typename CharType>
         void date_time_pattern(const std::basic_string<CharType>& str)
         {
             string_set& s = date_time_pattern_set();
-            s.set<CharType>(str.c_str());
+            s.set(str.c_str());
         }
-
-        /// Get a flags that define a way for format data like number, spell, currency etc.
-        uint64_t display_flags() const;
-
-        /// Get a flags that define how to format currency
-        uint64_t currency_flags() const;
-
-        /// Get a flags that define how to format date
-        uint64_t date_flags() const;
-
-        /// Get a flags that define how to format time
-        uint64_t time_flags() const;
-
-        /// Get a flags that define how to format both date and time
-        uint64_t datetime_flags() const;
-
-        /// Get special message domain identification
-        int domain_id() const;
-
-        /// Get time zone for formatting dates and time
-        std::string time_zone() const;
-
         /// Get date/time pattern (strftime like)
         template<typename CharType>
         std::basic_string<CharType> date_time_pattern() const

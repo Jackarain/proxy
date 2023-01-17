@@ -1,7 +1,7 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Revision history</title>
+<title>Changelog</title>
 <link rel="stylesheet" href="../../../../../doc/src/boostbook.css" type="text/css">
 <meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
 <link rel="home" href="../index.html" title="Chapter 1. Boost.Histogram">
@@ -23,11 +23,37 @@
 </div>
 <div class="section">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
-<a name="histogram.history"></a><a class="link" href="history.html" title="Revision history">Revision history</a>
+<a name="histogram.changelog"></a><a class="link" href="changelog.html" title="Changelog">Changelog</a>
 </h2></div></div></div>
 <h4>
-<a name="histogram.history.h0"></a>
-      <span class="phrase"><a name="histogram.history.boost_1_80"></a></span><a class="link" href="history.html#histogram.history.boost_1_80">Boost
+<a name="histogram.changelog.h0"></a>
+      <span class="phrase"><a name="histogram.changelog.boost_1_81"></a></span><a class="link" href="changelog.html#histogram.changelog.boost_1_81">Boost
+      1.81</a>
+    </h4>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Added new <code class="computeroutput"><span class="identifier">accumulators</span><span class="special">::</span><span class="identifier">fraction</span></code>
+          to compute fractions, their variance, and confidence intervals
+        </li>
+<li class="listitem">
+          Added interval computers for fractions: <code class="computeroutput"><span class="identifier">utility</span><span class="special">::</span><span class="identifier">clopper_pearson</span></code>,
+          <code class="computeroutput"><span class="identifier">utility</span><span class="special">::</span><span class="identifier">wilson_interval</span></code>, <code class="computeroutput"><span class="identifier">utility</span><span class="special">::</span><span class="identifier">jeffreys_interval</span></code>,
+          <code class="computeroutput"><span class="identifier">utility</span><span class="special">::</span><span class="identifier">wald_interval</span></code> which can compute intervals
+          with arbitrary confidence level
+        </li>
+<li class="listitem">
+          Added <code class="computeroutput"><span class="identifier">utility</span><span class="special">::</span><span class="identifier">confidence_level</span></code> and <code class="computeroutput"><span class="identifier">utility</span><span class="special">::</span><span class="identifier">deviation</span></code>
+          types to pass confidence levels as probabilities or in multiples of standard
+          deviation for all interval computers, respectively
+        </li>
+<li class="listitem">
+          Fixed internal <code class="computeroutput"><span class="identifier">sub_array</span></code>
+          and <code class="computeroutput"><span class="identifier">span</span></code> in C++20
+        </li>
+</ul></div>
+<h4>
+<a name="histogram.changelog.h1"></a>
+      <span class="phrase"><a name="histogram.changelog.boost_1_80"></a></span><a class="link" href="changelog.html#histogram.changelog.boost_1_80">Boost
       1.80</a>
     </h4>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
@@ -73,8 +99,8 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h1"></a>
-      <span class="phrase"><a name="histogram.history.boost_1_79"></a></span><a class="link" href="history.html#histogram.history.boost_1_79">Boost
+<a name="histogram.changelog.h2"></a>
+      <span class="phrase"><a name="histogram.changelog.boost_1_79"></a></span><a class="link" href="changelog.html#histogram.changelog.boost_1_79">Boost
       1.79</a>
     </h4>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
@@ -91,8 +117,8 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h2"></a>
-      <span class="phrase"><a name="histogram.history.boost_1_78"></a></span><a class="link" href="history.html#histogram.history.boost_1_78">Boost
+<a name="histogram.changelog.h3"></a>
+      <span class="phrase"><a name="histogram.changelog.boost_1_78"></a></span><a class="link" href="changelog.html#histogram.changelog.boost_1_78">Boost
       1.78</a>
     </h4>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
@@ -113,8 +139,8 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h3"></a>
-      <span class="phrase"><a name="histogram.history.boost_1_77"></a></span><a class="link" href="history.html#histogram.history.boost_1_77">Boost
+<a name="histogram.changelog.h4"></a>
+      <span class="phrase"><a name="histogram.changelog.boost_1_77"></a></span><a class="link" href="changelog.html#histogram.changelog.boost_1_77">Boost
       1.77</a>
     </h4>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
@@ -138,8 +164,8 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h4"></a>
-      <span class="phrase"><a name="histogram.history.boost_1_76"></a></span><a class="link" href="history.html#histogram.history.boost_1_76">Boost
+<a name="histogram.changelog.h5"></a>
+      <span class="phrase"><a name="histogram.changelog.boost_1_76"></a></span><a class="link" href="changelog.html#histogram.changelog.boost_1_76">Boost
       1.76</a>
     </h4>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
@@ -165,8 +191,8 @@
 </ul></div>
         </li></ul></div>
 <h4>
-<a name="histogram.history.h5"></a>
-      <span class="phrase"><a name="histogram.history.boost_1_75"></a></span><a class="link" href="history.html#histogram.history.boost_1_75">Boost
+<a name="histogram.changelog.h6"></a>
+      <span class="phrase"><a name="histogram.changelog.boost_1_75"></a></span><a class="link" href="changelog.html#histogram.changelog.boost_1_75">Boost
       1.75</a>
     </h4>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
@@ -209,8 +235,8 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h6"></a>
-      <span class="phrase"><a name="histogram.history.boost_1_74"></a></span><a class="link" href="history.html#histogram.history.boost_1_74">Boost
+<a name="histogram.changelog.h7"></a>
+      <span class="phrase"><a name="histogram.changelog.boost_1_74"></a></span><a class="link" href="changelog.html#histogram.changelog.boost_1_74">Boost
       1.74</a>
     </h4>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
@@ -267,8 +293,8 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h7"></a>
-      <span class="phrase"><a name="histogram.history.boost_1_73"></a></span><a class="link" href="history.html#histogram.history.boost_1_73">Boost
+<a name="histogram.changelog.h8"></a>
+      <span class="phrase"><a name="histogram.changelog.boost_1_73"></a></span><a class="link" href="changelog.html#histogram.changelog.boost_1_73">Boost
       1.73</a>
     </h4>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
@@ -404,8 +430,8 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h8"></a>
-      <span class="phrase"><a name="histogram.history.boost_1_72"></a></span><a class="link" href="history.html#histogram.history.boost_1_72">Boost
+<a name="histogram.changelog.h9"></a>
+      <span class="phrase"><a name="histogram.changelog.boost_1_72"></a></span><a class="link" href="changelog.html#histogram.changelog.boost_1_72">Boost
       1.72</a>
     </h4>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
@@ -560,8 +586,8 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h9"></a>
-      <span class="phrase"><a name="histogram.history.boost_1_71"></a></span><a class="link" href="history.html#histogram.history.boost_1_71">Boost
+<a name="histogram.changelog.h10"></a>
+      <span class="phrase"><a name="histogram.changelog.boost_1_71"></a></span><a class="link" href="changelog.html#histogram.changelog.boost_1_71">Boost
       1.71</a>
     </h4>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
@@ -658,8 +684,8 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h10"></a>
-      <span class="phrase"><a name="histogram.history.boost_1_70"></a></span><a class="link" href="history.html#histogram.history.boost_1_70">Boost
+<a name="histogram.changelog.h11"></a>
+      <span class="phrase"><a name="histogram.changelog.boost_1_70"></a></span><a class="link" href="changelog.html#histogram.changelog.boost_1_70">Boost
       1.70</a>
     </h4>
 <p>
@@ -741,8 +767,8 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h11"></a>
-      <span class="phrase"><a name="histogram.history.3_2_not_in_boost"></a></span><a class="link" href="history.html#histogram.history.3_2_not_in_boost">3.2
+<a name="histogram.changelog.h12"></a>
+      <span class="phrase"><a name="histogram.changelog.3_2_not_in_boost"></a></span><a class="link" href="changelog.html#histogram.changelog.3_2_not_in_boost">3.2
       (not in Boost)</a>
     </h4>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
@@ -754,8 +780,8 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h12"></a>
-      <span class="phrase"><a name="histogram.history.3_1_not_in_boost"></a></span><a class="link" href="history.html#histogram.history.3_1_not_in_boost">3.1
+<a name="histogram.changelog.h13"></a>
+      <span class="phrase"><a name="histogram.changelog.3_1_not_in_boost"></a></span><a class="link" href="changelog.html#histogram.changelog.3_1_not_in_boost">3.1
       (not in Boost)</a>
     </h4>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
@@ -791,8 +817,8 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h13"></a>
-      <span class="phrase"><a name="histogram.history.3_0_not_in_boost"></a></span><a class="link" href="history.html#histogram.history.3_0_not_in_boost">3.0
+<a name="histogram.changelog.h14"></a>
+      <span class="phrase"><a name="histogram.changelog.3_0_not_in_boost"></a></span><a class="link" href="changelog.html#histogram.changelog.3_0_not_in_boost">3.0
       (not in Boost)</a>
     </h4>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
@@ -831,8 +857,8 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h14"></a>
-      <span class="phrase"><a name="histogram.history.2_0_not_in_boost"></a></span><a class="link" href="history.html#histogram.history.2_0_not_in_boost">2.0
+<a name="histogram.changelog.h15"></a>
+      <span class="phrase"><a name="histogram.changelog.2_0_not_in_boost"></a></span><a class="link" href="changelog.html#histogram.changelog.2_0_not_in_boost">2.0
       (not in Boost)</a>
     </h4>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
@@ -866,8 +892,8 @@
         </li>
 </ul></div>
 <h4>
-<a name="histogram.history.h15"></a>
-      <span class="phrase"><a name="histogram.history.1_0_not_in_boost"></a></span><a class="link" href="history.html#histogram.history.1_0_not_in_boost">1.0
+<a name="histogram.changelog.h16"></a>
+      <span class="phrase"><a name="histogram.changelog.1_0_not_in_boost"></a></span><a class="link" href="changelog.html#histogram.changelog.1_0_not_in_boost">1.0
       (not in Boost)</a>
     </h4>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">

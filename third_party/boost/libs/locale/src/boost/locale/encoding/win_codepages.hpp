@@ -109,6 +109,8 @@ namespace boost { namespace locale { namespace conv { namespace impl {
       {"koi8r", 20866, 0},
       {"koi8u", 21866, 0},
       {"ksc56011987", 949, 0},
+      {"latin1", 28591, 0},
+      {"latin1", 1252, 0},
       {"macintosh", 10000, 0},
       {"ms936", 936, 0},
       {"shiftjis", 932, 0},

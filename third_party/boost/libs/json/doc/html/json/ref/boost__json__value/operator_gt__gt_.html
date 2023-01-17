@@ -27,7 +27,7 @@
 <a name="json.ref.boost__json__value.operator_gt__gt_"></a><a class="link" href="operator_gt__gt_.html" title="value::operator&gt;&gt;">value::operator&gt;&gt;</a>
 </h5></div></div></div>
 <p>
-          <a class="indexterm" name="idm60051"></a>
+          <a class="indexterm" name="idm59692"></a>
         </p>
 <p>
           Parse <a class="link" href="../boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a>
@@ -52,13 +52,16 @@
 <p>
           This function parses JSON from an input stream into a <code class="computeroutput"><span class="identifier">value</span></code>.
           If parsing fails, <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">ios_base</span><span class="special">::</span><span class="identifier">failbit</span></code> will be set for <code class="computeroutput"><span class="identifier">is</span></code> and <code class="computeroutput"><span class="identifier">jv</span></code>
-          will be left unchanged.
+          will be left unchanged. Regardless of whether <code class="computeroutput"><span class="identifier">skipws</span></code>
+          flag is set on <code class="computeroutput"><span class="identifier">is</span></code>, consumes
+          whitespace before and after JSON, because whitespace is considered a part
+          of JSON. Behaves as <a href="https://en.cppreference.com/w/cpp/named_req/FormattedInputFunction" target="_top"><span class="emphasis"><em>FormattedInputFunction</em></span></a>.
         </p>
 <p>
           Note: this operator cannot assume that the stream only contains a single
-          JSON document, which results in <span class="bold"><strong>very underwhelming
-          performance</strong></span>. If you know that your input consists of a single
-          JSON document, consider using <a class="link" href="../boost__json__parse.html" title="parse"><code class="computeroutput"><span class="identifier">parse</span></code></a> function instead.
+          JSON document, which may result in <span class="bold"><strong>very underwhelming
+          performance</strong></span>, if the stream isn't cooperative. If you know that
+          your input consists of a single JSON document, consider using <a class="link" href="../boost__json__parse.html" title="parse"><code class="computeroutput"><span class="identifier">parse</span></code></a> function instead.
         </p>
 <h6>
 <a name="json.ref.boost__json__value.operator_gt__gt_.h2"></a>
@@ -82,7 +85,7 @@
         </h6>
 <p>
           Basic guarantee. Calls to <code class="computeroutput"><span class="identifier">memory_resource</span><span class="special">::</span><span class="identifier">allocate</span></code>
-          may throw. The stream may throw as described by <a href="https://en.cppreference.com/w/cpp/io/basic_ios/exceptions" target="_top"><code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">ios</span><span class="special">::</span><span class="identifier">exceptions</span></code></a>.
+          may throw. The stream may throw as configured by <a href="https://en.cppreference.com/w/cpp/io/basic_ios/exceptions" target="_top"><code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">ios</span><span class="special">::</span><span class="identifier">exceptions</span></code></a>.
         </p>
 <h6>
 <a name="json.ref.boost__json__value.operator_gt__gt_.h5"></a>

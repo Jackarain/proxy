@@ -1103,7 +1103,12 @@ struct url_base_test
 
         set_encoded_host("", "//", host_type::name);
         set_encoded_host("127.0.0.1", "//127.0.0.1", host_type::ipv4);
+        set_encoded_host("10.2.201.1", "//10.2.201.1", host_type::ipv4);
+        set_encoded_host("0.5.15.20", "//0.5.15.20", host_type::ipv4);
+        set_encoded_host("100.101.110.115", "//100.101.110.115", host_type::ipv4);
+        set_encoded_host("200.205.210.255", "//200.205.210.255", host_type::ipv4);
         set_encoded_host("[1::6:c0a8:1]", "//[1::6:c0a8:1]", host_type::ipv6 );
+        set_encoded_host("[::ffff:192.168.102.0]", "//[::ffff:192.168.102.0]", host_type::ipv6 );
         set_encoded_host("[v42.69]", "//[v42.69]", host_type::ipvfuture );
         set_encoded_host("www.example.com", "//www.example.com", host_type::name);
         set_encoded_host("%5b%3a", "//%5b%3a", host_type::name);

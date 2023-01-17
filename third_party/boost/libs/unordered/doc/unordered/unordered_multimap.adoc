@@ -186,27 +186,76 @@ namespace boost {
     void xref:#unordered_multimap_rehash[rehash](size_type n);
     void xref:#unordered_multimap_reserve[reserve](size_type n);
   };
+
+  // Deduction Guides
+  template<class InputIterator,
+           class Hash = boost::hash<xref:#unordered_multimap_iter_key_type[__iter-key-type__]<InputIterator>>,
+           class Pred = std::equal_to<xref:#unordered_multimap_iter_key_type[__iter-key-type__]<InputIterator>>,
+           class Allocator = std::allocator<xref:#unordered_multimap_iter_to_alloc_type[__iter-to-alloc-type__]<InputIterator>>>
+    unordered_multimap(InputIterator, InputIterator, typename xref:#unordered_multimap_deduction_guides[__see below__]::size_type = xref:#unordered_multimap_deduction_guides[__see below__],
+                       Hash = Hash(), Pred = Pred(), Allocator = Allocator())
+      -> unordered_multimap<xref:#unordered_multimap_iter_key_type[__iter-key-type__]<InputIterator>, xref:#unordered_multimap_iter_mapped_type[__iter-mapped-type__]<InputIterator>, Hash,
+                            Pred, Allocator>;
+
+  template<class Key, class T, class Hash = boost::hash<Key>,
+           class Pred = std::equal_to<Key>,
+           class Allocator = std::allocator<std::pair<const Key, T>>>
+    unordered_multimap(std::initializer_list<std::pair<Key, T>>,
+                       typename xref:#unordered_multimap_deduction_guides[__see below__]::size_type = xref:#unordered_multimap_deduction_guides[__see below__], Hash = Hash(),
+                       Pred = Pred(), Allocator = Allocator())
+      -> unordered_multimap<Key, T, Hash, Pred, Allocator>;
+
+  template<class InputIterator, class Allocator>
+    unordered_multimap(InputIterator, InputIterator, typename xref:#unordered_multimap_deduction_guides[__see below__]::size_type, Allocator)
+      -> unordered_multimap<xref:#unordered_multimap_iter_key_type[__iter-key-type__]<InputIterator>, xref:#unordered_multimap_iter_mapped_type[__iter-mapped-type__]<InputIterator>,
+                            boost::hash<xref:#unordered_multimap_iter_key_type[__iter-key-type__]<InputIterator>>,
+                            std::equal_to<xref:#unordered_multimap_iter_key_type[__iter-key-type__]<InputIterator>>, Allocator>;
+
+  template<class InputIterator, class Allocator>
+    unordered_multimap(InputIterator, InputIterator, Allocator)
+      -> unordered_multimap<xref:#unordered_multimap_iter_key_type[__iter-key-type__]<InputIterator>, xref:#unordered_multimap_iter_mapped_type[__iter-mapped-type__]<InputIterator>,
+                            boost::hash<xref:#unordered_multimap_iter_key_type[__iter-key-type__]<InputIterator>>,
+                            std::equal_to<xref:#unordered_multimap_iter_key_type[__iter-key-type__]<InputIterator>>, Allocator>;
+
+  template<class InputIterator, class Hash, class Allocator>
+    unordered_multimap(InputIterator, InputIterator, typename xref:#unordered_multimap_deduction_guides[__see below__]::size_type, Hash,
+                       Allocator)
+      -> unordered_multimap<xref:#unordered_multimap_iter_key_type[__iter-key-type__]<InputIterator>, xref:#unordered_multimap_iter_mapped_type[__iter-mapped-type__]<InputIterator>, Hash,
+                            std::equal_to<xref:#unordered_multimap_iter_key_type[__iter-key-type__]<InputIterator>>, Allocator>;
+
+  template<class Key, class T, class Allocator>
+    unordered_multimap(std::initializer_list<std::pair<Key, T>>, typename xref:#unordered_multimap_deduction_guides[__see below__]::size_type,
+                       Allocator)
+      -> unordered_multimap<Key, T, boost::hash<Key>, std::equal_to<Key>, Allocator>;
+
+  template<class Key, class T, class Allocator>
+    unordered_multimap(std::initializer_list<std::pair<Key, T>>, Allocator)
+      -> unordered_multimap<Key, T, boost::hash<Key>, std::equal_to<Key>, Allocator>;
+
+  template<class Key, class T, class Hash, class Allocator>
+    unordered_multimap(std::initializer_list<std::pair<Key, T>>, typename xref:#unordered_multimap_deduction_guides[__see below__]::size_type,
+                       Hash, Allocator)
+      -> unordered_multimap<Key, T, Hash, std::equal_to<Key>, Allocator>;
+
+  // Equality Comparisons
+  template<class Key, class T, class Hash, class Pred, class Alloc>
+    bool xref:#unordered_multimap_operator[operator++==++](const unordered_multimap<Key, T, Hash, Pred, Alloc>& x,
+                    const unordered_multimap<Key, T, Hash, Pred, Alloc>& y);
+
+  template<class Key, class T, class Hash, class Pred, class Alloc>
+    bool xref:#unordered_multimap_operator_2[operator!=](const unordered_multimap<Key, T, Hash, Pred, Alloc>& x,
+                    const unordered_multimap<Key, T, Hash, Pred, Alloc>& y);
+
+  // swap
+  template<class Key, class T, class Hash, class Pred, class Alloc>
+    void xref:#unordered_multimap_swap_2[swap](unordered_multimap<Key, T, Hash, Pred, Alloc>& x,
+              unordered_multimap<Key, T, Hash, Pred, Alloc>& y)
+      noexcept(noexcept(x.swap(y)));
+
+  template<class K, class T, class H, class P, class A, class Predicate>
+    typename unordered_multimap<K, T, H, P, A>::size_type
+      xref:#unordered_multimap_erase_if[erase_if](unordered_multimap<K, T, H, P, A>& c, Predicate pred);
 }
-
-// Equality Comparisons
-template<class Key, class T, class Hash, class Pred, class Alloc>
-  bool xref:#unordered_multimap_operator[operator++==++](const unordered_multimap<Key, T, Hash, Pred, Alloc>& x,
-                  const unordered_multimap<Key, T, Hash, Pred, Alloc>& y);
-
-template<class Key, class T, class Hash, class Pred, class Alloc>
-  bool xref:#unordered_multimap_operator_2[operator!=](const unordered_multimap<Key, T, Hash, Pred, Alloc>& x,
-                  const unordered_multimap<Key, T, Hash, Pred, Alloc>& y);
-
-// swap
-template<class Key, class T, class Hash, class Pred, class Alloc>
-  void xref:#unordered_multimap_swap_2[swap](unordered_multimap<Key, T, Hash, Pred, Alloc>& x,
-            unordered_multimap<Key, T, Hash, Pred, Alloc>& y)
-    noexcept(noexcept(x.swap(y)));
-
-template<class K, class T, class H, class P, class A, class Predicate>
-  typename unordered_multimap<K, T, H, P, A>::size_type
-    xref:#unordered_multimap_erase_if[erase_if](unordered_multimap<K, T, H, P, A>& c, Predicate pred);
-
 -----
 
 ---
@@ -1401,6 +1450,51 @@ Invalidates iterators, and changes the order of elements. Pointers and reference
 Throws:;; The function has no effect if an exception is thrown, unless it is thrown by the container's hash function or comparison function.
 
 ---
+
+=== Deduction Guides
+A deduction guide will not participate in overload resolution if any of the following are true:
+
+  - It has an `InputIterator` template parameter and a type that does not qualify as an input iterator is deduced for that parameter.
+  - It has an `Allocator` template parameter and a type that does not qualify as an allocator is deduced for that parameter.
+  - It has a `Hash` template parameter and an integral type or a type that qualifies as an allocator is deduced for that parameter.
+  - It has a `Pred` template parameter and a type that qualifies as an allocator is deduced for that parameter.
+
+A `size_­type` parameter type in a deduction guide refers to the `size_­type` member type of the
+container type deduced by the deduction guide. Its default value coincides with the default value
+of the constructor selected.
+
+==== __iter-value-type__
+[listings,subs="+macros,+quotes"]
+-----
+template<class InputIterator>
+  using __iter-value-type__ =
+    typename std::iterator_traits<InputIterator>::value_type; // exposition only
+-----
+
+==== __iter-key-type__
+[listings,subs="+macros,+quotes"]
+-----
+template<class InputIterator>
+  using __iter-key-type__ = std::remove_const_t<
+    std::tuple_element_t<0, xref:#unordered_map_iter_value_type[__iter-value-type__]<InputIterator>>>; // exposition only
+-----
+
+==== __iter-mapped-type__
+[listings,subs="+macros,+quotes"]
+-----
+template<class InputIterator>
+  using __iter-mapped-type__ =
+    std::tuple_element_t<1, xref:#unordered_map_iter_value_type[__iter-value-type__]<InputIterator>>;  // exposition only
+-----
+
+==== __iter-to-alloc-type__
+[listings,subs="+macros,+quotes"]
+-----
+template<class InputIterator>
+  using __iter-to-alloc-type__ = std::pair<
+    std::add_const_t<std::tuple_element_t<0, xref:#unordered_map_iter_value_type[__iter-value-type__]<InputIterator>>>,
+    std::tuple_element_t<1, xref:#unordered_map_iter_value_type[__iter-value-type__]<InputIterator>>>; // exposition only
+-----
 
 === Equality Comparisons
 

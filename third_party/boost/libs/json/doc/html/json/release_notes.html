@@ -28,6 +28,89 @@
 </h2></div></div></div>
 <h4>
 <a name="json.release_notes.h0"></a>
+      <span class="phrase"><a name="json.release_notes.boost_1_81_0"></a></span><a class="link" href="release_notes.html#json.release_notes.boost_1_81_0">Boost
+      1.81.0</a>
+    </h4>
+<p>
+      <span class="bold"><strong>API Changes</strong></span>
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          <a href="https://github.com/cppalliance/json/issues/686%20" target="_top">#686 </a> Conversion traits were redesigned.
+        </li>
+<li class="listitem">
+          <a href="https://github.com/cppalliance/json/issues/756%20" target="_top">#756 </a> Removed <code class="computeroutput"><span class="identifier">condition</span><span class="special">::</span><span class="identifier">assign_error</span></code>.
+        </li>
+<li class="listitem">
+          <a href="https://github.com/cppalliance/json/issues/758%20" target="_top">#758 </a> Removed <code class="computeroutput"><span class="identifier">generic_category</span></code>
+          alias.
+        </li>
+</ul></div>
+<p>
+      <span class="bold"><strong>New Features</strong></span>
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          <a href="https://github.com/cppalliance/json/issues/749%20" target="_top">#749 </a> <code class="computeroutput"><span class="identifier">object</span><span class="special">::</span><span class="identifier">stable_erase</span></code>.
+        </li>
+<li class="listitem">
+          <a href="https://github.com/cppalliance/json/issues/778%20" target="_top">#778 </a> Added error condition for generic library errors.
+        </li>
+<li class="listitem">
+          <a href="https://github.com/cppalliance/json/issues/619%20" target="_top">#619 </a> Added <code class="computeroutput"><span class="identifier">parse</span></code> overload
+          for <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">istream</span></code>.
+        </li>
+<li class="listitem">
+          <a href="https://github.com/cppalliance/json/issues/619%20" target="_top">#619 </a> <code class="computeroutput"><span class="keyword">operator</span><span class="special">&gt;&gt;</span></code>
+          for <code class="computeroutput"><span class="identifier">value</span></code>.
+        </li>
+</ul></div>
+<p>
+      <span class="bold"><strong>Improvements</strong></span>
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          <a href="https://github.com/cppalliance/json/issues/686%20" target="_top">#686 </a> Null-like type conversion support (including <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">nullptr_t</span></code>).
+        </li>
+<li class="listitem">
+          <a href="https://github.com/cppalliance/json/issues/736%20" target="_top">#736 </a> Non-throwing conversion from <code class="computeroutput"><span class="identifier">value</span></code>
+          to user types.
+        </li>
+<li class="listitem">
+          <a href="https://github.com/cppalliance/json/issues/677%20" target="_top">#677 </a> <code class="computeroutput"><span class="identifier">value_to</span><span class="special">/</span><span class="identifier">from</span></code> supports <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">optional</span></code>
+          and <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">nullopt_t</span></code>.
+        </li>
+<li class="listitem">
+          <a href="https://github.com/cppalliance/json/issues/517%20" target="_top">#517 </a> <code class="computeroutput"><span class="identifier">value_to</span><span class="special">/</span><span class="identifier">from</span></code> supports <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">variant</span></code>
+          and <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">monotype</span></code>.
+        </li>
+<li class="listitem">
+          <a href="https://github.com/cppalliance/json/issues/626%20" target="_top">#626 </a> <code class="computeroutput"><span class="identifier">value_to</span><span class="special">/</span><span class="identifier">from</span></code> supports supports described classes
+          and enums.
+        </li>
+<li class="listitem">
+          <a href="https://github.com/cppalliance/json/issues/757%20" target="_top">#757 </a> Rvalue ref-qualified accessors for <code class="computeroutput"><span class="identifier">value</span></code>.
+        </li>
+</ul></div>
+<p>
+      <span class="bold"><strong>Fixes</strong></span>
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          <a href="https://github.com/cppalliance/json/issues/745%20" target="_top">#745 </a> Support for self-swap and self-move in <code class="computeroutput"><span class="identifier">string</span></code>.
+        </li>
+<li class="listitem">
+          <a href="https://github.com/cppalliance/json/issues/747%20" target="_top">#747 </a> Support for self-swap and self-move in <code class="computeroutput"><span class="identifier">array</span></code>.
+        </li>
+<li class="listitem">
+          <a href="https://github.com/cppalliance/json/issues/735%20" target="_top">#735 </a> Replaced C floating point constants with C++ equivalents.
+        </li>
+<li class="listitem">
+          Documentation improvements.
+        </li>
+</ul></div>
+<h4>
+<a name="json.release_notes.h1"></a>
       <span class="phrase"><a name="json.release_notes.boost_1_80_0"></a></span><a class="link" href="release_notes.html#json.release_notes.boost_1_80_0">Boost
       1.80.0</a>
     </h4>
@@ -59,7 +142,7 @@
           on libc++.
         </li>
 <li class="listitem">
-          <a href="https://github.com/cppalliance/json/issues/708" target="_top">#708</a> Fix ambigious conversion to <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">string_view</span></code>
+          <a href="https://github.com/cppalliance/json/issues/708" target="_top">#708</a> Fix ambiguous conversion to <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">string_view</span></code>
           on GCC 8.
         </li>
 <li class="listitem">
@@ -73,7 +156,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="json.release_notes.h1"></a>
+<a name="json.release_notes.h2"></a>
       <span class="phrase"><a name="json.release_notes.boost_1_79_0"></a></span><a class="link" href="release_notes.html#json.release_notes.boost_1_79_0">Boost
       1.79.0</a>
     </h4>
@@ -109,7 +192,7 @@
           <a href="https://github.com/cppalliance/json/issues/668" target="_top">#668</a> Naturally grow string during serialization.
         </li></ul></div>
 <h4>
-<a name="json.release_notes.h2"></a>
+<a name="json.release_notes.h3"></a>
       <span class="phrase"><a name="json.release_notes.boost_1_78_0"></a></span><a class="link" href="release_notes.html#json.release_notes.boost_1_78_0">Boost
       1.78.0</a>
     </h4>
@@ -120,7 +203,7 @@
           <a href="https://github.com/cppalliance/json/issues/628" target="_top">#628</a> Standalone mode of the library is removed.
         </li></ul></div>
 <h4>
-<a name="json.release_notes.h3"></a>
+<a name="json.release_notes.h4"></a>
       <span class="phrase"><a name="json.release_notes.boost_1_78_0_0"></a></span><a class="link" href="release_notes.html#json.release_notes.boost_1_78_0_0">Boost
       1.78.0</a>
     </h4>
@@ -154,7 +237,7 @@
           <a href="https://github.com/cppalliance/json/issues/557" target="_top">#557</a> Add support for <code class="computeroutput"><span class="special">/</span><span class="identifier">Zc</span><span class="special">:</span><span class="identifier">implicitNoexcept</span><span class="special">-</span></code> on MSVC.
         </li></ul></div>
 <h4>
-<a name="json.release_notes.h4"></a>
+<a name="json.release_notes.h5"></a>
       <span class="phrase"><a name="json.release_notes.boost_1_77_0"></a></span><a class="link" href="release_notes.html#json.release_notes.boost_1_77_0">Boost
       1.77.0</a>
     </h4>
@@ -204,7 +287,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="json.release_notes.h5"></a>
+<a name="json.release_notes.h6"></a>
       <span class="phrase"><a name="json.release_notes.boost_1_76_0"></a></span><a class="link" href="release_notes.html#json.release_notes.boost_1_76_0">Boost
       1.76.0</a>
     </h4>
@@ -227,7 +310,7 @@
         </li>
 </ul></div>
 <h4>
-<a name="json.release_notes.h6"></a>
+<a name="json.release_notes.h7"></a>
       <span class="phrase"><a name="json.release_notes.boost_1_75_0"></a></span><a class="link" href="release_notes.html#json.release_notes.boost_1_75_0">Boost
       1.75.0</a>
     </h4>

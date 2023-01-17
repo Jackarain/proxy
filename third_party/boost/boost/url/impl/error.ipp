@@ -20,6 +20,8 @@ make_error_code(error e)
 {
     struct codes : error_category
     {
+        virtual ~codes() = default;
+
         codes() noexcept
             : error_category(
                 0xbc15399d7a4ce829)

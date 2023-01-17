@@ -1148,7 +1148,15 @@
           All traits are implemented the same way using preprocessor macros to avoid
           code duplication. The main files are in <code class="literal">boost/type_traits/detail</code>:
           <code class="literal">has_binary_operator.hpp</code>, <code class="literal">has_prefix_operator.hpp</code>
-          and <code class="literal">has_postfix_operator.hpp</code>. The example of prefix
+          and <code class="literal">has_postfix_operator.hpp</code>.
+        </p>
+<p>
+          Given a sufficiently conforming C++11 compiler, these traits are implemented
+          in a rather compact and straightforward way that should always give accurate
+          answers.
+        </p>
+<p>
+          In C++03 there is a legacy implementation, by way of example the prefix
           <code class="computeroutput"><span class="keyword">operator</span><span class="special">-</span></code>
           is presented below:
         </p>
@@ -1324,7 +1332,7 @@
           <span class="phrase"><a name="boost_typetraits.category.value_traits.operators.limitation"></a></span><a class="link" href="operators.html#boost_typetraits.category.value_traits.operators.limitation">Limitation</a>
         </h6>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
-              Requires a compiler with working SFINAE.
+              Prior to C++11, requires a compiler with working SFINAE.
             </li></ul></div>
 <h6>
 <a name="boost_typetraits.category.value_traits.operators.h6"></a>
@@ -1333,21 +1341,22 @@
         </h6>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
 <li class="listitem">
-              These traits cannot detect whether the operators are public or not:
-              if an operator is defined as a private member of type <code class="computeroutput"><span class="identifier">T</span></code> then the instantiation of the corresponding
-              trait will produce a compiler error. For this reason these traits cannot
-              be used to determine whether a type has a public operator or not.
+              Prior to C++11, these traits cannot detect whether the operators are
+              public or not: if an operator is defined as a private member of type
+              <code class="computeroutput"><span class="identifier">T</span></code> then the instantiation
+              of the corresponding trait will produce a compiler error. For this
+              reason these traits cannot be used to determine whether a type has
+              a public operator or not.
 <pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">A</span> <span class="special">{</span> <span class="keyword">private</span><span class="special">:</span> <span class="identifier">A</span> <span class="keyword">operator</span><span class="special">-();</span> <span class="special">};</span>
 <span class="identifier">boost</span><span class="special">::</span><span class="identifier">has_unary_minus</span><span class="special">&lt;</span><span class="identifier">A</span><span class="special">&gt;::</span><span class="identifier">value</span><span class="special">;</span> <span class="comment">// error: A::operator-() is private</span>
 </pre>
             </li>
 <li class="listitem">
-              There is an issue if the operator exists only for type <code class="computeroutput"><span class="identifier">A</span></code> and <code class="computeroutput"><span class="identifier">B</span></code>
-              is convertible to <code class="computeroutput"><span class="identifier">A</span></code>.
-              In this case, the compiler will report an ambiguous overload because
-              both the existing operator and the one we provide (with argument of
-              type <code class="computeroutput"><span class="identifier">any</span></code>) need type
-              conversion, so that none is preferred.
+              Prior to C++11, there is an issue if the operator exists only for type
+              <code class="computeroutput"><span class="identifier">A</span></code> and <code class="computeroutput"><span class="identifier">B</span></code> is convertible to <code class="computeroutput"><span class="identifier">A</span></code>. In this case, the compiler will
+              report an ambiguous overload because both the existing operator and
+              the one we provide (with argument of type <code class="computeroutput"><span class="identifier">any</span></code>)
+              need type conversion, so that none is preferred.
 <pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">A</span> <span class="special">{</span> <span class="special">};</span>
 <span class="keyword">void</span> <span class="keyword">operator</span><span class="special">-(</span><span class="keyword">const</span> <span class="identifier">A</span><span class="special">&amp;);</span>
 <span class="keyword">struct</span> <span class="identifier">B</span> <span class="special">{</span> <span class="keyword">operator</span> <span class="identifier">A</span><span class="special">();</span> <span class="special">};</span>

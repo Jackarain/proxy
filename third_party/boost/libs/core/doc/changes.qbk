@@ -6,11 +6,39 @@
 
 [section Revision History]
 
+[section Changes in 1.81.0]
+
+* [link core.empty_value `empty_value`] members are now marked as `constexpr`.
+* Added [link core.fclose_deleter `fclose_deleter`], a deleter that calls `std::fclose` on a pointer to `std::FILE`.
+* Bit manipulation utilities in [link core.bit `boost/core/bit.hpp`] now explicitly require unsigned integers on input.
+  ([@https://github.com/boostorg/core/issues/129 #129])
+* `bit_width` now returns `int` instead of a value of the input argument type. This follows the
+  resolution of [@https://cplusplus.github.io/LWG/issue3656 LWG3656].
+
+[endsect]
+
+[section Changes in 1.80.0]
+
+* In [link core.allocator_access `boost/core/allocator_access.hpp`], added detection of `construct` and `destroy`
+  members of an allocator.
+* `boost/core/alloc_construct.hpp` header is now deprecated and will be removed in a future release. Its functionality
+  was moved to [link core.allocator_access `boost/core/allocator_access.hpp`]. In particular, new methods
+  `allocator_construct_n` and `allocator_destroy_n` were added for allocating and destroying arrays.
+* Worked around MSVC bug that failed to compile [link core.span `span`] in C++17 mode when Boost.Range headers were included.
+  ([@https://github.com/boostorg/core/issues/105 #105], [@https://github.com/boostorg/core/pull/115 PR#115])
+* Added support for 128-bit integer types in [link core.type_name `type_name`].
+* In [link core.pointer_traits `pointer_traits`], pointer rebinding now supports C++03 compilers.
+
+[endsect]
+
 [section Changes in 1.79.0]
 
 * Added `boost::allocator_traits`, an implementation of `std::allocator_traits`.
 * Made `boost::pointer_traits` SFINAE friendly.
-* `boost/iterator.hpp` is deprecated and will be removed in a future release. The header defines `boost::iterator` template, which is equivalent to `std::iterator` in `<iterator>` header. However, since `std::iterator` is itself deprecated in C++17, users are advised to remove `boost::iterator` or `std::iterator` use from their code.
+* `boost/iterator.hpp` is deprecated and will be removed in a future release. The header defines the
+  `boost::iterator` template, which is equivalent to `std::iterator` in the `<iterator>` header. However,
+  since `std::iterator` is itself deprecated in C++17, users are advised to remove the use of `boost::iterator`
+  or `std::iterator` from their code.
 * Added `boost::core::verbose_terminate_handler`, a utility function intended
   to be passed to `std::set_terminate` that prints information about the
   uncaught exception to `stderr`.

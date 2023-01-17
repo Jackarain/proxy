@@ -1,7 +1,5 @@
 var NAVTREEINDEX4 =
 {
-"using_localization_backends.html#posix_backend":[4,1,1],
-"using_localization_backends.html#std_backend":[4,1,0],
 "using_localization_backends.html#supported_features_by_backends":[4,2],
 "using_localization_backends.html#using_localization_backends_sec":[4,3],
 "using_localization_backends.html#when_to_use_non_icu_backends":[4,0],

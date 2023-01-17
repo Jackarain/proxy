@@ -816,14 +816,22 @@ error_code dir_itr_create(boost::intrusive_ptr< detail::dir_itr_imp >& imp, fs::
             {
                 DWORD error = ::GetLastError();
 
-                if (error == ERROR_NOT_SUPPORTED || error == ERROR_INVALID_PARAMETER)
+                if (error == ERROR_NOT_SUPPORTED || error == ERROR_INVALID_PARAMETER || error == ERROR_CALL_NOT_IMPLEMENTED)
                 {
                     // Fall back to file_full_dir_info_format.
                     // Note that some mounted filesystems may not support FILE_ID_128 identifiers, which will cause
                     // GetFileInformationByHandleEx(FileIdExtdDirectoryRestartInfo) return ERROR_INVALID_PARAMETER,
                     // even though in general the operation is supported by the kernel. So don't downgrade to
                     // FileFullDirectoryRestartInfo permanently in this case - only for this particular iterator.
-                    if (error == ERROR_NOT_SUPPORTED)
+                    // Some other filesystems also don't implement other info classes and also return ERROR_INVALID_PARAMETER
+                    // (e.g. see https://github.com/boostorg/filesystem/issues/266), so generally treat this error code
+                    // as "non-permanent", even though it is also returned if GetFileInformationByHandleEx in general
+                    // does not support a certain info class. Worst case, we will make extra syscalls on directory iterator
+                    // construction.
+                    // Also note that Wine returns ERROR_CALL_NOT_IMPLEMENTED for unimplemented info classes, and
+                    // up until 7.21 it didn't implement FileIdExtdDirectoryRestartInfo and FileFullDirectoryRestartInfo.
+                    // (https://bugs.winehq.org/show_bug.cgi?id=53590)
+                    if (error == ERROR_NOT_SUPPORTED || error == ERROR_CALL_NOT_IMPLEMENTED)
                         filesystem::detail::atomic_store_relaxed(g_extra_data_format, file_full_dir_info_format);
                     goto fallback_to_file_full_dir_info_format;
                 }
@@ -850,11 +858,12 @@ error_code dir_itr_create(boost::intrusive_ptr< detail::dir_itr_imp >& imp, fs::
             {
                 DWORD error = ::GetLastError();
 
-                if (error == ERROR_NOT_SUPPORTED || error == ERROR_INVALID_PARAMETER)
+                if (error == ERROR_NOT_SUPPORTED || error == ERROR_INVALID_PARAMETER || error == ERROR_CALL_NOT_IMPLEMENTED)
                 {
                     // Fall back to file_id_both_dir_info
-                    filesystem::detail::atomic_store_relaxed(g_extra_data_format, file_id_both_dir_info_format);
-                    goto fallback_to_file_id_both_dir_info;
+                    if (error == ERROR_NOT_SUPPORTED || error == ERROR_CALL_NOT_IMPLEMENTED)
+                        filesystem::detail::atomic_store_relaxed(g_extra_data_format, file_id_both_dir_info_format);
+                    goto fallback_to_file_id_both_dir_info_format;
                 }
 
                 if (error == ERROR_NO_MORE_FILES || error == ERROR_FILE_NOT_FOUND)
@@ -873,11 +882,19 @@ error_code dir_itr_create(boost::intrusive_ptr< detail::dir_itr_imp >& imp, fs::
         break;
 
     case file_id_both_dir_info_format:
-    fallback_to_file_id_both_dir_info:
+    fallback_to_file_id_both_dir_info_format:
         {
             if (!get_file_information_by_handle_ex(iterator_handle, file_id_both_directory_restart_info_class, extra_data, dir_itr_extra_size))
             {
                 DWORD error = ::GetLastError();
+
+                if (error == ERROR_NOT_SUPPORTED || error == ERROR_INVALID_PARAMETER || error == ERROR_CALL_NOT_IMPLEMENTED)
+                {
+                    // Fall back to file_directory_information
+                    if (error == ERROR_NOT_SUPPORTED || error == ERROR_CALL_NOT_IMPLEMENTED)
+                        filesystem::detail::atomic_store_relaxed(g_extra_data_format, file_directory_information_format);
+                    goto fallback_to_file_directory_information_format;
+                }
 
                 if (error == ERROR_NO_MORE_FILES || error == ERROR_FILE_NOT_FOUND)
                     goto done;
@@ -895,6 +912,7 @@ error_code dir_itr_create(boost::intrusive_ptr< detail::dir_itr_imp >& imp, fs::
         break;
 
     default:
+    fallback_to_file_directory_information_format:
         {
             NtQueryDirectoryFile_t* nt_query_directory_file = filesystem::detail::atomic_load_relaxed(boost::filesystem::detail::nt_query_directory_file_api);
             if (BOOST_UNLIKELY(!nt_query_directory_file))

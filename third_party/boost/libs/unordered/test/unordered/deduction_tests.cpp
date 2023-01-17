@@ -269,14 +269,14 @@ template <template <class...> class UnorderedSet> void set_tests()
   test_allocator<int> int_allocator;
 
   /*   template<class InputIt,
-            class Hash = std::hash<typename
-    std::iterator_traits<InputIt>::value_type>, class Pred =
+           class Hash = std::hash<typename
+  std::iterator_traits<InputIt>::value_type>, class Pred =
     std::equal_to<typename std::iterator_traits<InputIt>::value_type>, class
     Alloc = std::allocator<typename std::iterator_traits<InputIt>::value_type>>
-    unordered_set(InputIt, InputIt,
+  unordered_set(InputIt, InputIt,
             typename see below ::size_type = see below,
-            Hash = Hash(), Pred = Pred(), Alloc = Alloc())
-      -> unordered_set<typename std::iterator_traits<InputIt>::value_type, Hash,
+           Hash = Hash(), Pred = Pred(), Alloc = Alloc())
+    -> unordered_set<typename std::iterator_traits<InputIt>::value_type, Hash,
     Pred, Alloc>; */
 
   {
@@ -389,6 +389,35 @@ template <template <class...> class UnorderedSet> void set_tests()
     UnorderedSet s({1, 2}, 0u, f, int_allocator);
     BOOST_TEST_TRAIT_SAME(decltype(s),
       UnorderedSet<int, hash_equals, std::equal_to<int>, test_allocator<int> >);
+  }
+
+  /*
+    template<class InputIterator, class Allocator>
+      unordered_set(InputIterator, InputIterator, Allocator)
+        -> unordered_set<iter-value-type<InputIterator>,
+                         hash<iter-value-type<InputIterator>>,
+                         equal_to<iter-value-type<InputIterator>>,
+                         Allocator>;
+   */
+
+  {
+    UnorderedSet s(y.begin(), y.end(), int_allocator);
+    BOOST_TEST_TRAIT_SAME(
+      decltype(s), UnorderedSet<int, boost::hash<int>, std::equal_to<int>,
+                     test_allocator<int> >);
+  }
+
+  /*
+  template<class T, class Allocator>
+    unordered_set(initializer_list<T>, Allocator)
+      -> unordered_set<T, hash<T>, equal_to<T>, Allocator>;
+ */
+
+  {
+    UnorderedSet s({1, 2}, int_allocator);
+    BOOST_TEST_TRAIT_SAME(
+      decltype(s), UnorderedSet<int, boost::hash<int>, std::equal_to<int>,
+                     test_allocator<int> >);
   }
 }
 

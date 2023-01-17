@@ -43,6 +43,8 @@ struct any_suite
 
 struct suites
 {
+    virtual ~suites() = default;
+
     using iterator = any_suite const* const*;
     virtual void insert(any_suite const&) = 0;
     virtual iterator begin() const noexcept = 0;
@@ -95,7 +97,7 @@ public:
     static any_runner& instance() noexcept;
 
     any_runner() noexcept;
-    ~any_runner();
+    virtual ~any_runner();
 
     virtual void run(any_suite const& test) = 0;
     virtual void note(char const* msg) = 0;

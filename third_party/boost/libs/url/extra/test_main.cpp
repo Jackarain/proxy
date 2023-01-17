@@ -133,6 +133,8 @@ instance() noexcept
         std::vector<any_suite const*> v_;
 
     public:
+        virtual ~suites_impl() = default;
+
         void
         insert(any_suite const& t) override
         {
@@ -375,7 +377,7 @@ public:
         v_.reserve(256);
     }
 
-    ~simple_runner()
+    virtual ~simple_runner()
     {
         log_ <<
             elapsed{clock_type::now() -

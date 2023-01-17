@@ -16,10 +16,6 @@
 #    define BOOST_LOCALE_USE_WIN32_API
 #endif
 
-#ifdef BOOST_MSVC
-#    pragma warning(disable : 4996)
-#endif
-
 namespace boost { namespace locale { namespace util {
     std::string get_system_locale(bool use_utf8)
     {

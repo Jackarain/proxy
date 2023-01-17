@@ -10,7 +10,7 @@
 #include <boost/call_traits.hpp>
 #include <boost/polymorphic_cast.hpp>
 #include <boost/type_traits/is_convertible.hpp>
-#include <boost/utility/enable_if.hpp>
+#include <boost/core/enable_if.hpp>
 
 // This is a really, really limited test so far.  All we're doing
 // right now is checking that the postfix++ proxy for single-pass
@@ -63,7 +63,23 @@ struct proxy
 
 struct value
 {
-    void mutator() {} // non-const member function
+    int increment_count;
+    int private_mutator_count;
+    int& shared_mutator_count;
+
+    explicit value(int& shared_mutator_count) :
+        increment_count(0),
+        private_mutator_count(0),
+        shared_mutator_count(shared_mutator_count)
+    {
+    }
+
+    // non-const member function
+    void mutator()
+    {
+        ++private_mutator_count;
+        ++shared_mutator_count;
+    }
 };
 
 struct input_iter
@@ -75,21 +91,25 @@ struct input_iter
     >
 {
  public:
-    input_iter() {}
+    explicit input_iter(value& val) : state(&val) {}
 
     void increment()
     {
+        ++(state->increment_count);
     }
     value
     dereference() const
     {
-        return value();
+        return *state;
     }
 
     bool equal(input_iter const&) const
     {
         return false;
     }
+
+ private:
+    value* state;
 };
 
 template <class T>
@@ -198,11 +218,28 @@ int main()
     {
         // test for a fix to http://tinyurl.com/zuohe
         // These two lines should be equivalent (and both compile)
-        input_iter p;
+        int shared_mutator_count = 0;
+        value val(shared_mutator_count);
+        input_iter p(val);
         (*p).mutator();
         p->mutator();
+        BOOST_TEST_EQ(val.increment_count, 0);
+        BOOST_TEST_EQ(val.private_mutator_count, 0); // mutator() should be invoked on an object returned by value
+        BOOST_TEST_EQ(shared_mutator_count, 2);
 
         same_type<input_iter::pointer>(p.operator->());
+    }
+
+    {
+        // Test that accessing dereferenced value of a post-incremented iterator works
+        int shared_mutator_count = 0;
+        value val(shared_mutator_count);
+        input_iter p(val);
+        (*p++).mutator();
+        (p++)->mutator();
+        BOOST_TEST_EQ(val.increment_count, 2);
+        BOOST_TEST_EQ(val.private_mutator_count, 0); // mutator() should be invoked on an object returned by value
+        BOOST_TEST_EQ(shared_mutator_count, 2);
     }
 
     {

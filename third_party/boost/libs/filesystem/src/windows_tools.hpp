@@ -1,7 +1,8 @@
 //  windows_tools.hpp  -----------------------------------------------------------------//
 
-//  Copyright 2002-2009, 2014 Beman Dawes
 //  Copyright 2001 Dietmar Kuehl
+//  Copyright 2002-2009, 2014 Beman Dawes
+//  Copyright 2021-2022 Andrey Semashev
 
 //  Distributed under the Boost Software License, Version 1.0.
 //  See http://www.boost.org/LICENSE_1_0.txt
@@ -22,6 +23,10 @@
 #include <windows.h>
 
 #include <boost/filesystem/detail/header.hpp> // must be the last #include
+
+#ifndef IO_REPARSE_TAG_DEDUP
+#define IO_REPARSE_TAG_DEDUP (0x80000013L)
+#endif
 
 #ifndef IO_REPARSE_TAG_MOUNT_POINT
 #define IO_REPARSE_TAG_MOUNT_POINT (0xA0000003L)
@@ -64,7 +69,7 @@ inline boost::filesystem::perms make_permissions(boost::filesystem::path const& 
     return prms;
 }
 
-bool is_reparse_point_a_symlink_ioctl(HANDLE h);
+ULONG get_reparse_point_tag_ioctl(HANDLE h);
 
 inline bool is_reparse_point_tag_a_symlink(ULONG reparse_point_tag)
 {
@@ -81,6 +86,11 @@ inline bool is_reparse_point_tag_a_symlink(ULONG reparse_point_tag)
         // them look like directory symlinks in terms of Boost.Filesystem. read_symlink()
         // may return a volume path or NT path for such symlinks.
         || reparse_point_tag == IO_REPARSE_TAG_MOUNT_POINT; // aka "directory junction" or "junction"
+}
+
+inline bool is_reparse_point_a_symlink_ioctl(HANDLE h)
+{
+    return detail::is_reparse_point_tag_a_symlink(detail::get_reparse_point_tag_ioctl(h));
 }
 
 #if !defined(UNDER_CE)
@@ -155,6 +165,9 @@ struct object_attributes
 
 #ifndef FILE_DIRECTORY_FILE
 #define FILE_DIRECTORY_FILE 0x00000001
+#endif
+#ifndef FILE_SYNCHRONOUS_IO_NONALERT
+#define FILE_SYNCHRONOUS_IO_NONALERT 0x00000020
 #endif
 #ifndef FILE_OPEN_FOR_BACKUP_INTENT
 #define FILE_OPEN_FOR_BACKUP_INTENT 0x00004000

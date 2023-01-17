@@ -28,10 +28,10 @@ core/ref.html
 boost/is_reference_wrapper.html
 boost/reference_wrapper.html
 boost/unwrap_reference.html
-boost/ref_idm10437.html
-boost/cref_idm10451.html
-boost/ref_idm10465.html
-boost/cref_idm10474.html
+boost/ref_idm10539.html
+boost/cref_idm10553.html
+boost/ref_idm10567.html
+boost/cref_idm10576.html
 boost/unwrap_ref.html
 core/scoped_enum.html
 core/span.html

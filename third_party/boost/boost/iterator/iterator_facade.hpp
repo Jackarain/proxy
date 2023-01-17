@@ -150,54 +150,25 @@ namespace iterators {
     // value must be read and stored away before the increment occurs
     // so that *a++ yields the originally referenced element and not
     // the next one.
-    template <class Value>
-    class postfix_increment_dereference_proxy
+    template <class Iterator>
+    class postfix_increment_proxy
     {
-        typedef Value value_type;
-     public:
-#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
-        template<typename OtherValue>
-        explicit postfix_increment_dereference_proxy(OtherValue&& x)
-          : stored_value(static_cast< OtherValue&& >(x))
-        {}
-#else
-        explicit postfix_increment_dereference_proxy(value_type const& x)
-          : stored_value(x)
-        {}
+        typedef typename iterator_value<Iterator>::type value_type;
 
-        explicit postfix_increment_dereference_proxy(value_type& x)
-          : stored_value(x)
+     public:
+        explicit postfix_increment_proxy(Iterator const& x)
+          : stored_iterator(x)
+          , stored_value(*x)
         {}
-#endif
 
         // Returning a mutable reference allows nonsense like
         // (*r++).mutate(), but it imposes fewer assumptions about the
         // behavior of the value_type.  In particular, recall that
         // (*r).mutate() is legal if operator* returns by value.
         // Provides readability of *r++
-        operator value_type&() const
+        value_type& operator*() const
         {
-            return this->stored_value;
-        }
-
-     private:
-        mutable value_type stored_value;
-    };
-
-    template <class Iterator>
-    class postfix_increment_proxy
-    {
-        typedef typename iterator_value<Iterator>::type value_type;
-     public:
-        explicit postfix_increment_proxy(Iterator const& x)
-          : stored_iterator(x)
-          , dereference_proxy(*x)
-        {}
-
-        postfix_increment_dereference_proxy<value_type> const&
-        operator*() const
-        {
-            return dereference_proxy;
+            return stored_value;
         }
 
         // Provides X(r++)
@@ -206,9 +177,15 @@ namespace iterators {
             return stored_iterator;
         }
 
+        // Provides (r++)->foo()
+        value_type* operator->() const
+        {
+            return boost::addressof(stored_value);
+        }
+
      private:
         Iterator stored_iterator;
-        postfix_increment_dereference_proxy<value_type> dereference_proxy;
+        mutable value_type stored_value;
     };
 
 
@@ -304,6 +281,8 @@ namespace iterators {
     template <class Iterator>
     class writable_postfix_increment_proxy
     {
+        typedef typename iterator_value<Iterator>::type value_type;
+
      public:
         explicit writable_postfix_increment_proxy(Iterator const& x)
           : dereference_proxy(x)
@@ -319,6 +298,12 @@ namespace iterators {
         operator Iterator const&() const
         {
             return dereference_proxy.stored_iterator;
+        }
+
+        // Provides (r++)->foo()
+        value_type* operator->() const
+        {
+            return boost::addressof(dereference_proxy.stored_value);
         }
 
      private:

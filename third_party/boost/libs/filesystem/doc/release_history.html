@@ -49,6 +49,8 @@
   <li>On Windows, fixed <code>weakly_canonical</code> failing with an <code>ERROR_INVALID_FUNCTION</code> error code if the path started with the "\\?\" prefix. (<a href="https://github.com/boostorg/filesystem/issues/247">#247</a>)</li>
   <li>Added support for <code>std::string_view</code>, <code>boost::string_view</code> and <code>boost::container::string</code> (as well as respective <code>wchar_t</code> counterparts) in <code>path</code> constructors, assignment and appending operations. (<a href="https://github.com/boostorg/filesystem/issues/208">#208</a>)</li>
   <li><code>path</code> constructors, assignment and appending operations taking a pair of iterators will no longer accept iterators with value types that are not one of the supported path character types.</li>
+  <li>On Windows, improved compatibility of <code>directory_iterator</code> with various mounted filesystems and Wine releases prior to 7.21. (<a href="https://github.com/boostorg/filesystem/issues/255">#255</a>, <a href="https://github.com/boostorg/filesystem/issues/266">#266</a>)</li>
+  <li>On Windows, deduplicated files are now reported as regular files rather than reparse files. (<a href="https://github.com/boostorg/filesystem/issues/262">#262</a>)</li>
 </ul>
 
 <h2>1.80.0</h2>

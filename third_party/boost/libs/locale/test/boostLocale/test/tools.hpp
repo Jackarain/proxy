@@ -9,7 +9,9 @@
 
 #include <boost/locale/encoding.hpp>
 #include "boostLocale/test/posix_tools.hpp"
+#include "boostLocale/test/unit_test.hpp"
 #include <cstdio>
+#include <ctime>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -17,6 +19,14 @@
 #if defined(BOOST_MSVC) && BOOST_MSVC < 1700
 #    pragma warning(disable : 4428) // universal-character-name encountered in source
 #endif
+
+class remove_file_on_exit {
+    std::string filename_;
+
+public:
+    explicit remove_file_on_exit(const std::string& filename) : filename_(filename) {}
+    ~remove_file_on_exit() { std::remove(filename_.c_str()); }
+};
 
 inline unsigned utf8_next(const std::string& s, unsigned& pos)
 {
@@ -103,10 +113,10 @@ inline std::string to_correct_string(const std::string& utf8_str, std::locale l)
     return boost::locale::conv::from_utf(utf8_str, l);
 }
 
-bool has_std_locale(const std::string& name)
+bool has_std_locale(const char* name)
 {
     try {
-        std::locale tmp(name.c_str());
+        std::locale tmp(name);
         return true;
     } catch(...) {
         return false;
@@ -115,33 +125,32 @@ bool has_std_locale(const std::string& name)
 
 inline bool test_std_supports_SJIS_codecvt(const std::string& locale_name)
 {
-    bool res = true;
+    const std::string file_path = boost::locale::test::exe_name + "-test-siftjis.txt";
+    remove_file_on_exit _(file_path);
     {
         // Japan in Shift JIS/cp932
         const char* japan_932 = "\x93\xfa\x96\x7b";
-        std::ofstream f("test-siftjis.txt");
+        std::ofstream f(file_path);
         f << japan_932;
-        f.close();
     }
+    bool res = true;
     try {
         std::wfstream test;
-        test.imbue(std::locale(locale_name.c_str()));
-        test.open("test-siftjis.txt");
+        test.imbue(std::locale(locale_name));
+        test.open(file_path);
         // Japan in Unicode
-        std::wstring cmp = L"\u65e5\u672c";
+        const std::wstring cmp = L"\u65e5\u672c";
         std::wstring ref;
-        test >> ref;
-        res = ref == cmp;
+        res = (test >> ref) && (ref == cmp);
     } catch(const std::exception&) {
         res = false;
     }
-    remove("test-siftjis.txt");
     return res;
 }
 
 std::string get_std_name(const std::string& name, std::string* real_name = 0)
 {
-    if(has_std_locale(name)) {
+    if(has_std_locale(name.c_str())) {
         if(real_name)
             *real_name = name;
         return name;
@@ -215,12 +224,22 @@ char* make4(unsigned v)
     return reinterpret_cast<char*>(buf);
 }
 
-class remove_file_on_exit {
-    std::string filename_;
-
-public:
-    explicit remove_file_on_exit(const std::string& filename) : filename_(filename) {}
-    ~remove_file_on_exit() { std::remove(filename_.c_str()); }
-};
+#ifdef _MSC_VER
+#    pragma warning(push)
+#    pragma warning(disable : 4996) //"This function or variable may be unsafe"
+#endif
+/// Wrapper for std::gmtime avoiding warning 4996 on MSVC/clang-cl:
+inline std::tm* gmtime_wrap(const std::time_t* time)
+{
+    return std::gmtime(time);
+}
+/// Wrapper for std::localtime avoiding warning 4996 on MSVC/clang-cl
+inline std::tm* localtime_wrap(const std::time_t* time)
+{
+    return std::localtime(time);
+}
+#ifdef _MSC_VER
+#    pragma warning(pop)
+#endif
 
 #endif

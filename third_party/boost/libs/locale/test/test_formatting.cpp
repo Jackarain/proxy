@@ -5,16 +5,13 @@
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
-#ifdef _MSC_VER
-#    define _CRT_SECURE_NO_WARNINGS
-#endif
-
 #include <boost/locale/date_time.hpp>
 #include <boost/locale/encoding_utf.hpp>
 #include <boost/locale/format.hpp>
 #include <boost/locale/formatting.hpp>
 #include <boost/locale/generator.hpp>
 #include <cstdint>
+#include <ctime>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -454,7 +451,7 @@ void test_manip(std::string e_charset = "UTF-8")
         ss.imbue(loc);
         // By default the globally set (local) time zone is used
         ss << as::ftime(format_string) << now;
-        strftime(time_str, sizeof(time_str), format.c_str(), gmtime(&local_now));
+        strftime(time_str, sizeof(time_str), format.c_str(), gmtime_wrap(&local_now));
         TEST_EQ(ss.str(), to<CharType>(time_str));
         ss.str(string_type()); // Clear
         // We can manually tell it to use the local time zone
@@ -463,7 +460,7 @@ void test_manip(std::string e_charset = "UTF-8")
         ss.str(string_type()); // Clear
         // Or e.g. GMT
         ss << as::ftime(format_string) << as::gmt << now;
-        strftime(time_str, sizeof(time_str), format.c_str(), gmtime(&now));
+        strftime(time_str, sizeof(time_str), format.c_str(), gmtime_wrap(&now));
         TEST_EQ(ss.str(), to<CharType>(time_str));
     }
     const std::pair<std::string, std::string> format_string_test_cases[] = {
@@ -634,9 +631,9 @@ void test_format_class(std::string charset = "UTF-8")
         time_t now = time(0);
         char local_time_str[256], local_time_str_gmt2[256];
         time_t local_now = now + 3600 * 4;
-        strftime(local_time_str, sizeof(local_time_str), "'%H:%M:%S'", gmtime(&local_now));
+        strftime(local_time_str, sizeof(local_time_str), "'%H:%M:%S'", gmtime_wrap(&local_now));
         local_now = now + 3600 * 2;
-        strftime(local_time_str_gmt2, sizeof(local_time_str_gmt2), "'%H:%M:%S'", gmtime(&local_now));
+        strftime(local_time_str_gmt2, sizeof(local_time_str_gmt2), "'%H:%M:%S'", gmtime_wrap(&local_now));
 
         TEST_FORMAT_CLS("{1,ftime='''%H:%M:%S'''}", now, local_time_str);
         TEST_FORMAT_CLS("{1,strftime='''%H:%M:%S'''}", now, local_time_str);

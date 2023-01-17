@@ -34,6 +34,7 @@ else()
       container_hash
       conversion
       date_time
+      describe
       detail
       exception
       functional

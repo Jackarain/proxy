@@ -9,37 +9,26 @@
 
 #include <boost/locale/config.hpp>
 #include <boost/locale/encoding.hpp>
+
 namespace boost { namespace locale { namespace conv { namespace impl {
 
     template<typename CharType>
     const char* utf_name()
     {
-        union {
-            char first;
-            uint16_t u16;
-            uint32_t u32;
-        } v;
-
-        if(sizeof(CharType) == 1) {
-            return "UTF-8";
-        } else if(sizeof(CharType) == 2) {
-            v.u16 = 1;
-            if(v.first == 1) {
-                return "UTF-16LE";
-            } else {
-                return "UTF-16BE";
+        switch(sizeof(CharType)) {
+            case 1: return "UTF-8";
+            case 2: {
+                const int16_t endianMark = 1;
+                const bool isLittleEndian = reinterpret_cast<const char*>(&endianMark)[0] == 1;
+                return isLittleEndian ? "UTF-16LE" : "UTF-16BE";
             }
-        } else if(sizeof(CharType) == 4) {
-            v.u32 = 1;
-            if(v.first == 1) {
-                return "UTF-32LE";
-            } else {
-                return "UTF-32BE";
+            case 4: {
+                const int32_t endianMark = 1;
+                const bool isLittleEndian = reinterpret_cast<const char*>(&endianMark)[0] == 1;
+                return isLittleEndian ? "UTF-32LE" : "UTF-32BE";
             }
-
-        } else {
-            return "Unknown Character Encoding";
         }
+        return "Unknown Character Encoding";
     }
 
     BOOST_LOCALE_DECL std::string normalize_encoding(const char* encoding);

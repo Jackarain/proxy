@@ -1682,6 +1682,7 @@ void absolute_tests()
         BOOST_TEST_EQ(fs::absolute(fs::path("a:foo/bar"), "b:/"), fs::path("a:/foo/bar"));
         BOOST_TEST_EQ(fs::absolute(fs::path("a:foo/bar"), "b:/abc"), fs::path("a:/abc/foo/bar"));
         BOOST_TEST_EQ(fs::absolute(fs::path("a:foo/bar"), "b:/abc/def"), fs::path("a:/abc/def/foo/bar"));
+        BOOST_TEST_EQ(fs::absolute(fs::path("\\\\net\\share\\folder"), "c:\\"), fs::path("\\\\net\\share\\folder"));
     }
     // !p.has_root_name()
     //   p.has_root_directory()

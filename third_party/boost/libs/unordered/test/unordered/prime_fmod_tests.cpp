@@ -21,8 +21,7 @@ void macros_test()
     BOOST_ERROR("std::numeric_limits<size_t>::digits >= 64, but "
                 "BOOST_UNORDERED_FCA_HAS_64B_SIZE_T is not defined");
 #endif
-  }
-  else {
+  } else {
 #if defined(BOOST_UNORDERED_FCA_HAS_64B_SIZE_T)
     BOOST_ERROR("std::numeric_limits<size_t>::digits < 64, but "
                 "BOOST_UNORDERED_FCA_HAS_64B_SIZE_T is defined");
@@ -155,7 +154,7 @@ void get_remainder_test()
 
   for (std::size_t i = 0; i < 1000000u; ++i) {
     boost::uint64_t f = rng();
-    boost::uint32_t d = static_cast<uint32_t>(rng());
+    boost::uint32_t d = rng() & 0xffffffffu;
 
     boost::uint64_t r1 =
       boost::unordered::detail::prime_fmod_size<>::get_remainder(f, d);
@@ -180,14 +179,14 @@ void modulo_test()
   boost::detail::splitmix64 rng;
 
   for (std::size_t i = 0; i < 1000000u; ++i) {
-    std::size_t hash = static_cast<std::size_t>(rng());
+    std::size_t hash = static_cast<std::size_t>(-1) & rng();
 
     for (std::size_t j = 0; j < sizes_len; ++j) {
       std::size_t h = hash;
 
 #if defined(BOOST_UNORDERED_FCA_HAS_64B_SIZE_T)
       if (sizes[j] <= UINT_MAX) {
-        h = boost::uint32_t(h) + boost::uint32_t(h >> 32);
+        h = boost::uint32_t(h & 0xffffffffu) + boost::uint32_t(h >> 32);
       }
 #endif
       std::size_t p1 =

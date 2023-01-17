@@ -6,8 +6,6 @@ var classboost_1_1locale_1_1ios__info =
     [ "date_flags", "classboost_1_1locale_1_1ios__info.html#ad1fb3b4066250c0a119bad1baf9ebab7", null ],
     [ "date_time_pattern", "classboost_1_1locale_1_1ios__info.html#ab62472f0a6aae648132bd513ec64ae5f", null ],
     [ "date_time_pattern", "classboost_1_1locale_1_1ios__info.html#a3ee0576ce914ce4feeb93652989271cf", null ],
-    [ "datetime_flags", "classboost_1_1locale_1_1ios__info.html#a6e90b9fcfb723495da5239fc380b0331", null ],
-    [ "datetime_flags", "classboost_1_1locale_1_1ios__info.html#ab06b12df72f062470c0ba995949a68de", null ],
     [ "display_flags", "classboost_1_1locale_1_1ios__info.html#a18b06a5cf88e25361bf188f64216edf2", null ],
     [ "display_flags", "classboost_1_1locale_1_1ios__info.html#a32fc3e9ca27d029a088e90b96626667d", null ],
     [ "domain_id", "classboost_1_1locale_1_1ios__info.html#a08b1bb49e5806900bfa1901e869497a6", null ],

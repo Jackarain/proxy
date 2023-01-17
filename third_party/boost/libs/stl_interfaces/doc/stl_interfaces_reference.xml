@@ -48,7 +48,13 @@
 <typedef name="pointer"><type><emphasis>unspecified</emphasis></type></typedef>
 <typedef name="difference_type"><type>DifferenceType</type></typedef>
 <method-group name="public member functions">
+<method name="operator *" cv="noexcept(noexcept(*access::base(std::declval&lt; D &amp; &gt;()))))"><type>constexpr auto</type><template>
+          <template-type-parameter name="D"><default>Derived</default></template-type-parameter>
+        </template></method>
 <method name="operator *" cv="const noexcept(noexcept(*access::base(std::declval&lt; D const &amp; &gt;()))))"><type>constexpr auto</type><template>
+          <template-type-parameter name="D"><default>Derived</default></template-type-parameter>
+        </template></method>
+<method name="operator-&gt;" cv="noexcept(noexcept(detail::make_pointer&lt; pointer &gt;(*std::declval&lt; D &amp; &gt;()))))"><type>constexpr auto</type><template>
           <template-type-parameter name="D"><default>Derived</default></template-type-parameter>
         </template></method>
 <method name="operator-&gt;" cv="const noexcept(noexcept(detail::make_pointer&lt; pointer &gt;(*std::declval&lt; D const &amp; &gt;()))))"><type>constexpr auto</type><template>

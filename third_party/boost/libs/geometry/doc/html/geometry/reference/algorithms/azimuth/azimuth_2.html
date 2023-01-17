@@ -156,8 +156,9 @@ Calculate azimuth of a segment defined by a pair of points.
 <th align="left">Note</th>
 </tr>
 <tr><td align="left" valign="top"><p>
-              PostGIS contains an algorithm ST_Azimuth with the same functionality.
-              See the <a href="https://postgis.net/docs/ST_Azimuth.html" target="_top">PostGIS
+              PostGIS contains an algorithm ST_Azimuth with the same functionality
+              but could return different results e.g. result normalized to range
+              0 to pi instead of range -pi to pi. See the <a href="https://postgis.net/docs/ST_Azimuth.html" target="_top">PostGIS
               documentation</a>.
             </p></td></tr>
 </table></div>
@@ -175,7 +176,7 @@ Calculate azimuth of a segment defined by a pair of points.
 <th align="left">Note</th>
 </tr>
 <tr><td align="left" valign="top"><p>
-              The result is in radians.
+              The result is in the range -pi to pi radians.
             </p></td></tr>
 </table></div>
 <h6>

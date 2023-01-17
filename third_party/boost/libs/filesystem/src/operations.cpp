@@ -1511,7 +1511,7 @@ boost::winapi::NTSTATUS_ nt_create_file_handle_at(HANDLE& out, HANDLE basedir_ha
 
 #endif // !defined(UNDER_CE)
 
-bool is_reparse_point_a_symlink_ioctl(HANDLE h)
+ULONG get_reparse_point_tag_ioctl(HANDLE h)
 {
     boost::scoped_ptr< reparse_data_buffer_with_storage > buf(new reparse_data_buffer_with_storage);
 
@@ -1521,7 +1521,7 @@ bool is_reparse_point_a_symlink_ioctl(HANDLE h)
     if (BOOST_UNLIKELY(!result))
         return false;
 
-    return is_reparse_point_tag_a_symlink(buf->rdb.ReparseTag);
+    return buf->rdb.ReparseTag;
 }
 
 namespace {
@@ -1590,6 +1590,7 @@ fs::file_status status_by_handle(HANDLE h, path const& p, error_code* ec)
 {
     fs::file_type ftype;
     DWORD attrs;
+    ULONG reparse_tag = 0u;
     GetFileInformationByHandleEx_t* get_file_information_by_handle_ex = filesystem::detail::atomic_load_relaxed(get_file_information_by_handle_ex_api);
     if (BOOST_LIKELY(get_file_information_by_handle_ex != NULL))
     {
@@ -1609,12 +1610,7 @@ fs::file_status status_by_handle(HANDLE h, path const& p, error_code* ec)
         }
 
         attrs = info.FileAttributes;
-
-        if (attrs & FILE_ATTRIBUTE_REPARSE_POINT)
-        {
-            ftype = is_reparse_point_tag_a_symlink(info.ReparseTag) ? fs::symlink_file : fs::reparse_file;
-            goto done;
-        }
+        reparse_tag = info.ReparseTag;
     }
     else
     {
@@ -1626,16 +1622,28 @@ fs::file_status status_by_handle(HANDLE h, path const& p, error_code* ec)
 
         attrs = info.dwFileAttributes;
 
-        if (attrs & FILE_ATTRIBUTE_REPARSE_POINT)
-        {
-            ftype = is_reparse_point_a_symlink_ioctl(h) ? fs::symlink_file : fs::reparse_file;
-            goto done;
-        }
+        if ((attrs & FILE_ATTRIBUTE_REPARSE_POINT) != 0u)
+            reparse_tag = get_reparse_point_tag_ioctl(h);
     }
 
-    ftype = (attrs & FILE_ATTRIBUTE_DIRECTORY) ? fs::directory_file : fs::regular_file;
+    if ((attrs & FILE_ATTRIBUTE_REPARSE_POINT) != 0u)
+    {
+        if (reparse_tag == IO_REPARSE_TAG_DEDUP)
+            ftype = fs::regular_file;
+        else if (is_reparse_point_tag_a_symlink(reparse_tag))
+            ftype = fs::symlink_file;
+        else
+            ftype = fs::reparse_file;
+    }
+    else if ((attrs & FILE_ATTRIBUTE_DIRECTORY) != 0u)
+    {
+        ftype = fs::directory_file;
+    }
+    else
+    {
+        ftype = fs::regular_file;
+    }
 
-done:
     return fs::file_status(ftype, make_permissions(p, attrs));
 }
 
@@ -1775,7 +1783,7 @@ DWORD remove_nt6_by_handle(HANDLE handle, remove_impl_type impl)
                 break;
 
             err = ::GetLastError();
-            if (BOOST_UNLIKELY(err == ERROR_INVALID_PARAMETER || err == ERROR_INVALID_FUNCTION || err == ERROR_NOT_SUPPORTED))
+            if (BOOST_UNLIKELY(err == ERROR_INVALID_PARAMETER || err == ERROR_INVALID_FUNCTION || err == ERROR_NOT_SUPPORTED || err == ERROR_CALL_NOT_IMPLEMENTED))
             {
                 // Downgrade to the older implementation
                 impl = remove_disp_ex_flag_posix_semantics;
@@ -1833,7 +1841,7 @@ DWORD remove_nt6_by_handle(HANDLE handle, remove_impl_type impl)
 
                 break;
             }
-            else if (BOOST_UNLIKELY(err == ERROR_INVALID_PARAMETER || err == ERROR_INVALID_FUNCTION || err == ERROR_NOT_SUPPORTED))
+            else if (BOOST_UNLIKELY(err == ERROR_INVALID_PARAMETER || err == ERROR_INVALID_FUNCTION || err == ERROR_NOT_SUPPORTED || err == ERROR_CALL_NOT_IMPLEMENTED))
             {
                 // Downgrade to the older implementation
                 impl = remove_disp;
@@ -2004,7 +2012,7 @@ uintmax_t remove_all_nt6_by_handle(HANDLE h, path const& p, error_code* ec)
                     FILE_LIST_DIRECTORY | DELETE | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE,
                     FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                     FILE_OPEN,
-                    FILE_OPEN_FOR_BACKUP_INTENT | FILE_OPEN_REPARSE_POINT
+                    FILE_SYNCHRONOUS_IO_NONALERT | FILE_OPEN_FOR_BACKUP_INTENT | FILE_OPEN_REPARSE_POINT
                 );
 
                 if (!NT_SUCCESS(status))

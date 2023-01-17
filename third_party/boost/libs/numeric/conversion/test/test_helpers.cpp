@@ -17,6 +17,7 @@
 #include "boost/utility.hpp"
 
 #include <boost/core/lightweight_test.hpp>
+#include <stdexcept> // std::runtime_error
 
 // Convenience macros to help with compilers which don't parse
 // explicit template function instantiations (MSVC6)

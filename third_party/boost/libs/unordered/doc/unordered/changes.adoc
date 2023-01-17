@@ -10,6 +10,8 @@
 
 * Added fast containers `boost::unordered_flat_map` and `boost::unordered_flat_set`
   based on open addressing.
+* Added CTAD deduction guides for all containers.
+* Added missing constructors as specified in https://cplusplus.github.io/LWG/issue2713[LWG issue 2713].
 
 == Release 1.80.0 - Major update
 

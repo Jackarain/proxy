@@ -69,6 +69,7 @@ struct arg
     virtual char* prepare(std::size_t n) = 0;
 
     // prevent misuse
+    virtual ~arg() = default;
     arg() = default;
     arg(arg&&) = default;
     arg(arg const&) = delete;
