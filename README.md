@@ -31,6 +31,38 @@
 同时 proxy server 能接收 socks/http 代理请求，也能同时接受正常 http 请求，且所有功能（socks、http）亦可运行在同一端口上，由 server 主动探测协议类型。
 <BR>
 
+### Linux 平台下编译:
+
+<br>
+
+首先执行git克隆源码
+
+```
+git clone <source url>
+```
+
+然后进入源码目录，执行如下操作：
+
+```
+mkdir build && cd build
+```
+```
+cmake .. -DCMAKE_BUILD_TYPE=Debug
+```
+
+上面命令中，CMAKE_BUILD_TYPE=Debug指定了编译为Debug的类型，如果需要更好的性能，则需要编译为Release。
+
+在cmake命令成功执行完成后，开始输入以下命令编译：
+
+```
+make
+```
+
+通常编译过程不会出现问题，如果出现任何问题，请联系作者，并将完整的错误信息保留并报告给作者。
+
+成功编译后，example 生成的可执行程序将在 bin 目录下生成，其它相关 lib 的编译结果 .a 文件将在相应项目名称的目录下。
+
+
 具体使用参考 example 中的 proxy server，它提供了较完整功能的 proxy server，它可以非常完美的作为 tun2socks 后级用于科学上网等事宜，example 中还有几个其它编程参考示例。
 
 proxy server 不仅是一个 proxy 服务器，同时还可以做为一个真实的 静态文件 http 服务，运行效果（浏览器打开）：
