@@ -1836,11 +1836,11 @@ namespace proxy {
 			namespace fs = std::filesystem;
 			namespace chrono = std::chrono;
 
-			const static std::wstring head_fmt =
+			constexpr static auto head_fmt =
 				LR"(<html><head><meta charset="UTF-8"><title>Index of {}</title></head><body bgcolor="white"><h1>Index of {}</h1><hr><pre>)";
-			const static std::wstring tail_fmt =
+			constexpr static auto tail_fmt =
 				L"</pre><hr></body></html>";
-			const static std::wstring body_fmt =
+			constexpr static auto body_fmt =
 				L"<a href=\"{}\">{}</a>{}{}              {}\r\n";
 
 			auto& request = hctx.request_;
