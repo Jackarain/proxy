@@ -223,6 +223,7 @@ std::string socks_userid;
 std::string socks_passwd;
 std::string socks_next_proxy;
 bool socks_next_proxy_ssl = false;
+bool ssl_prefer_server_ciphers = false;
 std::string ssl_certificate_dir;
 std::string ssl_ciphers;
 std::string socks_listen;
@@ -340,6 +341,7 @@ int main(int argc, char** argv)
 
 		("ssl_certificate_dir", po::value<std::string>(&ssl_certificate_dir)->value_name("path"), "SSL certificate dir.")
 		("ssl_ciphers", po::value<std::string>(&ssl_ciphers)->value_name("ssl_ciphers"), "Specifies the enabled ciphers.")
+		("ssl_prefer_server_ciphers", po::value<bool>(&ssl_prefer_server_ciphers)->default_value(false, "false")->value_name(""), "Specifies that server ciphers should be preferred over client ciphers when using the SSLv3 and TLS protocols.")
 
 		("http_doc", po::value<std::string>(&doc_directory)->value_name("doc"), "Http server doc root.")
 		("logs_path", po::value<std::string>(&log_directory)->value_name(""), "Logs dirctory.")

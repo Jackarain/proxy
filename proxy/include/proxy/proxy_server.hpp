@@ -117,6 +117,9 @@ namespace proxy {
 		// 指定允许的加密算法.
 		std::string ssl_ciphers_;
 
+		// 优先使用server端加密算法.
+		bool ssl_prefer_server_ciphers_;
+
 		// http doc 目录, 用于伪装成web站点.
 		std::string doc_directory_;
 	};
@@ -2407,10 +2410,12 @@ Connection: close
 				| net::ssl::context::no_tlsv1
 				| net::ssl::context::no_tlsv1_1
 				| net::ssl::context::single_dh_use
-				| SSL_OP_CIPHER_SERVER_PREFERENCE
 			);
 
-			std::string ssl_ciphers = "HIGH:!aNULL:!MD5:!3DES";
+			if (m_option.ssl_prefer_server_ciphers_)
+				m_ssl_context.set_options(SSL_OP_CIPHER_SERVER_PREFERENCE);
+
+			const std::string ssl_ciphers = "HIGH:!aNULL:!MD5:!3DES";
 			if (m_option.ssl_ciphers_.empty())
 				m_option.ssl_ciphers_ = ssl_ciphers;
 
