@@ -114,6 +114,9 @@ namespace proxy {
 		// 使用ssl的时候, 指定证书目录.
 		std::string ssl_cert_path_;
 
+		// 指定允许的加密算法.
+		std::string ssl_ciphers_;
+
 		// http doc 目录, 用于伪装成web站点.
 		std::string doc_directory_;
 	};
@@ -2400,7 +2403,19 @@ Connection: close
 			m_ssl_context.set_options(
 				net::ssl::context::default_workarounds
 				| net::ssl::context::no_sslv2
-				| net::ssl::context::single_dh_use);
+				| net::ssl::context::no_sslv3
+				| net::ssl::context::no_tlsv1
+				| net::ssl::context::no_tlsv1_1
+				| net::ssl::context::single_dh_use
+				| SSL_OP_CIPHER_SERVER_PREFERENCE
+			);
+
+			std::string ssl_ciphers = "HIGH:!aNULL:!MD5:!3DES";
+			if (m_option.ssl_ciphers_.empty())
+				m_option.ssl_ciphers_ = ssl_ciphers;
+
+			SSL_CTX_set_cipher_list(m_ssl_context.native_handle(),
+				m_option.ssl_ciphers_.c_str());
 
 			auto dir = std::filesystem::path(m_option.ssl_cert_path_);
 			auto pwd = dir / "ssl_crt.pwd";

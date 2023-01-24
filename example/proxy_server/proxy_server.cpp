@@ -224,6 +224,7 @@ std::string socks_passwd;
 std::string socks_next_proxy;
 bool socks_next_proxy_ssl = false;
 std::string ssl_certificate_dir;
+std::string ssl_ciphers;
 std::string socks_listen;
 std::string doc_directory;
 std::string log_directory;
@@ -253,6 +254,7 @@ net::awaitable<void> start_proxy_server(server_ptr& server)
 	opt.next_proxy_ = socks_next_proxy;
 	opt.next_proxy_use_ssl_ = socks_next_proxy_ssl;
 	opt.ssl_cert_path_ = ssl_certificate_dir;
+	opt.ssl_ciphers_ = ssl_ciphers;
 	opt.doc_directory_ = doc_directory;
 
 	auto executor = co_await net::this_coro::executor;
@@ -337,6 +339,7 @@ int main(int argc, char** argv)
 		("socks_next_proxy_ssl", po::value<bool>(&socks_next_proxy_ssl)->default_value(false, "false")->value_name(""), "Next socks4/5 proxy with ssl.")
 
 		("ssl_certificate_dir", po::value<std::string>(&ssl_certificate_dir)->value_name("path"), "SSL certificate dir.")
+		("ssl_ciphers", po::value<std::string>(&ssl_ciphers)->value_name("ssl_ciphers"), "Specifies the enabled ciphers.")
 
 		("http_doc", po::value<std::string>(&doc_directory)->value_name("doc"), "Http server doc root.")
 		("logs_path", po::value<std::string>(&log_directory)->value_name(""), "Logs dirctory.")
