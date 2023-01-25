@@ -225,6 +225,12 @@ std::string socks_next_proxy;
 bool socks_next_proxy_ssl = false;
 bool ssl_prefer_server_ciphers = false;
 std::string ssl_certificate_dir;
+
+std::string ssl_certificate;
+std::string ssl_certificate_key;
+std::string ssl_certificate_passwd;
+std::string ssl_dhparam;
+
 std::string ssl_ciphers;
 std::string socks_listen;
 std::string doc_directory;
@@ -254,8 +260,14 @@ net::awaitable<void> start_proxy_server(server_ptr& server)
 
 	opt.next_proxy_ = socks_next_proxy;
 	opt.next_proxy_use_ssl_ = socks_next_proxy_ssl;
+
 	opt.ssl_cert_path_ = ssl_certificate_dir;
 	opt.ssl_ciphers_ = ssl_ciphers;
+	opt.ssl_certificate_ = ssl_certificate;
+	opt.ssl_certificate_key_ = ssl_certificate_key;
+	opt.ssl_certificate_passwd_ = ssl_certificate_passwd;
+	opt.ssl_dhparam_ = ssl_dhparam;
+
 	opt.doc_directory_ = doc_directory;
 
 	auto executor = co_await net::this_coro::executor;
@@ -339,7 +351,13 @@ int main(int argc, char** argv)
 		("socks_next_proxy", po::value<std::string>(&socks_next_proxy)->default_value("")->value_name(""), "Next socks4/5 proxy. (e.g: socks5://user:passwd@ip:port)")
 		("socks_next_proxy_ssl", po::value<bool>(&socks_next_proxy_ssl)->default_value(false, "false")->value_name(""), "Next socks4/5 proxy with ssl.")
 
-		("ssl_certificate_dir", po::value<std::string>(&ssl_certificate_dir)->value_name("path"), "SSL certificate dir.")
+		("ssl_certificate_dir", po::value<std::string>(&ssl_certificate_dir)->value_name("path"), "SSL certificate dir, auto find 'ssl_crt.pem/ssl_crt.pwd/ssl_key.pem/ssl_dh.pem'.")
+
+		("ssl_certificate", po::value<std::string>(&ssl_certificate)->value_name("path"), "SSL certificate file.")
+		("ssl_certificate_key", po::value<std::string>(&ssl_certificate_key)->value_name("path"), "SSL certificate secret key.")
+		("ssl_certificate_passwd", po::value<std::string>(&ssl_certificate_passwd)->value_name("path/string"), "SSL certificate key passphrases.")
+		("ssl_dhparam", po::value<std::string>(&ssl_dhparam)->value_name("path"), "Specifies a file with DH parameters for DHE ciphers.")
+
 		("ssl_ciphers", po::value<std::string>(&ssl_ciphers)->value_name("ssl_ciphers"), "Specifies the enabled ciphers.")
 		("ssl_prefer_server_ciphers", po::value<bool>(&ssl_prefer_server_ciphers)->default_value(false, "false")->value_name(""), "Specifies that server ciphers should be preferred over client ciphers when using the SSLv3 and TLS protocols.")
 

@@ -111,8 +111,25 @@ namespace proxy {
 		// 多层代理模式中, 与下一个代理服务器是否使用tls加密(ssl).
 		bool next_proxy_use_ssl_{ false };
 
-		// 使用ssl的时候, 指定证书目录.
+		// 作为服务器时, 指定ssl证书目录, 使用固定文件名(ssl_crt.pem,
+		// ssl_dh.pem, ssl_key.pem, ssl_dh.pem, ssl_crt.pwd)
+		// , 这样就不用指定下面: ssl_certificate_、ssl_certificate_key_
+		// 以及 ssl_dhparam_、ssl_certificate_passwd_ 这4个参数.
 		std::string ssl_cert_path_;
+
+		// 作为服务器时, 指定ssl证书pem文件.
+		std::string ssl_certificate_;
+
+		// 作为服务器时, 指定ssl证书密钥文件.
+		std::string ssl_certificate_key_;
+
+		// 作为服务器时, 指定ssl证书解密密钥/或密钥文件.
+		std::string ssl_certificate_passwd_;
+
+		// 作为服务器时, 指定ssl dh参数文件, 可用命令:
+		// openssl dhparam -out dh4096.pem 4096
+		// 来生成此文件, 以增强密钥交换安全性.
+		std::string ssl_dhparam_;
 
 		// 指定允许的加密算法.
 		std::string ssl_ciphers_;
@@ -2422,31 +2439,55 @@ Connection: close
 			SSL_CTX_set_cipher_list(m_ssl_context.native_handle(),
 				m_option.ssl_ciphers_.c_str());
 
-			auto dir = std::filesystem::path(m_option.ssl_cert_path_);
-			auto pwd = dir / "ssl_crt.pwd";
+			if (!m_option.ssl_cert_path_.empty())
+			{
+				auto dir = std::filesystem::path(m_option.ssl_cert_path_);
+				auto pwd = dir / "ssl_crt.pwd";
 
-			if (std::filesystem::exists(pwd))
+				if (std::filesystem::exists(pwd))
+					m_ssl_context.set_password_callback(
+						[&pwd]([[maybe_unused]] auto... args) {
+							std::string password;
+							fileop::read(pwd, password);
+							return password;
+						}
+				);
+
+				auto cert = dir / "ssl_crt.pem";
+				auto key = dir / "ssl_key.pem";
+				auto dh = dir / "ssl_dh.pem";
+
+				if (std::filesystem::exists(cert))
+					m_ssl_context.use_certificate_chain_file(cert.string());
+
+				if (std::filesystem::exists(key))
+					m_ssl_context.use_private_key_file(
+						key.string(), boost::asio::ssl::context::pem);
+
+				if (std::filesystem::exists(dh))
+					m_ssl_context.use_tmp_dh_file(dh.string());
+			}
+			else
+			{
 				m_ssl_context.set_password_callback(
-					[&pwd]([[maybe_unused]] auto... args) {
+					[&]([[maybe_unused]] auto... args) {
+						const auto& pwd = m_option.ssl_certificate_passwd_;
+						if (!std::filesystem::exists(pwd))
+							return pwd;
+
 						std::string password;
 						fileop::read(pwd, password);
+
 						return password;
-					}
-			);
+					});
 
-			auto cert = dir / "ssl_crt.pem";
-			auto key = dir / "ssl_key.pem";
-			auto dh = dir / "ssl_dh.pem";
-
-			if (std::filesystem::exists(cert))
-				m_ssl_context.use_certificate_chain_file(cert.string());
-
-			if (std::filesystem::exists(key))
+				m_ssl_context.use_certificate_chain_file(
+					m_option.ssl_certificate_);
 				m_ssl_context.use_private_key_file(
-					key.string(), boost::asio::ssl::context::pem);
-
-			if (std::filesystem::exists(dh))
-				m_ssl_context.use_tmp_dh_file(dh.string());
+					m_option.ssl_certificate_key_, net::ssl::context::pem);
+				m_ssl_context.use_tmp_dh_file(
+					m_option.ssl_dhparam_);
+			}
 		}
 
 	public:
