@@ -235,6 +235,7 @@ std::string ssl_ciphers;
 std::string socks_listen;
 std::string doc_directory;
 std::string log_directory;
+bool disable_logs;
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -363,6 +364,7 @@ int main(int argc, char** argv)
 
 		("http_doc", po::value<std::string>(&doc_directory)->value_name("doc"), "Http server doc root.")
 		("logs_path", po::value<std::string>(&log_directory)->value_name(""), "Logs dirctory.")
+		("disable_logs", po::value<bool>(&disable_logs)->value_name(""), "Disable logs.")
 	;
 
 	// 解析命令行.
@@ -389,7 +391,7 @@ int main(int argc, char** argv)
 	{
 		if (!std::filesystem::exists(config))
 		{
-			LOG_ERR << "No such config file: " << config;
+			std::cerr << "No such config file: " << config << std::endl;
 			return EXIT_FAILURE;
 		}
 
@@ -397,6 +399,9 @@ int main(int argc, char** argv)
 		auto cfg = po::parse_config_file(config.c_str(), desc, false);
 		po::store(cfg, vm);
 		po::notify(vm);
+
+		if (disable_logs)
+			util::toggle_write_logging(true);
 	}
 
 	print_args(argc, argv, vm);
