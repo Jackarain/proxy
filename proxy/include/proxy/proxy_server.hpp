@@ -108,7 +108,9 @@ namespace proxy {
 		// socks5 默认使用 hostname 模式, 即 dns 解析在远程执行.
 		std::string next_proxy_;
 
-		// 多层代理模式中, 与下一个代理服务器是否使用tls加密(ssl).
+		// 多层代理模式中, 与下一个代理服务器(next_proxy_)是否使用tls加密(ssl).
+		// 该参数只能当 next_proxy_ 是 socks 代理时才有作用, 如果 next_proxy_
+		// 是 http proxy，则由 url 指定的 protocol 决定是否使用 ssl.
 		bool next_proxy_use_ssl_{ false };
 
 		// 作为服务器时, 指定ssl证书目录, 使用固定文件名(ssl_crt.pem,

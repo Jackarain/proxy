@@ -239,7 +239,8 @@ bool disable_logs;
 
 //////////////////////////////////////////////////////////////////////////
 
-net::awaitable<void> start_proxy_server(net::io_context& ioc, server_ptr& server)
+net::awaitable<void>
+start_proxy_server(net::io_context& ioc, server_ptr& server)
 {
 	std::string host, port;
 	bool v6only = false;
@@ -271,9 +272,8 @@ net::awaitable<void> start_proxy_server(net::io_context& ioc, server_ptr& server
 
 	opt.doc_directory_ = doc_directory;
 
-	auto executor = ioc.get_executor();// co_await net::this_coro::executor;
 	server = proxy_server::make(
-		executor, listen, opt);
+		ioc.get_executor(), listen, opt);
 	server->start();
 
 	co_return;
