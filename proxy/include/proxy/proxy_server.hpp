@@ -81,7 +81,7 @@ namespace proxy {
 	using request_parser = http::request_parser<dynamic_request::body_type>;
 	using response_serializer = http::response_serializer<buffer_body, http::fields>;
 
-	using ssl_stream = net::ssl::stream<tcp::socket>;
+	using ssl_stream = net::ssl::stream<tcp_socket>;
 
 	using io_util::read;
 	using io_util::write;
@@ -1440,7 +1440,7 @@ namespace proxy {
 					net::buffer(data), net_awaitable[ec]);
 				if (ec || m_abort)
 				{
-					to.shutdown(net::ip::tcp::socket::shutdown_send, ec);
+					to.shutdown(tcp_socket::shutdown_send, ec);
 					co_return;
 				}
 
@@ -1448,7 +1448,7 @@ namespace proxy {
 					net::buffer(data, bytes), net_awaitable[ec]);
 				if (ec || m_abort)
 				{
-					from.shutdown(net::ip::tcp::socket::shutdown_receive, ec);
+					from.shutdown(tcp_socket::shutdown_receive, ec);
 					co_return;
 				}
 			}
@@ -1461,8 +1461,8 @@ namespace proxy {
 			auto executor = co_await net::this_coro::executor;
 
 			// 获取构造函数中临时创建的tcp::socket.
-			tcp::socket& remote_socket =
-				boost::variant2::get<tcp::socket>(m_remote_socket);
+			tcp_socket& remote_socket =
+				boost::variant2::get<tcp_socket>(m_remote_socket);
 
 			auto bind_interface = net::ip::address::from_string(
 				m_option.bind_addr_, ec);
@@ -1474,7 +1474,7 @@ namespace proxy {
 
 			auto check_condition = [this, bind_interface](
 				const boost::system::error_code&,
-				tcp::socket& stream, auto&) mutable
+				tcp_socket& stream, auto&) mutable
 			{
 				if (m_option.bind_addr_.empty())
 					return true;
@@ -2409,7 +2409,7 @@ Connection: close
 		proxy_server(const proxy_server&) = delete;
 		proxy_server& operator=(const proxy_server&) = delete;
 
-		proxy_server(net::any_io_executor executor,
+		proxy_server(net::io_context::executor_type executor,
 			const tcp::endpoint& endp, proxy_server_option opt)
 			: m_executor(executor)
 			, m_acceptor(executor, endp)
@@ -2423,7 +2423,7 @@ Connection: close
 
 	public:
 		inline static std::shared_ptr<proxy_server> make(
-			net::any_io_executor executor,
+			net::io_context::executor_type executor,
 			const tcp::endpoint& endp,
 			proxy_server_option opt)
 		{
@@ -2496,12 +2496,15 @@ Connection: close
 						return password;
 					});
 
+				boost::system::error_code ec;
+
 				m_ssl_context.use_certificate_chain_file(
-					m_option.ssl_certificate_);
+					m_option.ssl_certificate_, ec);
 				m_ssl_context.use_private_key_file(
-					m_option.ssl_certificate_key_, net::ssl::context::pem);
+					m_option.ssl_certificate_key_,
+					net::ssl::context::pem, ec);
 				m_ssl_context.use_tmp_dh_file(
-					m_option.ssl_dhparam_);
+					m_option.ssl_dhparam_, ec);
 			}
 		}
 
@@ -2544,14 +2547,14 @@ Connection: close
 		}
 
 	private:
-		inline net::awaitable<void> start_proxy_listen(tcp::acceptor& a)
+		inline net::awaitable<void> start_proxy_listen(tcp_acceptor& a)
 		{
 			auto self = shared_from_this();
 			boost::system::error_code error;
 
 			while (!m_abort)
 			{
-				tcp::socket socket(m_executor);
+				tcp_socket socket(m_executor);
 				co_await a.async_accept(
 					socket, net_awaitable[error]);
 				if (error)
@@ -2595,7 +2598,7 @@ Connection: close
 
 				// 等待读取事件.
 				co_await socket.async_wait(
-					tcp::socket::wait_read, net_awaitable[error]);
+					tcp_socket::wait_read, net_awaitable[error]);
 				if (error)
 				{
 					LOG_WARN << "socket.async_wait error: " << error.message();
@@ -2689,8 +2692,8 @@ Connection: close
 		}
 
 	private:
-		net::any_io_executor m_executor;
-		tcp::acceptor m_acceptor;
+		net::io_context::executor_type m_executor;
+		tcp_acceptor m_acceptor;
 		proxy_server_option m_option;
 		using proxy_session_weak_ptr =
 			std::weak_ptr<proxy_session>;

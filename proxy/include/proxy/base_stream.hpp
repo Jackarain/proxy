@@ -20,6 +20,12 @@ namespace util {
 	using tcp = net::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 	using udp = net::ip::udp;               // from <boost/asio/ip/udp.hpp>
 
+	using tcp_acceptor = net::basic_socket_acceptor<
+		tcp, net::io_context::executor_type>;
+
+	using tcp_socket = net::basic_stream_socket<
+		tcp, net::io_context::executor_type>;
+
 	template<typename... T>
 	class base_stream : public boost::variant2::variant<T...>
 	{
@@ -39,9 +45,9 @@ namespace util {
 		base_stream& operator=(base_stream&&) = default;
 		base_stream(base_stream&&) = default;
 
-		using executor_type = net::any_io_executor;
+		using executor_type = net::io_context::executor_type;
 
-		net::any_io_executor get_executor()
+		executor_type get_executor()
 		{
 			return boost::variant2::visit([&](auto& t) mutable
 				{ return t.get_executor(); }, *this);
@@ -73,7 +79,7 @@ namespace util {
 		{
 			return boost::variant2::visit([&](auto& t) mutable
 				{
-					if constexpr (std::same_as<tcp::socket,
+					if constexpr (std::same_as<tcp_socket,
 						std::decay_t<decltype(t)>>)
 					{
 						return t.remote_endpoint();
@@ -90,7 +96,7 @@ namespace util {
 		{
 			boost::variant2::visit([&](auto& t) mutable
 				{
-					if constexpr (std::same_as<tcp::socket,
+					if constexpr (std::same_as<tcp_socket,
 						std::decay_t<decltype(t)>>)
 					{
 						t.shutdown(what, ec);
@@ -106,7 +112,7 @@ namespace util {
 		{
 			boost::variant2::visit([&](auto& t) mutable
 				{
-					if constexpr (std::same_as<tcp::socket,
+					if constexpr (std::same_as<tcp_socket,
 						std::decay_t<decltype(t)>>)
 					{
 						t.close(ec);
@@ -119,39 +125,39 @@ namespace util {
 		}
 	};
 
-	using ssl_stream = net::ssl::stream<tcp::socket>;
-	using proxy_stream_type = base_stream<tcp::socket, ssl_stream>;
+	using ssl_stream = net::ssl::stream<tcp_socket>;
+	using proxy_stream_type = base_stream<tcp_socket, ssl_stream>;
 
 
 	inline proxy_stream_type instantiate_proxy_stream(
 		proxy_stream_type& s)
 	{
-		return proxy_stream_type(tcp::socket(s.get_executor()));
+		return proxy_stream_type(tcp_socket(s.get_executor()));
 	}
 
 	inline proxy_stream_type instantiate_proxy_stream(
-		net::any_io_executor executor)
+		net::io_context::executor_type executor)
 	{
-		return proxy_stream_type(tcp::socket(executor));
+		return proxy_stream_type(tcp_socket(executor));
 	}
 
 	inline proxy_stream_type instantiate_proxy_stream(
 		net::io_context& ioc)
 	{
-		return proxy_stream_type(tcp::socket(ioc));
+		return proxy_stream_type(tcp_socket(ioc));
 	}
 
 	inline proxy_stream_type instantiate_proxy_stream(
-		tcp::socket&& s)
+		tcp_socket&& s)
 	{
 		return proxy_stream_type(std::move(s));
 	}
 
 	inline proxy_stream_type instantiate_proxy_stream(
-		tcp::socket&& s, net::ssl::context& sslctx)
+		tcp_socket&& s, net::ssl::context& sslctx)
 	{
 		return proxy_stream_type(ssl_stream(
-			std::forward<tcp::socket>(s), sslctx));
+			std::forward<tcp_socket>(s), sslctx));
 	}
 
 }

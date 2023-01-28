@@ -27,7 +27,7 @@ using namespace proxy;
 
 using server_ptr = std::shared_ptr<proxy::proxy_server>;
 
-net::awaitable<void> start_proxy_server(server_ptr& server)
+net::awaitable<void> start_proxy_server(net::io_context& ioc, server_ptr& server)
 {
 	tcp::endpoint socks_listen(
 		net::ip::address::from_string("0.0.0.0"),
@@ -37,7 +37,7 @@ net::awaitable<void> start_proxy_server(server_ptr& server)
 	opt.usrdid_ = "jack";
 	opt.passwd_ = "1111";
 
-	auto executor = co_await net::this_coro::executor;
+	auto executor = ioc.get_executor();
 	server = proxy_server::make(
 			executor, socks_listen, opt);
 	server->start();
@@ -102,7 +102,7 @@ int main()
 	net::io_context ioc(1);
 	server_ptr server;
 
-	net::co_spawn(ioc, start_proxy_server(server), net::detached);
+	net::co_spawn(ioc, start_proxy_server(ioc, server), net::detached);
 	net::co_spawn(ioc, start_socks_client(), net::detached);
 
 	ioc.run();

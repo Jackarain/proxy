@@ -46,7 +46,10 @@ namespace proxy {
 	using http_request = http::request<http::string_body>;
 	using http_response = http::response<http::dynamic_body>;
 
-	using ssl_stream = net::ssl::stream<tcp::socket>;
+	using tcp_socket = net::basic_stream_socket<
+		tcp, net::io_context::executor_type>;
+
+	using ssl_stream = net::ssl::stream<tcp_socket>;
 
 	struct http_proxy_client_option
 	{
