@@ -1731,6 +1731,15 @@ namespace proxy {
 					net::buffer(fake_web_page()),
 					net::transfer_all(),
 					net_awaitable[ec]);
+				net::streambuf bufs(8192);
+				co_await net::async_read_until(
+					m_local_socket,
+					bufs,
+					"\r\n\r\n",
+					net_awaitable[ec]);
+				if (!ec)
+					m_local_socket.shutdown(
+						net::socket_base::shutdown_both, ec);
 				co_return;
 			}
 
@@ -1817,6 +1826,12 @@ namespace proxy {
 
 				if (!keep_alive) break;
 				continue;
+			}
+
+			if (!keep_alive)
+			{
+				m_local_socket.shutdown(
+					net::socket_base::shutdown_both, ec);
 			}
 
 			co_return;
