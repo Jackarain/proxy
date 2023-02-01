@@ -109,6 +109,15 @@ namespace std {
 
 
 //////////////////////////////////////////////////////////////////////////
+//
+// User customization function for hook log, function signature:
+//
+// bool logger_writer(logger_tag,
+//   int64_t time, const int& level, const std::string& message);
+//
+
+struct logger_tag
+{};
 
 namespace util {
 
@@ -797,6 +806,31 @@ inline const std::string& logger_level_string__(const int& level) noexcept
 	return _LOGGER_DEBUG_STR__;
 }
 
+struct access {
+	template <class... T>
+	static bool logger_writer(logger_tag, T...) noexcept
+	{
+		return false;
+	}
+};
+
+template <class T>
+inline bool logger_writer(T tag
+	, int64_t time, const int& level, const std::string& message) noexcept
+{
+	return access::logger_writer(tag
+		, time, level, message
+	);
+}
+
+template<class T>
+inline bool logger_writer_adl(T tag
+	, int64_t time, const int& level, const std::string& message) noexcept
+{
+	return logger_writer(std::forward<T>(tag),
+		time, level, message);
+}
+
 inline void logger_writer__(int64_t time, const int& level,
 	const std::string& message,
 	[[maybe_unused]] bool disable_cout = false) noexcept
@@ -810,6 +844,11 @@ inline void logger_writer__(int64_t time, const int& level,
 		logger_level_string__(level) + std::string("]: ");
 	std::string tmp = message + "\n";
 	std::string whole = prefix + tmp;
+
+	// User log hook.
+	if (logger_writer_adl(logger_tag(), time, level, message))
+		return;
+
 #ifndef DISABLE_WRITE_LOGGING
 	logger.write(time, whole.c_str(), whole.size());
 #endif // !DISABLE_WRITE_LOGGING
