@@ -27,12 +27,14 @@
 #include <condition_variable>
 
 #ifndef LOGGING_DISABLE_ASIO_ENDPOINT
-
-#	include <boost/asio/ip/tcp.hpp>
-#	include <boost/asio/ip/udp.hpp>
-#	include <boost/asio/ip/address.hpp>
-#	include <boost/asio/ip/basic_endpoint.hpp>
-
+#	if __has_include(<boost/asio.hpp>)
+#		include <boost/asio/ip/tcp.hpp>
+#		include <boost/asio/ip/udp.hpp>
+#		include <boost/asio/ip/address.hpp>
+#		include <boost/asio/ip/basic_endpoint.hpp>
+#	else
+#		define LOGGING_DISABLE_ASIO_ENDPOINT
+#	endif
 #endif // !LOGGING_DISABLE_ASIO_ENDPOINT
 
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -939,13 +941,17 @@ inline std::shared_ptr<logger_aux__::async_logger___> global_logger_obj___ =
 	std::make_shared<logger_aux__::async_logger___>();
 
 #if defined(_WIN32) || defined(WIN32)
-static LONG WINAPI unexpectedExceptionHandling(EXCEPTION_POINTERS*)
+static LONG WINAPI unexpectedExceptionHandling(EXCEPTION_POINTERS* e)
 {
+	if (!global_logger_obj___)
+		return EXCEPTION_CONTINUE_SEARCH;
+
 	auto old = global_logger_obj___->oldUnhandledExceptionFilter();
 	SetUnhandledExceptionFilter(old);
 
 	global_logger_obj___.reset();
-	return EXCEPTION_CONTINUE_SEARCH;
+
+	return old(e);
 }
 #endif
 
@@ -1105,6 +1111,10 @@ public:
 		return strcat_impl(v);
 	}
 	inline logger___& operator<<(const std::wstring& v)
+	{
+		return strcat_impl(boost::nowide::narrow(v));
+	}
+	inline logger___& operator<<(const std::u16string& v)
 	{
 		return strcat_impl(boost::nowide::narrow(v));
 	}
