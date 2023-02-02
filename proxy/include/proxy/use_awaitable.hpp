@@ -11,6 +11,7 @@
 #pragma once
 
 #include <boost/type_traits.hpp>
+#include <boost/asio/io_context.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/use_awaitable.hpp>
@@ -48,4 +49,11 @@ namespace asio_util
 // stream.async_read(buffer, net_awaitable);
 //
 
-[[maybe_unused]] inline constexpr asio_util::asio_use_awaitable_t<> net_awaitable;
+// Executor is any_io_executor
+[[maybe_unused]] inline constexpr
+	asio_util::asio_use_awaitable_t<> net_awaitable;
+
+// Executor is boost::asio::io_context::executor_type
+[[maybe_unused]] inline constexpr
+	asio_util::asio_use_awaitable_t<
+		boost::asio::io_context::executor_type> ioc_awaitable;
