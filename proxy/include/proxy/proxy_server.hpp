@@ -1442,6 +1442,10 @@ namespace proxy {
 					net::buffer(data), net_awaitable[ec]);
 				if (ec || m_abort)
 				{
+					if (bytes > 0)
+						co_await net::async_write(to,
+							net::buffer(data, bytes), net_awaitable[ec]);
+
 					to.shutdown(tcp_socket::shutdown_send, ec);
 					co_return;
 				}
