@@ -690,16 +690,16 @@ private:
 #endif // LOGGER_DBG_VIEW_
 
 const inline int _logger_debug_id__ = 0;
-const inline int _logger_info_id__ = 1;
-const inline int _logger_warn_id__ = 2;
+const inline int _logger_info_id__  = 1;
+const inline int _logger_warn_id__  = 2;
 const inline int _logger_error_id__ = 3;
-const inline int _logger_file_id__ = 4;
+const inline int _logger_file_id__  = 4;
 
-const inline std::string _LOGGER_DEBUG_STR__ = "DEBUG";
-const inline std::string _LOGGER_INFO_STR__ = "INFO";
-const inline std::string _LOGGER_WARN_STR__ = "WARNING";
-const inline std::string _LOGGER_ERR_STR__ = "ERROR";
-const inline std::string _LOGGER_FILE_STR__ = "FILE";
+const inline std::string _LOGGER_DEBUG_STR__ = " DEBUG ";
+const inline std::string _LOGGER_INFO_STR__  = " INFO  ";
+const inline std::string _LOGGER_WARN_STR__  = " WARN  ";
+const inline std::string _LOGGER_ERR_STR__   = " ERROR ";
+const inline std::string _LOGGER_FILE_STR__  = " FILE  ";
 
 inline void logger_output_console__([[maybe_unused]] bool disable_cout,
 	[[maybe_unused]] const int& level,
@@ -838,8 +838,7 @@ inline void logger_writer__(int64_t time, const int& level,
 		util::auto_logger_file__>();
 	char ts[64] = { 0 };
 	[[maybe_unused]] auto ptm = logger_aux__::time_to_string(ts, time);
-	std::string prefix = ts + std::string(" [") +
-		logger_level_string__(level) + std::string("]: ");
+	std::string prefix = ts + logger_level_string__(level);
 	std::string tmp = message + "\n";
 	std::string whole = prefix + tmp;
 
