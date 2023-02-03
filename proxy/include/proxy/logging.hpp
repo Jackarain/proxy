@@ -25,21 +25,51 @@
 #include <deque>
 #include <csignal>
 #include <condition_variable>
+#include <optional>
 
-#ifndef LOGGING_DISABLE_ASIO_ENDPOINT
-#	if __has_include(<boost/asio.hpp>)
-#		include <boost/asio/ip/tcp.hpp>
-#		include <boost/asio/ip/udp.hpp>
-#		include <boost/asio/ip/address.hpp>
-#		include <boost/asio/ip/basic_endpoint.hpp>
-#	else
-#		define LOGGING_DISABLE_ASIO_ENDPOINT
-#	endif
+#ifndef LOGGING_DISABLE_BOOST_ASIO_ENDPOINT
+# if defined(__has_include)
+#  if __has_include(<boost/asio.hpp>)
+#   include <boost/asio/ip/tcp.hpp>
+#   include <boost/asio/ip/udp.hpp>
+#   include <boost/asio/ip/address.hpp>
+#   include <boost/asio/ip/basic_endpoint.hpp>
+#  else
+#   define LOGGING_DISABLE_BOOST_ASIO_ENDPOINT
+#  endif
+# else
+#  include <boost/asio/ip/tcp.hpp>
+#  include <boost/asio/ip/udp.hpp>
+#  include <boost/asio/ip/address.hpp>
+#  include <boost/asio/ip/basic_endpoint.hpp>
+# endif
 #endif // !LOGGING_DISABLE_ASIO_ENDPOINT
 
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/nowide/convert.hpp>
-#include <boost/utility/string_view.hpp>
+
+#ifndef LOGGING_DISABLE_BOOST_POSIX_TIME
+# if defined(__has_include)
+#  if __has_include(<boost/date_time/posix_time/posix_time.hpp>)
+#   include <boost/date_time/posix_time/posix_time.hpp>
+#  else
+#   define LOGGING_DISABLE_BOOST_POSIX_TIME
+#  endif
+# else
+#  include <boost/date_time/posix_time/posix_time.hpp>
+# endif
+#endif
+
+#ifndef LOGGING_DISABLE_BOOST_STRING_VIEW
+# if defined(__has_include)
+#  if __has_include(<boost/utility/string_view.hpp>)
+#   include <boost/utility/string_view.hpp>
+#  else
+#   define LOGGING_DISABLE_BOOST_STRING_VIEW
+#  endif
+# else
+#  include <boost/utility/string_view.hpp>
+# endif
+#endif
+
 
 //////////////////////////////////////////////////////////////////////////
 #if defined(_WIN32) || defined(WIN32)
@@ -121,7 +151,7 @@ struct logger_tag
 
 namespace util {
 
-#ifndef LOGGING_DISABLE_ASIO_ENDPOINT
+#ifndef LOGGING_DISABLE_BOOST_ASIO_ENDPOINT
 	namespace net = boost::asio;
 #endif
 
@@ -297,22 +327,22 @@ namespace logger_aux__ {
 	inline uint32_t decode(uint32_t* state, uint32_t* codep, uint32_t byte)
 	{
 		static constexpr uint8_t utf8d[] =
-{
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 00..1f
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 20..3f
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 40..5f
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 60..7f
-	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9, // 80..9f
-	7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7, // a0..bf
-	8,8,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, // c0..df
-	0xa,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x4,0x3,0x3, // e0..ef
-	0xb,0x6,0x6,0x6,0x5,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8, // f0..ff
-	0x0,0x1,0x2,0x3,0x5,0x8,0x7,0x1,0x1,0x1,0x4,0x6,0x1,0x1,0x1,0x1, // s0..s0
-	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1,0,1,1,1,1,1,1, // s1..s2
-	1,2,1,1,1,1,1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1, // s3..s4
-	1,2,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,3,1,3,1,1,1,1,1,1, // s5..s6
-	1,3,1,1,1,1,1,3,1,3,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1, // s7..s8
-};
+		{
+			0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 00..1f
+			0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 20..3f
+			0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 40..5f
+			0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 60..7f
+			1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9, // 80..9f
+			7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7, // a0..bf
+			8,8,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, // c0..df
+			0xa,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x4,0x3,0x3, // e0..ef
+			0xb,0x6,0x6,0x6,0x5,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8, // f0..ff
+			0x0,0x1,0x2,0x3,0x5,0x8,0x7,0x1,0x1,0x1,0x4,0x6,0x1,0x1,0x1,0x1, // s0..s0
+			1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1,0,1,1,1,1,1,1, // s1..s2
+			1,2,1,1,1,1,1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1, // s3..s4
+			1,2,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,3,1,3,1,1,1,1,1,1, // s5..s6
+			1,3,1,1,1,1,1,3,1,3,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1, // s7..s8
+		};
 
 		uint32_t type = utf8d[byte];
 
@@ -355,124 +385,136 @@ namespace logger_aux__ {
 	}
 #endif
 
-#if 0
-	inline bool utf8_check_is_valid(const std::string& str)
-	{
-		int c, i, ix, n, j;
-		for (i = 0, ix = static_cast<int>(str.size()); i < ix; i++)
-		{
-			c = (unsigned char)str[i];
-			// is_printable_ascii
-			//if (c==0x09 || c==0x0a || c==0x0d ||
-			// (0x20 <= c && c <= 0x7e)) n = 0;
-			if (0x00 <= c && c <= 0x7f) n = 0; // 0bbbbbbb
-			else if ((c & 0xE0) == 0xC0) n = 1; // 110bbbbb
-			else if (c == 0xed && i < (ix - 1) &&
-				((unsigned char)str[i + 1] & 0xa0) == 0xa0)
-				return false; // U+d800 to U+dfff
-			else if ((c & 0xF0) == 0xE0) n = 2; // 1110bbbb
-			else if ((c & 0xF8) == 0xF0) n = 3; // 11110bbb
-			// 111110bb //byte 5, unnecessary in 4 byte UTF-8
-			//else if (($c & 0xFC) == 0xF8) n=4;
-			// 1111110b //byte 6, unnecessary in 4 byte UTF-8
-			//else if (($c & 0xFE) == 0xFC) n=5;
-			else return false;
-			// n bytes matching 10bbbbbb follow ?
-			for (j = 0; j < n && i < ix; j++)
-			{
-				if ((++i == ix) || (((unsigned char)str[i] & 0xC0) != 0x80))
-					return false;
-			}
-		}
-		return true;
-	}
-#endif
-
-	inline bool wide_string(const std::wstring& src, std::string& str)
-	{
-		std::locale sys_locale("");
-
-		const wchar_t* data_from = src.c_str();
-		const wchar_t* data_from_end = src.c_str() + src.size();
-		const wchar_t* data_from_next = 0;
-
-		int wchar_size = 4;
-		std::unique_ptr<char> buffer(new char[(src.size() + 1) * wchar_size]);
-		char* data_to = buffer.get();
-		char* data_to_end = data_to + (src.size() + 1) * wchar_size;
-		char* data_to_next = 0;
-
-		memset(data_to, 0, (src.size() + 1) * wchar_size);
-
-		typedef std::codecvt<wchar_t, char, mbstate_t> convert_facet;
-		mbstate_t out_state;
-		auto result = std::use_facet<convert_facet>(sys_locale).out(
-			out_state, data_from, data_from_end, data_from_next,
-			data_to, data_to_end, data_to_next);
-		if (result == convert_facet::ok)
-		{
-			str = data_to;
-			return true;
-		}
-
-		return false;
-	}
-
 #ifdef WIN32
-	inline bool string_wide(const std::string_view& src, std::wstring& wstr)
+	inline std::optional<std::wstring> string_wide(const std::string_view& src)
 	{
-		auto len = MultiByteToWideChar(CP_ACP, 0, src.data(), -1, NULL, 0);
-		if (len > 0)
-		{
-			wchar_t* tmp = (wchar_t*)malloc(sizeof(wchar_t) * len);
-			if (!tmp)
-				return false;
-			MultiByteToWideChar(CP_ACP, 0, src.data(), -1, tmp, len);
-			wstr.assign(tmp);
-			free(tmp);
-			return true;
-		}
-		return false;
+		auto len = MultiByteToWideChar(CP_ACP, 0,
+			src.data(), static_cast<int>(src.size()), NULL, 0);
+		if (len <= 0)
+			return {};
+
+		std::wstring ret(len, 0);
+		MultiByteToWideChar(CP_ACP, 0,
+			src.data(), static_cast<int>(src.size()),
+			(LPWSTR)ret.data(), len);
+
+		return ret;
 	}
-#else
-	inline bool string_wide(const std::string_view& src, std::wstring& wstr)
+
+	inline std::optional<std::wstring> utf8_utf16(const std::string_view& src)
 	{
+		auto len = MultiByteToWideChar(CP_UTF8, 0,
+			src.data(), static_cast<int>(src.size()), NULL, 0);
+		if (len <= 0)
+			return {};
+
+		std::wstring ret(len, 0);
+		MultiByteToWideChar(CP_UTF8, 0,
+			src.data(), static_cast<int>(src.size()),
+			(LPWSTR)ret.data(), len);
+
+		return ret;
+	}
+
+	inline std::optional<std::string> utf16_utf8(std::wstring_view utf16)
+	{
+		auto len = WideCharToMultiByte(CP_UTF8, 0,
+			(LPCWCH)utf16.data(), static_cast<int>(utf16.size()),
+			NULL, 0, NULL, NULL);
+		if (len <= 0)
+			return {};
+
+		std::string ret(len, 0);
+		WideCharToMultiByte(CP_UTF8, 0,
+			(LPCWCH)utf16.data(), static_cast<int>(utf16.size()),
+			(LPSTR)ret.data(), len, NULL, NULL);
+
+		return ret;
+	}
+
+#else
+	inline std::optional<std::wstring> string_wide(const std::string_view& src)
+	{
+		const char* first = src.data();
+		const char* last = src.data() + src.size();
+		const char* snext = nullptr;
+
+		std::wstring result(src.size() + 1, wchar_t{ 0 });
+
+		wchar_t* dest = result.data();
+		wchar_t* dnext = nullptr;
+
+		using codecvt_type = std::codecvt<wchar_t, char, mbstate_t>;
 		std::locale sys_locale("");
-		const char* data_from = src.data();
-		const char* data_from_end = src.data() + src.size();
-		const char* data_from_next = 0;
-
-		std::vector<wchar_t> buffer(src.size() + 1, 0);
-		wchar_t* data_to = buffer.data();
-		wchar_t* data_to_end = data_to + src.size() + 1;
-		wchar_t* data_to_next = 0;
-
-		typedef std::codecvt<wchar_t, char, mbstate_t> convert_facet;
 		mbstate_t in_state;
-		auto result = std::use_facet<convert_facet>(sys_locale).in(
-			in_state, data_from, data_from_end, data_from_next,
-			data_to, data_to_end, data_to_next);
-		if (result == convert_facet::ok)
-		{
-			wstr = data_to;
-			return true;
-		}
 
-		return false;
+		auto ret = std::use_facet<codecvt_type>(sys_locale).in(
+			in_state, first, last, snext, dest, dest + result.size(), dnext);
+		if (ret != codecvt_type::ok)
+			return {};
+
+		result.resize(static_cast<size_t>(dnext - dest));
+		return result;
+	}
+
+	inline std::optional<std::wstring> utf8_utf16(std::string_view utf8)
+	{
+		const char* first = &utf8[0];
+		const char* last = first + utf8.size();
+		const char8_t* snext = nullptr;
+
+		std::wstring result(utf8.size(), char16_t{ 0 });
+		wchar_t* dest = &result[0];
+		char16_t* next = nullptr;
+
+		using codecvt_type = std::codecvt<char16_t, char8_t, std::mbstate_t>;
+
+		codecvt_type* cvt = new codecvt_type;
+
+		// manages reference to codecvt facet to free memory.
+		std::locale loc;
+		loc = std::locale(loc, cvt);
+
+		codecvt_type::state_type state{};
+
+		auto ret = cvt->in(
+			state, (char8_t*)first, (char8_t*)last, snext,
+			(char16_t*)dest, (char16_t*)dest + result.size(), next);
+		if (ret != codecvt_type::ok)
+			return {};
+
+		result.resize(static_cast<size_t>((wchar_t*)next - dest));
+		return result;
+	}
+
+	inline std::optional<std::string> utf16_utf8(std::wstring_view utf16)
+	{
+		auto* first = &utf16[0];
+		auto* last = first + utf16.size();
+
+		std::string result((utf16.size() + 1) * 6, char{ 0 });
+		char* dest = &result[0];
+		char8_t* next = nullptr;
+
+		using codecvt_type = std::codecvt<char16_t, char8_t, std::mbstate_t>;
+
+		codecvt_type* cvt = new codecvt_type;
+		// manages reference to codecvt facet to free memory.
+		std::locale loc;
+		loc = std::locale(loc, cvt);
+
+		codecvt_type::state_type state{};
+		const char16_t* snext = nullptr;
+		auto ret = cvt->out(
+			state, (char16_t*)first, (char16_t*)last, snext,
+			(char8_t*)dest, (char8_t*)dest + result.size(), next);
+		if (ret != codecvt_type::ok)
+			return {};
+
+		result.resize(static_cast<size_t>((char*)next - dest));
+		return result;
 	}
 #endif
-
-	inline std::string string_utf8(const std::string& str)
-	{
-		if (!logger_aux__::utf8_check_is_valid(str))
-		{
-			std::wstring wres;
-			if (logger_aux__::string_wide(str, wres))
-				return boost::nowide::narrow(wres);
-		}
-
-		return str;
-	}
 
 	template <class Lock>
 	Lock& lock_single()
@@ -709,8 +751,8 @@ inline void logger_output_console__([[maybe_unused]] bool disable_cout,
 #if defined(WIN32)
 
 #if !defined(DISABLE_LOGGER_TO_CONSOLE) || !defined(DISABLE_LOGGER_TO_DBGVIEW)
-	std::wstring title = boost::nowide::widen(prefix);
-	std::wstring msg = boost::nowide::widen(message);
+	std::wstring title = *logger_aux__::utf8_utf16(prefix);
+	std::wstring msg = *logger_aux__::utf8_utf16(message);
 #endif
 
 #if !defined(DISABLE_LOGGER_TO_CONSOLE)
@@ -1144,19 +1186,24 @@ public:
 	{
 		if (!logger_aux__::utf8_check_is_valid(v))
 		{
-			std::wstring wres;
-			if (logger_aux__::string_wide(v, wres))
-				return strcat_impl(boost::nowide::narrow(wres));
+			auto wres = logger_aux__::string_wide(v);
+			if (wres)
+			{
+				auto ret = logger_aux__::utf16_utf8(*wres);
+				if (ret)
+					return strcat_impl(*ret);
+			}
 		}
 		return strcat_impl(v);
 	}
 	inline logger___& operator<<(const std::wstring& v)
 	{
-		return strcat_impl(boost::nowide::narrow(v));
+		return strcat_impl(*logger_aux__::utf16_utf8(v));
 	}
 	inline logger___& operator<<(const std::u16string& v)
 	{
-		return strcat_impl(boost::nowide::narrow(v));
+		return strcat_impl(*logger_aux__::utf16_utf8(
+			{(const wchar_t*)v.data(), v.size()}));
 	}
 #if (__cplusplus >= 202002L)
 	inline logger___& operator<<(const std::u8string& v)
@@ -1168,9 +1215,13 @@ public:
 	{
 		if (!logger_aux__::utf8_check_is_valid(v))
 		{
-			std::wstring wres;
-			if (logger_aux__::string_wide(v, wres))
-				return strcat_impl(boost::nowide::narrow(wres));
+			auto wres = logger_aux__::string_wide(v);
+			if (wres)
+			{
+				auto ret = logger_aux__::utf16_utf8(*wres);
+				if (ret)
+					return strcat_impl(*ret);
+			}
 		}
 		return strcat_impl(v);
 	}
@@ -1179,9 +1230,13 @@ public:
 		std::string_view sv{v.data(), v.length()};
 		if (!logger_aux__::utf8_check_is_valid(sv))
 		{
-			std::wstring wres;
-			if (logger_aux__::string_wide(sv, wres))
-				return strcat_impl(boost::nowide::narrow(wres));
+			auto wres = logger_aux__::string_wide(sv);
+			if (wres)
+			{
+				auto ret = logger_aux__::utf16_utf8(*wres);
+				if (ret)
+					return strcat_impl(*ret);
+			}
 		}
 		return strcat_impl(sv);
 	}
@@ -1190,15 +1245,19 @@ public:
 		std::string_view sv(v);
 		if (!logger_aux__::utf8_check_is_valid(sv))
 		{
-			std::wstring wres;
-			if (logger_aux__::string_wide(sv, wres))
-				return strcat_impl(boost::nowide::narrow(wres));
+			auto wres = logger_aux__::string_wide(sv);
+			if (wres)
+			{
+				auto ret = logger_aux__::utf16_utf8(*wres);
+				if (ret)
+					return strcat_impl(*ret);
+			}
 		}
 		return strcat_impl(sv);
 	}
 	inline logger___& operator<<(const wchar_t* v)
 	{
-		return strcat_impl(boost::nowide::narrow(v));
+		return strcat_impl(*logger_aux__::utf16_utf8(v));
 	}
 	inline logger___& operator<<(const void *v)
 	{
@@ -1250,7 +1309,7 @@ public:
 		return *this;
 	}
 
-#ifndef LOGGING_DISABLE_ASIO_ENDPOINT
+#ifndef LOGGING_DISABLE_BOOST_ASIO_ENDPOINT
 	inline logger___& operator<<(const net::ip::tcp::endpoint& v)
 	{
 		if (!global_logging___)
@@ -1397,6 +1456,7 @@ public:
 		return *this;
 	}
 #endif
+#ifndef LOGGING_DISABLE_BOOST_POSIX_TIME
 	inline logger___& operator<<(const boost::posix_time::ptime& p) noexcept
 	{
 		if (!global_logging___)
@@ -1434,6 +1494,7 @@ public:
 
 		return *this;
 	}
+#endif
 	inline logger___& operator<<(const std::thread::id& id) noexcept
 	{
 		std::ostringstream oss;
