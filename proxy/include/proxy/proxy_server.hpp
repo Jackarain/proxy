@@ -1861,6 +1861,7 @@ namespace proxy {
 			if (start_pos < target.size())
 				sv = std::wstring_view(target.c_str() + start_pos);
 #ifdef WIN32
+			slash = L"\\";
 			if (doc.back() == L'/' ||
 				doc.back() == L'\\')
 				slash = L"";
