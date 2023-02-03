@@ -324,11 +324,11 @@ namespace logger_aux__ {
 		return *state;
 	}
 
-	inline bool utf8_check_is_valid(const std::string& str)
+	inline bool utf8_check_is_valid(std::string_view str)
 	{
 		uint32_t codepoint;
 		uint32_t state = 0;
-		uint8_t* s = (uint8_t*)str.c_str();
+		uint8_t* s = (uint8_t*)str.data();
 		uint8_t* end = s + str.size();
 
 		for (; s != end; ++s)
@@ -419,15 +419,15 @@ namespace logger_aux__ {
 	}
 
 #ifdef WIN32
-	inline bool string_wide(const std::string& src, std::wstring& wstr)
+	inline bool string_wide(const std::string_view& src, std::wstring& wstr)
 	{
-		auto len = MultiByteToWideChar(CP_ACP, 0, src.c_str(), -1, NULL, 0);
+		auto len = MultiByteToWideChar(CP_ACP, 0, src.data(), -1, NULL, 0);
 		if (len > 0)
 		{
 			wchar_t* tmp = (wchar_t*)malloc(sizeof(wchar_t) * len);
 			if (!tmp)
 				return false;
-			MultiByteToWideChar(CP_ACP, 0, src.c_str(), -1, tmp, len);
+			MultiByteToWideChar(CP_ACP, 0, src.data(), -1, tmp, len);
 			wstr.assign(tmp);
 			free(tmp);
 			return true;
@@ -435,19 +435,17 @@ namespace logger_aux__ {
 		return false;
 	}
 #else
-	inline bool string_wide(const std::string& src, std::wstring& wstr)
+	inline bool string_wide(const std::string_view& src, std::wstring& wstr)
 	{
 		std::locale sys_locale("");
-		const char* data_from = src.c_str();
-		const char* data_from_end = src.c_str() + src.size();
+		const char* data_from = src.data();
+		const char* data_from_end = src.data() + src.size();
 		const char* data_from_next = 0;
 
 		std::vector<wchar_t> buffer(src.size() + 1, 0);
 		wchar_t* data_to = buffer.data();
 		wchar_t* data_to_end = data_to + src.size() + 1;
 		wchar_t* data_to_next = 0;
-
-		wmemset(data_to, 0, src.size() + 1);
 
 		typedef std::codecvt<wchar_t, char, mbstate_t> convert_facet;
 		mbstate_t in_state;
@@ -1062,16 +1060,14 @@ public:
 		if (!global_logging___)
 			return;
 
-		std::string message = logger_aux__::string_utf8(out_);
-
 		// if global_logger_obj___ is nullptr, fallback to
 		// synchronous operation.
 		if (async_ && global_logger_obj___)
 			global_logger_obj___->post_log(
-				level_, std::move(message), disable_cout_);
+				level_, std::move(out_), disable_cout_);
 		else
 			logger_writer__(logger_aux__::gettime(),
-				level_, message, disable_cout_);
+				level_, out_, disable_cout_);
 	}
 
 	template <class... Args>
@@ -1147,6 +1143,12 @@ public:
 	}
 	inline logger___& operator<<(const std::string& v)
 	{
+		if (!logger_aux__::utf8_check_is_valid(v))
+		{
+			std::wstring wres;
+			if (logger_aux__::string_wide(v, wres))
+				return strcat_impl(boost::nowide::narrow(wres));
+		}
 		return strcat_impl(v);
 	}
 	inline logger___& operator<<(const std::wstring& v)
@@ -1157,17 +1159,43 @@ public:
 	{
 		return strcat_impl(boost::nowide::narrow(v));
 	}
+#if (__cplusplus >= 202002L)
+	inline logger___& operator<<(const std::u8string& v)
+	{
+		return strcat_impl(reinterpret_cast<const char*>(v.c_str()));
+	}
+#endif
 	inline logger___& operator<<(const std::string_view& v)
 	{
+		if (!logger_aux__::utf8_check_is_valid(v))
+		{
+			std::wstring wres;
+			if (logger_aux__::string_wide(v, wres))
+				return strcat_impl(boost::nowide::narrow(wres));
+		}
 		return strcat_impl(v);
 	}
 	inline logger___& operator<<(const boost::string_view& v)
 	{
-		return strcat_impl(std::string_view{v.data(), v.length()});
+		std::string_view sv{v.data(), v.length()};
+		if (!logger_aux__::utf8_check_is_valid(sv))
+		{
+			std::wstring wres;
+			if (logger_aux__::string_wide(sv, wres))
+				return strcat_impl(boost::nowide::narrow(wres));
+		}
+		return strcat_impl(sv);
 	}
 	inline logger___& operator<<(const char* v)
 	{
-		return strcat_impl(v);
+		std::string_view sv(v);
+		if (!logger_aux__::utf8_check_is_valid(sv))
+		{
+			std::wstring wres;
+			if (logger_aux__::string_wide(sv, wres))
+				return strcat_impl(boost::nowide::narrow(wres));
+		}
+		return strcat_impl(sv);
 	}
 	inline logger___& operator<<(const wchar_t* v)
 	{
@@ -1285,7 +1313,7 @@ public:
 			return *this;
 		switch (v.c_encoding())
 		{
-#if 0
+#ifndef __cpp_lib_char8_t
 		case 0:	out_ = "Sunday"; break;
 		case 1:	out_ = "Monday"; break;
 		case 2:	out_ = "Tuesday"; break;
@@ -1325,7 +1353,7 @@ public:
 			return *this;
 		switch (static_cast<unsigned int>(v))
 		{
-#if 0
+#ifndef __cpp_lib_char8_t
 		case  1: out_ = "January"; break;
 		case  2: out_ = "February"; break;
 		case  3: out_ = "March"; break;
@@ -1359,7 +1387,7 @@ public:
 	{
 		if (!global_logging___)
 			return *this;
-#if 0
+#ifndef __cpp_lib_char8_t
 		std::format_to(std::back_inserter(out_),
 			"{:02}", static_cast<int>(v));
 #else
