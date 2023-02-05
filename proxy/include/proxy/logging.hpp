@@ -70,55 +70,64 @@
 # endif
 #endif
 
+#ifdef WIN32
+# ifndef LOGGING_DISABLE_AUTO_UTF8
+#  define LOGGING_ENABLE_AUTO_UTF8
+# endif // !LOGGING_DISABLE_WINDOWS_AUTO_UTF8
+#endif // WIN32
+
 
 //////////////////////////////////////////////////////////////////////////
+
 #if defined(_WIN32) || defined(WIN32)
-#	ifndef WIN32_LEAN_AND_MEAN
-#		define WIN32_LEAN_AND_MEAN
-#	endif // !WIN32_LEAN_AND_MEAN
-#	include <windows.h>
+# ifndef WIN32_LEAN_AND_MEAN
+#  define WIN32_LEAN_AND_MEAN
+# endif // !WIN32_LEAN_AND_MEAN
+# include <windows.h>
 #endif // _WIN32
 
 #ifdef USE_SYSTEMD_LOGGING
-#if __has_include(<systemd/sd-journal.h>)
-#	include <systemd/sd-journal.h>
-#else
-#error "systemd/sd-journal.h not found"
-#endif
+# if __has_include(<systemd/sd-journal.h>)
+#  include <systemd/sd-journal.h>
+# else
+#  error "systemd/sd-journal.h not found"
+# endif
 #endif
 
 //////////////////////////////////////////////////////////////////////////
-#if defined(__has_include)
-#	if __has_include(<zlib.h>)
-#		include <zlib.h>
-#		ifndef LOGGING_COMPRESS_LOGS
-#			define LOGGING_COMPRESS_LOGS
-#		endif
-#	endif
-#else
-#	ifdef LOGGING_COMPRESS_LOGS
-#		include <zlib.h>
-#	endif
+#ifndef LOGGING_DISABLE_COMPRESS_LOGS
+# if defined(__has_include)
+#  if __has_include(<zlib.h>)
+#   include <zlib.h>
+#   ifndef LOGGING_ENABLE_COMPRESS_LOGS
+#    define LOGGING_ENABLE_COMPRESS_LOGS
+#   endif
+#  endif
+# else
+#  ifdef LOGGING_ENABLE_COMPRESS_LOGS
+#   include <zlib.h>
+#  endif
+# endif
 #endif
 
 #if defined(__cpp_lib_format)
-#	include <format>
+# include <format>
 #endif
 
 #if !defined(__cpp_lib_format)
-#ifdef _MSC_VER
-#	pragma warning(push)
-#	pragma warning(disable: 4244 4127)
-#endif // _MSC_VER
+# ifdef _MSC_VER
+#  pragma warning(push)
+#  pragma warning(disable: 4244 4127)
+# endif // _MSC_VER
 
-#ifdef __clang__
-#	pragma clang diagnostic push
-#	pragma clang diagnostic ignored "-Wexpansion-to-defined"
-#endif
+# ifdef __clang__
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wexpansion-to-defined"
+# endif
 
-#include <fmt/ostream.h>
-#include <fmt/printf.h>
-#include <fmt/format.h>
+# include <fmt/ostream.h>
+# include <fmt/printf.h>
+# include <fmt/format.h>
 
 namespace std {
 	using ::fmt::format;
@@ -128,13 +137,13 @@ namespace std {
 	using ::fmt::make_format_args;
 }
 
-#ifdef __clang__
-#	pragma clang diagnostic pop
-#endif
+# ifdef __clang__
+#  pragma clang diagnostic pop
+# endif
 
-#ifdef _MSC_VER
-#	pragma warning(pop)
-#endif
+# ifdef _MSC_VER
+#  pragma warning(pop)
+# endif
 #endif
 
 
@@ -164,7 +173,7 @@ namespace util {
 #endif // LOG_MAXFILE_SIZE
 
 
-#ifdef LOGGING_COMPRESS_LOGS
+#ifdef LOGGING_ENABLE_COMPRESS_LOGS
 
 namespace logging_compress__ {
 
@@ -324,6 +333,8 @@ namespace logger_aux__ {
 		return false;
 	}
 
+	inline namespace utf {
+
 	inline uint32_t decode(uint32_t* state, uint32_t* codep, uint32_t byte)
 	{
 		static constexpr uint8_t utf8d[] =
@@ -368,22 +379,104 @@ namespace logger_aux__ {
 		return state == 0;
 	}
 
-	inline std::string from_u8string(const std::string& s)
+	inline std::optional<std::wstring> utf8_convert(std::string_view str)
 	{
-		return s;
+		uint8_t* start = (uint8_t*)str.data();
+		uint8_t* end = start + str.size();
+
+		std::wstring wstr;
+		uint32_t codepoint;
+		uint32_t state = 0;
+
+		for (; start != end; ++start)
+		{
+			switch (decode(&state, &codepoint, *start))
+			{
+			case 0:
+				if (codepoint <= 0xFFFF) [[likely]]
+				{
+					wstr.push_back(static_cast<wchar_t>(codepoint));
+					continue;
+				}
+				wstr.push_back(static_cast<wchar_t>(0xD7C0 + (codepoint >> 10)));
+				wstr.push_back(static_cast<wchar_t>(0xDC00 + (codepoint & 0x3FF)));
+				continue;
+			case 1:
+				return {};
+			default:
+				;
+			}
+		}
+
+		if (state != 0)
+			return {};
+
+		return wstr;
 	}
 
-	inline std::string from_u8string(std::string&& s)
+	inline bool append(uint32_t cp, std::string& result)
 	{
-		return s;
+		if (!(cp <= 0x0010ffffu && !(cp >= 0xd800u && cp <= 0xdfffu)))
+			return false;
+
+		if (cp < 0x80)
+		{
+			result.push_back(static_cast<uint8_t>(cp));
+		}
+		else if (cp < 0x800)
+		{
+			result.push_back(static_cast<uint8_t>((cp >> 6) | 0xc0));
+			result.push_back(static_cast<uint8_t>((cp & 0x3f) | 0x80));
+		}
+		else if (cp < 0x10000)
+		{
+			result.push_back(static_cast<uint8_t>((cp >> 12) | 0xe0));
+			result.push_back(static_cast<uint8_t>(((cp >> 6) & 0x3f) | 0x80));
+			result.push_back(static_cast<uint8_t>((cp & 0x3f) | 0x80));
+		}
+		else {
+			result.push_back(static_cast<uint8_t>((cp >> 18) | 0xf0));
+			result.push_back(static_cast<uint8_t>(((cp >> 12) & 0x3f) | 0x80));
+			result.push_back(static_cast<uint8_t>(((cp >> 6) & 0x3f) | 0x80));
+			result.push_back(static_cast<uint8_t>((cp & 0x3f) | 0x80));
+		}
+
+		return true;
 	}
 
-#if defined(__cpp_lib_char8_t)
-	inline std::string from_u8string(const std::u8string& s)
+	inline std::optional<std::string> utf16_convert(std::wstring_view wstr)
 	{
-		return std::string(s.begin(), s.end());
+		std::string result;
+
+		auto end = wstr.cend();
+		for (auto start = wstr.cbegin(); start != end;)
+		{
+			uint32_t cp = static_cast<uint16_t>(0xffff & *start++);
+
+			if (cp >= 0xdc00u && cp <= 0xdfffu) [[unlikely]]
+				return {};
+
+			if (cp >= 0xd800u && cp <= 0xdbffu)
+			{
+				if (start == end) [[unlikely]]
+					return {};
+
+				uint32_t trail = static_cast<uint16_t>(0xffff & *start++);
+				if (!(trail >= 0xdc00u && trail <= 0xdfffu)) [[unlikely]]
+					return {};
+
+				cp = (cp << 10) + trail + 0xFCA02400;
+			}
+
+			if (!append(cp, result))
+				return {};
+		}
+
+		if (result.empty())
+			return {};
+
+		return result;
 	}
-#endif
 
 #ifdef WIN32
 	inline std::optional<std::wstring> string_wide(const std::string_view& src)
@@ -515,6 +608,27 @@ namespace logger_aux__ {
 		return result;
 	}
 #endif
+
+	} // namespace utf
+
+	inline std::string from_u8string(const std::string& s)
+	{
+		return s;
+	}
+
+	inline std::string from_u8string(std::string&& s)
+	{
+		return s;
+	}
+
+#if defined(__cpp_lib_char8_t)
+	inline std::string from_u8string(const std::u8string& s)
+	{
+		return std::string(s.begin(), s.end());
+	}
+#endif
+
+	//////////////////////////////////////////////////////////////////////////
 
 	template <class Lock>
 	Lock& lock_single()
@@ -661,7 +775,7 @@ public:
 			std::filesystem::resize_file(m_log_path, 0, ec);
 			m_log_size = 0;
 
-#ifdef LOGGING_COMPRESS_LOGS
+#ifdef LOGGING_ENABLE_COMPRESS_LOGS
 			auto fn = filename.string();
 			std::thread th([fn]()
 				{
@@ -1184,6 +1298,7 @@ public:
 	}
 	inline logger___& operator<<(const std::string& v)
 	{
+#ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!logger_aux__::utf8_check_is_valid(v))
 		{
 			auto wres = logger_aux__::string_wide(v);
@@ -1194,6 +1309,7 @@ public:
 					return strcat_impl(*ret);
 			}
 		}
+#endif
 		return strcat_impl(v);
 	}
 	inline logger___& operator<<(const std::wstring& v)
@@ -1213,6 +1329,7 @@ public:
 #endif
 	inline logger___& operator<<(const std::string_view& v)
 	{
+#ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!logger_aux__::utf8_check_is_valid(v))
 		{
 			auto wres = logger_aux__::string_wide(v);
@@ -1223,11 +1340,13 @@ public:
 					return strcat_impl(*ret);
 			}
 		}
+#endif
 		return strcat_impl(v);
 	}
 	inline logger___& operator<<(const boost::string_view& v)
 	{
 		std::string_view sv{v.data(), v.length()};
+#ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!logger_aux__::utf8_check_is_valid(sv))
 		{
 			auto wres = logger_aux__::string_wide(sv);
@@ -1238,11 +1357,13 @@ public:
 					return strcat_impl(*ret);
 			}
 		}
+#endif
 		return strcat_impl(sv);
 	}
 	inline logger___& operator<<(const char* v)
 	{
 		std::string_view sv(v);
+#ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!logger_aux__::utf8_check_is_valid(sv))
 		{
 			auto wres = logger_aux__::string_wide(sv);
@@ -1253,6 +1374,7 @@ public:
 					return strcat_impl(*ret);
 			}
 		}
+#endif
 		return strcat_impl(sv);
 	}
 	inline logger___& operator<<(const wchar_t* v)
