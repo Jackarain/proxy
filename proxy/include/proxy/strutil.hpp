@@ -682,7 +682,7 @@ namespace strutil
 	 * @param out - output string.
 	 * @return True if successfully, false otherwise.
 	 */
-	static inline bool unescape(const std::string_view& in, std::string& out)
+	static inline bool unescape(std::string_view in, std::string& out)
 	{
 		out.clear();
 		out.reserve(in.size());
