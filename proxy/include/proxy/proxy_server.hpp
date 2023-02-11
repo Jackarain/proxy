@@ -527,7 +527,7 @@ namespace proxy {
 
 				LOG_DBG << "socks id: " << m_connection_id
 					<< ", " << m_local_socket.remote_endpoint()
-					<< " use ipv4: " << dst_endpoint;
+					<< " to ipv4: " << dst_endpoint;
 			}
 			else if (atyp == SOCKS5_ATYP_DOMAINNAME)
 			{
@@ -537,7 +537,7 @@ namespace proxy {
 
 				LOG_DBG << "socks id: " << m_connection_id
 					<< ", " << m_local_socket.remote_endpoint()
-					<< " use domain: " << domain << ":" << port;
+					<< " to domain: " << domain << ":" << port;
 			}
 			else if (atyp == SOCKS5_ATYP_IPV6)
 			{
@@ -556,7 +556,7 @@ namespace proxy {
 
 				LOG_DBG << "socks id: " << m_connection_id
 					<< ", " << m_local_socket.remote_endpoint()
-					<< " use ipv6: " << dst_endpoint;
+					<< " to ipv6: " << dst_endpoint;
 			}
 
 			if (command == SOCKS_CMD_CONNECT)
@@ -598,13 +598,9 @@ namespace proxy {
 
 				auto remote_endp = m_local_socket.remote_endpoint();
 
-				// 所有发向 udp socket 的数据, 都将转发到 m_client_endp
-				// 除非是 m_client_endp 本身除外.
-				m_client_endp.address(remote_endp.address());
-				m_client_endp.port(port);
-
-				LOG_DBG << "socks id: " << m_connection_id
-					<< ", udp client: " << m_client_endp;
+				// 所有发向 udp socket 的数据, 都将转发到 m_local_udp_address
+				// 除非地址是 m_local_udp_address 本身除外.
+				m_local_udp_address = remote_endp.address();
 
 				// 开启udp socket数据接收, 并计时, 如果在一定时间内没有接收到数据包
 				// 则关闭 udp socket 等相关资源.
@@ -625,6 +621,13 @@ namespace proxy {
 				auto local_endp = m_udp_socket.local_endpoint(ec);
 				if (ec)
 					break;
+
+				LOG_DBG << "socks id: "
+					<< m_connection_id
+					<< ", local udp address: "
+					<< m_local_udp_address.to_string()
+					<< ", udp socket: "
+					<< local_endp;
 
 				if (local_endp.address().is_v4())
 				{
@@ -762,6 +765,7 @@ namespace proxy {
 			[[maybe_unused]] auto self = shared_from_this();
 			boost::system::error_code ec;
 			udp::endpoint remote_endp;
+			udp::endpoint local_endp;
 			char read_buffer[4096];
 			const char* rbuf = &read_buffer[96];
 			char* wbuf = &read_buffer[86];
@@ -776,14 +780,14 @@ namespace proxy {
 					remote_endp,
 					net_awaitable[ec]);
 				if (ec)
-				{
 					break;
-				}
 
 				auto rp = rbuf;
 
-				if (remote_endp.address() == m_client_endp.address())
+				if (remote_endp.address() == m_local_udp_address)
 				{
+					local_endp = remote_endp;
+
 					//  +----+------+------+----------+-----------+----------+
 					//  |RSV | FRAG | ATYP | DST.ADDR | DST.PORT  |   DATA   |
 					//  +----+------+------+----------+-----------+----------+
@@ -847,6 +851,11 @@ namespace proxy {
 					auto head_size = rp - rbuf;
 					auto udp_size = bytes - head_size;
 
+					LOG_DBG << "udp forward: "
+						<< local_endp
+						<< " to "
+						<< remote_endp;
+
 					co_await m_udp_socket.async_send_to(
 						net::buffer(rp, udp_size),
 						remote_endp,
@@ -883,9 +892,14 @@ namespace proxy {
 					auto head_size = wp - wbuf;
 					auto udp_size = bytes + head_size;
 
+					LOG_DBG << "udp forward: "
+						<< remote_endp
+						<< " to "
+						<< local_endp;
+
 					co_await m_udp_socket.async_send_to(
 						net::buffer(wbuf, udp_size),
-						m_client_endp,
+						local_endp,
 						net_awaitable[ec]);
 				}
 			}
@@ -2395,7 +2409,7 @@ Connection: close
 		proxy_stream_type m_local_socket;
 		proxy_stream_type m_remote_socket;
 		udp::socket m_udp_socket;
-		udp::endpoint m_client_endp;
+		net::ip::address m_local_udp_address;
 		net::steady_timer m_timer;
 		int m_timeout{ udp_session_expired_time };
 		size_t m_connection_id;
