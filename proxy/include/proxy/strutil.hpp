@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <regex>
 #include <sstream>
 #include <string>
@@ -1161,5 +1162,200 @@ namespace strutil
 
 		result.resize(static_cast<size_t>(dnext - dest));
 		return result;
+	}
+
+
+	//////////////////////////////////////////////////////////////////////////
+	static inline constexpr char ascii_tolower(const char c) noexcept
+	{
+		return ((static_cast<unsigned>(c) - 65U) < 26) ?
+			c + 'a' - 'A' : c;
+	}
+
+	static inline constexpr bool ishexdigit(const char c) noexcept
+	{
+		return isdigit(c) || ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'));
+	}
+
+	// 0xFFFF
+	// 000008
+	// 123456
+	static inline std::optional<int64_t>
+	from_string(std::string_view str, int base = -1)
+	{
+		const char* start = str.data();
+#if 0
+		const char* end = str.data() + str.size();
+
+		if (start >= end)
+			return {};
+
+		bool has_prefix = false;
+
+		if (*start == '0')
+		{
+			if (base == -1)
+				base = 8;
+
+			if (end - start >= 2 &&
+				ascii_tolower(*(start + 1)) == 'x')
+			{
+				if (base == -1)
+					base = 16;
+				has_prefix = true;
+			}
+		}
+
+		if (base == -1)
+			base = 10;
+
+		if (base == 16 && has_prefix)
+			start += 2;
+
+		const char* p = start;
+		while (p < end)
+		{
+			const char c = *p++;
+			switch (base)
+			{
+			case 8:
+				if (c < '0' || c > '7')
+					return {};
+				continue;
+			case 10:
+				if (!isdigit(c))
+					return {};
+				continue;
+			case 16:
+				if (!ishexdigit(c))
+					return {};
+				continue;
+			}
+		}
+#endif
+		return std::strtoll(start, nullptr, base);
+	}
+
+	static inline bool is_ipv4_host(std::string_view str)
+	{
+		const char* b = str.data();
+		const char* e = str.data() + str.size();
+		int parts = 0;
+		const char* start = b;
+		int64_t last = 0;
+		int64_t max = 0;
+
+		while (b != e)
+		{
+			const char c = *b++;
+			bool eol = b == e;
+
+			if (c == '.' || eol)
+			{
+				if (++parts > 4)
+					return false;
+
+				const char* end = eol ? b : b - 1;
+				auto ret = from_string({ start, static_cast<size_t>(end - start) });
+				if (!ret)
+					return false;
+
+				last = *ret;
+				if (last < 0)
+					return false;
+
+				if (max < last)
+					max = last;
+
+				start = b;
+			}
+		}
+
+		if (parts == 0 || parts > 4)
+		{
+			if (str.size() == 0)
+				return false;
+			return false;
+		}
+
+		if (max > 255 && last < max)
+			return false;
+
+		last >>= (8 * (4 - (parts - 1)));
+		if (last != 0)
+			return false;
+
+		return true;
+	}
+
+	inline bool is_ipv6_host(std::string_view str)
+	{
+		const char* b = str.data();
+		const char* e = str.data() + str.size();
+		const char* start = b;
+		int parts = 0;
+		int colons = 0;
+		char last_char = '\0';
+		uint16_t value[8];
+
+		while (b != e)
+		{
+			const char c = *b++;
+			bool eol = b == e;
+
+			if (c == ':' || eol)
+			{
+				const char* end = eol ? b : b - 1;
+				auto ret = from_string({ start, static_cast<size_t>(end - start) }, 16);
+				if (!ret)
+					return false;
+
+				int64_t n = *ret;
+				if (n > 0xffff)
+					return false;
+
+				value[parts] = static_cast<uint16_t>(n);
+				parts++;
+				start = b;
+
+				if (last_char == ':' && last_char == c)
+				{
+					colons++;
+					if (colons > 1)
+						return false;
+				}
+
+				bool is_ipv4 = false;
+				if (parts == 3 && colons == 1 && n == 0xffff) // ipv4
+					is_ipv4 = true;
+
+				if (parts == 6
+					&& colons == 0
+					&& (value[0] == 0 && value[1] == 0 && value[2] == 0
+						&& value[3] == 0 && value[4] == 0)
+					&& n == 0xffff) // ipv4
+					is_ipv4 = true;
+
+				if (is_ipv4)
+				{
+					if (!is_ipv4_host({ b, static_cast<size_t>(e - b) }))
+						return false;
+
+					return true;
+				}
+			}
+			else
+			{
+				if (!ishexdigit(c))
+					return false;
+			}
+
+			last_char = c;
+		}
+
+		if ((parts > 8) || (parts < 8 && colons == 0))
+			return false;
+
+		return true;
 	}
 }
