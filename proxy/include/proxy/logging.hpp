@@ -1,8 +1,11 @@
 ﻿//
-// Copyright (C) 2019 Jack.
+// logging.hpp
+// ~~~~~~~~~~~
 //
-// Author: jack
-// Email:  jack.wgm at gmail dot com
+// Copyright (c) 2023 Jack (jack dot wgm at gmail dot com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
 #pragma once
@@ -55,6 +58,18 @@
 #  endif
 # else
 #  include <boost/date_time/posix_time/posix_time.hpp>
+# endif
+#endif
+
+#ifndef LOGGING_DISABLE_BOOST_FILESYSTEM
+# if defined(__has_include)
+#  if __has_include(<boost/filesystem.hpp>)
+#   include <boost/filesystem.hpp>
+#  else
+#   define LOGGING_DISABLE_BOOST_FILESYSTEM
+#  endif
+# else
+#  include <boost/filesystem.hpp>
 # endif
 #endif
 
@@ -155,8 +170,6 @@ namespace std {
 //   int64_t time, const int& level, const std::string& message);
 //
 
-struct logger_tag
-{};
 
 namespace util {
 
@@ -960,29 +973,37 @@ inline const std::string& logger_level_string__(const int& level) noexcept
 	return _LOGGER_DEBUG_STR__;
 }
 
-struct access {
-	template <class... T>
-	static bool logger_writer(logger_tag, T...) noexcept
+struct logger_tag
+{};
+
+namespace access
+{
+	namespace detail
 	{
-		return false;
+		template <typename... T>
+		bool tag_invoke(T...) noexcept
+		{
+			return false;
+		}
+
+		struct tag_invoke_t
+		{
+			template <typename Tag>
+			bool operator()(Tag tag,
+				int64_t time,
+				const int& level,
+				const std::string& message) noexcept
+			{
+				return tag_invoke(
+					std::forward<Tag>(tag),
+					time,
+					level,
+					message);
+			}
+		};
 	}
-};
 
-template <class T>
-inline bool logger_writer(T tag
-	, int64_t time, const int& level, const std::string& message) noexcept
-{
-	return access::logger_writer(tag
-		, time, level, message
-	);
-}
-
-template<class T>
-inline bool logger_writer_adl(T tag
-	, int64_t time, const int& level, const std::string& message) noexcept
-{
-	return logger_writer(std::forward<T>(tag),
-		time, level, message);
+	inline detail::tag_invoke_t tag_invoke{};
 }
 
 inline void logger_writer__(int64_t time, const int& level,
@@ -999,7 +1020,7 @@ inline void logger_writer__(int64_t time, const int& level,
 	std::string whole = prefix + tmp;
 
 	// User log hook.
-	if (logger_writer_adl(logger_tag(), time, level, message))
+	if (access::tag_invoke(logger_tag(), time, level, message))
 		return;
 
 #ifndef DISABLE_WRITE_LOGGING
@@ -1576,6 +1597,26 @@ public:
 				logger_aux__::from_u8string(u8"日"));
 #endif
 		return *this;
+	}
+#endif
+	inline logger___& operator<<(const std::filesystem::path& p) noexcept
+	{
+		if (!global_logging___)
+			return *this;
+		auto ret = logger_aux__::utf16_utf8(p.wstring());
+		if (ret)
+			return strcat_impl(*ret);
+		return strcat_impl(p.string());
+	}
+#ifndef LOGGING_DISABLE_BOOST_FILESYSTEM
+	inline logger___& operator<<(const boost::filesystem::path& p) noexcept
+	{
+		if (!global_logging___)
+			return *this;
+		auto ret = logger_aux__::utf16_utf8(p.wstring());
+		if (ret)
+			return strcat_impl(*ret);
+		return strcat_impl(p.string());
 	}
 #endif
 #ifndef LOGGING_DISABLE_BOOST_POSIX_TIME
