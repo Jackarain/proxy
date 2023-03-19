@@ -1519,6 +1519,8 @@ namespace proxy {
 
 				auto proxy_host = std::string(m_next_proxy->host());
 				auto proxy_port = std::string(m_next_proxy->port());
+				if (proxy_port.empty())
+					proxy_port = m_next_proxy->scheme();
 
 				auto targets = co_await resolver.async_resolve(
 					proxy_host, proxy_port, net_awaitable[ec]);
