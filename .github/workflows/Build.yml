@@ -10,4 +10,8 @@ jobs:
       - run: sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10
       - run: sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 10
       - run: mkdir build && cd build && cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF && ninja
-
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: proxy_server
+          path: build/bin/proxy_server
