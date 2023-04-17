@@ -149,7 +149,8 @@ namespace proxy {
 	class proxy_server_base {
 	public:
 		virtual ~proxy_server_base() {}
-		virtual void remove_client(size_t id) = 0;
+		virtual void remove_session(size_t id) = 0;
+		virtual size_t num_session() = 0;
 		virtual const proxy_server_option& option() = 0;
 	};
 
@@ -198,9 +199,13 @@ namespace proxy {
 			if (!server)
 				return;
 
-			server->remove_client(m_connection_id);
+			server->remove_session(m_connection_id);
+			auto num = server->num_session();
 
-			LOG_DBG << "socks id: " << m_connection_id << ", destroyed";
+			LOG_DBG << "socks id: "
+				<< m_connection_id
+				<< ", destroyed, remainder: "
+				<< num;
 		}
 
 	public:
@@ -2559,9 +2564,14 @@ Connection: close
 		}
 
 	private:
-		virtual void remove_client(size_t id) override
+		virtual void remove_session(size_t id) override
 		{
 			m_clients.erase(id);
+		}
+
+		virtual size_t num_session() override
+		{
+			return m_clients.size();
 		}
 
 		virtual const proxy_server_option& option() override
