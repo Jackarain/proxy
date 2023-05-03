@@ -39,6 +39,17 @@
     </td>
 </table>
 
+<h2>1.82.0</h2>
+<ul>
+  <li>Due to changes in Boost.System and some other libraries used in Boost.Filesystem, the support for C++03 is deprecated. C++11 will become the minimum starting with Boost.Filesystem 1.84.</li>
+  <li>Fixed compilation errors that could have been caused by <code>path</code> conversion constructors being too permissive on the accepted arguments. (<a href="https://github.com/boostorg/filesystem/issues/273">#273</a>)</li>
+  <li><b>v4:</b> <code>path::remove_filename</code> now presesrves the trailing directory separator. (<a href="https://github.com/boostorg/filesystem/issues/271">#271</a>)</li>
+  <li>Added <code>path::remove_filename_and_trailing_separators</li>, which removes the filename and directory separators preceding it from the path. This behavior is similar to <code>path::remove_filename</code> in Filesystem <b>v3</b>, but is also usable in <b>v4</b>.
+  <li>Added <code>path::replace_filename</code>, which replaces filename in a path.</li>
+  <li>Updated implementation of the library version selection to avoid ODR violations. (<a href="https://github.com/boostorg/filesystem/issues/279">#279</a>)</li>
+  <li>On Windows, added a workaround for querying file attributes for files in SMBv1 shares. Previously, directories in SMBv1 shares could have been reported as regular files. This does not affect SMBv2 or later. (<a href="https://github.com/boostorg/filesystem/issues/282">#282</a>)</li>
+</ul>
+
 <h2>1.81.0</h2>
 <ul>
   <li><b>Deprecated:</b> <code>path</code> construction, assignment and appending from containers of characters, such as <code>std::vector&lt;char&gt;</code> or <code>std::list&lt;wchar_t&gt;</code>, is deprecated in <b>v3</b> and removed in <b>v4</b>. Please use string types or iterators instead.</li>

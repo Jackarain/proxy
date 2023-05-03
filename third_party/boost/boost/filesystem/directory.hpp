@@ -123,8 +123,7 @@ public:
 
     void replace_filename(boost::filesystem::path const& p, file_status st = file_status(), file_status symlink_st = file_status())
     {
-        m_path.remove_filename();
-        m_path /= p;
+        m_path.replace_filename(p);
 #if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
         m_status = static_cast< file_status&& >(st);
         m_symlink_status = static_cast< file_status&& >(symlink_st);
@@ -174,10 +173,10 @@ namespace path_traits {
 
 // Dispatch function for integration with path class
 template< typename Callback >
-BOOST_FORCEINLINE void dispatch(directory_entry const& de, Callback cb, const codecvt_type* cvt, directory_entry_tag)
+BOOST_FORCEINLINE typename Callback::result_type dispatch(directory_entry const& de, Callback cb, const codecvt_type* cvt, directory_entry_tag)
 {
     boost::filesystem::path::string_type const& source = de.path().native();
-    cb(source.data(), source.data() + source.size(), cvt);
+    return cb(source.data(), source.data() + source.size(), cvt);
 }
 
 } // namespace path_traits
@@ -276,13 +275,13 @@ inline bool is_regular(directory_entry const& e)
 BOOST_SCOPED_ENUM_UT_DECLARE_BEGIN(directory_options, unsigned int)
 {
     none = 0u,
-    skip_permission_denied = 1u,        // if a directory cannot be opened because of insufficient permissions, pretend that the directory is empty
-    follow_directory_symlink = 1u << 1, // recursive_directory_iterator: follow directory symlinks
-    skip_dangling_symlinks = 1u << 2,   // non-standard extension for recursive_directory_iterator: don't follow dangling directory symlinks,
-    pop_on_error = 1u << 3,             // non-standard extension for recursive_directory_iterator: instead of producing an end iterator on errors,
-                                        // repeatedly invoke pop() until it succeeds or the iterator becomes equal to end iterator
-    _detail_no_follow = 1u << 4,        // internal use only
-    _detail_no_push = 1u << 5           // internal use only
+    skip_permission_denied = 1u,         // if a directory cannot be opened because of insufficient permissions, pretend that the directory is empty
+    follow_directory_symlink = 1u << 1u, // recursive_directory_iterator: follow directory symlinks
+    skip_dangling_symlinks = 1u << 2u,   // non-standard extension for recursive_directory_iterator: don't follow dangling directory symlinks,
+    pop_on_error = 1u << 3u,             // non-standard extension for recursive_directory_iterator: instead of producing an end iterator on errors,
+                                         // repeatedly invoke pop() until it succeeds or the iterator becomes equal to end iterator
+    _detail_no_follow = 1u << 4u,        // internal use only
+    _detail_no_push = 1u << 5u           // internal use only
 }
 BOOST_SCOPED_ENUM_DECLARE_END(directory_options)
 

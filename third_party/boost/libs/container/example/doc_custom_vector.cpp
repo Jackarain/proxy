@@ -7,11 +7,9 @@
 // See http://www.boost.org/libs/container for documentation.
 //
 //////////////////////////////////////////////////////////////////////////////
-#include <boost/core/no_exceptions_support.hpp>
 //[doc_custom_vector
 #include <boost/container/vector.hpp>
 #include <boost/static_assert.hpp>
-#include <boost/core/no_exceptions_support.hpp>
 
 //Make sure assertions are active
 #ifdef NDEBUG
@@ -36,7 +34,7 @@ int main ()
    bool exception_thrown = false;
    /*<-*/ 
    #ifndef BOOST_NO_EXCEPTIONS
-   BOOST_TRY{ size_optimized_vector_t v(256); } BOOST_CATCH(...){ exception_thrown = true; } BOOST_CATCH_END
+   BOOST_CONTAINER_TRY{ size_optimized_vector_t v(256); } BOOST_CONTAINER_CATCH(...){ exception_thrown = true; } BOOST_CONTAINER_CATCH_END
    #else
    exception_thrown = true;
    #endif   //BOOST_NO_EXCEPTIONS

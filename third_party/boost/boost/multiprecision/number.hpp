@@ -2174,6 +2174,15 @@ class number
       using child2_type = typename Exp::right_type ;
       return contains_self(e.left(), typename child0_type::arity()) || contains_self(e.middle(), typename child1_type::arity()) || contains_self(e.right(), typename child2_type::arity());
    }
+   template <class Exp>
+   BOOST_MP_FORCEINLINE BOOST_MP_CXX14_CONSTEXPR bool contains_self(const Exp& e, std::integral_constant<int, 4> const&) const noexcept
+   {
+      using child0_type = typename Exp::left_type;
+      using child1_type = typename Exp::left_middle_type;
+      using child2_type = typename Exp::right_middle_type;
+      using child3_type = typename Exp::right_type;
+      return contains_self(e.left(), typename child0_type::arity()) || contains_self(e.left_middle(), typename child1_type::arity()) || contains_self(e.right_middle(), typename child2_type::arity()) || contains_self(e.right(), typename child3_type::arity());
+   }
 
    // Test if the expression is a reference to *this:
    template <class Exp>

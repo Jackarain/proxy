@@ -19,7 +19,8 @@
 #include <initializer_list>
 #include <iterator>
 
-BOOST_JSON_NS_BEGIN
+namespace boost {
+namespace json {
 
 #ifndef BOOST_JSON_DOCS
 class value;
@@ -184,13 +185,15 @@ public:
     /** Constructor.
 
         The constructed array is empty with zero
-        capacity, using the default memory resource.
+        capacity, using the [default memory resource].
 
         @par Complexity
         Constant.
 
         @par Exception Safety
         No-throw guarantee.
+
+        [default memory resource]: json/allocators/storage_ptr.html#json.allocators.storage_ptr.default_memory_resource
     */
     array() noexcept
         : t_(&empty_)
@@ -1739,7 +1742,8 @@ private:
     equal(array const& other) const noexcept;
 };
 
-BOOST_JSON_NS_END
+} // namespace json
+} // namespace boost
 
 // std::hash specialization
 #ifndef BOOST_JSON_DOCS

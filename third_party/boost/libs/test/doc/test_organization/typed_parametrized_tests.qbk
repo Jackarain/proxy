@@ -74,7 +74,7 @@ from the [link boost_test.runtime_config.test_unit_filtering command line filter
  `collection_of_types` *yields an error*.]
 
 [note If you prefer having the template parameter list directly in the declaration of __BOOST_AUTO_TEST_CASE_TEMPLATE__,
-  you may use the macro [@www.boost.org/doc/libs/release/libs/utility/identity_type/doc/html/index.html `BOOST_IDENTITY_TYPE`].
+  you may use the macro [@http://www.boost.org/doc/libs/release/libs/utility/identity_type/doc/html/index.html `BOOST_IDENTITY_TYPE`].
   The previous example gives (note the double parenthesis around the MPL list):
 
   ``

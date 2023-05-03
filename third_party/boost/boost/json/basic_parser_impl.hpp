@@ -42,7 +42,8 @@
 
 #ifndef BOOST_JSON_DOCS
 
-BOOST_JSON_NS_BEGIN
+namespace boost {
+namespace json {
 namespace detail {
 
 inline
@@ -217,8 +218,11 @@ const char*
 basic_parser<Handler>::
 sentinel()
 {
+    // the "+1" ensures that the returned pointer is unique even if
+    // the given input buffer borders on this object
     return reinterpret_cast<
-        const char*>(this);
+        const char*>(this) + 1;
+    return nullptr;
 }
 
 template<class Handler>
@@ -1563,7 +1567,7 @@ do_str2:
     // all at once instead of one at a time
     for(;;)
     {
-        if(BOOST_JSON_UNLIKELY(! cs))
+        if(BOOST_JSON_UNLIKELY(! cs || temp.capacity() == 0 ))
         {
             // flush
             if(BOOST_JSON_LIKELY(! temp.empty()))
@@ -2788,7 +2792,8 @@ write_some(
 
 #endif
 
-BOOST_JSON_NS_END
+} // namespace json
+} // namespace boost
 
 #ifdef _MSC_VER
 #pragma warning(pop)

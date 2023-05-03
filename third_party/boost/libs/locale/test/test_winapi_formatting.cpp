@@ -38,7 +38,7 @@ void test_by_char(const std::locale& l, std::string name, int lcid)
         TEST(ss << 1045.45);
         double n;
         TEST(ss >> n);
-        TEST(n == 1045.45);
+        TEST_EQ(n, 1045.45);
         TEST_EQ(to_utf8(ss.str()), "1045.45");
     }
 

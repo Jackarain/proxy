@@ -8,6 +8,7 @@
 <link rel="up" href="../testing_tools.html" title="Writing unit tests">
 <link rel="prev" href="tools_assertion_severity_level.html" title="Assertion severity level">
 <link rel="next" href="reports.html" title="Reported information">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -51,7 +52,7 @@
                 </p>
               </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">boost_test_macro_overview</span>
+<pre class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">boost_test_macro_overview</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">test</span><span class="special">/</span><span class="identifier">included</span><span class="special">/</span><span class="identifier">unit_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 
 <span class="identifier">BOOST_AUTO_TEST_CASE</span><span class="special">(</span> <span class="identifier">test_macro_overview</span> <span class="special">)</span>
@@ -76,7 +77,7 @@
                 </p>
               </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="special">&gt;</span> <span class="special">./</span><span class="identifier">boost_test_macro_overview</span> <span class="special">--</span><span class="identifier">log_level</span><span class="special">=</span><span class="identifier">all</span>
+<pre class="table-programlisting"><span class="special">&gt;</span> <span class="special">./</span><span class="identifier">boost_test_macro_overview</span> <span class="special">--</span><span class="identifier">log_level</span><span class="special">=</span><span class="identifier">all</span>
 <span class="identifier">Running</span> <span class="number">1</span> <span class="identifier">test</span> <span class="keyword">case</span><span class="special">...</span>
 <span class="identifier">Entering</span> <span class="identifier">test</span> <span class="identifier">module</span> <span class="string">"boost_test_macro_overview"</span>
 <span class="identifier">test</span><span class="special">.</span><span class="identifier">cpp</span><span class="special">:</span><span class="number">12</span><span class="special">:</span> <span class="identifier">Entering</span> <span class="identifier">test</span> <span class="keyword">case</span> <span class="string">"test_macro_overview"</span>
@@ -178,7 +179,7 @@
                 </p>
               </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">boost_test_macro3</span>
+<pre class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">boost_test_macro3</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">test</span><span class="special">/</span><span class="identifier">included</span><span class="special">/</span><span class="identifier">unit_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 
 <span class="identifier">BOOST_AUTO_TEST_CASE</span><span class="special">(</span> <span class="identifier">test_op_reportings</span> <span class="special">)</span>
@@ -200,7 +201,7 @@
                 </p>
               </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="special">&gt;</span> <span class="special">./</span><span class="identifier">boost_test_macro3</span> <span class="special">--</span><span class="identifier">log_level</span><span class="special">=</span><span class="identifier">all</span>
+<pre class="table-programlisting"><span class="special">&gt;</span> <span class="special">./</span><span class="identifier">boost_test_macro3</span> <span class="special">--</span><span class="identifier">log_level</span><span class="special">=</span><span class="identifier">all</span>
 <span class="identifier">Running</span> <span class="number">1</span> <span class="identifier">test</span> <span class="keyword">case</span><span class="special">...</span>
 <span class="identifier">Entering</span> <span class="identifier">test</span> <span class="identifier">module</span> <span class="string">"boost_test_macro3"</span>
 <span class="identifier">test</span><span class="special">.</span><span class="identifier">cpp</span><span class="special">(</span><span class="number">12</span><span class="special">):</span> <span class="identifier">Entering</span> <span class="identifier">test</span> <span class="keyword">case</span> <span class="string">"test_op_reportings"</span>
@@ -361,7 +362,7 @@
                 </p>
               </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">boost_test_macro_workaround</span>
+<pre class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">boost_test_macro_workaround</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">test</span><span class="special">/</span><span class="identifier">included</span><span class="special">/</span><span class="identifier">unit_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">sstream</span><span class="special">&gt;</span>
 
@@ -391,7 +392,7 @@
                 </p>
               </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="special">&gt;</span> <span class="special">./</span><span class="identifier">boost_test_macro_workaround</span> <span class="special">--</span><span class="identifier">log_level</span><span class="special">=</span><span class="identifier">all</span>
+<pre class="table-programlisting"><span class="special">&gt;</span> <span class="special">./</span><span class="identifier">boost_test_macro_workaround</span> <span class="special">--</span><span class="identifier">log_level</span><span class="special">=</span><span class="identifier">all</span>
 <span class="identifier">Running</span> <span class="number">2</span> <span class="identifier">test</span> <span class="identifier">cases</span><span class="special">...</span>
 <span class="identifier">Entering</span> <span class="identifier">test</span> <span class="identifier">module</span> <span class="string">"boost_test_macro_workaround"</span>
 <span class="identifier">test</span><span class="special">.</span><span class="identifier">cpp</span><span class="special">:</span><span class="number">13</span><span class="special">:</span> <span class="identifier">Entering</span> <span class="identifier">test</span> <span class="keyword">case</span> <span class="string">"test_logical_not_allowed"</span>
@@ -407,14 +408,11 @@
               </td></tr></tbody>
 </table></div>
 </div>
-<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
-<td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2001-2022 Boost.Test contributors<p>
+<div class="copyright-footer">Copyright © 2001-2022 Boost.Test contributors<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div></td>
-</tr></table>
+</div>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="tools_assertion_severity_level.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../testing_tools.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="reports.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>

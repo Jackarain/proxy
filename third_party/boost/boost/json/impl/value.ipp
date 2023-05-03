@@ -10,16 +10,33 @@
 #ifndef BOOST_JSON_IMPL_VALUE_IPP
 #define BOOST_JSON_IMPL_VALUE_IPP
 
+#include <boost/container_hash/hash.hpp>
 #include <boost/json/value.hpp>
 #include <boost/json/parser.hpp>
-#include <boost/json/detail/hash_combine.hpp>
 #include <cstring>
 #include <istream>
 #include <limits>
 #include <new>
 #include <utility>
 
-BOOST_JSON_NS_BEGIN
+namespace boost {
+namespace json {
+
+namespace
+{
+
+struct value_hasher
+{
+    std::size_t& seed;
+
+    template< class T >
+    void operator()( T&& t ) const noexcept
+    {
+        boost::hash_combine( seed, t );
+    }
+};
+
+} // namespace
 
 value::
 ~value() noexcept
@@ -399,7 +416,7 @@ operator>>(
             // if this assert fails, the streambuf is buggy
             BOOST_ASSERT( available > 0 );
 
-            available = std::min(
+            available = ( std::min )(
                 static_cast<std::size_t>(available), sizeof(read_buf) );
             // we read from the internal buffer of buf into our buffer
             available = buf.sgetn( read_buf, available );
@@ -588,7 +605,24 @@ key_value_pair(
 
 //----------------------------------------------------------
 
-BOOST_JSON_NS_END
+namespace detail
+{
+
+std::size_t
+hash_value_impl( value const& jv ) noexcept
+{
+    std::size_t seed = 0;
+
+    kind const k = jv.kind();
+    boost::hash_combine( seed, k != kind::int64 ? k : kind::uint64 );
+
+    visit( value_hasher{seed}, jv );
+    return seed;
+}
+
+} // namespace detail
+} // namespace json
+} // namespace boost
 
 //----------------------------------------------------------
 //
@@ -600,40 +634,7 @@ std::size_t
 std::hash<::boost::json::value>::operator()(
     ::boost::json::value const& jv) const noexcept
 {
-  std::size_t seed = static_cast<std::size_t>(jv.kind());
-  switch (jv.kind()) {
-    default:
-    case ::boost::json::kind::null:
-      return seed;
-    case ::boost::json::kind::bool_:
-      return ::boost::json::detail::hash_combine(
-        seed,
-        hash<bool>{}(jv.get_bool()));
-    case ::boost::json::kind::int64:
-      return ::boost::json::detail::hash_combine(
-        static_cast<size_t>(::boost::json::kind::uint64),
-        hash<std::uint64_t>{}(jv.get_int64()));
-    case ::boost::json::kind::uint64:
-      return ::boost::json::detail::hash_combine(
-        seed,
-        hash<std::uint64_t>{}(jv.get_uint64()));
-    case ::boost::json::kind::double_:
-      return ::boost::json::detail::hash_combine(
-        seed,
-        hash<double>{}(jv.get_double()));
-    case ::boost::json::kind::string:
-      return ::boost::json::detail::hash_combine(
-        seed,
-        hash<::boost::json::string>{}(jv.get_string()));
-    case ::boost::json::kind::array:
-      return ::boost::json::detail::hash_combine(
-        seed,
-        hash<::boost::json::array>{}(jv.get_array()));
-    case ::boost::json::kind::object:
-      return ::boost::json::detail::hash_combine(
-        seed,
-        hash<::boost::json::object>{}(jv.get_object()));
-  }
+    return ::boost::hash< ::boost::json::value >()( jv );
 }
 
 //----------------------------------------------------------

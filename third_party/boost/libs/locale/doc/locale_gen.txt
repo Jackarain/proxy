@@ -46,8 +46,8 @@ Of course we can also specify the locale manually
 -   Even if your application uses wide strings everywhere, you should specify the
     8-bit encoding to use for 8-bit stream IO operations like \c cout or \c fstream.
     \n
--   The default locale is defined by the environment variables \c LC_CTYPE , \c LC_ALL , and \c LANG
-    in that order (i.e. \c LC_CTYPE first and \c LANG last). On Windows, the library
+-   The default locale is defined by the environment variables \c LC_ALL , \c LC_CTYPE , and \c LANG
+    in that order (i.e. \c LC_ALL first and \c LANG last). On Windows, the library
     also queries the \c LOCALE_USER_DEFAULT option in the Win32 API when these variables
     are not set.
 

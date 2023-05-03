@@ -8,6 +8,7 @@
 <link rel="up" href="../write_some.html" title="parser::write_some">
 <link rel="prev" href="overload5.html" title="parser::write_some (5 of 6 overloads)">
 <link rel="next" href="../write.html" title="parser::write">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -28,7 +29,7 @@
           (6 of 6 overloads)</a>
 </h6></div></div></div>
 <p>
-            Parse a buffer containing a complete JSON.
+            Parse a buffer containing a complete JSON text.
           </p>
 <h6>
 <a name="json.ref.boost__json__parser.write_some.overload6.h0"></a>
@@ -43,18 +44,19 @@
             <span class="phrase"><a name="json.ref.boost__json__parser.write_some.overload6.description"></a></span><a class="link" href="overload6.html#json.ref.boost__json__parser.write_some.overload6.description">Description</a>
           </h6>
 <p>
-            This function parses a complete JSON contained in the specified character
-            buffer. Additional characters past the end of the complete JSON are ignored.
-            The function returns the actual number of characters parsed, which may
-            be less than the size of the input. This allows parsing of a buffer containing
-            multiple individual JSONs or containing different protocol data:
+            This function parses a complete JSON text contained in the specified
+            character buffer. Additional characters past the end of the complete
+            JSON text are ignored. The function returns the actual number of characters
+            parsed, which may be less than the size of the input. This allows parsing
+            of a buffer containing multiple individual JSON texts or containing different
+            protocol data:
           </p>
 <h6>
 <a name="json.ref.boost__json__parser.write_some.overload6.h2"></a>
             <span class="phrase"><a name="json.ref.boost__json__parser.write_some.overload6.example"></a></span><a class="link" href="overload6.html#json.ref.boost__json__parser.write_some.overload6.example">Example</a>
           </h6>
 <pre class="programlisting"><span class="identifier">parser</span> <span class="identifier">p</span><span class="special">;</span>                                       <span class="comment">// construct a parser</span>
-<span class="identifier">size_t</span> <span class="identifier">n</span> <span class="special">=</span> <span class="identifier">p</span><span class="special">.</span><span class="identifier">write_some</span><span class="special">(</span> <span class="string">"[1,2,3] null"</span> <span class="special">);</span>      <span class="comment">// parse a complete JSON</span>
+<span class="identifier">size_t</span> <span class="identifier">n</span> <span class="special">=</span> <span class="identifier">p</span><span class="special">.</span><span class="identifier">write_some</span><span class="special">(</span> <span class="string">"[1,2,3] null"</span> <span class="special">);</span>      <span class="comment">// parse a complete JSON text</span>
 <span class="identifier">assert</span><span class="special">(</span> <span class="identifier">n</span> <span class="special">==</span> <span class="number">8</span> <span class="special">);</span>                               <span class="comment">// only some characters consumed</span>
 <span class="identifier">value</span> <span class="identifier">jv</span> <span class="special">=</span> <span class="identifier">p</span><span class="special">.</span><span class="identifier">release</span><span class="special">();</span>                         <span class="comment">// take ownership of the value</span>
 </pre>
@@ -74,7 +76,7 @@
             Basic guarantee. Calls to <code class="computeroutput"><span class="identifier">memory_resource</span><span class="special">::</span><span class="identifier">allocate</span></code>
             may throw. Upon error or exception, subsequent calls will fail until
             <a class="link" href="../reset.html" title="parser::reset"><code class="computeroutput"><span class="identifier">reset</span></code></a>
-            is called to parse a new JSON.
+            is called to parse a new JSON text.
           </p>
 <h6>
 <a name="json.ref.boost__json__parser.write_some.overload6.h5"></a>
@@ -153,14 +155,11 @@
 </tr></tbody>
 </table></div>
 </div>
-<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
-<td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
+<div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div></td>
-</tr></table>
+</div>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="overload5.html"><img src="../../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../write_some.html"><img src="../../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../index.html"><img src="../../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../write.html"><img src="../../../../../../../../doc/src/images/next.png" alt="Next"></a>

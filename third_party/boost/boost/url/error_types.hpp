@@ -122,7 +122,7 @@ namespace errc = boost::system::errc;
     result< url_view > rv = parse_uri( "http://example.com/path/to/file.txt" );
 
     if(! rv )
-        std::cout << r.error();
+        std::cout << rv.error();
     else
         std::cout << *rv;
     @endcode

@@ -62,7 +62,7 @@ inline boost::filesystem::perms make_permissions(boost::filesystem::path const& 
     boost::filesystem::perms prms = boost::filesystem::owner_read | boost::filesystem::group_read | boost::filesystem::others_read;
     if ((attr & FILE_ATTRIBUTE_READONLY) == 0u)
         prms |= boost::filesystem::owner_write | boost::filesystem::group_write | boost::filesystem::others_write;
-    boost::filesystem::path ext = p.extension();
+    boost::filesystem::path ext = detail::path_algorithms::extension_v4(p);
     wchar_t const* q = ext.c_str();
     if (equal_extension(q, L".exe", L".EXE") || equal_extension(q, L".com", L".COM") || equal_extension(q, L".bat", L".BAT") || equal_extension(q, L".cmd", L".CMD"))
         prms |= boost::filesystem::owner_exe | boost::filesystem::group_exe | boost::filesystem::others_exe;

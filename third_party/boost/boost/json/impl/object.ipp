@@ -10,10 +10,10 @@
 #ifndef BOOST_JSON_IMPL_OBJECT_IPP
 #define BOOST_JSON_IMPL_OBJECT_IPP
 
+#include <boost/container_hash/hash.hpp>
 #include <boost/json/object.hpp>
 #include <boost/json/detail/digest.hpp>
 #include <boost/json/detail/except.hpp>
-#include <boost/json/detail/hash_combine.hpp>
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -22,7 +22,8 @@
 #include <stdexcept>
 #include <type_traits>
 
-BOOST_JSON_NS_BEGIN
+namespace boost {
+namespace json {
 namespace detail {
 
 template<class CharRange>
@@ -447,9 +448,7 @@ insert(
 {
     auto const n0 = size();
     if(init.size() > max_size() - n0)
-        detail::throw_length_error(
-            "object too large",
-            BOOST_CURRENT_LOCATION);
+        detail::throw_length_error( "object too large" );
     reserve(n0 + init.size());
     revert_insert r(*this);
     if(t_->is_small())
@@ -785,9 +784,7 @@ growth(
     std::size_t new_size) const
 {
     if(new_size > max_size())
-        detail::throw_length_error(
-            "object too large",
-            BOOST_CURRENT_LOCATION);
+        detail::throw_length_error( "object too large" );
     std::size_t const old = capacity();
     if(old > max_size() - old / 2)
         return new_size;
@@ -889,7 +886,8 @@ reindex_relocate(
         index_t>(dst - begin());
 }
 
-BOOST_JSON_NS_END
+} // namespace json
+} // namespace boost
 
 //----------------------------------------------------------
 //
@@ -901,16 +899,7 @@ std::size_t
 std::hash<::boost::json::object>::operator()(
     ::boost::json::object const& jo) const noexcept
 {
-    std::size_t seed = jo.size();
-    for (const auto& kv_pair : jo) {
-        auto const hk = ::boost::json::detail::digest(
-            kv_pair.key().begin(), kv_pair.key().end(), 0);
-        auto const hkv = ::boost::json::detail::hash_combine(
-            hk,
-            std::hash<::boost::json::value>{}(kv_pair.value()));
-        seed = ::boost::json::detail::hash_combine_commutative(seed, hkv);
-    }
-    return seed;
+    return ::boost::hash< ::boost::json::object >()( jo );
 }
 
 //----------------------------------------------------------

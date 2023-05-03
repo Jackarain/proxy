@@ -14,6 +14,7 @@
 #elif defined(__clang__)
 # pragma clang diagnostic push
 # pragma clang diagnostic ignored "-Wunused"
+# pragma clang diagnostic ignored "-Wmismatched-tags"
 #elif defined(__GNUC__)
 # pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Wunused"
@@ -110,9 +111,30 @@ tag_invoke( const try_value_to_tag< ip_address >&, value const& jv )
 
 } // namespace user_ns
 
-BOOST_JSON_NS_BEGIN
+namespace boost {
+namespace json {
 
 namespace {
+
+//[snippet_strings_5
+string greeting( string_view first_name, string_view last_name )
+{
+    const char hello[] = "Hello, ";
+    const std::size_t sz = first_name.size() + last_name.size() + sizeof(hello) + 1;
+
+    string js;
+    js.reserve(sz);
+
+    char* p = std::copy( hello, hello + sizeof(hello) - 1, js.data() );
+    p = std::copy( first_name.begin(), first_name.end(), p );
+    *p++ = ' ';
+    p = std::copy( last_name.begin(), last_name.end(), p );
+    *p++ = '!';
+
+    js.grow( sz );
+    return js;
+}
+//]
 
 void
 usingStrings()
@@ -175,6 +197,12 @@ usingStrings()
         str.compare("Boost");
 
         //]
+    }
+
+    {
+        auto str = greeting( "John", "Smith" );
+        (void)str;
+        assert( str == "Hello, John Smith!");
     }
 }
 
@@ -311,7 +339,7 @@ usingInitLists()
 
         assert( jv.as_array().size() == 4 );
 
-        assert( serialize(jv) == "[true,2,\"hello\",null]" );
+        assert( serialize(jv) == R"([true,2,"hello",null])" );
 
         //]
     }
@@ -325,7 +353,7 @@ usingInitLists()
 
         assert( jv.as_array().back().is_array() );
 
-        assert( serialize(jv) == "[true,2,\"hello\",[\"bye\",null,false]]" );
+        assert( serialize(jv) == R"([true,2,"hello",["bye",null,false]])" );
 
         //]
     }
@@ -388,11 +416,11 @@ usingInitLists()
 
         assert( jv.is_object() );
 
-        assert( serialize(jv) == "{\"mercury\":36,\"venus\":67,\"earth\":93}" );
+        assert( serialize(jv) == R"({"mercury":36,"venus":67,"earth":93})" );
 
         array ja = { { "mercury", 36 }, { "venus", 67 }, { "earth", 93 } };
 
-        assert( serialize(ja) == "[[\"mercury\",36],[\"venus\",67],[\"earth\",93]]" );
+        assert( serialize(ja) == R"([["mercury",36],["venus",67],["earth",93]])" );
 
         //]
 
@@ -769,6 +797,32 @@ usingPointer()
     assert( elem1 == elem2 );
 }
 
+
+void
+usingSetAtPointer()
+{
+    //[snippet_pointer_4
+    value jv;
+    jv.set_at_pointer("/two/bar/0", 12);
+    assert( jv.is_object() );
+    assert( jv.at_pointer("/two").is_object() );
+    assert( jv.at_pointer("/two/bar").is_array() );
+    assert( jv.at_pointer("/two/bar/0") == 12 );
+    //]
+
+    jv = nullptr;
+    //[snippet_pointer_5
+    set_pointer_options opts;
+    opts.create_arrays = false;
+
+    jv.set_at_pointer("/two/bar/0", 12, opts);
+    assert( jv.is_object() );
+    assert( jv.at_pointer("/two").is_object() );
+    assert( jv.at_pointer("/two/bar").is_object() ); // object, not array
+    assert( jv.at_pointer("/two/bar/0") == 12 );
+    //]
+}
+
 BOOST_STATIC_ASSERT(
     has_value_from<customer>::value);
 
@@ -836,6 +890,7 @@ public:
         usingStrings();
         usingPointer();
         usingSpecializedTrait();
+        usingSetAtPointer();
 
         BOOST_TEST_PASS();
     }
@@ -843,4 +898,5 @@ public:
 
 TEST_SUITE(snippets_test, "boost.json.snippets");
 
-BOOST_JSON_NS_END
+} // namespace json
+} // namespace boost

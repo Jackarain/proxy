@@ -8,6 +8,7 @@
 <link rel="up" href="../index.html" title="Chapter 1. Boost.JSON">
 <link rel="prev" href="allocators/uses_allocator.html" title="Uses-allocator construction">
 <link rel="next" href="examples.html" title="Examples">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -37,7 +38,7 @@
 <a name="json.input_output.parsing"></a><a class="link" href="input_output.html#json.input_output.parsing" title="Parsing">Parsing</a>
 </h3></div></div></div>
 <p>
-        Parsing is the process where a serialized JSON is validated and decomposed
+        Parsing is the process where a serialized JSON text is validated and decomposed
         into elements. The library provides these functions and types to assist with
         parsing:
       </p>
@@ -70,8 +71,8 @@
 <td>
                 <p>
                   A SAX push parser implementation which converts a serialized JSON
-                  into a series of member function calls to a user provided handler.
-                  This allows custom behaviors to be implemented for representing
+                  text into a series of member function calls to a user provided
+                  handler. This allows custom behaviors to be implemented for representing
                   the document in memory.
                 </p>
               </td>
@@ -97,8 +98,8 @@
               </td>
 <td>
                 <p>
-                  Parse a string containing a complete serialized JSON, and return
-                  a <a class="link" href="ref/boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a>.
+                  Parse a string containing a complete serialized JSON text, and
+                  return a <a class="link" href="ref/boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a>.
                 </p>
               </td>
 </tr>
@@ -111,7 +112,7 @@
 <td>
                 <p>
                   A stateful DOM parser object which may be used to efficiently parse
-                  a series of JSONs each contained in a single contiguous character
+                  a series of JSON texts each contained in a single contiguous character
                   buffer, returning each result as a <a class="link" href="ref/boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a>.
                 </p>
               </td>
@@ -125,7 +126,8 @@
 <td>
                 <p>
                   A stateful DOM parser object which may be used to efficiently parse
-                  a series of JSONs incrementally, returning each result as a <a class="link" href="ref/boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a>.
+                  a series of JSON texts incrementally, returning each result as
+                  a <a class="link" href="ref/boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a>.
                 </p>
               </td>
 </tr>
@@ -180,8 +182,8 @@
 </pre>
 <p>
         The <a class="link" href="ref/boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a>
-        returned in the preceding examples use the default memory resource. The following
-        code uses a <a class="link" href="ref/boost__json__monotonic_resource.html" title="monotonic_resource"><code class="computeroutput"><span class="identifier">monotonic_resource</span></code></a>, which results
+        returned in the preceding examples use the <a class="link" href="../">default
+        memory resource</a>. The following code uses a <a class="link" href="ref/boost__json__monotonic_resource.html" title="monotonic_resource"><code class="computeroutput"><span class="identifier">monotonic_resource</span></code></a>, which results
         in faster parsing. <code class="computeroutput"><span class="identifier">jv</span></code> is
         marked <code class="computeroutput"><span class="keyword">const</span></code> to prevent subsequent
         modification, because containers using a monotonic resource waste memory
@@ -250,10 +252,10 @@
             Streaming API, parse input JSON incrementally
           </li>
 <li class="listitem">
-            Improved performance when parsing multiple JSONs
+            Improved performance when parsing multiple JSON texts
           </li>
 <li class="listitem">
-            Ignore non-JSON content after the end of a JSON
+            Ignore non-JSON content after the end of a JSON text
           </li>
 </ul></div>
 <p>
@@ -262,8 +264,8 @@
         is allocated and freed in each call. However, by declaring an instance of
         <a class="link" href="ref/boost__json__parser.html" title="parser"><code class="computeroutput"><span class="identifier">parser</span></code></a>
         or <a class="link" href="ref/boost__json__stream_parser.html" title="stream_parser"><code class="computeroutput"><span class="identifier">stream_parser</span></code></a>,
-        this temporary storage can be reused when parsing more than one JSON, reducing
-        the total number of dynamic memory allocations.
+        this temporary storage can be reused when parsing more than one JSON text,
+        reducing the total number of dynamic memory allocations.
       </p>
 <p>
         To use the <a class="link" href="ref/boost__json__parser.html" title="parser"><code class="computeroutput"><span class="identifier">parser</span></code></a>,
@@ -351,8 +353,8 @@
         or <code class="computeroutput"><span class="identifier">finish</span></code> if parsing is complete.
       </p>
 <p>
-        In the following example a JSON is parsed from standard input a line at a
-        time. Error codes are used instead. The function <a class="link" href="ref/boost__json__stream_parser/finish.html" title="stream_parser::finish"><code class="computeroutput"><span class="identifier">finish</span></code></a> is used to indicate the end
+        In the following example a JSON text is parsed from standard input a line
+        at a time. Error codes are used instead. The function <a class="link" href="ref/boost__json__stream_parser/finish.html" title="stream_parser::finish"><code class="computeroutput"><span class="identifier">finish</span></code></a> is used to indicate the end
         of the input:
       </p>
 <div class="caution"><table border="0" summary="Caution">
@@ -381,6 +383,44 @@
     <span class="keyword">return</span> <span class="identifier">p</span><span class="special">.</span><span class="identifier">release</span><span class="special">();</span>
 <span class="special">}</span>
 </pre>
+<p>
+        We can complicate the example further by excracting <span class="emphasis"><em>several</em></span>
+        JSON values from the sequence of lines.
+      </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">value</span><span class="special">&gt;</span> <span class="identifier">read_jsons</span><span class="special">(</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">istream</span><span class="special">&amp;</span> <span class="identifier">is</span><span class="special">,</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">)</span>
+<span class="special">{</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span> <span class="identifier">value</span> <span class="special">&gt;</span> <span class="identifier">jvs</span><span class="special">;</span>
+    <span class="identifier">stream_parser</span> <span class="identifier">p</span><span class="special">;</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">line</span><span class="special">;</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">n</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span>
+    <span class="keyword">while</span><span class="special">(</span> <span class="keyword">true</span> <span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">if</span><span class="special">(</span> <span class="identifier">n</span> <span class="special">==</span> <span class="identifier">line</span><span class="special">.</span><span class="identifier">size</span><span class="special">()</span> <span class="special">)</span>
+        <span class="special">{</span>
+            <span class="keyword">if</span><span class="special">(</span> <span class="special">!</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">getline</span><span class="special">(</span> <span class="identifier">is</span><span class="special">,</span> <span class="identifier">line</span> <span class="special">)</span> <span class="special">)</span>
+                <span class="keyword">break</span><span class="special">;</span>
+            <span class="identifier">n</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span>
+        <span class="special">}</span>
+
+        <span class="identifier">n</span> <span class="special">+=</span> <span class="identifier">p</span><span class="special">.</span><span class="identifier">write_some</span><span class="special">(</span> <span class="identifier">line</span><span class="special">.</span><span class="identifier">data</span><span class="special">()</span> <span class="special">+</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">line</span><span class="special">.</span><span class="identifier">size</span><span class="special">()</span> <span class="special">-</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">ec</span> <span class="special">);</span>
+
+        <span class="keyword">if</span><span class="special">(</span> <span class="identifier">p</span><span class="special">.</span><span class="identifier">done</span><span class="special">()</span> <span class="special">)</span>
+        <span class="special">{</span>
+            <span class="identifier">jvs</span><span class="special">.</span><span class="identifier">push_back</span><span class="special">(</span> <span class="identifier">p</span><span class="special">.</span><span class="identifier">release</span><span class="special">()</span> <span class="special">);</span>
+            <span class="identifier">p</span><span class="special">.</span><span class="identifier">reset</span><span class="special">();</span>
+        <span class="special">}</span>
+    <span class="special">}</span>
+    <span class="keyword">if</span><span class="special">(</span> <span class="special">!</span><span class="identifier">p</span><span class="special">.</span><span class="identifier">done</span><span class="special">()</span> <span class="special">)</span>   <span class="comment">// this part handles the cases when the last JSON text in</span>
+    <span class="special">{</span>                 <span class="comment">// the input is either incomplete or doesn't have a marker</span>
+        <span class="identifier">p</span><span class="special">.</span><span class="identifier">finish</span><span class="special">(</span><span class="identifier">ec</span><span class="special">);</span> <span class="comment">// for end of the value (e.g. it is a number)</span>
+        <span class="keyword">if</span><span class="special">(</span> <span class="identifier">ec</span><span class="special">.</span><span class="identifier">failed</span><span class="special">()</span> <span class="special">)</span>
+            <span class="keyword">return</span> <span class="identifier">jvs</span><span class="special">;</span>
+        <span class="identifier">jvs</span><span class="special">.</span><span class="identifier">push_back</span><span class="special">(</span> <span class="identifier">p</span><span class="special">.</span><span class="identifier">release</span><span class="special">()</span> <span class="special">);</span>
+    <span class="special">}</span>
+
+    <span class="keyword">return</span> <span class="identifier">jvs</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
 <h5>
 <a name="json.input_output.parsing.h3"></a>
         <span class="phrase"><a name="json.input_output.parsing.controlling_memory"></a></span><a class="link" href="input_output.html#json.input_output.parsing.controlling_memory">Controlling
@@ -407,7 +447,7 @@
 <p>
         To achieve performance and memory efficiency, the parser uses a temporary
         storage area to hold intermediate results. This storage is reused when parsing
-        more than one JSON, reducing the total number of calls to allocate memory
+        more than one JSON text, reducing the total number of calls to allocate memory
         and thus improving performance. Upon construction, the memory resource used
         to perform allocations for this temporary storage area may be specified.
         Otherwise, the default memory resource is used. In addition to a memory resource,
@@ -430,8 +470,8 @@
 <p>
           Through careful specification of buffers and memory resources, it is possible
           to eliminate all dynamic allocation completely when parsing JSON, for the
-          case where the entire JSON is available in a single character buffer, as
-          shown here:
+          case where the entire JSON text is available in a single character buffer,
+          as shown here:
         </p>
 <pre class="programlisting"><span class="comment">/*  Parse JSON and invoke the handler
 
@@ -737,14 +777,11 @@
       </p>
 </div>
 </div>
-<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
-<td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
+<div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div></td>
-</tr></table>
+</div>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="allocators/uses_allocator.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="examples.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>

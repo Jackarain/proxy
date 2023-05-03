@@ -16,9 +16,9 @@
 template<typename CharType>
 void test_one(const std::locale& l, std::string src, std::string tgtl, std::string tgtu)
 {
-    TEST(boost::locale::to_upper(to_correct_string<CharType>(src, l), l) == to_correct_string<CharType>(tgtu, l));
-    TEST(boost::locale::to_lower(to_correct_string<CharType>(src, l), l) == to_correct_string<CharType>(tgtl, l));
-    TEST(boost::locale::fold_case(to_correct_string<CharType>(src, l), l) == to_correct_string<CharType>(tgtl, l));
+    TEST_EQ(boost::locale::to_upper(to_correct_string<CharType>(src, l), l), to_correct_string<CharType>(tgtu, l));
+    TEST_EQ(boost::locale::to_lower(to_correct_string<CharType>(src, l), l), to_correct_string<CharType>(tgtl, l));
+    TEST_EQ(boost::locale::fold_case(to_correct_string<CharType>(src, l), l), to_correct_string<CharType>(tgtl, l));
 }
 
 template<typename CharType>
@@ -47,9 +47,9 @@ template<typename Char>
 void test_normc(std::basic_string<Char> orig, std::basic_string<Char> normal, boost::locale::norm_type type)
 {
     std::locale l = boost::locale::generator().generate("en_US.UTF-8");
-    TEST(boost::locale::normalize(orig, type, l) == normal);
-    TEST(boost::locale::normalize(orig.c_str(), type, l) == normal);
-    TEST(boost::locale::normalize(orig.c_str(), orig.c_str() + orig.size(), type, l) == normal);
+    TEST_EQ(boost::locale::normalize(orig, type, l), normal);
+    TEST_EQ(boost::locale::normalize(orig.c_str(), type, l), normal);
+    TEST_EQ(boost::locale::normalize(orig.c_str(), orig.c_str() + orig.size(), type, l), normal);
 }
 
 void test_norm(std::string orig, std::string normal, boost::locale::norm_type type)

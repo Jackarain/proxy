@@ -11,7 +11,6 @@
 #define BOOST_CONTAINER_SOURCE
 #include <boost/container/pmr/memory_resource.hpp>
 #include <boost/container/pmr/global_resource.hpp>
-#include <boost/core/no_exceptions_support.hpp>
 #include <boost/container/throw_exception.hpp>
 #include <boost/container/detail/dlmalloc.hpp>  //For global lock
 #include <boost/container/detail/singleton.hpp>
@@ -127,17 +126,19 @@ namespace boost {
 namespace container {
 namespace pmr {
 
-static std::atomic<memory_resource*> default_memory_resource = 
-   ATOMIC_VAR_INIT(&boost::container::dtl::singleton_default<new_delete_resource_imp>::instance());
+std::atomic<memory_resource*>& default_memory_resource_instance() {
+    static std::atomic<memory_resource*> instance(new_delete_resource());
+    return instance;
+}
 
 BOOST_CONTAINER_DECL memory_resource* set_default_resource(memory_resource* r) BOOST_NOEXCEPT
 {
    memory_resource *const res = r ? r : new_delete_resource();
-   return default_memory_resource.exchange(res, std::memory_order_acq_rel);
+   return default_memory_resource_instance().exchange(res, std::memory_order_acq_rel);
 }
 
 BOOST_CONTAINER_DECL memory_resource* get_default_resource() BOOST_NOEXCEPT
-{  return default_memory_resource.load(std::memory_order_acquire); }
+{  return default_memory_resource_instance().load(std::memory_order_acquire); }
 
 #endif
 

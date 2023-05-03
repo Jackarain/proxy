@@ -27,11 +27,11 @@ static void double_interrupt()
 
 int main()
 {
-	BOOST_TEST( true ); // perform lwt initialization
+    BOOST_TEST( true ); // perform lwt initialization
 
     std::cout << "Start" << std::endl;
     double_interrupt();
     std::cout << "End" << std::endl;
 
-	return boost::report_errors();
+    return boost::report_errors();
 }

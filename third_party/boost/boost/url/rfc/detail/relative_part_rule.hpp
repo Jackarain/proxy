@@ -32,7 +32,7 @@ namespace detail {
     @endcode
 
     @par Specification
-    @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-4.2
+    @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-4.2"
         >4.2. Relative Reference (rfc3986)</a>
     @li <a href="https://www.rfc-editor.org/errata/eid5428"
         >Errata ID: 5428 (rfc3986)</a>

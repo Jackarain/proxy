@@ -314,7 +314,7 @@ struct default_launcher
     auto ec__ = detail::get_last_error();
     if (ok == 0)
     {
-      ec = detail::get_last_error();
+      BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec)
       detail::on_error(*this, executable, command_line, ec, inits...);
 
       if (process_information.hProcess != INVALID_HANDLE_VALUE)

@@ -37,9 +37,13 @@ in a translation unit of the program.
 #include <boost/url/detail/impl/any_segments_iter.ipp>
 #include <boost/url/detail/impl/decode.ipp>
 #include <boost/url/detail/impl/except.ipp>
+#include <boost/url/detail/impl/format_args.ipp>
 #include <boost/url/detail/impl/normalize.ipp>
 #include <boost/url/detail/impl/params_iter_impl.ipp>
 #include <boost/url/detail/impl/path.ipp>
+#include <boost/url/detail/impl/pattern.ipp>
+#include <boost/url/detail/impl/pct_format.ipp>
+#include <boost/url/detail/impl/replacement_field_rule.ipp>
 #include <boost/url/detail/impl/segments_iter_impl.ipp>
 #include <boost/url/detail/impl/url_impl.ipp>
 
@@ -111,5 +115,6 @@ in a translation unit of the program.
 #include <boost/url/rfc/impl/relative_ref_rule.ipp>
 #include <boost/url/rfc/impl/uri_rule.ipp>
 #include <boost/url/rfc/impl/uri_reference_rule.ipp>
+
 
 #endif

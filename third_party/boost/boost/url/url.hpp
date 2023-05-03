@@ -476,6 +476,10 @@ public:
     url& set_query(string_view s) { url_base::set_query(s); return *this; }
     /// @copydoc url_base::set_encoded_query
     url& set_encoded_query(pct_string_view s) { url_base::set_encoded_query(s); return *this; }
+    /// @copydoc url_base::set_params
+    url& set_params(std::initializer_list<param_view> s) { url_base::set_params(s); return *this; }
+    /// @copydoc url_base::set_encoded_params
+    url& set_encoded_params(std::initializer_list< param_pct_view > ps) { url_base::set_encoded_params(ps); return *this; }
     /// @copydoc url_base::remove_query
     url& remove_query() noexcept { url_base::remove_query(); return *this; }
 

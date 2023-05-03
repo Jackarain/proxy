@@ -16,9 +16,9 @@
 template<typename CharType>
 void test_one(const std::locale& l, std::string src, std::string tgtl, std::string tgtu)
 {
-    TEST(boost::locale::to_upper(to_correct_string<CharType>(src, l), l) == to_correct_string<CharType>(tgtu, l));
-    TEST(boost::locale::to_lower(to_correct_string<CharType>(src, l), l) == to_correct_string<CharType>(tgtl, l));
-    TEST(boost::locale::fold_case(to_correct_string<CharType>(src, l), l) == to_correct_string<CharType>(tgtl, l));
+    TEST_EQ(boost::locale::to_upper(to_correct_string<CharType>(src, l), l), to_correct_string<CharType>(tgtu, l));
+    TEST_EQ(boost::locale::to_lower(to_correct_string<CharType>(src, l), l), to_correct_string<CharType>(tgtl, l));
+    TEST_EQ(boost::locale::fold_case(to_correct_string<CharType>(src, l), l), to_correct_string<CharType>(tgtl, l));
 }
 
 template<typename CharType>

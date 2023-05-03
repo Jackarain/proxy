@@ -18,7 +18,6 @@
 #include <boost/container/list.hpp>
 #include <boost/container/allocator.hpp>
 #include <boost/container/vector.hpp>
-#include <boost/core/no_exceptions_support.hpp>
 #include <boost/type_traits/is_default_constructible.hpp>
 #include <boost/type_traits/is_nothrow_move_constructible.hpp>
 #include "dummy_test_allocator.hpp"
@@ -636,13 +635,13 @@ template <class Devector> void test_il_assignment()
 
       test_elem_throw::on_copy_after(3);
 
-      BOOST_TRY
+      BOOST_CONTAINER_TRY
       {
          a = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
          BOOST_TEST(false);
       }
-      BOOST_CATCH(const test_exception&) {}
-      BOOST_CATCH_END
+      BOOST_CONTAINER_CATCH(const test_exception&) {}
+      BOOST_CONTAINER_CATCH_END
       test_elem_throw::do_not_throw();
 
       test_equal_range(a, {1, 2, 3, 4, 5, 6});

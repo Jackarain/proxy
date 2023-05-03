@@ -132,14 +132,14 @@ struct string_literals<wchar_t>
       {  return L"LongLongLongLongLongLongLongLongLongLongLongLongLongString";  }
    static wchar_t Char()
       {  return L'C';  }
-   static void sprintf_number(wchar_t *buffer, unsigned long number)
+   static void sprintf_number(wchar_t *buffer, unsigned long long number)
    {
       //For compilers without wsprintf, print it backwards
       const wchar_t *digits = L"0123456789";
       wchar_t *buf = buffer;
 
       while(1){
-         unsigned long rem = number % 10;
+         unsigned long long rem = number % 10;
          number  = number / 10;
 
          *buf = digits[rem];

@@ -206,13 +206,12 @@ public:
         this parameter is omitted, the default
         options are used.
     */
-    BOOST_URL_DECL
     explicit
     decode_view(
         pct_string_view s,
         encoding_opts opt = {}) noexcept
         : decode_view(
-            string_view(s),
+            detail::to_sv(s),
             s.decoded_size(),
             opt)
     {
@@ -340,6 +339,140 @@ public:
     */
     reference
     back() const noexcept;
+
+    /** Checks if the string begins with the given prefix
+
+        @par Example
+        @code
+        assert( decode_view( "Program%20Files" ).starts_with("Program") );
+        @endcode
+
+        @par Complexity
+        Linear.
+
+        @par Exception Safety
+        Throws nothing.
+    */
+    BOOST_URL_DECL
+    bool
+    starts_with( string_view s ) const noexcept;
+
+    /** Checks if the string ends with the given prefix
+
+        @par Example
+        @code
+        assert( decode_view( "Program%20Files" ).ends_with("Files") );
+        @endcode
+
+        @par Complexity
+        Linear.
+
+        @par Exception Safety
+        Throws nothing.
+    */
+    BOOST_URL_DECL
+    bool
+    ends_with( string_view s ) const noexcept;
+
+    /** Checks if the string begins with the given prefix
+
+        @par Example
+        @code
+        assert( decode_view( "Program%20Files" ).starts_with('P') );
+        @endcode
+
+        @par Complexity
+        Constant.
+
+        @par Exception Safety
+        Throws nothing.
+    */
+    BOOST_URL_DECL
+    bool
+    starts_with( char ch ) const noexcept;
+
+    /** Checks if the string ends with the given prefix
+
+        @par Example
+        @code
+        assert( decode_view( "Program%20Files" ).ends_with('s') );
+        @endcode
+
+        @par Complexity
+        Constant.
+
+        @par Exception Safety
+        Throws nothing.
+    */
+    BOOST_URL_DECL
+    bool
+    ends_with( char ch ) const noexcept;
+
+    /** Finds the first occurrence of character in this view
+
+        @par Complexity
+        Linear.
+
+        @par Exception Safety
+        Throws nothing.
+    */
+    BOOST_URL_DECL
+    const_iterator
+    find( char ch ) const noexcept;
+
+    /** Finds the first occurrence of character in this view
+
+        @par Complexity
+        Linear.
+
+        @par Exception Safety
+        Throws nothing.
+    */
+    BOOST_URL_DECL
+    const_iterator
+    rfind( char ch ) const noexcept;
+
+    /** Remove the first characters
+
+        @par Example
+        @code
+        decode_view d( "Program%20Files" );
+        d.remove_prefix( 8 );
+        assert( d == "Files" );
+        @endcode
+
+        @par Preconditions
+        @code
+        not this->empty()
+        @endcode
+
+        @par Complexity
+        Linear.
+    */
+    BOOST_URL_DECL
+    void
+    remove_prefix( size_type n );
+
+    /** Remove the last characters
+
+        @par Example
+        @code
+        decode_view d( "Program%20Files" );
+        d.remove_prefix( 6 );
+        assert( d == "Program" );
+        @endcode
+
+        @par Preconditions
+        @code
+        not this->empty()
+        @endcode
+
+        @par Complexity
+        Linear.
+    */
+    BOOST_URL_DECL
+    void
+    remove_suffix( size_type n );
 
     /** Return the decoding options
     */

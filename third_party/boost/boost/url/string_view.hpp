@@ -11,7 +11,7 @@
 #define BOOST_URL_STRING_VIEW_HPP
 
 #include <boost/url/detail/config.hpp>
-#include <boost/core/detail/string_view.hpp>
+#include <boost/url/detail/string_view.hpp>
 
 namespace boost {
 namespace urls {

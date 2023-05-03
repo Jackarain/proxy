@@ -10,7 +10,6 @@
 #define BOOST_ENABLE_ASSERT_HANDLER
 #include <boost/container/static_vector.hpp>
 #include <boost/core/lightweight_test.hpp>
-#include <boost/core/no_exceptions_support.hpp>
 #include <new> //for bad_alloc
 #include <boost/assert.hpp>
 #include <cstdlib>
@@ -87,16 +86,16 @@ void test_throw_on_overflow()
       v.resize(Capacity);
       bool expected_type_thrown = false;
 
-      BOOST_TRY{
+      BOOST_CONTAINER_TRY{
          v.push_back(0);
       }
-      BOOST_CATCH(bad_alloc_t&)
+      BOOST_CONTAINER_CATCH(bad_alloc_t&)
       {
          expected_type_thrown = true;
       }
-      BOOST_CATCH(...)
+      BOOST_CONTAINER_CATCH(...)
       {}
-      BOOST_CATCH_END
+      BOOST_CONTAINER_CATCH_END
 
       BOOST_TEST(expected_type_thrown == true);
       BOOST_TEST(v.capacity() == Capacity);
@@ -115,16 +114,16 @@ void test_throw_on_overflow()
       v.resize(Capacity);
       bool expected_type_thrown = false;
 
-      BOOST_TRY{
+      BOOST_CONTAINER_TRY{
          v.push_back(0);
       }
-      BOOST_CATCH(throw_on_overflow_off)
+      BOOST_CONTAINER_CATCH(throw_on_overflow_off)
       {
          expected_type_thrown = true;
       }
-      BOOST_CATCH(...)
+      BOOST_CONTAINER_CATCH(...)
       {}
-      BOOST_CATCH_END
+      BOOST_CONTAINER_CATCH_END
 
       BOOST_TEST(expected_type_thrown == true);
       BOOST_TEST(v.capacity() == Capacity);

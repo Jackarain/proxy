@@ -488,7 +488,7 @@ struct key
     using string_type      = std::basic_string<char_type, traits_type>;
     using string_view_type = basic_string_view<char_type, traits_type>;
 
-    key() noexcept = default;
+    key() {}
     key( const key& p ) = default;
     key( key&& p ) noexcept = default;
     key( const string_type& source ) : value_(source) {}
@@ -524,7 +524,11 @@ struct key
     ~key() = default;
 
     key& operator=( const key& p ) = default;
-    key& operator=( key&& p ) noexcept = default;
+    key& operator=( key&& p )
+    {
+      value_ = std::move(p.value_);
+      return *this;
+    }
     key& operator=( string_type&& source )
     {
         value_ = std::move(source);
@@ -708,7 +712,7 @@ struct value
     using string_type      = std::basic_string<char_type, traits_type>;
     using string_view_type = basic_cstring_ref<char_type, traits_type>;
 
-    value() noexcept = default;
+    value() {}
     value( const value& p ) = default;
 
     value( const string_type& source ) : value_(source) {}
@@ -742,7 +746,11 @@ struct value
     ~value() = default;
 
     value& operator=( const value& p ) = default;
-    value& operator=( value&& p ) noexcept = default;
+    value& operator=( value&& p )
+    {
+      value_ = std::move(p.value_);
+      return *this;
+    }
     value& operator=( string_type&& source )
     {
         value_ = std::move(source);
@@ -935,7 +943,7 @@ struct key_value_pair
     using string_type      = std::basic_string<char_type>;
     using string_view_type = basic_cstring_ref<char_type>;
 
-    key_value_pair() noexcept = default;
+    key_value_pair() {}
     key_value_pair( const key_value_pair& p ) = default;
     key_value_pair( key_value_pair&& p ) noexcept = default;
     key_value_pair(key_view key, value_view value) : value_(key.basic_string<char_type, traits_type>() + equality_sign + 
@@ -999,7 +1007,11 @@ struct key_value_pair
     ~key_value_pair() = default;
 
     key_value_pair& operator=( const key_value_pair& p ) = default;
-    key_value_pair& operator=( key_value_pair&& p ) noexcept = default;
+    key_value_pair& operator=( key_value_pair&& p )
+    {
+      value_ = std::move(p.value_);
+      return *this;
+    }
     key_value_pair& operator=( string_type&& source )
     {
         value_ = std::move(source);

@@ -74,7 +74,7 @@ parse(
     std::size_t const n(it - it0);
     return params_encoded_view(
         detail::query_ref(
-            string_view(it, n),
+            string_view(it0, n),
             n - dn,
             nparam));
 }

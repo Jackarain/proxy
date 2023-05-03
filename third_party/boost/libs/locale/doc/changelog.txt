@@ -1,6 +1,6 @@
 //
 // Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
-// Copyright (c) 2021-2022 Alexander Grund
+// Copyright (c) 2021-2023 Alexander Grund
 //
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
@@ -8,6 +8,15 @@
 /*!
 \page changelog Changelog
 
+- 1.82.0
+    - Breaking changes
+        - `get_system_locale` and dependents will now correctly favor `$LC_ALL` over `LC_CTYPE` as defined by POSIX
+        - `utf8_codecvt::out` returns `partial` for trailing (UTF) surrogates
+    - Other improvements and fixes
+        - Add `boost::locale::util::locale_data` to parse a locale
+        - `boost::locale::info::encoding()` result is in uppercase as documented, e.g. "UTF-8" instead of "utf-8"
+        - Support M49 country codes such as `en_001` or `en_150`
+        - Treat `en_US_POSIX` as an alias for the `C` locale
 - 1.81.0
     - Breaking changes
         - Require C++11 or higher

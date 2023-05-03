@@ -8,6 +8,7 @@
 <link rel="up" href="../runtime_config.html" title="Runtime parameters">
 <link rel="prev" href="../runtime_config.html" title="Runtime parameters">
 <link rel="next" href="custom_command_line_arguments.html" title="Custom command line arguments">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -82,7 +83,7 @@
                 </p>
               </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">decorator_20</span>
+<pre class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">decorator_20</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">test</span><span class="special">/</span><span class="identifier">included</span><span class="special">/</span><span class="identifier">unit_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 
 <span class="keyword">namespace</span> <span class="identifier">utf</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">unit_test</span><span class="special">;</span>
@@ -126,7 +127,7 @@
                 </p>
               </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="special">&gt;</span> <span class="identifier">decorator_20</span>
+<pre class="table-programlisting"><span class="special">&gt;</span> <span class="identifier">decorator_20</span>
 <span class="identifier">Running</span> <span class="number">2</span> <span class="identifier">test</span> <span class="identifier">cases</span><span class="special">...</span>
 <span class="identifier">test</span><span class="special">.</span><span class="identifier">cpp</span><span class="special">(</span><span class="number">18</span><span class="special">):</span> <span class="identifier">error</span><span class="special">:</span> <span class="identifier">in</span> <span class="string">"suite1/test_2"</span><span class="special">:</span> <span class="identifier">check</span> <span class="number">2</span> <span class="special">!=</span> <span class="number">2</span> <span class="identifier">has</span> <span class="identifier">failed</span> <span class="special">[</span><span class="number">2</span> <span class="special">==</span> <span class="number">2</span><span class="special">]</span>
 <span class="identifier">test</span><span class="special">.</span><span class="identifier">cpp</span><span class="special">(</span><span class="number">24</span><span class="special">):</span> <span class="identifier">error</span><span class="special">:</span> <span class="identifier">in</span> <span class="string">"suite1/test_io"</span><span class="special">:</span> <span class="identifier">check</span> <span class="number">3</span> <span class="special">!=</span> <span class="number">3</span> <span class="identifier">has</span> <span class="identifier">failed</span> <span class="special">[</span><span class="number">3</span> <span class="special">==</span> <span class="number">3</span><span class="special">]</span>
@@ -267,10 +268,10 @@
                 </p>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=test_1</pre>
+<pre class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=test_1</pre>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting">test_1
+<pre class="table-programlisting">test_1
 </pre>
               </td>
 </tr>
@@ -281,10 +282,10 @@
                 </p>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=suite_1/suite_1/test_1</pre>
+<pre class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=suite_1/suite_1/test_1</pre>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting">suite_1/suite_1/test_1
+<pre class="table-programlisting">suite_1/suite_1/test_1
 </pre>
               </td>
 </tr>
@@ -295,12 +296,12 @@
                 </p>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=suite_1/suite_2
+<pre class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=suite_1/suite_2
 <a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=suite_1/suite_2/*
 </pre>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting">suite_1/suite_2/test_1
+<pre class="table-programlisting">suite_1/suite_2/test_1
 suite_1/suite_2/test_2
 </pre>
               </td>
@@ -313,10 +314,10 @@ suite_1/suite_2/test_2
                 </p>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=suite_1/test_1,suite_2</pre>
+<pre class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=suite_1/test_1,suite_2</pre>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting">suite_1/suite_2/test_1
+<pre class="table-programlisting">suite_1/suite_2/test_1
 suite_1/suite_2/test_2
 suite_1/test_1
 </pre>
@@ -329,10 +330,10 @@ suite_1/test_1
                 </p>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=suite_1/test_1:test_1</pre>
+<pre class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=suite_1/test_1:test_1</pre>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting">suite_1/test_1
+<pre class="table-programlisting">suite_1/test_1
 test_1
 </pre>
               </td>
@@ -344,10 +345,10 @@ test_1
                 </p>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=@L1</pre>
+<pre class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=@L1</pre>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting">test_1
+<pre class="table-programlisting">test_1
 test_2
 suite_1/test_1
 </pre>
@@ -361,10 +362,10 @@ suite_1/test_1
                 </p>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=*</pre>
+<pre class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=*</pre>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting">test_1
+<pre class="table-programlisting">test_1
 test_2
 suite_1/suite_1/test_1
 suite_1/suite_1/test_2
@@ -383,10 +384,10 @@ suite_1/test_2A
                 </p>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=suite_1/test*</pre>
+<pre class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=suite_1/test*</pre>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting">suite_1/test_1
+<pre class="table-programlisting">suite_1/test_1
 suite_1/test_2
 suite_1/test_2A
 </pre>
@@ -399,10 +400,10 @@ suite_1/test_2A
                 </p>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=suite_1/*_1</pre>
+<pre class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=suite_1/*_1</pre>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting">suite_1/suite_1/test_1
+<pre class="table-programlisting">suite_1/suite_1/test_1
 suite_1/suite_1/test_2
 suite_1/test_1
 </pre>
@@ -415,10 +416,10 @@ suite_1/test_1
                 </p>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=suite_1/*_2*</pre>
+<pre class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=suite_1/*_2*</pre>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting">suite_1/suite_2/test_1
+<pre class="table-programlisting">suite_1/suite_2/test_1
 suite_1/suite_2/test_2
 suite_1/test_2
 suite_1/test_2A
@@ -432,10 +433,10 @@ suite_1/test_2A
                 </p>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=*/*/test_2</pre>
+<pre class="table-programlisting"><a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=*/*/test_2</pre>
               </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting">suite_1/suite_1/test_2
+<pre class="table-programlisting">suite_1/suite_1/test_2
 suite_1/suite_2/test_2
 </pre>
               </td>
@@ -469,7 +470,7 @@ suite_1/suite_2/test_2
                 </p>
               </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">decorator_21</span>
+<pre class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">decorator_21</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">test</span><span class="special">/</span><span class="identifier">included</span><span class="special">/</span><span class="identifier">unit_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 
 <span class="keyword">namespace</span> <span class="identifier">utf</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">unit_test</span><span class="special">;</span>
@@ -509,7 +510,7 @@ suite_1/suite_2/test_2
                 </p>
               </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="special">&gt;</span> <span class="identifier">decorator_21</span> <span class="special">--</span><span class="identifier">log_level</span><span class="special">=</span><span class="identifier">test_suite</span> <span class="special">--</span><span class="identifier">run_test</span><span class="special">=</span><span class="identifier">test_2</span><span class="special">,</span><span class="identifier">test_3</span>
+<pre class="table-programlisting"><span class="special">&gt;</span> <span class="identifier">decorator_21</span> <span class="special">--</span><span class="identifier">log_level</span><span class="special">=</span><span class="identifier">test_suite</span> <span class="special">--</span><span class="identifier">run_test</span><span class="special">=</span><span class="identifier">test_2</span><span class="special">,</span><span class="identifier">test_3</span>
 <span class="identifier">Including</span> <span class="identifier">test</span> <span class="keyword">case</span> <span class="identifier">test_1</span> <span class="identifier">as</span> <span class="identifier">a</span> <span class="identifier">dependency</span> <span class="identifier">of</span> <span class="identifier">test</span> <span class="keyword">case</span> <span class="identifier">test_2</span>
 <span class="identifier">Running</span> <span class="number">3</span> <span class="identifier">test</span> <span class="identifier">cases</span><span class="special">...</span>
 <span class="identifier">Entering</span> <span class="identifier">test</span> <span class="identifier">module</span> <span class="string">"decorator_21"</span>
@@ -568,7 +569,7 @@ suite_1/suite_2/test_2
 <tbody>
 <tr>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting">&gt; test_program --<a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=!&lt;absolute_spec&gt;</pre>
+<pre class="table-programlisting">&gt; test_program --<a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=!&lt;absolute_spec&gt;</pre>
               </td>
 <td>
                 <p>
@@ -584,7 +585,7 @@ suite_1/suite_2/test_2
 </tr>
 <tr>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting">&gt; test_program --<a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=+&lt;absolute_spec&gt;</pre>
+<pre class="table-programlisting">&gt; test_program --<a class="link" href="../utf_reference/rt_param_reference/run_test.html" title="run_test"><code class="computeroutput"><span class="identifier">run_test</span></code></a>=+&lt;absolute_spec&gt;</pre>
               </td>
 <td>
                 <p>
@@ -617,7 +618,7 @@ suite_1/suite_2/test_2
                 </p>
               </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">decorator_22</span>
+<pre class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">decorator_22</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">test</span><span class="special">/</span><span class="identifier">included</span><span class="special">/</span><span class="identifier">unit_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 
 <span class="keyword">namespace</span> <span class="identifier">utf</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">unit_test</span><span class="special">;</span>
@@ -644,7 +645,7 @@ suite_1/suite_2/test_2
                 </p>
               </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="special">&gt;</span> <span class="identifier">decorator_22</span> <span class="special">--</span><span class="identifier">list_content</span>
+<pre class="table-programlisting"><span class="special">&gt;</span> <span class="identifier">decorator_22</span> <span class="special">--</span><span class="identifier">list_content</span>
 <span class="identifier">test_1</span><span class="special">*</span>
 <span class="identifier">test_net</span> <span class="special">:</span> <span class="identifier">requires</span> <span class="identifier">network</span>
 
@@ -689,7 +690,7 @@ suite_1/suite_2/test_2
                 </p>
               </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">decorator_23</span>
+<pre class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">decorator_23</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">test</span><span class="special">/</span><span class="identifier">included</span><span class="special">/</span><span class="identifier">unit_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 
 <span class="keyword">namespace</span> <span class="identifier">utf</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">unit_test</span><span class="special">;</span>
@@ -715,7 +716,7 @@ suite_1/suite_2/test_2
                 </p>
               </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="special">&gt;</span> <span class="identifier">decorator_23</span> <span class="special">--</span><span class="identifier">list_content</span>
+<pre class="table-programlisting"><span class="special">&gt;</span> <span class="identifier">decorator_23</span> <span class="special">--</span><span class="identifier">list_content</span>
 <span class="identifier">test_1</span><span class="special">*</span>
 <span class="identifier">test_net</span><span class="special">*:</span> <span class="identifier">requires</span> <span class="identifier">network</span>
 
@@ -759,14 +760,11 @@ suite_1/suite_2/test_2
         </p></td></tr>
 </table></div>
 </div>
-<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
-<td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2001-2022 Boost.Test contributors<p>
+<div class="copyright-footer">Copyright © 2001-2022 Boost.Test contributors<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div></td>
-</tr></table>
+</div>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="../runtime_config.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../runtime_config.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="custom_command_line_arguments.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>

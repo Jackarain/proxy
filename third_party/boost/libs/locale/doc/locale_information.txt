@@ -15,7 +15,7 @@ Thus an additional facet was created, giving more precise information: boost::lo
 
 -   \ref boost::locale::info::name() "std::string name()" -- the full name of the locale, for example \c en_US.UTF-8
 -   \ref boost::locale::info::language() "std::string language()" -- the ISO-639 language code of the current locale, for example "en".
--   \ref boost::locale::info::country() "std::string country()" -- the ISO-3199 country code of the current locale, for example "US".
+-   \ref boost::locale::info::country() "std::string country()" -- the ISO-3166 country code of the current locale, for example "US".
 -   \ref boost::locale::info::variant() "std::string variant()" -- the variant of current locale, for example "euro".
 -   \ref boost::locale::info::encoding() "std::string encoding()" -- the encoding used for \c char based strings, for example "UTF-8"
 -   \ref boost::locale::info::utf8() "bool utf8()" -- a fast way to check whether the encoding is UTF-8.

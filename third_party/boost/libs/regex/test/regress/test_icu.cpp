@@ -20,10 +20,19 @@
 // We can only build this if we have ICU support:
 //
 #include <boost/regex/config.hpp>
+
 #if defined(BOOST_HAS_ICU) && !defined(BOOST_NO_STD_WSTRING)
 
 #include <boost/regex/icu.hpp>
+#ifndef BOOST_REGEX_STANDALONE
 #include <boost/mpl/int.hpp>
+#else
+#include <type_traits>
+namespace boost { namespace mpl {
+   template <int I>
+   using int_ = ::std::integral_constant<int, I>; 
+} }
+#endif
 #include "test.hpp"
 
 namespace unnecessary_fix{

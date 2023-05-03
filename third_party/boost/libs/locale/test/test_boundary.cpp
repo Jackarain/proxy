@@ -8,6 +8,7 @@
 
 #include <boost/locale/boundary.hpp>
 #include <boost/locale/generator.hpp>
+#include <boost/locale/localization_backend.hpp>
 #include "boostLocale/test/tools.hpp"
 #include "boostLocale/test/unit_test.hpp"
 #include <iostream>
@@ -108,11 +109,11 @@ void test_word_container(Iterator begin,
                     TEST_EQ(p->rule(), masks[i]);
                 }
 
-                TEST(chunks.size() == i);
+                TEST_EQ(chunks.size(), i);
 
                 for(;;) {
                     if(p == map.begin()) {
-                        TEST(i == 0);
+                        TEST_EQ(i, 0u);
                         break;
                     } else {
                         --p;
@@ -182,14 +183,14 @@ void test_word_container(Iterator begin,
                 TEST_EQ(p->rule(), bmasks[i]);
             }
 
-            TEST(iters.size() == i);
+            TEST_EQ(iters.size(), i);
 
             do {
                 --p;
                 --i;
                 TEST(p->iterator() == iters.at(i));
             } while(p != map.begin());
-            TEST(i == 0);
+            TEST_EQ(i, 0u);
 
             unsigned iters_ptr = 0;
             for(Iterator optr = begin; optr != end; optr++) {
@@ -427,49 +428,49 @@ void test_op_one_side(const std::string& sl, const std::string& sr, int val)
     boost::locale::boundary::ssegment l(sl.begin(), sl.end(), 0), r(sr.begin(), sr.end(), 0);
 
     // segment
-    TEST((l == r) == (val == 0));
-    TEST((l != r) == (val != 0));
-    TEST((l <= r) == (val <= 0));
-    TEST((l < r) == (val < 0));
-    TEST((l >= r) == (val >= 0));
-    TEST((l > r) == (val > 0));
+    TEST_EQ((l == r), (val == 0));
+    TEST_EQ((l != r), (val != 0));
+    TEST_EQ((l <= r), (val <= 0));
+    TEST_EQ((l < r), (val < 0));
+    TEST_EQ((l >= r), (val >= 0));
+    TEST_EQ((l > r), (val > 0));
 
     // C string
-    TEST((l == sr.c_str()) == (val == 0));
-    TEST((l != sr.c_str()) == (val != 0));
-    TEST((l <= sr.c_str()) == (val <= 0));
-    TEST((l < sr.c_str()) == (val < 0));
-    TEST((l >= sr.c_str()) == (val >= 0));
-    TEST((l > sr.c_str()) == (val > 0));
+    TEST_EQ((l == sr.c_str()), (val == 0));
+    TEST_EQ((l != sr.c_str()), (val != 0));
+    TEST_EQ((l <= sr.c_str()), (val <= 0));
+    TEST_EQ((l < sr.c_str()), (val < 0));
+    TEST_EQ((l >= sr.c_str()), (val >= 0));
+    TEST_EQ((l > sr.c_str()), (val > 0));
 
-    TEST((sl.c_str() == r) == (val == 0));
-    TEST((sl.c_str() != r) == (val != 0));
-    TEST((sl.c_str() <= r) == (val <= 0));
-    TEST((sl.c_str() < r) == (val < 0));
-    TEST((sl.c_str() >= r) == (val >= 0));
-    TEST((sl.c_str() > r) == (val > 0));
+    TEST_EQ((sl.c_str() == r), (val == 0));
+    TEST_EQ((sl.c_str() != r), (val != 0));
+    TEST_EQ((sl.c_str() <= r), (val <= 0));
+    TEST_EQ((sl.c_str() < r), (val < 0));
+    TEST_EQ((sl.c_str() >= r), (val >= 0));
+    TEST_EQ((sl.c_str() > r), (val > 0));
 
     // C++ string
-    TEST((l == sr) == (val == 0));
-    TEST((l != sr) == (val != 0));
-    TEST((l <= sr) == (val <= 0));
-    TEST((l < sr) == (val < 0));
-    TEST((l >= sr) == (val >= 0));
-    TEST((l > sr) == (val > 0));
+    TEST_EQ((l == sr), (val == 0));
+    TEST_EQ((l != sr), (val != 0));
+    TEST_EQ((l <= sr), (val <= 0));
+    TEST_EQ((l < sr), (val < 0));
+    TEST_EQ((l >= sr), (val >= 0));
+    TEST_EQ((l > sr), (val > 0));
 
-    TEST((sl == r) == (val == 0));
-    TEST((sl != r) == (val != 0));
-    TEST((sl <= r) == (val <= 0));
-    TEST((sl < r) == (val < 0));
-    TEST((sl >= r) == (val >= 0));
-    TEST((sl > r) == (val > 0));
+    TEST_EQ((sl == r), (val == 0));
+    TEST_EQ((sl != r), (val != 0));
+    TEST_EQ((sl <= r), (val <= 0));
+    TEST_EQ((sl < r), (val < 0));
+    TEST_EQ((sl >= r), (val >= 0));
+    TEST_EQ((sl > r), (val > 0));
     // self check
-    TEST((sl == sr) == (val == 0));
-    TEST((sl != sr) == (val != 0));
-    TEST((sl <= sr) == (val <= 0));
-    TEST((sl < sr) == (val < 0));
-    TEST((sl >= sr) == (val >= 0));
-    TEST((sl > sr) == (val > 0));
+    TEST_EQ((sl == sr), (val == 0));
+    TEST_EQ((sl != sr), (val != 0));
+    TEST_EQ((sl <= sr), (val <= 0));
+    TEST_EQ((sl < sr), (val < 0));
+    TEST_EQ((sl >= sr), (val >= 0));
+    TEST_EQ((sl > sr), (val > 0));
 }
 
 void test_op(const std::string& sl, const std::string& sr, int val)
@@ -488,6 +489,22 @@ void segment_operator()
 BOOST_LOCALE_DISABLE_UNREACHABLE_CODE_WARNING
 void test_main(int /*argc*/, char** /*argv*/)
 {
+#ifndef BOOST_LOCALE_NO_STD_BACKEND
+    {
+        namespace bl = boost::locale;
+        const bl::localization_backend_manager orig_backend = bl::localization_backend_manager::global();
+        bl::localization_backend_manager tmp_backend = bl::localization_backend_manager::global();
+        tmp_backend.select("std");
+        bl::localization_backend_manager::global(tmp_backend);
+
+        bl::generator g;
+        const std::string text = "To be or not to be, that is the question.";
+        // Std backend doesn't support segmentation, expect reasonable error
+        TEST_THROWS(bl::boundary::ssegment_index map(bl::boundary::word, text.begin(), text.end(), g("en_US.UTF-8")),
+                    std::runtime_error);
+        bl::localization_backend_manager::global(orig_backend);
+    }
+#endif
 #ifndef BOOST_LOCALE_WITH_ICU
     std::cout << "ICU is not build... Skipping\n";
     return;

@@ -27,6 +27,23 @@
 #pragma warning(disable:1418 981 383 1419 7)
 #endif
 
+#ifndef BOOST_WORKAROUND
+#define BOOST_WORKAROUND(x, y) false
+#endif
+#ifdef BOOST_REGEX_STANDALONE
+#include <cstdint>
+
+namespace boost { using std::uint32_t; }
+
+#define BOOST_JOIN(X, Y) BOOST_DO_JOIN(X, Y)
+#define BOOST_DO_JOIN(X, Y) BOOST_DO_JOIN2(X,Y)
+#define BOOST_DO_JOIN2(X, Y) X##Y
+
+#define BOOST_STRINGIZE(X) BOOST_DO_STRINGIZE(X)
+#define BOOST_DO_STRINGIZE(X) #X
+
+#endif
+
 #include <typeinfo>
 #include "test_not_regex.hpp"
 #include "test_regex_search.hpp"

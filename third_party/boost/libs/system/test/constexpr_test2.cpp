@@ -19,8 +19,17 @@ struct X
 
 X const& f()
 {
+#if defined(BOOST_CLANG_VERSION) && BOOST_CLANG_VERSION < 30900
+
+    BOOST_STATIC_CONSTEXPR X x = {};
+    return x;
+
+#else
+
     BOOST_STATIC_CONSTEXPR X x;
     return x;
+
+#endif
 }
 
 #endif

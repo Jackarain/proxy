@@ -11,7 +11,6 @@
 #define BOOST_URL_DETAIL_OPTIONAL_STRING_HPP
 
 #include <boost/url/string_view.hpp>
-#include <boost/type_traits/make_void.hpp>
 
 namespace boost {
 namespace urls {
@@ -47,7 +46,7 @@ struct is_dereferenceable : std::false_type
 template <class T>
 struct is_dereferenceable<
     T,
-    boost::void_t<
+    void_t<
         decltype(*std::declval<T>())
         >> : std::true_type
 {};
@@ -70,7 +69,7 @@ get_optional_string(
         std::is_convertible<typename std::decay<decltype(*std::declval<OptionalString>())>::type, string_view>::value,
         "OptionalString requirements not met");
     optional_string r;
-    r.s = opt ? string_view(*opt) : string_view{};
+    r.s = opt ? detail::to_sv(*opt) : string_view{};
     r.b = static_cast<bool>(opt);
     return r;
 }

@@ -228,6 +228,14 @@ void test_constructors()
 path x;
 path y;
 
+#if defined(__clang__) && defined(__has_warning)
+#if __has_warning("-Wself-assign-overloaded")
+#pragma clang diagnostic push
+// explicitly assigning value of variable of type 'boost::filesystem::path' to itself
+#pragma clang diagnostic ignored "-Wself-assign-overloaded"
+#endif
+#endif
+
 //  test_assignments  ----------------------------------------------------------------//
 
 void test_assignments()
@@ -438,6 +446,12 @@ void test_concats()
     x += L'x'; // wchar
     PATH_IS(x, L"foo-x");
 }
+
+#if defined(__clang__) && defined(__has_warning)
+#if __has_warning("-Wself-assign-overloaded")
+#pragma clang diagnostic pop
+#endif
+#endif
 
 //  test_observers  ------------------------------------------------------------------//
 
@@ -746,16 +760,35 @@ void test_modifiers()
     CHECK(path("").remove_filename() == "");
     CHECK(path("foo").remove_filename() == "");
     CHECK(path("/foo").remove_filename() == "/");
-    CHECK(path("foo/bar").remove_filename() == "foo");
-    BOOST_TEST_EQ(path("foo/bar/").remove_filename(), path("foo/bar"));
+
     BOOST_TEST_EQ(path(".").remove_filename(), path(""));
-    BOOST_TEST_EQ(path("./.").remove_filename(), path("."));
     BOOST_TEST_EQ(path("/.").remove_filename(), path("/"));
     BOOST_TEST_EQ(path("..").remove_filename(), path(""));
-    BOOST_TEST_EQ(path("../..").remove_filename(), path(".."));
     BOOST_TEST_EQ(path("/..").remove_filename(), path("/"));
+
+#if BOOST_FILESYSTEM_VERSION == 3
+    CHECK(path("foo/bar").remove_filename() == "foo");
+    BOOST_TEST_EQ(path("foo/bar/").remove_filename(), path("foo/bar"));
+    BOOST_TEST_EQ(path("./.").remove_filename(), path("."));
+    BOOST_TEST_EQ(path("../..").remove_filename(), path(".."));
     BOOST_TEST_EQ(path("//").remove_filename(), path(""));
     BOOST_TEST_EQ(path("////").remove_filename(), path(""));
+#else
+    CHECK(path("foo/bar").remove_filename() == "foo/");
+    BOOST_TEST_EQ(path("foo/bar/").remove_filename(), path("foo/bar/"));
+    BOOST_TEST_EQ(path("./.").remove_filename(), path("./"));
+    BOOST_TEST_EQ(path("../..").remove_filename(), path("../"));
+    BOOST_TEST_EQ(path("//").remove_filename(), path("//"));
+    BOOST_TEST_EQ(path("////").remove_filename(), path("////"));
+#endif
+
+    BOOST_TEST_EQ(path("foo/bar").remove_filename_and_trailing_separators(), path("foo"));
+    BOOST_TEST_EQ(path("foo/bar/").remove_filename_and_trailing_separators(), path("foo/bar"));
+    BOOST_TEST_EQ(path("foo///bar").remove_filename_and_trailing_separators(), path("foo"));
+    BOOST_TEST_EQ(path("foo/bar///").remove_filename_and_trailing_separators(), path("foo/bar"));
+
+    BOOST_TEST_EQ(path("foo/bar").replace_filename("zoo"), path("foo/zoo"));
+    BOOST_TEST_EQ(path("foo/bar/").replace_filename("zoo"), path("foo/bar/zoo"));
 }
 
 //  test_decompositions  -------------------------------------------------------------//

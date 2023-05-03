@@ -1560,8 +1560,8 @@ limitations that cannot be lifted without compiler support:
   via `malloc` or `new`), and IPC atomics can be used in read-write process-shared memory (e.g. obtained via
   [@https://pubs.opengroup.org/onlinepubs/9699919799/functions/shm_open.html `shm_open`]+
   [@https://pubs.opengroup.org/onlinepubs/9699919799/functions/mmap.html `mmap`]). Any special memory types, such
-  as mapped device memory or memory mapped with special caching strategies, are not guaranteed to work and are
-  subject to system-specific restrictions.
+  as mapped device memory or memory mapped with special caching strategies (i.e. other than write-back), are not
+  guaranteed to work and are subject to system-specific restrictions.
 * [*Signed integers must use [@https://en.wikipedia.org/wiki/Two%27s_complement two's complement]
   representation]: [*Boost.Atomic] makes this requirement in order to implement
   conversions between signed and unsigned integers internally. C++11 requires all

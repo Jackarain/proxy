@@ -26,7 +26,7 @@ add_test(NAME boost_json-tests COMMAND boost_json-tests)
 add_dependencies(tests boost_json-tests)
 
 
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "" FILES limits.cpp main.cpp)
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "" FILES limits.cpp main.cpp unhygenic_macros.cpp)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../src PREFIX "" FILES ../src/src.cpp)
 add_executable(boost_json-limits limits.cpp main.cpp ../src/src.cpp Jamfile)
 boost_json_setup_properties(boost_json-limits)
@@ -40,3 +40,11 @@ target_compile_definitions(boost_json-limits PRIVATE
 
 add_test(NAME boost_json-limits COMMAND boost_json-limits)
 add_dependencies(tests boost_json-limits)
+
+add_executable(boost_json-intrusive-macro-tests intrusive_macros.cpp main.cpp Jamfile)
+boost_json_setup_properties(boost_json-intrusive-macro-tests)
+target_compile_definitions(boost_json-intrusive-macro-tests PRIVATE
+    BOOST_JSON_NO_LIB=1
+)
+add_test(NAME boost_json-intrusive-macro-tests COMMAND boost_json-intrusive-macro-tests)
+add_dependencies(tests boost_json-intrusive-macro-tests)

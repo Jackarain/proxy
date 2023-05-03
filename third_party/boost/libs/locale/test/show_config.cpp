@@ -13,6 +13,10 @@
 #include <locale>
 #include <stdexcept>
 #include <vector>
+#ifndef BOOST_LOCALE_NO_WINAPI_BACKEND
+#    include "../src/boost/locale/win32/lcid.hpp"
+#endif
+#include <boost/core/ignore_unused.hpp>
 
 #ifdef BOOST_LOCALE_WITH_ICU
 #    include <unicode/uversion.h>
@@ -27,7 +31,14 @@ const char* env(const char* s)
 #    pragma warning(push)
 #    pragma warning(disable : 4996)
 #endif
+#if defined(__clang__)
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
     const char* r = getenv(s);
+#if defined(__clang__)
+#    pragma clang diagnostic pop
+#endif
 #ifdef _MSC_VER
 #    pragma warning(pop)
 #endif
@@ -36,20 +47,25 @@ const char* env(const char* s)
     return "";
 }
 
-bool has_locale(const char* name)
+bool has_win_locale(const std::string& locale_name)
 {
-    const bool result = std::setlocale(LC_ALL, name) != nullptr;
-    std::setlocale(LC_ALL, "C");
-    return result;
+#ifdef BOOST_LOCALE_NO_WINAPI_BACKEND
+    boost::ignore_unused(locale_name);
+    return false;
+#else
+    return boost::locale::impl_win::locale_to_lcid(locale_name) != 0;
+#endif
 }
 
 void check_locales(const std::vector<const char*>& names)
 {
-    std::cout << "  " << std::setw(32) << "locale" << std::setw(4) << "C" << std::setw(4) << "C++" << std::endl;
+    std::cout << std::setw(32) << "locale" << std::setw(7) << "POSIX" << std::setw(5) << "STD" << std::setw(5) << "WIN"
+              << std::endl;
     for(const char* name : names) {
-        std::cout << "  " << std::setw(32) << name;
-        std::cout << std::setw(4) << (has_locale(name) ? "Yes" : "No");
-        std::cout << std::setw(4) << (has_std_locale(name) ? "Yes" : "No");
+        std::cout << std::setw(32) << name;
+        std::cout << std::setw(7) << (has_posix_locale(name) ? "Yes" : "No");
+        std::cout << std::setw(5) << (has_std_locale(name) ? "Yes" : "No");
+        std::cout << std::setw(5) << (has_win_locale(name) ? "Yes" : "No");
         std::cout << std::endl;
     }
 }
@@ -111,6 +127,8 @@ void test_main(int /*argc*/, char** /*argv*/)
       "ja_JP.UTF-8",
       "ja_JP.SJIS",
       "Japanese_Japan.932",
+      "en_001.UTF-8",
+      "en_150.UTF-8",
     };
     std::cout << "- Testing locales availability on the operation system:" << std::endl;
     check_locales(locales_to_check);

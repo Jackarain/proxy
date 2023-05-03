@@ -1228,6 +1228,22 @@ encoded_params() noexcept
 
 url_base&
 url_base::
+set_params( std::initializer_list<param_view> ps ) noexcept
+{
+    params().assign(ps);
+    return *this;
+}
+
+url_base&
+url_base::
+set_encoded_params( std::initializer_list< param_pct_view > ps ) noexcept
+{
+    encoded_params().assign(ps);
+    return *this;
+}
+
+url_base&
+url_base::
 remove_query() noexcept
 {
     op_t op(*this);
@@ -1526,6 +1542,12 @@ normalize_path()
     auto skip_dot = 0;
     bool encode_colons = false;
     string_view first_seg;
+
+//------------------------------------------------
+//
+//  Determine unnecessary initial dot segments to skip and
+//  if we need to encode colons in the first segment
+//
     if (
         !has_authority() &&
         p.starts_with("/./"))
@@ -1580,6 +1602,11 @@ normalize_path()
             encode_colons = first_seg.contains(':');
         }
     }
+
+//------------------------------------------------
+//
+//  Encode colons in the first segment
+//
     if (encode_colons)
     {
         // prepend with "./"
@@ -1633,20 +1660,34 @@ normalize_path()
         p_dest = s_ + impl_.offset(id_path);
         p_end = s_ + impl_.offset(id_path + 1);
     }
+
+//------------------------------------------------
+//
+//  Remove "." and ".." segments
+//
     p.remove_prefix(skip_dot);
     p_dest += skip_dot;
     auto n = detail::remove_dot_segments(
         p_dest, p_end, p);
+
+//------------------------------------------------
+//
+//  Update path parameters
+//
     if (n != pn)
     {
         BOOST_ASSERT(n < pn);
         shrink_impl(id_path, n + skip_dot, op);
         p = encoded_path();
-        if (!p.empty())
+        if (p == "/")
+            impl_.nseg_ = 0;
+        else if (!p.empty())
             impl_.nseg_ = std::count(
                 p.begin() + 1, p.end(), '/') + 1;
         else
             impl_.nseg_ = 0;
+        impl_.decoded_[id_path] =
+            detail::decode_bytes_unsafe(impl_.get(id_path));
     }
     return *this;
 }
@@ -2097,6 +2138,7 @@ edit_segments(
     std::size_t nchar = 0;
     std::size_t prefix = 0;
     bool encode_colons = false;
+    bool cp_src_prefix = false;
     if(it0.index > 0)
     {
         // first segment unchanged
@@ -2109,7 +2151,20 @@ edit_segments(
         {
             if( src.front == "." &&
                     src.fast_nseg > 1)
-                prefix = 2 + absolute;
+                if (src.s.empty())
+                {
+                    // if front is ".", we need the extra "." in the prefix
+                    // which will maintain the invariant that segments represent
+                    // {"."}
+                    prefix = 2 + absolute;
+                }
+                else
+                {
+                    // if the "." prefix is explicitly required from set_path
+                    // we do not include an extra "." segment
+                    prefix = absolute;
+                    cp_src_prefix = true;
+                }
             else if(absolute)
                 prefix = 1;
             else if(has_scheme() ||
@@ -2274,7 +2329,7 @@ edit_segments(
         BOOST_ASSERT(size() == new_size);
         end = dest + nchar;
         impl_.nseg_ = impl_.nseg_ + nseg - (
-            it1.index - it0.index);
+            it1.index - it0.index) - cp_src_prefix;
         if(s_)
             s_[size()] = '\0';
     }

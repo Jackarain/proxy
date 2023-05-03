@@ -8,6 +8,7 @@
 <link rel="up" href="../test_tree.html" title="Test tree">
 <link rel="prev" href="../test_tree.html" title="Test tree">
 <link rel="next" href="master_test_suite.html" title="Master test suite">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -102,7 +103,7 @@
                   </p>
                 </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">example</span>
+<pre class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">example</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">test</span><span class="special">/</span><span class="identifier">included</span><span class="special">/</span><span class="identifier">unit_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 
 <span class="identifier">BOOST_AUTO_TEST_SUITE</span><span class="special">(</span> <span class="identifier">test_suite1</span> <span class="special">)</span>
@@ -143,7 +144,7 @@
                   </p>
                 </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="special">&gt;</span> <span class="identifier">example</span>
+<pre class="table-programlisting"><span class="special">&gt;</span> <span class="identifier">example</span>
 <span class="identifier">Running</span> <span class="number">4</span> <span class="identifier">test</span> <span class="identifier">cases</span><span class="special">...</span>
 <span class="identifier">test</span><span class="special">.</span><span class="identifier">cpp</span><span class="special">(</span><span class="number">21</span><span class="special">):</span> <span class="identifier">fatal</span> <span class="identifier">error</span><span class="special">:</span> <span class="identifier">in</span> <span class="string">"test_suite1/test_case2"</span><span class="special">:</span> <span class="identifier">critical</span> <span class="identifier">check</span> <span class="number">1</span> <span class="special">==</span> <span class="number">2</span> <span class="identifier">has</span> <span class="identifier">failed</span> <span class="special">[</span><span class="number">1</span> <span class="special">!=</span> <span class="number">2</span><span class="special">]</span>
 <span class="identifier">test</span><span class="special">.</span><span class="identifier">cpp</span><span class="special">(</span><span class="number">35</span><span class="special">):</span> <span class="identifier">error</span><span class="special">:</span> <span class="identifier">in</span> <span class="string">"test_suite2/test_case4"</span><span class="special">:</span> <span class="identifier">check</span> <span class="keyword">false</span> <span class="identifier">has</span> <span class="identifier">failed</span>
@@ -177,7 +178,7 @@
                   </p>
                 </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">example</span>
+<pre class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">example</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">test</span><span class="special">/</span><span class="identifier">included</span><span class="special">/</span><span class="identifier">unit_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 
 <span class="identifier">BOOST_AUTO_TEST_SUITE</span><span class="special">(</span> <span class="identifier">test_suite</span> <span class="special">)</span>
@@ -214,7 +215,7 @@
                   </p>
                 </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="special">&gt;</span><span class="identifier">example</span> <span class="special">--</span><span class="identifier">report_level</span><span class="special">=</span><span class="identifier">detailed</span>
+<pre class="table-programlisting"><span class="special">&gt;</span><span class="identifier">example</span> <span class="special">--</span><span class="identifier">report_level</span><span class="special">=</span><span class="identifier">detailed</span>
 <span class="identifier">Running</span> <span class="number">3</span> <span class="identifier">test</span> <span class="identifier">cases</span><span class="special">...</span>
 <span class="identifier">test</span><span class="special">.</span><span class="identifier">cpp</span><span class="special">(</span><span class="number">8</span><span class="special">):</span> <span class="identifier">error</span> <span class="identifier">in</span> <span class="string">"test_case1"</span><span class="special">:</span> <span class="identifier">some</span> <span class="identifier">error</span> <span class="number">1</span>
 <span class="identifier">test</span><span class="special">.</span><span class="identifier">cpp</span><span class="special">(</span><span class="number">23</span><span class="special">):</span> <span class="identifier">error</span> <span class="identifier">in</span> <span class="string">"test_case2"</span><span class="special">:</span> <span class="identifier">some</span> <span class="identifier">error</span> <span class="number">2</span>
@@ -359,7 +360,7 @@
                   </p>
                 </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">test</span><span class="special">/</span><span class="identifier">included</span><span class="special">/</span><span class="identifier">unit_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<pre class="table-programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">test</span><span class="special">/</span><span class="identifier">included</span><span class="special">/</span><span class="identifier">unit_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">unit_test</span><span class="special">;</span>
 
 <span class="keyword">void</span> <span class="identifier">test_case1</span><span class="special">()</span> <span class="special">{</span> <span class="comment">/* ... */</span> <span class="special">}</span>
@@ -393,7 +394,7 @@
                   </p>
                 </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="special">&gt;</span> <span class="identifier">example</span> <span class="special">--</span><span class="identifier">log_level</span><span class="special">=</span><span class="identifier">test_suite</span>
+<pre class="table-programlisting"><span class="special">&gt;</span> <span class="identifier">example</span> <span class="special">--</span><span class="identifier">log_level</span><span class="special">=</span><span class="identifier">test_suite</span>
 <span class="identifier">Running</span> <span class="number">4</span> <span class="identifier">test</span> <span class="identifier">cases</span><span class="special">...</span>
 <span class="identifier">Entering</span> <span class="identifier">test</span> <span class="identifier">suite</span> <span class="string">"Master Test Suite"</span>
 <span class="identifier">Entering</span> <span class="identifier">test</span> <span class="identifier">suite</span> <span class="string">"test_suite1"</span>
@@ -415,14 +416,11 @@
                 </td></tr></tbody>
 </table></div>
 </div>
-<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
-<td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2001-2022 Boost.Test contributors<p>
+<div class="copyright-footer">Copyright © 2001-2022 Boost.Test contributors<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div></td>
-</tr></table>
+</div>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="../test_tree.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../test_tree.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="master_test_suite.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>

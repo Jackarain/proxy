@@ -30,8 +30,8 @@
 
 int cpp_main( int, char *[] )  // note the name
 {
-#if (defined(APPLE) && defined(ppc)) || defined(_ARCH_PPC)
-    std::printf("The ppc doesn't throw on divide-by-zero. No check.\n");
+#if ((defined(APPLE) && defined(ppc)) || (defined(__APPLE__) && defined(__arm64__))) || defined(_ARCH_PPC)
+    std::printf("Apple ppc and ARM don't throw on divide-by-zero. No check.\n");
     return 1;
 #else
     int div = 0;

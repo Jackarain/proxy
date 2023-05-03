@@ -16,7 +16,8 @@ bool init_unit_test()
   using namespace boost::unit_test;
 
 // Having some problems on AppleClang 10.10 / Xcode 6/7
-#if !defined(BOOST_TEST_DYN_LINK) || (!defined(BOOST_CLANG) || (BOOST_CLANG != 1) || (__clang_major__ >= 8))
+// Persists on MacOS 11 with AppleClang 13
+#if (!defined(BOOST_TEST_DYN_LINK) || (!defined(BOOST_CLANG) || (BOOST_CLANG != 1) || (__clang_major__ >= 8))) && !defined(__APPLE__)
   log_level logLevel = runtime_config::get<log_level>(runtime_config::btrt_log_level);
   std::cout << "Current log level: " << static_cast<int>(logLevel) << std::endl;
 #endif

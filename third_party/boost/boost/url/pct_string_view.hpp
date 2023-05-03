@@ -176,7 +176,7 @@ public:
     pct_string_view(
         String const& s)
         : pct_string_view(
-            string_view(s))
+            detail::to_sv(s))
     {
     }
 
@@ -442,6 +442,18 @@ make_pct_string_view_unsafe(
     return pct_string_view(
         data, size, decoded_size);
 }
+#endif
+
+#ifndef BOOST_URL_DOCS
+namespace detail {
+template <>
+inline
+string_view
+to_sv(pct_string_view const& s) noexcept
+{
+    return s.substr();
+}
+} // detail
 #endif
 
 } // urls

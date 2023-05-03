@@ -19,7 +19,7 @@ struct test_property {
         counter++;
         x = other.x;
     }
-    test_property& operator=(const test_property& other) = default;
+    test_property& operator=(const test_property&) = default;
     ~test_property() { counter--; }
     void on_imbue() { imbued++; }
 

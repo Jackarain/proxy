@@ -17,9 +17,9 @@
 template<typename CharType>
 void test_one(const std::locale& l, std::string src, std::string tgtl, std::string tgtu)
 {
-    TEST(boost::locale::to_upper(to_correct_string<CharType>(src, l), l) == to_correct_string<CharType>(tgtu, l));
-    TEST(boost::locale::to_lower(to_correct_string<CharType>(src, l), l) == to_correct_string<CharType>(tgtl, l));
-    TEST(boost::locale::fold_case(to_correct_string<CharType>(src, l), l) == to_correct_string<CharType>(tgtl, l));
+    TEST_EQ(boost::locale::to_upper(to_correct_string<CharType>(src, l), l), to_correct_string<CharType>(tgtu, l));
+    TEST_EQ(boost::locale::to_lower(to_correct_string<CharType>(src, l), l), to_correct_string<CharType>(tgtl, l));
+    TEST_EQ(boost::locale::fold_case(to_correct_string<CharType>(src, l), l), to_correct_string<CharType>(tgtl, l));
 }
 
 template<typename CharType>
@@ -32,16 +32,18 @@ void test_char()
     test_one<CharType>(l, "Hello World i", "hello world i", "HELLO WORLD I");
 
     std::string name = "en_US.UTF-8";
-    if(have_locale(name)) {
+    if(!has_posix_locale(name))
+        std::cout << "- " << name << " is not supported, skipping" << std::endl;
+    else {
         std::cout << "- Testing " << name << std::endl;
         l = gen(name);
         test_one<CharType>(l, "Façade", "façade", "FAÇADE");
-    } else {
-        std::cout << "- en_US.UTF-8 is not supported, skipping" << std::endl;
     }
 
     name = "en_US.ISO8859-1";
-    if(have_locale(name)) {
+    if(!has_posix_locale(name))
+        std::cout << "- " << name << " is not supported, skipping" << std::endl;
+    else {
         std::cout << "Testing " << name << std::endl;
         l = gen(name);
         test_one<CharType>(l, "Hello World", "hello world", "HELLO WORLD");
@@ -49,12 +51,12 @@ void test_char()
         if(sizeof(CharType) != 1)
 #endif
             test_one<CharType>(l, "Façade", "façade", "FAÇADE");
-    } else {
-        std::cout << "- en_US.ISO8859-1 is not supported, skipping" << std::endl;
     }
 
     name = "tr_TR.UTF-8";
-    if(have_locale(name)) {
+    if(!has_posix_locale(name))
+        std::cout << "- " << name << " is not supported, skipping" << std::endl;
+    else {
         std::cout << "Testing " << name << std::endl;
         locale_holder cl(newlocale(LC_ALL_MASK, name.c_str(), 0));
         TEST(cl);
@@ -64,8 +66,6 @@ void test_char()
         else
             std::cout << "  Turkish locale is not supported well" << std::endl; // LCOV_EXCL_LINE
 #endif
-    } else {
-        std::cout << "- tr_TR.UTF-8 is not supported, skipping" << std::endl;
     }
 }
 

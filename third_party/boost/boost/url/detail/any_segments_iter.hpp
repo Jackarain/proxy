@@ -207,7 +207,7 @@ private:
         if(it_ == end_)
             return false;
         measure_impl(n,
-            string_view(*it_),
+            detail::to_sv(*it_),
             encode_colons);
         ++it_;
         return true;
@@ -219,7 +219,7 @@ private:
         char const* end) noexcept override
     {
         copy_impl(dest, end,
-            string_view(*it_++),
+            detail::to_sv(*it_++),
             encode_colons);
     }
 };
@@ -292,7 +292,7 @@ struct segments_encoded_iter
         {
             // throw on invalid input
             front = pct_string_view(
-                string_view(*first));
+                detail::to_sv(*first));
             auto it = first;
             if(++it == last)
                 fast_nseg = 1;
@@ -325,7 +325,7 @@ private:
         // throw on invalid input
         measure_impl(n,
             pct_string_view(
-                string_view(*it_++)),
+                detail::to_sv(*it_++)),
             encode_colons);
         return true;
     }
@@ -336,7 +336,7 @@ private:
         char const* end) noexcept override
     {
         copy_impl(dest, end,
-            string_view(*it_++),
+            detail::to_sv(*it_++),
             encode_colons);
     }
 };

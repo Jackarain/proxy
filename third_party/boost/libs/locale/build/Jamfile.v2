@@ -408,16 +408,19 @@ boost-lib locale
       shared/format.cpp
       shared/formatting.cpp
       shared/generator.cpp
+      shared/iconv_codecvt.cpp
       shared/ids.cpp
       shared/localization_backend.cpp
       shared/message.cpp
       shared/mo_lambda.cpp
       util/codecvt_converter.cpp
       util/default_locale.cpp
+      util/encoding.cpp
       util/info.cpp
       util/locale_data.cpp
     :
       $(cxx_requirements)
+      <define>BOOST_LOCALE_SOURCE
       # Don't link explicitly, not required
       <define>BOOST_THREAD_NO_LIB=1
       <include>$(TOP)/src

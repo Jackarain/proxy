@@ -217,6 +217,13 @@ int main(int argc, char * argv[])
    return cpp_main(argc, argv);
 }
 
+#elif defined(BOOST_REGEX_STANDALONE)
+
+int main(int argc, char* argv[])
+{
+   return cpp_main(argc, argv);
+}
+
 #else
 
 #include <boost/detail/lightweight_main.hpp>

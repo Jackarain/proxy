@@ -35,6 +35,13 @@
 namespace boost {
 namespace urls {
 
+#ifndef BOOST_URL_DOCS
+namespace detail {
+struct pattern;
+}
+#endif
+
+
 /** Common functionality for containers
 
     This base class is used by the library
@@ -78,6 +85,7 @@ class BOOST_SYMBOL_VISIBLE
     friend class segments_encoded_view;
     friend class segments_ref;
     friend class segments_view;
+    friend struct detail::pattern;
 
     struct shared_impl;
 
@@ -220,7 +228,7 @@ public:
     /** Return the url string
 
         This function returns the entire url,
-        which main contain percent escapes.
+        which may contain percent escapes.
 
         @par Example
         @code
@@ -238,6 +246,20 @@ public:
     {
         return string_view(
             data(), size());
+    }
+
+    /** Return the URL as a string_view
+
+        @par Complexity
+        Constant.
+
+        @par Exception Safety
+        Throws nothing.
+
+    */
+    operator string_view() const noexcept
+    {
+        return buffer();
     }
 
     /** Return a shared, persistent copy of the url

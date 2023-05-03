@@ -41,6 +41,7 @@ run no_exceptions_test.cpp : : : <exception-handling>off ;
 run errinfos_test.cpp : : : <exception-handling>on ;
 run exception_ptr_test.cpp/<define>BOOST_ENABLE_NON_INTRUSIVE_EXCEPTION_PTR ../../thread/src/tss_null.cpp /boost/exception /boost//thread : : : <threading>multi <exception-handling>on : non_intrusive_exception_ptr_test ;
 run exception_ptr_test.cpp ../../thread/src/tss_null.cpp /boost//thread : : : <threading>multi <exception-handling>on ;
+run exception_ptr_test2.cpp ;
 
 lib visibility_test_lib : visibility_test_lib.cpp : <visibility>hidden <exception-handling>on ;
 run visibility_test.cpp visibility_test_lib/<link>shared : : : <visibility>hidden <exception-handling>on ;

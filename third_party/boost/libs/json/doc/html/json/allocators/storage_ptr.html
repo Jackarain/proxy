@@ -8,6 +8,7 @@
 <link rel="up" href="../allocators.html" title="Allocators">
 <link rel="prev" href="background.html" title="Background">
 <link rel="next" href="uses_allocator.html" title="Uses-allocator construction">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -199,10 +200,11 @@
         Memory Resource</a>
       </h5>
 <p>
-        The <span class="emphasis"><em>default memory resource</em></span> wraps calls to the global
-        heap allocation functions. This resource is not reference counted and has
-        a non-trivial deallocate function. All default-constructed <a class="link" href="../ref/boost__json__storage_ptr.html" title="storage_ptr"><code class="computeroutput"><span class="identifier">storage_ptr</span></code></a> reference the same default
-        memory resource:
+        The <span class="emphasis"><em>default memory resource</em></span> uses the global <code class="computeroutput"><span class="keyword">operator</span> <span class="keyword">new</span></code>
+        and <code class="computeroutput"><span class="keyword">operator</span> <span class="keyword">delete</span></code>
+        to allocate memory. This resource is not reference counted and has a non-trivial
+        deallocate function. All default-constructed <a class="link" href="../ref/boost__json__storage_ptr.html" title="storage_ptr"><code class="computeroutput"><span class="identifier">storage_ptr</span></code></a> objects reference the
+        same memory resource:
       </p>
 <pre class="programlisting"><span class="identifier">storage_ptr</span> <span class="identifier">sp1</span><span class="special">;</span>
 <span class="identifier">storage_ptr</span> <span class="identifier">sp2</span><span class="special">;</span>
@@ -228,6 +230,17 @@
         performance for parsing, and conservative memory usage for modification of
         the contents of containers.
       </p>
+<div class="note"><table border="0" summary="Note">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../../doc/src/images/note.png"></td>
+<th align="left">Note</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+          This memory resource is not guaranteed to be the same as the result of
+          <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">container</span><span class="special">::</span><span class="identifier">pmr</span><span class="special">::</span><span class="identifier">get_default_resource</span></code>. It also cannot
+          be changed with <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">container</span><span class="special">::</span><span class="identifier">pmr</span><span class="special">::</span><span class="identifier">set_default_resource</span></code>.
+        </p></td></tr>
+</table></div>
 <h5>
 <a name="json.allocators.storage_ptr.h1"></a>
         <span class="phrase"><a name="json.allocators.storage_ptr.monotonic_resource"></a></span><a class="link" href="storage_ptr.html#json.allocators.storage_ptr.monotonic_resource">Monotonic
@@ -415,14 +428,11 @@
 <span class="special">};</span>
 </pre>
 </div>
-<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
-<td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
+<div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div></td>
-</tr></table>
+</div>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="background.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../allocators.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="uses_allocator.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>

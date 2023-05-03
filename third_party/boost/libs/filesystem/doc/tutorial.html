@@ -72,30 +72,24 @@ ready to build.</p>
 <a href="http://www.boost.org/more/getting_started/index.html">Boost Getting
 Started</a> docs.</p>
 
-<p>This tutorial assumes you are going to compile and test the examples using
-the provided scripts. That's highly recommended.</p>
+<p>This tutorial assumes you have bootstrapped Boost.Build and compiled Boost.Filesystem
+as described in the Getting Started article. The <code>b2</code> executable is expected
+to be available in <code>PATH</code>.</p>
 
 <blockquote>
-
-<p><b>If you are planning to compile and test the examples but not use the
-scripts, make sure your build setup knows where to
-locate or build the Boost library binaries.</b></p>
 
 </blockquote>
 <p>Fire up your command line interpreter, and type the following commands:</p>
 
   <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" bordercolor="#111111" bgcolor="#D7EEFF">
     <tr>
-      <td align="center"><i><b>Ubuntu Linux </b></i></td>
+      <td align="center"><i><b>Ubuntu Linux</b></i></td>
     </tr>
     <tr>
       <td>
-      <pre>$ cd <i><b>boost-root</b></i>/libs/filesystem/example/test
+      <pre>$ cd <i><b>boost-root</b></i>/libs/filesystem/example
 
-$ ./setup.sh
-Copying example programs...
-
-$ ./build.sh
+$ b2 tutorial
 Compiling example programs...
 
 $ ./tut1
@@ -112,12 +106,9 @@ Usage: tut1 path</pre>
     </tr>
     <tr>
     <td>
-      <pre>&gt;cd <i><b>boost-root</b></i>\libs\filesystem\example\test
+      <pre>&gt;cd <i><b>boost-root</b></i>\libs\filesystem\example
 
-&gt;setup
-Copying example programs...
-
-&gt;build
+&gt;b2.exe tutorial
 Compiling example programs...
 
 &gt;tut1
@@ -127,11 +118,10 @@ Usage: tut1 path</pre>
   </table>
 
 <p>If the <code>tut1</code> command outputs &quot;<code>Usage: tut1 path</code>&quot;, all
-is well. A set of tutorial example programs has been copied (by <code>setup</code>) to
-<i><b><code>boost-root</code></b></i><code>/libs/filesystem/example/test</code>
-and then built. You are encouraged to modify and experiment with them as the
-tutorial progresses. Just invoke the <code>build</code> script again to rebuild,
-or invoke <code>b2</code> directly.</p>
+is well. The tutorial example programs are available in
+<code><i><b>boost-root</b></i>/libs/filesystem/example</code>. Should you modify
+and experiment with them as the tutorial progresses, just invoke <code>b2 tutorial</code> again
+to rebuild.</p>
 
 <p>If something didn't work right, here are some troubleshooting suggestions:</p>
 
@@ -141,7 +131,7 @@ or invoke <code>b2</code> directly.</p>
     <a href="http://www.boost.org/more/getting_started/windows.html">Boost
     Getting Started</a>.<br>
 &nbsp;</li>
-    <li>Look at <code>b2.log</code> to try to spot an indication of the
+    <li>Look at Boost bootstrap output to try to spot an indication of the
     problem.</li>
   </ul>
 
@@ -189,7 +179,7 @@ results look like on two different operating systems:</p>
 
   <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" bordercolor="#111111" bgcolor="#D7EEFF">
     <tr>
-      <td align="center"><i><b>Ubuntu Linux </b></i></td>
+      <td align="center"><i><b>Ubuntu Linux</b></i></td>
     </tr>
     <tr>
       <td valign="top">
@@ -230,7 +220,7 @@ from the above if changes have been made to <code>tut1.cpp</code>.</p>
   <table border="1" cellpadding="5" cellspacing="0"
     style="border-collapse: collapse" bordercolor="#111111" bgcolor="#D7EEFF">
     <tr>
-      <td align="center"><i><b>Ubuntu Linux </b></i></td>
+      <td align="center"><i><b>Ubuntu Linux</b></i></td>
     </tr>
     <tr>
       <td valign="top">
@@ -266,7 +256,7 @@ exception is thrown. See <a href="#Error-reporting">Error reporting</a> to learn
 
   <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" bordercolor="#111111" bgcolor="#D7EEFF">
     <tr>
-      <td align="center"><i><b>Ubuntu Linux </b></i></td>
+      <td align="center"><i><b>Ubuntu Linux</b></i></td>
     </tr>
     <tr>
       <td>
@@ -353,7 +343,7 @@ int main(int argc, char* argv[])
 
   <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" bordercolor="#111111" bgcolor="#D7EEFF">
     <tr>
-      <td align="center"><i><b>Ubuntu Linux </b></i></td>
+      <td align="center"><i><b>Ubuntu Linux</b></i></td>
     </tr>
     <tr>
       <td valign="top">
@@ -397,7 +387,7 @@ we will see how to iterate over directories.</p>
 
   <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" bordercolor="#111111" bgcolor="#D7EEFF">
     <tr>
-      <td align="center"><i><b>Ubuntu Linux </b></i></td>
+      <td align="center"><i><b>Ubuntu Linux</b></i></td>
     </tr>
     <tr>
       <td valign="top">
@@ -450,8 +440,7 @@ acts as the end iterator.</p>
 <p>The value type of <code>directory_iterator</code> is <code>
 <a href="reference.html#directory_entry">directory_entry</a></code>. A <code>
 directory_entry</code> object contains <code>path</code> and <code><a href="reference.html#file_status">file_status</a></code>
-information.&nbsp; A <code>
-directory_entry</code> object
+information. A <code>directory_entry</code> object
 can be used directly, but can also be passed to <code>path</code> arguments in function calls.</p>
 
 <p>The other need is increased robustness in the face of the many kinds of
@@ -516,7 +505,7 @@ of the test cases that caused exceptions on Linux and Windows:</p>
 
   <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" bordercolor="#111111" bgcolor="#D7EEFF">
     <tr>
-      <td align="center"><i><b>Ubuntu Linux </b></i></td>
+      <td align="center"><i><b>Ubuntu Linux</b></i></td>
     </tr>
     <tr>
       <td valign="top">
@@ -703,8 +692,8 @@ for (auto&amp;&amp; x : v)
     <a href="reference.html#path-filename">filename()</a></code> is one of
     several class <code>path</code> decomposition functions. It extracts the
     filename portion
-    from a path (<font face="Courier New">i.e. </font><code>&quot;index.html&quot;</code><font face="Courier New">
-    from </font><code>&quot;/home/beman/boost/trunk/index.html&quot;</code>). These decomposition functions are
+    from a path (i.e. <code>&quot;index.html&quot;</code>
+    from <code>&quot;/home/beman/boost/trunk/index.html&quot;</code>). These decomposition functions are
     more fully explored in the <a href="#Class path-iterators-etc">Path iterators, observers,
     composition, decomposition and query</a> portion of this tutorial.</p>
     <p>The above was written as two lines of code for clarity. It could have
@@ -716,11 +705,41 @@ for (auto&amp;&amp; x : v)
 
   <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" bordercolor="#111111" bgcolor="#D7EEFF">
     <tr>
-      <td align="center"><i><b>Ubuntu Linux </b></i></td>
+      <td align="center"><i><b>Ubuntu Linux</b></i></td>
     </tr>
     <tr>
       <td>
-      <pre>$ ./tut4  v</pre>
+      <pre>$ ./tut4 ~/boost/develop
+"/home/beman/boost/develop" is a directory containing:
+    ".git"
+    ".gitattributes"
+    ".gitignore"
+    ".gitmodules"
+    ".travis.yml"
+    "INSTALL"
+    "Jamroot"
+    "LICENSE_1_0.txt"
+    "bin.v2"
+    "boost"
+    "boost-build.jam"
+    "boost.css"
+    "boost.png"
+    "boostcpp.jam"
+    "boostcpp.py"
+    "bootstrap.bat"
+    "bootstrap.sh"
+    "doc"
+    "index.htm"
+    "index.html"
+    "libs"
+    "more"
+    "project-config.jam"
+    "project-config.jam.1"
+    "project-config.jam.2"
+    "rst.css"
+    "stage"
+    "status"
+    "tools"</pre>
       </td>
     </tr>
   </table>
@@ -733,37 +752,37 @@ for (auto&amp;&amp; x : v)
     </tr>
     <tr>
       <td>
-      <pre>$ ./tut4 ~/boost/develop
-"/home/beman/boost/develop" is a directory containing:
-    .git
-    .gitattributes
-    .gitignore
-    .gitmodules
-    .travis.yml
-    INSTALL
-    Jamroot
-    LICENSE_1_0.txt
-    bin.v2
-    boost
-    boost-build.jam
-    boost.css
-    boost.png
-    boostcpp.jam
-    boostcpp.py
-    bootstrap.bat
-    bootstrap.sh
-    doc
-    index.htm
-    index.html
-    libs
-    more
-    project-config.jam
-    project-config.jam.1
-    project-config.jam.2
-    rst.css
-    stage
-    status
-    tools</pre>
+      <pre>&gt;tut4 \boost\develop
+"\boost\develop" is a directory containing:
+    ".git"
+    ".gitattributes"
+    ".gitignore"
+    ".gitmodules"
+    ".travis.yml"
+    "INSTALL"
+    "Jamroot"
+    "LICENSE_1_0.txt"
+    "bin.v2"
+    "boost"
+    "boost-build.jam"
+    "boost.css"
+    "boost.png"
+    "boostcpp.jam"
+    "boostcpp.py"
+    "bootstrap.bat"
+    "bootstrap.sh"
+    "doc"
+    "index.htm"
+    "index.html"
+    "libs"
+    "more"
+    "project-config.jam"
+    "project-config.jam.1"
+    "project-config.jam.2"
+    "rst.css"
+    "stage"
+    "status"
+    "tools"</pre>
       </td>
     </tr>
   </table>
@@ -864,7 +883,7 @@ int main()
 
   <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" bordercolor="#111111" bgcolor="#D7EEFF">
     <tr>
-      <td align="center"><i><b>Ubuntu Linux </b></i></td>
+      <td align="center"><i><b>Ubuntu Linux</b></i></td>
     </tr>
     <tr>
       <td valign="top">
@@ -902,7 +921,7 @@ smile&#9786;</pre>
 <p>The exact appearance of the smiling face will depend on the font,
 font size, and other settings for your command line window. The above tests were
 run with out-of-the-box Ubuntu 14.04 and Windows 7, US Edition. If you don't get
-the above results, take a look at the <code><i>boost-root</i>/libs/filesystem/example/test</code>
+the above results, take a look at the <code><i><b>boost-root</b></i>/libs/filesystem/example</code>
 directory with your system's GUI file browser, such as Linux Nautilus, Mac OS X
 Finder, or Windows Explorer. These tend to be more comfortable with
 international character sets than command line interpreters.</p>
@@ -962,9 +981,7 @@ for how that plays out.</p>
 
 <p>The <code><a href="../example/path_info.cpp">path_info.cpp</a></code> program is handy for learning how class <code>path</code>
 iterators,
-observers, composition, decomposition, and query functions work on your system.
-It is one of the programs built by the <code>build.sh</code> and <code>build.bat</code>
-scripts:</p>
+observers, composition, decomposition, and query functions work on your system.</p>
 
 
 <table border="1" cellpadding="3" cellspacing="0" style="border-collapse: collapse" bordercolor="#111111" bgcolor="#D7EEFF">
@@ -1053,7 +1070,7 @@ as we go along. Here is the invocation we will talk about in detail:</p>
 
   <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" bordercolor="#111111" bgcolor="#D7EEFF">
     <tr>
-      <td align="center"><i><b>Ubuntu Linux </b></i></td>
+      <td align="center"><i><b>Ubuntu Linux</b></i></td>
     </tr>
     <tr>
       <td>
@@ -1162,7 +1179,7 @@ has_extension()------: true</pre>
 <p>We will go through the above code in detail to gain a better
 understanding of what is going on.</p>
 
-<p dir="ltr">A common need is to compose a path from its constituent
+<p>A common need is to compose a path from its constituent
 directories. Class <code>path</code> uses <code>/</code> and <code>/=</code> operators to
 append elements. That's a reminder
 that these operations append the operating system's preferred directory
@@ -1170,7 +1187,7 @@ separator if needed. The preferred
 directory separator is a slash on POSIX-like systems, and a backslash on
 Windows-like systems.</p>
 
-<p dir="ltr">That&#39;s what this code does before displaying the resulting <code>
+<p>That's what this code does before displaying the resulting <code>
 path p</code> using the <code>class path</code> stream inserter: </p>
 
 
@@ -1191,7 +1208,7 @@ path p</code> using the <code>class path</code> stream inserter: </p>
 
 <p>One abstraction for thinking about a path is as a sequence of elements, where
 the elements are directory and file names. To support this abstraction, class
-<code>path</code> provides STL-like&nbsp; iterators and also <code>begin()</code>
+<code>path</code> provides iterators and also <code>begin()</code>
 and <code>end()</code> functions.</p>
 
 <p>Here is the code that produced the list of elements in the above output listing:</p>

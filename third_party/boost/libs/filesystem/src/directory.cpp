@@ -1109,7 +1109,18 @@ void directory_iterator_construct(directory_iterator& it, path const& p, unsigne
                 && (filename_str[1] == static_cast< path::string_type::value_type >('\0') ||
                     (filename_str[1] == path::dot && filename_str[2] == static_cast< path::string_type::value_type >('\0')))))
             {
-                imp->dir_entry.assign(p / filename, file_stat, symlink_file_stat);
+                path full_path(p);
+                path_algorithms::append_v4(full_path, filename);
+                imp->dir_entry.assign
+                (
+#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
+                    static_cast< path&& >(full_path),
+#else
+                    full_path,
+#endif
+                    file_stat,
+                    symlink_file_stat
+                );
                 it.m_imp.swap(imp);
                 return;
             }

@@ -19,8 +19,7 @@
 #    include <locale.h>
 #endif
 
-#if !defined(BOOST_LOCALE_WITH_ICU) && !defined(BOOST_LOCALE_WITH_ICONV) \
-  && (defined(BOOST_WINDOWS) || defined(__CYGWIN__))
+#if !defined(BOOST_LOCALE_WITH_ICU) && !defined(BOOST_LOCALE_WITH_ICONV) && BOOST_LOCALE_USE_WIN32_API
 #    ifndef NOMINMAX
 #        define NOMINMAX
 #    endif
@@ -455,8 +454,7 @@ void test_main(int /*argc*/, char** /*argv*/)
     backends.push_back("posix");
 #endif
 
-#if !defined(BOOST_LOCALE_WITH_ICU) && !defined(BOOST_LOCALE_WITH_ICONV) \
-  && (defined(BOOST_WINDOWS) || defined(__CYGWIN__))
+#if !defined(BOOST_LOCALE_WITH_ICU) && !defined(BOOST_LOCALE_WITH_ICONV) && BOOST_LOCALE_USE_WIN32_API
     test_iso_8859_8 = IsValidCodePage(28598) != 0;
 #endif
 
@@ -500,27 +498,15 @@ void test_main(int /*argc*/, char** /*argv*/)
         test_utf = true;
 #ifndef BOOST_LOCALE_NO_POSIX_BACKEND
         if(backendName == "posix") {
-            {
-                locale_holder l(newlocale(LC_ALL_MASK, he_il_8bit.c_str(), 0));
-                if(!l)
-                    test_iso = false;
-            }
-            {
-                locale_holder l(newlocale(LC_ALL_MASK, en_us_8bit.c_str(), 0));
-                if(!l)
-                    test_iso = false;
-            }
-            {
-                locale_holder l(newlocale(LC_ALL_MASK, "en_US.UTF-8", 0));
-                if(!l)
-                    test_utf = false;
-            }
+            if(!has_posix_locale(he_il_8bit))
+                test_iso = false;
+            if(!has_posix_locale(en_us_8bit))
+                test_iso = false;
+            if(!has_posix_locale("en_US.UTF-8"))
+                test_utf = false;
 #    ifdef BOOST_LOCALE_WITH_ICONV
-            {
-                locale_holder l(newlocale(LC_ALL_MASK, ja_jp_shiftjis.c_str(), 0));
-                if(!l)
-                    test_sjis = false;
-            }
+            if(!has_posix_locale(ja_jp_shiftjis))
+                test_sjis = false;
 #    else
             test_sjis = false;
 #    endif
@@ -570,36 +556,35 @@ bool isLittleEndian()
     return reinterpret_cast<const char*>(&endianMark)[0] == 1;
 }
 
-#include "../src/boost/locale/encoding/conv.hpp"
-#include "../src/boost/locale/encoding/win_codepages.hpp"
+#include "../src/boost/locale/util/encoding.hpp"
+#include "../src/boost/locale/util/win_codepages.hpp"
 
 void test_utf_name()
 {
-    TEST_EQ(boost::locale::conv::impl::utf_name<char>(), std::string("UTF-8"));
+    TEST_EQ(boost::locale::util::utf_name<char>(), std::string("UTF-8"));
 #ifdef __cpp_char8_t
-    TEST_EQ(boost::locale::conv::impl::utf_name<char8_t>(), std::string("UTF-8"));
+    TEST_EQ(boost::locale::util::utf_name<char8_t>(), std::string("UTF-8"));
 #endif
-    TEST_EQ(boost::locale::conv::impl::utf_name<char16_t>(), std::string(isLittleEndian() ? "UTF-16LE" : "UTF-16BE"));
-    TEST_EQ(boost::locale::conv::impl::utf_name<char32_t>(), std::string(isLittleEndian() ? "UTF-32LE" : "UTF-32BE"));
+    TEST_EQ(boost::locale::util::utf_name<char16_t>(), std::string(isLittleEndian() ? "UTF-16LE" : "UTF-16BE"));
+    TEST_EQ(boost::locale::util::utf_name<char32_t>(), std::string(isLittleEndian() ? "UTF-32LE" : "UTF-32BE"));
 }
 
 void test_win_codepages()
 {
-    using namespace boost::locale::conv::impl;
+    using namespace boost::locale::util;
 
     constexpr size_t n = sizeof(all_windows_encodings) / sizeof(all_windows_encodings[0]);
     for(const windows_encoding *it = all_windows_encodings, *end = all_windows_encodings + n; it != end; ++it) {
         TEST_EQ(normalize_encoding(it->name), it->name); // Must be normalized
-        auto is_same_win_codepage = [&it](const boost::locale::conv::impl::windows_encoding& rhs) -> bool {
+        auto is_same_win_codepage = [&it](const windows_encoding& rhs) -> bool {
             return it->codepage == rhs.codepage && std::strcmp(it->name, rhs.name) == 0;
         };
         const auto* it2 = std::find_if(it + 1, end, is_same_win_codepage);
         TEST(it2 == end);
         if(it2 != end)
-            std::cerr << "Duplicate entry: " << it->name << ':' << it->codepage << '\n';
+            std::cerr << "Duplicate entry: " << it->name << ':' << it->codepage << '\n'; // LCOV_EXCL_LINE
     }
-    const auto cmp = [](const boost::locale::conv::impl::windows_encoding& rhs,
-                        const boost::locale::conv::impl::windows_encoding& lhs) -> bool { return rhs < lhs.name; };
+    const auto cmp = [](const windows_encoding& rhs, const windows_encoding& lhs) -> bool { return rhs < lhs.name; };
     const auto* it = std::is_sorted_until(all_windows_encodings, all_windows_encodings + n, cmp);
     TEST(it == all_windows_encodings + n);
     if(it != all_windows_encodings + n)

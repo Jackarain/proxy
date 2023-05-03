@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\bench\bench_hash_common.hpp" />
     <ClInclude Include="..\..\include\boost\container\adaptive_pool.hpp" />
     <ClInclude Include="..\..\include\boost\container\allocator.hpp" />
     <ClInclude Include="..\..\include\boost\container\allocator_traits.hpp" />
@@ -86,8 +87,6 @@
     <ClInclude Include="..\..\include\boost\container\devector.hpp" />
     <ClInclude Include="..\..\include\boost\container\flat_map.hpp" />
     <ClInclude Include="..\..\include\boost\container\flat_set.hpp" />
-    <ClInclude Include="..\..\include\boost\container\hash_map.hpp" />
-    <ClInclude Include="..\..\include\boost\container\hash_set.hpp" />
     <ClInclude Include="..\..\include\boost\container\list.hpp" />
     <ClInclude Include="..\..\include\boost\container\map.hpp" />
     <ClInclude Include="..\..\include\boost\container\new_allocator.hpp" />
@@ -157,6 +156,7 @@
     <ClInclude Include="..\..\test\vector_test.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\.github\workflows\ci.yml" />
     <None Include="..\..\doc\container.qbk" />
     <None Include="..\..\doc\index.idx" />
     <None Include="..\..\doc\Jamfile.v2" />

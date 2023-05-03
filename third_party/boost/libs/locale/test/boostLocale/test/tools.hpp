@@ -228,6 +228,10 @@ char* make4(unsigned v)
 #    pragma warning(push)
 #    pragma warning(disable : 4996) //"This function or variable may be unsafe"
 #endif
+#if defined(__clang__)
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 /// Wrapper for std::gmtime avoiding warning 4996 on MSVC/clang-cl:
 inline std::tm* gmtime_wrap(const std::time_t* time)
 {
@@ -238,6 +242,9 @@ inline std::tm* localtime_wrap(const std::time_t* time)
 {
     return std::localtime(time);
 }
+#if defined(__clang__)
+#    pragma clang diagnostic pop
+#endif
 #ifdef _MSC_VER
 #    pragma warning(pop)
 #endif

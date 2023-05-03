@@ -16,98 +16,86 @@ namespace boost {
 namespace urls {
 namespace grammar {
 
-error_code
-make_error_code(
-    error e) noexcept
+namespace detail {
+
+const char*
+error_cat_type::
+name() const noexcept
 {
-    struct codes : error_category
+    return "boost.url.grammar";
+}
+
+std::string
+error_cat_type::
+message(int code) const
+{
+    return message(code, nullptr, 0);
+}
+
+char const*
+error_cat_type::
+message(
+    int code,
+    char*,
+    std::size_t) const noexcept
+{
+    switch(static_cast<error>(code))
     {
-        virtual ~codes() = default;
-
-        codes() noexcept
-            : error_category(
-                0x0536e50a30f9e9f2)
-        {
-        }
-
-        const char*
-        name() const noexcept override
-        {
-            return "boost.url.bnf";
-        }
-
-        std::string
-        message(int ev) const override
-        {
-            switch(static_cast<error>(ev))
-            {
-            default:
+    default:
 case error::need_more: return "need more";
 case error::mismatch: return "mismatch";
 case error::invalid: return "invalid";
 case error::end_of_range: return "end of range";
 case error::leftover: return "leftover";
 case error::out_of_range: return "out of range";
-            }
-        }
+    }
+}
 
-        error_condition
-        default_error_condition(
-            int ev) const noexcept override
-        {
-            switch(static_cast<error>(ev))
-            {
+error_condition
+error_cat_type::
+default_error_condition(
+    int ev) const noexcept
+{
+    switch(static_cast<error>(ev))
+    {
 case error::invalid:
 case error::out_of_range:
-                return condition::fatal;
-            default:
-                return {ev, *this};
-            }
-        }
-    };
-
-    static codes const cat{};
-    return error_code{static_cast<
-        std::underlying_type<error>::type>(e), cat};
+        return condition::fatal;
+    default:
+        return {ev, *this};
+    }
 }
 
 //------------------------------------------------
 
-error_condition
-make_error_condition(
-    condition c) noexcept
+const char*
+condition_cat_type::
+name() const noexcept
 {
-    struct codes : error_category
-    {
-        virtual ~codes() = default;
-
-        codes() noexcept
-            : error_category(
-                0x809a015e2fe509bd)
-        {
-        }
-
-        const char*
-        name() const noexcept override
-        {
-            return "boost.url.grammar";
-        }
-
-        std::string
-        message(int cv) const override
-        {
-            switch(static_cast<condition>(cv))
-            {
-            default:
-            case condition::fatal:
-                return "fatal condition";
-            }
-        }
-    };
-    static codes const cat{};
-    return error_condition{static_cast<
-        std::underlying_type<condition>::type>(c), cat};
+    return "boost.url.grammar";
 }
+
+std::string
+condition_cat_type::
+message(int code) const
+{
+    return message(code, nullptr, 0);
+}
+
+char const*
+condition_cat_type::
+message(
+    int code, char*, std::size_t) const noexcept
+{
+    switch(static_cast<condition>(code))
+    {
+    default:
+    case condition::fatal:
+        return "fatal condition";
+    }
+}
+
+} // detail
 
 } // grammar
 } // urls

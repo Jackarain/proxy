@@ -16,7 +16,8 @@
 #include <stdexcept>
 #include <type_traits>
 
-BOOST_JSON_NS_BEGIN
+namespace boost {
+namespace json {
 
 //----------------------------------------------------------
 
@@ -206,8 +207,7 @@ array::
 at(std::size_t pos) &
 {
     if(pos >= t_->size)
-        detail::throw_out_of_range(
-            BOOST_CURRENT_LOCATION);
+        detail::throw_out_of_range();
     return (*t_)[pos];
 }
 
@@ -223,8 +223,7 @@ array::
 at(std::size_t pos) const&
 {
     if(pos >= t_->size)
-        detail::throw_out_of_range(
-            BOOST_CURRENT_LOCATION);
+        detail::throw_out_of_range();
     return (*t_)[pos];
 }
 
@@ -583,6 +582,7 @@ insert(
     return r.commit();
 }
 
-BOOST_JSON_NS_END
+} // namespace json
+} // namespace boost
 
 #endif

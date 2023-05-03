@@ -35,15 +35,15 @@ struct url_impl : parts_base
 {
     static
     constexpr
-    pos_t const zero_ = 0;
+    std::size_t const zero_ = 0;
 
     // never nullptr
     char const* cs_ = empty_c_str_;
 
-    pos_t offset_[id_end + 1] = {};
-    pos_t decoded_[id_end] = {};
-    pos_t nseg_ = 0;
-    pos_t nparam_ = 0;
+    std::size_t offset_[id_end + 1] = {};
+    std::size_t decoded_[id_end] = {};
+    std::size_t nseg_ = 0;
+    std::size_t nparam_ = 0;
     unsigned char ip_addr_[16] = {};
     // VFALCO don't we need a bool?
     std::uint16_t port_number_ = 0;
@@ -67,14 +67,14 @@ struct url_impl : parts_base
     authority_view
     construct_authority() const noexcept;
 
-    pos_t len(int, int) const noexcept;
-    pos_t len(int) const noexcept;
-    pos_t offset(int) const noexcept;
+    std::size_t len(int, int) const noexcept;
+    std::size_t len(int) const noexcept;
+    std::size_t offset(int) const noexcept;
     string_view get(int) const noexcept;
     string_view get(int, int) const noexcept;
     pct_string_view pct_get(int) const noexcept;
     pct_string_view pct_get(int, int) const noexcept;
-    void set_size(int, pos_t) noexcept;
+    void set_size(int, std::size_t) noexcept;
     void split(int, std::size_t) noexcept;
     void adjust(int, int, std::size_t) noexcept;
     void collapse(int, int, std::size_t) noexcept;
@@ -195,7 +195,7 @@ url_impl::
 len(
     int first,
     int last) const noexcept ->
-        pos_t
+        std::size_t
 {
     BOOST_ASSERT(first <= last);
     BOOST_ASSERT(last <= id_end);
@@ -207,7 +207,7 @@ inline
 auto
 url_impl::
 len(int id) const noexcept ->
-    pos_t
+    std::size_t
 {
     return id == id_end
         ? zero_
@@ -220,7 +220,7 @@ inline
 auto
 url_impl::
 offset(int id) const noexcept ->
-    pos_t
+    std::size_t
 {
     return
         id == id_scheme
@@ -288,7 +288,7 @@ void
 url_impl::
 set_size(
     int id,
-    pos_t n) noexcept
+    std::size_t n) noexcept
 {
     auto d = n - len(id);
     for(auto i = id + 1;

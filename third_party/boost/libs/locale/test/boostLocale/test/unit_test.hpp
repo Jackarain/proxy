@@ -165,6 +165,14 @@ std::string to_string(const wchar_t (&s)[size])
     return ss.str();
 }
 
+std::string to_string(const wchar_t* s)
+{
+    std::stringstream ss;
+    for(; *s; ++s)
+        stream_char(ss, *s);
+    return ss.str();
+}
+
 // Unicode chars cannot be streamed directly (deleted overloads in C++20)
 template<typename Char>
 std::string to_string_char_impl(const Char c)
@@ -205,9 +213,21 @@ void test_eq_impl(T const& l, U const& r, const char* expr, int line)
 }
 
 template<typename T, typename U>
+void test_ne_impl(T const& l, U const& r, const char* expr, int line)
+{
+    test_impl(l != r, l, r, expr, "==", line);
+}
+
+template<typename T, typename U>
 void test_le_impl(T const& l, U const& r, const char* expr, int line)
 {
     test_impl(l <= r, l, r, expr, ">", line);
+}
+
+template<typename T, typename U>
+void test_lt_impl(T const& l, U const& r, const char* expr, int line)
+{
+    test_impl(l < r, l, r, expr, ">=", line);
 }
 
 template<typename T, typename U>
@@ -216,9 +236,18 @@ void test_ge_impl(T const& l, U const& r, const char* expr, int line)
     test_impl(l >= r, l, r, expr, "<", line);
 }
 
+template<typename T, typename U>
+void test_gt_impl(T const& l, U const& r, const char* expr, int line)
+{
+    test_impl(l > r, l, r, expr, "<=", line);
+}
+
 #define TEST_EQ(x, y) test_eq_impl(x, y, BOOST_LOCALE_STRINGIZE(x == y), __LINE__)
+#define TEST_NE(x, y) test_ne_impl(x, y, BOOST_LOCALE_STRINGIZE(x != y), __LINE__)
 #define TEST_LE(x, y) test_le_impl(x, y, BOOST_LOCALE_STRINGIZE(x <= y), __LINE__)
+#define TEST_LT(x, y) test_lt_impl(x, y, BOOST_LOCALE_STRINGIZE(x < y), __LINE__)
 #define TEST_GE(x, y) test_ge_impl(x, y, BOOST_LOCALE_STRINGIZE(x >= y), __LINE__)
+#define TEST_GT(x, y) test_gt_impl(x, y, BOOST_LOCALE_STRINGIZE(x > y), __LINE__)
 
 #ifdef BOOST_MSVC
 #    define BOOST_LOCALE_DISABLE_UNREACHABLE_CODE_WARNING __pragma(warning(disable : 4702))

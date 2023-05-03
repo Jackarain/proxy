@@ -73,6 +73,31 @@ endif()
 add_library(boost_filesystem ${BOOST_FILESYSTEM_SOURCES})
 add_library(Boost::filesystem ALIAS boost_filesystem)
 
+get_target_property(BOOST_FILESYSTEM_TARGET_TYPE boost_filesystem TYPE)
+if(BOOST_FILESYSTEM_TARGET_TYPE STREQUAL "SHARED_LIBRARY")
+    set(CMAKE_REQUIRED_LIBRARIES "-Wl,--no-undefined")
+    check_cxx_source_compiles("#include <${CMAKE_CURRENT_SOURCE_DIR}/config/has_linkflag_no_undefined.cpp>" BOOST_FILESYSTEM_HAS_LINKFLAG_NO_UNDEFINED)
+    unset(CMAKE_REQUIRED_LIBRARIES)
+    if(NOT BOOST_FILESYSTEM_HAS_LINKFLAG_NO_UNDEFINED)
+        set(CMAKE_REQUIRED_LIBRARIES "-Wl,-undefined,error")
+        check_cxx_source_compiles("#include <${CMAKE_CURRENT_SOURCE_DIR}/config/has_linkflag_no_undefined.cpp>" BOOST_FILESYSTEM_HAS_LINKFLAG_UNDEFINED_ERROR)
+        unset(CMAKE_REQUIRED_LIBRARIES)
+    endif()
+    if(BOOST_FILESYSTEM_HAS_LINKFLAG_NO_UNDEFINED)
+        if(NOT CMAKE_VERSION VERSION_LESS 3.13)
+            target_link_options(boost_filesystem PRIVATE "-Wl,--no-undefined")
+        else()
+            target_link_libraries(boost_filesystem PRIVATE "-Wl,--no-undefined")
+        endif()
+    elseif(BOOST_FILESYSTEM_HAS_LINKFLAG_UNDEFINED_ERROR)
+        if(NOT CMAKE_VERSION VERSION_LESS 3.13)
+            target_link_options(boost_filesystem PRIVATE "-Wl,-undefined,error")
+        else()
+            target_link_libraries(boost_filesystem PRIVATE "-Wl,-undefined,error")
+        endif()
+    endif()
+endif()
+
 target_include_directories(boost_filesystem PUBLIC include)
 target_include_directories(boost_filesystem PRIVATE src)
 
@@ -104,6 +129,16 @@ if(WIN32 OR CYGWIN)
         BOOST_USE_WINDOWS_H
         WIN32_LEAN_AND_MEAN
         NOMINMAX
+    )
+endif()
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
+    (CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 12 OR CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 12) AND
+    CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13)
+    # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
+    # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105651
+    target_compile_options(boost_filesystem PRIVATE
+        -Wno-restrict
     )
 endif()
 

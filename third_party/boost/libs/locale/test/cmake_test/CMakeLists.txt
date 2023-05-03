@@ -37,9 +37,9 @@ else()
       describe
       detail
       exception
-      functional
       function
       function_types
+      functional
       fusion
       integer
       intrusive
@@ -61,9 +61,8 @@ else()
       throw_exception
       tokenizer
       tuple
-      type_index
-      typeof
       type_traits
+      typeof
       unordered
       utility
       variant2

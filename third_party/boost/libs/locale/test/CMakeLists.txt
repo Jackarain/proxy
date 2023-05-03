@@ -38,11 +38,7 @@ endif()
 
 boost_test_jamfile(FILE Jamfile.v2)
 
-boost_test(NAME show_config  SOURCES show_config.cpp)
-
 # Those require to be run in the test directory
 foreach(name test_formatting test_message)
-  boost_test(NAME ${name} SOURCES ${name}.cpp)
-  set_target_properties(${PROJECT_NAME}-${name} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
-  set_tests_properties(run-${PROJECT_NAME}-${name} PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+  boost_test(SOURCES ${name}.cpp WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 endforeach()

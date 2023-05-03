@@ -198,13 +198,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "boost_iterator_comp_test", 
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "common_iterator_test", "common_iterator_test.vcxproj", "{3E10C8C3-4F8E-96A0-4FA2-32BA7AE46392}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hash_map_string_test", "hash_map_string_test.vcxproj", "{58CCE183-6092-48FE-A4F7-B6979D8A0642}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bench_hash_map_string_test", "bench_hash_map_string_test.vcxproj", "{58CCE183-6092-48FE-A4F7-B6979D8A0642}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hash_map_uint32_test", "hash_map_uint32_test.vcxproj", "{58CCE183-6092-48FE-A4F7-B7946A2D3A06}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bench_hash_map_uint32_test", "bench_hash_map_uint32_test.vcxproj", "{58CCE183-6092-48FE-A4F7-B7946A2D3A06}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hash_map_uint64_test", "hash_map_uint64_test.vcxproj", "{58CCE183-6092-48FE-F7A4-B6946A5D3A06}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bench_hash_map_uint64_test", "bench_hash_map_uint64_test.vcxproj", "{58CCE183-6092-48FE-F7A4-B6946A5D3A06}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hash_map_test", "hash_map_test.vcxproj", "{58CCE183-6092-48FE-FA47-B792603093A6}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bench_hash_map_test", "bench_hash_map_test.vcxproj", "{58CCE183-6092-48FE-FA47-B792603093A6}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "copy_move_algo_test", "copy_move_algo_test.vcxproj", "{5CE11C83-84A7-093A-4FA2-A6BA20A30592}"
 EndProject

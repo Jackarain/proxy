@@ -90,12 +90,10 @@
 #define BOOST_URL_RETURN(x) return (x)
 #endif
 
-using pos_t = size_t;
-
 #ifndef BOOST_URL_MAX_SIZE
 // we leave room for a null,
-// and still fit in pos_t
-#define BOOST_URL_MAX_SIZE ((pos_t(-1))-1)
+// and still fit in size_t
+#define BOOST_URL_MAX_SIZE ((std::size_t(-1))-1)
 #endif
 
 #ifdef BOOST_GCC
@@ -118,5 +116,15 @@ using pos_t = size_t;
 #else
 # error Unknown or unsupported architecture, please open an issue
 #endif
+
+namespace boost {
+namespace urls {
+
+// avoid some of Boost.TypeTraits for just this
+template<class...> struct make_void { typedef void type; };
+template<class... Ts> using void_t = typename make_void<Ts...>::type;
+
+} // urls
+} // boost
 
 #endif

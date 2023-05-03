@@ -303,6 +303,30 @@ However the `u8string()` member function can be used to obtain an UTF-8 encoded 
 And to optain a `path` from an UTF-8 encoded string you may use `std::filesystem::u8path`
 or since C++20 one of the `path` constructors taking a `char8_t`-type input.
 
+To read/write `std::filesystem::path` instances from/to streams you'd usually use e.g. `os << path`.
+However that will effectively be run as `os << std::quoted(path.string())` which means a possible conversion
+to a narrow string which may not be UTF-8 encoded.
+For that \c quoted can be used:
+
+\code
+#include <boost/nowide/quoted.hpp>
+#include <filesystem>
+#include <sstream>
+
+std::string write(const std::filesystem::path& path)
+{
+    std::ostringstream s;
+    s << boost::nowide::quoted(path);
+    return s.str();
+}
+
+std::experimental::path read(std::istream& is)
+{
+    std::filesystem::path path;
+    is >> boost::nowide::quoted(path);
+    return path;
+}
+\endcode
 
 \section technical Technical Details
 \subsection technical_imple Windows vs POSIX

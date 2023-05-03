@@ -13,7 +13,6 @@
 #include <boost/url/detail/config.hpp>
 #include <boost/url/string_view.hpp>
 #include <boost/url/detail/except.hpp>
-#include <boost/type_traits.hpp>
 #include <memory>
 #include <string>
 
@@ -89,7 +88,7 @@ template<class T, class = void>
 struct is_token : std::false_type {};
 
 template<class T>
-struct is_token<T, boost::void_t<
+struct is_token<T, void_t<
     decltype(std::declval<T&>().prepare(
         std::declval<std::size_t>())),
     decltype(std::declval<T&>().result())

@@ -64,14 +64,14 @@ void test_from_utf(const CharType* const s, unsigned codepoint)
 
     static_assert(tr::max_width == 4 / sizeof(CharType), "Wrong max_width");
 
-    TEST(tr::template decode<const CharType*>(cur, end) == codepoint);
+    TEST_EQ(tr::template decode<const CharType*>(cur, end), codepoint);
 
     if(codepoint != illegal)
         TEST(cur == end);
 
     if(codepoint == incomplete) {
         TEST(*s == 0 || tr::trail_length(*s) > 0);
-        TEST(tr::trail_length(*s) >= end - s);
+        TEST_GE(tr::trail_length(*s), end - s);
     }
 
     if(codepoint != incomplete && codepoint != illegal) {
@@ -82,10 +82,10 @@ void test_from_utf(const CharType* const s, unsigned codepoint)
             TEST(tr::is_trail(*cur));
             TEST(!tr::is_lead(*cur));
         }
-        TEST(tr::width(codepoint) == end - s);
-        TEST(tr::trail_length(*s) == tr::width(codepoint) - 1);
+        TEST_EQ(tr::width(codepoint), end - s);
+        TEST_EQ(tr::trail_length(*s), tr::width(codepoint) - 1);
         cur = s;
-        TEST(tr::decode_valid(cur) == codepoint);
+        TEST_EQ(tr::decode_valid(cur), codepoint);
         TEST(cur == end);
     }
 }
@@ -97,10 +97,10 @@ void test_to_utf(const CharType* str, unsigned codepoint)
     CharType* p = buf;
     p = utf_traits<CharType>::template encode<CharType*>(codepoint, p);
     const CharType* const end = boost::locale::util::str_end(str);
-    TEST(end - str == p - buf);
+    TEST_EQ(end - str, p - buf);
     TEST(*p);
     *p = 0;
-    TEST(memcmp(str, buf, sizeof(CharType) * (end - str)) == 0);
+    TEST_EQ(memcmp(str, buf, sizeof(CharType) * (end - str)), 0);
 }
 
 template<typename CharType>

@@ -78,7 +78,7 @@ Basics</h1>
 <ul>
 <li>Even if your application uses wide strings everywhere, you should specify the 8-bit encoding to use for 8-bit stream IO operations like <code>cout</code> or <code>fstream</code>. <br />
 </li>
-<li>The default locale is defined by the environment variables <code>LC_CTYPE</code> , <code>LC_ALL</code> , and <code>LANG</code> in that order (i.e. <code>LC_CTYPE</code> first and <code>LANG</code> last). On Windows, the library also queries the <code>LOCALE_USER_DEFAULT</code> option in the Win32 API when these variables are not set.</li>
+<li>The default locale is defined by the environment variables <code>LC_ALL</code> , <code>LC_CTYPE</code> , and <code>LANG</code> in that order (i.e. <code>LC_ALL</code> first and <code>LANG</code> last). On Windows, the library also queries the <code>LOCALE_USER_DEFAULT</code> option in the Win32 API when these variables are not set.</li>
 </ul>
 <p><b>Tip:</b> Prefer using UTF-8 Unicode encoding over 8-bit encodings like the ISO-8859-X ones.</p>
 <p>By default the generated locales include all supported categories and character types. However, if your application uses only 8-bit encodings, only wide-character encodings, or only specific facets, you can limit the facet generation to specific categories and character types by calling the <a class="el" href="classboost_1_1locale_1_1generator.html#ad6886bea36c63cba458e8f5c7c0f7244">categories</a> and <a class="el" href="classboost_1_1locale_1_1generator.html#afaa002c765766373d347253e71468f22">characters</a> member functions of the <a class="el" href="classboost_1_1locale_1_1generator.html">generator</a> class.</p>

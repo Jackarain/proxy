@@ -23,3 +23,14 @@ exe path_info : path_info.cpp : <cxxstd>11 ;
 exe file_status : file_status.cpp ;
 exe file_size : file_size.cpp ;
 exe directory_symlink_parent_resolution : directory_symlink_parent_resolution.cpp ;
+exe simple_ls : simple_ls.cpp ;
+
+install tut1-copy : tut1 : <location>. ;
+install tut2-copy : tut2 : <location>. ;
+install tut3-copy : tut3 : <location>. ;
+install tut4-copy : tut4 : <location>. ;
+install tut5-copy : tut5 : <location>. ;
+install path_info-copy : path_info : <location>. ;
+
+alias tutorial : tut1-copy tut2-copy tut3-copy tut4-copy tut5-copy path_info-copy ;
+explicit tut1-copy tut2-copy tut3-copy tut4-copy tut5-copy path_info-copy tutorial ;

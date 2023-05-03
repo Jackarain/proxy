@@ -158,8 +158,8 @@
 &nbsp;&nbsp;&nbsp;&nbsp; <a href="#weakly_canonical">weakly_canonical</a><br></code>
     <a href="#File-streams">File streams</a><br>
 <a href="#path-decomposition-table">Path decomposition table</a><br>
-    <a href="#long-path-warning">Warning: Long paths on Windows and the
-    extended-length <b>\\?\ </b>prefix</a><br>
+    <a href="#windows-path-prefixes">Long paths on Windows and the
+    <b>\\?\</b> namespace prefix</a><br>
 <a href="#Acknowledgements">Acknowledgements</a><br>
 <a href="#References">References</a><br>
 &nbsp;</td>
@@ -1114,6 +1114,8 @@ system or for a particular file system.</p>
         void  <a href="#path-clear">clear</a>();
         path&amp; <a href="#path-make_preferred">make_preferred</a>();
         path&amp; <a href="#path-remove_filename">remove_filename</a>();
+        path&amp; <a href="#path-remove_filename_and_trailing_separators">remove_filename_and_trailing_separators</a>();
+        path&amp; <a href="#path-replace_filename">replace_filename</a>(const path&amp; replacement);
         path&amp; <a href="#path-replace_extension">replace_extension</a>(const path&amp; new_extension = path());
         void  <a href="#path-swap">swap</a>(path&amp; rhs) noexcept;
 
@@ -1439,10 +1441,30 @@ path</code> modifiers</a> [path.modifiers]</h3>
 <pre>path&amp; <a name="path-remove_filename">remove_filename</a>();</pre>
 
 <blockquote>
-  <p><i>Returns: </i>As if, <code>*this = parent_path();</code></p>
+  <p><i>Effects:</i> <b>v3:</b> As if, <code>*this = parent_path();</code></p>
   <p>[<i>Note:</i> This function is needed to efficiently implement <code>directory_iterator</code>. It is exposed to allow additional uses. The actual
   implementation may be much more efficient than <code>*this = parent_path()</code>&nbsp; <i>—end
   note</i>]</p>
+  <p><b>v4:</b> Removes the <code>filename()</code> path element.</p>
+  <p>[<i>Note:</i> Unlike <b>v3</b>, the trailing directory separator(s) are not removed.<i>—end
+  note</i>]</p>
+  <p><i>Returns:</i> <code>*this</code>.
+</blockquote>
+
+<pre>path&amp; <a name="path-remove_filename_and_trailing_separators">remove_filename_and_trailing_separators</a>();</pre>
+
+<blockquote>
+  <p><i>Effects:</i> As if, <code>*this = parent_path();</code></p>
+  <p>[<i>Note:</i> This function is similar to <code>path::remove_filename</code> from <b>v3</b>, but is also usable in <b>v4</b>.<i>—end
+  note</i>]</p>
+  <p><i>Returns:</i> <code>*this</code>.
+</blockquote>
+
+<pre>path&amp; <a name="path-replace_filename">replace_filename</a>(const path&amp; replacement);</pre>
+
+<blockquote>
+  <p><i>Effects:</i> As if, <code>remove_filename().append(replacement);</code></p>
+  <p><i>Returns:</i> <code>*this</code>.
 </blockquote>
 
 <pre>path&amp; <a name="path-replace_extension">replace_extension</a>(const path&amp; new_extension = path());</pre>
@@ -4373,36 +4395,54 @@ ISO/IEC 9945 result and the bottom value is the Windows result. <br>
 <td><code>foo\bar</code><br><code>bar</code></td>
 </tr>
 </table>
-<h2><a name="long-path-warning"></a>Warning: Long paths on Windows and the
-extended-length <b>\\?\ </b>prefix</h2>
+
+<h2><a name="windows-path-prefixes"></a>Long paths on Windows and the
+<b>\\?\</b> namespace prefix</h2>
 <p>The Microsoft Windows &quot;Maximum Path Length Limitation&quot; specifies:</p>
 <blockquote>
 <p>In the Windows API (with some exceptions ...), the maximum length for a path
-is MAX_PATH, which is defined as 260 characters.</p>
+is <code>MAX_PATH</code>, which is defined as 260 characters.</p>
 <p>The Windows API has many functions that also have Unicode versions to permit
 an extended-length path for a maximum total path length of 32,767 characters.
-... To specify an extended-length path, use the <b>&quot;\\?\&quot; prefix</b>. For
-example, &quot;\\?\D:\<em>very long path</em>&quot;.&nbsp; <i>[C++ string literals require backslashes be doubled, of course.]</i></p>
+... To specify an extended-length path, use the &quot;\\?\&quot; prefix. For
+example, &quot;\\?\D:\<em>very long path</em>&quot;.&nbsp;<i>[C++ string literals
+require backslashes be doubled, of course.]</i></p>
 </blockquote>
 <p>Because most Boost.Filesystem operational functions just pass the contents of
 a class path object to the Windows API, they do work with the extended-length
-prefixes. But some won't work, because to the limitations imposed by Windows.
-Read the following cautions carefully!</p>
-<h3>Cautions for paths with extended-length prefixes</h3>
+prefixes. But some won't work, because to the limitations imposed by Windows.</p>
+<p>Effectively, the &quot;\\?\&quot; prefix informs the underlying Windows API
+that the path identifies an object in the Win32 filesystem namespace and disables
+most of the internal path processing, including normalization, by the Windows API.
+While it lifts the length limitation, this imposes a number of other restrictions on
+the acceptable paths that are listed in the section below. There are a number of
+other prefixes that have different special meanings, such as &quot;\\.\&quot; (a local
+device namespace prefix) and &quot;\??\&quot; (NT object namespace prefix). Note that
+UNC paths can be extended with the prefixes by referring to a special &quot;UNC&quot;
+device. For example, &quot;\\server\share&quot; can be extended as &quot;\\?\UNC\server\share&quot;.</p>
+<p>In terms of Boost.Filesystem, the namespace prefixes are considered as parts of the path's
+root name. For example, the root name of &quot;\\?\c:\foo&quot; is &quot;\\?\c:&quot;.
+This interpretation is chosen to allow root paths to be iterable, that is you can list
+the contents of the &quot;\\?\c:\&quot; directory, provided that drive C: exists and you have
+the necessary permissions. <i>[Note: You can't list the contents of &quot;\\?\&quot;
+as such path does not exist.]</i></p>
+
+<h3>Cautions for paths with namespace prefixes</h3>
 <ul>
   <li>Individual components of a path are still are limited to whatever is
   supported for the particular filesystem, commonly 255 characters.</li>
   <li>Only backslashes are acceptable as directory separators. Slashes are
   not treated as separators.</li>
-  <li>All paths must be absolute - relative paths are not allowed.</li>
+  <li>All paths must be absolute and must not contain &quot;.&quot; or &quot;..&quot; components.</li>
   <li>Once an absolute path grows beyond 260 characters, it is essentially
   poisoned and all operations must use extended-length prefixes. So even a
   simple operation like <code>create_directory(&quot;a&quot;)</code> will fail if the
   absolute path of the resulting directory would exceed 260 characters.</li>
   <li>Certain Boost.Filesystem functions that decompose their argument path and
   then work on individual relative directories or files will not work properly
-  with extended-length prefix paths.</li>
+  with namespace prefix paths.</li>
 </ul>
+
 <h2><a name="Acknowledgements">Acknowledgements</a></h2>
 <p>This Filesystem Library is dedicated to my wife, Sonda, who provided the
 support necessary to see both a trial implementation and the proposal itself

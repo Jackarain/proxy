@@ -4,7 +4,6 @@
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
-#include <boost/locale/config.hpp>
 #include <boost/locale/conversion.hpp>
 #include <boost/locale/generator.hpp>
 #include <boost/locale/info.hpp>
@@ -41,12 +40,12 @@ void test_one(const std::locale& l, std::string ia, std::string ib, int diff)
 
     const std::collate<CharType>& col = std::use_facet<std::collate<CharType>>(l);
 
-    TEST(diff == col.compare(a.c_str(), a.c_str() + a.size(), b.c_str(), b.c_str() + b.size()));
-    TEST(diff
-         == get_sign(
-           col.transform(a.c_str(), a.c_str() + a.size()).compare(col.transform(b.c_str(), b.c_str() + b.size()))));
+    TEST_EQ(diff, col.compare(a.c_str(), a.c_str() + a.size(), b.c_str(), b.c_str() + b.size()));
+    TEST_EQ(
+      diff,
+      get_sign(col.transform(a.c_str(), a.c_str() + a.size()).compare(col.transform(b.c_str(), b.c_str() + b.size()))));
     if(diff == 0) {
-        TEST(col.hash(a.c_str(), a.c_str() + a.size()) == col.hash(b.c_str(), b.c_str() + b.size()));
+        TEST_EQ(col.hash(a.c_str(), a.c_str() + a.size()), col.hash(b.c_str(), b.c_str() + b.size()));
     }
 }
 

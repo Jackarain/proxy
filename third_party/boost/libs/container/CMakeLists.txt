@@ -24,12 +24,9 @@ target_link_libraries(boost_container
   PUBLIC
     Boost::assert
     Boost::config
-    Boost::core
     Boost::intrusive
     Boost::move
     Boost::static_assert
-    Boost::type_traits
-    Boost::winapi
 )
 
 target_compile_definitions(boost_container

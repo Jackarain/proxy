@@ -79,6 +79,9 @@ Functions</h2></td></tr>
 <tr class="memitem:ab23f248c3a3a7f5adffb89e155e5a0fe"><td class="memTemplParams" colspan="2">template&lt;typename CharOut , typename CharIn &gt; </td></tr>
 <tr class="memitem:ab23f248c3a3a7f5adffb89e155e5a0fe"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharOut &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceboost_1_1nowide_1_1utf.html#ab23f248c3a3a7f5adffb89e155e5a0fe">convert_string</a> (const CharIn *begin, const CharIn *end)</td></tr>
 <tr class="separator:ab23f248c3a3a7f5adffb89e155e5a0fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afde8641eeeadef44a46e109891f8b641"><td class="memTemplParams" colspan="2">template&lt;typename CharOut , typename CharIn &gt; </td></tr>
+<tr class="memitem:afde8641eeeadef44a46e109891f8b641"><td class="memTemplItemLeft" align="right" valign="top">std::basic_string&lt; CharOut &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceboost_1_1nowide_1_1utf.html#afde8641eeeadef44a46e109891f8b641">convert_string</a> (const std::basic_string&lt; CharIn &gt; &amp;s)</td></tr>
+<tr class="separator:afde8641eeeadef44a46e109891f8b641"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a36d7b6788f08461409fbfbba8af8b0a4"><td class="memItemLeft" align="right" valign="top"><a id="a36d7b6788f08461409fbfbba8af8b0a4"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceboost_1_1nowide_1_1utf.html#a36d7b6788f08461409fbfbba8af8b0a4">is_valid_codepoint</a> (<a class="el" href="namespaceboost_1_1nowide_1_1utf.html#a4bd651000593bf73be05d50278e2c1e3">code_point</a> v)</td></tr>
 <tr class="memdesc:a36d7b6788f08461409fbfbba8af8b0a4"><td class="mdescLeft">&#160;</td><td class="mdescRight">the function checks if <em>v</em> is a valid code point <br /></td></tr>
@@ -145,7 +148,7 @@ template&lt;typename CharOut , typename CharIn &gt; </div>
 </div>
 </div>
 <a id="ab23f248c3a3a7f5adffb89e155e5a0fe"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab23f248c3a3a7f5adffb89e155e5a0fe">&#9670;&nbsp;</a></span>convert_string()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ab23f248c3a3a7f5adffb89e155e5a0fe">&#9670;&nbsp;</a></span>convert_string() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -172,6 +175,33 @@ template&lt;typename CharOut , typename CharIn &gt; </div>
       </table>
 </div><div class="memdoc">
 <p>Convert the UTF sequences in range [begin, end) from <em>CharIn</em> to <em>CharOut</em> and return it as a string</p>
+<p>Any illegal sequences are replaced with the replacement character, see <a class="el" href="replacement_8hpp.html#a51c35d4bbf84bc443caab9afce302447">BOOST_NOWIDE_REPLACEMENT_CHARACTER</a> </p><dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">CharOut</td><td>Output character type </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="afde8641eeeadef44a46e109891f8b641"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afde8641eeeadef44a46e109891f8b641">&#9670;&nbsp;</a></span>convert_string() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename CharOut , typename CharIn &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">std::basic_string&lt;CharOut&gt; boost::nowide::utf::convert_string </td>
+          <td>(</td>
+          <td class="paramtype">const std::basic_string&lt; CharIn &gt; &amp;&#160;</td>
+          <td class="paramname"><em>s</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Convert the UTF sequence in the input string from <em>CharIn</em> to <em>CharOut</em> and return it as a string</p>
 <p>Any illegal sequences are replaced with the replacement character, see <a class="el" href="replacement_8hpp.html#a51c35d4bbf84bc443caab9afce302447">BOOST_NOWIDE_REPLACEMENT_CHARACTER</a> </p><dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">CharOut</td><td>Output character type </td></tr>

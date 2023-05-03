@@ -2,11 +2,9 @@
 // Copyright 2018 Peter Dimov.
 // Distributed under the Boost Software License, Version 1.0.
 
-// Avoid spurious VC++ warnings
-#define _CRT_SECURE_NO_WARNINGS
-
 #include <boost/system/error_code.hpp>
 #include <boost/core/lightweight_test.hpp>
+#include <boost/core/snprintf.hpp>
 #include <cstdio>
 
 using namespace boost::system;
@@ -28,7 +26,7 @@ struct http_category_impl: public error_category
     {
         char buffer[ 32 ];
 
-        std::sprintf( buffer, "HTTP/1.0 %d", ev );
+        boost::core::snprintf( buffer, sizeof( buffer ), "HTTP/1.0 %d", ev );
         return buffer;
     }
 

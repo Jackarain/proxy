@@ -1,11 +1,18 @@
 [/
- / Copyright (c) 2021-2022 Andrey Semashev
+ / Copyright (c) 2021-2023 Andrey Semashev
  /
  / Distributed under the Boost Software License, Version 1.0. (See accompanying
  / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
  /]
 
 [section:changelog Changelog]
+
+[heading Boost 1.82]
+
+* Due to changes in Boost libraries used in Boost.Atomic, support for C++03 is deprecated. C++11 will become the minimum starting with Boost.Atomic 1.84.
+* When compiled for x86 targets supporting AVX, vector instructions are now used for 128-bit atomic loads and stores.
+* For 32-bit x86 targets, 64-bit atomic loads and stores with `memory_order_seq_cst` semantics will now issue a memory ordering instruction.
+* Removed `atomic<T>::storage()` accessors and `atomic<T>::storage_type` types that were deprecated in Boost.Atomic 1.73. Users are recommended to use `atomic<T>::value()` and `atomic<T>::value_type` instead.
 
 [heading Boost 1.80]
 

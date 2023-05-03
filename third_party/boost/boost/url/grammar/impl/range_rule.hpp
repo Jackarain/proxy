@@ -11,9 +11,9 @@
 #define BOOST_URL_GRAMMAR_IMPL_RANGE_HPP
 
 #include <boost/url/detail/except.hpp>
-#include <boost/url/detail/empty_value.hpp>
 #include <boost/url/grammar/error.hpp>
 #include <boost/url/grammar/recycled.hpp>
+#include <boost/core/empty_value.hpp>
 #include <boost/assert.hpp>
 #include <boost/static_assert.hpp>
 #include <exception>
@@ -84,12 +84,12 @@ template<class T>
 template<class R, bool Small>
 struct range<T>::impl1
     : any_rule
-    , private urls::detail::empty_value<R>
+    , private empty_value<R>
 {
     explicit
     impl1(R const& next) noexcept
-        : urls::detail::empty_value<R>(
-            urls::detail::empty_init,
+        : empty_value<R>(
+            empty_init,
             next)
     {
     }
@@ -217,16 +217,16 @@ template<
     class R0, class R1, bool Small>
 struct range<T>::impl2
     : any_rule
-    , private urls::detail::empty_value<R0, 0>
-    , private urls::detail::empty_value<R1, 1>
+    , private empty_value<R0, 0>
+    , private empty_value<R1, 1>
 {
     impl2(
         R0 const& first,
         R1 const& next) noexcept
-        : urls::detail::empty_value<R0,0>(
-            urls::detail::empty_init, first)
-        , urls::detail::empty_value<R1,1>(
-            urls::detail::empty_init, next)
+        : empty_value<R0,0>(
+            empty_init, first)
+        , empty_value<R1,1>(
+            empty_init, next)
     {
     }
 
@@ -256,7 +256,7 @@ private:
             const noexcept override
     {
         return grammar::parse(it, end,
-            urls::detail::empty_value<
+            empty_value<
                 R0,0>::get());
     }
 
@@ -267,7 +267,7 @@ private:
             const noexcept override
     {
         return grammar::parse(it, end,
-            urls::detail::empty_value<
+            empty_value<
                 R1,1>::get());
     }
 };
@@ -372,9 +372,9 @@ public:
 
     iterator() = default;
     iterator(
-        iterator const&) noexcept = default;
+        iterator const&) = default;
     iterator& operator=(
-        iterator const&) noexcept = default;
+        iterator const&) = default;
 
     reference
     operator*() const noexcept
@@ -384,7 +384,7 @@ public:
 
     bool
     operator==(
-        iterator other) const noexcept
+        iterator const& other) const noexcept
     {
         // can't compare iterators
         // from different containers!
@@ -395,7 +395,7 @@ public:
 
     bool
     operator!=(
-        iterator other) const noexcept
+        iterator const& other) const noexcept
     {
         return !(*this == other);
     }

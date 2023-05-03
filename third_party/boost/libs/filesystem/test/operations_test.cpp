@@ -1232,7 +1232,7 @@ void create_directories_tests()
     BOOST_TEST(!ec);
 
 #ifdef BOOST_POSIX_API
-    if (geteuid() > 0)
+    if (access("/", W_OK) != 0)
     {
         ec.clear();
         BOOST_TEST(!fs::create_directories("/foo", ec)); // may be OK on Windows

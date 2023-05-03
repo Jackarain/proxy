@@ -158,6 +158,12 @@ compile constexpr_test2.cpp ;
 run error_code_test3.cpp ;
 run std_interop_test15.cpp ;
 
+run win32_generic_test.cpp ;
+
+run ec_hash_value_test.cpp ;
+
+run std_interop_test16.cpp ;
+
 # result
 
 import ../../config/checks/config : requires ;
@@ -184,3 +190,6 @@ run result_typedefs.cpp : : : $(CPP11) ;
 run result_value_construct3.cpp : : : $(CPP11) ;
 run result_error_construct3.cpp : : : $(CPP11) ;
 run result_emplace.cpp : : : $(CPP11) ;
+run result_error_construct4.cpp : : : $(CPP11) ;
+run result_value_construct4.cpp : : : $(CPP11) ;
+run result_value_construct5.cpp : : : $(CPP11) ;

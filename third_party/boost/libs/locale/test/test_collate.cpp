@@ -16,43 +16,43 @@ void test_comp(std::locale l, std::basic_string<Char> left, std::basic_string<Ch
 {
     typedef std::basic_string<Char> string_type;
     boost::locale::collate_level level = static_cast<boost::locale::collate_level>(ilevel);
-    TEST(boost::locale::comparator<Char>(l, level)(left, right) == (expected < 0));
+    TEST_EQ(boost::locale::comparator<Char>(l, level)(left, right), expected < 0);
     if(ilevel == 4) {
         const std::collate<Char>& coll = std::use_facet<std::collate<Char>>(l);
         string_type lt = coll.transform(left.c_str(), left.c_str() + left.size());
         string_type rt = coll.transform(right.c_str(), right.c_str() + right.size());
         if(expected < 0)
-            TEST(lt < rt);
+            TEST_LT(lt, rt);
         else if(expected == 0) {
-            TEST(lt == rt);
+            TEST_EQ(lt, rt);
         } else
-            TEST(lt > rt);
+            TEST_GT(lt, rt);
         long lh = coll.hash(left.c_str(), left.c_str() + left.size());
         long rh = coll.hash(right.c_str(), right.c_str() + right.size());
         if(expected == 0)
-            TEST(lh == rh);
+            TEST_EQ(lh, rh);
         else
-            TEST(lh != rh);
+            TEST_NE(lh, rh);
     }
     const boost::locale::collator<Char>& coll = std::use_facet<boost::locale::collator<Char>>(l);
     string_type lt = coll.transform(level, left.c_str(), left.c_str() + left.size());
-    TEST(lt == coll.transform(level, left));
+    TEST_EQ(lt, coll.transform(level, left));
     string_type rt = coll.transform(level, right.c_str(), right.c_str() + right.size());
-    TEST(rt == coll.transform(level, right));
+    TEST_EQ(rt, coll.transform(level, right));
     if(expected < 0)
-        TEST(lt < rt);
+        TEST_LT(lt, rt);
     else if(expected == 0)
-        TEST(lt == rt);
+        TEST_EQ(lt, rt);
     else
-        TEST(lt > rt);
+        TEST_GT(lt, rt);
     long lh = coll.hash(level, left.c_str(), left.c_str() + left.size());
-    TEST(lh == coll.hash(level, left));
+    TEST_EQ(lh, coll.hash(level, left));
     long rh = coll.hash(level, right.c_str(), right.c_str() + right.size());
-    TEST(rh == coll.hash(level, right));
+    TEST_EQ(rh, coll.hash(level, right));
     if(expected == 0)
-        TEST(lh == rh);
+        TEST_EQ(lh, rh);
     else
-        TEST(lh != rh);
+        TEST_NE(lh, rh);
 }
 
 #define TEST_COMP(c, _l, _r) test_comp<c>(l, _l, _r, level, expected)
@@ -62,7 +62,7 @@ void compare(std::string left, std::string right, int level, int expected)
     boost::locale::generator gen;
     std::locale l = gen("en_US.UTF-8");
     if(level == 4)
-        TEST(l(left, right) == (expected < 0));
+        TEST_EQ(l(left, right), (expected < 0));
     TEST_COMP(char, left, right);
     TEST_COMP(wchar_t, to<wchar_t>(left), to<wchar_t>(right));
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
@@ -73,7 +73,7 @@ void compare(std::string left, std::string right, int level, int expected)
 #endif
     l = gen("en_US.ISO8859-1");
     if(level == 4)
-        TEST(l(to<char>(left), to<char>(right)) == (expected < 0));
+        TEST_EQ(l(to<char>(left), to<char>(right)), (expected < 0));
     TEST_COMP(char, to<char>(left), to<char>(right));
 }
 

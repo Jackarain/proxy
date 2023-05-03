@@ -87,17 +87,18 @@ test_string( CharT* = 0 )
 
 //____________________________________________________________________________//
 
-template<typename CharT>
-CharT*
-static_literal(char const* orig, std::size_t orig_size)
+template<typename CharT, size_t Size>
+CharT (&static_literal(char const (&orig)[Size]))[Size]
 {
-    static string_literal<CharT> l;
+    typedef typename boost::remove_const<CharT>::type mutable_char;
+    static mutable_char l[Size];
     
-    l.assign(orig, orig_size);
+    for (size_t index = 0; index < Size; ++index)
+        l[index] = orig[index];
 
-    return l.begin();
+    return l;
 }
-#define LITERAL( s ) static_literal<CharT>( s, sizeof( s ) )
+#define LITERAL( s ) static_literal<CharT>( s )
 
 #define LOCAL_DEF( name, s )                                                \
 string_literal<CharT> BOOST_JOIN( sl, __LINE__)(s, sizeof( s ));            \
@@ -418,7 +419,7 @@ BOOST_TEST_CASE_TEMPLATE_FUNCTION( io_test, CharT )
 BOOST_TEST_CASE_TEMPLATE_FUNCTION( find_test, CharT )
 {
     typedef typename utf::basic_cstring<CharT>::size_type size;
-    utf::basic_cstring<CharT> bcs1( TEST_STRING );
+    utf::basic_cstring<CharT> bcs1( LITERAL( "test_string" ) );
 
     size not_found = (size)utf::basic_cstring<CharT>::npos;
 

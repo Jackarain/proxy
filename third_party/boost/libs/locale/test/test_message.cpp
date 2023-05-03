@@ -82,38 +82,38 @@ void strings_equal(std::string n_c,
     string_type p = to<Char>(n_p.c_str());
 
     if(domain == "default") {
-        TEST(bl::translate(c, s, p, n).str(l) == expected);
+        TEST_EQ(bl::translate(c, s, p, n).str(l), expected);
         const Char *c_c_str = c.c_str(), *s_c_str = s.c_str(), *p_c_str = p.c_str(); // workaround gcc-3.4 bug
-        TEST(bl::translate(c_c_str, s_c_str, p_c_str, n).str(l) == expected);
+        TEST_EQ(bl::translate(c_c_str, s_c_str, p_c_str, n).str(l), expected);
         std::locale tmp_locale = std::locale();
         std::locale::global(l);
         string_type tmp = bl::translate(c, s, p, n);
-        TEST(tmp == expected);
+        TEST_EQ(tmp, expected);
         tmp = bl::translate(c, s, p, n).str();
-        TEST(tmp == expected);
+        TEST_EQ(tmp, expected);
         std::locale::global(tmp_locale);
 
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
         ss << bl::translate(c, s, p, n);
-        TEST(ss.str() == expected);
+        TEST_EQ(ss.str(), expected);
     }
-    TEST(bl::translate(c, s, p, n).str(l, domain) == expected);
+    TEST_EQ(bl::translate(c, s, p, n).str(l, domain), expected);
     std::locale tmp_locale = std::locale();
     std::locale::global(l);
-    TEST(bl::translate(c, s, p, n).str(domain) == expected);
+    TEST_EQ(bl::translate(c, s, p, n).str(domain), expected);
     std::locale::global(tmp_locale);
     {
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
         ss << bl::as::domain(domain) << bl::translate(c, s, p, n);
-        TEST(ss.str() == expected);
+        TEST_EQ(ss.str(), expected);
     }
     {
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
         ss << bl::as::domain(domain) << bl::translate(c.c_str(), s.c_str(), p.c_str(), n);
-        TEST(ss.str() == expected);
+        TEST_EQ(ss.str(), expected);
     }
 }
 
@@ -130,38 +130,38 @@ void strings_equal(std::string n_s,
     string_type s = to<Char>(n_s.c_str());
     string_type p = to<Char>(n_p.c_str());
     if(domain == "default") {
-        TEST(bl::translate(s, p, n).str(l) == expected);
+        TEST_EQ(bl::translate(s, p, n).str(l), expected);
         const Char *s_c_str = s.c_str(), *p_c_str = p.c_str(); // workaround gcc-3.4 bug
-        TEST(bl::translate(s_c_str, p_c_str, n).str(l) == expected);
+        TEST_EQ(bl::translate(s_c_str, p_c_str, n).str(l), expected);
         std::locale tmp_locale = std::locale();
         std::locale::global(l);
         string_type tmp = bl::translate(s, p, n);
-        TEST(tmp == expected);
+        TEST_EQ(tmp, expected);
         tmp = bl::translate(s, p, n).str();
-        TEST(tmp == expected);
+        TEST_EQ(tmp, expected);
         std::locale::global(tmp_locale);
 
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
         ss << bl::translate(s, p, n);
-        TEST(ss.str() == expected);
+        TEST_EQ(ss.str(), expected);
     }
-    TEST(bl::translate(s, p, n).str(l, domain) == expected);
+    TEST_EQ(bl::translate(s, p, n).str(l, domain), expected);
     std::locale tmp_locale = std::locale();
     std::locale::global(l);
-    TEST(bl::translate(s, p, n).str(domain) == expected);
+    TEST_EQ(bl::translate(s, p, n).str(domain), expected);
     std::locale::global(tmp_locale);
     {
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
         ss << bl::as::domain(domain) << bl::translate(s, p, n);
-        TEST(ss.str() == expected);
+        TEST_EQ(ss.str(), expected);
     }
     {
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
         ss << bl::as::domain(domain) << bl::translate(s.c_str(), p.c_str(), n);
-        TEST(ss.str() == expected);
+        TEST_EQ(ss.str(), expected);
     }
 }
 
@@ -177,39 +177,39 @@ void strings_equal(std::string n_c,
     string_type original = to<Char>(n_original.c_str());
     string_type c = to<Char>(n_c.c_str());
     if(domain == "default") {
-        TEST(bl::translate(c, original).str(l) == expected);
+        TEST_EQ(bl::translate(c, original).str(l), expected);
         const Char* original_c_str = original.c_str(); // workaround gcc-3.4 bug
         const Char* context_c_str = c.c_str();
-        TEST(bl::translate(context_c_str, original_c_str).str(l) == expected);
+        TEST_EQ(bl::translate(context_c_str, original_c_str).str(l), expected);
         std::locale tmp_locale = std::locale();
         std::locale::global(l);
         string_type tmp = bl::translate(c, original);
-        TEST(tmp == expected);
+        TEST_EQ(tmp, expected);
         tmp = bl::translate(c, original).str();
-        TEST(tmp == expected);
+        TEST_EQ(tmp, expected);
         std::locale::global(tmp_locale);
 
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
         ss << bl::translate(c, original);
-        TEST(ss.str() == expected);
+        TEST_EQ(ss.str(), expected);
     }
-    TEST(bl::translate(c, original).str(l, domain) == expected);
+    TEST_EQ(bl::translate(c, original).str(l, domain), expected);
     std::locale tmp_locale = std::locale();
     std::locale::global(l);
-    TEST(bl::translate(c, original).str(domain) == expected);
+    TEST_EQ(bl::translate(c, original).str(domain), expected);
     std::locale::global(tmp_locale);
     {
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
         ss << bl::as::domain(domain) << bl::translate(c, original);
-        TEST(ss.str() == expected);
+        TEST_EQ(ss.str(), expected);
     }
     {
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
         ss << bl::as::domain(domain) << bl::translate(c.c_str(), original.c_str());
-        TEST(ss.str() == expected);
+        TEST_EQ(ss.str(), expected);
     }
 }
 
@@ -220,38 +220,38 @@ void strings_equal(std::string n_original, std::string iexpected, const std::loc
     string_type expected = to_correct_string<Char>(iexpected, l);
     string_type original = to<Char>(n_original.c_str());
     if(domain == "default") {
-        TEST(bl::translate(original).str(l) == expected);
+        TEST_EQ(bl::translate(original).str(l), expected);
         const Char* original_c_str = original.c_str(); // workaround gcc-3.4 bug
-        TEST(bl::translate(original_c_str).str(l) == expected);
+        TEST_EQ(bl::translate(original_c_str).str(l), expected);
         std::locale tmp_locale = std::locale();
         std::locale::global(l);
         string_type tmp = bl::translate(original);
-        TEST(tmp == expected);
+        TEST_EQ(tmp, expected);
         tmp = bl::translate(original).str();
-        TEST(tmp == expected);
+        TEST_EQ(tmp, expected);
         std::locale::global(tmp_locale);
 
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
         ss << bl::translate(original);
-        TEST(ss.str() == expected);
+        TEST_EQ(ss.str(), expected);
     }
-    TEST(bl::translate(original).str(l, domain) == expected);
+    TEST_EQ(bl::translate(original).str(l, domain), expected);
     std::locale tmp_locale = std::locale();
     std::locale::global(l);
-    TEST(bl::translate(original).str(domain) == expected);
+    TEST_EQ(bl::translate(original).str(domain), expected);
     std::locale::global(tmp_locale);
     {
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
         ss << bl::as::domain(domain) << bl::translate(original);
-        TEST(ss.str() == expected);
+        TEST_EQ(ss.str(), expected);
     }
     {
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
         ss << bl::as::domain(domain) << bl::translate(original.c_str());
-        TEST(ss.str() == expected);
+        TEST_EQ(ss.str(), expected);
     }
 }
 
@@ -428,17 +428,17 @@ void test_main(int argc, char** argv)
         std::cout << "  Testing automatic conversions " << std::endl;
         std::locale::global(g("he_IL.UTF-8"));
 
-        TEST(same_s(bl::translate("hello")) == "שלום");
-        TEST(same_w(bl::translate(to<wchar_t>("hello"))) == to<wchar_t>("שלום"));
+        TEST_EQ(same_s(bl::translate("hello")), "שלום");
+        TEST_EQ(same_w(bl::translate(to<wchar_t>("hello"))), to<wchar_t>("שלום"));
 
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
         if(backend == "icu" || backend == "std")
-            TEST(same_u16(bl::translate(to<char16_t>("hello"))) == to<char16_t>("שלום"));
+            TEST_EQ(same_u16(bl::translate(to<char16_t>("hello"))), to<char16_t>("שלום"));
 #endif
 
 #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
         if(backend == "icu" || backend == "std")
-            TEST(same_u32(bl::translate(to<char32_t>("hello"))) == to<char32_t>("שלום"));
+            TEST_EQ(same_u32(bl::translate(to<char32_t>("hello"))), to<char32_t>("שלום"));
 #endif
     }
 
@@ -458,7 +458,7 @@ void test_main(int argc, char** argv)
 
         std::locale l(std::locale::classic(), boost::locale::gnu_gettext::create_messages_facet<char>(info));
         TEST(file_loader_is_actually_called);
-        TEST(bl::translate("hello").str(l) == "שלום");
+        TEST_EQ(bl::translate("hello").str(l), "שלום");
     }
     if(iso_8859_8_not_supported) {
         std::cout << "ISO 8859-8 not supported so skipping non-US-ASCII keys" << std::endl;
@@ -476,19 +476,19 @@ void test_main(int argc, char** argv)
             std::locale l = g("he_IL.UTF-8");
 
             // narrow
-            TEST(bl::gettext("בדיקה", l) == "test");
-            TEST(bl::gettext("לא קיים", l) == "לא קיים");
+            TEST_EQ(bl::gettext("בדיקה", l), "test");
+            TEST_EQ(bl::gettext("לא קיים", l), "לא קיים");
 
             // wide
             std::wstring wtest = bl::conv::to_utf<wchar_t>("בדיקה", "UTF-8");
             std::wstring wmiss = bl::conv::to_utf<wchar_t>("לא קיים", "UTF-8");
-            TEST(bl::gettext(wtest.c_str(), l) == L"test");
-            TEST(bl::gettext(wmiss.c_str(), l) == wmiss);
+            TEST_EQ(bl::gettext(wtest.c_str(), l), L"test");
+            TEST_EQ(bl::gettext(wmiss.c_str(), l), wmiss);
 
             l = g("he_IL.ISO-8859-8");
 
             // conversion with substitution
-            TEST(bl::gettext("test-あにま-בדיקה", l) == bl::conv::from_utf("test--בדיקה", "ISO-8859-8"));
+            TEST_EQ(bl::gettext("test-あにま-בדיקה", l), bl::conv::from_utf("test--בדיקה", "ISO-8859-8"));
         }
 
         std::cout << "  `ANSI' keys" << std::endl;
@@ -505,9 +505,9 @@ void test_main(int argc, char** argv)
 
             // narrow non-UTF-8 keys
             // match
-            TEST(bl::gettext(bl::conv::from_utf("בדיקה", "ISO-8859-8").c_str(), l) == "test");
+            TEST_EQ(bl::gettext(bl::conv::from_utf("בדיקה", "ISO-8859-8").c_str(), l), "test");
             // conversion
-            TEST(bl::gettext(bl::conv::from_utf("לא קיים", "ISO-8859-8").c_str(), l) == "לא קיים");
+            TEST_EQ(bl::gettext(bl::conv::from_utf("לא קיים", "ISO-8859-8").c_str(), l), "לא קיים");
         }
     }
     // Test compiles

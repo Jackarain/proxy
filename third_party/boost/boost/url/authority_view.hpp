@@ -240,7 +240,7 @@ public:
 
         @par Example
         @code
-        assert( parse_authority( "www.example.com" ).value().encoded_authority() == "www.example.com" );
+        assert( parse_authority( "www.example.com" ).value().buffer() == "www.example.com" );
         @endcode
 
         @par BNF
@@ -1226,6 +1226,152 @@ public:
     BOOST_URL_DECL
     pct_string_view
     encoded_host_and_port() const noexcept;
+
+    //--------------------------------------------
+    //
+    // Comparison
+    //
+    //--------------------------------------------
+
+    /** Return the result of comparing this with another authority
+
+        This function compares two authorities
+        according to Syntax-Based comparison
+        algorithm.
+
+        @par Exception Safety
+        Throws nothing.
+
+        @return -1 if `*this < other`, 0 if
+        `this == other`, and 1 if `this > other`.
+
+        @par Specification
+        @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-6.2.2"
+            >6.2.2 Syntax-Based Normalization (rfc3986)</a>
+    */
+    BOOST_URL_DECL
+    int
+    compare(authority_view const& other) const noexcept;
+
+    /** Return the result of comparing two authorities
+        The authorities are compared component
+        by component as if they were first
+        normalized.
+
+        @par Complexity
+        Linear in `min( a0.size(), a1.size() )`
+
+        @par Exception Safety
+        Throws nothing
+    */
+    friend
+    bool
+    operator==(
+        authority_view const& a0,
+        authority_view const& a1) noexcept
+    {
+        return a0.compare(a1) == 0;
+    }
+
+    /** Return the result of comparing two authorities
+        The authorities are compared component
+        by component as if they were first
+        normalized.
+
+        @par Complexity
+        Linear in `min( a0.size(), a1.size() )`
+
+        @par Exception Safety
+        Throws nothing
+    */
+    friend
+    bool
+    operator!=(
+        authority_view const& a0,
+        authority_view const& a1) noexcept
+    {
+        return ! (a0 == a1);
+    }
+
+    /** Return the result of comparing two authorities
+        The authorities are compared component
+        by component as if they were first
+        normalized.
+
+        @par Complexity
+        Linear in `min( a0.size(), a1.size() )`
+
+        @par Exception Safety
+        Throws nothing
+    */
+    friend
+    bool
+    operator<(
+        authority_view const& a0,
+        authority_view const& a1) noexcept
+    {
+        return a0.compare(a1) < 0;
+    }
+
+    /** Return the result of comparing two authorities
+        The authorities are compared component
+        by component as if they were first
+        normalized.
+
+        @par Complexity
+        Linear in `min( a0.size(), a1.size() )`
+
+        @par Exception Safety
+        Throws nothing
+    */
+    friend
+    bool
+    operator<=(
+        authority_view const& a0,
+        authority_view const& a1) noexcept
+    {
+        return a0.compare(a1) <= 0;
+    }
+
+    /** Return the result of comparing two authorities
+        The authorities are compared component
+        by component as if they were first
+        normalized.
+
+        @par Complexity
+        Linear in `min( a0.size(), a1.size() )`
+
+        @par Exception Safety
+        Throws nothing
+    */
+    friend
+    bool
+    operator>(
+        authority_view const& a0,
+        authority_view const& a1) noexcept
+    {
+        return a0.compare(a1) > 0;
+    }
+
+    /** Return the result of comparing two authorities
+        The authorities are compared component
+        by component as if they were first
+        normalized.
+
+        @par Complexity
+        Linear in `min( a0.size(), a1.size() )`
+
+        @par Exception Safety
+        Throws nothing
+    */
+    friend
+    bool
+    operator>=(
+        authority_view const& a0,
+        authority_view const& a1) noexcept
+    {
+        return a0.compare(a1) >= 0;
+    }
 
     //--------------------------------------------
 

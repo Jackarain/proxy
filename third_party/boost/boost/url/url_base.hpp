@@ -22,6 +22,7 @@
 #include <boost/url/segments_ref.hpp>
 #include <boost/url/url_view_base.hpp>
 #include <cstdint>
+#include <initializer_list>
 #include <memory>
 #include <string>
 #include <utility>
@@ -35,6 +36,7 @@ struct any_params_iter;
 struct any_segments_iter;
 struct params_iter_impl;
 struct segments_iter_impl;
+struct pattern;
 }
 #endif
 
@@ -71,6 +73,7 @@ class BOOST_SYMBOL_VISIBLE
     friend class segments_ref;
     friend class segments_encoded_ref;
     friend class params_encoded_ref;
+    friend struct detail::pattern;
 
     struct op_t
     {
@@ -1869,6 +1872,13 @@ public:
     urls::segments_ref
     segments() noexcept;
 
+    /// @copydoc url_view_base::segments
+    segments_view
+    segments() const noexcept
+    {
+        return url_view_base::segments();
+    }
+
     /** Return the path as a container of segments
 
         This function returns a bidirectional
@@ -1924,6 +1934,13 @@ public:
     segments_encoded_ref
     encoded_segments() noexcept;
 
+    /// @copydoc url_view_base::encoded_segments
+    segments_encoded_view
+    encoded_segments() const noexcept
+    {
+        return url_view_base::encoded_segments();
+    }
+
     //--------------------------------------------
     //
     // Query
@@ -1964,7 +1981,7 @@ public:
         @endcode
 
         @par Specification
-        @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.4
+        @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.4"
             >3.4.  Query (rfc3986)</a>
         @li <a href="https://en.wikipedia.org/wiki/Query_string"
             >Query string (Wikipedia)</a>
@@ -2020,7 +2037,7 @@ public:
         @endcode
 
         @par Specification
-        @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.4
+        @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.4"
             >3.4.  Query (rfc3986)</a>
         @li <a href="https://en.wikipedia.org/wiki/Query_string"
             >Query string (Wikipedia)</a>
@@ -2069,7 +2086,7 @@ public:
         @endcode
 
         @par Specification
-        @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.4
+        @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.4"
             >3.4.  Query (rfc3986)</a>
         @li <a href="https://en.wikipedia.org/wiki/Query_string"
             >Query string (Wikipedia)</a>
@@ -2083,6 +2100,13 @@ public:
     BOOST_URL_DECL
     params_ref
     params() noexcept;
+
+    /// @copydoc url_view_base::params
+    params_view
+    params() const noexcept
+    {
+        return url_view_base::params();
+    }
 
     /** Return the query as a container of parameters
 
@@ -2123,7 +2147,7 @@ public:
         @endcode
 
         @par Specification
-        @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.4
+        @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.4"
             >3.4.  Query (rfc3986)</a>
         @li <a href="https://en.wikipedia.org/wiki/Query_string"
             >Query string (Wikipedia)</a>
@@ -2137,6 +2161,13 @@ public:
     BOOST_URL_DECL
     params_ref
     params(encoding_opts opt) noexcept;
+
+    /// @copydoc url_view_base::encoded_params
+    params_encoded_view
+    encoded_params() const noexcept
+    {
+        return url_view_base::encoded_params();
+    }
 
     /** Return the query as a container of parameters
 
@@ -2171,7 +2202,7 @@ public:
         @endcode
 
         @par Specification
-        @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.4
+        @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.4"
             >3.4.  Query (rfc3986)</a>
         @li <a href="https://en.wikipedia.org/wiki/Query_string"
             >Query string (Wikipedia)</a>
@@ -2185,6 +2216,121 @@ public:
     BOOST_URL_DECL
     params_encoded_ref
     encoded_params() noexcept;
+
+    /** Set the query params
+
+        This sets the query params to the list
+        of param_view, which can be empty.
+
+        An empty list of params is distinct from
+        having no params.
+
+        Reserved characters in the string are
+        percent-escaped in the result.
+
+        @par Example
+        @code
+        assert( url( "http://example.com" ).set_params( {"id", "42"} ).query() == "id=42" );
+        @endcode
+
+        @par Postconditions
+        @code
+        this->has_query() == true
+        @endcode
+
+        @par Exception Safety
+        Strong guarantee.
+        Calls to allocate may throw.
+
+        @par Complexity
+        Linear.
+
+        @param ps The params to set.
+
+        @par BNF
+        @code
+        query           = *( pchar / "/" / "?" )
+
+        query-param     = key [ "=" value ]
+        query-params    = [ query-param ] *( "&" query-param )
+        @endcode
+
+        @par Specification
+        @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.4
+            >3.4.  Query (rfc3986)</a>
+        @li <a href="https://en.wikipedia.org/wiki/Query_string"
+            >Query string (Wikipedia)</a>
+
+        @see
+            @ref encoded_params,
+            @ref remove_query,
+            @ref set_encoded_query,
+            @ref set_query.
+    */
+    BOOST_URL_DECL
+    url_base&
+    set_params( std::initializer_list<param_view> ps ) noexcept;
+
+    /** Set the query params
+
+        This sets the query params to the elements
+        in the list, which may contain
+        percent-escapes and can be empty.
+
+        An empty list of params is distinct from
+        having no query.
+
+        Escapes in the string are preserved,
+        and reserved characters in the string
+        are percent-escaped in the result.
+
+        @par Example
+        @code
+        assert( url( "http://example.com" ).set_encoded_params( {"id", "42"} ).encoded_query() == "id=42" );
+        @endcode
+
+        @par Postconditions
+        @code
+        this->has_query() == true
+        @endcode
+
+        @par Complexity
+        Linear.
+
+        @par Exception Safety
+        Strong guarantee.
+        Calls to allocate may throw.
+        Exceptions thrown on invalid input.
+
+        @param ps The params to set.
+
+        @throws system_error
+        some element in `ps` contains an invalid percent-encoding.
+
+        @par BNF
+        @code
+        query           = *( pchar / "/" / "?" )
+
+        query-param     = key [ "=" value ]
+        query-params    = [ query-param ] *( "&" query-param )
+        @endcode
+
+        @par Specification
+        @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.4"
+            >3.4. Query (rfc3986)</a>
+        @li <a href="https://en.wikipedia.org/wiki/Query_string"
+            >Query string (Wikipedia)</a>
+
+        @see
+            @ref set_params,
+            @ref params,
+            @ref remove_query,
+            @ref set_encoded_query,
+            @ref set_query.
+    */
+    BOOST_URL_DECL
+    url_base&
+    set_encoded_params( std::initializer_list< param_pct_view > ps ) noexcept;
 
     /** Remove the query
 
@@ -2214,7 +2360,7 @@ public:
         @endcode
 
         @par Specification
-        @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.4
+        @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.4"
             >3.4.  Query (rfc3986)</a>
         @li <a href="https://en.wikipedia.org/wiki/Query_string"
             >Query string (Wikipedia)</a>

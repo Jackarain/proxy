@@ -16,9 +16,9 @@ template<typename Char>
 void test_normc(std::basic_string<Char> orig, std::basic_string<Char> normal, boost::locale::norm_type type)
 {
     std::locale l = boost::locale::generator().generate("en_US.UTF-8");
-    TEST(normalize(orig, type, l) == normal);
-    TEST(normalize(orig.c_str(), type, l) == normal);
-    TEST(normalize(orig.c_str(), orig.c_str() + orig.size(), type, l) == normal);
+    TEST_EQ(normalize(orig, type, l), normal);
+    TEST_EQ(normalize(orig.c_str(), type, l), normal);
+    TEST_EQ(normalize(orig.c_str(), orig.c_str() + orig.size(), type, l), normal);
 }
 
 void test_norm(std::string orig, std::string normal, boost::locale::norm_type type)
@@ -33,18 +33,18 @@ void test_norm(std::string orig, std::string normal, boost::locale::norm_type ty
 #endif
 }
 
-#define TEST_A(Chr, how, source, dest)                                                            \
-    do {                                                                                          \
-        const boost::locale::info& inf = std::use_facet<boost::locale::info>(std::locale());      \
-        std::cout << "Testing " #how " for " #Chr ", lang=" << inf.language();                    \
-        if(std::string("char") == #Chr)                                                           \
-            std::cout << " charset=" << inf.encoding();                                           \
-        std::cout << std::endl;                                                                   \
-        std::basic_string<Chr> source_s = (source), dest_s = (dest);                              \
-        TEST(boost::locale::how(source_s) == dest_s);                                             \
-        TEST(boost::locale::how(source_s.c_str()) == dest_s);                                     \
-        TEST(boost::locale::how(source_s.c_str(), source_s.c_str() + source_s.size()) == dest_s); \
-        BOOST_LOCALE_START_CONST_CONDITION                                                        \
+#define TEST_A(Chr, how, source, dest)                                                             \
+    do {                                                                                           \
+        const boost::locale::info& inf = std::use_facet<boost::locale::info>(std::locale());       \
+        std::cout << "Testing " #how " for " #Chr ", lang=" << inf.language();                     \
+        if(std::string("char") == #Chr)                                                            \
+            std::cout << " charset=" << inf.encoding();                                            \
+        std::cout << std::endl;                                                                    \
+        std::basic_string<Chr> source_s = (source), dest_s = (dest);                               \
+        TEST_EQ(boost::locale::how(source_s), dest_s);                                             \
+        TEST_EQ(boost::locale::how(source_s.c_str()), dest_s);                                     \
+        TEST_EQ(boost::locale::how(source_s.c_str(), source_s.c_str() + source_s.size()), dest_s); \
+        BOOST_LOCALE_START_CONST_CONDITION                                                         \
     } while(0) BOOST_LOCALE_END_CONST_CONDITION
 
 #define TEST_ALL_CASES                                    \

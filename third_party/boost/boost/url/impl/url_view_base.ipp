@@ -640,35 +640,33 @@ int
 url_view_base::
 compare(const url_view_base& other) const noexcept
 {
-    int comp = detail::ci_compare(
-        scheme(),
-        other.scheme());
+    int comp =
+        static_cast<int>(has_scheme()) -
+        static_cast<int>(other.has_scheme());
     if ( comp != 0 )
         return comp;
 
-    comp = detail::compare_encoded(
-        encoded_user(),
-        other.encoded_user());
+    if (has_scheme())
+    {
+        comp = detail::ci_compare(
+            scheme(),
+            other.scheme());
+        if ( comp != 0 )
+            return comp;
+    }
+
+    comp =
+        static_cast<int>(has_authority()) -
+        static_cast<int>(other.has_authority());
     if ( comp != 0 )
         return comp;
 
-    comp = detail::compare_encoded(
-        encoded_password(),
-        other.encoded_password());
-    if ( comp != 0 )
-        return comp;
-
-    comp = detail::ci_compare_encoded(
-        encoded_host(),
-        other.encoded_host());
-    if ( comp != 0 )
-        return comp;
-
-    comp = detail::compare(
-        port(),
-        other.port());
-    if ( comp != 0 )
-        return comp;
+    if (has_authority())
+    {
+        comp = authority().compare(other.authority());
+        if ( comp != 0 )
+            return comp;
+    }
 
     comp = detail::segments_compare(
         encoded_segments(),
@@ -676,17 +674,35 @@ compare(const url_view_base& other) const noexcept
     if ( comp != 0 )
         return comp;
 
-    comp = detail::compare_encoded(
-        encoded_query(),
-        other.encoded_query());
+    comp =
+        static_cast<int>(has_query()) -
+        static_cast<int>(other.has_query());
     if ( comp != 0 )
         return comp;
 
-    comp = detail::compare_encoded(
-        encoded_fragment(),
-        other.encoded_fragment());
+    if (has_query())
+    {
+        comp = detail::compare_encoded(
+            encoded_query(),
+            other.encoded_query());
+        if ( comp != 0 )
+            return comp;
+    }
+
+    comp =
+        static_cast<int>(has_fragment()) -
+        static_cast<int>(other.has_fragment());
     if ( comp != 0 )
         return comp;
+
+    if (has_fragment())
+    {
+        comp = detail::compare_encoded(
+            encoded_fragment(),
+            other.encoded_fragment());
+        if ( comp != 0 )
+            return comp;
+    }
 
     return 0;
 }

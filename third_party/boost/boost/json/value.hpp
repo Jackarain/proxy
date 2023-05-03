@@ -16,6 +16,7 @@
 #include <boost/json/kind.hpp>
 #include <boost/json/object.hpp>
 #include <boost/json/pilfer.hpp>
+#include <boost/json/set_pointer_options.hpp>
 #include <boost/json/storage_ptr.hpp>
 #include <boost/json/string.hpp>
 #include <boost/json/string_view.hpp>
@@ -31,7 +32,8 @@
 #include <type_traits>
 #include <utility>
 
-BOOST_JSON_NS_BEGIN
+namespace boost {
+namespace json {
 
 //----------------------------------------------------------
 
@@ -138,13 +140,15 @@ public:
     /** Default constructor.
 
         The constructed value is null,
-        using the default memory resource.
+        using the [default memory resource].
 
         @par Complexity
         Constant.
 
         @par Exception Safety
         No-throw guarantee.
+
+        [default memory resource]: json/allocators/storage_ptr.html#json.allocators.storage_ptr.default_memory_resource
     */
     value() noexcept
         : sca_()
@@ -351,12 +355,12 @@ public:
         bool b,
         storage_ptr sp = {}) noexcept;
 #else
-    template<class Bool
+    template<class T
         ,class = typename std::enable_if<
-            std::is_same<Bool, bool>::value>::type
+            std::is_same<T, bool>::value>::type
     >
     value(
-        Bool b,
+        T b,
         storage_ptr sp = {}) noexcept
         : sca_(b, std::move(sp))
     {
@@ -1153,11 +1157,11 @@ public:
 #ifdef BOOST_JSON_DOCS
     value& operator=(bool b) noexcept;
 #else
-    template<class Bool
+    template<class T
         ,class = typename std::enable_if<
-            std::is_same<Bool, bool>::value>::type
+            std::is_same<T, bool>::value>::type
     >
-    value& operator=(Bool b) noexcept
+    value& operator=(T b) noexcept
     {
         if(is_scalar())
         {
@@ -2439,7 +2443,7 @@ public:
         error_code ec;
         auto result = to_number<T>(ec);
         if(ec)
-            detail::throw_system_error(ec, BOOST_CURRENT_LOCATION);
+            detail::throw_system_error( ec );
         return result;
     }
 
@@ -2505,9 +2509,7 @@ public:
     as_object() &
     {
         if(! is_object())
-            detail::throw_invalid_argument(
-                "not an object",
-                BOOST_CURRENT_LOCATION);
+            detail::throw_invalid_argument( "not an object" );
         return obj_;
     }
 
@@ -2521,9 +2523,7 @@ public:
     as_object() const&
     {
         if(! is_object())
-            detail::throw_invalid_argument(
-                "not an object",
-                BOOST_CURRENT_LOCATION);
+            detail::throw_invalid_argument( "not an object" );
         return obj_;
     }
     /* @} */
@@ -2547,9 +2547,7 @@ public:
     as_array() &
     {
         if(! is_array())
-            detail::throw_invalid_argument(
-                "array required",
-                BOOST_CURRENT_LOCATION);
+            detail::throw_invalid_argument( "array required" );
         return arr_;
     }
 
@@ -2563,9 +2561,7 @@ public:
     as_array() const&
     {
         if(! is_array())
-            detail::throw_invalid_argument(
-                "array required",
-                BOOST_CURRENT_LOCATION);
+            detail::throw_invalid_argument( "array required" );
         return arr_;
     }
     /* @} */
@@ -2589,9 +2585,7 @@ public:
     as_string() &
     {
         if(! is_string())
-            detail::throw_invalid_argument(
-                "not a string",
-                BOOST_CURRENT_LOCATION);
+            detail::throw_invalid_argument( "not a string" );
         return str_;
     }
 
@@ -2605,9 +2599,7 @@ public:
     as_string() const&
     {
         if(! is_string())
-            detail::throw_invalid_argument(
-                "not a string",
-                BOOST_CURRENT_LOCATION);
+            detail::throw_invalid_argument( "not a string" );
         return str_;
     }
     /* @} */
@@ -2630,9 +2622,7 @@ public:
     as_int64()
     {
         if(! is_int64())
-            detail::throw_invalid_argument(
-                "not an int64",
-                BOOST_CURRENT_LOCATION);
+            detail::throw_invalid_argument( "not an int64" );
         return sca_.i;
     }
 
@@ -2654,9 +2644,7 @@ public:
     as_int64() const
     {
         if(! is_int64())
-            detail::throw_invalid_argument(
-                "not an int64",
-                BOOST_CURRENT_LOCATION);
+            detail::throw_invalid_argument( "not an int64" );
         return sca_.i;
     }
 
@@ -2678,9 +2666,7 @@ public:
     as_uint64()
     {
         if(! is_uint64())
-            detail::throw_invalid_argument(
-                "not a uint64",
-                BOOST_CURRENT_LOCATION);
+            detail::throw_invalid_argument( "not a uint64" );
         return sca_.u;
     }
 
@@ -2702,9 +2688,7 @@ public:
     as_uint64() const
     {
         if(! is_uint64())
-            detail::throw_invalid_argument(
-                "not a uint64",
-                BOOST_CURRENT_LOCATION);
+            detail::throw_invalid_argument( "not a uint64" );
         return sca_.u;
     }
 
@@ -2726,9 +2710,7 @@ public:
     as_double()
     {
         if(! is_double())
-            detail::throw_invalid_argument(
-                "not a double",
-                BOOST_CURRENT_LOCATION);
+            detail::throw_invalid_argument( "not a double" );
         return sca_.d;
     }
 
@@ -2750,9 +2732,7 @@ public:
     as_double() const
     {
         if(! is_double())
-            detail::throw_invalid_argument(
-                "not a double",
-                BOOST_CURRENT_LOCATION);
+            detail::throw_invalid_argument( "not a double" );
         return sca_.d;
     }
 
@@ -2774,9 +2754,7 @@ public:
     as_bool()
     {
         if(! is_bool())
-            detail::throw_invalid_argument(
-                "bool required",
-                BOOST_CURRENT_LOCATION);
+            detail::throw_invalid_argument( "bool required" );
         return sca_.b;
     }
 
@@ -2798,9 +2776,7 @@ public:
     as_bool() const
     {
         if(! is_bool())
-            detail::throw_invalid_argument(
-                "bool required",
-                BOOST_CURRENT_LOCATION);
+            detail::throw_invalid_argument( "bool required" );
         return sca_.b;
     }
 
@@ -3266,6 +3242,152 @@ public:
     find_pointer(string_view ptr, std::error_code& ec) noexcept;
 /** @} */
 
+    //------------------------------------------------------
+
+    /** Set an element via JSON Pointer.
+
+        This function is used to insert or assign to a potentially nested
+        element of the value using a JSON Pointer string. The function may
+        create intermediate elements corresponding to pointer segments.
+        <br/>
+
+        The particular conditions when and what kind of intermediate element
+        is created is governed by the `ptr` parameter.
+
+        Each pointer token is considered in sequence. For each token
+
+        - if the containing value is an @ref object, then a new `null`
+        element is created with key equal to unescaped token string; otherwise
+
+        - if the containing value is an @ref array, and the token represents a
+        past-the-end marker, then a `null` element is appended to the array;
+        otherwise
+
+        - if the containing value is an @ref array, and the token represents a
+        number, then if the difference between the number and array's size
+        is smaller than `opts.max_created_elements`, then the size of the
+        array is increased, so that the number can reference an element in the
+        array; otherwise
+
+        - if the containing value is of different @ref kind and
+          `opts.replace_any_scalar` is `true`, or the value is `null`, then
+
+           - if `opts.create_arrays` is `true` and the token either represents
+             past-the-end marker or a number, then the value is replaced with
+             an empty array and the token is considered again; otherwise
+
+           - if `opts.create_objects` is `true`, then the value is replaced
+             with an empty object and the token is considered again; otherwise
+
+        - an error is produced.
+
+        @par Complexity
+        Linear in the sum of size of `ptr`, size of underlying array, object,
+        or string and `opts.max_created_elements`.
+
+        @par Exception Safety
+        Basic guarantee.
+        Calls to `memory_resource::allocate` may throw.
+
+        @param sv JSON Pointer string.
+
+        @param ref The value to assign to pointed element.
+
+        @param opts The options for the algorithm.
+
+        @return Reference to the element identified by `ptr`.
+
+        @see @ref set_pointer_options,
+        <a href="https://datatracker.ietf.org/doc/html/rfc6901">
+            RFC 6901 - JavaScript Object Notation (JSON) Pointer</a>.
+    */
+    BOOST_JSON_DECL
+    value&
+    set_at_pointer(
+        string_view sv,
+        value_ref ref,
+        set_pointer_options const& opts = {} );
+
+    /** Set an element via JSON Pointer.
+
+        This function is used to insert or assign to a potentially nested
+        element of the value using a JSON Pointer string. The function may
+        create intermediate elements corresponding to pointer segments.
+        <br/>
+
+        The particular conditions when and what kind of intermediate element
+        is created is governed by the `ptr` parameter.
+
+        Each pointer token is considered in sequence. For each token
+
+        - if the containing value is an @ref object, then a new `null`
+          element is created with key equal to unescaped token string;
+          otherwise
+
+        - if the containing value is an @ref array, and the token represents a
+          past-the-end marker, then a `null` element is appended to the array;
+          otherwise
+
+        - if the containing value is an @ref array, and the token represents a
+          number, then if the difference between the number and array's size
+          is smaller than `opts.max_created_elements`, then the size of the
+          array is increased, so that the number can reference an element in the
+          array; otherwise
+
+        - if the containing value is of different @ref kind and
+          `opts.replace_any_scalar` is `true`, or the value is `null`, then
+
+           - if `opts.create_arrays` is `true` and the token either represents
+             past-the-end marker or a number, then the value is replaced with
+             an empty array and the token is considered again; otherwise
+
+           - if `opts.create_objects` is `true`, then the value is replaced
+             with an empty object and the token is considered again; otherwise
+
+        - an error is produced.
+
+        @par Complexity
+        Linear in the sum of size of `ptr`, size of underlying array, object,
+        or string and `opts.max_created_elements`.
+
+        @par Exception Safety
+        Basic guarantee.
+        Calls to `memory_resource::allocate` may throw.
+
+        @param sv JSON Pointer string.
+
+        @param ref The value to assign to pointed element.
+
+        @param ec Set to the error, if any occurred.
+
+        @param opts The options for the algorithm.
+
+        @return Pointer to the element identified by `ptr`.
+
+        @see @ref set_pointer_options,
+        <a href="https://datatracker.ietf.org/doc/html/rfc6901">
+            RFC 6901 - JavaScript Object Notation (JSON) Pointer</a>.
+    */
+/** @{ */
+    BOOST_JSON_DECL
+    value*
+    set_at_pointer(
+        string_view sv,
+        value_ref ref,
+        error_code& ec,
+        set_pointer_options const& opts = {} );
+
+    BOOST_JSON_DECL
+    value*
+    set_at_pointer(
+        string_view sv,
+        value_ref ref,
+        std::error_code& ec,
+        set_pointer_options const& opts = {} );
+/** @} */
+
+    //------------------------------------------------------
+
     /** Return `true` if two values are equal.
 
         Two values are equal when they are the
@@ -3377,6 +3499,38 @@ public:
     operator>>(
         std::istream& is,
         value& jv);
+
+    /** Helper for `boost::hash` support
+
+        Computes a hash value for `jv`. This function is used by
+        `boost::hash<value>`. Similar overloads for @ref array, @ref object,
+        and @ref string do not exist, because those types are supported by
+        `boost::hash` out of the box.
+
+        @return hash value for `jv`.
+
+        @param jv `value` for which a hash is to be computed.
+
+        @see [Boost.ContainerHash](https://boost.org/libs/container_hash).
+     */
+#ifndef BOOST_JSON_DOCS
+    template<
+        class T,
+        typename std::enable_if<
+            std::is_same< detail::remove_cvref<T>, value >::value >::type*
+                = nullptr>
+    friend
+    std::size_t
+    hash_value( T const& jv ) noexcept
+#else
+    friend
+    inline
+    std::size_t
+    hash_value( value const& jv ) noexcept
+#endif
+    {
+        return detail::hash_value_impl(jv);
+    }
 
 private:
     static
@@ -3700,9 +3854,7 @@ public:
         : value_(std::forward<Args>(args)...)
     {
         if(key.size() > string::max_size())
-            detail::throw_length_error(
-                "key too large",
-                BOOST_CURRENT_LOCATION);
+            detail::throw_length_error( "key too large" );
         auto s = reinterpret_cast<
             char*>(value_.storage()->
                 allocate(key.size() + 1, alignof(char)));
@@ -4012,7 +4164,8 @@ get<1>(key_value_pair&& kvp) noexcept
 
 #endif
 
-BOOST_JSON_NS_END
+} // namespace json
+} // namespace boost
 
 #ifdef __clang__
 # pragma clang diagnostic push

@@ -4,7 +4,6 @@
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
-#include <boost/locale/config.hpp>
 #include <boost/locale/conversion.hpp>
 #include <boost/locale/generator.hpp>
 #include <boost/locale/info.hpp>
@@ -41,12 +40,12 @@ void test_one(const std::locale& l, std::string ia, std::string ib, int diff)
 
     const std::collate<CharType>& col = std::use_facet<std::collate<CharType>>(l);
 
-    TEST(diff == col.compare(a.c_str(), a.c_str() + a.size(), b.c_str(), b.c_str() + b.size()));
-    TEST(diff
-         == get_sign(
-           col.transform(a.c_str(), a.c_str() + a.size()).compare(col.transform(b.c_str(), b.c_str() + b.size()))));
+    TEST_EQ(diff, col.compare(a.c_str(), a.c_str() + a.size(), b.c_str(), b.c_str() + b.size()));
+    TEST_EQ(
+      diff,
+      get_sign(col.transform(a.c_str(), a.c_str() + a.size()).compare(col.transform(b.c_str(), b.c_str() + b.size()))));
     if(diff == 0) {
-        TEST(col.hash(a.c_str(), a.c_str() + a.size()) == col.hash(b.c_str(), b.c_str() + b.size()));
+        TEST_EQ(col.hash(a.c_str(), a.c_str() + a.size()), col.hash(b.c_str(), b.c_str() + b.size()));
     }
 }
 
@@ -62,13 +61,13 @@ void test_char()
 
 #if !defined(__APPLE__) && !defined(__FreeBSD__)
     for(const std::string locale_name : {"en_US.UTF-8", "en_US.ISO8859-1"}) {
-        if(have_locale(locale_name)) {
+        if(!has_posix_locale(locale_name))
+            std::cout << "- " << locale_name << " not supported, skipping" << std::endl;
+        else {
             std::cout << "- Testing " << locale_name << std::endl;
             l = gen(locale_name);
             test_one<CharType>(l, "a", "ç", -1);
             test_one<CharType>(l, "ç", "d", -1);
-        } else {
-            std::cout << "- " << locale_name << " not supported, skipping" << std::endl;
         }
     }
 #else

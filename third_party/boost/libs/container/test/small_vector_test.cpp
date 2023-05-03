@@ -15,6 +15,7 @@
 #include "../../intrusive/test/iterator_test.hpp"
 
 #include <boost/container/allocator.hpp>
+#include <boost/container/allocator_traits.hpp>
 
 #include <iostream>
 
@@ -149,6 +150,43 @@ bool test_swap()
    return true;
 }
 
+template<class VoidAllocator>
+struct GetAllocatorCont
+{
+   template<class ValueType>
+   struct apply
+   {
+      typedef boost::container::small_vector< ValueType, 10
+         , typename boost::container::allocator_traits<VoidAllocator>
+            ::template portable_rebind_alloc<ValueType>::type
+      > type;
+   };
+};
+
+template<class VoidAllocator>
+int test_cont_variants()
+{
+   using namespace boost::container;
+   typedef typename GetAllocatorCont<VoidAllocator>::template apply<int>::type MyCont;
+   typedef typename GetAllocatorCont<VoidAllocator>::template apply<test::movable_int>::type MyMoveCont;
+   typedef typename GetAllocatorCont<VoidAllocator>::template apply<test::movable_and_copyable_int>::type MyCopyMoveCont;
+   typedef typename GetAllocatorCont<VoidAllocator>::template apply<test::copyable_int>::type MyCopyCont;
+   typedef typename GetAllocatorCont<VoidAllocator>::template apply<test::moveconstruct_int>::type MyMoveConstructCont;
+
+   if (test::vector_test<MyCont>())
+      return 1;
+   if (test::vector_test<MyMoveCont>())
+      return 1;
+   if (test::vector_test<MyCopyMoveCont>())
+      return 1;
+   if (test::vector_test<MyCopyCont>())
+      return 1;
+   if (test::vector_test<MyMoveConstructCont>())
+      return 1;
+
+   return 0;
+}
+
 int main()
 {
    using namespace boost::container;
@@ -160,6 +198,9 @@ int main()
       return 1;
 
    if(test::vector_test< small_vector<int, 2000> >())
+      return 1;
+
+   if (test_cont_variants< new_allocator<void> >())
       return 1;
 
    ////////////////////////////////////

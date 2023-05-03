@@ -110,6 +110,20 @@ BOOST_DESCRIBE_STRUCT(T7, (T6), (s))
 
 BOOST_DEFINE_ENUM_CLASS(E1, a, b, c)
 
+//----------------------------------------------------------
+
+struct T8
+{
+    int n;
+    double d;
+#ifndef BOOST_NO_CXX17_HDR_OPTIONAL
+    std::optional<std::string> opt_s;
+#else
+    std::string opt_s;
+#endif // BOOST_NO_CXX17_HDR_OPTIONAL
+};
+BOOST_DESCRIBE_STRUCT(T8, (), (n, d, opt_s))
+
 } // namespace value_to_test_ns
 
 namespace std
@@ -130,7 +144,8 @@ struct tuple_size<value_to_test_ns::T4>
 
 } // namespace std
 
-BOOST_JSON_NS_BEGIN
+namespace boost {
+namespace json {
 
 template<>
 struct is_null_like<::value_to_test_ns::T1> : std::true_type { };
@@ -318,6 +333,10 @@ public:
             BOOST_TEST( res );
             BOOST_TEST( res->n == -78 );
             BOOST_TEST( res->d == 0.125 );
+
+            jv.as_object()["x"] = 0;
+            BOOST_TEST_THROWS_WITH_LOCATION(
+                value_to<::value_to_test_ns::T6>( jv ));
         }
         {
             value jv = {{"n", 1}, {"d", 2}, {"s", "xyz"}};
@@ -349,7 +368,22 @@ public:
             value_to<::value_to_test_ns::E1>( value(1) ));
         BOOST_TEST_THROWS_WITH_LOCATION(
             value_to<::value_to_test_ns::E1>( value("x") ));
-#endif
+
+        {
+#ifndef BOOST_NO_CXX17_HDR_OPTIONAL
+            value jv = {{"n", -78}, {"d", 0.125}};
+            auto res = try_value_to<::value_to_test_ns::T8>(jv);
+            BOOST_TEST( res );
+            BOOST_TEST( res->n == -78 );
+            BOOST_TEST( res->d == 0.125 );
+            BOOST_TEST( std::nullopt == res->opt_s );
+
+            jv.as_object()["x"] = 0;
+            BOOST_TEST_THROWS_WITH_LOCATION(
+                value_to<::value_to_test_ns::T8>( jv ));
+#endif // BOOST_NO_CXX17_HDR_OPTIONAL
+        }
+#endif // BOOST_DESCRIBE_CXX14
     }
 
 #ifndef BOOST_NO_CXX17_HDR_OPTIONAL
@@ -584,4 +618,5 @@ public:
 
 TEST_SUITE(value_to_test, "boost.json.value_to");
 
-BOOST_JSON_NS_END
+} // namespace json
+} // namespace boost

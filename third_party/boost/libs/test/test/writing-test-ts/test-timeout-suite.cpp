@@ -25,7 +25,7 @@ BOOST_DATA_TEST_CASE(test_success, utf::data::make({0,1,2,3}))
 BOOST_TEST_DECORATOR(* utf::timeout(1))
 
 BOOST_AUTO_TEST_SUITE(test_suite_success)
-BOOST_DATA_TEST_CASE(test_success, utf::data::make({0,1,2,3,4,5,6}))
+BOOST_DATA_TEST_CASE(test_success, utf::data::make({0,1,2,3}))
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     BOOST_TEST(sample >= 0);

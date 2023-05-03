@@ -12,7 +12,6 @@
 #define BOOST_URL_GRAMMAR_DETAIL_CI_STRING_HPP
 
 #include <boost/url/string_view.hpp>
-#include <boost/type_traits/make_void.hpp>
 #include <boost/assert.hpp>
 #include <cstdint>
 #include <iterator>
@@ -27,7 +26,7 @@ template<class T, class = void>
 struct is_char_iter : std::false_type {};
 
 template<class T>
-struct is_char_iter<T, boost::void_t<
+struct is_char_iter<T, void_t<
     decltype(std::declval<char&>() =
         *std::declval<T const&>()),
     decltype(std::declval<T&>() =
@@ -44,7 +43,7 @@ template<class T, class = void>
 struct is_char_range : std::false_type {};
 
 template<class T>
-struct is_char_range<T, boost::void_t<
+struct is_char_range<T, void_t<
     decltype(std::declval<T const&>().begin()),
     decltype(std::declval<T const&>().end())
     > > : std::integral_constant<bool,

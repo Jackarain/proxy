@@ -19,7 +19,8 @@
 #include "test.hpp"
 #include "test_suite.hpp"
 
-BOOST_JSON_NS_BEGIN
+namespace boost {
+namespace json {
 
 BOOST_STATIC_ASSERT( std::is_nothrow_destructible<value>::value );
 BOOST_STATIC_ASSERT( std::is_nothrow_move_constructible<value>::value );
@@ -2236,16 +2237,10 @@ public:
             value({{"b",2}, {"c",3}, {"a",1}})));
         BOOST_TEST(expect_hash_not_equal(
             value({{"a",1}, {"b",2}, {"c",3}}),
-            object({{"b",2}, {"c",3}, {"a",1}})));
-        BOOST_TEST(expect_hash_not_equal(
-            value({{"a",1}, {"b",2}, {"c",3}}),
             value({{"b",2}, {"c",3}})));
         BOOST_TEST(check_hash_equal(
             value({"a", "b", 17}),
             value({"a", "b", 17U})));
-        BOOST_TEST(expect_hash_not_equal(
-            value({"a", "b", 17}),
-            array({"a", "b", 17})));
         BOOST_TEST(expect_hash_not_equal(
             value({"a", "b", 17}),
             value({17, "a", "b"})));
@@ -2345,4 +2340,5 @@ public:
 
 TEST_SUITE(value_test, "boost.json.value");
 
-BOOST_JSON_NS_END
+} // namespace json
+} // namespace boost

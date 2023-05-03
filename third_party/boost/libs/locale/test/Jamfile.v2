@@ -6,21 +6,16 @@
 # https://www.boost.org/LICENSE_1_0.txt
 
 import config : requires ;
+import ../../predef/check/predef : check : predef-check ;
 
 project : requirements
     <library>/boost/locale//boost_locale
     <warnings>extra
     <toolset>msvc:<warnings-as-errors>on
-    <toolset>gcc-8:<warnings-as-errors>on
-    <toolset>gcc-9:<warnings-as-errors>on
-    <toolset>gcc-10:<warnings-as-errors>on
-    <toolset>gcc-11:<warnings-as-errors>on
+    [ predef-check "BOOST_COMP_GNUC >= 8.0.0" : : <cxxflags>-Wsuggest-override ]
+    [ predef-check "BOOST_COMP_GNUC >= 8.0.0" and "BOOST_COMP_GNUC < 12" : : <warnings-as-errors>on ]
     <toolset>clang-5:<warnings-as-errors>on
-    <toolset>clang-9:<warnings-as-errors>on
-    <toolset>clang-10:<warnings-as-errors>on
-    <toolset>clang-11:<warnings-as-errors>on
-    <toolset>clang-12:<warnings-as-errors>on
-    <toolset>clang-13:<warnings-as-errors>on
+    [ predef-check "BOOST_COMP_CLANG >= 9" and "BOOST_COMP_CLANG < 14" : : <warnings-as-errors>on ]
     <include>.
     # Make sure we get all defines we need
     # Otherwise we would have problem knowing
@@ -33,9 +28,11 @@ project : requirements
   ;
 
 # Configuration Information
-run show_config.cpp : : : <test-info>always_show_run_output ;
+run show_config.cpp
+    : : : <test-info>always_show_run_output ;
 # Shared
 run test_utf.cpp ;
+run test_util.cpp test_helpers.cpp ;
 run test_date_time.cpp ;
 run test_ios_info.cpp ;
 run test_ios_prop.cpp ;

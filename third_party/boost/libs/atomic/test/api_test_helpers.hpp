@@ -132,8 +132,21 @@ void test_base_operators(T value1, T value2, T value3)
     {
         Wrapper<T> wrapper(value1);
         typename Wrapper<T>::atomic_reference_type a = wrapper.a;
+        BOOST_TEST_EQ( a.load(boost::memory_order_relaxed), value1 );
+    }
+
+    {
+        Wrapper<T> wrapper(value1);
+        typename Wrapper<T>::atomic_reference_type a = wrapper.a;
         a.store(value2);
         BOOST_TEST_EQ( a.load(), value2 );
+    }
+
+    {
+        Wrapper<T> wrapper(value1);
+        typename Wrapper<T>::atomic_reference_type a = wrapper.a;
+        a.store(value2, boost::memory_order_relaxed);
+        BOOST_TEST_EQ( a.load(boost::memory_order_relaxed), value2 );
     }
 
     // overloaded assignment/conversion

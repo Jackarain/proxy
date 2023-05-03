@@ -5,6 +5,7 @@
 #include <boost/system/result.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <boost/core/lightweight_test_trait.hpp>
+#include <boost/config.hpp>
 #include <system_error>
 
 using namespace boost::system;
@@ -223,7 +224,10 @@ int main()
         BOOST_TEST_NOT( r );
         BOOST_TEST( !r );
 
+#if defined(BOOST_CLANG_VERSION) && BOOST_CLANG_VERSION < 30600
+#else
         BOOST_TEST_THROWS( r.value(), E2 );
+#endif
 
         BOOST_TEST_EQ( r.operator->(), static_cast<int*>(0) );
     }
@@ -471,7 +475,10 @@ int main()
         BOOST_TEST_NOT( r );
         BOOST_TEST( !r );
 
+#if defined(BOOST_CLANG_VERSION) && BOOST_CLANG_VERSION < 30600
+#else
         BOOST_TEST_THROWS( r.value(), E2 );
+#endif
 
         BOOST_TEST_EQ( r.operator->(), static_cast<void*>(0) );
     }

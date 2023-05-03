@@ -8,9 +8,7 @@
 #ifdef BOOST_LOCALE_WITH_ICU
 #    include "../src/boost/locale/icu/codecvt.hpp"
 #endif
-#if defined(BOOST_LOCALE_WITH_ICONV) && !defined(BOOST_LOCALE_NO_POSIX_BACKEND)
-#    include "../src/boost/locale/posix/codecvt.hpp"
-#endif
+#include "../src/boost/locale/shared/iconv_codecvt.hpp"
 
 #include <cstring>
 #include <iostream>
@@ -88,7 +86,7 @@ void test_main(int /*argc*/, char** /*argv*/)
 
     TEST(cvt.get());
     TEST(cvt->is_thread_safe());
-    TEST(cvt->max_len() == 4);
+    TEST_EQ(cvt->max_len(), 4);
 
     std::cout << "-- Correct" << std::endl;
 
@@ -219,7 +217,7 @@ void test_main(int /*argc*/, char** /*argv*/)
 
     TEST(cvt.get());
     TEST(cvt->is_thread_safe());
-    TEST(cvt->max_len() == 1);
+    TEST_EQ(cvt->max_len(), 1);
 
     std::cout << "- From 1255" << std::endl;
 
@@ -249,16 +247,19 @@ void test_main(int /*argc*/, char** /*argv*/)
     test_shiftjis(cvt);
 #endif
 
-#if defined(BOOST_LOCALE_WITH_ICONV) && !defined(BOOST_LOCALE_NO_POSIX_BACKEND)
     std::cout << "Testing Shift-JIS using POSIX/iconv" << std::endl;
 
-    cvt = boost::locale::impl_posix::create_iconv_converter("Shift-JIS");
-    if(cvt) {
-        test_shiftjis(cvt);
-    } else {
-        std::cout << "- Shift-JIS is not supported!" << std::endl;
-    }
+    cvt = boost::locale::create_iconv_converter("Shift-JIS");
+#ifndef BOOST_LOCALE_WITH_ICONV
+    TEST(!cvt);
 #endif
+    if(cvt)
+        test_shiftjis(cvt);
+    else {
+#ifdef BOOST_LOCALE_WITH_ICONV
+        std::cout << "- Shift-JIS is not supported!" << std::endl;
+#endif
+    }
 }
 
 // boostinspect:noascii

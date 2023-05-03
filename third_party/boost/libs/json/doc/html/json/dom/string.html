@@ -8,6 +8,7 @@
 <link rel="up" href="../dom.html" title="Document Model">
 <link rel="prev" href="value.html" title="value">
 <link rel="next" href="array.html" title="array">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -49,11 +50,16 @@
           </li>
 <li class="listitem">
             access to characters in the range <code class="computeroutput"><span class="special">[</span><span class="identifier">size</span><span class="special">(),</span> <span class="identifier">capacity</span><span class="special">())</span></code>
-            is permitted, and
+            is permitted,
           </li>
 <li class="listitem">
             <a class="link" href="../ref/boost__json__storage_ptr.html" title="storage_ptr"><code class="computeroutput"><span class="identifier">storage_ptr</span></code></a>
-            is used instead of <a href="https://en.cppreference.com/w/cpp/named_req/Allocator" target="_top"><span class="emphasis"><em>Allocator</em></span></a>.
+            is used instead of <a href="https://en.cppreference.com/w/cpp/named_req/Allocator" target="_top"><span class="emphasis"><em>Allocator</em></span></a>,
+            and
+          </li>
+<li class="listitem">
+            guaranteed small buffer optimisation that avoids allocating memory for
+            small strings.
           </li>
 </ul></div>
 <p>
@@ -144,8 +150,10 @@
 </pre>
 <p>
         A <a class="link" href="../ref/boost__json__string.html" title="string"><code class="computeroutput"><span class="identifier">string</span></code></a>
-        may be constructed using the default memory resource without incurring any
-        memory allocations. Alternatively, a <a class="link" href="../ref/boost__json__storage_ptr.html" title="storage_ptr"><code class="computeroutput"><span class="identifier">storage_ptr</span></code></a> can be provided explicitly:
+        may be constructed using the <a class="link" href="../../">default
+        memory resource</a> without incurring any memory allocations. Alternatively,
+        a <a class="link" href="../ref/boost__json__storage_ptr.html" title="storage_ptr"><code class="computeroutput"><span class="identifier">storage_ptr</span></code></a>
+        can be provided explicitly:
       </p>
 <pre class="programlisting"><span class="identifier">string</span> <span class="identifier">str1</span><span class="special">;</span> <span class="comment">// empty string, uses the default memory resource</span>
 
@@ -162,15 +170,42 @@
         the result is a valid JSON. That is, the result will be double quoted and
         the contents properly escaped per the JSON specification.
       </p>
+<h5>
+<a name="json.dom.string.h1"></a>
+        <span class="phrase"><a name="json.dom.string.accessing_storage_beyond_size"></a></span><a class="link" href="string.html#json.dom.string.accessing_storage_beyond_size">Accessing
+        storage beyond <code class="computeroutput"><span class="identifier">size</span><span class="special">()</span></code></a>
+      </h5>
+<p>
+        <a class="link" href="../ref/boost__json__string.html" title="string"><code class="computeroutput"><span class="identifier">string</span></code></a>
+        directly supports access to its storage in the range <code class="computeroutput"><span class="special">[</span><span class="identifier">size</span><span class="special">(),</span> <span class="identifier">capacity</span><span class="special">())</span></code>.
+        This can be used for efficient assembly of a string from several parts. After
+        the string is assembled, use the member function <a class="link" href="../ref/boost__json__string/grow.html" title="string::grow"><code class="computeroutput"><span class="identifier">grow</span><span class="special">()</span></code></a>
+        to update the string's size and insert the null terminator. For example:
+      </p>
+<pre class="programlisting"><span class="identifier">string</span> <span class="identifier">greeting</span><span class="special">(</span> <span class="identifier">string_view</span> <span class="identifier">first_name</span><span class="special">,</span> <span class="identifier">string_view</span> <span class="identifier">last_name</span> <span class="special">)</span>
+<span class="special">{</span>
+    <span class="keyword">const</span> <span class="keyword">char</span> <span class="identifier">hello</span><span class="special">[]</span> <span class="special">=</span> <span class="string">"Hello, "</span><span class="special">;</span>
+    <span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">sz</span> <span class="special">=</span> <span class="identifier">first_name</span><span class="special">.</span><span class="identifier">size</span><span class="special">()</span> <span class="special">+</span> <span class="identifier">last_name</span><span class="special">.</span><span class="identifier">size</span><span class="special">()</span> <span class="special">+</span> <span class="keyword">sizeof</span><span class="special">(</span><span class="identifier">hello</span><span class="special">)</span> <span class="special">+</span> <span class="number">1</span><span class="special">;</span>
+
+    <span class="identifier">string</span> <span class="identifier">js</span><span class="special">;</span>
+    <span class="identifier">js</span><span class="special">.</span><span class="identifier">reserve</span><span class="special">(</span><span class="identifier">sz</span><span class="special">);</span>
+
+    <span class="keyword">char</span><span class="special">*</span> <span class="identifier">p</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">copy</span><span class="special">(</span> <span class="identifier">hello</span><span class="special">,</span> <span class="identifier">hello</span> <span class="special">+</span> <span class="keyword">sizeof</span><span class="special">(</span><span class="identifier">hello</span><span class="special">)</span> <span class="special">-</span> <span class="number">1</span><span class="special">,</span> <span class="identifier">js</span><span class="special">.</span><span class="identifier">data</span><span class="special">()</span> <span class="special">);</span>
+    <span class="identifier">p</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">copy</span><span class="special">(</span> <span class="identifier">first_name</span><span class="special">.</span><span class="identifier">begin</span><span class="special">(),</span> <span class="identifier">first_name</span><span class="special">.</span><span class="identifier">end</span><span class="special">(),</span> <span class="identifier">p</span> <span class="special">);</span>
+    <span class="special">*</span><span class="identifier">p</span><span class="special">++</span> <span class="special">=</span> <span class="char">' '</span><span class="special">;</span>
+    <span class="identifier">p</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">copy</span><span class="special">(</span> <span class="identifier">last_name</span><span class="special">.</span><span class="identifier">begin</span><span class="special">(),</span> <span class="identifier">last_name</span><span class="special">.</span><span class="identifier">end</span><span class="special">(),</span> <span class="identifier">p</span> <span class="special">);</span>
+    <span class="special">*</span><span class="identifier">p</span><span class="special">++</span> <span class="special">=</span> <span class="char">'!'</span><span class="special">;</span>
+
+    <span class="identifier">js</span><span class="special">.</span><span class="identifier">grow</span><span class="special">(</span> <span class="identifier">sz</span> <span class="special">);</span>
+    <span class="keyword">return</span> <span class="identifier">js</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
 </div>
-<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
-<td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
+<div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div></td>
-</tr></table>
+</div>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="value.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../dom.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="array.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>

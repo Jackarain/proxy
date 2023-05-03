@@ -70,47 +70,8 @@
 // Deprecated symbols markup -----------------------------------------------------------//
 
 #if !defined(BOOST_FILESYSTEM_ALLOW_DEPRECATED)
-
-#if !defined(BOOST_FILESYSTEM_DETAIL_DEPRECATED) && defined(_MSC_VER)
-#if (_MSC_VER) >= 1400
-#define BOOST_FILESYSTEM_DETAIL_DEPRECATED(msg) __declspec(deprecated(msg))
+#define BOOST_FILESYSTEM_DETAIL_DEPRECATED(msg) BOOST_DEPRECATED(msg)
 #else
-// MSVC 7.1 only supports the attribute without a message
-#define BOOST_FILESYSTEM_DETAIL_DEPRECATED(msg) __declspec(deprecated)
-#endif
-#endif
-
-#if !defined(BOOST_FILESYSTEM_DETAIL_DEPRECATED) && defined(__has_extension)
-#if __has_extension(attribute_deprecated_with_message)
-#define BOOST_FILESYSTEM_DETAIL_DEPRECATED(msg) __attribute__((deprecated(msg)))
-#endif
-#endif
-
-// gcc since 4.5 supports deprecated attribute with a message; older versions support the attribute without a message.
-// Oracle Studio 12.4 supports deprecated attribute with a message; this is the first release that supports the attribute.
-#if !defined(BOOST_FILESYSTEM_DETAIL_DEPRECATED) && (\
-    (defined(__GNUC__) && (__GNUC__ * 100 + __GNUC_MINOR__) >= 405) ||\
-    (defined(__SUNPRO_CC) && __SUNPRO_CC >= 0x5130))
-#define BOOST_FILESYSTEM_DETAIL_DEPRECATED(msg) __attribute__((deprecated(msg)))
-#endif
-
-#if !defined(BOOST_FILESYSTEM_DETAIL_DEPRECATED) && __cplusplus >= 201402
-#define BOOST_FILESYSTEM_DETAIL_DEPRECATED(msg) [[deprecated(msg)]]
-#endif
-
-#if !defined(BOOST_FILESYSTEM_DETAIL_DEPRECATED) && defined(__GNUC__)
-#define BOOST_FILESYSTEM_DETAIL_DEPRECATED(msg) __attribute__((deprecated))
-#endif
-
-#if !defined(BOOST_FILESYSTEM_DETAIL_DEPRECATED) && defined(__has_attribute)
-#if __has_attribute(deprecated)
-#define BOOST_FILESYSTEM_DETAIL_DEPRECATED(msg) __attribute__((deprecated))
-#endif
-#endif
-
-#endif // !defined(BOOST_FILESYSTEM_ALLOW_DEPRECATED)
-
-#if !defined(BOOST_FILESYSTEM_DETAIL_DEPRECATED)
 #define BOOST_FILESYSTEM_DETAIL_DEPRECATED(msg)
 #endif
 

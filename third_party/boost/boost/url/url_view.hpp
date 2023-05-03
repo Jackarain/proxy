@@ -196,8 +196,25 @@ public:
             @ref parse_uri_reference.
     */
     BOOST_URL_DECL
-    explicit
     url_view(string_view s);
+
+    /// @copydoc url_view(string_view)
+    template<
+        class String
+#ifndef BOOST_URL_DOCS
+        , class = typename std::enable_if<
+            std::is_convertible<
+                String,
+                string_view
+                    >::value>::type
+#endif
+    >
+    url_view(
+        String const& s)
+        : url_view(
+            detail::to_sv(s))
+    {
+    }
 
     /** Constructor
 

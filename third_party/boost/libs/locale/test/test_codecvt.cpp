@@ -62,13 +62,13 @@ void test_codecvt_in_n_m(const cvt_type& cvt, int n, int m)
 
         int count = cvt.length(mb2, from, end, to_end - to);
 #ifndef BOOST_LOCALE_DO_LENGTH_MBSTATE_CONST
-        TEST(memcmp(&mb, &mb2, sizeof(mb)) == 0);
+        TEST_EQ(memcmp(&mb, &mb2, sizeof(mb)), 0);
         if(count != from_next - from) {
             std::cout << count << " " << from_next - from << std::endl;
         }
-        TEST(count == from_next - from);
+        TEST_EQ(count, from_next - from);
 #else
-        TEST(count == to_next - to);
+        TEST_EQ(count, to_next - to);
 #endif
 
         if(r == cvt_type::partial) {
@@ -76,9 +76,9 @@ void test_codecvt_in_n_m(const cvt_type& cvt, int n, int m)
             if(end > real_end)
                 end = real_end;
         } else
-            TEST(r == cvt_type::ok);
+            TEST_EQ(r, cvt_type::ok);
         while(to != to_next) {
-            TEST(*wptr == *to);
+            TEST_EQ(*wptr, *to);
             wptr++;
             to++;
         }
@@ -117,16 +117,20 @@ void test_codecvt_out_n_m(const cvt_type& cvt, int n, int m)
 
         std::codecvt_base::result r = cvt.out(mb, from, from_end, from_next, to, to_end, to_next);
         if(r == cvt_type::partial) {
-            TEST(to_end - to_next < cvt.max_length());
-            to_end += n;
-            if(to_end > real_to_end)
-                to_end = real_to_end;
+            // If those are equal, then "partial" probably means: Need more input
+            // Otherwise "Need more output"
+            if(from_next != from_end) {
+                TEST_LT(to_end - to_next, cvt.max_length());
+                to_end += n;
+                if(to_end > real_to_end)
+                    to_end = real_to_end;
+            }
         } else {
-            TEST(r == cvt_type::ok);
+            TEST_EQ(r, cvt_type::ok);
         }
 
         while(to != to_next) {
-            TEST(*nptr == *to);
+            TEST_EQ(*nptr, *to);
             nptr++;
             to++;
         }
@@ -134,7 +138,7 @@ void test_codecvt_out_n_m(const cvt_type& cvt, int n, int m)
     }
     TEST(nptr == utf8_name + u8len);
     TEST(from_next == real_from_end);
-    TEST(cvt.unshift(mb, to, to + n, to_next) == cvt_type::ok);
+    TEST_EQ(cvt.unshift(mb, to, to + n, to_next), cvt_type::ok);
     TEST(to_next == to);
 }
 
@@ -145,7 +149,7 @@ void test_codecvt_conv()
 
     const cvt_type& cvt = std::use_facet<cvt_type>(l);
 
-    TEST(cvt.max_length() == 4);
+    TEST_EQ(cvt.max_length(), 4);
 
     for(int i = 1; i <= (int)strlen(utf8_name) + 1; i++) {
         for(int j = 1; j <= (int)wcslen(wide_name) + 1; j++) {
@@ -180,10 +184,10 @@ void test_codecvt_err()
             const char* from_end = from + strlen(from);
             const char* from_next = from;
             to_next = to;
-            TEST(cvt.in(mb, from, from_end, from_next, to, to_end, to_next) == cvt_type::error);
+            TEST_EQ(cvt.in(mb, from, from_end, from_next, to, to_end, to_next), cvt_type::error);
             TEST(from_next == from + 1);
             TEST(to_next == to + 1);
-            TEST(*to == '1');
+            TEST_EQ(*to, '1');
         }
         err_utf++;
         {
@@ -191,7 +195,33 @@ void test_codecvt_err()
             const char* from = err_utf;
             const char* from_end = from + strlen(from);
             const char* from_next = from;
-            TEST(cvt.in(mb, from, from_end, from_next, to, to_end, to_next) == cvt_type::error);
+            TEST_EQ(cvt.in(mb, from, from_end, from_next, to, to_end, to_next), cvt_type::error);
+            TEST(from_next == from);
+            TEST(to_next == to);
+        }
+    }
+    std::cout << "- Trailing UTF-16 surrogate" << std::endl;
+    {
+        char buf[4] = {};
+        char* const to = buf;
+        char* const to_end = buf + 4;
+        char* to_next = to;
+        const wchar_t* err_utf = L"\xD800"; // Trailing UTF-16 surrogate
+        std::mbstate_t mb = std::mbstate_t();
+        const wchar_t* from = err_utf;
+        const wchar_t* from_end = from + 1;
+        const wchar_t* from_next = from;
+        cvt_type::result res = cvt.out(mb, from, from_end, from_next, to, to_end, to_next);
+        BOOST_LOCALE_START_CONST_CONDITION
+        if(sizeof(wchar_t) == 2) {
+            BOOST_LOCALE_END_CONST_CONDITION
+            TEST(res == cvt_type::partial);
+            TEST(from_next == from_end);
+            TEST(to_next == to);
+            TEST(buf[0] == 0);
+        } else {
+            // surrogate is invalid
+            TEST(res == cvt_type::error);
             TEST(from_next == from);
             TEST(to_next == to);
         }
@@ -203,17 +233,17 @@ void test_codecvt_err()
         char* to = buf;
         char* to_end = buf + 32;
         char* to_next = to;
-        wchar_t err_buf[3] = {'1', 0xDC9E}; // second surrogate not works both for UTF-16 and 32
+        wchar_t err_buf[3] = {'1', 0xDC9E, 0}; // second value is invalid for UTF-16 and 32
         const wchar_t* err_utf = err_buf;
         {
             std::mbstate_t mb = std::mbstate_t();
             const wchar_t* from = err_utf;
             const wchar_t* from_end = from + wcslen(from);
             const wchar_t* from_next = from;
-            TEST(cvt.out(mb, from, from_end, from_next, to, to_end, to_next) == cvt_type::error);
+            TEST_EQ(cvt.out(mb, from, from_end, from_next, to, to_end, to_next), cvt_type::error);
             TEST(from_next == from + 1);
             TEST(to_next == to + 1);
-            TEST(*to == '1');
+            TEST_EQ(*to, '1');
         }
         err_utf++;
         {
@@ -222,7 +252,7 @@ void test_codecvt_err()
             const wchar_t* from_end = from + wcslen(from);
             const wchar_t* from_next = from;
             to_next = to;
-            TEST(cvt.out(mb, from, from_end, from_next, to, to_end, to_next) == cvt_type::error);
+            TEST_EQ(cvt.out(mb, from, from_end, from_next, to, to_end, to_next), cvt_type::error);
             TEST(from_next == from);
             TEST(to_next == to);
         }
@@ -242,15 +272,15 @@ void test_char_char()
     char* to = buf;
     char* to_end = buf + 1;
     char* to_next = to;
-    TEST(cvt.always_noconv() == true);
-    TEST(cvt.in(mb, from, from_end, from_next, to, to_end, to_next) == cvt_type::noconv);
+    TEST(cvt.always_noconv());
+    TEST_EQ(cvt.in(mb, from, from_end, from_next, to, to_end, to_next), cvt_type::noconv);
     TEST(from_next == from);
     TEST(to_next == to);
-    TEST(cvt.out(mb, from, from_end, from_next, to, to_end, to_next) == cvt_type::noconv);
+    TEST_EQ(cvt.out(mb, from, from_end, from_next, to, to_end, to_next), cvt_type::noconv);
     TEST(from_next == from);
     TEST(to_next == to);
-    TEST(cvt.encoding() == 1);
-    TEST(cvt.max_length() == 1);
+    TEST_EQ(cvt.encoding(), 1);
+    TEST_EQ(cvt.max_length(), 1);
 }
 
 void test_main(int /*argc*/, char** /*argv*/)

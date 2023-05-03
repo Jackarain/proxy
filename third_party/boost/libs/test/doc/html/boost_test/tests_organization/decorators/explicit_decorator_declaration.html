@@ -8,6 +8,7 @@
 <link rel="up" href="../decorators.html" title="Decorators">
 <link rel="prev" href="suite_level_decorators.html" title="Suite-level decorators">
 <link rel="next" href="../fixtures.html" title="Fixtures">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -46,7 +47,7 @@
                   </p>
                 </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">decorator_00</span>
+<pre class="table-programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_TEST_MODULE</span> <span class="identifier">decorator_00</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">test</span><span class="special">/</span><span class="identifier">included</span><span class="special">/</span><span class="identifier">unit_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">test</span><span class="special">/</span><span class="identifier">data</span><span class="special">/</span><span class="identifier">test_case</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 
@@ -69,7 +70,7 @@
                   </p>
                 </th></tr></thead>
 <tbody><tr><td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="special">&gt;</span> <span class="identifier">decorator_00</span> <span class="special">--</span><span class="identifier">list_content</span>
+<pre class="table-programlisting"><span class="special">&gt;</span> <span class="identifier">decorator_00</span> <span class="special">--</span><span class="identifier">list_content</span>
 <span class="identifier">test_1</span><span class="special">*:</span> <span class="identifier">with</span> <span class="identifier">description</span>
 <span class="identifier">test_1</span><span class="special">*:</span> <span class="identifier">with</span> <span class="identifier">description</span>
 <span class="identifier">test_1</span><span class="special">*:</span> <span class="identifier">with</span> <span class="identifier">description</span>
@@ -121,14 +122,14 @@
                   </p>
                 </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="identifier">BOOST_AUTO_TEST_CASE</span><span class="special">(</span><span class="identifier">test_case</span><span class="special">,</span> <span class="special">*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
+<pre class="table-programlisting"><span class="identifier">BOOST_AUTO_TEST_CASE</span><span class="special">(</span><span class="identifier">test_case</span><span class="special">,</span> <span class="special">*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
 <span class="special">{</span>
   <span class="comment">// assertions</span>
 <span class="special">}</span>
 </pre>
                 </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="identifier">BOOST_TEST_DECORATOR</span><span class="special">(*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
+<pre class="table-programlisting"><span class="identifier">BOOST_TEST_DECORATOR</span><span class="special">(*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
 <span class="identifier">BOOST_AUTO_TEST_CASE</span><span class="special">(</span><span class="identifier">test_case</span><span class="special">)</span>
 <span class="special">{</span>
   <span class="comment">// assertions</span>
@@ -143,14 +144,14 @@
                   </p>
                 </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="identifier">BOOST_FIXTURE_TEST_CASE</span><span class="special">(</span><span class="identifier">test_case</span><span class="special">,</span> <span class="identifier">Fx</span><span class="special">,</span> <span class="special">*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
+<pre class="table-programlisting"><span class="identifier">BOOST_FIXTURE_TEST_CASE</span><span class="special">(</span><span class="identifier">test_case</span><span class="special">,</span> <span class="identifier">Fx</span><span class="special">,</span> <span class="special">*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
 <span class="special">{</span>
   <span class="comment">// assertions</span>
 <span class="special">}</span>
 </pre>
                 </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="identifier">BOOST_TEST_DECORATOR</span><span class="special">(*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
+<pre class="table-programlisting"><span class="identifier">BOOST_TEST_DECORATOR</span><span class="special">(*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
 <span class="identifier">BOOST_FIXTURE_TEST_CASE</span><span class="special">(</span><span class="identifier">test_case</span><span class="special">,</span> <span class="identifier">Fx</span><span class="special">)</span>
 <span class="special">{</span>
   <span class="comment">// assertions</span>
@@ -165,7 +166,7 @@
                   </p>
                 </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="identifier">BOOST_AUTO_TEST_SUITE</span><span class="special">(</span><span class="identifier">test_suite</span><span class="special">,</span> <span class="special">*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
+<pre class="table-programlisting"><span class="identifier">BOOST_AUTO_TEST_SUITE</span><span class="special">(</span><span class="identifier">test_suite</span><span class="special">,</span> <span class="special">*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
 
   <span class="comment">// test units</span>
 
@@ -173,7 +174,7 @@
 </pre>
                 </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="identifier">BOOST_TEST_DECORATOR</span><span class="special">(*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
+<pre class="table-programlisting"><span class="identifier">BOOST_TEST_DECORATOR</span><span class="special">(*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
 <span class="identifier">BOOST_AUTO_TEST_SUITE</span><span class="special">(</span><span class="identifier">test_suite</span><span class="special">)</span>
 
   <span class="comment">// test units</span>
@@ -189,7 +190,7 @@
                   </p>
                 </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="identifier">BOOST_FIXTURE_TEST_SUITE</span><span class="special">(</span><span class="identifier">test_suite</span><span class="special">,</span> <span class="identifier">Fx</span><span class="special">,</span> <span class="special">*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
+<pre class="table-programlisting"><span class="identifier">BOOST_FIXTURE_TEST_SUITE</span><span class="special">(</span><span class="identifier">test_suite</span><span class="special">,</span> <span class="identifier">Fx</span><span class="special">,</span> <span class="special">*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
 
   <span class="comment">// test units</span>
 
@@ -197,7 +198,7 @@
 </pre>
                 </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="identifier">BOOST_TEST_DECORATOR</span><span class="special">(*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
+<pre class="table-programlisting"><span class="identifier">BOOST_TEST_DECORATOR</span><span class="special">(*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
 <span class="identifier">BOOST_FIXTURE_TEST_SUITE</span><span class="special">(</span><span class="identifier">test_suite</span><span class="special">,</span> <span class="identifier">Fx</span><span class="special">)</span>
 
   <span class="comment">// test units</span>
@@ -213,11 +214,11 @@
                   </p>
                 </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="comment">// not doable</span>
+<pre class="table-programlisting"><span class="comment">// not doable</span>
 </pre>
                 </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="identifier">BOOST_TEST_DECORATOR</span><span class="special">(*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
+<pre class="table-programlisting"><span class="identifier">BOOST_TEST_DECORATOR</span><span class="special">(*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
 <span class="identifier">BOOST_DATA_TEST_CASE</span><span class="special">(</span><span class="identifier">test_case</span><span class="special">,</span> <span class="identifier">data</span><span class="special">,</span> <span class="identifier">var</span><span class="special">)</span>
 <span class="special">{</span>
   <span class="comment">// assertions</span>
@@ -232,11 +233,11 @@
                   </p>
                 </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="comment">// not doable</span>
+<pre class="table-programlisting"><span class="comment">// not doable</span>
 </pre>
                 </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="identifier">BOOST_TEST_DECORATOR</span><span class="special">(*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
+<pre class="table-programlisting"><span class="identifier">BOOST_TEST_DECORATOR</span><span class="special">(*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
 <span class="identifier">BOOST_AUTO_TEST_CASE_TEMPLATE</span><span class="special">(</span><span class="identifier">test_case</span><span class="special">,</span> <span class="identifier">T</span><span class="special">,</span> <span class="identifier">type_list</span><span class="special">)</span>
 <span class="special">{</span>
   <span class="comment">// assertions</span>
@@ -251,11 +252,11 @@
                   </p>
                 </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="comment">// not doable</span>
+<pre class="table-programlisting"><span class="comment">// not doable</span>
 </pre>
                 </td>
 <td>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="identifier">BOOST_TEST_DECORATOR</span><span class="special">(*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
+<pre class="table-programlisting"><span class="identifier">BOOST_TEST_DECORATOR</span><span class="special">(*</span><span class="identifier">decor1</span><span class="special">()</span> <span class="special">*</span><span class="identifier">decor2</span><span class="special">())</span>
 <span class="identifier">BOOST_FIXTURE_TEST_CASE_TEMPLATE</span><span class="special">(</span><span class="identifier">test_case</span><span class="special">,</span> <span class="identifier">T</span><span class="special">,</span> <span class="identifier">type_list</span><span class="special">,</span> <span class="identifier">Fx</span><span class="special">)</span>
 <span class="special">{</span>
   <span class="comment">// assertions</span>
@@ -269,14 +270,11 @@
           Throughout the reminder of this documentation we use only the concise syntax.
         </p>
 </div>
-<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
-<td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2001-2022 Boost.Test contributors<p>
+<div class="copyright-footer">Copyright © 2001-2022 Boost.Test contributors<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div></td>
-</tr></table>
+</div>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="suite_level_decorators.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../decorators.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../fixtures.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>

@@ -127,6 +127,7 @@ int test_cont_variants()
    typedef typename GetAllocatorCont<VoidAllocator>::template apply<test::movable_int>::type MyMoveCont;
    typedef typename GetAllocatorCont<VoidAllocator>::template apply<test::movable_and_copyable_int>::type MyCopyMoveCont;
    typedef typename GetAllocatorCont<VoidAllocator>::template apply<test::copyable_int>::type MyCopyCont;
+   typedef typename GetAllocatorCont<VoidAllocator>::template apply<test::moveconstruct_int>::type MyMoveConstructCont;
 
    if(test::vector_test<MyCont>())
       return 1;
@@ -135,6 +136,8 @@ int test_cont_variants()
    if(test::vector_test<MyCopyMoveCont>())
       return 1;
    if(test::vector_test<MyCopyCont>())
+      return 1;
+   if (test::vector_test<MyMoveConstructCont>())
       return 1;
 
    return 0;
@@ -219,6 +222,12 @@ bool test_span_conversion()
 }
 
 #endif   //BOOST_VECTOR_TEST_HAS_SPAN
+
+struct POD { int POD::*ptr; };
+BOOST_STATIC_ASSERT_MSG
+   ( boost::container::dtl::is_pod<POD>::value
+   , "POD test failed"
+   );
 
 int main()
 {
@@ -391,6 +400,25 @@ int main()
          , "has_trivial_destructor_after_move(std::allocator) test failed"
          );
    }
+
+   ////////////////////////////////////
+   //    POD types should not be 0-filled testing
+   ////////////////////////////////////
+#if !defined(_MSC_VER)
+   // MSVC miscompiles value initialization of pointers to data members,
+   // https://developercommunity.visualstudio.com/t/Pointer-to-data-member-is-not-initialize/10238905
+   {
+      typedef boost::container::vector<POD> cont;
+      const std::size_t size = 10;
+      cont a(size);
+      for(std::size_t i = 0; i != size; ++i) {
+         if (a[i].ptr != 0) {
+            std::cerr << "POD test failed" << std::endl;
+            return 1;
+         }
+      }
+   }
+#endif
 
    return 0;
 }

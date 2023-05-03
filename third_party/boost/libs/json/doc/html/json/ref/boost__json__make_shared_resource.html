@@ -8,6 +8,7 @@
 <link rel="up" href="../ref.html" title="This Page Intentionally Left Blank 2/2">
 <link rel="prev" href="boost__json__operator_gt_.html" title="operator&gt;">
 <link rel="next" href="boost__json__pilfer.html" title="pilfer">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -27,7 +28,7 @@
 <a name="json.ref.boost__json__make_shared_resource"></a><a class="link" href="boost__json__make_shared_resource.html" title="make_shared_resource">make_shared_resource</a>
 </h4></div></div></div>
 <p>
-        <a class="indexterm" name="idm66133"></a>
+        <a class="indexterm" name="idm67679"></a>
       </p>
 <p>
         Return shared ownership of a new, dynamically allocated memory resource.
@@ -40,7 +41,7 @@
         Defined in header <code class="literal">&lt;<a href="https://github.com/cppalliance/json/blob/master/include/boost/json/storage_ptr.hpp" target="_top">boost/json/storage_ptr.hpp</a>&gt;</code>
       </p>
 <pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
-    <span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span>
+    <span class="keyword">class</span> <span class="identifier">U</span><span class="special">,</span>
     <span class="keyword">class</span><span class="special">...</span> <span class="identifier">Args</span><span class="special">&gt;</span>
 <span class="identifier">storage_ptr</span>
 <span class="identifier">make_shared_resource</span><span class="special">(</span>
@@ -60,14 +61,14 @@
 <a name="json.ref.boost__json__make_shared_resource.h2"></a>
         <span class="phrase"><a name="json.ref.boost__json__make_shared_resource.mandates"></a></span><a class="link" href="boost__json__make_shared_resource.html#json.ref.boost__json__make_shared_resource.mandates">Mandates</a>
       </h5>
-<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">is_base_of</span><span class="special">&lt;</span> <span class="identifier">memory_resource</span><span class="special">,</span> <span class="identifier">T</span> <span class="special">&gt;::</span><span class="identifier">value</span> <span class="special">==</span> <span class="keyword">true</span>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">is_base_of</span><span class="special">&lt;</span> <span class="identifier">memory_resource</span><span class="special">,</span> <span class="identifier">U</span> <span class="special">&gt;::</span><span class="identifier">value</span> <span class="special">==</span> <span class="keyword">true</span>
 </pre>
 <h5>
 <a name="json.ref.boost__json__make_shared_resource.h3"></a>
         <span class="phrase"><a name="json.ref.boost__json__make_shared_resource.complexity"></a></span><a class="link" href="boost__json__make_shared_resource.html#json.ref.boost__json__make_shared_resource.complexity">Complexity</a>
       </h5>
 <p>
-        Same as <code class="computeroutput"><span class="keyword">new</span> <span class="identifier">T</span><span class="special">(</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">forward</span><span class="special">&lt;</span><span class="identifier">Args</span><span class="special">&gt;(</span><span class="identifier">args</span><span class="special">)...</span> <span class="special">)</span></code>.
+        Same as <code class="computeroutput"><span class="keyword">new</span> <span class="identifier">U</span><span class="special">(</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">forward</span><span class="special">&lt;</span><span class="identifier">Args</span><span class="special">&gt;(</span><span class="identifier">args</span><span class="special">)...</span> <span class="special">)</span></code>.
       </p>
 <h5>
 <a name="json.ref.boost__json__make_shared_resource.h4"></a>
@@ -102,7 +103,7 @@
 <tbody><tr>
 <td>
                 <p>
-                  <code class="computeroutput"><span class="identifier">T</span></code>
+                  <code class="computeroutput"><span class="identifier">U</span></code>
                 </p>
               </td>
 <td>
@@ -141,7 +142,7 @@
               </td>
 <td>
                 <p>
-                  Parameters forwarded to the constructor of <code class="computeroutput"><span class="identifier">T</span></code>.
+                  Parameters forwarded to the constructor of <code class="computeroutput"><span class="identifier">U</span></code>.
                 </p>
               </td>
 </tr></tbody>
@@ -150,14 +151,11 @@
         Convenience header <code class="literal">&lt;<a href="https://github.com/cppalliance/json/blob/master/include/boost/json.hpp" target="_top">boost/json.hpp</a>&gt;</code>
       </p>
 </div>
-<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
-<td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
+<div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div></td>
-</tr></table>
+</div>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="boost__json__operator_gt_.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../ref.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="boost__json__pilfer.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>

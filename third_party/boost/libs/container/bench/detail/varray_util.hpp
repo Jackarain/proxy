@@ -18,7 +18,6 @@
 #include <limits>
 
 #include <boost/config.hpp>
-#include <boost/core/no_exceptions_support.hpp>
 
 #include <boost/container/detail/addressof.hpp>
 #if defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
@@ -251,18 +250,18 @@ O uninitialized_move_dispatch(I first, I last, O dst,
 
     O o = dst;
 
-    BOOST_TRY
+    BOOST_CONTAINER_TRY
     {
         typedef typename boost::container::iterator_traits<O>::value_type value_type;
         for (; first != last; ++first, ++o )
             new (boost::container::dtl::addressof(*o)) value_type(boost::move(*first));
     }
-    BOOST_CATCH(...)
+    BOOST_CONTAINER_CATCH(...)
     {
         destroy(dst, o);
-        BOOST_RETHROW;
+        BOOST_CONTAINER_RETHROW;
     }
-    BOOST_CATCH_END
+    BOOST_CONTAINER_CATCH_END
 
     return dst;
 }
@@ -431,17 +430,17 @@ void uninitialized_fill_dispatch(I first, I last,
     typedef typename ::boost::container::iterator_traits<I>::value_type value_type;
     I it = first;
 
-    BOOST_TRY
+    BOOST_CONTAINER_TRY
     {
         for ( ; it != last ; ++it )
             new (boost::container::dtl::addressof(*it)) value_type();                           // may throw
     }
-    BOOST_CATCH(...)
+    BOOST_CONTAINER_CATCH(...)
     {
         destroy(first, it);
-        BOOST_RETHROW;
+        BOOST_CONTAINER_RETHROW;
     }
-    BOOST_CATCH_END
+    BOOST_CONTAINER_CATCH_END
 }
 
 template <typename I, typename DisableTrivialInit>
@@ -600,7 +599,7 @@ inline std::size_t uninitialized_copy_s(I first, I last, F dest, std::size_t max
     std::size_t count = 0;
     F it = dest;
 
-    BOOST_TRY
+    BOOST_CONTAINER_TRY
     {
         for ( ; first != last ; ++it, ++first, ++count )
         {
@@ -611,12 +610,12 @@ inline std::size_t uninitialized_copy_s(I first, I last, F dest, std::size_t max
             construct(0, it, *first);                                              // may throw
         }
     }
-    BOOST_CATCH(...)
+    BOOST_CONTAINER_CATCH(...)
     {
         destroy(dest, it);
-        BOOST_RETHROW;
+        BOOST_CONTAINER_RETHROW;
     }
-    BOOST_CATCH_END
+    BOOST_CONTAINER_CATCH_END
 
     return count;
 }

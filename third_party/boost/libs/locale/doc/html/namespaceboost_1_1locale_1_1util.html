@@ -80,6 +80,9 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1util_1_1base__converter.html">base_converter</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">This class represent a simple stateless converter from UCS-4 and to UCS-4 for each single code point.  <a href="classboost_1_1locale_1_1util_1_1base__converter.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classboost_1_1locale_1_1util_1_1locale__data.html">locale_data</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Holder and parser for locale names/identifiers.  <a href="classboost_1_1locale_1_1util_1_1locale__data.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
@@ -88,11 +91,20 @@ template&lt;typename Char &gt; </td></tr>
 <tr class="memitem:a7dad7a4c24e4ee07e3f2ba013328d019"><td class="memTemplItemLeft" align="right" valign="top">Char *&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceboost_1_1locale_1_1util.html#a7dad7a4c24e4ee07e3f2ba013328d019">str_end</a> (Char *str)</td></tr>
 <tr class="memdesc:a7dad7a4c24e4ee07e3f2ba013328d019"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return the end of a C-string, i.e. the pointer to the trailing NULL byte. <br /></td></tr>
 <tr class="separator:a7dad7a4c24e4ee07e3f2ba013328d019"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6100b6d2e9e467d9503d4795a7769aa3"><td class="memItemLeft" align="right" valign="top"><a id="a6100b6d2e9e467d9503d4795a7769aa3"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_upper_ascii</b> (const char c)</td></tr>
+<tr class="separator:a6100b6d2e9e467d9503d4795a7769aa3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab1a3fc96ceb4de178dc92aff6b589a26"><td class="memItemLeft" align="right" valign="top"><a id="ab1a3fc96ceb4de178dc92aff6b589a26"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_lower_ascii</b> (const char c)</td></tr>
+<tr class="separator:ab1a3fc96ceb4de178dc92aff6b589a26"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a311e013ab938aec72258f22f81c99c74"><td class="memItemLeft" align="right" valign="top"><a id="a311e013ab938aec72258f22f81c99c74"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_numeric_ascii</b> (const char c)</td></tr>
+<tr class="separator:a311e013ab938aec72258f22f81c99c74"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad9737569d0e2d6b08885b01aba308365"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceboost_1_1locale_1_1util.html#ad9737569d0e2d6b08885b01aba308365">get_system_locale</a> (bool use_utf8_on_windows=false)</td></tr>
 <tr class="memdesc:ad9737569d0e2d6b08885b01aba308365"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return default system locale name in POSIX format.  <a href="#ad9737569d0e2d6b08885b01aba308365">More...</a><br /></td></tr>
 <tr class="separator:ad9737569d0e2d6b08885b01aba308365"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae5be4b299c8d200c50d7648dceb115da"><td class="memItemLeft" align="right" valign="top">std::locale&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceboost_1_1locale_1_1util.html#ae5be4b299c8d200c50d7648dceb115da">create_info</a> (const std::locale &amp;in, const std::string &amp;name)</td></tr>
-<tr class="memdesc:ae5be4b299c8d200c50d7648dceb115da"><td class="mdescLeft">&#160;</td><td class="mdescRight">Installs information facet to locale in based on locale name <em>name</em>.  <a href="#ae5be4b299c8d200c50d7648dceb115da">More...</a><br /></td></tr>
+<tr class="memdesc:ae5be4b299c8d200c50d7648dceb115da"><td class="mdescLeft">&#160;</td><td class="mdescRight">Installs information facet to locale <em>in</em> based on locale name <em>name</em>.  <a href="#ae5be4b299c8d200c50d7648dceb115da">More...</a><br /></td></tr>
 <tr class="separator:ae5be4b299c8d200c50d7648dceb115da"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aed96ada9d698912e283bcbd643f01e8f"><td class="memItemLeft" align="right" valign="top">std::unique_ptr&lt; <a class="el" href="classboost_1_1locale_1_1util_1_1base__converter.html">base_converter</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceboost_1_1locale_1_1util.html#aed96ada9d698912e283bcbd643f01e8f">create_utf8_converter</a> ()</td></tr>
 <tr class="separator:aed96ada9d698912e283bcbd643f01e8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -184,10 +196,10 @@ std::locale&#160;</td><td class="memItemRight" valign="bottom"><b>create_codecvt
       </table>
 </div><div class="memdoc">
 
-<p>Installs information facet to locale in based on locale name <em>name</em>. </p>
+<p>Installs information facet to locale <em>in</em> based on locale name <em>name</em>. </p>
 <p>This function installs <a class="el" href="classboost_1_1locale_1_1info.html" title="a facet that holds general information about locale">boost::locale::info</a> facet into the locale <em>in</em> and returns newly created locale.</p>
 <p>Note: all information is based only on parsing of string <em>name</em>;</p>
-<p>The name has following format: language[_COUNTRY][.encoding][@variant] Where language is ISO-639 language code like "en" or "ru", COUNTRY is ISO-3166 country identifier like "US" or "RU". the Encoding is a charracter set name like UTF-8 or ISO-8859-1. Variant is backend specific variant like <code>euro</code> or calendar=hebrew.</p>
+<p>The name has following format: language[_COUNTRY][.encoding][@variant] Where language is ISO-639 language code like "en" or "ru", COUNTRY is ISO-3166 country identifier like "US" or "RU". the Encoding is a character set name like UTF-8 or ISO-8859-1. Variant is backend specific variant like <code>euro</code> or calendar=hebrew.</p>
 <p>If some parameters are missing they are specified as blanks, default encoding is assumed to be US-ASCII and missing language is assumed to be "C" </p>
 
 </div>
@@ -350,8 +362,7 @@ std::locale&#160;</td><td class="memItemRight" valign="bottom"><b>create_codecvt
 </div><div class="memdoc">
 
 <p>Return default system locale name in POSIX format. </p>
-<p>This function tries to detect the locale using, LC_CTYPE, LC_ALL and LANG environment variables in this order and if all of them unset, in POSIX platforms it returns "C"</p>
-<p>On Windows additionally to check the above environment variables, this function tries to creates locale name from ISO-339 and ISO-3199 country codes defined for user default locale. If <em>use_utf8_on_windows</em> is true it sets the encoding to UTF-8, otherwise, if system locale supports ANSI code-page it defines the ANSI encoding like windows-1252, otherwise it fall-backs to UTF-8 encoding if ANSI code-page is not available. </p>
+<p>This function tries to detect the locale using LC_ALL, LC_CTYPE and LANG environment variables in this order and if all of them are unset, on POSIX platforms it returns "C". On Windows additionally to the above environment variables, this function tries to create the locale name from ISO-639 and ISO-3166 country codes defined for the users default locale. If <em>use_utf8_on_windows</em> is true it sets the encoding to UTF-8, otherwise, if the system locale supports ANSI codepages it defines the ANSI encoding, e.g. windows-1252, otherwise (if ANSI codepage is not available) it uses UTF-8 encoding. </p>
 
 </div>
 </div>

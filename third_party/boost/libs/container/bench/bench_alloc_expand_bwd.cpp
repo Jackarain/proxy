@@ -13,7 +13,6 @@
 #endif
 
 #include <boost/container/allocator.hpp>
-#include <boost/core/no_exceptions_support.hpp>
 
 #define BOOST_CONTAINER_VECTOR_ALLOC_STATS
 
@@ -114,7 +113,7 @@ void vector_test_template(std::size_t num_iterations, std::size_t num_elements, 
       bc::vector<MyInt, IntAllocator> v;
       v.reset_alloc_stats();
       void *first_mem = 0;
-      BOOST_TRY{
+      BOOST_CONTAINER_TRY{
          first_mem = bc::dlmalloc_malloc(sizeof(MyInt)*num_elements*3/2);
          v.push_back(MyInt(0));
          bc::dlmalloc_free(first_mem);
@@ -126,11 +125,11 @@ void vector_test_template(std::size_t num_iterations, std::size_t num_elements, 
          numexpand += v.num_expand_bwd;
          capacity = static_cast<std::size_t>(v.capacity());
       }
-      BOOST_CATCH(...){
+      BOOST_CONTAINER_CATCH(...){
          bc::dlmalloc_free(first_mem);
-         BOOST_RETHROW;
+         BOOST_CONTAINER_RETHROW;
       }
-      BOOST_CATCH_END
+      BOOST_CONTAINER_CATCH_END
    }
 
    assert(bc::dlmalloc_allocated_memory() == 0);

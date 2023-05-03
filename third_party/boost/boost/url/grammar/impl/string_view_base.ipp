@@ -22,7 +22,7 @@ operator<<(
     std::ostream& os,
     string_view_base const& s)
 {
-    return os << string_view(s);
+    return os << urls::detail::to_sv(s);
 }
 
 } // grammar

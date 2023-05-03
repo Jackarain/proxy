@@ -66,7 +66,7 @@ void test_by_char(const std::locale& l, locale_t lreal)
         TEST(ss << 1045.45);
         double n;
         TEST(ss >> n);
-        TEST(n == 1045.45);
+        TEST_EQ(n, 1045.45);
 
         if(std::use_facet<boost::locale::info>(l).country() == "US")
             TEST_EQ(ss.str(), to_utf<CharType>("1,045.45", lreal));
@@ -77,7 +77,7 @@ void test_by_char(const std::locale& l, locale_t lreal)
 
         char buf[64]{};
 #ifndef BOOST_LOCALE_NO_POSIX_BACKEND
-        TEST(strfmon_l(buf, sizeof(buf), lreal, "%n", 1043.34) > 0);
+        TEST_GT(strfmon_l(buf, sizeof(buf), lreal, "%n", 1043.34), 0);
 #endif
 
         ss_type ss;
@@ -93,7 +93,7 @@ void test_by_char(const std::locale& l, locale_t lreal)
         std::cout << "- Testing as::currency iso" << std::endl;
         char buf[64]{};
 #ifndef BOOST_LOCALE_NO_POSIX_BACKEND
-        TEST(strfmon_l(buf, sizeof(buf), lreal, "%i", 1043.34) > 0);
+        TEST_GT(strfmon_l(buf, sizeof(buf), lreal, "%i", 1043.34), 0);
 #endif
         ss_type ss;
         ss.imbue(l);
@@ -127,7 +127,7 @@ void test_by_char(const std::locale& l, locale_t lreal)
         char buf[64]{};
 #ifndef BOOST_LOCALE_NO_POSIX_BACKEND
         std::tm tm = *gmtime_wrap(&a_datetime);
-        TEST(strftime_l(buf, sizeof(buf), "%x\n%X\n%c\n16\n48\n", &tm, lreal) > 0);
+        TEST_GT(strftime_l(buf, sizeof(buf), "%x\n%X\n%c\n16\n48\n", &tm, lreal), 0u);
 #endif
         TEST_EQ(ss.str(), to_utf<CharType>(buf, lreal));
     }
@@ -146,7 +146,7 @@ void test_main(int /*argc*/, char** /*argv*/)
     boost::locale::generator gen;
     for(const std::string locale_name : {"en_US.UTF-8", "en_US.ISO8859-1", "he_IL.UTF-8", "he_IL.ISO8859-8"}) {
         std::cout << locale_name << " locale" << std::endl;
-        if(!have_locale(locale_name)) {
+        if(!has_posix_locale(locale_name)) {
             std::cout << locale_name << " not supported" << std::endl;
         } else {
             std::locale generated_locale = gen(locale_name);
@@ -163,7 +163,7 @@ void test_main(int /*argc*/, char** /*argv*/)
     {
         std::cout << "Testing UTF-8 punct issues" << std::endl;
         const std::string locale_name = "ru_RU.UTF-8";
-        if(!have_locale(locale_name)) {
+        if(!has_posix_locale(locale_name)) {
             std::cout << "- No Russian locale" << std::endl;
         } else {
             std::ostringstream ss;

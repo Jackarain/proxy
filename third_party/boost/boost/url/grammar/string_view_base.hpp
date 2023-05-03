@@ -777,7 +777,7 @@ public:
         typename std::enable_if<
             is_match<S0, S1>::value, bool>::type
     {
-        return string_view(s0) == string_view(s1);
+        return urls::detail::to_sv(s0) == urls::detail::to_sv(s1);
     }
 
     template<class S0, class S1>
@@ -786,7 +786,7 @@ public:
         typename std::enable_if<
             is_match<S0, S1>::value, bool>::type
     {
-        return string_view(s0) != string_view(s1);
+        return urls::detail::to_sv(s0) != urls::detail::to_sv(s1);
     }
 
     template<class S0, class S1>
@@ -795,7 +795,7 @@ public:
         typename std::enable_if<
             is_match<S0, S1>::value, bool>::type
     {
-        return string_view(s0) < string_view(s1);
+        return urls::detail::to_sv(s0) < urls::detail::to_sv(s1);
     }
 
     template<class S0, class S1>
@@ -804,7 +804,7 @@ public:
         typename std::enable_if<
             is_match<S0, S1>::value, bool>::type
     {
-        return string_view(s0) <= string_view(s1);
+        return urls::detail::to_sv(s0) <= urls::detail::to_sv(s1);
     }
 
     template<class S0, class S1>
@@ -813,7 +813,7 @@ public:
         typename std::enable_if<
             is_match<S0, S1>::value, bool>::type
     {
-        return string_view(s0) > string_view(s1);
+        return urls::detail::to_sv(s0) > urls::detail::to_sv(s1);
     }
 
     template<class S0, class S1>
@@ -822,7 +822,7 @@ public:
         typename std::enable_if<
             is_match<S0, S1>::value, bool>::type
     {
-        return string_view(s0) >= string_view(s1);
+        return urls::detail::to_sv(s0) >= urls::detail::to_sv(s1);
     }
 #endif
 
@@ -857,6 +857,19 @@ operator<<(
     string_view_base const& s);
 
 } // grammar
+
+#ifndef BOOST_URL_DOCS
+namespace detail {
+template <>
+inline
+string_view
+to_sv(grammar::string_view_base const& s) noexcept
+{
+    return s.operator string_view();
+}
+} // detail
+#endif
+
 } // urls
 } // boost
 

@@ -148,7 +148,7 @@ struct code_as_error_handler
   void operator()(error_code ec, native_exit_code_type code)
   {
     if (!ec)
-      ec.assign(code, category);
+      BOOST_PROCESS_V2_ASSIGN_EC(ec, code, category)
     std::move(handler_)(ec);
   }
 

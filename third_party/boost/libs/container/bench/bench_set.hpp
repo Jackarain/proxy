@@ -19,7 +19,6 @@
 #include <iomanip>
 #include <boost/container/vector.hpp>
 #include <boost/container/string.hpp>
-#include <boost/core/no_exceptions_support.hpp>
 
 using boost::move_detail::cpu_timer;
 using boost::move_detail::cpu_times;

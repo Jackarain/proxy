@@ -8,6 +8,7 @@
 <link rel="up" href="../index.html" title="Chapter 1. Boost.Contract 1.0.0">
 <link rel="prev" href="advanced.html" title="Advanced">
 <link rel="next" href="examples.html" title="Examples">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -1200,7 +1201,7 @@
 <td>
                 <p>
 </p>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="comment">// Use macro interface to completely disable contract code compilation.</span>
+<pre class="table-programlisting"><span class="comment">// Use macro interface to completely disable contract code compilation.</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">contract_macro</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 
 <span class="keyword">int</span> <span class="identifier">inc</span><span class="special">(</span><span class="keyword">int</span><span class="special">&amp;</span> <span class="identifier">x</span><span class="special">)</span> <span class="special">{</span>
@@ -1225,7 +1226,7 @@
 <td>
                 <p>
 </p>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="comment">// Use #ifdef to completely disable contract code compilation.</span>
+<pre class="table-programlisting"><span class="comment">// Use #ifdef to completely disable contract code compilation.</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">contract</span><span class="special">/</span><span class="identifier">core</span><span class="special">/</span><span class="identifier">config</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 <span class="preprocessor">#ifndef</span> <span class="identifier">BOOST_CONTRACT_NO_ALL</span>
     <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">contract</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
@@ -1293,7 +1294,7 @@
 <td>
                 <p>
 </p>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="keyword">class</span> <span class="identifier">integers</span>
+<pre class="table-programlisting"><span class="keyword">class</span> <span class="identifier">integers</span>
     <span class="preprocessor">#define</span> <span class="identifier">BASES</span> <span class="keyword">public</span> <span class="identifier">pushable</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span>
     <span class="special">:</span>
         <span class="comment">// Left in code (almost no overhead).</span>
@@ -1365,7 +1366,7 @@
 <td>
                 <p>
 </p>
-<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting"><span class="keyword">class</span> <span class="identifier">integers</span>
+<pre class="table-programlisting"><span class="keyword">class</span> <span class="identifier">integers</span>
     <span class="preprocessor">#define</span> <span class="identifier">BASES</span> <span class="keyword">public</span> <span class="identifier">pushable</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span>
     <span class="special">:</span>
         <span class="preprocessor">#ifndef</span> <span class="identifier">BOOST_CONTRACT_NO_PRECONDITIONS</span>
@@ -2501,14 +2502,11 @@
         </p></div>
 </div>
 </div>
-<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
-<td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2008-2019 Lorenzo Caminiti<p>
+<div class="copyright-footer">Copyright © 2008-2019 Lorenzo Caminiti<p>
         Distributed under the Boost Software License, Version 1.0 (see accompanying
         file LICENSE_1_0.txt or a copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div></td>
-</tr></table>
+</div>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="advanced.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="examples.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>

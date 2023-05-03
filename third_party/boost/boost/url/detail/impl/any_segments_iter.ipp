@@ -78,6 +78,11 @@ rewind() noexcept
         {
             ++p0;
             ++pos_;
+            if (p0 == end)
+            {
+                fast_nseg = 0;
+                pos_ = string_view::npos;
+            }
         }
         auto p = p0;
         while(p != end)

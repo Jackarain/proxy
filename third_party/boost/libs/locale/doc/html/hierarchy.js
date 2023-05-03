@@ -50,6 +50,7 @@ var hierarchy =
     [ "boost::locale::hold_ptr< data >", "classboost_1_1locale_1_1hold__ptr.html", null ],
     [ "boost::locale::hold_ptr< impl >", "classboost_1_1locale_1_1hold__ptr.html", null ],
     [ "boost::locale::ios_info", "classboost_1_1locale_1_1ios__info.html", null ],
+    [ "boost::locale::util::locale_data", "classboost_1_1locale_1_1util_1_1locale__data.html", null ],
     [ "boost::locale::localization_backend", "classboost_1_1locale_1_1localization__backend.html", null ],
     [ "boost::locale::localization_backend_manager", "classboost_1_1locale_1_1localization__backend__manager.html", null ],
     [ "boost::locale::gnu_gettext::messages_info", "structboost_1_1locale_1_1gnu__gettext_1_1messages__info.html", null ],

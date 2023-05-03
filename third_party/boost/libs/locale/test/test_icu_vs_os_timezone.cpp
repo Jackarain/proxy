@@ -33,9 +33,9 @@ void test_main(int /*argc*/, char** /*argv*/)
         int icu_hour = 0, icu_min = 0, icu_sec = 0;
         ss >> icu_hour >> icu_min >> icu_sec;
         std::tm* tm = localtime_wrap(&point);
-        TEST(icu_hour == tm->tm_hour);
-        TEST(icu_min == tm->tm_min);
-        TEST(icu_sec == tm->tm_sec);
+        TEST_EQ(icu_hour, tm->tm_hour);
+        TEST_EQ(icu_min, tm->tm_min);
+        TEST_EQ(icu_sec, tm->tm_sec);
     }
 }
 

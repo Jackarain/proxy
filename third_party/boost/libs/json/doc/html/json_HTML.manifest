@@ -325,11 +325,17 @@ json/ref/boost__json__serializer/reset/overload5.html
 json/ref/boost__json__serializer/serializer.html
 json/ref/boost__json__serializer/serializer/overload1.html
 json/ref/boost__json__serializer/serializer/overload2.html
+json/ref/boost__json__serializer/serializer/overload3.html
 json/ref/boost__json__serializer/_dtor_serializer.html
 json/ref/boost__json__serializer/done.html
 json/ref/boost__json__serializer/read.html
 json/ref/boost__json__serializer/read/overload1.html
 json/ref/boost__json__serializer/read/overload2.html
+json/ref/boost__json__set_pointer_options.html
+json/ref/boost__json__set_pointer_options/create_arrays.html
+json/ref/boost__json__set_pointer_options/create_objects.html
+json/ref/boost__json__set_pointer_options/replace_any_scalar.html
+json/ref/boost__json__set_pointer_options/max_created_elements.html
 json/ref/boost__json__static_resource.html
 json/ref/boost__json__static_resource/static_resource.html
 json/ref/boost__json__static_resource/static_resource/overload1.html
@@ -604,6 +610,10 @@ json/ref/boost__json__value/find_pointer/overload1.html
 json/ref/boost__json__value/find_pointer/overload2.html
 json/ref/boost__json__value/find_pointer/overload3.html
 json/ref/boost__json__value/find_pointer/overload4.html
+json/ref/boost__json__value/set_at_pointer.html
+json/ref/boost__json__value/set_at_pointer/overload1.html
+json/ref/boost__json__value/set_at_pointer/overload2.html
+json/ref/boost__json__value/set_at_pointer/overload3.html
 json/ref/boost__json__value/allocator_type.html
 json/ref/boost__json__value/_dtor_value.html
 json/ref/boost__json__value/value.html
@@ -716,6 +726,7 @@ json/ref/boost__json__value/operator_eq__eq_.html
 json/ref/boost__json__value/operator_not__eq_.html
 json/ref/boost__json__value/operator_lt__lt_.html
 json/ref/boost__json__value/operator_gt__gt_.html
+json/ref/boost__json__value/hash_value.html
 json/ref/boost__json__value_from_tag.html
 json/ref/boost__json__value_ref.html
 json/ref/boost__json__value_ref/value_ref.html

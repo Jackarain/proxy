@@ -101,6 +101,27 @@ rule check-cxx20-atomic-ref ( properties * )
     return $(result) ;
 }
 
+# The rule checks if the linker supports requiring no unresolved symbols
+rule check-linkflag-no-undefined ( properties * )
+{
+    local result ;
+
+    if <link>shared in $(properties)
+    {
+        if [ configure.builds ../config//has_linkflag_no_undefined : $(properties) : "has -Wl,--no-undefined" ]
+        {
+            result = <linkflags>"-Wl,--no-undefined" ;
+        }
+        else if [ configure.builds ../config//has_linkflag_undefined_error : $(properties) : "has -Wl,-undefined,error" ]
+        {
+            result = <linkflags>"-Wl,-undefined,error" ;
+        }
+    }
+
+    #ECHO Result: $(result) ;
+    return $(result) ;
+}
+
 project boost/filesystem
     : requirements
       <host-os>hpux,<toolset>gcc:<define>_INCLUDE_STDC__SOURCE_199901
@@ -117,6 +138,8 @@ project boost/filesystem
       <conditional>@check-statx
       <conditional>@select-windows-crypto-api
       <conditional>@check-cxx20-atomic-ref
+      # Make sure no undefined references are left from the library
+      <conditional>@check-linkflag-no-undefined
       <target-os>windows:<define>_SCL_SECURE_NO_WARNINGS
       <target-os>windows:<define>_SCL_SECURE_NO_DEPRECATE
       <target-os>windows:<define>_CRT_SECURE_NO_WARNINGS
@@ -127,6 +150,11 @@ project boost/filesystem
       <target-os>cygwin:<define>BOOST_USE_WINDOWS_H
       <target-os>cygwin:<define>WIN32_LEAN_AND_MEAN
       <target-os>cygwin:<define>NOMINMAX
+
+      # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
+      # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105651
+      <toolset>gcc-12:<cxxflags>"-Wno-restrict"
+
     : source-location ../src
     : usage-requirements # pass these requirement to dependents (i.e. users)
       <link>shared:<define>BOOST_FILESYSTEM_DYN_LINK=1

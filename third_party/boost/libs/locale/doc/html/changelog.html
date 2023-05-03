@@ -69,6 +69,21 @@ $(document).ready(function(){initNavTree('changelog.html','');});
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><ul>
+<li>1.82.0<ul>
+<li>Breaking changes<ul>
+<li><code>get_system_locale</code> and dependents will now correctly favor <code>$LC_ALL</code> over <code>LC_CTYPE</code> as defined by POSIX</li>
+<li><code>utf8_codecvt::out</code> returns <code>partial</code> for trailing (UTF) surrogates</li>
+</ul>
+</li>
+<li>Other improvements and fixes<ul>
+<li>Add <code><a class="el" href="classboost_1_1locale_1_1util_1_1locale__data.html" title="Holder and parser for locale names/identifiers.">boost::locale::util::locale_data</a></code> to parse a locale</li>
+<li><code><a class="el" href="classboost_1_1locale_1_1info.html#aec4c43a95a6cadbfc1362ddd9448e60b" title="Get encoding.">boost::locale::info::encoding()</a></code> result is in uppercase as documented, e.g. "UTF-8" instead of "utf-8"</li>
+<li>Support M49 country codes such as <code>en_001</code> or <code>en_150</code></li>
+<li>Treat <code>en_US_POSIX</code> as an alias for the <code>C</code> locale</li>
+</ul>
+</li>
+</ul>
+</li>
 <li>1.81.0<ul>
 <li>Breaking changes<ul>
 <li>Require C++11 or higher</li>

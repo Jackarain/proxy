@@ -8,9 +8,6 @@
 
 // See library home page at http://www.boost.org/libs/system
 
-// Avoid spurious VC++ warnings
-# define _CRT_SECURE_NO_WARNINGS
-
 #include <boost/system/error_code.hpp>
 #include <boost/config.hpp>
 #include <boost/config/pragma_message.hpp>
@@ -30,6 +27,7 @@ int main()
 #else
 
 #include <boost/core/lightweight_test.hpp>
+#include <boost/core/snprintf.hpp>
 #include <system_error>
 #include <cerrno>
 #include <string>
@@ -127,7 +125,7 @@ public:
     virtual std::string message( int ev ) const
     {
         char buffer[ 256 ];
-        std::sprintf( buffer, "user message %d", ev );
+        boost::core::snprintf( buffer, sizeof( buffer ), "user message %d", ev );
 
         return buffer;
     }
@@ -267,7 +265,7 @@ public:
     virtual std::string message( int ev ) const
     {
         char buffer[ 256 ];
-        std::sprintf( buffer, "user2 message %d", ev );
+        boost::core::snprintf( buffer, sizeof( buffer ), "user2 message %d", ev );
 
         return buffer;
     }

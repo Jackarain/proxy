@@ -58,7 +58,7 @@ struct mock_calendar : public boost::locale::abstract_calendar {
 };
 int mock_calendar::num_instances = 0;
 struct mock_calendar_facet : boost::locale::calendar_facet {
-    boost::locale::abstract_calendar* create_calendar() const { return proto_cal.clone(); }
+    boost::locale::abstract_calendar* create_calendar() const override { return proto_cal.clone(); }
     mock_calendar proto_cal;
 };
 
@@ -145,7 +145,7 @@ void test_main(int /*argc*/, char** /*argv*/)
             TEST_EQ(time_zone::global(tz), "GMT+01:00");
             calendar cal(loc, tz);
             TEST(cal.get_locale() == loc);
-            TEST(cal.get_time_zone() == tz);
+            TEST_EQ(cal.get_time_zone(), tz);
 
             TEST(calendar() == cal);
             TEST(calendar(loc) == cal);

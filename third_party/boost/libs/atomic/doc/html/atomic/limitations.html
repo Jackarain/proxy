@@ -8,6 +8,7 @@
 <link rel="up" href="../index.html" title="Chapter 1. Boost.Atomic">
 <link rel="prev" href="usage_examples.html" title="Usage examples">
 <link rel="next" href="porting.html" title="Porting">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -134,8 +135,9 @@
           memory (e.g. stack or obtained via <code class="computeroutput"><span class="identifier">malloc</span></code>
           or <code class="computeroutput"><span class="keyword">new</span></code>), and IPC atomics can
           be used in read-write process-shared memory (e.g. obtained via <a href="https://pubs.opengroup.org/onlinepubs/9699919799/functions/shm_open.html" target="_top"><code class="computeroutput"><span class="identifier">shm_open</span></code></a>+ <a href="https://pubs.opengroup.org/onlinepubs/9699919799/functions/mmap.html" target="_top"><code class="computeroutput"><span class="identifier">mmap</span></code></a>). Any special memory types,
-          such as mapped device memory or memory mapped with special caching strategies,
-          are not guaranteed to work and are subject to system-specific restrictions.
+          such as mapped device memory or memory mapped with special caching strategies
+          (i.e. other than write-back), are not guaranteed to work and are subject
+          to system-specific restrictions.
         </li>
 <li class="listitem">
           <span class="bold"><strong>Signed integers must use <a href="https://en.wikipedia.org/wiki/Two%27s_complement" target="_top">two's
@@ -166,14 +168,11 @@
         </li>
 </ul></div>
 </div>
-<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
-<td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 2011 Helge Bahmann<br>Copyright © 2012 Tim Blechmann<br>Copyright © 2013, 2017, 2018, 2020-2022 Andrey Semashev<p>
+<div class="copyright-footer">Copyright © 2011 Helge Bahmann<br>Copyright © 2012 Tim Blechmann<br>Copyright © 2013, 2017, 2018, 2020-2022 Andrey Semashev<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div></td>
-</tr></table>
+</div>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="usage_examples.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="porting.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
