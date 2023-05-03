@@ -2651,8 +2651,10 @@ Connection: close
 #endif
 				if (ret <= 0)
 				{
-					LOG_WARN << "start_tcp_listen,"
-						" peek message return: " << ret;
+					LOG_WARN << "start_tcp_listen: "
+						<< connection_id
+						<< " peek message return: "
+						<< ret;
 					continue;
 				}
 
