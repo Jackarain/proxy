@@ -130,6 +130,7 @@ std::string ssl_ciphers;
 std::string socks_listen;
 std::string doc_directory;
 std::string log_directory;
+bool disable_http = false;
 bool disable_logs;
 
 //////////////////////////////////////////////////////////////////////////
@@ -164,6 +165,8 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.ssl_certificate_key_ = ssl_certificate_key;
 	opt.ssl_certificate_passwd_ = ssl_certificate_passwd;
 	opt.ssl_dhparam_ = ssl_dhparam;
+
+	opt.disable_noraml_http_ = disable_http;
 
 	opt.doc_directory_ = doc_directory;
 
@@ -260,6 +263,7 @@ int main(int argc, char** argv)
 		("http_doc", po::value<std::string>(&doc_directory)->value_name("doc"), "Http server doc root.")
 		("logs_path", po::value<std::string>(&log_directory)->value_name(""), "Logs dirctory.")
 		("disable_logs", po::value<bool>(&disable_logs)->value_name(""), "Disable logs.")
+		("disable_http", po::value<bool>(&disable_http)->value_name("")->default_value(false), "Disable http protocol.")
 	;
 
 	// 解析命令行.

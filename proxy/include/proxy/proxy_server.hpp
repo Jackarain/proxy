@@ -141,6 +141,9 @@ namespace proxy {
 
 		// http doc 目录, 用于伪装成web站点.
 		std::string doc_directory_;
+
+		// 禁用未加密 http 服务.
+		bool disable_noraml_http_{ false };
 	};
 
 	// proxy server 虚基类, 任何 proxy server 的实现, 必须基于这个基类.
@@ -2709,6 +2712,14 @@ Connection: close
 					|| detect[0] == 0x50
 					|| detect[0] == 0x43)
 				{
+					if (m_option.disable_noraml_http_)
+					{
+						LOG_DBG << "http protocol"
+							", connection id: " << connection_id
+							<< ", Forbidden";
+						continue;
+					}
+
 					LOG_DBG << "http protocol"
 						", connection id: " << connection_id;
 
