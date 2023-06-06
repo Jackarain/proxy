@@ -39,12 +39,21 @@
 #include <boost/asio/detached.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
 
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable: 4702)
+#endif // _MSC_VER
+
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/beast/ssl.hpp>
 #include <boost/beast/version.hpp>
 #include <boost/beast/core/detail/base64.hpp>
+
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
 
 #include <boost/url.hpp>
 #include <boost/regex.hpp>
