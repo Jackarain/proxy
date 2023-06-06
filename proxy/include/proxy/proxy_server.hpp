@@ -868,7 +868,7 @@ namespace proxy {
 					auto head_size = rp - rbuf;
 					auto udp_size = bytes - head_size;
 
-					LOG_DBG << "udp forward: "
+					LOG_DBG << "udp forward, send "
 						<< local_endp
 						<< " to "
 						<< remote_endp;
@@ -909,7 +909,7 @@ namespace proxy {
 					auto head_size = wp - wbuf;
 					auto udp_size = bytes + head_size;
 
-					LOG_DBG << "udp forward: "
+					LOG_DBG << "udp forward, recv "
 						<< remote_endp
 						<< " to "
 						<< local_endp;
