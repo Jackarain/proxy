@@ -609,7 +609,8 @@ namespace proxy {
 				if (ec)
 					break;
 
-				m_udp_socket.bind(udp::endpoint(protocol, 0), ec);
+				m_udp_socket.bind(
+					udp::endpoint(protocol, dst_endpoint.port()), ec);
 				if (ec)
 					break;
 
