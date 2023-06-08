@@ -116,8 +116,8 @@ inline int platform_init()
 
 std::string socks_userid;
 std::string socks_passwd;
-std::string socks_next_proxy;
-bool socks_next_proxy_ssl = false;
+std::string proxy_pass;
+bool proxy_pass_ssl = false;
 bool ssl_prefer_server_ciphers = false;
 std::string ssl_certificate_dir;
 
@@ -156,8 +156,8 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.usrdid_ = socks_userid;
 	opt.passwd_ = socks_passwd;
 
-	opt.next_proxy_ = socks_next_proxy;
-	opt.next_proxy_use_ssl_ = socks_next_proxy_ssl;
+	opt.proxy_pass_ = proxy_pass;
+	opt.proxy_pass_use_ssl_ = proxy_pass_ssl;
 
 	opt.ssl_cert_path_ = ssl_certificate_dir;
 	opt.ssl_ciphers_ = ssl_ciphers;
@@ -247,8 +247,8 @@ int main(int argc, char** argv)
 		("socks_userid", po::value<std::string>(&socks_userid)->default_value("jack")->value_name("userid"), "Socks4/5 auth user id.")
 		("socks_passwd", po::value<std::string>(&socks_passwd)->default_value("1111")->value_name("passwd"), "Socks4/5 auth password.")
 
-		("socks_next_proxy", po::value<std::string>(&socks_next_proxy)->default_value("")->value_name(""), "Next socks4/5 proxy. (e.g: socks5://user:passwd@ip:port)")
-		("socks_next_proxy_ssl", po::value<bool>(&socks_next_proxy_ssl)->default_value(false, "false")->value_name(""), "Next socks4/5 proxy with ssl.")
+		("proxy_pass", po::value<std::string>(&proxy_pass)->default_value("")->value_name(""), "Next proxy pass. (e.g: socks5://user:passwd@ip:port)")
+		("proxy_pass_ssl", po::value<bool>(&proxy_pass_ssl)->default_value(false, "false")->value_name(""), "Next proxy pass with ssl.")
 
 		("ssl_certificate_dir", po::value<std::string>(&ssl_certificate_dir)->value_name("path"), "SSL certificate dir, auto find 'ssl_crt.pem/ssl_crt.pwd/ssl_key.pem/ssl_dh.pem'.")
 

@@ -109,18 +109,32 @@ namespace proxy {
 		// 指定当前proxy server向外发起连接时, 绑定到哪个本地地址.
 		std::string bind_addr_;
 
-		// 多层代理, 当前服务器级连下一个服务器, 对于 client 而言
-		// 是无感的, 这是当前服务器通过 next_proxy_ 指定的下一个
-		// 代理服务器, 为 client 实现多层代理.
-		// 例如: socks5://user:passwd@proxy.server.com:1080
-		// 或:   https://user:passwd@proxy.server.com:1080
-		// socks5 默认使用 hostname 模式, 即 dns 解析在远程执行.
-		std::string next_proxy_;
+		// 多层代理, 当前服务器级连下一个服务器, 对于 client 而言是无感的,
+		// 这是当前服务器通过 proxy_pass_ 指定的下一个代理服务器, 为 client
+		// 实现多层代理.
+		//
+		// 例如 proxy_pass_ 可以是:
+		// socks5://user:passwd@proxy.server.com:1080
+		// 或:
+		// https://user:passwd@proxy.server.com:1080
+		//
+		// 当 proxy_pass_ 是 socks5 代理时, 默认使用 hostname 模式, 即 dns
+		// 解析在远程执行.
+		//
+		// 在配置了 proxy_protocol (haproxy)协议时, proxy_pass_ 通常为
+		// 下一个 proxy_protocol 或直接目标服务器(目标服务器需要支持
+		// proxy_protocol).
+		std::string proxy_pass_;
 
 		// 多层代理模式中, 与下一个代理服务器(next_proxy_)是否使用tls加密(ssl).
 		// 该参数只能当 next_proxy_ 是 socks 代理时才有作用, 如果 next_proxy_
 		// 是 http proxy，则由 url 指定的 protocol 决定是否使用 ssl.
-		bool next_proxy_use_ssl_{ false };
+		bool proxy_pass_use_ssl_{ false };
+
+		// 启用 proxy protocol (haproxy)协议.
+		// 当前服务将会在连接到 proxy_pass_ 成功后，首先传递 proxy protocol 以
+		// 告之 proxy_pass_ 来源 IP/PORT 以及目标 IP/PORT.
+		bool haproxy_{ false };
 
 		// 作为服务器时, 指定ssl证书目录, 使用固定文件名(ssl_crt.pem,
 		// ssl_dh.pem, ssl_key.pem, ssl_dh.pem, ssl_crt.pwd)
@@ -229,19 +243,19 @@ namespace proxy {
 
 			m_option = server->option();
 
-			if (!m_option.next_proxy_.empty())
+			if (!m_option.proxy_pass_.empty())
 			{
 				try
 				{
 					m_next_proxy =
-						std::make_unique<urls::url_view>(m_option.next_proxy_);
+						std::make_unique<urls::url_view>(m_option.proxy_pass_);
 				}
 				catch (const std::exception& e)
 				{
 					LOG_ERR << "socks id: "
 						<< m_connection_id
 						<< ", params next_proxy error: "
-						<< m_option.next_proxy_
+						<< m_option.proxy_pass_
 						<< ", exception: "
 						<< e.what();
 					return;
@@ -1569,7 +1583,7 @@ namespace proxy {
 				}
 
 				// 使用ssl加密与下一级代理通信.
-				if (m_option.next_proxy_use_ssl_)
+				if (m_option.proxy_pass_use_ssl_)
 				{
 					// 设置 ssl cert 证书目录.
 					if (std::filesystem::exists(m_option.ssl_cert_path_))
@@ -1600,7 +1614,7 @@ namespace proxy {
 				{
 					ec = {};
 
-					if (m_option.next_proxy_use_ssl_ || scheme == "https")
+					if (m_option.proxy_pass_use_ssl_ || scheme == "https")
 					{
 						m_ssl_context.set_verify_mode(net::ssl::verify_peer);
 						auto cert = default_root_certificates();
