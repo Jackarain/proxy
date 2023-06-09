@@ -802,6 +802,7 @@ namespace proxy {
 			const char* rbuf = &read_buffer[96];
 			char* wbuf = &read_buffer[86];
 			auto executor = co_await net::this_coro::executor;
+			size_t total = 0;
 
 			while (!m_abort)
 			{
@@ -883,10 +884,13 @@ namespace proxy {
 					auto head_size = rp - rbuf;
 					auto udp_size = bytes - head_size;
 
-					LOG_DBG << "udp forward, send "
+					LOG_DBG << "socks id: "
+						<< m_connection_id
+						<< ", udp forward, send "
 						<< local_endp
 						<< " to "
 						<< remote_endp;
+					total++;
 
 					co_await m_udp_socket.async_send_to(
 						net::buffer(rp, udp_size),
@@ -924,10 +928,13 @@ namespace proxy {
 					auto head_size = wp - wbuf;
 					auto udp_size = bytes + head_size;
 
-					LOG_DBG << "udp forward, recv "
+					LOG_DBG << "socks id: "
+						<< m_connection_id
+						<< ", udp forward, recv "
 						<< remote_endp
 						<< " to "
 						<< local_endp;
+					total++;
 
 					co_await m_udp_socket.async_send_to(
 						net::buffer(wbuf, udp_size),
@@ -936,7 +943,10 @@ namespace proxy {
 				}
 			}
 
-			LOG_DBG << "socks id: " << m_connection_id
+			LOG_DBG << "socks id: "
+				<< m_connection_id
+				<< ", total: "
+				<< total
 				<< ", forward_udp quit";
 
 			co_return;
