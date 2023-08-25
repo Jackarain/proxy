@@ -56,9 +56,8 @@ int main()
     std::wcout << text << std::endl;
 
     boundary::wssegment_index index(boundary::word, text.begin(), text.end());
-    boundary::wssegment_index::iterator p, e;
 
-    for(p = index.begin(), e = index.end(); p != e; ++p) {
+    for(boundary::wssegment_index::iterator p = index.begin(), e = index.end(); p != e; ++p) {
         std::wcout << L"Part [" << *p << L"] has ";
         if(p->rule() & boundary::word_number)
             std::wcout << L"number(s) ";
@@ -75,23 +74,20 @@ int main()
 
     index.map(boundary::character, text.begin(), text.end());
 
-    for(p = index.begin(), e = index.end(); p != e; ++p) {
-        std::wcout << L"|" << *p;
-    }
+    for(const boundary::wssegment& p : index)
+        std::wcout << L"|" << p;
     std::wcout << L"|\n\n";
 
     index.map(boundary::line, text.begin(), text.end());
 
-    for(p = index.begin(), e = index.end(); p != e; ++p) {
-        std::wcout << L"|" << *p;
-    }
+    for(const boundary::wssegment& p : index)
+        std::wcout << L"|" << p;
     std::wcout << L"|\n\n";
 
     index.map(boundary::sentence, text.begin(), text.end());
 
-    for(p = index.begin(), e = index.end(); p != e; ++p) {
-        std::wcout << L"|" << *p;
-    }
+    for(const boundary::wssegment& p : index)
+        std::wcout << L"|" << p;
     std::wcout << "|\n\n";
 }
 

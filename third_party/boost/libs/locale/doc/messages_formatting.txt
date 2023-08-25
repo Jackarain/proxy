@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2022-2023 Alexander Grund
 //
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
@@ -135,11 +136,11 @@ There are two ways to translate messages:
     These are functions that are used for direct message translation: they receive as a parameter
     an original message or a key and convert it to the \c std::basic_string in given locale.
     \n
-    These functions have similar names to thous used in the GNU Gettext library.
+    These functions have similar names to those used in the GNU Gettext library.
 
 \subsection indirect_message_translation Indirect Message Translation
 
-The basic function that allows us to translate a message is \ref boost_locale_translate_family  "boost::locale::translate()" family of functions.
+The basic function that allows us to translate a message is the \ref boost_locale_translate_family  "boost::locale::translate()" family of functions.
 
 These functions use a character type \c CharType as template parameter and receive either <tt>CharType const *</tt> or <tt>std::basic_string<CharType></tt> as input.
 
@@ -533,7 +534,7 @@ key is missing in the dictionary.
 -   Why doesn't Boost.Locale provide tools for extracting and management of message catalogs. Why should
     I use GPL-ed software? Are my programs or message catalogs affected by its license?
     \n
-    -#  Boost.Locale does not link to or use any of the GNU Gettext code, so you need not worry about your code as
+    -#  Boost.Locale does not link to or use any of the GNU Gettext code, so you do not need to worry about your code as
         the runtime library is fully reimplemented.
     -#  You may freely use GPL-ed software for extracting and managing catalogs, the same way as you are free to use
         a GPL-ed editor. It does not affect your message catalogs or your code.
@@ -554,6 +555,6 @@ key is missing in the dictionary.
         a single user like most GUI applications, but is problematic for services and servers.
     -#  The GNU Gettext API supports only 8-bit encodings, making it irrelevant in environments that natively use
         wide strings.
-    -#  The GNU Gettext runtime library distributed under LGPL license which may be not convenient for some users.
+    -#  The GNU Gettext runtime library is distributed under LGPL license which may be not convenient for some users.
 
 */

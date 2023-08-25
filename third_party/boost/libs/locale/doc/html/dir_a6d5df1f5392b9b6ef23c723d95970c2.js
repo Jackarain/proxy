@@ -1,6 +1,7 @@
 var dir_a6d5df1f5392b9b6ef23c723d95970c2 =
 [
     [ "boundary", "dir_24a634756d649c6439a67f231a10e01b.html", "dir_24a634756d649c6439a67f231a10e01b" ],
+    [ "detail", "dir_ba00c98cb0dddbc135ad0ab98240aeda.html", "dir_ba00c98cb0dddbc135ad0ab98240aeda" ],
     [ "util", "dir_ee6c58b259fe783ff1da02a543e1d7be.html", "dir_ee6c58b259fe783ff1da02a543e1d7be" ],
     [ "boundary.hpp", "boundary_8hpp_source.html", null ],
     [ "collator.hpp", "collator_8hpp_source.html", null ],

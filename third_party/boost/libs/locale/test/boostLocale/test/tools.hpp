@@ -15,6 +15,26 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#ifndef BOOST_LOCALE_NO_WINAPI_BACKEND
+#    include "../src/boost/locale/win32/lcid.hpp"
+#else
+#    include <boost/core/ignore_unused.hpp>
+#endif
+#if BOOST_LOCALE_USE_WIN32_API
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    include <windows.h>
+bool hasWinCodepage(unsigned codepage)
+{
+    return IsValidCodePage(codepage) != 0;
+}
+#else
+bool hasWinCodepage(unsigned)
+{
+    return false;
+}
+#endif
 
 #if defined(BOOST_MSVC) && BOOST_MSVC < 1700
 #    pragma warning(disable : 4428) // universal-character-name encountered in source
@@ -30,55 +50,57 @@ public:
 
 inline unsigned utf8_next(const std::string& s, unsigned& pos)
 {
-    unsigned c = (unsigned char)s[pos++];
-    if((unsigned char)(c - 0xc0) >= 0x35)
-        return c;
+    unsigned c = static_cast<unsigned char>(s[pos++]);
     unsigned l;
-    if(c < 192)
-        l = 0;
-    else if(c < 224)
+    if(c <= 127)
+        return c;
+    else if(c <= 193)
+        throw std::logic_error("Invalid UTF8"); // LCOV_EXCL_LINE
+    else if(c <= 223)
         l = 1;
-    else if(c < 240)
+    else if(c <= 239)
         l = 2;
-    else
+    else if(c <= 244)
         l = 3;
+    else
+        throw std::logic_error("Invalid UTF8"); // LCOV_EXCL_LINE
 
     c &= (1 << (6 - l)) - 1;
 
     switch(l) {
-        case 3: c = (c << 6) | (((unsigned char)s[pos++]) & 0x3F); BOOST_FALLTHROUGH;
-        case 2: c = (c << 6) | (((unsigned char)s[pos++]) & 0x3F); BOOST_FALLTHROUGH;
-        case 1: c = (c << 6) | (((unsigned char)s[pos++]) & 0x3F);
+        case 3: c = (c << 6) | (static_cast<unsigned char>(s[pos++]) & 0x3F); BOOST_FALLTHROUGH;
+        case 2: c = (c << 6) | (static_cast<unsigned char>(s[pos++]) & 0x3F); BOOST_FALLTHROUGH;
+        case 1: c = (c << 6) | (static_cast<unsigned char>(s[pos++]) & 0x3F);
     }
     return c;
 }
 
-/// Convert/decode an UTF-8 encoded string to the given char type
+/// Convert an UTF encoded string to an UTF-8 encoded string
 template<typename C>
-std::string to_utf8(const std::basic_string<C>& s)
+std::string to_utf8(const std::basic_string<C>& utf_string)
 {
-    return boost::locale::conv::from_utf(s, "UTF-8");
+    return boost::locale::conv::utf_to_utf<char>(utf_string);
 }
-std::string to_utf8(const std::string& s)
+std::string to_utf8(const std::string& utf_string)
 {
-    return s;
+    return utf_string;
 }
 
+/// Convert/decode an UTF-8 encoded string to the given char type
+/// For `char` this will be Latin1, otherwise UTF-16/UTF-32
 template<typename Char>
 std::basic_string<Char> to(const std::string& utf8)
 {
     std::basic_string<Char> out;
-    unsigned i = 0;
-    while(i < utf8.size()) {
-        unsigned point;
-        unsigned prev = i;
-        point = utf8_next(utf8, i);
+    for(unsigned i = 0; i < utf8.size();) {
+        const unsigned prev = i;
+        unsigned point = utf8_next(utf8, i);
         BOOST_LOCALE_START_CONST_CONDITION
         if(sizeof(Char) == 1 && point > 255) {
             std::ostringstream ss;
             ss << "Can't convert codepoint U" << std::hex << point << "("
                << std::string(utf8.begin() + prev, utf8.begin() + i) << ") to Latin1";
-            throw std::runtime_error(ss.str());
+            throw std::logic_error(ss.str());
         } else if(sizeof(Char) == 2 && point > 0xFFFF) { // Deal with surrogates
             point -= 0x10000;
             out += static_cast<Char>(0xD800 | (point >> 10));
@@ -123,6 +145,25 @@ bool has_std_locale(const char* name)
     }
 }
 
+bool has_win_locale(const std::string& locale_name)
+{
+#ifdef BOOST_LOCALE_NO_WINAPI_BACKEND
+    boost::ignore_unused(locale_name); // LCOV_EXCL_LINE
+    return false;                      // LCOV_EXCL_LINE
+#else
+    return boost::locale::impl_win::locale_to_lcid(locale_name) != 0;
+#endif
+}
+
+/// Clear a string stream and return it
+template<class T>
+T& empty_stream(T& s)
+{
+    s.str(std::basic_string<typename T::char_type>());
+    s.clear();
+    return s;
+}
+
 inline bool test_std_supports_SJIS_codecvt(const std::string& locale_name)
 {
     const std::string file_path = boost::locale::test::exe_name + "-test-siftjis.txt";
@@ -130,7 +171,7 @@ inline bool test_std_supports_SJIS_codecvt(const std::string& locale_name)
     {
         // Japan in Shift JIS/cp932
         const char* japan_932 = "\x93\xfa\x96\x7b";
-        std::ofstream f(file_path);
+        std::ofstream f(file_path, std::ios::binary);
         f << japan_932;
     }
     bool res = true;
@@ -148,7 +189,7 @@ inline bool test_std_supports_SJIS_codecvt(const std::string& locale_name)
     return res;
 }
 
-std::string get_std_name(const std::string& name, std::string* real_name = 0)
+std::string get_std_name(const std::string& name, std::string* real_name = nullptr)
 {
     if(has_std_locale(name.c_str())) {
         if(real_name)
@@ -156,8 +197,8 @@ std::string get_std_name(const std::string& name, std::string* real_name = 0)
         return name;
     }
 
-#ifdef BOOST_WINDOWS
-    bool utf8 = name.find("UTF-8") != std::string::npos;
+#if BOOST_LOCALE_USE_WIN32_API
+    const bool utf8 = name.find("UTF-8") != std::string::npos;
 
     if(name == "en_US.UTF-8" || name == "en_US.ISO8859-1") {
         if(has_std_locale("English_United States.1252")) {

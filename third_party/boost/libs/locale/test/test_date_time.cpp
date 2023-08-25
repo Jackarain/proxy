@@ -10,6 +10,7 @@
 #include <boost/locale/localization_backend.hpp>
 #include "boostLocale/test/tools.hpp"
 #include "boostLocale/test/unit_test.hpp"
+#include <cmath>
 #include <ctime>
 #include <iomanip>
 #include <limits>
@@ -25,9 +26,8 @@
 #    pragma warning(disable : 4244) // loose data
 #endif
 
-#define TEST_EQ_FMT(t, X) \
-    ss.str("");           \
-    ss << (t);            \
+#define TEST_EQ_FMT(t, X)    \
+    empty_stream(ss) << (t); \
     test_eq_impl(ss.str(), X, #t "==" #X, __LINE__)
 
 // Very simple container for a part of the tests. Counts its instances
@@ -51,7 +51,10 @@ struct mock_calendar : public boost::locale::abstract_calendar {
     int difference(const abstract_calendar&, period_mark) const override { return 0; } // LCOV_EXCL_LINE
     void set_timezone(const std::string&) override {}
     std::string get_timezone() const override { return "mock TZ"; }
-    bool same(const abstract_calendar*) const override { return false; } // LCOV_EXCL_LINE
+    bool same(const abstract_calendar* other) const override
+    {
+        return dynamic_cast<const mock_calendar*>(other) != nullptr;
+    }
 
     static int num_instances;
     double time;
@@ -66,20 +69,7 @@ void test_main(int /*argc*/, char** /*argv*/)
 {
     using namespace boost::locale;
     using namespace boost::locale::period;
-    std::string def[] = {
-#ifdef BOOST_LOCALE_WITH_ICU
-      "icu",
-#endif
-#ifndef BOOST_LOCALE_NO_STD_BACKEND
-      "std",
-#endif
-#ifndef BOOST_LOCALE_NO_POSIX_BACKEND
-      "posix",
-#endif
-#ifndef BOOST_LOCALE_NO_WINAPI_BACKEND
-      "winapi",
-#endif
-    };
+    std::unique_ptr<calendar> mock_cal;
     {
         auto* cal_facet = new mock_calendar_facet;
         std::locale old_loc = std::locale::global(std::locale(std::locale(), cal_facet));
@@ -88,6 +78,7 @@ void test_main(int /*argc*/, char** /*argv*/)
             cal_facet->proto_cal.time = 42 * 1e3;
             date_time t1;
             TEST_EQ(t1.time(), 42);
+            TEST_EQ(t1.timezone(), "mock TZ");
             TEST_EQ(mock_calendar::num_instances, 1);
             cal_facet->proto_cal.time = 99 * 1e3;
             date_time t2;
@@ -123,19 +114,26 @@ void test_main(int /*argc*/, char** /*argv*/)
             TEST_EQ(mock_calendar::num_instances, 2);
         }
         TEST_EQ(mock_calendar::num_instances, 0); // No leaks
+        mock_cal.reset(new calendar());
         std::locale::global(old_loc);
     }
-    for(int type = 0; type < int(sizeof(def) / sizeof(def[0])); type++) {
-        boost::locale::localization_backend_manager tmp_backend = boost::locale::localization_backend_manager::global();
-        tmp_backend.select(def[type]);
-        boost::locale::localization_backend_manager::global(tmp_backend);
-        const std::string backend_name = def[type];
+    for(const std::string& backend_name : boost::locale::localization_backend_manager::global().get_all_backends()) {
         std::cout << "Testing for backend: " << backend_name << std::endl;
+        boost::locale::localization_backend_manager tmp_backend = boost::locale::localization_backend_manager::global();
+        tmp_backend.select(backend_name);
+        boost::locale::localization_backend_manager::global(tmp_backend);
+
+        boost::locale::generator g;
+        std::locale loc = g("en_US.UTF-8");
         {
-            boost::locale::generator g;
+            using boost::locale::abstract_calendar;
+            std::unique_ptr<abstract_calendar> cal(
+              std::use_facet<boost::locale::calendar_facet>(loc).create_calendar());
+            TEST_THROWS(cal->set_option(abstract_calendar::is_gregorian, 0), boost::locale::date_time_error);
+            TEST_THROWS(cal->set_option(abstract_calendar::is_dst, 0), boost::locale::date_time_error);
+        }
 
-            std::locale loc = g("en_US.UTF-8");
-
+        {
             std::locale::global(loc);
 
             const std::string tz = "GMT";
@@ -150,8 +148,32 @@ void test_main(int /*argc*/, char** /*argv*/)
             TEST(calendar() == cal);
             TEST(calendar(loc) == cal);
             TEST(calendar(tz) == cal);
-            TEST(calendar(loc, "GMT+01:00") != cal);
-            TEST(calendar(g("ru_RU.UTF-8")) != cal);
+            {
+                const std::string tz2 = "GMT+01:00";
+                const std::locale loc2 = g("ru_RU.UTF-8");
+                const calendar cal_tz2(loc, "GMT+01:00");
+                const calendar cal_loc2(loc2);
+                TEST(cal_tz2 != cal);
+                TEST(cal_loc2 != cal);
+                calendar cal_tmp(cal);
+                TEST(cal_tmp == cal);
+                TEST(cal_tmp != cal_tz2);
+                cal_tmp = cal_tz2;
+                TEST(cal_tmp == cal_tz2);
+                TEST_EQ(cal_tmp.get_time_zone(), tz2);
+                TEST(cal_tmp.get_locale() == loc);
+                TEST(cal_tmp != cal_loc2);
+                cal_tmp = cal_loc2;
+                TEST(cal_tmp == cal_loc2);
+                TEST_EQ(cal_tmp.get_time_zone(), tz);
+                TEST(cal_tmp.get_locale() == loc2);
+            }
+            {
+                calendar cal2;
+                TEST(cal2 != *mock_cal);
+                cal2 = *mock_cal;
+                TEST(cal2 == *mock_cal);
+            }
 
             TEST_EQ(cal.minimum(month()), 0);
             TEST_EQ(cal.maximum(month()), 11);
@@ -174,7 +196,8 @@ void test_main(int /*argc*/, char** /*argv*/)
             const time_t a_time = 15 * one_h + 60 * 33 + 13; // 15:33:13
             const time_t a_datetime = a_date + a_time;
 
-            const date_time tp_5_feb_1970_153313 = date_time(a_datetime); /// 5th Feb 1970 15:33:13
+            const date_time tp_5_feb_1970_153313 = date_time(a_datetime); // 5th Feb 1970 15:33:13
+            TEST_EQ(tp_5_feb_1970_153313.timezone(), tz);
             ss << as::ftime("%Y-%m-%d");
             TEST_EQ_FMT(tp_5_feb_1970_153313, "1970-02-05");
             ss << as::ftime("%Y-%m-%d %H:%M:%S");
@@ -297,7 +320,7 @@ void test_main(int /*argc*/, char** /*argv*/)
             TEST_EQ_FMT(tp_5_april_1990_153313 - month(12 * 3 + 1), "1987-03-05 15:33:13");
             TEST_EQ_FMT(tp_5_april_1990_153313 >> month(12 * 3 + 1), "1990-03-05 15:33:13");
             // Check that possible int overflows get handled
-            const int max_full_years_in_months = (std::numeric_limits<int>::max() / 12) * 12;
+            constexpr int max_full_years_in_months = (std::numeric_limits<int>::max() / 12) * 12;
             TEST_EQ_FMT(tp_5_april_1990_153313 >> month(max_full_years_in_months), "1990-04-05 15:33:13");
             TEST_EQ_FMT(tp_5_april_1990_153313 << month(max_full_years_in_months), "1990-04-05 15:33:13");
             TEST_EQ_FMT(tp_5_april_1990_153313 + day(30 + 2), "1990-05-07 15:33:13");
@@ -391,38 +414,23 @@ void test_main(int /*argc*/, char** /*argv*/)
 #endif
             BOOST_LOCALE_START_CONST_CONDITION
 
-            if((ICU_cldr_issue))
-                TEST_EQ(time_point.get(week_of_month()), 2);
-            else
-                TEST_EQ(time_point.get(week_of_month()), 1);
+            TEST_EQ(time_point.get(week_of_month()), ICU_cldr_issue ? 2 : 1);
 
             time_point = year(2010) + january() + day() * 3;
 
-            if((ICU_cldr_issue))
-                TEST_EQ(time_point.get(week_of_year()), 1);
-            else
-                TEST_EQ(time_point.get(week_of_year()), 53);
+            TEST_EQ(time_point.get(week_of_year()), ICU_cldr_issue ? 1 : 53);
 
             time_point = year() * 2010 + january() + day() * 4;
 
-            if((ICU_cldr_issue))
-                TEST_EQ(time_point.get(week_of_year()), 2);
-            else
-                TEST_EQ(time_point.get(week_of_year()), 1);
+            TEST_EQ(time_point.get(week_of_year()), ICU_cldr_issue ? 2 : 1);
 
             time_point = year() * 2010 + january() + day() * 10;
 
-            if((ICU_cldr_issue))
-                TEST_EQ(time_point.get(week_of_year()), 2);
-            else
-                TEST_EQ(time_point.get(week_of_year()), 1);
+            TEST_EQ(time_point.get(week_of_year()), ICU_cldr_issue ? 2 : 1);
 
             time_point = year() * 2010 + january() + day() * 11;
 
-            if((ICU_cldr_issue))
-                TEST_EQ(time_point.get(week_of_year()), 3);
-            else
-                TEST_EQ(time_point.get(week_of_year()), 2);
+            TEST_EQ(time_point.get(week_of_year()), ICU_cldr_issue ? 3 : 2);
 
             BOOST_LOCALE_END_CONST_CONDITION
 
@@ -485,6 +493,7 @@ void test_main(int /*argc*/, char** /*argv*/)
             TEST_EQ((time_point + 2 * hour() - time_point) / minute(), 120);
             TEST_EQ((time_point + month() - time_point) / day(), 28);
             TEST_EQ((time_point + 2 * month() - (time_point + month())) / day(), 31);
+            TEST_EQ((time_point + month(2) + day(3) - time_point) / month(), 2);
             TEST_EQ(day(time_point + 2 * month() - (time_point + month())), 31);
             TEST_EQ((time_point + year() * 1 - hour() * 1 - time_point) / year(), 0);
             TEST_EQ((time_point + year() * 1 - time_point) / year(), 1);
@@ -492,47 +501,57 @@ void test_main(int /*argc*/, char** /*argv*/)
             TEST_EQ((time_point - year() * 1 + hour() * 1 - time_point) / year(), 0);
             TEST_EQ((time_point - year() * 1 - time_point) / year(), -1);
             TEST_EQ((time_point - year() * 1 - hour() * 1 - time_point) / year(), -1);
+            TEST_EQ((time_point - tp_29_march_2011) / era(), 0);
+            const date_time tp_morning = time_point = hour(5) + minute(7) + second(42);
+            TEST_EQ(((tp_morning + am()) - tp_morning) / am_pm(), 0);
+            TEST_EQ(((tp_morning + pm()) - tp_morning) / am_pm(), 1);
+            // Same point
+            TEST_EQ((time_point - time_point) / year(), 0);
+            TEST_EQ((time_point - time_point) / month(), 0);
+            TEST_EQ((time_point - time_point) / day(), 0);
+            TEST_EQ((time_point - time_point) / hour(), 0);
+            TEST_EQ((time_point - time_point) / minute(), 0);
+            TEST_EQ((time_point - time_point) / second(), 0);
+        }
+        // Default constructed time_point
+        {
+            const time_t current_time = std::time(nullptr);
+            date_time time_point_default;
+            // Defaults to current time, i.e. different than a date in 1970
+            date_time time_point_1970 = year(1970) + february() + day(5);
+            TEST(time_point_default != time_point_1970);
+            // We can not check an exact time as we can't know at which exact time the time point was recorded. So
+            // only check that it refers to the same hour
+            const double time_point_time = time_point_default.time();
+            TEST_GE(time_point_time, current_time);
+            constexpr double secsPerHour = 60 * 60;
+            TEST_LE(time_point_time - current_time, secsPerHour);
+            // However at least the date should match
+            const tm current_time_gmt = *gmtime_wrap(&current_time);
+            TEST_EQ(time_point_default.get(year()), current_time_gmt.tm_year + 1900);
+            TEST_EQ(time_point_default.get(month()), current_time_gmt.tm_mon);
+            TEST_EQ(time_point_default.get(day()), current_time_gmt.tm_mday);
 
-            // Default constructed time_point
-            {
-                const time_t current_time = std::time(0);
-                date_time time_point_default;
-                // Defaults to current time, i.e. different than a date in 1970
-                date_time time_point_1970 = year(1970) + february() + day(5);
-                TEST(time_point_default != time_point_1970);
-                // We can not check an exact time as we can't know
-                // at which exact time the time point was recorded
-                const double time_point_time = time_point_default.time();
-                TEST_GE(time_point_time, current_time);
-                TEST_EQ(static_cast<time_t>(time_point_time / 3600), current_time / 3600); // Roughly match
-                // However at least the date should match
-                const tm current_time_gmt = *gmtime_wrap(&current_time);
-                TEST_EQ(time_point_default.get(year()), current_time_gmt.tm_year + 1900);
-                TEST_EQ(time_point_default.get(month()), current_time_gmt.tm_mon);
-                TEST_EQ(time_point_default.get(day()), current_time_gmt.tm_mday);
+            // Uses the current global timezone
+            time_zone::global("GMT");
+            date_time tp_gmt;
+            time_zone::global("GMT+01:00");
+            date_time tp_gmt1;
+            // Both refer to the same point in time (i.e. comparison ignores timezones)
+            // Unless the system clock resolution is high enough to detect that the 2 instances
+            // are not created in the exact same second
+            TEST((tp_gmt == tp_gmt1) || (tp_gmt1 - tp_gmt) / second() < 5);
 
-                // Uses the current global timezone
-                time_zone::global("GMT");
-                date_time tp_gmt;
-                time_zone::global("GMT+01:00");
-                date_time tp_gmt1;
-                // Both refer to the same point in time (i.e. comparison ignores timezones)
-                // Unless the system clock resolution is high enough to detect that the 2 instances
-                // are not created in the exact same second
-                TEST((tp_gmt == tp_gmt1) || (tp_gmt1 - tp_gmt) / second() < 5);
-
-                // But getting the hour shows the difference of 1 hour
-                const int gmt_h = tp_gmt.get(hour());
-                // Handle overflow to next day
-                const int expected_gmt1_h = (gmt_h == tp_gmt.maximum(hour())) ? tp_gmt.minimum(hour()) : gmt_h + 1;
-                TEST_EQ(expected_gmt1_h, tp_gmt1.get(hour()));
-                // Adding the hour automatically handles the overflow, so this works too
-                tp_gmt += hour();
-                TEST_EQ(tp_gmt.get(hour()), tp_gmt1.get(hour()));
-            }
-
-        } // test
-    }     // for loop
+            // But getting the hour shows the difference of 1 hour
+            const int gmt_h = tp_gmt.get(hour());
+            // Handle overflow to next day
+            const int expected_gmt1_h = (gmt_h == tp_gmt.maximum(hour())) ? tp_gmt.minimum(hour()) : gmt_h + 1;
+            TEST_EQ(expected_gmt1_h, tp_gmt1.get(hour()));
+            // Adding the hour automatically handles the overflow, so this works too
+            tp_gmt += hour();
+            TEST_EQ(tp_gmt.get(hour()), tp_gmt1.get(hour()));
+        }
+    } // for loop
 }
 
 // boostinspect:noascii

@@ -28,10 +28,6 @@
 <a name="json.ref.boost__json__value.get_string.overload2"></a><a class="link" href="overload2.html" title="value::get_string (2 of 3 overloads)">value::get_string
           (2 of 3 overloads)</a>
 </h6></div></div></div>
-<p>
-            Return a reference to the underlying <code class="computeroutput"><span class="identifier">string</span></code>,
-            without checking.
-          </p>
 <h6>
 <a name="json.ref.boost__json__value.get_string.overload2.h0"></a>
             <span class="phrase"><a name="json.ref.boost__json__value.get_string.overload2.synopsis"></a></span><a class="link" href="overload2.html#json.ref.boost__json__value.get_string.overload2.synopsis">Synopsis</a>
@@ -39,35 +35,6 @@
 <pre class="programlisting"><span class="identifier">string</span><span class="special">&amp;&amp;</span>
 <span class="identifier">get_string</span><span class="special">();</span>
 </pre>
-<h6>
-<a name="json.ref.boost__json__value.get_string.overload2.h1"></a>
-            <span class="phrase"><a name="json.ref.boost__json__value.get_string.overload2.description"></a></span><a class="link" href="overload2.html#json.ref.boost__json__value.get_string.overload2.description">Description</a>
-          </h6>
-<p>
-            This is the fastest way to access the underlying representation when
-            the kind is known in advance.
-          </p>
-<h6>
-<a name="json.ref.boost__json__value.get_string.overload2.h2"></a>
-            <span class="phrase"><a name="json.ref.boost__json__value.get_string.overload2.preconditions"></a></span><a class="link" href="overload2.html#json.ref.boost__json__value.get_string.overload2.preconditions">Preconditions</a>
-          </h6>
-<pre class="programlisting"><span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">is_string</span><span class="special">()</span>
-</pre>
-<h6>
-<a name="json.ref.boost__json__value.get_string.overload2.h3"></a>
-            <span class="phrase"><a name="json.ref.boost__json__value.get_string.overload2.complexity"></a></span><a class="link" href="overload2.html#json.ref.boost__json__value.get_string.overload2.complexity">Complexity</a>
-          </h6>
-<p>
-            Constant.
-          </p>
-<h6>
-<a name="json.ref.boost__json__value.get_string.overload2.h4"></a>
-            <span class="phrase"><a name="json.ref.boost__json__value.get_string.overload2.exception_safety"></a></span><a class="link" href="overload2.html#json.ref.boost__json__value.get_string.overload2.exception_safety">Exception
-            Safety</a>
-          </h6>
-<p>
-            No-throw guarantee.
-          </p>
 </div>
 <div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying

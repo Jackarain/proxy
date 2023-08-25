@@ -58,7 +58,7 @@ For POSIX, `posix_code` is possible.
 You are guaranteed that `system_code` can be transported by the compiler
 in exactly two CPU registers.
 */
-using system_code = status_code<erased<intptr_t>>;
+using system_code = erased_status_code<intptr_t>;
 
 #ifndef NDEBUG
 static_assert(sizeof(system_code) == 2 * sizeof(void *), "system_code is not exactly two pointers in size!");

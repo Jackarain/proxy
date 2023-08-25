@@ -154,6 +154,7 @@ public:
 class object::revert_insert
 {
     object* obj_;
+    table* t_ = nullptr;
     std::size_t size_;
 
     BOOST_JSON_DECL
@@ -163,24 +164,38 @@ class object::revert_insert
 public:
     explicit
     revert_insert(
-        object& obj) noexcept
+        object& obj,
+        std::size_t capacity)
         : obj_(&obj)
         , size_(obj_->size())
     {
+        if( capacity > obj_->capacity() )
+            t_ = obj_->reserve_impl(capacity);
     }
 
     ~revert_insert()
     {
         if(! obj_)
             return;
+
         destroy();
-        obj_->t_->size = static_cast<
-            index_t>(size_);
+        if( t_ )
+        {
+            table::deallocate( obj_->t_, obj_->sp_ );
+            obj_->t_ = t_;
+        }
+        else
+        {
+            obj_->t_->size = static_cast<index_t>(size_);
+        }
     }
 
     void
     commit() noexcept
     {
+        BOOST_ASSERT(obj_);
+        if( t_ )
+            table::deallocate( t_, obj_->sp_ );
         obj_ = nullptr;
     }
 };
@@ -329,6 +344,16 @@ capacity() const noexcept ->
     return t_->capacity;
 }
 
+void
+object::
+reserve(std::size_t new_capacity)
+{
+    if( new_capacity <= capacity() )
+        return;
+    table* const old_table = reserve_impl(new_capacity);
+    table::deallocate( old_table, sp_ );
+}
+
 //----------------------------------------------------------
 //
 // Lookup
@@ -340,10 +365,8 @@ object::
 at(string_view key) & ->
     value&
 {
-    auto it = find(key);
-    if(it == end())
-        detail::throw_out_of_range();
-    return it->value();
+    auto const& self = *this;
+    return const_cast< value& >( self.at(key) );
 }
 
 auto
@@ -361,7 +384,10 @@ at(string_view key) const& ->
 {
     auto it = find(key);
     if(it == end())
-        detail::throw_out_of_range();
+    {
+        BOOST_STATIC_CONSTEXPR source_location loc = BOOST_CURRENT_LOCATION;
+        detail::throw_system_error( error::out_of_range, &loc );
+    }
     return it->value();
 }
 
@@ -375,7 +401,7 @@ insert(P&& p) ->
 {
     key_value_pair v(
         std::forward<P>(p), sp_);
-    return insert_impl(pilfer(v));
+    return emplace_impl( v.key(), pilfer(v) );
 }
 
 template<class M>
@@ -385,18 +411,14 @@ insert_or_assign(
     string_view key, M&& m) ->
         std::pair<iterator, bool>
 {
-    reserve(size() + 1);
-    auto const result = detail::find_in_object(*this, key);
-    if(result.first)
+    std::pair<iterator, bool> result = emplace_impl(
+        key, key, static_cast<M&&>(m) );
+    if( !result.second )
     {
-        value(std::forward<M>(m),
-            sp_).swap(result.first->value());
-        return { result.first, false };
+        value(static_cast<M>(m), sp_).swap(
+            result.first->value());
     }
-    key_value_pair kv(key,
-        std::forward<M>(m), sp_);
-    return { insert_impl(pilfer(kv),
-        result.second), true };
+    return result;
 }
 
 template<class Arg>
@@ -407,14 +429,7 @@ emplace(
     Arg&& arg) ->
         std::pair<iterator, bool>
 {
-    reserve(size() + 1);
-    auto const result = detail::find_in_object(*this, key);
-    if(result.first)
-        return { result.first, false };
-    key_value_pair kv(key,
-        std::forward<Arg>(arg), sp_);
-    return { insert_impl(pilfer(kv),
-        result.second), true };
+    return emplace_impl( key, key, static_cast<Arg&&>(arg) );
 }
 
 //----------------------------------------------------------
@@ -497,15 +512,51 @@ insert(
             std::distance(first, last));
     auto const n0 = size();
     if(n > max_size() - n0)
-        detail::throw_length_error( "object too large" );
-    reserve(n0 + n);
-    revert_insert r(*this);
+    {
+        BOOST_STATIC_CONSTEXPR source_location loc = BOOST_CURRENT_LOCATION;
+        detail::throw_system_error( error::object_too_large, &loc );
+    }
+    revert_insert r( *this, n0 + n );
     while(first != last)
     {
         insert(*first);
         ++first;
     }
     r.commit();
+}
+
+template< class... Args >
+std::pair<object::iterator, bool>
+object::
+emplace_impl( string_view key, Args&& ... args )
+{
+    std::pair<iterator, std::size_t> search_result(nullptr, 0);
+    if( !empty() )
+    {
+        search_result = detail::find_in_object(*this, key);
+        if( search_result.first )
+            return { search_result.first, false };
+    }
+
+    // we create the new value before reserving, in case it is a reference to
+    // a subobject of the current object
+    key_value_pair kv( static_cast<Args&&>(args)..., sp_ );
+    // the key might get deallocated too
+    key = kv.key();
+
+    std::size_t const old_capacity = capacity();
+    reserve(size() + 1);
+    if( (empty() && capacity() > detail::small_object_size_)
+            || (capacity() != old_capacity) )
+        search_result.second = detail::digest(
+            key.begin(), key.end(), t_->salt);
+
+    BOOST_ASSERT(
+        t_->is_small() ||
+        (search_result.second ==
+            detail::digest(key.begin(), key.end(), t_->salt)) );
+
+    return { insert_impl(pilfer(kv), search_result.second), true };
 }
 
 //----------------------------------------------------------

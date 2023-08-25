@@ -12,17 +12,71 @@
 
 #include <boost/mysql/statement.hpp>
 
-#include <boost/mysql/detail/auxiliar/access_fwd.hpp>
-#include <boost/mysql/detail/protocol/prepared_statement_messages.hpp>
+#include <boost/mysql/detail/access.hpp>
 
-struct boost::mysql::detail::statement_access
+#include <boost/assert.hpp>
+
+template <BOOST_MYSQL_WRITABLE_FIELD_TUPLE WritableFieldTuple>
+class boost::mysql::bound_statement_tuple
 {
-    static void reset(statement& stmt, const detail::com_stmt_prepare_ok_packet& msg) noexcept
+    friend class statement;
+    friend struct detail::access;
+
+    struct impl
     {
-        stmt.valid_ = true;
-        stmt.id_ = msg.statement_id;
-        stmt.num_params_ = msg.num_params;
+        statement stmt;
+        WritableFieldTuple params;
+    } impl_;
+
+    template <typename TupleType>
+    bound_statement_tuple(const statement& stmt, TupleType&& t) : impl_{stmt, std::forward<TupleType>(t)}
+    {
     }
 };
+
+template <BOOST_MYSQL_FIELD_VIEW_FORWARD_ITERATOR FieldViewFwdIterator>
+class boost::mysql::bound_statement_iterator_range
+{
+    friend class statement;
+    friend struct detail::access;
+
+    struct impl
+    {
+        statement stmt;
+        FieldViewFwdIterator first;
+        FieldViewFwdIterator last;
+    } impl_;
+
+    bound_statement_iterator_range(
+        const statement& stmt,
+        FieldViewFwdIterator first,
+        FieldViewFwdIterator last
+    )
+        : impl_{stmt, first, last}
+    {
+    }
+};
+
+template <BOOST_MYSQL_WRITABLE_FIELD_TUPLE WritableFieldTuple, typename EnableIf>
+boost::mysql::bound_statement_tuple<typename std::decay<WritableFieldTuple>::type> boost::mysql::statement::
+    bind(WritableFieldTuple&& args) const
+
+{
+    BOOST_ASSERT(valid());
+    return bound_statement_tuple<typename std::decay<WritableFieldTuple>::type>(
+        *this,
+        std::forward<WritableFieldTuple>(args)
+    );
+}
+
+template <BOOST_MYSQL_FIELD_VIEW_FORWARD_ITERATOR FieldViewFwdIterator, typename EnableIf>
+boost::mysql::bound_statement_iterator_range<FieldViewFwdIterator> boost::mysql::statement::bind(
+    FieldViewFwdIterator first,
+    FieldViewFwdIterator last
+) const
+{
+    BOOST_ASSERT(valid());
+    return bound_statement_iterator_range<FieldViewFwdIterator>(*this, first, last);
+}
 
 #endif

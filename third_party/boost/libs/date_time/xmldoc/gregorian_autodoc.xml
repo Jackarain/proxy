@@ -216,7 +216,7 @@
 
 
 
-
+<function name="to_iso_string"><type>std::string</type><parameter name=""><paramtype>const <classname>date</classname> &amp;</paramtype></parameter><purpose>Convert to ISO 8601 standard string YYYYMMDD. Example: 20021231. </purpose></function>
 
 
 
@@ -464,7 +464,7 @@
 <header name="boost/date_time/gregorian/greg_day.hpp">
 <namespace name="boost">
 <namespace name="gregorian">
-<struct name="bad_day_of_month"><inherit access="public">out_of_range</inherit><purpose>Exception type for gregorian day of month (1..31) </purpose><method-group name="public member functions">
+<struct name="bad_day_of_month"><inherit access="public">std::out_of_range</inherit><purpose>Exception type for gregorian day of month (1..31) </purpose><method-group name="public member functions">
 </method-group>
 <constructor/>
 <constructor><parameter name="s"><paramtype>const std::string &amp;</paramtype></parameter><purpose>Allow other classes to throw with unique string for bad day like Feb 29. </purpose></constructor>
@@ -559,7 +559,7 @@
 <header name="boost/date_time/gregorian/greg_day_of_year.hpp">
 <namespace name="boost">
 <namespace name="gregorian">
-<struct name="bad_day_of_year"><inherit access="public">out_of_range</inherit><purpose>Exception type for day of year (1..366) </purpose><method-group name="public member functions">
+<struct name="bad_day_of_year"><inherit access="public">std::out_of_range</inherit><purpose>Exception type for day of year (1..366) </purpose><method-group name="public member functions">
 </method-group>
 <constructor/>
 </struct><typedef name="greg_day_of_year_policies"><purpose>A day of the year range (1..366) </purpose><type>CV::simple_exception_policy&lt; unsigned short, 1, 366, <classname>bad_day_of_year</classname> &gt;</type></typedef>
@@ -985,7 +985,7 @@
 <header name="boost/date_time/gregorian/greg_month.hpp">
 <namespace name="boost">
 <namespace name="gregorian">
-<struct name="bad_month"><inherit access="public">out_of_range</inherit><purpose>Exception thrown if a <classname alt="boost::gregorian::greg_month">greg_month</classname> is constructed with a value out of range. </purpose><method-group name="public member functions">
+<struct name="bad_month"><inherit access="public">std::out_of_range</inherit><purpose>Exception thrown if a <classname alt="boost::gregorian::greg_month">greg_month</classname> is constructed with a value out of range. </purpose><method-group name="public member functions">
 </method-group>
 <constructor/>
 </struct><class name="greg_month"><inherit access="public">greg_month_rep</inherit><purpose>Wrapper class to represent months in gregorian based calendar. </purpose><typedef name="month_enum"><type>date_time::months_of_year</type></typedef>
@@ -1125,7 +1125,7 @@
 
 
 
-<function name="to_iso_string"><type>std::string</type><parameter name=""><paramtype>const <classname>date</classname> &amp;</paramtype></parameter><purpose>Convert to ISO 8601 standard string YYYYMMDD. Example: 20021231. </purpose></function>
+
 
 
 
@@ -1171,13 +1171,15 @@
 
 </namespace>
 <namespace name="serialization">
-<function name="BOOST_DATE_TIME_SPLIT_FREE"><type/><parameter name=""><paramtype>::<classname>boost::gregorian::date</classname></paramtype></parameter><description><para>Method that does serialization for <classname alt="boost::gregorian::date">gregorian::date</classname> – splits to load/save</para><para>Dates are serialized into a string for transport and storage. While it would be more efficient to store the internal integer used to manipulate the dates, it is an unstable solution. </para></description></function>
+<function name="BOOST_DATE_TIME_SPLIT_FREE"><type/><parameter name=""><paramtype><classname>::boost::gregorian::date</classname></paramtype></parameter><description><para>Method that does serialization for <classname alt="boost::gregorian::date">gregorian::date</classname> – splits to load/save</para><para>Dates are serialized into a string for transport and storage. While it would be more efficient to store the internal integer used to manipulate the dates, it is an unstable solution. <sbr/>
+ </para></description></function>
 <function name="load"><type>void</type><template>
           <template-type-parameter name="Archive"/>
-        </template><parameter name="ar"><paramtype>Archive &amp;</paramtype></parameter><parameter name="d"><paramtype>::<classname>boost::gregorian::date</classname> &amp;</paramtype></parameter><parameter name=""><paramtype>unsigned int</paramtype></parameter><purpose>Function to load <classname alt="boost::gregorian::date">gregorian::date</classname> objects using serialization lib. </purpose><description><para>Dates are serialized into a string for transport and storage. While it would be more efficient to store the internal integer used to manipulate the dates, it is an unstable solution. </para></description></function>
+        </template><parameter name="ar"><paramtype>Archive &amp;</paramtype></parameter><parameter name="d"><paramtype><classname>::boost::gregorian::date</classname> &amp;</paramtype></parameter><parameter name=""><paramtype>unsigned int</paramtype></parameter><purpose>Function to load <classname alt="boost::gregorian::date">gregorian::date</classname> objects using serialization lib. </purpose><description><para>Dates are serialized into a string for transport and storage. While it would be more efficient to store the internal integer used to manipulate the dates, it is an unstable solution. <sbr/>
+ </para></description></function>
 <function name="load_construct_data"><type>void</type><template>
           <template-type-parameter name="Archive"/>
-        </template><parameter name=""><paramtype>Archive &amp;</paramtype></parameter><parameter name="dp"><paramtype>::<classname>boost::gregorian::date</classname> *</paramtype></parameter><parameter name=""><paramtype>const unsigned int</paramtype></parameter><purpose>override needed b/c no default constructor </purpose></function>
+        </template><parameter name=""><paramtype>Archive &amp;</paramtype></parameter><parameter name="dp"><paramtype><classname>::boost::gregorian::date</classname> *</paramtype></parameter><parameter name=""><paramtype>const unsigned int</paramtype></parameter><purpose>override needed b/c no default constructor </purpose></function>
 <function name="save"><type>void</type><template>
           <template-type-parameter name="Archive"/>
         </template><parameter name="ar"><paramtype>Archive &amp;</paramtype></parameter><parameter name="dd"><paramtype>const <classname>gregorian::date_duration</classname> &amp;</paramtype></parameter><parameter name=""><paramtype>unsigned int</paramtype></parameter><purpose>Function to save <classname alt="boost::gregorian::date_duration">gregorian::date_duration</classname> objects using serialization lib. </purpose></function>
@@ -1301,7 +1303,7 @@
 <header name="boost/date_time/gregorian/greg_weekday.hpp">
 <namespace name="boost">
 <namespace name="gregorian">
-<struct name="bad_weekday"><inherit access="public">out_of_range</inherit><purpose>Exception that flags that a weekday number is incorrect. </purpose><method-group name="public member functions">
+<struct name="bad_weekday"><inherit access="public">std::out_of_range</inherit><purpose>Exception that flags that a weekday number is incorrect. </purpose><method-group name="public member functions">
 </method-group>
 <constructor/>
 </struct><class name="greg_weekday"><inherit access="public">greg_weekday_rep</inherit><purpose>Represent a day within a week (range 0==Sun to 6==Sat) </purpose><typedef name="weekday_enum"><type>boost::date_time::weekdays</type></typedef>
@@ -1400,7 +1402,7 @@
 <header name="boost/date_time/gregorian/greg_year.hpp">
 <namespace name="boost">
 <namespace name="gregorian">
-<struct name="bad_year"><inherit access="public">out_of_range</inherit><purpose>Exception type for gregorian year. </purpose><method-group name="public member functions">
+<struct name="bad_year"><inherit access="public">std::out_of_range</inherit><purpose>Exception type for gregorian year. </purpose><method-group name="public member functions">
 </method-group>
 <constructor/>
 </struct><class name="greg_year"><inherit access="public">greg_year_rep</inherit><purpose>Represent a year (range 1400 - 9999) </purpose><description><para>This small class allows for simple conversion an integer value into a year for the gregorian calendar. This currently only allows a range of 1400 to 9999. Both ends of the range are a bit arbitrary at the moment, but they are the limits of current testing of the library. As such they may be increased in the future. </para></description><method-group name="public member functions">

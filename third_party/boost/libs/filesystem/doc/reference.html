@@ -131,14 +131,20 @@
 &nbsp;&nbsp;&nbsp;&nbsp; <a href="#exists">exists</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp; <a href="#equivalent">equivalent</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp; <a href="#file_size">file_size</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp; <a href="#hard_link_count">hard_link_count</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp; <a href="#initial_path">initial_path</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp; <a href="#is_directory">is_directory</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp; <a href="#is_empty">is_empty</a></code></td>
+&nbsp;&nbsp;&nbsp;&nbsp; <a href="#hard_link_count">hard_link_count</a></code></td>
     <td width="34%" valign="top">
     <p>
-    <code>&nbsp;&nbsp;&nbsp;&nbsp; <a href="#is_other">is_other</a><br>
+    <code>
+&nbsp;&nbsp;&nbsp;&nbsp; <a href="#initial_path">initial_path</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp; <a href="#is_block_file">is_block_file</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp; <a href="#is_character_file">is_character_file</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp; <a href="#is_directory">is_directory</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp; <a href="#is_empty">is_empty</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp; <a href="#is_fifo">is_fifo</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp; <a href="#is_other">is_other</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp; <a href="#is_regular_file">is_regular_file</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp; <a href="#is_reparse_file">is_reparse_file</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp; <a href="#is_socket">is_socket</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp; <a href="#is_symlink">is_symlink</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp; <a href="#last_write_time">last_write_time</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp; <a href="#permissions">permissions</a><br>
@@ -893,6 +899,16 @@ nothing else.&quot;</p>
     const path&amp;  <a href="#initial_path">initial_path</a>();
     const path&amp;  <a href="#initial_path">initial_path</a>(<code>system::error_code&amp; ec</code>);
 
+    bool         <a href="#is_block_file">is_block_file</a>(file_status s) noexcept;
+    bool         <a href="#is_block_file2">is_block_file</a>(const path&amp; p);
+    bool         <a href="#is_block_file2">is_block_file</a>(const path&amp; p,
+                   system::error_code&amp; ec) noexcept;
+
+    bool         <a href="#is_character_file">is_character_file</a>(file_status s) noexcept;
+    bool         <a href="#is_character_file2">is_character_file</a>(const path&amp; p);
+    bool         <a href="#is_character_file2">is_character_file</a>(const path&amp; p,
+                   system::error_code&amp; ec) noexcept;
+
     bool         <a href="#is_directory">is_directory</a>(file_status s) noexcept;
     bool         <a href="#is_directory2">is_directory</a>(const path&amp; p);
     bool         <a href="#is_directory2">is_directory</a>(const path&amp; p,
@@ -901,6 +917,11 @@ nothing else.&quot;</p>
     bool         <a href="#is_empty">is_empty</a>(const path&amp; p);
     bool         <a href="#is_empty">is_empty</a>(const path&amp; p, system::error_code&amp; ec);
 
+    bool         <a href="#is_fifo">is_fifo</a>(file_status s) noexcept;
+    bool         <a href="#is_fifo2">is_fifo</a>(const path&amp; p);
+    bool         <a href="#is_fifo2">is_fifo</a>(const path&amp; p,
+                   system::error_code&amp; ec) noexcept;
+
     bool         <a href="#is_other">is_other</a>(file_status s) noexcept;
     bool         <a href="#is_other2">is_other</a>(const path&amp; p,);
     bool         <a href="#is_other2">is_other</a>(const path&amp; p, system::error_code&amp; ec) noexcept;
@@ -908,6 +929,16 @@ nothing else.&quot;</p>
     bool         <a href="#is_regular_file">is_regular_file</a>(file_status s) noexcept;
     bool         <a href="#is_regular_file2">is_regular_file</a>(const path&amp; p);
     bool         <a href="#is_regular_file2">is_regular_file</a>(const path&amp; p,
+                   system::error_code&amp; ec) noexcept;
+
+    bool         <a href="#is_reparse_file">is_reparse_file</a>(file_status s) noexcept;
+    bool         <a href="#is_reparse_file2">is_reparse_file</a>(const path&amp; p);
+    bool         <a href="#is_reparse_file2">is_reparse_file</a>(const path&amp; p,
+                   system::error_code&amp; ec) noexcept;
+
+    bool         <a href="#is_socket">is_socket</a>(file_status s) noexcept;
+    bool         <a href="#is_socket2">is_socket</a>(const path&amp; p);
+    bool         <a href="#is_socket2">is_socket</a>(const path&amp; p,
                    system::error_code&amp; ec) noexcept;
 
     bool         <a href="#is_symlink">is_symlink</a>(file_status s noexcept);
@@ -2543,23 +2574,58 @@ and permissions of a file.</p>
         // <a href="#directory_entry-constructors">constructors</a> and destructor
         directory_entry();
         directory_entry(const directory_entry&amp;);
-        explicit directory_entry(const path&amp; p, file_status st=file_status(),
+        explicit directory_entry(const path&amp; p);
+        directory_entry(const path&amp; p, system::error_code&amp; ec);       // v4-only
+        directory_entry(const path&amp; p, file_status st,                // v3-only
           file_status symlink_st=file_status());
        ~directory_entry();
 
         // <a href="#directory_entry-modifiers">modifiers</a>
         directory_entry&amp; operator=(const directory_entry&amp;);
-        void assign(const path&amp; p, file_status st=file_status(),
+        void assign(const path&amp; p);
+        void assign(const path&amp; p, system::error_code&amp; ec);           // v4-only
+        void assign(const path&amp; p, file_status st,                    // v3-only
           file_status symlink_st=file_status());
-        void replace_filename(const path&amp; p, file_status st=file_status(),
+        void replace_filename(const path&amp; p);
+        void replace_filename(const path&amp; p, system::error_code&amp; ec); // v4-only
+        void replace_filename(const path&amp; p, file_status st,          // v3-only
           file_status symlink_st=file_status());
+
+        void refresh();
+        void refresh(system::error_code&amp; ec);
 
         // <a href="#directory_entry-observers">observers</a>
         const path&amp;  path() const;
+
         file_status  status() const;
         file_status  status(system::error_code&amp; ec) const;
         file_status  symlink_status() const;
         file_status  symlink_status(system::error_code&amp; ec) const;
+        file_type file_type() const;
+        file_type file_type(system::error_code&amp; ec) const;
+        file_type symlink_file_type() const;
+        file_type symlink_file_type(system::error_code&amp; ec) const;
+
+        bool exists() const;
+        bool exists(system::error_code&amp; ec) const;
+        bool is_regular_file() const;
+        bool is_regular_file(system::error_code&amp; ec) const;
+        bool is_directory() const;
+        bool is_directory(system::error_code&amp; ec) const;
+        bool is_symlink() const;
+        bool is_symlink(system::error_code&amp; ec) const;
+        bool is_block_file() const;
+        bool is_block_file(system::error_code&amp; ec) const;
+        bool is_character_file() const;
+        bool is_character_file(system::error_code&amp; ec) const;
+        bool is_fifo() const;
+        bool is_fifo(system::error_code&amp; ec) const;
+        bool is_socket() const;
+        bool is_socket(system::error_code&amp; ec) const;
+        bool is_reparse_file() const;
+        bool is_reparse_file(system::error_code&amp; ec) const;
+        bool is_other() const;
+        bool is_other(system::error_code&amp; ec) const;
 
         bool operator&lt; (const directory_entry&amp; rhs);
         bool operator==(const directory_entry&amp; rhs);
@@ -2577,10 +2643,12 @@ and permissions of a file.</p>
   }  // namespace filesystem
 }  // namespace boost</pre>
 
-<p>A <code>directory_entry</code> object stores a <code>path object</code>,
-a <code>file_status</code> object for non-symbolic link status, and a <code>file_status</code> object for symbolic link status. The <code>file_status</code> objects act as value caches.</p>
+<p>A <code>directory_entry</code> object stores a <code>path</code> object,
+as well as some amount of cached information about the file identified by the path.
+Currently, the cached information includes a <code>file_status</code> object for non-symbolic
+link status and a <code>file_status</code> object for symbolic link status.</p>
 <blockquote>
-<p>[<i>Note:</i> Because <code>status()</code>on a pathname may be a relatively expensive operation,
+<p>[<i>Note:</i> Because <code>status()</code> on a pathname may be a relatively expensive operation,
 some operating systems provide status information as a byproduct of directory
 iteration. Caching such status information can result is significant time savings. Cached and
 non-cached results may differ in the presence of file system races. <i>—end note</i>]</p>
@@ -2589,8 +2657,14 @@ a directory with 15,047 entries was six seconds for non-cached status queries
 versus one second for cached status queries. Windows XP, 3.0 GHz processor, with
 a moderately fast hard-drive. Similar speedups are expected on Linux and BSD-derived
 systems that provide status as a by-product of directory iteration.</i></span></p>
+<p>[<i>Note:</i> The exact set of cached information may vary from one Boost.Filesystem version
+to another, and also between different operating systems and underlying file systems. Users' code
+must not rely on whether a certain piece of information is cached or not. This means that calling
+most observers and modifiers of <code>directory_entry</code> may or may not result in a filesystem
+query that may potentially fail. Information caching is exclusively a performance feature aimed
+at reducing the amount of such queries. <i>—end note</i>]</p>
 </blockquote>
-<h3> <a name="directory_entry-constructors"> <code>directory_entry </code>constructors</a>
+<h3> <a name="directory_entry-constructors"> <code>directory_entry</code> constructors</a>
 [directory_entry.cons]</h3>
 <pre>directory_entry();</pre>
 <blockquote>
@@ -2614,9 +2688,18 @@ systems that provide status as a by-product of directory iteration.</i></span></
     </tr>
   </table>
 </blockquote>
-<pre>explicit directory_entry(const path&amp; p, file_status st=file_status(), file_status symlink_st=file_status());</pre>
+<pre>explicit directory_entry(const path&amp; p);
+directory_entry(const path&amp; p, system::error_code&amp; ec); // v4-only</pre>
 <blockquote>
-  <p><i>Postcondition:</i></p>
+  <p><i>Effects:</i></p>
+  <p><b>v3:</b> Initializes <code>m_path</code> from <code>p</code> and default-constructs <code>m_status</code> and <code>m_symlink_status</code>.</p>
+  <p>[<i>Note:</i> The cached file statuses will be updated when queried by the caller or by an explicit call to <code>refresh</code>. <i>—end note</i>]</p>
+  <p><b>v4:</b> Initializes <code>m_path</code> from <code>p</code> and calls <code>refresh()</code> or <code>refresh(ec)</code>, respectively.</p>
+  <p><i>Postcondition:</i> <code>path() == p</code> if no error occurs, otherwise <code>path().empty() == true</code>.</p>
+</blockquote>
+<pre>directory_entry(const path&amp; p, file_status st, file_status symlink_st=file_status()); // v3-only</pre>
+<blockquote>
+  <p><b>v3:</b> <i>Postcondition:</i></p>
   <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" bordercolor="#111111" width="36%">
     <tr>
       <td width="18%"><b>Expression</b></td>
@@ -2636,11 +2719,20 @@ systems that provide status as a by-product of directory iteration.</i></span></
     </tr>
   </table>
 </blockquote>
-<h3> <a name="directory_entry-modifiers"> <code>directory_entry </code>modifiers</a>
+<h3> <a name="directory_entry-modifiers"> <code>directory_entry</code> modifiers</a>
 [directory_entry.mods]</h3>
-<pre>void assign(const path&amp; p, file_status st=file_status(), file_status symlink_st=file_status());</pre>
+<pre>void assign(const path&amp; p);
+void assign(const path&amp; p, system::error_code&amp; ec); // v4-only</pre>
 <blockquote>
-  <p><i>Postcondition:</i></p>
+  <p><i>Effects:</i></p>
+  <p><b>v3:</b> Assigns <code>p</code> to <code>m_path</code> and <code>file_status()</code> to <code>m_status</code> and <code>m_symlink_status</code>.</p>
+  <p>[<i>Note:</i> The cached file statuses will be updated when queried by the caller or by an explicit call to <code>refresh</code>. <i>—end note</i>]</p>
+  <p><b>v4:</b> Assigns <code>p</code> to <code>m_path</code> and calls <code>refresh()</code> or <code>refresh(ec)</code>, respectively. If an error
+  occurs, the value of the cached data is unspecified.</p>
+</blockquote>
+<pre>void assign(const path&amp; p, file_status st, file_status symlink_st=file_status()); // v3-only</pre>
+<blockquote>
+  <p><b>v3:</b> <i>Postcondition:</i></p>
   <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" bordercolor="#111111" width="36%">
     <tr>
       <td width="18%"><b>Expression</b></td>
@@ -2660,27 +2752,25 @@ systems that provide status as a by-product of directory iteration.</i></span></
     </tr>
   </table>
 </blockquote>
-<pre>void replace_filename(const path&amp; p, file_status st=file_status(), file_status symlink_st=file_status());</pre>
+<pre>void replace_filename(const path&amp; p);
+void replace_filename(const path&amp; p, system::error_code&amp; ec); // v4-only</pre>
 <blockquote>
-  <p><i>Postcondition:</i></p>
-  <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse" bordercolor="#111111" width="43%">
-    <tr>
-      <td width="18%"><b>Expression</b></td>
-      <td width="82%"><b>Value</b></td>
-    </tr>
-    <tr>
-      <td width="18%"><code>path()</code></td>
-      <td width="82%"><code>path().branch() / s</code></td>
-    </tr>
-    <tr>
-      <td width="18%"><code>status()</code></td>
-      <td width="82%"><code>st</code></td>
-    </tr>
-    <tr>
-      <td width="18%"><code>symlink_status()</code></td>
-      <td width="82%"><code>symlink_st</code></td>
-    </tr>
-  </table>
+  <p><i>Effects:</i></p>
+  <p><b>v3:</b> Calls <code>m_path.replace_filename(p)</code> and assigns <code>file_status()</code> to <code>m_status</code> and <code>m_symlink_status</code>.</p>
+  <p>[<i>Note:</i> The cached file statuses will be updated when queried by the caller or by an explicit call to <code>refresh</code>. <i>—end note</i>]</p>
+  <p><b>v4:</b> Calls <code>m_path.replace_filename(p)</code> and then <code>refresh()</code> or <code>refresh(ec)</code>, respectively. If an error
+  occurs, the value of the cached data is unspecified.</p>
+</blockquote>
+<pre>void replace_filename(const path&amp; p, file_status st, file_status symlink_st=file_status()); // v3-only</pre>
+<blockquote>
+  <p><i>Effects:</i> <b>v3:</b> Calls <code>m_path.replace_filename(p)</code> and assigns <code>st</code> to <code>m_status</code> and <code>symlink_st</code>
+  to <code>m_symlink_status</code>.</p>
+</blockquote>
+<pre>void refresh();
+void refresh(system::error_code&amp; ec);</pre>
+<blockquote>
+  <p><i>Effects:</i> Updates any cached data by querying the filesystem about the file identified by <code>m_path</code>. If an error occurs,
+  the value of the cached data is unspecified.</p>
 </blockquote>
 <h3> <a name="directory_entry-observers"> <code>directory_entry</code> observers</a>
 [directory_entry.obs]</h3>
@@ -2691,35 +2781,80 @@ systems that provide status as a by-product of directory iteration.</i></span></
 <pre>file_status status() const;
 file_status status(system::error_code&amp; ec) const;</pre>
 <blockquote>
-<p><i>Effects:</i> As if,</p>
-  <blockquote>
-    <pre>if ( !status_known( m_status ) )
-{
-  if ( status_known(m_symlink_status) &amp;&amp; !is_symlink(m_symlink_status) )
-    { m_status = m_symlink_status; }
-  else { m_status = status(m_path<i>[, ec]</i>); }
-}</pre>
-  </blockquote>
+  <p><i>Effects:</i> If <code>!status_known(m_status)</code>, calls <code>refresh()</code> or <code>refresh(ec)</code>, respectively.</p>
   <p><i>Returns:</i> <code>m_status</code></p>
-
   <p><i>Throws:</i> As specified in <a href="#Error-reporting">Error reporting</a>.</p>
-
 </blockquote>
 <pre>file_status  symlink_status() const;
 file_status  symlink_status(system::error_code&amp; ec) const;</pre>
 <blockquote>
-<p>
-  <i>Effects:</i> As if,</p>
-  <blockquote>
-    <pre>if ( !status_known( m_symlink_status ) )
-{
-  m_symlink_status = symlink_status(m_path<i>[, ec]</i>);
-}</pre>
-  </blockquote>
+  <p><i>Effects:</i> If <code>!status_known(m_symlink_status)</code>, calls <code>refresh()</code> or <code>refresh(ec)</code>, respectively.</p>
   <p><i>Returns:</i> <code>m_symlink_status</code></p>
-
   <p><i>Throws:</i> As specified in <a href="#Error-reporting">Error reporting</a>.</p>
-
+</blockquote>
+<pre>file_type file_type() const;
+file_type file_type(system::error_code&amp; ec) const;</pre>
+<blockquote>
+  <p><i>Effects:</i> Equivalent to <code>status().type()</code> or <code>status(ec).type()</code>, respectively.</p>
+  <p>[<i>Note:</i> The implementation may be more efficient than calling <code>status</code>, if the information
+  about the file type is cached, but permissions are not. <i>—end note</i>]</p>
+</blockquote>
+<pre>file_type symlink_file_type() const;
+file_type symlink_file_type(system::error_code&amp; ec) const;</pre>
+<blockquote>
+  <p><i>Effects:</i> Equivalent to <code>symlink_status().type()</code> or <code>symlink_status(ec).type()</code>, respectively.</p>
+  <p>[<i>Note:</i> The implementation may be more efficient than calling <code>symlink_status</code>, if the information
+  about the file type is cached, but permissions are not. <i>—end note</i>]</p>
+</blockquote>
+<pre>bool exists() const;
+bool exists(system::error_code&amp; ec) const;</pre>
+<blockquote>
+  <p><i>Effects:</i> Equivalent to <code>exists(status())</code> or <code>exists(status(ec))</code>, respectively.</p>
+</blockquote>
+<pre>bool is_regular_file() const;
+bool is_regular_file(system::error_code&amp; ec) const;</pre>
+<blockquote>
+  <p><i>Effects:</i> Equivalent to <code>is_regular_file(status())</code> or <code>is_regular_file(status(ec))</code>, respectively.</p>
+</blockquote>
+<pre>bool is_directory() const;
+bool is_directory(system::error_code&amp; ec) const;</pre>
+<blockquote>
+  <p><i>Effects:</i> Equivalent to <code>is_directory(status())</code> or <code>is_directory(status(ec))</code>, respectively.</p>
+</blockquote>
+<pre>bool is_symlink() const;
+bool is_symlink(system::error_code&amp; ec) const;</pre>
+<blockquote>
+  <p><i>Effects:</i> Equivalent to <code>is_symlink(symlink_status())</code> or <code>is_symlink(symlink_status(ec))</code>, respectively.</p>
+</blockquote>
+<pre>bool is_block_file() const;
+bool is_block_file(system::error_code&amp; ec) const;</pre>
+<blockquote>
+  <p><i>Effects:</i> Equivalent to <code>is_block_file(status())</code> or <code>is_block_file(status(ec))</code>, respectively.</p>
+</blockquote>
+<pre>bool is_character_file() const;
+bool is_character_file(system::error_code&amp; ec) const;</pre>
+<blockquote>
+  <p><i>Effects:</i> Equivalent to <code>is_character_file(status())</code> or <code>is_character_file(status(ec))</code>, respectively.</p>
+</blockquote>
+<pre>bool is_fifo() const;
+bool is_fifo(system::error_code&amp; ec) const;</pre>
+<blockquote>
+  <p><i>Effects:</i> Equivalent to <code>is_fifo(status())</code> or <code>is_fifo(status(ec))</code>, respectively.</p>
+</blockquote>
+<pre>bool is_socket() const;
+bool is_socket(system::error_code&amp; ec) const;</pre>
+<blockquote>
+  <p><i>Effects:</i> Equivalent to <code>is_socket(status())</code> or <code>is_socket(status(ec))</code>, respectively.</p>
+</blockquote>
+<pre>bool is_reparse_file() const;
+bool is_reparse_file(system::error_code&amp; ec) const;</pre>
+<blockquote>
+  <p><i>Effects:</i> Equivalent to <code>is_reparse_file(symlink_status())</code> or <code>is_reparse_file(symlink_status(ec))</code>, respectively.</p>
+</blockquote>
+<pre>bool is_other() const;
+bool is_other(system::error_code&amp; ec) const;</pre>
+<blockquote>
+  <p><i>Effects:</i> Equivalent to <code>is_other(status())</code> or <code>is_other(status(ec))</code>, respectively.</p>
 </blockquote>
 <pre>bool operator==(const directory_entry&amp; rhs);</pre>
 <blockquote>
@@ -3427,6 +3562,30 @@ const path&amp; <a name="initial_path2">initial_path</a>(<code>system::error_cod
   main().&nbsp; <i>—end note</i>]</p>
   <p><i>Throws:</i> For the first call, as specified in <a href="#Error-reporting">Error reporting</a>. Subsequent calls throw nothing.</p>
 </blockquote>
+<pre>bool <code><a name="is_block_file">is_block_file</a></code>(file_status s) noexcept;</pre>
+<blockquote>
+  <p><i>Returns:</i> <code>s.type() == block_file</code></p>
+</blockquote>
+<pre><code>bool <a name="is_block_file2">is_block_file</a>(const path&amp; p);
+bool <a name="is_block_file3">is_block_file</a>(const path&amp; p, system::error_code&amp; ec) noexcept;</code></pre>
+<blockquote>
+  <p><i>Returns:</i> <code>is_block_file(status(p))</code> or <code>is_block_file(status(p, ec))</code>,
+  respectively. The overload with argument <code>ec</code> returns <code>false</code> if an error occurs.</p>
+<p><i>Throws:</i> <code>filesystem_error</code>; the overload with argument <code>ec</code> throws
+nothing.</p>
+</blockquote>
+<pre>bool <code><a name="is_character_file">is_character_file</a></code>(file_status s) noexcept;</pre>
+<blockquote>
+  <p><i>Returns:</i> <code>s.type() == character_file</code></p>
+</blockquote>
+<pre><code>bool <a name="is_character_file2">is_character_file</a>(const path&amp; p);
+bool <a name="is_character_file3">is_character_file</a>(const path&amp; p, system::error_code&amp; ec) noexcept;</code></pre>
+<blockquote>
+  <p><i>Returns:</i> <code>is_character_file(status(p))</code> or <code>is_character_file(status(p, ec))</code>,
+  respectively. The overload with argument <code>ec</code> returns <code>false</code> if an error occurs.</p>
+<p><i>Throws:</i> <code>filesystem_error</code>; the overload with argument <code>ec</code> throws
+nothing.</p>
+</blockquote>
 <pre>bool <code><a name="is_directory">is_directory</a></code>(file_status s) noexcept;</pre>
 <blockquote>
   <p><i>Returns:</i> <code>s.type() == directory_file</code></p>
@@ -3435,8 +3594,8 @@ const path&amp; <a name="initial_path2">initial_path</a>(<code>system::error_cod
 bool <a name="is_directory3">is_directory</a>(const path&amp; p, system::error_code&amp; ec) noexcept;</code></pre>
 <blockquote>
   <p><i>Returns:</i> <code>is_directory(status(p))</code> or <code>is_directory(status(p, ec))</code>,
-  respectively.</p>
-<p><i>Throws:</i> <code>filesystem_error</code>; overload with <code>error_code&amp;</code> throws
+  respectively. The overload with argument <code>ec</code> returns <code>false</code> if an error occurs.</p>
+<p><i>Throws:</i> <code>filesystem_error</code>; the overload with argument <code>ec</code> throws
 nothing.</p>
 </blockquote>
 <pre><code>bool <a name="is_empty">is_empty</a>(const path&amp; p);
@@ -3447,20 +3606,17 @@ bool <a name="is_empty2">is_empty</a></a>(const path&amp; p, system::error_code&
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ? directory_iterator(p) == directory_iterator()<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; : file_size(p) == 0;</code></p>
 </blockquote>
-<pre>bool <code><a name="is_regular_file">is_regular_file</a></code>(file_status s) noexcept;</pre>
+<pre>bool <code><a name="is_fifo">is_fifo</a></code>(file_status s) noexcept;</pre>
 <blockquote>
-  <p><i>Returns:</i> <code>s.type() == regular_file</code></p>
+  <p><i>Returns:</i> <code>s.type() == fifo_file</code></p>
 </blockquote>
-<pre><code>bool <a name="is_regular_file2">is_regular_file</a>(const path&amp; p);</code></pre>
+<pre><code>bool <a name="is_fifo2">is_fifo</a>(const path&amp; p);
+bool <a name="is_fifo3">is_fifo</a>(const path&amp; p, system::error_code&amp; ec) noexcept;</code></pre>
 <blockquote>
-  <p><i>Returns:</i> <code>is_regular_file(status(p))</code>.</p>
-  <p><i>Throws:</i> <code>filesystem_error</code> if <code>status(p)</code> would throw <code>filesystem_error.</code></p>
-  </blockquote>
-<pre><code>bool <a name="is_regular_file3">is_regular_file</a>(const path&amp; p, system::error_code&amp; ec) noexcept;</code></pre>
-<blockquote>
-  <p><i>Effects:</i> Sets <code>ec</code> as if by <code>status(p, ec)</code>. [<i>Note:</i> <code>status_error</code>, <code>file_not_found</code> and <code>type_unknown</code> cases set <code>ec</code> to error values. To distinguish between cases, call the <code>status</code> function directly. <i>—end
-  note</i>] </p>
-  <p><i>Returns:</i> <code>is_regular_file(status(p, ec))</code>.</p>
+  <p><i>Returns:</i> <code>is_fifo(status(p))</code> or <code>is_fifo(status(p, ec))</code>,
+  respectively. The overload with argument <code>ec</code> returns <code>false</code> if an error occurs.</p>
+<p><i>Throws:</i> <code>filesystem_error</code>; the overload with argument <code>ec</code> throws
+nothing.</p>
 </blockquote>
 <pre>bool <a name="is_other">is_other</a>(file_status s) noexcept;</pre>
 <blockquote>
@@ -3470,8 +3626,44 @@ bool <a name="is_empty2">is_empty</a></a>(const path&amp; p, system::error_code&
 bool <a name="is_other3">is_other</a>(const path&amp; p, system::error_code&amp; ec) noexcept;</code></pre>
 <blockquote>
   <p><i>Returns:</i> <code>is_other(status(p))</code> or <code>is_other(status(p, ec))</code>,
-  respectively.</p>
-  <p><i>Throws:</i> <code>filesystem_error</code>; overload with <code>error_code&amp;</code> throws
+  respectively. The overload with argument <code>ec</code> returns <code>false</code> if an error occurs.</p>
+  <p><i>Throws:</i> <code>filesystem_error</code>; the overload with argument <code>ec</code> throws
+  nothing.</p>
+</blockquote>
+<pre>bool <code><a name="is_regular_file">is_regular_file</a></code>(file_status s) noexcept;</pre>
+<blockquote>
+  <p><i>Returns:</i> <code>s.type() == regular_file</code></p>
+</blockquote>
+<pre><code>bool <a name="is_regular_file2">is_regular_file</a>(const path&amp; p);
+bool <a name="is_regular_file3">is_regular_file</a>(const path&amp; p, system::error_code&amp; ec) noexcept;</code></pre>
+<blockquote>
+  <p><i>Returns:</i> <code>is_regular_file(status(p))</code> or <code>is_regular_file(status(p, ec))</code>,
+  respectively. The overload with argument <code>ec</code> returns <code>false</code> if an error occurs.</p>
+  <p><i>Throws:</i> <code>filesystem_error</code>; the overload with argument <code>ec</code> throws
+  nothing.</p>
+</blockquote>
+<pre>bool <a name="is_reparse_file">is_reparse_file</a>(file_status s) noexcept;</pre>
+<blockquote>
+  <p><i>Returns:</i> <code>s.type() == reparse_file</code></p>
+</blockquote>
+<pre><code>bool <a name="is_reparse_file2">is_reparse_file</a>(const path&amp; p);
+bool <a name="is_reparse_file3">is_reparse_file</a>(const path&amp; p, system::error_code&amp; ec) noexcept;</code></pre>
+<blockquote>
+  <p><i>Returns:</i> <code>is_reparse_file(symlink_status(p))</code> or <code>is_reparse_file(symlink_status(p, ec))</code>,
+  respectively. The overload with argument <code>ec</code> returns <code>false</code> if an error occurs.</p>
+  <p><i>Throws:</i> <code>filesystem_error</code>; the overload with argument <code>ec</code> throws
+  nothing.</p>
+</blockquote>
+<pre>bool <a name="is_socket">is_socket</a>(file_status s) noexcept;</pre>
+<blockquote>
+  <p><i>Returns:</i> <code>s.type() == socket_file</code></p>
+</blockquote>
+<pre><code>bool <a name="is_socket2">is_socket</a>(const path&amp; p);
+bool <a name="is_socket3">is_socket</a>(const path&amp; p, system::error_code&amp; ec) noexcept;</code></pre>
+<blockquote>
+  <p><i>Returns:</i> <code>is_socket(status(p))</code> or <code>is_socket(status(p, ec))</code>,
+  respectively. The overload with argument <code>ec</code> returns <code>false</code> if an error occurs.</p>
+  <p><i>Throws:</i> <code>filesystem_error</code>; the overload with argument <code>ec</code> throws
   nothing.</p>
 </blockquote>
 <pre>bool <a name="is_symlink">is_symlink</a>(file_status s) noexcept;</pre>
@@ -3482,8 +3674,8 @@ bool <a name="is_other3">is_other</a>(const path&amp; p, system::error_code&amp;
 bool <a name="is_symlink3">is_symlink</a>(const path&amp; p, system::error_code&amp; ec) noexcept;</code></pre>
 <blockquote>
   <p><i>Returns:</i> <code>is_symlink(symlink_status(p))</code> or <code>is_symlink(symlink_status(p, ec))</code>,
-  respectively.</p>
-  <p><i>Throws:</i> <code>filesystem_error</code>; overload with <code>error_code&amp;</code> throws
+  respectively. The overload with argument <code>ec</code> returns <code>false</code> if an error occurs.</p>
+  <p><i>Throws:</i> <code>filesystem_error</code>; the overload with argument <code>ec</code> throws
   nothing.</p>
 </blockquote>
 <pre><code>std::time_t <a name="creation_time">creation_time</a>(const path&amp; p);
@@ -3835,14 +4027,13 @@ path weakly_canonical(const path&amp; p, const path&amp; base, system::error_cod
 <!-- generate-section-numbers=false -->
 
 
-<h3><a name="File-streams">File streams</a> -
-<a href="../../../boost/filesystem/fstream.hpp">&lt;boost/filesystem/fstream.hpp&gt;</a></h3>
+<h3><a name="File-streams">File streams</a></h3>
+<h4><a href="../../../boost/filesystem/fstream.hpp">&lt;boost/filesystem/fstream.hpp&gt;</a> header</h4>
 <p>Replacements are provided for the file stream classes from the C++ standard
 library's <code>&lt;fstream&gt;</code> header. These replacement classes
 publicly inherit from the standard library classes. In the Boost.Filesystem
 version, constructors and open functions take <code>const path&amp;</code> arguments
-instead of <code>
-const char*</code> arguments. There are no other differences in syntax or
+instead of <code>const char*</code> arguments. There are no other differences in syntax or
 semantics.</p>
 <pre>namespace boost
 {
@@ -3896,6 +4087,18 @@ semantics.</p>
 }  // namespace boost</pre>
 
 
+<h4><a href="../../../boost/filesystem/cstdio.hpp">&lt;boost/filesystem/cstdio.hpp&gt;</a> header</h4>
+<p>This header provides a <code>std::fopen</code> overload from <code>&lt;cstdio&gt;</code> C++ standard library header.
+The overload accepts <code>const path&amp;</code> as its first argument instead of <code>const char*</code> and has no
+other differences from its standard counterpart.</p>
+<pre>namespace boost
+{
+  namespace filesystem
+  {
+    std::FILE* fopen(const path&amp; p, const char* mode);
+
+  }  // namespace filesystem
+}  // namespace boost</pre>
 
 <h2><a name="path-decomposition-table">Path decomposition table</a></h2>
 <p>The table is generated by a program compiled with the Boost implementation.</p>

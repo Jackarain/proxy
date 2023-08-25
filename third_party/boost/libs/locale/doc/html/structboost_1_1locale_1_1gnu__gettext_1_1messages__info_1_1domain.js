@@ -1,6 +1,5 @@
 var structboost_1_1locale_1_1gnu__gettext_1_1messages__info_1_1domain =
 [
-    [ "domain", "structboost_1_1locale_1_1gnu__gettext_1_1messages__info_1_1domain.html#aabb910a72b2b3939475bf5ee0c7e0f55", null ],
     [ "domain", "structboost_1_1locale_1_1gnu__gettext_1_1messages__info_1_1domain.html#a3f652fb5ab683b83ca1977e83a0a7e1d", null ],
     [ "operator!=", "structboost_1_1locale_1_1gnu__gettext_1_1messages__info_1_1domain.html#a60cdc37fe831b7ca5cbdd0367317640a", null ],
     [ "operator==", "structboost_1_1locale_1_1gnu__gettext_1_1messages__info_1_1domain.html#ac54e237708898f90ed52f0467475d5b0", null ],

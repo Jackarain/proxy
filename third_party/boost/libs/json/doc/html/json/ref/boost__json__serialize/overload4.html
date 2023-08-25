@@ -36,11 +36,12 @@
           <span class="phrase"><a name="json.ref.boost__json__serialize.overload4.synopsis"></a></span><a class="link" href="overload4.html#json.ref.boost__json__serialize.overload4.synopsis">Synopsis</a>
         </h6>
 <p>
-          Defined in header <code class="literal">&lt;<a href="https://github.com/cppalliance/json/blob/master/include/boost/json/serialize.hpp" target="_top">boost/json/serialize.hpp</a>&gt;</code>
+          Defined in header <code class="literal">&lt;<a href="https://github.com/boostorg/json/blob/master/include/boost/json/serialize.hpp" target="_top">boost/json/serialize.hpp</a>&gt;</code>
         </p>
 <pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span>
 <span class="identifier">serialize</span><span class="special">(</span>
-    <span class="identifier">string</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">t</span><span class="special">);</span>
+    <span class="identifier">string</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">t</span><span class="special">,</span>
+    <span class="identifier">serialize_options</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">opts</span> <span class="special">=</span> <span class="special">{});</span>
 </pre>
 <h6>
 <a name="json.ref.boost__json__serialize.overload4.h1"></a>
@@ -94,7 +95,8 @@
                   </p>
                 </th>
 </tr></thead>
-<tbody><tr>
+<tbody>
+<tr>
 <td>
                   <p>
                     <code class="computeroutput"><span class="identifier">t</span></code>
@@ -105,10 +107,24 @@
                     The value to serialize
                   </p>
                 </td>
-</tr></tbody>
+</tr>
+<tr>
+<td>
+                  <p>
+                    <code class="computeroutput"><span class="identifier">opts</span></code>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    The options for the serializer. If this parameter is omitted,
+                    the serializer will output only standard JSON.
+                  </p>
+                </td>
+</tr>
+</tbody>
 </table></div>
 <p>
-          Convenience header <code class="literal">&lt;<a href="https://github.com/cppalliance/json/blob/master/include/boost/json.hpp" target="_top">boost/json.hpp</a>&gt;</code>
+          Convenience header <code class="literal">&lt;<a href="https://github.com/boostorg/json/blob/master/include/boost/json.hpp" target="_top">boost/json.hpp</a>&gt;</code>
         </p>
 </div>
 <div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>

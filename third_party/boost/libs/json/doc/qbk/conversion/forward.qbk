@@ -4,7 +4,7 @@
     Distributed under the Boost Software License, Version 1.0. (See accompanying
     file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-    Official repository: https://github.com/cppalliance/json
+    Official repository: https://github.com/boostorg/json
 ]
 
 [/-----------------------------------------------------------------------------]
@@ -32,5 +32,10 @@ As discussed previously, we prefer to define a non-throwing overload of
 `tag_invoke` for __try_value_to__, rather then the throwing overload for
 __value_to__, as the latter can fallback to the former without performance
 degradation.
+
+Forward declarations of contextual conversions are done very similarly:
+
+[doc_forward_conversion_3]
+[doc_forward_conversion_4]
 
 [endsect]

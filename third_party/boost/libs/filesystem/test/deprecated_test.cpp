@@ -266,7 +266,16 @@ int cpp_main(int /*argc*/, char* /*argv*/[])
 
     //path::default_name_check(fs::no_check);
 
-    fs::directory_entry de("foo/bar");
+    fs::directory_entry de("foo.bar", fs::file_status(fs::regular_file, fs::owner_all), fs::file_status(fs::directory_file, fs::group_all));
+
+    BOOST_TEST(de.path() == "foo.bar");
+    BOOST_TEST(de.status() == fs::file_status(fs::regular_file, fs::owner_all));
+    BOOST_TEST(de.symlink_status() == fs::file_status(fs::directory_file, fs::group_all));
+    BOOST_TEST(de < fs::directory_entry("goo.bar", fs::file_status(), fs::file_status()));
+    BOOST_TEST(de == fs::directory_entry("foo.bar", fs::file_status(), fs::file_status()));
+    BOOST_TEST(de != fs::directory_entry("goo.bar", fs::file_status(), fs::file_status()));
+    de.replace_filename("bar.foo", fs::file_status(), fs::file_status());
+    BOOST_TEST(de.path() == "bar.foo");
 
     de.replace_leaf("", fs::file_status(), fs::file_status());
 

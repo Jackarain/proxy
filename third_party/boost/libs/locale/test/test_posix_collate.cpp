@@ -44,9 +44,8 @@ void test_one(const std::locale& l, std::string ia, std::string ib, int diff)
     TEST_EQ(
       diff,
       get_sign(col.transform(a.c_str(), a.c_str() + a.size()).compare(col.transform(b.c_str(), b.c_str() + b.size()))));
-    if(diff == 0) {
+    if(diff == 0)
         TEST_EQ(col.hash(a.c_str(), a.c_str() + a.size()), col.hash(b.c_str(), b.c_str() + b.size()));
-    }
 }
 
 template<typename CharType>
@@ -57,12 +56,13 @@ void test_char()
     std::cout << "- Testing at least C" << std::endl;
     std::locale l = gen("C.UTF-8");
     test_one<CharType>(l, "a", "b", -1);
+    test_one<CharType>(l, "b", "a", 1);
     test_one<CharType>(l, "a", "a", 0);
 
 #if !defined(__APPLE__) && !defined(__FreeBSD__)
     for(const std::string locale_name : {"en_US.UTF-8", "en_US.ISO8859-1"}) {
         if(!has_posix_locale(locale_name))
-            std::cout << "- " << locale_name << " not supported, skipping" << std::endl;
+            std::cout << "- " << locale_name << " not supported, skipping" << std::endl; // LCOV_EXCL_LINE
         else {
             std::cout << "- Testing " << locale_name << std::endl;
             l = gen(locale_name);

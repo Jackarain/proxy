@@ -53,7 +53,7 @@ the program is terminated as this is a logic error)
 As with `system_code`, it remains guaranteed to be two CPU registers in size,
 and move bitcopying.
 */
-using error = errored_status_code<erased<system_code::value_type>>;
+using error = erased_errored_status_code<system_code::value_type>;
 
 #ifndef NDEBUG
 static_assert(sizeof(error) == 2 * sizeof(void *), "error is not exactly two pointers in size!");

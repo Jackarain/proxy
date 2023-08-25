@@ -38,14 +38,14 @@
 <span class="special">{</span>
 <span class="keyword">public</span><span class="special">:</span>
   <span class="comment">// <a class="link" href="bad_virtual_result_cast.html#boost.contract.bad_virtual_result_castconstruct-copy-destruct">construct/copy/destruct</a></span>
-  <span class="keyword">explicit</span> <a class="link" href="bad_virtual_result_cast.html#idm35240-bb"><span class="identifier">bad_virtual_result_cast</span></a><span class="special">(</span><span class="keyword">char</span> <span class="keyword">const</span> <span class="special">*</span><span class="special">,</span> <span class="keyword">char</span> <span class="keyword">const</span> <span class="special">*</span><span class="special">)</span><span class="special">;</span>
-  <a class="link" href="bad_virtual_result_cast.html#idm35252-bb"><span class="special">~</span><span class="identifier">bad_virtual_result_cast</span></a><span class="special">(</span><span class="special">)</span><span class="special">;</span>
+  <span class="keyword">explicit</span> <a class="link" href="bad_virtual_result_cast.html#idm35247-bb"><span class="identifier">bad_virtual_result_cast</span></a><span class="special">(</span><span class="keyword">char</span> <span class="keyword">const</span> <span class="special">*</span><span class="special">,</span> <span class="keyword">char</span> <span class="keyword">const</span> <span class="special">*</span><span class="special">)</span><span class="special">;</span>
+  <a class="link" href="bad_virtual_result_cast.html#idm35259-bb"><span class="special">~</span><span class="identifier">bad_virtual_result_cast</span></a><span class="special">(</span><span class="special">)</span><span class="special">;</span>
 
-  <span class="comment">// <a class="link" href="bad_virtual_result_cast.html#idm35231-bb">public member functions</a></span>
-  <span class="keyword">virtual</span> <span class="keyword">char</span> <span class="keyword">const</span>  <span class="special">*</span> <a class="link" href="bad_virtual_result_cast.html#idm35232-bb"><span class="identifier">what</span></a><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+  <span class="comment">// <a class="link" href="bad_virtual_result_cast.html#idm35238-bb">public member functions</a></span>
+  <span class="keyword">virtual</span> <span class="keyword">char</span> <span class="keyword">const</span> <span class="special">*</span> <a class="link" href="bad_virtual_result_cast.html#idm35239-bb"><span class="identifier">what</span></a><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
 <span class="special">}</span><span class="special">;</span></pre></div>
 <div class="refsect1">
-<a name="idm38648"></a><h2>Description</h2>
+<a name="idm38595"></a><h2>Description</h2>
 <p>This exception is thrown when programmers pass to this library return value parameters for public function overrides in derived classes that are not consistent with the return type parameter passed for the virtual public function being overridden from the base classes. This allows this library to give more descriptive error messages in such cases of misuse.</p>
 <p>This exception is internally thrown by this library and programmers should not need to throw it from user code.</p>
 <p><span class="bold"><strong>See Also:</strong></span></p>
@@ -56,13 +56,13 @@
 <p>
 </p>
 <div class="refsect2">
-<a name="idm38657"></a><h3>
+<a name="idm38604"></a><h3>
 <a name="boost.contract.bad_virtual_result_castconstruct-copy-destruct"></a><code class="computeroutput">bad_virtual_result_cast</code> 
         public
        construct/copy/destruct</h3>
 <div class="orderedlist"><ol class="orderedlist" type="1">
 <li class="listitem">
-<pre class="literallayout"><span class="keyword">explicit</span> <a name="idm35240-bb"></a><span class="identifier">bad_virtual_result_cast</span><span class="special">(</span><span class="keyword">char</span> <span class="keyword">const</span> <span class="special">*</span> from_type_name<span class="special">,</span> 
+<pre class="literallayout"><span class="keyword">explicit</span> <a name="idm35247-bb"></a><span class="identifier">bad_virtual_result_cast</span><span class="special">(</span><span class="keyword">char</span> <span class="keyword">const</span> <span class="special">*</span> from_type_name<span class="special">,</span> 
                                  <span class="keyword">char</span> <span class="keyword">const</span> <span class="special">*</span> to_type_name<span class="special">)</span><span class="special">;</span></pre>Construct this object with the name of the from- and to- result types. <p>
 </p>
 <div class="variablelist"><table border="0" class="variablelist compact">
@@ -92,15 +92,15 @@
 </table></div>
 </li>
 <li class="listitem">
-<pre class="literallayout"><a name="idm35252-bb"></a><span class="special">~</span><span class="identifier">bad_virtual_result_cast</span><span class="special">(</span><span class="special">)</span><span class="special">;</span></pre>Destruct this object. <p><span class="bold"><strong>Throws:</strong></span> This is declared <code class="computeroutput">noexcept</code> (or <code class="computeroutput">throw()</code> before C++11). </p>
+<pre class="literallayout"><a name="idm35259-bb"></a><span class="special">~</span><span class="identifier">bad_virtual_result_cast</span><span class="special">(</span><span class="special">)</span><span class="special">;</span></pre>Destruct this object. <p><span class="bold"><strong>Throws:</strong></span> This is declared <code class="computeroutput">noexcept</code> (or <code class="computeroutput">throw()</code> before C++11). </p>
 </li>
 </ol></div>
 </div>
 <div class="refsect2">
-<a name="idm38707"></a><h3>
-<a name="idm35231-bb"></a><code class="computeroutput">bad_virtual_result_cast</code> public member functions</h3>
+<a name="idm38654"></a><h3>
+<a name="idm35238-bb"></a><code class="computeroutput">bad_virtual_result_cast</code> public member functions</h3>
 <div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
-<pre class="literallayout"><span class="keyword">virtual</span> <span class="keyword">char</span> <span class="keyword">const</span>  <span class="special">*</span> <a name="idm35232-bb"></a><span class="identifier">what</span><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span></pre>Description for this error (containing both from- and to- type names). <p><span class="bold"><strong>Throws:</strong></span> This is declared <code class="computeroutput">noexcept</code> (or <code class="computeroutput">throw()</code> before C++11). </p>
+<pre class="literallayout"><span class="keyword">virtual</span> <span class="keyword">char</span> <span class="keyword">const</span> <span class="special">*</span> <a name="idm35239-bb"></a><span class="identifier">what</span><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span></pre>Description for this error (containing both from- and to- type names). <p><span class="bold"><strong>Throws:</strong></span> This is declared <code class="computeroutput">noexcept</code> (or <code class="computeroutput">throw()</code> before C++11). </p>
 </li></ol></div>
 </div>
 </div>

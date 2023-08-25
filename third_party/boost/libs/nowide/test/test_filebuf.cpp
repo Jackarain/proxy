@@ -308,7 +308,7 @@ void test_xsgetn(const std::string& filepath, bool binary)
         buffer[0] = origStr[0];
 
         TEST_EQ(buf.sgetn(&str[0], 0), 0);
-#if defined(__GNUC__) && __GNUC__ >= 7
+#if defined(__GNUC__) && __GNUC__ >= 12
         // GCC may not detect that the negative value is checked by xsgetn
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wrestrict"

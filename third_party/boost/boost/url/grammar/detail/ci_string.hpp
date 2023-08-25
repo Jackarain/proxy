@@ -11,7 +11,7 @@
 #ifndef BOOST_URL_GRAMMAR_DETAIL_CI_STRING_HPP
 #define BOOST_URL_GRAMMAR_DETAIL_CI_STRING_HPP
 
-#include <boost/url/string_view.hpp>
+#include <boost/core/detail/string_view.hpp>
 #include <boost/assert.hpp>
 #include <cstdint>
 #include <iterator>
@@ -111,9 +111,9 @@ ci_is_equal(
     S1 const& s1) ->
         typename std::enable_if<
             ! std::is_convertible<
-                S0, string_view>::value ||
+                S0, core::string_view>::value ||
             ! std::is_convertible<
-                S1, string_view>::value,
+                S1, core::string_view>::value,
         bool>::type
 {
 /*  If you get a compile error here, it
@@ -162,14 +162,14 @@ ci_is_equal(
 BOOST_URL_DECL
 bool
 ci_is_equal(
-    string_view s0,
-    string_view s1) noexcept;
+    core::string_view s0,
+    core::string_view s1) noexcept;
 
 BOOST_URL_DECL
 bool
 ci_is_less(
-    string_view s0,
-    string_view s1) noexcept;
+    core::string_view s0,
+    core::string_view s1) noexcept;
 
 } // detail
 } // grammar

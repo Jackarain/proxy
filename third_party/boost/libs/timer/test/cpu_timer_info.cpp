@@ -8,7 +8,6 @@
 //  See http://www.boost.org/libs/timer for documentation.
 
 #include <boost/timer/timer.hpp>
-#include <boost/chrono/chrono.hpp>
 #include <boost/detail/lightweight_main.hpp>
 #include <cstdlib> // for atol()
 #include <iostream>
@@ -22,17 +21,6 @@ using std::cout; using std::endl;
 
 int cpp_main( int argc, char * argv[] )
 {
-  cout << '\n';
-  cout << "For cpu_times.wall, the underlying clock "
-       << (boost::chrono::high_resolution_clock::is_steady
-           ? "is steady. "
-           : "is not steady. "
-          )
-       << "Steady clocks are defined by C++11 as clocks for which values "
-          "of time_point never decrease as physical time advances and for "
-          "which values of time_point advance at a steady rate relative to "
-          "real time. That is, the clock may not be adjusted.\n\n";
-  
   cpu_times start_time;
   start_time.clear();
   cpu_times current_time;

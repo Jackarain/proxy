@@ -7,6 +7,10 @@
 
 [section:changelog Changelog]
 
+[heading Boost 1.83]
+
+* Fixed compilation of `atomic_ref` for `const`-qualified types. Note that even `const`-qualified atomic objects must still reside in read-write memory. ([github_issue 62])
+
 [heading Boost 1.82]
 
 * Due to changes in Boost libraries used in Boost.Atomic, support for C++03 is deprecated. C++11 will become the minimum starting with Boost.Atomic 1.84.

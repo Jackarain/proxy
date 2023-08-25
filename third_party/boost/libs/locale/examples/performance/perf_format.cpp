@@ -21,13 +21,14 @@ int main(int argc, char** argv)
     boost::locale::localization_backend_manager mgr = boost::locale::localization_backend_manager::global();
     mgr.select(argv[1]);
     generator gen(mgr);
+    // Set global locale to requested
     std::locale::global(gen(argv[2]));
-    /// Set global locale to requested
 
     for(int i = 0; i < 100000; i++) {
         std::ostringstream ss;
         for(int j = 0; j < 5; j++) {
-            ss << boost::locale::as::datetime << std::time(0) << " " << boost::locale::as::number << 13456.345 << "\n";
+            ss << boost::locale::as::datetime << std::time(nullptr) << " " << boost::locale::as::number << 13456.345
+               << "\n";
         }
         if(i == 0)
             std::cout << ss.str() << std::endl;

@@ -11,7 +11,7 @@
 #define BOOST_URL_DETAIL_REPLACEMENT_FIELD_RULE_HPP
 
 #include <boost/url/error.hpp>
-#include <boost/url/string_view.hpp>
+#include <boost/core/detail/string_view.hpp>
 #include <boost/url/grammar/variant_rule.hpp>
 #include <boost/url/grammar/unsigned_rule.hpp>
 
@@ -22,10 +22,10 @@ namespace detail {
 // replacement_field ::=  "{" [arg_id] [":" format_spec "}"
 struct replacement_field_rule_t
 {
-    using value_type = string_view;
+    using value_type = core::string_view;
 
     BOOST_URL_DECL
-    result<value_type>
+    system::result<value_type>
     parse(
         char const*& it,
         char const* end) const noexcept;
@@ -38,10 +38,10 @@ constexpr replacement_field_rule_t replacement_field_rule{};
 // id_continue       ::=  id_start | digit
 struct identifier_rule_t
 {
-    using value_type = string_view;
+    using value_type = core::string_view;
 
     BOOST_URL_DECL
-    result<value_type>
+    system::result<value_type>
     parse(
         char const*& it,
         char const* end) const noexcept;
@@ -59,9 +59,9 @@ static constexpr auto arg_id_rule =
 
 struct format_spec_rule_t
 {
-    using value_type = string_view;
+    using value_type = core::string_view;
 
-    result<value_type>
+    system::result<value_type>
     parse(
         char const*& it,
         char const* end) const noexcept;

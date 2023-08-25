@@ -51,10 +51,9 @@
             are inserted one at a time, in order. Any element with key that is a
             duplicate of a key already present in container will be skipped. This
             also means, that if there are two keys within the range that are equal
-            to each other, only the first will be inserted. If the size necessary
-            to accomodate elements from the range exceeds <a class="link" href="../capacity.html" title="object::capacity"><code class="computeroutput"><span class="identifier">capacity</span><span class="special">()</span></code></a>,
-            a rehashing can occur. In that case all iterators and references are
-            invalidated. Otherwise, they are not affected.
+            to each other, only the first will be inserted. Insertion may result
+            in rehashing of the container. In that case all iterators and references
+            are invalidated. Otherwise, they are not affected.
           </p>
 <h6>
 <a name="json.ref.boost__json__object.insert.overload2.h2"></a>
@@ -83,7 +82,8 @@
             Safety</a>
           </h6>
 <p>
-            Basic guarantee. Calls to <code class="computeroutput"><span class="identifier">memory_resource</span><span class="special">::</span><span class="identifier">allocate</span></code>
+            Strong guarantee for forward iterators, basic guarantee for input iterators.
+            Calls to <code class="computeroutput"><span class="identifier">memory_resource</span><span class="special">::</span><span class="identifier">allocate</span></code>
             may throw.
           </p>
 <h6>

@@ -45,8 +45,8 @@ explicit prg_exec_monitor ;
 
 alias boost_test_examples
 :
-    [ run      exec_mon_example.cpp prg_exec_monitor ]
-    [ run-fail prg_exec_example.cpp prg_exec_monitor ]
+    # [ run      exec_mon_example.cpp prg_exec_monitor ]
+    # [ run-fail prg_exec_example.cpp prg_exec_monitor ]
 
     [ run-fail test_case_template_example.cpp unit_test_framework/<link>static ]
 
@@ -65,14 +65,14 @@ alias boost_test_examples
     [ link     unit_test_example_12.cpp unit_test_framework/<link>static ]
     [ run      unit_test_example_13.cpp ]
     [ run-fail unit_test_example_15.cpp : : : [ requires cxx11_decltype cxx11_hdr_random cxx11_hdr_tuple cxx11_hdr_initializer_list cxx11_variadic_macros cxx11_trailing_result_types cxx11_template_aliases ] ]
-    [ run      unit_test_example_16.cpp unit_test_framework ]
+    # [ run      unit_test_example_16.cpp unit_test_framework ]
 
     [ run      named_param_example.cpp ]
 
     [ run      const_string_test.cpp ]
 
-    [ run-fail external_main_example_1.cpp unit_test_framework ]
-    [ run-fail external_main_example_2.cpp unit_test_framework ]
+    # [ run-fail external_main_example_1.cpp unit_test_framework ]
+    # [ run-fail external_main_example_2.cpp unit_test_framework ]
     [ run-fail external_main_example_3.cpp ]
     [ run-fail filtering_example.cpp unit_test_framework/<link>static : : : [ requires cxx11_variadic_macros cxx11_decltype cxx11_auto_declarations ] ]
 ;

@@ -28,7 +28,7 @@
 <a name="json.ref.boost__json__serializer.serializer"></a><a class="link" href="serializer.html" title="serializer::serializer">serializer::serializer</a>
 </h5></div></div></div>
 <p>
-          <a class="indexterm" name="idm33122"></a>
+          <a class="indexterm" name="idm35167"></a>
         </p>
 <p>
           Move constructor (deleted)
@@ -40,13 +40,15 @@
 <p>
           Constructor.
         </p>
-<pre class="programlisting"><a class="link" href="serializer/overload2.html" title="serializer::serializer (2 of 3 overloads)">serializer</a><span class="special">();</span>
+<pre class="programlisting"><a class="link" href="serializer/overload2.html" title="serializer::serializer (2 of 3 overloads)">serializer</a><span class="special">(</span>
+    <span class="identifier">serialize_options</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">opts</span> <span class="special">=</span> <span class="special">{});</span>
   <span class="emphasis"><em>» <a class="link" href="serializer/overload2.html" title="serializer::serializer (2 of 3 overloads)"><code class="computeroutput"><span class="identifier">more</span><span class="special">...</span></code></a></em></span>
 
 <a class="link" href="serializer/overload3.html" title="serializer::serializer (3 of 3 overloads)">serializer</a><span class="special">(</span>
     <span class="identifier">storage_ptr</span> <span class="identifier">sp</span><span class="special">,</span>
     <span class="keyword">unsigned</span> <span class="keyword">char</span><span class="special">*</span> <span class="identifier">buf</span> <span class="special">=</span> <span class="keyword">nullptr</span><span class="special">,</span>
-    <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">buf_size</span> <span class="special">=</span> <span class="number">0</span><span class="special">);</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">buf_size</span> <span class="special">=</span> <span class="number">0</span><span class="special">,</span>
+    <span class="identifier">serialize_options</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">opts</span> <span class="special">=</span> <span class="special">{});</span>
   <span class="emphasis"><em>» <a class="link" href="serializer/overload3.html" title="serializer::serializer (3 of 3 overloads)"><code class="computeroutput"><span class="identifier">more</span><span class="special">...</span></code></a></em></span>
 </pre>
 </div>

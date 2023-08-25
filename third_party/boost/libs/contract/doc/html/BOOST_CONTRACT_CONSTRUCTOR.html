@@ -6,8 +6,8 @@
 <meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
 <link rel="home" href="index.html" title="Chapter 1. Boost.Contract 1.0.0">
 <link rel="up" href="reference.html#header.boost.contract_macro_hpp" title="Header &lt;boost/contract_macro.hpp&gt;">
-<link rel="prev" href="BOOST_CONTRACT_ST_idm37315.html" title="Macro BOOST_CONTRACT_STATIC_INVARIANT">
-<link rel="next" href="BOOST_CONTRACT_CO_idm37391.html" title="Macro BOOST_CONTRACT_CONSTRUCTOR_PRECONDITION">
+<link rel="prev" href="BOOST_CONTRACT_ST_idm37356.html" title="Macro BOOST_CONTRACT_STATIC_INVARIANT">
+<link rel="next" href="BOOST_CONTRACT_CO_idm37432.html" title="Macro BOOST_CONTRACT_CONSTRUCTOR_PRECONDITION">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
@@ -21,7 +21,7 @@
 </tr></table>
 <hr>
 <div class="spirit-nav">
-<a accesskey="p" href="BOOST_CONTRACT_ST_idm37315.html"><img src="../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="reference.html#header.boost.contract_macro_hpp"><img src="../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="BOOST_CONTRACT_CO_idm37391.html"><img src="../../../../doc/src/images/next.png" alt="Next"></a>
+<a accesskey="p" href="BOOST_CONTRACT_ST_idm37356.html"><img src="../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="reference.html#header.boost.contract_macro_hpp"><img src="../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="BOOST_CONTRACT_CO_idm37432.html"><img src="../../../../doc/src/images/next.png" alt="Next"></a>
 </div>
 <div class="refentry">
 <a name="BOOST_CONTRACT_CONSTRUCTOR"></a><div class="titlepage"></div>
@@ -34,8 +34,8 @@
 
 </span>BOOST_CONTRACT_CONSTRUCTOR(...)</pre></div>
 <div class="refsect1">
-<a name="idm45430"></a><h2>Description</h2>
-<p>This is used together with <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_PO_idm37056.html" title="Macro BOOST_CONTRACT_POSTCONDITION">BOOST_CONTRACT_POSTCONDITION</a></code>,  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_EXCEPT.html" title="Macro BOOST_CONTRACT_EXCEPT">BOOST_CONTRACT_EXCEPT</a></code>, and <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_OLD.html" title="Macro BOOST_CONTRACT_OLD">BOOST_CONTRACT_OLD</a></code> to specify postconditions, exception guarantees, and old value copies at body that can be completely disabled at compile-time for constructors (see  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_CO_idm37391.html" title="Macro BOOST_CONTRACT_CONSTRUCTOR_PRECONDITION">BOOST_CONTRACT_CONSTRUCTOR_PRECONDITION</a></code> to specify preconditions for constructors):</p>
+<a name="idm45215"></a><h2>Description</h2>
+<p>This is used together with  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_PO_idm37097.html" title="Macro BOOST_CONTRACT_POSTCONDITION">BOOST_CONTRACT_POSTCONDITION</a></code>,  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_EXCEPT.html" title="Macro BOOST_CONTRACT_EXCEPT">BOOST_CONTRACT_EXCEPT</a></code>, and  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_OLD.html" title="Macro BOOST_CONTRACT_OLD">BOOST_CONTRACT_OLD</a></code> to specify postconditions, exception guarantees, and old value copies at body that can be completely disabled at compile-time for constructors (see  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_CO_idm37432.html" title="Macro BOOST_CONTRACT_CONSTRUCTOR_PRECONDITION">BOOST_CONTRACT_CONSTRUCTOR_PRECONDITION</a></code> to specify preconditions for constructors):</p>
 <pre class="programlisting"><span class="keyword">class</span> <span class="identifier">u</span> <span class="special">{</span>
     <span class="keyword">friend</span> <span class="keyword">class</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">contract</span><span class="special">::</span><span class="identifier">access</span><span class="special">;</span>
 
@@ -70,7 +70,7 @@
 <span class="special">}</span><span class="special">;</span>
 </pre>
 <p>For optimization, this can be omitted for constructors that do not have postconditions and exception guarantees, within classes that have no invariants.</p>
-<p><code class="computeroutput">BOOST_CONTRACT_CONSTRUCTOR(obj)</code> expands to code equivalent to the following (note that no code is generated when  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_NO_idm34946.html" title="Macro BOOST_CONTRACT_NO_CONSTRUCTORS">BOOST_CONTRACT_NO_CONSTRUCTORS</a></code> is defined):</p>
+<p><code class="computeroutput">BOOST_CONTRACT_CONSTRUCTOR(obj)</code> expands to code equivalent to the following (note that no code is generated when  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_NO_idm34950.html" title="Macro BOOST_CONTRACT_NO_CONSTRUCTORS">BOOST_CONTRACT_NO_CONSTRUCTORS</a></code> is defined):</p>
 <pre class="programlisting"><span class="preprocessor">#ifndef</span> <span class="identifier">BOOST_CONTRACT_NO_CONSTRUCTORS</span>
     <span class="identifier">boost</span><span class="special">::</span><span class="identifier">contract</span><span class="special">::</span><span class="identifier">check</span> <span class="identifier">internal_var</span> <span class="special">=</span>
             <span class="identifier">boost</span><span class="special">::</span><span class="identifier">contract</span><span class="special">::</span><span class="identifier">constructor</span><span class="special">(</span><span class="identifier">obj</span><span class="special">)</span>
@@ -78,7 +78,7 @@
 </pre>
 <p>Where:</p>
 <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
-<li class="listitem"><p><code class="computeroutput"><span class="bold"><strong>obj</strong></span></code> is the object <code class="computeroutput">this</code> from the scope of the enclosing constructor declaring the contract. Constructors check all class invariants, including static and volatile invariants (see <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_INVARIANT.html" title="Macro BOOST_CONTRACT_INVARIANT">BOOST_CONTRACT_INVARIANT</a></code>,  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_ST_idm37315.html" title="Macro BOOST_CONTRACT_STATIC_INVARIANT">BOOST_CONTRACT_STATIC_INVARIANT</a></code>, and  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_IN_idm37284.html" title="Macro BOOST_CONTRACT_INVARIANT_VOLATILE">BOOST_CONTRACT_INVARIANT_VOLATILE</a></code>). (This is a variadic macro parameter so it can contain commas not protected by round parenthesis.) </p></li>
+<li class="listitem"><p><code class="computeroutput"><span class="bold"><strong>obj</strong></span></code> is the object <code class="computeroutput">this</code> from the scope of the enclosing constructor declaring the contract. Constructors check all class invariants, including static and volatile invariants (see  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_INVARIANT.html" title="Macro BOOST_CONTRACT_INVARIANT">BOOST_CONTRACT_INVARIANT</a></code>,  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_ST_idm37356.html" title="Macro BOOST_CONTRACT_STATIC_INVARIANT">BOOST_CONTRACT_STATIC_INVARIANT</a></code>, and  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_IN_idm37325.html" title="Macro BOOST_CONTRACT_INVARIANT_VOLATILE">BOOST_CONTRACT_INVARIANT_VOLATILE</a></code>). (This is a variadic macro parameter so it can contain commas not protected by round parenthesis.) </p></li>
 <li class="listitem"><p><code class="computeroutput"><span class="bold"><strong>internal_var</strong></span></code> is a variable name internally generated by this library (this name is unique but only on different line numbers so this macro cannot be expanded multiple times on the same line).</p></li>
 </ul></div>
 <p>
@@ -99,7 +99,7 @@
 </div>
 <hr>
 <div class="spirit-nav">
-<a accesskey="p" href="BOOST_CONTRACT_ST_idm37315.html"><img src="../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="reference.html#header.boost.contract_macro_hpp"><img src="../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="BOOST_CONTRACT_CO_idm37391.html"><img src="../../../../doc/src/images/next.png" alt="Next"></a>
+<a accesskey="p" href="BOOST_CONTRACT_ST_idm37356.html"><img src="../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="reference.html#header.boost.contract_macro_hpp"><img src="../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="BOOST_CONTRACT_CO_idm37432.html"><img src="../../../../doc/src/images/next.png" alt="Next"></a>
 </div>
 </body>
 </html>

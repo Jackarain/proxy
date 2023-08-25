@@ -16,15 +16,15 @@ namespace boost {
 namespace urls {
 namespace detail {
 
-// We use detail::to_sv(s) instead of string_view(s) whenever
-// we should convert to string_view.
+// We use detail::to_sv(s) instead of core::string_view(s) whenever
+// we should convert to core::string_view.
 // This is a workaround for GCC >=8.0 <8.4
 // See: https://github.com/boostorg/url/issues/672
 template<class T>
 core::string_view
 to_sv(T const& t) noexcept
 {
-    return boost::core::string_view(t);
+    return core::string_view(t);
 }
 
 } // detail

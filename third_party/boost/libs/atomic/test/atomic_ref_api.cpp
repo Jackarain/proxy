@@ -77,6 +77,10 @@ int main(int, char *[])
     test_struct_with_padding_api< atomic_ref_wrapper >();
 #endif
 
+    aligned_object< const int, boost::atomic_ref< const int >::required_alignment > object(10);
+    boost::atomic_ref< const int > r(object.get());
+    BOOST_TEST_EQ(r.load(boost::memory_order_relaxed), 10);
+
 #if !defined(BOOST_NO_CXX17_DEDUCTION_GUIDES)
     if (boost::atomic_ref< int >::is_always_lock_free)
     {

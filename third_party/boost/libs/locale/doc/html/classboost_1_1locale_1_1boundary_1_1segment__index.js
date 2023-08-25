@@ -14,8 +14,7 @@ var classboost_1_1locale_1_1boundary_1_1segment__index =
     [ "full_select", "group__boundary.html#gaa1560a05d1db02228ed0f5a16a650915", null ],
     [ "full_select", "group__boundary.html#ga205fd51daa439a18527675e663a0802f", null ],
     [ "map", "group__boundary.html#ga3f82ec594bb8f4159352e6111c52fb03", null ],
-    [ "operator=", "group__boundary.html#ga71d2e73911267180538859d35ee5db2c", null ],
+    [ "operator=", "group__boundary.html#ga5d623cd700841dbf71ed5e1db94475a9", null ],
     [ "rule", "group__boundary.html#gadedc114f14445bbaa91afba14ffb92a0", null ],
-    [ "rule", "group__boundary.html#gad19735180401edb15acbdbbeb21e5a73", null ],
-    [ "boundary_point_index< base_iterator >", "group__boundary.html#ga960209e8a9453221641eda6bd8c4989b", null ]
+    [ "rule", "group__boundary.html#gad19735180401edb15acbdbbeb21e5a73", null ]
 ];

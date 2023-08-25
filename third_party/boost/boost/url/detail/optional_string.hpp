@@ -10,7 +10,8 @@
 #ifndef BOOST_URL_DETAIL_OPTIONAL_STRING_HPP
 #define BOOST_URL_DETAIL_OPTIONAL_STRING_HPP
 
-#include <boost/url/string_view.hpp>
+#include <boost/url/detail/string_view.hpp>
+#include <boost/core/detail/string_view.hpp>
 
 namespace boost {
 namespace urls {
@@ -22,13 +23,13 @@ struct no_value_t;
 namespace detail {
 struct optional_string
 {
-    string_view s;
+    core::string_view s;
     bool b = false;
 };
 
 template <class String>
 typename std::enable_if<
-    std::is_convertible<String, string_view>::value,
+    std::is_convertible<String, core::string_view>::value,
     optional_string>::type
 get_optional_string(
     String const& s)
@@ -53,7 +54,7 @@ struct is_dereferenceable<
 
 template <class OptionalString>
 typename std::enable_if<
-    !std::is_convertible<OptionalString, string_view>::value,
+    !std::is_convertible<OptionalString, core::string_view>::value,
     optional_string>::type
 get_optional_string(
     OptionalString const& opt)
@@ -65,11 +66,11 @@ get_optional_string(
     static_assert(
         is_dereferenceable<OptionalString>::value &&
         std::is_constructible<bool, OptionalString>::value &&
-        !std::is_convertible<OptionalString, string_view>::value &&
-        std::is_convertible<typename std::decay<decltype(*std::declval<OptionalString>())>::type, string_view>::value,
+        !std::is_convertible<OptionalString, core::string_view>::value &&
+        std::is_convertible<typename std::decay<decltype(*std::declval<OptionalString>())>::type, core::string_view>::value,
         "OptionalString requirements not met");
     optional_string r;
-    r.s = opt ? detail::to_sv(*opt) : string_view{};
+    r.s = opt ? detail::to_sv(*opt) : core::string_view{};
     r.b = static_cast<bool>(opt);
     return r;
 }

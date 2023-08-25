@@ -10,6 +10,10 @@
 
 #include <boost/mysql/error_code.hpp>
 
+#include <boost/mysql/detail/config.hpp>
+
+#include <boost/system/error_category.hpp>
+
 namespace boost {
 namespace mysql {
 
@@ -48,15 +52,49 @@ enum class client_errc : int
     wrong_num_params,
 
     /// The connection mandatory SSL, but the server doesn't accept SSL connections.
-    server_doesnt_support_ssl
+    server_doesnt_support_ssl,
+
+    /// The static interface detected a mismatch between your C++ type definitions and what the server
+    /// returned in the query.
+    metadata_check_failed,
+
+    /// The static interface detected a mismatch between the number of row types passed to `static_results`
+    /// or `static_execution_state` and the number of resultsets returned by your query.
+    num_resultsets_mismatch,
+
+    /// The StaticRow type passed to read_some_rows does not correspond to the resultset type being read.
+    row_type_mismatch,
+
+    /// The static interface encountered an error when parsing a field into a C++ data structure.
+    static_row_parsing_error,
 };
 
+BOOST_MYSQL_DECL
+const boost::system::error_category& get_client_category() noexcept;
+
 /// Creates an \ref error_code from a \ref client_errc.
-inline error_code make_error_code(client_errc error);
+inline error_code make_error_code(client_errc error)
+{
+    return error_code(static_cast<int>(error), get_client_category());
+}
 
 }  // namespace mysql
+
+#ifndef BOOST_MYSQL_DOXYGEN
+namespace system {
+
+template <>
+struct is_error_code_enum<::boost::mysql::client_errc>
+{
+    static constexpr bool value = true;
+};
+}  // namespace system
+#endif
+
 }  // namespace boost
 
-#include <boost/mysql/impl/error_categories.hpp>
+#ifdef BOOST_MYSQL_HEADER_ONLY
+#include <boost/mysql/impl/error_categories.ipp>
+#endif
 
 #endif

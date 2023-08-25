@@ -39,6 +39,22 @@
     </td>
 </table>
 
+<h2>1.83.0</h2>
+<ul>
+  <li>Added <code>directory_entry::refresh</code> method that updates internal cached file statuses for the directory entry identified by path.</li>
+  <li><b>v4:</b> <code>directory_entry</code> constructors and modifiers that initialize or modify the path now automatically call <code>refresh</code>. This may result in errors that were not indicated before and in <b>v3</b>, if querying the filesystem for file statuses fails (e.g. if the file does not exist). This new behavior is similar to std::filesystem.</li>
+  <li><b>v4:</b> <code>directory_entry</code> constructors and methods taking <code>file_status</code> parameters are removed. Users are recommended to remove these arguments and rely on <code>directory_entry</code> calling <code>refresh</code> internally.</li>
+  <li>Added <code>directory_entry</code> member methods for checking the file type of the file, similar to std::filesystem.</li>
+  <li>Added more methods for testing file status: <code>is_block_file</code>, <code>is_character_file</code>, <code>is_fifo</code>, <code>is_socket</code> and <code>is_reparse_file</code>.</li>
+  <li><code>recursive_directory_iterator</code> is now more likely to reuse information about the file type that is obtained during filesystem iteration. This may improve performance. (<a href="https://github.com/boostorg/filesystem/issues/288">#288</a>)</li>
+  <li>File streams defined in <code>boost/filesystem/fstream.hpp</code> are now movable, if the standard library file streams are. (<a href="https://github.com/boostorg/filesystem/issues/280">#280</a>)</li>
+  <li>Added a new header <code>boost/filesystem/cstdio.hpp</code> with a portable <code>fopen</code> overload that takes <code>path</code> as the first argument. This function is equivalent to <code>std::fopen</code>, except that on Windows it uses the native wide character encoding for paths.</li>
+  <li>Generic <code>path</code> comparison operators are now more restricted to avoid potential ambiguities when user's code contains a <code>using namespace boost::filesystem;</code> directive. (<a href="https://github.com/boostorg/filesystem/issues/285">#285</a>)</li>
+  <li>Fixed potential overload resolution ambiguity in users' code, where <code>path</code> constructors from iterators could interfere with function overloads taking a <code>std::initializer_list</code> argument. (<a href="https://github.com/boostorg/filesystem/issues/287">#287</a>)</li>
+  <li>On Windows, added more workarounds for errors returned by various filesystems when creating a directory iterator. (<a href="https://github.com/boostorg/filesystem/issues/284">#284</a>, <a href="https://github.com/boostorg/filesystem/issues/286">#286</a>)</li>
+  <li>On Windows, relaxed access rights needed for querying file times. (<a href="https://github.com/boostorg/filesystem/issues/290">#290</a>)</li>
+</ul>
+
 <h2>1.82.0</h2>
 <ul>
   <li>Due to changes in Boost.System and some other libraries used in Boost.Filesystem, the support for C++03 is deprecated. C++11 will become the minimum starting with Boost.Filesystem 1.84.</li>

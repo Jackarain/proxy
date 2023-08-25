@@ -17,9 +17,8 @@ var classboost_1_1locale_1_1abstract__calendar =
       [ "actual_maximum", "classboost_1_1locale_1_1abstract__calendar.html#af786b3e65294d70769f2826ef95c7bd5a3d2648e95466623ba20502281e0208af", null ],
       [ "absolute_maximum", "classboost_1_1locale_1_1abstract__calendar.html#af786b3e65294d70769f2826ef95c7bd5ab5d1af0b2698fee942a1486dfcc6552b", null ]
     ] ],
-    [ "~abstract_calendar", "classboost_1_1locale_1_1abstract__calendar.html#a1fa3963b78eecfe4d0f22f655bedb9c2", null ],
     [ "adjust_value", "classboost_1_1locale_1_1abstract__calendar.html#acc0e2e3edb7e774c35e0a01964d10c02", null ],
-    [ "clone", "classboost_1_1locale_1_1abstract__calendar.html#a73bc2d023be4c6ac6a6f441f74ded2f9", null ],
+    [ "clone", "classboost_1_1locale_1_1abstract__calendar.html#a21258ba655bbd5fbc9f39351f2601433", null ],
     [ "difference", "classboost_1_1locale_1_1abstract__calendar.html#a4770b99780933148b737e911595c0b85", null ],
     [ "get_option", "classboost_1_1locale_1_1abstract__calendar.html#a0c034dd6f135b7d9b6faad08d49715a8", null ],
     [ "get_time", "classboost_1_1locale_1_1abstract__calendar.html#a8900097c0b687393b053bc0420070815", null ],

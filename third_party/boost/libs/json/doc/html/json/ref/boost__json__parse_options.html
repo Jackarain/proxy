@@ -35,7 +35,7 @@
         <span class="phrase"><a name="json.ref.boost__json__parse_options.synopsis"></a></span><a class="link" href="boost__json__parse_options.html#json.ref.boost__json__parse_options.synopsis">Synopsis</a>
       </h5>
 <p>
-        Defined in header <code class="literal">&lt;<a href="https://github.com/cppalliance/json/blob/master/include/boost/json/parse_options.hpp" target="_top">boost/json/parse_options.hpp</a>&gt;</code>
+        Defined in header <code class="literal">&lt;<a href="https://github.com/boostorg/json/blob/master/include/boost/json/parse_options.hpp" target="_top">boost/json/parse_options.hpp</a>&gt;</code>
       </p>
 <pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">parse_options</span>
 </pre>
@@ -66,6 +66,18 @@
 <td>
                 <p>
                   <span class="bold"><strong><a class="link" href="boost__json__parse_options/allow_comments.html" title="parse_options::allow_comments">allow_comments</a></strong></span>
+                </p>
+              </td>
+<td>
+                <p>
+                  Non-standard extension option.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <span class="bold"><strong><a class="link" href="boost__json__parse_options/allow_infinity_and_nan.html" title="parse_options::allow_infinity_and_nan">allow_infinity_and_nan</a></strong></span>
                 </p>
               </td>
 <td>
@@ -110,10 +122,56 @@
                 </p>
               </td>
 </tr>
+<tr>
+<td>
+                <p>
+                  <span class="bold"><strong><a class="link" href="boost__json__parse_options/numbers.html" title="parse_options::numbers">numbers</a></strong></span>
+                </p>
+              </td>
+<td>
+                <p>
+                  Number pasing mode.
+                </p>
+              </td>
+</tr>
 </tbody>
 </table></div>
 <h5>
 <a name="json.ref.boost__json__parse_options.h2"></a>
+        <span class="phrase"><a name="json.ref.boost__json__parse_options.friends"></a></span><a class="link" href="boost__json__parse_options.html#json.ref.boost__json__parse_options.friends">Friends</a>
+      </h5>
+<div class="informaltable"><table class="table">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+                <p>
+                  Name
+                </p>
+              </th>
+<th>
+                <p>
+                  Description
+                </p>
+              </th>
+</tr></thead>
+<tbody><tr>
+<td>
+                <p>
+                  <span class="bold"><strong><a class="link" href="boost__json__parse_options/operator__gt__gt_.html" title="parse_options::operator&gt;&gt;">operator&gt;&gt;</a></strong></span>
+                </p>
+              </td>
+<td>
+                <p>
+                  Set JSON parse options on input stream.
+                </p>
+              </td>
+</tr></tbody>
+</table></div>
+<h5>
+<a name="json.ref.boost__json__parse_options.h3"></a>
         <span class="phrase"><a name="json.ref.boost__json__parse_options.description"></a></span><a class="link" href="boost__json__parse_options.html#json.ref.boost__json__parse_options.description">Description</a>
       </h5>
 <p>
@@ -122,7 +180,7 @@
         maximum parsing depth to 32 and specify that only standard JSON is allowed,
       </p>
 <h5>
-<a name="json.ref.boost__json__parse_options.h3"></a>
+<a name="json.ref.boost__json__parse_options.h4"></a>
         <span class="phrase"><a name="json.ref.boost__json__parse_options.see_also"></a></span><a class="link" href="boost__json__parse_options.html#json.ref.boost__json__parse_options.see_also">See
         Also</a>
       </h5>
@@ -131,7 +189,7 @@
         <a class="link" href="boost__json__parser.html" title="parser"><code class="computeroutput"><span class="identifier">parser</span></code></a>.
       </p>
 <p>
-        Convenience header <code class="literal">&lt;<a href="https://github.com/cppalliance/json/blob/master/include/boost/json.hpp" target="_top">boost/json.hpp</a>&gt;</code>
+        Convenience header <code class="literal">&lt;<a href="https://github.com/boostorg/json/blob/master/include/boost/json.hpp" target="_top">boost/json.hpp</a>&gt;</code>
       </p>
 </div>
 <div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>

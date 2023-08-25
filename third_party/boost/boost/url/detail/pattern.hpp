@@ -12,7 +12,7 @@
 
 #include <boost/url/error_types.hpp>
 #include <boost/url/url_base.hpp>
-#include <boost/url/string_view.hpp>
+#include <boost/core/detail/string_view.hpp>
 
 // This file includes functions and classes
 // to parse uri templates or format strings
@@ -25,14 +25,14 @@ class format_args;
 
 struct pattern
 {
-    string_view scheme;
-    string_view user;
-    string_view pass;
-    string_view host;
-    string_view port;
-    string_view path;
-    string_view query;
-    string_view frag;
+    core::string_view scheme;
+    core::string_view user;
+    core::string_view pass;
+    core::string_view host;
+    core::string_view port;
+    core::string_view path;
+    core::string_view query;
+    core::string_view frag;
 
     bool has_authority = false;
     bool has_user = false;
@@ -49,9 +49,9 @@ struct pattern
 };
 
 BOOST_URL_DECL
-result<pattern>
+system::result<pattern>
 parse_pattern(
-    string_view s);
+    core::string_view s);
 
 } // detail
 } // url

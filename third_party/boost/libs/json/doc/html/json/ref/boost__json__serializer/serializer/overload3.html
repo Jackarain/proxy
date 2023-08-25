@@ -38,7 +38,8 @@
 <pre class="programlisting"><span class="identifier">serializer</span><span class="special">(</span>
     <span class="identifier">storage_ptr</span> <span class="identifier">sp</span><span class="special">,</span>
     <span class="keyword">unsigned</span> <span class="keyword">char</span><span class="special">*</span> <span class="identifier">buf</span> <span class="special">=</span> <span class="keyword">nullptr</span><span class="special">,</span>
-    <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">buf_size</span> <span class="special">=</span> <span class="number">0</span><span class="special">);</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">buf_size</span> <span class="special">=</span> <span class="number">0</span><span class="special">,</span>
+    <span class="identifier">serialize_options</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">opts</span> <span class="special">=</span> <span class="special">{});</span>
 </pre>
 <h6>
 <a name="json.ref.boost__json__serializer.serializer.overload3.h1"></a>
@@ -122,6 +123,19 @@
 <td>
                     <p>
                       The number of bytes of valid memory pointed to by <code class="computeroutput"><span class="identifier">buf</span></code>.
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      <code class="computeroutput"><span class="identifier">opts</span></code>
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      The options for the serializer. If this parameter is omitted,
+                      the serializer will output only standard JSON.
                     </p>
                   </td>
 </tr>

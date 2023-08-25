@@ -1511,49 +1511,35 @@ boost::winapi::NTSTATUS_ nt_create_file_handle_at(HANDLE& out, HANDLE basedir_ha
 
 #endif // !defined(UNDER_CE)
 
-ULONG get_reparse_point_tag_ioctl(HANDLE h)
+ULONG get_reparse_point_tag_ioctl(HANDLE h, path const& p, error_code* ec)
 {
-    boost::scoped_ptr< reparse_data_buffer_with_storage > buf(new reparse_data_buffer_with_storage);
+    boost::scoped_ptr< reparse_data_buffer_with_storage > buf(new (std::nothrow) reparse_data_buffer_with_storage);
+    if (BOOST_UNLIKELY(!buf.get()))
+    {
+        if (!ec)
+            BOOST_FILESYSTEM_THROW(filesystem_error("Cannot allocate memory to query reparse point", p, make_error_code(system::errc::not_enough_memory)));
+
+        *ec = make_error_code(system::errc::not_enough_memory);
+        return 0u;
+    }
 
     // Query the reparse data
     DWORD dwRetLen = 0u;
     BOOL result = ::DeviceIoControl(h, FSCTL_GET_REPARSE_POINT, NULL, 0, buf.get(), sizeof(*buf), &dwRetLen, NULL);
     if (BOOST_UNLIKELY(!result))
-        return false;
+    {
+        DWORD err = ::GetLastError();
+        if (!ec)
+            BOOST_FILESYSTEM_THROW(filesystem_error("Failed to query reparse point", p, error_code(err, system_category())));
+
+        ec->assign(err, system_category());
+        return 0u;
+    }
 
     return buf->rdb.ReparseTag;
 }
 
 namespace {
-
-inline bool is_reparse_point_a_symlink(path const& p)
-{
-    handle_wrapper h(create_file_handle(
-        p,
-        FILE_READ_ATTRIBUTES | FILE_READ_EA,
-        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-        NULL,
-        OPEN_EXISTING,
-        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT));
-    if (BOOST_UNLIKELY(h.handle == INVALID_HANDLE_VALUE))
-        return false;
-
-    GetFileInformationByHandleEx_t* get_file_information_by_handle_ex = filesystem::detail::atomic_load_relaxed(get_file_information_by_handle_ex_api);
-    if (BOOST_LIKELY(get_file_information_by_handle_ex != NULL))
-    {
-        file_attribute_tag_info info;
-        BOOL result = get_file_information_by_handle_ex(h.handle, file_attribute_tag_info_class, &info, sizeof(info));
-        if (BOOST_UNLIKELY(!result))
-            return false;
-
-        if ((info.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) == 0u)
-            return false;
-
-        return is_reparse_point_tag_a_symlink(info.ReparseTag);
-    }
-
-    return is_reparse_point_a_symlink_ioctl(h.handle);
-}
 
 inline std::size_t get_full_path_name(path const& src, std::size_t len, wchar_t* buf, wchar_t** p)
 {
@@ -1623,7 +1609,14 @@ fs::file_status status_by_handle(HANDLE h, path const& p, error_code* ec)
         attrs = info.dwFileAttributes;
 
         if ((attrs & FILE_ATTRIBUTE_REPARSE_POINT) != 0u)
-            reparse_tag = get_reparse_point_tag_ioctl(h);
+        {
+            reparse_tag = get_reparse_point_tag_ioctl(h, p, ec);
+            if (ec)
+            {
+                if (BOOST_UNLIKELY(!!ec))
+                    return fs::file_status(fs::status_error);
+            }
+        }
     }
 
     if ((attrs & FILE_ATTRIBUTE_REPARSE_POINT) != 0u)
@@ -2973,7 +2966,14 @@ bool copy_file(path const& from, path const& to, unsigned int options, error_cod
         // Create handle_wrappers here so that CloseHandle calls don't clobber error code returned by GetLastError
         handle_wrapper hw_from, hw_to;
 
-        hw_from.handle = create_file_handle(from.c_str(), GENERIC_READ, FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);
+        // See the comment in last_write_time regarding access rights used here for GetFileTime.
+        hw_from.handle = create_file_handle(
+            from.c_str(),
+            FILE_READ_ATTRIBUTES | FILE_READ_EA,
+            FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL,
+            OPEN_EXISTING,
+            FILE_FLAG_BACKUP_SEMANTICS);
 
         FILETIME lwt_from;
         if (hw_from.handle == INVALID_HANDLE_VALUE)
@@ -2987,7 +2987,13 @@ bool copy_file(path const& from, path const& to, unsigned int options, error_cod
         if (!::GetFileTime(hw_from.handle, NULL, NULL, &lwt_from))
             goto fail_last_error;
 
-        hw_to.handle = create_file_handle(to.c_str(), GENERIC_READ, FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS);
+        hw_to.handle = create_file_handle(
+            to.c_str(),
+            FILE_READ_ATTRIBUTES | FILE_READ_EA,
+            FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL,
+            OPEN_EXISTING,
+            FILE_FLAG_BACKUP_SEMANTICS);
 
         if (hw_to.handle != INVALID_HANDLE_VALUE)
         {
@@ -3769,9 +3775,10 @@ std::time_t creation_time(path const& p, system::error_code* ec)
 
 #else // defined(BOOST_POSIX_API)
 
+    // See the comment in last_write_time regarding access rights used here for GetFileTime.
     handle_wrapper hw(create_file_handle(
         p.c_str(),
-        GENERIC_READ,
+        FILE_READ_ATTRIBUTES | FILE_READ_EA,
         FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
         NULL,
         OPEN_EXISTING,
@@ -3826,9 +3833,12 @@ std::time_t last_write_time(path const& p, system::error_code* ec)
 
 #else // defined(BOOST_POSIX_API)
 
+    // GetFileTime is documented to require GENERIC_READ access right, but this causes problems if the file
+    // is opened by another process without FILE_SHARE_READ. In practice, FILE_READ_ATTRIBUTES works, and
+    // FILE_READ_EA is also added for good measure, in case if it matters for SMBv1.
     handle_wrapper hw(create_file_handle(
         p.c_str(),
-        GENERIC_READ,
+        FILE_READ_ATTRIBUTES | FILE_READ_EA,
         FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
         NULL,
         OPEN_EXISTING,

@@ -1,13 +1,13 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>value_from (1 of 2 overloads)</title>
+<title>value_from (1 of 4 overloads)</title>
 <link rel="stylesheet" href="../../../../../../../doc/src/boostbook.css" type="text/css">
 <meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
 <link rel="home" href="../../../index.html" title="Chapter 1. Boost.JSON">
 <link rel="up" href="../boost__json__value_from.html" title="value_from">
 <link rel="prev" href="../boost__json__value_from.html" title="value_from">
-<link rel="next" href="overload2.html" title="value_from (2 of 2 overloads)">
+<link rel="next" href="overload2.html" title="value_from (2 of 4 overloads)">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
@@ -25,8 +25,8 @@
 </div>
 <div class="section">
 <div class="titlepage"><div><div><h5 class="title">
-<a name="json.ref.boost__json__value_from.overload1"></a><a class="link" href="overload1.html" title="value_from (1 of 2 overloads)">value_from
-        (1 of 2 overloads)</a>
+<a name="json.ref.boost__json__value_from.overload1"></a><a class="link" href="overload1.html" title="value_from (1 of 4 overloads)">value_from
+        (1 of 4 overloads)</a>
 </h5></div></div></div>
 <p>
           Convert an object of type <code class="computeroutput"><span class="identifier">T</span></code>
@@ -37,13 +37,15 @@
           <span class="phrase"><a name="json.ref.boost__json__value_from.overload1.synopsis"></a></span><a class="link" href="overload1.html#json.ref.boost__json__value_from.overload1.synopsis">Synopsis</a>
         </h6>
 <p>
-          Defined in header <code class="literal">&lt;<a href="https://github.com/cppalliance/json/blob/master/include/boost/json/value_from.hpp" target="_top">boost/json/value_from.hpp</a>&gt;</code>
+          Defined in header <code class="literal">&lt;<a href="https://github.com/boostorg/json/blob/master/include/boost/json/value_from.hpp" target="_top">boost/json/value_from.hpp</a>&gt;</code>
         </p>
 <pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
-    <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+    <span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span>
+    <span class="keyword">class</span> <span class="identifier">Context</span><span class="special">&gt;</span>
 <span class="keyword">void</span>
 <span class="identifier">value_from</span><span class="special">(</span>
     <span class="identifier">T</span><span class="special">&amp;&amp;</span> <span class="identifier">t</span><span class="special">,</span>
+    <span class="identifier">Context</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">ctx</span><span class="special">,</span>
     <span class="identifier">value</span><span class="special">&amp;</span> <span class="identifier">jv</span><span class="special">);</span>
 </pre>
 <h6>
@@ -76,8 +78,28 @@
           Conversion of other types is done by calling an overload of <code class="computeroutput"><span class="identifier">tag_invoke</span></code> found by argument-dependent
           lookup. Its signature should be similar to:
         </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span> <span class="keyword">class</span> <span class="identifier">FullContext</span> <span class="special">&gt;</span>
+<span class="keyword">void</span> <span class="identifier">tag_invoke</span><span class="special">(</span> <span class="identifier">value_from_tag</span><span class="special">,</span> <span class="identifier">value</span><span class="special">&amp;,</span> <span class="identifier">T</span><span class="special">,</span>  <span class="keyword">const</span> <span class="identifier">Context</span><span class="special">&amp;</span> <span class="special">,</span> <span class="keyword">const</span> <span class="identifier">FullContext</span><span class="special">&amp;</span> <span class="special">);</span>
+</pre>
+<p>
+          or
+        </p>
+<pre class="programlisting"><span class="keyword">void</span> <span class="identifier">tag_invoke</span><span class="special">(</span> <span class="identifier">value_from_tag</span><span class="special">,</span> <span class="identifier">value</span><span class="special">&amp;,</span> <span class="identifier">T</span><span class="special">,</span>  <span class="keyword">const</span> <span class="identifier">Context</span><span class="special">&amp;</span> <span class="special">);</span>
+</pre>
+<p>
+          or
+        </p>
 <pre class="programlisting"><span class="keyword">void</span> <span class="identifier">tag_invoke</span><span class="special">(</span> <span class="identifier">value_from_tag</span><span class="special">,</span> <span class="identifier">value</span><span class="special">&amp;,</span> <span class="identifier">T</span> <span class="special">);</span>
 </pre>
+<p>
+          The overloads are checked for existence in that order and the first that
+          matches will be selected.
+        </p>
+<p>
+          The <code class="computeroutput"><span class="identifier">ctx</span></code> argument can be
+          used either as a tag type to provide conversions for third-party types,
+          or to pass extra data to the conversion function.
+        </p>
 <h6>
 <a name="json.ref.boost__json__value_from.overload1.h2"></a>
           <span class="phrase"><a name="json.ref.boost__json__value_from.overload1.exception_safety"></a></span><a class="link" href="overload1.html#json.ref.boost__json__value_from.overload1.exception_safety">Exception
@@ -108,7 +130,8 @@
                   </p>
                 </th>
 </tr></thead>
-<tbody><tr>
+<tbody>
+<tr>
 <td>
                   <p>
                     <code class="computeroutput"><span class="identifier">T</span></code>
@@ -119,7 +142,20 @@
                     The type of the object to convert.
                   </p>
                 </td>
-</tr></tbody>
+</tr>
+<tr>
+<td>
+                  <p>
+                    <code class="computeroutput"><span class="identifier">Context</span></code>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    The type of context passed to the conversion function.
+                  </p>
+                </td>
+</tr>
+</tbody>
 </table></div>
 <h6>
 <a name="json.ref.boost__json__value_from.overload1.h4"></a>
@@ -158,6 +194,18 @@
 <tr>
 <td>
                   <p>
+                    <code class="computeroutput"><span class="identifier">ctx</span></code>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    Context passed to the conversion function.
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
                     <code class="computeroutput"><span class="identifier">jv</span></code>
                   </p>
                 </td>
@@ -181,7 +229,7 @@
           A general pattern for supporting customisable functions</a>
         </p>
 <p>
-          Convenience header <code class="literal">&lt;<a href="https://github.com/cppalliance/json/blob/master/include/boost/json.hpp" target="_top">boost/json.hpp</a>&gt;</code>
+          Convenience header <code class="literal">&lt;<a href="https://github.com/boostorg/json/blob/master/include/boost/json.hpp" target="_top">boost/json.hpp</a>&gt;</code>
         </p>
 </div>
 <div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>

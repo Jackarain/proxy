@@ -71,7 +71,7 @@ using nt_error = status_error<_nt_code_domain>;
 class _nt_code_domain : public status_code_domain
 {
   template <class DomainType> friend class status_code;
-  template <class StatusCode> friend class detail::indirecting_domain;
+  template <class StatusCode, class Allocator> friend class detail::indirecting_domain;
   friend class _com_code_domain;
   using _base = status_code_domain;
   static int _nt_code_to_errno(win32::NTSTATUS c)
@@ -103,7 +103,9 @@ class _nt_code_domain : public status_code_domain
   {
     wchar_t buffer[32768];
     static win32::HMODULE ntdll = win32::GetModuleHandleW(L"NTDLL.DLL");
-    win32::DWORD wlen = win32::FormatMessageW(0x00000800 /*FORMAT_MESSAGE_FROM_HMODULE*/ | 0x00001000 /*FORMAT_MESSAGE_FROM_SYSTEM*/ | 0x00000200 /*FORMAT_MESSAGE_IGNORE_INSERTS*/, ntdll, c, (1 << 10) /*MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT)*/, buffer, 32768, nullptr);
+    win32::DWORD wlen =
+    win32::FormatMessageW(0x00000800 /*FORMAT_MESSAGE_FROM_HMODULE*/ | 0x00001000 /*FORMAT_MESSAGE_FROM_SYSTEM*/ | 0x00000200 /*FORMAT_MESSAGE_IGNORE_INSERTS*/,
+                          ntdll, c, (1 << 10) /*MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT)*/, buffer, 32768, nullptr);
     size_t allocation = wlen + (wlen >> 1);
     win32::DWORD bytes;
     if(wlen == 0)
@@ -160,7 +162,11 @@ public:
 
   virtual string_ref name() const noexcept override { return string_ref("NT domain"); }  // NOLINT
 
-  virtual payload_info_t payload_info() const noexcept override { return {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type), (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) : alignof(status_code_domain *)}; }
+  virtual payload_info_t payload_info() const noexcept override
+  {
+    return {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type),
+            (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) : alignof(status_code_domain *)};
+  }
 
 protected:
   virtual bool _do_failure(const status_code<void> &code) const noexcept override  // NOLINT

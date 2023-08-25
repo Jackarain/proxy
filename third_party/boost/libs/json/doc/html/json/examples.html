@@ -126,15 +126,9 @@
     <span class="special">}</span>
 
     <span class="keyword">case</span> <span class="identifier">json</span><span class="special">::</span><span class="identifier">kind</span><span class="special">::</span><span class="identifier">uint64</span><span class="special">:</span>
-        <span class="identifier">os</span> <span class="special">&lt;&lt;</span> <span class="identifier">jv</span><span class="special">.</span><span class="identifier">get_uint64</span><span class="special">();</span>
-        <span class="keyword">break</span><span class="special">;</span>
-
     <span class="keyword">case</span> <span class="identifier">json</span><span class="special">::</span><span class="identifier">kind</span><span class="special">::</span><span class="identifier">int64</span><span class="special">:</span>
-        <span class="identifier">os</span> <span class="special">&lt;&lt;</span> <span class="identifier">jv</span><span class="special">.</span><span class="identifier">get_int64</span><span class="special">();</span>
-        <span class="keyword">break</span><span class="special">;</span>
-
     <span class="keyword">case</span> <span class="identifier">json</span><span class="special">::</span><span class="identifier">kind</span><span class="special">::</span><span class="identifier">double_</span><span class="special">:</span>
-        <span class="identifier">os</span> <span class="special">&lt;&lt;</span> <span class="identifier">jv</span><span class="special">.</span><span class="identifier">get_double</span><span class="special">();</span>
+        <span class="identifier">os</span> <span class="special">&lt;&lt;</span> <span class="identifier">jv</span><span class="special">;</span>
         <span class="keyword">break</span><span class="special">;</span>
 
     <span class="keyword">case</span> <span class="identifier">json</span><span class="special">::</span><span class="identifier">kind</span><span class="special">::</span><span class="identifier">bool_</span><span class="special">:</span>
@@ -306,6 +300,89 @@
             <span class="special">&lt;&lt;</span> <span class="identifier">e</span><span class="special">.</span><span class="identifier">what</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
         <span class="keyword">return</span> <span class="identifier">EXIT_FAILURE</span><span class="special">;</span>
     <span class="special">}</span>
+
+    <span class="keyword">return</span> <span class="identifier">EXIT_SUCCESS</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="json.examples.allocator_aware_conversion"></a><a class="link" href="examples.html#json.examples.allocator_aware_conversion" title="Allocator-aware conversion">Allocator-aware
+      conversion</a>
+</h3></div></div></div>
+<pre class="programlisting"><span class="comment">/*
+    This example uses a context that stores an allocator to create sequences during conversions
+*/</span>
+
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">container</span><span class="special">/</span><span class="identifier">pmr</span><span class="special">/</span><span class="identifier">monotonic_buffer_resource</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">container</span><span class="special">/</span><span class="identifier">pmr</span><span class="special">/</span><span class="identifier">vector</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">json</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">system</span><span class="special">/</span><span class="identifier">errc</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">json</span><span class="special">;</span>
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">container</span><span class="special">;</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span> <span class="keyword">class</span> <span class="identifier">Alloc</span> <span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">use_allocator_t</span>
+<span class="special">{</span>
+    <span class="identifier">Alloc</span> <span class="identifier">allocator</span><span class="special">;</span>
+<span class="special">};</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span> <span class="keyword">class</span> <span class="identifier">Alloc</span> <span class="special">&gt;</span>
+<span class="identifier">use_allocator_t</span><span class="special">&lt;</span> <span class="identifier">Alloc</span> <span class="special">&gt;</span>
+<span class="identifier">use_allocator</span><span class="special">(</span> <span class="identifier">Alloc</span> <span class="identifier">alloc</span> <span class="special">)</span> <span class="keyword">noexcept</span>
+<span class="special">{</span>
+    <span class="keyword">return</span> <span class="special">{</span> <span class="identifier">alloc</span> <span class="special">};</span>
+<span class="special">}</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span>
+    <span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span>
+    <span class="keyword">class</span> <span class="identifier">Alloc</span><span class="special">,</span>
+    <span class="keyword">class</span> <span class="identifier">FullContext</span><span class="special">,</span>
+    <span class="keyword">class</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">enable_if</span><span class="special">&lt;</span>
+        <span class="identifier">is_sequence_like</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">value</span> <span class="special">&amp;&amp;</span>
+        <span class="identifier">std</span><span class="special">::</span><span class="identifier">uses_allocator</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span> <span class="identifier">Alloc</span><span class="special">&gt;::</span><span class="identifier">value</span>
+        <span class="special">&gt;::</span><span class="identifier">type</span> <span class="special">&gt;</span>
+<span class="identifier">result</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">tag_invoke</span><span class="special">(</span> <span class="identifier">try_value_to_tag</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;,</span> <span class="keyword">const</span> <span class="identifier">value</span><span class="special">&amp;</span> <span class="identifier">jv</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">use_allocator_t</span><span class="special">&lt;</span><span class="identifier">Alloc</span><span class="special">&gt;&amp;</span> <span class="identifier">ctx</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">FullContext</span><span class="special">&amp;</span> <span class="identifier">full_ctx</span> <span class="special">)</span>
+<span class="special">{</span>
+
+    <span class="identifier">array</span> <span class="keyword">const</span><span class="special">*</span> <span class="identifier">arr</span> <span class="special">=</span> <span class="identifier">jv</span><span class="special">.</span><span class="identifier">if_array</span><span class="special">();</span>
+    <span class="keyword">if</span><span class="special">(</span> <span class="special">!</span><span class="identifier">arr</span> <span class="special">)</span>
+        <span class="keyword">return</span> <span class="special">{</span>
+            <span class="identifier">boost</span><span class="special">::</span><span class="identifier">system</span><span class="special">::</span><span class="identifier">in_place_error</span><span class="special">,</span>
+            <span class="identifier">make_error_code</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">system</span><span class="special">::</span><span class="identifier">errc</span><span class="special">::</span><span class="identifier">invalid_argument</span><span class="special">)</span> <span class="special">};</span>
+
+    <span class="identifier">T</span> <span class="identifier">result</span><span class="special">(</span><span class="identifier">ctx</span><span class="special">.</span><span class="identifier">allocator</span><span class="special">);</span>
+    <span class="keyword">auto</span> <span class="identifier">ins</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">inserter</span><span class="special">(</span><span class="identifier">result</span><span class="special">,</span> <span class="identifier">result</span><span class="special">.</span><span class="identifier">end</span><span class="special">());</span>
+    <span class="keyword">for</span><span class="special">(</span> <span class="identifier">value</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">val</span><span class="special">:</span> <span class="special">*</span><span class="identifier">arr</span> <span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">using</span> <span class="identifier">ValueType</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">T</span><span class="special">::</span><span class="identifier">value_type</span><span class="special">;</span>
+        <span class="keyword">auto</span> <span class="identifier">elem_res</span> <span class="special">=</span> <span class="identifier">try_value_to</span><span class="special">&lt;</span><span class="identifier">ValueType</span><span class="special">&gt;(</span> <span class="identifier">val</span><span class="special">,</span> <span class="identifier">full_ctx</span> <span class="special">);</span>
+        <span class="keyword">if</span><span class="special">(</span> <span class="identifier">elem_res</span><span class="special">.</span><span class="identifier">has_error</span><span class="special">()</span> <span class="special">)</span>
+            <span class="keyword">return</span> <span class="special">{</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">system</span><span class="special">::</span><span class="identifier">in_place_error</span><span class="special">,</span> <span class="identifier">elem_res</span><span class="special">.</span><span class="identifier">error</span><span class="special">()};</span>
+        <span class="special">*</span><span class="identifier">ins</span><span class="special">++</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">move</span><span class="special">(*</span><span class="identifier">elem_res</span><span class="special">);</span>
+    <span class="special">}</span>
+    <span class="keyword">return</span> <span class="identifier">result</span><span class="special">;</span>
+<span class="special">}</span>
+
+<span class="keyword">int</span>
+<span class="identifier">main</span><span class="special">(</span><span class="keyword">int</span><span class="special">,</span> <span class="keyword">char</span><span class="special">**)</span>
+<span class="special">{</span>
+
+    <span class="identifier">value</span> <span class="keyword">const</span> <span class="identifier">jv</span> <span class="special">=</span> <span class="special">{</span> <span class="number">1</span><span class="special">,</span> <span class="number">2</span><span class="special">,</span> <span class="number">3</span><span class="special">,</span> <span class="number">4</span><span class="special">,</span> <span class="number">5</span><span class="special">,</span> <span class="number">6</span><span class="special">,</span> <span class="number">7</span><span class="special">,</span> <span class="number">8</span> <span class="special">};</span>
+
+    <span class="keyword">unsigned</span> <span class="keyword">char</span> <span class="identifier">buf</span><span class="special">[</span><span class="number">1024</span><span class="special">];</span>
+    <span class="identifier">pmr</span><span class="special">::</span><span class="identifier">monotonic_buffer_resource</span> <span class="identifier">mr</span><span class="special">(</span> <span class="identifier">buf</span><span class="special">,</span> <span class="keyword">sizeof</span><span class="special">(</span><span class="identifier">buf</span><span class="special">)</span> <span class="special">);</span>
+
+    <span class="keyword">auto</span> <span class="identifier">v</span> <span class="special">=</span> <span class="identifier">value_to</span><span class="special">&lt;</span> <span class="identifier">pmr</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&gt;(</span>
+        <span class="identifier">jv</span><span class="special">,</span>
+        <span class="identifier">use_allocator</span><span class="special">(</span> <span class="identifier">pmr</span><span class="special">::</span><span class="identifier">polymorphic_allocator</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;(&amp;</span><span class="identifier">mr</span><span class="special">)</span> <span class="special">)</span> <span class="special">);</span>
+
+    <span class="identifier">assert</span><span class="special">(</span> <span class="identifier">v</span><span class="special">.</span><span class="identifier">size</span><span class="special">()</span> <span class="special">==</span> <span class="identifier">jv</span><span class="special">.</span><span class="identifier">as_array</span><span class="special">().</span><span class="identifier">size</span><span class="special">()</span> <span class="special">);</span>
+
+    <span class="keyword">for</span><span class="special">(</span> <span class="keyword">auto</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0u</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="identifier">v</span><span class="special">.</span><span class="identifier">size</span><span class="special">();</span> <span class="special">++</span><span class="identifier">i</span> <span class="special">)</span>
+        <span class="identifier">assert</span><span class="special">(</span> <span class="identifier">v</span><span class="special">[</span><span class="identifier">i</span><span class="special">]</span> <span class="special">==</span> <span class="identifier">jv</span><span class="special">.</span><span class="identifier">at</span><span class="special">(</span><span class="identifier">i</span><span class="special">).</span><span class="identifier">to_number</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;()</span> <span class="special">);</span>
 
     <span class="keyword">return</span> <span class="identifier">EXIT_SUCCESS</span><span class="special">;</span>
 <span class="special">}</span>

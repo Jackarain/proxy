@@ -11,29 +11,9 @@ add_subdirectory(../.. boostorg/timer)
 set(deps
 
   # Primary dependencies
-  chrono
   config
-  core
   io
   predef
-  system
-  throw_exception
-
-  # Secondary dependencies
-  assert
-  integer
-  move
-  mpl
-  ratio
-  static_assert
-  type_traits
-  typeof
-  utility
-  winapi
-  variant2
-  preprocessor
-  rational
-  mp11
 )
 
 foreach(dep IN LISTS deps)
@@ -43,7 +23,7 @@ foreach(dep IN LISTS deps)
 endforeach()
 
 add_executable(main main.cpp)
-target_link_libraries(main Boost::timer Boost::core)
+target_link_libraries(main Boost::timer)
 
 enable_testing()
 add_test(main main)

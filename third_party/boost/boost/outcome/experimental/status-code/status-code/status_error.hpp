@@ -103,22 +103,22 @@ public:
 
 /*! Exception type representing a thrown erased status_code
  */
-template <class ErasedType> class status_error<erased<ErasedType>> : public status_error<void>
+template <class ErasedType> class status_error<detail::erased<ErasedType>> : public status_error<void>
 {
-  status_code<erased<ErasedType>> _code;
+  status_code<detail::erased<ErasedType>> _code;
   typename status_code_domain::string_ref _msgref;
 
-  virtual const status_code<erased<ErasedType>> &_do_code() const noexcept override final { return _code; }
+  virtual const status_code<detail::erased<ErasedType>> &_do_code() const noexcept override final { return _code; }
 
 public:
   //! The type of the status domain
   using domain_type = void;
   //! The type of the status code
-  using status_code_type = status_code<erased<ErasedType>>;
+  using status_code_type = status_code<detail::erased<ErasedType>>;
 
   //! Constructs an instance
-  explicit status_error(status_code<erased<ErasedType>> code)
-      : _code(static_cast<status_code<erased<ErasedType>> &&>(code))
+  explicit status_error(status_code<detail::erased<ErasedType>> code)
+      : _code(static_cast<status_code<detail::erased<ErasedType>> &&>(code))
       , _msgref(_code.message())
   {
   }

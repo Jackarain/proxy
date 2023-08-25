@@ -28,7 +28,7 @@
 <a name="json.ref.boost__json__result"></a><a class="link" href="boost__json__result.html" title="result">result</a>
 </h4></div></div></div>
 <p>
-        <a class="indexterm" name="idm65485"></a>
+        <a class="indexterm" name="idm67258"></a>
       </p>
 <p>
         The type of result returned by library functions.
@@ -38,7 +38,7 @@
         <span class="phrase"><a name="json.ref.boost__json__result.synopsis"></a></span><a class="link" href="boost__json__result.html#json.ref.boost__json__result.synopsis">Synopsis</a>
       </h5>
 <p>
-        Defined in header <code class="literal">&lt;<a href="https://github.com/cppalliance/json/blob/master/include/boost/json/system_error.hpp" target="_top">boost/json/system_error.hpp</a>&gt;</code>
+        Defined in header <code class="literal">&lt;<a href="https://github.com/boostorg/json/blob/master/include/boost/json/system_error.hpp" target="_top">boost/json/system_error.hpp</a>&gt;</code>
       </p>
 <pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
     <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
@@ -57,16 +57,16 @@
 <a name="json.ref.boost__json__result.h2"></a>
         <span class="phrase"><a name="json.ref.boost__json__result.declaration"></a></span><a class="link" href="boost__json__result.html#json.ref.boost__json__result.declaration">Declaration</a>
       </h5>
-<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span> <span class="keyword">class</span> <span class="identifier">T</span> <span class="special">&gt;</span>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span> <span class="keyword">class</span> <span class="identifier">T</span> <span class="special">&gt;</span>
 <span class="keyword">class</span> <span class="identifier">result</span>
 <span class="special">{</span>
-<span class="keyword">public</span><span class="special">:</span>
+<span class="keyword">public</span> <span class="special">:</span>
     <span class="comment">// Return true if the result contains an error</span>
     <span class="keyword">constexpr</span> <span class="keyword">bool</span> <span class="identifier">has_error</span><span class="special">()</span> <span class="keyword">const</span> <span class="keyword">noexcept</span><span class="special">;</span>
 
     <span class="comment">// These two return true if the result contains a value</span>
     <span class="keyword">constexpr</span> <span class="keyword">bool</span> <span class="identifier">has_value</span><span class="special">()</span> <span class="keyword">const</span> <span class="keyword">noexcept</span><span class="special">;</span>
-    <span class="keyword">constexpr</span> <span class="keyword">explicit</span> <span class="keyword">operator</span> <span class="keyword">bool</span><span class="special">()</span> <span class="keyword">const</span> <span class="keyword">noexcept</span><span class="special">;</span>
+    <span class="keyword">constexpr</span> <span class="keyword">explicit</span> <span class="keyword">operator</span> <span class="keyword">bool</span> <span class="special">()</span> <span class="keyword">const</span> <span class="keyword">noexcept</span><span class="special">;</span>
 
     <span class="comment">// Return the value or throw an exception if has_value() == false</span>
     <span class="keyword">constexpr</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">value</span><span class="special">();</span>
@@ -88,7 +88,7 @@
 <p>
         Given the function <a class="link" href="boost__json__try_value_to.html" title="try_value_to"><code class="computeroutput"><span class="identifier">try_value_to</span></code></a> with this signature:
       </p>
-<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span> <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span> <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
 <span class="identifier">result</span><span class="special">&lt;</span> <span class="identifier">T</span> <span class="special">&gt;</span> <span class="identifier">try_value_to</span><span class="special">(</span> <span class="keyword">const</span> <span class="identifier">value</span><span class="special">&amp;</span> <span class="identifier">jv</span> <span class="special">);</span>
 </pre>
 <p>
@@ -101,7 +101,7 @@
         This statement captures the result in a variable and inspects the error condition:
       </p>
 <pre class="programlisting"><span class="identifier">result</span><span class="special">&lt;</span> <span class="keyword">int</span> <span class="special">&gt;</span> <span class="identifier">r</span> <span class="special">=</span> <span class="identifier">try_value_to</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;(</span> <span class="identifier">jv</span> <span class="special">);</span>
-<span class="keyword">if</span><span class="special">(</span> <span class="identifier">r</span> <span class="special">)</span>
+<span class="keyword">if</span> <span class="special">(</span> <span class="identifier">r</span> <span class="special">)</span>
     <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="special">*</span><span class="identifier">r</span><span class="special">;</span>
 <span class="keyword">else</span>
     <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">r</span><span class="special">.</span><span class="identifier">error</span><span class="special">();</span>
@@ -150,7 +150,7 @@
 </tr></tbody>
 </table></div>
 <p>
-        Convenience header <code class="literal">&lt;<a href="https://github.com/cppalliance/json/blob/master/include/boost/json.hpp" target="_top">boost/json.hpp</a>&gt;</code>
+        Convenience header <code class="literal">&lt;<a href="https://github.com/boostorg/json/blob/master/include/boost/json.hpp" target="_top">boost/json.hpp</a>&gt;</code>
       </p>
 </div>
 <div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>

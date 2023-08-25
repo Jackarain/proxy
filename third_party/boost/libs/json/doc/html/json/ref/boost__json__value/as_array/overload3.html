@@ -28,9 +28,6 @@
 <a name="json.ref.boost__json__value.as_array.overload3"></a><a class="link" href="overload3.html" title="value::as_array (3 of 3 overloads)">value::as_array
           (3 of 3 overloads)</a>
 </h6></div></div></div>
-<p>
-            Return a reference to the underlying <a class="link" href="../../boost__json__array.html" title="array"><code class="computeroutput"><span class="identifier">array</span></code></a>, or throw an exception.
-          </p>
 <h6>
 <a name="json.ref.boost__json__value.as_array.overload3.h0"></a>
             <span class="phrase"><a name="json.ref.boost__json__value.as_array.overload3.synopsis"></a></span><a class="link" href="overload3.html#json.ref.boost__json__value.as_array.overload3.synopsis">Synopsis</a>
@@ -38,64 +35,6 @@
 <pre class="programlisting"><span class="identifier">array</span> <span class="keyword">const</span><span class="special">&amp;</span>
 <span class="identifier">as_array</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;</span>
 </pre>
-<h6>
-<a name="json.ref.boost__json__value.as_array.overload3.h1"></a>
-            <span class="phrase"><a name="json.ref.boost__json__value.as_array.overload3.description"></a></span><a class="link" href="overload3.html#json.ref.boost__json__value.as_array.overload3.description">Description</a>
-          </h6>
-<p>
-            If <a class="link" href="../is_array.html" title="value::is_array"><code class="computeroutput"><span class="identifier">is_array</span><span class="special">()</span></code></a>
-            is <code class="computeroutput"><span class="keyword">true</span></code>, returns a reference
-            to the underlying <a class="link" href="../../boost__json__array.html" title="array"><code class="computeroutput"><span class="identifier">array</span></code></a>, otherwise throws an exception.
-          </p>
-<h6>
-<a name="json.ref.boost__json__value.as_array.overload3.h2"></a>
-            <span class="phrase"><a name="json.ref.boost__json__value.as_array.overload3.complexity"></a></span><a class="link" href="overload3.html#json.ref.boost__json__value.as_array.overload3.complexity">Complexity</a>
-          </h6>
-<p>
-            Constant.
-          </p>
-<h6>
-<a name="json.ref.boost__json__value.as_array.overload3.h3"></a>
-            <span class="phrase"><a name="json.ref.boost__json__value.as_array.overload3.exception_safety"></a></span><a class="link" href="overload3.html#json.ref.boost__json__value.as_array.overload3.exception_safety">Exception
-            Safety</a>
-          </h6>
-<p>
-            Strong guarantee.
-          </p>
-<h6>
-<a name="json.ref.boost__json__value.as_array.overload3.h4"></a>
-            <span class="phrase"><a name="json.ref.boost__json__value.as_array.overload3.exceptions"></a></span><a class="link" href="overload3.html#json.ref.boost__json__value.as_array.overload3.exceptions">Exceptions</a>
-          </h6>
-<div class="informaltable"><table class="table">
-<colgroup>
-<col>
-<col>
-</colgroup>
-<thead><tr>
-<th>
-                    <p>
-                      Type
-                    </p>
-                  </th>
-<th>
-                    <p>
-                      Thrown On
-                    </p>
-                  </th>
-</tr></thead>
-<tbody><tr>
-<td>
-                    <p>
-                      <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">invalid_argument</span></code>
-                    </p>
-                  </td>
-<td>
-                    <p>
-                      <code class="computeroutput"><span class="special">!</span> <span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">is_array</span><span class="special">()</span></code>
-                    </p>
-                  </td>
-</tr></tbody>
-</table></div>
 </div>
 <div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying

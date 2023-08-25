@@ -16,6 +16,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <typeinfo>
+#include <vector>
 
 #if defined(_MSC_VER) && defined(_CPPLIB_VER) && defined(_DEBUG)
 #    include <crtdbg.h>
@@ -106,17 +108,17 @@ int main(int argc, char** argv)
     try {
         test_main(argc, argv);
     } catch(const std::exception& e) {
-        std::cerr << "Failed " << e.what() << std::endl; // LCOV_EXCL_LINE
-        return EXIT_FAILURE;                             // LCOV_EXCL_LINE
+        std::cerr << "Failed with exception "                                 // LCOV_EXCL_LINE
+                  << typeid(e).name() << '(' << e.what() << ')' << std::endl; // LCOV_EXCL_LINE
+        return EXIT_FAILURE;                                                  // LCOV_EXCL_LINE
     }
     using boost::locale::test::results;
     if(results().test_counter > 0) {
         int passed = results().test_counter - results().error_counter;
         std::cout << std::endl;
         std::cout << "Passed " << passed << " tests\n";
-        if(results().error_counter > 0) {
+        if(results().error_counter > 0)
             std::cout << "Failed " << results().error_counter << " tests\n"; // LCOV_EXCL_LINE
-        }
         std::cout << " " << std::fixed << std::setprecision(1) << std::setw(5)
                   << 100.0 * passed / results().test_counter << "% of tests completed successfully\n";
     }
@@ -136,6 +138,20 @@ const std::string& to_string(const std::string& s)
     return s;
 }
 
+template<typename T>
+std::string to_string(const std::vector<T>& v)
+{
+    std::stringstream ss;
+    bool first = true;
+    for(const T& e : v) {
+        if(!first)
+            ss << ", ";
+        first = false;
+        ss << to_string(e);
+    }
+    return ss.str();
+}
+
 /// Put the char into the stream making sure it is readable
 /// Fallback to the unicode representation of it (e.g. U+00A0)
 template<typename Char>
@@ -151,8 +167,8 @@ template<typename Char>
 std::string to_string(const std::basic_string<Char>& s)
 {
     std::stringstream ss;
-    for(size_t i = 0; i < s.size(); ++i)
-        stream_char(ss, s[i]);
+    for(const Char c : s)
+        stream_char(ss, c);
     return ss.str();
 }
 
@@ -194,6 +210,16 @@ std::string to_string(const char32_t c)
 {
     return to_string_char_impl(c);
 }
+
+#if defined(BOOST_CLANG) && BOOST_CLANG_VERSION < 120000 && defined(__cplusplus) && __cplusplus >= 202002L
+// Avoid warning due to comparison-to-spaceship-rewrite, happening e.g. for string comparison
+// see https://github.com/llvm/llvm-project/issues/43670
+#    define BOOST_LOCALE_SPACESHIP_NULLPTR_WARNING 1
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
+#else
+#    define BOOST_LOCALE_SPACESHIP_NULLPTR_WARNING 0
+#endif
 
 template<typename T, typename U>
 void test_impl(bool success, T const& l, U const& r, const char* expr, const char* fail_expr, int line)
@@ -248,6 +274,10 @@ void test_gt_impl(T const& l, U const& r, const char* expr, int line)
 #define TEST_LT(x, y) test_lt_impl(x, y, BOOST_LOCALE_STRINGIZE(x < y), __LINE__)
 #define TEST_GE(x, y) test_ge_impl(x, y, BOOST_LOCALE_STRINGIZE(x >= y), __LINE__)
 #define TEST_GT(x, y) test_gt_impl(x, y, BOOST_LOCALE_STRINGIZE(x > y), __LINE__)
+
+#if BOOST_LOCALE_SPACESHIP_NULLPTR_WARNING
+#    pragma clang diagnostic pop
+#endif
 
 #ifdef BOOST_MSVC
 #    define BOOST_LOCALE_DISABLE_UNREACHABLE_CODE_WARNING __pragma(warning(disable : 4702))

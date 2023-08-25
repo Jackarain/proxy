@@ -19,28 +19,29 @@
 constexpr auto illegal = boost::locale::util::base_converter::illegal;
 constexpr auto incomplete = boost::locale::util::base_converter::incomplete;
 
-bool test_to(boost::locale::util::base_converter& cvt, const char* s, unsigned codepoint)
+namespace utf = boost::locale::utf;
+
+bool test_to(boost::locale::util::base_converter& cvt, const char* s, const utf::code_point codepoint)
 {
-    size_t len = strlen(s);
+    const size_t len = strlen(s);
     const char* end = s + len;
     return cvt.to_unicode(s, end) == codepoint;
 }
 
-bool test_from(boost::locale::util::base_converter& cvt, unsigned codepoint, const char* str)
+bool test_from(boost::locale::util::base_converter& cvt, const utf::code_point codepoint, const char* str)
 {
     char buf[32] = {0};
-    unsigned res = cvt.from_unicode(codepoint, buf, buf + sizeof(buf));
-    if(res == boost::locale::util::base_converter::illegal) {
-        return str == 0;
-    } else {
-        return str != 0 && strlen(str) == res && memcmp(str, buf, res) == 0;
-    }
+    const auto res = cvt.from_unicode(codepoint, buf, buf + sizeof(buf));
+    if(res == boost::locale::util::base_converter::illegal)
+        return str == nullptr;
+    else
+        return str != nullptr && strlen(str) == res && memcmp(str, buf, res) == 0;
 }
 
-bool test_incomplete(boost::locale::util::base_converter& cvt, unsigned codepoint, int len)
+bool test_incomplete(boost::locale::util::base_converter& cvt, const utf::code_point codepoint, const size_t len)
 {
     char buf[32] = {0};
-    unsigned res = cvt.from_unicode(codepoint, buf, buf + len);
+    const auto res = cvt.from_unicode(codepoint, buf, buf + len);
     return res == boost::locale::util::base_converter::incomplete;
 }
 
@@ -72,7 +73,7 @@ void test_shiftjis(std::unique_ptr<boost::locale::util::base_converter>& cvt)
     TEST_INC(0x30d2, 1); // Full width katakana Hi ヒ
     TEST_INC(0x3072, 1); // Full width hiragana Hi ひ
 
-    TEST_FROM(0, 0x5e9); // Hebrew ש not in ShiftJIS
+    TEST_FROM(nullptr, 0x5e9); // Hebrew ש not in ShiftJIS
 }
 
 void test_main(int /*argc*/, char** /*argv*/)
@@ -82,9 +83,10 @@ void test_main(int /*argc*/, char** /*argv*/)
     std::cout << "Test UTF-8\n";
     std::cout << "- From UTF-8" << std::endl;
 
+    TEST(!create_simple_converter("UTF-8"));
     std::unique_ptr<base_converter> cvt = create_utf8_converter();
 
-    TEST(cvt.get());
+    TEST_REQUIRE(cvt);
     TEST(cvt->is_thread_safe());
     TEST_EQ(cvt->max_len(), 4);
 
@@ -120,7 +122,7 @@ void test_main(int /*argc*/, char** /*argv*/)
 
     std::cout << "-- Invalid length" << std::endl;
 
-    /// Test that this actually works
+    // Test that this actually works
     TEST_TO(make2(0x80), 0x80);
     TEST_TO(make2(0x7ff), 0x7ff);
 
@@ -201,21 +203,21 @@ void test_main(int /*argc*/, char** /*argv*/)
 
     std::cout << "-- Test no surrogate " << std::endl;
 
-    TEST_FROM(0, 0xD800);
-    TEST_FROM(0, 0xDBFF);
-    TEST_FROM(0, 0xDC00);
-    TEST_FROM(0, 0xDFFF);
+    TEST_FROM(nullptr, 0xD800);
+    TEST_FROM(nullptr, 0xDBFF);
+    TEST_FROM(nullptr, 0xDC00);
+    TEST_FROM(nullptr, 0xDFFF);
 
     std::cout << "-- Test invalid " << std::endl;
 
-    TEST_FROM(0, 0x110000);
-    TEST_FROM(0, 0x1FFFFF);
+    TEST_FROM(nullptr, 0x110000);
+    TEST_FROM(nullptr, 0x1FFFFF);
 
     std::cout << "Test windows-1255" << std::endl;
 
     cvt = create_simple_converter("windows-1255");
 
-    TEST(cvt.get());
+    TEST_REQUIRE(cvt);
     TEST(cvt->is_thread_safe());
     TEST_EQ(cvt->max_len(), 1);
 
@@ -236,8 +238,8 @@ void test_main(int /*argc*/, char** /*argv*/)
     TEST_FROM("\xc4", 0x5b4);
     TEST_FROM("\xfe", 0x200f);
 
-    TEST_FROM(0, 0xe4);
-    TEST_FROM(0, 0xd0);
+    TEST_FROM(nullptr, 0xe4);
+    TEST_FROM(nullptr, 0xd0);
 
 #ifdef BOOST_LOCALE_WITH_ICU
     std::cout << "Testing Shift-JIS using ICU/uconv" << std::endl;
@@ -249,17 +251,17 @@ void test_main(int /*argc*/, char** /*argv*/)
 
     std::cout << "Testing Shift-JIS using POSIX/iconv" << std::endl;
 
+    TEST(!create_simple_converter("Shift_JIS"));
     cvt = boost::locale::create_iconv_converter("Shift-JIS");
 #ifndef BOOST_LOCALE_WITH_ICONV
     TEST(!cvt);
 #endif
     if(cvt)
         test_shiftjis(cvt);
-    else {
 #ifdef BOOST_LOCALE_WITH_ICONV
-        std::cout << "- Shift-JIS is not supported!" << std::endl;
+    else
+        std::cout << "- Shift-JIS is not supported!" << std::endl; // LCOV_EXCL_LINE
 #endif
-    }
 }
 
 // boostinspect:noascii

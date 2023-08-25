@@ -49,13 +49,12 @@
 .type   ontop_fcontext, @function
 
 #define ARG_OFFSET         0
-#define GR_OFFSET	   16
-#define R14_OFFSET	   88
-#define FP_OFFSET	   96
-#define FPC_OFFSET	   160
-#define PC_OFFSET	   168
-#define CONTEXT_SIZE	   176
-
+#define GR_OFFSET          16
+#define R14_OFFSET         88
+#define FP_OFFSET          96
+#define FPC_OFFSET         160
+#define PC_OFFSET          168
+#define CONTEXT_SIZE       176
 
 /*
 

@@ -270,9 +270,7 @@ set(BOOST_JSON_SRC
 	libs/json/src/src.cpp
 )
 
-set(BOOST_URL_SRC
-	libs/url/src/src.cpp
-)
+file(GLOB_RECURSE BOOST_URL_SRC CONFIGURE_DEPENDS libs/url/src/*.cpp)
 
 set(BOOST_TIMER_SRC
 	libs/timer/src/auto_timers_construction.cpp

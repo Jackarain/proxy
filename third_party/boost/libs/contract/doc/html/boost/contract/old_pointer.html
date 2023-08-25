@@ -36,19 +36,19 @@
 <span class="keyword">class</span> <a class="link" href="old_pointer.html" title="Class old_pointer">old_pointer</a> <span class="special">{</span>
 <span class="keyword">public</span><span class="special">:</span>
 
-  <span class="comment">// <a class="link" href="old_pointer.html#idm36218-bb">public member functions</a></span>
-  <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> T<span class="special">&gt;</span> <a class="link" href="old_pointer.html#idm36219-bb"><span class="keyword">operator</span> <span class="identifier">old_ptr_if_copyable</span><span class="special">&lt;</span> <span class="identifier">T</span> <span class="special">&gt;</span></a><span class="special">(</span><span class="special">)</span><span class="special">;</span>
-  <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> T<span class="special">&gt;</span> <a class="link" href="old_pointer.html#idm36234-bb"><span class="keyword">operator</span> <span class="identifier">old_ptr</span><span class="special">&lt;</span> <span class="identifier">T</span> <span class="special">&gt;</span></a><span class="special">(</span><span class="special">)</span><span class="special">;</span>
+  <span class="comment">// <a class="link" href="old_pointer.html#idm36231-bb">public member functions</a></span>
+  <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> T<span class="special">&gt;</span> <a class="link" href="old_pointer.html#idm36232-bb"><span class="keyword">operator</span> <span class="identifier">old_ptr_if_copyable</span><span class="special">&lt;</span> <span class="identifier">T</span> <span class="special">&gt;</span></a><span class="special">(</span><span class="special">)</span><span class="special">;</span>
+  <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> T<span class="special">&gt;</span> <a class="link" href="old_pointer.html#idm36247-bb"><span class="keyword">operator</span> <span class="identifier">old_ptr</span><span class="special">&lt;</span> <span class="identifier">T</span> <span class="special">&gt;</span></a><span class="special">(</span><span class="special">)</span><span class="special">;</span>
 <span class="special">}</span><span class="special">;</span></pre></div>
 <div class="refsect1">
-<a name="idm41425"></a><h2>Description</h2>
+<a name="idm41342"></a><h2>Description</h2>
 <p>This class is usually only implicitly used by this library and it does not explicitly appear in user code (that is why this class does not have public constructors, etc.). </p>
 <div class="refsect2">
-<a name="idm41428"></a><h3>
-<a name="idm36218-bb"></a><code class="computeroutput">old_pointer</code> public member functions</h3>
+<a name="idm41345"></a><h3>
+<a name="idm36231-bb"></a><code class="computeroutput">old_pointer</code> public member functions</h3>
 <div class="orderedlist"><ol class="orderedlist" type="1">
 <li class="listitem">
-<pre class="literallayout"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> T<span class="special">&gt;</span> <a name="idm36219-bb"></a><span class="keyword">operator</span> <span class="identifier">old_ptr_if_copyable</span><span class="special">&lt;</span> <span class="identifier">T</span> <span class="special">&gt;</span><span class="special">(</span><span class="special">)</span><span class="special">;</span></pre>Convert this object to an actual old value pointer for which the old value type <code class="computeroutput">T</code> might or not be copyable. <p>For example, this is implicitly called when assigning or initializing old value pointers of type <code class="computeroutput"><code class="computeroutput"><a class="link" href="old_ptr_if_copyable.html" title="Class template old_ptr_if_copyable">boost::contract::old_ptr_if_copyable</a></code></code>.</p>
+<pre class="literallayout"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> T<span class="special">&gt;</span> <a name="idm36232-bb"></a><span class="keyword">operator</span> <span class="identifier">old_ptr_if_copyable</span><span class="special">&lt;</span> <span class="identifier">T</span> <span class="special">&gt;</span><span class="special">(</span><span class="special">)</span><span class="special">;</span></pre>Convert this object to an actual old value pointer for which the old value type <code class="computeroutput">T</code> might or not be copyable. <p>For example, this is implicitly called when assigning or initializing old value pointers of type <code class="computeroutput"><code class="computeroutput"><a class="link" href="old_ptr_if_copyable.html" title="Class template old_ptr_if_copyable">boost::contract::old_ptr_if_copyable</a></code></code>.</p>
 <p>
 </p>
 <div class="variablelist"><table border="0" class="variablelist compact">
@@ -72,7 +72,7 @@
 </table></div>
 </li>
 <li class="listitem">
-<pre class="literallayout"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> T<span class="special">&gt;</span> <a name="idm36234-bb"></a><span class="keyword">operator</span> <span class="identifier">old_ptr</span><span class="special">&lt;</span> <span class="identifier">T</span> <span class="special">&gt;</span><span class="special">(</span><span class="special">)</span><span class="special">;</span></pre>Convert this object to an actual old value pointer for which the old value type <code class="computeroutput">T</code> must be copyable. <p>For example, this is implicitly called when assigning or initializing old value pointers of type <code class="computeroutput"><code class="computeroutput"><a class="link" href="old_ptr.html" title="Class template old_ptr">boost::contract::old_ptr</a></code></code>.</p>
+<pre class="literallayout"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> T<span class="special">&gt;</span> <a name="idm36247-bb"></a><span class="keyword">operator</span> <span class="identifier">old_ptr</span><span class="special">&lt;</span> <span class="identifier">T</span> <span class="special">&gt;</span><span class="special">(</span><span class="special">)</span><span class="special">;</span></pre>Convert this object to an actual old value pointer for which the old value type <code class="computeroutput">T</code> must be copyable. <p>For example, this is implicitly called when assigning or initializing old value pointers of type <code class="computeroutput"><code class="computeroutput"><a class="link" href="old_ptr.html" title="Class template old_ptr">boost::contract::old_ptr</a></code></code>.</p>
 <p>
 </p>
 <div class="variablelist"><table border="0" class="variablelist compact">

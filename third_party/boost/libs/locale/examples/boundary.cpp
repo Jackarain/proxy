@@ -28,9 +28,8 @@ int main()
     std::cout << text << std::endl;
 
     boundary::ssegment_index index(boundary::word, text.begin(), text.end());
-    boundary::ssegment_index::iterator p, e;
 
-    for(p = index.begin(), e = index.end(); p != e; ++p) {
+    for(boundary::ssegment_index::iterator p = index.begin(), e = index.end(); p != e; ++p) {
         std::cout << "Part [" << *p << "] has ";
         if(p->rule() & boundary::word_number)
             std::cout << "number(s) ";
@@ -47,23 +46,20 @@ int main()
 
     index.map(boundary::character, text.begin(), text.end());
 
-    for(p = index.begin(), e = index.end(); p != e; ++p) {
-        std::cout << "|" << *p;
-    }
+    for(const boundary::ssegment& p : index)
+        std::cout << "|" << p;
     std::cout << "|\n\n";
 
     index.map(boundary::line, text.begin(), text.end());
 
-    for(p = index.begin(), e = index.end(); p != e; ++p) {
-        std::cout << "|" << *p;
-    }
+    for(const boundary::ssegment& p : index)
+        std::cout << "|" << p;
     std::cout << "|\n\n";
 
     index.map(boundary::sentence, text.begin(), text.end());
 
-    for(p = index.begin(), e = index.end(); p != e; ++p) {
-        std::cout << "|" << *p;
-    }
+    for(const boundary::ssegment& p : index)
+        std::cout << "|" << p;
     std::cout << "|\n\n";
 }
 

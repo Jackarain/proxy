@@ -1287,20 +1287,26 @@ BOOST_FORCEINLINE bool operator==(path const& lhs, path const& rhs)
     return lhs.compare(rhs) == 0;
 }
 
-template< typename Source >
+template< typename Path, typename Source >
 BOOST_FORCEINLINE typename boost::enable_if_c<
-    detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >::value,
+    boost::conjunction<
+        boost::is_same< Path, path >,
+        detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >
+    >::value,
     bool
->::type operator==(path const& lhs, Source const& rhs)
+>::type operator==(Path const& lhs, Source const& rhs)
 {
     return lhs.compare(rhs) == 0;
 }
 
-template< typename Source >
+template< typename Source, typename Path >
 BOOST_FORCEINLINE typename boost::enable_if_c<
-    detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >::value,
+    boost::conjunction<
+        boost::is_same< Path, path >,
+        detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >
+    >::value,
     bool
->::type operator==(Source const& lhs, path const& rhs)
+>::type operator==(Source const& lhs, Path const& rhs)
 {
     return rhs.compare(lhs) == 0;
 }
@@ -1310,20 +1316,26 @@ BOOST_FORCEINLINE bool operator!=(path const& lhs, path const& rhs)
     return lhs.compare(rhs) != 0;
 }
 
-template< typename Source >
+template< typename Path, typename Source >
 BOOST_FORCEINLINE typename boost::enable_if_c<
-    detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >::value,
+    boost::conjunction<
+        boost::is_same< Path, path >,
+        detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >
+    >::value,
     bool
->::type operator!=(path const& lhs, Source const& rhs)
+>::type operator!=(Path const& lhs, Source const& rhs)
 {
     return lhs.compare(rhs) != 0;
 }
 
-template< typename Source >
+template< typename Source, typename Path >
 BOOST_FORCEINLINE typename boost::enable_if_c<
-    detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >::value,
+    boost::conjunction<
+        boost::is_same< Path, path >,
+        detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >
+    >::value,
     bool
->::type operator!=(Source const& lhs, path const& rhs)
+>::type operator!=(Source const& lhs, Path const& rhs)
 {
     return rhs.compare(lhs) != 0;
 }
@@ -1333,20 +1345,26 @@ BOOST_FORCEINLINE bool operator<(path const& lhs, path const& rhs)
     return lhs.compare(rhs) < 0;
 }
 
-template< typename Source >
+template< typename Path, typename Source >
 BOOST_FORCEINLINE typename boost::enable_if_c<
-    detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >::value,
+    boost::conjunction<
+        boost::is_same< Path, path >,
+        detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >
+    >::value,
     bool
->::type operator<(path const& lhs, Source const& rhs)
+>::type operator<(Path const& lhs, Source const& rhs)
 {
     return lhs.compare(rhs) < 0;
 }
 
-template< typename Source >
+template< typename Source, typename Path >
 BOOST_FORCEINLINE typename boost::enable_if_c<
-    detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >::value,
+    boost::conjunction<
+        boost::is_same< Path, path >,
+        detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >
+    >::value,
     bool
->::type operator<(Source const& lhs, path const& rhs)
+>::type operator<(Source const& lhs, Path const& rhs)
 {
     return rhs.compare(lhs) > 0;
 }
@@ -1356,20 +1374,26 @@ BOOST_FORCEINLINE bool operator<=(path const& lhs, path const& rhs)
     return lhs.compare(rhs) <= 0;
 }
 
-template< typename Source >
+template< typename Path, typename Source >
 BOOST_FORCEINLINE typename boost::enable_if_c<
-    detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >::value,
+    boost::conjunction<
+        boost::is_same< Path, path >,
+        detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >
+    >::value,
     bool
->::type operator<=(path const& lhs, Source const& rhs)
+>::type operator<=(Path const& lhs, Source const& rhs)
 {
     return lhs.compare(rhs) <= 0;
 }
 
-template< typename Source >
+template< typename Source, typename Path >
 BOOST_FORCEINLINE typename boost::enable_if_c<
-    detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >::value,
+    boost::conjunction<
+        boost::is_same< Path, path >,
+        detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >
+    >::value,
     bool
->::type operator<=(Source const& lhs, path const& rhs)
+>::type operator<=(Source const& lhs, Path const& rhs)
 {
     return rhs.compare(lhs) >= 0;
 }
@@ -1379,20 +1403,26 @@ BOOST_FORCEINLINE bool operator>(path const& lhs, path const& rhs)
     return lhs.compare(rhs) > 0;
 }
 
-template< typename Source >
+template< typename Path, typename Source >
 BOOST_FORCEINLINE typename boost::enable_if_c<
-    detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >::value,
+    boost::conjunction<
+        boost::is_same< Path, path >,
+        detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >
+    >::value,
     bool
->::type operator>(path const& lhs, Source const& rhs)
+>::type operator>(Path const& lhs, Source const& rhs)
 {
     return lhs.compare(rhs) > 0;
 }
 
-template< typename Source >
+template< typename Source, typename Path >
 BOOST_FORCEINLINE typename boost::enable_if_c<
-    detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >::value,
+    boost::conjunction<
+        boost::is_same< Path, path >,
+        detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >
+    >::value,
     bool
->::type operator>(Source const& lhs, path const& rhs)
+>::type operator>(Source const& lhs, Path const& rhs)
 {
     return rhs.compare(lhs) < 0;
 }
@@ -1402,35 +1432,41 @@ BOOST_FORCEINLINE bool operator>=(path const& lhs, path const& rhs)
     return lhs.compare(rhs) >= 0;
 }
 
-template< typename Source >
+template< typename Path, typename Source >
 BOOST_FORCEINLINE typename boost::enable_if_c<
-    detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >::value,
+    boost::conjunction<
+        boost::is_same< Path, path >,
+        detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >
+    >::value,
     bool
->::type operator>=(path const& lhs, Source const& rhs)
+>::type operator>=(Path const& lhs, Source const& rhs)
 {
     return lhs.compare(rhs) >= 0;
 }
 
-template< typename Source >
+template< typename Source, typename Path >
 BOOST_FORCEINLINE typename boost::enable_if_c<
-    detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >::value,
+    boost::conjunction<
+        boost::is_same< Path, path >,
+        detail::path_traits::is_convertible_to_path_source< typename boost::remove_cv< Source >::type >
+    >::value,
     bool
->::type operator>=(Source const& lhs, path const& rhs)
+>::type operator>=(Source const& lhs, Path const& rhs)
 {
     return rhs.compare(lhs) <= 0;
 }
 
 
 // Note: Declared as a template to delay binding to Boost.ContainerHash functions and make the dependency optional
-template< typename T >
+template< typename Path >
 inline typename boost::enable_if_c<
-    boost::is_same< T, path >::value,
+    boost::is_same< Path, path >::value,
     std::size_t
->::type hash_value(T const& p) BOOST_NOEXCEPT
+>::type hash_value(Path const& p) BOOST_NOEXCEPT
 {
 #ifdef BOOST_WINDOWS_API
     std::size_t seed = 0u;
-    for (typename T::value_type const* it = p.c_str(); *it; ++it)
+    for (typename Path::value_type const* it = p.c_str(); *it; ++it)
         hash_combine(seed, *it == L'/' ? L'\\' : *it);
     return seed;
 #else // BOOST_POSIX_API

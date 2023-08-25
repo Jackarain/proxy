@@ -53,7 +53,7 @@ using generic_code = status_code<_generic_code_domain>;
 
 namespace detail
 {
-  template <class StatusCode> class indirecting_domain;
+  template <class StatusCode, class Allocator> class indirecting_domain;
   /* We are severely limited by needing to retain C++ 11 compatibility when doing
   constexpr string parsing. MSVC lets you throw exceptions within a constexpr
   evaluation context when exceptions are globally disabled, but won't let you
@@ -110,7 +110,7 @@ namespace detail
 class status_code_domain
 {
   template <class DomainType> friend class status_code;
-  template <class StatusCode> friend class indirecting_domain;
+  template <class StatusCode, class Allocator> friend class indirecting_domain;
 
 public:
   //! Type of the unique id for this domain.
@@ -261,55 +261,25 @@ public:
     }
 
     //! Returns whether the reference is empty or not
-    BOOST_OUTCOME_SYSTEM_ERROR2_NODISCARD constexpr bool empty() const noexcept
-    {
-      return _begin == _end;
-    }
+    BOOST_OUTCOME_SYSTEM_ERROR2_NODISCARD constexpr bool empty() const noexcept { return _begin == _end; }
     //! Returns the size of the string
-    constexpr size_type size() const noexcept
-    {
-      return _end - _begin;
-    }
+    constexpr size_type size() const noexcept { return _end - _begin; }
     //! Returns a null terminated C string
-    constexpr const_pointer c_str() const noexcept
-    {
-      return _begin;
-    }
+    constexpr const_pointer c_str() const noexcept { return _begin; }
     //! Returns a null terminated C string
-    constexpr const_pointer data() const noexcept
-    {
-      return _begin;
-    }
+    constexpr const_pointer data() const noexcept { return _begin; }
     //! Returns the beginning of the string
-    BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 iterator begin() noexcept
-    {
-      return _begin;
-    }
+    BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 iterator begin() noexcept { return _begin; }
     //! Returns the beginning of the string
-    BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 const_iterator begin() const noexcept
-    {
-      return _begin;
-    }
+    BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 const_iterator begin() const noexcept { return _begin; }
     //! Returns the beginning of the string
-    constexpr const_iterator cbegin() const noexcept
-    {
-      return _begin;
-    }
+    constexpr const_iterator cbegin() const noexcept { return _begin; }
     //! Returns the end of the string
-    BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 iterator end() noexcept
-    {
-      return _end;
-    }
+    BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 iterator end() noexcept { return _end; }
     //! Returns the end of the string
-    BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 const_iterator end() const noexcept
-    {
-      return _end;
-    }
+    BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 const_iterator end() const noexcept { return _end; }
     //! Returns the end of the string
-    constexpr const_iterator cend() const noexcept
-    {
-      return _end;
-    }
+    constexpr const_iterator cend() const noexcept { return _end; }
   };
 
   /*! A reference counted, threadsafe reference to a message string.
@@ -328,8 +298,8 @@ public:
       auto dest = static_cast<atomic_refcounted_string_ref *>(_dest);      // NOLINT
       auto src = static_cast<const atomic_refcounted_string_ref *>(_src);  // NOLINT
       (void) src;
-      assert(dest->_thunk == _refcounted_string_thunk);                   // NOLINT
-      assert(src == nullptr || src->_thunk == _refcounted_string_thunk);  // NOLINT
+      assert(dest->_thunk == _refcounted_string_thunk);                    // NOLINT
+      assert(src == nullptr || src->_thunk == _refcounted_string_thunk);   // NOLINT
       switch(op)
       {
       case _thunk_op::copy:
@@ -423,26 +393,14 @@ protected:
 
 public:
   //! True if the unique ids match.
-  constexpr bool operator==(const status_code_domain &o) const noexcept
-  {
-    return _id == o._id;
-  }
+  constexpr bool operator==(const status_code_domain &o) const noexcept { return _id == o._id; }
   //! True if the unique ids do not match.
-  constexpr bool operator!=(const status_code_domain &o) const noexcept
-  {
-    return _id != o._id;
-  }
+  constexpr bool operator!=(const status_code_domain &o) const noexcept { return _id != o._id; }
   //! True if this unique is lower than the other's unique id.
-  constexpr bool operator<(const status_code_domain &o) const noexcept
-  {
-    return _id < o._id;
-  }
+  constexpr bool operator<(const status_code_domain &o) const noexcept { return _id < o._id; }
 
   //! Returns the unique id used to identify identical category instances.
-  constexpr unique_id_type id() const noexcept
-  {
-    return _id;
-  }
+  constexpr unique_id_type id() const noexcept { return _id; }
   //! Name of this category.
   BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual string_ref name() const noexcept = 0;
   //! Information about the payload of the code for this domain
@@ -477,10 +435,7 @@ protected:
   BOOST_OUTCOME_SYSTEM_ERROR2_NORETURN BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual void _do_throw_exception(const status_code<void> &code) const = 0;
 #else
   // Keep a vtable slot for binary compatibility
-  BOOST_OUTCOME_SYSTEM_ERROR2_NORETURN virtual void _do_throw_exception(const status_code<void> & /*code*/) const
-  {
-    abort();
-  }
+  BOOST_OUTCOME_SYSTEM_ERROR2_NORETURN virtual void _do_throw_exception(const status_code<void> & /*code*/) const { abort(); }
 #endif
   // For a `status_code<erased<T>>` only, copy from `src` to `dst`. Default implementation uses `memcpy()`. You should return false here if your payload is not
   // trivially copyable or would not fit.
@@ -497,10 +452,10 @@ protected:
     return true;
   }  // NOLINT
   // For a `status_code<erased<T>>` only, destroy the erased value type. Default implementation does nothing.
-  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual void _do_erased_destroy(status_code<void> &code, size_t bytes) const noexcept  // NOLINT
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual void _do_erased_destroy(status_code<void> &code, payload_info_t info) const noexcept  // NOLINT
   {
     (void) code;
-    (void) bytes;
+    (void) info;
   }
 };
 

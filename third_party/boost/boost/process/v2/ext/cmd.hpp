@@ -20,6 +20,11 @@ BOOST_PROCESS_V2_BEGIN_NAMESPACE
 
 namespace ext {
 
+#if defined(BOOST_PROCESS_V2_WINDOWS)
+BOOST_PROCESS_V2_DECL shell cmd(HANDLE handle, error_code & ec);
+BOOST_PROCESS_V2_DECL shell cmd(HANDLE handle);
+#endif
+
 /// @{
 /// Get the argument vector of another process
 BOOST_PROCESS_V2_DECL shell cmd(pid_type pid, error_code & ec);

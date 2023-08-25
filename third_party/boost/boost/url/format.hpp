@@ -11,7 +11,7 @@
 #define BOOST_URL_FORMAT_HPP
 
 #include <boost/url/detail/config.hpp>
-#include <boost/url/string_view.hpp>
+#include <boost/core/detail/string_view.hpp>
 #include <boost/url/url.hpp>
 #include <boost/url/detail/vformat.hpp>
 #include <initializer_list>
@@ -90,7 +90,7 @@ namespace urls {
 template <class... Args>
 url
 format(
-    string_view fmt,
+    core::string_view fmt,
     Args&&... args)
 {
     return detail::vformat(
@@ -174,7 +174,7 @@ template <class... Args>
 void
 format_to(
     url_base& u,
-    string_view fmt,
+    core::string_view fmt,
     Args&&... args)
 {
     detail::vformat_to(
@@ -262,7 +262,7 @@ format_to(
 inline
 url
 format(
-    string_view fmt,
+    core::string_view fmt,
 #ifdef BOOST_URL_DOCS
     std::initializer_list<__see_below__> args
 #else
@@ -360,7 +360,7 @@ inline
 void
 format_to(
     url_base& u,
-    string_view fmt,
+    core::string_view fmt,
 #ifdef BOOST_URL_DOCS
     std::initializer_list<__see_below__> args
 #else
@@ -405,7 +405,7 @@ __implementation_defined__
 #else
 detail::named_arg<T>
 #endif
-arg(string_view name, T const& arg)
+arg(core::string_view name, T const& arg)
 {
     return {name, arg};
 }

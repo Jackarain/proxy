@@ -67,11 +67,11 @@
 <p>
         Similar to its standard library counterpart, elements may be accessed directly
         by their 0-based index with bounds checking using <a class="link" href="../ref/boost__json__array/at/overload1.html" title="array::at (1 of 3 overloads)"><code class="computeroutput"><span class="identifier">at</span></code></a>, or without bounds checking using
-        <a class="link" href="../ref/boost__json__array/operator_lb__rb_.html" title="array::operator[]"><code class="computeroutput"><span class="keyword">operator</span><span class="special">[]</span></code></a>:
+        <a class="link" href="../../"><code class="computeroutput"><span class="keyword">operator</span><span class="special">[]</span></code></a>:
       </p>
 <pre class="programlisting"><span class="identifier">assert</span><span class="special">(</span> <span class="identifier">arr</span><span class="special">[</span><span class="number">0</span><span class="special">].</span><span class="identifier">as_string</span><span class="special">()</span> <span class="special">==</span> <span class="string">"Hello"</span> <span class="special">);</span>
 
-<span class="comment">// The following line throws std::out_of_range, since the index is out of range</span>
+<span class="comment">// The following line throws system_error, since the index is out of range</span>
 <span class="identifier">arr</span><span class="special">.</span><span class="identifier">at</span><span class="special">(</span> <span class="number">3</span> <span class="special">)</span> <span class="special">=</span> <span class="keyword">nullptr</span><span class="special">;</span>
 </pre>
 <p>

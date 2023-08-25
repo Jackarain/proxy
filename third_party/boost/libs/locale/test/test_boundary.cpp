@@ -11,6 +11,7 @@
 #include <boost/locale/localization_backend.hpp>
 #include "boostLocale/test/tools.hpp"
 #include "boostLocale/test/unit_test.hpp"
+#include <boost/assert.hpp>
 #include <iostream>
 #include <list>
 #include <vector>
@@ -19,6 +20,124 @@
 #endif
 
 namespace lb = boost::locale::boundary;
+template<typename Char>
+using chunks_t = std::vector<std::basic_string<Char>>;
+using masks_t = std::vector<unsigned>;
+using positions_t = std::vector<size_t>;
+
+template<typename Iterator, typename Char>
+void run_segment_iterator_test(const lb::segment_index<Iterator>& map,
+                               const Iterator begin,
+                               const Iterator end,
+                               const chunks_t<Char>& chunks,
+                               const masks_t& masks,
+                               const positions_t& pos)
+{
+    {
+        unsigned i = 0;
+        typename lb::segment_index<Iterator>::iterator p;
+        for(p = map.begin(); p != map.end(); ++p, i++) {
+            TEST_REQUIRE(i < masks.size());
+            TEST_EQ(p->str(), chunks[i]);
+            TEST_EQ(p->rule(), masks[i]);
+        }
+        TEST_EQ(i, chunks.size());
+
+        for(;;) {
+            if(p == map.begin()) {
+                TEST_EQ(i, 0u);
+                break;
+            } else {
+                --p, --i;
+                TEST_EQ(p->str(), chunks[i]);
+                TEST_EQ(p->rule(), masks[i]);
+            }
+        }
+        for(i = 0, p = map.end(); i < chunks.size(); i++) {
+            --p;
+            size_t index = chunks.size() - i - 1;
+            TEST_EQ(p->str(), chunks[index]);
+            TEST_EQ(p->rule(), masks[index]);
+        }
+        TEST(p == map.begin());
+    }
+
+    {
+        size_t chunk_ptr = 0, i = 0;
+        for(Iterator optr = begin; optr != end; optr++, i++) {
+            const auto p = map.find(optr);
+            if(chunk_ptr < pos.size() && i >= pos[chunk_ptr])
+                chunk_ptr++;
+            if(chunk_ptr >= pos.size())
+                TEST(p == map.end());
+            else {
+                TEST_EQ(p->str(), chunks[chunk_ptr]);
+                TEST_EQ(p->rule(), unsigned(masks[chunk_ptr]));
+            }
+        }
+    }
+}
+
+template<typename Iterator>
+void run_break_iterator_test(const lb::boundary_point_index<Iterator>& map,
+                             const Iterator begin,
+                             const Iterator end,
+                             const std::vector<Iterator>& iters,
+                             const masks_t& masks)
+{
+    unsigned i = 0;
+    typename lb::boundary_point_index<Iterator>::iterator p;
+    for(p = map.begin(); p != map.end(); ++p, i++) {
+        TEST_REQUIRE(i < masks.size());
+        TEST(p->iterator() == iters[i]);
+        TEST_EQ(p->rule(), masks[i]);
+    }
+
+    TEST_EQ(i, iters.size());
+
+    do {
+        --p;
+        --i;
+        TEST(p->iterator() == iters.at(i));
+    } while(p != map.begin());
+    TEST_EQ(i, 0u);
+
+    unsigned iters_ptr = 0;
+    for(Iterator optr = begin; optr != end; optr++) {
+        p = map.find(optr);
+        TEST(p->iterator() == iters[iters_ptr]);
+        if(iters.at(iters_ptr) == optr)
+            iters_ptr++;
+    }
+}
+
+template<typename Iterator>
+void verify_index(const lb::boundary_point_index<Iterator>& map,
+                  const std::vector<Iterator>& iters,
+                  const masks_t& masks)
+{
+    BOOST_ASSERT(iters.size() == masks.size());
+    TEST_REQUIRE(static_cast<size_t>(std::distance(map.begin(), map.end())) == masks.size());
+    size_t i = 0;
+    for(const auto& b_point : map) {
+        TEST(b_point.iterator() == iters[i]);
+        TEST_EQ(b_point.rule(), masks[i]);
+        ++i;
+    }
+}
+
+template<typename Iterator, typename Char>
+void verify_index(const lb::segment_index<Iterator>& map, const chunks_t<Char>& chunks, const masks_t& masks)
+{
+    BOOST_ASSERT(chunks.size() == masks.size());
+    TEST_REQUIRE(static_cast<size_t>(std::distance(map.begin(), map.end())) == masks.size());
+    size_t i = 0;
+    for(const auto& seg : map) {
+        TEST_EQ(seg.str(), chunks[i]);
+        TEST_EQ(seg.rule(), masks[i]);
+        ++i;
+    }
+}
 
 template<typename Char, typename Iterator>
 void test_word_container(Iterator begin,
@@ -29,276 +148,113 @@ void test_word_container(Iterator begin,
                          std::locale l,
                          lb::boundary_type bt = lb::word)
 {
+    using segments_t = lb::segment_index<Iterator>;
+    using boundaries_t = lb::boundary_point_index<Iterator>;
     for(int sm = (bt == lb::word ? 31 : 3); sm >= 0; sm--) {
         unsigned mask = ((sm & 1) != 0) * 0xF + ((sm & 2) != 0) * 0xF0 + ((sm & 4) != 0) * 0xF00
                         + ((sm & 8) != 0) * 0xF000 + ((sm & 16) != 0) * 0xF0000;
 
-        std::vector<unsigned> masks;
+        masks_t masks;
         std::vector<size_t> pos;
-        std::vector<unsigned> bmasks;
+        std::vector<unsigned> boundary_masks;
         std::basic_string<Char> empty_chunk;
 
-        std::vector<std::basic_string<Char>> chunks;
-        std::vector<std::basic_string<Char>> fchunks;
+        chunks_t<Char> chunks;
+        chunks_t<Char> full_chunks;
         std::vector<Iterator> iters;
         iters.push_back(begin);
-        bmasks.push_back(0);
+        boundary_masks.push_back(0);
 
         for(unsigned i = 0; i < imasks.size(); i++) {
             if(imasks[i] & mask) {
                 masks.push_back(imasks[i]);
                 chunks.push_back(ichunks[i]);
-                fchunks.push_back(empty_chunk + ichunks[i]);
+                full_chunks.push_back(empty_chunk + ichunks[i]);
                 empty_chunk.clear();
                 pos.push_back(ipos[i]);
-            } else {
+            } else
                 empty_chunk += ichunks[i];
-            }
 
             if((imasks[i] & mask) || i == imasks.size() - 1) {
                 Iterator ptr = begin;
                 std::advance(ptr, ipos[i]);
                 iters.push_back(ptr);
-                bmasks.push_back(imasks[i]);
+                boundary_masks.push_back(imasks[i]);
             }
         }
-
-        // segment iterator tests
         {
-            lb::segment_index<Iterator> map(bt, begin, end, l);
-            typedef typename lb::segment_index<Iterator>::iterator iter_type;
-
+            segments_t map(bt, begin, end, l);
             map.rule(mask);
-
-            {
-                unsigned i = 0;
-                iter_type p;
-                map.full_select(false);
-                for(p = map.begin(); p != map.end(); ++p, i++) {
-                    TEST_REQUIRE(i < chunks.size());
-                    TEST_EQ(p->str(), chunks[i]);
-                    TEST_EQ(p->rule(), masks[i]);
-                }
-
-                TEST_EQ(i, chunks.size());
-                for(;;) {
-                    if(p == map.begin()) {
-                        TEST_EQ(i, 0u);
-                        break;
-                    } else {
-                        --p, --i;
-                        TEST_EQ(p->str(), chunks[i]);
-                        TEST_EQ(p->rule(), masks[i]);
-                    }
-                }
-                for(i = 0, p = map.end(); i < chunks.size(); i++) {
-                    --p;
-                    size_t index = chunks.size() - i - 1;
-                    TEST_EQ(p->str(), chunks[index]);
-                    TEST_EQ(p->rule(), unsigned(masks[index]));
-                }
-                TEST(p == map.begin());
-            }
-
-            {
-                unsigned i = 0;
-                iter_type p;
-                map.full_select(true);
-                for(p = map.begin(); p != map.end(); ++p, i++) {
-                    TEST_EQ(p->str(), fchunks[i]);
-                    TEST_EQ(p->rule(), masks[i]);
-                }
-
-                TEST_EQ(chunks.size(), i);
-
-                for(;;) {
-                    if(p == map.begin()) {
-                        TEST_EQ(i, 0u);
-                        break;
-                    } else {
-                        --p;
-                        TEST_EQ(p->str(), fchunks[--i]);
-                        TEST_EQ(p->rule(), masks[i]);
-                    }
-                }
-
-                for(i = 0, p = map.end(); i < chunks.size(); i++) {
-                    --p;
-                    size_t index = chunks.size() - i - 1u;
-                    TEST_EQ(p->str(), fchunks[index]);
-                    TEST_EQ(p->rule(), unsigned(masks[index]));
-                }
-                TEST(p == map.begin());
-            }
-
-            {
-                iter_type p;
-                unsigned chunk_ptr = 0;
-                unsigned i = 0;
-                map.full_select(false);
-                for(Iterator optr = begin; optr != end; optr++, i++) {
-                    p = map.find(optr);
-                    if(chunk_ptr < pos.size() && i >= unsigned(pos[chunk_ptr])) {
-                        chunk_ptr++;
-                    }
-                    if(chunk_ptr >= pos.size()) {
-                        TEST(p == map.end());
-                    } else {
-                        TEST_EQ(p->str(), chunks[chunk_ptr]);
-                        TEST_EQ(p->rule(), unsigned(masks[chunk_ptr]));
-                    }
-                }
-            }
-            {
-                iter_type p;
-                unsigned chunk_ptr = 0;
-                unsigned i = 0;
-                map.full_select(true);
-                for(Iterator optr = begin; optr != end; optr++, i++) {
-                    p = map.find(optr);
-                    if(chunk_ptr < pos.size() && i >= unsigned(pos[chunk_ptr])) {
-                        chunk_ptr++;
-                    }
-                    if(chunk_ptr >= pos.size()) {
-                        TEST(p == map.end());
-                    } else {
-                        TEST_EQ(p->str(), fchunks[chunk_ptr]);
-                        TEST_EQ(p->rule(), unsigned(masks[chunk_ptr]));
-                    }
-                }
-            }
-
-        } // segment iterator tests
-
-        { // break iterator tests
-            lb::boundary_point_index<Iterator> map(bt, begin, end, l);
-            typedef typename lb::boundary_point_index<Iterator>::iterator iter_type;
-
+            map.full_select(false);
+            run_segment_iterator_test(map, begin, end, chunks, masks, pos);
+            map.full_select(true);
+            run_segment_iterator_test(map, begin, end, full_chunks, masks, pos);
+        }
+        {
+            boundaries_t map(bt, begin, end, l);
             map.rule(mask);
+            run_break_iterator_test(map, begin, end, iters, boundary_masks);
+        }
 
-            unsigned i = 0;
-            iter_type p;
-            for(p = map.begin(); p != map.end(); ++p, i++) {
-                TEST(p->iterator() == iters[i]);
-                TEST_EQ(p->rule(), bmasks[i]);
+        std::cout << "-- Copy from segment_index\n";
+        {
+            segments_t ti(bt, begin, end, l);
+            ti.rule(mask);
+            std::cout << "---- Construct boundary_point_index\n";
+            {
+                boundaries_t bi(ti);
+                bi.rule(mask);
+                verify_index(bi, iters, boundary_masks);
             }
-
-            TEST_EQ(iters.size(), i);
-
-            do {
-                --p;
-                --i;
-                TEST(p->iterator() == iters.at(i));
-            } while(p != map.begin());
-            TEST_EQ(i, 0u);
-
-            unsigned iters_ptr = 0;
-            for(Iterator optr = begin; optr != end; optr++) {
-                p = map.find(optr);
-                TEST(p->iterator() == iters[iters_ptr]);
-                if(iters.at(iters_ptr) == optr)
-                    iters_ptr++;
+            std::cout << "---- Assign boundary_point_index\n";
+            {
+                boundaries_t bi;
+                bi.rule(mask);
+                bi = ti;
+                verify_index(bi, iters, boundary_masks);
             }
-
-        } // break iterator tests
-
-        { // copy test
-            typedef lb::segment_index<Iterator> ti_type;
-            typedef lb::boundary_point_index<Iterator> bi_type;
-            { // segment to bound
-                ti_type ti(bt, begin, end, l);
-                ti.rule(mask);
-                {
-                    bi_type bi(ti);
-                    bi.rule(mask);
-                    unsigned i = 0;
-                    typename bi_type::iterator p;
-                    for(p = bi.begin(); p != bi.end(); ++p, i++) {
-                        TEST(p->iterator() == iters[i]);
-                        TEST_EQ(p->rule(), bmasks[i]);
-                    }
-                }
-                {
-                    bi_type bi;
-                    bi.rule(mask);
-                    bi = ti;
-                    unsigned i = 0;
-                    typename bi_type::iterator p;
-                    for(p = bi.begin(); p != bi.end(); ++p, i++) {
-                        TEST(p->iterator() == iters[i]);
-                        TEST_EQ(p->rule(), bmasks[i]);
-                    }
-                }
-                // boundary_point to bound
-                bi_type bi_2(bt, begin, end, l);
-                bi_2.rule(mask);
-                {
-                    bi_type bi(bi_2);
-                    unsigned i = 0;
-                    typename bi_type::iterator p;
-                    for(p = bi.begin(); p != bi.end(); ++p, i++) {
-                        TEST(p->iterator() == iters[i]);
-                        TEST_EQ(p->rule(), bmasks[i]);
-                    }
-                }
-                {
-                    bi_type bi;
-                    bi = bi_2;
-                    unsigned i = 0;
-                    typename bi_type::iterator p;
-                    for(p = bi.begin(); p != bi.end(); ++p, i++) {
-                        TEST(p->iterator() == iters[i]);
-                        TEST_EQ(p->rule(), bmasks[i]);
-                    }
-                }
+            std::cout << "---- Construct segment_index\n";
+            {
+                segments_t ti2(ti);
+                verify_index(ti2, chunks, masks);
             }
-            { // boundary_point to segment
-                bi_type bi(bt, begin, end, l);
-                {
-                    ti_type ti(bi);
-                    ti.rule(mask);
-                    unsigned i = 0;
-                    typename ti_type::iterator p;
-                    for(p = ti.begin(); p != ti.end(); ++p, i++) {
-                        TEST(p->str() == chunks[i]);
-                        TEST_EQ(p->rule(), masks[i]);
-                    }
-                }
-                {
-                    ti_type ti;
-                    ti.rule(mask);
-                    ti = (bi);
-                    unsigned i = 0;
-                    typename ti_type::iterator p;
-                    for(p = ti.begin(); p != ti.end(); ++p, i++) {
-                        TEST_EQ(p->str(), chunks[i]);
-                        TEST_EQ(p->rule(), masks[i]);
-                    }
-                }
-                ti_type ti_2(bt, begin, end, l);
-                ti_2.rule(mask);
-                {
-                    ti_type ti(ti_2);
-                    unsigned i = 0;
-                    typename ti_type::iterator p;
-                    for(p = ti.begin(); p != ti.end(); ++p, i++) {
-                        TEST_EQ(p->str(), chunks[i]);
-                        TEST_EQ(p->rule(), masks[i]);
-                    }
-                }
-                {
-                    ti_type ti;
-                    ti = (ti_2);
-                    unsigned i = 0;
-                    typename ti_type::iterator p;
-                    for(p = ti.begin(); p != ti.end(); ++p, i++) {
-                        TEST_EQ(p->str(), chunks[i]);
-                        TEST_EQ(p->rule(), masks[i]);
-                    }
-                }
+            std::cout << "---- Assign segment_index\n";
+            {
+                segments_t ti2;
+                ti2 = ti;
+                verify_index(ti2, chunks, masks);
             }
         }
-    } // for mask
+        std::cout << "-- Copy from boundary_point_index\n";
+        {
+            boundaries_t bi(bt, begin, end, l);
+            bi.rule(mask);
+            std::cout << "---- Construct boundary_point_index\n";
+            {
+                boundaries_t bi2(bi);
+                verify_index(bi2, iters, boundary_masks);
+            }
+            std::cout << "---- Assign boundary_point_index\n";
+            {
+                boundaries_t bi2;
+                bi2 = bi;
+                verify_index(bi2, iters, boundary_masks);
+            }
+            std::cout << "---- Construct segment_index\n";
+            {
+                segments_t ti(bi);
+                ti.rule(mask);
+                verify_index(ti, chunks, masks);
+            }
+            std::cout << "---- Assign segment_index\n";
+            {
+                segments_t ti;
+                ti.rule(mask);
+                ti = bi;
+                verify_index(ti, chunks, masks);
+            }
+        }
+    }
 }
 
 template<typename Char>
@@ -345,11 +301,11 @@ void test_boundaries(std::string* all, int* first, int* second, lb::boundary_typ
 {
     boost::locale::generator g;
     std::cout << " char UTF-8" << std::endl;
-    run_word<char>(all, first, second, 0, 0, 0, g("he_IL.UTF-8"), t);
+    run_word<char>(all, first, second, nullptr, nullptr, nullptr, g("he_IL.UTF-8"), t);
     std::cout << " char CP1255" << std::endl;
-    run_word<char>(all, first, second, 0, 0, 0, g("he_IL.cp1255"), t);
+    run_word<char>(all, first, second, nullptr, nullptr, nullptr, g("he_IL.cp1255"), t);
     std::cout << " wchar_t" << std::endl;
-    run_word<wchar_t>(all, first, second, 0, 0, 0, g("he_IL.UTF-8"), t);
+    run_word<wchar_t>(all, first, second, nullptr, nullptr, nullptr, g("he_IL.UTF-8"), t);
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
     std::cout << " char16_t" << std::endl;
     run_word<char16_t>(all, first, second, 0, 0, 0, g("he_IL.UTF-8"), t);
@@ -379,15 +335,15 @@ void word_boundary()
     int        word_all[] = {  0,  0,      1,  0,         0,  0,      1,  0,      0,      0,  0};
 #else
     // ICU < 62 combines the word and number classification if there is a number at the boundary
-    int         num_all[] = {  1,  0,      0,  0,         1,  0,      0,  0,      0,      0,  0};
-    int        word_all[] = {  0,  0,      1,  0,         1,  0,      1,  0,      0,      0,  0};
+    int         num_all[] = {  1,  0,      0,  0,         1,  0,      0,  0,      0,      0,  0}; // LCOV_EXCL_LINE
+    int        word_all[] = {  0,  0,      1,  0,         1,  0,      1,  0,      0,      0,  0}; // LCOV_EXCL_LINE
 #endif
 #if U_ICU_VERSION_MAJOR_NUM >= 50
     int        kana_all[] = {  0,  0,      0,  0,         0,  0,      0,  0,      0,      0,  0};
     int        ideo_all[] = {  0,  0,      0,  0,         0,  0,      0,  0,      1,      1,  1};
 #else
-    int        kana_all[] = {  0,  0,      0,  0,         0,  0,      0,  0,      0,      1,  1};
-    int        ideo_all[] = {  0,  0,      0,  0,         0,  0,      0,  0,      1,      0,  0};
+    int        kana_all[] = {  0,  0,      0,  0,         0,  0,      0,  0,      0,      1,  1}; // LCOV_EXCL_LINE
+    int        ideo_all[] = {  0,  0,      0,  0,         0,  0,      0,  0,      1,      0,  0}; // LCOV_EXCL_LINE
 #endif
     // clang-format on
 
@@ -426,6 +382,11 @@ void word_boundary()
 void test_op_one_side(const std::string& sl, const std::string& sr, int val)
 {
     boost::locale::boundary::ssegment l(sl.begin(), sl.end(), 0), r(sr.begin(), sr.end(), 0);
+
+#if BOOST_LOCALE_SPACESHIP_NULLPTR_WARNING
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
+#endif
 
     // segment
     TEST_EQ((l == r), (val == 0));
@@ -471,6 +432,10 @@ void test_op_one_side(const std::string& sl, const std::string& sr, int val)
     TEST_EQ((sl < sr), (val < 0));
     TEST_EQ((sl >= sr), (val >= 0));
     TEST_EQ((sl > sr), (val > 0));
+
+#if BOOST_LOCALE_SPACESHIP_NULLPTR_WARNING
+#    pragma clang diagnostic pop
+#endif
 }
 
 void test_op(const std::string& sl, const std::string& sr, int val)
@@ -514,7 +479,7 @@ void test_main(int /*argc*/, char** /*argv*/)
     std::cout << "Testing word boundary" << std::endl;
     word_boundary();
     std::cout << "Testing character boundary" << std::endl;
-    test_boundaries(character, nones, 0, lb::character);
+    test_boundaries(character, nones, nullptr, lb::character);
     std::cout << "Testing sentence boundary" << std::endl;
     test_boundaries(sentence1, sentence1a, sentence1b, lb::sentence);
     std::cout << "Testing line boundary" << std::endl;

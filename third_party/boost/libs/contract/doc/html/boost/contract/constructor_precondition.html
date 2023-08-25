@@ -36,18 +36,18 @@
 <span class="keyword">class</span> <a class="link" href="constructor_precondition.html" title="Class template constructor_precondition">constructor_precondition</a> <span class="special">{</span>
 <span class="keyword">public</span><span class="special">:</span>
   <span class="comment">// <a class="link" href="constructor_precondition.html#boost.contract.constructor_preconditionconstruct-copy-destruct">construct/copy/destruct</a></span>
-  <a class="link" href="constructor_precondition.html#idm35101-bb"><span class="identifier">constructor_precondition</span></a><span class="special">(</span><span class="special">)</span><span class="special">;</span>
-  <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> F<span class="special">&gt;</span> <span class="keyword">explicit</span> <a class="link" href="constructor_precondition.html#idm35108-bb"><span class="identifier">constructor_precondition</span></a><span class="special">(</span><span class="identifier">F</span> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span><span class="special">;</span>
+  <a class="link" href="constructor_precondition.html#idm35106-bb"><span class="identifier">constructor_precondition</span></a><span class="special">(</span><span class="special">)</span><span class="special">;</span>
+  <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> F<span class="special">&gt;</span> <span class="keyword">explicit</span> <a class="link" href="constructor_precondition.html#idm35113-bb"><span class="identifier">constructor_precondition</span></a><span class="special">(</span><span class="identifier">F</span> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span><span class="special">;</span>
 <span class="special">}</span><span class="special">;</span></pre></div>
 <div class="refsect1">
-<a name="idm37899"></a><h2>Description</h2>
+<a name="idm37848"></a><h2>Description</h2>
 <p>This class must be the very first base of the class declaring the constructor for which preconditions are programmed (that way constructor arguments can be checked by preconditions even before they are used to initialize other base classes):</p>
 <pre class="programlisting"><span class="keyword">class</span> <span class="identifier">u</span>
     <span class="preprocessor">#define</span> <span class="identifier">BASES</span> <span class="keyword">private</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">contract</span><span class="special">::</span><span class="identifier">constructor_precondition</span><span class="special">&lt;</span><span class="identifier">u</span><span class="special">&gt;</span><span class="special">,</span> \
             <span class="keyword">public</span> <span class="identifier">b</span>
     <span class="special">:</span> <span class="identifier">BASES</span>
 <span class="special">{</span>
-    <span class="keyword">friend</span> <span class="keyword">class</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">contract</span><span class="special">::</span><span class="identifier">access</span><span class="special">;</span>
+    <span class="keyword">friend</span> <span class="keyword">class</span> <a class="link" href="access.html" title="Class access">boost::contract::access</a><span class="special">;</span>
 
     <span class="keyword">typedef</span> <span class="identifier">BOOST_CONTRACT_BASE_TYPES</span><span class="special">(</span><span class="identifier">BASES</span><span class="special">)</span> <span class="identifier">base_types</span><span class="special">;</span>
     <span class="preprocessor">#undef</span> <span class="identifier">BASES</span>
@@ -67,7 +67,7 @@
 <span class="special">}</span><span class="special">;</span>
 </pre>
 <p>User-defined classes should inherit privately from this class (to not alter the public interface of user-defined classes). In addition, this class should never be declared as a virtual base (because virtual bases are initialized only once across the entire inheritance hierarchy preventing preconditions of other base classes from being checked).</p>
-<p>This class cannot be used this way in a <code class="computeroutput">union</code> because unions cannot have base classes in C++. Instead, this class is used in a <code class="computeroutput">union</code> to declare a local object within the constructor definition just before <code class="computeroutput"><a class="link" href="constructor.html" title="Function template constructor">boost::contract::constructor</a></code> is used (see <a class="link" href="../../boost_contract/extras.html#boost_contract.extras.unions" title="Unions"> Unions</a>).</p>
+<p>This class cannot be used this way in a <code class="computeroutput">union</code> because unions cannot have base classes in C++. Instead, this class is used in a <code class="computeroutput">union</code> to declare a local object within the constructor definition just before  <code class="computeroutput"><a class="link" href="constructor.html" title="Function template constructor">boost::contract::constructor</a></code> is used (see  <a class="link" href="../../boost_contract/extras.html#boost_contract.extras.unions" title="Unions"> Unions</a>).</p>
 <p><span class="bold"><strong>See Also:</strong></span></p>
 <p> <a class="link" href="../../boost_contract/tutorial.html#boost_contract.tutorial.constructors" title="Constructors"> Constructors</a></p>
 <p>
@@ -76,20 +76,20 @@
 
 </p>
 <div class="refsect2">
-<a name="idm38002"></a><h3>Template Parameters</h3>
+<a name="idm37947"></a><h3>Template Parameters</h3>
 <div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
 <pre class="literallayout"><span class="keyword">typename</span> Class</pre>
 <p>The class type of the constructor for which preconditions are being programmed. </p>
 </li></ol></div>
 </div>
 <div class="refsect2">
-<a name="idm38011"></a><h3>
+<a name="idm37956"></a><h3>
 <a name="boost.contract.constructor_preconditionconstruct-copy-destruct"></a><code class="computeroutput">constructor_precondition</code> 
         public
        construct/copy/destruct</h3>
 <div class="orderedlist"><ol class="orderedlist" type="1">
 <li class="listitem">
-<pre class="literallayout"><a name="idm35101-bb"></a><span class="identifier">constructor_precondition</span><span class="special">(</span><span class="special">)</span><span class="special">;</span></pre>Construct this object without specifying constructor preconditions. <p>This is implicitly called for those constructors of the contracted class that do not specify preconditions.</p>
+<pre class="literallayout"><a name="idm35106-bb"></a><span class="identifier">constructor_precondition</span><span class="special">(</span><span class="special">)</span><span class="special">;</span></pre>Construct this object without specifying constructor preconditions. <p>This is implicitly called for those constructors of the contracted class that do not specify preconditions.</p>
 <div class="note"><table border="0" summary="Note">
 <tr>
 <td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../../doc/src/images/note.png"></td>
@@ -101,7 +101,7 @@
 </p>
 </li>
 <li class="listitem">
-<pre class="literallayout"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> F<span class="special">&gt;</span> <span class="keyword">explicit</span> <a name="idm35108-bb"></a><span class="identifier">constructor_precondition</span><span class="special">(</span><span class="identifier">F</span> <span class="keyword">const</span> <span class="special">&amp;</span> f<span class="special">)</span><span class="special">;</span></pre>Construct this object specifying constructor preconditions. <p>
+<pre class="literallayout"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> F<span class="special">&gt;</span> <span class="keyword">explicit</span> <a name="idm35113-bb"></a><span class="identifier">constructor_precondition</span><span class="special">(</span><span class="identifier">F</span> <span class="keyword">const</span> <span class="special">&amp;</span> f<span class="special">)</span><span class="special">;</span></pre>Construct this object specifying constructor preconditions. <p>
 </p>
 <div class="variablelist"><table border="0" class="variablelist compact">
 <colgroup>
@@ -117,7 +117,7 @@
 </colgroup>
 <tbody><tr>
 <td><p><span class="term"><code class="computeroutput">f</code></span></p></td>
-<td><p>Nullary functor called by this library to check constructor preconditions <code class="computeroutput">f()</code>. Assertions within this functor call are usually programmed using <code class="computeroutput"><code class="computeroutput"><a class="link" href="../../BOOST_CONTRACT_ASSERT.html" title="Macro BOOST_CONTRACT_ASSERT">BOOST_CONTRACT_ASSERT</a></code></code>, but any exception thrown by a call to this functor indicates a contract failure (and will result in this library calling  <code class="computeroutput"><code class="computeroutput"><a class="link" href="precondition_failure.html" title="Function precondition_failure">boost::contract::precondition_failure</a></code></code>). This functor should capture variables by (constant) value, or better by (constant) reference to avoid extra copies. </p></td>
+<td><p>Nullary functor called by this library to check constructor preconditions <code class="computeroutput">f()</code>. Assertions within this functor call are usually programmed using  <code class="computeroutput"><code class="computeroutput"><a class="link" href="../../BOOST_CONTRACT_ASSERT.html" title="Macro BOOST_CONTRACT_ASSERT">BOOST_CONTRACT_ASSERT</a></code></code>, but any exception thrown by a call to this functor indicates a contract failure (and will result in this library calling  <code class="computeroutput"><code class="computeroutput"><a class="link" href="precondition_failure.html" title="Function precondition_failure">boost::contract::precondition_failure</a></code></code>). This functor should capture variables by (constant) value, or better by (constant) reference to avoid extra copies. </p></td>
 </tr></tbody>
 </table></div></td>
 </tr></tbody>

@@ -23,17 +23,12 @@ project : requirements
   <include>.
   <warnings>pedantic
   <warnings-as-errors>on
-  [ requires
-      cxx11_defaulted_functions
-      cxx11_noexcept
-      cxx11_rvalue_references
-      cxx11_static_assert
-  ]
   [ check-target-builds ../config//cxx11_moveable_fstreams "std::fstream is moveable and swappable" : : <build>no ] 
   ;
 
 lib shell32 ;
 lib file_test_helpers : file_test_helpers.cpp : <link>static -<library>/boost/nowide//boost_nowide ;
+explicit file_test_helpers ;
 
 run test_codecvt.cpp ;
 run test_convert.cpp ;

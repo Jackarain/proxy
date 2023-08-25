@@ -13,10 +13,6 @@
 #include <locale>
 #include <stdexcept>
 #include <vector>
-#ifndef BOOST_LOCALE_NO_WINAPI_BACKEND
-#    include "../src/boost/locale/win32/lcid.hpp"
-#endif
-#include <boost/core/ignore_unused.hpp>
 
 #ifdef BOOST_LOCALE_WITH_ICU
 #    include <unicode/uversion.h>
@@ -45,16 +41,6 @@ const char* env(const char* s)
     if(r)
         return r;
     return "";
-}
-
-bool has_win_locale(const std::string& locale_name)
-{
-#ifdef BOOST_LOCALE_NO_WINAPI_BACKEND
-    boost::ignore_unused(locale_name);
-    return false;
-#else
-    return boost::locale::impl_win::locale_to_lcid(locale_name) != 0;
-#endif
 }
 
 void check_locales(const std::vector<const char*>& names)
@@ -109,7 +95,7 @@ void test_main(int /*argc*/, char** /*argv*/)
 #else
         std::cout << "- C++ locale: " << loc.name() << std::endl;
 #endif
-    } catch(const std::exception&) {
+    } catch(const std::exception&) {                     // LCOV_EXCL_LINE
         std::cout << "- C++ locale: is not supported\n"; // LCOV_EXCL_LINE
     }
 
@@ -129,6 +115,8 @@ void test_main(int /*argc*/, char** /*argv*/)
       "Japanese_Japan.932",
       "en_001.UTF-8",
       "en_150.UTF-8",
+      "C.UTF-8",
+      "C.utf8",
     };
     std::cout << "- Testing locales availability on the operation system:" << std::endl;
     check_locales(locales_to_check);
@@ -138,7 +126,7 @@ void test_main(int /*argc*/, char** /*argv*/)
     std::cout << "- Testing timezone and time " << std::endl;
     {
         setlocale(LC_ALL, "C");
-        time_t now = time(0);
+        time_t now = std::time(nullptr);
         char buf[1024];
         strftime(buf, sizeof(buf), "%%c=%c; %%Z=%Z; %%z=%z", localtime_wrap(&now));
         std::cout << "  Local Time    :" << buf << std::endl;

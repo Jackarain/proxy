@@ -34,15 +34,15 @@
 
 </span>BOOST_CONTRACT_CHECK(cond)</pre></div>
 <div class="refsect1">
-<a name="idm36766"></a><h2>Description</h2>
-<p>It is preferred to use this macro instead of programming implementation checks in a nullary functor passed to <code class="computeroutput"><a class="link" href="boost/contract/check.html" title="Class check">boost::contract::check</a></code> constructor because this macro will completely remove implementation checks from the code when <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_NO_CHECKS.html" title="Macro BOOST_CONTRACT_NO_CHECKS">BOOST_CONTRACT_NO_CHECKS</a></code> is defined:</p>
+<a name="idm36715"></a><h2>Description</h2>
+<p>It is preferred to use this macro instead of programming implementation checks in a nullary functor passed to  <code class="computeroutput"><a class="link" href="boost/contract/check.html" title="Class check">boost::contract::check</a></code> constructor because this macro will completely remove implementation checks from the code when  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_NO_CHECKS.html" title="Macro BOOST_CONTRACT_NO_CHECKS">BOOST_CONTRACT_NO_CHECKS</a></code> is defined:</p>
 <pre class="programlisting"><span class="keyword">void</span> <span class="identifier">f</span><span class="special">(</span><span class="special">)</span> <span class="special">{</span>
     <span class="special">...</span>
     <span class="identifier">BOOST_CONTRACT_CHECK</span><span class="special">(</span><span class="identifier">cond</span><span class="special">)</span><span class="special">;</span>
     <span class="special">...</span>
 <span class="special">}</span>
 </pre>
-<p> <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_CHECK.html" title="Macro BOOST_CONTRACT_CHECK">BOOST_CONTRACT_CHECK</a></code>, <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_CHECK_AUDIT.html" title="Macro BOOST_CONTRACT_CHECK_AUDIT">BOOST_CONTRACT_CHECK_AUDIT</a></code>, and  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_CHECK_AXIOM.html" title="Macro BOOST_CONTRACT_CHECK_AXIOM">BOOST_CONTRACT_CHECK_AXIOM</a></code> are the three assertion levels predefined by this library for implementation checks.</p>
+<p> <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_CHECK.html" title="Macro BOOST_CONTRACT_CHECK">BOOST_CONTRACT_CHECK</a></code>,  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_CHECK_AUDIT.html" title="Macro BOOST_CONTRACT_CHECK_AUDIT">BOOST_CONTRACT_CHECK_AUDIT</a></code>, and  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_CHECK_AXIOM.html" title="Macro BOOST_CONTRACT_CHECK_AXIOM">BOOST_CONTRACT_CHECK_AXIOM</a></code> are the three assertion levels predefined by this library for implementation checks.</p>
 <p><span class="bold"><strong>See Also:</strong></span></p>
 <p> <a class="link" href="boost_contract/advanced.html#boost_contract.advanced.implementation_checks" title="Implementation Checks"> Implementation Checks</a></p>
 <p>

@@ -13,32 +13,32 @@
 
 using namespace boost::locale::utf;
 
-const boost::uint32_t* u32_seq(boost::uint32_t a)
+const std::uint32_t* u32_seq(std::uint32_t a)
 {
-    static boost::uint32_t buf[2];
+    static std::uint32_t buf[2];
     buf[0] = a;
     buf[1] = 0;
     return buf;
 }
 
-const boost::uint16_t* u16_seq(boost::uint16_t a)
+const std::uint16_t* u16_seq(std::uint16_t a)
 {
-    static boost::uint16_t buf[2];
+    static std::uint16_t buf[2];
     buf[0] = a;
     buf[1] = 0;
     return buf;
 }
 
-const boost::uint16_t* u16_seq(boost::uint16_t a, boost::uint16_t b)
+const std::uint16_t* u16_seq(std::uint16_t a, std::uint16_t b)
 {
-    static boost::uint16_t buf[3];
+    static std::uint16_t buf[3];
     buf[0] = a;
     buf[1] = b;
     buf[2] = 0;
     return buf;
 }
 
-const char16_t* c16_seq(boost::uint16_t a)
+const char16_t* c16_seq(std::uint16_t a)
 {
     static char16_t buf[2];
     buf[0] = static_cast<char16_t>(a);
@@ -46,7 +46,7 @@ const char16_t* c16_seq(boost::uint16_t a)
     return buf;
 }
 
-const char32_t* c32_seq(boost::uint32_t a)
+const char32_t* c32_seq(std::uint32_t a)
 {
     static char32_t buf[2];
     buf[0] = static_cast<char32_t>(a);
@@ -64,7 +64,7 @@ void test_from_utf(const CharType* const s, unsigned codepoint)
 
     static_assert(tr::max_width == 4 / sizeof(CharType), "Wrong max_width");
 
-    TEST_EQ(tr::template decode<const CharType*>(cur, end), codepoint);
+    TEST_EQ(tr::decode(cur, end), codepoint);
 
     if(codepoint != illegal)
         TEST(cur == end);
@@ -95,7 +95,7 @@ void test_to_utf(const CharType* str, unsigned codepoint)
 {
     CharType buf[5] = {1, 1, 1, 1, 1};
     CharType* p = buf;
-    p = utf_traits<CharType>::template encode<CharType*>(codepoint, p);
+    p = utf_traits<CharType>::encode(codepoint, p);
     const CharType* const end = boost::locale::util::str_end(str);
     TEST_EQ(end - str, p - buf);
     TEST(*p);
@@ -123,7 +123,7 @@ void test_utf8()
     test_valid_utf("\xf0\x90\x80\x80", 0x10000);
     test_valid_utf("\xf4\x8f\xbf\xbf", 0x10ffff);
 
-    /// test that this actually works
+    // test that this actually works
     test_from_utf(make2(0x80), 0x80);
     test_from_utf(make2(0x7ff), 0x7ff);
 

@@ -8,6 +8,18 @@
 /*!
 \page changelog Changelog
 
+- 1.83.0
+    - Breaking changes
+        - Bitwise/binary operators (left/right shift, binary and/or/xor/not) are no longer supported in message catalog files matching GNU gettext behavior
+        - Std backend on Windows uses the classic locale instead of the system locale when the requested locale does not exist (now same as on other OSs)
+        - `localization_backend_manager::get` is deprecated and should be replaced by `localization_backend_manager::create` or simply using the generator
+    - Other improvements and fixes
+        - Introduce converter classes as alternative to `to_utf`/`from_utf`/`between`
+        - Fix UB on invalid index in format strings
+        - Fix conversion of UTF to e.g. iso-2022-jp on Windows without ICU
+        - Use `long long` as the count parameter for pluralized translations
+        - Make `localization_backend_manager` movable
+        - Add missing `noexcept` to move assignments/constructors
 - 1.82.0
     - Breaking changes
         - `get_system_locale` and dependents will now correctly favor `$LC_ALL` over `LC_CTYPE` as defined by POSIX

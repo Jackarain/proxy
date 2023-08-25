@@ -29,6 +29,8 @@ obj has_stat_st_birthtimespec : has_stat_st_birthtimespec.cpp : <include>../src 
 explicit has_stat_st_birthtimespec ;
 obj has_fdopendir_nofollow : has_fdopendir_nofollow.cpp : <include>../src ;
 explicit has_fdopendir_nofollow ;
+obj has_dirent_d_type : has_dirent_d_type.cpp : <include>../src ;
+explicit has_dirent_d_type ;
 obj has_posix_at_apis : has_posix_at_apis.cpp : <include>../src ;
 explicit has_posix_at_apis ;
 

@@ -12,6 +12,15 @@
 #error "MSVC and compatible compilers don't support -Wl,... flags"
 #endif
 
+#if defined(__OpenBSD__)
+// On OpenBSD, shared libraries are not linked to libc, as there are multiple
+// libc versions installed, and loading multiple different versions into the
+// process is considered dangerous. Only the main executable is linked against
+// one of them, which will be used by all shared libraries loaded into the
+// process. This renders -Wl,--no-undefined unusable for shared libraries.
+#error "-Wl,--no-undefined is broken for shared libraries on OpenBSD"
+#endif
+
 int main()
 {
     return 0;

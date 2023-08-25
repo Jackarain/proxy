@@ -14,8 +14,8 @@ CLANG_FORMAT="clang-format-14"
 if ! command -v "$CLANG_FORMAT" &> /dev/null; then
     echo "You need $CLANG_FORMAT in your PATH"
     exit 1
-fi    
+fi
 
 cd "$(dirname "$0")/.."
 
-find . -type f \( -name '*.cpp' -o -name '*.hpp' -o -name '*.ipp' \) -print0 | xargs -0 -n4 "$CLANG_FORMAT" -i --style=file
+find . -type f \( -name '*.cpp' -o -name '*.hpp' \) -exec "$CLANG_FORMAT" -i --style=file {} \;

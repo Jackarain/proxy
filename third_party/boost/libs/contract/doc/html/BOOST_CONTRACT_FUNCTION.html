@@ -7,7 +7,7 @@
 <link rel="home" href="index.html" title="Chapter 1. Boost.Contract 1.0.0">
 <link rel="up" href="reference.html#header.boost.contract_macro_hpp" title="Header &lt;boost/contract_macro.hpp&gt;">
 <link rel="prev" href="BOOST_CONTRACT_DESTRUCTOR.html" title="Macro BOOST_CONTRACT_DESTRUCTOR">
-<link rel="next" href="BOOST_CONTRACT_ST_idm37505.html" title="Macro BOOST_CONTRACT_STATIC_PUBLIC_FUNCTION">
+<link rel="next" href="BOOST_CONTRACT_ST_idm37546.html" title="Macro BOOST_CONTRACT_STATIC_PUBLIC_FUNCTION">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
@@ -21,7 +21,7 @@
 </tr></table>
 <hr>
 <div class="spirit-nav">
-<a accesskey="p" href="BOOST_CONTRACT_DESTRUCTOR.html"><img src="../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="reference.html#header.boost.contract_macro_hpp"><img src="../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="BOOST_CONTRACT_ST_idm37505.html"><img src="../../../../doc/src/images/next.png" alt="Next"></a>
+<a accesskey="p" href="BOOST_CONTRACT_DESTRUCTOR.html"><img src="../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="reference.html#header.boost.contract_macro_hpp"><img src="../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="BOOST_CONTRACT_ST_idm37546.html"><img src="../../../../doc/src/images/next.png" alt="Next"></a>
 </div>
 <div class="refentry">
 <a name="BOOST_CONTRACT_FUNCTION"></a><div class="titlepage"></div>
@@ -34,8 +34,8 @@
 
 </span>BOOST_CONTRACT_FUNCTION()</pre></div>
 <div class="refsect1">
-<a name="idm45917"></a><h2>Description</h2>
-<p>This is used together with <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_PR_idm37029.html" title="Macro BOOST_CONTRACT_PRECONDITION">BOOST_CONTRACT_PRECONDITION</a></code>,  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_PO_idm37056.html" title="Macro BOOST_CONTRACT_POSTCONDITION">BOOST_CONTRACT_POSTCONDITION</a></code>, <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_EXCEPT.html" title="Macro BOOST_CONTRACT_EXCEPT">BOOST_CONTRACT_EXCEPT</a></code>, and <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_OLD.html" title="Macro BOOST_CONTRACT_OLD">BOOST_CONTRACT_OLD</a></code> to specify preconditions, postconditions, exception guarantees, and old value copies at body that can be completely disabled at compile-time for (non-public) functions:</p>
+<a name="idm45702"></a><h2>Description</h2>
+<p>This is used together with  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_PR_idm37070.html" title="Macro BOOST_CONTRACT_PRECONDITION">BOOST_CONTRACT_PRECONDITION</a></code>,  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_PO_idm37097.html" title="Macro BOOST_CONTRACT_POSTCONDITION">BOOST_CONTRACT_POSTCONDITION</a></code>,  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_EXCEPT.html" title="Macro BOOST_CONTRACT_EXCEPT">BOOST_CONTRACT_EXCEPT</a></code>, and  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_OLD.html" title="Macro BOOST_CONTRACT_OLD">BOOST_CONTRACT_OLD</a></code> to specify preconditions, postconditions, exception guarantees, and old value copies at body that can be completely disabled at compile-time for (non-public) functions:</p>
 <pre class="programlisting"><span class="keyword">void</span> <span class="identifier">f</span><span class="special">(</span><span class="special">...</span><span class="special">)</span> <span class="special">{</span>
     <span class="identifier">BOOST_CONTRACT_OLD_PTR</span><span class="special">(</span><span class="identifier">old_type</span><span class="special">)</span><span class="special">(</span><span class="identifier">old_var</span><span class="special">)</span><span class="special">;</span>
     <span class="identifier">BOOST_CONTRACT_FUNCTION</span><span class="special">(</span><span class="special">)</span>
@@ -61,7 +61,7 @@
 <span class="special">}</span>
 </pre>
 <p>This can be used to program contracts for non-member functions but also for private and protected functions, lambda functions, loops, arbitrary blocks of code, etc. For optimization, this can be omitted for code that does not have preconditions, postconditions, and exception guarantees.</p>
-<p><code class="computeroutput">BOOST_CONTRACT_FUNCTION()</code> expands to code equivalent to the following (note that no code is generated when <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_NO_idm35008.html" title="Macro BOOST_CONTRACT_NO_FUNCTIONS">BOOST_CONTRACT_NO_FUNCTIONS</a></code> is defined):</p>
+<p><code class="computeroutput">BOOST_CONTRACT_FUNCTION()</code> expands to code equivalent to the following (note that no code is generated when  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_NO_idm35012.html" title="Macro BOOST_CONTRACT_NO_FUNCTIONS">BOOST_CONTRACT_NO_FUNCTIONS</a></code> is defined):</p>
 <pre class="programlisting"><span class="preprocessor">#ifndef</span> <span class="identifier">BOOST_CONTRACT_NO_FUNCTIONS</span>
     <span class="identifier">boost</span><span class="special">::</span><span class="identifier">contract</span><span class="special">::</span><span class="identifier">check</span> <span class="identifier">internal_var</span> <span class="special">=</span>
             <span class="identifier">boost</span><span class="special">::</span><span class="identifier">contract</span><span class="special">::</span><span class="identifier">function</span><span class="special">(</span><span class="special">)</span>
@@ -89,7 +89,7 @@
 </div>
 <hr>
 <div class="spirit-nav">
-<a accesskey="p" href="BOOST_CONTRACT_DESTRUCTOR.html"><img src="../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="reference.html#header.boost.contract_macro_hpp"><img src="../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="BOOST_CONTRACT_ST_idm37505.html"><img src="../../../../doc/src/images/next.png" alt="Next"></a>
+<a accesskey="p" href="BOOST_CONTRACT_DESTRUCTOR.html"><img src="../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="reference.html#header.boost.contract_macro_hpp"><img src="../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="BOOST_CONTRACT_ST_idm37546.html"><img src="../../../../doc/src/images/next.png" alt="Next"></a>
 </div>
 </body>
 </html>

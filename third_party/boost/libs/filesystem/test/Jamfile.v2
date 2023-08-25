@@ -78,6 +78,7 @@ compile macro_default_test.cpp ;
 run odr1_test.cpp odr2_test.cpp ;
 run deprecated_test.cpp : : : <define>BOOST_FILESYSTEM_VERSION=3 ;
 run fstream_test.cpp : : : $(VIS) <define>BOOST_FILESYSTEM_VERSION=4 ;
+run cstdio_test.cpp : : : $(VIS) <define>BOOST_FILESYSTEM_VERSION=4 ;
 run large_file_support_test.cpp : : : <define>BOOST_FILESYSTEM_VERSION=4 ;
 run locale_info.cpp : : : <define>BOOST_FILESYSTEM_VERSION=4 <test-info>always_show_run_output ;
 run operations_test.cpp : : : <link>shared <define>BOOST_FILESYSTEM_VERSION=4 <test-info>always_show_run_output ;
@@ -85,6 +86,8 @@ run operations_test.cpp : : : <link>static <define>BOOST_FILESYSTEM_VERSION=4 : 
 run operations_unit_test.cpp : $(HERE) : : <link>shared <define>BOOST_FILESYSTEM_VERSION=4 <test-info>always_show_run_output ;
 run copy_test.cpp : : : <define>BOOST_FILESYSTEM_VERSION=4 ;
 compile-fail cf_path_nullptr_test.cpp ;
+compile path_iter_ctor_overload_test.cpp ;
+compile path_operator_ambiguity.cpp : <toolset>gcc:<warnings-as-errors>on ;
 run path_test.cpp : : : <link>shared <define>BOOST_FILESYSTEM_VERSION=4 ;
 run path_test.cpp : : : <link>static <define>BOOST_FILESYSTEM_VERSION=4 : path_test_static ;
 run path_test.cpp : : : <link>shared <define>BOOST_FILESYSTEM_VERSION=3 : path_test_v3 ;

@@ -44,7 +44,7 @@ public:
 
     constexpr
     format_parse_context(
-        string_view fmt,
+        core::string_view fmt,
         std::size_t arg_id = 0)
         : format_parse_context(
             fmt.data(),
@@ -88,10 +88,10 @@ struct ignore_format {};
 template <class T>
 struct named_arg
 {
-    string_view name;
+    core::string_view name;
     T const& value;
 
-    named_arg(string_view n, T const& v)
+    named_arg(core::string_view n, T const& v)
         : name(n)
         , value(v)
     {}
@@ -111,7 +111,7 @@ class format_arg
         format_context&,
         grammar::lut_chars const&,
         void const* );
-    string_view name_;
+    core::string_view name_;
     std::size_t value_ = 0;
     bool ignore_ = false;
 
@@ -141,7 +141,7 @@ public:
     format_arg( named_arg<A>&& a );
 
     template<class A>
-    format_arg( string_view name, A&& a );
+    format_arg( core::string_view name, A&& a );
 
     format_arg()
         : format_arg(ignore_format{})
@@ -171,7 +171,7 @@ public:
         fmt_( pctx, fctx, cs, arg_ );
     }
 
-    string_view
+    core::string_view
     name() const
     {
         return name_;
@@ -221,7 +221,7 @@ public:
     }
 
     format_arg
-    get( string_view name ) const noexcept
+    get( core::string_view name ) const noexcept
     {
         for (std::size_t i = 0; i < n_; ++i)
         {
@@ -259,7 +259,7 @@ public:
     }
 
     format_arg
-    arg( string_view name ) const noexcept
+    arg( core::string_view name ) const noexcept
     {
         return args_.get( name );
     }
@@ -309,7 +309,7 @@ public:
     }
 
     format_arg
-    arg( string_view name ) const noexcept
+    arg( core::string_view name ) const noexcept
     {
         return args_.get( name );
     }

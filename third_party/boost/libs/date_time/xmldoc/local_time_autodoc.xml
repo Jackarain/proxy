@@ -124,16 +124,16 @@
 <header name="boost/date_time/local_time/local_date_time.hpp">
 <namespace name="boost">
 <namespace name="local_time">
-<struct name="ambiguous_result"><inherit access="public">logic_error</inherit><purpose>simple exception for reporting when STD or DST cannot be determined </purpose><method-group name="public member functions">
+<struct name="ambiguous_result"><inherit access="public">std::logic_error</inherit><purpose>simple exception for reporting when STD or DST cannot be determined </purpose><method-group name="public member functions">
 </method-group>
 <constructor><parameter name="msg"><paramtype>std::string const &amp;</paramtype><default>std::string()</default></parameter></constructor>
-</struct><struct name="dst_not_valid"><inherit access="public">logic_error</inherit><method-group name="public member functions">
+</struct><struct name="dst_not_valid"><inherit access="public">std::logic_error</inherit><method-group name="public member functions">
 </method-group>
 <constructor><parameter name="msg"><paramtype>std::string const &amp;</paramtype><default>std::string()</default></parameter></constructor>
 </struct><class name="local_date_time_base"><template>
       <template-type-parameter name="utc_time_"><default>posix_time::ptime</default></template-type-parameter>
       <template-type-parameter name="tz_type"><default>date_time::time_zone_base&lt;utc_time_,char&gt;</default></template-type-parameter>
-    </template><inherit access="public">date_time::base_time&lt; utc_time_, boost::posix_time::posix_time_system &gt;</inherit><purpose>Representation of "wall-clock" time in a particular time zone. </purpose><description><para>Representation of "wall-clock" time in a particular time zone Local_date_time_base holds a time value (date and time offset from 00:00) along with a time zone. The time value is stored as UTC and conversions to wall clock time are made as needed. This approach allows for operations between wall-clock times in different time zones, and daylight savings time considerations, to be made. Time zones are required to be in the form of a boost::shared_ptr&lt;time_zone_base&gt;. </para></description><enum name="DST_CALC_OPTIONS"><enumvalue name="EXCEPTION_ON_ERROR"/><enumvalue name="NOT_DATE_TIME_ON_ERROR"/></enum>
+    </template><inherit access="public">date_time::base_time&lt; posix_time::ptime, boost::posix_time::posix_time_system &gt;</inherit><purpose>Representation of "wall-clock" time in a particular time zone. </purpose><description><para>Representation of "wall-clock" time in a particular time zone Local_date_time_base holds a time value (date and time offset from 00:00) along with a time zone. The time value is stored as UTC and conversions to wall clock time are made as needed. This approach allows for operations between wall-clock times in different time zones, and daylight savings time considerations, to be made. Time zones are required to be in the form of a boost::shared_ptr&lt;time_zone_base&gt;. </para></description><enum name="DST_CALC_OPTIONS"><enumvalue name="EXCEPTION_ON_ERROR"/><enumvalue name="NOT_DATE_TIME_ON_ERROR"/></enum>
 <typedef name="utc_time_type"><type>utc_time_</type></typedef>
 <typedef name="time_duration_type"><type>utc_time_type::time_duration_type</type></typedef>
 <typedef name="date_type"><type>utc_time_type::date_type</type></typedef>
@@ -168,7 +168,7 @@
 <constructor><parameter name="t"><paramtype>utc_time_type</paramtype><description><para>A UTC time </para></description></parameter><parameter name="tz"><paramtype>boost::shared_ptr&lt; tz_type &gt;</paramtype><description><para>Timezone for to adjust the UTC time to. </para></description></parameter><description><para>This constructor interprets the passed time as a UTC time. So, for example, if the passed timezone is UTC-5 then the time will be adjusted back 5 hours. The time zone allows for automatic calculation of whether the particular time is adjusted for daylight savings, etc. If the time zone shared pointer is null then time stays unadjusted. 
 </para></description></constructor>
 <constructor><parameter name="d"><paramtype>date_type</paramtype></parameter><parameter name="td"><paramtype>time_duration_type</paramtype></parameter><parameter name="tz"><paramtype>boost::shared_ptr&lt; tz_type &gt;</paramtype></parameter><parameter name="dst_flag"><paramtype>bool</paramtype></parameter><description><para>This constructs a local time – the passed time information understood to be in the passed tz. The DST flag must be passed to indicate whether the time is in daylight savings or not. 
-</para></description><throws><simpara><classname>&amp;ndash;</classname> <classname alt="boost::local_time::time_label_invalid">time_label_invalid</classname> if the time passed does not exist in the given locale. The non-existent case occurs typically during the shift-back from daylight savings time. When the clock is shifted forward a range of times (2 am to 3 am in the US) is skipped and hence is invalid. <classname alt="boost::local_time::dst_not_valid">dst_not_valid</classname> if the DST flag is passed for a period where DST is not active. </simpara></throws></constructor>
+</para></description><throws><simpara><classname>--</classname> <classname alt="boost::local_time::time_label_invalid">time_label_invalid</classname> if the time passed does not exist in the given locale. The non-existent case occurs typically during the shift-back from daylight savings time. When the clock is shifted forward a range of times (2 am to 3 am in the US) is skipped and hence is invalid. <classname alt="boost::local_time::dst_not_valid">dst_not_valid</classname> if the DST flag is passed for a period where DST is not active. </simpara></throws></constructor>
 <constructor><parameter name="d"><paramtype>date_type</paramtype></parameter><parameter name="td"><paramtype>time_duration_type</paramtype></parameter><parameter name="tz"><paramtype>boost::shared_ptr&lt; tz_type &gt;</paramtype></parameter><parameter name="calc_option"><paramtype>DST_CALC_OPTIONS</paramtype></parameter><description><para>This constructs a local time – the passed time information understood to be in the passed tz. The DST flag is calculated according to the specified rule. </para></description></constructor>
 <destructor><purpose>Simple destructor, releases time zone if last referrer. </purpose></destructor>
 <constructor><parameter name="rhs"><paramtype>const <classname>local_date_time_base</classname> &amp;</paramtype></parameter><purpose>Copy constructor. </purpose></constructor>
@@ -180,7 +180,7 @@
 <method name="construction_adjustment"><type>utc_time_type</type><parameter name="t"><paramtype>utc_time_type</paramtype></parameter><parameter name="z"><paramtype>boost::shared_ptr&lt; tz_type &gt;</paramtype></parameter><parameter name="dst_flag"><paramtype>bool</paramtype></parameter><description><para>Adjust the passed in time to UTC? </para></description></method>
 <method name="zone_as_offset" cv="const"><type>std::string</type><parameter name="td"><paramtype>const time_duration_type &amp;</paramtype></parameter><parameter name="separator"><paramtype>const std::string &amp;</paramtype></parameter><description><para>Simple formatting code – todo remove this? </para></description></method>
 </method-group>
-</class><struct name="time_label_invalid"><inherit access="public">logic_error</inherit><purpose>simple exception for when time label given cannot exist </purpose><method-group name="public member functions">
+</class><struct name="time_label_invalid"><inherit access="public">std::logic_error</inherit><purpose>simple exception for when time label given cannot exist </purpose><method-group name="public member functions">
 </method-group>
 <constructor><parameter name="msg"><paramtype>std::string const &amp;</paramtype><default>std::string()</default></parameter></constructor>
 </struct><typedef name="local_date_time"><purpose>Use the default parameters to define local_date_time. </purpose><type><classname>local_date_time_base</classname></type></typedef>
@@ -269,10 +269,10 @@
 <header name="boost/date_time/local_time/posix_time_zone.hpp">
 <namespace name="boost">
 <namespace name="local_time">
-<struct name="bad_adjustment"><inherit access="public">out_of_range</inherit><purpose>simple exception for UTC daylight savings adjustment </purpose><method-group name="public member functions">
+<struct name="bad_adjustment"><inherit access="public">std::out_of_range</inherit><purpose>simple exception for UTC daylight savings adjustment </purpose><method-group name="public member functions">
 </method-group>
 <constructor><parameter name="msg"><paramtype>std::string const &amp;</paramtype><default>std::string()</default></parameter></constructor>
-</struct><struct name="bad_offset"><inherit access="public">out_of_range</inherit><purpose>simple exception for UTC and Daylight savings start/end offsets </purpose><method-group name="public member functions">
+</struct><struct name="bad_offset"><inherit access="public">std::out_of_range</inherit><purpose>simple exception for UTC and Daylight savings start/end offsets </purpose><method-group name="public member functions">
 </method-group>
 <constructor><parameter name="msg"><paramtype>std::string const &amp;</paramtype><default>std::string()</default></parameter></constructor>
 </struct><class name="posix_time_zone_base"><template>

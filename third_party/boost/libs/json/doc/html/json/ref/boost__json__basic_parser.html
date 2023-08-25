@@ -35,7 +35,7 @@
         <span class="phrase"><a name="json.ref.boost__json__basic_parser.synopsis"></a></span><a class="link" href="boost__json__basic_parser.html#json.ref.boost__json__basic_parser.synopsis">Synopsis</a>
       </h5>
 <p>
-        Defined in header <code class="literal">&lt;<a href="https://github.com/cppalliance/json/blob/master/include/boost/json/basic_parser.hpp" target="_top">boost/json/basic_parser.hpp</a>&gt;</code>
+        Defined in header <code class="literal">&lt;<a href="https://github.com/boostorg/json/blob/master/include/boost/json/basic_parser.hpp" target="_top">boost/json/basic_parser.hpp</a>&gt;</code>
       </p>
 <pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
     <span class="keyword">class</span> <span class="identifier">Handler</span><span class="special">&gt;</span>
@@ -240,163 +240,48 @@
       </p>
 <pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">handler</span>
 <span class="special">{</span>
-    <span class="comment">/// The maximum number of elements allowed in an array</span>
     <span class="keyword">static</span> <span class="keyword">constexpr</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">max_array_size</span> <span class="special">=</span> <span class="special">-</span><span class="number">1</span><span class="special">;</span>
 
-    <span class="comment">/// The maximum number of elements allowed in an object</span>
     <span class="keyword">static</span> <span class="keyword">constexpr</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">max_object_size</span> <span class="special">=</span> <span class="special">-</span><span class="number">1</span><span class="special">;</span>
 
-    <span class="comment">/// The maximum number of characters allowed in a string</span>
     <span class="keyword">static</span> <span class="keyword">constexpr</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">max_string_size</span> <span class="special">=</span> <span class="special">-</span><span class="number">1</span><span class="special">;</span>
 
-    <span class="comment">/// The maximum number of characters allowed in a key</span>
     <span class="keyword">static</span> <span class="keyword">constexpr</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">max_key_size</span> <span class="special">=</span> <span class="special">-</span><span class="number">1</span><span class="special">;</span>
 
-    <span class="comment">/// Called once when the JSON parsing begins.</span>
-    <span class="comment">///</span>
-    <span class="comment">/// @return `true` on success.</span>
-    <span class="comment">/// @param ec Set to the error, if any occurred.</span>
-    <span class="comment">///</span>
     <span class="keyword">bool</span> <span class="identifier">on_document_begin</span><span class="special">(</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">);</span>
 
-    <span class="comment">/// Called when the JSON parsing is done.</span>
-    <span class="comment">///</span>
-    <span class="comment">/// @return `true` on success.</span>
-    <span class="comment">/// @param ec Set to the error, if any occurred.</span>
-    <span class="comment">///</span>
     <span class="keyword">bool</span> <span class="identifier">on_document_end</span><span class="special">(</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">);</span>
 
-    <span class="comment">/// Called when the beginning of an array is encountered.</span>
-    <span class="comment">///</span>
-    <span class="comment">/// @return `true` on success.</span>
-    <span class="comment">/// @param ec Set to the error, if any occurred.</span>
-    <span class="comment">///</span>
     <span class="keyword">bool</span> <span class="identifier">on_array_begin</span><span class="special">(</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">);</span>
 
-    <span class="comment">/// Called when the end of the current array is encountered.</span>
-    <span class="comment">///</span>
-    <span class="comment">/// @return `true` on success.</span>
-    <span class="comment">/// @param n The number of elements in the array.</span>
-    <span class="comment">/// @param ec Set to the error, if any occurred.</span>
-    <span class="comment">///</span>
     <span class="keyword">bool</span> <span class="identifier">on_array_end</span><span class="special">(</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">);</span>
 
-    <span class="comment">/// Called when the beginning of an object is encountered.</span>
-    <span class="comment">///</span>
-    <span class="comment">/// @return `true` on success.</span>
-    <span class="comment">/// @param ec Set to the error, if any occurred.</span>
-    <span class="comment">///</span>
     <span class="keyword">bool</span> <span class="identifier">on_object_begin</span><span class="special">(</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">);</span>
 
-    <span class="comment">/// Called when the end of the current object is encountered.</span>
-    <span class="comment">///</span>
-    <span class="comment">/// @return `true` on success.</span>
-    <span class="comment">/// @param n The number of elements in the object.</span>
-    <span class="comment">/// @param ec Set to the error, if any occurred.</span>
-    <span class="comment">///</span>
     <span class="keyword">bool</span> <span class="identifier">on_object_end</span><span class="special">(</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">);</span>
 
-    <span class="comment">/// Called with characters corresponding to part of the current string.</span>
-    <span class="comment">///</span>
-    <span class="comment">/// @return `true` on success.</span>
-    <span class="comment">/// @param s The partial characters</span>
-    <span class="comment">/// @param n The total size of the string thus far</span>
-    <span class="comment">/// @param ec Set to the error, if any occurred.</span>
-    <span class="comment">///</span>
     <span class="keyword">bool</span> <span class="identifier">on_string_part</span><span class="special">(</span> <span class="identifier">string_view</span> <span class="identifier">s</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">);</span>
 
-    <span class="comment">/// Called with the last characters corresponding to the current string.</span>
-    <span class="comment">///</span>
-    <span class="comment">/// @return `true` on success.</span>
-    <span class="comment">/// @param s The remaining characters</span>
-    <span class="comment">/// @param n The total size of the string</span>
-    <span class="comment">/// @param ec Set to the error, if any occurred.</span>
-    <span class="comment">///</span>
     <span class="keyword">bool</span> <span class="identifier">on_string</span><span class="special">(</span> <span class="identifier">string_view</span> <span class="identifier">s</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">);</span>
 
-    <span class="comment">/// Called with characters corresponding to part of the current key.</span>
-    <span class="comment">///</span>
-    <span class="comment">/// @return `true` on success.</span>
-    <span class="comment">/// @param s The partial characters</span>
-    <span class="comment">/// @param n The total size of the key thus far</span>
-    <span class="comment">/// @param ec Set to the error, if any occurred.</span>
-    <span class="comment">///</span>
     <span class="keyword">bool</span> <span class="identifier">on_key_part</span><span class="special">(</span> <span class="identifier">string_view</span> <span class="identifier">s</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">);</span>
 
-    <span class="comment">/// Called with the last characters corresponding to the current key.</span>
-    <span class="comment">///</span>
-    <span class="comment">/// @return `true` on success.</span>
-    <span class="comment">/// @param s The remaining characters</span>
-    <span class="comment">/// @param n The total size of the key</span>
-    <span class="comment">/// @param ec Set to the error, if any occurred.</span>
-    <span class="comment">///</span>
     <span class="keyword">bool</span> <span class="identifier">on_key</span><span class="special">(</span> <span class="identifier">string_view</span> <span class="identifier">s</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">);</span>
 
-    <span class="comment">/// Called with the characters corresponding to part of the current number.</span>
-    <span class="comment">///</span>
-    <span class="comment">/// @return `true` on success.</span>
-    <span class="comment">/// @param s The partial characters</span>
-    <span class="comment">/// @param ec Set to the error, if any occurred.</span>
-    <span class="comment">///</span>
     <span class="keyword">bool</span> <span class="identifier">on_number_part</span><span class="special">(</span> <span class="identifier">string_view</span> <span class="identifier">s</span><span class="special">,</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">);</span>
 
-    <span class="comment">/// Called when a signed integer is parsed.</span>
-    <span class="comment">///</span>
-    <span class="comment">/// @return `true` on success.</span>
-    <span class="comment">/// @param i The value</span>
-    <span class="comment">/// @param s The remaining characters</span>
-    <span class="comment">/// @param ec Set to the error, if any occurred.</span>
-    <span class="comment">///</span>
     <span class="keyword">bool</span> <span class="identifier">on_int64</span><span class="special">(</span> <span class="identifier">int64_t</span> <span class="identifier">i</span><span class="special">,</span> <span class="identifier">string_view</span> <span class="identifier">s</span><span class="special">,</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">);</span>
 
-    <span class="comment">/// Called when an unsigend integer is parsed.</span>
-    <span class="comment">///</span>
-    <span class="comment">/// @return `true` on success.</span>
-    <span class="comment">/// @param u The value</span>
-    <span class="comment">/// @param s The remaining characters</span>
-    <span class="comment">/// @param ec Set to the error, if any occurred.</span>
-    <span class="comment">///</span>
     <span class="keyword">bool</span> <span class="identifier">on_uint64</span><span class="special">(</span> <span class="identifier">uint64_t</span> <span class="identifier">u</span><span class="special">,</span> <span class="identifier">string_view</span> <span class="identifier">s</span><span class="special">,</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">);</span>
 
-    <span class="comment">/// Called when a double is parsed.</span>
-    <span class="comment">///</span>
-    <span class="comment">/// @return `true` on success.</span>
-    <span class="comment">/// @param d The value</span>
-    <span class="comment">/// @param s The remaining characters</span>
-    <span class="comment">/// @param ec Set to the error, if any occurred.</span>
-    <span class="comment">///</span>
     <span class="keyword">bool</span> <span class="identifier">on_double</span><span class="special">(</span> <span class="keyword">double</span> <span class="identifier">d</span><span class="special">,</span> <span class="identifier">string_view</span> <span class="identifier">s</span><span class="special">,</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">);</span>
 
-    <span class="comment">/// Called when a boolean is parsed.</span>
-    <span class="comment">///</span>
-    <span class="comment">/// @return `true` on success.</span>
-    <span class="comment">/// @param b The value</span>
-    <span class="comment">/// @param s The remaining characters</span>
-    <span class="comment">/// @param ec Set to the error, if any occurred.</span>
-    <span class="comment">///</span>
     <span class="keyword">bool</span> <span class="identifier">on_bool</span><span class="special">(</span> <span class="keyword">bool</span> <span class="identifier">b</span><span class="special">,</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">);</span>
 
-    <span class="comment">/// Called when a null is parsed.</span>
-    <span class="comment">///</span>
-    <span class="comment">/// @return `true` on success.</span>
-    <span class="comment">/// @param ec Set to the error, if any occurred.</span>
-    <span class="comment">///</span>
     <span class="keyword">bool</span> <span class="identifier">on_null</span><span class="special">(</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">);</span>
 
-    <span class="comment">/// Called with characters corresponding to part of the current comment.</span>
-    <span class="comment">///</span>
-    <span class="comment">/// @return `true` on success.</span>
-    <span class="comment">/// @param s The partial characters.</span>
-    <span class="comment">/// @param ec Set to the error, if any occurred.</span>
-    <span class="comment">///</span>
     <span class="keyword">bool</span> <span class="identifier">on_comment_part</span><span class="special">(</span> <span class="identifier">string_view</span> <span class="identifier">s</span><span class="special">,</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">);</span>
 
-    <span class="comment">/// Called with the last characters corresponding to the current comment.</span>
-    <span class="comment">///</span>
-    <span class="comment">/// @return `true` on success.</span>
-    <span class="comment">/// @param s The remaining characters</span>
-    <span class="comment">/// @param ec Set to the error, if any occurred.</span>
-    <span class="comment">///</span>
     <span class="keyword">bool</span> <span class="identifier">on_comment</span><span class="special">(</span> <span class="identifier">string_view</span> <span class="identifier">s</span><span class="special">,</span> <span class="identifier">error_code</span><span class="special">&amp;</span> <span class="identifier">ec</span> <span class="special">);</span>
 <span class="special">};</span>
 </pre>
@@ -412,7 +297,7 @@
         parser example</a>.
       </p>
 <p>
-        Convenience header <code class="literal">&lt;<a href="https://github.com/cppalliance/json/blob/master/include/boost/json.hpp" target="_top">boost/json.hpp</a>&gt;</code>
+        Convenience header <code class="literal">&lt;<a href="https://github.com/boostorg/json/blob/master/include/boost/json.hpp" target="_top">boost/json.hpp</a>&gt;</code>
       </p>
 </div>
 <div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>

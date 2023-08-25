@@ -1657,7 +1657,8 @@ public:
 
     // error access
 
-    constexpr E error() const;
+    constexpr E error() const &;
+    constexpr E error() &&;
 
     // emplace
 
@@ -1851,7 +1852,8 @@ Returns: ::
 #### Error Access
 
 ```
-constexpr E error() const;
+constexpr E error() const &;
+constexpr E error() &&;
 ```
 [none]
 * {blank}
@@ -1979,7 +1981,8 @@ public:
 
     // error access
 
-    constexpr E error() const;
+    constexpr E error() const &;
+    constexpr E error() &&;
 
     // emplace
 
@@ -2120,7 +2123,8 @@ Effects: ::
 #### Error Access
 
 ```
-constexpr E error() const;
+constexpr E error() const &;
+constexpr E error() &&;
 ```
 [none]
 * {blank}

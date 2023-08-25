@@ -399,6 +399,7 @@ local cxx_requirements = [ requires
       cxx11_scoped_enums
       cxx11_smart_ptr
       cxx11_static_assert
+      cxx11_variadic_templates
     ] ;
 
 boost-lib locale

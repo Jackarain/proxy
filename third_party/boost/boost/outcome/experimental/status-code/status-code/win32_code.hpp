@@ -93,7 +93,7 @@ namespace mixins
 class _win32_code_domain : public status_code_domain
 {
   template <class DomainType> friend class status_code;
-  template <class StatusCode> friend class detail::indirecting_domain;
+  template <class StatusCode, class Allocator> friend class detail::indirecting_domain;
   friend class _com_code_domain;
   using _base = status_code_domain;
   static int _win32_code_to_errno(win32::DWORD c)
@@ -166,10 +166,7 @@ public:
   //! Constexpr singleton getter. Returns the constexpr win32_code_domain variable.
   static inline constexpr const _win32_code_domain &get();
 
-  virtual string_ref name() const noexcept override
-  {
-    return string_ref("win32 domain");
-  }  // NOLINT
+  virtual string_ref name() const noexcept override { return string_ref("win32 domain"); }  // NOLINT
 
   virtual payload_info_t payload_info() const noexcept override
   {

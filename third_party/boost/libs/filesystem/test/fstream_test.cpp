@@ -34,10 +34,15 @@ using ::remove;
 }
 #endif
 
+#if !defined(BOOST_FILESYSTEM_DETAIL_NO_CXX11_MOVABLE_FSTREAMS) && !defined(BOOST_NO_CXX11_HDR_TYPE_TRAITS)
+#include <type_traits>
+#endif
+
 #include <boost/core/lightweight_test.hpp>
 #include <boost/detail/lightweight_main.hpp>
 
 namespace {
+
 bool cleanup = true;
 
 void test(const fs::path& p)
@@ -129,9 +134,34 @@ void test(const fs::path& p)
 
     if (cleanup)
         fs::remove(p);
+}
 
-} // test
-} // unnamed namespace
+#if !defined(BOOST_FILESYSTEM_DETAIL_NO_CXX11_MOVABLE_FSTREAMS) && !defined(BOOST_NO_CXX11_HDR_TYPE_TRAITS)
+void test_movable()
+{
+    BOOST_TEST_EQ(std::is_move_constructible< fs::filebuf >::value, std::is_move_constructible< std::filebuf >::value);
+    BOOST_TEST_EQ(std::is_move_assignable< fs::filebuf >::value, std::is_move_assignable< std::filebuf >::value);
+    BOOST_TEST_EQ(std::is_move_constructible< fs::wfilebuf >::value, std::is_move_constructible< std::wfilebuf >::value);
+    BOOST_TEST_EQ(std::is_move_assignable< fs::wfilebuf >::value, std::is_move_assignable< std::wfilebuf >::value);
+
+    BOOST_TEST_EQ(std::is_move_constructible< fs::ifstream >::value, std::is_move_constructible< std::ifstream >::value);
+    BOOST_TEST_EQ(std::is_move_assignable< fs::ifstream >::value, std::is_move_assignable< std::ifstream >::value);
+    BOOST_TEST_EQ(std::is_move_constructible< fs::wifstream >::value, std::is_move_constructible< std::wifstream >::value);
+    BOOST_TEST_EQ(std::is_move_assignable< fs::wifstream >::value, std::is_move_assignable< std::wifstream >::value);
+
+    BOOST_TEST_EQ(std::is_move_constructible< fs::ofstream >::value, std::is_move_constructible< std::ofstream >::value);
+    BOOST_TEST_EQ(std::is_move_assignable< fs::ofstream >::value, std::is_move_assignable< std::ofstream >::value);
+    BOOST_TEST_EQ(std::is_move_constructible< fs::wofstream >::value, std::is_move_constructible< std::wofstream >::value);
+    BOOST_TEST_EQ(std::is_move_assignable< fs::wofstream >::value, std::is_move_assignable< std::wofstream >::value);
+
+    BOOST_TEST_EQ(std::is_move_constructible< fs::fstream >::value, std::is_move_constructible< std::fstream >::value);
+    BOOST_TEST_EQ(std::is_move_assignable< fs::fstream >::value, std::is_move_assignable< std::fstream >::value);
+    BOOST_TEST_EQ(std::is_move_constructible< fs::wfstream >::value, std::is_move_constructible< std::wfstream >::value);
+    BOOST_TEST_EQ(std::is_move_assignable< fs::wfstream >::value, std::is_move_assignable< std::wfstream >::value);
+}
+#endif // !defined(BOOST_FILESYSTEM_DETAIL_NO_CXX11_MOVABLE_FSTREAMS) && !defined(BOOST_NO_CXX11_HDR_TYPE_TRAITS)
+
+} // namespace
 
 int cpp_main(int argc, char*[])
 {
@@ -159,6 +189,10 @@ int cpp_main(int argc, char*[])
     ws.push_back(static_cast< wchar_t >(0x2780));
     ws.push_back(static_cast< wchar_t >(0x263A));
     test(ws);
+
+#if !defined(BOOST_FILESYSTEM_DETAIL_NO_CXX11_MOVABLE_FSTREAMS) && !defined(BOOST_NO_CXX11_HDR_TYPE_TRAITS)
+    test_movable();
+#endif
 
     return ::boost::report_errors();
 }

@@ -33,6 +33,13 @@ void test_by_char(const std::locale& l, const std::locale& lreal)
         TEST(ss >> n);
         TEST_EQ(n, 1045.45);
         TEST_EQ(ss.str(), ascii_to<CharType>("1045.45"));
+        ss_ref_type ss_ref;
+        ss_ref.imbue(std::locale::classic());
+        empty_stream(ss) << std::setw(8) << 1 << CharType(':') << 2 << CharType(':') << 1234 << CharType(':')
+                         << std::setw(8) << std::setfill(CharType('0')) << std::hex << 1234;
+        ss_ref << std::setw(8) << 1 << RefCharType(':') << 2 << RefCharType(':') << 1234 << RefCharType(':')
+               << std::setw(8) << std::setfill(RefCharType('0')) << std::hex << 1234;
+        TEST_EQ(to_utf8(ss.str()), to_utf8(ss_ref.str()));
     }
 
     {
@@ -108,40 +115,43 @@ void test_by_char(const std::locale& l, const std::locale& lreal)
 
     {
         std::cout << "- Testing as::date/time" << std::endl;
-        ss_type ss;
-        ss.imbue(l);
 
-        time_t a_date = 3600 * 24 * (31 + 4); // Feb 5th
-        time_t a_time = 3600 * 15 + 60 * 33;  // 15:33:05
-        time_t a_timesec = 13;
-        time_t a_datetime = a_date + a_time + a_timesec;
+        const time_t a_date = 3600 * 24 * (31 + 4);     // Feb 5th
+        const time_t a_time = 3600 * 15 + 60 * 33 + 13; // 15:33:13
+        const time_t a_datetime = a_date + a_time;
 
-        ss << as::time_zone("GMT");
-
-        ss << as::date << a_datetime << CharType('\n');
-        ss << as::time << a_datetime << CharType('\n');
-        ss << as::datetime << a_datetime << CharType('\n');
-        ss << as::time_zone("GMT+01:00");
-        ss << as::ftime(ascii_to<CharType>("%H")) << a_datetime << CharType('\n');
-        ss << as::time_zone("GMT+00:15");
-        ss << as::ftime(ascii_to<CharType>("%M")) << a_datetime << CharType('\n');
-
+        const std::tm tm = *gmtime_wrap(&a_datetime);
         ss_ref_type ss_ref;
         ss_ref.imbue(lreal);
+        empty_stream(ss_ref) << std::put_time(&tm, ascii_to<RefCharType>("%x").c_str());
+        const std::string expDate = to_utf8(ss_ref.str());
+        empty_stream(ss_ref) << std::put_time(&tm, ascii_to<RefCharType>("%X").c_str());
+        const std::string expTime = to_utf8(ss_ref.str());
+        empty_stream(ss_ref) << std::put_time(&tm, ascii_to<RefCharType>("%c").c_str());
+        const std::string expDateTime = to_utf8(ss_ref.str());
 
-        std::basic_string<RefCharType> rfmt(ascii_to<RefCharType>("%x\n%X\n%c\n16\n48\n"));
+        if(expDateTime == "%c") {
+            std::cout << "-- Standard library failed to format the datetime value" << std::endl; // LCOV_EXCL_LINE
+        } else {
+            ss_type ss;
+            ss.imbue(l);
+            ss << as::time_zone("GMT");
 
-        std::tm tm = *gmtime_wrap(&a_datetime);
-
-        std::use_facet<std::time_put<RefCharType>>(lreal)
-          .put(ss_ref, ss_ref, RefCharType(' '), &tm, rfmt.c_str(), rfmt.c_str() + rfmt.size());
-        if(ss_ref.str() == rfmt)
-            std::cout << "-- Standard library failed to format the datetime value" << std::endl;
-        else
-            TEST_EQ(to_utf8(ss.str()), to_utf8(ss_ref.str()));
+            empty_stream(ss) << as::date << a_datetime;
+            TEST_EQ(to_utf8(ss.str()), expDate);
+            empty_stream(ss) << as::time << a_datetime;
+            TEST_EQ(to_utf8(ss.str()), expTime);
+            empty_stream(ss) << as::datetime << a_datetime;
+            TEST_EQ(to_utf8(ss.str()), expDateTime);
+            empty_stream(ss) << as::time_zone("GMT+01:00") << as::ftime(ascii_to<CharType>("%H")) << a_datetime;
+            TEST_EQ(to_utf8(ss.str()), "16");
+            empty_stream(ss) << as::time_zone("GMT+00:15") << as::ftime(ascii_to<CharType>("%M")) << a_datetime;
+            TEST_EQ(to_utf8(ss.str()), "48");
+        }
     }
 }
 
+BOOST_LOCALE_DISABLE_UNREACHABLE_CODE_WARNING
 void test_main(int /*argc*/, char** /*argv*/)
 {
 #ifdef BOOST_LOCALE_NO_STD_BACKEND
@@ -157,19 +167,19 @@ void test_main(int /*argc*/, char** /*argv*/)
         std::cout << lName << " locale" << std::endl;
         std::string real_name;
         std::string name = get_std_name(lName, &real_name);
-        if(name.empty()) {
-            std::cout << lName << " not supported" << std::endl;
-        } else {
+        if(name.empty())
+            std::cout << lName << " not supported" << std::endl; // LCOV_EXCL_LINE
+        else {
             std::cout << "\tstd name: " << name << std::endl;
             std::locale l1 = gen(name);
             std::cout << "\treal name: " << real_name << std::endl;
-            std::locale l2(real_name.c_str());
+            std::locale l2(real_name);
             if(lName.find(".UTF-8") != std::string::npos) {
                 std::cout << "\tUTF-8" << std::endl;
                 if(name == real_name)
                     test_by_char<char, char>(l1, l2);
                 else
-                    test_by_char<char, wchar_t>(l1, l2);
+                    test_by_char<char, wchar_t>(l1, l2); // LCOV_EXCL_LINE
             } else {
                 std::cout << "\tchar" << std::endl;
                 test_by_char<char, char>(l1, l2);
@@ -192,12 +202,12 @@ void test_main(int /*argc*/, char** /*argv*/)
         std::cout << "Testing UTF-8 punct workaround" << std::endl;
         std::string real_name;
         std::string name = get_std_name("ru_RU.UTF-8", &real_name);
-        if(name.empty()) {
-            std::cout << "- No Russian locale" << std::endl;
-        } else if(name != real_name) {
-            std::cout << "- Not having UTF-8 locale, no need for workaround" << std::endl;
-        } else {
-            std::locale l1 = gen(name), l2(real_name.c_str());
+        if(name.empty())
+            std::cout << "- No Russian locale" << std::endl; // LCOV_EXCL_LINE
+        else if(name != real_name)
+            std::cout << "- No Russian UTF-8 locale, no need for workaround" << std::endl; // LCOV_EXCL_LINE
+        else {
+            std::locale l1 = gen(name), l2(real_name);
             bool fails = false;
             try {
                 std::ostringstream ss;
@@ -209,9 +219,9 @@ void test_main(int /*argc*/, char** /*argv*/)
                 fails = true;
             }
 
-            if(!fails) {
+            if(!fails)
                 std::cout << "- No invalid UTF. No need to check" << std::endl;
-            } else {
+            else {
                 std::ostringstream ss;
                 ss.imbue(l1);
                 ss << std::setprecision(10);

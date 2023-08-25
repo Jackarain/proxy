@@ -1,5 +1,5 @@
 /* Proposed SG14 status_code
-(C) 2018 - 2020 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
+(C) 2018 - 2023 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
 File Created: Feb 2018
 
 
@@ -60,15 +60,21 @@ namespace mixins
   };
 }  // namespace mixins
 
-/*! A tag for an erased value type for `status_code<D>`.
+namespace detail
+{
+  BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class ErasedType)  //
+  BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(traits::is_move_bitcopying<ErasedType>::value))
+  struct erased
+  {
+    using value_type = ErasedType;
+  };
+}  // namespace detail
+
+/*! The tag type used to specialise erased editions of `status_code<D>`.
 Available only if `ErasedType` satisfies `traits::is_move_bitcopying<ErasedType>::value`.
 */
-BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class ErasedType)  //
-BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(traits::is_move_bitcopying<ErasedType>::value))
-struct erased
-{
-  using value_type = ErasedType;
-};
+template <class ErasedType>  //
+using status_code_erased_tag_type = detail::erased<ErasedType>;
 
 /*! Specialise this template to quickly wrap a third party enumeration into a
 custom status code domain.
@@ -129,7 +135,7 @@ namespace detail
   {
     static constexpr bool value = false;
   };
-  template <class T> struct is_erased_status_code<status_code<erased<T>>>
+  template <class T> struct is_erased_status_code<status_code<detail::erased<T>>>
   {
     static constexpr bool value = true;
   };
@@ -334,41 +340,26 @@ namespace detail
 
     // Replace the type erased implementations with type aware implementations for better codegen
     //! Return the status code domain.
-    constexpr const domain_type &domain() const noexcept
-    {
-      return *static_cast<const domain_type *>(this->_domain);
-    }
+    constexpr const domain_type &domain() const noexcept { return *static_cast<const domain_type *>(this->_domain); }
 
     //! Reset the code to empty.
     BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 void clear() noexcept
     {
       this->_value.~value_type();
       this->_domain = nullptr;
-      new(&this->_value) value_type();
+      new(std::addressof(this->_value)) value_type();
     }
 
 #if __cplusplus >= 201400 || _MSC_VER >= 1910 /* VS2017 */
     //! Return a reference to the `value_type`.
-    constexpr value_type &value() &noexcept
-    {
-      return this->_value;
-    }
+    constexpr value_type &value() & noexcept { return this->_value; }
     //! Return a reference to the `value_type`.
-    constexpr value_type &&value() &&noexcept
-    {
-      return static_cast<value_type &&>(this->_value);
-    }
+    constexpr value_type &&value() && noexcept { return static_cast<value_type &&>(this->_value); }
 #endif
     //! Return a reference to the `value_type`.
-    constexpr const value_type &value() const &noexcept
-    {
-      return this->_value;
-    }
+    constexpr const value_type &value() const & noexcept { return this->_value; }
     //! Return a reference to the `value_type`.
-    constexpr const value_type &&value() const &&noexcept
-    {
-      return static_cast<const value_type &&>(this->_value);
-    }
+    constexpr const value_type &&value() const && noexcept { return static_cast<const value_type &&>(this->_value); }
 
   protected:
     status_code_storage() = default;
@@ -479,7 +470,7 @@ public:
   /***** KEEP THESE IN SYNC WITH ERRORED_STATUS_CODE *****/
   //! Implicit construction from any type where an ADL discovered `make_status_code(T, Args ...)` returns a `status_code`.
   BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(
-  class T, class... Args,  //
+  class T, class... Args,                                               //
   class MakeStatusCodeResult =
   typename detail::safe_get_make_status_code_result<T, Args...>::type)  // Safe ADL lookup of make_status_code(), returns void if not found
   BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(!std::is_same<typename std::decay<T>::type, status_code>::value       // not copy/move of self
@@ -526,8 +517,8 @@ public:
   Does not check if domains are equal.
   */
   BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class ErasedType)  //
-  BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(detail::domain_value_type_erasure_is_safe<domain_type, erased<ErasedType>>::value))
-  constexpr explicit status_code(const status_code<erased<ErasedType>> &v) noexcept(std::is_nothrow_copy_constructible<value_type>::value)
+  BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(detail::domain_value_type_erasure_is_safe<domain_type, detail::erased<ErasedType>>::value))
+  constexpr explicit status_code(const status_code<detail::erased<ErasedType>> &v) noexcept(std::is_nothrow_copy_constructible<value_type>::value)
       : status_code(detail::erasure_cast<value_type>(v.value()))
   {
 #if __cplusplus >= 201400
@@ -566,10 +557,11 @@ If it is found, and it generates a status code compatible with this status code,
 is made available.
 */
 template <class ErasedType>
-class BOOST_OUTCOME_SYSTEM_ERROR2_TRIVIAL_ABI status_code<erased<ErasedType>> : public mixins::mixin<detail::status_code_storage<erased<ErasedType>>, erased<ErasedType>>
+class BOOST_OUTCOME_SYSTEM_ERROR2_TRIVIAL_ABI status_code<detail::erased<ErasedType>>
+    : public mixins::mixin<detail::status_code_storage<detail::erased<ErasedType>>, detail::erased<ErasedType>>
 {
   template <class T> friend class status_code;
-  using _base = mixins::mixin<detail::status_code_storage<erased<ErasedType>>, erased<ErasedType>>;
+  using _base = mixins::mixin<detail::status_code_storage<detail::erased<ErasedType>>, detail::erased<ErasedType>>;
 
 public:
   //! The type of the domain (void, as it is erased).
@@ -594,7 +586,8 @@ public:
   {
     if(nullptr != this->_domain)
     {
-      this->_domain->_do_erased_destroy(*this, sizeof(*this));
+      status_code_domain::payload_info_t info{sizeof(value_type), sizeof(status_code), alignof(status_code)};
+      this->_domain->_do_erased_destroy(*this, info);
     }
   }
 
@@ -617,23 +610,27 @@ public:
   //! Implicit copy construction from any other status code if its value type is trivially copyable, it would fit into our storage, and it is not an erased
   //! status code.
   BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class DomainType)  //
-  BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(detail::domain_value_type_erasure_is_safe<erased<ErasedType>, DomainType>::value),
+  BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(detail::domain_value_type_erasure_is_safe<detail::erased<ErasedType>, DomainType>::value),
                           BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(!detail::is_erased_status_code<status_code<typename std::decay<DomainType>::type>>::value))
   constexpr status_code(const status_code<DomainType> &v) noexcept  // NOLINT
       : _base(typename _base::_value_type_constructor{}, v._domain_ptr(), detail::erasure_cast<value_type>(v.value()))
   {
   }
   //! Implicit move construction from any other status code if its value type is trivially copyable or move bitcopying and it would fit into our storage
-  BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class DomainType)  //
-  BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(detail::domain_value_type_erasure_is_safe<erased<ErasedType>, DomainType>::value))
+  BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class DomainType)                                     //
+  BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(detail::domain_value_type_erasure_is_safe<detail::erased<ErasedType>, DomainType>::value))
   BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 status_code(status_code<DomainType> &&v) noexcept  // NOLINT
       : _base(typename _base::_value_type_constructor{}, v._domain_ptr(), detail::erasure_cast<value_type>(v.value()))
   {
+    alignas(alignof(typename DomainType::value_type)) char buffer[sizeof(typename DomainType::value_type)];
+    new(buffer) typename DomainType::value_type(static_cast<status_code<DomainType> &&>(v).value());
+    // deliberately do not destruct value moved into buffer
+    (void) buffer;
     v._domain = nullptr;
   }
   //! Implicit construction from any type where an ADL discovered `make_status_code(T, Args ...)` returns a `status_code`.
   BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(
-  class T, class... Args,  //
+  class T, class... Args,                                               //
   class MakeStatusCodeResult =
   typename detail::safe_get_make_status_code_result<T, Args...>::type)  // Safe ADL lookup of make_status_code(), returns void if not found
   BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(!std::is_same<typename std::decay<T>::type, status_code>::value       // not copy/move of self
@@ -698,20 +695,19 @@ public:
 
   /**** By rights ought to be removed in any formal standard ****/
   //! Reset the code to empty.
-  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 void clear() noexcept
-  {
-    *this = status_code();
-  }
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 void clear() noexcept { *this = status_code(); }
   //! Return the erased `value_type` by value.
-  constexpr value_type value() const noexcept
-  {
-    return this->_value;
-  }
+  constexpr value_type value() const noexcept { return this->_value; }
 };
+
+/*! An erased type specialisation of `status_code<D>`.
+Available only if `ErasedType` satisfies `traits::is_move_bitcopying<ErasedType>::value`.
+*/
+template <class ErasedType> using erased_status_code = status_code<detail::erased<ErasedType>>;
 
 namespace traits
 {
-  template <class ErasedType> struct is_move_bitcopying<status_code<erased<ErasedType>>>
+  template <class ErasedType> struct is_move_bitcopying<status_code<detail::erased<ErasedType>>>
   {
     static constexpr bool value = true;
   };

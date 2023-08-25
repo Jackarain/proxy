@@ -29,7 +29,7 @@ struct fork_and_forget_launcher : default_launcher
         auto proc =  (*this)(context, ec, executable, std::forward<Args>(args), std::forward<Inits>(inits)...);
 
         if (ec)
-            asio::detail::throw_error(ec, "fork_and_forget_launcher");
+            v2::detail::throw_error(ec, "fork_and_forget_launcher");
 
         return proc;
     }
@@ -60,7 +60,7 @@ struct fork_and_forget_launcher : default_launcher
         auto proc =  (*this)(std::move(exec), ec, executable, std::forward<Args>(args), std::forward<Inits>(inits)...);
 
         if (ec)
-            asio::detail::throw_error(ec, "fork_and_forget_launcher");
+            v2::detail::throw_error(ec, "fork_and_forget_launcher");
 
         return proc;
     }

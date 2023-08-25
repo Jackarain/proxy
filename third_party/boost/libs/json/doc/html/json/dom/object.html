@@ -81,7 +81,7 @@
         Similar to the <code class="computeroutput"><span class="identifier">std</span></code> counterpart,
         elements may be accessed directly by their key with bounds checking using
         <a class="link" href="../ref/boost__json__object/at/overload1.html" title="object::at (1 of 3 overloads)"><code class="computeroutput"><span class="identifier">at</span></code></a>,
-        or without bounds checking using <a class="link" href="../ref/boost__json__object/operator_lb__rb_.html" title="object::operator[]"><code class="computeroutput"><span class="keyword">operator</span><span class="special">[]</span></code></a>
+        or without bounds checking using <a class="link" href="../../"><code class="computeroutput"><span class="keyword">operator</span><span class="special">[]</span></code></a>
         which creates a null element if the key does not already exist:
       </p>
 <pre class="programlisting"><span class="identifier">object</span> <span class="identifier">obj</span><span class="special">;</span>
@@ -90,7 +90,7 @@
 <span class="identifier">obj</span><span class="special">[</span><span class="string">"key2"</span><span class="special">]</span> <span class="special">=</span> <span class="number">42</span><span class="special">;</span>
 <span class="identifier">obj</span><span class="special">[</span><span class="string">"key3"</span><span class="special">]</span> <span class="special">=</span> <span class="keyword">false</span><span class="special">;</span>
 
-<span class="comment">// The following line throws std::out_of_range, since the key does not exist</span>
+<span class="comment">// The following line throws system_error, since the key does not exist</span>
 <span class="identifier">obj</span><span class="special">.</span><span class="identifier">at</span><span class="special">(</span> <span class="string">"key4"</span> <span class="special">);</span>
 </pre>
 <p>

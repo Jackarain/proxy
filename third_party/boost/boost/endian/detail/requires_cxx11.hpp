@@ -16,7 +16,7 @@
     defined(BOOST_NO_CXX11_SCOPED_ENUMS) || \
     defined(BOOST_NO_CXX11_DEFAULTED_FUNCTIONS)
 
-BOOST_PRAGMA_MESSAGE("C++03 support is deprecated in Boost.Endian 1.82 and will be removed in Boost.Endian 1.84.")
+BOOST_PRAGMA_MESSAGE("C++03 support was deprecated in Boost.Endian 1.82 and will be removed in Boost.Endian 1.84. Please open an issue in https://github.com/boostorg/endian if you want it retained.")
 
 #endif
 

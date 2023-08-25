@@ -23,9 +23,12 @@
 #endif
 #include <boost/assert.hpp>
 #include <boost/system/error_category.hpp>
+#include <boost/iterator/is_iterator.hpp>
 #include <boost/type_traits/declval.hpp>
 #include <boost/type_traits/remove_cv.hpp>
-#if defined(BOOST_FILESYSTEM_CXX23_STRING_VIEW_HAS_IMPLICIT_RANGE_CTOR)
+#include <boost/type_traits/integral_constant.hpp>
+#include <boost/type_traits/conjunction.hpp>
+#if defined(BOOST_FILESYSTEM_DETAIL_CXX23_STRING_VIEW_HAS_IMPLICIT_RANGE_CTOR)
 #include <boost/type_traits/disjunction.hpp>
 #include <boost/core/enable_if.hpp>
 #endif
@@ -311,78 +314,87 @@ struct path_source_traits< directory_entry >
 
 //! The trait tests if the type is a known path Source tag
 template< typename Tag >
-struct is_known_path_source_tag
+struct is_known_path_source_tag :
+    public boost::true_type
 {
-    static BOOST_CONSTEXPR_OR_CONST bool value = true;
 };
 
 template< >
-struct is_known_path_source_tag< unknown_type_tag >
+struct is_known_path_source_tag< unknown_type_tag > :
+    public boost::false_type
 {
-    static BOOST_CONSTEXPR_OR_CONST bool value = false;
 };
 
 //! The trait tests if the type is compatible with path Source requirements
 template< typename T >
 struct is_path_source :
-    public is_known_path_source_tag< typename path_source_traits< T >::tag_type >
+    public is_known_path_source_tag< typename path_source_traits< T >::tag_type >::type
 {
 };
 
 
 //! The trait indicates whether the type is a path Source that is natively supported by path::string_type as the source for construction/assignment/appending
 template< typename T >
-struct is_native_path_source
+struct is_native_path_source :
+    public boost::integral_constant< bool, path_source_traits< T >::is_native >
 {
-    static BOOST_CONSTEXPR_OR_CONST bool value = path_source_traits< T >::is_native;
 };
 
 
 //! The trait indicates whether the type is one of the supported path character types
 template< typename T >
-struct is_path_char_type
+struct is_path_char_type :
+    public boost::false_type
 {
-    static BOOST_CONSTEXPR_OR_CONST bool value = false;
 };
 
 template< >
-struct is_path_char_type< char >
+struct is_path_char_type< char > :
+    public boost::true_type
 {
-    static BOOST_CONSTEXPR_OR_CONST bool value = true;
 };
 
 template< >
-struct is_path_char_type< wchar_t >
+struct is_path_char_type< wchar_t > :
+    public boost::true_type
 {
-    static BOOST_CONSTEXPR_OR_CONST bool value = true;
 };
 
+
+template< typename Iterator >
+struct is_iterator_to_path_chars :
+    public is_path_char_type< typename std::iterator_traits< Iterator >::value_type >::type
+{
+};
 
 //! The trait indicates whether the type is an iterator over a sequence of path characters
 template< typename Iterator >
 struct is_path_source_iterator :
-    public is_path_char_type< typename std::iterator_traits< Iterator >::value_type >
+    public boost::conjunction<
+        boost::iterators::is_iterator< Iterator >,
+        is_iterator_to_path_chars< Iterator >
+    >::type
 {
 };
 
 
 //! The trait indicates whether the type is a pointer to a sequence of native path characters
 template< typename T >
-struct is_native_char_ptr
+struct is_native_char_ptr :
+    public boost::false_type
 {
-    static BOOST_CONSTEXPR_OR_CONST bool value = false;
 };
 
 template< >
-struct is_native_char_ptr< path_native_char_type* >
+struct is_native_char_ptr< path_native_char_type* > :
+    public boost::true_type
 {
-    static BOOST_CONSTEXPR_OR_CONST bool value = true;
 };
 
 template< >
-struct is_native_char_ptr< const path_native_char_type* >
+struct is_native_char_ptr< const path_native_char_type* > :
+    public boost::true_type
 {
-    static BOOST_CONSTEXPR_OR_CONST bool value = true;
 };
 
 
@@ -468,37 +480,40 @@ BOOST_FORCEINLINE typename Callback::result_type dispatch(Source const& source, 
 typedef char yes_type;
 struct no_type { char buf[2]; };
 
-// Note: The obscure naming of the _check* functions below is a workaround for an MSVC-9.0 bug, which looks up the function outside the class scope
+#if !defined(BOOST_FILESYSTEM_DETAIL_CXX23_STRING_VIEW_HAS_IMPLICIT_RANGE_CTOR)
 
-#if !defined(BOOST_FILESYSTEM_CXX23_STRING_VIEW_HAS_IMPLICIT_RANGE_CTOR)
+namespace is_convertible_to_path_source_impl {
+
+yes_type check(const char*);
+yes_type check(const wchar_t*);
+yes_type check(std::string const&);
+yes_type check(std::wstring const&);
+yes_type check(boost::container::basic_string< char, std::char_traits< char >, void > const&);
+yes_type check(boost::container::basic_string< wchar_t, std::char_traits< wchar_t >, void > const&);
+#if !defined(BOOST_NO_CXX17_HDR_STRING_VIEW)
+yes_type check(std::string_view const&);
+yes_type check(std::wstring_view const&);
+#endif
+yes_type check(boost::basic_string_view< char, std::char_traits< char > > const&);
+yes_type check(boost::basic_string_view< wchar_t, std::char_traits< wchar_t > > const&);
+#if !defined(BOOST_NO_CXX11_NULLPTR)
+no_type check(std::nullptr_t);
+#endif
+no_type check(...);
+
+} // namespace is_convertible_to_path_source_impl
 
 //! The type trait indicates whether the type has a conversion path to one of the path source types
 template< typename T >
-struct is_convertible_to_path_source
+struct is_convertible_to_path_source :
+    public boost::integral_constant<
+        bool,
+        sizeof(is_convertible_to_path_source_impl::check(boost::declval< T const& >())) == sizeof(yes_type)
+    >
 {
-    // Note: The obscure naming of this function is a workaround for an MSVC-9.0 bug, which looks up the function outside the class scope
-    static yes_type _check_convertible_to_path_source(const char*);
-    static yes_type _check_convertible_to_path_source(const wchar_t*);
-    static yes_type _check_convertible_to_path_source(std::string const&);
-    static yes_type _check_convertible_to_path_source(std::wstring const&);
-    static yes_type _check_convertible_to_path_source(boost::container::basic_string< char, std::char_traits< char >, void > const&);
-    static yes_type _check_convertible_to_path_source(boost::container::basic_string< wchar_t, std::char_traits< wchar_t >, void > const&);
-#if !defined(BOOST_NO_CXX17_HDR_STRING_VIEW)
-    static yes_type _check_convertible_to_path_source(std::string_view const&);
-    static yes_type _check_convertible_to_path_source(std::wstring_view const&);
-#endif
-    static yes_type _check_convertible_to_path_source(boost::basic_string_view< char, std::char_traits< char > > const&);
-    static yes_type _check_convertible_to_path_source(boost::basic_string_view< wchar_t, std::char_traits< wchar_t > > const&);
-#if !defined(BOOST_NO_CXX11_NULLPTR)
-    static no_type _check_convertible_to_path_source(std::nullptr_t);
-#endif
-    static no_type _check_convertible_to_path_source(...);
-
-    static BOOST_CONSTEXPR_OR_CONST bool value =
-        sizeof(is_convertible_to_path_source< T >::_check_convertible_to_path_source(boost::declval< T const& >())) == sizeof(yes_type);
 };
 
-#else // !defined(BOOST_FILESYSTEM_CXX23_STRING_VIEW_HAS_IMPLICIT_RANGE_CTOR)
+#else // !defined(BOOST_FILESYSTEM_DETAIL_CXX23_STRING_VIEW_HAS_IMPLICIT_RANGE_CTOR)
 
 // Note: We use separate checks for convertibility to std::string_view and other types to avoid ambiguity with an implicit range constructor
 //       of std::string_view in the early C++23 draft (N4892). If a user's type is convertible to e.g. std::string and also satisfies
@@ -506,39 +521,50 @@ struct is_convertible_to_path_source
 //       through the conversion operator in the user's class and is also convertible to std::string_view through the implicit conversion
 //       constructor in std::string_view. The solution is to check convertibility to std::string_view separately first.
 
-template< typename T >
-struct is_convertible_to_std_string_view
-{
-    static yes_type _check_convertible_to_std_string_view(std::string_view const&);
-    static yes_type _check_convertible_to_std_string_view(std::wstring_view const&);
-#if !defined(BOOST_NO_CXX11_NULLPTR)
-    static no_type _check_convertible_to_std_string_view(std::nullptr_t);
-#endif
-    static no_type _check_convertible_to_std_string_view(...);
+namespace is_convertible_to_std_string_view_impl {
 
-    static BOOST_CONSTEXPR_OR_CONST bool value =
-        sizeof(is_convertible_to_std_string_view< T >::_check_convertible_to_std_string_view(boost::declval< T const& >())) == sizeof(yes_type);
+yes_type check(std::string_view const&);
+yes_type check(std::wstring_view const&);
+#if !defined(BOOST_NO_CXX11_NULLPTR)
+no_type check(std::nullptr_t);
+#endif
+no_type check(...);
+
+} // namespace is_convertible_to_std_string_view_impl
+
+template< typename T >
+struct is_convertible_to_std_string_view :
+    public boost::integral_constant<
+        bool,
+        sizeof(is_convertible_to_std_string_view_impl::check(boost::declval< T const& >())) == sizeof(yes_type)
+    >
+{
 };
 
-template< typename T >
-struct is_convertible_to_path_source_non_std_string_view
-{
-    // Note: The obscure naming of this function is a workaround for an MSVC-9.0 bug, which looks up the function outside the class scope
-    static yes_type _check_convertible_to_path_source(const char*);
-    static yes_type _check_convertible_to_path_source(const wchar_t*);
-    static yes_type _check_convertible_to_path_source(std::string const&);
-    static yes_type _check_convertible_to_path_source(std::wstring const&);
-    static yes_type _check_convertible_to_path_source(boost::container::basic_string< char, std::char_traits< char >, void > const&);
-    static yes_type _check_convertible_to_path_source(boost::container::basic_string< wchar_t, std::char_traits< wchar_t >, void > const&);
-    static yes_type _check_convertible_to_path_source(boost::basic_string_view< char, std::char_traits< char > > const&);
-    static yes_type _check_convertible_to_path_source(boost::basic_string_view< wchar_t, std::char_traits< wchar_t > > const&);
-#if !defined(BOOST_NO_CXX11_NULLPTR)
-    static no_type _check_convertible_to_path_source(std::nullptr_t);
-#endif
-    static no_type _check_convertible_to_path_source(...);
+namespace is_convertible_to_path_source_non_std_string_view_impl {
 
-    static BOOST_CONSTEXPR_OR_CONST bool value =
-        sizeof(is_convertible_to_path_source_non_std_string_view< T >::_check_convertible_to_path_source(boost::declval< T const& >())) == sizeof(yes_type);
+yes_type check(const char*);
+yes_type check(const wchar_t*);
+yes_type check(std::string const&);
+yes_type check(std::wstring const&);
+yes_type check(boost::container::basic_string< char, std::char_traits< char >, void > const&);
+yes_type check(boost::container::basic_string< wchar_t, std::char_traits< wchar_t >, void > const&);
+yes_type check(boost::basic_string_view< char, std::char_traits< char > > const&);
+yes_type check(boost::basic_string_view< wchar_t, std::char_traits< wchar_t > > const&);
+#if !defined(BOOST_NO_CXX11_NULLPTR)
+no_type check(std::nullptr_t);
+#endif
+no_type check(...);
+
+} // namespace is_convertible_to_path_source_non_std_string_view_impl
+
+template< typename T >
+struct is_convertible_to_path_source_non_std_string_view :
+    public boost::integral_constant<
+        bool,
+        sizeof(is_convertible_to_path_source_non_std_string_view_impl::check(boost::declval< T const& >())) == sizeof(yes_type)
+    >
+{
 };
 
 //! The type trait indicates whether the type has a conversion path to one of the path source types
@@ -547,11 +573,11 @@ struct is_convertible_to_path_source :
     public boost::disjunction<
         is_convertible_to_std_string_view< T >,
         is_convertible_to_path_source_non_std_string_view< T >
-    >
+    >::type
 {
 };
 
-#endif // !defined(BOOST_FILESYSTEM_CXX23_STRING_VIEW_HAS_IMPLICIT_RANGE_CTOR)
+#endif // !defined(BOOST_FILESYSTEM_DETAIL_CXX23_STRING_VIEW_HAS_IMPLICIT_RANGE_CTOR)
 
 //! The type trait makes \a T dependent on the second template argument. Used to delay type resolution and name binding.
 template< typename T, typename >
@@ -636,7 +662,7 @@ BOOST_FORCEINLINE typename Callback::result_type dispatch_convertible_impl
     return path_traits::dispatch(static_cast< source_t const& >(source), cb, cvt);
 }
 
-#if !defined(BOOST_FILESYSTEM_CXX23_STRING_VIEW_HAS_IMPLICIT_RANGE_CTOR)
+#if !defined(BOOST_FILESYSTEM_DETAIL_CXX23_STRING_VIEW_HAS_IMPLICIT_RANGE_CTOR)
 
 #if !defined(BOOST_NO_CXX17_HDR_STRING_VIEW)
 
@@ -663,7 +689,7 @@ BOOST_FORCEINLINE typename Callback::result_type dispatch_convertible(Source con
     return path_traits::dispatch_convertible_impl< source_t >(source, cb, cvt);
 }
 
-#else // !defined(BOOST_FILESYSTEM_CXX23_STRING_VIEW_HAS_IMPLICIT_RANGE_CTOR)
+#else // !defined(BOOST_FILESYSTEM_DETAIL_CXX23_STRING_VIEW_HAS_IMPLICIT_RANGE_CTOR)
 
 template< typename Source, typename Callback >
 BOOST_FORCEINLINE typename Callback::result_type dispatch_convertible_sv_impl(std::string_view const& source, Callback cb, const codecvt_type* cvt)
@@ -699,7 +725,7 @@ BOOST_FORCEINLINE typename boost::enable_if_c<
     return path_traits::dispatch_convertible_sv_impl< source_t >(source, cb, cvt);
 }
 
-#endif // !defined(BOOST_FILESYSTEM_CXX23_STRING_VIEW_HAS_IMPLICIT_RANGE_CTOR)
+#endif // !defined(BOOST_FILESYSTEM_DETAIL_CXX23_STRING_VIEW_HAS_IMPLICIT_RANGE_CTOR)
 
 } // namespace path_traits
 } // namespace detail

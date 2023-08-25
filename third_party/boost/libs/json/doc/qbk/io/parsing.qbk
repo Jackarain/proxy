@@ -4,7 +4,7 @@
     Distributed under the Boost Software License, Version 1.0. (See accompanying
     file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-    Official repository: https://github.com/cppalliance/json
+    Official repository: https://github.com/boostorg/json
 ]
 
 [/-----------------------------------------------------------------------------]
@@ -106,6 +106,24 @@ with __parse_options__ is possible:
 [caution When enabling comment support take extra care not to drop whitespace
     when reading the input. For example, `std::getline` removes the
     endline characters from the string it produces.]
+
+[/-----------------------------------------------------------------------------]
+
+[heading Full precision number parsing]
+
+The default algorithm that the library uses to parse numbers is fast, but may
+result in slight precision loss. This may not be suitable for some
+applications, so there is an option to enable an alternative algorithm that
+doesn't have that flaw, but is somewhat slower. To do this, you also need to
+use __parse_options__ structure.
+
+[doc_parsing_precise]
+
+Note that full precision number parsing requires the algorithm to see the full
+number. This means, that when used with __stream_parser__, additional memory
+allocations may be necessary to store the number parts which were so far
+accepted by the parser. The library does try its best to avoid such
+allocations.
 
 [/-----------------------------------------------------------------------------]
 

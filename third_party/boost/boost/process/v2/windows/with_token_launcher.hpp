@@ -38,7 +38,7 @@ struct with_token_launcher : default_launcher
       auto proc =  (*this)(context, ec, executable, std::forward<Args>(args), std::forward<Inits>(inits)...);
 
       if (ec)
-          asio::detail::throw_error(ec, "with_token_launcher");
+          v2::detail::throw_error(ec, "with_token_launcher");
 
       return proc;
   }
@@ -69,7 +69,7 @@ struct with_token_launcher : default_launcher
       auto proc =  (*this)(std::move(exec), ec, executable, std::forward<Args>(args), std::forward<Inits>(inits)...);
 
       if (ec)
-          asio::detail::throw_error(ec, "with_token_launcher");
+          detail::throw_error(ec, "with_token_launcher");
 
       return proc;
   }

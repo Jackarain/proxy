@@ -46,10 +46,10 @@ BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE_BEGIN
 
 class _com_code_domain;
 /*! (Windows only) A COM error code. Note semantic equivalence testing is only implemented for `FACILITY_WIN32`
-and `FACILITY_NT_BIT`. As you can see at [https://blogs.msdn.microsoft.com/eldar/2007/04/03/a-lot-of-hresult-codes/](https://blogs.msdn.microsoft.com/eldar/2007/04/03/a-lot-of-hresult-codes/),
-there are an awful lot of COM error codes, and keeping mapping tables for all of them would be impractical
-(for the Win32 and NT facilities, we actually reuse the mapping tables in `win32_code` and `nt_code`).
-You can, of course, inherit your own COM code domain from this one and override the `_do_equivalent()` function
+and `FACILITY_NT_BIT`. As you can see at
+[https://blogs.msdn.microsoft.com/eldar/2007/04/03/a-lot-of-hresult-codes/](https://blogs.msdn.microsoft.com/eldar/2007/04/03/a-lot-of-hresult-codes/), there
+are an awful lot of COM error codes, and keeping mapping tables for all of them would be impractical (for the Win32 and NT facilities, we actually reuse the
+mapping tables in `win32_code` and `nt_code`). You can, of course, inherit your own COM code domain from this one and override the `_do_equivalent()` function
 to add semantic equivalence testing for whichever extra COM codes that your application specifically needs.
 */
 using com_code = status_code<_com_code_domain>;
@@ -61,7 +61,7 @@ using com_error = status_error<_com_code_domain>;
 class _com_code_domain : public status_code_domain
 {
   template <class DomainType> friend class status_code;
-  template <class StatusCode> friend class detail::indirecting_domain;
+  template <class StatusCode, class Allocator> friend class detail::indirecting_domain;
   using _base = status_code_domain;
 
   //! Construct from a `HRESULT` error code
@@ -146,7 +146,11 @@ public:
 
   virtual string_ref name() const noexcept override { return string_ref("COM domain"); }  // NOLINT
 
-  virtual payload_info_t payload_info() const noexcept override { return {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type), (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) : alignof(status_code_domain *)}; }
+  virtual payload_info_t payload_info() const noexcept override
+  {
+    return {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type),
+            (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) : alignof(status_code_domain *)};
+  }
 
 protected:
   virtual bool _do_failure(const status_code<void> &code) const noexcept override  // NOLINT

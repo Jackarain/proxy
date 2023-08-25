@@ -11,7 +11,7 @@
 #define BOOST_URL_DECODE_VIEW_HPP
 
 #include <boost/url/detail/config.hpp>
-#include <boost/url/string_view.hpp>
+#include <boost/core/detail/string_view.hpp>
 #include <boost/url/encoding_opts.hpp>
 #include <boost/url/pct_string_view.hpp>
 #include <type_traits>
@@ -72,7 +72,7 @@ make_decode_view(
     @par Operators
     The following operators are supported between
     @ref decode_view and any object that is convertible
-    to @ref string_view
+    to `core::string_view`
 
     @code
     bool operator==( decode_view, decode_view ) noexcept;
@@ -103,7 +103,7 @@ class decode_view
     BOOST_URL_DECL
     explicit
     decode_view(
-        string_view s,
+        core::string_view s,
         std::size_t n,
         encoding_opts opt) noexcept;
 
@@ -355,7 +355,7 @@ public:
     */
     BOOST_URL_DECL
     bool
-    starts_with( string_view s ) const noexcept;
+    starts_with( core::string_view s ) const noexcept;
 
     /** Checks if the string ends with the given prefix
 
@@ -372,7 +372,7 @@ public:
     */
     BOOST_URL_DECL
     bool
-    ends_with( string_view s ) const noexcept;
+    ends_with( core::string_view s ) const noexcept;
 
     /** Checks if the string begins with the given prefix
 
@@ -509,7 +509,7 @@ public:
     */
     BOOST_URL_DECL
     int
-    compare(string_view other) const noexcept;
+    compare(core::string_view other) const noexcept;
 
     /** Return the result of comparing to another string
 
@@ -539,17 +539,17 @@ public:
 private:
     template<class S0, class S1>
     using is_match = std::integral_constant<bool,
-        // both decode_view or convertible to string_view
+        // both decode_view or convertible to core::string_view
         (
             std::is_same<typename std::decay<S0>::type, decode_view>::value ||
-            std::is_convertible<S0, string_view>::value) &&
+            std::is_convertible<S0, core::string_view>::value) &&
         (
             std::is_same<typename std::decay<S1>::type, decode_view>::value ||
-            std::is_convertible<S1, string_view>::value) &&
+            std::is_convertible<S1, core::string_view>::value) &&
         // not both are convertible to string view
         (
-            !std::is_convertible<S0, string_view>::value ||
-            !std::is_convertible<S1, string_view>::value)>;
+            !std::is_convertible<S0, core::string_view>::value ||
+            !std::is_convertible<S1, core::string_view>::value)>;
 
     static
     int

@@ -36,14 +36,14 @@
 <span class="keyword">class</span> <a class="link" href="specify_except.html" title="Class specify_except">specify_except</a> <span class="special">{</span>
 <span class="keyword">public</span><span class="special">:</span>
   <span class="comment">// <a class="link" href="specify_except.html#boost.contract.specify_exceptconstruct-copy-destruct">construct/copy/destruct</a></span>
-  <a class="link" href="specify_except.html#idm35784-bb"><span class="special">~</span><span class="identifier">specify_except</span></a><span class="special">(</span><span class="special">)</span><span class="special">;</span>
+  <a class="link" href="specify_except.html#idm35791-bb"><span class="special">~</span><span class="identifier">specify_except</span></a><span class="special">(</span><span class="special">)</span><span class="special">;</span>
 
-  <span class="comment">// <a class="link" href="specify_except.html#idm35764-bb">public member functions</a></span>
-  <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> F<span class="special">&gt;</span> <a class="link" href="specify_nothing.html" title="Class specify_nothing">specify_nothing</a> <a class="link" href="specify_except.html#idm35765-bb"><span class="identifier">except</span></a><span class="special">(</span><span class="identifier">F</span> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span><span class="special">;</span>
+  <span class="comment">// <a class="link" href="specify_except.html#idm35771-bb">public member functions</a></span>
+  <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> F<span class="special">&gt;</span> <a class="link" href="specify_nothing.html" title="Class specify_nothing">specify_nothing</a> <a class="link" href="specify_except.html#idm35772-bb"><span class="identifier">except</span></a><span class="special">(</span><span class="identifier">F</span> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span><span class="special">;</span>
 <span class="special">}</span><span class="special">;</span></pre></div>
 <div class="refsect1">
-<a name="idm39887"></a><h2>Description</h2>
-<p>Allow to specify the functor this library will call to check exception guarantees. This object is internally constructed by the library when users specify contracts calling <code class="computeroutput"><a class="link" href="function.html" title="Function function">boost::contract::function</a></code> and similar functions (that is why this class does not have a public constructor).</p>
+<a name="idm39834"></a><h2>Description</h2>
+<p>Allow to specify the functor this library will call to check exception guarantees. This object is internally constructed by the library when users specify contracts calling  <code class="computeroutput"><a class="link" href="function.html" title="Function function">boost::contract::function</a></code> and similar functions (that is why this class does not have a public constructor).</p>
 <p><span class="bold"><strong>See Also:</strong></span></p>
 <p> <a class="link" href="../../boost_contract/tutorial.html#boost_contract.tutorial.exception_guarantees" title="Exception Guarantees"> Exception Guarantees</a> </p>
 <p>
@@ -51,20 +51,20 @@
 <p>
 </p>
 <div class="refsect2">
-<a name="idm39897"></a><h3>
+<a name="idm39844"></a><h3>
 <a name="boost.contract.specify_exceptconstruct-copy-destruct"></a><code class="computeroutput">specify_except</code> 
         public
        construct/copy/destruct</h3>
 <div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
-<pre class="literallayout"><a name="idm35784-bb"></a><span class="special">~</span><span class="identifier">specify_except</span><span class="special">(</span><span class="special">)</span><span class="special">;</span></pre>Destruct this object. <p><span class="bold"><strong>Throws:</strong></span> This is declared <code class="computeroutput">noexcept(false)</code> since C++11 to allow users to program failure handlers that throw exceptions on contract assertion failures (not the default, see  <a class="link" href="../../boost_contract/advanced.html#boost_contract.advanced.throw_on_failures__and__noexcept__" title="Throw on Failures (and noexcept)">
+<pre class="literallayout"><a name="idm35791-bb"></a><span class="special">~</span><span class="identifier">specify_except</span><span class="special">(</span><span class="special">)</span><span class="special">;</span></pre>Destruct this object. <p><span class="bold"><strong>Throws:</strong></span> This is declared <code class="computeroutput">noexcept(false)</code> since C++11 to allow users to program failure handlers that throw exceptions on contract assertion failures (not the default, see  <a class="link" href="../../boost_contract/advanced.html#boost_contract.advanced.throw_on_failures__and__noexcept__" title="Throw on Failures (and noexcept)">
             Throw on Failure</a>). </p>
 </li></ol></div>
 </div>
 <div class="refsect2">
-<a name="idm39915"></a><h3>
-<a name="idm35764-bb"></a><code class="computeroutput">specify_except</code> public member functions</h3>
+<a name="idm39862"></a><h3>
+<a name="idm35771-bb"></a><code class="computeroutput">specify_except</code> public member functions</h3>
 <div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
-<pre class="literallayout"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> F<span class="special">&gt;</span> <a class="link" href="specify_nothing.html" title="Class specify_nothing">specify_nothing</a> <a name="idm35765-bb"></a><span class="identifier">except</span><span class="special">(</span><span class="identifier">F</span> <span class="keyword">const</span> <span class="special">&amp;</span> f<span class="special">)</span><span class="special">;</span></pre>Allow to specify exception guarantees. <p>
+<pre class="literallayout"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> F<span class="special">&gt;</span> <a class="link" href="specify_nothing.html" title="Class specify_nothing">specify_nothing</a> <a name="idm35772-bb"></a><span class="identifier">except</span><span class="special">(</span><span class="identifier">F</span> <span class="keyword">const</span> <span class="special">&amp;</span> f<span class="special">)</span><span class="special">;</span></pre>Allow to specify exception guarantees. <p>
 
 </p>
 <div class="variablelist"><table border="0" class="variablelist compact">

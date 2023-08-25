@@ -53,6 +53,7 @@ using clock_type = std::chrono::steady_clock;
 
 ::test_suite::debug_stream dout(std::cerr);
 std::stringstream strout;
+parse_options popts;
 
 #if defined(__clang__)
 string_view toolset = "clang";
@@ -276,7 +277,7 @@ public:
         string_view s,
         std::size_t repeat) const override
     {
-        stream_parser p;
+        stream_parser p({}, popts);
         while(repeat--)
         {
             p.reset();
@@ -343,7 +344,7 @@ public:
         string_view s,
         std::size_t repeat) const override
     {
-        stream_parser p;
+        stream_parser p({}, popts);
         while(repeat--)
         {
             monotonic_resource mr;
@@ -422,7 +423,7 @@ class boost_null_impl : public any_impl
         basic_parser<handler> p_;
 
         null_parser()
-            : p_(json::parse_options())
+            : p_(popts)
         {
         }
 
@@ -514,7 +515,7 @@ public:
         while(repeat--)
         {
             error_code ec;
-            auto jv = json::parse(s, ec);
+            auto jv = json::parse(s, ec, {}, popts);
             (void)jv;
         }
     }
@@ -704,6 +705,22 @@ static bool parse_option( char const * s )
     case 'b':
         s_branch = s;
         break;
+    case 'm':
+        switch( *s )
+        {
+        case 'i':
+            popts.numbers = number_precision::imprecise;
+            break;
+        case 'p':
+            popts.numbers = number_precision::precise;
+            break;
+        case 'n':
+            popts.numbers = number_precision::none;
+            break;
+        default:
+            return false;
+        }
+        break;
     }
 
     return true;
@@ -810,6 +827,11 @@ main(
 			"                                 (default all)\n"
             "          -n:<number>          Number of trials (default 6)\n"
             "          -b:<branch>          Branch label for boost implementations\n"
+            "          -m:(i|p|n)           Number parsing mode\n"
+            "                                 (i: imprecise)\n"
+            "                                 (p: precise)\n"
+            "                                 (n: none)\n"
+            "                                 (default imprecise)\n"
         ;
 
         return 4;

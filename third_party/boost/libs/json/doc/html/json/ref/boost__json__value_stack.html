@@ -36,7 +36,7 @@
         <span class="phrase"><a name="json.ref.boost__json__value_stack.synopsis"></a></span><a class="link" href="boost__json__value_stack.html#json.ref.boost__json__value_stack.synopsis">Synopsis</a>
       </h5>
 <p>
-        Defined in header <code class="literal">&lt;<a href="https://github.com/cppalliance/json/blob/master/include/boost/json/value_stack.hpp" target="_top">boost/json/value_stack.hpp</a>&gt;</code>
+        Defined in header <code class="literal">&lt;<a href="https://github.com/boostorg/json/blob/master/include/boost/json/value_stack.hpp" target="_top">boost/json/value_stack.hpp</a>&gt;</code>
       </p>
 <pre class="programlisting"><span class="keyword">class</span> <span class="identifier">value_stack</span>
 </pre>
@@ -302,26 +302,26 @@
 
 <span class="comment">// Construct the value stack using a local buffer</span>
 <span class="keyword">unsigned</span> <span class="keyword">char</span> <span class="identifier">temp</span><span class="special">[</span><span class="number">4096</span><span class="special">];</span>
-<span class="identifier">value_stack</span> <span class="identifier">st</span><span class="special">(</span> <span class="identifier">storage_ptr</span><span class="special">(),</span> <span class="identifier">temp</span><span class="special">,</span> <span class="keyword">sizeof</span><span class="special">(</span><span class="identifier">temp</span><span class="special">)</span> <span class="special">);</span>
+<span class="identifier">value_stack</span> <span class="identifier">st</span><span class="special">(</span> <span class="identifier">storage_ptr</span><span class="special">(),</span> <span class="identifier">temp</span><span class="special">,</span> <span class="keyword">sizeof</span> <span class="special">(</span><span class="identifier">temp</span><span class="special">)</span> <span class="special">);</span>
 
 <span class="comment">// Create a static resource with a local initial buffer</span>
 <span class="keyword">unsigned</span> <span class="keyword">char</span> <span class="identifier">buf</span><span class="special">[</span><span class="number">4096</span><span class="special">];</span>
-<span class="identifier">static_resource</span> <span class="identifier">mr</span><span class="special">(</span> <span class="identifier">buf</span><span class="special">,</span> <span class="keyword">sizeof</span><span class="special">(</span><span class="identifier">buf</span><span class="special">)</span> <span class="special">);</span>
+<span class="identifier">static_resource</span> <span class="identifier">mr</span><span class="special">(</span> <span class="identifier">buf</span><span class="special">,</span> <span class="keyword">sizeof</span> <span class="special">(</span><span class="identifier">buf</span><span class="special">)</span> <span class="special">);</span>
 
 <span class="comment">// All values on the stack will use `mr`</span>
 <span class="identifier">st</span><span class="special">.</span><span class="identifier">reset</span><span class="special">(&amp;</span><span class="identifier">mr</span><span class="special">);</span>
 
 <span class="comment">// Push the key/value pair "a":1.</span>
-<span class="identifier">st</span><span class="special">.</span><span class="identifier">push_key</span><span class="special">(</span><span class="string">"a"</span><span class="special">);</span>
+<span class="identifier">st</span><span class="special">.</span><span class="identifier">push_key</span><span class="special">(</span> <span class="string">"a"</span> <span class="special">);</span>
 <span class="identifier">st</span><span class="special">.</span><span class="identifier">push_int64</span><span class="special">(</span><span class="number">1</span><span class="special">);</span>
 
 <span class="comment">// Push "b":null</span>
-<span class="identifier">st</span><span class="special">.</span><span class="identifier">push_key</span><span class="special">(</span><span class="string">"b"</span><span class="special">);</span>
+<span class="identifier">st</span><span class="special">.</span><span class="identifier">push_key</span><span class="special">(</span> <span class="string">"b"</span> <span class="special">);</span>
 <span class="identifier">st</span><span class="special">.</span><span class="identifier">push_null</span><span class="special">();</span>
 
 <span class="comment">// Push "c":"hello"</span>
-<span class="identifier">st</span><span class="special">.</span><span class="identifier">push_key</span><span class="special">(</span><span class="string">"c"</span><span class="special">);</span>
-<span class="identifier">st</span><span class="special">.</span><span class="identifier">push_string</span><span class="special">(</span><span class="string">"hello"</span><span class="special">);</span>
+<span class="identifier">st</span><span class="special">.</span><span class="identifier">push_key</span><span class="special">(</span> <span class="string">"c"</span> <span class="special">);</span>
+<span class="identifier">st</span><span class="special">.</span><span class="identifier">push_string</span><span class="special">(</span> <span class="string">"hello"</span> <span class="special">);</span>
 
 <span class="comment">// Pop the three key/value pairs and push an object with those three values.</span>
 <span class="identifier">st</span><span class="special">.</span><span class="identifier">push_object</span><span class="special">(</span><span class="number">3</span><span class="special">);</span>
@@ -344,7 +344,7 @@
         functions of that instance.
       </p>
 <p>
-        Convenience header <code class="literal">&lt;<a href="https://github.com/cppalliance/json/blob/master/include/boost/json.hpp" target="_top">boost/json.hpp</a>&gt;</code>
+        Convenience header <code class="literal">&lt;<a href="https://github.com/boostorg/json/blob/master/include/boost/json.hpp" target="_top">boost/json.hpp</a>&gt;</code>
       </p>
 </div>
 <div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>

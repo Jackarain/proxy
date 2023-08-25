@@ -24,11 +24,15 @@
 #endif
 
 #include <boost/filesystem.hpp> // make sure filesystem.hpp works
+#include <boost/filesystem/fstream.hpp> // for BOOST_FILESYSTEM_C_STR
 
 #include <boost/system/error_code.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <boost/detail/lightweight_main.hpp>
 #include <iostream>
+#include <fstream>
+#include <string>
+#include <cerrno>
 
 using namespace boost::filesystem;
 using namespace boost::system;
@@ -40,6 +44,15 @@ using std::string;
 
 namespace {
 bool cleanup = true;
+
+void create_file(const path& ph, const std::string& contents = std::string())
+{
+    std::ofstream f(BOOST_FILESYSTEM_C_STR(ph));
+    if (!f)
+        throw filesystem_error("operations_test create_file", ph, error_code(errno, system_category()));
+    if (!contents.empty())
+        f << contents;
+}
 
 void check(bool ok, const char* file, int line)
 {
@@ -252,20 +265,32 @@ void operations_test()
 
 //  directory_entry_test  ------------------------------------------------------------//
 
-void directory_entry_test()
+void directory_entry_test(path const& temp_dir)
 {
     cout << "directory_entry test..." << endl;
 
-    directory_entry de("foo.bar", file_status(regular_file, owner_all), file_status(directory_file, group_all));
+    create_file(temp_dir / "foo.bar");
+    create_file(temp_dir / "goo.bar");
+    create_directory(temp_dir / "bar.foo");
 
-    CHECK(de.path() == "foo.bar");
-    CHECK(de.status() == file_status(regular_file, owner_all));
-    CHECK(de.symlink_status() == file_status(directory_file, group_all));
-    CHECK(de < directory_entry("goo.bar"));
-    CHECK(de == directory_entry("foo.bar"));
-    CHECK(de != directory_entry("goo.bar"));
+    directory_entry de(temp_dir / "foo.bar");
+
+    CHECK(de.path() == temp_dir / "foo.bar");
+    CHECK(de.status().type() == regular_file);
+    CHECK(de.symlink_status().type() == regular_file);
+    CHECK(de.is_regular_file());
+    CHECK(de < directory_entry(temp_dir / "goo.bar"));
+    CHECK(de == directory_entry(temp_dir / "foo.bar"));
+    CHECK(de != directory_entry(temp_dir / "goo.bar"));
     de.replace_filename("bar.foo");
-    CHECK(de.path() == "bar.foo");
+    CHECK(de.path() == temp_dir / "bar.foo");
+    CHECK(de.is_directory());
+    CHECK(de.status().type() == directory_file);
+    CHECK(de.symlink_status().type() == directory_file);
+
+    boost::filesystem::remove(temp_dir / "bar.foo");
+    boost::filesystem::remove(temp_dir / "goo.bar");
+    boost::filesystem::remove(temp_dir / "foo.bar");
 }
 
 //  directory_entry_overload_test  ---------------------------------------------------//
@@ -354,7 +379,7 @@ int cpp_main(int argc, char* argv[])
     directory_iterator_test();
     recursive_directory_iterator_test();
     operations_test();
-    directory_entry_test();
+    directory_entry_test(temp_dir);
     directory_entry_overload_test();
     error_handling_test();
 

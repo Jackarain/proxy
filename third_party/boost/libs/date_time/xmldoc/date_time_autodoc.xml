@@ -469,8 +469,8 @@
 <method name="operator+="><type>BOOST_CXX14_CONSTEXPR <classname>months_type</classname> &amp;</type><parameter name="rhs"><paramtype>const <classname>months_type</classname> &amp;</paramtype></parameter></method>
 <method name="operator-" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>months_type</classname></type><parameter name="rhs"><paramtype>const <classname>months_type</classname> &amp;</paramtype></parameter></method>
 <method name="operator-="><type>BOOST_CXX14_CONSTEXPR <classname>months_type</classname> &amp;</type><parameter name="rhs"><paramtype>const <classname>months_type</classname> &amp;</paramtype></parameter></method>
-<method name="operator *" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>months_type</classname></type><parameter name="rhs"><paramtype>const int_type</paramtype></parameter></method>
-<method name="operator *="><type>BOOST_CXX14_CONSTEXPR <classname>months_type</classname> &amp;</type><parameter name="rhs"><paramtype>const int_type</paramtype></parameter></method>
+<method name="operator*" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>months_type</classname></type><parameter name="rhs"><paramtype>const int_type</paramtype></parameter></method>
+<method name="operator*="><type>BOOST_CXX14_CONSTEXPR <classname>months_type</classname> &amp;</type><parameter name="rhs"><paramtype>const int_type</paramtype></parameter></method>
 <method name="operator/" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>months_type</classname></type><parameter name="rhs"><paramtype>const int_type</paramtype></parameter></method>
 <method name="operator/="><type>BOOST_CXX14_CONSTEXPR <classname>months_type</classname> &amp;</type><parameter name="rhs"><paramtype>const int_type</paramtype></parameter></method>
 <method name="operator+" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>months_type</classname></type><parameter name="y"><paramtype>const <classname>years_type</classname> &amp;</paramtype></parameter></method>
@@ -499,8 +499,8 @@
 <method name="operator+="><type>BOOST_CXX14_CONSTEXPR <classname>years_type</classname> &amp;</type><parameter name="rhs"><paramtype>const <classname>years_type</classname> &amp;</paramtype></parameter></method>
 <method name="operator-" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>years_type</classname></type><parameter name="rhs"><paramtype>const <classname>years_type</classname> &amp;</paramtype></parameter></method>
 <method name="operator-="><type>BOOST_CXX14_CONSTEXPR <classname>years_type</classname> &amp;</type><parameter name="rhs"><paramtype>const <classname>years_type</classname> &amp;</paramtype></parameter></method>
-<method name="operator *" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>years_type</classname></type><parameter name="rhs"><paramtype>const int_type</paramtype></parameter></method>
-<method name="operator *="><type>BOOST_CXX14_CONSTEXPR <classname>years_type</classname> &amp;</type><parameter name="rhs"><paramtype>const int_type</paramtype></parameter></method>
+<method name="operator*" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>years_type</classname></type><parameter name="rhs"><paramtype>const int_type</paramtype></parameter></method>
+<method name="operator*="><type>BOOST_CXX14_CONSTEXPR <classname>years_type</classname> &amp;</type><parameter name="rhs"><paramtype>const int_type</paramtype></parameter></method>
 <method name="operator/" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>years_type</classname></type><parameter name="rhs"><paramtype>const int_type</paramtype></parameter></method>
 <method name="operator/="><type>BOOST_CXX14_CONSTEXPR <classname>years_type</classname> &amp;</type><parameter name="rhs"><paramtype>const int_type</paramtype></parameter></method>
 <method name="operator+" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>months_type</classname></type><parameter name="m"><paramtype>const <classname>months_type</classname> &amp;</paramtype></parameter></method>
@@ -552,7 +552,7 @@
       <template-type-parameter name="date_type"/>
       <template-type-parameter name="CharT"/>
       <template-type-parameter name="OutItrT"><default>std::ostreambuf_iterator&lt;CharT, std::char_traits&lt;CharT&gt; &gt;</default></template-type-parameter>
-    </template><inherit access="public">facet</inherit><description><para>Class that provides format based I/O facet for date types.</para><para>This class allows the formatting of dates by using format string. Format strings are:</para><para><itemizedlist>
+    </template><inherit access="public">std::locale::facet</inherit><description><para>Class that provides format based I/O facet for date types.</para><para>This class allows the formatting of dates by using format string. Format strings are:</para><para><itemizedlist>
 <listitem><para>A =&gt; long_weekday_format - Full name Ex: Tuesday</para>
 </listitem><listitem><para>a =&gt; short_weekday_format - Three letter abbreviation Ex: Tue</para>
 </listitem><listitem><para>B =&gt; long_month_format - Full name Ex: October</para>
@@ -625,7 +625,7 @@
       <template-type-parameter name="date_type"/>
       <template-type-parameter name="CharT"/>
       <template-type-parameter name="InItrT"><default>std::istreambuf_iterator&lt;CharT, std::char_traits&lt;CharT&gt; &gt;</default></template-type-parameter>
-    </template><inherit access="public">facet</inherit><purpose>Input facet. </purpose><typedef name="duration_type"><type>date_type::duration_type</type></typedef>
+    </template><inherit access="public">std::locale::facet</inherit><purpose>Input facet. </purpose><typedef name="duration_type"><type>date_type::duration_type</type></typedef>
 <typedef name="day_of_week_type"><type>date_type::day_of_week_type</type></typedef>
 <typedef name="day_type"><type>date_type::day_type</type></typedef>
 <typedef name="month_type"><type>date_type::month_type</type></typedef>
@@ -1179,7 +1179,7 @@
 <namespace name="date_time">
 <class name="first_kday_after"><template>
       <template-type-parameter name="date_type"/>
-    </template><purpose>Calculate something like "First Sunday after Jan 1,2002. </purpose><description><para>Date generator that takes a date and finds kday after <programlisting language="c++">typedef boost::date_time::first_kday_after&lt;date&gt; firstkdayafter;
+    </template><purpose>Calculate something like "First Sunday after Jan 1,2002. </purpose><description><para>Date generator that takes a date and finds kday after <programlisting language="c++">typedef <classname alt="boost::date_time::first_kday_after">boost::date_time::first_kday_after&lt;date&gt;</classname> firstkdayafter;
 firstkdayafter fkaf(Monday);
 fkaf.get_date(date(2002,Feb,1));
 </programlisting> </para></description><typedef name="calendar_type"><type>date_type::calendar_type</type></typedef>
@@ -1192,7 +1192,7 @@ fkaf.get_date(date(2002,Feb,1));
 <constructor><parameter name="dow"><paramtype>day_of_week_type</paramtype></parameter></constructor>
 </class><class name="first_kday_before"><template>
       <template-type-parameter name="date_type"/>
-    </template><purpose>Calculate something like "First Sunday before Jan 1,2002. </purpose><description><para>Date generator that takes a date and finds kday after <programlisting language="c++">typedef boost::date_time::first_kday_before&lt;date&gt; firstkdaybefore;
+    </template><purpose>Calculate something like "First Sunday before Jan 1,2002. </purpose><description><para>Date generator that takes a date and finds kday after <programlisting language="c++">typedef <classname alt="boost::date_time::first_kday_before">boost::date_time::first_kday_before&lt;date&gt;</classname> firstkdaybefore;
 firstkdaybefore fkbf(Monday);
 fkbf.get_date(date(2002,Feb,1));
 </programlisting> </para></description><typedef name="calendar_type"><type>date_type::calendar_type</type></typedef>
@@ -1360,7 +1360,7 @@ pg.get_date(2000); // returns 2000-2-29
 <method name="operator--"><type><classname>date_itr_base</classname> &amp;</type></method>
 <method name="get_offset" cv="const = 0" specifiers="virtual"><type>duration_type</type><parameter name="current"><paramtype>const date_type &amp;</paramtype></parameter></method>
 <method name="get_neg_offset" cv="const = 0" specifiers="virtual"><type>duration_type</type><parameter name="current"><paramtype>const date_type &amp;</paramtype></parameter></method>
-<method name="operator *" cv="const"><type>const date_type &amp;</type></method>
+<method name="operator*" cv="const"><type>const date_type &amp;</type></method>
 <method name="operator-&gt;" cv="const"><type>const date_type *</type></method>
 <method name="operator&lt;" cv="const"><type>bool</type><parameter name="d"><paramtype>const date_type &amp;</paramtype></parameter></method>
 <method name="operator&lt;=" cv="const"><type>bool</type><parameter name="d"><paramtype>const date_type &amp;</paramtype></parameter></method>
@@ -1415,16 +1415,16 @@ pg.get_date(2000); // returns 2000-2-29
       <template-type-parameter name="Config"/>
       <template-type-parameter name="charT"><default>char</default></template-type-parameter>
       <template-type-parameter name="OutputIterator"><default>std::ostreambuf_iterator&lt;charT&gt;</default></template-type-parameter>
-    </template><inherit access="public">boost::date_time::date_names_put&lt; Config, charT, OutputIterator &gt;</inherit><purpose>A date name output facet that takes an array of char* to define strings. </purpose><typedef name="iter_type"><type>OutputIterator</type></typedef>
+    </template><inherit access="public">boost::date_time::date_names_put&lt; Config, char, std::ostreambuf_iterator&lt; char &gt; &gt;</inherit><purpose>A date name output facet that takes an array of char* to define strings. </purpose><typedef name="iter_type"><type>OutputIterator</type></typedef>
 <typedef name="month_enum"><type>Config::month_enum</type></typedef>
 <typedef name="weekday_enum"><type>Config::weekday_enum</type></typedef>
 <typedef name="special_value_enum"><type>Config::special_value_enum</type></typedef>
 <method-group name="public member functions">
-<method name="get_short_month_names" cv="const"><type>const charT *const  *</type></method>
-<method name="get_long_month_names" cv="const"><type>const charT *const  *</type></method>
-<method name="get_special_value_names" cv="const"><type>const charT *const  *</type></method>
-<method name="get_short_weekday_names" cv="const"><type>const charT *const  *</type></method>
-<method name="get_long_weekday_names" cv="const"><type>const charT *const  *</type></method>
+<method name="get_short_month_names" cv="const"><type>const charT *const *</type></method>
+<method name="get_long_month_names" cv="const"><type>const charT *const *</type></method>
+<method name="get_special_value_names" cv="const"><type>const charT *const *</type></method>
+<method name="get_short_weekday_names" cv="const"><type>const charT *const *</type></method>
+<method name="get_long_weekday_names" cv="const"><type>const charT *const *</type></method>
 </method-group>
 <constructor><parameter name="month_short_names"><paramtype>const charT *const</paramtype></parameter><parameter name="month_long_names"><paramtype>const charT *const</paramtype></parameter><parameter name="special_value_names"><paramtype>const charT *const</paramtype></parameter><parameter name="weekday_short_names"><paramtype>const charT *const</paramtype></parameter><parameter name="weekday_long_names"><paramtype>const charT *const</paramtype></parameter><parameter name="separator_char"><paramtype>charT</paramtype><default>'-'</default></parameter><parameter name="order_spec"><paramtype>ymd_order_spec</paramtype><default>ymd_order_iso</default></parameter><parameter name="month_format"><paramtype>month_format_spec</paramtype><default>month_as_short_string</default></parameter></constructor>
 <method-group name="protected member functions">
@@ -1442,7 +1442,7 @@ pg.get_date(2000); // returns 2000-2-29
       <template-type-parameter name="Config"/>
       <template-type-parameter name="charT"><default>char</default></template-type-parameter>
       <template-type-parameter name="OutputIterator"><default>std::ostreambuf_iterator&lt;charT&gt;</default></template-type-parameter>
-    </template><inherit access="public">facet</inherit><purpose>Output facet base class for gregorian dates. </purpose><description><para>This class is a base class for date facets used to localize the names of months and the names of days in the week.</para><para>Requirements of Config<itemizedlist>
+    </template><inherit access="public">std::locale::facet</inherit><purpose>Output facet base class for gregorian dates. </purpose><description><para>This class is a base class for date facets used to localize the names of months and the names of days in the week.</para><para>Requirements of Config<itemizedlist>
 <listitem><para>define an enumeration month_enum that enumerates the months. The enumeration should be '1' based eg: Jan==1</para>
 </listitem><listitem><para>define as_short_string and as_long_string</para>
 </listitem></itemizedlist>
@@ -2037,8 +2037,8 @@ pg.get_date(2000); // returns 2000-2-29
           <template-type-parameter name="rhs_type"/>
         </template><parameter name="rhs"><paramtype>const <classname>int_adapter</classname>&lt; rhs_type &gt; &amp;</paramtype></parameter><description><para>Operator allows for subtracting dissimilar <classname alt="boost::date_time::int_adapter">int_adapter</classname> types. The return type will match that of the the calling object's type </para></description></method>
 <method name="operator-" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>int_adapter</classname></type><parameter name="rhs"><paramtype>const int_type</paramtype></parameter></method>
-<method name="operator *" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>int_adapter</classname></type><parameter name="rhs"><paramtype>const <classname>int_adapter</classname> &amp;</paramtype></parameter></method>
-<method name="operator *" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>int_adapter</classname></type><parameter name="rhs"><paramtype>const int</paramtype></parameter><description><para>Provided for cases when automatic conversion from 'int' to '<classname alt="boost::date_time::int_adapter">int_adapter</classname>' causes incorrect results. </para></description></method>
+<method name="operator*" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>int_adapter</classname></type><parameter name="rhs"><paramtype>const <classname>int_adapter</classname> &amp;</paramtype></parameter></method>
+<method name="operator*" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>int_adapter</classname></type><parameter name="rhs"><paramtype>const int</paramtype></parameter><description><para>Provided for cases when automatic conversion from 'int' to '<classname alt="boost::date_time::int_adapter">int_adapter</classname>' causes incorrect results. </para></description></method>
 <method name="operator/" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>int_adapter</classname></type><parameter name="rhs"><paramtype>const <classname>int_adapter</classname> &amp;</paramtype></parameter></method>
 <method name="operator/" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>int_adapter</classname></type><parameter name="rhs"><paramtype>const int</paramtype></parameter><description><para>Provided for cases when automatic conversion from 'int' to '<classname alt="boost::date_time::int_adapter">int_adapter</classname>' causes incorrect results. </para></description></method>
 <method name="operator%" cv="const"><type>BOOST_CXX14_CONSTEXPR <classname>int_adapter</classname></type><parameter name="rhs"><paramtype>const <classname>int_adapter</classname> &amp;</paramtype></parameter></method>
@@ -2344,7 +2344,7 @@ The logic is as follows. Starting with UTC time use the offset to create a label
     </template><purpose>Specification for daylight savings start rules in US. </purpose><description><para>This class is used to configure <classname alt="boost::date_time::dst_calc_engine">dst_calc_engine</classname> template typically as follows: <programlisting language="c++">using namespace boost::gregorian;
 using namespace boost::posix_time;
 typedef us_dst_trait&lt;date&gt; us_dst_traits;
-typedef boost::date_time::dst_calc_engine&lt;date, time_duration, 
+typedef <classname alt="boost::date_time::dst_calc_engine">boost::date_time::dst_calc_engine</classname>&lt;date, time_duration, 
                                           us_dst_traits&gt;  
                                           us_dst_calc;
 //calculate the 2002 transition day of USA April 7 2002
@@ -2804,7 +2804,8 @@ result:
 <class name="special_values_formatter"><template>
       <template-type-parameter name="CharT"/>
       <template-type-parameter name="OutItrT"><default>std::ostreambuf_iterator&lt;CharT, std::char_traits&lt;CharT&gt; &gt;</default></template-type-parameter>
-    </template><purpose>Class that provides generic formmatting ostream formatting for special values. </purpose><description><para>This class provides for the formmating of special values to an output stream. In particular, it produces strings for the values of negative and positive infinity as well as not_a_date_time.</para><para>While not a facet, this class is used by the date and time facets for formatting special value types. </para></description><typedef name="string_type"><type>std::basic_string&lt; CharT &gt;</type></typedef>
+    </template><purpose>Class that provides generic formmatting ostream formatting for special values. </purpose><description><para>This class provides for the formmating of special values to an output stream. In particular, it produces strings for the values of negative and positive infinity as well as not_a_date_time. <sbr/>
+</para><para>While not a facet, this class is used by the date and time facets for formatting special value types. </para></description><typedef name="string_type"><type>std::basic_string&lt; CharT &gt;</type></typedef>
 <typedef name="char_type"><type>CharT</type></typedef>
 <typedef name="collection_type"><type>std::vector&lt; string_type &gt;</type></typedef>
 <data-member name="default_special_value_names" specifiers="static"><type>const char_type</type><purpose>Storage for the strings used to indicate special values. </purpose></data-member>
@@ -2812,7 +2813,8 @@ result:
 <method name="put_special" cv="const"><type>OutItrT</type><parameter name="next"><paramtype>OutItrT</paramtype></parameter><parameter name="value"><paramtype>const boost::date_time::special_values &amp;</paramtype></parameter></method>
 </method-group>
 <constructor><purpose>Construct special values formatter using default strings. </purpose><description><para>Default strings are not-a-date-time -infinity +infinity </para></description></constructor>
-<constructor><parameter name="begin"><paramtype>const char_type *const *</paramtype></parameter><parameter name="end"><paramtype>const char_type *const *</paramtype></parameter><purpose>Construct special values formatter from array of strings. </purpose><description><para>This constructor will take pair of iterators from an array of strings that represent the special values and copy them for use in formatting special values. <programlisting language="c++">const char* const special_value_names[]={"nadt","-inf","+inf" };
+<constructor><parameter name="begin"><paramtype>const char_type *const *</paramtype></parameter><parameter name="end"><paramtype>const char_type *const *</paramtype></parameter><purpose>Construct special values formatter from array of strings. </purpose><description><para>This constructor will take pair of iterators from an array of strings that represent the special values and copy them for use in formatting special values. <sbr/>
+ <programlisting language="c++">const char* const special_value_names[]={"nadt","-inf","+inf" };
 
 special_value_formatter svf(&amp;special_value_names[0], &amp;special_value_names[3]);
 </programlisting> </para></description></constructor>
@@ -3320,8 +3322,8 @@ special_value_formatter svf(&amp;special_value_names[0], &amp;special_value_name
 <method name="operator-="><type>BOOST_CXX14_CONSTEXPR duration_type</type><parameter name="d"><paramtype>const duration_type &amp;</paramtype></parameter></method>
 <method name="operator+="><type>BOOST_CXX14_CONSTEXPR duration_type</type><parameter name="d"><paramtype>const duration_type &amp;</paramtype></parameter></method>
 <method name="operator/="><type>BOOST_CXX14_CONSTEXPR duration_type</type><parameter name="divisor"><paramtype>int</paramtype></parameter><purpose>Division operations on a duration with an integer. </purpose></method>
-<method name="operator *" cv="const"><type>BOOST_CXX14_CONSTEXPR duration_type</type><parameter name="rhs"><paramtype>int</paramtype></parameter><purpose>Multiplication operations an a duration with an integer. </purpose></method>
-<method name="operator *="><type>BOOST_CXX14_CONSTEXPR duration_type</type><parameter name="divisor"><paramtype>int</paramtype></parameter></method>
+<method name="operator*" cv="const"><type>BOOST_CXX14_CONSTEXPR duration_type</type><parameter name="rhs"><paramtype>int</paramtype></parameter><purpose>Multiplication operations an a duration with an integer. </purpose></method>
+<method name="operator*="><type>BOOST_CXX14_CONSTEXPR duration_type</type><parameter name="divisor"><paramtype>int</paramtype></parameter></method>
 <method name="ticks" cv="const"><type>BOOST_CXX14_CONSTEXPR tick_type</type></method>
 <method name="is_special" cv="const"><type>BOOST_CXX14_CONSTEXPR bool</type><purpose>Is ticks_ a special value? </purpose></method>
 <method name="is_pos_infinity" cv="const"><type>BOOST_CXX14_CONSTEXPR bool</type><purpose>Is duration pos-infinity. </purpose></method>
@@ -3384,7 +3386,7 @@ special_value_formatter svf(&amp;special_value_names[0], &amp;special_value_name
       <template-type-parameter name="time_type"/>
       <template-type-parameter name="CharT"/>
       <template-type-parameter name="OutItrT"><default>std::ostreambuf_iterator&lt;CharT, std::char_traits&lt;CharT&gt; &gt;</default></template-type-parameter>
-    </template><inherit access="public">boost::date_time::date_facet&lt; time_type::date_type, CharT, OutItrT &gt;</inherit><description><para>Facet used for format-based output of time types This class provides for the use of format strings to output times. In addition to the flags for formatting date elements, the following are the allowed format flags:<itemizedlist>
+    </template><inherit access="public">boost::date_time::date_facet&lt; time_type::date_type, CharT, std::ostreambuf_iterator&lt; CharT, std::char_traits&lt; CharT &gt; &gt; &gt;</inherit><description><para>Facet used for format-based output of time types This class provides for the use of format strings to output times. In addition to the flags for formatting date elements, the following are the allowed format flags:<itemizedlist>
 <listitem><para>x X =&gt; default format - enables addition of more flags to default (ie. "%x %X %z")</para>
 </listitem><listitem><para>f =&gt; fractional seconds ".123456"</para>
 </listitem><listitem><para>F =&gt; fractional seconds or none: like frac sec but empty if frac sec == 0</para>
@@ -3475,7 +3477,7 @@ special_value_formatter svf(&amp;special_value_names[0], &amp;special_value_name
       <template-type-parameter name="time_type"/>
       <template-type-parameter name="CharT"/>
       <template-type-parameter name="InItrT"><default>std::istreambuf_iterator&lt;CharT, std::char_traits&lt;CharT&gt; &gt;</default></template-type-parameter>
-    </template><inherit access="public">boost::date_time::date_input_facet&lt; time_type::date_type, CharT, InItrT &gt;</inherit><purpose>Facet for format-based input. </purpose><typedef name="date_type"><type>time_type::date_type</type></typedef>
+    </template><inherit access="public">boost::date_time::date_input_facet&lt; time_type::date_type, CharT, std::istreambuf_iterator&lt; CharT, std::char_traits&lt; CharT &gt; &gt; &gt;</inherit><purpose>Facet for format-based input. </purpose><typedef name="date_type"><type>time_type::date_type</type></typedef>
 <typedef name="time_duration_type"><type>time_type::time_duration_type</type></typedef>
 <typedef name="fracional_seconds_type"><type>time_duration_type::fractional_seconds_type</type></typedef>
 <typedef name="period_type"><type><classname>boost::date_time::period</classname>&lt; time_type, time_duration_type &gt;</type></typedef>
@@ -3642,7 +3644,7 @@ special_value_formatter svf(&amp;special_value_names[0], &amp;special_value_name
 <method-group name="public member functions">
 <method name="operator++"><type><classname>time_itr</classname> &amp;</type></method>
 <method name="operator--"><type><classname>time_itr</classname> &amp;</type></method>
-<method name="operator *" cv="const"><type>const time_type &amp;</type></method>
+<method name="operator*" cv="const"><type>const time_type &amp;</type></method>
 <method name="operator-&gt;" cv="const"><type>const time_type *</type></method>
 <method name="operator&lt;" cv="const"><type>bool</type><parameter name="t"><paramtype>const time_type &amp;</paramtype></parameter></method>
 <method name="operator&lt;=" cv="const"><type>bool</type><parameter name="t"><paramtype>const time_type &amp;</paramtype></parameter></method>
@@ -3708,7 +3710,7 @@ special_value_formatter svf(&amp;special_value_names[0], &amp;special_value_name
         </template><parameter name="s"><paramtype>const std::string &amp;</paramtype></parameter><parameter name="sep"><paramtype>char</paramtype></parameter></function>
 <function name="parse_undelimited_time_duration"><type><classname>time_duration</classname></type><template>
           <template-type-parameter name="time_duration"/>
-        </template><parameter name="s"><paramtype>const std::string &amp;</paramtype></parameter><purpose>Parse time duration part of an ISO 8601 time of form: [-]hhmmss<ulink url="eg: 120259.123 is 12 hours, 2 min, 59 seconds, 123000 microseconds">.fff...</ulink> </purpose></function>
+        </template><parameter name="s"><paramtype>const std::string &amp;</paramtype></parameter><purpose>Parse time duration part of an ISO 8601 time of form: [-]hhmmss[.fff...] (eg: 120259.123 is 12 hours, 2 min, 59 seconds, 123000 microseconds) </purpose></function>
 <function name="parse_iso_time"><type>time_type</type><template>
           <template-type-parameter name="time_type"/>
         </template><parameter name="s"><paramtype>const std::string &amp;</paramtype></parameter><parameter name="sep"><paramtype>char</paramtype></parameter><purpose>Parse time string of form YYYYMMDDThhmmss where T is delimeter between date and time. </purpose></function>
@@ -4123,10 +4125,10 @@ special_value_formatter svf(&amp;special_value_names[0], &amp;special_value_name
 <header name="boost/date_time/tz_db_base.hpp">
 <namespace name="boost">
 <namespace name="date_time">
-<class name="bad_field_count"><inherit access="public">out_of_range</inherit><purpose>Exception thrown when tz database locates incorrect field structure in data file. </purpose><method-group name="public member functions">
+<class name="bad_field_count"><inherit access="public">std::out_of_range</inherit><purpose>Exception thrown when tz database locates incorrect field structure in data file. </purpose><method-group name="public member functions">
 </method-group>
 <constructor><parameter name="s"><paramtype>const std::string &amp;</paramtype></parameter></constructor>
-</class><class name="data_not_accessible"><inherit access="public">logic_error</inherit><purpose>Exception thrown when tz database cannot locate requested data file. </purpose><method-group name="public member functions">
+</class><class name="data_not_accessible"><inherit access="public">std::logic_error</inherit><purpose>Exception thrown when tz database cannot locate requested data file. </purpose><method-group name="public member functions">
 </method-group>
 <constructor/>
 <constructor><parameter name="filespec"><paramtype>const std::string &amp;</paramtype></parameter></constructor>

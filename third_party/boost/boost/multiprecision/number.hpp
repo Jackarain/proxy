@@ -1121,6 +1121,7 @@ class number
    static BOOST_MP_CXX14_CONSTEXPR void default_variable_precision_options(variable_precision_options opts)
    {
       Backend::default_variable_precision_options(opts);
+      Backend::thread_default_variable_precision_options(opts);
    }
    static BOOST_MP_CXX14_CONSTEXPR void thread_default_variable_precision_options(variable_precision_options opts)
    {

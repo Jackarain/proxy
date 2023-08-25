@@ -6,7 +6,7 @@ include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag(-Wsuggest-override _BOOST_NOWIDE_SUGGEST_OVERRIDE_SUPPORTED)
 
 add_library(boost_nowide_file_test_helpers STATIC file_test_helpers.cpp)
-target_link_libraries(boost_nowide_file_test_helpers PRIVATE PRIVATE Boost::nowide)
+target_link_libraries(boost_nowide_file_test_helpers PRIVATE Boost::nowide)
 target_compile_definitions(boost_nowide_file_test_helpers PRIVATE BOOST_ALL_NO_LIB)
 
 if(NOT TARGET tests)

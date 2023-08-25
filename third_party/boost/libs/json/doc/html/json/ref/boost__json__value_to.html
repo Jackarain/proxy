@@ -7,7 +7,7 @@
 <link rel="home" href="../../index.html" title="Chapter 1. Boost.JSON">
 <link rel="up" href="../ref.html" title="This Page Intentionally Left Blank 2/2">
 <link rel="prev" href="boost__json__string_kind.html" title="string_kind">
-<link rel="next" href="boost__json__value_to/overload1.html" title="value_to (1 of 2 overloads)">
+<link rel="next" href="boost__json__value_to/overload1.html" title="value_to (1 of 3 overloads)">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
@@ -28,26 +28,35 @@
 <a name="json.ref.boost__json__value_to"></a><a class="link" href="boost__json__value_to.html" title="value_to">value_to</a>
 </h4></div></div></div>
 <p>
-        <a class="indexterm" name="idm65891"></a>
+        <a class="indexterm" name="idm67664"></a>
       </p>
 <p>
         Convert a <a class="link" href="boost__json__value.html" title="value"><code class="computeroutput"><span class="identifier">value</span></code></a>
         to an object of type <code class="computeroutput"><span class="identifier">T</span></code>.
       </p>
 <pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
+    <span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span>
+    <span class="keyword">class</span> <span class="identifier">Context</span><span class="special">&gt;</span>
+<span class="identifier">T</span>
+<a class="link" href="boost__json__value_to/overload1.html" title="value_to (1 of 3 overloads)">value_to</a><span class="special">(</span>
+    <span class="identifier">value</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">jv</span><span class="special">,</span>
+    <span class="identifier">Context</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">ctx</span><span class="special">);</span>
+  <span class="emphasis"><em>» <a class="link" href="boost__json__value_to/overload1.html" title="value_to (1 of 3 overloads)"><code class="computeroutput"><span class="identifier">more</span><span class="special">...</span></code></a></em></span>
+
+<span class="keyword">template</span><span class="special">&lt;</span>
     <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
 <span class="identifier">T</span>
-<a class="link" href="boost__json__value_to/overload1.html" title="value_to (1 of 2 overloads)">value_to</a><span class="special">(</span>
+<a class="link" href="boost__json__value_to/overload2.html" title="value_to (2 of 3 overloads)">value_to</a><span class="special">(</span>
     <span class="keyword">const</span> <span class="identifier">value</span><span class="special">&amp;</span> <span class="identifier">jv</span><span class="special">);</span>
-  <span class="emphasis"><em>» <a class="link" href="boost__json__value_to/overload1.html" title="value_to (1 of 2 overloads)"><code class="computeroutput"><span class="identifier">more</span><span class="special">...</span></code></a></em></span>
+  <span class="emphasis"><em>» <a class="link" href="boost__json__value_to/overload2.html" title="value_to (2 of 3 overloads)"><code class="computeroutput"><span class="identifier">more</span><span class="special">...</span></code></a></em></span>
 
 <span class="keyword">template</span><span class="special">&lt;</span>
     <span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span>
     <span class="keyword">class</span> <span class="identifier">U</span><span class="special">&gt;</span>
 <span class="identifier">T</span>
-<a class="link" href="boost__json__value_to/overload2.html" title="value_to (2 of 2 overloads)">value_to</a><span class="special">(</span>
+<a class="link" href="boost__json__value_to/overload3.html" title="value_to (3 of 3 overloads)">value_to</a><span class="special">(</span>
     <span class="identifier">U</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">jv</span><span class="special">)</span> <span class="special">=</span> <span class="keyword">delete</span><span class="special">;</span>
-  <span class="emphasis"><em>» <a class="link" href="boost__json__value_to/overload2.html" title="value_to (2 of 2 overloads)"><code class="computeroutput"><span class="identifier">more</span><span class="special">...</span></code></a></em></span>
+  <span class="emphasis"><em>» <a class="link" href="boost__json__value_to/overload3.html" title="value_to (3 of 3 overloads)"><code class="computeroutput"><span class="identifier">more</span><span class="special">...</span></code></a></em></span>
 </pre>
 </div>
 <div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>

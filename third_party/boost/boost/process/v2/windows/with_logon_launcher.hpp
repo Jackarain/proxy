@@ -20,7 +20,7 @@ namespace windows
 /// A windows launcher using CreateProcessWithLogon instead of CreateProcess
 struct with_logon_launcher : default_launcher
 {
-  std::wstring username, domain, password;
+  std::wstring username, password, domain;
   DWORD logon_flags{0u};
 
   with_logon_launcher(std::wstring username = L"",
@@ -72,7 +72,7 @@ struct with_logon_launcher : default_launcher
       auto proc =  (*this)(std::move(exec), ec, executable, std::forward<Args>(args), std::forward<Inits>(inits)...);
 
       if (ec)
-          asio::detail::throw_error(ec, "with_logon_launcher");
+          v2::detail::throw_error(ec, "with_logon_launcher");
 
       return proc;
   }

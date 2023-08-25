@@ -93,17 +93,7 @@ struct basic_process
       : basic_process(default_process_launcher()(std::move(executor), exe, args, std::forward<Inits>(inits)...))
   {
   }
-    /// Construct a child from a property list and launch it using the default launcher..
-  template<typename ... Inits>
-  explicit basic_process(
-      executor_type executor,
-      const filesystem::path& exe,
-      std::initializer_list<wstring_view> args,
-      Inits&&... inits)
-      : basic_process(default_process_launcher()(std::move(executor), exe, args, std::forward<Inits>(inits)...))
-  {
-  }
-
+  
   /// Construct a child from a property list and launch it using the default launcher..
   template<typename Args, typename ... Inits>
   explicit basic_process(
@@ -265,7 +255,7 @@ struct basic_process
   {
     error_code ec;
     if (running(ec))
-      wait(ec);
+      process_handle_.wait(exit_status_, ec);
     if (ec)
       detail::throw_error(ec, "wait failed");
     return exit_code();
@@ -287,8 +277,9 @@ struct basic_process
     return boost::exchange(process_handle_, get_executor());
 #endif
   }
-  // Get the native 
+  /// Get the native
   native_handle_type native_handle() {return process_handle_.native_handle(); }
+  /// Return the evaluated exit_code.
   int exit_code() const
   {
     return evaluate_exit_code(exit_status_);
@@ -334,7 +325,7 @@ struct basic_process
   /** Note that this might be a process that already exited.*/
   bool is_open() const { return process_handle_.is_open(); }
   
-  /// Asynchronously wait for the process to exit and deliver the portable exit-code in the completion handler.
+  /// Asynchronously wait for the process to exit and deliver the native exit-code in the completion handler.
   template <BOOST_PROCESS_V2_COMPLETION_TOKEN_FOR(void (error_code, int))
             WaitHandler BOOST_PROCESS_V2_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
   BOOST_PROCESS_V2_INITFN_AUTO_RESULT_TYPE(WaitHandler, void (error_code, int))

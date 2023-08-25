@@ -35,7 +35,7 @@ namespace grammar {
     @par Example
     Rules are used with the function @ref grammar::parse.
     @code
-    result< optional< string_view > > rv = parse( "", optional_rule( token_rule( alpha_chars ) ) );
+    system::result< optional< core::string_view > > rv = parse( "", optional_rule( token_rule( alpha_chars ) ) );
     @endcode
 
     @par BNF
@@ -65,10 +65,10 @@ template<class Rule>
 struct optional_rule_t
     : private empty_value<Rule>
 {
-    using value_type = optional<
+    using value_type = boost::optional<
         typename Rule::value_type>;
 
-    result<value_type>
+    system::result<value_type>
     parse(
         char const*& it,
         char const* end) const;

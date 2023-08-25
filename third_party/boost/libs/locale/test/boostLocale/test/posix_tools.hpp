@@ -14,10 +14,10 @@
 #endif
 
 #ifndef LC_ALL_MASK
-using locale_t = int;
+using locale_t = void*;
 locale_t newlocale(int, const char*, locale_t)
 {
-    return 0;
+    return nullptr;
 }
 void freelocale(locale_t) {}
 #    define LC_ALL_MASK 0xFFFFFFFF
@@ -25,7 +25,7 @@ void freelocale(locale_t) {}
 
 class locale_holder {
     locale_t l_;
-    void reset(const locale_t l = 0)
+    void reset(const locale_t l = nullptr)
     {
         if(l_)
             freelocale(l_);
@@ -33,7 +33,7 @@ class locale_holder {
     }
 
 public:
-    explicit locale_holder(locale_t l = 0) : l_(l) {}
+    explicit locale_holder(locale_t l = nullptr) : l_(l) {}
     ~locale_holder() { reset(); }
     locale_holder(const locale_holder&) = delete;
     locale_holder& operator=(const locale_holder&) = delete;
@@ -47,7 +47,7 @@ public:
 
 inline bool has_posix_locale(const std::string& name)
 {
-    locale_holder l(newlocale(LC_ALL_MASK, name.c_str(), 0));
+    locale_holder l(newlocale(LC_ALL_MASK, name.c_str(), nullptr));
     return !!l;
 }
 

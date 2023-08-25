@@ -28,9 +28,6 @@
 <a name="json.ref.boost__json__array.at.overload2"></a><a class="link" href="overload2.html" title="array::at (2 of 3 overloads)">array::at
           (2 of 3 overloads)</a>
 </h6></div></div></div>
-<p>
-            Access an element, with bounds checking.
-          </p>
 <h6>
 <a name="json.ref.boost__json__array.at.overload2.h0"></a>
             <span class="phrase"><a name="json.ref.boost__json__array.at.overload2.synopsis"></a></span><a class="link" href="overload2.html#json.ref.boost__json__array.at.overload2.synopsis">Synopsis</a>
@@ -39,91 +36,6 @@
 <span class="identifier">at</span><span class="special">(</span>
     <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">pos</span><span class="special">);</span>
 </pre>
-<h6>
-<a name="json.ref.boost__json__array.at.overload2.h1"></a>
-            <span class="phrase"><a name="json.ref.boost__json__array.at.overload2.description"></a></span><a class="link" href="overload2.html#json.ref.boost__json__array.at.overload2.description">Description</a>
-          </h6>
-<p>
-            Returns a reference to the element specified at location <code class="computeroutput"><span class="identifier">pos</span></code>, with bounds checking. If <code class="computeroutput"><span class="identifier">pos</span></code> is not within the range of the
-            container, an exception of type <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">out_of_range</span></code>
-            is thrown.
-          </p>
-<h6>
-<a name="json.ref.boost__json__array.at.overload2.h2"></a>
-            <span class="phrase"><a name="json.ref.boost__json__array.at.overload2.complexity"></a></span><a class="link" href="overload2.html#json.ref.boost__json__array.at.overload2.complexity">Complexity</a>
-          </h6>
-<p>
-            Constant.
-          </p>
-<h6>
-<a name="json.ref.boost__json__array.at.overload2.h3"></a>
-            <span class="phrase"><a name="json.ref.boost__json__array.at.overload2.parameters"></a></span><a class="link" href="overload2.html#json.ref.boost__json__array.at.overload2.parameters">Parameters</a>
-          </h6>
-<div class="informaltable"><table class="table">
-<colgroup>
-<col>
-<col>
-</colgroup>
-<thead><tr>
-<th>
-                    <p>
-                      Name
-                    </p>
-                  </th>
-<th>
-                    <p>
-                      Description
-                    </p>
-                  </th>
-</tr></thead>
-<tbody><tr>
-<td>
-                    <p>
-                      <code class="computeroutput"><span class="identifier">pos</span></code>
-                    </p>
-                  </td>
-<td>
-                    <p>
-                      A zero-based index.
-                    </p>
-                  </td>
-</tr></tbody>
-</table></div>
-<h6>
-<a name="json.ref.boost__json__array.at.overload2.h4"></a>
-            <span class="phrase"><a name="json.ref.boost__json__array.at.overload2.exceptions"></a></span><a class="link" href="overload2.html#json.ref.boost__json__array.at.overload2.exceptions">Exceptions</a>
-          </h6>
-<div class="informaltable"><table class="table">
-<colgroup>
-<col>
-<col>
-</colgroup>
-<thead><tr>
-<th>
-                    <p>
-                      Type
-                    </p>
-                  </th>
-<th>
-                    <p>
-                      Thrown On
-                    </p>
-                  </th>
-</tr></thead>
-<tbody><tr>
-<td>
-                    <p>
-                      <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">out_of_range</span></code>
-                    </p>
-                  </td>
-<td>
-                    <p>
-                      <code class="computeroutput"><span class="identifier">pos</span> <span class="special">&gt;=</span>
-                      <span class="identifier">size</span><span class="special">()</span></code>
-                    </p>
-                  </td>
-</tr></tbody>
-</table></div>
 </div>
 <div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying

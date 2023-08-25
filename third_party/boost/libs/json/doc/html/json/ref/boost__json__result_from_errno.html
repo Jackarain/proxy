@@ -28,7 +28,7 @@
 <a name="json.ref.boost__json__result_from_errno"></a><a class="link" href="boost__json__result_from_errno.html" title="result_from_errno">result_from_errno</a>
 </h4></div></div></div>
 <p>
-        <a class="indexterm" name="idm66982"></a>
+        <a class="indexterm" name="idm69906"></a>
       </p>
 <p>
         Create <a class="link" href="boost__json__result.html" title="result"><code class="computeroutput"><span class="identifier">result</span></code></a>
@@ -39,7 +39,7 @@
         <span class="phrase"><a name="json.ref.boost__json__result_from_errno.synopsis"></a></span><a class="link" href="boost__json__result_from_errno.html#json.ref.boost__json__result_from_errno.synopsis">Synopsis</a>
       </h5>
 <p>
-        Defined in header <code class="literal">&lt;<a href="https://github.com/cppalliance/json/blob/master/include/boost/json/system_error.hpp" target="_top">boost/json/system_error.hpp</a>&gt;</code>
+        Defined in header <code class="literal">&lt;<a href="https://github.com/boostorg/json/blob/master/include/boost/json/system_error.hpp" target="_top">boost/json/system_error.hpp</a>&gt;</code>
       </p>
 <pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span>
     <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
@@ -76,15 +76,15 @@
 
 <span class="keyword">class</span> <span class="identifier">value</span><span class="special">;</span>
 
-<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">template</span> <span class="special">&lt;</span> <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
 <span class="keyword">struct</span> <span class="identifier">try_value_to_tag</span><span class="special">;</span>
 
-<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">&gt;</span>
+<span class="keyword">template</span> <span class="special">&lt;</span> <span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">&gt;</span>
 <span class="keyword">struct</span> <span class="identifier">result_for</span><span class="special">;</span>
 
-<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">template</span> <span class="special">&lt;</span> <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
 <span class="keyword">typename</span> <span class="identifier">result_for</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span> <span class="identifier">value</span><span class="special">&gt;::</span><span class="identifier">type</span>
-<span class="identifier">result_from_errno</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">e</span><span class="special">,</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">source_location</span> <span class="keyword">const</span><span class="special">*</span> <span class="identifier">loc</span><span class="special">)</span> <span class="keyword">noexcept</span>
+<span class="identifier">result_from_errno</span><span class="special">(</span> <span class="keyword">int</span> <span class="identifier">e</span><span class="special">,</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">source_location</span> <span class="keyword">const</span> <span class="special">*</span> <span class="identifier">loc</span><span class="special">)</span> <span class="keyword">noexcept</span>
 
 <span class="special">}</span>
 <span class="special">}</span>
@@ -94,12 +94,12 @@
 
 <span class="keyword">class</span> <span class="identifier">my_class</span><span class="special">;</span>
 <span class="special">...</span>
-<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">JsonValue</span><span class="special">&gt;</span>
+<span class="keyword">template</span><span class="special">&lt;</span> <span class="keyword">class</span> <span class="identifier">JsonValue</span><span class="special">&gt;</span>
 <span class="identifier">boost</span><span class="special">::</span><span class="identifier">json</span><span class="special">::</span><span class="identifier">result_for</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">,</span> <span class="identifier">JsonValue</span><span class="special">&gt;</span>
 <span class="identifier">tag_invoke</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">json</span><span class="special">::</span><span class="identifier">try_value_to_tag</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">&gt;,</span> <span class="keyword">const</span> <span class="identifier">JsonValue</span><span class="special">&amp;</span> <span class="identifier">jv</span><span class="special">)</span>
 <span class="special">{</span>
     <span class="identifier">BOOST_STATIC_CONSTEXPR</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">source_location</span> <span class="identifier">loc</span> <span class="special">=</span> <span class="identifier">BOOST_CURRENT_LOCATION</span><span class="special">;</span>
-    <span class="keyword">if</span><span class="special">(</span> <span class="special">!</span><span class="identifier">jv</span><span class="special">.</span><span class="identifier">is_null</span><span class="special">()</span> <span class="special">)</span>
+    <span class="keyword">if</span> <span class="special">(</span> <span class="special">!</span><span class="identifier">jv</span><span class="special">.</span><span class="identifier">is_null</span><span class="special">()</span> <span class="special">)</span>
         <span class="keyword">return</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">json</span><span class="special">::</span><span class="identifier">result_from_errno</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">&gt;(</span><span class="identifier">EINVAL</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">loc</span><span class="special">);</span>
     <span class="keyword">return</span> <span class="identifier">my_class</span><span class="special">();</span>
 <span class="special">}</span>
@@ -219,7 +219,7 @@
         <a href="https://www.boost.org/doc/libs/develop/libs/system/doc/html/system.html#ref_generic_category" target="_top"><code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">system</span><span class="special">::</span><span class="identifier">generic_category</span></code></a>, <a href="https://www.boost.org/doc/libs/master/libs/assert/doc/html/assert.html#source_location_support" target="_top"><code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">source_location</span></code></a>.
       </p>
 <p>
-        Convenience header <code class="literal">&lt;<a href="https://github.com/cppalliance/json/blob/master/include/boost/json.hpp" target="_top">boost/json.hpp</a>&gt;</code>
+        Convenience header <code class="literal">&lt;<a href="https://github.com/boostorg/json/blob/master/include/boost/json.hpp" target="_top">boost/json.hpp</a>&gt;</code>
       </p>
 </div>
 <div class="copyright-footer">Copyright © 2019, 2020 Vinnie Falco<br>Copyright © 2020 Krystian Stasiowski<br>Copyright © 2022 Dmitry Arkhipov<p>

@@ -101,7 +101,7 @@
 <constructor><parameter name="arr_"><paramtype>T const *</paramtype></parameter><parameter name="size_"><paramtype>std::size_t</paramtype></parameter></constructor>
 </class><struct-specialization name="is_dataset"><template>
       <template-type-parameter name="T"/>
-    </template><specialization><template-arg>array&lt; T &gt;</template-arg></specialization><inherit access="public">true_</inherit><purpose>An array dataset is a dataset. </purpose></struct-specialization>
+    </template><specialization><template-arg>array&lt; T &gt;</template-arg></specialization><inherit access="public">mpl::true_</inherit><purpose>An array dataset is a dataset. </purpose></struct-specialization>
 
 
 
@@ -114,7 +114,10 @@
 
 
 
-
+<function name="make"><type><classname>monomorphic::array</classname>&lt; typename boost::remove_const&lt; T &gt;::type &gt;</type><template>
+          <template-type-parameter name="T"/>
+          <template-nontype-parameter name="size"><type>std::size_t</type></template-nontype-parameter>
+        </template><parameter name="a"><paramtype>T(&amp;)</paramtype></parameter></function>
 
 
 
@@ -180,7 +183,7 @@
 <typedef name="iterator"><type>col_type::const_iterator</type></typedef>
 <data-member name="arity" specifiers="static"><type>const int</type></data-member>
 <method-group name="public member functions">
-<method name="col" cv="const"><type>C const  &amp;</type><purpose>Returns the underlying collection. </purpose></method>
+<method name="col" cv="const"><type>C const &amp;</type><purpose>Returns the underlying collection. </purpose></method>
 <method name="size" cv="const"><type><classname>data::size_t</classname></type><purpose>dataset interface </purpose></method>
 <method name="begin" cv="const"><type>iterator</type></method>
 </method-group>
@@ -188,7 +191,7 @@
 <constructor><parameter name="c"><paramtype><classname>collection</classname> &amp;&amp;</paramtype></parameter><purpose>Move constructor. </purpose></constructor>
 </class><struct-specialization name="is_dataset"><template>
       <template-type-parameter name="C"/>
-    </template><specialization><template-arg>collection&lt; C &gt;</template-arg></specialization><inherit access="public">true_</inherit><purpose>A collection from a forward iterable container is a dataset. </purpose></struct-specialization>
+    </template><specialization><template-arg>collection&lt; C &gt;</template-arg></specialization><inherit access="public">mpl::true_</inherit><purpose>A collection from a forward iterable container is a dataset. </purpose></struct-specialization>
 
 
 
@@ -200,7 +203,9 @@
 </namespace>
 
 
-
+<function name="make"><type>std::enable_if&lt; <classname>is_container_forward_iterable</classname>&lt; C &gt;::value, <classname>monomorphic::collection</classname>&lt; C &gt; &gt;::type</type><template>
+          <template-type-parameter name="C"/>
+        </template><parameter name="c"><paramtype>C &amp;&amp;</paramtype></parameter></function>
 
 
 
@@ -281,7 +286,7 @@
 </class><struct-specialization name="is_dataset"><template>
       <template-type-parameter name="dataset_t"/>
       <template-nontype-parameter name="Args"><type>class ...</type></template-nontype-parameter>
-    </template><specialization><template-arg>delayed_dataset&lt; dataset_t</template-arg><template-arg>Args... &gt;</template-arg></specialization><inherit access="public">true_</inherit><purpose>A lazy/delayed dataset is a dataset. </purpose></struct-specialization>
+    </template><specialization><template-arg>delayed_dataset&lt; dataset_t</template-arg><template-arg>Args... &gt;</template-arg></specialization><inherit access="public">boost::mpl::true_</inherit><purpose>A lazy/delayed dataset is a dataset. </purpose></struct-specialization>
 
 
 
@@ -299,7 +304,10 @@
 
 
 
-
+<function name="make_delayed"><type>std::enable_if&lt; <classname>monomorphic::is_dataset</classname>&lt; dataset_t &gt;::value, <classname>monomorphic::delayed_dataset</classname>&lt; dataset_t, Args... &gt; &gt;::type</type><template>
+          <template-type-parameter name="dataset_t"/>
+          <template-nontype-parameter name="Args"><type>class ...</type></template-nontype-parameter>
+        </template><parameter name="args"><paramtype>Args...</paramtype></parameter><purpose>Delayed dataset instanciation. </purpose></function>
 
 
 
@@ -363,7 +371,7 @@
       <template-nontype-parameter name="DataSetTT"><type>class...</type></template-nontype-parameter>
     </template><specialization><template-arg>DataSet0</template-arg><template-arg>DataSet1</template-arg><template-arg>DataSetTT...</template-arg></specialization><inherit access="public">std::integral_constant&lt; bool, is_dataset&lt; DataSet0 &gt;::value||has_dataset&lt; DataSet1, DataSetTT... &gt;::value &gt;</inherit></struct-specialization><struct name="is_dataset"><template>
       <template-type-parameter name="DataSet"/>
-    </template><inherit access="public">false_</inherit><purpose>Helper metafunction indicating if the specified type is a dataset. </purpose></struct><struct-specialization name="is_dataset"><template>
+    </template><inherit access="public">mpl::false_</inherit><purpose>Helper metafunction indicating if the specified type is a dataset. </purpose></struct><struct-specialization name="is_dataset"><template>
       <template-type-parameter name="DataSet"/>
     </template><specialization><template-arg>DataSet &amp;</template-arg></specialization><inherit access="public">boost::unit_test::data::monomorphic::is_dataset&lt; DataSet &gt;</inherit><purpose>A reference to a dataset is a dataset. </purpose></struct-specialization><struct-specialization name="is_dataset"><template>
       <template-type-parameter name="DataSet"/>
@@ -382,37 +390,28 @@
 <namespace name="result_of">
 <struct name="make"><template>
       <template-type-parameter name="DataSet"/>
-    </template><purpose>Result of the make call. </purpose><data-member name="type"><type>decltype(data::make(declval&lt; DataSet &gt;())) typedef</type></data-member>
+    </template><purpose>Result of the make call. </purpose><typedef name="type"><type>decltype(data::make(declval&lt; DataSet &gt;()))</type></typedef>
 </struct></namespace>
-<overloaded-function name="make"><signature><type>std::enable_if&lt; <classname>monomorphic::is_dataset</classname>&lt; DataSet &gt;::value, DataSet &gt;::type</type><template>
+<function name="make"><type>std::enable_if&lt; <classname>monomorphic::is_dataset</classname>&lt; DataSet &gt;::value, DataSet &gt;::type</type><template>
           <template-type-parameter name="DataSet"/>
-        </template><parameter name="ds"><paramtype>DataSet &amp;&amp;</paramtype></parameter></signature><signature><type>std::enable_if&lt;!<classname>is_container_forward_iterable</classname>&lt; T &gt;::value &amp;&amp;!<classname>monomorphic::is_dataset</classname>&lt; T &gt;::value &amp;&amp;!is_array&lt; typename remove_reference&lt; T &gt;::type &gt;::value, <classname>monomorphic::singleton</classname>&lt; T &gt; &gt;::type</type><template>
-          <template-type-parameter name="T"/>
-        </template><parameter name="v"><paramtype>T &amp;&amp;</paramtype></parameter></signature><signature><type>std::enable_if&lt; <classname>is_container_forward_iterable</classname>&lt; C &gt;::value, <classname>monomorphic::collection</classname>&lt; C &gt; &gt;::type</type><template>
-          <template-type-parameter name="C"/>
-        </template><parameter name="c"><paramtype>C &amp;&amp;</paramtype></parameter></signature><signature><type><classname>monomorphic::array</classname>&lt; typename boost::remove_const&lt; T &gt;::type &gt;</type><template>
-          <template-type-parameter name="T"/>
-          <template-nontype-parameter name="size"><type>std::size_t</type></template-nontype-parameter>
-        </template><parameter name="a"><paramtype>T(&amp;)</paramtype></parameter></signature><signature><type><classname>monomorphic::singleton</classname>&lt; char * &gt;</type><parameter name="str"><paramtype>char *</paramtype></parameter></signature><signature><type><classname>monomorphic::singleton</classname>&lt; char const  * &gt;</type><parameter name="str"><paramtype>char const *</paramtype></parameter></signature><signature><type><classname>monomorphic::init_list</classname>&lt; T &gt;</type><template>
-          <template-type-parameter name="T"/>
-        </template><parameter name=""><paramtype>std::initializer_list&lt; T &gt; &amp;&amp;</paramtype></parameter></signature><signature><type>std::enable_if&lt; !<classname>monomorphic::has_dataset</classname>&lt; T, Args... &gt;::value, <classname>monomorphic::init_list</classname>&lt; T &gt;&gt;::type</type><template>
-          <template-type-parameter name="T"/>
-          <template-nontype-parameter name="Args"><type>class ...</type></template-nontype-parameter>
-        </template><parameter name="arg0"><paramtype>T &amp;&amp;</paramtype></parameter><parameter name="args"><paramtype>Args &amp;&amp;...</paramtype></parameter></signature><purpose>Creates a dataset from a value, a collection or an array. </purpose><description><para>This function has several overloads: <programlisting language="c++">// returns ds if ds is already a dataset
+        </template><parameter name="ds"><paramtype>DataSet &amp;&amp;</paramtype></parameter><purpose>Creates a dataset from a value, a collection or an array. </purpose><description><para>This function has several overloads: <programlisting language="c++">// returns ds if ds is already a dataset
 template &lt;typename DataSet&gt; DataSet make(DataSet&amp;&amp; ds); 
 
 // creates a singleton dataset, for non forward iterable and non dataset type T
 // (a C string is not considered as a sequence).
-template &lt;typename T&gt; monomorphic::singleton&lt;T&gt; make(T&amp;&amp; v); 
-monomorphic::singleton&lt;char*&gt; make( char* str );
-monomorphic::singleton&lt;char const*&gt; make( char const* str );
+template &lt;typename T&gt; <classname alt="boost::unit_test::data::monomorphic::singleton">monomorphic::singleton&lt;T&gt;</classname> make(T&amp;&amp; v); 
+<classname alt="boost::unit_test::data::monomorphic::singleton">monomorphic::singleton&lt;char*&gt;</classname> make( char* str );
+<classname alt="boost::unit_test::data::monomorphic::singleton">monomorphic::singleton&lt;char const*&gt;</classname> make( char const* str );
 
 // creates a collection dataset, for forward iterable and non dataset type C
-template &lt;typename C&gt; monomorphic::collection&lt;C&gt; make(C &amp;&amp; c);
+template &lt;typename C&gt; <classname alt="boost::unit_test::data::monomorphic::collection">monomorphic::collection&lt;C&gt;</classname> make(C &amp;&amp; c);
 
 // creates an array dataset
-template&lt;typename T, std::size_t size&gt; monomorphic::array&lt;T&gt; make( T (&amp;a)[size] );
-</programlisting> </para></description></overloaded-function>
+template&lt;typename T, std::size_t size&gt; <classname alt="boost::unit_test::data::monomorphic::array">monomorphic::array&lt;T&gt;</classname> make( T (&amp;a)[size] );
+</programlisting> </para></description></function>
+<function name="make"><type>std::enable_if&lt;!<classname>is_container_forward_iterable</classname>&lt; T &gt;::value &amp;&amp;!<classname>monomorphic::is_dataset</classname>&lt; T &gt;::value &amp;&amp;!is_array&lt; typenameremove_reference&lt; T &gt;::type &gt;::value, <classname>monomorphic::singleton</classname>&lt; T &gt; &gt;::type</type><template>
+          <template-type-parameter name="T"/>
+        </template><parameter name="v"><paramtype>T &amp;&amp;</paramtype></parameter></function>
 
 
 
@@ -420,10 +419,6 @@ template&lt;typename T, std::size_t size&gt; monomorphic::array&lt;T&gt; make( T
 
 
 
-<function name="make_delayed"><type>std::enable_if&lt; <classname>monomorphic::is_dataset</classname>&lt; dataset_t &gt;::value, <classname>monomorphic::delayed_dataset</classname>&lt; dataset_t, Args... &gt;&gt;::type</type><template>
-          <template-type-parameter name="dataset_t"/>
-          <template-nontype-parameter name="Args"><type>class ...</type></template-nontype-parameter>
-        </template><parameter name="args"><paramtype>Args...</paramtype></parameter><purpose>Delayed dataset instanciation. </purpose></function>
 
 
 
@@ -491,7 +486,7 @@ template&lt;typename T, std::size_t size&gt; monomorphic::array&lt;T&gt; make( T
 </listitem><listitem><para>the member function <computeroutput>reset</computeroutput> should put the state of the object in the same state as right after its instanciation </para>
 </listitem></itemizedlist>
 </para></description><struct name="iterator"><method-group name="public member functions">
-<method name="operator *" cv="const"><type>sample const  &amp;</type></method>
+<method name="operator*" cv="const"><type>sample const &amp;</type></method>
 <method name="operator++"><type>void</type></method>
 </method-group>
 <constructor specifiers="explicit"><parameter name="gen"><paramtype>Generator &amp;</paramtype></parameter></constructor>
@@ -506,7 +501,7 @@ template&lt;typename T, std::size_t size&gt; monomorphic::array&lt;T&gt; make( T
 <constructor><parameter name="rhs"><paramtype><classname>generated_by</classname> &amp;&amp;</paramtype></parameter></constructor>
 </class><struct-specialization name="is_dataset"><template>
       <template-type-parameter name="Generator"/>
-    </template><specialization><template-arg>generated_by&lt; Generator &gt;</template-arg></specialization><inherit access="public">true_</inherit><purpose>A generated dataset is a dataset. </purpose></struct-specialization>
+    </template><specialization><template-arg>generated_by&lt; Generator &gt;</template-arg></specialization><inherit access="public">boost::mpl::true_</inherit><purpose>A generated dataset is a dataset. </purpose></struct-specialization>
 
 
 
@@ -711,11 +706,7 @@ template&lt;typename T, std::size_t size&gt; monomorphic::array&lt;T&gt; make( T
 
 
 
-<overloaded-function name="random"><signature><type><classname>monomorphic::generated_by</classname>&lt; <classname>monomorphic::random_t</classname>&lt;&gt; &gt;</type></signature><signature><type><classname>monomorphic::generated_by</classname>&lt; <classname>monomorphic::random_t</classname>&lt; SampleType &gt; &gt;</type><template>
-          <template-type-parameter name="SampleType"/>
-        </template><parameter name="begin"><paramtype>SampleType</paramtype></parameter><parameter name="end"><paramtype>SampleType</paramtype></parameter></signature><signature><type><emphasis>unspecified</emphasis></type><template>
-          <template-type-parameter name="Params"/>
-        </template><parameter name="params"><paramtype>Params const &amp;</paramtype></parameter></signature><purpose>Returns an infinite sequence of random numbers. </purpose><description><para>The following overloads are available: <programlisting language="c++">auto d = random();
+<function name="random"><type><classname>monomorphic::generated_by</classname>&lt; <classname>monomorphic::random_t</classname>&lt;&gt; &gt;</type><purpose>Returns an infinite sequence of random numbers. </purpose><description><para>The following overloads are available: <programlisting language="c++">auto d = random();
 auto d = random(begin, end);
 auto d = random(params);
 </programlisting></para><para><itemizedlist>
@@ -730,9 +721,13 @@ auto d = random(params);
 </listitem></itemizedlist>
 </para><para>The function returns an object that implements the dataset API. <note><para>This function is available only for C++11 capable compilers. </para>
 </note>
-</para></description></overloaded-function>
-
-
+</para></description></function>
+<function name="random"><type><classname>monomorphic::generated_by</classname>&lt; <classname>monomorphic::random_t</classname>&lt; SampleType &gt; &gt;</type><template>
+          <template-type-parameter name="SampleType"/>
+        </template><parameter name="begin"><paramtype>SampleType</paramtype></parameter><parameter name="end"><paramtype>SampleType</paramtype></parameter></function>
+<function name="random"><type><emphasis>unspecified</emphasis></type><template>
+          <template-type-parameter name="Params"/>
+        </template><parameter name="params"><paramtype>Params const &amp;</paramtype></parameter></function>
 
 
 
@@ -816,20 +811,10 @@ auto d = random(params);
 
 
 
-<overloaded-function name="xrange"><signature><type><classname>monomorphic::generated_by</classname>&lt; <classname>monomorphic::xrange_t</classname>&lt; SampleType &gt; &gt;</type><template>
+<function name="xrange"><type><classname>monomorphic::generated_by</classname>&lt; <classname>monomorphic::xrange_t</classname>&lt; SampleType &gt; &gt;</type><template>
           <template-type-parameter name="SampleType"/>
           <template-type-parameter name="Params"/>
-        </template><parameter name="params"><paramtype>Params const &amp;</paramtype></parameter></signature><signature><type><classname>monomorphic::generated_by</classname>&lt; <classname>monomorphic::xrange_t</classname>&lt; SampleType &gt; &gt;</type><template>
-          <template-type-parameter name="SampleType"/>
-        </template><parameter name="end_val"><paramtype>SampleType const &amp;</paramtype></parameter></signature><signature><type>enable_if_c&lt; <classname>nfp::is_named_param_pack</classname>&lt; Params &gt;::value, <classname>monomorphic::generated_by</classname>&lt; <classname>monomorphic::xrange_t</classname>&lt; SampleType &gt; &gt; &gt;::type</type><template>
-          <template-type-parameter name="SampleType"/>
-          <template-type-parameter name="Params"/>
-        </template><parameter name="end_val"><paramtype>SampleType const &amp;</paramtype></parameter><parameter name="params"><paramtype>Params const &amp;</paramtype></parameter></signature><signature><type><classname>monomorphic::generated_by</classname>&lt; <classname>monomorphic::xrange_t</classname>&lt; SampleType &gt; &gt;</type><template>
-          <template-type-parameter name="SampleType"/>
-        </template><parameter name="begin_val"><paramtype>SampleType const &amp;</paramtype></parameter><parameter name="end_val"><paramtype>SampleType const &amp;</paramtype></parameter></signature><signature><type><classname>monomorphic::generated_by</classname>&lt; <classname>monomorphic::xrange_t</classname>&lt; SampleType &gt; &gt;</type><template>
-          <template-type-parameter name="SampleType"/>
-          <template-type-parameter name="StepType"/>
-        </template><parameter name="begin_val"><paramtype>SampleType const &amp;</paramtype></parameter><parameter name="end_val"><paramtype>SampleType const &amp;</paramtype></parameter><parameter name="step_val"><paramtype>StepType const &amp;</paramtype></parameter></signature><purpose>Creates a range (sequence) dataset. </purpose><description><para>The following overloads are available: <programlisting language="c++">auto d = xrange();
+        </template><parameter name="params"><paramtype>Params const &amp;</paramtype></parameter><purpose>Creates a range (sequence) dataset. </purpose><description><para>The following overloads are available: <programlisting language="c++">auto d = xrange();
 auto d = xrange(end_val);
 auto d = xrange(end_val, param);
 auto d = xrange(begin_val, end_val);
@@ -850,11 +835,21 @@ auto d = xrange(param);
 </listitem></itemizedlist>
 </para><para>The returned value is an object that implements the dataset API.</para><para><note><para>the step size cannot be null, and it should be positive if <computeroutput>begin_val</computeroutput> &lt; <computeroutput>end_val</computeroutput>, negative otherwise. </para>
 </note>
-</para></description></overloaded-function>
-
-
-
-
+</para></description></function>
+<function name="xrange"><type><classname>monomorphic::generated_by</classname>&lt; <classname>monomorphic::xrange_t</classname>&lt; SampleType &gt; &gt;</type><template>
+          <template-type-parameter name="SampleType"/>
+        </template><parameter name="end_val"><paramtype>SampleType const &amp;</paramtype></parameter></function>
+<function name="xrange"><type>enable_if_c&lt; <classname>nfp::is_named_param_pack</classname>&lt; Params &gt;::value, <classname>monomorphic::generated_by</classname>&lt; <classname>monomorphic::xrange_t</classname>&lt; SampleType &gt; &gt; &gt;::type</type><template>
+          <template-type-parameter name="SampleType"/>
+          <template-type-parameter name="Params"/>
+        </template><parameter name="end_val"><paramtype>SampleType const &amp;</paramtype></parameter><parameter name="params"><paramtype>Params const &amp;</paramtype></parameter></function>
+<function name="xrange"><type><classname>monomorphic::generated_by</classname>&lt; <classname>monomorphic::xrange_t</classname>&lt; SampleType &gt; &gt;</type><template>
+          <template-type-parameter name="SampleType"/>
+        </template><parameter name="begin_val"><paramtype>SampleType const &amp;</paramtype></parameter><parameter name="end_val"><paramtype>SampleType const &amp;</paramtype></parameter></function>
+<function name="xrange"><type><classname>monomorphic::generated_by</classname>&lt; <classname>monomorphic::xrange_t</classname>&lt; SampleType &gt; &gt;</type><template>
+          <template-type-parameter name="SampleType"/>
+          <template-type-parameter name="StepType"/>
+        </template><parameter name="begin_val"><paramtype>SampleType const &amp;</paramtype></parameter><parameter name="end_val"><paramtype>SampleType const &amp;</paramtype></parameter><parameter name="step_val"><paramtype>StepType const &amp;</paramtype></parameter></function>
 </namespace>
 
 
@@ -875,7 +870,7 @@ auto d = xrange(param);
       <template-type-parameter name="DataSet2"/>
     </template><purpose>Implements the dataset resulting from a cartesian product/grid operation on datasets. </purpose><description><para>The arity of the resulting dataset is the sum of the arity of its operands. </para></description><struct name="iterator"><typedef name="iterator_sample"><type>decltype(sample_merge(*std::declval&lt; dataset1_iter &gt;(), *std::declval&lt; dataset2_iter &gt;()))</type></typedef>
 <method-group name="public member functions">
-<method name="operator *" cv="const"><type>auto</type></method>
+<method name="operator*" cv="const"><type>auto</type></method>
 <method name="operator++"><type>void</type></method>
 </method-group>
 <constructor specifiers="explicit"><parameter name="iter1"><paramtype>dataset1_iter</paramtype></parameter><parameter name="ds2"><paramtype>DataSet2 const &amp;</paramtype></parameter></constructor>
@@ -889,24 +884,24 @@ auto d = xrange(param);
 </class><struct-specialization name="is_dataset"><template>
       <template-type-parameter name="DataSet1"/>
       <template-type-parameter name="DataSet2"/>
-    </template><specialization><template-arg>grid&lt; DataSet1</template-arg><template-arg>DataSet2 &gt;</template-arg></specialization><inherit access="public">true_</inherit></struct-specialization><namespace name="result_of">
+    </template><specialization><template-arg>grid&lt; DataSet1</template-arg><template-arg>DataSet2 &gt;</template-arg></specialization><inherit access="public">boost::mpl::true_</inherit></struct-specialization><namespace name="result_of">
 <struct name="grid"><template>
       <template-type-parameter name="DS1Gen"/>
       <template-type-parameter name="DS2Gen"/>
     </template><purpose>Result type of the grid operation on dataset. </purpose><typedef name="type"><type><classname>monomorphic::grid</classname>&lt; typename DS1Gen::type, typename DS2Gen::type &gt;</type></typedef>
 </struct></namespace>
-<overloaded-function name="operator*"><signature><type>boost::lazy_enable_if_c&lt; <classname>is_dataset</classname>&lt; DataSet1 &gt;::value &amp;&amp;<classname>is_dataset</classname>&lt; DataSet2 &gt;::value, <classname>result_of::grid</classname>&lt; mpl::identity&lt; DataSet1 &gt;, mpl::identity&lt; DataSet2 &gt; &gt;&gt;::type</type><template>
+<function name="operator*"><type>boost::lazy_enable_if_c&lt; <classname>is_dataset</classname>&lt; DataSet1 &gt;::value &amp;&amp;<classname>is_dataset</classname>&lt; DataSet2 &gt;::value, <classname>result_of::grid</classname>&lt; mpl::identity&lt; DataSet1 &gt;, mpl::identity&lt; DataSet2 &gt; &gt; &gt;::type</type><template>
           <template-type-parameter name="DataSet1"/>
           <template-type-parameter name="DataSet2"/>
-        </template><parameter name="ds1"><paramtype>DataSet1 &amp;&amp;</paramtype></parameter><parameter name="ds2"><paramtype>DataSet2 &amp;&amp;</paramtype></parameter></signature><signature><type>boost::lazy_enable_if_c&lt; <classname>is_dataset</classname>&lt; DataSet1 &gt;::value &amp;&amp;!<classname>is_dataset</classname>&lt; DataSet2 &gt;::value, <classname>result_of::grid</classname>&lt; mpl::identity&lt; DataSet1 &gt;, <classname>data::result_of::make</classname>&lt; DataSet2 &gt; &gt;&gt;::type</type><template>
+        </template><parameter name="ds1"><paramtype>DataSet1 &amp;&amp;</paramtype></parameter><parameter name="ds2"><paramtype>DataSet2 &amp;&amp;</paramtype></parameter><purpose>Grid operation. </purpose></function>
+<function name="operator*"><type>boost::lazy_enable_if_c&lt; <classname>is_dataset</classname>&lt; DataSet1 &gt;::value &amp;&amp;!<classname>is_dataset</classname>&lt; DataSet2 &gt;::value, <classname>result_of::grid</classname>&lt; mpl::identity&lt; DataSet1 &gt;, <classname>data::result_of::make</classname>&lt; DataSet2 &gt; &gt; &gt;::type</type><template>
           <template-type-parameter name="DataSet1"/>
           <template-type-parameter name="DataSet2"/>
-        </template><parameter name="ds1"><paramtype>DataSet1 &amp;&amp;</paramtype></parameter><parameter name="ds2"><paramtype>DataSet2 &amp;&amp;</paramtype></parameter></signature><signature><type>boost::lazy_enable_if_c&lt;!<classname>is_dataset</classname>&lt; DataSet1 &gt;::value &amp;&amp;<classname>is_dataset</classname>&lt; DataSet2 &gt;::value, <classname>result_of::grid</classname>&lt; <classname>data::result_of::make</classname>&lt; DataSet1 &gt;, mpl::identity&lt; DataSet2 &gt; &gt;&gt;::type</type><template>
+        </template><parameter name="ds1"><paramtype>DataSet1 &amp;&amp;</paramtype></parameter><parameter name="ds2"><paramtype>DataSet2 &amp;&amp;</paramtype></parameter></function>
+<function name="operator*"><type>boost::lazy_enable_if_c&lt;!<classname>is_dataset</classname>&lt; DataSet1 &gt;::value &amp;&amp;<classname>is_dataset</classname>&lt; DataSet2 &gt;::value, <classname>result_of::grid</classname>&lt; <classname>data::result_of::make</classname>&lt; DataSet1 &gt;, mpl::identity&lt; DataSet2 &gt; &gt; &gt;::type</type><template>
           <template-type-parameter name="DataSet1"/>
           <template-type-parameter name="DataSet2"/>
-        </template><parameter name="ds1"><paramtype>DataSet1 &amp;&amp;</paramtype></parameter><parameter name="ds2"><paramtype>DataSet2 &amp;&amp;</paramtype></parameter></signature><purpose>Grid operation. </purpose></overloaded-function>
-
-
+        </template><parameter name="ds1"><paramtype>DataSet1 &amp;&amp;</paramtype></parameter><parameter name="ds2"><paramtype>DataSet2 &amp;&amp;</paramtype></parameter></function>
 
 
 
@@ -990,9 +985,10 @@ auto d = xrange(param);
           <template-nontype-parameter name="Args"><type>class ...</type></template-nontype-parameter>
         </template><parameter name="args"><paramtype>Args &amp;&amp;...</paramtype></parameter><purpose>Variadic template initialization. </purpose></constructor>
 </class><class-specialization name="init_list"><template>
-    </template><specialization><template-arg>bool</template-arg></specialization><purpose>Specialization of <classname alt="boost::unit_test::data::monomorphic::init_list">init_list</classname> for type bool. </purpose><struct name="non_proxy_iterator"><data-member name="iterator"><type>std::vector&lt; bool &gt;::const_iterator</type></data-member>
+    </template><specialization><template-arg>bool</template-arg></specialization><purpose>Specialization of <classname alt="boost::unit_test::data::monomorphic::init_list">init_list</classname> for type bool. </purpose><struct name="non_proxy_iterator"><template>
+    </template><data-member name="iterator"><type>std::vector&lt; bool &gt;::const_iterator</type></data-member>
 <method-group name="public member functions">
-<method name="operator *" cv="const"><type>bool</type></method>
+<method name="operator*" cv="const"><type>bool</type></method>
 <method name="operator++"><type>non_proxy_iterator &amp;</type></method>
 </method-group>
 <constructor><parameter name="it"><paramtype>std::vector&lt; bool &gt;::const_iterator &amp;&amp;</paramtype></parameter></constructor>
@@ -1009,7 +1005,7 @@ auto d = xrange(param);
         </template><parameter name="args"><paramtype>Args &amp;&amp;...</paramtype></parameter><purpose>Variadic template initialization. </purpose></constructor>
 </class-specialization><struct-specialization name="is_dataset"><template>
       <template-type-parameter name="T"/>
-    </template><specialization><template-arg>init_list&lt; T &gt;</template-arg></specialization><inherit access="public">true_</inherit><purpose>An array dataset is a dataset. </purpose></struct-specialization>
+    </template><specialization><template-arg>init_list&lt; T &gt;</template-arg></specialization><inherit access="public">boost::mpl::true_</inherit><purpose>An array dataset is a dataset. </purpose></struct-specialization>
 
 
 
@@ -1025,8 +1021,13 @@ auto d = xrange(param);
 
 
 
-
-
+<function name="make"><type><classname>monomorphic::init_list</classname>&lt; T &gt;</type><template>
+          <template-type-parameter name="T"/>
+        </template><parameter name=""><paramtype>std::initializer_list&lt; T &gt; &amp;&amp;</paramtype></parameter></function>
+<function name="make"><type>std::enable_if&lt;!<classname>monomorphic::has_dataset</classname>&lt; T, Args... &gt;::value, <classname>monomorphic::init_list</classname>&lt; T &gt; &gt;::type</type><template>
+          <template-type-parameter name="T"/>
+          <template-nontype-parameter name="Args"><type>class ...</type></template-nontype-parameter>
+        </template><parameter name="arg0"><paramtype>T &amp;&amp;</paramtype></parameter><parameter name="args"><paramtype>Args &amp;&amp;...</paramtype></parameter></function>
 
 
 
@@ -1085,11 +1086,11 @@ auto d = xrange(param);
 <struct-specialization name="is_dataset"><template>
       <template-type-parameter name="DataSet1"/>
       <template-type-parameter name="DataSet2"/>
-    </template><specialization><template-arg>join&lt; DataSet1</template-arg><template-arg>DataSet2 &gt;</template-arg></specialization><inherit access="public">true_</inherit></struct-specialization><class name="join"><template>
+    </template><specialization><template-arg>join&lt; DataSet1</template-arg><template-arg>DataSet2 &gt;</template-arg></specialization><inherit access="public">boost::mpl::true_</inherit></struct-specialization><class name="join"><template>
       <template-type-parameter name="DataSet1"/>
       <template-type-parameter name="DataSet2"/>
     </template><purpose>Defines a new dataset from the concatenation of two datasets. </purpose><description><para>The size of the resulting dataset is the sum of the two underlying datasets. The arity of the datasets should match. </para></description><struct name="iterator"><method-group name="public member functions">
-<method name="operator *" cv="const"><type>sample_t</type></method>
+<method name="operator*" cv="const"><type>sample_t</type></method>
 <method name="operator++"><type>void</type></method>
 </method-group>
 <constructor specifiers="explicit"><parameter name="it1"><paramtype>dataset1_iter &amp;&amp;</paramtype></parameter><parameter name="it2"><paramtype>dataset2_iter &amp;&amp;</paramtype></parameter><parameter name="first_size"><paramtype><classname>data::size_t</classname></paramtype></parameter></constructor>
@@ -1110,15 +1111,15 @@ auto d = xrange(param);
 
 
 
-<function name="operator+"><type>boost::lazy_enable_if_c&lt; <classname>is_dataset</classname>&lt; DataSet1 &gt;::value &amp;&amp;<classname>is_dataset</classname>&lt; DataSet2 &gt;::value, <classname>result_of::join</classname>&lt; mpl::identity&lt; DataSet1 &gt;, mpl::identity&lt; DataSet2 &gt; &gt;&gt;::type</type><template>
+<function name="operator+"><type>boost::lazy_enable_if_c&lt; <classname>is_dataset</classname>&lt; DataSet1 &gt;::value &amp;&amp;<classname>is_dataset</classname>&lt; DataSet2 &gt;::value, <classname>result_of::join</classname>&lt; mpl::identity&lt; DataSet1 &gt;, mpl::identity&lt; DataSet2 &gt; &gt; &gt;::type</type><template>
           <template-type-parameter name="DataSet1"/>
           <template-type-parameter name="DataSet2"/>
         </template><parameter name="ds1"><paramtype>DataSet1 &amp;&amp;</paramtype></parameter><parameter name="ds2"><paramtype>DataSet2 &amp;&amp;</paramtype></parameter></function>
-<function name="operator+"><type>boost::lazy_enable_if_c&lt; <classname>is_dataset</classname>&lt; DataSet1 &gt;::value &amp;&amp;!<classname>is_dataset</classname>&lt; DataSet2 &gt;::value, <classname>result_of::join</classname>&lt; mpl::identity&lt; DataSet1 &gt;, <classname>data::result_of::make</classname>&lt; DataSet2 &gt; &gt;&gt;::type</type><template>
+<function name="operator+"><type>boost::lazy_enable_if_c&lt; <classname>is_dataset</classname>&lt; DataSet1 &gt;::value &amp;&amp;!<classname>is_dataset</classname>&lt; DataSet2 &gt;::value, <classname>result_of::join</classname>&lt; mpl::identity&lt; DataSet1 &gt;, <classname>data::result_of::make</classname>&lt; DataSet2 &gt; &gt; &gt;::type</type><template>
           <template-type-parameter name="DataSet1"/>
           <template-type-parameter name="DataSet2"/>
         </template><parameter name="ds1"><paramtype>DataSet1 &amp;&amp;</paramtype></parameter><parameter name="ds2"><paramtype>DataSet2 &amp;&amp;</paramtype></parameter></function>
-<function name="operator+"><type>boost::lazy_enable_if_c&lt;!<classname>is_dataset</classname>&lt; DataSet1 &gt;::value &amp;&amp;<classname>is_dataset</classname>&lt; DataSet2 &gt;::value, <classname>result_of::join</classname>&lt; <classname>data::result_of::make</classname>&lt; DataSet1 &gt;, mpl::identity&lt; DataSet2 &gt; &gt;&gt;::type</type><template>
+<function name="operator+"><type>boost::lazy_enable_if_c&lt;!<classname>is_dataset</classname>&lt; DataSet1 &gt;::value &amp;&amp;<classname>is_dataset</classname>&lt; DataSet2 &gt;::value, <classname>result_of::join</classname>&lt; <classname>data::result_of::make</classname>&lt; DataSet1 &gt;, mpl::identity&lt; DataSet2 &gt; &gt; &gt;::type</type><template>
           <template-type-parameter name="DataSet1"/>
           <template-type-parameter name="DataSet2"/>
         </template><parameter name="ds1"><paramtype>DataSet1 &amp;&amp;</paramtype></parameter><parameter name="ds2"><paramtype>DataSet2 &amp;&amp;</paramtype></parameter></function>
@@ -1191,16 +1192,16 @@ auto d = xrange(param);
 <namespace name="monomorphic">
 <struct-specialization name="is_dataset"><template>
       <template-type-parameter name="T"/>
-    </template><specialization><template-arg>singleton&lt; T &gt;</template-arg></specialization><inherit access="public">true_</inherit></struct-specialization><class name="singleton"><template>
+    </template><specialization><template-arg>singleton&lt; T &gt;</template-arg></specialization><inherit access="public">boost::mpl::true_</inherit></struct-specialization><class name="singleton"><template>
       <template-type-parameter name="T"/>
     </template><purpose>Models a single element data set. </purpose><struct name="iterator"><method-group name="public member functions">
-<method name="operator *" cv="const"><type>sample const  &amp;</type></method>
+<method name="operator*" cv="const"><type>sample const &amp;</type></method>
 <method name="operator++"><type>void</type></method>
 </method-group>
 <constructor specifiers="explicit"><parameter name="owner"><paramtype><classname>singleton</classname>&lt; T &gt; const *</paramtype></parameter></constructor>
 </struct><data-member name="arity" specifiers="static"><type>const int</type></data-member>
 <method-group name="public member functions">
-<method name="value" cv="const"><type>T const  &amp;</type><purpose>Value access method. </purpose></method>
+<method name="value" cv="const"><type>T const &amp;</type><purpose>Value access method. </purpose></method>
 <method name="size" cv="const"><type><classname>data::size_t</classname></type><purpose>dataset interface </purpose></method>
 <method name="begin" cv="const"><type><classname>iterator</classname></type></method>
 </method-group>
@@ -1220,6 +1221,8 @@ auto d = xrange(param);
 
 
 
+<function name="make"><type><classname>monomorphic::singleton</classname>&lt; char * &gt;</type><parameter name="str"><paramtype>char *</paramtype></parameter></function>
+<function name="make"><type><classname>monomorphic::singleton</classname>&lt; char const * &gt;</type><parameter name="str"><paramtype>char const *</paramtype></parameter></function>
 
 
 
@@ -1253,9 +1256,9 @@ auto d = xrange(param);
 
 
 
-
-
-
+<function name="make"><type>std::enable_if&lt;!<classname>is_container_forward_iterable</classname>&lt; T &gt;::value &amp;&amp;!<classname>monomorphic::is_dataset</classname>&lt; T &gt;::value &amp;&amp;!boost::is_array&lt; typenameboost::remove_reference&lt; T &gt;::type &gt;::value, <classname>monomorphic::singleton</classname>&lt; T &gt; &gt;::type</type><template>
+          <template-type-parameter name="T"/>
+        </template><parameter name="v"><paramtype>T &amp;&amp;</paramtype></parameter></function>
 
 
 
@@ -1282,12 +1285,12 @@ auto d = xrange(param);
 <struct-specialization name="is_dataset"><template>
       <template-type-parameter name="DataSet1"/>
       <template-type-parameter name="DataSet2"/>
-    </template><specialization><template-arg>zip&lt; DataSet1</template-arg><template-arg>DataSet2 &gt;</template-arg></specialization><inherit access="public">true_</inherit><purpose>Zipped datasets results in a dataset. </purpose></struct-specialization><class name="zip"><template>
+    </template><specialization><template-arg>zip&lt; DataSet1</template-arg><template-arg>DataSet2 &gt;</template-arg></specialization><inherit access="public">boost::mpl::true_</inherit><purpose>Zipped datasets results in a dataset. </purpose></struct-specialization><class name="zip"><template>
       <template-type-parameter name="DataSet1"/>
       <template-type-parameter name="DataSet2"/>
     </template><purpose>Zip datasets. </purpose><description><para>A zip of two datasets is a dataset whose arity is the sum of the operand datasets arity. The size is given by the function creating the instance (see <computeroutput>operator^</computeroutput> on datasets). </para></description><struct name="iterator"><typedef name="iterator_sample"><type>decltype(sample_merge(*std::declval&lt; dataset1_iter &gt;(), *std::declval&lt; dataset2_iter &gt;()))</type></typedef>
 <method-group name="public member functions">
-<method name="operator *" cv="const"><type>auto</type></method>
+<method name="operator*" cv="const"><type>auto</type></method>
 <method name="operator++"><type>void</type></method>
 </method-group>
 <constructor specifiers="explicit"><parameter name="iter1"><paramtype>dataset1_iter</paramtype></parameter><parameter name="iter2"><paramtype>dataset2_iter</paramtype></parameter></constructor>
@@ -1313,18 +1316,18 @@ auto d = xrange(param);
 
 
 
-<overloaded-function name="operator^"><signature><type>boost::lazy_enable_if_c&lt; <classname>is_dataset</classname>&lt; DataSet1 &gt;::value &amp;&amp;<classname>is_dataset</classname>&lt; DataSet2 &gt;::value, <classname>result_of::zip</classname>&lt; mpl::identity&lt; DataSet1 &gt;, mpl::identity&lt; DataSet2 &gt; &gt;&gt;::type</type><template>
+<function name="operator^"><type>boost::lazy_enable_if_c&lt; <classname>is_dataset</classname>&lt; DataSet1 &gt;::value &amp;&amp;<classname>is_dataset</classname>&lt; DataSet2 &gt;::value, <classname>result_of::zip</classname>&lt; mpl::identity&lt; DataSet1 &gt;, mpl::identity&lt; DataSet2 &gt; &gt; &gt;::type</type><template>
           <template-type-parameter name="DataSet1"/>
           <template-type-parameter name="DataSet2"/>
-        </template><parameter name="ds1"><paramtype>DataSet1 &amp;&amp;</paramtype></parameter><parameter name="ds2"><paramtype>DataSet2 &amp;&amp;</paramtype></parameter></signature><signature><type>boost::lazy_enable_if_c&lt; <classname>is_dataset</classname>&lt; DataSet1 &gt;::value &amp;&amp;!<classname>is_dataset</classname>&lt; DataSet2 &gt;::value, <classname>result_of::zip</classname>&lt; mpl::identity&lt; DataSet1 &gt;, <classname>data::result_of::make</classname>&lt; DataSet2 &gt; &gt;&gt;::type</type><template>
+        </template><parameter name="ds1"><paramtype>DataSet1 &amp;&amp;</paramtype></parameter><parameter name="ds2"><paramtype>DataSet2 &amp;&amp;</paramtype></parameter><purpose>Overload operator for zip support. </purpose></function>
+<function name="operator^"><type>boost::lazy_enable_if_c&lt; <classname>is_dataset</classname>&lt; DataSet1 &gt;::value &amp;&amp;!<classname>is_dataset</classname>&lt; DataSet2 &gt;::value, <classname>result_of::zip</classname>&lt; mpl::identity&lt; DataSet1 &gt;, <classname>data::result_of::make</classname>&lt; DataSet2 &gt; &gt; &gt;::type</type><template>
           <template-type-parameter name="DataSet1"/>
           <template-type-parameter name="DataSet2"/>
-        </template><parameter name="ds1"><paramtype>DataSet1 &amp;&amp;</paramtype></parameter><parameter name="ds2"><paramtype>DataSet2 &amp;&amp;</paramtype></parameter></signature><signature><type>boost::lazy_enable_if_c&lt;!<classname>is_dataset</classname>&lt; DataSet1 &gt;::value &amp;&amp;<classname>is_dataset</classname>&lt; DataSet2 &gt;::value, <classname>result_of::zip</classname>&lt; <classname>data::result_of::make</classname>&lt; DataSet1 &gt;, mpl::identity&lt; DataSet2 &gt; &gt;&gt;::type</type><template>
+        </template><parameter name="ds1"><paramtype>DataSet1 &amp;&amp;</paramtype></parameter><parameter name="ds2"><paramtype>DataSet2 &amp;&amp;</paramtype></parameter></function>
+<function name="operator^"><type>boost::lazy_enable_if_c&lt;!<classname>is_dataset</classname>&lt; DataSet1 &gt;::value &amp;&amp;<classname>is_dataset</classname>&lt; DataSet2 &gt;::value, <classname>result_of::zip</classname>&lt; <classname>data::result_of::make</classname>&lt; DataSet1 &gt;, mpl::identity&lt; DataSet2 &gt; &gt; &gt;::type</type><template>
           <template-type-parameter name="DataSet1"/>
           <template-type-parameter name="DataSet2"/>
-        </template><parameter name="ds1"><paramtype>DataSet1 &amp;&amp;</paramtype></parameter><parameter name="ds2"><paramtype>DataSet2 &amp;&amp;</paramtype></parameter></signature><purpose>Overload operator for zip support. </purpose></overloaded-function>
-
-
+        </template><parameter name="ds1"><paramtype>DataSet1 &amp;&amp;</paramtype></parameter><parameter name="ds2"><paramtype>DataSet2 &amp;&amp;</paramtype></parameter></function>
 </namespace>
 
 
@@ -1682,14 +1685,14 @@ em.register_exception_translator&lt;MyException&gt;( myExceptTr );
 <method name="next" cv="const"><type>const_string</type><purpose>Give me next frame; empty - last frame. </purpose></method>
 </method-group>
 <constructor/>
-</struct><struct name="internal_error"><inherit access="public">runtime_error</inherit><purpose>This exception type is used to report internal Boost.Test framework errors. </purpose><method-group name="public member functions">
+</struct><struct name="internal_error"><inherit access="public">std::runtime_error</inherit><purpose>This exception type is used to report internal Boost.Test framework errors. </purpose><method-group name="public member functions">
 </method-group>
 <constructor><parameter name="m"><paramtype>const_string</paramtype></parameter></constructor>
 </struct><struct name="nothing_to_test"><data-member name="m_result_code"><type>int</type></data-member>
 <method-group name="public member functions">
 </method-group>
 <constructor specifiers="explicit"><parameter name="rc"><paramtype>int</paramtype></parameter></constructor>
-</struct><struct name="setup_error"><inherit access="public">runtime_error</inherit><purpose>This exception type is used to report test module setup errors. </purpose><method-group name="public member functions">
+</struct><struct name="setup_error"><inherit access="public">std::runtime_error</inherit><purpose>This exception type is used to report test module setup errors. </purpose><method-group name="public member functions">
 </method-group>
 <constructor><parameter name="m"><paramtype>const_string</paramtype></parameter></constructor>
 </struct><namespace name="impl">
@@ -1737,10 +1740,10 @@ em.register_exception_translator&lt;MyException&gt;( myExceptTr );
 <function name="master_test_suite"><type><classname>master_test_suite_t</classname> &amp;</type><purpose>There is only only master test suite per test module. </purpose><description><para>
 </para></description><returns><para>a reference the master test suite instance </para>
 </returns></function>
-<function name="current_test_unit"><type><classname>test_unit</classname> const  &amp;</type><purpose>This function provides an access to the test unit currently being executed. </purpose><description><para>The difference with current_test_case is about the time between a test-suite is being set up or torn down (fixtures) and when the test-cases of that suite start. This function is only valid during test execution phase. <para><emphasis role="bold">See Also:</emphasis><para>current_test_case_id, current_test_case </para>
+<function name="current_test_unit"><type><classname>test_unit</classname> const &amp;</type><purpose>This function provides an access to the test unit currently being executed. </purpose><description><para>The difference with current_test_case is about the time between a test-suite is being set up or torn down (fixtures) and when the test-cases of that suite start. This function is only valid during test execution phase. <para><emphasis role="bold">See Also:</emphasis><para>current_test_case_id, current_test_case </para>
 </para>
 </para></description></function>
-<function name="current_test_case"><type><classname>test_case</classname> const  &amp;</type><purpose>This function provides an access to the test case currently being executed. </purpose><description><para>This function is only valid during test execution phase. <para><emphasis role="bold">See Also:</emphasis><para>current_test_case_id </para>
+<function name="current_test_case"><type><classname>test_case</classname> const &amp;</type><purpose>This function provides an access to the test case currently being executed. </purpose><description><para>This function is only valid during test execution phase. <para><emphasis role="bold">See Also:</emphasis><para>current_test_case_id </para>
 </para>
 </para></description></function>
 <function name="current_test_case_id"><type>test_unit_id</type><purpose>This function provides an access to an id of the test case currently being executed. </purpose><description><para>This function safer than current_test_case, cause if wont throw if no test case is being executed. <para><emphasis role="bold">See Also:</emphasis><para>current_test_case </para>
@@ -1845,13 +1848,13 @@ em.register_exception_translator&lt;MyException&gt;( myExceptTr );
 <method name="test_unit_skipped" specifiers="virtual"><type>void</type><parameter name=""><paramtype>std::ostream &amp;</paramtype></parameter><parameter name=""><paramtype><classname>test_unit</classname> const &amp;</paramtype></parameter><purpose>Deprecated version of this interface. </purpose><description><para><xrefsect id="a00851_1_deprecated000001"><xreftitle>Deprecated</xreftitle><xrefdescription/></xrefsect></para></description></method>
 <method name="test_unit_aborted" specifiers="virtual"><type>void</type><parameter name=""><paramtype>std::ostream &amp;</paramtype></parameter><parameter name=""><paramtype><classname>test_unit</classname> const &amp;</paramtype></parameter><purpose>Invoked when a test unit is aborted. </purpose></method>
 <method name="test_unit_timed_out" specifiers="virtual"><type>void</type><parameter name=""><paramtype>std::ostream &amp;</paramtype></parameter><parameter name=""><paramtype><classname>test_unit</classname> const &amp;</paramtype></parameter><purpose>Invoked when a test unit times-out. </purpose></method>
-<method name="set_log_level" specifiers="virtual"><type>void</type><parameter name="new_log_level"><paramtype>log_level</paramtype></parameter><purpose>Sets the log level of the logger/formatter. </purpose><description><para>Some loggers need to manage the log level by their own. This member function let the implementation decide of that. <formalpara><title>Since Boost 1.62 </title><para/>
+<method name="set_log_level" specifiers="virtual"><type>void</type><parameter name="new_log_level"><paramtype>log_level</paramtype></parameter><purpose>Sets the log level of the logger/formatter. </purpose><description><para>Some loggers need to manage the log level by their own. This member function let the implementation decide of that. <formalpara><title>Since Boost 1.62</title><para/>
 </formalpara>
 </para></description></method>
-<method name="get_log_level" cv="const" specifiers="virtual"><type>log_level</type><purpose>Returns the log level of the logger/formatter. </purpose><description><para><formalpara><title>Since Boost 1.62 </title><para/>
+<method name="get_log_level" cv="const" specifiers="virtual"><type>log_level</type><purpose>Returns the log level of the logger/formatter. </purpose><description><para><formalpara><title>Since Boost 1.62</title><para/>
 </formalpara>
 </para></description></method>
-<method name="get_default_stream_description" cv="const" specifiers="virtual"><type>std::string</type><purpose>Returns a default stream for this logger. </purpose><description><para>The returned string describes the stream as if it was passed from the command line <computeroutput>"--log_sink"</computeroutput> parameter. With that regards, <emphasis role="bold">stdout</emphasis> and <emphasis role="bold">stderr</emphasis> have special meaning indicating the standard output or error stream respectively.</para><para><formalpara><title>Since Boost 1.62 </title><para/>
+<method name="get_default_stream_description" cv="const" specifiers="virtual"><type>std::string</type><purpose>Returns a default stream for this logger. </purpose><description><para>The returned string describes the stream as if it was passed from the command line <computeroutput>"--log_sink"</computeroutput> parameter. With that regards, <emphasis role="bold">stdout</emphasis> and <emphasis role="bold">stderr</emphasis> have special meaning indicating the standard output or error stream respectively.</para><para><formalpara><title>Since Boost 1.62</title><para/>
 </formalpara>
 </para></description></method>
 </method-group>
@@ -1955,28 +1958,24 @@ em.register_exception_translator&lt;MyException&gt;( myExceptTr );
 <para><emphasis role="bold">See Also:</emphasis><para>log_entry_start, entry_context_context </para>
 </para>
 </para></description></method>
-<method name="log_entry_value"><type>void</type><purpose>Invoked by Unit Test Framework to report a log entry content. </purpose><description><para>This is one of two overloaded methods to report log entry content. This one is used to report plain string value. 
+<method name="log_entry_value" specifiers="virtual"><type>void</type><parameter name="os"><paramtype>std::ostream &amp;</paramtype><description><para>output stream to write a messages into. </para></description></parameter><parameter name="value"><paramtype>const_string</paramtype><description><para>log entry string value </para></description></parameter><purpose>Invoked by Unit Test Framework to report a log entry content. </purpose><description><para>This is one of two overloaded methods to report log entry content. This one is used to report plain string value. 
 <para><emphasis role="bold">See Also:</emphasis><para>log_entry_start, log_entry_finish </para>
 </para>
 </para></description></method>
-<method name="log_entry_value"><type>void</type><purpose>Invoked by Unit Test Framework to report a log entry content. </purpose><description><para>This is one of two overloaded methods to report log entry content. This one is used to report some complicated expression passed as an expression template lazy_ostream. In most cases default implementation provided by the framework should work as is (it just converts the lazy expression into a string. 
+<method name="log_entry_value" specifiers="virtual"><type>void</type><parameter name="os"><paramtype>std::ostream &amp;</paramtype><description><para>output stream to write a messages into </para></description></parameter><parameter name="value"><paramtype>lazy_ostream const &amp;</paramtype><description><para>log entry "lazy" value </para></description></parameter><purpose>Invoked by Unit Test Framework to report a log entry content. </purpose><description><para>This is one of two overloaded methods to report log entry content. This one is used to report some complicated expression passed as an expression template lazy_ostream. In most cases default implementation provided by the framework should work as is (it just converts the lazy expression into a string. 
 <para><emphasis role="bold">See Also:</emphasis><para>log_entry_start, log_entry_finish </para>
 </para>
 </para></description></method>
 <method name="test_unit_skipped" specifiers="virtual"><type>void</type><parameter name=""><paramtype>std::ostream &amp;</paramtype></parameter><parameter name=""><paramtype><classname>test_unit</classname> const &amp;</paramtype></parameter><purpose>Deprecated version of this interface. </purpose><description><para><xrefsect id="a00851_1_deprecated000001"><xreftitle>Deprecated</xreftitle><xrefdescription/></xrefsect></para></description></method>
 <method name="test_unit_aborted" specifiers="virtual"><type>void</type><parameter name=""><paramtype>std::ostream &amp;</paramtype></parameter><parameter name=""><paramtype><classname>test_unit</classname> const &amp;</paramtype></parameter><purpose>Invoked when a test unit is aborted. </purpose></method>
 <method name="test_unit_timed_out" specifiers="virtual"><type>void</type><parameter name=""><paramtype>std::ostream &amp;</paramtype></parameter><parameter name=""><paramtype><classname>test_unit</classname> const &amp;</paramtype></parameter><purpose>Invoked when a test unit times-out. </purpose></method>
-<method name="log_entry_value" specifiers="virtual"><type>void</type><parameter name="os"><paramtype>std::ostream &amp;</paramtype><description><para>output stream to write a messages into </para></description></parameter><parameter name="value"><paramtype>lazy_ostream const &amp;</paramtype><description><para>log entry "lazy" value </para></description></parameter><purpose>Invoked by Unit Test Framework to report a log entry content. </purpose><description><para>This is one of two overloaded methods to report log entry content. This one is used to report some complicated expression passed as an expression template lazy_ostream. In most cases default implementation provided by the framework should work as is (it just converts the lazy expression into a string. 
-<para><emphasis role="bold">See Also:</emphasis><para>log_entry_start, log_entry_finish </para>
-</para>
-</para></description></method>
-<method name="set_log_level" specifiers="virtual"><type>void</type><parameter name="new_log_level"><paramtype>log_level</paramtype></parameter><purpose>Sets the log level of the logger/formatter. </purpose><description><para>Some loggers need to manage the log level by their own. This member function let the implementation decide of that. <formalpara><title>Since Boost 1.62 </title><para/>
+<method name="set_log_level" specifiers="virtual"><type>void</type><parameter name="new_log_level"><paramtype>log_level</paramtype></parameter><purpose>Sets the log level of the logger/formatter. </purpose><description><para>Some loggers need to manage the log level by their own. This member function let the implementation decide of that. <formalpara><title>Since Boost 1.62</title><para/>
 </formalpara>
 </para></description></method>
-<method name="get_log_level" cv="const" specifiers="virtual"><type>log_level</type><purpose>Returns the log level of the logger/formatter. </purpose><description><para><formalpara><title>Since Boost 1.62 </title><para/>
+<method name="get_log_level" cv="const" specifiers="virtual"><type>log_level</type><purpose>Returns the log level of the logger/formatter. </purpose><description><para><formalpara><title>Since Boost 1.62</title><para/>
 </formalpara>
 </para></description></method>
-<method name="get_default_stream_description" cv="const" specifiers="virtual"><type>std::string</type><purpose>Returns a default stream for this logger. </purpose><description><para>The returned string describes the stream as if it was passed from the command line <computeroutput>"--log_sink"</computeroutput> parameter. With that regards, <emphasis role="bold">stdout</emphasis> and <emphasis role="bold">stderr</emphasis> have special meaning indicating the standard output or error stream respectively.</para><para><formalpara><title>Since Boost 1.62 </title><para/>
+<method name="get_default_stream_description" cv="const" specifiers="virtual"><type>std::string</type><purpose>Returns a default stream for this logger. </purpose><description><para>The returned string describes the stream as if it was passed from the command line <computeroutput>"--log_sink"</computeroutput> parameter. With that regards, <emphasis role="bold">stdout</emphasis> and <emphasis role="bold">stderr</emphasis> have special meaning indicating the standard output or error stream respectively.</para><para><formalpara><title>Since Boost 1.62</title><para/>
 </formalpara>
 </para></description></method>
 </method-group>
@@ -2085,7 +2084,7 @@ em.register_exception_translator&lt;MyException&gt;( myExceptTr );
 <method name="assertion_result" specifiers="virtual"><type>void</type><parameter name=""><paramtype>unit_test::assertion_result</paramtype></parameter></method>
 <method name="exception_caught" specifiers="virtual"><type>void</type><parameter name=""><paramtype><classname>execution_exception</classname> const &amp;</paramtype></parameter><purpose>Called when an exception is intercepted. </purpose><description><para>In case an exception is intercepted, this call happens before the call to test_unit_aborted in order to log additional data about the exception. </para></description></method>
 <method name="priority" specifiers="virtual"><type>int</type><purpose>The priority indicates the order at which this observer is initialized and tore down in the UTF framework. The order is lowest to highest priority. </purpose></method>
-<method name="results" cv="const"><type><classname>test_results</classname> const  &amp;</type><parameter name="tu_id"><paramtype>test_unit_id</paramtype><description><para>id of a test unit </para></description></parameter><purpose>Results access per test unit. </purpose><description><para>
+<method name="results" cv="const"><type><classname>test_results</classname> const &amp;</type><parameter name="tu_id"><paramtype>test_unit_id</paramtype><description><para>id of a test unit </para></description></parameter><purpose>Results access per test unit. </purpose><description><para>
 </para></description></method>
 <method name="test_finish" specifiers="virtual"><type>void</type><purpose>Called after the framework ends executing the test cases. </purpose><description><para><note><para>The call is made with a reversed priority order. </para>
 </note>
@@ -2268,13 +2267,13 @@ em.register_exception_translator&lt;MyException&gt;( myExceptTr );
 
 
 
-<overloaded-function name="tolerance"><signature><type><emphasis>unspecified</emphasis></type><template>
+<function name="tolerance"><type><emphasis>unspecified</emphasis></type><template>
           <template-type-parameter name="FPT"/>
-        </template><parameter name="v"><paramtype>FPT</paramtype></parameter></signature><signature><type><emphasis>unspecified</emphasis></type><template>
+        </template><parameter name="v"><paramtype>FPT</paramtype></parameter><description><para>Tolerance manipulator</para><para>These functions return a manipulator that can be used in conjunction with BOOST_TEST in order to specify the tolerance with which floating point comparisons are made. </para></description></function>
+<function name="tolerance"><type><emphasis>unspecified</emphasis></type><template>
           <template-type-parameter name="FPT"/>
-        </template><parameter name="v"><paramtype>fpc::percent_tolerance_t&lt; FPT &gt;</paramtype></parameter></signature><signature><type><emphasis>unspecified</emphasis></type></signature><description><para>Tolerance manipulator</para><para>These functions return a manipulator that can be used in conjunction with BOOST_TEST in order to specify the tolerance with which floating point comparisons are made. </para></description></overloaded-function>
-
-
+        </template><parameter name="v"><paramtype>fpc::percent_tolerance_t&lt; FPT &gt;</paramtype></parameter></function>
+<function name="tolerance"><type><emphasis>unspecified</emphasis></type></function>
 </namespace>
 </namespace>
 </header>
@@ -2325,12 +2324,12 @@ What is reported by <computeroutput>tested_rel_diff</computeroutput> in case of 
 <constructor specifiers="explicit"><parameter name="tolerance"><paramtype>FPT</paramtype></parameter></constructor>
 </class><struct name="tolerance_based"><template>
       <template-type-parameter name="T"/>
-    </template><inherit access="public">tolerance_based_delegate::type&lt; T, !is_array&lt; T &gt;::value &amp;&amp;!is_abstract_class_or_function&lt; T &gt;::value &gt;</inherit><purpose>Indicates if a type can be compared using a tolerance scheme. </purpose><description><para>This is a metafunction that should evaluate to <computeroutput>mpl::true_</computeroutput> if the type <computeroutput>T</computeroutput> can be compared using a tolerance based method, typically for floating point types.</para><para>This metafunction can be specialized further to declare user types that are floating point (eg. boost.multiprecision). </para></description></struct><struct name="tolerance_based_delegate"><template>
+    </template><inherit access="public">tolerance_based_delegate::type</inherit><purpose>Indicates if a type can be compared using a tolerance scheme. </purpose><description><para>This is a metafunction that should evaluate to <computeroutput>mpl::true_</computeroutput> if the type <computeroutput>T</computeroutput> can be compared using a tolerance based method, typically for floating point types.</para><para>This metafunction can be specialized further to declare user types that are floating point (eg. boost.multiprecision). </para></description></struct><struct name="tolerance_based_delegate"><template>
       <template-type-parameter name="T"/>
       <template-nontype-parameter name="enabled"><type>bool</type></template-nontype-parameter>
     </template></struct><struct-specialization name="tolerance_based_delegate"><template>
       <template-type-parameter name="T"/>
-    </template><specialization><template-arg>T</template-arg><template-arg>false</template-arg></specialization><inherit access="public">false_</inherit></struct-specialization><struct-specialization name="tolerance_based_delegate"><template>
+    </template><specialization><template-arg>T</template-arg><template-arg>false</template-arg></specialization><inherit access="public">mpl::false_</inherit></struct-specialization><struct-specialization name="tolerance_based_delegate"><template>
       <template-type-parameter name="T"/>
     </template><specialization><template-arg>T</template-arg><template-arg>true</template-arg></specialization><inherit access="public">mpl::bool_&lt; is_floating_point&lt; T &gt;::value||(!std::numeric_limits&lt; T &gt;::is_integer &amp;&amp;std::numeric_limits&lt; T &gt;::is_specialized &amp;&amp;!std::numeric_limits&lt; T &gt;::is_exact)&gt;</inherit></struct-specialization><enum name="strength"><enumvalue name="FPC_STRONG"><purpose>"Very close" - equation 2' in docs, the default </purpose></enumvalue><enumvalue name="FPC_WEAK"><purpose>"Close enough" - equation 3' in docs. </purpose></enumvalue><purpose>Method for comparing floating point numbers. </purpose></enum>
 <function name="operator&lt;&lt;"><type>std::ostream &amp;</type><template>
@@ -2349,7 +2348,7 @@ What is reported by <computeroutput>tested_rel_diff</computeroutput> in case of 
 <header name="boost/test/tools/output_test_stream.hpp">
 <para>output_test_stream class definition </para><namespace name="boost">
 <namespace name="test_tools">
-<class name="output_test_stream"><inherit access="public">wrapped_stream</inherit><purpose>Class to be used to simplify testing of ostream-based output operations. </purpose><method-group name="public member functions">
+<class name="output_test_stream"><inherit access="public">wrap_stringstream::wrapped_stream</inherit><purpose>Class to be used to simplify testing of ostream-based output operations. </purpose><method-group name="public member functions">
 <method name="is_empty" specifiers="virtual"><type><classname>assertion_result</classname></type><parameter name="flush_stream"><paramtype>bool</paramtype><default>true</default><description><para>if true, flushes the stream after the call </para></description></parameter><purpose>Checks if the stream is empty. </purpose><description><para>
 </para></description></method>
 <method name="check_length" specifiers="virtual"><type><classname>assertion_result</classname></type><parameter name="length"><paramtype>std::size_t</paramtype><description><para>target length </para></description></parameter><parameter name="flush_stream"><paramtype>bool</paramtype><default>true</default><description><para>if true, flushes the stream after the call. Set to false to call additional checks on the same content. </para></description></parameter><purpose>Checks the length of the stream. </purpose><description><para>
@@ -2459,9 +2458,9 @@ What is reported by <computeroutput>tested_rel_diff</computeroutput> in case of 
 <typedef name="precondition_t"><type>boost::function&lt; <classname>test_tools::assertion_result</classname>(test_unit_id)&gt;</type></typedef>
 <method-group name="public member functions">
 <method name="add"><type>void</type><parameter name="tu"><paramtype><classname>test_unit</classname> *</paramtype></parameter><parameter name="expected_failures"><paramtype>counter_t</paramtype><default>0</default></parameter><parameter name="timeout"><paramtype>unsigned</paramtype><default>0</default></parameter><purpose>Adds a test unit to a test suite. </purpose><description><para>It is possible to specify the timeout and the expected failures. </para></description></method>
-<method name="add"><type>void</type><parameter name="gen"><paramtype><classname>test_unit_generator</classname> const &amp;</paramtype></parameter><parameter name="timeout"><paramtype>unsigned</paramtype><default>0</default></parameter><description><para>This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. </para></description></method>
-<method name="add"><type>void</type><parameter name="gen"><paramtype><classname>test_unit_generator</classname> const &amp;</paramtype></parameter><parameter name="decorators"><paramtype>decorator::collector_t &amp;</paramtype></parameter><description><para>This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. </para></description></method>
-<method name="add"><type>void</type><parameter name="gen_ptr"><paramtype>boost::shared_ptr&lt; <classname>test_unit_generator</classname> &gt;</paramtype></parameter><parameter name="decorators"><paramtype>decorator::collector_t &amp;</paramtype></parameter><description><para>This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. </para></description></method>
+<method name="add"><type>void</type><parameter name="gen"><paramtype><classname>test_unit_generator</classname> const &amp;</paramtype></parameter><parameter name="timeout"><paramtype>unsigned</paramtype><default>0</default></parameter><purpose>This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. </purpose></method>
+<method name="add"><type>void</type><parameter name="gen"><paramtype><classname>test_unit_generator</classname> const &amp;</paramtype></parameter><parameter name="decorators"><paramtype>decorator::collector_t &amp;</paramtype></parameter><purpose>This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. </purpose></method>
+<method name="add"><type>void</type><parameter name="gen_ptr"><paramtype>boost::shared_ptr&lt; <classname>test_unit_generator</classname> &gt;</paramtype></parameter><parameter name="decorators"><paramtype>decorator::collector_t &amp;</paramtype></parameter><purpose>This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. </purpose></method>
 <method name="remove"><type>void</type><parameter name="id"><paramtype>test_unit_id</paramtype></parameter><purpose>Removes a test from the test suite. </purpose></method>
 <method name="generate"><type>void</type><purpose>Generates all the delayed test_units from the generators. </purpose></method>
 <method name="check_for_duplicate_test_cases"><type>void</type><purpose>Check for duplicates name in test cases. </purpose><description><para>Raises a setup_error if there are duplicates </para></description></method>
@@ -2537,9 +2536,9 @@ What is reported by <computeroutput>tested_rel_diff</computeroutput> in case of 
 <typedef name="precondition_t"><type>boost::function&lt; <classname>test_tools::assertion_result</classname>(test_unit_id)&gt;</type></typedef>
 <method-group name="public member functions">
 <method name="add"><type>void</type><parameter name="tu"><paramtype><classname>test_unit</classname> *</paramtype></parameter><parameter name="expected_failures"><paramtype>counter_t</paramtype><default>0</default></parameter><parameter name="timeout"><paramtype>unsigned</paramtype><default>0</default></parameter><purpose>Adds a test unit to a test suite. </purpose><description><para>It is possible to specify the timeout and the expected failures. </para></description></method>
-<method name="add"><type>void</type><parameter name="gen"><paramtype><classname>test_unit_generator</classname> const &amp;</paramtype></parameter><parameter name="timeout"><paramtype>unsigned</paramtype><default>0</default></parameter><description><para>This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. </para></description></method>
-<method name="add"><type>void</type><parameter name="gen"><paramtype><classname>test_unit_generator</classname> const &amp;</paramtype></parameter><parameter name="decorators"><paramtype>decorator::collector_t &amp;</paramtype></parameter><description><para>This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. </para></description></method>
-<method name="add"><type>void</type><parameter name="gen_ptr"><paramtype>boost::shared_ptr&lt; <classname>test_unit_generator</classname> &gt;</paramtype></parameter><parameter name="decorators"><paramtype>decorator::collector_t &amp;</paramtype></parameter><description><para>This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. </para></description></method>
+<method name="add"><type>void</type><parameter name="gen"><paramtype><classname>test_unit_generator</classname> const &amp;</paramtype></parameter><parameter name="timeout"><paramtype>unsigned</paramtype><default>0</default></parameter><purpose>This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. </purpose></method>
+<method name="add"><type>void</type><parameter name="gen"><paramtype><classname>test_unit_generator</classname> const &amp;</paramtype></parameter><parameter name="decorators"><paramtype>decorator::collector_t &amp;</paramtype></parameter><purpose>This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. </purpose></method>
+<method name="add"><type>void</type><parameter name="gen_ptr"><paramtype>boost::shared_ptr&lt; <classname>test_unit_generator</classname> &gt;</paramtype></parameter><parameter name="decorators"><paramtype>decorator::collector_t &amp;</paramtype></parameter><purpose>This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. </purpose></method>
 <method name="remove"><type>void</type><parameter name="id"><paramtype>test_unit_id</paramtype></parameter><purpose>Removes a test from the test suite. </purpose></method>
 <method name="generate"><type>void</type><purpose>Generates all the delayed test_units from the generators. </purpose></method>
 <method name="check_for_duplicate_test_cases"><type>void</type><purpose>Check for duplicates name in test cases. </purpose><description><para>Raises a setup_error if there are duplicates </para></description></method>
@@ -2734,12 +2733,12 @@ Users/developers willing to implement their own formatter need to:<itemizedlist>
 <method name="set_stream"><type>void</type><parameter name=""><paramtype>std::ostream &amp;</paramtype></parameter><purpose>Sets the stream for all loggers. </purpose><description><para>This will override the log sink/stream of all loggers, whether enabled or not. </para></description></method>
 <method name="set_stream"><type>void</type><parameter name=""><paramtype>output_format</paramtype></parameter><parameter name=""><paramtype>std::ostream &amp;</paramtype></parameter><purpose>Sets the stream for specific logger. </purpose><description><para><note><para>Has no effect if the specified format is not found </para>
 </note>
-<formalpara><title>Since Boost 1.62 </title><para/>
+<formalpara><title>Since Boost 1.62</title><para/>
 </formalpara>
 </para></description></method>
 <method name="get_stream" cv="const"><type>std::ostream *</type><parameter name=""><paramtype>output_format</paramtype></parameter><purpose>Returns a pointer to the stream associated to specific logger. </purpose><description><para><note><para>Returns a null pointer if the format is not found </para>
 </note>
-<formalpara><title>Since Boost 1.67 </title><para/>
+<formalpara><title>Since Boost 1.67</title><para/>
 </formalpara>
 </para></description></method>
 <method name="set_threshold_level"><type>log_level</type><parameter name=""><paramtype>log_level</paramtype></parameter><purpose>Sets the threshold level for all loggers/formatters. </purpose><description><para>This will override the log level of all loggers, whether enabled or not. 
@@ -2752,12 +2751,12 @@ Users/developers willing to implement their own formatter need to:<itemizedlist>
 
 </para></description><returns><para>the previous log level of the corresponding formatter (new in Boost 1.73) </para>
 </returns></method>
-<method name="add_format"><type>void</type><parameter name=""><paramtype>output_format</paramtype></parameter><purpose>Add a format to the set of loggers. </purpose><description><para>Adding a logger means that the specified logger is enabled. The log level is managed by the formatter itself and specifies what events are forwarded to the underlying formatter. <formalpara><title>Since Boost 1.62 </title><para/>
+<method name="add_format"><type>void</type><parameter name=""><paramtype>output_format</paramtype></parameter><purpose>Add a format to the set of loggers. </purpose><description><para>Adding a logger means that the specified logger is enabled. The log level is managed by the formatter itself and specifies what events are forwarded to the underlying formatter. <formalpara><title>Since Boost 1.62</title><para/>
 </formalpara>
 </para></description></method>
 <method name="set_format"><type>void</type><parameter name=""><paramtype>output_format</paramtype></parameter><purpose>Sets the format of the logger. </purpose><description><para>This will become the only active format of the logs. </para></description></method>
 <method name="get_formatter"><type><classname>unit_test_log_formatter</classname> *</type><parameter name=""><paramtype>output_format</paramtype></parameter><purpose>Returns the logger instance for a specific format. </purpose><description><para>
-<formalpara><title>Since Boost 1.62 </title><para/>
+<formalpara><title>Since Boost 1.62</title><para/>
 </formalpara>
 </para></description><returns><para>the logger/formatter instance, or <computeroutput/>(unit_test_log_formatter*)0 if the format is not found. </para>
 </returns></method>
@@ -2771,7 +2770,7 @@ Users/developers willing to implement their own formatter need to:<itemizedlist>
 </para></description></method>
 <method name="add_formatter"><type>void</type><parameter name="the_formatter"><paramtype><classname>unit_test_log_formatter</classname> *</paramtype></parameter><purpose>Adds a custom log formatter to the set of formatters. </purpose><description><para>The specified logger is added with the format <computeroutput>OF_CUSTOM_LOGGER</computeroutput>, such that it can be futher selected or its stream/log level can be specified. If there is already a custom logger (with <computeroutput>OF_CUSTOM_LOGGER</computeroutput>), then the existing one gets replaced by the one given in argument. The provided logger is added with an enabled state. If (unit_test_log_formatter*)0 is given as argument, the custom logger (if any) is removed and no other action is performed.</para><para><note><para>The ownership of the pointer is transferred to the Boost.Test framework. </para>
 </note>
-<formalpara><title>Since Boost 1.62 </title><para/>
+<formalpara><title>Since Boost 1.62</title><para/>
 </formalpara>
 </para></description></method>
 <method name="set_checkpoint"><type>void</type><parameter name="file"><paramtype>const_string</paramtype></parameter><parameter name="line_num"><paramtype>std::size_t</paramtype></parameter><parameter name="msg"><paramtype>const_string</paramtype><default>const_string()</default></parameter></method>
@@ -2906,13 +2905,13 @@ Users/developers willing to implement their own formatter need to:<itemizedlist>
 <para><emphasis role="bold">See Also:</emphasis><para>log_entry_start, entry_context_context </para>
 </para>
 </para></description></method>
-<method name="set_log_level" specifiers="virtual"><type>void</type><parameter name="new_log_level"><paramtype>log_level</paramtype></parameter><purpose>Sets the log level of the logger/formatter. </purpose><description><para>Some loggers need to manage the log level by their own. This member function let the implementation decide of that. <formalpara><title>Since Boost 1.62 </title><para/>
+<method name="set_log_level" specifiers="virtual"><type>void</type><parameter name="new_log_level"><paramtype>log_level</paramtype></parameter><purpose>Sets the log level of the logger/formatter. </purpose><description><para>Some loggers need to manage the log level by their own. This member function let the implementation decide of that. <formalpara><title>Since Boost 1.62</title><para/>
 </formalpara>
 </para></description></method>
-<method name="get_log_level" cv="const" specifiers="virtual"><type>log_level</type><purpose>Returns the log level of the logger/formatter. </purpose><description><para><formalpara><title>Since Boost 1.62 </title><para/>
+<method name="get_log_level" cv="const" specifiers="virtual"><type>log_level</type><purpose>Returns the log level of the logger/formatter. </purpose><description><para><formalpara><title>Since Boost 1.62</title><para/>
 </formalpara>
 </para></description></method>
-<method name="get_default_stream_description" cv="const" specifiers="virtual"><type>std::string</type><purpose>Returns a default stream for this logger. </purpose><description><para>The returned string describes the stream as if it was passed from the command line <computeroutput>"--log_sink"</computeroutput> parameter. With that regards, <emphasis role="bold">stdout</emphasis> and <emphasis role="bold">stderr</emphasis> have special meaning indicating the standard output or error stream respectively.</para><para><formalpara><title>Since Boost 1.62 </title><para/>
+<method name="get_default_stream_description" cv="const" specifiers="virtual"><type>std::string</type><purpose>Returns a default stream for this logger. </purpose><description><para>The returned string describes the stream as if it was passed from the command line <computeroutput>"--log_sink"</computeroutput> parameter. With that regards, <emphasis role="bold">stdout</emphasis> and <emphasis role="bold">stderr</emphasis> have special meaning indicating the standard output or error stream respectively.</para><para><formalpara><title>Since Boost 1.62</title><para/>
 </formalpara>
 </para></description></method>
 </method-group>
@@ -2971,8 +2970,8 @@ Users/developers willing to implement their own formatter need to:<itemizedlist>
 <data-member name="btrt_usage"><type>std::string</type></data-member>
 <data-member name="btrt_version"><type>std::string</type></data-member>
 <function name="init"><type>void</type><parameter name="argc"><paramtype>int &amp;</paramtype></parameter><parameter name="argv"><paramtype>char **</paramtype></parameter></function>
-<function name="argument_store"><type>runtime::arguments_store const  &amp;</type><purpose>Access to arguments. </purpose></function>
-<function name="get"><type>T const  &amp;</type><template>
+<function name="argument_store"><type>runtime::arguments_store const &amp;</type><purpose>Access to arguments. </purpose></function>
+<function name="get"><type>T const &amp;</type><template>
           <template-type-parameter name="T"/>
         </template><parameter name="parameter_name"><paramtype>runtime::cstring</paramtype></parameter></function>
 <function name="has"><type>bool</type><parameter name="parameter_name"><paramtype>runtime::cstring</paramtype></parameter></function>
@@ -3068,19 +3067,8 @@ The wildcard is the symbol '*'. Only a unique wildcard per string is supported. 
       <template-nontype-parameter name="is_forward_iterable"><type>bool</type><default><classname alt="boost::unit_test::is_forward_iterable">is_forward_iterable</classname>&lt;T&gt;::value</default></template-nontype-parameter>
     </template><purpose>Helper structure for accessing the content of a container or an array. </purpose></struct><struct-specialization name="bt_iterator_traits"><template>
       <template-type-parameter name="T"/>
-      <template-nontype-parameter name="N"><type>std::size_t</type></template-nontype-parameter>
-    </template><specialization><template-arg>T [N]</template-arg><template-arg>true</template-arg></specialization><typedef name="T_const"><type>boost::add_const&lt; T &gt;::type</type></typedef>
-<typedef name="const_iterator"><type>boost::add_pointer&lt; T_const &gt;::type</type></typedef>
-<typedef name="value_type"><type>T</type></typedef>
-<method-group name="public static functions">
-<method name="begin" specifiers="static"><type>const_iterator</type><parameter name="array"><paramtype>T_const(&amp;)</paramtype></parameter></method>
-<method name="end" specifiers="static"><type>const_iterator</type><parameter name="array"><paramtype>T_const(&amp;)</paramtype></parameter></method>
-<method name="size" specifiers="static"><type>std::size_t</type><parameter name=""><paramtype>T_const(&amp;)</paramtype></parameter></method>
-</method-group>
-</struct-specialization><struct-specialization name="bt_iterator_traits"><template>
-      <template-type-parameter name="T"/>
-    </template><specialization><template-arg>T</template-arg><template-arg>true</template-arg></specialization><typedef name="value_type"><type>std::iterator_traits&lt; const_iterator &gt;::value_type</type></typedef>
-<data-member name="const_iterator"><type>decltype(boost::declval&lt; typename boost::add_const&lt; typename boost::remove_reference&lt; T &gt;::type &gt;::type &gt;().begin()) typedef</type></data-member>
+    </template><specialization><template-arg>T</template-arg><template-arg>true</template-arg></specialization><typedef name="const_iterator"><type>decltype(boost::declval&lt; typename boost::add_const&lt; typename boost::remove_reference&lt; T &gt;::type &gt;::type &gt;().begin())</type></typedef>
+<typedef name="value_type"><type>std::iterator_traits&lt; const_iterator &gt;::value_type</type></typedef>
 <method-group name="public member functions">
 <method name="BOOST_STATIC_ASSERT"><type/><parameter name=""><paramtype>(<classname>is_forward_iterable</classname>&lt; T &gt;::value)</paramtype></parameter></method>
 </method-group>
@@ -3092,6 +3080,17 @@ The wildcard is the symbol '*'. Only a unique wildcard per string is supported. 
 <method-group name="private static functions">
 <method name="size" specifiers="static"><type>std::size_t</type><parameter name="container"><paramtype>T const &amp;</paramtype></parameter><parameter name=""><paramtype>std::true_type</paramtype></parameter></method>
 <method name="size" specifiers="static"><type>std::size_t</type><parameter name="container"><paramtype>T const &amp;</paramtype></parameter><parameter name=""><paramtype>std::false_type</paramtype></parameter></method>
+</method-group>
+</struct-specialization><struct-specialization name="bt_iterator_traits"><template>
+      <template-type-parameter name="T"/>
+      <template-nontype-parameter name="N"><type>std::size_t</type></template-nontype-parameter>
+    </template><specialization><template-arg>T[N]</template-arg><template-arg>true</template-arg></specialization><typedef name="T_const"><type>boost::add_const&lt; T &gt;::type</type></typedef>
+<typedef name="const_iterator"><type>boost::add_pointer&lt; T_const &gt;::type</type></typedef>
+<typedef name="value_type"><type>T</type></typedef>
+<method-group name="public static functions">
+<method name="begin" specifiers="static"><type>const_iterator</type><parameter name="array"><paramtype>T_const(&amp;)</paramtype></parameter></method>
+<method name="end" specifiers="static"><type>const_iterator</type><parameter name="array"><paramtype>T_const(&amp;)</paramtype></parameter></method>
+<method name="size" specifiers="static"><type>std::size_t</type><parameter name=""><paramtype>T_const(&amp;)</paramtype></parameter></method>
 </method-group>
 </struct-specialization><struct name="is_container_forward_iterable"><template>
       <template-type-parameter name="T"/>
@@ -3126,14 +3125,14 @@ The wildcard is the symbol '*'. Only a unique wildcard per string is supported. 
       <template-type-parameter name="Keyword"/>
     </template><specialization><template-arg>named_parameter_combine&lt; NP</template-arg><template-arg>Rest &gt;</template-arg><template-arg>Keyword</template-arg></specialization><inherit access="public">mpl::or_&lt; is_same&lt; NP::id, Keyword::id &gt;::type, has_param&lt; Rest, Keyword &gt;::type &gt;</inherit></struct-specialization><struct name="is_named_param_pack"><template>
       <template-type-parameter name="T"/>
-    </template><inherit access="public">false_</inherit><purpose>is_named_param_pack&lt;T&gt;::value is true if T is parameters pack </purpose></struct><struct-specialization name="is_named_param_pack"><template>
+    </template><inherit access="public">mpl::false_</inherit><purpose>is_named_param_pack&lt;T&gt;::value is true if T is parameters pack </purpose></struct><struct-specialization name="is_named_param_pack"><template>
       <template-type-parameter name="T"/>
       <template-type-parameter name="unique_id"/>
       <template-type-parameter name="RefType"/>
-    </template><specialization><template-arg>named_parameter&lt; T</template-arg><template-arg>unique_id</template-arg><template-arg>RefType &gt;</template-arg></specialization><inherit access="public">true_</inherit></struct-specialization><struct-specialization name="is_named_param_pack"><template>
+    </template><specialization><template-arg>named_parameter&lt; T</template-arg><template-arg>unique_id</template-arg><template-arg>RefType &gt;</template-arg></specialization><inherit access="public">mpl::true_</inherit></struct-specialization><struct-specialization name="is_named_param_pack"><template>
       <template-type-parameter name="NP"/>
       <template-type-parameter name="Rest"/>
-    </template><specialization><template-arg>named_parameter_combine&lt; NP</template-arg><template-arg>Rest &gt;</template-arg></specialization><inherit access="public">true_</inherit></struct-specialization><struct name="keyword"><template>
+    </template><specialization><template-arg>named_parameter_combine&lt; NP</template-arg><template-arg>Rest &gt;</template-arg></specialization><inherit access="public">mpl::true_</inherit></struct-specialization><struct name="keyword"><template>
       <template-type-parameter name="unique_id"/>
       <template-nontype-parameter name="required"><type>bool</type><default>false</default></template-nontype-parameter>
     </template><typedef name="id"><type>unique_id</type></typedef>
@@ -3145,7 +3144,7 @@ The wildcard is the symbol '*'. Only a unique wildcard per string is supported. 
 <copy-assignment cv="const"><type><classname>named_parameter</classname>&lt; T, unique_id &gt;</type><template>
           <template-type-parameter name="T"/>
         </template><parameter name="t"><paramtype>T &amp;</paramtype></parameter></copy-assignment>
-<copy-assignment cv="const"><type><classname>named_parameter</classname>&lt; char const  *, unique_id, char const  * &gt;</type><parameter name="t"><paramtype>char const *</paramtype></parameter></copy-assignment>
+<copy-assignment cv="const"><type><classname>named_parameter</classname>&lt; char const *, unique_id, char const * &gt;</type><parameter name="t"><paramtype>char const *</paramtype></parameter></copy-assignment>
 </struct><struct name="named_parameter"><template>
       <template-type-parameter name="T"/>
       <template-type-parameter name="unique_id"/>
@@ -3177,7 +3176,7 @@ The wildcard is the symbol '*'. Only a unique wildcard per string is supported. 
 </struct><struct name="named_parameter_combine"><template>
       <template-type-parameter name="NP"/>
       <template-type-parameter name="Rest"><default><classname alt="boost::nfp::nil">nil</classname></default></template-type-parameter>
-    </template><inherit access="public">Rest</inherit><typedef name="res_type"><type>NP::ref_type</type></typedef>
+    </template><inherit access="public">boost::nfp::nil</inherit><typedef name="res_type"><type>NP::ref_type</type></typedef>
 <typedef name="self_type"><type><classname>named_parameter_combine</classname>&lt; NP, Rest &gt;</type></typedef>
 <method-group name="public member functions">
 <method name="operator[]" cv="const"><type>res_type</type><parameter name="kw"><paramtype><classname>keyword</classname>&lt; typename NP::id, true &gt;</paramtype></parameter></method>
@@ -3187,9 +3186,32 @@ The wildcard is the symbol '*'. Only a unique wildcard per string is supported. 
 <method name="apply_to" cv="const"><type>void</type><template>
           <template-type-parameter name="Visitor"/>
         </template><parameter name="V"><paramtype>Visitor &amp;</paramtype></parameter></method>
-<method name="operator," cv="const"><type><classname>named_parameter_combine</classname>&lt; NP, <classname>named_parameter_combine</classname>&lt; NP, Rest &gt; &gt;</type><parameter name="np"><paramtype>NP const &amp;</paramtype></parameter></method>
+<method name="conversion-operator" cv="const"><type>T const &amp;</type><template>
+          <template-type-parameter name="T"/>
+        </template></method>
+<method name="any_cast" cv="const"><type>T</type><template>
+          <template-type-parameter name="T"/>
+        </template></method>
+<method name="operator()"><type><classname>nil</classname></type><template>
+          <template-type-parameter name="Arg1"/>
+        </template><parameter name=""><paramtype>Arg1 const &amp;</paramtype></parameter></method>
+<method name="operator()"><type><classname>nil</classname></type><template>
+          <template-type-parameter name="Arg1"/>
+          <template-type-parameter name="Arg2"/>
+        </template><parameter name=""><paramtype>Arg1 const &amp;</paramtype></parameter><parameter name=""><paramtype>Arg2 const &amp;</paramtype></parameter></method>
+<method name="operator()"><type><classname>nil</classname></type><template>
+          <template-type-parameter name="Arg1"/>
+          <template-type-parameter name="Arg2"/>
+          <template-type-parameter name="Arg3"/>
+        </template><parameter name=""><paramtype>Arg1 const &amp;</paramtype></parameter><parameter name=""><paramtype>Arg2 const &amp;</paramtype></parameter><parameter name=""><paramtype>Arg3 const &amp;</paramtype></parameter></method>
+<method name="operator," cv="const"><type><classname>named_parameter_combine</classname>&lt; NP, Derived &gt;</type><template>
+          <template-type-parameter name="NP"/>
+        </template><parameter name="np"><paramtype>NP const &amp;</paramtype></parameter></method>
 </method-group>
 <constructor><parameter name="np"><paramtype>NP const &amp;</paramtype></parameter><parameter name="r"><paramtype>Rest const &amp;</paramtype></parameter></constructor>
+<method-group name="public static functions">
+<method name="inst" specifiers="static"><type><classname>nil</classname> &amp;</type></method>
+</method-group>
 </struct><struct name="nil"><method-group name="public member functions">
 <method name="conversion-operator" cv="const"><type>T const &amp;</type><template>
           <template-type-parameter name="T"/>
@@ -3223,7 +3245,7 @@ The wildcard is the symbol '*'. Only a unique wildcard per string is supported. 
       <template-type-parameter name="NP"/>
       <template-type-parameter name="Keyword"/>
       <template-type-parameter name="DefaultType"><default>void</default></template-type-parameter>
-    </template><inherit access="public">mpl::if_&lt; is_same&lt; NP::id, Keyword::id &gt;::type, remove_cv&lt; NP::data_type &gt;::type, DefaultType &gt;</inherit><purpose>param_type&lt;Params,Keyword,Default&gt;::type is the type of the parameter corresponding to the Keyword (if parameter is present) or Default </purpose></struct><struct-specialization name="param_type"><template>
+    </template><inherit access="public">mpl::if_&lt; is_same&lt; NP::id, Keyword::id &gt;::type, remove_cv&lt; NP::data_type &gt;::type, void &gt;</inherit><purpose>param_type&lt;Params,Keyword,Default&gt;::type is the type of the parameter corresponding to the Keyword (if parameter is present) or Default </purpose></struct><struct-specialization name="param_type"><template>
       <template-type-parameter name="NP"/>
       <template-type-parameter name="Rest"/>
       <template-type-parameter name="Keyword"/>
@@ -3253,7 +3275,9 @@ The wildcard is the symbol '*'. Only a unique wildcard per string is supported. 
 <method name="erase" cv="const"><type>void</type><parameter name=""><paramtype><classname>keyword</classname>&lt; unique_id, false &gt;</paramtype></parameter></method>
 <method name="erase" cv="const"><type>void</type><parameter name=""><paramtype><classname>keyword</classname>&lt; UnknownId, false &gt;</paramtype></parameter></method>
 <method name="apply_to" cv="const"><type>void</type><parameter name="V"><paramtype>Visitor &amp;</paramtype></parameter></method>
-<method name="operator," cv="const"><type><classname>named_parameter_combine</classname>&lt; NP, <classname>named_parameter</classname>&lt; bool, unique_id, bool &gt; &gt;</type><parameter name="np"><paramtype>NP const &amp;</paramtype></parameter></method>
+<method name="operator," cv="const"><type><classname>named_parameter_combine</classname>&lt; NP, Derived &gt;</type><template>
+          <template-type-parameter name="NP"/>
+        </template><parameter name="np"><paramtype>NP const &amp;</paramtype></parameter></method>
 </method-group>
 <constructor/>
 </struct-specialization><typedef name="no_params_type"><type><classname>named_parameter</classname>&lt; char, struct no_params_type_t, char &gt;</type></typedef>
@@ -3272,11 +3296,11 @@ The wildcard is the symbol '*'. Only a unique wildcard per string is supported. 
           <template-type-parameter name="Params"/>
           <template-type-parameter name="Keyword"/>
         </template><parameter name="p"><paramtype>Params const &amp;</paramtype></parameter><parameter name="k"><paramtype>Keyword</paramtype></parameter><parameter name="default_val"><paramtype>T</paramtype></parameter></function>
-<function name="opt_append"><type>enable_if_c&lt;!<classname>has_param</classname>&lt; Params, <classname>keyword</classname>&lt; typename NP::id &gt; &gt;::value, <classname>named_parameter_combine</classname>&lt; NP, Params &gt; &gt;::type</type><template>
+<function name="opt_append"><type>enable_if_c&lt;!<classname>has_param</classname>&lt; Params, <classname>keyword</classname>&lt; typenameNP::id &gt; &gt;::value, <classname>named_parameter_combine</classname>&lt; NP, Params &gt; &gt;::type</type><template>
           <template-type-parameter name="Params"/>
           <template-type-parameter name="NP"/>
         </template><parameter name="params"><paramtype>Params const &amp;</paramtype></parameter><parameter name="np"><paramtype>NP const &amp;</paramtype></parameter></function>
-<function name="opt_append"><type>enable_if_c&lt; <classname>has_param</classname>&lt; Params, <classname>keyword</classname>&lt; typename NP::id &gt; &gt;::value, Params &gt;::type</type><template>
+<function name="opt_append"><type>enable_if_c&lt; <classname>has_param</classname>&lt; Params, <classname>keyword</classname>&lt; typenameNP::id &gt; &gt;::value, Params &gt;::type</type><template>
           <template-type-parameter name="Params"/>
           <template-type-parameter name="NP"/>
         </template><parameter name="params"><paramtype>Params const &amp;</paramtype></parameter><parameter name=""><paramtype>NP const &amp;</paramtype></parameter></function>

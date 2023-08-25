@@ -42,44 +42,44 @@
     <span class="keyword">typedef</span> <span class="keyword">decltype</span><span class="special">(</span><span class="identifier">sample_merge</span><span class="special">(</span><span class="special">*</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">declval</span><span class="special">&lt;</span> <span class="identifier">dataset1_iter</span> <span class="special">&gt;</span><span class="special">(</span><span class="special">)</span><span class="special">,</span> <span class="special">*</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">declval</span><span class="special">&lt;</span> <span class="identifier">dataset2_iter</span> <span class="special">&gt;</span><span class="special">(</span><span class="special">)</span><span class="special">)</span><span class="special">)</span> <a class="link" href="grid/iterator.html#boost.unit_test.data.monomorphic.grid.iterator.iterator_sample"><span class="identifier">iterator_sample</span></a><span class="special">;</span>
 
     <span class="comment">// <a class="link" href="grid/iterator.html#boost.unit_test.data.monomorphic.grid.iteratorconstruct-copy-destruct">construct/copy/destruct</a></span>
-    <span class="keyword">explicit</span> <a class="link" href="grid/iterator.html#idm43256-bb"><span class="identifier">iterator</span></a><span class="special">(</span><span class="identifier">dataset1_iter</span><span class="special">,</span> <span class="identifier">DataSet2</span> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span><span class="special">;</span>
+    <span class="keyword">explicit</span> <a class="link" href="grid/iterator.html#idm43229-bb"><span class="identifier">iterator</span></a><span class="special">(</span><span class="identifier">dataset1_iter</span><span class="special">,</span> <span class="identifier">DataSet2</span> <span class="keyword">const</span> <span class="special">&amp;</span><span class="special">)</span><span class="special">;</span>
 
-    <span class="comment">// <a class="link" href="grid/iterator.html#idm43251-bb">public member functions</a></span>
-    <span class="keyword">auto</span> <a class="link" href="grid/iterator.html#idm43252-bb"><span class="keyword">operator</span> <span class="special">*</span></a><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
-    <span class="keyword">void</span> <a class="link" href="grid/iterator.html#idm43254-bb"><span class="keyword">operator</span><span class="special">++</span></a><span class="special">(</span><span class="special">)</span><span class="special">;</span>
+    <span class="comment">// <a class="link" href="grid/iterator.html#idm43224-bb">public member functions</a></span>
+    <span class="keyword">auto</span> <a class="link" href="grid/iterator.html#idm43225-bb"><span class="keyword">operator</span><span class="special">*</span></a><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+    <span class="keyword">void</span> <a class="link" href="grid/iterator.html#idm43227-bb"><span class="keyword">operator</span><span class="special">++</span></a><span class="special">(</span><span class="special">)</span><span class="special">;</span>
   <span class="special">}</span><span class="special">;</span>
   <span class="comment">// <a class="link" href="grid.html#boost.unit_test.data.monomorphic.gridconstruct-copy-destruct">construct/copy/destruct</a></span>
-  <a class="link" href="grid.html#idm43270-bb"><span class="identifier">grid</span></a><span class="special">(</span><span class="identifier">DataSet1</span> <span class="special">&amp;&amp;</span><span class="special">,</span> <span class="identifier">DataSet2</span> <span class="special">&amp;&amp;</span><span class="special">)</span><span class="special">;</span>
-  <a class="link" href="grid.html#idm43276-bb"><span class="identifier">grid</span></a><span class="special">(</span><a class="link" href="grid.html" title="Class template grid">grid</a> <span class="special">&amp;&amp;</span><span class="special">)</span><span class="special">;</span>
+  <a class="link" href="grid.html#idm43243-bb"><span class="identifier">grid</span></a><span class="special">(</span><span class="identifier">DataSet1</span> <span class="special">&amp;&amp;</span><span class="special">,</span> <span class="identifier">DataSet2</span> <span class="special">&amp;&amp;</span><span class="special">)</span><span class="special">;</span>
+  <a class="link" href="grid.html#idm43249-bb"><span class="identifier">grid</span></a><span class="special">(</span><a class="link" href="grid.html" title="Class template grid">grid</a> <span class="special">&amp;&amp;</span><span class="special">)</span><span class="special">;</span>
 
-  <span class="comment">// <a class="link" href="grid.html#idm43263-bb">public member functions</a></span>
-  <a class="link" href="../size_t.html" title="Class size_t">data::size_t</a> <a class="link" href="grid.html#idm43264-bb"><span class="identifier">size</span></a><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
-  <a class="link" href="grid/iterator.html" title="Struct iterator">iterator</a> <a class="link" href="grid.html#idm43267-bb"><span class="identifier">begin</span></a><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+  <span class="comment">// <a class="link" href="grid.html#idm43236-bb">public member functions</a></span>
+  <a class="link" href="../size_t.html" title="Class size_t">data::size_t</a> <a class="link" href="grid.html#idm43237-bb"><span class="identifier">size</span></a><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+  <a class="link" href="grid/iterator.html" title="Struct iterator">iterator</a> <a class="link" href="grid.html#idm43240-bb"><span class="identifier">begin</span></a><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
 
   <span class="comment">// public data members</span>
   <span class="keyword">static</span> <span class="keyword">const</span> <span class="keyword">int</span> <span class="identifier">arity</span><span class="special">;</span>
 <span class="special">}</span><span class="special">;</span></pre></div>
 <div class="refsect1">
-<a name="idm46137"></a><h2>Description</h2>
+<a name="idm45718"></a><h2>Description</h2>
 <p>The arity of the resulting dataset is the sum of the arity of its operands. </p>
 <div class="refsect2">
-<a name="idm46140"></a><h3>
+<a name="idm45721"></a><h3>
 <a name="boost.unit_test.data.monomorphic.gridconstruct-copy-destruct"></a><code class="computeroutput">grid</code> 
         public
        construct/copy/destruct</h3>
 <div class="orderedlist"><ol class="orderedlist" type="1">
 <li class="listitem">
-<pre class="literallayout"><a name="idm43270-bb"></a><span class="identifier">grid</span><span class="special">(</span><span class="identifier">DataSet1</span> <span class="special">&amp;&amp;</span> ds1<span class="special">,</span> <span class="identifier">DataSet2</span> <span class="special">&amp;&amp;</span> ds2<span class="special">)</span><span class="special">;</span></pre>Constructor. </li>
+<pre class="literallayout"><a name="idm43243-bb"></a><span class="identifier">grid</span><span class="special">(</span><span class="identifier">DataSet1</span> <span class="special">&amp;&amp;</span> ds1<span class="special">,</span> <span class="identifier">DataSet2</span> <span class="special">&amp;&amp;</span> ds2<span class="special">)</span><span class="special">;</span></pre>Constructor. </li>
 <li class="listitem">
-<pre class="literallayout"><a name="idm43276-bb"></a><span class="identifier">grid</span><span class="special">(</span><a class="link" href="grid.html" title="Class template grid">grid</a> <span class="special">&amp;&amp;</span> j<span class="special">)</span><span class="special">;</span></pre>Move constructor. </li>
+<pre class="literallayout"><a name="idm43249-bb"></a><span class="identifier">grid</span><span class="special">(</span><a class="link" href="grid.html" title="Class template grid">grid</a> <span class="special">&amp;&amp;</span> j<span class="special">)</span><span class="special">;</span></pre>Move constructor. </li>
 </ol></div>
 </div>
 <div class="refsect2">
-<a name="idm46168"></a><h3>
-<a name="idm43263-bb"></a><code class="computeroutput">grid</code> public member functions</h3>
+<a name="idm45749"></a><h3>
+<a name="idm43236-bb"></a><code class="computeroutput">grid</code> public member functions</h3>
 <div class="orderedlist"><ol class="orderedlist" type="1">
-<li class="listitem"><pre class="literallayout"><a class="link" href="../size_t.html" title="Class size_t">data::size_t</a> <a name="idm43264-bb"></a><span class="identifier">size</span><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span></pre></li>
-<li class="listitem"><pre class="literallayout"><a class="link" href="grid/iterator.html" title="Struct iterator">iterator</a> <a name="idm43267-bb"></a><span class="identifier">begin</span><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span></pre></li>
+<li class="listitem"><pre class="literallayout"><a class="link" href="../size_t.html" title="Class size_t">data::size_t</a> <a name="idm43237-bb"></a><span class="identifier">size</span><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span></pre></li>
+<li class="listitem"><pre class="literallayout"><a class="link" href="grid/iterator.html" title="Struct iterator">iterator</a> <a name="idm43240-bb"></a><span class="identifier">begin</span><span class="special">(</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span></pre></li>
 </ol></div>
 </div>
 </div>

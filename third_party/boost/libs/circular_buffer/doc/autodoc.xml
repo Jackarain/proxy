@@ -158,7 +158,7 @@ For detailed documentation of the <classname alt="boost::circular_buffer">circul
 </para>
 </para></description><returns><para>A const reverse random access iterator pointing to the element "one before" the first element of the <computeroutput><classname alt="boost::circular_buffer">circular_buffer</classname></computeroutput>. If the <computeroutput><classname alt="boost::circular_buffer">circular_buffer</classname></computeroutput> is empty it returns an iterator equal to the one returned by <computeroutput>rbegin() const</computeroutput>. </para>
 </returns><throws><simpara><classname>Nothing.</classname> </simpara></throws></method>
-<method name="operator []"><type>reference</type><parameter name="index"><paramtype>size_type</paramtype><description><para>The position of the element. </para></description></parameter><purpose>Get the element at the <computeroutput>index</computeroutput> position. </purpose><description><para>
+<method name="operator[]"><type>reference</type><parameter name="index"><paramtype>size_type</paramtype><description><para>The position of the element. </para></description></parameter><purpose>Get the element at the <computeroutput>index</computeroutput> position. </purpose><description><para>
 
 
 
@@ -173,7 +173,7 @@ For detailed documentation of the <classname alt="boost::circular_buffer">circul
 </para></description><requires><para><computeroutput>0 &lt;= index &amp;&amp; index &lt; size()</computeroutput> </para>
 </requires><returns><para>A reference to the element at the <computeroutput>index</computeroutput> position. </para>
 </returns><throws><simpara><classname>Nothing.</classname> </simpara></throws></method>
-<method name="operator []" cv="const"><type>const_reference</type><parameter name="index"><paramtype>size_type</paramtype><description><para>The position of the element. </para></description></parameter><purpose>Get the element at the <computeroutput>index</computeroutput> position. </purpose><description><para>
+<method name="operator[]" cv="const"><type>const_reference</type><parameter name="index"><paramtype>size_type</paramtype><description><para>The position of the element. </para></description></parameter><purpose>Get the element at the <computeroutput>index</computeroutput> position. </purpose><description><para>
 
 
 

@@ -12,9 +12,11 @@ project : requirements
     <library>/boost/locale//boost_locale
     <warnings>extra
     <toolset>msvc:<warnings-as-errors>on
+    <toolset>gcc:<cxxflags>-Wzero-as-null-pointer-constant
     [ predef-check "BOOST_COMP_GNUC >= 8.0.0" : : <cxxflags>-Wsuggest-override ]
     [ predef-check "BOOST_COMP_GNUC >= 8.0.0" and "BOOST_COMP_GNUC < 12" : : <warnings-as-errors>on ]
     <toolset>clang-5:<warnings-as-errors>on
+    [ predef-check "BOOST_COMP_CLANG >= 5" : : <cxxflags>-Wzero-as-null-pointer-constant ]
     [ predef-check "BOOST_COMP_CLANG >= 9" and "BOOST_COMP_CLANG < 14" : : <warnings-as-errors>on ]
     <include>.
     # Make sure we get all defines we need
@@ -31,6 +33,8 @@ project : requirements
 run show_config.cpp
     : : : <test-info>always_show_run_output ;
 # Shared
+run test_catalog.cpp ;
+run test_encoding.cpp ;
 run test_utf.cpp ;
 run test_util.cpp test_helpers.cpp ;
 run test_date_time.cpp ;
@@ -38,7 +42,7 @@ run test_ios_info.cpp ;
 run test_ios_prop.cpp ;
 run test_codecvt.cpp ;
 run test_codepage_converter.cpp ;
-run test_codepage.cpp ;
+run test_stream_io.cpp ;
 run test_message.cpp : $(BOOST_ROOT)/libs/locale/test ;
 run test_generator.cpp ;
 # icu

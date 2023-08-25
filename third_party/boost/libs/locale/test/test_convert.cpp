@@ -72,7 +72,7 @@ void test_main(int /*argc*/, char** /*argv*/)
     {
         using namespace boost::locale;
         std::cout << "Testing Unicode normalization" << std::endl;
-        test_norm("\xEF\xAC\x81", "\xEF\xAC\x81", norm_nfd); /// ligature fi
+        test_norm("\xEF\xAC\x81", "\xEF\xAC\x81", norm_nfd); // ligature fi
         test_norm("\xEF\xAC\x81", "\xEF\xAC\x81", norm_nfc);
         test_norm("\xEF\xAC\x81", "fi", norm_nfkd);
         test_norm("\xEF\xAC\x81", "fi", norm_nfkc);

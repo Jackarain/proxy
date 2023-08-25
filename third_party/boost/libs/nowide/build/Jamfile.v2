@@ -21,12 +21,20 @@ project boost/nowide
   : source-location ../src
   : requirements $(requirements)
     [ requires
+      cxx11_auto_declarations
+      cxx11_char16_t
+      cxx11_char32_t
+      cxx11_constexpr
+      cxx11_decltype
       cxx11_defaulted_functions
       cxx11_noexcept
+      cxx11_nullptr
+      cxx11_override
       cxx11_rvalue_references
       cxx11_static_assert
+      cxx11_template_aliases
+      cxx11_variadic_templates
     ]
-    [ check-target-builds ../config//cxx11_moveable_fstreams "std::fstream is moveable and swappable" : : <build>no ]
     [ check-target-builds ../config//lfs_support "Has Large File Support" : : <define>BOOST_NOWIDE_NO_LFS ] <boost.nowide.lfs>no:<define>BOOST_NOWIDE_NO_LFS
     [ check-target-builds ../config//attribute_init_priority "Has attribute init_priority" : <define>BOOST_NOWIDE_HAS_INIT_PRIORITY ]
   : usage-requirements $(requirements)

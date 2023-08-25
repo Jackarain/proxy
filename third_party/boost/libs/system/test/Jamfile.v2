@@ -193,3 +193,4 @@ run result_emplace.cpp : : : $(CPP11) ;
 run result_error_construct4.cpp : : : $(CPP11) ;
 run result_value_construct4.cpp : : : $(CPP11) ;
 run result_value_construct5.cpp : : : $(CPP11) ;
+run result_error_move.cpp : : : $(CPP11) ;

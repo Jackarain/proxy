@@ -6,7 +6,7 @@
 <meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
 <link rel="home" href="index.html" title="Chapter 1. Boost.Contract 1.0.0">
 <link rel="up" href="reference.html#header.boost.contract.base_types_hpp" title="Header &lt;boost/contract/base_types.hpp&gt;">
-<link rel="prev" href="BOOST_CONTRACT_AS_idm33665.html" title="Macro BOOST_CONTRACT_ASSERT_AXIOM">
+<link rel="prev" href="BOOST_CONTRACT_AS_idm33668.html" title="Macro BOOST_CONTRACT_ASSERT_AXIOM">
 <link rel="next" href="boost/contract/call_if_statement.html" title="Struct template call_if_statement">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
@@ -21,7 +21,7 @@
 </tr></table>
 <hr>
 <div class="spirit-nav">
-<a accesskey="p" href="BOOST_CONTRACT_AS_idm33665.html"><img src="../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="reference.html#header.boost.contract.base_types_hpp"><img src="../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="boost/contract/call_if_statement.html"><img src="../../../../doc/src/images/next.png" alt="Next"></a>
+<a accesskey="p" href="BOOST_CONTRACT_AS_idm33668.html"><img src="../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="reference.html#header.boost.contract.base_types_hpp"><img src="../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="boost/contract/call_if_statement.html"><img src="../../../../doc/src/images/next.png" alt="Next"></a>
 </div>
 <div class="refentry">
 <a name="BOOST_CONTRACT_BASE_TYPES"></a><div class="titlepage"></div>
@@ -34,21 +34,21 @@
 
 </span>BOOST_CONTRACT_BASE_TYPES(...)</pre></div>
 <div class="refsect1">
-<a name="idm34279"></a><h2>Description</h2>
-<p>In order to support subcontracting, a derived class that specifies contracts for one or more overriding public functions must declare a <code class="computeroutput">typedef</code> named <code class="computeroutput">base_types</code> (or <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_BA_idm34666.html" title="Macro BOOST_CONTRACT_BASES_TYPEDEF">BOOST_CONTRACT_BASES_TYPEDEF</a></code>) using this macro:</p>
-<pre class="programlisting"><span class="keyword">class</span> <span class="identifier">u</span>
-    <span class="preprocessor">#define</span> <span class="identifier">BASES</span> <span class="keyword">public</span> <span class="identifier">b</span><span class="special">,</span> <span class="keyword">protected</span> <span class="keyword">virtual</span> <span class="identifier">w1</span><span class="special">,</span> <span class="keyword">private</span> <span class="identifier">w2</span>
-    <span class="special">:</span> <span class="identifier">BASES</span>
-<span class="special">{</span>
-    <span class="keyword">friend</span> <span class="keyword">class</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">contract</span><span class="special">:</span><span class="identifier">access</span><span class="special">;</span>
+<a name="idm34282"></a><h2>Description</h2>
+<p>In order to support subcontracting, a derived class that specifies contracts for one or more overriding public functions must declare a <code class="computeroutput">typedef</code> named <code class="computeroutput">base_types</code> (or  <code class="computeroutput"><a class="link" href="BOOST_CONTRACT_BA_idm34670.html" title="Macro BOOST_CONTRACT_BASES_TYPEDEF">BOOST_CONTRACT_BASES_TYPEDEF</a></code>) using this macro: @code
+    class u
+        #define BASES public b, protected virtual w1, private w2
+        : BASES
+    {
+        friend class boost::contract:access;
 
-    <span class="keyword">typedef</span> <span class="identifier">BOOST_CONTRACT_BASE_TYPES</span><span class="special">(</span><span class="identifier">BASES</span><span class="special">)</span> <span class="identifier">base_types</span><span class="special">;</span>
-    <span class="preprocessor">#undef</span> <span class="identifier">BASES</span>
+        typedef BOOST_CONTRACT_BASE_TYPES(BASES) base_types;
+        #undef BASES
 
-    <span class="special">...</span>
-<span class="special">}</span><span class="special">;</span>
-</pre>
-<p>This <code class="computeroutput">typedef</code> must be <code class="computeroutput">public</code> unless <code class="computeroutput"><a class="link" href="boost/contract/access.html" title="Class access">boost::contract::access</a></code> is used.</p>
+        ...
+    };
+@endcode
+ This <code class="computeroutput">typedef</code> must be <code class="computeroutput">public</code> unless  <code class="computeroutput"><a class="link" href="boost/contract/access.html" title="Class access">boost::contract::access</a></code> is used.</p>
 <p><span class="bold"><strong>See Also:</strong></span></p>
 <p> <a class="link" href="boost_contract/tutorial.html#boost_contract.tutorial.base_classes__subcontracting_" title="Base Classes (Subcontracting)"> Base Classes</a></p>
 <p>
@@ -84,7 +84,7 @@
 </div>
 <hr>
 <div class="spirit-nav">
-<a accesskey="p" href="BOOST_CONTRACT_AS_idm33665.html"><img src="../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="reference.html#header.boost.contract.base_types_hpp"><img src="../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="boost/contract/call_if_statement.html"><img src="../../../../doc/src/images/next.png" alt="Next"></a>
+<a accesskey="p" href="BOOST_CONTRACT_AS_idm33668.html"><img src="../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="reference.html#header.boost.contract.base_types_hpp"><img src="../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="boost/contract/call_if_statement.html"><img src="../../../../doc/src/images/next.png" alt="Next"></a>
 </div>
 </body>
 </html>

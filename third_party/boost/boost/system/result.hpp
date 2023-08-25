@@ -401,10 +401,16 @@ public:
 
     // error access
 
-    constexpr E error() const
+    constexpr E error() const &
         noexcept( std::is_nothrow_default_constructible<E>::value && std::is_nothrow_copy_constructible<E>::value )
     {
         return has_error()? variant2::unsafe_get<1>( v_ ): E();
+    }
+
+    BOOST_CXX14_CONSTEXPR E error() &&
+        noexcept( std::is_nothrow_default_constructible<E>::value && std::is_nothrow_move_constructible<E>::value )
+    {
+        return has_error()? std::move( variant2::unsafe_get<1>( v_ ) ): E();
     }
 
     // emplace
@@ -581,10 +587,16 @@ public:
 
     // error access
 
-    constexpr E error() const
+    constexpr E error() const &
         noexcept( std::is_nothrow_default_constructible<E>::value && std::is_nothrow_copy_constructible<E>::value )
     {
         return has_error()? variant2::unsafe_get<1>( v_ ): E();
+    }
+
+    BOOST_CXX14_CONSTEXPR E error() &&
+        noexcept( std::is_nothrow_default_constructible<E>::value && std::is_nothrow_move_constructible<E>::value )
+    {
+        return has_error()? std::move( variant2::unsafe_get<1>( v_ ) ): E();
     }
 
     // emplace

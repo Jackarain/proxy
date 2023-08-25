@@ -13,6 +13,7 @@
 #include <ctime>
 #include <iomanip>
 #include <iostream>
+#include <utility>
 #ifndef BOOST_LOCALE_NO_WINAPI_BACKEND
 #    ifndef NOMINMAX
 #        define NOMINMAX
@@ -77,7 +78,7 @@ void test_by_char(const std::locale& l, std::string name, int lcid)
 
 #ifndef BOOST_LOCALE_NO_WINAPI_BACKEND
         wchar_t buf[256];
-        GetCurrencyFormatW(lcid, 0, L"1043.34", 0, buf, 256);
+        GetCurrencyFormatW(lcid, 0, L"1043.34", nullptr, buf, 256);
         TEST_EQ(to_utf8(ss.str()), to_utf8<wchar_t>(buf));
 #else
         boost::ignore_unused(lcid);
@@ -86,38 +87,43 @@ void test_by_char(const std::locale& l, std::string name, int lcid)
 
     {
         std::cout << "--- Testing as::date/time" << std::endl;
+
+        const time_t a_date = 3600 * 24 * (31 + 4);     // Feb 5th
+        const time_t a_time = 3600 * 15 + 60 * 33 + 13; // 15:33:13
+        const time_t a_datetime = a_date + a_time;
+
+        wchar_t time_buf[256]{};
+        wchar_t date_buf[256]{};
+#ifndef BOOST_LOCALE_NO_WINAPI_BACKEND
+        SYSTEMTIME st = {1970, 2, 5, 5, 15, 33, 13, 0};
+        GetTimeFormatW(lcid, 0, &st, nullptr, time_buf, 256);
+        GetDateFormatW(lcid, 0, &st, nullptr, date_buf, 256);
+#else
+        if(!time_buf[0])
+            return;
+#endif
+        const std::string expDate = to_utf8(std::wstring(date_buf));
+        const std::string expTime = to_utf8(std::wstring(time_buf));
+
         ss_type ss;
         ss.imbue(l);
 
-        time_t a_date = 3600 * 24 * (31 + 4); // Feb 5th
-        time_t a_time = 3600 * 15 + 60 * 33;  // 15:33:13
-        time_t a_timesec = 13;
-        time_t a_datetime = a_date + a_time + a_timesec;
-
         ss << as::time_zone("GMT");
 
-        ss << as::date << a_datetime << CharType('\n');
-        ss << as::time << a_datetime << CharType('\n');
-        ss << as::datetime << a_datetime << CharType('\n');
-        ss << as::time_zone("GMT+01:00");
-        ss << as::ftime(ascii_to<CharType>("%H")) << a_datetime << CharType('\n');
-        ss << as::time_zone("GMT+00:15");
-        ss << as::ftime(ascii_to<CharType>("%M")) << a_datetime << CharType('\n');
-
-#ifndef BOOST_LOCALE_NO_WINAPI_BACKEND
-        wchar_t time_buf[256];
-        wchar_t date_buf[256];
-        SYSTEMTIME st = {1970, 2, 5, 5, 15, 33, 13, 0};
-        GetTimeFormatW(lcid, 0, &st, 0, time_buf, 256);
-        GetDateFormatW(lcid, 0, &st, 0, date_buf, 256);
-        TEST_EQ(
-          to_utf8(ss.str()),
-          to_utf8(std::wstring(date_buf) + L"\n" + time_buf + L"\n" + date_buf + L" " + time_buf + L"\n16\n48\n"));
-#endif
+        empty_stream(ss) << as::date << a_datetime;
+        TEST_EQ(to_utf8(ss.str()), expDate);
+        empty_stream(ss) << as::time << a_datetime;
+        TEST_EQ(to_utf8(ss.str()), expTime);
+        empty_stream(ss) << as::datetime << a_datetime;
+        TEST_EQ(to_utf8(ss.str()), expDate + " " + expTime);
+        empty_stream(ss) << as::time_zone("GMT+01:00") << as::ftime(ascii_to<CharType>("%H")) << a_datetime;
+        TEST_EQ(to_utf8(ss.str()), "16");
+        empty_stream(ss) << as::time_zone("GMT+00:15") << as::ftime(ascii_to<CharType>("%M")) << a_datetime;
+        TEST_EQ(to_utf8(ss.str()), "48");
     }
 }
 
-void test_date_time(std::locale l)
+void test_date_time(const std::locale& l) // LCOV_EXCL_LINE
 {
     std::ostringstream ss;
     ss.imbue(l);
@@ -129,18 +135,20 @@ void test_date_time(std::locale l)
     time_t a_timesec = 13;
     time_t a_datetime = a_date + a_time + a_timesec;
 
-    std::string pat[] = {"a",        "Thu", "A",  "Thursday", "b",   "Feb", "B",    "February",    "d",  "05",    "D",
-                         "02/05/70", "e",   "5",  "h",        "Feb", "H",   "15",   "I",           "03", "m",     "02",
-                         "M",        "33",  "n",  "\n",       "p",   "PM",  "r",    "03:33:13 PM", "R",  "15:33", "S",
-                         "13",       "t",   "\t", "y",        "70",  "Y",   "1970", "%",           "%"};
+    const std::pair<std::string, std::string> testCases[] = {
+      {"a", "Thu"},      {"A", "Thursday"}, {"b", "Feb"}, {"B", "February"}, {"d", "05"},
+      {"D", "02/05/70"}, {"e", "5"},        {"h", "Feb"}, {"H", "15"},       {"I", "03"},
+      {"m", "02"},       {"M", "33"},       {"n", "\n"},  {"p", "PM"},       {"r", "03:33:13 PM"},
+      {"R", "15:33"},    {"S", "13"},       {"t", "\t"},  {"y", "70"},       {"Y", "1970"},
+      {"%", "%"}};
 
-    for(unsigned i = 0; i < sizeof(pat) / sizeof(pat[0]); i += 2) {
-        ss.str("");
-        ss << boost::locale::as::ftime("%" + pat[i]) << a_datetime;
-        TEST_EQ(ss.str(), pat[i + 1]);
+    for(const auto& patternAndResult : testCases) {
+        empty_stream(ss) << boost::locale::as::ftime("%" + patternAndResult.first) << a_datetime;
+        TEST_EQ(ss.str(), patternAndResult.second);
     }
-}
+} // LCOV_EXCL_LINE
 
+BOOST_LOCALE_DISABLE_UNREACHABLE_CODE_WARNING
 void test_main(int /*argc*/, char** /*argv*/)
 {
 #ifdef BOOST_LOCALE_NO_WINAPI_BACKEND
@@ -158,15 +166,15 @@ void test_main(int /*argc*/, char** /*argv*/)
     {
         const std::string name = name_lcid.first;
         std::cout << "- " << name << " locale" << std::endl;
-        if(boost::locale::impl_win::locale_to_lcid(name) == 0) {
-            std::cout << "-- not supported, skipping" << std::endl;
-            continue;
+        if(!has_win_locale(name))
+            std::cout << "-- not supported, skipping" << std::endl; // LCOV_EXCL_LINE
+        else {
+            const std::locale l = gen(name);
+            std::cout << "-- UTF-8" << std::endl;
+            test_by_char<char>(l, name, name_lcid.second);
+            std::cout << "-- UTF-16" << std::endl;
+            test_by_char<wchar_t>(l, name, name_lcid.second);
         }
-        std::locale l1 = gen(name);
-        std::cout << "-- UTF-8" << std::endl;
-        test_by_char<char>(l1, name, name_lcid.second);
-        std::cout << "-- UTF-16" << std::endl;
-        test_by_char<wchar_t>(l1, name, name_lcid.second);
     }
     std::cout << "- Testing strftime" << std::endl;
     test_date_time(gen("en_US.UTF-8"));

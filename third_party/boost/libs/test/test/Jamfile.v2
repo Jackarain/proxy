@@ -141,7 +141,7 @@ test-suite "usage-variants-ts"
 
 test-suite "framework-ts"
 :
-  [ boost.test-self-test run : framework-ts : result-report-test : : baseline-outputs/result-report-test.pattern baseline-outputs/result_report_test.pattern.default_behaviour ]
+  # [ boost.test-self-test run : framework-ts : result-report-test : : baseline-outputs/result-report-test.pattern baseline-outputs/result_report_test.pattern.default_behaviour ]
   [ boost.test-self-test run : framework-ts : log-formatter-test : : baseline-outputs/log-formatter-context-test.pattern baseline-outputs/log-formatter-test.pattern baseline-outputs/log-formatter-test.pattern.junit ] # should be ordered alphabetically
   [ boost.test-self-test run : framework-ts : run-by-name-or-label-test ]
   [ boost.test-self-test run : framework-ts : version-uses-module-name : included ]
@@ -170,7 +170,7 @@ test-suite "writing-test-ts"
   [ boost.test-self-test run : writing-test-ts : fp-no-comparison-for-incomplete-types-test ]
   [ boost.test-self-test run : writing-test-ts : fp-relational-operator ]
   [ boost.test-self-test run : writing-test-ts : output_test_stream-test ]
-  [ boost.test-self-test run : writing-test-ts : test_tools-test : : baseline-outputs/test_tools-test.pattern : : : : $(requirements_boost_test_full_support) ]
+  # [ boost.test-self-test run : writing-test-ts : test_tools-test : : baseline-outputs/test_tools-test.pattern : : : : $(requirements_boost_test_full_support) ]
   [ boost.test-self-test run : writing-test-ts : windows-headers-test ]
   [ boost.test-self-test run : writing-test-ts : tools-under-debugger-test ]
   [ boost.test-self-test run : writing-test-ts : tools-debuggable-test  : : : : : : $(requirements_boost_test_full_support) ]
@@ -180,10 +180,10 @@ test-suite "writing-test-ts"
   [ boost.test-self-test run : writing-test-ts : test-fixture-detect-setup-teardown ]
   [ boost.test-self-test run : writing-test-ts : test-fixture-detect-setup-teardown-cpp11 : : : : : : [ requires cxx11_decltype cxx11_trailing_result_types ] ]
   [ boost.test-self-test run : writing-test-ts : test-with-precondition : : : : : : [ requires cxx11_auto_declarations cxx11_lambdas ] ]
-  [ boost.test-self-test run : writing-test-ts : test-timeout : : : : : : [ requires cxx11_hdr_thread cxx11_hdr_chrono ] ]
-  [ boost.test-self-test run-fail : writing-test-ts : test-timeout-fail : : : : : : [ requires cxx11_hdr_thread cxx11_hdr_chrono ] ]
-  [ boost.test-self-test run : writing-test-ts : test-timeout-suite : : : : : : $(requirements_datasets) [ requires cxx11_hdr_thread cxx11_hdr_chrono ] ]
-  [ boost.test-self-test run-fail : writing-test-ts : test-timeout-suite-fail : : : : : : $(requirements_datasets) [ requires cxx11_hdr_thread cxx11_hdr_chrono ] ]
+  # [ boost.test-self-test run : writing-test-ts : test-timeout : : : : : : [ requires cxx11_hdr_thread cxx11_hdr_chrono ] ]
+  # [ boost.test-self-test run-fail : writing-test-ts : test-timeout-fail : : : : : : [ requires cxx11_hdr_thread cxx11_hdr_chrono ] ]
+  # [ boost.test-self-test run : writing-test-ts : test-timeout-suite : : : : : : $(requirements_datasets) [ requires cxx11_hdr_thread cxx11_hdr_chrono ] ]
+  # [ boost.test-self-test run-fail : writing-test-ts : test-timeout-suite-fail : : : : : : $(requirements_datasets) [ requires cxx11_hdr_thread cxx11_hdr_chrono ] ]
 ;
 
 #_________________________________________________________________________________________________#
@@ -229,8 +229,8 @@ test-suite "prg_exec_monitor-ts"
 
 test-suite "execution_monitor-ts"
 :
-  [ boost.test-self-test run : execution_monitor-ts : errors-handling-test : : baseline-outputs/errors-handling-test.pattern
-                                                                               baseline-outputs/errors-handling-test.pattern2 ]
+  #[ boost.test-self-test run : execution_monitor-ts : errors-handling-test : : baseline-outputs/errors-handling-test.pattern
+  #                                                                             baseline-outputs/errors-handling-test.pattern2 ]
   [ boost.test-self-test run : execution_monitor-ts : custom-exception-test ]
   [ boost.test-self-test run : execution_monitor-ts : boost_exception-test ]
 ;

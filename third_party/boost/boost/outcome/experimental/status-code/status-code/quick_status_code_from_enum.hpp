@@ -63,7 +63,7 @@ template <class Enum> struct quick_status_code_from_enum_defaults
 template <class Enum> class _quick_status_code_from_enum_domain : public status_code_domain
 {
   template <class DomainType> friend class status_code;
-  template <class StatusCode> friend class detail::indirecting_domain;
+  template <class StatusCode, class Allocator> friend class detail::indirecting_domain;
   using _base = status_code_domain;
   using _src = quick_status_code_from_enum<Enum>;
 
@@ -94,7 +94,11 @@ public:
 
   virtual string_ref name() const noexcept override { return string_ref(_src::domain_name); }
 
-  virtual payload_info_t payload_info() const noexcept override { return {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type), (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) : alignof(status_code_domain *)}; }
+  virtual payload_info_t payload_info() const noexcept override
+  {
+    return {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type),
+            (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) : alignof(status_code_domain *)};
+  }
 
 protected:
   // Not sure if a hash table is worth it here, most enumerations won't be long enough to be worth it
@@ -131,7 +135,7 @@ protected:
   }
   virtual bool _do_equivalent(const status_code<void> &code1, const status_code<void> &code2) const noexcept override
   {
-    assert(code1.domain() == *this);                                                                   // NOLINT
+    assert(code1.domain() == *this);                                                            // NOLINT
     const auto &c1 = static_cast<const quick_status_code_from_enum_code<value_type> &>(code1);  // NOLINT
     if(code2.domain() == *this)
     {
@@ -184,7 +188,7 @@ protected:
 #if defined(_CPPUNWIND) || defined(__EXCEPTIONS) || defined(BOOST_OUTCOME_STANDARDESE_IS_IN_THE_HOUSE)
   BOOST_OUTCOME_SYSTEM_ERROR2_NORETURN virtual void _do_throw_exception(const status_code<void> &code) const override
   {
-    assert(code.domain() == *this);                                                                  // NOLINT
+    assert(code.domain() == *this);                                                           // NOLINT
     const auto &c = static_cast<const quick_status_code_from_enum_code<value_type> &>(code);  // NOLINT
     throw status_error<_quick_status_code_from_enum_domain>(c);
   }
@@ -201,7 +205,8 @@ template <class Enum> inline constexpr const _quick_status_code_from_enum_domain
 
 namespace mixins
 {
-  template <class Base, class Enum> struct mixin<Base, _quick_status_code_from_enum_domain<Enum>> : public quick_status_code_from_enum<Enum>::template mixin<Base>
+  template <class Base, class Enum>
+  struct mixin<Base, _quick_status_code_from_enum_domain<Enum>> : public quick_status_code_from_enum<Enum>::template mixin<Base>
   {
     using quick_status_code_from_enum<Enum>::template mixin<Base>::mixin;
   };

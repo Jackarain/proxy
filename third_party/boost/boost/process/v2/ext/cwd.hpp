@@ -15,6 +15,11 @@ BOOST_PROCESS_V2_BEGIN_NAMESPACE
 
 namespace ext {
 
+#if defined(BOOST_PROCESS_V2_WINDOWS)
+BOOST_PROCESS_V2_DECL filesystem::path cwd(HANDLE handle, error_code & ec);
+BOOST_PROCESS_V2_DECL filesystem::path cwd(HANDLE handle);
+#endif
+
 /// @{
 /// Obtain the current path of another process
 BOOST_PROCESS_V2_DECL filesystem::path cwd(pid_type pid, error_code & ec);
@@ -41,12 +46,6 @@ BOOST_PROCESS_V2_DECL filesystem::path cwd(basic_process_handle<Executor> & hand
 }
 
 /// @}
-
-#if defined(BOOST_PROCESS_V2_WINDOWS)
-BOOST_PROCESS_V2_DECL filesystem::path cwd(HANDLE handle, error_code & ec);
-BOOST_PROCESS_V2_DECL filesystem::path cwd(HANDLE handle);
-#endif
-
 
 } // namespace ext
 

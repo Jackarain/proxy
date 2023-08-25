@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2021-2023 Alexander Grund
 //
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
@@ -13,13 +14,45 @@
 #include "boostLocale/test/unit_test.hpp"
 #include <fstream>
 #include <iostream>
+#include <limits>
+#include <type_traits>
 #include <vector>
 
 namespace bl = boost::locale;
 
-std::string backend;
-std::string message_path = "./";
+void test_messages_info()
+{
+    using string_vec = std::vector<std::string>;
+    {
+        bl::gnu_gettext::messages_info info;
+        info.locale_category = "LC";
+        TEST_EQ(info.get_catalog_paths(), string_vec{});
+        info.paths.push_back(".");
+        TEST_EQ(info.get_catalog_paths(), string_vec{"./C/LC"});
+        info.language = "en";
+        TEST_EQ(info.get_catalog_paths(), string_vec{"./en/LC"});
+        info.country = "US";
+        TEST_EQ(info.get_catalog_paths(), (string_vec{"./en_US/LC", "./en/LC"}));
+        info.country.clear();
+        info.variant = "euro";
+        TEST_EQ(info.get_catalog_paths(), (string_vec{"./en@euro/LC", "./en/LC"}));
+        info.country = "US";
+        TEST_EQ(info.get_catalog_paths(), (string_vec{"./en_US@euro/LC", "./en@euro/LC", "./en_US/LC", "./en/LC"}));
 
+        info.paths = string_vec{"/1", "/2"};
+        TEST_EQ(info.get_catalog_paths(),
+                (string_vec{"/1/en_US@euro/LC",
+                            "/2/en_US@euro/LC",
+                            "/1/en@euro/LC",
+                            "/2/en@euro/LC",
+                            "/1/en_US/LC",
+                            "/2/en_US/LC",
+                            "/1/en/LC",
+                            "/2/en/LC"}));
+    }
+}
+
+std::string backend;
 bool file_loader_is_actually_called = false;
 
 struct file_loader {
@@ -30,12 +63,12 @@ struct file_loader {
         if(!f)
             return buffer;
         f.seekg(0, std::ifstream::end);
-        size_t len = static_cast<size_t>(f.tellg());
-        if(len == 0)
-            return buffer;
+        const auto len = f.tellg();
         f.seekg(0);
-        buffer.resize(len, '\0');
-        f.read(&buffer[0], len);
+        if(len > 0) {
+            buffer.resize(static_cast<size_t>(len));
+            f.read(buffer.data(), buffer.size());
+        }
         file_loader_is_actually_called = true;
         return buffer;
     }
@@ -65,27 +98,28 @@ std::u32string same_u32(std::u32string s)
 }
 #endif
 
+namespace impl {
+
 template<typename Char>
-void strings_equal(std::string n_c,
-                   std::string n_s,
-                   std::string n_p,
-                   int n,
-                   std::string iexpected,
-                   const std::locale& l,
-                   std::string domain)
+void test_cntranslate(const std::string& sContext,
+                      const std::string& sSingular,
+                      const std::string& sPlural,
+                      long long n,
+                      const std::string& sExpected,
+                      const std::locale& l,
+                      const std::string& domain)
 {
     typedef std::basic_string<Char> string_type;
-    string_type expected = to_correct_string<Char>(iexpected, l);
+    const string_type expected = to_correct_string<Char>(sExpected, l);
 
-    string_type c = to<Char>(n_c.c_str());
-    string_type s = to<Char>(n_s.c_str());
-    string_type p = to<Char>(n_p.c_str());
+    const string_type c = to<Char>(sContext);
+    const string_type s = to<Char>(sSingular);
+    const string_type p = to<Char>(sPlural);
 
     if(domain == "default") {
         TEST_EQ(bl::translate(c, s, p, n).str(l), expected);
-        const Char *c_c_str = c.c_str(), *s_c_str = s.c_str(), *p_c_str = p.c_str(); // workaround gcc-3.4 bug
-        TEST_EQ(bl::translate(c_c_str, s_c_str, p_c_str, n).str(l), expected);
-        std::locale tmp_locale = std::locale();
+        TEST_EQ(bl::translate(c.c_str(), s.c_str(), p.c_str(), n).str(l), expected);
+        std::locale tmp_locale;
         std::locale::global(l);
         string_type tmp = bl::translate(c, s, p, n);
         TEST_EQ(tmp, expected);
@@ -97,9 +131,47 @@ void strings_equal(std::string n_c,
         ss.imbue(l);
         ss << bl::translate(c, s, p, n);
         TEST_EQ(ss.str(), expected);
+
+        // Copyable & movable
+        const string_type s2 = ascii_to<Char>("missing Singular");
+        const string_type p2 = ascii_to<Char>("missing Plural");
+        const string_type& expected2 = (n == 1) ? s2 : p2;
+        auto translation1 = bl::translate(c, s, p, n);
+        auto translation2 = bl::translate(c, s2, p2, n);
+        TEST_EQ(translation1.str(l), expected);
+        TEST_EQ(translation2.str(l), expected2);
+        // Copy
+        translation1 = translation2;
+        TEST_EQ(translation1.str(l), expected2);
+        {
+            bl::basic_message<Char> t3(translation2);
+            TEST_EQ(t3.str(l), expected2);
+        }
+        // Move
+        translation1 = bl::translate(c, s, p, n);
+        translation2 = std::move(translation1);
+        TEST_EQ(translation2.str(l), expected);
+        {
+            bl::basic_message<Char> t3(std::move(translation2));
+            TEST_EQ(t3.str(l), expected);
+        }
+        // Swap
+        translation1 = bl::translate(c, s, p, n);
+        translation2 = bl::translate(c, s2, p2, n);
+        TEST_EQ(translation1.str(l), expected);
+        TEST_EQ(translation2.str(l), expected2);
+        using std::swap;
+        swap(translation1, translation2);
+        TEST_EQ(translation1.str(l), expected2);
+        TEST_EQ(translation2.str(l), expected);
+        translation1 = bl::translate(c, s, p, n);
+        translation2 = bl::translate(c, s2, p2, 1); // n==1!
+        swap(translation1, translation2);
+        TEST_EQ(translation1.str(l), s2);
+        TEST_EQ(translation2.str(l), expected);
     }
     TEST_EQ(bl::translate(c, s, p, n).str(l, domain), expected);
-    std::locale tmp_locale = std::locale();
+    std::locale tmp_locale;
     std::locale::global(l);
     TEST_EQ(bl::translate(c, s, p, n).str(domain), expected);
     std::locale::global(tmp_locale);
@@ -115,25 +187,32 @@ void strings_equal(std::string n_c,
         ss << bl::as::domain(domain) << bl::translate(c.c_str(), s.c_str(), p.c_str(), n);
         TEST_EQ(ss.str(), expected);
     }
+    // Missing facet -> No translation
+    {
+        const string_type nonAscii = ((string_type() + Char('\x7F')) + Char('\x82')) + Char('\xF0');
+        const string_type p2 = nonAscii + p + nonAscii;
+        // For char the non-ASCII chars are removed -> original p
+        const string_type expected2 = (n == 1) ? s : (std::is_same<Char, char>::value ? p : p2);
+        TEST_EQ(bl::translate(c, s, p2, n).str(std::locale::classic()), expected2);
+    }
 }
 
 template<typename Char>
-void strings_equal(std::string n_s,
-                   std::string n_p,
-                   int n,
-                   std::string iexpected,
-                   const std::locale& l,
-                   std::string domain)
+void test_ntranslate(const std::string& sSingular,
+                     const std::string& sPlural,
+                     long long n,
+                     const std::string& sExpected,
+                     const std::locale& l,
+                     const std::string& domain)
 {
     typedef std::basic_string<Char> string_type;
-    string_type expected = to_correct_string<Char>(iexpected, l);
-    string_type s = to<Char>(n_s.c_str());
-    string_type p = to<Char>(n_p.c_str());
+    const string_type expected = to_correct_string<Char>(sExpected, l);
+    const string_type s = to<Char>(sSingular);
+    const string_type p = to<Char>(sPlural);
     if(domain == "default") {
         TEST_EQ(bl::translate(s, p, n).str(l), expected);
-        const Char *s_c_str = s.c_str(), *p_c_str = p.c_str(); // workaround gcc-3.4 bug
-        TEST_EQ(bl::translate(s_c_str, p_c_str, n).str(l), expected);
-        std::locale tmp_locale = std::locale();
+        TEST_EQ(bl::translate(s.c_str(), p.c_str(), n).str(l), expected);
+        std::locale tmp_locale;
         std::locale::global(l);
         string_type tmp = bl::translate(s, p, n);
         TEST_EQ(tmp, expected);
@@ -147,7 +226,7 @@ void strings_equal(std::string n_s,
         TEST_EQ(ss.str(), expected);
     }
     TEST_EQ(bl::translate(s, p, n).str(l, domain), expected);
-    std::locale tmp_locale = std::locale();
+    std::locale tmp_locale;
     std::locale::global(l);
     TEST_EQ(bl::translate(s, p, n).str(domain), expected);
     std::locale::global(tmp_locale);
@@ -166,22 +245,20 @@ void strings_equal(std::string n_s,
 }
 
 template<typename Char>
-void strings_equal(std::string n_c,
-                   std::string n_original,
-                   std::string iexpected,
-                   const std::locale& l,
-                   std::string domain)
+void test_ctranslate(const std::string& sContext,
+                     const std::string& sOriginal,
+                     const std::string& sExpected,
+                     const std::locale& l,
+                     const std::string& domain)
 {
     typedef std::basic_string<Char> string_type;
-    string_type expected = to_correct_string<Char>(iexpected, l);
-    string_type original = to<Char>(n_original.c_str());
-    string_type c = to<Char>(n_c.c_str());
+    const string_type expected = to_correct_string<Char>(sExpected, l);
+    const string_type original = to<Char>(sOriginal);
+    const string_type c = to<Char>(sContext);
     if(domain == "default") {
         TEST_EQ(bl::translate(c, original).str(l), expected);
-        const Char* original_c_str = original.c_str(); // workaround gcc-3.4 bug
-        const Char* context_c_str = c.c_str();
-        TEST_EQ(bl::translate(context_c_str, original_c_str).str(l), expected);
-        std::locale tmp_locale = std::locale();
+        TEST_EQ(bl::translate(c.c_str(), original.c_str()).str(l), expected);
+        std::locale tmp_locale;
         std::locale::global(l);
         string_type tmp = bl::translate(c, original);
         TEST_EQ(tmp, expected);
@@ -195,7 +272,7 @@ void strings_equal(std::string n_c,
         TEST_EQ(ss.str(), expected);
     }
     TEST_EQ(bl::translate(c, original).str(l, domain), expected);
-    std::locale tmp_locale = std::locale();
+    std::locale tmp_locale;
     std::locale::global(l);
     TEST_EQ(bl::translate(c, original).str(domain), expected);
     std::locale::global(tmp_locale);
@@ -214,16 +291,18 @@ void strings_equal(std::string n_c,
 }
 
 template<typename Char>
-void strings_equal(std::string n_original, std::string iexpected, const std::locale& l, std::string domain)
+void test_translate(const std::string& sOriginal,
+                    const std::string& sExpected,
+                    const std::locale& l,
+                    const std::string& domain)
 {
     typedef std::basic_string<Char> string_type;
-    string_type expected = to_correct_string<Char>(iexpected, l);
-    string_type original = to<Char>(n_original.c_str());
+    const string_type expected = to_correct_string<Char>(sExpected, l);
+    const string_type original = to<Char>(sOriginal);
     if(domain == "default") {
         TEST_EQ(bl::translate(original).str(l), expected);
-        const Char* original_c_str = original.c_str(); // workaround gcc-3.4 bug
-        TEST_EQ(bl::translate(original_c_str).str(l), expected);
-        std::locale tmp_locale = std::locale();
+        TEST_EQ(bl::translate(original.c_str()).str(l), expected);
+        std::locale tmp_locale;
         std::locale::global(l);
         string_type tmp = bl::translate(original);
         TEST_EQ(tmp, expected);
@@ -237,7 +316,7 @@ void strings_equal(std::string n_original, std::string iexpected, const std::loc
         TEST_EQ(ss.str(), expected);
     }
     TEST_EQ(bl::translate(original).str(l, domain), expected);
-    std::locale tmp_locale = std::locale();
+    std::locale tmp_locale;
     std::locale::global(l);
     TEST_EQ(bl::translate(original).str(domain), expected);
     std::locale::global(tmp_locale);
@@ -254,112 +333,103 @@ void strings_equal(std::string n_original, std::string iexpected, const std::loc
         TEST_EQ(ss.str(), expected);
     }
 }
+} // namespace impl
 
-void test_cntranslate(std::string c,
-                      std::string s,
-                      std::string p,
-                      int n,
-                      std::string expected,
+void test_cntranslate(const std::string& c,
+                      const std::string& s,
+                      const std::string& p,
+                      long long n,
+                      const std::string& expected,
                       const std::locale& l,
-                      std::string domain)
+                      const std::string& domain)
 {
-    strings_equal<char>(c, s, p, n, expected, l, domain);
-    strings_equal<wchar_t>(c, s, p, n, expected, l, domain);
+    impl::test_cntranslate<char>(c, s, p, n, expected, l, domain);
+    impl::test_cntranslate<wchar_t>(c, s, p, n, expected, l, domain);
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
     if(backend == "icu" || backend == "std")
-        strings_equal<char16_t>(c, s, p, n, expected, l, domain);
+        impl::test_cntranslate<char16_t>(c, s, p, n, expected, l, domain);
 #endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
     if(backend == "icu" || backend == "std")
-        strings_equal<char32_t>(c, s, p, n, expected, l, domain);
+        impl::test_cntranslate<char32_t>(c, s, p, n, expected, l, domain);
 #endif
 }
 
-void test_ntranslate(std::string s,
-                     std::string p,
-                     int n,
-                     std::string expected,
+void test_ntranslate(const std::string& s,
+                     const std::string& p,
+                     long long n,
+                     const std::string& expected,
                      const std::locale& l,
-                     std::string domain)
+                     const std::string& domain)
 {
-    strings_equal<char>(s, p, n, expected, l, domain);
-    strings_equal<wchar_t>(s, p, n, expected, l, domain);
+    impl::test_ntranslate<char>(s, p, n, expected, l, domain);
+    impl::test_ntranslate<wchar_t>(s, p, n, expected, l, domain);
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
     if(backend == "icu" || backend == "std")
-        strings_equal<char16_t>(s, p, n, expected, l, domain);
+        impl::test_ntranslate<char16_t>(s, p, n, expected, l, domain);
 #endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
     if(backend == "icu" || backend == "std")
-        strings_equal<char32_t>(s, p, n, expected, l, domain);
+        impl::test_ntranslate<char32_t>(s, p, n, expected, l, domain);
 #endif
 }
 
-void test_ctranslate(std::string c,
-                     std::string original,
-                     std::string expected,
+void test_ctranslate(const std::string& c,
+                     const std::string& original,
+                     const std::string& expected,
                      const std::locale& l,
-                     std::string domain)
+                     const std::string& domain)
 {
-    strings_equal<char>(c, original, expected, l, domain);
-    strings_equal<wchar_t>(c, original, expected, l, domain);
+    impl::test_ctranslate<char>(c, original, expected, l, domain);
+    impl::test_ctranslate<wchar_t>(c, original, expected, l, domain);
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
     if(backend == "icu" || backend == "std")
-        strings_equal<char16_t>(c, original, expected, l, domain);
+        impl::test_ctranslate<char16_t>(c, original, expected, l, domain);
 #endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
     if(backend == "icu" || backend == "std")
-        strings_equal<char32_t>(c, original, expected, l, domain);
+        impl::test_ctranslate<char32_t>(c, original, expected, l, domain);
 #endif
 }
 
-void test_translate(std::string original, std::string expected, const std::locale& l, std::string domain)
+void test_translate(const std::string& original,
+                    const std::string& expected,
+                    const std::locale& l,
+                    const std::string& domain)
 {
-    strings_equal<char>(original, expected, l, domain);
-    strings_equal<wchar_t>(original, expected, l, domain);
+    impl::test_translate<char>(original, expected, l, domain);
+    impl::test_translate<wchar_t>(original, expected, l, domain);
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
     if(backend == "icu" || backend == "std")
-        strings_equal<char16_t>(original, expected, l, domain);
+        impl::test_translate<char16_t>(original, expected, l, domain);
 #endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
     if(backend == "icu" || backend == "std")
-        strings_equal<char32_t>(original, expected, l, domain);
+        impl::test_translate<char32_t>(original, expected, l, domain);
 #endif
 }
 
-bool iso_8859_8_not_supported = false;
+bool iso_8859_8_supported = true;
 
 void test_main(int argc, char** argv)
 {
-    if(argc == 2)
-        message_path = argv[1];
+    test_messages_info();
 
-    std::string def[] = {
-#ifdef BOOST_LOCALE_WITH_ICU
-      "icu",
-#endif
-#ifndef BOOST_LOCALE_NO_STD_BACKEND
-      "std",
-#endif
-#ifndef BOOST_LOCALE_NO_POSIX_BACKEND
-      "posix",
-#endif
-#ifndef BOOST_LOCALE_NO_WINAPI_BACKEND
-      "winapi",
-#endif
-    };
-    for(int type = 0; type < int(sizeof(def) / sizeof(def[0])); type++) {
+    const std::string message_path = (argc == 2) ? argv[1] : ".";
+
+    for(const std::string& backend_name : boost::locale::localization_backend_manager::global().get_all_backends()) {
+        std::cout << "Testing for backend --------- " << backend_name << std::endl;
         boost::locale::localization_backend_manager tmp_backend = boost::locale::localization_backend_manager::global();
-        tmp_backend.select(def[type]);
+        tmp_backend.select(backend_name);
         boost::locale::localization_backend_manager::global(tmp_backend);
 
-        backend = def[type];
-
-        std::cout << "Testing for backend --------- " << def[type] << std::endl;
+        backend = backend_name;
 
         boost::locale::generator g;
         g.add_messages_domain("simple");
         g.add_messages_domain("full");
-        g.add_messages_domain("fall");
+        // Fallback using only ASCII keys, choose a specific encoding != UTF-8, here: Latin1
+        g.add_messages_domain("fall/ISO-8859-1");
         g.add_messages_path(message_path);
         g.set_default_messages_domain("default");
 
@@ -369,10 +439,10 @@ void test_main(int argc, char** argv)
             if(locale_name.find(".ISO") != std::string::npos) {
                 try {
                     l = g(locale_name);
-                } catch(const boost::locale::conv::invalid_charset_error&) {
-                    std::cout << "Looks like ISO-8859-8 is not supported! skipping" << std::endl;
-                    iso_8859_8_not_supported = true;
-                    continue;
+                } catch(const boost::locale::conv::invalid_charset_error&) {                      // LCOV_EXCL_LINE
+                    std::cout << "Looks like ISO-8859-8 is not supported! skipping" << std::endl; // LCOV_EXCL_LINE
+                    iso_8859_8_supported = false;                                                 // LCOV_EXCL_LINE
+                    continue;                                                                     // LCOV_EXCL_LINE
                 }
             } else
                 l = g(locale_name);
@@ -398,11 +468,19 @@ void test_main(int argc, char** argv)
                 test_ntranslate("x day", "x days", 2, "יומיים", l, "default");
                 test_ntranslate("x day", "x days", 3, "x ימים", l, "default");
                 test_ntranslate("x day", "x days", 20, "x יום", l, "default");
-
                 test_ntranslate("x day", "x days", 0, "x days", l, "undefined");
                 test_ntranslate("x day", "x days", 1, "x day", l, "undefined");
                 test_ntranslate("x day", "x days", 2, "x days", l, "undefined");
                 test_ntranslate("x day", "x days", 20, "x days", l, "undefined");
+                // Ensure no truncation occurs
+                test_ntranslate("x day", "x days", std::numeric_limits<long long>::min(), "x days", l, "undefined");
+                test_ntranslate("x day", "x days", std::numeric_limits<long long>::max(), "x days", l, "undefined");
+                for(unsigned bit = 1; bit < std::numeric_limits<long long>::digits; ++bit) {
+                    // Set each individual bit possible and add 1.
+                    // If the value is truncated the 1 will remain leading to singular form
+                    const auto num = static_cast<long long>(static_cast<unsigned long long>(1) << bit);
+                    test_ntranslate("x day", "x days", num + 1, "x days", l, "undefined");
+                }
             }
             std::cout << "    plural forms with context" << std::endl;
             {
@@ -422,8 +500,16 @@ void test_main(int argc, char** argv)
             }
         }
         std::cout << "  Testing fallbacks" << std::endl;
-        test_translate("test", "he_IL", g("he_IL.UTF-8"), "full");
-        test_translate("test", "he", g("he_IL.UTF-8"), "fall");
+        {
+            const std::locale l = g("he_IL.UTF-8");
+            test_translate("test", "he_IL", l, "full");
+            test_translate("test", "he", l, "fall");
+            for(int n = -1; n < 5; ++n) {
+                // No plural forms -> Use english logic
+                // Singular is translated, plural is not
+                test_ntranslate("test", "tests", n, (n == 1) ? "he" : "tests", l, "fall");
+            }
+        }
 
         std::cout << "  Testing automatic conversions " << std::endl;
         std::locale::global(g("he_IL.UTF-8"));
@@ -448,30 +534,23 @@ void test_main(int argc, char** argv)
         info.language = "he";
         info.country = "IL";
         info.encoding = "UTF-8";
-        if(argc == 2)
-            info.paths.push_back(argv[1]);
-        else
-            info.paths.push_back("./");
+        info.paths.push_back(message_path);
 
         info.domains.push_back(bl::gnu_gettext::messages_info::domain("default"));
         info.callback = file_loader();
 
+        file_loader_is_actually_called = false;
         std::locale l(std::locale::classic(), boost::locale::gnu_gettext::create_messages_facet<char>(info));
         TEST(file_loader_is_actually_called);
         TEST_EQ(bl::translate("hello").str(l), "שלום");
     }
-    if(iso_8859_8_not_supported) {
-        std::cout << "ISO 8859-8 not supported so skipping non-US-ASCII keys" << std::endl;
-    } else {
+    if(iso_8859_8_supported) {
         std::cout << "Testing non-US-ASCII keys" << std::endl;
         std::cout << "  UTF-8 keys" << std::endl;
         {
             boost::locale::generator g;
             g.add_messages_domain("default");
-            if(argc == 2)
-                g.add_messages_path(argv[1]);
-            else
-                g.add_messages_path("./");
+            g.add_messages_path(message_path);
 
             std::locale l = g("he_IL.UTF-8");
 
@@ -480,8 +559,8 @@ void test_main(int argc, char** argv)
             TEST_EQ(bl::gettext("לא קיים", l), "לא קיים");
 
             // wide
-            std::wstring wtest = bl::conv::to_utf<wchar_t>("בדיקה", "UTF-8");
-            std::wstring wmiss = bl::conv::to_utf<wchar_t>("לא קיים", "UTF-8");
+            std::wstring wtest = bl::conv::utf_to_utf<wchar_t>("בדיקה");
+            std::wstring wmiss = bl::conv::utf_to_utf<wchar_t>("לא קיים");
             TEST_EQ(bl::gettext(wtest.c_str(), l), L"test");
             TEST_EQ(bl::gettext(wmiss.c_str(), l), wmiss);
 
@@ -491,15 +570,12 @@ void test_main(int argc, char** argv)
             TEST_EQ(bl::gettext("test-あにま-בדיקה", l), bl::conv::from_utf("test--בדיקה", "ISO-8859-8"));
         }
 
-        std::cout << "  `ANSI' keys" << std::endl;
+        std::cout << "  ANSI keys" << std::endl;
 
         {
             boost::locale::generator g;
             g.add_messages_domain("default/ISO-8859-8");
-            if(argc == 2)
-                g.add_messages_path(argv[1]);
-            else
-                g.add_messages_path("./");
+            g.add_messages_path(message_path);
 
             std::locale l = g("he_IL.UTF-8");
 
@@ -516,14 +592,17 @@ void test_main(int argc, char** argv)
         bl::gettext(L"");
         bl::dgettext("", "");
         bl::dgettext("", L"");
+
         bl::pgettext("", "");
         bl::pgettext(L"", L"");
         bl::dpgettext("", "", "");
         bl::dpgettext("", L"", L"");
+
         bl::ngettext("", "", 1);
         bl::ngettext(L"", L"", 1);
         bl::dngettext("", "", "", 1);
         bl::dngettext("", L"", L"", 1);
+
         bl::npgettext("", "", "", 1);
         bl::npgettext(L"", L"", L"", 1);
         bl::dnpgettext("", "", "", "", 1);

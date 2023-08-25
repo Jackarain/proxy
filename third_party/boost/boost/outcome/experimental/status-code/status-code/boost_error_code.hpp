@@ -66,7 +66,7 @@ namespace mixins
 class _boost_error_code_domain final : public status_code_domain
 {
   template <class DomainType> friend class status_code;
-  template <class StatusCode> friend class detail::indirecting_domain;
+  template <class StatusCode, class Allocator> friend class detail::indirecting_domain;
   using _base = status_code_domain;
   using _error_code_type = boost::system::error_code;
   using _error_category_type = boost::system::error_category;
@@ -124,10 +124,7 @@ public:
 
   static inline const _boost_error_code_domain *get(_error_code_type ec);
 
-  virtual string_ref name() const noexcept override
-  {
-    return string_ref(_name.c_str(), _name.size());
-  }  // NOLINT
+  virtual string_ref name() const noexcept override { return string_ref(_name.c_str(), _name.size()); }  // NOLINT
 
   virtual payload_info_t payload_info() const noexcept override
   {
@@ -196,7 +193,7 @@ namespace detail
         }
         if(ret == nullptr && count < max_items)
         {
-          ret = new(&items[count++].domain) _boost_error_code_domain(category);
+          ret = new(BOOST_OUTCOME_SYSTEM_ERROR2_ADDRESS_OF(items[count++].domain)) _boost_error_code_domain(category);
         }
         unlock();
         return ret;
@@ -323,7 +320,7 @@ namespace boost
 {
   namespace system
   {
-    inline BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE::status_code<BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE::erased<int>> make_status_code(error_code c) noexcept
+    inline BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE::erased_status_code<int> make_status_code(error_code c) noexcept
     {
       if(c.category() == detail::interop_category())
       {

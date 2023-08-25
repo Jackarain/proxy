@@ -8,6 +8,7 @@
 #include <boost/process/v2/detail/config.hpp>
 #include <boost/process/v2/cstring_ref.hpp>
 #include <boost/process/v2/posix/detail/close_handles.hpp>
+#include <boost/process/v2/detail/throw_error.hpp>
 #include <boost/process/v2/detail/utf8.hpp>
 
 #if defined(BOOST_PROCESS_V2_STANDALONE)
@@ -313,7 +314,7 @@ struct default_launcher
         auto proc =  (*this)(context, ec, executable, std::forward<Args>(args), std::forward<Inits>(inits)...);
 
         if (ec)
-            asio::detail::throw_error(ec, "default_launcher");
+            v2::detail::throw_error(ec, "default_launcher");
 
         return proc;
     }
@@ -344,7 +345,7 @@ struct default_launcher
         auto proc =  (*this)(std::move(exec), ec, executable, std::forward<Args>(args), std::forward<Inits>(inits)...);
 
         if (ec)
-            asio::detail::throw_error(ec, "default_launcher");
+            v2::detail::throw_error(ec, "default_launcher");
 
         return proc;
     }

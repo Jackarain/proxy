@@ -237,6 +237,28 @@
 </table></div>
 <h5>
 <a name="json.input_output.parsing.h1"></a>
+        <span class="phrase"><a name="json.input_output.parsing.full_precision_number_parsing"></a></span><a class="link" href="input_output.html#json.input_output.parsing.full_precision_number_parsing">Full precision
+        number parsing</a>
+      </h5>
+<p>
+        The default algorithm that the library uses to parse numbers is fast, but
+        may result in slight precision loss. This may not be suitable for some applications,
+        so there is an option to enable an alternative algorithm that doesn't have
+        that flaw, but is somewhat slower. To do this, you also need to use <a class="link" href="ref/boost__json__parse_options.html" title="parse_options"><code class="computeroutput"><span class="identifier">parse_options</span></code></a>
+        structure.
+      </p>
+<pre class="programlisting"><span class="identifier">parse_options</span> <span class="identifier">opt</span><span class="special">;</span>
+<span class="identifier">opt</span><span class="special">.</span><span class="identifier">numbers</span> <span class="special">=</span> <span class="identifier">number_precision</span><span class="special">::</span><span class="identifier">precise</span><span class="special">;</span>
+<span class="identifier">value</span> <span class="identifier">jv</span> <span class="special">=</span> <span class="identifier">parse</span><span class="special">(</span> <span class="string">"1002.9111801605201"</span><span class="special">,</span> <span class="identifier">storage_ptr</span><span class="special">(),</span> <span class="identifier">opt</span> <span class="special">);</span>
+</pre>
+<p>
+        Note that full precision number parsing requires the algorithm to see the
+        full number. This means, that when used with <a class="link" href="ref/boost__json__stream_parser.html" title="stream_parser"><code class="computeroutput"><span class="identifier">stream_parser</span></code></a>, additional memory
+        allocations may be necessary to store the number parts which were so far
+        accepted by the parser. The library does try its best to avoid such allocations.
+      </p>
+<h5>
+<a name="json.input_output.parsing.h2"></a>
         <span class="phrase"><a name="json.input_output.parsing.parser"></a></span><a class="link" href="input_output.html#json.input_output.parsing.parser">Parser</a>
       </h5>
 <p>
@@ -317,7 +339,7 @@
 <span class="identifier">stream_parser</span> <span class="identifier">p</span><span class="special">(</span> <span class="identifier">storage_ptr</span><span class="special">(),</span> <span class="identifier">opt</span> <span class="special">);</span>              <span class="comment">// The stream_parser will use the options</span>
 </pre>
 <h5>
-<a name="json.input_output.parsing.h2"></a>
+<a name="json.input_output.parsing.h3"></a>
         <span class="phrase"><a name="json.input_output.parsing.streaming_parser"></a></span><a class="link" href="input_output.html#json.input_output.parsing.streaming_parser">Streaming
         Parser</a>
       </h5>
@@ -422,7 +444,7 @@
 <span class="special">}</span>
 </pre>
 <h5>
-<a name="json.input_output.parsing.h3"></a>
+<a name="json.input_output.parsing.h4"></a>
         <span class="phrase"><a name="json.input_output.parsing.controlling_memory"></a></span><a class="link" href="input_output.html#json.input_output.parsing.controlling_memory">Controlling
         Memory</a>
       </h5>
@@ -512,7 +534,7 @@
 </pre>
 </div>
 <h5>
-<a name="json.input_output.parsing.h4"></a>
+<a name="json.input_output.parsing.h5"></a>
         <span class="phrase"><a name="json.input_output.parsing.custom_parsers"></a></span><a class="link" href="input_output.html#json.input_output.parsing.custom_parsers">Custom
         Parsers</a>
       </h5>
@@ -752,7 +774,7 @@
 <span class="keyword">operator</span><span class="special">&lt;&lt;(</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">ostream</span><span class="special">&amp;</span> <span class="identifier">os</span><span class="special">,</span> <span class="identifier">value</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">jv</span> <span class="special">)</span>
 <span class="special">{</span>
     <span class="comment">// Create a serializer</span>
-    <span class="identifier">serializer</span> <span class="identifier">sr</span><span class="special">;</span>
+    <span class="identifier">serializer</span> <span class="identifier">sr</span><span class="special">(</span> <span class="identifier">get_stream_flags</span><span class="special">(</span><span class="identifier">os</span><span class="special">)</span> <span class="special">);</span>
 
     <span class="comment">// Set the serializer up for our value</span>
     <span class="identifier">sr</span><span class="special">.</span><span class="identifier">reset</span><span class="special">(</span> <span class="special">&amp;</span><span class="identifier">jv</span> <span class="special">);</span>

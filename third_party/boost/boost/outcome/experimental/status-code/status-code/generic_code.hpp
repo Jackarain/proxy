@@ -293,7 +293,7 @@ namespace detail
 class _generic_code_domain : public status_code_domain
 {
   template <class> friend class status_code;
-  template <class StatusCode> friend class detail::indirecting_domain;
+  template <class StatusCode, class Allocator> friend class detail::indirecting_domain;
   using _base = status_code_domain;
 
 public:
@@ -318,7 +318,11 @@ public:
 
   virtual _base::string_ref name() const noexcept override { return string_ref("generic domain"); }  // NOLINT
 
-  virtual payload_info_t payload_info() const noexcept override { return {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type), (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) : alignof(status_code_domain *)}; }
+  virtual payload_info_t payload_info() const noexcept override
+  {
+    return {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type),
+            (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) : alignof(status_code_domain *)};
+  }
 
 protected:
   virtual bool _do_failure(const status_code<void> &code) const noexcept override  // NOLINT
@@ -402,43 +406,49 @@ template <class T> inline BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 bool status_co
   return (!_domain && !o._domain);
 }
 //! True if the status code's are semantically equal via `equivalent()`.
-template <class DomainType1, class DomainType2> BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator==(const status_code<DomainType1> &a, const status_code<DomainType2> &b) noexcept
+template <class DomainType1, class DomainType2>
+BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator==(const status_code<DomainType1> &a, const status_code<DomainType2> &b) noexcept
 {
   return a.equivalent(b);
 }
 //! True if the status code's are not semantically equal via `equivalent()`.
-template <class DomainType1, class DomainType2> BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator!=(const status_code<DomainType1> &a, const status_code<DomainType2> &b) noexcept
+template <class DomainType1, class DomainType2>
+BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator!=(const status_code<DomainType1> &a, const status_code<DomainType2> &b) noexcept
 {
   return !a.equivalent(b);
 }
 //! True if the status code's are semantically equal via `equivalent()` to `make_status_code(T)`.
-BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class DomainType1, class T,                                                                       //
-                       class MakeStatusCodeResult = typename detail::safe_get_make_status_code_result<const T &>::type)  // Safe ADL lookup of make_status_code(), returns void if not found
-BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<MakeStatusCodeResult>::value))                                // ADL makes a status code
+BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class DomainType1, class T,  //
+                       class MakeStatusCodeResult =
+                       typename detail::safe_get_make_status_code_result<const T &>::type)  // Safe ADL lookup of make_status_code(), returns void if not found
+BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<MakeStatusCodeResult>::value))   // ADL makes a status code
 BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator==(const status_code<DomainType1> &a, const T &b)
 {
   return a.equivalent(make_status_code(b));
 }
 //! True if the status code's are semantically equal via `equivalent()` to `make_status_code(T)`.
-BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class T, class DomainType1,                                                                       //
-                       class MakeStatusCodeResult = typename detail::safe_get_make_status_code_result<const T &>::type)  // Safe ADL lookup of make_status_code(), returns void if not found
-BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<MakeStatusCodeResult>::value))                                // ADL makes a status code
+BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class T, class DomainType1,  //
+                       class MakeStatusCodeResult =
+                       typename detail::safe_get_make_status_code_result<const T &>::type)  // Safe ADL lookup of make_status_code(), returns void if not found
+BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<MakeStatusCodeResult>::value))   // ADL makes a status code
 BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator==(const T &a, const status_code<DomainType1> &b)
 {
   return b.equivalent(make_status_code(a));
 }
 //! True if the status code's are not semantically equal via `equivalent()` to `make_status_code(T)`.
-BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class DomainType1, class T,                                                                       //
-                       class MakeStatusCodeResult = typename detail::safe_get_make_status_code_result<const T &>::type)  // Safe ADL lookup of make_status_code(), returns void if not found
-BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<MakeStatusCodeResult>::value))                                // ADL makes a status code
+BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class DomainType1, class T,  //
+                       class MakeStatusCodeResult =
+                       typename detail::safe_get_make_status_code_result<const T &>::type)  // Safe ADL lookup of make_status_code(), returns void if not found
+BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<MakeStatusCodeResult>::value))   // ADL makes a status code
 BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator!=(const status_code<DomainType1> &a, const T &b)
 {
   return !a.equivalent(make_status_code(b));
 }
 //! True if the status code's are semantically equal via `equivalent()` to `make_status_code(T)`.
-BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class T, class DomainType1,                                                                       //
-                       class MakeStatusCodeResult = typename detail::safe_get_make_status_code_result<const T &>::type)  // Safe ADL lookup of make_status_code(), returns void if not found
-BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<MakeStatusCodeResult>::value))                                // ADL makes a status code
+BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class T, class DomainType1,  //
+                       class MakeStatusCodeResult =
+                       typename detail::safe_get_make_status_code_result<const T &>::type)  // Safe ADL lookup of make_status_code(), returns void if not found
+BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<MakeStatusCodeResult>::value))   // ADL makes a status code
 BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator!=(const T &a, const status_code<DomainType1> &b)
 {
   return !b.equivalent(make_status_code(a));

@@ -69,7 +69,7 @@ inline boost::filesystem::perms make_permissions(boost::filesystem::path const& 
     return prms;
 }
 
-ULONG get_reparse_point_tag_ioctl(HANDLE h);
+ULONG get_reparse_point_tag_ioctl(HANDLE h, boost::filesystem::path const& p, boost::system::error_code* ec);
 
 inline bool is_reparse_point_tag_a_symlink(ULONG reparse_point_tag)
 {
@@ -86,11 +86,6 @@ inline bool is_reparse_point_tag_a_symlink(ULONG reparse_point_tag)
         // them look like directory symlinks in terms of Boost.Filesystem. read_symlink()
         // may return a volume path or NT path for such symlinks.
         || reparse_point_tag == IO_REPARSE_TAG_MOUNT_POINT; // aka "directory junction" or "junction"
-}
-
-inline bool is_reparse_point_a_symlink_ioctl(HANDLE h)
-{
-    return detail::is_reparse_point_tag_a_symlink(detail::get_reparse_point_tag_ioctl(h));
 }
 
 #if !defined(UNDER_CE)
