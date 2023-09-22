@@ -2619,8 +2619,11 @@ Connection: close
 	private:
 		inline net::awaitable<void> start_proxy_listen(tcp_acceptor& a)
 		{
-			auto self = shared_from_this();
 			boost::system::error_code error;
+			net::socket_base::keep_alive keep_alive_opt(true);
+			net::ip::tcp::no_delay no_delay_opt(true);
+
+			auto self = shared_from_this();
 
 			while (!m_abort)
 			{
@@ -2644,15 +2647,8 @@ Connection: close
 					continue;
 				}
 
-				{
-					net::socket_base::keep_alive option(true);
-					socket.set_option(option, error);
-				}
-
-				{
-					net::ip::tcp::no_delay option(true);
-					socket.set_option(option);
-				}
+				socket.set_option(keep_alive_opt, error);
+				socket.set_option(no_delay_opt, error);
 
 				static std::atomic_size_t id{ 1 };
 				size_t connection_id = id++;
