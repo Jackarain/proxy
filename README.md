@@ -14,7 +14,9 @@
                        local          GFW          remote
 ```
 
-以及服务端可以使用比 `trojan` 更通用的 `https proxy` 协议服务，本质上 `trojan` 的做法就是利用了 `TLS` 而已但却不兼容标准 `https` 协议而失去了灵活生，这是因为 `https proxy` 在很多环境下可以直接使用而不需要安装任何东西就可以使用，如 `shell` 中声名 `HTTPS_PROXY` 环境变量指向 `proxy server` 的 `url` 就可以了，如果服务端被他人探测协议，只能得到它是一个 `nginx web` 服务的结论。因为在探测者不知 `proxy auth` 认证信息的前提下（服务端必须配置了认证参数，无论探测者访问的是 `socks`、 `http` 或是 `https`）认证出错，这时的 `proxy server` 将伪装成一个 `nginx` 服务，返回一个 `nginx` 出错的页面信息。
+以及服务端可以使用比 `trojan` 更通用的 `https proxy` 协议服务，本质上 `trojan` 的做法就是利用了 `TLS` 而已但却不兼容标准 `https` 协议而失去了灵活生，这是因为 `https proxy` 在很多环境下可以直接，使用而不需要安装任何东西就可以使用（`trojan` 必须要安装本地端），如 `shell` 中声名 `HTTPS_PROXY` 环境变量指向 `proxy server` 的 `url` 就可以了。
+
+如果服务端被他人探测协议，只能得到它是一个 `nginx error page` 服务的结果，因为在探测者不知 `proxy auth` 认证信息的情况下，会导致认证出错，这时的 `proxy server` 将伪装成一个 `nginx` 服务，返回一个 `nginx error page` 页面信息。
 
 ```
                       |            +--------------+
@@ -23,7 +25,7 @@
     local            GFW               remote
 ```
 
-`proxy server` 同时能接收 `socks`/`http` 代理请求（`http` 代理使用 `CONNECT`），它将所有功能（`socks`、`http`）可运行在同一端口上，服务端能自动甄别协议的类型，它通过处理请求协议的前几个字节判定为 `socks` 或 `http` 请求。
+`proxy server` 同时能接收 `socks`/`http` 代理请求（`http` 代理使用 `CONNECT`），它能将所有功能（`socks`、`http`）可运行在同一端口上，服务端能自动甄别协议的类型，它通过处理请求协议的前几个字节判定为 `socks` 或 `http` 请求。
 
 `proxy server`也能同时接受正常 `http` 请求（请求 `http` 静态文件），这时它和一个正常的静态 `web` 文件服务器是完全相同的功能。
 
