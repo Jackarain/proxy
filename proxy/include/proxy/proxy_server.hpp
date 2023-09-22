@@ -2628,23 +2628,13 @@ Connection: close
 			while (!m_abort)
 			{
 				tcp_socket socket(m_executor);
-				co_await a.async_accept(
-					socket, net_awaitable[error]);
+
+				co_await a.async_accept(socket, net_awaitable[error]);
 				if (error)
 				{
 					LOG_ERR << "start_proxy_listen"
 						", async_accept: " << error.message();
-
-					if (error == net::error::operation_aborted ||
-						error == net::error::bad_descriptor)
-					{
-						co_return;
-					}
-
-					if (!a.is_open())
-						co_return;
-
-					continue;
+					co_return;
 				}
 
 				socket.set_option(keep_alive_opt, error);
