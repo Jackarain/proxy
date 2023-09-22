@@ -47,6 +47,16 @@ public:
 		f_();
 	}
 
+	inline void operator()()
+	{
+		if (stop_token_)
+			return;
+
+		stop_token_ = true;
+
+		f_();
+	}
+
 	inline void cancel()
 	{
 		stop_token_ = true;
