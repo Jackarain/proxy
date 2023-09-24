@@ -11,6 +11,7 @@
 #pragma once
 
 #include "proxy/use_awaitable.hpp"
+#include "proxy/strutil.hpp"
 
 #include <cstdlib>
 #include <string>
@@ -36,7 +37,6 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/ssl.hpp>
 #include <boost/beast/version.hpp>
-#include <boost/beast/core/detail/base64.hpp>
 
 #ifdef _MSC_VER
 # pragma warning(pop)
@@ -95,18 +95,8 @@ namespace proxy {
 			{
 				auto userinfo =
 					opt.username + ":" + opt.password;
+				auto result = strutil::base64_encode(userinfo);
 
-				std::string result(
-					beast::detail::base64::encoded_size(userinfo.size()),
-					0);
-
-				auto len =
-					beast::detail::base64::encode(
-					(char*)result.data(),
-					userinfo.c_str(),
-					userinfo.size());
-
-				result.resize(len);
 				result = "Basic " + result;
 				req.set(http::field::proxy_authorization, result);
 			}
