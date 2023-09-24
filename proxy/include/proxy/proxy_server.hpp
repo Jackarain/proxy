@@ -2338,7 +2338,8 @@ namespace proxy {
 			}
 
 			const auto buf_size = 5 * 1024 * 1024;
-			char buf[buf_size];
+			auto bufs = std::make_unique<char[]>(buf_size);
+			char* buf = bufs.get();
 			std::streamsize total = 0;
 
 			do
