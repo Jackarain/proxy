@@ -593,7 +593,7 @@ namespace proxy {
 			if (command == SOCKS_CMD_CONNECT)
 			{
 				// 连接目标主机.
-				co_await connect_host(
+				co_await start_connect_host(
 					domain, port, ec, atyp == SOCKS5_ATYP_DOMAINNAME);
 			}
 			else if (command == SOCKS5_CMD_UDP)
@@ -1127,9 +1127,9 @@ namespace proxy {
 			if (command == SOCKS_CMD_CONNECT)
 			{
 				if (socks4a)
-					co_await connect_host(hostname, port, ec, true);
+					co_await start_connect_host(hostname, port, ec, true);
 				else
-					co_await connect_host(
+					co_await start_connect_host(
 						dst_endpoint.address().to_string(),
 						port,
 						ec);
@@ -1289,7 +1289,7 @@ namespace proxy {
 			std::string host(target_view.substr(0, pos));
 			std::string port(target_view.substr(pos + 1));
 
-			co_await connect_host(host,
+			co_await start_connect_host(host,
 				static_cast<uint16_t>(std::atol(port.c_str())), ec, true);
 			if (ec)
 			{
@@ -1516,7 +1516,7 @@ namespace proxy {
 			}
 		}
 
-		inline net::awaitable<void> connect_host(
+		inline net::awaitable<void> start_connect_host(
 			std::string target_host, uint16_t target_port,
 			boost::system::error_code& ec, bool resolve = false)
 		{
