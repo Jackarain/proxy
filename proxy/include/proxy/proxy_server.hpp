@@ -84,10 +84,12 @@ namespace proxy {
 	using buffer_body = http::buffer_body;
 
 	using dynamic_request = http::request<dynamic_body>;
+	using string_request = http::request<string_body>;
+
 	using string_response = http::response<string_body>;
 	using buffer_response = http::response<buffer_body>;
 
-	using request_parser = http::request_parser<dynamic_request::body_type>;
+	using request_parser = http::request_parser<string_request::body_type>;
 	using response_serializer = http::response_serializer<buffer_body, http::fields>;
 
 	using ssl_stream = net::ssl::stream<tcp_socket>;
@@ -201,7 +203,7 @@ namespace proxy {
 		struct http_context
 		{
 			std::vector<std::string> command_;
-			dynamic_request& request_;
+			string_request& request_;
 			request_parser& parser_;
 			beast::flat_buffer& buffer_;
 		};
@@ -338,8 +340,15 @@ namespace proxy {
 			}
 			if (socks_version == 'G')
 			{
-				co_await web_server();
-				co_return;
+				auto ret = co_await http_proxy_get();
+				if (!ret)
+				{
+					co_await net::async_write(
+						m_local_socket,
+						net::buffer(bad_request_page()),
+						net::transfer_all(),
+						net_awaitable[ec]);
+				}
 			}
 			else if (socks_version == 'C')
 			{
@@ -1194,13 +1203,95 @@ namespace proxy {
 			co_return;
 		}
 
-		inline net::awaitable<bool> http_proxy_connect()
+		inline bool http_proxy_authorization(std::string_view pa)
+		{
+			if (m_option.usrdid_.empty())
+				return true;
+
+			if (pa.empty())
+			{
+				LOG_ERR << "http proxy id: "
+					<< m_connection_id
+					<< ", missing proxy auth";
+
+				return false;
+			}
+
+			auto pos = pa.find(' ');
+			if (pos == std::string::npos)
+			{
+				LOG_ERR << "http proxy id: "
+					<< m_connection_id
+					<< ", illegal proxy type: "
+					<< pa;
+
+				return false;
+			}
+
+			auto type = pa.substr(0, pos);
+			auto auth = pa.substr(pos + 1);
+
+			if (type != "Basic")
+			{
+				LOG_ERR << "http proxy id: "
+					<< m_connection_id
+					<< ", illegal proxy type: "
+					<< pa;
+
+				return false;
+			}
+
+			std::string userinfo(
+				beast::detail::base64::decoded_size(auth.size()), 0);
+			auto [len, _] = beast::detail::base64::decode(
+				(char*)userinfo.data(),
+				auth.data(),
+				auth.size());
+			userinfo.resize(len);
+
+			pos = userinfo.find(':');
+
+			std::string uname = userinfo.substr(0, pos);
+			std::string passwd = userinfo.substr(pos + 1);
+
+			bool verify_passed =
+				m_option.usrdid_ == uname &&
+				m_option.passwd_ == passwd;
+
+			auto endp = m_local_socket.remote_endpoint();
+			auto client = endp.address().to_string();
+			client += ":" + std::to_string(endp.port());
+
+			LOG_DBG << "socks id: " << m_connection_id
+				<< ", auth: " << m_option.usrdid_
+				<< " := " << uname
+				<< ", passwd: " << m_option.passwd_
+				<< " := " << passwd
+				<< ", client: " << client;
+
+			if (!verify_passed)
+				return false;
+
+			return true;
+		}
+
+		inline net::awaitable<bool> http_proxy_get()
 		{
 			http::request<http::string_body> req;
 			boost::system::error_code ec;
 
-			co_await http::async_read(
-				m_local_socket, m_local_buffer, req, net_awaitable[ec]);
+			// 读取 http 请求头.
+			co_await http::async_read(m_local_socket,
+				m_local_buffer, req, net_awaitable[ec]);
+			if (ec)
+			{
+				LOG_ERR << "http proxy id: "
+					<< m_connection_id
+					<< ", http_proxy_get async_read: "
+					<< ec.message();
+
+				co_return false;
+			}
 
 			auto mth = std::string(req.method_string());
 			auto target_view = std::string(req.target());
@@ -1213,68 +1304,111 @@ namespace proxy {
 				<< (pa.empty() ? std::string()
 					: ", proxy_authorization: " + pa);
 
-			if (!m_option.usrdid_.empty())
+			auto expect = urls::parse_uri(target_view);
+
+			// http 代理认证, 如果请求的 rarget 不是 http url 或认证
+			// 失败, 则按正常 web 请求处理.
+			if (!http_proxy_authorization(pa) || expect.has_error())
 			{
-				if (pa.empty())
-				{
-					LOG_ERR << "http proxy id: "
-						<< m_connection_id
-						<< ", missing proxy auth";
+				// 如果 doc 目录为空, 则不允许访问目录
+				// 这里直接返回错误页面.
+				if (m_option.doc_directory_.empty())
 					co_return false;
-				}
 
-				auto pos = pa.find(' ');
-				if (pos == std::string::npos)
-				{
-					LOG_ERR << "http proxy id: "
-						<< m_connection_id
-						<< ", illegal proxy type: "
-						<< pa;
-					co_return false;
-				}
-
-				auto type = pa.substr(0, pos);
-				auto auth = pa.substr(pos + 1);
-
-				if (type != "Basic")
-				{
-					LOG_ERR << "http proxy id: "
-						<< m_connection_id
-						<< ", illegal proxy type: "
-						<< pa;
-					co_return false;
-				}
-
-				std::string userinfo(
-					beast::detail::base64::decoded_size(auth.size()), 0);
-				auto [len, _] = beast::detail::base64::decode(
-					(char*)userinfo.data(),
-					auth.c_str(),
-					auth.size());
-				userinfo.resize(len);
-
-				pos = userinfo.find(':');
-				std::string uname = userinfo.substr(0, pos);
-				std::string passwd = userinfo.substr(pos + 1);
-
-				bool verify_passed =
-					m_option.usrdid_ == uname &&
-					m_option.passwd_ == passwd;
-
-				auto endp = m_local_socket.remote_endpoint();
-				auto client = endp.address().to_string();
-				client += ":" + std::to_string(endp.port());
-
-				LOG_DBG << "socks id: " << m_connection_id
-					<< ", auth: " << m_option.usrdid_
-					<< " := " << uname
-					<< ", passwd: " << m_option.passwd_
-					<< " := " << passwd
-					<< ", client: " << client;
-
-				if (!verify_passed)
-					co_return false;
+				// 按正常 http 目录请求来处理.
+				co_await normal_web_server(req);
+				co_return true;
 			}
+
+			auto& url = expect.value();
+			auto host = url.host();
+			auto port = url.port_number();
+
+			if (port == 0)
+				port = urls::default_port(url.scheme_id());
+
+			// 连接到目标主机.
+			co_await start_connect_host(host,
+				port ? port : 80, ec, true);
+			if (ec)
+			{
+				LOG_WFMT("http proxy id: {},"
+					" connect to target {}:{} error: {}",
+					m_connection_id,
+					host,
+					port,
+					ec.message());
+				co_return false;
+			}
+
+			// 处理代理请求头.
+			std::string query;
+			if (url.query() != "")
+			{
+				auto q = std::string(url.query());
+				if (q[0] == '?')
+					query = std::string(url.query());
+				else
+					query = "?" + std::string(url.query());
+			}
+
+			if (std::string(url.path()) == "")
+				req.target("/" + query);
+			else
+				req.target(std::string(url.path()) + query);
+
+			req.erase(http::field::proxy_authorization);
+			req.erase(http::field::proxy_connection);
+
+			// 代理请求头.
+			co_await http::async_write(
+				m_remote_socket, req, net_awaitable[ec]);
+
+			// 代理连接之间数据转发.
+			co_await(
+				transfer(m_local_socket, m_remote_socket)
+				&&
+				transfer(m_remote_socket, m_local_socket)
+				);
+
+			LOG_DBG << "http proxy id: " << m_connection_id
+				<< ", transfer completed";
+
+			co_return true;
+		}
+
+		inline net::awaitable<bool> http_proxy_connect()
+		{
+			http::request<http::string_body> req;
+			boost::system::error_code ec;
+
+			// 读取 http 请求头.
+			co_await http::async_read(m_local_socket,
+				m_local_buffer, req, net_awaitable[ec]);
+			if (ec)
+			{
+				LOG_ERR << "http proxy id: "
+					<< m_connection_id
+					<< ", http_proxy_connect async_read: "
+					<< ec.message();
+
+				co_return false;
+			}
+
+			auto mth = std::string(req.method_string());
+			auto target_view = std::string(req.target());
+			auto pa = std::string(req[http::field::proxy_authorization]);
+
+			LOG_DBG << "http proxy id: "
+				<< m_connection_id
+				<< ", method: " << mth
+				<< ", target: " << target_view
+				<< (pa.empty() ? std::string()
+					: ", proxy_authorization: " + pa);
+
+			// http 代理认证.
+			if (!http_proxy_authorization(pa))
+				co_return false;
 
 			auto pos = target_view.find(':');
 			if (pos == std::string::npos)
@@ -1782,75 +1916,64 @@ namespace proxy {
 			co_return;
 		}
 
-		inline net::awaitable<void> web_server()
+		inline net::awaitable<void> normal_web_server(http::request<http::string_body>& req)
 		{
 			namespace fs = std::filesystem;
 
 			boost::system::error_code ec;
 
-			if (m_option.doc_directory_.empty())
-			{
-				co_await net::async_write(
-					m_local_socket,
-					net::buffer(fake_web_page()),
-					net::transfer_all(),
-					net_awaitable[ec]);
-				net::streambuf bufs(8192);
-				co_await net::async_read_until(
-					m_local_socket,
-					bufs,
-					"\r\n\r\n",
-					net_awaitable[ec]);
-				if (!ec)
-					m_local_socket.shutdown(
-						net::socket_base::shutdown_both, ec);
-				co_return;
-			}
-
 			beast::flat_buffer buffer;
 			buffer.reserve(5 * 1024 * 1024);
 
 			bool keep_alive = false;
+			bool has_read_header = true;
+
 			for (; !m_abort;)
 			{
 				request_parser parser;
-				parser.body_limit(std::numeric_limits<uint64_t>::max());
 
-				co_await http::async_read_header(
-					m_local_socket,
-					buffer,
-					parser,
-					net_awaitable[ec]);
-				if (ec)
+				parser.body_limit(std::numeric_limits<int32_t>::max());
+
+				if (!has_read_header)
 				{
-					LOG_DBG << "start_web_connect, id: "
-						<< m_connection_id
-						<< ", async_read_header: "
-						<< ec.message();
-					co_return;
-				}
-
-				if (parser.get()[http::field::expect] == "100-continue")
-				{
-					http::response<http::empty_body> res;
-					res.version(11);
-					res.result(http::status::continue_);
-
-					co_await http::async_write(
+					co_await http::async_read_header(
 						m_local_socket,
-						res,
+						buffer,
+						parser,
 						net_awaitable[ec]);
 					if (ec)
 					{
 						LOG_DBG << "start_web_connect, id: "
 							<< m_connection_id
-							<< ", expect async_write: "
+							<< ", async_read_header: "
 							<< ec.message();
 						co_return;
 					}
+
+					req = parser.release();
+
+					if (req[http::field::expect] == "100-continue")
+					{
+						http::response<http::empty_body> res;
+						res.version(11);
+						res.result(http::status::continue_);
+
+						co_await http::async_write(
+							m_local_socket,
+							res,
+							net_awaitable[ec]);
+						if (ec)
+						{
+							LOG_DBG << "start_web_connect, id: "
+								<< m_connection_id
+								<< ", expect async_write: "
+								<< ec.message();
+							co_return;
+						}
+					}
 				}
 
-				auto req = parser.release();
+				has_read_header = false;
 				keep_alive = req.keep_alive();
 
 				if (beast::websocket::is_upgrade(req))
