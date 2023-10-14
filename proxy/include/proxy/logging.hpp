@@ -8,7 +8,9 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#pragma once
+#ifndef INCLUDE__2016_10_14__LOGGING_HPP
+#define INCLUDE__2016_10_14__LOGGING_HPP
+
 #include <version>
 #include <codecvt>
 #include <clocale>
@@ -1841,3 +1843,4 @@ public:
 
 #endif
 
+#endif // INCLUDE__2016_10_14__LOGGING_HPP
