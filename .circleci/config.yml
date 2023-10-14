@@ -26,7 +26,7 @@ jobs:
             mkdir build
             cd build
             cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF
-            ninja -j4
+            ninja -j1
             cp -r bin /tmp
 
       - store_artifacts:
