@@ -1037,7 +1037,7 @@ inline void logger_writer__(int64_t time, const int& level,
 #if defined(_WIN32) || defined(WIN32)
 static LONG WINAPI unexpectedExceptionHandling(EXCEPTION_POINTERS* info);
 #endif
-void signalHandler(int);
+void signal_handler(int);
 
 namespace logger_aux__ {
 	using namespace std::chrono_literals;
@@ -1066,11 +1066,11 @@ namespace logger_aux__ {
 			m_unexpected_exception_handler =
 				SetUnhandledExceptionFilter(unexpectedExceptionHandling);
 #endif
-			signal(SIGTERM, signalHandler);
-			signal(SIGABRT, signalHandler);
-			signal(SIGFPE, signalHandler);
-			signal(SIGSEGV, signalHandler);
-			signal(SIGILL, signalHandler);
+			signal(SIGTERM, signal_handler);
+			signal(SIGABRT, signal_handler);
+			signal(SIGFPE, signal_handler);
+			signal(SIGSEGV, signal_handler);
+			signal(SIGILL, signal_handler);
 		}
 		~async_logger___()
 		{
@@ -1170,7 +1170,7 @@ static LONG WINAPI unexpectedExceptionHandling(EXCEPTION_POINTERS* e)
 }
 #endif
 
-inline void signalHandler(int)
+inline void signal_handler(int)
 {
 	global_logger_obj___.reset();
 }
