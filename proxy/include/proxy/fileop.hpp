@@ -106,7 +106,7 @@ namespace fileop {
 		}
 
 		inline std::streamsize
-		read(std::streambuf& buf, std::span<uint8_t>& val)
+		read(std::streambuf& buf, std::span<char>& val)
 		{
 			std::streamsize bytes = val.size();
 			return buf.sgetn((char*)(val.data()), bytes);
@@ -123,8 +123,12 @@ namespace fileop {
 	template<class T>
 	std::streamsize write(const std::streambuf& buf, T const& val)
 	{
-		using details::write;
-		return write(buf, val);
+		return details::write(buf, val);
+	}
+
+	std::streamsize read(const std::fstream& file, std::span<char> val)
+	{
+		return details::read(*file.rdbuf(), val);
 	}
 
 	template<class T>

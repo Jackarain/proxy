@@ -90,7 +90,9 @@ namespace proxy {
 	using buffer_response = http::response<buffer_body>;
 
 	using request_parser = http::request_parser<string_request::body_type>;
+
 	using response_serializer = http::response_serializer<buffer_body, http::fields>;
+	using string_response_serializer = http::response_serializer<string_body, http::fields>;
 
 	using ssl_stream = net::ssl::stream<tcp_socket>;
 
@@ -2251,6 +2253,13 @@ namespace proxy {
 				{ ".c", "text/javascript" },
 				{ ".json", "application/json" },
 				{ ".css", "text/css" },
+				{ ".txt", "text/plain" },
+				{ ".md", "text/plain" },
+				{ ".log", "text/plain" },
+				{ ".xml", "text/xml" },
+				{ ".ico", "image/x-icon" },
+				{ ".ttf", "application/x-font-ttf" },
+				{ ".eot", "application/vnd.ms-fontobject" },
 				{ ".woff", "application/x-font-woff" },
 				{ ".pdf", "application/pdf" },
 				{ ".png", "image/png" },
@@ -2397,7 +2406,7 @@ namespace proxy {
 				file.seekg(r.first, std::ios_base::beg);
 			}
 
-			buffer_response res{ st, request.version() };
+			buffer_response res{ http::status::ok, request.version() };
 
 			res.set(http::field::server, version_string);
 			auto ext = to_lower(fs::path(path).extension().string());
@@ -2467,7 +2476,7 @@ namespace proxy {
 
 			do
 			{
-				auto bytes_transferred = fileop::read(file, buf);
+				auto bytes_transferred = fileop::read(file, std::span<char>(buf, buf_size));
 				bytes_transferred = std::min<std::streamsize>(
 					bytes_transferred,
 					content_length - total
