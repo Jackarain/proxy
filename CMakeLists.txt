@@ -56,7 +56,7 @@ message(STATUS "SYSTEM NAME: ${CMAKE_SYSTEM_NAME}")
 
 ################################################################################
 
-option(ENABLE_BUILD_WERROR			"All warnings being treated as errors" ON)
+option(ENABLE_BUILD_WERROR			"All warnings being treated as errors" OFF)
 option(ENABLE_GIT_VERSION			"Enable git version" ON)
 
 option(ENABLE_USE_IO_URING			"Enable auto use io_uring" ON)
