@@ -1410,7 +1410,15 @@ namespace proxy {
 
 			// http 代理认证.
 			if (!http_proxy_authorization(pa))
-				co_return false;
+			{
+				co_await net::async_write(
+					m_local_socket,
+					net::buffer(authentication_required_page()),
+					net::transfer_all(),
+					net_awaitable[ec]);
+
+				co_return true;
+			}
 
 			auto pos = target_view.find(':');
 			if (pos == std::string::npos)
@@ -2580,6 +2588,19 @@ Connection: close
 
 )xxxxxx";
 			return fake_content;
+		}
+
+		inline const std::string& authentication_required_page() const
+		{
+			static std::string auth_required =
+R"xxxxxx(HTTP/1.1 407 Proxy Authentication Required
+Connection: close
+Proxy-Authenticate: Basic realm="proxy"
+Proxy-Connection: close
+Content-Length: 0
+
+)xxxxxx";
+			return auth_required;
 		}
 
 	private:
