@@ -1,5 +1,5 @@
 ﻿//
-// socks_server.hpp
+// proxy_server.hpp
 // ~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2019 Jack (jack dot wgm at gmail dot com)
