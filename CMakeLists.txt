@@ -61,6 +61,7 @@ option(ENABLE_GIT_VERSION			"Enable git version" ON)
 
 option(ENABLE_USE_IO_URING			"Enable auto use io_uring" ON)
 option(ENABLE_BUILD_WITH_LIBCXX		"Build with libc++" OFF)
+option(ENABLE_REUSEPORT				"Build with REUSEPORT support" OFF)
 
 option(ENABLE_SYSTEM_ZLIB			"Build with system zlib support" OFF)
 option(ENABLE_SYSTEM_OPENSSL		"Build with system openssl support" OFF)
@@ -212,6 +213,10 @@ if (NOT MSVC)
 			if (ENABLE_STATIC_LINK_TO_GCC)
 				set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc")
 			endif()
+		endif()
+
+		if (ENABLE_REUSEPORT)
+			add_definitions(-DENABLE_REUSEPORT)
 		endif()
 	endif()
 	if (ANDROID)

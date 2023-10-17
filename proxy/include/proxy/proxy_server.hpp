@@ -140,6 +140,9 @@ namespace proxy {
 		// 告之 proxy_pass_ 来源 IP/PORT 以及目标 IP/PORT.
 		bool haproxy_{ false };
 
+		// 启用 TCP 端口重用(仅Linux kernel version 3.9以上支持).
+		bool reuse_port_{ false };
+
 		// 作为服务器时, 指定ssl证书目录, 使用固定文件名(ssl_crt.pem,
 		// ssl_dh.pem, ssl_key.pem, ssl_dh.pem, ssl_crt.pwd)
 		// , 这样就不用指定下面: ssl_certificate_、ssl_certificate_key_
@@ -2648,6 +2651,22 @@ Content-Length: 0
 			init_ssl_context();
 
 			boost::system::error_code ec;
+
+			if (m_option.reuse_port_)
+			{
+#ifdef ENABLE_REUSEPORT
+				using net::detail::socket_option::boolean;
+				using reuse_port = boolean<SOL_SOCKET, SO_REUSEPORT>;
+
+				m_acceptor.set_option(reuse_port(true), ec);
+				if (ec)
+				{
+					LOG_WARN << "acceptor set_option with SO_REUSEPORT: "
+						<< ec.message();
+				}
+#endif
+			}
+
 			m_acceptor.listen(net::socket_base::max_listen_connections, ec);
 		}
 

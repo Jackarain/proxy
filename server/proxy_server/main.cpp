@@ -133,6 +133,7 @@ std::string doc_directory;
 std::string log_directory;
 bool disable_http = false;
 bool disable_logs;
+bool reuse_port = false;
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -169,6 +170,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.ssl_sni_ = ssl_sni;
 
 	opt.disable_noraml_http_ = disable_http;
+	opt.reuse_port_ = reuse_port;
 
 	opt.doc_directory_ = doc_directory;
 
@@ -245,6 +247,8 @@ int main(int argc, char** argv)
 		("config", po::value<std::string>(&config)->value_name("config.conf"), "Load config options from file.")
 
 		("socks_server", po::value<std::string>(&socks_listen)->default_value("[::0]:1080")->value_name("ip:port"), "For socks4/5 server listen.")
+
+		("reuse_port", po::value<bool>(&reuse_port)->default_value(false), "TCP reuse port option(SO_REUSEPORT since Linux 3.9).")
 
 		("socks_userid", po::value<std::string>(&socks_userid)->default_value("jack")->value_name("userid"), "Socks4/5 auth user id.")
 		("socks_passwd", po::value<std::string>(&socks_passwd)->default_value("1111")->value_name("passwd"), "Socks4/5 auth password.")
