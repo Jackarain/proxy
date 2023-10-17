@@ -332,7 +332,8 @@ int main(int argc, char** argv)
 	// 帮助输出.
 	if (vm.count("help") || argc == 1)
 	{
-		std::cout << version_info() << desc;
+		version_info();
+		std::cout << desc;
 		return EXIT_SUCCESS;
 	}
 
