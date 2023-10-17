@@ -1639,7 +1639,7 @@ namespace proxy {
 		template<typename S1, typename S2>
 		net::awaitable<void> transfer(S1& from, S2& to)
 		{
-			std::vector<char> data(512 * 1024, 0);
+			std::vector<char> data(1024 * 1024, 0);
 			boost::system::error_code ec;
 
 			for (; !m_abort;)
