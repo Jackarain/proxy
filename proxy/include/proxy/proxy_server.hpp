@@ -160,6 +160,9 @@ namespace proxy {
 		// 来生成此文件, 以增强密钥交换安全性.
 		std::string ssl_dhparam_;
 
+		// 用于多域名证书下指定具体域名.
+		std::string ssl_sni_;
+
 		// 指定允许的加密算法.
 		std::string ssl_ciphers_;
 
@@ -1798,8 +1801,16 @@ namespace proxy {
 						ssl_stream& ssl_socket =
 							boost::variant2::get<ssl_stream>(socks_stream);
 
+						auto server = m_proxy_server.lock();
+						BOOST_ASSERT(server && "server is nullptr!");
+						auto opt = server->option();
+
+						std::string sni =
+							opt.ssl_sni_.empty() ? proxy_host : opt.ssl_sni_;
+
+						// Set SNI Hostname.
 						if (!SSL_set_tlsext_host_name(
-							ssl_socket.native_handle(), proxy_host.c_str()))
+							ssl_socket.native_handle(), sni.c_str()))
 						{
 							LOG_WFMT("proxy id: {},"
 							" SSL_set_tlsext_host_name error: {}",

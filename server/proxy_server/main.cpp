@@ -125,6 +125,7 @@ std::string ssl_certificate;
 std::string ssl_certificate_key;
 std::string ssl_certificate_passwd;
 std::string ssl_dhparam;
+std::string ssl_sni;
 
 std::string ssl_ciphers;
 std::string socks_listen;
@@ -165,6 +166,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.ssl_certificate_key_ = ssl_certificate_key;
 	opt.ssl_certificate_passwd_ = ssl_certificate_passwd;
 	opt.ssl_dhparam_ = ssl_dhparam;
+	opt.ssl_sni_ = ssl_sni;
 
 	opt.disable_noraml_http_ = disable_http;
 
@@ -256,6 +258,7 @@ int main(int argc, char** argv)
 		("ssl_certificate_key", po::value<std::string>(&ssl_certificate_key)->value_name("path"), "SSL certificate secret key.")
 		("ssl_certificate_passwd", po::value<std::string>(&ssl_certificate_passwd)->value_name("path/string"), "SSL certificate key passphrases.")
 		("ssl_dhparam", po::value<std::string>(&ssl_dhparam)->value_name("path"), "Specifies a file with DH parameters for DHE ciphers.")
+		("ssl_sni", po::value<std::string>(&ssl_sni)->value_name("sni"), "Specifies SNI for multiple SSL certificates on one IP.")
 
 		("ssl_ciphers", po::value<std::string>(&ssl_ciphers)->value_name("ssl_ciphers"), "Specifies the enabled ciphers.")
 		("ssl_prefer_server_ciphers", po::value<bool>(&ssl_prefer_server_ciphers)->default_value(false, "false")->value_name(""), "Specifies that server ciphers should be preferred over client ciphers when using the SSLv3 and TLS protocols.")
