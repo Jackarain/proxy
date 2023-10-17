@@ -59,7 +59,7 @@ message(STATUS "SYSTEM NAME: ${CMAKE_SYSTEM_NAME}")
 option(ENABLE_BUILD_WERROR			"All warnings being treated as errors" OFF)
 option(ENABLE_GIT_VERSION			"Enable git version" ON)
 
-option(ENABLE_USE_IO_URING			"Enable auto use io_uring" ON)
+option(ENABLE_USE_IO_URING			"Enable auto use io_uring" OFF)
 option(ENABLE_BUILD_WITH_LIBCXX		"Build with libc++" OFF)
 option(ENABLE_REUSEPORT				"Build with REUSEPORT support" OFF)
 
