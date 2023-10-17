@@ -2645,12 +2645,27 @@ Content-Length: 0
 		proxy_server(net::io_context::executor_type executor,
 			const tcp::endpoint& endp, proxy_server_option opt)
 			: m_executor(executor)
-			, m_acceptor(executor, endp)
+			, m_acceptor(executor)
 			, m_option(std::move(opt))
 		{
 			init_ssl_context();
 
 			boost::system::error_code ec;
+
+			m_acceptor.open(endp.protocol(), ec);
+			if (ec)
+			{
+				LOG_WARN << "acceptor open: " << endp
+					<< ", error: " << ec.message();
+				throw std::runtime_error(ec.message());
+			}
+
+			m_acceptor.set_option(net::socket_base::reuse_address(true), ec);
+			if (ec)
+			{
+				LOG_WARN << "acceptor set_option with reuse_address: "
+					<< ec.message();
+			}
 
 			if (m_option.reuse_port_)
 			{
@@ -2667,7 +2682,21 @@ Content-Length: 0
 #endif
 			}
 
+			m_acceptor.bind(endp, ec);
+			if (ec)
+			{
+				LOG_ERR << "acceptor bind: " << endp
+					<< ", error: " << ec.message();
+				throw std::runtime_error(ec.message());
+			}
+
 			m_acceptor.listen(net::socket_base::max_listen_connections, ec);
+			if (ec)
+			{
+				LOG_ERR << "acceptor listen: " << endp
+					<< ", error: " << ec.message();
+				throw std::runtime_error(ec.message());
+			}
 		}
 
 	public:
