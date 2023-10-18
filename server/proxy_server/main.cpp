@@ -323,7 +323,7 @@ int main(int argc, char** argv)
 		("socks_userid", po::value<std::string>(&socks_userid)->default_value("jack")->value_name("userid"), "Auth user id (Deprecated)")
 		("socks_passwd", po::value<std::string>(&socks_passwd)->default_value("1111")->value_name("passwd"), "Auth password (Deprecated)")
 
-		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->value_name("authorization"), "Authorized user list (e.g: user:passwd)")
+		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->value_name("user:passwd"), "Authorized user list (e.g: user:passwd)")
 
 		("proxy_pass", po::value<std::string>(&proxy_pass)->default_value("")->value_name(""), "Next proxy pass. (e.g: socks5://user:passwd@ip:port)")
 		("proxy_pass_ssl", po::value<bool>(&proxy_pass_ssl)->default_value(false, "false")->value_name(""), "Next proxy pass with ssl.")
