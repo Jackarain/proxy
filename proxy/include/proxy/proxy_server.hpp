@@ -142,7 +142,7 @@ namespace proxy {
 		bool haproxy_{ false };
 
 		// 指定当前proxy server向外发起连接时, 绑定到哪个本地地址.
-		std::string bind_addr_;
+		std::string local_ip_;
 
 		// 启用 TCP 端口重用(仅Linux kernel version 3.9以上支持).
 		bool reuse_port_{ false };
@@ -1733,18 +1733,19 @@ namespace proxy {
 				boost::variant2::get<tcp_socket>(m_remote_socket);
 
 			auto bind_interface = net::ip::address::from_string(
-				m_option.bind_addr_, ec);
+				m_option.local_ip_, ec);
 			if (ec)
 			{
 				// bind 地址有问题, 忽略bind参数.
-				m_option.bind_addr_.clear();
+				m_option.local_ip_.clear();
+				bind_interface = {};
 			}
 
 			auto check_condition = [this, bind_interface](
 				const boost::system::error_code&,
 				tcp_socket& stream, auto&) mutable
 			{
-				if (m_option.bind_addr_.empty())
+				if (m_option.local_ip_.empty())
 					return true;
 
 				tcp::endpoint bind_endpoint(bind_interface, 0);
@@ -1798,7 +1799,7 @@ namespace proxy {
 					{
 						remote_socket.close(ec);
 
-						if (!m_option.bind_addr_.empty())
+						if (!m_option.local_ip_.empty())
 						{
 							tcp::endpoint bind_endpoint(
 								bind_interface,

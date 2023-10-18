@@ -139,6 +139,7 @@ bool disable_logs;
 
 bool reuse_port = false;
 bool happyeyeballs = true;
+std::string local_ip;
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -189,6 +190,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 
 	opt.disable_http_ = disable_http;
 	opt.disable_socks_ = disable_socks;
+	opt.local_ip_ = local_ip;
 
 	opt.reuse_port_ = reuse_port;
 	opt.happyeyeballs_ = happyeyeballs;
@@ -316,6 +318,7 @@ int main(int argc, char** argv)
 
 		("reuse_port", po::value<bool>(&reuse_port)->default_value(false), "TCP reuse port option(SO_REUSEPORT since Linux 3.9).")
 		("happyeyeballs", po::value<bool>(&happyeyeballs)->default_value(true), "Use Happy Eyeballs for tcp connect.")
+		("local_ip", po::value<std::string>(&local_ip)->default_value(""), "Local IP binding for client tcp connection to server.")
 
 		("socks_userid", po::value<std::string>(&socks_userid)->default_value("jack")->value_name("userid"), "Auth user id (Deprecated)")
 		("socks_passwd", po::value<std::string>(&socks_passwd)->default_value("1111")->value_name("passwd"), "Auth password (Deprecated)")
