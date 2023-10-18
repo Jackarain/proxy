@@ -110,6 +110,10 @@ namespace proxy {
 		// 指定当前proxy server认证密码.
 		std::string passwd_;
 
+		// 授权信息.
+		using auth_users = std::tuple<std::string, std::string>;
+		std::vector<auth_users> auth_users_;
+
 		// 指定当前proxy server向外发起连接时, 绑定到哪个本地地址.
 		std::string bind_addr_;
 
@@ -275,7 +279,7 @@ namespace proxy {
 			auto self = shared_from_this();
 
 			net::co_spawn(m_local_socket.get_executor(),
-				[self, this]() -> net::awaitable<void>
+				[this, self, server]() -> net::awaitable<void>
 				{
 					co_await start_socks_proxy();
 				}, net::detached);
@@ -293,9 +297,6 @@ namespace proxy {
 	private:
 		inline net::awaitable<void> start_socks_proxy()
 		{
-			// 保持整个生命周期在协程栈上.
-			auto self = shared_from_this();
-
 			// read
 			//  +----+----------+----------+
 			//  |VER | NMETHODS | METHODS  |
@@ -407,13 +408,8 @@ namespace proxy {
 				co_return;
 			}
 
-			auto server = m_proxy_server.lock();
-			if (!server)
-				co_return;
-
 			// 服务端是否需要认证.
-			const auto& srv_opt = server->option();
-			auto auth_required = !srv_opt.usrdid_.empty();
+			auto auth_required = !m_option.usrdid_.empty();
 
 			// 循环读取客户端支持的代理方式.
 			p = net::buffer_cast<const char*>(m_local_buffer.data());
@@ -1088,22 +1084,28 @@ namespace proxy {
 				<< (socks4a ? hostname : dst_endpoint.address().to_string());
 
 			// 用户认证逻辑.
-			bool verify_passed = false;
-			auto server = m_proxy_server.lock();
+			bool verify_passed = m_option.usrdid_ == userid;
 
-			if (server)
+			if (!verify_passed || userid.empty())
 			{
-				const auto& srv_opt = server->option();
+				verify_passed = false;
 
-				verify_passed = srv_opt.usrdid_ == userid;
-				if (verify_passed)
-					LOG_DBG << "socks id: " << m_connection_id
-					<< ", auth passed";
-				else
-					LOG_WARN << "socks id: " << m_connection_id
-					<< ", auth no pass";
-				server = {};
+				for (auto [user, pwd] : m_option.auth_users_)
+				{
+					if (user == userid)
+					{
+						verify_passed = true;
+						break;
+					}
+				}
 			}
+
+			if (verify_passed)
+				LOG_DBG << "socks id: " << m_connection_id
+				<< ", auth passed";
+			else
+				LOG_WARN << "socks id: " << m_connection_id
+				<< ", auth no pass";
 
 			if (!verify_passed)
 			{
@@ -1213,7 +1215,7 @@ namespace proxy {
 
 		inline bool http_proxy_authorization(std::string_view pa)
 		{
-			if (m_option.usrdid_.empty())
+			if (m_option.usrdid_.empty() && m_option.auth_users_.empty())
 				return true;
 
 			if (pa.empty())
@@ -1266,15 +1268,27 @@ namespace proxy {
 				m_option.usrdid_ == uname &&
 				m_option.passwd_ == passwd;
 
+			if (!verify_passed || uname.empty())
+			{
+				verify_passed = false;
+
+				for (auto [user, pwd] : m_option.auth_users_)
+				{
+					if (uname == user && passwd == pwd)
+					{
+						verify_passed = true;
+						break;
+					}
+				}
+			}
+
 			auto endp = m_local_socket.remote_endpoint();
 			auto client = endp.address().to_string();
 			client += ":" + std::to_string(endp.port());
 
 			LOG_DBG << "socks id: " << m_connection_id
-				<< ", auth: " << m_option.usrdid_
-				<< " := " << uname
-				<< ", passwd: " << m_option.passwd_
-				<< " := " << passwd
+				<< ", auth: " << uname
+				<< ", passwd: " << passwd
 				<< ", client: " << client;
 
 			if (!verify_passed)
@@ -1584,24 +1598,28 @@ namespace proxy {
 			client += ":" + std::to_string(endp.port());
 
 			// 用户认证逻辑.
-			bool verify_passed = false;
-			auto server = m_proxy_server.lock();
+			bool verify_passed =
+				m_option.usrdid_ == uname &&
+				m_option.passwd_ == passwd;
 
-			if (server)
+			if (!verify_passed || uname.empty())
 			{
-				const auto& srv_opt = server->option();
+				verify_passed = false;
 
-				verify_passed =
-					srv_opt.usrdid_ == uname && srv_opt.passwd_ == passwd;
-				server.reset();
-
-				LOG_DBG << "socks id: " << m_connection_id
-					<< ", auth: " << srv_opt.usrdid_
-					<< " := " << uname
-					<< ", passwd: " << srv_opt.passwd_
-					<< " := " << passwd
-					<< ", client: " << client;
+				for (auto [user, pwd] : m_option.auth_users_)
+				{
+					if (uname == user && passwd == pwd)
+					{
+						verify_passed = true;
+						break;
+					}
+				}
 			}
+
+			LOG_DBG << "socks id: " << m_connection_id
+				<< ", auth: " << uname
+				<< ", passwd: " << passwd
+				<< ", client: " << client;
 
 			net::streambuf wbuf;
 			auto wp = net::buffer_cast<char*>(wbuf.prepare(16));
@@ -1804,12 +1822,8 @@ namespace proxy {
 						ssl_stream& ssl_socket =
 							boost::variant2::get<ssl_stream>(socks_stream);
 
-						auto server = m_proxy_server.lock();
-						BOOST_ASSERT(server && "server is nullptr!");
-						auto opt = server->option();
-
-						std::string sni =
-							opt.ssl_sni_.empty() ? proxy_host : opt.ssl_sni_;
+						std::string sni = m_option.ssl_sni_.empty()
+							? proxy_host : m_option.ssl_sni_;
 
 						// Set SNI Hostname.
 						if (!SSL_set_tlsext_host_name(

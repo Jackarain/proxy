@@ -116,6 +116,7 @@ inline int platform_init()
 
 std::string socks_userid;
 std::string socks_passwd;
+std::vector<std::string> auth_users;
 std::string proxy_pass;
 bool proxy_pass_ssl = false;
 bool ssl_prefer_server_ciphers = false;
@@ -157,6 +158,19 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 
 	opt.usrdid_ = socks_userid;
 	opt.passwd_ = socks_passwd;
+
+	for (const auto& user : auth_users)
+	{
+		if (user.empty())
+			continue;
+
+		auto pos = user.find(':');
+		if (pos == std::string::npos)
+			opt.auth_users_.emplace_back(user, "");
+		else
+			opt.auth_users_.emplace_back(
+				user.substr(0, pos), user.substr(pos + 1));
+	}
 
 	opt.proxy_pass_ = proxy_pass;
 	opt.proxy_pass_use_ssl_ = proxy_pass_ssl;
@@ -295,8 +309,10 @@ int main(int argc, char** argv)
 
 		("reuse_port", po::value<bool>(&reuse_port)->default_value(false), "TCP reuse port option(SO_REUSEPORT since Linux 3.9).")
 
-		("socks_userid", po::value<std::string>(&socks_userid)->default_value("jack")->value_name("userid"), "Socks4/5 auth user id.")
-		("socks_passwd", po::value<std::string>(&socks_passwd)->default_value("1111")->value_name("passwd"), "Socks4/5 auth password.")
+		("socks_userid", po::value<std::string>(&socks_userid)->default_value("jack")->value_name("userid"), "Auth user id (Deprecated)")
+		("socks_passwd", po::value<std::string>(&socks_passwd)->default_value("1111")->value_name("passwd"), "Auth password (Deprecated)")
+
+		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->value_name("authorization"), "Authorized user list (e.g: user:passwd)")
 
 		("proxy_pass", po::value<std::string>(&proxy_pass)->default_value("")->value_name(""), "Next proxy pass. (e.g: socks5://user:passwd@ip:port)")
 		("proxy_pass_ssl", po::value<bool>(&proxy_pass_ssl)->default_value(false, "false")->value_name(""), "Next proxy pass with ssl.")
