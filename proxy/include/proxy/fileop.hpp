@@ -5,8 +5,12 @@
 // Email:  jack.wgm at gmail dot com
 //
 
-#pragma once
+#ifndef INCLUDE__2023_10_18__FILEOP_HPP
+#define INCLUDE__2023_10_18__FILEOP_HPP
 
+
+#include <cstdint>
+#include <fstream>
 #include <streambuf>
 #include <string>
 #include <vector>
@@ -170,3 +174,5 @@ namespace fileop {
 		return write(*f.rdbuf(), val);
 	}
 }
+
+#endif // INCLUDE__2023_10_18__FILEOP_HPP

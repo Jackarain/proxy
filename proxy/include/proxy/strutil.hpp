@@ -13,7 +13,9 @@
  ******************************************************************************
 */
 
-#pragma once
+#ifndef INCLUDE__2023_10_18__STRUTIL_HPP
+#define INCLUDE__2023_10_18__STRUTIL_HPP
+
 
 #include <algorithm>
 #include <cctype>
@@ -1479,3 +1481,5 @@ namespace strutil
 	}
 
 }
+
+#endif // INCLUDE__2023_10_18__STRUTIL_HPP

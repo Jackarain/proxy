@@ -8,7 +8,9 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#pragma once
+#ifndef INCLUDE__2023_10_18__SOCKS_ERROR_CODE_HPP
+#define INCLUDE__2023_10_18__SOCKS_ERROR_CODE_HPP
+
 
 #include <boost/system/error_code.hpp>
 
@@ -167,3 +169,5 @@ namespace boost::system {
 		static const inline bool value = true;
 	};
 } // namespace boost
+
+#endif // INCLUDE__2023_10_18__SOCKS_ERROR_CODE_HPP

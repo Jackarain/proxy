@@ -8,7 +8,9 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#pragma once
+#ifndef INCLUDE__2023_10_18__PROXY_SERVER_HPP
+#define INCLUDE__2023_10_18__PROXY_SERVER_HPP
+
 
 #include "proxy/use_awaitable.hpp"
 #include "proxy/scoped_exit.hpp"
@@ -3081,3 +3083,5 @@ Content-Length: 0
 	};
 
 }
+
+#endif // INCLUDE__2023_10_18__PROXY_SERVER_HPP

@@ -5,7 +5,9 @@
 // Email:  jack.wgm at gmail dot com
 //
 
-#pragma once
+#ifndef INCLUDE__2023_10_18__DEFAULT_CERT_HPP
+#define INCLUDE__2023_10_18__DEFAULT_CERT_HPP
+
 
 #include <string_view>
 
@@ -18010,3 +18012,5 @@ inline std::string_view default_root_certificates()
 
 	return std::string_view((const char*)&cacert_2023_05_30_pem, cacert_2023_05_30_pem_len);
 }
+
+#endif // INCLUDE__2023_10_18__DEFAULT_CERT_HPP

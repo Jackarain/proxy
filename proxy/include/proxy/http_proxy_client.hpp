@@ -8,7 +8,9 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#pragma once
+#ifndef INCLUDE__2023_10_18__HTTP_PROXY_CLIENT_HPP
+#define INCLUDE__2023_10_18__HTTP_PROXY_CLIENT_HPP
+
 
 #include "proxy/use_awaitable.hpp"
 #include "proxy/strutil.hpp"
@@ -150,3 +152,5 @@ namespace proxy {
 				detail::initiate_do_http_proxy(), handler, &socket, opt);
 	}
 }
+
+#endif // INCLUDE__2023_10_18__HTTP_PROXY_CLIENT_HPP

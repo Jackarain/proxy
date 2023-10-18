@@ -8,7 +8,9 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#pragma once
+#ifndef INCLUDE__2023_10_18__MAIN_HPP
+#define INCLUDE__2023_10_18__MAIN_HPP
+
 
 #include <string>
 #include <string_view>
@@ -119,3 +121,5 @@ inline bool parse_endpoint_string(std::string_view str,
 
 	return true;
 }
+
+#endif // INCLUDE__2023_10_18__MAIN_HPP

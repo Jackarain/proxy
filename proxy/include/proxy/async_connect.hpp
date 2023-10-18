@@ -8,7 +8,8 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#pragma once
+#ifndef INCLUDE__2023_10_18__ASYNC_CONNECT_HPP
+#define INCLUDE__2023_10_18__ASYNC_CONNECT_HPP
 
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/connect.hpp>
@@ -445,3 +446,5 @@ namespace asio_util {
 					endpoints, connect_condition);
 	}
 }
+
+#endif // INCLUDE__2023_10_18__ASYNC_CONNECT_HPP
