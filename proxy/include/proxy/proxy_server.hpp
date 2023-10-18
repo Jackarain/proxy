@@ -1738,7 +1738,6 @@ namespace proxy {
 			{
 				// bind 地址有问题, 忽略bind参数.
 				m_option.local_ip_.clear();
-				bind_interface = {};
 			}
 
 			auto check_condition = [this, bind_interface](
