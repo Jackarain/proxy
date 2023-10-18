@@ -114,9 +114,6 @@ namespace proxy {
 		using auth_users = std::tuple<std::string, std::string>;
 		std::vector<auth_users> auth_users_;
 
-		// 指定当前proxy server向外发起连接时, 绑定到哪个本地地址.
-		std::string bind_addr_;
-
 		// 多层代理, 当前服务器级连下一个服务器, 对于 client 而言是无感的,
 		// 这是当前服务器通过 proxy_pass_ 指定的下一个代理服务器, 为 client
 		// 实现多层代理.
@@ -144,8 +141,14 @@ namespace proxy {
 		// 告之 proxy_pass_ 来源 IP/PORT 以及目标 IP/PORT.
 		bool haproxy_{ false };
 
+		// 指定当前proxy server向外发起连接时, 绑定到哪个本地地址.
+		std::string bind_addr_;
+
 		// 启用 TCP 端口重用(仅Linux kernel version 3.9以上支持).
 		bool reuse_port_{ false };
+
+		// 是否启用 Happy Eyeballs 连接算法, 默认为使用.
+		bool happyeyeballs_{ true };
 
 		// 作为服务器时, 指定ssl证书目录, 使用固定文件名(ssl_crt.pem,
 		// ssl_dh.pem, ssl_key.pem, ssl_dh.pem, ssl_crt.pwd)
@@ -1781,8 +1784,47 @@ namespace proxy {
 					co_return;
 				}
 
-				co_await asio_util::async_connect(remote_socket,
-					targets, check_condition, net_awaitable[ec]);
+				if (m_option.happyeyeballs_)
+				{
+					co_await asio_util::async_connect(
+						remote_socket,
+						targets,
+						check_condition,
+						net_awaitable[ec]);
+				}
+				else
+				{
+					for (auto endpoint : targets)
+					{
+						remote_socket.close(ec);
+
+						if (!m_option.bind_addr_.empty())
+						{
+							tcp::endpoint bind_endpoint(
+								bind_interface,
+								0);
+
+							remote_socket.open(
+								bind_endpoint.protocol(),
+								ec);
+							if (ec)
+								break;
+
+							remote_socket.bind(
+								bind_endpoint,
+								ec);
+							if (ec)
+								break;
+						}
+
+						co_await remote_socket.async_connect(
+							endpoint,
+							net_awaitable[ec]);
+						if (!ec)
+							break;
+					}
+				}
+
 				if (ec)
 				{
 					LOG_WFMT("socks id: {},"

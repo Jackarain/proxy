@@ -132,10 +132,13 @@ std::string ssl_ciphers;
 std::string socks_listen;
 std::string doc_directory;
 std::string log_directory;
+
 bool disable_http = false;
 bool disable_socks = false;
 bool disable_logs;
+
 bool reuse_port = false;
+bool happyeyeballs = true;
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -188,6 +191,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.disable_socks_ = disable_socks;
 
 	opt.reuse_port_ = reuse_port;
+	opt.happyeyeballs_ = happyeyeballs;
 
 	opt.doc_directory_ = doc_directory;
 
@@ -311,6 +315,7 @@ int main(int argc, char** argv)
 		("socks_server", po::value<std::string>(&socks_listen)->default_value("[::0]:1080")->value_name("ip:port"), "For socks4/5 server listen.")
 
 		("reuse_port", po::value<bool>(&reuse_port)->default_value(false), "TCP reuse port option(SO_REUSEPORT since Linux 3.9).")
+		("happyeyeballs", po::value<bool>(&happyeyeballs)->default_value(true), "Use Happy Eyeballs for tcp connect.")
 
 		("socks_userid", po::value<std::string>(&socks_userid)->default_value("jack")->value_name("userid"), "Auth user id (Deprecated)")
 		("socks_passwd", po::value<std::string>(&socks_passwd)->default_value("1111")->value_name("passwd"), "Auth password (Deprecated)")
