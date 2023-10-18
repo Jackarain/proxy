@@ -133,6 +133,7 @@ std::string socks_listen;
 std::string doc_directory;
 std::string log_directory;
 bool disable_http = false;
+bool disable_socks = false;
 bool disable_logs;
 bool reuse_port = false;
 
@@ -184,6 +185,8 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.ssl_sni_ = ssl_sni;
 
 	opt.disable_http_ = disable_http;
+	opt.disable_socks_ = disable_socks;
+
 	opt.reuse_port_ = reuse_port;
 
 	opt.doc_directory_ = doc_directory;
@@ -332,6 +335,7 @@ int main(int argc, char** argv)
 		("logs_path", po::value<std::string>(&log_directory)->value_name(""), "Logs dirctory.")
 		("disable_logs", po::value<bool>(&disable_logs)->value_name(""), "Disable logs.")
 		("disable_http", po::value<bool>(&disable_http)->value_name("")->default_value(false), "Disable http protocol.")
+		("disable_socks", po::value<bool>(&disable_socks)->value_name("")->default_value(false), "Disable socks proxy protocol.")
 	;
 
 	// 解析命令行.

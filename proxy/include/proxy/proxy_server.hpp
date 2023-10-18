@@ -179,8 +179,11 @@ namespace proxy {
 		// http doc 目录, 用于伪装成web站点.
 		std::string doc_directory_;
 
-		// 禁用未加密 http 服务.
+		// 禁用 http 服务.
 		bool disable_http_{ false };
+
+		// 禁用 socks proxy 服务.
+		bool disable_socks_{ false };
 	};
 
 	// proxy server 虚基类, 任何 proxy server 的实现, 必须基于这个基类.
@@ -333,6 +336,14 @@ namespace proxy {
 
 			if (socks_version == SOCKS_VERSION_5)
 			{
+				if (m_option.disable_socks_)
+				{
+					LOG_DBG << "socks protocol"
+						", connection id: " << m_connection_id
+						<< ", Forbidden";
+					co_return;
+				}
+
 				LOG_DBG << "connection id: " << m_connection_id
 					<< ", socks version: " << socks_version;
 
@@ -341,6 +352,14 @@ namespace proxy {
 			}
 			if (socks_version == SOCKS_VERSION_4)
 			{
+				if (m_option.disable_socks_)
+				{
+					LOG_DBG << "socks protocol"
+						", connection id: " << m_connection_id
+						<< ", Forbidden";
+					co_return;
+				}
+
 				LOG_DBG << "connection id: " << m_connection_id
 					<< ", socks version: " << socks_version;
 
@@ -349,6 +368,14 @@ namespace proxy {
 			}
 			if (socks_version == 'G')
 			{
+				if (m_option.disable_http_)
+				{
+					LOG_DBG << "http protocol"
+						", connection id: " << m_connection_id
+						<< ", Forbidden";
+					co_return;
+				}
+
 				auto ret = co_await http_proxy_get();
 				if (!ret)
 				{
@@ -361,6 +388,14 @@ namespace proxy {
 			}
 			else if (socks_version == 'C')
 			{
+				if (m_option.disable_http_)
+				{
+					LOG_DBG << "http protocol"
+						", connection id: " << m_connection_id
+						<< ", Forbidden";
+					co_return;
+				}
+
 				auto ret = co_await http_proxy_connect();
 				if (!ret)
 				{
@@ -2911,6 +2946,14 @@ Content-Length: 0
 				// plain socks4/5 protocol.
 				if (detect[0] == 0x05 || detect[0] == 0x04)
 				{
+					if (m_option.disable_socks_)
+					{
+						LOG_DBG << "socks protocol"
+							", connection id: " << connection_id
+							<< ", Forbidden";
+						continue;
+					}
+
 					LOG_DBG << "socks protocol:"
 						" connection id: " << connection_id;
 
