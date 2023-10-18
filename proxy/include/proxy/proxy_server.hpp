@@ -180,7 +180,7 @@ namespace proxy {
 		std::string doc_directory_;
 
 		// 禁用未加密 http 服务.
-		bool disable_noraml_http_{ false };
+		bool disable_http_{ false };
 	};
 
 	// proxy server 虚基类, 任何 proxy server 的实现, 必须基于这个基类.
@@ -2908,7 +2908,7 @@ Content-Length: 0
 					continue;
 				}
 
-				// socks4/5 protocol.
+				// plain socks4/5 protocol.
 				if (detect[0] == 0x05 || detect[0] == 0x04)
 				{
 					LOG_DBG << "socks protocol:"
@@ -2923,7 +2923,7 @@ Content-Length: 0
 
 					new_session->start();
 				}
-				else if (detect[0] == 0x16) // socks5 with ssl protocol.
+				else if (detect[0] == 0x16) // http/socks proxy with ssl crypto protocol.
 				{
 					LOG_DBG << "ssl protocol"
 						", connection id: " << connection_id;
@@ -2954,12 +2954,12 @@ Content-Length: 0
 					m_clients[connection_id] = new_session;
 
 					new_session->start();
-				}
-				else if (detect[0] == 0x47
-					|| detect[0] == 0x50
-					|| detect[0] == 0x43)
+				}								// plain http protocol.
+				else if (detect[0] == 0x47 ||	// 'G'
+					detect[0] == 0x50 ||		// 'P'
+					detect[0] == 0x43)			// 'C'
 				{
-					if (m_option.disable_noraml_http_)
+					if (m_option.disable_http_)
 					{
 						LOG_DBG << "http protocol"
 							", connection id: " << connection_id

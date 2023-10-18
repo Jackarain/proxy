@@ -183,7 +183,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.ssl_dhparam_ = ssl_dhparam;
 	opt.ssl_sni_ = ssl_sni;
 
-	opt.disable_noraml_http_ = disable_http;
+	opt.disable_http_ = disable_http;
 	opt.reuse_port_ = reuse_port;
 
 	opt.doc_directory_ = doc_directory;
