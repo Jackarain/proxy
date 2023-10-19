@@ -17,6 +17,10 @@
 #include <string_view>
 #include <filesystem>
 #include <span>
+#include <type_traits>
+
+
+//////////////////////////////////////////////////////////////////////////
 
 namespace fileop {
 	namespace details {
@@ -42,139 +46,144 @@ namespace fileop {
 		}
 
 		template<class T>
-		std::streamsize
-		write(std::streambuf& buf, const T& val)
+		requires std::is_same_v<T, uint8_t> || std::is_same_v<T, char>
+		std::streamsize write(std::streambuf& buf, std::span<T> val)
 		{
-			static_assert(std::is_standard_layout<T>{},
-				"data is not standard layout");
-
-			std::streamsize bytes = sizeof(T);
-			return buf.sputn(reinterpret_cast<const char*>(&val), bytes);
-		}
-
-		inline std::streamsize
-		write(std::streambuf& buf, const std::vector<uint8_t>& val)
-		{
-			std::streamsize bytes = val.size();
+			auto bytes = val.size();
 			return buf.sputn(reinterpret_cast<const char*>(val.data()), bytes);
 		}
 
 		inline std::streamsize
-		write(std::streambuf& buf, const std::string& val)
+		write(std::streambuf& buf, std::string_view val)
 		{
-			std::streamsize bytes = val.size();
+			auto bytes = val.size();
 			return buf.sputn(reinterpret_cast<const char*>(val.data()), bytes);
 		}
 
-		inline std::streamsize
-		write(std::streambuf& buf, const std::string_view& val)
-		{
-			std::streamsize bytes = val.size();
-			return buf.sputn(reinterpret_cast<const char*>(val.data()), bytes);
-		}
-
-		inline std::streamsize
-		write(std::streambuf& buf, const std::span<uint8_t>& val)
-		{
-			std::streamsize bytes = val.size();
-			return buf.sputn(reinterpret_cast<const char*>(val.data()), bytes);
-		}
 
 		template<class T>
-		std::streamsize
-		read(std::streambuf& buf, T& val)
+		requires std::is_same_v<T, uint8_t> || std::is_same_v<T, char>
+		std::streamsize read(std::streambuf& buf, std::span<T> val)
 		{
-			static_assert(std::is_standard_layout<T>{},
-				"data is not standard layout");
-
-			std::streamsize bytes = sizeof(T);
-			return buf.sgetn(reinterpret_cast<char*>(&val), bytes);
-		}
-
-		inline std::streamsize
-		read(std::streambuf& buf, std::vector<uint8_t>& val)
-		{
-			std::streamsize bytes = val.size();
+			auto bytes = val.size();
 			return buf.sgetn(reinterpret_cast<char*>(val.data()), bytes);
 		}
 
 		inline std::streamsize
-		read(std::streambuf& buf, std::string& val)
-		{
-			std::streamsize bytes = val.size();
-			return buf.sgetn(reinterpret_cast<char*>(val.data()), bytes);
-		}
-
-		inline std::streamsize
-		read(std::streambuf& buf, std::string_view& val)
-		{
-			std::streamsize bytes = val.size();
-			return buf.sgetn((char*)(val.data()), bytes);
-		}
-
-		inline std::streamsize
-		read(std::streambuf& buf, std::span<char>& val)
+		read(std::streambuf& buf, std::string_view val)
 		{
 			std::streamsize bytes = val.size();
 			return buf.sgetn((char*)(val.data()), bytes);
 		}
 	}
 
-	template<class T>
-	std::streamsize read(const std::streambuf& buf, T& val)
-	{
-		using details::read;
-		return read(buf, val);
-	}
+	//////////////////////////////////////////////////////////////////////////
 
 	template<class T>
-	std::streamsize write(const std::streambuf& buf, T const& val)
+	requires std::is_same_v<T, uint8_t> || std::is_same_v<T, char>
+	std::streamsize read(const std::streambuf& buf, std::span<T> val)
 	{
-		return details::write(buf, val);
+		return details::read(buf, val);
 	}
 
-	std::streamsize read(const std::fstream& file, std::span<char> val)
+	inline std::streamsize
+	read(std::streambuf& buf, std::string& val)
+	{
+		std::streamsize bytes = val.size();
+		return buf.sgetn(reinterpret_cast<char*>(val.data()), bytes);
+	}
+
+
+	template<class T>
+	requires std::is_same_v<T, uint8_t> || std::is_same_v<T, char>
+	std::streamsize read(const std::fstream& file, std::span<T> val)
 	{
 		return details::read(*file.rdbuf(), val);
 	}
 
-	template<class T>
-	std::streamsize read(const std::fstream& file, T& val)
+	inline std::streamsize
+	read(const std::fstream& file, std::string& val)
 	{
-		using details::read;
-		return read(*file.rdbuf(), val);
+		return details::read(*file.rdbuf(), val);
 	}
 
-	template<class T>
-	std::streamsize write(const std::fstream& file, T const& val)
-	{
-		using details::write;
-		return write(*file.rdbuf(), val);
-	}
 
 	template<class T>
-	std::streamsize read(const std::filesystem::path& file, T& val)
+	requires std::is_same_v<T, uint8_t> || std::is_same_v<T, char>
+	std::streamsize read(const std::filesystem::path& file, std::span<T> val)
 	{
 		std::fstream f(file, std::ios_base::binary | std::ios_base::in);
-		auto fsize = std::filesystem::file_size(file);
-		val.resize(fsize);
-
-		using details::read;
-		return read(*f.rdbuf(), val);
+		return details::read(*f.rdbuf(), val);
 	}
 
-	template<class T>
-	std::streamsize write(const std::filesystem::path& file, T const& val)
+	inline std::streamsize
+	read(const std::filesystem::path& file, std::string& val)
 	{
-		using details::create_parent_directories;
-		create_parent_directories(file);
+		std::fstream f(file, std::ios_base::binary | std::ios_base::in);
+		std::error_code ec;
+		auto fsize = std::filesystem::file_size(file, ec);
+		if (ec)
+			return -1;
+		val.resize(fsize);
+		return details::read<char>(*f.rdbuf(), val);
+	}
 
-		std::fstream f(file, std::ios_base::binary |
+	//////////////////////////////////////////////////////////////////////////
+
+
+	template<class T>
+	requires std::is_same_v<T, uint8_t> || std::is_same_v<T, char>
+	std::streamsize write(std::streambuf& buf, std::span<T> val)
+	{
+		return details::write(buf, val);
+	}
+
+	inline std::streamsize
+	write(std::streambuf& buf, std::string_view val)
+	{
+		return details::write(buf, val);
+	}
+
+
+	template<class T>
+	requires std::is_same_v<T, uint8_t> || std::is_same_v<T, char>
+	std::streamsize write(std::fstream& file, std::span<T> val)
+	{
+		return details::write(*file.rdbuf(), val);
+	}
+
+	inline std::streamsize
+	write(std::fstream& file, std::string_view val)
+	{
+		return details::write(*file.rdbuf(), val);
+	}
+
+
+	template<class T>
+	requires std::is_same_v<T, uint8_t> || std::is_same_v<T, char>
+	std::streamsize write(const std::filesystem::path& file, std::span<T> val)
+	{
+		details::create_parent_directories(file);
+
+		std::fstream f(file,
+			std::ios_base::binary |
 			std::ios_base::out |
 			std::ios_base::trunc);
 
-		using details::write;
-		return write(*f.rdbuf(), val);
+		return details::write(*f.rdbuf(), val);
+	}
+
+	inline std::streamsize
+	write(const std::filesystem::path& file, std::string_view val)
+	{
+		details::create_parent_directories(file);
+
+		std::fstream f(file,
+			std::ios_base::binary |
+			std::ios_base::out |
+			std::ios_base::trunc);
+
+		return details::write(*f.rdbuf(), val);
 	}
 }
 
