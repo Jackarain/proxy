@@ -21,21 +21,20 @@
 namespace fileop {
 	namespace details {
 
-		inline void create_parent_directories(const std::filesystem::path& p)
+		inline bool create_parent_directories(const std::filesystem::path& p)
 		{
 			std::error_code ec;
-			auto e = std::filesystem::exists(p, ec);
-			if (ec)
-				return;
 
-			if (!e)
+			if (std::filesystem::exists(p, ec) || ec)
+				return true;
+
+			if (!p.parent_path().empty())
 			{
-				if (!p.parent_path().empty())
-				{
-					std::filesystem::create_directories(
-						p.parent_path(), ec);
-				}
+				if (std::filesystem::create_directories(p.parent_path(), ec) || ec)
+					return false;
 			}
+
+			return true;
 		}
 
 		template<class T>
