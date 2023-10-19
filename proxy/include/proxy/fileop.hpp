@@ -25,12 +25,16 @@ namespace fileop {
 		{
 			std::error_code ec;
 
-			if (std::filesystem::exists(p, ec) || ec)
+			if (std::filesystem::exists(p, ec))
 				return true;
+
+			if (ec)
+				return false;
 
 			if (!p.parent_path().empty())
 			{
-				if (std::filesystem::create_directories(p.parent_path(), ec) || ec)
+				std::filesystem::create_directories(p.parent_path(), ec);
+				if (ec)
 					return false;
 			}
 
