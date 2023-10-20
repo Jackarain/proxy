@@ -208,48 +208,39 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 
 inline std::string version_info()
 {
+	std::ostringstream oss;
 	std::string os_name;
 
 #ifdef _WIN32
-#ifdef _WIN64
+# ifdef _WIN64
 	os_name = "Windows (64bit)";
-#else
+# else
 	os_name = "Windows (32bit)";
-#endif // _WIN64
-
+# endif
 #elif defined(HAVE_UNAME)
-	utsname un;
+	struct utsname un;
 	uname(&un);
-	os_name = un.sysname;
-	os_name += " ";
-	os_name += un.release;
+	os_name = std::string(un.sysname) + " " + un.release;
 
-	// extract_linux_version from un.release;
 	int ma_ver, mi_ver, patch_ver;
 	sscanf(un.release, "%d.%d.%d", &ma_ver, &mi_ver, &patch_ver);
 
-	if (std::string(un.sysname) == "Linux" && ma_ver < 4)
-	{
-		std::cerr << "WARNING: kernel too old, "
-			<< "please upgrade your system!" << std::endl;
-	}
+	if (os_name.find("Linux") != std::string::npos && ma_ver < 4)
+		std::cerr << "WARNING: kernel too old, please upgrade your system!" << std::endl;
 
 #elif defined(__APPLE__)
-	os_name = "Drawin";
+	os_name = "Darwin";
 #else
-	os_name = "unknow";
-#endif // _WIN32
+	os_name = "unknown";
+#endif
 
-	std::ostringstream oss;
-	oss << "Built on " << __DATE__
-		<< " " << __TIME__
-		<< " runs on " << os_name
-		<< ", " << BOOST_COMPILER
-		<< ", boost " << BOOST_LIB_VERSION;
+	oss << "Built on " << __DATE__ << " " << __TIME__ << " runs on " << os_name
+		<< ", " << BOOST_COMPILER << ", boost " << BOOST_LIB_VERSION;
+
 	std::cerr << oss.str() << "\n";
-
 	return oss.str();
 }
+
 
 void print_args(int argc, char** argv,
 	const po::variables_map& vm)
@@ -391,7 +382,9 @@ int main(int argc, char** argv)
 	net::io_context ioc(1);
 	server_ptr server;
 
-	net::co_spawn(ioc, start_proxy_server(ioc, server), net::detached);
+	net::co_spawn(ioc,
+		start_proxy_server(ioc, server),
+		net::detached);
 
 	ioc.run();
 
