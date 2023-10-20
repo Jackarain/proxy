@@ -8,45 +8,39 @@
 #ifndef INCLUDE__2023_10_18__FILEOP_HPP
 #define INCLUDE__2023_10_18__FILEOP_HPP
 
-
 #include <cstdint>
 #include <fstream>
-#include <streambuf>
-#include <string>
-#include <vector>
-#include <string_view>
 #include <filesystem>
 #include <span>
+#include <streambuf>
+#include <string>
+#include <string_view>
 #include <type_traits>
 
 
 //////////////////////////////////////////////////////////////////////////
 
 namespace fileop {
+
+	template<typename T>
+	concept ByteType = std::same_as<T, uint8_t> || std::same_as<T, char>;
+
 	namespace details {
 
-		inline bool create_parent_directories(const std::filesystem::path& p)
+		inline void create_parent_directories(const std::filesystem::path& p)
 		{
 			std::error_code ec;
 
 			if (std::filesystem::exists(p, ec))
-				return true;
+				return;
 
 			if (ec)
-				return false;
+				return;
 
-			if (!p.parent_path().empty())
-			{
-				std::filesystem::create_directories(p.parent_path(), ec);
-				if (ec)
-					return false;
-			}
-
-			return true;
+			std::filesystem::create_directories(p.parent_path(), ec);
 		}
 
-		template<class T>
-		requires std::is_same_v<T, uint8_t> || std::is_same_v<T, char>
+		template<ByteType T>
 		std::streamsize write(std::streambuf& buf, std::span<T> val)
 		{
 			auto bytes = val.size();
@@ -61,8 +55,7 @@ namespace fileop {
 		}
 
 
-		template<class T>
-		requires std::is_same_v<T, uint8_t> || std::is_same_v<T, char>
+		template<ByteType T>
 		std::streamsize read(std::streambuf& buf, std::span<T> val)
 		{
 			auto bytes = val.size();
@@ -79,8 +72,7 @@ namespace fileop {
 
 	//////////////////////////////////////////////////////////////////////////
 
-	template<class T>
-	requires std::is_same_v<T, uint8_t> || std::is_same_v<T, char>
+	template<ByteType T>
 	std::streamsize read(const std::streambuf& buf, std::span<T> val)
 	{
 		return details::read(buf, val);
@@ -94,8 +86,7 @@ namespace fileop {
 	}
 
 
-	template<class T>
-	requires std::is_same_v<T, uint8_t> || std::is_same_v<T, char>
+	template<ByteType T>
 	std::streamsize read(const std::fstream& file, std::span<T> val)
 	{
 		return details::read(*file.rdbuf(), val);
@@ -108,8 +99,7 @@ namespace fileop {
 	}
 
 
-	template<class T>
-	requires std::is_same_v<T, uint8_t> || std::is_same_v<T, char>
+	template<ByteType T>
 	std::streamsize read(const std::filesystem::path& file, std::span<T> val)
 	{
 		std::fstream f(file, std::ios_base::binary | std::ios_base::in);
@@ -131,8 +121,7 @@ namespace fileop {
 	//////////////////////////////////////////////////////////////////////////
 
 
-	template<class T>
-	requires std::is_same_v<T, uint8_t> || std::is_same_v<T, char>
+	template<ByteType T>
 	std::streamsize write(std::streambuf& buf, std::span<T> val)
 	{
 		return details::write(buf, val);
@@ -145,8 +134,7 @@ namespace fileop {
 	}
 
 
-	template<class T>
-	requires std::is_same_v<T, uint8_t> || std::is_same_v<T, char>
+	template<ByteType T>
 	std::streamsize write(std::fstream& file, std::span<T> val)
 	{
 		return details::write(*file.rdbuf(), val);
@@ -159,8 +147,7 @@ namespace fileop {
 	}
 
 
-	template<class T>
-	requires std::is_same_v<T, uint8_t> || std::is_same_v<T, char>
+	template<ByteType T>
 	std::streamsize write(const std::filesystem::path& file, std::span<T> val)
 	{
 		details::create_parent_directories(file);
