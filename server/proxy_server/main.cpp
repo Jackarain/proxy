@@ -22,29 +22,6 @@
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
-#include <memory>
-
-#ifdef __linux__
-#  include <sys/resource.h>
-
-# ifndef HAVE_UNAME
-#  define HAVE_UNAME
-# endif
-
-#elif _WIN32
-#  ifndef WIN32_LEAN_AND_MEAN
-#    define WIN32_LEAN_AND_MEAN
-#  endif
-#  include <fcntl.h>
-#  include <io.h>
-#  include <windows.h>
-
-#endif // _WIN32
-
-#ifdef HAVE_UNAME
-#  include <sys/utsname.h>
-#endif
-
 #include "main.hpp"
 
 namespace net = boost::asio;
@@ -53,64 +30,6 @@ using namespace proxy;
 
 using server_ptr = std::shared_ptr<proxy_server>;
 
-
-inline int platform_init()
-{
-#if defined(WIN32) || defined(_WIN32)
-	/* Disable the "application crashed" popup. */
-	SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX |
-		SEM_NOOPENFILEERRORBOX);
-
-#if defined(DEBUG) ||defined(_DEBUG)
-	//	_CrtDumpMemoryLeaks();
-	// 	int flags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
-	// 	flags |= _CRTDBG_LEAK_CHECK_DF;
-	// 	_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
-	// 	_CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDOUT);
-	// 	_CrtSetDbgFlag(flags);
-#endif
-
-#if !defined(__MINGW32__)
-	_CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_DEBUG);
-	_CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_DEBUG);
-#endif
-
-	_setmode(0, _O_BINARY);
-	_setmode(1, _O_BINARY);
-	_setmode(2, _O_BINARY);
-
-	/* Disable stdio output buffering. */
-	setvbuf(stdout, NULL, _IONBF, 0);
-	setvbuf(stderr, NULL, _IONBF, 0);
-
-	/* Enable minidump when application crashed. */
-#elif defined(__linux__)
-	rlimit of = { 50000, 100000 };
-	setrlimit(RLIMIT_NOFILE, &of);
-
-	struct rlimit core_limit;
-	core_limit.rlim_cur = RLIM_INFINITY;
-	core_limit.rlim_max = RLIM_INFINITY;
-	setrlimit(RLIMIT_CORE, &core_limit);
-
-	/* Set the stack size programmatically with setrlimit */
-	rlimit rl;
-	int result = getrlimit(RLIMIT_STACK, &rl);
-	if (result == 0)
-	{
-		const rlim_t stack_size = 100 * 1024 * 1024;
-		if (rl.rlim_cur < stack_size)
-		{
-			rl.rlim_cur = stack_size;
-			setrlimit(RLIMIT_STACK, &rl);
-		}
-	}
-#endif
-
-	std::ios::sync_with_stdio(false);
-
-	return 0;
-}
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -206,90 +125,71 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 
 //////////////////////////////////////////////////////////////////////////
 
-inline std::string version_info()
+inline std::optional<std::string> try_as_string(const boost::any& var)
 {
-	std::ostringstream oss;
-	std::string os_name;
+	try {
+		return boost::any_cast<std::string>(var);
+	}
+	catch (const boost::bad_any_cast&) {
+		return std::nullopt;
+	}
+}
 
-#ifdef _WIN32
-# ifdef _WIN64
-	os_name = "Windows (64bit)";
-# else
-	os_name = "Windows (32bit)";
-# endif
-#elif defined(HAVE_UNAME)
-	struct utsname un;
-	uname(&un);
-	os_name = std::string(un.sysname) + " " + un.release;
+inline std::optional<bool> try_as_bool(const boost::any& var)
+{
+	try {
+		return boost::any_cast<bool>(var);
+	}
+	catch (const boost::bad_any_cast&) {
+		return std::nullopt;
+	}
+}
 
-	int ma_ver, mi_ver, patch_ver;
-	sscanf(un.release, "%d.%d.%d", &ma_ver, &mi_ver, &patch_ver);
-
-	if (os_name.find("Linux") != std::string::npos && ma_ver < 4)
-		std::cerr << "WARNING: kernel too old, please upgrade your system!" << std::endl;
-
-#elif defined(__APPLE__)
-	os_name = "Darwin";
-#else
-	os_name = "unknown";
-#endif
-
-	oss << "Built on " << __DATE__ << " " << __TIME__ << " runs on " << os_name
-		<< ", " << BOOST_COMPILER << ", boost " << BOOST_LIB_VERSION;
-
-	std::cerr << oss.str() << "\n";
-	return oss.str();
+inline std::optional<int> try_as_int(const boost::any& var)
+{
+	try {
+		return boost::any_cast<int>(var);
+	}
+	catch (const boost::bad_any_cast&) {
+		return std::nullopt;
+	}
 }
 
 
-void print_args(int argc, char** argv,
-	const po::variables_map& vm)
+inline void print_args(int argc, char** argv, const po::variables_map& vm)
 {
 	LOG_INFO << "Current directory: "
 		<< std::filesystem::current_path().string();
 
 	if (!vm.count("config"))
 	{
-		std::vector<std::string> print_args;
-		print_args.assign(argv, argv + argc);
-		LOG_INFO << "Run: "
-			<< boost::algorithm::join(print_args, " ");
-
+		std::vector<std::string> args(argv, argv + argc);
+		LOG_INFO << "Run: " << boost::algorithm::join(args, " ");
 		return;
 	}
 
-	for (const auto& cfg : vm)
+	for (const auto& [key, value] : vm)
 	{
-		if (cfg.second.empty() || cfg.first == "config")
+		if (value.empty() || key == "config")
 			continue;
 
-		auto& var = cfg.second.value();
-		try {
-			const auto& s = boost::any_cast<std::string>(var);
-			LOG_INFO << cfg.first
-				<< " = "
-				<< s;
+		if (auto s = try_as_string(value.value()))
+		{
+			LOG_INFO << key << " = " << *s;
 			continue;
 		}
-		catch (const std::exception&) {}
 
-		try {
-			const auto& v = boost::any_cast<bool>(var);
-			LOG_INFO << cfg.first
-				<< " = "
-				<< v;
+		if (auto b = try_as_bool(value.value()))
+		{
+			LOG_INFO << key << " = " << *b;
 			continue;
 		}
-		catch (const std::exception&) {}
 
-		try {
-			const auto& v = boost::any_cast<int>(var);
-			LOG_INFO << cfg.first
-				<< " = "
-				<< v;
+		if (auto i = try_as_int(value.value()))
+		{
+			LOG_INFO << key << " = " << *i;
 			continue;
 		}
-		catch (const std::exception&) {}
 	}
 }
 
@@ -309,7 +209,7 @@ int main(int argc, char** argv)
 
 		("reuse_port", po::value<bool>(&reuse_port)->default_value(false), "Enable TCP SO_REUSEPORT option (available since Linux 3.9).")
 		("happyeyeballs", po::value<bool>(&happyeyeballs)->default_value(true), "Enable Happy Eyeballs algorithm for TCP connections.")
-		("local_ip", po::value<std::string>(&local_ip)->default_value(""), "Specify local IP for client TCP connection to server.")
+		("local_ip", po::value<std::string>(&local_ip), "Specify local IP for client TCP connection to server.")
 
 		("socks_userid", po::value<std::string>(&socks_userid)->default_value("jack")->value_name("userid"), "Authentication user ID (Deprecated).")
 		("socks_passwd", po::value<std::string>(&socks_passwd)->default_value("1111")->value_name("passwd"), "Authentication password (Deprecated).")
