@@ -312,38 +312,38 @@ int main(int argc, char** argv)
 	po::options_description desc("Options");
 	desc.add_options()
 		("help,h", "Help message.")
-		("config", po::value<std::string>(&config)->value_name("config.conf"), "Load config options from file.")
+		("config", po::value<std::string>(&config)->value_name("config.conf"), "Load configuration options from specified file.")
 
-		("socks_server", po::value<std::string>(&socks_listen)->default_value("[::0]:1080")->value_name("ip:port"), "For socks4/5 server listen.")
+		("socks_server", po::value<std::string>(&socks_listen)->default_value("[::0]:1080")->value_name("ip:port"), "Specify SOCKS4/5 server listening address and port.")
 
-		("reuse_port", po::value<bool>(&reuse_port)->default_value(false), "TCP reuse port option(SO_REUSEPORT since Linux 3.9).")
-		("happyeyeballs", po::value<bool>(&happyeyeballs)->default_value(true), "Use Happy Eyeballs for tcp connect.")
-		("local_ip", po::value<std::string>(&local_ip)->default_value(""), "Local IP binding for client tcp connection to server.")
+		("reuse_port", po::value<bool>(&reuse_port)->default_value(false), "Enable TCP SO_REUSEPORT option (available since Linux 3.9).")
+		("happyeyeballs", po::value<bool>(&happyeyeballs)->default_value(true), "Enable Happy Eyeballs algorithm for TCP connections.")
+		("local_ip", po::value<std::string>(&local_ip)->default_value(""), "Specify local IP for client TCP connection to server.")
 
-		("socks_userid", po::value<std::string>(&socks_userid)->default_value("jack")->value_name("userid"), "Auth user id (Deprecated)")
-		("socks_passwd", po::value<std::string>(&socks_passwd)->default_value("1111")->value_name("passwd"), "Auth password (Deprecated)")
+		("socks_userid", po::value<std::string>(&socks_userid)->default_value("jack")->value_name("userid"), "Authentication user ID (Deprecated).")
+		("socks_passwd", po::value<std::string>(&socks_passwd)->default_value("1111")->value_name("passwd"), "Authentication password (Deprecated).")
 
-		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->value_name("user:passwd"), "Authorized user list (e.g: user:passwd)")
+		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->value_name("user:passwd"), "List of authorized users (e.g: user:passwd).")
 
-		("proxy_pass", po::value<std::string>(&proxy_pass)->default_value("")->value_name(""), "Next proxy pass. (e.g: socks5://user:passwd@ip:port)")
-		("proxy_pass_ssl", po::value<bool>(&proxy_pass_ssl)->default_value(false, "false")->value_name(""), "Next proxy pass with ssl.")
+		("proxy_pass", po::value<std::string>(&proxy_pass)->default_value("")->value_name(""), "Specify next proxy pass (e.g: socks5://user:passwd@ip:port).")
+		("proxy_pass_ssl", po::value<bool>(&proxy_pass_ssl)->default_value(false, "false")->value_name(""), "Enable SSL for the next proxy pass.")
 
-		("ssl_certificate_dir", po::value<std::string>(&ssl_certificate_dir)->value_name("path"), "SSL certificate dir, auto find 'ssl_crt.pem/ssl_crt.pwd/ssl_key.pem/ssl_dh.pem'.")
+		("ssl_certificate_dir", po::value<std::string>(&ssl_certificate_dir)->value_name("path"), "Directory containing SSL certificates, auto-locates 'ssl_crt.pem/ssl_crt.pwd/ssl_key.pem/ssl_dh.pem'.")
 
-		("ssl_certificate", po::value<std::string>(&ssl_certificate)->value_name("path"), "SSL certificate file.")
-		("ssl_certificate_key", po::value<std::string>(&ssl_certificate_key)->value_name("path"), "SSL certificate secret key.")
-		("ssl_certificate_passwd", po::value<std::string>(&ssl_certificate_passwd)->value_name("path/string"), "SSL certificate key passphrases.")
+		("ssl_certificate", po::value<std::string>(&ssl_certificate)->value_name("path"), "Path to SSL certificate file.")
+		("ssl_certificate_key", po::value<std::string>(&ssl_certificate_key)->value_name("path"), "Path to SSL certificate secret key file.")
+		("ssl_certificate_passwd", po::value<std::string>(&ssl_certificate_passwd)->value_name("path/string"), "SSL certificate key passphrase.")
 		("ssl_dhparam", po::value<std::string>(&ssl_dhparam)->value_name("path"), "Specifies a file with DH parameters for DHE ciphers.")
 		("ssl_sni", po::value<std::string>(&ssl_sni)->value_name("sni"), "Specifies SNI for multiple SSL certificates on one IP.")
 
-		("ssl_ciphers", po::value<std::string>(&ssl_ciphers)->value_name("ssl_ciphers"), "Specifies the enabled ciphers.")
-		("ssl_prefer_server_ciphers", po::value<bool>(&ssl_prefer_server_ciphers)->default_value(false, "false")->value_name(""), "Specifies that server ciphers should be preferred over client ciphers when using the SSLv3 and TLS protocols.")
+		("ssl_ciphers", po::value<std::string>(&ssl_ciphers)->value_name("ssl_ciphers"), "Specify enabled SSL ciphers")
+		("ssl_prefer_server_ciphers", po::value<bool>(&ssl_prefer_server_ciphers)->default_value(false, "false")->value_name(""), "Prefer server ciphers over client ciphers for SSLv3 and TLS protocols.")
 
-		("http_doc", po::value<std::string>(&doc_directory)->value_name("doc"), "Http server doc root.")
-		("logs_path", po::value<std::string>(&log_directory)->value_name(""), "Logs dirctory.")
-		("disable_logs", po::value<bool>(&disable_logs)->value_name(""), "Disable logs.")
-		("disable_http", po::value<bool>(&disable_http)->value_name("")->default_value(false), "Disable http protocol.")
-		("disable_socks", po::value<bool>(&disable_socks)->value_name("")->default_value(false), "Disable socks proxy protocol.")
+		("http_doc", po::value<std::string>(&doc_directory)->value_name("doc"), "Specify document root directory for HTTP server.")
+		("logs_path", po::value<std::string>(&log_directory)->value_name(""), "Specify directory for log files.")
+		("disable_logs", po::value<bool>(&disable_logs)->value_name(""), "Disable logging.")
+		("disable_http", po::value<bool>(&disable_http)->value_name("")->default_value(false), "Disable HTTP protocol.")
+		("disable_socks", po::value<bool>(&disable_socks)->value_name("")->default_value(false), "Disable SOCKS proxy protocol.")
 	;
 
 	// 解析命令行.
