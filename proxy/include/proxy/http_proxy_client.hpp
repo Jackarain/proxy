@@ -63,25 +63,20 @@ namespace proxy {
 
 	using ssl_stream = net::ssl::stream<tcp_socket>;
 
-	struct http_proxy_client_option
-	{
-		// target server
-		std::string target_host;
-		uint16_t target_port;
-
-		// user auth info
-		std::string username;
-		std::string password;
-
-		bool ssl{ false };
+	// Options for the HTTP proxy client
+	struct http_proxy_client_option {
+		std::string target_host;  // Target server host
+		uint16_t target_port;     // Target server port
+		std::string username;    // User authentication - username
+		std::string password;    // User authentication - password
+		bool ssl{ false };       // Use SSL or not
 	};
 
 	namespace detail {
 
 		template <typename Stream>
 		net::awaitable<boost::system::error_code>
-		do_http_proxy_handshake(
-			Stream& socket, http_proxy_client_option opt = {})
+		do_http_proxy_handshake(Stream& socket, http_proxy_client_option opt = {})
 		{
 			boost::system::error_code ec;
 
@@ -135,7 +130,6 @@ namespace proxy {
 				{
 					auto ec = co_await do_http_proxy_handshake(*socket, opt);
 					handler(ec);
-
 					co_return;
 				}, net::detached);
 			}
