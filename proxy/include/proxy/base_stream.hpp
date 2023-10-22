@@ -15,6 +15,9 @@
 #include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/ssl.hpp>
 
+#include <type_traits>
+
+
 namespace util {
 	namespace net = boost::asio;
 
