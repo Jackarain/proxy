@@ -15,10 +15,6 @@
 #include "proxy/use_awaitable.hpp"
 #include "proxy/strutil.hpp"
 
-#include <cstdlib>
-#include <string>
-#include <memory>
-
 #include <boost/system/error_code.hpp>
 
 #include <boost/asio/io_context.hpp>
@@ -43,6 +39,10 @@
 #ifdef _MSC_VER
 # pragma warning(pop)
 #endif
+
+#include <cstdlib>
+#include <string>
+#include <memory>
 
 
 namespace proxy {
