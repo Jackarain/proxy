@@ -163,12 +163,15 @@ namespace asio_util {
 			{
 				bool has_a = false, has_aaaa = false;
 
-				for (auto begin_ = begin; begin_ != end; begin_++)
+				for (; begin != end && !(has_a && has_aaaa); begin++)
 				{
-					const auto& addr = begin_->endpoint().address();
+					const auto& addr = begin->endpoint().address();
 
-					has_aaaa |= net::ip::address(addr).is_v6();
-					has_a |= net::ip::address(addr).is_v4();
+					if (!has_aaaa)
+						has_aaaa = addr.is_v6();
+
+					if (!has_a)
+						has_a = addr.is_v4();
 				}
 
 				if (has_aaaa && has_a)
