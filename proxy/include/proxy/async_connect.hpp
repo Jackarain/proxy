@@ -64,11 +64,11 @@ namespace asio_util {
 			net::post(ex,
 				[error, h = std::move(handler), begin]() mutable
 				{
-					if constexpr (std::is_same_v<ResultType,
+					if constexpr (std::same_as<ResultType,
 						typename Stream::endpoint_type>)
 						do_result(h, error, *begin);
 
-					if constexpr (!std::is_same_v<ResultType,
+					if constexpr (!std::same_as<ResultType,
 						typename Stream::endpoint_type>)
 						do_result(h, error, begin);
 				});
@@ -306,7 +306,9 @@ namespace asio_util {
 						auto timer = boost::make_local_shared<
 							steady_timer>(stream.get_executor());
 
-						timer->expires_from_now(200ms);
+						const auto delay = 200ms;
+
+						timer->expires_from_now(delay);
 						timer->async_wait([timer,
 							conn_func = std::move(conn_func),
 							context]
