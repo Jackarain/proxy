@@ -38,6 +38,7 @@ std::string socks_passwd;
 std::vector<std::string> auth_users;
 std::string proxy_pass;
 bool proxy_pass_ssl = false;
+std::string http_pass;
 bool ssl_prefer_server_ciphers = false;
 std::string ssl_certificate_dir;
 
@@ -98,6 +99,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 
 	opt.proxy_pass_ = proxy_pass;
 	opt.proxy_pass_use_ssl_ = proxy_pass_ssl;
+	opt.http_pass_ = http_pass;
 
 	opt.ssl_cert_path_ = ssl_certificate_dir;
 	opt.ssl_ciphers_ = ssl_ciphers;
@@ -218,6 +220,8 @@ int main(int argc, char** argv)
 
 		("proxy_pass", po::value<std::string>(&proxy_pass)->default_value("")->value_name(""), "Specify next proxy pass (e.g: socks5://user:passwd@ip:port).")
 		("proxy_pass_ssl", po::value<bool>(&proxy_pass_ssl)->default_value(false, "false")->value_name(""), "Enable SSL for the next proxy pass.")
+
+		("http_pass", po::value<std::string>(&http_pass)->default_value("")->value_name(""), "Specify next http(s) pass (e.g: https://user:passwd@domain/path).")
 
 		("ssl_certificate_dir", po::value<std::string>(&ssl_certificate_dir)->value_name("path"), "Directory containing SSL certificates, auto-locates 'ssl_crt.pem/ssl_crt.pwd/ssl_key.pem/ssl_dh.pem'.")
 

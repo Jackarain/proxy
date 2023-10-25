@@ -138,6 +138,9 @@ namespace proxy {
 		// 是 http proxy，则由 url 指定的 protocol 决定是否使用 ssl.
 		bool proxy_pass_use_ssl_{ false };
 
+		// 指定通过 http pass 作为下级代理, 通常可以使用 cdn 来实现多层代理.
+		std::string http_pass_;
+
 		// 启用 proxy protocol (haproxy)协议.
 		// 当前服务将会在连接到 proxy_pass_ 成功后，首先传递 proxy protocol 以
 		// 告之 proxy_pass_ 来源 IP/PORT 以及目标 IP/PORT.
