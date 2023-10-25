@@ -194,6 +194,18 @@ namespace util {
 
 namespace logging_compress__ {
 
+	struct closefile_deleter {
+		void operator()(FILE* fp) const {
+			fclose(fp);
+		}
+	};
+
+	struct closegz_deleter {
+		void operator()(gzFile gz) const {
+			gzclose(gz);
+		}
+	};
+
 	const inline std::string LOGGING_GZ_SUFFIX = ".gz";
 	const inline size_t LOGGING_GZ_BUFLEN = 65536;
 
@@ -210,15 +222,15 @@ namespace logging_compress__ {
 		gzFile out = gzopen(outfile.c_str(), "wb6f");
 		if (!out)
 			return false;
-		typedef typename std::remove_pointer<gzFile>::type gzFileType;
-		std::unique_ptr<gzFileType,
-			decltype(&gzclose)> gz_closer(out, &gzclose);
+
+		using gzFileType = typename std::remove_pointer<gzFile>::type;
+		std::unique_ptr<gzFileType, closegz_deleter> gz_closer(out);
 
 		FILE* in = fopen(infile.c_str(), "rb");
 		if (!in)
 			return false;
-		std::unique_ptr<FILE, decltype(&fclose)> FILE_closer(in, &fclose);
 
+		std::unique_ptr<FILE, closefile_deleter> FILE_closer(in);
 		std::unique_ptr<char[]> bufs(new char[LOGGING_GZ_BUFLEN]);
 		char* buf = bufs.get();
 		int len;
