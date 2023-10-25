@@ -25,6 +25,7 @@ namespace po = boost::program_options;
 #include "main.hpp"
 
 namespace net = boost::asio;
+namespace fs = std::filesystem;
 using net::ip::tcp;
 using namespace proxy;
 
@@ -159,7 +160,7 @@ inline std::optional<int> try_as_int(const boost::any& var)
 inline void print_args(int argc, char** argv, const po::variables_map& vm)
 {
 	LOG_INFO << "Current directory: "
-		<< std::filesystem::current_path().string();
+		<< fs::current_path().string();
 
 	if (!vm.count("config"))
 	{
@@ -260,7 +261,7 @@ int main(int argc, char** argv)
 
 	if (vm.count("config"))
 	{
-		if (!std::filesystem::exists(config))
+		if (!fs::exists(config))
 		{
 			std::cerr << "No such config file: " << config << std::endl;
 			return EXIT_FAILURE;

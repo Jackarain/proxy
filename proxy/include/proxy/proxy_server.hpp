@@ -81,6 +81,8 @@ namespace proxy {
 
 	namespace urls = boost::urls;			// form <boost/url.hpp>
 
+	namespace fs = std::filesystem;
+
 	using string_body = http::string_body;
 	using dynamic_body = http::dynamic_body;
 	using buffer_body = http::buffer_body;
@@ -1843,7 +1845,7 @@ namespace proxy {
 				if (m_option.proxy_pass_use_ssl_)
 				{
 					// 设置 ssl cert 证书目录.
-					if (std::filesystem::exists(m_option.ssl_cert_path_))
+					if (fs::exists(m_option.ssl_cert_path_))
 					{
 						m_ssl_context.add_verify_path(
 							m_option.ssl_cert_path_, ec);
@@ -2035,8 +2037,6 @@ namespace proxy {
 
 		inline net::awaitable<void> normal_web_server(http::request<http::string_body>& req)
 		{
-			namespace fs = std::filesystem;
-
 			boost::system::error_code ec;
 
 			beast::flat_buffer buffer;
@@ -2141,7 +2141,7 @@ namespace proxy {
 			co_return;
 		}
 
-		inline std::filesystem::path path_cat(
+		inline fs::path path_cat(
 			const std::wstring& doc, const std::wstring& target)
 		{
 			size_t start_pos = 0;
@@ -2163,11 +2163,11 @@ namespace proxy {
 			if (doc.back() == L'/' ||
 				doc.back() == L'\\')
 				slash = L"";
-			return std::filesystem::path(doc + slash + std::wstring(sv));
+			return fs::path(doc + slash + std::wstring(sv));
 #else
 			if (doc.back() == L'/')
 				slash = L"";
-			return std::filesystem::path(
+			return fs::path(
 				boost::nowide::narrow(doc + slash + std::wstring(sv)));
 #endif // WIN32
 		};
@@ -2176,7 +2176,6 @@ namespace proxy {
 			const http_context& hctx)
 		{
 			using namespace std::literals;
-			namespace fs = std::filesystem;
 			namespace chrono = std::chrono;
 
 			constexpr static auto head_fmt =
@@ -2353,8 +2352,6 @@ namespace proxy {
 		inline net::awaitable<void> on_http_get(
 			const http_context& hctx, std::string filename = "")
 		{
-			namespace fs = std::filesystem;
-
 			static std::map<std::string, std::string> mimes =
 			{
 				{ ".html", "text/html; charset=utf-8" },
@@ -2827,10 +2824,10 @@ Content-Length: 0
 
 			if (!m_option.ssl_cert_path_.empty())
 			{
-				auto dir = std::filesystem::path(m_option.ssl_cert_path_);
+				auto dir = fs::path(m_option.ssl_cert_path_);
 				auto pwd = dir / "ssl_crt.pwd";
 
-				if (std::filesystem::exists(pwd))
+				if (fs::exists(pwd))
 					m_ssl_context.set_password_callback(
 						[&pwd]([[maybe_unused]] auto... args) {
 							std::string password;
@@ -2843,14 +2840,14 @@ Content-Length: 0
 				auto key = dir / "ssl_key.pem";
 				auto dh = dir / "ssl_dh.pem";
 
-				if (std::filesystem::exists(cert))
+				if (fs::exists(cert))
 					m_ssl_context.use_certificate_chain_file(cert.string());
 
-				if (std::filesystem::exists(key))
+				if (fs::exists(key))
 					m_ssl_context.use_private_key_file(
 						key.string(), boost::asio::ssl::context::pem);
 
-				if (std::filesystem::exists(dh))
+				if (fs::exists(dh))
 					m_ssl_context.use_tmp_dh_file(dh.string());
 			}
 			else
@@ -2858,7 +2855,7 @@ Content-Length: 0
 				m_ssl_context.set_password_callback(
 					[&]([[maybe_unused]] auto... args) {
 						const auto& pwd = m_option.ssl_certificate_passwd_;
-						if (!std::filesystem::exists(pwd))
+						if (!fs::exists(pwd))
 							return pwd;
 
 						std::string password;

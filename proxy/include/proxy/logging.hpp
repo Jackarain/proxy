@@ -175,6 +175,8 @@ namespace std {
 
 namespace util {
 
+	namespace fs = std::filesystem;
+
 #ifndef LOGGING_DISABLE_BOOST_ASIO_ENDPOINT
 	namespace net = boost::asio;
 #endif
@@ -699,8 +701,8 @@ public:
 			return;
 
 		std::error_code ignore_ec;
-		if (!std::filesystem::exists(m_log_path, ignore_ec))
-			std::filesystem::create_directories(
+		if (!fs::exists(m_log_path, ignore_ec))
+			fs::create_directories(
 				m_log_path.parent_path(), ignore_ec);
 	}
 	~auto_logger_file__()
@@ -718,8 +720,8 @@ public:
 			return;
 
 		std::error_code ignore_ec;
-		if (!std::filesystem::exists(m_log_path, ignore_ec))
-			std::filesystem::create_directories(
+		if (!fs::exists(m_log_path, ignore_ec))
+			fs::create_directories(
 				m_log_path.parent_path(), ignore_ec);
 	}
 
@@ -761,8 +763,8 @@ public:
 			m_ofstream->close();
 			m_ofstream.reset();
 
-			auto logpath = std::filesystem::path(m_log_path.parent_path());
-			std::filesystem::path filename;
+			auto logpath = fs::path(m_log_path.parent_path());
+			fs::path filename;
 
 			if constexpr (LOG_MAXFILE_SIZE <= 0) {
 				auto logfile = std::format("{:04d}{:02d}{:02d}-{:02d}.log",
@@ -784,10 +786,10 @@ public:
 			m_last_time = time;
 
 			std::error_code ec;
-			if (!std::filesystem::copy_file(m_log_path, filename, ec))
+			if (!fs::copy_file(m_log_path, filename, ec))
 				break;
 
-			std::filesystem::resize_file(m_log_path, 0, ec);
+			fs::resize_file(m_log_path, 0, ec);
 			m_log_size = 0;
 
 #ifdef LOGGING_ENABLE_COMPRESS_LOGS
@@ -800,7 +802,7 @@ public:
 					if (!logging_compress__::do_compress_gz(fn))
 					{
 						auto file = fn + logging_compress__::LOGGING_GZ_SUFFIX;
-						std::filesystem::remove(file, ignore_ec);
+						fs::remove(file, ignore_ec);
 						if (ignore_ec)
 							std::cerr
 								<< "delete log failed: " << file
@@ -809,7 +811,7 @@ public:
 						return;
 					}
 
-					std::filesystem::remove(fn, ignore_ec);
+					fs::remove(fn, ignore_ec);
 				});
 			th.detach();
 #endif
@@ -832,7 +834,7 @@ public:
 	}
 
 private:
-	std::filesystem::path m_log_path{"./logs"};
+	fs::path m_log_path{"./logs"};
 	ofstream_ptr m_ofstream;
 	int64_t m_last_time{ -1 };
 	std::size_t m_log_size{ 0 };
@@ -1601,7 +1603,7 @@ public:
 		return *this;
 	}
 #endif
-	inline logger___& operator<<(const std::filesystem::path& p) noexcept
+	inline logger___& operator<<(const fs::path& p) noexcept
 	{
 		if (!global_logging___)
 			return *this;

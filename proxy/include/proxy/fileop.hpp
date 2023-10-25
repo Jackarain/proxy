@@ -22,22 +22,24 @@
 
 namespace fileop {
 
+	namespace fs = std::filesystem;
+
 	template<typename T>
 	concept ByteType = std::same_as<T, uint8_t> || std::same_as<T, char>;
 
 	namespace details {
 
-		inline void create_parent_directories(const std::filesystem::path& p)
+		inline void create_parent_directories(const fs::path& p)
 		{
 			std::error_code ec;
 
-			if (std::filesystem::exists(p, ec))
+			if (fs::exists(p, ec))
 				return;
 
 			if (ec)
 				return;
 
-			std::filesystem::create_directories(p.parent_path(), ec);
+			fs::create_directories(p.parent_path(), ec);
 		}
 
 		template<ByteType T>
@@ -100,18 +102,18 @@ namespace fileop {
 
 
 	template<ByteType T>
-	std::streamsize read(const std::filesystem::path& file, std::span<T> val)
+	std::streamsize read(const fs::path& file, std::span<T> val)
 	{
 		std::fstream f(file, std::ios_base::binary | std::ios_base::in);
 		return details::read(*f.rdbuf(), val);
 	}
 
 	inline std::streamsize
-	read(const std::filesystem::path& file, std::string& val)
+	read(const fs::path& file, std::string& val)
 	{
 		std::fstream f(file, std::ios_base::binary | std::ios_base::in);
 		std::error_code ec;
-		auto fsize = std::filesystem::file_size(file, ec);
+		auto fsize = fs::file_size(file, ec);
 		if (ec)
 			return -1;
 		val.resize(fsize);
@@ -148,7 +150,7 @@ namespace fileop {
 
 
 	template<ByteType T>
-	std::streamsize write(const std::filesystem::path& file, std::span<T> val)
+	std::streamsize write(const fs::path& file, std::span<T> val)
 	{
 		details::create_parent_directories(file);
 
@@ -161,7 +163,7 @@ namespace fileop {
 	}
 
 	inline std::streamsize
-	write(const std::filesystem::path& file, std::string_view val)
+	write(const fs::path& file, std::string_view val)
 	{
 		details::create_parent_directories(file);
 
