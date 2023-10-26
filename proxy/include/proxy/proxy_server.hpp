@@ -1746,7 +1746,7 @@ namespace proxy {
 
 			auto check_condition = [this, bind_interface](
 				const boost::system::error_code&,
-				tcp_socket& stream, auto&) mutable
+				auto& stream, auto&) mutable
 			{
 				if (m_option.local_ip_.empty())
 					return true;

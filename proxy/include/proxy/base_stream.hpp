@@ -24,11 +24,8 @@ namespace util {
 	using tcp = net::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 	using udp = net::ip::udp;               // from <boost/asio/ip/udp.hpp>
 
-	using tcp_acceptor = net::basic_socket_acceptor<
-		tcp, net::io_context::executor_type>;
-
-	using tcp_socket = net::basic_stream_socket<
-		tcp, net::io_context::executor_type>;
+	using tcp_acceptor = tcp::acceptor;
+	using tcp_socket = tcp::socket;
 
 	template<typename... T>
 	class base_stream : public boost::variant2::variant<T...>
@@ -49,7 +46,7 @@ namespace util {
 		base_stream& operator=(base_stream&&) = default;
 		base_stream(base_stream&&) = default;
 
-		using executor_type = net::io_context::executor_type;
+		using executor_type = net::any_io_executor;
 
 		executor_type get_executor()
 		{
@@ -140,7 +137,7 @@ namespace util {
 	}
 
 	inline proxy_stream_type instantiate_proxy_stream(
-		net::io_context::executor_type executor)
+		net::any_io_executor executor)
 	{
 		return proxy_stream_type(tcp_socket(executor));
 	}
