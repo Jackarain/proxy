@@ -398,7 +398,6 @@ namespace asio_util {
 	}
 
 	template <typename Protocol, typename Executor, typename EndpointSequence,
-		typename ConnectCondition,
 		BOOST_ASIO_COMPLETION_TOKEN_FOR(void(boost::system::error_code,
 			typename Protocol::endpoint))
 		ConnectHandler = net::default_completion_token_t<Executor>>
