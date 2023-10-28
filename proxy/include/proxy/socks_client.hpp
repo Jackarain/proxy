@@ -39,7 +39,6 @@ namespace proxy {
 	namespace net = boost::asio;
 
 	using net::ip::tcp;
-	using net::ip::udp;
 
 	using io_util::write;
 	using io_util::read;
