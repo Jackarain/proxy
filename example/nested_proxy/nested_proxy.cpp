@@ -22,7 +22,6 @@
 #include <memory>
 
 namespace net = boost::asio;
-using net::ip::tcp;
 using namespace proxy;
 
 using server_ptr = std::shared_ptr<proxy::proxy_server>;

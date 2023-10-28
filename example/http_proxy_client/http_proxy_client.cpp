@@ -18,10 +18,8 @@
 #include <boost/asio/detached.hpp>
 
 #include <boost/program_options.hpp>
-namespace po = boost::program_options;
 
 namespace net = boost::asio;
-using net::ip::tcp;
 using namespace proxy;
 
 

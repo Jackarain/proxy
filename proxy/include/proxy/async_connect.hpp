@@ -34,7 +34,6 @@
 
 namespace asio_util {
 	namespace net = boost::asio;
-	namespace ip = net::ip;
 
 	namespace detail {
 		template <typename Stream, typename Handler>
