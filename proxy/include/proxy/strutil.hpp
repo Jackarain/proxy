@@ -762,7 +762,7 @@ namespace strutil
 	static inline std::string to_string(float v, int width, int precision = 3)
 	{
 		char buf[20] = { 0 };
-		std::sprintf(buf, "%*.*f", width, precision, v);
+		std::snprintf(buf, sizeof(buf), "%*.*f", width, precision, v);
 		return std::string(buf);
 	}
 
