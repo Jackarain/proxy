@@ -26,7 +26,6 @@ namespace po = boost::program_options;
 
 namespace net = boost::asio;
 namespace fs = std::filesystem;
-using net::ip::tcp;
 using namespace proxy;
 
 using server_ptr = std::shared_ptr<proxy_server>;
