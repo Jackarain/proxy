@@ -137,11 +137,6 @@
 #  pragma warning(disable: 4244 4127)
 # endif // _MSC_VER
 
-# ifdef __clang__
-#  pragma clang diagnostic push
-#  pragma clang diagnostic ignored "-Wexpansion-to-defined"
-# endif
-
 # include <fmt/ostream.h>
 # include <fmt/printf.h>
 # include <fmt/format.h>
@@ -152,10 +147,6 @@ namespace std {
 	using ::fmt::vformat;
 	using ::fmt::make_format_args;
 }
-
-# ifdef __clang__
-#  pragma clang diagnostic pop
-# endif
 
 # ifdef _MSC_VER
 #  pragma warning(pop)
