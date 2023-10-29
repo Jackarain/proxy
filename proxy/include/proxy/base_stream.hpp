@@ -8,6 +8,9 @@
 #ifndef INCLUDE__2023_10_18__BASE_STREAM_HPP
 #define INCLUDE__2023_10_18__BASE_STREAM_HPP
 
+
+#include <type_traits>
+
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ip/udp.hpp>
 #include <boost/variant2.hpp>
@@ -16,8 +19,6 @@
 #include <boost/asio/socket_base.hpp>
 #include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/ssl.hpp>
-
-#include <type_traits>
 
 
 namespace util {

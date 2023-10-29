@@ -12,12 +12,6 @@
 #define INCLUDE__2023_10_18__SOCKS_CLIENT_HPP
 
 
-#include "proxy/socks_error_code.hpp"
-#include "proxy/socks_enums.hpp"
-#include "proxy/socks_io.hpp"
-
-#include "proxy/use_awaitable.hpp"
-
 #include <cstdlib>
 #include <string>
 #include <memory>
@@ -32,6 +26,13 @@
 #include <boost/asio/streambuf.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/asio/write.hpp>
+
+
+#include "proxy/socks_error_code.hpp"
+#include "proxy/socks_enums.hpp"
+#include "proxy/socks_io.hpp"
+
+#include "proxy/use_awaitable.hpp"
 
 
 namespace proxy {

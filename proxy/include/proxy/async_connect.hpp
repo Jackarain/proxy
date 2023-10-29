@@ -11,6 +11,16 @@
 #ifndef INCLUDE__2023_10_18__ASYNC_CONNECT_HPP
 #define INCLUDE__2023_10_18__ASYNC_CONNECT_HPP
 
+
+#include <iterator>
+#include <atomic>
+#include <utility>
+#include <memory>
+#include <vector>
+#include <tuple>
+#include <type_traits>
+
+
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -23,13 +33,7 @@
 #include <boost/smart_ptr/make_local_shared.hpp>
 #include <boost/smart_ptr/weak_ptr.hpp>
 
-#include <iterator>
-#include <atomic>
-#include <utility>
-#include <memory>
-#include <vector>
-#include <tuple>
-#include <type_traits>
+#include <boost/system/error_code.hpp>
 
 
 namespace asio_util {

@@ -8,18 +8,21 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
+
+#include <memory>
+
+
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/detached.hpp>
+
+
 #include "proxy/socks_client.hpp"
 #include "proxy/http_proxy_client.hpp"
 #include "proxy/proxy_server.hpp"
 #include "proxy/logging.hpp"
 
 #include "proxy/use_awaitable.hpp"
-
-#include <boost/asio/io_context.hpp>
-#include <boost/asio/co_spawn.hpp>
-#include <boost/asio/detached.hpp>
-
-#include <memory>
 
 namespace net = boost::asio;
 using namespace proxy;

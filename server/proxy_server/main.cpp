@@ -8,11 +8,6 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#include "proxy/proxy_server.hpp"
-#include "proxy/socks_client.hpp"
-#include "proxy/logging.hpp"
-
-#include "proxy/use_awaitable.hpp"
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/co_spawn.hpp>
@@ -22,10 +17,18 @@
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
+#include <filesystem>
+namespace fs = std::filesystem;
+
+#include "proxy/proxy_server.hpp"
+#include "proxy/socks_client.hpp"
+#include "proxy/logging.hpp"
+
+#include "proxy/use_awaitable.hpp"
+
 #include "main.hpp"
 
 namespace net = boost::asio;
-namespace fs = std::filesystem;
 using namespace proxy;
 
 using server_ptr = std::shared_ptr<proxy_server>;

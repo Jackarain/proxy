@@ -11,21 +11,6 @@
 #ifndef INCLUDE__2023_10_18__PROXY_SERVER_HPP
 #define INCLUDE__2023_10_18__PROXY_SERVER_HPP
 
-
-#include "proxy/use_awaitable.hpp"
-#include "proxy/scoped_exit.hpp"
-#include "proxy/async_connect.hpp"
-#include "proxy/logging.hpp"
-#include "proxy/base_stream.hpp"
-#include "proxy/default_cert.hpp"
-#include "proxy/fileop.hpp"
-#include "proxy/strutil.hpp"
-
-#include "proxy/socks_enums.hpp"
-#include "proxy/socks_client.hpp"
-#include "proxy/http_proxy_client.hpp"
-#include "proxy/socks_io.hpp"
-
 #include <memory>
 #include <string>
 #include <array>
@@ -64,6 +49,22 @@
 
 #include <fmt/xchar.h>
 #include <fmt/format.h>
+
+
+#include "proxy/use_awaitable.hpp"
+#include "proxy/scoped_exit.hpp"
+#include "proxy/async_connect.hpp"
+#include "proxy/logging.hpp"
+#include "proxy/base_stream.hpp"
+#include "proxy/default_cert.hpp"
+#include "proxy/fileop.hpp"
+#include "proxy/strutil.hpp"
+
+#include "proxy/socks_enums.hpp"
+#include "proxy/socks_client.hpp"
+#include "proxy/http_proxy_client.hpp"
+#include "proxy/socks_io.hpp"
+
 
 namespace proxy {
 
