@@ -1,10 +1,10 @@
-# 一个使用 c++20 的 proxy 的实现
+# 一个使用 c++20 的 proxy 的高性能实现
 
 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/Jackarain/proxy/tree/master.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/Jackarain/proxy/tree/master)
 [![actions workflow](https://github.com/jackarain/proxy/actions/workflows/Build.yml/badge.svg)](https://github.com/Jackarain/proxy/actions)
 \
 \
-使用 `C++20协程` 通过编写为数不多的代码，实现支持标准 `socks4`/`socks4a`/`socks5`/`http`/`https` 的 `server`/`client proxy` 实现，并且 `client` 与 `server` 之间可配置通过 `ssl` 加密通信，可配置多级代理，如下架构：
+使用 `C++20协程` 通过编写为数不多的代码，实现具有极高性能且支持标准 `socks4`/`socks4a`/`socks5`/`http`/`https` 的 `server`/`client proxy` 实现，并且 `client` 与 `server` 之间可配置通过 `ssl` 加密通信，可配置多级代理，如下架构：
 
 ```
 
