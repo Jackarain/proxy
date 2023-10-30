@@ -286,7 +286,7 @@ int main(int argc, char** argv)
 
 	print_args(argc, argv, vm);
 
-	LOG_DBG << "Start socks server: " << server_listen;
+	LOG_DBG << "Start server: " << server_listen;
 
 	net::io_context ioc(1);
 	server_ptr server;
