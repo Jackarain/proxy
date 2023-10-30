@@ -36,8 +36,8 @@ net::awaitable<void> start_proxy_server(net::io_context& ioc, server_ptr& server
 		10800);
 
 	proxy_server_option opt;
-	opt.usrdid_ = "jack";
-	opt.passwd_ = "1111";
+
+	opt.auth_users_.emplace_back("jack", "1111");
 
 	auto executor = ioc.get_executor();
 	server = proxy_server::make(

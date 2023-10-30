@@ -36,8 +36,6 @@ using server_ptr = std::shared_ptr<proxy_server>;
 
 //////////////////////////////////////////////////////////////////////////
 
-std::string socks_userid;
-std::string socks_passwd;
 std::vector<std::string> auth_users;
 std::string proxy_pass;
 bool proxy_pass_ssl = false;
@@ -82,9 +80,6 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 			(unsigned short)atoi(port.c_str()));
 
 	proxy_server_option opt;
-
-	opt.usrdid_ = socks_userid;
-	opt.passwd_ = socks_passwd;
 
 	for (const auto& user : auth_users)
 	{
@@ -213,9 +208,6 @@ int main(int argc, char** argv)
 		("reuse_port", po::value<bool>(&reuse_port)->default_value(false), "Enable TCP SO_REUSEPORT option (available since Linux 3.9).")
 		("happyeyeballs", po::value<bool>(&happyeyeballs)->default_value(true), "Enable Happy Eyeballs algorithm for TCP connections.")
 		("local_ip", po::value<std::string>(&local_ip), "Specify local IP for client TCP connection to server.")
-
-		("socks_userid", po::value<std::string>(&socks_userid)->default_value("jack")->value_name("userid"), "Authentication user ID (Deprecated).")
-		("socks_passwd", po::value<std::string>(&socks_passwd)->default_value("1111")->value_name("passwd"), "Authentication password (Deprecated).")
 
 		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->value_name("user:passwd"), "List of authorized users (e.g: user:passwd).")
 

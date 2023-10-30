@@ -110,11 +110,6 @@ namespace proxy {
 	// proxy server 参数选项.
 	struct proxy_server_option
 	{
-		// 指定当前proxy server认证用户id名称.
-		std::string usrdid_;
-		// 指定当前proxy server认证密码.
-		std::string passwd_;
-
 		// 授权信息.
 		using auth_users = std::tuple<std::string, std::string>;
 		std::vector<auth_users> auth_users_;
@@ -452,7 +447,7 @@ namespace proxy {
 			}
 
 			// 服务端是否需要认证.
-			auto auth_required = !m_option.usrdid_.empty();
+			auto auth_required = !m_option.auth_users_.empty();
 
 			// 循环读取客户端支持的代理方式.
 			p = net::buffer_cast<const char*>(m_local_buffer.data());
@@ -1127,19 +1122,14 @@ namespace proxy {
 				<< (socks4a ? hostname : dst_endpoint.address().to_string());
 
 			// 用户认证逻辑.
-			bool verify_passed = m_option.usrdid_ == userid;
+			bool verify_passed = m_option.auth_users_.empty();
 
-			if (!verify_passed || userid.empty())
+			for (auto [user, pwd] : m_option.auth_users_)
 			{
-				verify_passed = false;
-
-				for (auto [user, pwd] : m_option.auth_users_)
+				if (user == userid)
 				{
-					if (user == userid)
-					{
-						verify_passed = true;
-						break;
-					}
+					verify_passed = true;
+					break;
 				}
 			}
 
@@ -1258,7 +1248,7 @@ namespace proxy {
 
 		inline bool http_proxy_authorization(std::string_view pa)
 		{
-			if (m_option.usrdid_.empty() && m_option.auth_users_.empty())
+			if (m_option.auth_users_.empty())
 				return true;
 
 			if (pa.empty())
@@ -1307,21 +1297,14 @@ namespace proxy {
 			std::string uname = userinfo.substr(0, pos);
 			std::string passwd = userinfo.substr(pos + 1);
 
-			bool verify_passed =
-				m_option.usrdid_ == uname &&
-				m_option.passwd_ == passwd;
+			bool verify_passed = m_option.auth_users_.empty();
 
-			if (!verify_passed || uname.empty())
+			for (auto [user, pwd] : m_option.auth_users_)
 			{
-				verify_passed = false;
-
-				for (auto [user, pwd] : m_option.auth_users_)
+				if (uname == user && passwd == pwd)
 				{
-					if (uname == user && passwd == pwd)
-					{
-						verify_passed = true;
-						break;
-					}
+					verify_passed = true;
+					break;
 				}
 			}
 
@@ -1641,21 +1624,14 @@ namespace proxy {
 			client += ":" + std::to_string(endp.port());
 
 			// 用户认证逻辑.
-			bool verify_passed =
-				m_option.usrdid_ == uname &&
-				m_option.passwd_ == passwd;
+			bool verify_passed = m_option.auth_users_.empty();
 
-			if (!verify_passed || uname.empty())
+			for (auto [user, pwd] : m_option.auth_users_)
 			{
-				verify_passed = false;
-
-				for (auto [user, pwd] : m_option.auth_users_)
+				if (uname == user && passwd == pwd)
 				{
-					if (uname == user && passwd == pwd)
-					{
-						verify_passed = true;
-						break;
-					}
+					verify_passed = true;
+					break;
 				}
 			}
 
