@@ -51,7 +51,7 @@ std::string ssl_dhparam;
 std::string ssl_sni;
 
 std::string ssl_ciphers;
-std::string socks_listen;
+std::string server_listen;
 std::string doc_directory;
 std::string log_directory;
 
@@ -71,9 +71,9 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	std::string host, port;
 	bool v6only = false;
 
-	if (!parse_endpoint_string(socks_listen, host, port, v6only))
+	if (!parse_endpoint_string(server_listen, host, port, v6only))
 	{
-		std::cerr << "Parse endpoint fail: " << socks_listen << std::endl;
+		std::cerr << "Parse endpoint fail: " << server_listen << std::endl;
 		co_return;
 	}
 
@@ -208,7 +208,7 @@ int main(int argc, char** argv)
 		("help,h", "Help message.")
 		("config", po::value<std::string>(&config)->value_name("config.conf"), "Load configuration options from specified file.")
 
-		("socks_server", po::value<std::string>(&socks_listen)->default_value("[::0]:1080")->value_name("ip:port"), "Specify SOCKS4/5 server listening address and port.")
+		("server_listen", po::value<std::string>(&server_listen)->default_value("[::0]:1080")->value_name("ip:port"), "Specify server listening address and port.")
 
 		("reuse_port", po::value<bool>(&reuse_port)->default_value(false), "Enable TCP SO_REUSEPORT option (available since Linux 3.9).")
 		("happyeyeballs", po::value<bool>(&happyeyeballs)->default_value(true), "Enable Happy Eyeballs algorithm for TCP connections.")
@@ -279,7 +279,7 @@ int main(int argc, char** argv)
 
 	print_args(argc, argv, vm);
 
-	LOG_DBG << "Start socks server: " << socks_listen;
+	LOG_DBG << "Start socks server: " << server_listen;
 
 	net::io_context ioc(1);
 	server_ptr server;
