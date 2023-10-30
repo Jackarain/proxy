@@ -267,7 +267,6 @@ int main(int argc, char** argv)
 			return EXIT_FAILURE;
 		}
 
-		LOG_DBG << "Load config file: " << config;
 		auto cfg = po::parse_config_file(config.c_str(), desc, false);
 		po::store(cfg, vm);
 		po::notify(vm);
