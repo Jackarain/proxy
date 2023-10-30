@@ -191,6 +191,21 @@ inline void print_args(int argc, char** argv, const po::variables_map& vm)
 	}
 }
 
+namespace std
+{
+	std::ostream& operator<<(std::ostream &os, const std::vector<std::string> &users)
+	{
+		for (auto it = users.begin(); it != users.end();)
+		{
+			os << *it;
+			if (++it == users.end())
+				break;
+			os << " ";
+		}
+
+		return os;
+	}
+}
 
 int main(int argc, char** argv)
 {
@@ -209,7 +224,7 @@ int main(int argc, char** argv)
 		("happyeyeballs", po::value<bool>(&happyeyeballs)->default_value(true), "Enable Happy Eyeballs algorithm for TCP connections.")
 		("local_ip", po::value<std::string>(&local_ip), "Specify local IP for client TCP connection to server.")
 
-		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->value_name("user:passwd"), "List of authorized users (e.g: user:passwd).")
+		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->default_value(std::vector<std::string>{"jack:1111"}), "List of authorized users (e.g: user1:passwd1 user2:passwd2).")
 
 		("proxy_pass", po::value<std::string>(&proxy_pass)->default_value("")->value_name(""), "Specify next proxy pass (e.g: socks5://user:passwd@ip:port).")
 		("proxy_pass_ssl", po::value<bool>(&proxy_pass_ssl)->default_value(false, "false")->value_name(""), "Enable SSL for the next proxy pass.")
