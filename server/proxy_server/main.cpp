@@ -259,8 +259,6 @@ int main(int argc, char** argv)
 		return EXIT_SUCCESS;
 	}
 
-	init_logging(log_directory);
-
 	if (vm.count("config"))
 	{
 		if (!fs::exists(config))
@@ -277,6 +275,8 @@ int main(int argc, char** argv)
 		if (disable_logs)
 			util::toggle_write_logging(true);
 	}
+
+	init_logging(log_directory);
 
 	print_args(argc, argv, vm);
 
