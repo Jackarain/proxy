@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <optional>
 #include <iostream>
+#include <sstream>
 #include <memory>
 
 #include <boost/version.hpp>
