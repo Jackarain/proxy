@@ -20,6 +20,9 @@
 #include <iostream>
 #include <memory>
 
+#include <boost/version.hpp>
+#include <boost/config.hpp>
+
 #ifdef __linux__
 #  include <sys/resource.h>
 
