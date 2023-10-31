@@ -238,15 +238,15 @@ inline std::string version_info()
 
 	if (os_name.find("Linux") != std::string::npos && ma_ver < 4)
 		std::cerr << "WARNING: kernel too old, please upgrade your system!" << std::endl;
-
-#elif defined(__APPLE__)
-	os_name = "Darwin";
 #else
-	os_name = "unknown";
+	os_name = BOOST_PLATFORM;
 #endif
 
-	oss << "Built on " << __DATE__ << " " << __TIME__ << " runs on " << os_name
-		<< ", " << BOOST_COMPILER << ", boost " << BOOST_LIB_VERSION;
+	oss << "Built on " << __DATE__ << " " << __TIME__
+		<< " runs on " << os_name
+		<< ", " << BOOST_COMPILER
+		<< ", STL: " << BOOST_STDLIB
+		<< ", boost " << BOOST_LIB_VERSION;
 
 	std::cerr << oss.str() << "\n";
 	return oss.str();
