@@ -12,6 +12,7 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
+#include <boost/asio/signal_set.hpp>
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/program_options.hpp>
@@ -289,7 +290,24 @@ int main(int argc, char** argv)
 	LOG_DBG << "Start server: " << server_listen;
 
 	net::io_context ioc(1);
+	net::signal_set terminator_signal(ioc);
 	server_ptr server;
+
+	terminator_signal.add(SIGINT);
+	terminator_signal.add(SIGTERM);
+#ifdef __linux__
+	signal(SIGPIPE, SIG_IGN);
+#endif
+#if defined(SIGQUIT)
+	terminator_signal.add(SIGQUIT);
+#endif // defined(SIGQUIT)
+
+	terminator_signal.async_wait(
+		[&](const boost::system::error_code&, int sig) mutable
+			{
+				terminator_signal.remove(sig);
+				ioc.stop();
+			});
 
 	net::co_spawn(ioc,
 		start_proxy_server(ioc, server),
