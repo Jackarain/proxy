@@ -1325,6 +1325,7 @@ namespace proxy {
 		inline net::awaitable<bool> http_proxy_get()
 		{
 			boost::system::error_code ec;
+			bool keep_alive = false;
 			std::optional<request_parser> parser;
 
 			while (!m_abort)
@@ -1340,6 +1341,7 @@ namespace proxy {
 				{
 					LOG_ERR << "http proxy id: "
 						<< m_connection_id
+						<< (keep_alive ? ", keepalive" : "")
 						<< ", http_proxy_get async_read: "
 						<< ec.message();
 
@@ -1351,7 +1353,8 @@ namespace proxy {
 				auto mth = std::string(req.method_string());
 				auto target_view = std::string(req.target());
 				auto pa = std::string(req[http::field::proxy_authorization]);
-				auto keepalive = req.keep_alive();
+
+				keep_alive = req.keep_alive();
 
 				LOG_DBG << "http proxy id: "
 					<< m_connection_id
@@ -1441,7 +1444,7 @@ namespace proxy {
 				LOG_DBG << "http proxy id: " << m_connection_id
 					<< ", transfer completed";
 
-				if (!keepalive)
+				if (!keep_alive)
 					break;
 			}
 
@@ -2071,6 +2074,7 @@ namespace proxy {
 					{
 						LOG_DBG << "start_web_connect, id: "
 							<< m_connection_id
+							<< (keep_alive ? ", keepalive" : "")
 							<< ", async_read_header: "
 							<< ec.message();
 						co_return;
