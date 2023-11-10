@@ -12,6 +12,7 @@
 #define INCLUDE__2023_10_18__PROXY_SERVER_HPP
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <array>
 #include <unordered_map>
@@ -223,7 +224,6 @@ namespace proxy {
 			std::vector<std::string> command_;
 			string_request& request_;
 			request_parser& parser_;
-			beast::flat_buffer& buffer_;
 		};
 
 	public:
@@ -1325,12 +1325,15 @@ namespace proxy {
 
 		inline net::awaitable<bool> http_proxy_get()
 		{
-			http::request<http::string_body> req;
 			boost::system::error_code ec;
+			std::optional<request_parser> parser;
+
+			parser.emplace();
+			parser->body_limit(1024 * 512); // 512k
 
 			// 读取 http 请求头.
 			co_await http::async_read(m_local_socket,
-				m_local_buffer, req, net_awaitable[ec]);
+				m_local_buffer, *parser, net_awaitable[ec]);
 			if (ec)
 			{
 				LOG_ERR << "http proxy id: "
@@ -1340,6 +1343,8 @@ namespace proxy {
 
 				co_return false;
 			}
+
+			auto req = parser->release();
 
 			auto mth = std::string(req.method_string());
 			auto target_view = std::string(req.target());
@@ -1364,7 +1369,7 @@ namespace proxy {
 					co_return false;
 
 				// 按正常 http 目录请求来处理.
-				co_await normal_web_server(req);
+				co_await normal_web_server(req, parser);
 				co_return true;
 			}
 
@@ -2012,28 +2017,30 @@ namespace proxy {
 			co_return;
 		}
 
-		inline net::awaitable<void> normal_web_server(http::request<http::string_body>& req)
+		inline net::awaitable<void>
+		normal_web_server(http::request<http::string_body>& req, std::optional<request_parser>& parser)
 		{
 			boost::system::error_code ec;
-
-			beast::flat_buffer buffer;
-			buffer.reserve(5 * 1024 * 1024);
 
 			bool keep_alive = false;
 			bool has_read_header = true;
 
 			for (; !m_abort;)
 			{
-				request_parser parser;
-
-				parser.body_limit(std::numeric_limits<int32_t>::max());
-
 				if (!has_read_header)
 				{
+					// normal_web_server 调用是从 http_proxy_get
+					// 跳转过来的, 该函数已经读取了请求头, 所以第1次不需
+					// 要再次读取请求头, 即 has_read_header 为 true.
+					// 当 keepalive 时，需要读取请求头, 此时 has_read_header
+					// 为 false, 则在此读取和解析后续的 http 请求头.
+					parser.emplace();
+					parser->body_limit(1024 * 512); // 512k
+
 					co_await http::async_read_header(
 						m_local_socket,
-						buffer,
-						parser,
+						m_local_buffer,
+						*parser,
 						net_awaitable[ec]);
 					if (ec)
 					{
@@ -2044,27 +2051,27 @@ namespace proxy {
 						co_return;
 					}
 
-					req = parser.release();
+					req = parser->release();
+				}
 
-					if (req[http::field::expect] == "100-continue")
+				if (req[http::field::expect] == "100-continue")
+				{
+					http::response<http::empty_body> res;
+					res.version(11);
+					res.result(http::status::method_not_allowed);
+
+					co_await http::async_write(
+						m_local_socket,
+						res,
+						net_awaitable[ec]);
+					if (ec)
 					{
-						http::response<http::empty_body> res;
-						res.version(11);
-						res.result(http::status::continue_);
-
-						co_await http::async_write(
-							m_local_socket,
-							res,
-							net_awaitable[ec]);
-						if (ec)
-						{
-							LOG_DBG << "start_web_connect, id: "
-								<< m_connection_id
-								<< ", expect async_write: "
-								<< ec.message();
-							co_return;
-						}
+						LOG_DBG << "start_web_connect, id: "
+							<< m_connection_id
+							<< ", expect async_write: "
+							<< ec.message();
 					}
+					co_return;
 				}
 
 				has_read_header = false;
@@ -2084,7 +2091,7 @@ namespace proxy {
 				unescape(std::string(target), target);
 
 				boost::smatch what;
-				http_context http_ctx{ {}, req, parser, buffer };
+				http_context http_ctx{ {}, req, *parser };
 
 				#define BEGIN_HTTP_ROUTE() if (false) {}
 				#define ON_HTTP_ROUTE(exp, func) \
