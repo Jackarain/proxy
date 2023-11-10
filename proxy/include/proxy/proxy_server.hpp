@@ -1327,115 +1327,123 @@ namespace proxy {
 			boost::system::error_code ec;
 			std::optional<request_parser> parser;
 
-			parser.emplace();
-			parser->body_limit(1024 * 512); // 512k
-
-			// 读取 http 请求头.
-			co_await http::async_read(m_local_socket,
-				m_local_buffer, *parser, net_awaitable[ec]);
-			if (ec)
+			while (!m_abort)
 			{
-				LOG_ERR << "http proxy id: "
-					<< m_connection_id
-					<< ", http_proxy_get async_read: "
-					<< ec.message();
+				parser.emplace();
+				parser->body_limit(1024 * 512); // 512k
+				m_local_buffer.consume(m_local_buffer.size());
 
-				co_return false;
-			}
-
-			auto req = parser->release();
-
-			auto mth = std::string(req.method_string());
-			auto target_view = std::string(req.target());
-			auto pa = std::string(req[http::field::proxy_authorization]);
-
-			LOG_DBG << "http proxy id: "
-				<< m_connection_id
-				<< ", method: " << mth
-				<< ", target: " << target_view
-				<< (pa.empty() ? std::string()
-					: ", proxy_authorization: " + pa);
-
-			auto expect_url = urls::parse_uri(target_view);
-
-			// http 代理认证, 如果请求的 rarget 不是 http url 或认证
-			// 失败, 则按正常 web 请求处理.
-			auto auth = http_proxy_authorization(pa);
-			if (auth != PROXY_AUTH_SUCCESS || expect_url.has_error())
-			{
-				if (!expect_url.has_error())
+				// 读取 http 请求头.
+				co_await http::async_read(m_local_socket,
+					m_local_buffer, *parser, net_awaitable[ec]);
+				if (ec)
 				{
-					LOG_WARN << "http proxy id: "
+					LOG_ERR << "http proxy id: "
 						<< m_connection_id
-						<< ", proxy err: "
-						<< proxy_auth_error_message(auth);
+						<< ", http_proxy_get async_read: "
+						<< ec.message();
 
 					co_return false;
 				}
 
-				// 如果 doc 目录为空, 则不允许访问目录
-				// 这里直接返回错误页面.
-				if (m_option.doc_directory_.empty())
+				auto req = parser->release();
+
+				auto mth = std::string(req.method_string());
+				auto target_view = std::string(req.target());
+				auto pa = std::string(req[http::field::proxy_authorization]);
+				auto keepalive = req.keep_alive();
+
+				LOG_DBG << "http proxy id: "
+					<< m_connection_id
+					<< ", method: " << mth
+					<< ", target: " << target_view
+					<< (pa.empty() ? std::string()
+						: ", proxy_authorization: " + pa);
+
+				auto expect_url = urls::parse_uri(target_view);
+
+				// http 代理认证, 如果请求的 rarget 不是 http url 或认证
+				// 失败, 则按正常 web 请求处理.
+				auto auth = http_proxy_authorization(pa);
+				if (auth != PROXY_AUTH_SUCCESS || expect_url.has_error())
+				{
+					if (!expect_url.has_error())
+					{
+						LOG_WARN << "http proxy id: "
+							<< m_connection_id
+							<< ", proxy err: "
+							<< proxy_auth_error_message(auth);
+
+						co_return false;
+					}
+
+					// 如果 doc 目录为空, 则不允许访问目录
+					// 这里直接返回错误页面.
+					if (m_option.doc_directory_.empty())
+						co_return false;
+
+					// 按正常 http 目录请求来处理.
+					co_await normal_web_server(req, parser);
+					co_return true;
+				}
+
+				auto& url = expect_url.value();
+				auto host = url.host();
+				auto port = url.port_number();
+
+				if (port == 0)
+					port = urls::default_port(url.scheme_id());
+
+				// 连接到目标主机.
+				co_await start_connect_host(host,
+					port ? port : 80, ec, true);
+				if (ec)
+				{
+					LOG_WFMT("http proxy id: {},"
+						" connect to target {}:{} error: {}",
+						m_connection_id,
+						host,
+						port,
+						ec.message());
 					co_return false;
+				}
 
-				// 按正常 http 目录请求来处理.
-				co_await normal_web_server(req, parser);
-				co_return true;
-			}
+				// 处理代理请求头.
+				std::string query;
+				if (url.query() != "")
+				{
+					auto q = std::string(url.query());
+					if (q[0] == '?')
+						query = std::string(url.query());
+					else
+						query = "?" + std::string(url.query());
+				}
 
-			auto& url = expect_url.value();
-			auto host = url.host();
-			auto port = url.port_number();
-
-			if (port == 0)
-				port = urls::default_port(url.scheme_id());
-
-			// 连接到目标主机.
-			co_await start_connect_host(host,
-				port ? port : 80, ec, true);
-			if (ec)
-			{
-				LOG_WFMT("http proxy id: {},"
-					" connect to target {}:{} error: {}",
-					m_connection_id,
-					host,
-					port,
-					ec.message());
-				co_return false;
-			}
-
-			// 处理代理请求头.
-			std::string query;
-			if (url.query() != "")
-			{
-				auto q = std::string(url.query());
-				if (q[0] == '?')
-					query = std::string(url.query());
+				if (std::string(url.path()) == "")
+					req.target("/" + query);
 				else
-					query = "?" + std::string(url.query());
+					req.target(std::string(url.path()) + query);
+
+				req.erase(http::field::proxy_authorization);
+				req.erase(http::field::proxy_connection);
+
+				// 代理请求头.
+				co_await http::async_write(
+					m_remote_socket, req, net_awaitable[ec]);
+
+				// 代理连接之间数据转发.
+				co_await(
+					transfer(m_local_socket, m_remote_socket)
+					&&
+					transfer(m_remote_socket, m_local_socket)
+					);
+
+				LOG_DBG << "http proxy id: " << m_connection_id
+					<< ", transfer completed";
+
+				if (!keepalive)
+					break;
 			}
-
-			if (std::string(url.path()) == "")
-				req.target("/" + query);
-			else
-				req.target(std::string(url.path()) + query);
-
-			req.erase(http::field::proxy_authorization);
-			req.erase(http::field::proxy_connection);
-
-			// 代理请求头.
-			co_await http::async_write(
-				m_remote_socket, req, net_awaitable[ec]);
-
-			// 代理连接之间数据转发.
-			co_await(
-				transfer(m_local_socket, m_remote_socket)
-				&&
-				transfer(m_remote_socket, m_local_socket)
-				);
-
-			LOG_DBG << "http proxy id: " << m_connection_id
-				<< ", transfer completed";
 
 			co_return true;
 		}
@@ -2052,6 +2060,7 @@ namespace proxy {
 					// 为 false, 则在此读取和解析后续的 http 请求头.
 					parser.emplace();
 					parser->body_limit(1024 * 512); // 512k
+					m_local_buffer.consume(m_local_buffer.size());
 
 					co_await http::async_read_header(
 						m_local_socket,
