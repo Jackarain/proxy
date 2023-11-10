@@ -2684,13 +2684,19 @@ Connection: close
 		{
 			static std::string fake_content =
 R"xxxxxx(HTTP/1.1 400 Bad Request
-Server: nginx
+Server: nginx/1.20.2
 Date: Tue, 27 Dec 2022 01:36:17 GMT
 Content-Type: text/html
-Content-Length: 150
+Content-Length: 165
 Connection: close
 
-)xxxxxx";
+<html>
+<head><title>400 Bad Request</title></head>
+<body bgcolor="white">
+<center><h1>400 Bad Request</h1></center>
+<hr><center>nginx/1.20.2</center>
+</body>
+</html>)xxxxxx";
 			return fake_content;
 		}
 
@@ -2698,6 +2704,7 @@ Connection: close
 		{
 			static std::string auth_required =
 R"xxxxxx(HTTP/1.1 407 Proxy Authentication Required
+Server: nginx/1.20.2
 Connection: close
 Proxy-Authenticate: Basic realm="proxy"
 Proxy-Connection: close
