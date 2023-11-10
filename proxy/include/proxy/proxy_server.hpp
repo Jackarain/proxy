@@ -226,6 +226,30 @@ namespace proxy {
 			request_parser& parser_;
 		};
 
+		enum {
+			PROXY_AUTH_SUCCESS = 0,
+			PROXY_AUTH_FAILED,
+			PROXY_AUTH_NONE,
+			PROXY_AUTH_ILLEGAL,
+		};
+
+		std::string proxy_auth_error_message(int code)
+		{
+			switch (code)
+			{
+			case PROXY_AUTH_SUCCESS:
+				return "auth success";
+			case PROXY_AUTH_FAILED:
+				return "auth failed";
+			case PROXY_AUTH_NONE:
+				return "auth none";
+			case PROXY_AUTH_ILLEGAL:
+				return "auth illegal";
+			default:
+				return "auth unknown";
+			}
+		}
+
 	public:
 		proxy_session(proxy_stream_type&& socket,
 			size_t id, std::weak_ptr<proxy_server_base> server)
@@ -1246,43 +1270,23 @@ namespace proxy {
 			co_return;
 		}
 
-		inline bool http_proxy_authorization(std::string_view pa)
+		inline int http_proxy_authorization(std::string_view pa)
 		{
 			if (m_option.auth_users_.empty())
-				return true;
+				return PROXY_AUTH_SUCCESS;
 
 			if (pa.empty())
-			{
-				LOG_ERR << "http proxy id: "
-					<< m_connection_id
-					<< ", missing proxy auth";
-
-				return false;
-			}
+				return PROXY_AUTH_NONE;
 
 			auto pos = pa.find(' ');
 			if (pos == std::string::npos)
-			{
-				LOG_ERR << "http proxy id: "
-					<< m_connection_id
-					<< ", illegal proxy type: "
-					<< pa;
-
-				return false;
-			}
+				return PROXY_AUTH_ILLEGAL;
 
 			auto type = pa.substr(0, pos);
 			auto auth = pa.substr(pos + 1);
 
 			if (type != "Basic")
-			{
-				LOG_ERR << "http proxy id: "
-					<< m_connection_id
-					<< ", illegal proxy type: "
-					<< pa;
-
-				return false;
-			}
+				return PROXY_AUTH_ILLEGAL;
 
 			std::string userinfo(
 				beast::detail::base64::decoded_size(auth.size()), 0);
@@ -1312,15 +1316,10 @@ namespace proxy {
 			auto client = endp.address().to_string();
 			client += ":" + std::to_string(endp.port());
 
-			LOG_DBG << "socks id: " << m_connection_id
-				<< ", auth: " << uname
-				<< ", passwd: " << passwd
-				<< ", client: " << client;
-
 			if (!verify_passed)
-				return false;
+				return PROXY_AUTH_FAILED;
 
-			return true;
+			return PROXY_AUTH_SUCCESS;
 		}
 
 		inline net::awaitable<bool> http_proxy_get()
@@ -1357,12 +1356,23 @@ namespace proxy {
 				<< (pa.empty() ? std::string()
 					: ", proxy_authorization: " + pa);
 
-			auto expect = urls::parse_uri(target_view);
+			auto expect_url = urls::parse_uri(target_view);
 
 			// http 代理认证, 如果请求的 rarget 不是 http url 或认证
 			// 失败, 则按正常 web 请求处理.
-			if (!http_proxy_authorization(pa) || expect.has_error())
+			auto auth = http_proxy_authorization(pa);
+			if (auth != PROXY_AUTH_SUCCESS || expect_url.has_error())
 			{
+				if (!expect_url.has_error())
+				{
+					LOG_WARN << "http proxy id: "
+						<< m_connection_id
+						<< ", proxy err: "
+						<< proxy_auth_error_message(auth);
+
+					co_return false;
+				}
+
 				// 如果 doc 目录为空, 则不允许访问目录
 				// 这里直接返回错误页面.
 				if (m_option.doc_directory_.empty())
@@ -1373,7 +1383,7 @@ namespace proxy {
 				co_return true;
 			}
 
-			auto& url = expect.value();
+			auto& url = expect_url.value();
 			auto host = url.host();
 			auto port = url.port_number();
 
@@ -1460,8 +1470,14 @@ namespace proxy {
 					: ", proxy_authorization: " + pa);
 
 			// http 代理认证.
-			if (!http_proxy_authorization(pa))
+			auto auth = http_proxy_authorization(pa);
+			if (auth != PROXY_AUTH_SUCCESS)
 			{
+				LOG_WARN << "http proxy id: "
+					<< m_connection_id
+					<< ", proxy err: "
+					<< proxy_auth_error_message(auth);
+
 				co_await net::async_write(
 					m_local_socket,
 					net::buffer(authentication_required_page()),
