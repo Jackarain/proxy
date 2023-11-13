@@ -11,6 +11,7 @@
 #ifndef INCLUDE__2023_10_18__PROXY_SERVER_HPP
 #define INCLUDE__2023_10_18__PROXY_SERVER_HPP
 
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
@@ -105,8 +106,72 @@ namespace proxy {
 	using io_util::read;
 	using io_util::write;
 
-	const inline std::string version_string = "nginx/1.20.2";
-	const inline int udp_session_expired_time = 600;
+	inline const char* version_string = "nginx/1.20.2";
+
+	inline const char* fake_400_content_fmt =
+R"xxxxxx(HTTP/1.1 400 Bad Request
+Server: nginx/1.20.2
+Date: {}
+Content-Type: text/html
+Content-Length: 165
+Connection: close
+
+<html>
+<head><title>400 Bad Request</title></head>
+<body bgcolor="white">
+<center><h1>400 Bad Request</h1></center>
+<hr><center>nginx/1.20.2</center>
+</body>
+</html>)xxxxxx";
+
+	inline const char* fake_404_content_fmt =
+R"xxxxxx(HTTP/1.1 404 Not Found
+Server: nginx/1.20.2
+Date: {}
+Content-Type: text/html
+Content-Length: 145
+Connection: close
+
+<html><head><title>404 Not Found</title></head>
+<body>
+<center><h1>404 Not Found</h1></center>
+<hr>
+<center>nginx/1.20.2</center>
+</body>
+</html>)xxxxxx";
+
+	inline const char* fake_407_content_fmt =
+R"xxxxxx(HTTP/1.1 407 Proxy Authentication Required
+Server: nginx/1.20.2
+Date: {}
+Connection: close
+Proxy-Authenticate: Basic realm="proxy"
+Proxy-Connection: close
+Content-Length: 0
+
+)xxxxxx";
+
+	inline const char* fake_416_content =
+R"(<html>
+<head><title>416 Requested Range Not Satisfiable</title></head>
+<body>
+<center><h1>416 Requested Range Not Satisfiable</h1></center>
+<hr><center>nginx/1.20.2</center>
+</body>
+</html>
+)";
+
+	inline const char* fake_302_content =
+R"x*x(<html>
+<head><title>301 Moved Permanently</title></head>
+<body>
+<center><h1>301 Moved Permanently</h1></center>
+<hr><center>nginx/1.20.2</center>
+</body>
+</html>
+)x*x";
+
+	inline const int udp_session_expired_time = 600;
 
 	// proxy server 参数选项.
 	struct proxy_server_option
@@ -183,6 +248,10 @@ namespace proxy {
 		// http doc 目录, 用于伪装成web站点.
 		std::string doc_directory_;
 
+		// autoindex 功能, 类似 nginx 中的 autoindex.
+		// 打开将会显示目录下的文件列表.
+		bool autoindex_;
+
 		// 禁用 http 服务.
 		bool disable_http_{ false };
 
@@ -224,6 +293,8 @@ namespace proxy {
 			std::vector<std::string> command_;
 			string_request& request_;
 			request_parser& parser_;
+			std::string target_;
+			std::string target_path_;
 		};
 
 		enum {
@@ -406,9 +477,12 @@ namespace proxy {
 				auto ret = co_await http_proxy_get();
 				if (!ret)
 				{
+					auto fake_page = fmt::vformat(fake_400_content_fmt,
+						fmt::make_format_args(server_date_string()));
+
 					co_await net::async_write(
 						m_local_socket,
-						net::buffer(bad_request_page()),
+						net::buffer(fake_page),
 						net::transfer_all(),
 						net_awaitable[ec]);
 				}
@@ -426,9 +500,12 @@ namespace proxy {
 				auto ret = co_await http_proxy_connect();
 				if (!ret)
 				{
+					auto fake_page = fmt::vformat(fake_400_content_fmt,
+						fmt::make_format_args(server_date_string()));
+
 					co_await net::async_write(
 						m_local_socket,
-						net::buffer(bad_request_page()),
+						net::buffer(fake_page),
 						net::transfer_all(),
 						net_awaitable[ec]);
 				}
@@ -1385,6 +1462,37 @@ namespace proxy {
 					if (m_option.doc_directory_.empty())
 						co_return false;
 
+					// 如果不允许目录索引, 检查请求的是否为文件, 如果是具体文件则按文
+					// 件请求处理, 否则返回 403.
+					if (!m_option.autoindex_)
+					{
+						auto path = target_path(req);
+
+						if (!fs::is_directory(path, ec))
+						{
+							co_await normal_web_server(req, parser);
+							co_return true;
+						}
+
+						// 如果不允许目录索引, 则直接返回 403.
+						http::response<http::empty_body> res{
+							http::status::forbidden, req.version() };
+						res.reason("Forbidden");
+
+						co_await http::async_write(
+							m_local_socket, res, net_awaitable[ec]);
+						if (ec)
+						{
+							LOG_WFMT("http proxy id: {},"
+								" async write response error: {}",
+								m_connection_id,
+								ec.message());
+							co_return false;
+						}
+
+						co_return true;
+					}
+
 					// 按正常 http 目录请求来处理.
 					co_await normal_web_server(req, parser);
 					co_return true;
@@ -1489,9 +1597,12 @@ namespace proxy {
 					<< ", proxy err: "
 					<< proxy_auth_error_message(auth);
 
+				auto fake_page = fmt::vformat(fake_407_content_fmt,
+					fmt::make_format_args(server_date_string()));
+
 				co_await net::async_write(
 					m_local_socket,
-					net::buffer(authentication_required_page()),
+					net::buffer(fake_page),
 					net::transfer_all(),
 					net_awaitable[ec]);
 
@@ -2044,6 +2155,12 @@ namespace proxy {
 			co_return;
 		}
 
+		// is_crytpo_stream 判断当前连接是否为加密连接.
+		inline bool is_crytpo_stream() const
+		{
+			return boost::variant2::holds_alternative<ssl_stream>(m_remote_socket);
+		}
+
 		inline net::awaitable<void>
 		normal_web_server(http::request<http::string_body>& req, std::optional<request_parser>& parser)
 		{
@@ -2108,19 +2225,21 @@ namespace proxy {
 
 				if (beast::websocket::is_upgrade(req))
 				{
+					auto fake_page = fmt::vformat(fake_404_content_fmt,
+						fmt::make_format_args(server_date_string()));
+
 					co_await net::async_write(
 						m_local_socket,
-						net::buffer(fake_web_page()),
+						net::buffer(fake_page),
 						net::transfer_all(),
 						net_awaitable[ec]);
+
 					co_return;
 				}
 
 				std::string target = req.target();
-				unescape(std::string(target), target);
-
 				boost::smatch what;
-				http_context http_ctx{ {}, req, *parser };
+				http_context http_ctx{ {}, req, *parser, target, target_path(req) };
 
 				#define BEGIN_HTTP_ROUTE() if (false) {}
 				#define ON_HTTP_ROUTE(exp, func) \
@@ -2137,8 +2256,8 @@ namespace proxy {
 						http::status::bad_request ); }
 
 				BEGIN_HTTP_ROUTE()
-					ON_HTTP_ROUTE("^/getfile/(.*)$", on_http_get)
-					ON_HTTP_ROUTE("^.*?$", on_http_root)
+					ON_HTTP_ROUTE("^(.*)?/$", on_http_dir)
+					ON_HTTP_ROUTE("^(?!.*\\/$).*$", on_http_get)
 				END_HTTP_ROUTE()
 
 				if (!keep_alive) break;
@@ -2185,8 +2304,18 @@ namespace proxy {
 #endif // WIN32
 		};
 
-		inline net::awaitable<void> on_http_root(
-			const http_context& hctx)
+		std::string target_path(const string_request& req)
+		{
+			std::string target = req.target();
+			unescape(std::string(target), target);
+
+			auto doc_path = boost::nowide::widen(m_option.doc_directory_);
+			auto path = path_cat(doc_path, boost::nowide::widen(target)).string();
+
+			return path;
+		}
+
+		inline net::awaitable<void> on_http_dir(const http_context& hctx)
 		{
 			using namespace std::literals;
 			namespace chrono = std::chrono;
@@ -2200,26 +2329,14 @@ namespace proxy {
 
 			auto& request = hctx.request_;
 
-			std::string target;
-			unescape(request.target(), target);
-
-			if (!strutil::ends_with(target, "/"))
-			{
-				co_await on_http_get(hctx, target);
-				co_return;
-			}
-
-			auto doc_path = boost::nowide::widen(m_option.doc_directory_);
-			auto current_path = path_cat(
-				doc_path, boost::nowide::widen(target));
-
 			boost::system::error_code ec;
 			fs::directory_iterator end;
-			fs::directory_iterator it(current_path, ec);
+			fs::directory_iterator it(hctx.target_path_, ec);
 			if (ec)
 			{
 				string_response res{ http::status::found, request.version() };
 				res.set(http::field::server, version_string);
+				res.set(http::field::date, server_date_string());
 				res.set(http::field::location, "/");
 				res.keep_alive(request.keep_alive());
 				res.prepare_payload();
@@ -2325,7 +2442,7 @@ namespace proxy {
 				}
 			}
 
-			auto target_path = boost::nowide::widen(target);
+			auto target_path = boost::nowide::widen(hctx.target_);
 			std::wstring head = fmt::format(head_fmt,
 				target_path,
 				target_path);
@@ -2344,6 +2461,7 @@ namespace proxy {
 
 			string_response res{ http::status::ok, request.version() };
 			res.set(http::field::server, version_string);
+			res.set(http::field::date, server_date_string());
 			res.keep_alive(request.keep_alive());
 			res.body() = boost::nowide::narrow(body);
 			res.prepare_payload();
@@ -2362,8 +2480,7 @@ namespace proxy {
 			co_return;
 		}
 
-		inline net::awaitable<void> on_http_get(
-			const http_context& hctx, std::string filename = "")
+		inline net::awaitable<void> on_http_get(const http_context& hctx)
 		{
 			static std::map<std::string, std::string> mimes =
 			{
@@ -2451,45 +2568,62 @@ namespace proxy {
 			boost::system::error_code ec;
 
 			auto& request = hctx.request_;
-			if (request.method() == http::verb::get &&
-				hctx.command_.size() > 0 &&
-				filename.empty())
-				filename = hctx.command_[0];
+			const fs::path path = hctx.target_path_;
 
-			if (filename.empty())
-			{
-				LOG_WARN << "on_http_get, id: "
-					<< m_connection_id
-					<< ", bad request filename";
-
-				co_await default_http_route(hctx,
-					"bad request filename",
-					http::status::bad_request);
-
-				co_return;
-			}
-
-			auto doc_path = boost::nowide::widen(m_option.doc_directory_);
-
-#ifdef WIN32
-			boost::replace_all(filename, "/", "\\");
-			auto len = doc_path.size() + filename.size();
-			if (len > MAX_PATH)
-				doc_path = L"\\\\?\\" + doc_path;
-#endif
-			auto path = path_cat(
-				doc_path, boost::nowide::widen(filename));
-
-			if (!fs::exists(path))
+			if (!fs::exists(path, ec))
 			{
 				LOG_WARN << "on_http_get, id: "
 					<< m_connection_id
 					<< ", "
-					<< filename
+					<< hctx.target_
 					<< " file not exists";
 
+				auto fake_page = fmt::vformat(fake_404_content_fmt,
+					fmt::make_format_args(server_date_string()));
+
+				co_await net::async_write(
+					m_local_socket,
+					net::buffer(fake_page),
+					net::transfer_all(),
+					net_awaitable[ec]);
+
+				co_return;
+			}
+
+			if (fs::is_directory(path, ec))
+			{
+				LOG_DBG << "on_http_get, id: "
+					<< m_connection_id
+					<< ", "
+					<< hctx.target_
+					<< " is directory";
+
+				std::string url = "http://";
+				if (is_crytpo_stream())
+					url = "https://";
+				url += request[http::field::host];
+				urls::url u(url);
+				std::string target = hctx.target_ + "/";
+				u.set_path(target);
+
+				co_await location_http_route(
+					hctx, fake_302_content, u.buffer());
+
+				co_return;
+			}
+
+			size_t content_length = fs::file_size(path, ec);
+			if (ec)
+			{
+				LOG_WARN << "on_http_get, id: "
+					<< m_connection_id
+					<< ", "
+					<< hctx.target_
+					<< " file size error: "
+					<< ec.message();
+
 				co_await default_http_route(hctx,
-					"file not exists",
+					"file size error",
 					http::status::bad_request);
 
 				co_return;
@@ -2499,12 +2633,10 @@ namespace proxy {
 				std::ios_base::binary |
 				std::ios_base::in);
 
-			size_t content_length = fs::file_size(path);
-
 			LOG_DBG << "on_http_get, id: "
 				<< m_connection_id
 				<< ", file: "
-				<< filename
+				<< hctx.target_
 				<< ", size: "
 				<< content_length;
 
@@ -2534,6 +2666,8 @@ namespace proxy {
 			buffer_response res{ http::status::ok, request.version() };
 
 			res.set(http::field::server, version_string);
+			res.set(http::field::date, server_date_string());
+
 			auto ext = to_lower(fs::path(path).extension().string());
 
 			if (mimes.count(ext))
@@ -2551,14 +2685,7 @@ namespace proxy {
 				if (r.second < r.first && r.second >= 0)
 				{
 					co_await default_http_route(hctx,
-						R"(<html>
-<head><title>416 Requested Range Not Satisfiable</title></head>
-<body>
-<center><h1>416 Requested Range Not Satisfiable</h1></center>
-<hr><center>nginx/1.20.2</center>
-</body>
-</html>
-)",
+						fake_416_content,
 						http::status::range_not_satisfiable);
 					co_return;
 				}
@@ -2642,10 +2769,22 @@ namespace proxy {
 			LOG_DBG << "on_http_get, id: "
 				<< m_connection_id
 				<< ", request: "
-				<< filename
+				<< hctx.target_
 				<< ", completed";
 
 			co_return;
+		}
+
+		inline std::string server_date_string()
+		{
+			auto time = std::time(nullptr);
+			auto gmt = gmtime((const time_t*)&time);
+
+			std::string str(64, '\0');
+			auto ret = strftime((char*)str.data(), 64, "%a, %d %b %Y %H:%M:%S GMT", gmt);
+			str.resize(ret);
+
+			return str;
 		}
 
 		inline net::awaitable<void> default_http_route(
@@ -2656,9 +2795,10 @@ namespace proxy {
 			boost::system::error_code ec;
 			string_response res{ status, request.version() };
 			res.set(http::field::server, version_string);
+			res.set(http::field::date, server_date_string());
 			res.set(http::field::content_type, "text/html");
 
-			res.keep_alive(false);
+			res.keep_alive(true);
 			res.body() = response;
 			res.prepare_payload();
 
@@ -2675,56 +2815,33 @@ namespace proxy {
 			co_return;
 		}
 
-		inline const std::string& fake_web_page() const
+		inline net::awaitable<void> location_http_route(
+			const http_context& hctx, std::string response, const std::string& path)
 		{
-			static std::string fake_content =
-R"xxxxxx(HTTP/1.1 404 Not Found
-Server: nginx/1.20.2
-Content-Type: text/html
-Connection: close
+			auto& request = hctx.request_;
 
-<html><head><title>404 Not Found</title></head>
-<body>
-<center><h1>404 Not Found</h1></center>
-<hr>
-<center>nginx/1.20.2</center>
-</body>
-</html>)xxxxxx";
-			return fake_content;
-		}
+			boost::system::error_code ec;
+			string_response res{ http::status::moved_permanently, request.version() };
+			res.set(http::field::server, version_string);
+			res.set(http::field::date, server_date_string());
+			res.set(http::field::content_type, "text/html");
+			res.set(http::field::location, path);
 
-		inline const std::string& bad_request_page() const
-		{
-			static std::string fake_content =
-R"xxxxxx(HTTP/1.1 400 Bad Request
-Server: nginx/1.20.2
-Date: Tue, 27 Dec 2022 01:36:17 GMT
-Content-Type: text/html
-Content-Length: 165
-Connection: close
+			res.keep_alive(true);
+			res.body() = response;
+			res.prepare_payload();
 
-<html>
-<head><title>400 Bad Request</title></head>
-<body bgcolor="white">
-<center><h1>400 Bad Request</h1></center>
-<hr><center>nginx/1.20.2</center>
-</body>
-</html>)xxxxxx";
-			return fake_content;
-		}
+			http::serializer<false, string_body, http::fields> sr(res);
+			co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
+			if (ec)
+			{
+				LOG_WARN << "location_http_route, id: "
+					<< m_connection_id
+					<< ", err: "
+					<< ec.message();
+			}
 
-		inline const std::string& authentication_required_page() const
-		{
-			static std::string auth_required =
-R"xxxxxx(HTTP/1.1 407 Proxy Authentication Required
-Server: nginx/1.20.2
-Connection: close
-Proxy-Authenticate: Basic realm="proxy"
-Proxy-Connection: close
-Content-Length: 0
-
-)xxxxxx";
-			return auth_required;
+			co_return;
 		}
 
 	private:

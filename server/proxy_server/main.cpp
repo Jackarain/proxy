@@ -57,6 +57,7 @@ std::string log_directory;
 bool disable_http = false;
 bool disable_socks = false;
 bool disable_logs;
+bool autoindex = false;
 
 bool reuse_port = false;
 bool happyeyeballs = true;
@@ -114,6 +115,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.happyeyeballs_ = happyeyeballs;
 
 	opt.doc_directory_ = doc_directory;
+	opt.autoindex_ = autoindex;
 
 	server = proxy_server::make(
 		ioc.get_executor(), listen, opt);
@@ -242,6 +244,7 @@ int main(int argc, char** argv)
 		("ssl_prefer_server_ciphers", po::value<bool>(&ssl_prefer_server_ciphers)->default_value(false, "false")->value_name(""), "Prefer server ciphers over client ciphers for SSLv3 and TLS protocols.")
 
 		("http_doc", po::value<std::string>(&doc_directory)->value_name("doc"), "Specify document root directory for HTTP server.")
+		("autoindex", po::value<bool>(&autoindex)->default_value(false), "Enable directory listing.")
 		("logs_path", po::value<std::string>(&log_directory)->value_name(""), "Specify directory for log files.")
 		("disable_logs", po::value<bool>(&disable_logs)->value_name(""), "Disable logging.")
 		("disable_http", po::value<bool>(&disable_http)->value_name("")->default_value(false), "Disable HTTP protocol.")
