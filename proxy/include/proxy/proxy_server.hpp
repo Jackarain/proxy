@@ -124,6 +124,25 @@ Connection: close
 </body>
 </html>)xxxxxx";
 
+	inline const char* fake_400_content =
+R"xxxxxx(<html>
+<head><title>400 Bad Request</title></head>
+<body bgcolor="white">
+<center><h1>400 Bad Request</h1></center>
+<hr><center>nginx/1.20.2</center>
+</body>
+</html>)xxxxxx";
+
+	inline const char* fake_403_content =
+R"xxxxxx(<html>
+<head><title>403 Forbidden</title></head>
+<body>
+<center><h1>403 Forbidden</h1></center>
+<hr><center>nginx/1.20.2</center>
+</body>
+</html>
+)xxxxxx";
+
 	inline const char* fake_404_content_fmt =
 R"xxxxxx(HTTP/1.1 404 Not Found
 Server: nginx/1.20.2
@@ -1474,21 +1493,8 @@ R"x*x(<html>
 							co_return true;
 						}
 
-						// 如果不允许目录索引, 则直接返回 403.
-						http::response<http::empty_body> res{
-							http::status::forbidden, req.version() };
-						res.reason("Forbidden");
-
-						co_await http::async_write(
-							m_local_socket, res, net_awaitable[ec]);
-						if (ec)
-						{
-							LOG_WFMT("http proxy id: {},"
-								" async write response error: {}",
-								m_connection_id,
-								ec.message());
-							co_return false;
-						}
+						// 如果不允许目录索引, 则直接返回 403 forbidden.
+						co_await forbidden_http_route(req);
 
 						co_return true;
 					}
@@ -2251,8 +2257,8 @@ R"x*x(<html>
 				}
 				#define END_HTTP_ROUTE() else { \
 					co_await default_http_route( \
-						http_ctx, \
-						"Illegal request", \
+						req, \
+						fake_400_content, \
 						http::status::bad_request ); }
 
 				BEGIN_HTTP_ROUTE()
@@ -2606,8 +2612,7 @@ R"x*x(<html>
 				std::string target = hctx.target_ + "/";
 				u.set_path(target);
 
-				co_await location_http_route(
-					hctx, fake_302_content, u.buffer());
+				co_await location_http_route(request, u.buffer());
 
 				co_return;
 			}
@@ -2622,9 +2627,8 @@ R"x*x(<html>
 					<< " file size error: "
 					<< ec.message();
 
-				co_await default_http_route(hctx,
-					"file size error",
-					http::status::bad_request);
+				co_await default_http_route(
+					request, fake_400_content, http::status::bad_request);
 
 				co_return;
 			}
@@ -2684,7 +2688,7 @@ R"x*x(<html>
 
 				if (r.second < r.first && r.second >= 0)
 				{
-					co_await default_http_route(hctx,
+					co_await default_http_route(request,
 						fake_416_content,
 						http::status::range_not_satisfiable);
 					co_return;
@@ -2788,11 +2792,10 @@ R"x*x(<html>
 		}
 
 		inline net::awaitable<void> default_http_route(
-			const http_context& hctx, std::string response, http::status status)
+			const string_request& request, std::string response, http::status status)
 		{
-			auto& request = hctx.request_;
-
 			boost::system::error_code ec;
+
 			string_response res{ status, request.version() };
 			res.set(http::field::server, version_string);
 			res.set(http::field::date, server_date_string());
@@ -2816,11 +2819,10 @@ R"x*x(<html>
 		}
 
 		inline net::awaitable<void> location_http_route(
-			const http_context& hctx, std::string response, const std::string& path)
+			const string_request& request, const std::string& path)
 		{
-			auto& request = hctx.request_;
-
 			boost::system::error_code ec;
+
 			string_response res{ http::status::moved_permanently, request.version() };
 			res.set(http::field::server, version_string);
 			res.set(http::field::date, server_date_string());
@@ -2828,7 +2830,7 @@ R"x*x(<html>
 			res.set(http::field::location, path);
 
 			res.keep_alive(true);
-			res.body() = response;
+			res.body() = fake_302_content;
 			res.prepare_payload();
 
 			http::serializer<false, string_body, http::fields> sr(res);
@@ -2842,6 +2844,31 @@ R"x*x(<html>
 			}
 
 			co_return;
+		}
+
+		inline net::awaitable<void> forbidden_http_route(const string_request& request)
+		{
+			boost::system::error_code ec;
+
+			string_response res{ http::status::forbidden, request.version() };
+			res.set(http::field::server, version_string);
+			res.set(http::field::date, server_date_string());
+			res.set(http::field::content_type, "text/html");
+
+			res.keep_alive(true);
+			res.body() = fake_403_content;
+			res.prepare_payload();
+
+			http::serializer<false, string_body, http::fields> sr(res);
+			co_await http::async_write(
+				m_local_socket, sr, net_awaitable[ec]);
+			if (ec)
+			{
+				LOG_WARN << "forbidden_http_route, id: "
+					<< m_connection_id
+					<< ", err: "
+					<< ec.message();
+			}
 		}
 
 	private:
