@@ -323,7 +323,7 @@ R"x*x(<html>
 			PROXY_AUTH_ILLEGAL,
 		};
 
-		std::string proxy_auth_error_message(int code)
+		inline std::string proxy_auth_error_message(int code) const
 		{
 			switch (code)
 			{
