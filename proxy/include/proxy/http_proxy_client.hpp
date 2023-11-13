@@ -1,6 +1,6 @@
 ﻿//
-// socks_client.hpp
-// ~~~~~~~~~~~~~~~~
+// http_proxy_client.hpp
+// ~~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2019 Jack (jack dot wgm at gmail dot com)
 //
