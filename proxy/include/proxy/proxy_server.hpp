@@ -190,6 +190,15 @@ R"x*x(<html>
 </html>
 )x*x";
 
+
+	inline constexpr auto head_fmt =
+		LR"(<html><head><meta charset="UTF-8"><title>Index of {}</title></head><body bgcolor="white"><h1>Index of {}</h1><hr><pre>)";
+	inline constexpr auto tail_fmt =
+		L"</pre><hr></body></html>";
+	inline constexpr auto body_fmt =
+		L"<a href=\"{}\">{}</a>{} {}       {}\r\n";
+
+
 	inline const int udp_session_expired_time = 600;
 
 	// proxy server 参数选项.
@@ -2321,51 +2330,18 @@ R"x*x(<html>
 			return path;
 		}
 
-		inline net::awaitable<void> on_http_dir(const http_context& hctx)
+		inline std::vector<std::wstring>
+		format_path_list(const std::set<fs::path>& paths)
 		{
-			using namespace std::literals;
 			namespace chrono = std::chrono;
 
-			constexpr static auto head_fmt =
-				LR"(<html><head><meta charset="UTF-8"><title>Index of {}</title></head><body bgcolor="white"><h1>Index of {}</h1><hr><pre>)";
-			constexpr static auto tail_fmt =
-				L"</pre><hr></body></html>";
-			constexpr static auto body_fmt =
-				L"<a href=\"{}\">{}</a>{} {}       {}\r\n";
-
-			auto& request = hctx.request_;
-
 			boost::system::error_code ec;
-			fs::directory_iterator end;
-			fs::directory_iterator it(hctx.target_path_, ec);
-			if (ec)
-			{
-				string_response res{ http::status::found, request.version() };
-				res.set(http::field::server, version_string);
-				res.set(http::field::date, server_date_string());
-				res.set(http::field::location, "/");
-				res.keep_alive(request.keep_alive());
-				res.prepare_payload();
-
-				http::serializer<false, string_body, http::fields> sr(res);
-				co_await http::async_write(
-					m_local_socket,
-					sr,
-					net_awaitable[ec]);
-				if (ec)
-					LOG_WARN << "start_web_connect, id: "
-					<< m_connection_id
-					<< ", err: "
-					<< ec.message();
-
-				co_return;
-			}
-
 			std::vector<std::wstring> path_list;
 
-			for (; it != end && !m_abort; it++)
+			for (auto it = paths.cbegin(); it != paths.cend() && !m_abort; it++)
 			{
-				const auto& item = it->path();
+				const auto& item = *it;
+
 				fs::path unc_path;
 				std::wstring time_string;
 
@@ -2458,6 +2434,62 @@ R"x*x(<html>
 				}
 			}
 
+			std::sort(path_list.begin(), path_list.end());
+
+			return path_list;
+		}
+
+		inline net::awaitable<void> on_http_dir(const http_context& hctx)
+		{
+			using namespace std::literals;
+
+			boost::system::error_code ec;
+			auto& request = hctx.request_;
+
+			fs::directory_iterator end;
+			fs::directory_iterator it(hctx.target_path_, ec);
+			if (ec)
+			{
+				string_response res{ http::status::found, request.version() };
+				res.set(http::field::server, version_string);
+				res.set(http::field::date, server_date_string());
+				res.set(http::field::location, "/");
+				res.keep_alive(request.keep_alive());
+				res.prepare_payload();
+
+				http::serializer<false, string_body, http::fields> sr(res);
+				co_await http::async_write(
+					m_local_socket,
+					sr,
+					net_awaitable[ec]);
+				if (ec)
+					LOG_WARN << "start_web_connect, id: "
+					<< m_connection_id
+					<< ", err: "
+					<< ec.message();
+
+				co_return;
+			}
+
+			// 遍历目录, 生成目录列表和文件列表.
+			std::set<fs::path> dirs;
+			std::set<fs::path> files;
+
+			for (; it != end && !m_abort; it++)
+			{
+				const auto& item = it->path();
+				if (fs::is_directory(item, ec))
+					dirs.insert(item);
+				else
+					files.insert(item);
+			}
+
+			std::vector<std::wstring> path_list;
+
+			path_list = format_path_list(dirs);
+			auto file_list = format_path_list(files);
+			path_list.insert(path_list.end(), file_list.begin(), file_list.end());
+
 			auto target_path = boost::nowide::widen(hctx.target_);
 			std::wstring head = fmt::format(head_fmt,
 				target_path,
@@ -2470,7 +2502,6 @@ R"x*x(<html>
 				L"",
 				L"");
 
-			std::sort(path_list.begin(), path_list.end());
 			for (auto& s : path_list)
 				body += s;
 			body = head + body + tail_fmt;
