@@ -2331,7 +2331,7 @@ R"x*x(<html>
 			constexpr static auto tail_fmt =
 				L"</pre><hr></body></html>";
 			constexpr static auto body_fmt =
-				L"<a href=\"{}\">{}</a>{}{}              {}\r\n";
+				L"<a href=\"{}\">{}</a>{} {}       {}\r\n";
 
 			auto& request = hctx.request_;
 
@@ -2409,15 +2409,20 @@ R"x*x(<html>
 					auto leaf = item.filename().u16string();
 					leaf = leaf + u"/";
 					rpath.assign(leaf.begin(), leaf.end());
-					int width = 50 - ((int)leaf.size() + 1);
-					width = width < 0 ? 10 : width;
+					int width = 50 - rpath.size();
+					width = width < 0 ? 0 : width;
 					std::wstring space(width, L' ');
+					auto show_path = rpath;
+					if (show_path.size() > 50) {
+						show_path = show_path.substr(0, 47);
+						show_path += L"..&gt;";
+					}
 					auto str = fmt::format(body_fmt,
 						rpath,
-						rpath,
+						show_path,
 						space,
 						time_string,
-						L"[DIRECTORY]");
+						L"-");
 
 					path_list.push_back(str);
 				}
@@ -2425,8 +2430,8 @@ R"x*x(<html>
 				{
 					auto leaf = item.filename().u16string();
 					rpath.assign(leaf.begin(), leaf.end());
-					int width = 50 - (int)leaf.size();
-					width = width < 0 ? 10 : width;
+					int width = 50 - (int)rpath.size();
+					width = width < 0 ? 0 : width;
 					std::wstring space(width, L' ');
 					std::wstring filesize;
 					if (unc_path.empty())
@@ -2437,9 +2442,14 @@ R"x*x(<html>
 						sz = 0;
 					filesize = boost::nowide::widen(
 						add_suffix(sz));
+					auto show_path = rpath;
+					if (show_path.size() > 50) {
+						show_path = show_path.substr(0, 47);
+						show_path += L"..&gt;";
+					}
 					auto str = fmt::format(body_fmt,
 						rpath,
-						rpath,
+						show_path,
 						space,
 						time_string,
 						filesize);
