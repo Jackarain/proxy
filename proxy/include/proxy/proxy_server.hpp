@@ -2434,8 +2434,6 @@ R"x*x(<html>
 				}
 			}
 
-			std::sort(path_list.begin(), path_list.end());
-
 			return path_list;
 		}
 
