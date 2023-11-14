@@ -2319,7 +2319,7 @@ R"x*x(<html>
 #endif // WIN32
 		};
 
-		std::string target_path(const string_request& req)
+		inline std::string target_path(const string_request& req)
 		{
 			std::string target = req.target();
 			unescape(std::string(target), target);
