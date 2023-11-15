@@ -2405,9 +2405,9 @@ R"x*x(<html>
 
 				if (fs::is_directory(item, ec))
 				{
-					auto leaf = item.filename().u16string();
-					leaf = leaf + u"/";
-					rpath.assign(leaf.begin(), leaf.end());
+					auto leaf = boost::nowide::narrow(item.filename().wstring());
+					leaf = leaf + "/";
+					rpath = boost::nowide::widen(leaf);
 					int width = 50 - rpath.size();
 					width = width < 0 ? 0 : width;
 					std::wstring space(width, L' ');
@@ -2427,8 +2427,8 @@ R"x*x(<html>
 				}
 				else
 				{
-					auto leaf = item.filename().u16string();
-					rpath.assign(leaf.begin(), leaf.end());
+					auto leaf =  boost::nowide::narrow(item.filename().wstring());
+					rpath = boost::nowide::widen(leaf);
 					int width = 50 - (int)rpath.size();
 					width = width < 0 ? 0 : width;
 					std::wstring space(width, L' ');
