@@ -2330,11 +2330,67 @@ R"x*x(<html>
 			return path;
 		}
 
+		inline std::tuple<std::string, fs::path> file_last_wirte_time(const fs::path& file)
+		{
+			static auto loc_time = [](auto t) -> struct tm*
+			{
+				using time_type = std::decay_t<decltype(t)>;
+				if constexpr (std::is_same_v<time_type, std::filesystem::file_time_type>)
+				{
+					auto sctp = std::chrono::time_point_cast<
+						std::chrono::system_clock::duration>(t -
+							std::filesystem::file_time_type::clock::now() +
+								std::chrono::system_clock::now());
+					auto time = std::chrono::system_clock::to_time_t(sctp);
+					return std::localtime(&time);
+				}
+				else if constexpr (std::is_same_v<time_type, std::time_t>)
+				{
+					return std::localtime(&t);
+				}
+				else
+				{
+					static_assert(!std::is_same_v<time_type, time_type>, "time type required!");
+				}
+			};
+
+			boost::system::error_code ec;
+			std::string time_string;
+			fs::path unc_path;
+
+			auto ftime = fs::last_write_time(file, ec);
+			if (ec)
+			{
+		#ifdef WIN32
+				if (file.string().size() > MAX_PATH)
+				{
+					auto str = file.string();
+					boost::replace_all(str, "/", "\\");
+					unc_path = "\\\\?\\" + str;
+					ftime = fs::last_write_time(unc_path, ec);
+				}
+		#endif
+			}
+
+			if (!ec)
+			{
+				auto tm = loc_time(ftime);
+
+				char tmbuf[64] = { 0 };
+				std::strftime(tmbuf,
+					sizeof(tmbuf),
+					"%m-%d-%Y %H:%M",
+					tm);
+
+				time_string = tmbuf;
+			}
+
+			return { time_string, unc_path };
+		}
+
 		inline std::vector<std::wstring>
 		format_path_list(const std::set<fs::path>& paths)
 		{
-			namespace chrono = std::chrono;
-
 			boost::system::error_code ec;
 			std::vector<std::wstring> path_list;
 
@@ -2342,41 +2398,8 @@ R"x*x(<html>
 			{
 				const auto& item = *it;
 
-				fs::path unc_path;
-				std::wstring time_string;
-
-				auto ftime = fs::last_write_time(item, ec);
-				if (ec)
-				{
-#ifdef WIN32
-					if (item.string().size() > MAX_PATH)
-					{
-						auto str = item.string();
-						boost::replace_all(str, "/", "\\");
-						unc_path = "\\\\?\\" + str;
-						ftime = fs::last_write_time(unc_path, ec);
-					}
-#endif
-				}
-
-				if (!ec)
-				{
-					const auto stime = chrono::time_point_cast<
-						chrono::system_clock::duration>(ftime
-						- fs::file_time_type::clock::now()
-						+ chrono::system_clock::now());
-					const auto write_time =
-						chrono::system_clock::to_time_t(stime);
-
-					char tmbuf[64] = { 0 };
-					auto tm = std::localtime(&write_time);
-					std::strftime(tmbuf,
-						sizeof(tmbuf),
-						"%m-%d-%Y %H:%M",
-						tm);
-
-					time_string = boost::nowide::widen(tmbuf);
-				}
+				auto [ftime, unc_path] = file_last_wirte_time(item);
+				std::wstring time_string = boost::nowide::widen(ftime);
 
 				std::wstring rpath;
 
@@ -2540,9 +2563,9 @@ R"x*x(<html>
 				{ ".c", "text/javascript" },
 				{ ".json", "application/json" },
 				{ ".css", "text/css" },
-				{ ".txt", "text/plain" },
-				{ ".md", "text/plain" },
-				{ ".log", "text/plain" },
+				{ ".txt", "text/plain; charset=utf-8" },
+				{ ".md", "text/plain; charset=utf-8" },
+				{ ".log", "text/plain; charset=utf-8" },
 				{ ".xml", "text/xml" },
 				{ ".ico", "image/x-icon" },
 				{ ".ttf", "application/x-font-ttf" },
