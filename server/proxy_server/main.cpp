@@ -56,6 +56,7 @@ std::string log_directory;
 
 bool disable_http = false;
 bool disable_socks = false;
+bool noise_injection = false;
 bool disable_logs;
 bool autoindex = false;
 
@@ -109,6 +110,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 
 	opt.disable_http_ = disable_http;
 	opt.disable_socks_ = disable_socks;
+	opt.noise_injection_ = noise_injection;
 	opt.local_ip_ = local_ip;
 
 	opt.reuse_port_ = reuse_port;
@@ -249,6 +251,7 @@ int main(int argc, char** argv)
 		("disable_logs", po::value<bool>(&disable_logs)->value_name(""), "Disable logging.")
 		("disable_http", po::value<bool>(&disable_http)->value_name("")->default_value(false), "Disable HTTP protocol.")
 		("disable_socks", po::value<bool>(&disable_socks)->value_name("")->default_value(false), "Disable SOCKS proxy protocol.")
+		("noise_injection", po::value<bool>(&noise_injection)->value_name("")->default_value(false), "Enable header length randomization.")
 	;
 
 	// 解析命令行.

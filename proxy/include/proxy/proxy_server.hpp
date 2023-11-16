@@ -205,6 +205,10 @@ R"x*x(<html>
 	struct proxy_server_option
 	{
 		// 授权信息.
+		// auth_users 的第1个元素为用户名, 第2个元素为密码.
+		// auth_users_ 为空时, 表示不需要认证.
+		// auth_users_ 可以是多个用户, 例如:
+		// { {"user1", "passwd1"}, {"user2", "passwd2"} };
 		using auth_users = std::tuple<std::string, std::string>;
 		std::vector<auth_users> auth_users_;
 
@@ -231,8 +235,8 @@ R"x*x(<html>
 		bool proxy_pass_use_ssl_{ false };
 
 		// 启用 proxy protocol (haproxy)协议.
-		// 当前服务将会在连接到 proxy_pass_ 成功后，首先传递 proxy protocol 以
-		// 告之 proxy_pass_ 来源 IP/PORT 以及目标 IP/PORT.
+		// 当前服务将会在连接到 proxy_pass_ 成功后，首先传递 proxy protocol
+		// 以告之 proxy_pass_ 来源 IP/PORT 以及目标 IP/PORT.
 		bool haproxy_{ false };
 
 		// 指定当前proxy server向外发起连接时, 绑定到哪个本地地址.
@@ -293,6 +297,14 @@ R"x*x(<html>
 		// 禁用 socks proxy 服务, 服务端不提供 socks4/5 代理服务, 包括
 		// 加密的 socks4/5 以及不加密的 socks4/5.
 		bool disable_socks_{ false };
+
+		// 启用噪声注入以干扰流量分析.
+		// 此功能必须在 server/client 两端同时启用才有效, 此功能表示在启
+		// 用 ssl 协议时, 在 ssl 握手后双方互相发送一段随机长度的随机数据
+		// 以干扰流量分析.
+		// 启用后会增加一定的流量消耗以及延迟, 此选项默认不启用, 除非有确定
+		// 证据证明代理流量被分析或干扰, 此时可以启用此选项.
+		bool noise_injection_{ false };
 	};
 
 	// proxy server 虚基类, 任何 proxy server 的实现, 必须基于这个基类.
