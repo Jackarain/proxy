@@ -237,9 +237,11 @@ R"x*x(<html>
 		// 启用 proxy protocol (haproxy)协议.
 		// 当前服务将会在连接到 proxy_pass_ 成功后，首先传递 proxy protocol
 		// 以告之 proxy_pass_ 来源 IP/PORT 以及目标 IP/PORT.
+		// 注意：此选项当前未实现.
 		bool haproxy_{ false };
 
-		// 指定当前proxy server向外发起连接时, 绑定到哪个本地地址.
+		// 指定当前proxy server向外发起连接时, 绑定到哪个本地地址, 在多网卡
+		// 的服务器上, 可以指定此参数, 默认为空, 表示不指定, 由系统自动选择.
 		std::string local_ip_;
 
 		// 启用 TCP 端口重用(仅Linux kernel version 3.9以上支持).
@@ -304,6 +306,7 @@ R"x*x(<html>
 		// 以干扰流量分析.
 		// 启用后会增加一定的流量消耗以及延迟, 此选项默认不启用, 除非有确定
 		// 证据证明代理流量被分析或干扰, 此时可以启用此选项.
+		// 注意：此选项当前未实现.
 		bool noise_injection_{ false };
 	};
 
