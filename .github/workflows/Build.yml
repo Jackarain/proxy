@@ -1,27 +1,43 @@
 name: Build
+
 on: [push]
+
 jobs:
   Linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-      - run: sudo apt install -y cmake gcc-12 g++-12 ninja-build
-      - run: sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10
-      - run: sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 10
-      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF -G Ninja
-      - run: cmake --build build --config Release
+
+      - name: Build proxy
+        run: |
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          sudo apt install -y cmake gcc-12 g++-12 ninja-build
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 10
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF -G Ninja
+          cmake --build build --config Release
+
       - name: Archive artifacts
         uses: actions/upload-artifact@v3
         with:
           name: proxy_server
           path: build/bin/proxy_server
+
   Windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
-      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF
-      - run: cmake --build build --config Release
+
+      - name: Install ninja
+        run: |
+          choco install ninja
+          ninja.exe --version
+
+      - name: Build proxy
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF -G Ninja
+          cmake --build build --config Release
+
       - name: Archive artifacts
         uses: actions/upload-artifact@v3
         with:
