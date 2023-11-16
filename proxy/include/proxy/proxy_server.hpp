@@ -273,17 +273,25 @@ R"x*x(<html>
 		// 优先使用server端加密算法.
 		bool ssl_prefer_server_ciphers_;
 
-		// http doc 目录, 用于伪装成web站点.
+		// http doc 目录, 用于伪装成web站点, 如果此字段为空, 则表示不启
+		// 用此功能, 遇到 http/https 文件请求时则返回错误信息.
 		std::string doc_directory_;
 
 		// autoindex 功能, 类似 nginx 中的 autoindex.
-		// 打开将会显示目录下的文件列表.
+		// 打开将会显示目录下的文件列表, 此功能作用在启用 doc_directory_
+		// 的时候, 对 doc_directory_ 目录下的文件列表信息是否使用列表展
+		// 示.
 		bool autoindex_;
 
-		// 禁用 http 服务.
+		// 禁用 http 服务, 客户端无法通过明文的 http 协议与之通信, 包括
+		// ssl 加密的 https 以及不加密的 http 服务, 同时也包括 http(s)
+		// proxy 也会被禁用.
+		// 在有些时候, 为了安全考虑, 可以禁用 http 服务避免服务器上的信息
+		// 意外访问, 或不想启用 http(s) 服务.
 		bool disable_http_{ false };
 
-		// 禁用 socks proxy 服务.
+		// 禁用 socks proxy 服务, 服务端不提供 socks4/5 代理服务, 包括
+		// 加密的 socks4/5 以及不加密的 socks4/5.
 		bool disable_socks_{ false };
 	};
 
@@ -3246,7 +3254,7 @@ R"x*x(<html>
 					ssl_stream& ssl_socket =
 						boost::variant2::get<ssl_stream>(ssl_socks_stream);
 
-					// do async handshake.
+					// do async ssl handshake.
 					co_await ssl_socket.async_handshake(
 						net::ssl::stream_base::server,
 						net_awaitable[error]);
