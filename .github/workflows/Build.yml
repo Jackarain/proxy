@@ -31,17 +31,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install ninja
-        run: |
-          choco install ninja
-          ninja.exe --version
-
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.3.1
-
       - name: Build proxy
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF -G Ninja
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF
           cmake --build build --config Release
 
       - name: Archive artifacts
