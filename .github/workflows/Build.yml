@@ -23,7 +23,7 @@ jobs:
       - name: Archive artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: proxy_server
+          name: proxy_server-linux_x64
           path: build/bin/proxy_server
 
   Windows:
@@ -39,5 +39,5 @@ jobs:
       - name: Archive artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: proxy_server
+          name: proxy_server-win_x64
           path: build/bin/release/proxy_server.exe
