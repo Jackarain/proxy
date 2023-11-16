@@ -15,3 +15,14 @@ jobs:
         with:
           name: proxy_server
           path: build/bin/proxy_server
+  Windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF
+      - run: cmake --build build --config Release
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: proxy_server
+          path: build/bin/release/proxy_server.exe
