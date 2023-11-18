@@ -1528,7 +1528,7 @@ R"x*x(<html>
 					m_local_buffer, *parser, net_awaitable[ec]);
 				if (ec)
 				{
-					LOG_ERR << "http proxy id: "
+					LOG_ERR << "connection id: "
 						<< m_connection_id
 						<< (keep_alive ? ", keepalive" : "")
 						<< ", http_proxy_get async_read: "
@@ -1545,7 +1545,7 @@ R"x*x(<html>
 
 				keep_alive = req.keep_alive();
 
-				LOG_DBG << "http proxy id: "
+				LOG_DBG << "connection id: "
 					<< m_connection_id
 					<< ", method: " << mth
 					<< ", target: " << target_view
@@ -1561,7 +1561,7 @@ R"x*x(<html>
 				{
 					if (!expect_url.has_error())
 					{
-						LOG_WARN << "http proxy id: "
+						LOG_WARN << "connection id: "
 							<< m_connection_id
 							<< ", proxy err: "
 							<< proxy_auth_error_message(auth);
@@ -1609,7 +1609,7 @@ R"x*x(<html>
 					port ? port : 80, ec, true);
 				if (ec)
 				{
-					LOG_WFMT("http proxy id: {},"
+					LOG_WFMT("connection id: {},"
 						" connect to target {}:{} error: {}",
 						m_connection_id,
 						host,
@@ -1648,7 +1648,7 @@ R"x*x(<html>
 					transfer(m_remote_socket, m_local_socket)
 					);
 
-				LOG_DBG << "http proxy id: "
+				LOG_DBG << "connection id: "
 					<< m_connection_id
 					<< ", transfer completed";
 
@@ -1669,7 +1669,7 @@ R"x*x(<html>
 				m_local_buffer, req, net_awaitable[ec]);
 			if (ec)
 			{
-				LOG_ERR << "http proxy id: "
+				LOG_ERR << "connection id: "
 					<< m_connection_id
 					<< ", http_proxy_connect async_read: "
 					<< ec.message();
@@ -1681,7 +1681,7 @@ R"x*x(<html>
 			auto target_view = std::string(req.target());
 			auto pa = std::string(req[http::field::proxy_authorization]);
 
-			LOG_DBG << "http proxy id: "
+			LOG_DBG << "connection id: "
 				<< m_connection_id
 				<< ", method: " << mth
 				<< ", target: " << target_view
@@ -1692,7 +1692,7 @@ R"x*x(<html>
 			auto auth = http_proxy_authorization(pa);
 			if (auth != PROXY_AUTH_SUCCESS)
 			{
-				LOG_WARN << "http proxy id: "
+				LOG_WARN << "connection id: "
 					<< m_connection_id
 					<< ", proxy err: "
 					<< proxy_auth_error_message(auth);
@@ -1712,7 +1712,7 @@ R"x*x(<html>
 			auto pos = target_view.find(':');
 			if (pos == std::string::npos)
 			{
-				LOG_ERR  << "http proxy id: "
+				LOG_ERR  << "connection id: "
 					<< m_connection_id
 					<< ", illegal target: "
 					<< target_view;
@@ -1726,7 +1726,7 @@ R"x*x(<html>
 				static_cast<uint16_t>(std::atol(port.c_str())), ec, true);
 			if (ec)
 			{
-				LOG_WFMT("http proxy id: {},"
+				LOG_WFMT("connection id: {},"
 					" connect to target {}:{} error: {}",
 					m_connection_id,
 					host,
@@ -1745,7 +1745,7 @@ R"x*x(<html>
 				net_awaitable[ec]);
 			if (ec)
 			{
-				LOG_WFMT("http proxy id: {},"
+				LOG_WFMT("connection id: {},"
 					" async write response {}:{} error: {}",
 					m_connection_id,
 					host,
@@ -1760,7 +1760,7 @@ R"x*x(<html>
 				transfer(m_remote_socket, m_local_socket)
 				);
 
-			LOG_DBG << "http proxy id: "
+			LOG_DBG << "connection id: "
 				<< m_connection_id
 				<< ", transfer completed";
 
@@ -2118,7 +2118,7 @@ R"x*x(<html>
 							ec);
 						if (ec)
 						{
-							LOG_WFMT("proxy id: {},"
+							LOG_WFMT("connection id: {},"
 								" add_certificate_authority error: {}",
 								m_connection_id,
 								ec.message());
@@ -2128,7 +2128,7 @@ R"x*x(<html>
 							net::ssl::rfc2818_verification(proxy_host), ec);
 						if (ec)
 						{
-							LOG_WFMT("proxy id: {},"
+							LOG_WFMT("connection id: {},"
 								" set_verify_callback error: {}",
 								m_connection_id,
 								ec.message());
@@ -2148,7 +2148,7 @@ R"x*x(<html>
 						if (!SSL_set_tlsext_host_name(
 							ssl_socket.native_handle(), sni.c_str()))
 						{
-							LOG_WFMT("proxy id: {},"
+							LOG_WFMT("connection id: {},"
 							" SSL_set_tlsext_host_name error: {}",
 								m_connection_id,
 								::ERR_get_error());
@@ -2160,13 +2160,13 @@ R"x*x(<html>
 							net_awaitable[ec]);
 						if (ec)
 						{
-							LOG_WFMT("proxy id: {},"
+							LOG_WFMT("connection id: {},"
 								" ssl protocol handshake error: {}",
 								m_connection_id,
 								ec.message());
 						}
 
-						LOG_FMT("proxy id: {}, ssl handshake: {}",
+						LOG_FMT("connection id: {}, ssl handshake: {}",
 							m_connection_id,
 							proxy_host);
 
