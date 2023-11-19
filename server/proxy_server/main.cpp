@@ -161,13 +161,13 @@ inline std::optional<int> try_as_int(const boost::any& var)
 
 inline void print_args(int argc, char** argv, const po::variables_map& vm)
 {
-	LOG_INFO << "Current directory: "
+	XLOG_INFO << "Current directory: "
 		<< fs::current_path().string();
 
 	if (!vm.count("config"))
 	{
 		std::vector<std::string> args(argv, argv + argc);
-		LOG_INFO << "Run: " << boost::algorithm::join(args, " ");
+		XLOG_INFO << "Run: " << boost::algorithm::join(args, " ");
 		return;
 	}
 
@@ -178,19 +178,19 @@ inline void print_args(int argc, char** argv, const po::variables_map& vm)
 
 		if (auto s = try_as_string(value.value()))
 		{
-			LOG_INFO << key << " = " << *s;
+			XLOG_INFO << key << " = " << *s;
 			continue;
 		}
 
 		if (auto b = try_as_bool(value.value()))
 		{
-			LOG_INFO << key << " = " << *b;
+			XLOG_INFO << key << " = " << *b;
 			continue;
 		}
 
 		if (auto i = try_as_int(value.value()))
 		{
-			LOG_INFO << key << " = " << *i;
+			XLOG_INFO << key << " = " << *i;
 			continue;
 		}
 	}
@@ -293,7 +293,7 @@ int main(int argc, char** argv)
 
 	print_args(argc, argv, vm);
 
-	LOG_DBG << "Start server: " << server_listen;
+	XLOG_DBG << "Start server: " << server_listen;
 
 	net::io_context ioc(1);
 	net::signal_set terminator_signal(ioc);

@@ -37,7 +37,7 @@ net::awaitable<void> start_http_proxy_client()
 	co_await sock.async_connect(server_addr, net_awaitable[ec]);
 	if (ec)
 	{
-		LOG_WARN << "client connect to server: " << ec.message();
+		XLOG_WARN << "client connect to server: " << ec.message();
 		co_return;
 	}
 
@@ -50,7 +50,7 @@ net::awaitable<void> start_http_proxy_client()
 	co_await proxy::async_http_proxy_handshake(sock, opt, net_awaitable[ec]);
 	if (ec)
 	{
-		LOG_WARN << "client 1' handshake to server: " << ec.message();
+		XLOG_WARN << "client 1' handshake to server: " << ec.message();
 		co_return;
 	}
 

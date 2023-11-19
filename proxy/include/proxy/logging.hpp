@@ -1689,104 +1689,104 @@ public:
 };
 } // namespace util
 
-#undef LOG_DBG
-#undef LOG_INFO
-#undef LOG_WARN
-#undef LOG_ERR
-#undef LOG_FILE
+#undef XLOG_DBG
+#undef XLOG_INFO
+#undef XLOG_WARN
+#undef XLOG_ERR
+#undef XLOG_FILE
 
-#undef LOG_FMT
-#undef LOG_IFMT
-#undef LOG_WFMT
-#undef LOG_EFMT
-#undef LOG_FFMT
+#undef XLOG_FMT
+#undef XLOG_IFMT
+#undef XLOG_WFMT
+#undef XLOG_EFMT
+#undef XLOG_FFMT
 
-#undef ASYNC_LOGDBG
-#undef ASYNC_LOGINFO
-#undef ASYNC_LOGWARN
-#undef ASYNC_LOGERR
-#undef ASYNC_LOGFILE
+#undef AXLOG_DBG
+#undef AXLOG_INFO
+#undef AXLOG_WARN
+#undef AXLOG_ERR
+#undef AXLOG_FILE
 
-#undef ASYNC_LOGFMT
-#undef ASYNC_LOGIFMT
-#undef ASYNC_LOGWFMT
-#undef ASYNC_LOGEFMT
-#undef ASYNC_LOGFFMT
+#undef AXLOG_FMT
+#undef AXLOG_IFMT
+#undef AXLOG_WFMT
+#undef AXLOG_EFMT
+#undef AXLOG_FFMT
 
 #if (defined(DEBUG) || defined(_DEBUG) || \
 	defined(ENABLE_LOGGER)) && !defined(DISABLE_LOGGER)
 
-#define LOG_DBG util::logger___(util::_logger_debug_id__)
-#define LOG_INFO util::logger___(util::_logger_info_id__)
-#define LOG_WARN util::logger___(util::_logger_warn_id__)
-#define LOG_ERR util::logger___(util::_logger_error_id__)
-#define LOG_FILE util::logger___(util::_logger_file_id__, false, true)
+#define XLOG_DBG util::logger___(util::_logger_debug_id__)
+#define XLOG_INFO util::logger___(util::_logger_info_id__)
+#define XLOG_WARN util::logger___(util::_logger_warn_id__)
+#define XLOG_ERR util::logger___(util::_logger_error_id__)
+#define XLOG_FILE util::logger___(util::_logger_file_id__, false, true)
 
-#define LOG_FMT(...) util::logger___( \
+#define XLOG_FMT(...) util::logger___( \
 		util::_logger_debug_id__).format_to(__VA_ARGS__)
-#define LOG_IFMT(...) util::logger___( \
+#define XLOG_IFMT(...) util::logger___( \
 		util::_logger_info_id__).format_to(__VA_ARGS__)
-#define LOG_WFMT(...) util::logger___( \
+#define XLOG_WFMT(...) util::logger___( \
 		util::_logger_warn_id__).format_to(__VA_ARGS__)
-#define LOG_EFMT(...) util::logger___( \
+#define XLOG_EFMT(...) util::logger___( \
 		util::_logger_error_id__).format_to(__VA_ARGS__)
-#define LOG_FFMT(...) util::logger___( \
+#define XLOG_FFMT(...) util::logger___( \
 		util::_logger_file_id__, false, true).format_to(__VA_ARGS__)
 
-#define ASYNC_LOGDBG util::logger___(util::_logger_debug_id__, true)
-#define ASYNC_LOGINFO util::logger___(util::_logger_info_id__, true)
-#define ASYNC_LOGWARN util::logger___(util::_logger_warn_id__, true)
-#define ASYNC_LOGERR util::logger___(util::_logger_error_id__, true)
-#define ASYNC_LOGFILE util::logger___(util::_logger_file_id__, true, true)
+#define AXLOG_DBG util::logger___(util::_logger_debug_id__, true)
+#define AXLOG_INFO util::logger___(util::_logger_info_id__, true)
+#define AXLOG_WARN util::logger___(util::_logger_warn_id__, true)
+#define AXLOG_ERR util::logger___(util::_logger_error_id__, true)
+#define AXLOG_FILE util::logger___(util::_logger_file_id__, true, true)
 
-#define ASYNC_LOGFMT(...) util::logger___( \
+#define AXLOG_FMT(...) util::logger___( \
 		util::_logger_debug_id__, true).format_to(__VA_ARGS__)
-#define ASYNC_LOGIFMT(...) util::logger___( \
+#define AXLOG_IFMT(...) util::logger___( \
 		util::_logger_info_id__, true).format_to(__VA_ARGS__)
-#define ASYNC_LOGWFMT(...) util::logger___( \
+#define AXLOG_WFMT(...) util::logger___( \
 		util::_logger_warn_id__, true).format_to(__VA_ARGS__)
-#define ASYNC_LOGEFMT(...) util::logger___( \
+#define AXLOG_EFMT(...) util::logger___( \
 		util::_logger_error_id__, true).format_to(__VA_ARGS__)
-#define ASYNC_LOGFFMT(...) util::logger___( \
+#define AXLOG_FFMT(...) util::logger___( \
 		util::_logger_file_id__, true, true).format_to(__VA_ARGS__)
 
-#define ASYNC_VLOGDBG ASYNC_LOGDBG \
+#define AXVLOG_DBG AXLOG_DBG \
 	<< "(" << __FILE__ << ":" << __LINE__ << "): "
-#define ASYNC_VLOGINFO ASYNC_LOGINFO \
+#define AXVLOG_INFO AXLOG_INFO \
 	<< "(" << __FILE__ << ":" << __LINE__ << "): "
-#define ASYNC_VLOGWARN ASYNC_LOGWARN \
+#define AXVLOG_WARN AXLOG_WARN \
 	<< "(" << __FILE__ << ":" << __LINE__ << "): "
-#define ASYNC_VLOGERR ASYNC_LOGERR \
+#define AXVLOG_ERR AXLOG_ERR \
 	<< "(" << __FILE__ << ":" << __LINE__ << "): "
-#define ASYNC_VLOGFILE ASYNC_LOGFILE \
+#define AXVLOG_FILE AXLOG_FILE \
 	<< "(" << __FILE__ << ":" << __LINE__ << "): "
 
-#define ASYNC_VLOGFMT(...) (ASYNC_LOGDBG << "(" \
+#define AXVLOG_FMT(...) (AXLOG_DBG << "(" \
 		<< __FILE__ << ":" << __LINE__ << "): ").format_to(__VA_ARGS__)
-#define ASYNC_VLOGIFMT(...) (ASYNC_LOGINFO << "(" \
+#define AXVLOG_IFMT(...) (AXLOG_INFO << "(" \
 		<< __FILE__ << ":" << __LINE__ << "): ").format_to(__VA_ARGS__)
-#define ASYNC_VLOGWFMT(...) (ASYNC_LOGWARN << "(" \
+#define AXVLOG_WFMT(...) (AXLOG_WARN << "(" \
 		<< __FILE__ << ":" << __LINE__ << "): ").format_to(__VA_ARGS__)
-#define ASYNC_VLOGEFMT(...) (ASYNC_LOGERR << "(" \
+#define AXVLOG_EFMT(...) (AXLOG_ERR << "(" \
 		<< __FILE__ << ":" << __LINE__ << "): ").format_to(__VA_ARGS__)
-#define ASYNC_VLOGFFMT(...) (ASYNC_LOGFILE << "(" \
+#define AXVLOG_FFMT(...) (AXLOG_FILE << "(" \
 		<< __FILE__ << ":" << __LINE__ << "): ").format_to(__VA_ARGS__)
 
-#define VLOG_DBG LOG_DBG << "(" << __FILE__ << ":" << __LINE__ << "): "
-#define VLOG_INFO LOG_INFO << "(" << __FILE__ << ":" << __LINE__ << "): "
-#define VLOG_WARN LOG_WARN << "(" << __FILE__ << ":" << __LINE__ << "): "
-#define VLOG_ERR LOG_ERR << "(" << __FILE__ << ":" << __LINE__ << "): "
-#define VLOG_FILE LOG_FILE << "(" << __FILE__ << ":" << __LINE__ << "): "
+#define VXLOG_DBG XLOG_DBG << "(" << __FILE__ << ":" << __LINE__ << "): "
+#define VXLOG_INFO XLOG_INFO << "(" << __FILE__ << ":" << __LINE__ << "): "
+#define VXLOG_WARN XLOG_WARN << "(" << __FILE__ << ":" << __LINE__ << "): "
+#define VXLOG_ERR XLOG_ERR << "(" << __FILE__ << ":" << __LINE__ << "): "
+#define VXLOG_FILE XLOG_FILE << "(" << __FILE__ << ":" << __LINE__ << "): "
 
-#define VLOG_FMT(...) (LOG_DBG << "(" \
+#define VXLOG_FMT(...) (XLOG_DBG << "(" \
 		<< __FILE__ << ":" << __LINE__ << "): ").format_to(__VA_ARGS__)
-#define VLOG_IFMT(...) (LOG_INFO << "(" \
+#define VXLOG_IFMT(...) (XLOG_INFO << "(" \
 		<< __FILE__ << ":" << __LINE__ << "): ").format_to(__VA_ARGS__)
-#define VLOG_WFMT(...) (LOG_WARN << "(" \
+#define VXLOG_WFMT(...) (XLOG_WARN << "(" \
 		<< __FILE__ << ":" << __LINE__ << "): ").format_to(__VA_ARGS__)
-#define VLOG_EFMT(...) (LOG_ERR << "(" \
+#define VXLOG_EFMT(...) (XLOG_ERR << "(" \
 		<< __FILE__ << ":" << __LINE__ << "): ").format_to(__VA_ARGS__)
-#define VLOG_FFMT(...) (LOG_FILE << "(" \
+#define VXLOG_FFMT(...) (XLOG_FILE << "(" \
 		<< __FILE__ << ":" << __LINE__ << "): ").format_to(__VA_ARGS__)
 
 
@@ -1795,53 +1795,53 @@ public:
 
 #else
 
-#define LOG_DBG util::empty_logger___()
-#define LOG_INFO util::empty_logger___()
-#define LOG_WARN util::empty_logger___()
-#define LOG_ERR util::empty_logger___()
-#define LOG_FILE util::empty_logger___()
+#define XLOG_DBG util::empty_logger___()
+#define XLOG_INFO util::empty_logger___()
+#define XLOG_WARN util::empty_logger___()
+#define XLOG_ERR util::empty_logger___()
+#define XLOG_FILE util::empty_logger___()
 
-#define LOG_FMT(...) util::empty_logger___()
-#define LOG_IFMT(...) util::empty_logger___()
-#define LOG_WFMT(...) util::empty_logger___()
-#define LOG_EFMT(...) util::empty_logger___()
-#define LOG_FFMT(...) util::empty_logger___()
+#define XLOG_FMT(...) util::empty_logger___()
+#define XLOG_IFMT(...) util::empty_logger___()
+#define XLOG_WFMT(...) util::empty_logger___()
+#define XLOG_EFMT(...) util::empty_logger___()
+#define XLOG_FFMT(...) util::empty_logger___()
 
-#define VLOG_DBG(...) util::empty_logger___()
-#define VLOG_INFO(...) util::empty_logger___()
-#define VLOG_WARN(...) util::empty_logger___()
-#define VLOG_ERR(...) util::empty_logger___()
-#define VLOG_FILE(...) util::empty_logger___()
+#define VXLOG_DBG(...) util::empty_logger___()
+#define VXLOG_INFO(...) util::empty_logger___()
+#define VXLOG_WARN(...) util::empty_logger___()
+#define VXLOG_ERR(...) util::empty_logger___()
+#define VXLOG_FILE(...) util::empty_logger___()
 
-#define VLOG_FMT(...) util::empty_logger___()
-#define VLOG_IFMT(...) util::empty_logger___()
-#define VLOG_WFMT(...) util::empty_logger___()
-#define VLOG_EFMT(...) util::empty_logger___()
-#define VLOG_FFMT(...) util::empty_logger___()
+#define VXLOG_FMT(...) util::empty_logger___()
+#define VXLOG_IFMT(...) util::empty_logger___()
+#define VXLOG_WFMT(...) util::empty_logger___()
+#define VXLOG_EFMT(...) util::empty_logger___()
+#define VXLOG_FFMT(...) util::empty_logger___()
 
-#define ASYNC_LOGDBG util::empty_logger___()
-#define ASYNC_LOGINFO util::empty_logger___()
-#define ASYNC_LOGWARN util::empty_logger___()
-#define ASYNC_LOGERR util::empty_logger___()
-#define ASYNC_LOGFILE util::empty_logger___()
+#define AXLOG_DBG util::empty_logger___()
+#define AXLOG_INFO util::empty_logger___()
+#define AXLOG_WARN util::empty_logger___()
+#define AXLOG_ERR util::empty_logger___()
+#define AXLOG_FILE util::empty_logger___()
 
-#define ASYNC_LOGFMT(...) util::empty_logger___()
-#define ASYNC_LOGIFMT(...) util::empty_logger___()
-#define ASYNC_LOGWFMT(...) util::empty_logger___()
-#define ASYNC_LOGEFMT(...) util::empty_logger___()
-#define ASYNC_LOGFFMT(...) util::empty_logger___()
+#define AXLOG_FMT(...) util::empty_logger___()
+#define AXLOG_IFMT(...) util::empty_logger___()
+#define AXLOG_WFMT(...) util::empty_logger___()
+#define AXLOG_EFMT(...) util::empty_logger___()
+#define AXLOG_FFMT(...) util::empty_logger___()
 
-#define ASYNC_VLOGDBG LOG_DBG
-#define ASYNC_VLOGINFO LOG_INFO
-#define ASYNC_VLOGWARN LOG_WARN
-#define ASYNC_VLOGERR LOG_ERR
-#define ASYNC_VLOGFILE LOG_FILE
+#define AXVLOG_DBG XLOG_DBG
+#define AXVLOG_INFO XLOG_INFO
+#define AXVLOG_WARN XLOG_WARN
+#define AXVLOG_ERR XLOG_ERR
+#define AXVLOG_FILE XLOG_FILE
 
-#define ASYNC_VLOGFMT LOG_FMT
-#define ASYNC_VLOGIFMT LOG_IFMT
-#define ASYNC_VLOGWFMT LOG_WFMT
-#define ASYNC_VLOGEFMT LOG_EFMT
-#define ASYNC_VLOGFFMT LOG_FFMT
+#define AXVLOG_FMT XLOG_FMT
+#define AXVLOG_IFMT XLOG_IFMT
+#define AXVLOG_WFMT XLOG_WFMT
+#define AXVLOG_EFMT XLOG_EFMT
+#define AXVLOG_FFMT XLOG_FFMT
 
 #define INIT_ASYNC_LOGGING() void
 
