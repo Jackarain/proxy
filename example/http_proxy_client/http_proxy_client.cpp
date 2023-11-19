@@ -54,7 +54,7 @@ net::awaitable<void> start_http_proxy_client()
 		co_return;
 	}
 
-	// Usg socket 'sock' do something...
+	// Using socket 'sock' do something...
 
 	co_return;
 }

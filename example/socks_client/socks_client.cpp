@@ -56,7 +56,7 @@ net::awaitable<void> start_socks_client()
 		co_return;
 	}
 
-	// Usg socket 'sock' do something...
+	// Using socket 'sock' do something...
 
 	co_return;
 }
