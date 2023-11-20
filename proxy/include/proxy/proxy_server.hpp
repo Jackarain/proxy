@@ -3406,6 +3406,10 @@ R"x*x(<html>
 					continue;
 				}
 
+				static std::set<uint8_t> filter = {
+					0x04, 0x05, 0x16, 0x47, 0x50, 0x43
+				};
+
 				// plain socks4/5 protocol.
 				if (detect[0] == 0x05 || detect[0] == 0x04)
 				{
@@ -3488,6 +3492,9 @@ R"x*x(<html>
 					m_clients[connection_id] = new_session;
 
 					new_session->start();
+				}
+				else {
+					// 进入噪声过滤协议, 同时返回一段噪声给客户端.
 				}
 			}
 
