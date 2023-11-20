@@ -2601,7 +2601,7 @@ R"x*x(<html>
 					auto leaf = boost::nowide::narrow(item.filename().wstring());
 					leaf = leaf + "/";
 					rpath = boost::nowide::widen(leaf);
-					int width = 50 - rpath.size();
+					int width = 50 - static_cast<int>(rpath.size());
 					width = width < 0 ? 0 : width;
 					std::wstring space(width, L' ');
 					auto show_path = rpath;
