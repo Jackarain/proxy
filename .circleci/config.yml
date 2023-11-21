@@ -6,11 +6,13 @@ jobs:
       image: ubuntu-2004:202101-01
     resource_class: arm.medium
     steps:
-      - run: uname -a
+      - run:
+          name: Check OS
+          command: uname -a
 
       - checkout
       - run:
-          name: Build Classic
+          name: Build in docker
           command: |
             docker build . -t proxy:v1
             docker create --name ps proxy:v1
@@ -20,44 +22,29 @@ jobs:
       - store_artifacts:
           path: build/docker
 
-  build:
-    docker:
-      - image: cimg/base:edge
+  build-x86_64:
+    machine:
+      image: ubuntu-2004:202101-01
+      docker_layer_caching: true
     steps:
+      - run:
+          name: Check OS
+          command: uname -a
+
       - checkout
       - run:
-         name: Update OS
-         command: |
-          sudo apt-get update
-          sudo apt-get install -y
-          sudo rm -rf /var/lib/apt/lists/*
-
-      - run:
-          name: Install CMake&Ninja
+          name: Build in docker
           command: |
-            sudo apt-get update
-            sudo apt-get install -y cmake ninja-build
-
-      - run:
-          name: Check versions
-          command: |
-            g++ --version
-            cmake --version
-
-      - run:
-          name: Build Classic
-          command: |
-            mkdir build
-            cd build
-            cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF
-            ninja -j1
-            cp -r bin /tmp
+            docker build . -t proxy:v1
+            docker create --name ps proxy:v1
+            mkdir -p build/docker
+            docker cp ps:/usr/local/bin/proxy_server build/docker
 
       - store_artifacts:
-          path: /tmp/bin
+          path: build/docker
 
 workflows:
   build-workflow:
     jobs:
-      - build
+      - build-x86_64
       - build-aarch64
