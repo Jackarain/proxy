@@ -1,27 +1,16 @@
 version: 2.1
 
+orbs:
+  win: circleci/windows@2.4.0
+
+workflows:
+  build-workflow:
+    jobs:
+      - build-x86_64
+      - build-aarch64
+      - build-windows
+
 jobs:
-  build-aarch64:
-    machine:
-      image: ubuntu-2004:202101-01
-    resource_class: arm.medium
-    steps:
-      - run:
-          name: Check OS
-          command: uname -a
-
-      - checkout
-      - run:
-          name: Build in docker
-          command: |
-            docker build . -t proxy:v1
-            docker create --name ps proxy:v1
-            mkdir -p build/docker
-            docker cp ps:/usr/local/bin/proxy_server build/docker
-
-      - store_artifacts:
-          path: build/docker
-
   build-x86_64:
     machine:
       image: ubuntu-2004:202101-01
@@ -43,8 +32,42 @@ jobs:
       - store_artifacts:
           path: build/docker
 
-workflows:
-  build-workflow:
-    jobs:
-      - build-x86_64
-      - build-aarch64
+  build-aarch64:
+    machine:
+      image: ubuntu-2004:202101-01
+    resource_class: arm.medium
+    steps:
+      - run:
+          name: Check OS
+          command: uname -a
+
+      - checkout
+      - run:
+          name: Build in docker
+          command: |
+            docker build . -t proxy:v1
+            docker create --name ps proxy:v1
+            mkdir -p build/docker
+            docker cp ps:/usr/local/bin/proxy_server build/docker
+
+      - store_artifacts:
+          path: build/docker
+
+  build-windows:
+    executor:
+      name: win/default
+      shell: powershell.exe
+    steps:
+
+      - checkout
+      - run:
+          name: Install cmake
+          command: choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
+      - run:
+          name: Build on windows
+          command: |
+            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF
+            cmake --build build --config Release
+
+      - store_artifacts:
+          path: build/bin/release/proxy_server.exe
