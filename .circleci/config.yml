@@ -10,32 +10,15 @@ jobs:
 
       - checkout
       - run:
-         name: Update OS
-         command: |
-          curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-          curl https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-16 main"
-          sudo apt-get update
-          sudo apt-get install -y cmake ninja-build clang-16
-          sudo rm -rf /var/lib/apt/lists/*
-
-      - run:
-          name: Check versions
-          command: |
-            clang-16 --version
-            cmake --version
-
-      - run:
           name: Build Classic
           command: |
-            mkdir build
-            cd build
-            CXX=clang++-16 CC=clang-16 cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF
-            ninja -j1
-            cp -r bin /tmp
+            docker build . -t proxy:v1
+            docker create --name ps proxy:v1
+            mkdir -p build/docker
+            docker cp ps:/usr/local/bin/proxy_server build/docker
 
       - store_artifacts:
-          path: /tmp/bin
+          path: build/docker
 
   build:
     docker:
