@@ -3339,6 +3339,133 @@ R"x*x(<html>
 		}
 
 	private:
+		inline net::awaitable<void> socket_detect(tcp_socket socket, size_t connection_id)
+		{
+			auto self = shared_from_this();
+			auto error = boost::system::error_code{};
+
+			// 等待读取事件.
+			co_await socket.async_wait(
+				tcp_socket::wait_read, net_awaitable[error]);
+			if (error)
+			{
+				XLOG_WARN  << "connection id: "
+					<< connection_id
+					<< ", socket.async_wait error: "
+					<< error.message();
+				co_return;
+			}
+
+			// 检查协议.
+			auto fd = socket.native_handle();
+			uint8_t detect[5] = { 0 };
+
+#if defined(WIN32) || defined(__APPLE__)
+			auto ret = recv(fd, (char*)detect, sizeof(detect),
+				MSG_PEEK);
+#else
+			auto ret = recv(fd, (void*)detect, sizeof(detect),
+				MSG_PEEK | MSG_NOSIGNAL | MSG_DONTWAIT);
+#endif
+			if (ret <= 0)
+			{
+				XLOG_WARN << "connection id: "
+					<< connection_id
+					<< ", peek message return: "
+					<< ret;
+				co_return;
+			}
+
+			// plain socks4/5 protocol.
+			if (detect[0] == 0x05 || detect[0] == 0x04)
+			{
+				if (m_option.disable_socks_)
+				{
+					XLOG_DBG << "connection id: "
+						<< connection_id
+						<< ", socks protocol disabled";
+					co_return;
+				}
+
+				XLOG_DBG << "connection id: "
+					<< connection_id
+					<< ", socks4/5 protocol";
+
+				auto new_session =
+					std::make_shared<proxy_session>(
+						instantiate_proxy_stream(std::move(socket)),
+							connection_id, self);
+
+				m_clients[connection_id] = new_session;
+
+				new_session->start();
+			}
+			else if (detect[0] == 0x16) // http/socks proxy with ssl crypto protocol.
+			{
+				XLOG_DBG << "connection id: "
+					<< connection_id
+					<< ", socks/https protocol";
+
+				// instantiate socks stream with ssl context.
+				auto ssl_socks_stream = instantiate_proxy_stream(
+					std::move(socket), m_ssl_context);
+
+				// get origin ssl stream type.
+				ssl_stream& ssl_socket =
+					boost::variant2::get<ssl_stream>(ssl_socks_stream);
+
+				// do async ssl handshake.
+				co_await ssl_socket.async_handshake(
+					net::ssl::stream_base::server,
+					net_awaitable[error]);
+				if (error)
+				{
+					XLOG_DBG << "connection id: "
+						<< connection_id
+						<< ", ssl protocol handshake error: "
+						<< error.message();
+					co_return;
+				}
+
+				// make socks session shared ptr.
+				auto new_session =
+					std::make_shared<proxy_session>(
+						std::move(ssl_socks_stream), connection_id, self);
+				m_clients[connection_id] = new_session;
+
+				new_session->start();
+			}								// plain http protocol.
+			else if (detect[0] == 0x47 ||	// 'G'
+				detect[0] == 0x50 ||		// 'P'
+				detect[0] == 0x43)			// 'C'
+			{
+				if (m_option.disable_http_)
+				{
+					XLOG_DBG << "connection id: "
+						<< connection_id
+						<< ", http protocol disabled";
+					co_return;
+				}
+
+				XLOG_DBG << "connection id: "
+					<< connection_id
+					<< ", http protocol";
+
+				auto new_session =
+					std::make_shared<proxy_session>(
+						instantiate_proxy_stream(std::move(socket)),
+							connection_id, self);
+				m_clients[connection_id] = new_session;
+
+				new_session->start();
+			}
+			else {
+				// 进入噪声过滤协议, 同时返回一段噪声给客户端.
+			}
+
+			co_return;
+		}
+
 		inline net::awaitable<void> start_proxy_listen(tcp_acceptor& a)
 		{
 			boost::system::error_code error;
@@ -3374,128 +3501,8 @@ R"x*x(<html>
 					<< ", start client incoming: "
 					<< client;
 
-				// 等待读取事件.
-				co_await socket.async_wait(
-					tcp_socket::wait_read, net_awaitable[error]);
-				if (error)
-				{
-					XLOG_WARN  << "connection id: "
-						<< connection_id
-						<< ", socket.async_wait error: "
-						<< error.message();
-					continue;
-				}
-
-				// 检查协议.
-				auto fd = socket.native_handle();
-				uint8_t detect[5] = { 0 };
-
-#if defined(WIN32) || defined(__APPLE__)
-				auto ret = recv(fd, (char*)detect, sizeof(detect),
-					MSG_PEEK);
-#else
-				auto ret = recv(fd, (void*)detect, sizeof(detect),
-					MSG_PEEK | MSG_NOSIGNAL | MSG_DONTWAIT);
-#endif
-				if (ret <= 0)
-				{
-					XLOG_WARN << "connection id: "
-						<< connection_id
-						<< ", peek message return: "
-						<< ret;
-					continue;
-				}
-
-				static std::set<uint8_t> filter = {
-					0x04, 0x05, 0x16, 0x47, 0x50, 0x43
-				};
-
-				// plain socks4/5 protocol.
-				if (detect[0] == 0x05 || detect[0] == 0x04)
-				{
-					if (m_option.disable_socks_)
-					{
-						XLOG_DBG << "connection id: "
-							<< connection_id
-							<< ", socks protocol disabled";
-						continue;
-					}
-
-					XLOG_DBG << "connection id: "
-						<< connection_id
-						<< ", socks4/5 protocol";
-
-					auto new_session =
-						std::make_shared<proxy_session>(
-							instantiate_proxy_stream(std::move(socket)),
-								connection_id, self);
-
-					m_clients[connection_id] = new_session;
-
-					new_session->start();
-				}
-				else if (detect[0] == 0x16) // http/socks proxy with ssl crypto protocol.
-				{
-					XLOG_DBG << "connection id: "
-						<< connection_id
-						<< ", socks/https protocol";
-
-					// instantiate socks stream with ssl context.
-					auto ssl_socks_stream = instantiate_proxy_stream(
-						std::move(socket), m_ssl_context);
-
-					// get origin ssl stream type.
-					ssl_stream& ssl_socket =
-						boost::variant2::get<ssl_stream>(ssl_socks_stream);
-
-					// do async ssl handshake.
-					co_await ssl_socket.async_handshake(
-						net::ssl::stream_base::server,
-						net_awaitable[error]);
-					if (error)
-					{
-						XLOG_DBG << "connection id: "
-							<< connection_id
-							<< ", ssl protocol handshake error: "
-							<< error.message();
-						continue;
-					}
-
-					// make socks session shared ptr.
-					auto new_session =
-						std::make_shared<proxy_session>(
-							std::move(ssl_socks_stream), connection_id, self);
-					m_clients[connection_id] = new_session;
-
-					new_session->start();
-				}								// plain http protocol.
-				else if (detect[0] == 0x47 ||	// 'G'
-					detect[0] == 0x50 ||		// 'P'
-					detect[0] == 0x43)			// 'C'
-				{
-					if (m_option.disable_http_)
-					{
-						XLOG_DBG << "connection id: "
-							<< connection_id
-							<< ", http protocol disabled";
-						continue;
-					}
-
-					XLOG_DBG << "connection id: "
-						<< connection_id
-						<< ", http protocol";
-
-					auto new_session =
-						std::make_shared<proxy_session>(
-							instantiate_proxy_stream(std::move(socket)),
-								connection_id, self);
-					m_clients[connection_id] = new_session;
-
-					new_session->start();
-				}
-				else {
-					// 进入噪声过滤协议, 同时返回一段噪声给客户端.
-				}
+				net::co_spawn(m_executor,
+					socket_detect(std::move(socket), connection_id), net::detached);
 			}
 
 			XLOG_WARN << "start_proxy_listen exit ...";
