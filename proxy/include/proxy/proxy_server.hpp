@@ -2337,10 +2337,10 @@ R"x*x(<html>
 
 				if (ec)
 				{
-					XLOG_WFMT("{} id: {},"
-						" connect to next host {}:{} error: {}",
-						std::string(scheme),
+					XLOG_WFMT("connection id: {}"
+						", {} connect to next host {}:{} error: {}",
 						m_connection_id,
+						std::string(scheme),
 						target_host,
 						target_port,
 						ec.message());
