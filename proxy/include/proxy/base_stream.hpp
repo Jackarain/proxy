@@ -112,6 +112,22 @@ namespace util {
 				}, *this);
 		}
 
+		bool is_open() const
+		{
+			return boost::variant2::visit([&](auto& t)
+				{
+					if constexpr (std::same_as<tcp_socket,
+						std::decay_t<decltype(t)>>)
+					{
+						return t.is_open();
+					}
+					else
+					{
+						return t.lowest_layer().is_open();
+					}
+				}, *this);
+		}
+
 		void close(boost::system::error_code& ec)
 		{
 			boost::variant2::visit([&](auto& t) mutable
