@@ -1728,6 +1728,12 @@ R"x*x(<html>
 				else
 					req.target(std::string(url.path()) + query);
 
+				req.set(http::field::host, url.host());
+
+				if (req.find(http::field::connection) == req.end() &&
+					req.find(http::field::proxy_connection) != req.end())
+					req.set(http::field::connection, req[http::field::proxy_connection]);
+
 				req.erase(http::field::proxy_authorization);
 				req.erase(http::field::proxy_connection);
 
