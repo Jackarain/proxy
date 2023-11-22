@@ -606,7 +606,7 @@ R"x*x(<html>
 				co_await socks_connect_v4();
 				co_return;
 			}
-			if (socks_version == 'G')
+			if (socks_version == 'G' || socks_version == 'P')
 			{
 				if (m_option.disable_http_)
 				{
@@ -1601,12 +1601,16 @@ R"x*x(<html>
 			boost::system::error_code ec;
 			bool keep_alive = false;
 			std::optional<request_parser> parser;
+			bool first = true;
 
 			while (!m_abort)
 			{
 				parser.emplace();
 				parser->body_limit(1024 * 512); // 512k
-				m_local_buffer.consume(m_local_buffer.size());
+				if (!first)
+					m_local_buffer.consume(m_local_buffer.size());
+				else
+					first = false;
 
 				// 读取 http 请求头.
 				co_await http::async_read(m_local_socket,
@@ -3492,7 +3496,7 @@ R"x*x(<html>
 				static std::atomic_size_t id{ 1 };
 				size_t connection_id = id++;
 
-				auto endp = socket.remote_endpoint();
+				auto endp = socket.remote_endpoint(error);
 				auto client = endp.address().to_string();
 				client += ":" + std::to_string(endp.port());
 
