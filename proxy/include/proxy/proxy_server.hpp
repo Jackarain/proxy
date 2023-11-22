@@ -1609,12 +1609,13 @@ R"x*x(<html>
 				parser->body_limit(1024 * 512); // 512k
 				if (!first)
 					m_local_buffer.consume(m_local_buffer.size());
-				else
-					first = false;
 
 				// 读取 http 请求头.
-				co_await http::async_read(m_local_socket,
-					m_local_buffer, *parser, net_awaitable[ec]);
+				auto header_size = co_await http::async_read(
+					m_local_socket,
+					m_local_buffer,
+					*parser,
+					net_awaitable[ec]);
 				if (ec)
 				{
 					XLOG_ERR << "connection id: "
@@ -1623,10 +1624,19 @@ R"x*x(<html>
 						<< ", http_proxy_get async_read: "
 						<< ec.message();
 
-					co_return false;
+					co_return !first;
 				}
 
 				auto req = parser->release();
+
+				XLOG_DBG << "header size: "
+					<< header_size
+					<< ", local buffer size: "
+					<< m_local_buffer.size()
+					<< ", header: "
+					<< beast::buffers_to_string(m_local_buffer.data())
+					<< ", body size: "
+					<< req.body().size();
 
 				auto mth = std::string(req.method_string());
 				auto target_view = std::string(req.target());
@@ -1655,13 +1665,13 @@ R"x*x(<html>
 							<< ", proxy err: "
 							<< proxy_auth_error_message(auth);
 
-						co_return false;
+						co_return !first;
 					}
 
 					// 如果 doc 目录为空, 则不允许访问目录
 					// 这里直接返回错误页面.
 					if (m_option.doc_directory_.empty())
-						co_return false;
+						co_return !first;
 
 					// 如果不允许目录索引, 检查请求的是否为文件, 如果是具体文件则按文
 					// 件请求处理, 否则返回 403.
@@ -1704,7 +1714,8 @@ R"x*x(<html>
 						host,
 						port,
 						ec.message());
-					co_return false;
+
+					co_return !first;
 				}
 
 				// 处理代理请求头.
@@ -1726,21 +1737,30 @@ R"x*x(<html>
 				req.erase(http::field::proxy_authorization);
 				req.erase(http::field::proxy_connection);
 
-				// 代理请求头.
 				co_await http::async_write(
 					m_remote_socket, req, net_awaitable[ec]);
+				if (ec)
+					co_return !first;
 
-				// 代理连接之间数据转发.
-				co_await(
-					transfer(m_local_socket, m_remote_socket)
-					&&
-					transfer(m_remote_socket, m_local_socket)
-					);
+				m_local_buffer.consume(m_local_buffer.size());
+				string_response resp;
+				beast::flat_buffer buf;
+
+				co_await http::async_read(
+					m_remote_socket, buf, resp, net_awaitable[ec]);
+				if (ec)
+					co_return !first;
+
+				co_await http::async_write(
+					m_local_socket, resp, net_awaitable[ec]);
+				if (ec)
+					co_return !first;
 
 				XLOG_DBG << "connection id: "
 					<< m_connection_id
 					<< ", transfer completed";
 
+				first = false;
 				if (!keep_alive)
 					break;
 			}
