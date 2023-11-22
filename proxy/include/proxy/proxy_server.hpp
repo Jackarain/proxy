@@ -1618,26 +1618,16 @@ R"x*x(<html>
 					net_awaitable[ec]);
 				if (ec)
 				{
-					XLOG_ERR << "connection id: "
+					XLOG_WARN << "connection id: "
 						<< m_connection_id
 						<< (keep_alive ? ", keepalive" : "")
-						<< ", http_proxy_get async_read: "
+						<< ", http_proxy_get request async_read: "
 						<< ec.message();
 
 					co_return !first;
 				}
 
 				auto req = parser->release();
-
-				XLOG_DBG << "header size: "
-					<< header_size
-					<< ", local buffer size: "
-					<< m_local_buffer.size()
-					<< ", header: "
-					<< beast::buffers_to_string(m_local_buffer.data())
-					<< ", body size: "
-					<< req.body().size();
-
 				auto mth = std::string(req.method_string());
 				auto target_view = std::string(req.target());
 				auto pa = std::string(req[http::field::proxy_authorization]);
@@ -1697,25 +1687,29 @@ R"x*x(<html>
 				}
 
 				auto& url = expect_url.value();
-				auto host = url.host();
-				auto port = url.port_number();
 
-				if (port == 0)
-					port = urls::default_port(url.scheme_id());
-
-				// 连接到目标主机.
-				co_await start_connect_host(host,
-					port ? port : 80, ec, true);
-				if (ec)
+				if (!m_remote_socket.is_open())
 				{
-					XLOG_WFMT("connection id: {},"
-						" connect to target {}:{} error: {}",
-						m_connection_id,
-						host,
-						port,
-						ec.message());
+					auto host = url.host();
+					auto port = url.port_number();
 
-					co_return !first;
+					if (port == 0)
+						port = urls::default_port(url.scheme_id());
+
+					// 连接到目标主机.
+					co_await start_connect_host(host,
+						port ? port : 80, ec, true);
+					if (ec)
+					{
+						XLOG_WFMT("connection id: {},"
+							" connect to target {}:{} error: {}",
+							m_connection_id,
+							host,
+							port,
+							ec.message());
+
+						co_return !first;
+					}
 				}
 
 				// 处理代理请求头.
@@ -1740,7 +1734,13 @@ R"x*x(<html>
 				co_await http::async_write(
 					m_remote_socket, req, net_awaitable[ec]);
 				if (ec)
+				{
+					XLOG_WARN << "connection id: "
+						<< m_connection_id
+						<< ", http_proxy_get request async_write: "
+						<< ec.message();
 					co_return !first;
+				}
 
 				m_local_buffer.consume(m_local_buffer.size());
 				string_response resp;
@@ -1749,12 +1749,24 @@ R"x*x(<html>
 				co_await http::async_read(
 					m_remote_socket, buf, resp, net_awaitable[ec]);
 				if (ec)
+				{
+					XLOG_WARN << "connection id: "
+						<< m_connection_id
+						<< ", http_proxy_get response async_read: "
+						<< ec.message();
 					co_return !first;
+				}
 
 				co_await http::async_write(
 					m_local_socket, resp, net_awaitable[ec]);
 				if (ec)
+				{
+					XLOG_WARN << "connection id: "
+						<< m_connection_id
+						<< ", http_proxy_get response async_write: "
+						<< ec.message();
 					co_return !first;
+				}
 
 				XLOG_DBG << "connection id: "
 					<< m_connection_id
