@@ -380,8 +380,7 @@ R"x*x(<html>
 			static std::normal_distribution<> dis(5, 4);
 
 			int num = static_cast<int>(dis(gen));
-			if (num < 0) num = 0;
-			if (num > 10) num = 10;
+			num = std::clamp(num, 0, 10);
 
 			return pos[num];
 		}
