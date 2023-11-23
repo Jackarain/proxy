@@ -253,7 +253,7 @@ int main(int argc, char** argv)
 		("disable_logs", po::value<bool>(&disable_logs)->value_name(""), "Disable logging.")
 		("disable_http", po::value<bool>(&disable_http)->value_name("")->default_value(false), "Disable HTTP protocol.")
 		("disable_socks", po::value<bool>(&disable_socks)->value_name("")->default_value(false), "Disable SOCKS proxy protocol.")
-		("disable_insecure", po::value<bool>(&disable_insecure)->value_name("")->default_value(true), "Disable insecure protocol.")
+		("disable_insecure", po::value<bool>(&disable_insecure)->value_name("")->default_value(false), "Disable insecure protocol.")
 		("noise_injection", po::value<bool>(&noise_injection)->value_name("")->default_value(false), "Enable RLH(random-length headers) protocol.")
 	;
 
