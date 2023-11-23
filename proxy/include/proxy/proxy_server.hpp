@@ -2201,8 +2201,12 @@ R"x*x*x(<html>
 				}
 
 				noise_length = fvalue & cvalue;
-				if (noise_length >= nosie_injection_max_len)
+				if (noise_length >= nosie_injection_max_len ||
+					noise_length < 4)
+				{
+					noise_length = -1;
 					continue;
+				}
 
 				XLOG_DBG << "connection id: "
 					<< m_connection_id
@@ -3613,8 +3617,12 @@ R"x*x*x(<html>
 				}
 
 				noise_length = fvalue & cvalue;
-				if (noise_length >= nosie_injection_max_len)
+				if (noise_length >= nosie_injection_max_len ||
+					noise_length < 4)
+				{
+					noise_length = -1;
 					continue;
+				}
 
 				XLOG_DBG << "connection id: "
 					<< connection_id
