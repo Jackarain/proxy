@@ -3805,6 +3805,7 @@ R"x*x*x(<html>
 			boost::system::error_code error;
 			net::socket_base::keep_alive keep_alive_opt(true);
 			net::ip::tcp::no_delay no_delay_opt(true);
+			net::ip::tcp::no_delay delay_opt(false);
 
 			auto self = shared_from_this();
 
@@ -3821,7 +3822,10 @@ R"x*x*x(<html>
 				}
 
 				socket.set_option(keep_alive_opt, error);
-				socket.set_option(no_delay_opt, error);
+				if (m_option.noise_injection_)
+					socket.set_option(delay_opt, error);
+				else
+					socket.set_option(no_delay_opt, error);
 
 				static std::atomic_size_t id{ 1 };
 				size_t connection_id = id++;
