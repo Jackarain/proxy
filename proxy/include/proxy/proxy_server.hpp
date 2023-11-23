@@ -14,6 +14,7 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <cstdint>
 #include <string>
 #include <array>
 #include <unordered_map>
@@ -106,7 +107,9 @@ namespace proxy {
 	using io_util::read;
 	using io_util::write;
 
-	inline const char* version_string = "nginx/1.20.2";
+
+	inline const char* version_string =
+R"x*x*x(nginx/1.20.2)x*x*x";
 
 	inline const char* fake_400_content_fmt =
 R"x*x*x(HTTP/1.1 400 Bad Request
@@ -199,9 +202,25 @@ R"x*x*x(<html>
 		L"<a href=\"{}\">{}</a>{} {}       {}\r\n";
 
 
+	// udp_session_expired_time 用于指定 udp session 的过期时间, 单位为秒.
 	inline const int udp_session_expired_time = 600;
 
-	// proxy server 参数选项.
+	// nosie_injection_max_len 用于指定噪声注入的最大长度, 单位为字节.
+	inline const int nosie_injection_max_len = 0x0fff;
+
+	// global_known_proto 用于指定全局已知的协议, 用于噪声注入时避免生成已知的协议头.
+	inline std::set<uint8_t> global_known_proto =
+		{
+			0x04, // socks4
+			0x05, // socks5
+			0x47, // 'G'
+			0x50, // 'P'
+			0x43, // 'C'
+			0x16, // ssl
+		};
+
+
+	// proxy server 参数选项, 用于指定 proxy server 的各种参数.
 	struct proxy_server_option
 	{
 		// 授权信息.
@@ -314,6 +333,90 @@ R"x*x*x(<html>
 		bool noise_injection_{ false };
 	};
 
+	inline int start_position(std::mt19937& gen)
+	{
+		const static int pos[] =
+		{ 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24 };
+
+		static std::normal_distribution<> dis(5, 4);
+
+		int num = static_cast<int>(dis(gen));
+		num = std::clamp(num, 0, 10);
+
+		return pos[num];
+	}
+
+	inline std::vector<uint8_t>
+	generate_noise(uint16_t max_len = 0x7FFF, std::set<uint8_t> bfilter = {})
+	{
+		if (max_len <= 4)
+			return {};
+
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_int_distribution<> dis(0, 255);
+
+		std::vector<uint8_t> data;
+
+		uint8_t bhalf = static_cast<uint8_t>(max_len >> CHAR_BIT);
+		uint8_t ehalf = static_cast<uint8_t>(max_len & 0xFF);
+
+		int start_pos = start_position(gen);
+		if (start_pos > max_len)
+			start_pos = (max_len / 2) * 2;
+
+		bool flip = false;
+		for (int i = 0; i < start_pos; i++)
+		{
+			uint8_t c = static_cast<uint8_t>(dis(gen));
+
+			if (flip)
+				c |= bhalf;
+			else
+				c |= ehalf;
+
+			if (i == 0 && !bfilter.empty())
+			{
+				while (bfilter.contains(c))
+				{
+					c = static_cast<uint8_t>(dis(gen));
+					if (flip)
+						c |= bhalf;
+					else
+						c |= ehalf;
+				}
+			}
+
+			flip = !flip;
+
+			data.push_back(c);
+		}
+
+		uint16_t min_len = std::min<uint16_t>(max_len,
+			static_cast<uint16_t>(start_pos));
+
+		if (min_len >= max_len)
+			min_len = max_len - 1;
+
+		auto length = std::uniform_int_distribution<>(min_len, max_len - 1)(gen);
+
+		data[start_pos - 2] = static_cast<uint8_t>(length >> CHAR_BIT);
+		data[start_pos - 1] = static_cast<uint8_t>(length & 0xFF);
+
+		data[start_pos - 4] |= static_cast<uint8_t>(min_len >> CHAR_BIT);
+		data[start_pos - 3] |= static_cast<uint8_t>(min_len & 0xFF);
+
+		uint16_t a = data[start_pos - 3] | (data[start_pos - 4] << CHAR_BIT);
+		uint16_t b = data[start_pos - 1] | (data[start_pos - 2] << CHAR_BIT);
+
+		length = a & b;
+
+		while (data.size() < length)
+			data.push_back(static_cast<uint8_t>(dis(gen)));
+
+		return data;
+	}
+
 	// proxy server 虚基类, 任何 proxy server 的实现, 必须基于这个基类.
 	// 这样 proxy_session 才能通过虚基类指针访问proxy server的具体实
 	// 现以及虚函数方法.
@@ -374,90 +477,6 @@ R"x*x*x(<html>
 			default:
 				return "auth unknown";
 			}
-		}
-
-		inline int start_position(std::mt19937& gen)
-		{
-			const static int pos[] =
-			{ 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24 };
-
-			static std::normal_distribution<> dis(5, 4);
-
-			int num = static_cast<int>(dis(gen));
-			num = std::clamp(num, 0, 10);
-
-			return pos[num];
-		}
-
-		inline std::vector<uint8_t>
-		generate_noise(uint16_t max_len = 0x7FFF, std::set<uint8_t> bfilter = {})
-		{
-			if (max_len <= 4)
-				return {};
-
-			std::random_device rd;
-			std::mt19937 gen(rd());
-			std::uniform_int_distribution<> dis(0, 255);
-
-			std::vector<uint8_t> data;
-
-			uint8_t bhalf = static_cast<uint8_t>(max_len >> CHAR_BIT);
-			uint8_t ehalf = static_cast<uint8_t>(max_len & 0xFF);
-
-			int start_pos = start_position(gen);
-			if (start_pos > max_len)
-				start_pos = (max_len / 2) * 2;
-
-			bool flip = false;
-			for (int i = 0; i < start_pos; i++)
-			{
-				uint8_t c = static_cast<uint8_t>(dis(gen));
-
-				if (flip)
-					c |= bhalf;
-				else
-					c |= ehalf;
-
-				if (i == 0 && !bfilter.empty())
-				{
-					while (bfilter.contains(c))
-					{
-						c = static_cast<uint8_t>(dis(gen));
-						if (flip)
-							c |= bhalf;
-						else
-							c |= ehalf;
-					}
-				}
-
-				flip = !flip;
-
-				data.push_back(c);
-			}
-
-			uint16_t min_len = std::min<uint16_t>(max_len,
-				static_cast<uint16_t>(start_pos));
-
-			if (min_len >= max_len)
-				min_len = max_len - 1;
-
-			auto length = std::uniform_int_distribution<>(min_len, max_len - 1)(gen);
-
-			data[start_pos - 2] = static_cast<uint8_t>(length >> CHAR_BIT);
-			data[start_pos - 1] = static_cast<uint8_t>(length & 0xFF);
-
-			data[start_pos - 4] |= static_cast<uint8_t>(min_len >> CHAR_BIT);
-			data[start_pos - 3] |= static_cast<uint8_t>(min_len & 0xFF);
-
-			uint16_t a = data[start_pos - 3] | (data[start_pos - 4] << CHAR_BIT);
-			uint16_t b = data[start_pos - 1] | (data[start_pos - 2] << CHAR_BIT);
-
-			length = a & b;
-
-			while (data.size() < length)
-				data.push_back(static_cast<uint8_t>(dis(gen)));
-
-			return data;
 		}
 
 	public:
@@ -2092,9 +2111,115 @@ R"x*x*x(<html>
 			}
 		}
 
-		inline net::awaitable<void> start_connect_host(
-			std::string target_host, uint16_t target_port,
-			boost::system::error_code& ec, bool resolve = false)
+		inline net::awaitable<boost::system::error_code>
+		start_noise(tcp_socket& socket)
+		{
+			boost::system::error_code error;
+
+			// 生成 noise 数据, 按 noise_injection_max_len 长度生成.
+			std::vector<uint8_t> noise =
+				generate_noise(nosie_injection_max_len, global_known_proto);
+
+			// 发送 noise 数据.
+			co_await net::async_write(
+				socket,
+				net::buffer(noise),
+				net_awaitable[error]);
+
+			if (error)
+			{
+				XLOG_WARN << "connection id: "
+					<< m_connection_id
+					<< ", write noise error: "
+					<< error.message();
+
+				co_return error;
+			}
+
+			// 读取远程返回的 noise 数据.
+			size_t len = 0;
+			int noise_length = -1;
+			int recv_length = 2;
+			uint8_t bufs[2];
+			uint16_t fvalue = 0;
+			uint16_t cvalue = 0;
+
+			while (true)
+			{
+				if (!m_abort)
+					co_return net::error::operation_aborted;
+
+				fvalue = cvalue;
+
+				co_await net::async_read(
+					socket,
+					net::buffer(bufs, recv_length),
+					net_awaitable[error]);
+
+				if (error)
+				{
+					XLOG_WARN << "connection id: "
+						<< m_connection_id
+						<< ", noise read error: "
+						<< error.message();
+
+					co_return error;
+				}
+
+				cvalue =
+					static_cast<uint16_t>(bufs[1]) |
+					(static_cast<uint16_t>(bufs[0]) << 8);
+
+				len += recv_length;
+				if (len == 1)
+					continue;
+
+				if (len >= nosie_injection_max_len)
+				{
+					XLOG_WARN << "connection id: "
+						<< m_connection_id
+						<< ", noise max length reached";
+
+					co_return error;
+				}
+
+				if (noise_length != -1)
+				{
+					recv_length = noise_length - len;
+					recv_length = std::min(recv_length, 2);
+
+					if (recv_length != 0)
+						continue;
+
+					XLOG_DBG << "connection id: "
+						<< m_connection_id
+						<< ", noise length: "
+						<< noise_length
+						<< ", receive completed";
+
+					break;
+				}
+
+				noise_length = fvalue & cvalue;
+				if (noise_length >= nosie_injection_max_len)
+					continue;
+
+				XLOG_DBG << "connection id: "
+					<< m_connection_id
+					<< ", noise length: "
+					<< noise_length
+					<< ", receive";
+			}
+
+			error = {};
+			co_return error;
+		}
+
+		inline net::awaitable<bool> start_connect_host(
+			std::string target_host,
+			uint16_t target_port,
+			boost::system::error_code& ec,
+			bool resolve = false)
 		{
 			auto executor = co_await net::this_coro::executor;
 
@@ -2141,7 +2266,10 @@ R"x*x*x(<html>
 					proxy_port = m_next_proxy->scheme();
 
 				auto targets = co_await resolver.async_resolve(
-					proxy_host, proxy_port, net_awaitable[ec]);
+					proxy_host,
+					proxy_port,
+					net_awaitable[ec]);
+
 				if (ec)
 				{
 					XLOG_WFMT("connection id: {},"
@@ -2151,7 +2279,7 @@ R"x*x*x(<html>
 						std::string(m_next_proxy->port()),
 						ec.message());
 
-					co_return;
+					co_return false;
 				}
 
 				if (m_option.happyeyeballs_)
@@ -2204,7 +2332,16 @@ R"x*x*x(<html>
 						std::string(m_next_proxy->port()),
 						ec.message());
 
-					co_return;
+					co_return false;
+				}
+
+				// 如果启用了 noise, 则在向上游代理服务器发起 tcp 连接成功后, 发送 noise
+				// 数据以及接收 noise 数据.
+				if (m_option.noise_injection_)
+				{
+					ec = co_await start_noise(remote_socket);
+					if (!ec)
+						co_return false;
 				}
 
 				// 使用ssl加密与下一级代理通信.
@@ -2223,6 +2360,8 @@ R"x*x*x(<html>
 								m_connection_id,
 								m_option.ssl_cert_path_,
 								ec.message());
+
+							co_return false;
 						}
 					}
 				}
@@ -2353,6 +2492,8 @@ R"x*x*x(<html>
 						target_host,
 						target_port,
 						ec.message());
+
+					co_return false;
 				}
 			}
 			else
@@ -2375,7 +2516,7 @@ R"x*x*x(<html>
 							<< ", error: "
 							<< ec.message();
 
-						co_return;
+						co_return false;
 					}
 				}
 				else
@@ -2399,13 +2540,15 @@ R"x*x*x(<html>
 						target_host,
 						target_port,
 						ec.message());
+
+					co_return false;
 				}
 
 				m_remote_socket = instantiate_proxy_stream(
 					std::move(remote_socket));
 			}
 
-			co_return;
+			co_return true;
 		}
 
 		// is_crytpo_stream 判断当前连接是否为加密连接.
@@ -3384,7 +3527,110 @@ R"x*x*x(<html>
 		}
 
 	private:
-		inline net::awaitable<void> socket_detect(tcp_socket socket, size_t connection_id)
+		inline net::awaitable<bool>
+		noise_process(tcp_socket socket, size_t connection_id)
+		{
+			boost::system::error_code error;
+
+			std::vector<uint8_t> noise =
+				generate_noise(nosie_injection_max_len, global_known_proto);
+
+			// 发送 noise 消息.
+			co_await net::async_write(
+				socket,
+				net::buffer(noise),
+				net_awaitable[error]);
+			if (error)
+			{
+				XLOG_WARN << "connection id: "
+					<< connection_id
+					<< ", noise write error: "
+					<< error.message();
+				co_return false;
+			}
+
+			// 接收客户端发过来的 noise 回应消息.
+			size_t len = 0;
+			int noise_length = -1;
+			int recv_length = 2;
+			uint8_t bufs[2];
+			uint16_t fvalue = 0;
+			uint16_t cvalue = 0;
+
+			while (true)
+			{
+				if (!m_abort)
+					co_return false;
+
+				fvalue = cvalue;
+
+				co_await net::async_read(
+					socket,
+					net::buffer(bufs, recv_length),
+					net_awaitable[error]);
+
+				if (error) {
+					XLOG_WARN << "connection id: "
+						<< connection_id
+						<< ", noise read error: "
+						<< error.message();
+
+					co_return false;
+				}
+
+				cvalue =
+					static_cast<uint16_t>(bufs[1]) |
+					(static_cast<uint16_t>(bufs[0]) << 8);
+
+				len += recv_length;
+				if (len == 1)
+					continue;
+
+				if (len >= nosie_injection_max_len)
+				{
+					XLOG_WARN << "connection id: "
+						<< connection_id
+						<< ", noise max length reached";
+
+					co_return false;
+				}
+
+				if (noise_length != -1)
+				{
+					recv_length = noise_length - len;
+					recv_length = std::min(recv_length, 2);
+
+					if (recv_length != 0)
+						continue;
+
+					XLOG_DBG << "connection id: "
+						<< connection_id
+						<< ", noise length: "
+						<< noise_length
+						<< ", receive completed";
+
+					break;
+				}
+
+				noise_length = fvalue & cvalue;
+				if (noise_length >= nosie_injection_max_len)
+					continue;
+
+				XLOG_DBG << "connection id: "
+					<< connection_id
+					<< ", noise length: "
+					<< noise_length
+					<< ", receive";
+			}
+
+			// 在完成 noise 握手后, 重新检测协议.
+			co_await socket_detect(std::move(socket), connection_id, false);
+
+			co_return true;
+		}
+
+		inline net::awaitable<void>
+		socket_detect(tcp_socket socket, size_t connection_id, bool noise = true)
 		{
 			auto self = shared_from_this();
 			auto error = boost::system::error_code{};
@@ -3516,8 +3762,21 @@ R"x*x*x(<html>
 
 				new_session->start();
 			}
-			else {
+			else if (noise && m_option.noise_injection_)
+			{
 				// 进入噪声过滤协议, 同时返回一段噪声给客户端.
+				XLOG_DBG << "connection id: "
+					<< connection_id
+					<< ", noise protocol";
+
+				if (!co_await noise_process(std::move(socket), connection_id))
+					co_return;
+			}
+			else
+			{
+				XLOG_DBG << "connection id: "
+					<< connection_id
+					<< ", unknown protocol";
 			}
 
 			co_return;
@@ -3559,7 +3818,8 @@ R"x*x*x(<html>
 					<< client;
 
 				net::co_spawn(m_executor,
-					socket_detect(std::move(socket), connection_id), net::detached);
+					socket_detect(std::move(socket), connection_id),
+					net::detached);
 			}
 
 			XLOG_WARN << "start_proxy_listen exit ...";
