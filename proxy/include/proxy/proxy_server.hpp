@@ -109,7 +109,7 @@ namespace proxy {
 	inline const char* version_string = "nginx/1.20.2";
 
 	inline const char* fake_400_content_fmt =
-R"xxxxxx(HTTP/1.1 400 Bad Request
+R"x*x*x(HTTP/1.1 400 Bad Request
 Server: nginx/1.20.2
 Date: {}
 Content-Type: text/html
@@ -122,29 +122,29 @@ Connection: close
 <center><h1>400 Bad Request</h1></center>
 <hr><center>nginx/1.20.2</center>
 </body>
-</html>)xxxxxx";
+</html>)x*x*x";
 
 	inline const char* fake_400_content =
-R"xxxxxx(<html>
+R"x*x*x(<html>
 <head><title>400 Bad Request</title></head>
 <body bgcolor="white">
 <center><h1>400 Bad Request</h1></center>
 <hr><center>nginx/1.20.2</center>
 </body>
-</html>)xxxxxx";
+</html>)x*x*x";
 
 	inline const char* fake_403_content =
-R"xxxxxx(<html>
+R"x*x*x(<html>
 <head><title>403 Forbidden</title></head>
 <body>
 <center><h1>403 Forbidden</h1></center>
 <hr><center>nginx/1.20.2</center>
 </body>
 </html>
-)xxxxxx";
+)x*x*x";
 
 	inline const char* fake_404_content_fmt =
-R"xxxxxx(HTTP/1.1 404 Not Found
+R"x*x*x(HTTP/1.1 404 Not Found
 Server: nginx/1.20.2
 Date: {}
 Content-Type: text/html
@@ -157,10 +157,10 @@ Connection: close
 <hr>
 <center>nginx/1.20.2</center>
 </body>
-</html>)xxxxxx";
+</html>)x*x*x";
 
 	inline const char* fake_407_content_fmt =
-R"xxxxxx(HTTP/1.1 407 Proxy Authentication Required
+R"x*x*x(HTTP/1.1 407 Proxy Authentication Required
 Server: nginx/1.20.2
 Date: {}
 Connection: close
@@ -168,27 +168,27 @@ Proxy-Authenticate: Basic realm="proxy"
 Proxy-Connection: close
 Content-Length: 0
 
-)xxxxxx";
+)x*x*x";
 
 	inline const char* fake_416_content =
-R"(<html>
+R"x*x*x(<html>
 <head><title>416 Requested Range Not Satisfiable</title></head>
 <body>
 <center><h1>416 Requested Range Not Satisfiable</h1></center>
 <hr><center>nginx/1.20.2</center>
 </body>
 </html>
-)";
+)x*x*x";
 
 	inline const char* fake_302_content =
-R"x*x(<html>
+R"x*x*x(<html>
 <head><title>301 Moved Permanently</title></head>
 <body>
 <center><h1>301 Moved Permanently</h1></center>
 <hr><center>nginx/1.20.2</center>
 </body>
 </html>
-)x*x";
+)x*x*x";
 
 
 	inline constexpr auto head_fmt =
