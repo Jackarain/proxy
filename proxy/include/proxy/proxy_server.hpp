@@ -1610,7 +1610,7 @@ R"x*x(<html>
 					m_local_buffer.consume(m_local_buffer.size());
 
 				// 读取 http 请求头.
-				auto header_size = co_await http::async_read(
+				co_await http::async_read(
 					m_local_socket,
 					m_local_buffer,
 					*parser,
