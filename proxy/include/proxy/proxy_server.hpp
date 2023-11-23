@@ -2352,7 +2352,7 @@ R"x*x*x(<html>
 				if (m_option.noise_injection_)
 				{
 					ec = co_await start_noise(remote_socket);
-					if (!ec)
+					if (ec)
 						co_return false;
 				}
 
