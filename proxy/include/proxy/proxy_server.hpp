@@ -397,7 +397,7 @@ R"x*x*x(<html>
 
 			std::vector<uint8_t> data;
 
-			uint8_t bhalf = static_cast<uint8_t>(max_len >> 8);
+			uint8_t bhalf = static_cast<uint8_t>(max_len >> CHAR_BIT);
 			uint8_t ehalf = static_cast<uint8_t>(max_len & 0xFF);
 
 			int start_pos = start_position(gen);
@@ -416,7 +416,7 @@ R"x*x*x(<html>
 
 				if (i == 0 && !bfilter.empty())
 				{
-					while (bfilter.find(c) != bfilter.end())
+					while (bfilter.contains(c))
 					{
 						c = static_cast<uint8_t>(dis(gen));
 						if (flip)
@@ -439,10 +439,10 @@ R"x*x*x(<html>
 
 			auto length = std::uniform_int_distribution<>(min_len, max_len - 1)(gen);
 
-			data[start_pos - 2] = static_cast<uint8_t>(length >> 8);
+			data[start_pos - 2] = static_cast<uint8_t>(length >> CHAR_BIT);
 			data[start_pos - 1] = static_cast<uint8_t>(length & 0xFF);
 
-			data[start_pos - 4] |= static_cast<uint8_t>(min_len >> 8);
+			data[start_pos - 4] |= static_cast<uint8_t>(min_len >> CHAR_BIT);
 			data[start_pos - 3] |= static_cast<uint8_t>(min_len & 0xFF);
 
 			uint16_t a = data[start_pos - 3] | (data[start_pos - 4] << CHAR_BIT);
