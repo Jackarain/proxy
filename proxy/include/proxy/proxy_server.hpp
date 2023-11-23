@@ -2146,7 +2146,7 @@ R"x*x*x(<html>
 
 			while (true)
 			{
-				if (!m_abort)
+				if (m_abort)
 					co_return net::error::operation_aborted;
 
 				fvalue = cvalue;
@@ -3559,7 +3559,7 @@ R"x*x*x(<html>
 
 			while (true)
 			{
-				if (!m_abort)
+				if (m_abort)
 					co_return false;
 
 				fvalue = cvalue;
