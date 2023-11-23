@@ -1734,33 +1734,30 @@ R"x*x*x(<html>
 					}
 				}
 
-				if (!m_next_proxy)
+				// 处理代理请求头.
+				std::string query;
+				if (url.query() != "")
 				{
-					// 处理代理请求头.
-					std::string query;
-					if (url.query() != "")
-					{
-						auto q = std::string(url.query());
-						if (q[0] == '?')
-							query = std::string(url.query());
-						else
-							query = "?" + std::string(url.query());
-					}
-
-					if (std::string(url.path()) == "")
-						req.target("/" + query);
+					auto q = std::string(url.query());
+					if (q[0] == '?')
+						query = std::string(url.query());
 					else
-						req.target(std::string(url.path()) + query);
-
-					req.set(http::field::host, url.host());
-
-					if (req.find(http::field::connection) == req.end() &&
-						req.find(http::field::proxy_connection) != req.end())
-						req.set(http::field::connection, req[http::field::proxy_connection]);
-
-					req.erase(http::field::proxy_authorization);
-					req.erase(http::field::proxy_connection);
+						query = "?" + std::string(url.query());
 				}
+
+				if (std::string(url.path()) == "")
+					req.target("/" + query);
+				else
+					req.target(std::string(url.path()) + query);
+
+				req.set(http::field::host, url.host());
+
+				if (req.find(http::field::connection) == req.end() &&
+					req.find(http::field::proxy_connection) != req.end())
+					req.set(http::field::connection, req[http::field::proxy_connection]);
+
+				req.erase(http::field::proxy_authorization);
+				req.erase(http::field::proxy_connection);
 
 				co_await http::async_write(
 					m_remote_socket, req, net_awaitable[ec]);
