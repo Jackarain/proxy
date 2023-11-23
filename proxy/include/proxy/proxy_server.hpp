@@ -300,6 +300,10 @@ R"x*x*x(<html>
 		// 加密的 socks4/5 以及不加密的 socks4/5.
 		bool disable_socks_{ false };
 
+		// 禁止非安全连接, 即禁止 http/socks 明文连接, 只允许 https/socks5
+		// 加密连接.
+		bool disable_insecure_{ false };
+
 		// 启用噪声注入以干扰流量分析.
 		// 此功能必须在 server/client 两端同时启用才有效, 此功能表示在启
 		// 用 ssl 协议时, 在 ssl 握手后双方互相发送一段随机长度的随机数据
@@ -3415,6 +3419,18 @@ R"x*x*x(<html>
 					<< ", peek message return: "
 					<< ret;
 				co_return;
+			}
+
+			// 非安全连接检查.
+			if (m_option.disable_insecure_)
+			{
+				if (detect[0] != 0x16)
+				{
+					XLOG_DBG << "connection id: "
+						<< connection_id
+						<< ", insecure protocol disabled";
+					co_return;
+				}
 			}
 
 			// plain socks4/5 protocol.
