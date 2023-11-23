@@ -2120,6 +2120,11 @@ R"x*x*x(<html>
 			std::vector<uint8_t> noise =
 				generate_noise(nosie_injection_max_len, global_known_proto);
 
+			XLOG_DBG << "connection id: "
+				<< m_connection_id
+				<< ", send noise to upstream, length: "
+				<< noise.size();
+
 			// 发送 noise 数据.
 			co_await net::async_write(
 				socket,
@@ -3538,6 +3543,11 @@ R"x*x*x(<html>
 
 			std::vector<uint8_t> noise =
 				generate_noise(nosie_injection_max_len, global_known_proto);
+
+			XLOG_DBG << "connection id: "
+				<< connection_id
+				<< ", send noise, length: "
+				<< noise.size();
 
 			// 发送 noise 消息.
 			co_await net::async_write(
