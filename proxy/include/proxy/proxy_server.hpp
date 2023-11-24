@@ -3598,7 +3598,7 @@ R"x*x*x(<html>
 			auto self = shared_from_this();
 			auto error = boost::system::error_code{};
 
-			// 等待读取事件.
+			// 等待 read 事件以确保下面 recv 偷看数据时能有数据.
 			co_await socket.async_wait(
 				tcp_socket::wait_read, net_awaitable[error]);
 			if (error)
