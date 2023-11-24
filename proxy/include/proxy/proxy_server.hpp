@@ -15,8 +15,10 @@
 #include <memory>
 #include <optional>
 #include <cstdint>
+#include <span>
 #include <string>
 #include <array>
+#include <vector>
 #include <unordered_map>
 
 #include <boost/asio/io_context.hpp>
@@ -69,6 +71,7 @@
 #include "proxy/socks_io.hpp"
 
 #include "proxy/xxhash.hpp"
+#include "proxy/scramble.hpp"
 
 
 namespace proxy {
@@ -348,93 +351,6 @@ R"x*x*x(<html>
 		// 以启用此选项.
 		bool scramble_{ false };
 	};
-
-
-	//////////////////////////////////////////////////////////////////////////
-
-	inline int start_position(std::mt19937& gen)
-	{
-		const static int pos[] =
-		{ 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24 };
-
-		static std::normal_distribution<> dis(5, 4);
-
-		int num = static_cast<int>(dis(gen));
-		num = std::clamp(num, 0, 10);
-
-		return pos[num];
-	}
-
-	inline std::vector<uint8_t>
-	generate_noise(uint16_t max_len = 0x7FFF, std::set<uint8_t> bfilter = {})
-	{
-		if (max_len <= 4)
-			return {};
-
-		std::random_device rd;
-		std::mt19937 gen(rd());
-		std::uniform_int_distribution<> dis(0, 255);
-
-		std::vector<uint8_t> data;
-
-		uint8_t bhalf = static_cast<uint8_t>(max_len >> CHAR_BIT);
-		uint8_t ehalf = static_cast<uint8_t>(max_len & 0xFF);
-
-		int start_pos = start_position(gen);
-		if (start_pos > max_len)
-			start_pos = (max_len / 2) * 2;
-
-		bool flip = false;
-		for (int i = 0; i < start_pos; i++)
-		{
-			uint8_t c = static_cast<uint8_t>(dis(gen));
-
-			if (flip)
-				c |= bhalf;
-			else
-				c |= ehalf;
-
-			if (i == 0 && !bfilter.empty())
-			{
-				while (bfilter.contains(c))
-				{
-					c = static_cast<uint8_t>(dis(gen));
-					if (flip)
-						c |= bhalf;
-					else
-						c |= ehalf;
-				}
-			}
-
-			flip = !flip;
-
-			data.push_back(c);
-		}
-
-		uint16_t min_len = std::min<uint16_t>(max_len,
-			static_cast<uint16_t>(start_pos));
-
-		if (min_len >= max_len)
-			min_len = max_len - 1;
-
-		auto length = std::uniform_int_distribution<>(min_len, max_len - 1)(gen);
-
-		data[start_pos - 2] = static_cast<uint8_t>(length >> CHAR_BIT);
-		data[start_pos - 1] = static_cast<uint8_t>(length & 0xFF);
-
-		data[start_pos - 4] |= static_cast<uint8_t>(min_len >> CHAR_BIT);
-		data[start_pos - 3] |= static_cast<uint8_t>(min_len & 0xFF);
-
-		uint16_t a = data[start_pos - 3] | (data[start_pos - 4] << CHAR_BIT);
-		uint16_t b = data[start_pos - 1] | (data[start_pos - 2] << CHAR_BIT);
-
-		length = a & b;
-
-		while (data.size() < length)
-			data.push_back(static_cast<uint8_t>(dis(gen)));
-
-		return data;
-	}
 
 
 	//////////////////////////////////////////////////////////////////////////
