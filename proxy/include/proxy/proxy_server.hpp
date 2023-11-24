@@ -68,6 +68,8 @@
 #include "proxy/http_proxy_client.hpp"
 #include "proxy/socks_io.hpp"
 
+#include "proxy/xxhash.hpp"
+
 
 namespace proxy {
 

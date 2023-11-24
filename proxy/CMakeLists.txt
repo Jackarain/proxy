@@ -35,7 +35,7 @@ target_include_directories(libproxy
 )
 
 target_compile_definitions(libproxy
-	PRIVATE
+	PUBLIC
 	-DXXH_INLINE_ALL
 )
 
