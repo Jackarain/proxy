@@ -34,6 +34,11 @@ target_include_directories(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/
 )
 
+target_compile_definitions(libproxy
+	PRIVATE
+	-DXXH_INLINE_ALL
+)
+
 target_link_libraries(libproxy
 	Boost::asio
 	Boost::beast
