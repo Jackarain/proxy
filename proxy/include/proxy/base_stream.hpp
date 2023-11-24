@@ -33,6 +33,9 @@ namespace util {
 	template<typename... T>
 	class base_stream : public boost::variant2::variant<T...>
 	{
+		base_stream(const base_stream&) = delete;
+		base_stream& operator=(base_stream const&) = delete;
+
 	public:
 		template <typename S>
 		explicit base_stream(S device)
@@ -42,9 +45,6 @@ namespace util {
 				, "must be move constructible");
 		}
 		~base_stream() = default;
-
-		base_stream(const base_stream&) = delete;
-		base_stream& operator=(base_stream const&) = delete;
 
 		base_stream& operator=(base_stream&&) = default;
 		base_stream(base_stream&&) = default;
