@@ -12,6 +12,8 @@
 #define INCLUDE__2023_11_24__SCRAMBLE_HPP
 
 #include <random>
+#include <cstdint>
+#include <sstream>
 #include <vector>
 #include <set>
 #include <span>
@@ -20,91 +22,56 @@
 #include <boost/assert.hpp>
 
 #include "proxy/xxhash.hpp"
+#include "proxy/logging.hpp"
 
 namespace proxy {
-
-	inline int start_position(std::mt19937& gen)
-	{
-		const static int pos[] =
-		{ 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24 };
-
-		static std::normal_distribution<> dis(5, 4);
-
-		int num = static_cast<int>(dis(gen));
-		num = std::clamp(num, 0, 10);
-
-		return pos[num];
-	}
 
 	inline std::vector<uint8_t>
 	generate_noise(uint16_t max_len = 0x7FFF, std::set<uint8_t> bfilter = {})
 	{
-		if (max_len <= 4)
+		if (max_len < 16)
 			return {};
 
 		std::random_device rd;
 		std::mt19937 gen(rd());
 		std::uniform_int_distribution<> dis(0, 255);
+		std::uniform_int_distribution<> prefix(16, max_len);
 
 		std::vector<uint8_t> data;
 
-		uint8_t bhalf = static_cast<uint8_t>(max_len >> CHAR_BIT);
-		uint8_t ehalf = static_cast<uint8_t>(max_len & 0xFF);
+		uint16_t length = static_cast<uint16_t>(prefix(gen));
 
-		int start_pos = start_position(gen);
-		if (start_pos > max_len)
-			start_pos = (max_len / 2) * 2;
-
-		bool flip = false;
-		for (int i = 0; i < start_pos; i++)
+		for (int i = 0; i < 16; i++)
 		{
-			uint8_t c = static_cast<uint8_t>(dis(gen));
-
-			if (flip)
-				c |= bhalf;
-			else
-				c |= ehalf;
+			// 生成一个随机字节，并将长度信息的最后1位编码到最低位.
+			uint8_t c = (static_cast<uint8_t>(dis(gen)) & 0xFE)| ((length >> i) & 1);
 
 			if (i == 0 && !bfilter.empty())
 			{
 				while (bfilter.contains(c))
-				{
-					c = static_cast<uint8_t>(dis(gen));
-					if (flip)
-						c |= bhalf;
-					else
-						c |= ehalf;
-				}
+					c = (static_cast<uint8_t>(dis(gen)) & 0xFE)| ((length >> i) & 1);
 			}
-
-			flip = !flip;
 
 			data.push_back(c);
 		}
-
-		uint16_t min_len = std::min<uint16_t>(max_len,
-			static_cast<uint16_t>(start_pos));
-
-		if (min_len >= max_len)
-			min_len = max_len - 1;
-
-		auto length = std::uniform_int_distribution<>(min_len, max_len - 1)(gen);
-
-		data[start_pos - 2] = static_cast<uint8_t>(length >> CHAR_BIT);
-		data[start_pos - 1] = static_cast<uint8_t>(length & 0xFF);
-
-		data[start_pos - 4] |= static_cast<uint8_t>(min_len >> CHAR_BIT);
-		data[start_pos - 3] |= static_cast<uint8_t>(min_len & 0xFF);
-
-		uint16_t a = data[start_pos - 3] | (data[start_pos - 4] << CHAR_BIT);
-		uint16_t b = data[start_pos - 1] | (data[start_pos - 2] << CHAR_BIT);
-
-		length = a & b;
 
 		while (data.size() < length)
 			data.push_back(static_cast<uint8_t>(dis(gen)));
 
 		return data;
+	}
+
+	inline int extract_noise_length(const std::vector<uint8_t>& data)
+	{
+		if (data.size() < 16)
+			return -1;
+
+		int length = 0;
+
+		for (int i = 0; i < data.size(); ++i)
+			length |= ((data[i] & 1) << i);
+
+		return length;
 	}
 
 	inline std::vector<uint8_t> compute_key(std::span<uint8_t> data)
@@ -154,13 +121,34 @@ namespace proxy {
 		scramble_stream& operator=(const scramble_stream&) = delete;
 
 	public:
-		explicit scramble_stream(std::span<uint8_t> data)
-			: m_key(compute_key(data))
-		{}
-
+		scramble_stream() = default;
 		~scramble_stream() = default;
 
+		scramble_stream(scramble_stream&& other)
+			: m_key(std::move(other.m_key))
+			, m_pos(other.m_pos)
+		{
+			other.m_pos = 0;
+			other.m_key.clear();
+		}
+
+		scramble_stream& operator=(scramble_stream&& other)
+		{
+			m_key = std::move(other.m_key);
+			m_pos = other.m_pos;
+
+			other.m_pos = 0;
+			other.m_key.clear();
+
+			return *this;
+		}
+
 	public:
+		inline bool is_valid() const
+		{
+			return !m_key.empty();
+		}
+
 		inline void reset()
 		{
 			m_key.clear();
@@ -171,6 +159,33 @@ namespace proxy {
 		{
 			m_key = compute_key(data);
 			m_pos = 0;
+		}
+
+		inline void set_key(const std::vector<uint8_t>& key)
+		{
+			m_key = key;
+		}
+
+		inline void peek_data(std::span<uint8_t> data)
+		{
+			BOOST_ASSERT(m_key.size() == 16 && "key must be set!");
+
+			if (data.empty() || m_key.empty())
+				return;
+
+			std::vector<uint8_t> tmp = m_key;
+			size_t i = 0;
+			size_t pos = m_pos;
+
+			do {
+				data[i] = data[i] ^ tmp[pos];
+
+				pos = ++pos % tmp.size();
+
+				if (pos == 0)
+					tmp = compute_key(tmp);
+
+			} while (++i < data.size());
 		}
 
 		inline std::vector<uint8_t> scramble(std::span<uint8_t> data)
@@ -191,9 +206,29 @@ namespace proxy {
 				if (m_pos == 0)
 					m_key = compute_key(m_key);
 
-			} while (i < data.size());
+			} while (++i < data.size());
 
 			return result;
+		}
+
+		inline virtual void scramble(uint8_t* data, size_t size)
+		{
+			BOOST_ASSERT(m_key.size() == 16 && "key must be set!");
+
+			if (!data || size == 0 || m_key.empty())
+				return;
+
+			size_t i = 0;
+
+			do {
+				data[i] = data[i] ^ m_key[m_pos];
+
+				m_pos = ++m_pos % m_key.size();
+
+				if (m_pos == 0)
+					m_key = compute_key(m_key);
+
+			} while (++i < size);
 		}
 
 	private:

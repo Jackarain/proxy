@@ -8,7 +8,6 @@
 #ifndef INCLUDE__2023_10_18__BASE_STREAM_HPP
 #define INCLUDE__2023_10_18__BASE_STREAM_HPP
 
-
 #include <type_traits>
 
 #include <boost/asio/ip/tcp.hpp>
@@ -25,10 +24,8 @@ namespace util {
 	namespace net = boost::asio;
 
 	using tcp = net::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
-	using udp = net::ip::udp;               // from <boost/asio/ip/udp.hpp>
 
-	using tcp_acceptor = tcp::acceptor;
-	using tcp_socket = tcp::socket;
+	//////////////////////////////////////////////////////////////////////////
 
 	template<typename... T>
 	class base_stream : public boost::variant2::variant<T...>
@@ -50,11 +47,20 @@ namespace util {
 		base_stream(base_stream&&) = default;
 
 		using executor_type = net::any_io_executor;
+		using lowest_layer_type = tcp::socket;
 
 		executor_type get_executor()
 		{
 			return boost::variant2::visit([&](auto& t) mutable
 				{ return t.get_executor(); }, *this);
+		}
+
+		lowest_layer_type& lowest_layer()
+		{
+			return boost::variant2::visit([&](auto& t) mutable -> tcp::socket&
+				{
+					return static_cast<tcp::socket&>(t.lowest_layer());
+				}, *this);
 		}
 
 		template <typename MutableBufferSequence, typename ReadHandler>
@@ -63,7 +69,7 @@ namespace util {
 			async_read_some(const MutableBufferSequence& buffers,
 				ReadHandler&& handler)
 		{
-			return boost::variant2::visit([&](auto& t) mutable
+			return boost::variant2::visit([&, handler = std::move(handler)](auto& t) mutable
 				{ return t.async_read_some(buffers,
 					std::forward<ReadHandler>(handler)); }, *this);
 		}
@@ -83,15 +89,7 @@ namespace util {
 		{
 			return boost::variant2::visit([&](auto& t) mutable
 				{
-					if constexpr (std::same_as<tcp_socket,
-						std::decay_t<decltype(t)>>)
-					{
-						return t.remote_endpoint();
-					}
-					else
-					{
-						return t.lowest_layer().remote_endpoint();
-					}
+					return t.lowest_layer().remote_endpoint();
 				}, *this);
 		}
 
@@ -100,15 +98,7 @@ namespace util {
 		{
 			boost::variant2::visit([&](auto& t) mutable
 				{
-					if constexpr (std::same_as<tcp_socket,
-						std::decay_t<decltype(t)>>)
-					{
-						t.shutdown(what, ec);
-					}
-					else
-					{
-						t.lowest_layer().shutdown(what, ec);
-					}
+					t.lowest_layer().shutdown(what, ec);
 				}, *this);
 		}
 
@@ -116,15 +106,7 @@ namespace util {
 		{
 			return boost::variant2::visit([&](auto& t)
 				{
-					if constexpr (std::same_as<tcp_socket,
-						std::decay_t<decltype(t)>>)
-					{
-						return t.is_open();
-					}
-					else
-					{
-						return t.lowest_layer().is_open();
-					}
+					return t.lowest_layer().is_open();
 				}, *this);
 		}
 
@@ -132,54 +114,10 @@ namespace util {
 		{
 			boost::variant2::visit([&](auto& t) mutable
 				{
-					if constexpr (std::same_as<tcp_socket,
-						std::decay_t<decltype(t)>>)
-					{
-						t.close(ec);
-					}
-					else
-					{
-						t.lowest_layer().close(ec);
-					}
+					t.lowest_layer().close(ec);
 				}, *this);
 		}
 	};
-
-	using ssl_stream = net::ssl::stream<tcp_socket>;
-	using proxy_stream_type = base_stream<tcp_socket, ssl_stream>;
-
-
-	inline proxy_stream_type instantiate_proxy_stream(
-		proxy_stream_type& s)
-	{
-		return proxy_stream_type(tcp_socket(s.get_executor()));
-	}
-
-	inline proxy_stream_type instantiate_proxy_stream(
-		net::any_io_executor executor)
-	{
-		return proxy_stream_type(tcp_socket(executor));
-	}
-
-	inline proxy_stream_type instantiate_proxy_stream(
-		net::io_context& ioc)
-	{
-		return proxy_stream_type(tcp_socket(ioc));
-	}
-
-	inline proxy_stream_type instantiate_proxy_stream(
-		tcp_socket&& s)
-	{
-		return proxy_stream_type(std::move(s));
-	}
-
-	inline proxy_stream_type instantiate_proxy_stream(
-		tcp_socket&& s, net::ssl::context& sslctx)
-	{
-		return proxy_stream_type(ssl_stream(
-			std::forward<tcp_socket>(s), sslctx));
-	}
-
 }
 
 #endif // INCLUDE__2023_10_18__BASE_STREAM_HPP

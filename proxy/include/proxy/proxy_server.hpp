@@ -11,13 +11,18 @@
 #ifndef INCLUDE__2023_10_18__PROXY_SERVER_HPP
 #define INCLUDE__2023_10_18__PROXY_SERVER_HPP
 
+#include <cstddef>
 #include <filesystem>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <cstdint>
 #include <span>
+#include <cstdint>
+#include <sstream>
 #include <string>
 #include <array>
+#include <type_traits>
 #include <vector>
 #include <unordered_map>
 
@@ -27,6 +32,8 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ip/udp.hpp>
 #include <boost/asio/ssl.hpp>
+#include <boost/asio/buffer.hpp>
+#include <boost/asio/any_io_executor.hpp>
 
 #include <boost/asio/detached.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
@@ -73,6 +80,8 @@
 #include "proxy/xxhash.hpp"
 #include "proxy/scramble.hpp"
 
+#include "proxy/proxy_socket.hpp"
+
 
 namespace proxy {
 
@@ -106,8 +115,6 @@ namespace proxy {
 
 	using response_serializer = http::response_serializer<buffer_body, http::fields>;
 	using string_response_serializer = http::response_serializer<string_body, http::fields>;
-
-	using ssl_stream = net::ssl::stream<tcp_socket>;
 
 	using io_util::read;
 	using io_util::write;
@@ -364,6 +371,7 @@ R"x*x*x(<html>
 		virtual void remove_session(size_t id) = 0;
 		virtual size_t num_session() = 0;
 		virtual const proxy_server_option& option() = 0;
+		virtual net::ssl::context& ssl_context() = 0;
 	};
 
 
@@ -423,14 +431,24 @@ R"x*x*x(<html>
 			}
 		}
 
+		template <typename Stream>
+		tcp::socket& net_tcp_socket(Stream& socket)
+		{
+			return static_cast<tcp::socket&>(socket.lowest_layer());
+		}
+
 	public:
-		proxy_session(proxy_stream_type&& socket,
-			size_t id, std::weak_ptr<proxy_server_base> server)
-			: m_local_socket(std::move(socket))
-			, m_remote_socket(instantiate_proxy_stream(
-				m_local_socket.get_executor()))
-			, m_udp_socket(m_local_socket.get_executor())
-			, m_timer(m_local_socket.get_executor())
+		proxy_session(
+			net::any_io_executor executor,
+			proxy_stream_type&& socket,
+			size_t id,
+			std::weak_ptr<proxy_server_base> server
+		)
+			: m_executor(executor)
+			, m_local_socket(std::move(socket))
+			, m_remote_socket(init_proxy_stream(executor))
+			, m_udp_socket(executor)
+			, m_timer(executor)
 			, m_connection_id(id)
 			, m_proxy_server(server)
 		{
@@ -442,7 +460,10 @@ R"x*x*x(<html>
 			if (!server)
 				return;
 
+			// 从 server 中移除当前 session.
 			server->remove_session(m_connection_id);
+
+			// 打印当前 session 数量.
 			auto num = server->num_session();
 
 			XLOG_DBG << "connection id: "
@@ -458,14 +479,20 @@ R"x*x*x(<html>
 			if (!server)
 				return;
 
+			// 保存 server 的参数选项.
 			m_option = server->option();
 
+			// 如果指定了 proxy_pass_ 参数, 则解析它, 这说明它是一个
+			// 多层代理, 本服务器将会连接到下一个代理服务器.
+			// 所有数据将会通过本服务器转发到由 proxy_pass_ 指定的下一
+			// 个代理服务器.
 			if (!m_option.proxy_pass_.empty())
 			{
 				try
 				{
 					m_next_proxy =
-						std::make_unique<urls::url_view>(m_option.proxy_pass_);
+						std::make_unique<urls::url_view>(
+							m_option.proxy_pass_);
 				}
 				catch (const std::exception& e)
 				{
@@ -475,29 +502,340 @@ R"x*x*x(<html>
 						<< m_option.proxy_pass_
 						<< ", exception: "
 						<< e.what();
+
 					return;
 				}
 			}
 
-			auto self = shared_from_this();
+			// 保持 self 对象指针, 以防止在协程完成后 this 被销毁.
+			auto self = this->shared_from_this();
 
-			net::co_spawn(m_local_socket.get_executor(),
+			// 启动协议侦测协程.
+			net::co_spawn(m_executor,
 				[this, self, server]() -> net::awaitable<void>
 				{
-					co_await start_proxy();
+					co_await proto_detect();
+					co_return;
 				}, net::detached);
 		}
 
 		virtual void close() override
 		{
+			if (m_abort)
+				return;
+
 			m_abort = true;
 
 			boost::system::error_code ignore_ec;
+
+			// 关闭所有 socket.
 			m_local_socket.close(ignore_ec);
 			m_remote_socket.close(ignore_ec);
+
+			m_udp_socket.close(ignore_ec);
+
+			// 取消所有定时器.
+			m_timer.cancel(ignore_ec);
 		}
 
 	private:
+
+		inline net::awaitable<bool>
+		noise_handshake(tcp::socket& socket,
+			std::vector<uint8_t>& inkey, std::vector<uint8_t>& outkey)
+		{
+			boost::system::error_code error;
+
+			// 生成要发送的噪声数据.
+			std::vector<uint8_t> noise =
+				generate_noise(nosie_injection_max_len, global_known_proto);
+
+			// 计算数据发送 key.
+			outkey = compute_key(noise);
+
+			XLOG_DBG << "connection id: "
+				<< m_connection_id
+				<< ", send noise, length: "
+				<< noise.size();
+
+			// 发送 noise 消息.
+			co_await net::async_write(
+				socket,
+				net::buffer(noise),
+				net_awaitable[error]);
+			if (error)
+			{
+				XLOG_WARN << "connection id: "
+					<< m_connection_id
+					<< ", noise write error: "
+					<< error.message();
+
+				co_return false;
+			}
+
+			noise.resize(16);
+
+			// 接收对方发过来的 noise 回应消息.
+			co_await net::async_read(
+				socket,
+				net::buffer(noise, 16),
+				net_awaitable[error]);
+
+			if (error)
+			{
+				XLOG_WARN << "connection id: "
+					<< m_connection_id
+					<< ", noise read header error: "
+					<< error.message();
+
+				co_return false;
+			}
+
+			int noise_length = extract_noise_length(noise);
+
+			// 计算要接收的剩余数据大小.
+			auto remainder = noise_length - 16;
+			if (remainder < 0 || remainder >= std::numeric_limits<uint16_t>::max())
+			{
+				XLOG_DBG << "connection id: "
+					<< m_connection_id
+					<< ", noise length: "
+					<< noise_length
+					<< ", is invalid, noise size: "
+					<< noise.size();
+
+				co_return false;
+			}
+
+			noise.resize(noise_length);
+			co_await net::async_read(
+					socket,
+					net::buffer(noise.data() + 16, remainder),
+					net_awaitable[error]);
+
+			if (error)
+			{
+				XLOG_WARN << "connection id: "
+					<< m_connection_id
+					<< ", noise read body error: "
+					<< error.message();
+
+				co_return false;
+			}
+
+			XLOG_DBG << "connection id: "
+				<< m_connection_id
+				<< ", recv noise, length: "
+				<< noise.size();
+
+			// 计算接收数据key.
+			inkey = compute_key(noise);
+
+			co_return true;
+		}
+
+		// 协议侦测协程.
+		inline net::awaitable<void> proto_detect(bool noise = true)
+		{
+			auto self = shared_from_this();
+			auto error = boost::system::error_code{};
+			auto server = m_proxy_server.lock();
+			if (!server)
+				co_return;
+
+			// 从 m_local_socket 中获取 tcp::socket 对象的引用.
+			auto& socket = boost::variant2::get<tcp_socket>(m_local_socket);
+
+			// 等待 read 事件以确保下面 recv 偷看数据时能有数据.
+			co_await socket.async_wait(
+				net::socket_base::wait_read, net_awaitable[error]);
+			if (error)
+			{
+				XLOG_WARN  << "connection id: "
+					<< m_connection_id
+					<< ", socket.async_wait error: "
+					<< error.message();
+				co_return;
+			}
+
+			auto scramble_setup = [this](auto& sock) mutable
+			{
+				if (!m_option.scramble_)
+					return;
+
+				if (m_inin_key.empty() || m_inout_key.empty())
+					return;
+
+				using Stream = std::decay_t<decltype(sock)>;
+				using ProxySocket = util::proxy_socket<tcp::socket>;
+
+				if constexpr (std::same_as<Stream, tcp::socket>)
+					return;
+
+				if constexpr (std::same_as<Stream, ProxySocket>)
+				{
+					sock.set_scramble_key(m_inout_key);
+					sock.set_unscramble_key(m_inin_key);
+				}
+			};
+
+			// 设置 scramble key.
+			scramble_setup(socket);
+
+			// 检查协议.
+			auto fd = socket.native_handle();
+			uint8_t detect[5] = { 0 };
+
+#if defined(WIN32) || defined(__APPLE__)
+			auto ret = recv(fd, (char*)detect, sizeof(detect),
+				MSG_PEEK);
+#else
+			auto ret = recv(fd, (void*)detect, sizeof(detect),
+				MSG_PEEK | MSG_NOSIGNAL | MSG_DONTWAIT);
+#endif
+			if (ret <= 0)
+			{
+				XLOG_WARN << "connection id: "
+					<< m_connection_id
+					<< ", peek message return: "
+					<< ret;
+				co_return;
+			}
+
+			// scramble_peek 用于解密 peek 数据.
+			auto scramble_peek = [this](auto& sock, std::span<uint8_t> detect) mutable
+			{
+				if (!m_option.scramble_)
+					return;
+
+				if (m_inin_key.empty() || m_inout_key.empty())
+					return;
+
+				using Stream = std::decay_t<decltype(sock)>;
+				using ProxySocket = util::proxy_socket<tcp::socket>;
+
+				if constexpr (std::same_as<Stream, tcp::socket>)
+					return;
+
+				if constexpr (std::same_as<Stream, ProxySocket>)
+				{
+					auto& unscramble = sock.unscramble();
+					unscramble.peek_data(detect);
+				}
+			};
+
+			// 解密 peek 数据, 用于检测协议.
+			scramble_peek(socket, detect);
+
+			// 非安全连接检查.
+			if (m_option.disable_insecure_)
+			{
+				if (detect[0] != 0x16)
+				{
+					XLOG_DBG << "connection id: "
+						<< m_connection_id
+						<< ", insecure protocol disabled";
+					co_return;
+				}
+			}
+
+			// plain socks4/5 protocol.
+			if (detect[0] == 0x05 || detect[0] == 0x04)
+			{
+				if (m_option.disable_socks_)
+				{
+					XLOG_DBG << "connection id: "
+						<< m_connection_id
+						<< ", socks protocol disabled";
+					co_return;
+				}
+
+				XLOG_DBG << "connection id: "
+					<< m_connection_id
+					<< ", plain socks4/5 protocol";
+
+				// 开始启动代理协议.
+				co_await start_proxy();
+			}
+			else if (detect[0] == 0x16) // http/socks proxy with ssl crypto protocol.
+			{
+				XLOG_DBG << "connection id: "
+					<< m_connection_id
+					<< ", ssl protocol";
+
+				auto& srv_ssl_context = server->ssl_context();
+
+				// instantiate socks stream with ssl context.
+				auto ssl_socks_stream = init_proxy_stream(
+					std::move(socket), srv_ssl_context);
+
+				// get origin ssl stream type.
+				ssl_stream& ssl_socket =
+					boost::variant2::get<ssl_stream>(ssl_socks_stream);
+
+				// do async ssl handshake.
+				co_await ssl_socket.async_handshake(
+					net::ssl::stream_base::server,
+					net_awaitable[error]);
+
+				if (error)
+				{
+					XLOG_DBG << "connection id: "
+						<< m_connection_id
+						<< ", ssl protocol handshake error: "
+						<< error.message();
+					co_return;
+				}
+
+				// 使用 ssl_socks_stream 替换 m_local_socket.
+				m_local_socket = std::move(ssl_socks_stream);
+
+				// 开始启动代理协议.
+				co_await start_proxy();
+			}								// plain http protocol.
+			else if (detect[0] == 0x47 ||	// 'G'
+				detect[0] == 0x50 ||		// 'P'
+				detect[0] == 0x43)			// 'C'
+			{
+				if (m_option.disable_http_)
+				{
+					XLOG_DBG << "connection id: "
+						<< m_connection_id
+						<< ", http protocol disabled";
+					co_return;
+				}
+
+				XLOG_DBG << "connection id: "
+					<< m_connection_id
+					<< ", plain http protocol";
+
+				// 开始启动代理协议.
+				co_await start_proxy();
+			}
+			else if (noise && m_option.scramble_)
+			{
+				// 进入噪声过滤协议, 同时返回一段噪声给客户端.
+				XLOG_DBG << "connection id: "
+					<< m_connection_id
+					<< ", noise protocol";
+
+				if (!co_await noise_handshake(
+					net_tcp_socket(socket), m_inin_key, m_inout_key))
+					co_return;
+
+				// 在完成 noise 握手后, 重新检测协议.
+				co_await proto_detect(false);
+			}
+			else
+			{
+				XLOG_DBG << "connection id: "
+					<< m_connection_id
+					<< ", unknown protocol";
+			}
+
+			co_return;
+		}
+
 		inline net::awaitable<void> start_proxy()
 		{
 			// read
@@ -2041,7 +2379,7 @@ R"x*x*x(<html>
 						co_await net::async_write(to,
 							net::buffer(data, bytes), net_awaitable[ec]);
 
-					to.shutdown(tcp_socket::shutdown_send, ec);
+					to.shutdown(net::socket_base::shutdown_send, ec);
 					co_return;
 				}
 
@@ -2049,123 +2387,10 @@ R"x*x*x(<html>
 					net::buffer(data, bytes), net_awaitable[ec]);
 				if (ec || m_abort)
 				{
-					from.shutdown(tcp_socket::shutdown_receive, ec);
+					from.shutdown(net::socket_base::shutdown_receive, ec);
 					co_return;
 				}
 			}
-		}
-
-		inline net::awaitable<boost::system::error_code>
-		start_noise(tcp_socket& socket)
-		{
-			boost::system::error_code error;
-
-			// 生成 noise 数据, 按 noise_injection_max_len 长度生成.
-			std::vector<uint8_t> noise =
-				generate_noise(nosie_injection_max_len, global_known_proto);
-
-			XLOG_DBG << "connection id: "
-				<< m_connection_id
-				<< ", send noise to upstream, length: "
-				<< noise.size();
-
-			// 发送 noise 数据.
-			co_await net::async_write(
-				socket,
-				net::buffer(noise),
-				net_awaitable[error]);
-
-			if (error)
-			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
-					<< ", write noise error: "
-					<< error.message();
-
-				co_return error;
-			}
-
-			// 读取远程返回的 noise 数据.
-			size_t len = 0;
-			int noise_length = -1;
-			int recv_length = 2;
-			uint8_t bufs[2];
-			uint16_t fvalue = 0;
-			uint16_t cvalue = 0;
-
-			while (true)
-			{
-				if (m_abort)
-					co_return net::error::operation_aborted;
-
-				fvalue = cvalue;
-
-				co_await net::async_read(
-					socket,
-					net::buffer(bufs, recv_length),
-					net_awaitable[error]);
-
-				if (error)
-				{
-					XLOG_WARN << "connection id: "
-						<< m_connection_id
-						<< ", noise read error: "
-						<< error.message();
-
-					co_return error;
-				}
-
-				cvalue =
-					static_cast<uint16_t>(bufs[1]) |
-					(static_cast<uint16_t>(bufs[0]) << 8);
-
-				len += recv_length;
-				if (len == 1)
-					continue;
-
-				if (len >= nosie_injection_max_len)
-				{
-					XLOG_WARN << "connection id: "
-						<< m_connection_id
-						<< ", noise max length reached";
-
-					co_return error;
-				}
-
-				if (noise_length != -1)
-				{
-					recv_length = noise_length - len;
-					recv_length = std::min(recv_length, 2);
-
-					if (recv_length != 0)
-						continue;
-
-					XLOG_DBG << "connection id: "
-						<< m_connection_id
-						<< ", noise length: "
-						<< noise_length
-						<< ", receive completed";
-
-					break;
-				}
-
-				noise_length = fvalue & cvalue;
-				if (noise_length >= nosie_injection_max_len ||
-					noise_length < 4)
-				{
-					noise_length = -1;
-					continue;
-				}
-
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
-					<< ", noise length: "
-					<< noise_length
-					<< ", receive";
-			}
-
-			error = {};
-			co_return error;
 		}
 
 		inline net::awaitable<bool> start_connect_host(
@@ -2176,9 +2401,8 @@ R"x*x*x(<html>
 		{
 			auto executor = co_await net::this_coro::executor;
 
-			// 获取构造函数中临时创建的tcp::socket.
-			tcp_socket& remote_socket =
-				boost::variant2::get<tcp_socket>(m_remote_socket);
+			tcp::socket& remote_socket =
+				net_tcp_socket(m_remote_socket);
 
 			auto bind_interface = net::ip::address::from_string(
 				m_option.local_ip_, ec);
@@ -2217,6 +2441,13 @@ R"x*x*x(<html>
 				auto proxy_port = std::string(m_next_proxy->port());
 				if (proxy_port.empty())
 					proxy_port = m_next_proxy->scheme();
+
+				XLOG_DBG << "connection id: "
+					<< m_connection_id
+					<< ", connect to next proxy: "
+					<< proxy_host
+					<< ":"
+					<< proxy_port;
 
 				auto targets = co_await resolver.async_resolve(
 					proxy_host,
@@ -2288,13 +2519,24 @@ R"x*x*x(<html>
 					co_return false;
 				}
 
+				XLOG_DBG << "connection id: "
+					<< m_connection_id
+					<< ", connect to next proxy: "
+					<< proxy_host
+					<< ":"
+					<< proxy_port
+					<< " success";
+
 				// 如果启用了 noise, 则在向上游代理服务器发起 tcp 连接成功后, 发送 noise
 				// 数据以及接收 noise 数据.
 				if (m_option.scramble_)
 				{
-					ec = co_await start_noise(remote_socket);
-					if (ec)
+					if (!co_await noise_handshake(remote_socket, m_outin_key, m_outout_key))
 						co_return false;
+
+					XLOG_DBG << "connection id: "
+						<< m_connection_id
+						<< ", with upstream noise completed";
 				}
 
 				// 使用ssl加密与下一级代理通信.
@@ -2303,7 +2545,7 @@ R"x*x*x(<html>
 					// 设置 ssl cert 证书目录.
 					if (fs::exists(m_option.ssl_cert_path_))
 					{
-						m_ssl_context.add_verify_path(
+						m_ssl_cli_context.add_verify_path(
 							m_option.ssl_cert_path_, ec);
 						if (ec)
 						{
@@ -2331,11 +2573,17 @@ R"x*x*x(<html>
 				{
 					ec = {};
 
+					XLOG_DBG << "connection id: "
+						<< m_connection_id
+						<< ", connect to next proxy: "
+						<< proxy_host
+						<< " instantiate stream";
+
 					if (m_option.proxy_pass_use_ssl_ || scheme == "https")
 					{
-						m_ssl_context.set_verify_mode(net::ssl::verify_peer);
+						m_ssl_cli_context.set_verify_mode(net::ssl::verify_peer);
 						auto cert = default_root_certificates();
-						m_ssl_context.add_certificate_authority(
+						m_ssl_cli_context.add_certificate_authority(
 							net::buffer(cert.data(), cert.size()),
 							ec);
 						if (ec)
@@ -2346,7 +2594,10 @@ R"x*x*x(<html>
 								ec.message());
 						}
 
-						m_ssl_context.set_verify_callback(
+						m_ssl_cli_context.use_tmp_dh(
+							net::buffer(default_dh_param()), ec);
+
+						m_ssl_cli_context.set_verify_callback(
 							net::ssl::rfc2818_verification(proxy_host), ec);
 						if (ec)
 						{
@@ -2356,12 +2607,32 @@ R"x*x*x(<html>
 								ec.message());
 						}
 
-						auto socks_stream = instantiate_proxy_stream(
-							std::move(remote_socket), m_ssl_context);
+						// 生成 ssl socket 对象.
+						auto sock_stream = init_proxy_stream(
+							std::move(remote_socket), m_ssl_cli_context);
 
 						// get origin ssl stream type.
 						ssl_stream& ssl_socket =
-							boost::variant2::get<ssl_stream>(socks_stream);
+							boost::variant2::get<ssl_stream>(sock_stream);
+
+						if (m_option.scramble_)
+						{
+							auto& next_layer = ssl_socket.next_layer();
+
+							using NextLayerType =
+								std::decay_t<decltype(next_layer)>;
+
+							if constexpr (!std::same_as<tcp::socket, NextLayerType>)
+							{
+								next_layer.set_scramble_key(
+									m_outout_key
+								);
+
+								next_layer.set_unscramble_key(
+									m_outin_key
+								);
+							}
+						}
 
 						std::string sni = m_option.ssl_sni_.empty()
 							? proxy_host : m_option.ssl_sni_;
@@ -2375,6 +2646,10 @@ R"x*x*x(<html>
 								m_connection_id,
 								::ERR_get_error());
 						}
+
+						XLOG_DBG << "connection id: "
+							<< m_connection_id
+							<< ", do async ssl handshake...";
 
 						// do async handshake.
 						co_await ssl_socket.async_handshake(
@@ -2392,14 +2667,45 @@ R"x*x*x(<html>
 							m_connection_id,
 							proxy_host);
 
-						co_return socks_stream;
+						co_return sock_stream;
 					}
 
-					co_return instantiate_proxy_stream(
+					auto sock_stream = init_proxy_stream(
 						std::move(remote_socket));
+
+					auto& sock =
+						boost::variant2::get<tcp_socket>(sock_stream);
+
+					if (m_option.scramble_)
+					{
+						using NextLayerType =
+							std::decay_t<decltype(sock)>;
+
+						if constexpr (!std::same_as<tcp::socket, NextLayerType>)
+						{
+							sock.set_scramble_key(
+								m_outout_key
+							);
+
+							sock.set_unscramble_key(
+								m_outin_key
+							);
+						}
+					}
+
+					co_return sock_stream;
 				};
 
 				m_remote_socket = std::move(co_await instantiate_stream());
+
+				XLOG_DBG << "connection id: "
+					<< m_connection_id
+					<< ", connect to next proxy: "
+					<< proxy_host
+					<< ":"
+					<< proxy_port
+					<< " start upstream handshake with "
+					<< std::string(scheme);
 
 				if (scheme.starts_with("socks"))
 				{
@@ -2497,7 +2803,7 @@ R"x*x*x(<html>
 					co_return false;
 				}
 
-				m_remote_socket = instantiate_proxy_stream(
+				m_remote_socket = init_proxy_stream(
 					std::move(remote_socket));
 			}
 
@@ -3268,6 +3574,7 @@ R"x*x*x(<html>
 		}
 
 	private:
+		net::any_io_executor m_executor;
 		proxy_stream_type m_local_socket;
 		proxy_stream_type m_remote_socket;
 		udp::socket m_udp_socket;
@@ -3276,10 +3583,18 @@ R"x*x*x(<html>
 		int m_timeout{ udp_session_expired_time };
 		size_t m_connection_id;
 		net::streambuf m_local_buffer{};
+
+		std::vector<uint8_t> m_inin_key;
+		std::vector<uint8_t> m_inout_key;
+
 		std::weak_ptr<proxy_server_base> m_proxy_server;
 		proxy_server_option m_option;
 		std::unique_ptr<urls::url_view> m_next_proxy;
-		net::ssl::context m_ssl_context{ net::ssl::context::sslv23_client };
+
+		std::vector<uint8_t> m_outin_key;
+		std::vector<uint8_t> m_outout_key;
+
+		net::ssl::context m_ssl_cli_context{ net::ssl::context::sslv23_client };
 		bool m_abort{ false };
 	};
 
@@ -3293,7 +3608,7 @@ R"x*x*x(<html>
 		proxy_server(const proxy_server&) = delete;
 		proxy_server& operator=(const proxy_server&) = delete;
 
-		proxy_server(net::io_context::executor_type executor,
+		proxy_server(net::any_io_executor executor,
 			const tcp::endpoint& endp, proxy_server_option opt)
 			: m_executor(executor)
 			, m_acceptor(executor)
@@ -3351,10 +3666,10 @@ R"x*x*x(<html>
 		}
 
 	public:
-		inline static std::shared_ptr<proxy_server> make(
-			net::io_context::executor_type executor,
+		inline static std::shared_ptr<proxy_server>
+		make(net::any_io_executor executor,
 			const tcp::endpoint& endp,
-			proxy_server_option opt)
+				proxy_server_option opt)
 		{
 			return std::shared_ptr<proxy_server>(new
 				proxy_server(executor, std::cref(endp), opt));
@@ -3364,7 +3679,7 @@ R"x*x*x(<html>
 
 		inline void init_ssl_context()
 		{
-			m_ssl_context.set_options(
+			m_ssl_srv_context.set_options(
 				net::ssl::context::default_workarounds
 				| net::ssl::context::no_sslv2
 				| net::ssl::context::no_sslv3
@@ -3374,13 +3689,13 @@ R"x*x*x(<html>
 			);
 
 			if (m_option.ssl_prefer_server_ciphers_)
-				m_ssl_context.set_options(SSL_OP_CIPHER_SERVER_PREFERENCE);
+				m_ssl_srv_context.set_options(SSL_OP_CIPHER_SERVER_PREFERENCE);
 
 			const std::string ssl_ciphers = "HIGH:!aNULL:!MD5:!3DES";
 			if (m_option.ssl_ciphers_.empty())
 				m_option.ssl_ciphers_ = ssl_ciphers;
 
-			SSL_CTX_set_cipher_list(m_ssl_context.native_handle(),
+			SSL_CTX_set_cipher_list(m_ssl_srv_context.native_handle(),
 				m_option.ssl_ciphers_.c_str());
 
 			if (!m_option.ssl_cert_path_.empty())
@@ -3389,7 +3704,7 @@ R"x*x*x(<html>
 				auto pwd = dir / "ssl_crt.pwd";
 
 				if (fs::exists(pwd))
-					m_ssl_context.set_password_callback(
+					m_ssl_srv_context.set_password_callback(
 						[&pwd]([[maybe_unused]] auto... args) {
 							std::string password;
 							fileop::read(pwd, password);
@@ -3402,18 +3717,18 @@ R"x*x*x(<html>
 				auto dh = dir / "ssl_dh.pem";
 
 				if (fs::exists(cert))
-					m_ssl_context.use_certificate_chain_file(cert.string());
+					m_ssl_srv_context.use_certificate_chain_file(cert.string());
 
 				if (fs::exists(key))
-					m_ssl_context.use_private_key_file(
+					m_ssl_srv_context.use_private_key_file(
 						key.string(), boost::asio::ssl::context::pem);
 
 				if (fs::exists(dh))
-					m_ssl_context.use_tmp_dh_file(dh.string());
+					m_ssl_srv_context.use_tmp_dh_file(dh.string());
 			}
 			else
 			{
-				m_ssl_context.set_password_callback(
+				m_ssl_srv_context.set_password_callback(
 					[&]([[maybe_unused]] auto... args) {
 						const auto& pwd = m_option.ssl_certificate_passwd_;
 						if (!fs::exists(pwd))
@@ -3427,20 +3742,28 @@ R"x*x*x(<html>
 
 				boost::system::error_code ec;
 
-				m_ssl_context.use_certificate_chain_file(
+				m_ssl_srv_context.use_certificate_chain_file(
 					m_option.ssl_certificate_, ec);
-				m_ssl_context.use_private_key_file(
+
+				m_ssl_srv_context.use_private_key_file(
 					m_option.ssl_certificate_key_,
 					net::ssl::context::pem, ec);
-				m_ssl_context.use_tmp_dh_file(
-					m_option.ssl_dhparam_, ec);
+
+				if (fs::exists(m_option.ssl_dhparam_)) {
+					m_ssl_srv_context.use_tmp_dh_file(
+						m_option.ssl_dhparam_, ec);
+				}
+				else {
+					m_ssl_srv_context.use_tmp_dh(
+						net::buffer(default_dh_param()), ec);
+				}
 			}
 		}
 
 	public:
 		inline void start()
 		{
-			// 同时启动32个连接协程, 开始为proxy client提供服务.
+			// 同时启动32个连接协程, 开始为 proxy client 提供服务.
 			for (int i = 0; i < 32; i++)
 			{
 				net::co_spawn(m_executor,
@@ -3480,271 +3803,15 @@ R"x*x*x(<html>
 			return m_option;
 		}
 
+		virtual net::ssl::context& ssl_context() override
+		{
+			return m_ssl_srv_context;
+		}
+
 	private:
-		inline net::awaitable<bool>
-		noise_process(tcp_socket socket, size_t connection_id)
-		{
-			boost::system::error_code error;
-
-			std::vector<uint8_t> noise =
-				generate_noise(nosie_injection_max_len, global_known_proto);
-
-			XLOG_DBG << "connection id: "
-				<< connection_id
-				<< ", send noise, length: "
-				<< noise.size();
-
-			// 发送 noise 消息.
-			co_await net::async_write(
-				socket,
-				net::buffer(noise),
-				net_awaitable[error]);
-			if (error)
-			{
-				XLOG_WARN << "connection id: "
-					<< connection_id
-					<< ", noise write error: "
-					<< error.message();
-				co_return false;
-			}
-
-			// 接收客户端发过来的 noise 回应消息.
-			size_t len = 0;
-			int noise_length = -1;
-			int recv_length = 2;
-			uint8_t bufs[2];
-			uint16_t fvalue = 0;
-			uint16_t cvalue = 0;
-
-			while (true)
-			{
-				if (m_abort)
-					co_return false;
-
-				fvalue = cvalue;
-
-				co_await net::async_read(
-					socket,
-					net::buffer(bufs, recv_length),
-					net_awaitable[error]);
-
-				if (error) {
-					XLOG_WARN << "connection id: "
-						<< connection_id
-						<< ", noise read error: "
-						<< error.message();
-
-					co_return false;
-				}
-
-				cvalue =
-					static_cast<uint16_t>(bufs[1]) |
-					(static_cast<uint16_t>(bufs[0]) << 8);
-
-				len += recv_length;
-				if (len == 1)
-					continue;
-
-				if (len >= nosie_injection_max_len)
-				{
-					XLOG_WARN << "connection id: "
-						<< connection_id
-						<< ", noise max length reached";
-
-					co_return false;
-				}
-
-				if (noise_length != -1)
-				{
-					recv_length = noise_length - len;
-					recv_length = std::min(recv_length, 2);
-
-					if (recv_length != 0)
-						continue;
-
-					XLOG_DBG << "connection id: "
-						<< connection_id
-						<< ", noise length: "
-						<< noise_length
-						<< ", receive completed";
-
-					break;
-				}
-
-				noise_length = fvalue & cvalue;
-				if (noise_length >= nosie_injection_max_len ||
-					noise_length < 4)
-				{
-					noise_length = -1;
-					continue;
-				}
-
-				XLOG_DBG << "connection id: "
-					<< connection_id
-					<< ", noise length: "
-					<< noise_length
-					<< ", receive";
-			}
-
-			// 在完成 noise 握手后, 重新检测协议.
-			co_await socket_detect(std::move(socket), connection_id, false);
-
-			co_return true;
-		}
-
-		inline net::awaitable<void>
-		socket_detect(tcp_socket socket, size_t connection_id, bool noise = true)
-		{
-			auto self = shared_from_this();
-			auto error = boost::system::error_code{};
-
-			// 等待 read 事件以确保下面 recv 偷看数据时能有数据.
-			co_await socket.async_wait(
-				tcp_socket::wait_read, net_awaitable[error]);
-			if (error)
-			{
-				XLOG_WARN  << "connection id: "
-					<< connection_id
-					<< ", socket.async_wait error: "
-					<< error.message();
-				co_return;
-			}
-
-			// 检查协议.
-			auto fd = socket.native_handle();
-			uint8_t detect[5] = { 0 };
-
-#if defined(WIN32) || defined(__APPLE__)
-			auto ret = recv(fd, (char*)detect, sizeof(detect),
-				MSG_PEEK);
-#else
-			auto ret = recv(fd, (void*)detect, sizeof(detect),
-				MSG_PEEK | MSG_NOSIGNAL | MSG_DONTWAIT);
-#endif
-			if (ret <= 0)
-			{
-				XLOG_WARN << "connection id: "
-					<< connection_id
-					<< ", peek message return: "
-					<< ret;
-				co_return;
-			}
-
-			// 非安全连接检查.
-			if (m_option.disable_insecure_)
-			{
-				if (detect[0] != 0x16)
-				{
-					XLOG_DBG << "connection id: "
-						<< connection_id
-						<< ", insecure protocol disabled";
-					co_return;
-				}
-			}
-
-			// plain socks4/5 protocol.
-			if (detect[0] == 0x05 || detect[0] == 0x04)
-			{
-				if (m_option.disable_socks_)
-				{
-					XLOG_DBG << "connection id: "
-						<< connection_id
-						<< ", socks protocol disabled";
-					co_return;
-				}
-
-				XLOG_DBG << "connection id: "
-					<< connection_id
-					<< ", socks4/5 protocol";
-
-				auto new_session =
-					std::make_shared<proxy_session>(
-						instantiate_proxy_stream(std::move(socket)),
-							connection_id, self);
-
-				m_clients[connection_id] = new_session;
-
-				new_session->start();
-			}
-			else if (detect[0] == 0x16) // http/socks proxy with ssl crypto protocol.
-			{
-				XLOG_DBG << "connection id: "
-					<< connection_id
-					<< ", socks/https protocol";
-
-				// instantiate socks stream with ssl context.
-				auto ssl_socks_stream = instantiate_proxy_stream(
-					std::move(socket), m_ssl_context);
-
-				// get origin ssl stream type.
-				ssl_stream& ssl_socket =
-					boost::variant2::get<ssl_stream>(ssl_socks_stream);
-
-				// do async ssl handshake.
-				co_await ssl_socket.async_handshake(
-					net::ssl::stream_base::server,
-					net_awaitable[error]);
-				if (error)
-				{
-					XLOG_DBG << "connection id: "
-						<< connection_id
-						<< ", ssl protocol handshake error: "
-						<< error.message();
-					co_return;
-				}
-
-				// make socks session shared ptr.
-				auto new_session =
-					std::make_shared<proxy_session>(
-						std::move(ssl_socks_stream), connection_id, self);
-				m_clients[connection_id] = new_session;
-
-				new_session->start();
-			}								// plain http protocol.
-			else if (detect[0] == 0x47 ||	// 'G'
-				detect[0] == 0x50 ||		// 'P'
-				detect[0] == 0x43)			// 'C'
-			{
-				if (m_option.disable_http_)
-				{
-					XLOG_DBG << "connection id: "
-						<< connection_id
-						<< ", http protocol disabled";
-					co_return;
-				}
-
-				XLOG_DBG << "connection id: "
-					<< connection_id
-					<< ", http protocol";
-
-				auto new_session =
-					std::make_shared<proxy_session>(
-						instantiate_proxy_stream(std::move(socket)),
-							connection_id, self);
-				m_clients[connection_id] = new_session;
-
-				new_session->start();
-			}
-			else if (noise && m_option.scramble_)
-			{
-				// 进入噪声过滤协议, 同时返回一段噪声给客户端.
-				XLOG_DBG << "connection id: "
-					<< connection_id
-					<< ", noise protocol";
-
-				if (!co_await noise_process(std::move(socket), connection_id))
-					co_return;
-			}
-			else
-			{
-				XLOG_DBG << "connection id: "
-					<< connection_id
-					<< ", unknown protocol";
-			}
-
-			co_return;
-		}
-
+		// start_proxy_listen 启动一个协程, 用于监听 proxy client 的连接.
+		// 当有新的连接到来时, 会创建一个 proxy_session 对象, 并启动 proxy_session
+		// 的对象.
 		inline net::awaitable<void> start_proxy_listen(tcp_acceptor& a)
 		{
 			boost::system::error_code error;
@@ -3758,7 +3825,7 @@ R"x*x*x(<html>
 			{
 				tcp_socket socket(m_executor);
 
-				co_await a.async_accept(socket, net_awaitable[error]);
+				co_await a.async_accept(socket.lowest_layer(), net_awaitable[error]);
 				if (error)
 				{
 					XLOG_ERR << "start_proxy_listen"
@@ -3788,9 +3855,19 @@ R"x*x*x(<html>
 					<< ", start client incoming: "
 					<< client;
 
-				net::co_spawn(m_executor,
-					socket_detect(std::move(socket), connection_id),
-					net::detached);
+				// 创建 proxy_session 对象.
+				auto new_session =
+					std::make_shared<proxy_session>(
+						m_executor,
+							init_proxy_stream(std::move(socket)),
+								connection_id,
+									self);
+
+				// 保存 proxy_session 对象到 m_clients 中.
+				m_clients[connection_id] = new_session;
+
+				// 启动 proxy_session 对象.
+				new_session->start();
 			}
 
 			XLOG_WARN << "start_proxy_listen exit ...";
@@ -3798,13 +3875,13 @@ R"x*x*x(<html>
 		}
 
 	private:
-		net::io_context::executor_type m_executor;
+		net::any_io_executor m_executor;
 		tcp_acceptor m_acceptor;
 		proxy_server_option m_option;
 		using proxy_session_weak_ptr =
 			std::weak_ptr<proxy_session>;
 		std::unordered_map<size_t, proxy_session_weak_ptr> m_clients;
-		net::ssl::context m_ssl_context{ net::ssl::context::sslv23 };
+		net::ssl::context m_ssl_srv_context{ net::ssl::context::sslv23 };
 		bool m_abort{ false };
 	};
 

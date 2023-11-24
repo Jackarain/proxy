@@ -59,10 +59,6 @@ namespace proxy {
 	using http_request = http::request<http::string_body>;
 	using http_response = http::response<http::dynamic_body>;
 
-	using tcp_socket = tcp::socket;
-
-	using ssl_stream = net::ssl::stream<tcp_socket>;
-
 	// Options for the HTTP proxy client
 	struct http_proxy_client_option {
 		std::string target_host;  // Target server host
