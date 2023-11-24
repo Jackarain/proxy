@@ -108,6 +108,8 @@ namespace proxy {
 	using io_util::write;
 
 
+	//////////////////////////////////////////////////////////////////////////
+
 	inline const char* version_string =
 R"x*x*x(nginx/1.20.2)x*x*x";
 
@@ -202,6 +204,8 @@ R"x*x*x(<html>
 		L"<a href=\"{}\">{}</a>{} {}       {}\r\n";
 
 
+	//////////////////////////////////////////////////////////////////////////
+
 	// udp_session_expired_time 用于指定 udp session 的过期时间, 单位为秒.
 	inline const int udp_session_expired_time = 600;
 
@@ -219,6 +223,8 @@ R"x*x*x(<html>
 			0x16, // ssl
 		};
 
+
+	//////////////////////////////////////////////////////////////////////////
 
 	// proxy server 参数选项, 用于指定 proxy server 的各种参数.
 	struct proxy_server_option
@@ -323,15 +329,26 @@ R"x*x*x(<html>
 		// 加密连接.
 		bool disable_insecure_{ false };
 
-		// 启用噪声注入以干扰流量分析.
+		// 启用噪声注入以干扰流量分析, 从而达到数据安全的目的.
 		// 此功能必须在 server/client 两端同时启用才有效, 此功能表示在启
 		// 用 ssl 协议时, 在 ssl 握手后双方互相发送一段随机长度的随机数据
 		// 以干扰流量分析.
-		// 启用后会增加一定的流量消耗以及延迟, 此选项默认不启用, 除非有确定
-		// 证据证明代理流量被分析或干扰, 此时可以启用此选项.
-		// 注意：此选项当前未实现.
-		bool noise_injection_{ false };
+		// 在双方接收到对方的随机数据后, 将对整个随机数据进行 hash 计算, 得
+		// 到的结果将会作为后续数据的加密密钥, 从而达到加密通信的目的.
+		// 加密算法仅仅是简单的异或运算, 但是由于密钥是随机的, 因此即使是
+		// 同样的明文, 也会得到不同的密文, 从而达到加密通信的目的.
+		// 密钥在一轮(密钥长度)使用完后, 将会通过 hash(hash) 重新计算得到
+		// 新的密钥, 用于下一轮的加密通信.
+		// hash 算法采用快速的 xxhash, 但是由于 xxhash 本身的特性. 因此
+		// 密钥长度不能太长, 否则会影响性能, 所在固定密钥长度为 16 字节.
+		// 此功能可以有效的防止流量分析, 但是会增加一定的流量消耗以及延迟,
+		// 此选项默认不启用, 除非有确定证据证明代理流量被分析或干扰, 此时可
+		// 以启用此选项.
+		bool scramble_{ false };
 	};
+
+
+	//////////////////////////////////////////////////////////////////////////
 
 	inline int start_position(std::mt19937& gen)
 	{
@@ -417,6 +434,9 @@ R"x*x*x(<html>
 		return data;
 	}
 
+
+	//////////////////////////////////////////////////////////////////////////
+
 	// proxy server 虚基类, 任何 proxy server 的实现, 必须基于这个基类.
 	// 这样 proxy_session 才能通过虚基类指针访问proxy server的具体实
 	// 现以及虚函数方法.
@@ -428,6 +448,9 @@ R"x*x*x(<html>
 		virtual const proxy_server_option& option() = 0;
 	};
 
+
+	//////////////////////////////////////////////////////////////////////////
+
 	// proxy session 虚基类.
 	class proxy_session_base {
 	public:
@@ -435,6 +458,9 @@ R"x*x*x(<html>
 		virtual void start() = 0;
 		virtual void close() = 0;
 	};
+
+
+	//////////////////////////////////////////////////////////////////////////
 
 	// proxy_session 抽象类, 它被设计为一个模板抽象类, 模板参数Stream
 	// 指定与本地通信的stream对象, 默认使用tcp::socket, 可根据此
@@ -2346,7 +2372,7 @@ R"x*x*x(<html>
 
 				// 如果启用了 noise, 则在向上游代理服务器发起 tcp 连接成功后, 发送 noise
 				// 数据以及接收 noise 数据.
-				if (m_option.noise_injection_)
+				if (m_option.scramble_)
 				{
 					ec = co_await start_noise(remote_socket);
 					if (ec)
@@ -3339,6 +3365,7 @@ R"x*x*x(<html>
 		bool m_abort{ false };
 	};
 
+
 	//////////////////////////////////////////////////////////////////////////
 
 	class proxy_server
@@ -3780,7 +3807,7 @@ R"x*x*x(<html>
 
 				new_session->start();
 			}
-			else if (noise && m_option.noise_injection_)
+			else if (noise && m_option.scramble_)
 			{
 				// 进入噪声过滤协议, 同时返回一段噪声给客户端.
 				XLOG_DBG << "connection id: "
@@ -3822,7 +3849,11 @@ R"x*x*x(<html>
 				}
 
 				socket.set_option(keep_alive_opt, error);
-				if (m_option.noise_injection_)
+
+				// 在启用 scramble 时, 刻意开启 Nagle's algorithm 以尽量保证数据包
+				// 被重组, 尽最大可能避免观察者通过观察 ip 数据包大小的规律来分析 tcp
+				// 数据发送调用, 从而增加噪声加扰的强度.
+				if (m_option.scramble_)
 					socket.set_option(delay_opt, error);
 				else
 					socket.set_option(no_delay_opt, error);

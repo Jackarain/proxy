@@ -57,7 +57,7 @@ std::string log_directory;
 bool disable_http = false;
 bool disable_socks = false;
 bool disable_insecure = true;
-bool noise_injection = false;
+bool scramble = false;
 bool disable_logs;
 bool autoindex = false;
 
@@ -112,7 +112,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.disable_http_ = disable_http;
 	opt.disable_socks_ = disable_socks;
 	opt.disable_insecure_ = disable_insecure;
-	opt.noise_injection_ = noise_injection;
+	opt.scramble_ = scramble;
 	opt.local_ip_ = local_ip;
 
 	opt.reuse_port_ = reuse_port;
@@ -254,7 +254,7 @@ int main(int argc, char** argv)
 		("disable_http", po::value<bool>(&disable_http)->value_name("")->default_value(false), "Disable HTTP protocol.")
 		("disable_socks", po::value<bool>(&disable_socks)->value_name("")->default_value(false), "Disable SOCKS proxy protocol.")
 		("disable_insecure", po::value<bool>(&disable_insecure)->value_name("")->default_value(false), "Disable insecure protocol.")
-		("noise_injection", po::value<bool>(&noise_injection)->value_name("")->default_value(false), "Enable RLH(random-length headers) protocol.")
+		("scramble", po::value<bool>(&scramble)->value_name("")->default_value(false), "Noise-based data security.")
 	;
 
 	// 解析命令行.
