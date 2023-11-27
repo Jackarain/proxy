@@ -37,33 +37,34 @@ using server_ptr = std::shared_ptr<proxy_server>;
 
 //////////////////////////////////////////////////////////////////////////
 
-std::vector<std::string> auth_users;
-std::string proxy_pass;
-bool proxy_pass_ssl = false;
-bool ssl_prefer_server_ciphers = false;
-std::string ssl_certificate_dir;
 
-std::string ssl_certificate;
-std::string ssl_certificate_key;
-std::string ssl_certificate_passwd;
+std::vector<std::string> auth_users;
+std::string doc_dir;
+std::string log_dir;
+std::string local_ip;
+std::string proxy_pass;
+std::string server_listen;
+std::string ssl_cert;
+std::string ssl_cert_dir;
+std::string ssl_cert_key;
+std::string ssl_cert_pwd;
+std::string ssl_ciphers;
 std::string ssl_dhparam;
 std::string ssl_sni;
 
-std::string ssl_ciphers;
-std::string server_listen;
-std::string doc_directory;
-std::string log_directory;
-
-bool disable_http = false;
-bool disable_socks = false;
-bool disable_insecure = true;
-bool scramble = false;
-bool disable_logs;
 bool autoindex = false;
-
-bool reuse_port = false;
+bool disable_http = false;
+bool disable_insecure = true;
+bool disable_logs;
+bool disable_socks = false;
 bool happyeyeballs = true;
-std::string local_ip;
+bool proxy_pass_ssl = false;
+bool reuse_port = false;
+bool scramble = false;
+bool ssl_prefer_server_ciphers = false;
+
+uint16_t noise_length;
+
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -101,11 +102,11 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.proxy_pass_ = proxy_pass;
 	opt.proxy_pass_use_ssl_ = proxy_pass_ssl;
 
-	opt.ssl_cert_path_ = ssl_certificate_dir;
+	opt.ssl_cert_path_ = ssl_cert_dir;
 	opt.ssl_ciphers_ = ssl_ciphers;
-	opt.ssl_certificate_ = ssl_certificate;
-	opt.ssl_certificate_key_ = ssl_certificate_key;
-	opt.ssl_certificate_passwd_ = ssl_certificate_passwd;
+	opt.ssl_certificate_ = ssl_cert;
+	opt.ssl_certificate_key_ = ssl_cert_key;
+	opt.ssl_certificate_passwd_ = ssl_cert_pwd;
 	opt.ssl_dhparam_ = ssl_dhparam;
 	opt.ssl_sni_ = ssl_sni;
 
@@ -113,12 +114,13 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.disable_socks_ = disable_socks;
 	opt.disable_insecure_ = disable_insecure;
 	opt.scramble_ = scramble;
+	opt.noise_length_ = noise_length;
 	opt.local_ip_ = local_ip;
 
 	opt.reuse_port_ = reuse_port;
 	opt.happyeyeballs_ = happyeyeballs;
 
-	opt.doc_directory_ = doc_directory;
+	opt.doc_directory_ = doc_dir;
 	opt.autoindex_ = autoindex;
 
 	server = proxy_server::make(
@@ -236,25 +238,26 @@ int main(int argc, char** argv)
 		("proxy_pass", po::value<std::string>(&proxy_pass)->default_value("")->value_name(""), "Specify next proxy pass (e.g: socks5://user:passwd@ip:port).")
 		("proxy_pass_ssl", po::value<bool>(&proxy_pass_ssl)->default_value(false, "false")->value_name(""), "Enable SSL for the next proxy pass.")
 
-		("ssl_certificate_dir", po::value<std::string>(&ssl_certificate_dir)->value_name("path"), "Directory containing SSL certificates, auto-locates 'ssl_crt.pem/ssl_crt.pwd/ssl_key.pem/ssl_dh.pem'.")
+		("ssl_certificate_dir", po::value<std::string>(&ssl_cert_dir)->value_name("path"), "Directory containing SSL certificates, auto-locates 'ssl_crt.pem/ssl_crt.pwd/ssl_key.pem/ssl_dh.pem'.")
 
-		("ssl_certificate", po::value<std::string>(&ssl_certificate)->value_name("path"), "Path to SSL certificate file.")
-		("ssl_certificate_key", po::value<std::string>(&ssl_certificate_key)->value_name("path"), "Path to SSL certificate secret key file.")
-		("ssl_certificate_passwd", po::value<std::string>(&ssl_certificate_passwd)->value_name("path/string"), "SSL certificate key passphrase.")
+		("ssl_certificate", po::value<std::string>(&ssl_cert)->value_name("path"), "Path to SSL certificate file.")
+		("ssl_certificate_key", po::value<std::string>(&ssl_cert_key)->value_name("path"), "Path to SSL certificate secret key file.")
+		("ssl_certificate_passwd", po::value<std::string>(&ssl_cert_pwd)->value_name("path/string"), "SSL certificate key passphrase.")
 		("ssl_dhparam", po::value<std::string>(&ssl_dhparam)->value_name("path"), "Specifies a file with DH parameters for DHE ciphers.")
 		("ssl_sni", po::value<std::string>(&ssl_sni)->value_name("sni"), "Specifies SNI for multiple SSL certificates on one IP.")
 
 		("ssl_ciphers", po::value<std::string>(&ssl_ciphers)->value_name("ssl_ciphers"), "Specify enabled SSL ciphers")
 		("ssl_prefer_server_ciphers", po::value<bool>(&ssl_prefer_server_ciphers)->default_value(false, "false")->value_name(""), "Prefer server ciphers over client ciphers for SSLv3 and TLS protocols.")
 
-		("http_doc", po::value<std::string>(&doc_directory)->value_name("doc"), "Specify document root directory for HTTP server.")
+		("http_doc", po::value<std::string>(&doc_dir)->value_name("doc"), "Specify document root directory for HTTP server.")
 		("autoindex", po::value<bool>(&autoindex)->default_value(false), "Enable directory listing.")
-		("logs_path", po::value<std::string>(&log_directory)->value_name(""), "Specify directory for log files.")
+		("logs_path", po::value<std::string>(&log_dir)->value_name(""), "Specify directory for log files.")
 		("disable_logs", po::value<bool>(&disable_logs)->value_name(""), "Disable logging.")
 		("disable_http", po::value<bool>(&disable_http)->value_name("")->default_value(false), "Disable HTTP protocol.")
 		("disable_socks", po::value<bool>(&disable_socks)->value_name("")->default_value(false), "Disable SOCKS proxy protocol.")
 		("disable_insecure", po::value<bool>(&disable_insecure)->value_name("")->default_value(false), "Disable insecure protocol.")
 		("scramble", po::value<bool>(&scramble)->value_name("")->default_value(false), "Noise-based data security.")
+		("noise_length", po::value<uint16_t>(&noise_length)->value_name("length")->default_value(0x0fff), "Length of the noise data.")
 	;
 
 	// 解析命令行.
@@ -292,7 +295,7 @@ int main(int argc, char** argv)
 			util::toggle_write_logging(true);
 	}
 
-	init_logging(log_directory);
+	init_logging(log_dir);
 
 	print_args(argc, argv, vm);
 
