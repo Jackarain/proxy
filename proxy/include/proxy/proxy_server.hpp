@@ -222,7 +222,7 @@ R"x*x*x(<html>
 	inline const int udp_session_expired_time = 600;
 
 	// nosie_injection_max_len 用于指定噪声注入的最大长度, 单位为字节.
-	inline const int nosie_injection_max_len = 0x0fff;
+	inline const uint16_t nosie_injection_max_len = 0x0fff;
 
 	// global_known_proto 用于指定全局已知的协议, 用于噪声注入时避免生成已知的协议头.
 	inline std::set<uint8_t> global_known_proto =
@@ -357,6 +357,10 @@ R"x*x*x(<html>
 		// 此选项默认不启用, 除非有确定证据证明代理流量被分析或干扰, 此时可
 		// 以启用此选项.
 		bool scramble_{ false };
+
+		// 设置发送噪声的最大长度.
+		// 最大设置为 64k, 最小设置为 16, 默认为 4096.
+		uint16_t noise_length_{ nosie_injection_max_len };
 	};
 
 
@@ -547,8 +551,14 @@ R"x*x*x(<html>
 			boost::system::error_code error;
 
 			// 生成要发送的噪声数据.
+			uint16_t noise_length = m_option.noise_length_;
+
+			if (noise_length < 16 ||
+				(noise_length > std::numeric_limits<uint16_t>::max() / 2))
+				noise_length = nosie_injection_max_len;
+
 			std::vector<uint8_t> noise =
-				generate_noise(nosie_injection_max_len, global_known_proto);
+				generate_noise(noise_length, global_known_proto);
 
 			// 计算数据发送 key.
 			outkey = compute_key(noise);
@@ -591,10 +601,10 @@ R"x*x*x(<html>
 				co_return false;
 			}
 
-			int noise_length = extract_noise_length(noise);
+			noise_length = extract_noise_length(noise);
 
 			// 计算要接收的剩余数据大小.
-			auto remainder = noise_length - 16;
+			int remainder = static_cast<int>(noise_length) - 16;
 			if (remainder < 0 || remainder >= std::numeric_limits<uint16_t>::max())
 			{
 				XLOG_DBG << "connection id: "
@@ -727,10 +737,26 @@ R"x*x*x(<html>
 			// 解密 peek 数据, 用于检测协议.
 			scramble_peek(socket, detect);
 
+			// 保存第一个字节用于协议类型甄别.
+			const uint8_t proto_byte = detect[0];
+
 			// 非安全连接检查.
 			if (m_option.disable_insecure_)
 			{
-				if (detect[0] != 0x16)
+				bool noise_proto = false;
+
+				// 如果启用了 scramble, 则也认为是安全连接.
+				if (proto_byte != 0x05 &&
+					proto_byte != 0x04 &&
+					proto_byte != 0x47 &&
+					proto_byte != 0x50 &&
+					proto_byte != 0x43 &&
+					m_option.scramble_)
+				{
+					noise_proto = true;
+				}
+
+				if (detect[0] != 0x16 && !noise_proto)
 				{
 					XLOG_DBG << "connection id: "
 						<< m_connection_id
