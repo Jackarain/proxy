@@ -317,12 +317,7 @@ namespace util {
 				}
 
 				// 异步发送数据.
-				self_->next_layer_.async_write_some(buffers,
-					[buffers, handler = std::move(handler)]
-						(auto ec, auto bytes) mutable
-						{
-							handler(ec, bytes);
-						});
+				self_->next_layer_.async_write_some(buffers, std::forward<WriteHandler>(handler));
 			}
 
 		private:
