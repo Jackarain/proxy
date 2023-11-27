@@ -34,7 +34,7 @@ namespace util {
 	using proxy_stream_type = base_stream<tcp_socket, ssl_stream>;
 
 	//////////////////////////////////////////////////////////////////////////
-#if 1
+
 
 	template <typename Stream>
 	class proxy_socket final
@@ -285,8 +285,6 @@ namespace util {
 		proxy::scramble_stream unscramble_;
 	};
 
-
-#endif
 
 	//////////////////////////////////////////////////////////////////////////
 
