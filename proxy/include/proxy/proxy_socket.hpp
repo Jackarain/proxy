@@ -41,6 +41,9 @@ namespace util {
 		proxy_socket(const proxy_socket&) = delete;
 		proxy_socket& operator=(proxy_socket const&) = delete;
 
+		class initiate_async_read_some;
+		class initiate_async_write_some;
+
 	public:
 
 		using next_layer_type = typename std::remove_reference<Stream>::type;
@@ -213,64 +216,21 @@ namespace util {
 		BOOST_ASIO_INITFN_RESULT_TYPE(ReadHandler,
 			void(boost::system::error_code, std::size_t))
 			async_read_some(const MutableBufferSequence& buffers, ReadHandler&& handler)
-			{
-				return net::async_initiate<ReadHandler,
-						void (boost::system::error_code, std::size_t)>(
-							[this] (auto handler, const auto& buffers) mutable
-							{
-								// 读取数据后, 调用 unscramble_ 解密数据.
-								next_layer_.async_read_some(buffers,
-									[this, buffers, handler = std::move(handler)]
-										(auto ec, auto bytes) mutable
-										{
-											if (unscramble_.is_valid()) [[likely]]
-											{
-												net::mutable_buffer buffer =
-													net::detail::buffer_sequence_adapter<
-														net::mutable_buffer,
-														decltype(buffers)
-													>::first(buffers);
-
-												unscramble_.scramble(
-													(uint8_t*)buffer.data(), bytes);
-											}
-
-											handler(ec, bytes);
-										});
-							}, handler, buffers);
-			}
+		{
+			return net::async_initiate<ReadHandler,
+				void (boost::system::error_code, std::size_t)>(
+					initiate_async_read_some(this), handler, buffers);
+		}
 
 		template <typename ConstBufferSequence, typename WriteHandler>
 		BOOST_ASIO_INITFN_RESULT_TYPE(WriteHandler,
 			void(boost::system::error_code, std::size_t))
 			async_write_some(const ConstBufferSequence& buffers, WriteHandler&& handler)
-			{
-				// 发送数据前, 调用 scramble_ 加密数据.
-				if (scramble_.is_valid()) [[likely]]
-				{
-					net::const_buffer buffer =
-						net::detail::buffer_sequence_adapter<
-							net::const_buffer,
-							decltype(buffers)>::first(buffers);
-
-					scramble_.scramble(
-						(uint8_t*)buffer.data(), buffer.size());
-				}
-
-				// 异步发送数据.
-				return net::async_initiate<WriteHandler,
-						void (boost::system::error_code, std::size_t)>(
-							[this] (auto handler, const auto& buffers) mutable
-							{
-								net::async_write(
-									next_layer_, buffers,
-									[this, buffers, handler = std::move(handler)]
-										(auto ec, auto bytes) mutable
-										{
-											handler(ec, bytes);
-										});
-							}, handler, buffers);
-			}
+		{
+			return net::async_initiate<WriteHandler,
+				void (boost::system::error_code, std::size_t)>(
+					initiate_async_write_some(this), handler, buffers);
+		}
 
 		template <typename WaitHandler>
 		BOOST_ASIO_INITFN_RESULT_TYPE(WaitHandler,
@@ -279,6 +239,95 @@ namespace util {
 		{
 			return next_layer_.async_wait(w, std::forward<WaitHandler>(handler));
 		}
+
+	private:
+		class initiate_async_read_some
+		{
+		public:
+			typedef typename proxy_socket::executor_type executor_type;
+
+			explicit initiate_async_read_some(proxy_socket* self)
+				: self_(self)
+			{
+			}
+
+			executor_type get_executor() const noexcept
+			{
+				return self_->get_executor();
+			}
+
+			template <typename ReadHandler, typename MutableBufferSequence>
+			void operator()(BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
+				const MutableBufferSequence& buffers) const
+			{
+				// 读取数据后, 调用 unscramble_ 立即解密数据.
+				self_->next_layer_.async_read_some(buffers,
+					[buffers, self_ = self_, handler = std::move(handler)]
+						(auto ec, auto bytes) mutable
+						{
+							if (self_->unscramble_.is_valid()) [[likely]]
+							{
+								net::mutable_buffer buffer =
+									net::detail::buffer_sequence_adapter<
+										net::mutable_buffer,
+										decltype(buffers)
+									>::first(buffers);
+
+								self_->unscramble_.scramble(
+									(uint8_t*)buffer.data(), bytes);
+							}
+
+							handler(ec, bytes);
+						});
+			}
+
+		private:
+			proxy_socket* self_;
+		};
+
+		class initiate_async_write_some
+		{
+		public:
+			typedef typename proxy_socket::executor_type executor_type;
+
+			explicit initiate_async_write_some(proxy_socket* self)
+				: self_(self)
+			{
+			}
+
+			executor_type get_executor() const noexcept
+			{
+				return self_->get_executor();
+			}
+
+			template <typename WriteHandler, typename ConstBufferSequence>
+			void operator()(BOOST_ASIO_MOVE_ARG(WriteHandler) handler,
+				const ConstBufferSequence& buffers) const
+			{
+				// 发送数据前, 立即调用 scramble_ 加密数据.
+				if (self_->scramble_.is_valid()) [[likely]]
+				{
+					net::const_buffer buffer =
+						net::detail::buffer_sequence_adapter<
+							net::const_buffer,
+							decltype(buffers)>::first(buffers);
+
+					self_->scramble_.scramble(
+						(uint8_t*)buffer.data(), buffer.size());
+				}
+
+				// 异步发送数据.
+				self_->next_layer_.async_write_some(buffers,
+					[buffers, handler = std::move(handler)]
+						(auto ec, auto bytes) mutable
+						{
+							handler(ec, bytes);
+						});
+			}
+
+		private:
+			proxy_socket* self_;
+		};
 
 	private:
 		Stream next_layer_;
