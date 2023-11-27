@@ -15,7 +15,6 @@
 #include <boost/asio/ssl/stream.hpp>
 #include <boost/asio/buffer.hpp>
 
-#include "boost/asio/write.hpp"
 #include "proxy/base_stream.hpp"
 #include "proxy/scramble.hpp"
 
@@ -219,6 +218,7 @@ namespace util {
 						void (boost::system::error_code, std::size_t)>(
 							[this] (auto handler, const auto& buffers) mutable
 							{
+								// 读取数据后, 调用 unscramble_ 解密数据.
 								next_layer_.async_read_some(buffers,
 									[this, buffers, handler = std::move(handler)]
 										(auto ec, auto bytes) mutable
@@ -245,6 +245,7 @@ namespace util {
 			void(boost::system::error_code, std::size_t))
 			async_write_some(const ConstBufferSequence& buffers, WriteHandler&& handler)
 			{
+				// 发送数据前, 调用 scramble_ 加密数据.
 				if (scramble_.is_valid()) [[likely]]
 				{
 					net::const_buffer buffer =
@@ -256,6 +257,7 @@ namespace util {
 						(uint8_t*)buffer.data(), buffer.size());
 				}
 
+				// 异步发送数据.
 				return net::async_initiate<WriteHandler,
 						void (boost::system::error_code, std::size_t)>(
 							[this] (auto handler, const auto& buffers) mutable

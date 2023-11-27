@@ -22,10 +22,13 @@
 #include <boost/assert.hpp>
 
 #include "proxy/xxhash.hpp"
-#include "proxy/logging.hpp"
 
 namespace proxy {
 
+	// 用于制造噪声数据, 具体而言, 就是通过生成随机长度的随机数据, 并将长度信息通过
+	// 编码到随机数据前几个字节的最后一位, 以提高数据的隐匿性.
+	// 分析者即使通过阅读此源码得知数据的编码方法, 也很难将正常数据与通过此方式得到
+	// 的数据快速甄别.
 	inline std::vector<uint8_t>
 	generate_noise(uint16_t max_len = 0x7FFF, std::set<uint8_t> bfilter = {})
 	{
@@ -41,9 +44,9 @@ namespace proxy {
 
 		uint16_t length = static_cast<uint16_t>(prefix(gen));
 
+		// 长度信息为 16 位, 因此只需要将长度信息编码到前 16 个字节的最后一位.
 		for (int i = 0; i < 16; i++)
 		{
-			// 生成一个随机字节，并将长度信息的最后1位编码到最低位.
 			uint8_t c = (static_cast<uint8_t>(dis(gen)) & 0xFE)| ((length >> i) & 1);
 
 			if (i == 0 && !bfilter.empty())
@@ -55,12 +58,14 @@ namespace proxy {
 			data.push_back(c);
 		}
 
+		// 继续制造噪声.
 		while (data.size() < length)
 			data.push_back(static_cast<uint8_t>(dis(gen)));
 
 		return data;
 	}
 
+	// 从噪声数据中恢复噪声数据的长度信息.
 	inline int extract_noise_length(const std::vector<uint8_t>& data)
 	{
 		if (data.size() < 16)
@@ -74,6 +79,7 @@ namespace proxy {
 		return length;
 	}
 
+	// 用于通过计算噪声数据的 xx128hash 得到一个随机的 key.
 	inline std::vector<uint8_t> compute_key(std::span<uint8_t> data)
 	{
 		XXH3_state_t state;
@@ -92,6 +98,7 @@ namespace proxy {
 		return key;
 	}
 
+	// 用于对数据进行混淆, 通过 key 与数据进行异或运算, 以达到混淆数据的目的.
 	inline std::vector<uint8_t> scramble_data(
 		const std::vector<uint8_t>& key, std::span<uint8_t> data)
 	{
@@ -107,6 +114,7 @@ namespace proxy {
 		do {
 			result[i] = data[i] ^ tmp[i % tmp.size()];
 
+			// 每次处理完一个 key 长度的数据, 就重新计算一个新的 key.
 			if (++i % tmp.size() == 0)
 				tmp = compute_key(tmp);
 
@@ -115,6 +123,7 @@ namespace proxy {
 		return result;
 	}
 
+	// 用于对数据进行混淆, 通过 key 与数据进行异或运算, 以达到混淆数据的目的.
 	class scramble_stream
 	{
 		scramble_stream(const scramble_stream&) = delete;
@@ -166,6 +175,7 @@ namespace proxy {
 			m_key = key;
 		}
 
+		// 将数据 data 加解密, 但不改变 scramble_stream 类的状态.
 		inline void peek_data(std::span<uint8_t> data)
 		{
 			BOOST_ASSERT(m_key.size() == 16 && "key must be set!");
