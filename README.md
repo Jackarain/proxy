@@ -11,7 +11,7 @@
                   +--------------+     |      +--------------+
   browser/app --> | proxy server | ---ssl---> | proxy server | --> target server
                   +--------------+     |      +--------------+
-                       local          GFW          remote
+                       local        Firewall       remote
 ```
 
 以及服务端可以使用比 `trojan` 更通用的 `https proxy` 协议服务，本质上 `trojan` 的做法就是利用了 `TLS` 而已但却不兼容标准 `https` 协议而失去了灵活生，这是因为 `https proxy` 在很多环境下可以直接，使用而不需要安装任何东西就可以使用（`trojan` 必须要安装本地端），如 `shell` 中声名 `HTTPS_PROXY` 环境变量指向 `proxy server` 的 `url` 就可以了。
@@ -22,7 +22,7 @@
                       |            +--------------+
   browser/app --> https proxy ---> | proxy server | --> target server
                       |            +--------------+
-    local            GFW               remote
+    local          Firewall             remote
 ```
 
 `proxy server` 同时能接收 `socks`/`http` 代理请求（`http` 代理使用 `CONNECT`），它能将所有功能（`socks`、`http`）可运行在同一端口上，服务端能自动甄别协议的类型，它通过处理请求协议的前几个字节判定为 `socks` 或 `http` 请求。
@@ -67,9 +67,9 @@ docker build . -t proxy:v1
 
 即可自动编译
 
-具体使用参考 `proxy server` 的参数，`proxy server` 它提供了较完整的功能，它可以非常完美的作为 `tun2socks` 后级用于科学上网等事宜，`example` 主要用于编程示例。
+具体使用参考 `proxy server` 的参数，`proxy server` 它提供了较完整的功能，它可以非常完美的作为 `tun2socks` 后级用于全局代理上网等事宜，`example` 主要用于编程示例。
 
-`proxy server` 不仅是一个 `proxy` 服务器，同时还可以做为一个真实的 静态文件 `http` 服务，且支持 `http range`，所以也可以作为 `http` 视频文件服务器，播放器播放 `http` 视频文件时通过 `http range` 进行 `seek`（快进快退），运行效果（浏览器打开）：
+`proxy server` 不仅是一个 `proxy` 服务器，同时还可以做为一个真实的静态文件 `http` 服务，且支持 `http range`，所以也可以作为 `http` 视频文件服务器，播放器播放 `http` 视频文件时通过 `http range` 进行 `seek`（快进快退），运行效果（浏览器打开）：
 
 ![image](https://user-images.githubusercontent.com/378220/211153949-74a84038-f899-4e48-99c7-bd6af6bef82d.png)
 
