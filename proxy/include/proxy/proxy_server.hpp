@@ -3370,7 +3370,10 @@ R"x*x*x(<html>
 				<< ", http file: "
 				<< hctx.target_
 				<< ", size: "
-				<< content_length;
+				<< content_length
+				<< (request.count("Range") ?
+					", range: " + std::string(request["Range"])
+					: std::string());
 
 			auto range = get_ranges(request["Range"]);
 			http::status st = http::status::ok;
@@ -3493,7 +3496,9 @@ R"x*x*x(<html>
 					XLOG_WARN << "connection id: "
 						<< m_connection_id
 						<< ", http async_write: "
-						<< ec.message();
+						<< ec.message()
+						<< ", already write: "
+						<< total;
 					co_return;
 				}
 			} while (!sr.is_done());
