@@ -8,6 +8,7 @@
 #ifndef INCLUDE__2023_11_25__PROXY_SOCKET_HPP
 #define INCLUDE__2023_11_25__PROXY_SOCKET_HPP
 
+
 #include <cstdint>
 #include <type_traits>
 
@@ -49,7 +50,7 @@ namespace util {
 		using next_layer_type = typename std::remove_reference<Stream>::type;
 		using lowest_layer_type = typename next_layer_type::lowest_layer_type;
 		using executor_type = typename next_layer_type::executor_type;
-        using native_handle_type = typename next_layer_type::native_handle_type;
+		using native_handle_type = typename next_layer_type::native_handle_type;
 		using endpoint_type = typename next_layer_type::endpoint_type;
 		using wait_type = typename next_layer_type::wait_type;
 		using protocol_type = typename next_layer_type::protocol_type;

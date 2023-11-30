@@ -8,6 +8,7 @@
 #ifndef INCLUDE__2023_10_18__BASE_STREAM_HPP
 #define INCLUDE__2023_10_18__BASE_STREAM_HPP
 
+
 #include <type_traits>
 
 #include <boost/asio/ip/tcp.hpp>

@@ -11,6 +11,7 @@
 #ifndef INCLUDE__2016_10_14__LOGGING_HPP
 #define INCLUDE__2016_10_14__LOGGING_HPP
 
+
 #include <version>
 #include <codecvt>
 #include <clocale>

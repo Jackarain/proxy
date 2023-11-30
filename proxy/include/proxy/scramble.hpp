@@ -11,6 +11,7 @@
 #ifndef INCLUDE__2023_11_24__SCRAMBLE_HPP
 #define INCLUDE__2023_11_24__SCRAMBLE_HPP
 
+
 #include <random>
 #include <cstdint>
 #include <sstream>
