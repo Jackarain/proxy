@@ -45,6 +45,14 @@
 #  include <sys/utsname.h>
 #endif
 
+#if __has_include("openssl/opensslv.h")
+#  include "openssl/opensslv.h"
+#else
+#  ifndef OPENSSL_VERSION_TEXT
+#    define OPENSSL_VERSION_TEXT "NONE"
+#  endif
+#endif
+
 //////////////////////////////////////////////////////////////////////////
 
 namespace details {
@@ -246,8 +254,9 @@ inline std::string version_info()
 	oss << "Built on " << __DATE__ << " " << __TIME__
 		<< " runs on " << os_name
 		<< ", " << BOOST_COMPILER
-		<< ", STL: " << BOOST_STDLIB
-		<< ", boost " << BOOST_LIB_VERSION;
+		<< ", Boost " << BOOST_LIB_VERSION
+		<< ", SSL: " << OPENSSL_VERSION_TEXT
+		;
 
 	std::cerr << oss.str() << "\n";
 	return oss.str();
