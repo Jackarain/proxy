@@ -256,7 +256,10 @@ if (ENABLE_USE_OPENSSL)
 			endif()
 		endif()
 	endif()
+
+	# 包含 openssl 的头文件和库文件.
 	include_directories(${OPENSSL_INCLUDE_DIR})
+	link_libraries(${OPENSSL_LIBRARIES})
 
 	message(STATUS "Using openssl...")
 endif()
@@ -268,29 +271,34 @@ if (ENABLE_USE_WOLFSSL)
 	set(WOLFSSL_EXAMPLES OFF)
 	set(WOLFSSL_CRYPT_TESTS OFF)
 
+	# 打开 wolfssl 的 asio 支持, 它会自动定义 asio 所用到的 openssl 函数以及相关的宏.
 	set(WOLFSSL_ASIO ON)
+	# OpenSSL_FOUND 设置为 TRUE, 以便在编译 asio 时, 添加 ssl 代码的编译.
 	set(OpenSSL_FOUND TRUE)
 
 	set(BUILD_SHARED_LIBS OFF)
 
+	# 必须定义 BOOST_ASIO_USE_WOLFSSL 以便 asio 使用 wolfssl.
 	add_definitions(-DBOOST_ASIO_USE_WOLFSSL)
 
+	# gcc 编译时 wolfssl 会有一些 stringop-overflow 警告, 这里忽略掉.
 	if (NOT MSVC AND NOT APPLE)
 		if (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
 			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-stringop-overflow")
 		endif()
-	elseif (MSVC)
-#		add_definitions(-DNOMINMAX -DWOLFSSL_LIB)
 	endif()
 
 	add_subdirectory(third_party/wolfssl)
 
-	link_libraries(wolfssl::wolfssl)
+	# WOLFSSL_INCLUDE_DIRS 用于 wolfssl 的头文件包含.
+	set(WOLFSSL_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/wolfssl/wolfssl/)
 
-	set(WOLFSSL_INCLUDE_DIRS
-		${CMAKE_CURRENT_SOURCE_DIR}/third_party/wolfssl/wolfssl/
-	)
+	# WOLFSSL_LIBRARIES 用于 wolfssl 的库文件包含.
+	set(WOLFSSL_LIBRARIES wolfssl::wolfssl)
+
+	# 包含 wolfssl 的头文件和库文件.
 	include_directories(${WOLFSSL_INCLUDE_DIRS})
+	link_libraries(${WOLFSSL_LIBRARIES})
 
 	message(STATUS "Using wolfssl...")
 endif()
@@ -392,7 +400,6 @@ link_libraries(
 
 		fmt
 
-		${OPENSSL_LIBRARIES}
 		${ZLIB_LIBRARIES}
 		${PROXY_LIBRARIES}
 )
