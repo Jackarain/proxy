@@ -66,6 +66,9 @@ option(ENABLE_REUSEPORT				"Build with REUSEPORT support" OFF)
 option(ENABLE_SYSTEM_ZLIB			"Build with system zlib support" OFF)
 option(ENABLE_SYSTEM_OPENSSL		"Build with system openssl support" OFF)
 
+option(ENABLE_USE_WOLFSSL			"Build with wolfssl support" ON)
+option(ENABLE_USE_OPENSSL			"Build with openssl support" OFF)
+
 option(ENABLE_MOLD					"build using mold" OFF)
 option(ENABLE_LLD					"build using lld" OFF)
 
@@ -249,20 +252,49 @@ endif(NOT MSVC)
 
 ################################################################################
 
-if (ENABLE_SYSTEM_OPENSSL)
-	find_package(OpenSSL)
-else()
-	set(OpenSSL_FOUND TRUE)
-	add_subdirectory(third_party/openssl)
-	if (NOT MSVC AND NOT APPLE)
-		if (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
-			set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--exclude-libs,ALL ${CMAKE_SHARED_LINKER_FLAGS}")
-			set(CMAKE_MODULE_LINKER_FLAGS "-Wl,--exclude-libs,ALL ${CMAKE_MODULE_LINKER_FLAGS}")
-			set(CMAKE_EXE_LINKER_FLAGS "-Wl,--exclude-libs,ALL ${CMAKE_EXE_LINKER_FLAGS}")
+if (ENABLE_USE_OPENSSL)
+	if (ENABLE_SYSTEM_OPENSSL)
+		find_package(OpenSSL)
+	else()
+		set(OpenSSL_FOUND TRUE)
+		add_subdirectory(third_party/openssl)
+		if (NOT MSVC AND NOT APPLE)
+			if (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
+				set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--exclude-libs,ALL ${CMAKE_SHARED_LINKER_FLAGS}")
+				set(CMAKE_MODULE_LINKER_FLAGS "-Wl,--exclude-libs,ALL ${CMAKE_MODULE_LINKER_FLAGS}")
+				set(CMAKE_EXE_LINKER_FLAGS "-Wl,--exclude-libs,ALL ${CMAKE_EXE_LINKER_FLAGS}")
+			endif()
 		endif()
 	endif()
+	include_directories(${OPENSSL_INCLUDE_DIR})
+
+	message(STATUS "Using openssl...")
 endif()
-include_directories(${OPENSSL_INCLUDE_DIR})
+
+################################################################################
+
+if (ENABLE_USE_WOLFSSL)
+
+	set(WOLFSSL_EXAMPLES OFF)
+	set(WOLFSSL_CRYPT_TESTS OFF)
+
+	set(WOLFSSL_ASIO ON)
+	set(OpenSSL_FOUND TRUE)
+
+	set(BUILD_SHARED_LIBS OFF)
+
+	add_definitions(-DBOOST_ASIO_USE_WOLFSSL)
+	add_subdirectory(third_party/wolfssl)
+
+	link_libraries(wolfssl::wolfssl)
+
+	set(WOLFSSL_INCLUDE_DIRS
+		${CMAKE_CURRENT_SOURCE_DIR}/third_party/wolfssl/wolfssl/
+	)
+	include_directories(${WOLFSSL_INCLUDE_DIRS})
+
+	message(STATUS "Using wolfssl...")
+endif()
 
 ################################################################################
 
