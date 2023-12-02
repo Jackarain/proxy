@@ -290,7 +290,7 @@ if (ENABLE_USE_WOLFSSL)
 			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-stringop-overflow")
 		endif()
 	elseif (MSVC)
-		add_definitions(-DNOMINMAX)
+		add_definitions(-DNOMINMAX -DWOLFSSL_LIB)
 	endif()
 
 	add_subdirectory(third_party/wolfssl)
