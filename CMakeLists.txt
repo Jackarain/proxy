@@ -289,6 +289,8 @@ if (ENABLE_USE_WOLFSSL)
 		if (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
 			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-stringop-overflow")
 		endif()
+	elseif (MSVC)
+		add_definitions(-DNOMINMAX)
 	endif()
 
 	add_subdirectory(third_party/wolfssl)
