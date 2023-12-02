@@ -102,7 +102,7 @@ if (MSVC)
 	add_definitions(
 		-DWIN32_LEAN_AND_MEAN
 		-D_WIN32_WINNT=0x0601
-		-DNOMINMAX
+#		-DNOMINMAX
 		-DUNICODE
 		-D_UNICODE
 		-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
@@ -140,7 +140,7 @@ elseif(WIN32)
 	add_definitions(
 		-DWIN32_LEAN_AND_MEAN
 		-D_WIN32_WINNT=0x0601
-		-DNOMINMAX
+#		-DNOMINMAX
 		-DUNICODE
 		-D_UNICODE
 		-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
@@ -288,7 +288,7 @@ if (ENABLE_USE_WOLFSSL)
 			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-stringop-overflow")
 		endif()
 	elseif (MSVC)
-		add_definitions(-DNOMINMAX -DWOLFSSL_LIB)
+#		add_definitions(-DNOMINMAX -DWOLFSSL_LIB)
 	endif()
 
 	add_subdirectory(third_party/wolfssl)
