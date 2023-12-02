@@ -2940,7 +2940,7 @@ R"x*x*x(<html>
 						http::status::bad_request ); }
 
 				BEGIN_HTTP_ROUTE()
-					ON_HTTP_ROUTE("^(.*)?/$", on_http_dir)
+					ON_HTTP_ROUTE("^(.*)?\\/$", on_http_dir)
 					ON_HTTP_ROUTE("^(.*)?\\/\\?q=json$", on_http_json)
 					ON_HTTP_ROUTE("^(?!.*\\/$).*$", on_http_get)
 				END_HTTP_ROUTE()
@@ -3479,7 +3479,7 @@ R"x*x*x(<html>
 				file.seekg(r.first, std::ios_base::beg);
 			}
 
-			buffer_response res{ http::status::ok, request.version() };
+			buffer_response res{ st, request.version() };
 
 			res.set(http::field::server, version_string);
 			res.set(http::field::date, server_date_string());
