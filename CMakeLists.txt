@@ -85,8 +85,6 @@ option(ENABLE_LINKE_TO_LIBATOMIC	"link to libatomic.so - some platform requires 
 find_program(MOLD_LINKER mold)
 find_program(LLD_LINKER lld)
 
-set(CMAKE_C_STANDARD 11)
-
 ################################################################################
 
 if (MSVC)
