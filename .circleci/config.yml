@@ -7,7 +7,7 @@ workflows:
   build-workflow:
     jobs:
       - build-x86_64
-      - build-aarch64
+      - build-arm64
       - build-windows
 
 jobs:
@@ -32,7 +32,7 @@ jobs:
       - store_artifacts:
           path: build/docker
 
-  build-aarch64:
+  build-arm64:
     machine:
       image: ubuntu-2004:202101-01
     resource_class: arm.medium
