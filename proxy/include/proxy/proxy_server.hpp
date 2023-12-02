@@ -60,6 +60,8 @@
 
 #include <boost/nowide/convert.hpp>
 
+#include <boost/json/src.hpp>
+
 #include <fmt/xchar.h>
 #include <fmt/format.h>
 
@@ -1998,7 +2000,7 @@ R"x*x*x(<html>
 					// 件请求处理, 否则返回 403.
 					if (!m_option.autoindex_)
 					{
-						auto path = target_path(req);
+						auto path = target_path(req.target());
 
 						if (!fs::is_directory(path, ec))
 						{
@@ -2921,7 +2923,7 @@ R"x*x*x(<html>
 
 				std::string target = req.target();
 				boost::smatch what;
-				http_context http_ctx{ {}, req, *parser, target, target_path(req) };
+				http_context http_ctx{ {}, req, *parser, target, target_path(req.target()) };
 
 				#define BEGIN_HTTP_ROUTE() if (false) {}
 				#define ON_HTTP_ROUTE(exp, func) \
@@ -2939,6 +2941,7 @@ R"x*x*x(<html>
 
 				BEGIN_HTTP_ROUTE()
 					ON_HTTP_ROUTE("^(.*)?/$", on_http_dir)
+					ON_HTTP_ROUTE("^(.*)?\\/\\?q=json$", on_http_json)
 					ON_HTTP_ROUTE("^(?!.*\\/$).*$", on_http_get)
 				END_HTTP_ROUTE()
 
@@ -2986,13 +2989,13 @@ R"x*x*x(<html>
 #endif // WIN32
 		};
 
-		inline std::string target_path(const string_request& req)
+		inline std::string target_path(const std::string& target)
 		{
-			std::string target = req.target();
-			unescape(std::string(target), target);
+			std::string unescape_target;
+			unescape(target, unescape_target);
 
 			auto doc_path = boost::nowide::widen(m_option.doc_directory_);
-			auto path = path_cat(doc_path, boost::nowide::widen(target)).string();
+			auto path = path_cat(doc_path, boost::nowide::widen(unescape_target)).string();
 
 			return path;
 		}
@@ -3125,6 +3128,93 @@ R"x*x*x(<html>
 			}
 
 			return path_list;
+		}
+
+		inline net::awaitable<void> on_http_json(const http_context& hctx)
+		{
+			boost::system::error_code ec;
+			auto& request = hctx.request_;
+
+			auto target = target_path(hctx.command_.back());
+
+			fs::directory_iterator end;
+			fs::directory_iterator it(target, ec);
+			if (ec)
+			{
+				string_response res{ http::status::found, request.version() };
+				res.set(http::field::server, version_string);
+				res.set(http::field::date, server_date_string());
+				res.set(http::field::location, "/");
+				res.keep_alive(request.keep_alive());
+				res.prepare_payload();
+
+				http::serializer<false, string_body, http::fields> sr(res);
+				co_await http::async_write(
+					m_local_socket,
+					sr,
+					net_awaitable[ec]);
+				if (ec)
+					XLOG_WARN << "connection id: "
+					<< m_connection_id
+					<< ", http_dir write location err: "
+					<< ec.message();
+
+				co_return;
+			}
+
+			boost::json::array path_list;
+
+			for (; it != end && !m_abort; it++)
+			{
+				const auto& item = it->path();
+				boost::json::object obj;
+
+				auto [ftime, unc_path] = file_last_wirte_time(item);
+				obj["last_write_time"] = ftime;
+
+				if (fs::is_directory(item, ec))
+				{
+					auto leaf = boost::nowide::narrow(item.filename().wstring());
+					obj["filename"] = leaf;
+					obj["is_dir"] = true;
+				}
+				else
+				{
+					auto leaf =  boost::nowide::narrow(item.filename().wstring());
+					obj["filename"] = leaf;
+					obj["is_dir"] = false;
+					if (unc_path.empty())
+						unc_path = item;
+					auto sz = fs::file_size(unc_path, ec);
+					if (ec)
+						sz = 0;
+					obj["filesize"] = sz;
+				}
+
+				path_list.push_back(obj);
+			}
+
+			auto body = boost::json::serialize(path_list);
+
+			string_response res{ http::status::ok, request.version() };
+			res.set(http::field::server, version_string);
+			res.set(http::field::date, server_date_string());
+			res.keep_alive(request.keep_alive());
+			res.body() = body;
+			res.prepare_payload();
+
+			http::serializer<false, string_body, http::fields> sr(res);
+			co_await http::async_write(
+				m_local_socket,
+				sr,
+				net_awaitable[ec]);
+			if (ec)
+				XLOG_WARN << "connection id: "
+				<< m_connection_id
+				<< ", http dir write body err: "
+				<< ec.message();
+
+			co_return;
 		}
 
 		inline net::awaitable<void> on_http_dir(const http_context& hctx)
