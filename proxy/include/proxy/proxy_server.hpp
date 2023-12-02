@@ -3059,14 +3059,19 @@ R"x*x*x(<html>
 		}
 
 		inline std::vector<std::wstring>
-		format_path_list(const std::set<fs::path>& paths)
+		format_path_list(const std::string& path, boost::system::error_code ec)
 		{
-			boost::system::error_code ec;
-			std::vector<std::wstring> path_list;
+			fs::directory_iterator end;
+			fs::directory_iterator it(path, ec);
+			if (ec)
+				return {};
 
-			for (auto it = paths.cbegin(); it != paths.cend() && !m_abort; it++)
+			std::vector<std::wstring> path_list;
+			std::vector<std::wstring> file_list;
+
+			for (; it != end && !m_abort; it++)
 			{
-				const auto& item = *it;
+				const auto& item = it->path();
 
 				auto [ftime, unc_path] = file_last_wirte_time(item);
 				std::wstring time_string = boost::nowide::widen(ftime);
@@ -3123,9 +3128,14 @@ R"x*x*x(<html>
 						time_string,
 						filesize);
 
-					path_list.push_back(str);
+					file_list.push_back(str);
 				}
 			}
+
+			ec = {};
+
+			path_list.insert(path_list.end(),
+				file_list.begin(), file_list.end());
 
 			return path_list;
 		}
@@ -3224,8 +3234,7 @@ R"x*x*x(<html>
 			boost::system::error_code ec;
 			auto& request = hctx.request_;
 
-			fs::directory_iterator end;
-			fs::directory_iterator it(hctx.target_path_, ec);
+			auto path_list = format_path_list(hctx.target_path_, ec);
 			if (ec)
 			{
 				string_response res{ http::status::found, request.version() };
@@ -3248,25 +3257,6 @@ R"x*x*x(<html>
 
 				co_return;
 			}
-
-			// 遍历目录, 生成目录列表和文件列表.
-			std::set<fs::path> dirs;
-			std::set<fs::path> files;
-
-			for (; it != end && !m_abort; it++)
-			{
-				const auto& item = it->path();
-				if (fs::is_directory(item, ec))
-					dirs.insert(item);
-				else
-					files.insert(item);
-			}
-
-			std::vector<std::wstring> path_list;
-
-			path_list = format_path_list(dirs);
-			auto file_list = format_path_list(files);
-			path_list.insert(path_list.end(), file_list.begin(), file_list.end());
 
 			auto target_path = boost::nowide::widen(hctx.target_);
 			std::wstring head = fmt::format(head_fmt,
