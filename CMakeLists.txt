@@ -72,12 +72,12 @@ option(ENABLE_USE_OPENSSL			"Build with openssl support" OFF)
 option(ENABLE_MOLD					"build using mold" OFF)
 option(ENABLE_LLD					"build using lld" OFF)
 
-option(ENABLE_STATIC_LINK_TO_GCC "Build static link to gcc" ON)
+option(ENABLE_STATIC_LINK_TO_GCC	"Build static link to gcc" ON)
 
 option(ENABLE_TCMALLOC_STATIC		"Build with Tcmalloc support" OFF)
 option(ENABLE_JEMALLOC_STATIC		"Build with Jemalloc support" OFF)
 
-option(ENABLE_BUILD_TESTS			"build animals's unit tests" OFF)
+option(ENABLE_BUILD_EXAMPLES		"build proxy examples" OFF)
 option(ENABLE_LINKE_TO_LIBATOMIC	"link to libatomic.so - some platform requires it" OFF)
 
 ################################################################################
@@ -453,17 +453,12 @@ endif()
 
 ################################################################################
 
-add_subdirectory(example)
 add_subdirectory(server)
 
 ################################################################################
 
-if (ENABLE_BUILD_TESTS)
-	link_libraries(Boost::test)
-
-	enable_testing()
-	include_directories(${CMAKE_CURRENT_SOURCE_DIR}/proxy/include)
-	#add_subdirectory(unittests)
+if (ENABLE_BUILD_EXAMPLES)
+	add_subdirectory(example)
 endif()
 
 ################################################################################
