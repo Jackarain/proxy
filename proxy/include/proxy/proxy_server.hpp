@@ -3327,6 +3327,8 @@ R"x*x*x(<html>
 				{ ".svg", "image/svg+xml" },
 				{ ".wav", "audio/x-wav" },
 				{ ".ogg", "video/ogg" },
+				{ ".m4a", "audio/mp4" },
+				{ ".mp3", "audio/mpeg" },
 				{ ".mp4", "video/mp4" },
 				{ ".flv", "video/x-flv" },
 				{ ".f4v", "video/x-f4v" },
@@ -3341,7 +3343,9 @@ R"x*x*x(<html>
 				{ ".zip", "application/zip" },
 				{ ".xz", "application/x-xz" },
 				{ ".xml", "application/xml" },
-				{ ".webm", "video/webm" }
+				{ ".webm", "video/webm" },
+				{ ".weba", "audio/webm" },
+				{ ".m3u8", "application/vnd.apple.mpegurl" },
 			};
 
 			using ranges = std::vector<std::pair<int64_t, int64_t>>;
