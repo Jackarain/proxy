@@ -811,7 +811,7 @@ R"x*x*x(<html>
 				{
 					XLOG_DBG << "connection id: "
 						<< m_connection_id
-						<< ", ssl protocol handshake error: "
+						<< ", ssl server protocol handshake error: "
 						<< error.message();
 					co_return;
 				}
@@ -2687,7 +2687,7 @@ R"x*x*x(<html>
 						if (ec)
 						{
 							XLOG_WFMT("connection id: {},"
-								" ssl protocol handshake error: {}",
+								" ssl client protocol handshake error: {}",
 								m_connection_id,
 								ec.message());
 						}
