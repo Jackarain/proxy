@@ -282,6 +282,7 @@ compile_commands.json
 mingw/
 llvm/
 linux/
+xcode/
 
 .idea/
 .cache/
