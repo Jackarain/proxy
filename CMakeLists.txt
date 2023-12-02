@@ -284,6 +284,13 @@ if (ENABLE_USE_WOLFSSL)
 	set(BUILD_SHARED_LIBS OFF)
 
 	add_definitions(-DBOOST_ASIO_USE_WOLFSSL)
+
+	if (NOT MSVC AND NOT APPLE)
+		if (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
+			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-stringop-overflow")
+		endif()
+	endif()
+
 	add_subdirectory(third_party/wolfssl)
 
 	link_libraries(wolfssl::wolfssl)
