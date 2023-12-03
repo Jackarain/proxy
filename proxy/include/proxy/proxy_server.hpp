@@ -59,8 +59,10 @@
 #include <boost/regex.hpp>
 
 #include <boost/nowide/convert.hpp>
-
 #include <boost/json/src.hpp>
+
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 #include <fmt/xchar.h>
 #include <fmt/format.h>
@@ -2940,9 +2942,9 @@ R"x*x*x(<html>
 						http::status::bad_request ); }
 
 				BEGIN_HTTP_ROUTE()
-					ON_HTTP_ROUTE("^(.*)?\\/$", on_http_dir)
-					ON_HTTP_ROUTE("^(.*)?\\/\\?q=json$", on_http_json)
-					ON_HTTP_ROUTE("^(?!.*\\/$).*$", on_http_get)
+					ON_HTTP_ROUTE(R"(^(.*)?\/$)", on_http_dir)
+					ON_HTTP_ROUTE(R"(^(.*)?(\/\?q=json.*)$)", on_http_json)
+					ON_HTTP_ROUTE(R"(^(?!.*\/$).*$)", on_http_get)
 				END_HTTP_ROUTE()
 
 				if (!keep_alive) break;
@@ -3140,12 +3142,41 @@ R"x*x*x(<html>
 			return path_list;
 		}
 
+		inline std::string file_hash(const fs::path& p, boost::system::error_code& ec)
+		{
+			ec = {};
+
+			std::ifstream file(p.string(), std::ios::binary);
+			if (!file)
+			{
+				ec = boost::system::error_code(errno,
+					boost::system::generic_category());
+				return {};
+			}
+
+			boost::uuids::detail::sha1 sha1;
+			const auto buf_size = 1024 * 1024 * 4;
+			std::vector<char> bufs(buf_size, 0);
+
+			while (file.read(bufs.data(), buf_size) || file.gcount())
+				sha1.process_bytes(bufs.data(), file.gcount());
+
+			unsigned int hash[5];
+			sha1.get_digest(hash);
+
+			std::stringstream ss;
+			for (int i = 0; i < 5; ++i)
+				ss << std::hex << std::setfill('0') << std::setw(8) << hash[i];
+
+			return ss.str();
+		}
+
 		inline net::awaitable<void> on_http_json(const http_context& hctx)
 		{
 			boost::system::error_code ec;
 			auto& request = hctx.request_;
 
-			auto target = target_path(hctx.command_.back());
+			auto target = target_path(hctx.command_[0]);
 
 			fs::directory_iterator end;
 			fs::directory_iterator it(target, ec);
@@ -3171,6 +3202,12 @@ R"x*x*x(<html>
 
 				co_return;
 			}
+
+			bool hash = false;
+
+			urls::params_view qp(hctx.command_[1]);
+			if (qp.find("hash") != qp.end())
+				hash = true;
 
 			boost::json::array path_list;
 
@@ -3199,6 +3236,13 @@ R"x*x*x(<html>
 					if (ec)
 						sz = 0;
 					obj["filesize"] = sz;
+					if (hash)
+					{
+						auto hash = file_hash(unc_path, ec);
+						if (ec)
+							hash = "";
+						obj["hash"] = hash;
+					}
 				}
 
 				path_list.push_back(obj);
