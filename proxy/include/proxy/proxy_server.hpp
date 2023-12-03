@@ -23,6 +23,7 @@
 #include <sstream>
 #include <string>
 #include <array>
+#include <thread>
 #include <type_traits>
 #include <vector>
 #include <unordered_map>
@@ -35,6 +36,7 @@
 #include <boost/asio/ssl.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/any_io_executor.hpp>
+#include <boost/asio/async_result.hpp>
 
 #include <boost/asio/detached.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
@@ -3171,6 +3173,26 @@ R"x*x*x(<html>
 			return ss.str();
 		}
 
+		template <typename CompletionToken>
+		inline auto async_file_hash(const fs::path& p, CompletionToken&& token)
+		{
+			return net::async_initiate<CompletionToken,
+				void (boost::system::error_code, std::string)>(
+					[this, p = p]
+					(auto&& handler) mutable
+					{
+						std::thread(
+							[this, p = p, handler = std::move(handler)]() mutable
+							{
+								boost::system::error_code ec;
+								auto hash = file_hash(p, ec);
+
+								handler(ec, hash);
+							}
+						).detach();
+					}, token);
+		}
+
 		inline net::awaitable<void> on_http_json(const http_context& hctx)
 		{
 			boost::system::error_code ec;
@@ -3238,7 +3260,8 @@ R"x*x*x(<html>
 					obj["filesize"] = sz;
 					if (hash)
 					{
-						auto hash = file_hash(unc_path, ec);
+						auto hash = co_await
+							async_file_hash(unc_path, net_awaitable[ec]);
 						if (ec)
 							hash = "";
 						obj["hash"] = hash;
