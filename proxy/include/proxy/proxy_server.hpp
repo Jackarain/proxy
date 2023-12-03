@@ -1435,15 +1435,22 @@ R"x*x*x(<html>
 			// 发起数据传输协程.
 			if (command == SOCKS_CMD_CONNECT)
 			{
+				size_t l2r_transferred = 0;
+				size_t r2l_transferred = 0;
+
 				co_await(
-					transfer(m_local_socket, m_remote_socket)
+					transfer(m_local_socket, m_remote_socket, l2r_transferred)
 					&&
-					transfer(m_remote_socket, m_local_socket)
+					transfer(m_remote_socket, m_local_socket, r2l_transferred)
 					);
 
 				XLOG_DBG << "connection id: "
 					<< m_connection_id
-					<< ", transfer completed";
+					<< ", transfer completed"
+					<< ", local to remote: "
+					<< l2r_transferred
+					<< ", remote to local: "
+					<< r2l_transferred;
 			}
 			else
 			{
@@ -1869,15 +1876,22 @@ R"x*x*x(<html>
 			if (error_code != SOCKS4_REQUEST_GRANTED)
 				co_return;
 
+			size_t l2r_transferred = 0;
+			size_t r2l_transferred = 0;
+
 			co_await(
-				transfer(m_local_socket, m_remote_socket)
+				transfer(m_local_socket, m_remote_socket, l2r_transferred)
 				&&
-				transfer(m_remote_socket, m_local_socket)
+				transfer(m_remote_socket, m_local_socket, r2l_transferred)
 				);
 
 			XLOG_DBG << "connection id: "
 				<< m_connection_id
-				<< ", transfer completed";
+				<< ", transfer completed"
+				<< ", local to remote: "
+				<< l2r_transferred
+				<< ", remote to local: "
+				<< r2l_transferred;
 			co_return;
 		}
 
@@ -2089,7 +2103,7 @@ R"x*x*x(<html>
 				string_response resp;
 				beast::flat_buffer buf;
 
-				co_await http::async_read(
+				auto bytes = co_await http::async_read(
 					m_remote_socket, buf, resp, net_awaitable[ec]);
 				if (ec)
 				{
@@ -2113,7 +2127,9 @@ R"x*x*x(<html>
 
 				XLOG_DBG << "connection id: "
 					<< m_connection_id
-					<< ", transfer completed";
+					<< ", transfer completed"
+					<< ", remote to local: "
+					<< bytes;
 
 				first = false;
 				if (!keep_alive)
@@ -2218,15 +2234,22 @@ R"x*x*x(<html>
 				co_return false;
 			}
 
+			size_t l2r_transferred = 0;
+			size_t r2l_transferred = 0;
+
 			co_await(
-				transfer(m_local_socket, m_remote_socket)
+				transfer(m_local_socket, m_remote_socket, l2r_transferred)
 				&&
-				transfer(m_remote_socket, m_local_socket)
+				transfer(m_remote_socket, m_local_socket, r2l_transferred)
 				);
 
 			XLOG_DBG << "connection id: "
 				<< m_connection_id
-				<< ", transfer completed";
+				<< ", transfer completed"
+				<< ", local to remote: "
+				<< l2r_transferred
+				<< ", remote to local: "
+				<< r2l_transferred;
 
 			co_return true;
 		}
@@ -2397,10 +2420,11 @@ R"x*x*x(<html>
 		}
 
 		template<typename S1, typename S2>
-		net::awaitable<void> transfer(S1& from, S2& to)
+		net::awaitable<void> transfer(S1& from, S2& to, size_t& bytes_transferred)
 		{
 			std::vector<char> data(1024 * 1024, 0);
 			boost::system::error_code ec;
+			bytes_transferred = 0;
 
 			for (; !m_abort;)
 			{
@@ -2423,6 +2447,8 @@ R"x*x*x(<html>
 					from.shutdown(net::socket_base::shutdown_receive, ec);
 					co_return;
 				}
+
+				bytes_transferred += bytes;
 			}
 		}
 
