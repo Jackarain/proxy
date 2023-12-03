@@ -14,12 +14,13 @@ jobs:
           docker create --name ps proxy:v1
           mkdir -p build/docker
           docker cp ps:/usr/local/bin/proxy_server build/docker
+          docker cp ps:/usr/local/bin/proxy_server-wolfssl build/docker
 
       - name: Archive artifacts
         uses: actions/upload-artifact@v3
         with:
           name: proxy_server-linux_musl_x64
-          path: build/docker/proxy_server
+          path: build/docker/
 
   Linux:
     runs-on: ubuntu-latest
