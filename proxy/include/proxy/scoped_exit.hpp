@@ -59,7 +59,7 @@ public:
 		f_();
 	}
 
-	inline void cancel()
+	inline void cancel() noexcept
 	{
 		stop_token_ = true;
 	}

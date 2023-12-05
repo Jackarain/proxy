@@ -22,7 +22,6 @@
 namespace util {
 
 	using tcp = net::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
-	using udp = net::ip::udp;               // from <boost/asio/ip/udp.hpp>
 
 	template <typename Stream>
 	class proxy_socket;

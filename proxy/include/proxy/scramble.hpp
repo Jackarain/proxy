@@ -154,30 +154,30 @@ namespace proxy {
 		}
 
 	public:
-		inline bool is_valid() const
+		inline bool is_valid() const noexcept
 		{
 			return !m_key.empty();
 		}
 
-		inline void reset()
+		inline void reset() noexcept
 		{
 			m_key.clear();
 			m_pos = 0;
 		}
 
-		inline void reset(std::span<uint8_t> data)
+		inline void reset(std::span<uint8_t> data) noexcept
 		{
 			m_key = compute_key(data);
 			m_pos = 0;
 		}
 
-		inline void set_key(const std::vector<uint8_t>& key)
+		inline void set_key(const std::vector<uint8_t>& key) noexcept
 		{
 			m_key = key;
 		}
 
 		// 将数据 data 加解密, 但不改变 scramble_stream 类的状态.
-		inline void peek_data(std::span<uint8_t> data)
+		inline void peek_data(std::span<uint8_t> data) noexcept
 		{
 			BOOST_ASSERT(m_key.size() == 16 && "key must be set!");
 
@@ -199,7 +199,7 @@ namespace proxy {
 			} while (++i < data.size());
 		}
 
-		inline std::vector<uint8_t> scramble(std::span<uint8_t> data)
+		inline std::vector<uint8_t> scramble(std::span<uint8_t> data) noexcept
 		{
 			BOOST_ASSERT(m_key.size() == 16 && "key must be set!");
 
@@ -222,7 +222,7 @@ namespace proxy {
 			return result;
 		}
 
-		inline virtual void scramble(uint8_t* data, size_t size)
+		inline virtual void scramble(uint8_t* data, size_t size) noexcept
 		{
 			BOOST_ASSERT(m_key.size() == 16 && "key must be set!");
 
