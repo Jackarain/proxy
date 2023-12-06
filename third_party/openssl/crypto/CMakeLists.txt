@@ -40,6 +40,7 @@ file(GLOB SRCS
 	cms/*.c
 	conf/*.c
 	ct/*.c
+	chacha/*.c
 
 	dh/*.c
 
@@ -172,7 +173,6 @@ target_compile_definitions(crypto PUBLIC
 	-DOPENSSL_NO_MDC2
 	-DOPENSSL_NO_WHIRLPOOL
 	-DOPENSSL_NO_COMP
-	-DOPENSSL_NO_CHACHA
 	-DOPENSSLDIR=""
 	-DWIN32_LEAN_AND_MEAN )
 
@@ -203,4 +203,3 @@ endif()
 
 find_package(Threads)
 target_link_libraries(crypto ${CMAKE_THREAD_LIBS_INIT})
-
