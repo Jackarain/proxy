@@ -12,6 +12,7 @@
 #define INCLUDE__2023_10_18__PROXY_SERVER_HPP
 
 
+#include <algorithm>
 #include <cstddef>
 #include <filesystem>
 #include <limits>
@@ -37,6 +38,8 @@
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/async_result.hpp>
+#include <boost/asio/ip/host_name.hpp>
+#include <boost/asio/ip/address.hpp>
 
 #include <boost/asio/detached.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
@@ -294,6 +297,9 @@ R"x*x*x(<html>
 		// 是否启用 Happy Eyeballs 连接算法, 默认为使用.
 		bool happyeyeballs_{ true };
 
+		// 是否作为透明代理服务器(仅linux).
+		bool transparent_{ false };
+
 		// 作为服务器时, 指定ssl证书目录, 使用固定文件名(ssl_crt.pem,
 		// ssl_dh.pem, ssl_key.pem, ssl_dh.pem, ssl_crt.pwd)
 		// , 这样就不用指定下面: ssl_certificate_、ssl_certificate_key_
@@ -394,6 +400,7 @@ R"x*x*x(<html>
 		virtual ~proxy_session_base() {}
 		virtual void start() = 0;
 		virtual void close() = 0;
+		virtual void set_tproxy_remote(const net::ip::tcp::endpoint&) = 0;
 	};
 
 
@@ -453,7 +460,8 @@ R"x*x*x(<html>
 			net::any_io_executor executor,
 			proxy_stream_type&& socket,
 			size_t id,
-			std::weak_ptr<proxy_server_base> server
+			std::weak_ptr<proxy_server_base> server,
+			bool tproxy = false
 		)
 			: m_executor(executor)
 			, m_local_socket(std::move(socket))
@@ -461,6 +469,7 @@ R"x*x*x(<html>
 			, m_udp_socket(executor)
 			, m_timer(executor)
 			, m_connection_id(id)
+			, m_tproxy(tproxy)
 			, m_proxy_server(server)
 		{
 		}
@@ -493,6 +502,17 @@ R"x*x*x(<html>
 			// 保存 server 的参数选项.
 			m_option = server->option();
 
+			// 将 local_ip 转换为 ip::address 对象, 用于后面向外发起连接时
+			// 绑定到指定的本地地址.
+			boost::system::error_code ec;
+			m_bind_interface = net::ip::address::from_string(
+				m_option.local_ip_, ec);
+			if (ec)
+			{
+				// bind 地址有问题, 忽略bind参数.
+				m_bind_interface.reset();
+			}
+
 			// 如果指定了 proxy_pass_ 参数, 则解析它, 这说明它是一个
 			// 多层代理, 本服务器将会连接到下一个代理服务器.
 			// 所有数据将会通过本服务器转发到由 proxy_pass_ 指定的下一
@@ -501,7 +521,7 @@ R"x*x*x(<html>
 			{
 				try
 				{
-					m_next_proxy =
+					m_bridge_proxy =
 						std::make_unique<urls::url_view>(
 							m_option.proxy_pass_);
 				}
@@ -520,6 +540,19 @@ R"x*x*x(<html>
 
 			// 保持 self 对象指针, 以防止在协程完成后 this 被销毁.
 			auto self = this->shared_from_this();
+
+			// 如果是透明代理, 则启动透明代理协程.
+			if (m_tproxy)
+			{
+				net::co_spawn(m_executor,
+					[this, self, server]() -> net::awaitable<void>
+					{
+						co_await transparent_proxy();
+						co_return;
+					}, net::detached);
+
+				return;
+			}
 
 			// 启动协议侦测协程.
 			net::co_spawn(m_executor,
@@ -549,7 +582,52 @@ R"x*x*x(<html>
 			m_timer.cancel(ignore_ec);
 		}
 
+		virtual void set_tproxy_remote(
+			const net::ip::tcp::endpoint& tproxy_remote) override
+		{
+			m_tproxy_remote = tproxy_remote;
+		}
+
 	private:
+
+		inline net::awaitable<void>
+		transparent_proxy()
+		{
+			auto executor = co_await net::this_coro::executor;
+
+			tcp::socket& remote_socket =
+				net_tcp_socket(m_remote_socket);
+
+			boost::system::error_code ec;
+
+			bool ret = co_await connect_bridge_proxy(
+				remote_socket,
+				m_tproxy_remote.address().to_string(),
+				m_tproxy_remote.port(),
+				ec);
+
+			if (!ret)
+				co_return;
+
+			size_t l2r_transferred = 0;
+			size_t r2l_transferred = 0;
+
+			co_await(
+				transfer(m_local_socket, m_remote_socket, l2r_transferred)
+				&&
+				transfer(m_remote_socket, m_local_socket, r2l_transferred)
+				);
+
+			XLOG_DBG << "connection id: "
+				<< m_connection_id
+				<< ", transfer completed"
+				<< ", local to remote: "
+				<< l2r_transferred
+				<< ", remote to local: "
+				<< r2l_transferred;
+
+			co_return;
+		}
 
 		inline net::awaitable<bool>
 		noise_handshake(tcp::socket& socket,
@@ -1819,7 +1897,11 @@ R"x*x*x(<html>
 			if (command == SOCKS_CMD_CONNECT)
 			{
 				if (socks4a)
-					co_await start_connect_host(hostname, port, ec, true);
+					co_await start_connect_host(
+						hostname,
+						port,
+						ec,
+						true);
 				else
 					co_await start_connect_host(
 						dst_endpoint.address().to_string(),
@@ -2454,6 +2536,360 @@ R"x*x*x(<html>
 			}
 		}
 
+		template <typename Stream, typename Endpoint>
+		inline bool check_condition(
+			const boost::system::error_code&, Stream& stream, Endpoint&) const
+		{
+			if (!m_bind_interface)
+				return true;
+
+			tcp::endpoint bind_endpoint(*m_bind_interface, 0);
+			boost::system::error_code err;
+
+			stream.open(bind_endpoint.protocol(), err);
+			if (err)
+				return false;
+
+			stream.bind(bind_endpoint, err);
+			if (err)
+				return false;
+
+			return true;
+		}
+
+		inline net::awaitable<bool>
+		connect_bridge_proxy(tcp::socket& remote_socket,
+			std::string target_host,
+			uint16_t target_port,
+			boost::system::error_code& ec)
+		{
+			auto executor = co_await net::this_coro::executor;
+
+			tcp::resolver resolver{ executor };
+
+			auto proxy_host = std::string(m_bridge_proxy->host());
+			auto proxy_port = std::string(m_bridge_proxy->port());
+			if (proxy_port.empty())
+				proxy_port = m_bridge_proxy->scheme();
+
+			XLOG_DBG << "connection id: "
+				<< m_connection_id
+				<< ", connect to next proxy: "
+				<< proxy_host
+				<< ":"
+				<< proxy_port;
+
+			auto targets = co_await resolver.async_resolve(
+				proxy_host,
+				proxy_port,
+				net_awaitable[ec]);
+
+			if (ec)
+			{
+				XLOG_WFMT("connection id: {},"
+					" resolver to next proxy {}:{} error: {}",
+					m_connection_id,
+					std::string(m_bridge_proxy->host()),
+					std::string(m_bridge_proxy->port()),
+					ec.message());
+
+				co_return false;
+			}
+
+			if (m_option.happyeyeballs_)
+			{
+				co_await asio_util::async_connect(
+					remote_socket,
+					targets,
+					[this](const auto& ec, auto& stream, auto& endp) {
+						return check_condition(ec, stream, endp);
+					},
+					net_awaitable[ec]);
+			}
+			else
+			{
+				for (auto endpoint : targets)
+				{
+					remote_socket.close(ec);
+
+					if (m_bind_interface)
+					{
+						tcp::endpoint bind_endpoint(
+							*m_bind_interface,
+							0);
+
+						remote_socket.open(
+							bind_endpoint.protocol(),
+							ec);
+						if (ec)
+							break;
+
+						remote_socket.bind(
+							bind_endpoint,
+							ec);
+						if (ec)
+							break;
+					}
+
+					co_await remote_socket.async_connect(
+						endpoint,
+						net_awaitable[ec]);
+					if (!ec)
+						break;
+				}
+			}
+
+			if (ec)
+			{
+				XLOG_WFMT("connection id: {},"
+					" connect to next proxy {}:{} error: {}",
+					m_connection_id,
+					std::string(m_bridge_proxy->host()),
+					std::string(m_bridge_proxy->port()),
+					ec.message());
+
+				co_return false;
+			}
+
+			XLOG_DBG << "connection id: "
+				<< m_connection_id
+				<< ", connect to next proxy: "
+				<< proxy_host
+				<< ":"
+				<< proxy_port
+				<< " success";
+
+			// 如果启用了 noise, 则在向上游代理服务器发起 tcp 连接成功后, 发送 noise
+			// 数据以及接收 noise 数据.
+			if (m_option.scramble_)
+			{
+				if (!co_await noise_handshake(remote_socket, m_outin_key, m_outout_key))
+					co_return false;
+
+				XLOG_DBG << "connection id: "
+					<< m_connection_id
+					<< ", with upstream noise completed";
+			}
+
+			// 使用ssl加密与下一级代理通信.
+			if (m_option.proxy_pass_use_ssl_)
+			{
+				// 设置 ssl cert 证书目录.
+				if (fs::exists(m_option.ssl_cert_path_))
+				{
+					m_ssl_cli_context.add_verify_path(
+						m_option.ssl_cert_path_, ec);
+					if (ec)
+					{
+						XLOG_WFMT("connection id: {}, "
+							"load cert path: {}, "
+							"error: {}",
+							m_connection_id,
+							m_option.ssl_cert_path_,
+							ec.message());
+
+						co_return false;
+					}
+				}
+			}
+
+			auto scheme = m_bridge_proxy->scheme();
+
+			auto instantiate_stream =
+				[this,
+				&scheme,
+				&proxy_host,
+				&remote_socket,
+				&ec]
+			() mutable -> net::awaitable<proxy_stream_type>
+			{
+				ec = {};
+
+				XLOG_DBG << "connection id: "
+					<< m_connection_id
+					<< ", connect to next proxy: "
+					<< proxy_host
+					<< " instantiate stream";
+
+				if (m_option.proxy_pass_use_ssl_ || scheme == "https")
+				{
+					m_ssl_cli_context.set_verify_mode(net::ssl::verify_peer);
+					auto cert = default_root_certificates();
+					m_ssl_cli_context.add_certificate_authority(
+						net::buffer(cert.data(), cert.size()),
+						ec);
+					if (ec)
+					{
+						XLOG_WFMT("connection id: {},"
+							" add_certificate_authority error: {}",
+							m_connection_id,
+							ec.message());
+					}
+
+					m_ssl_cli_context.use_tmp_dh(
+						net::buffer(default_dh_param()), ec);
+
+					m_ssl_cli_context.set_verify_callback(
+						net::ssl::rfc2818_verification(proxy_host), ec);
+					if (ec)
+					{
+						XLOG_WFMT("connection id: {},"
+							" set_verify_callback error: {}",
+							m_connection_id,
+							ec.message());
+					}
+
+					// 生成 ssl socket 对象.
+					auto sock_stream = init_proxy_stream(
+						std::move(remote_socket), m_ssl_cli_context);
+
+					// get origin ssl stream type.
+					ssl_stream& ssl_socket =
+						boost::variant2::get<ssl_stream>(sock_stream);
+
+					if (m_option.scramble_)
+					{
+						auto& next_layer = ssl_socket.next_layer();
+
+						using NextLayerType =
+							std::decay_t<decltype(next_layer)>;
+
+						if constexpr (!std::same_as<tcp::socket, NextLayerType>)
+						{
+							next_layer.set_scramble_key(
+								m_outout_key
+							);
+
+							next_layer.set_unscramble_key(
+								m_outin_key
+							);
+						}
+					}
+
+					std::string sni = m_option.ssl_sni_.empty()
+						? proxy_host : m_option.ssl_sni_;
+
+					// Set SNI Hostname.
+					if (!SSL_set_tlsext_host_name(
+						ssl_socket.native_handle(), sni.c_str()))
+					{
+						XLOG_WFMT("connection id: {},"
+						" SSL_set_tlsext_host_name error: {}",
+							m_connection_id,
+							::ERR_get_error());
+					}
+
+					XLOG_DBG << "connection id: "
+						<< m_connection_id
+						<< ", do async ssl handshake...";
+
+					// do async handshake.
+					co_await ssl_socket.async_handshake(
+						net::ssl::stream_base::client,
+						net_awaitable[ec]);
+					if (ec)
+					{
+						XLOG_WFMT("connection id: {},"
+							" ssl client protocol handshake error: {}",
+							m_connection_id,
+							ec.message());
+					}
+
+					XLOG_FMT("connection id: {}, ssl handshake: {}",
+						m_connection_id,
+						proxy_host);
+
+					co_return sock_stream;
+				}
+
+				auto sock_stream = init_proxy_stream(
+					std::move(remote_socket));
+
+				auto& sock =
+					boost::variant2::get<tcp_socket>(sock_stream);
+
+				if (m_option.scramble_)
+				{
+					using NextLayerType =
+						std::decay_t<decltype(sock)>;
+
+					if constexpr (!std::same_as<tcp::socket, NextLayerType>)
+					{
+						sock.set_scramble_key(
+							m_outout_key
+						);
+
+						sock.set_unscramble_key(
+							m_outin_key
+						);
+					}
+				}
+
+				co_return sock_stream;
+			};
+
+			m_remote_socket = std::move(co_await instantiate_stream());
+
+			XLOG_DBG << "connection id: "
+				<< m_connection_id
+				<< ", connect to next proxy: "
+				<< proxy_host
+				<< ":"
+				<< proxy_port
+				<< " start upstream handshake with "
+				<< std::string(scheme);
+
+			if (scheme.starts_with("socks"))
+			{
+				socks_client_option opt;
+
+				opt.target_host = target_host;
+				opt.target_port = target_port;
+				opt.proxy_hostname = true;
+				opt.username = std::string(m_bridge_proxy->user());
+				opt.password = std::string(m_bridge_proxy->password());
+
+				if (scheme == "socks4")
+					opt.version = socks4_version;
+				else if (scheme == "socks4a")
+					opt.version = socks4a_version;
+
+				co_await async_socks_handshake(
+					m_remote_socket,
+					opt,
+					net_awaitable[ec]);
+			}
+			else if (scheme.starts_with("http"))
+			{
+				http_proxy_client_option opt;
+
+				opt.target_host = target_host;
+				opt.target_port = target_port;
+				opt.username = std::string(m_bridge_proxy->user());
+				opt.password = std::string(m_bridge_proxy->password());
+
+				co_await async_http_proxy_handshake(
+					m_remote_socket,
+					opt,
+					net_awaitable[ec]);
+			}
+
+			if (ec)
+			{
+				XLOG_WFMT("connection id: {}"
+					", {} connect to next host {}:{} error: {}",
+					m_connection_id,
+					std::string(scheme),
+					target_host,
+					target_port,
+					ec.message());
+
+				co_return false;
+			}
+
+			co_return true;
+		}
+
 		inline net::awaitable<bool> start_connect_host(
 			std::string target_host,
 			uint16_t target_port,
@@ -2465,356 +2901,15 @@ R"x*x*x(<html>
 			tcp::socket& remote_socket =
 				net_tcp_socket(m_remote_socket);
 
-			auto bind_interface = net::ip::address::from_string(
-				m_option.local_ip_, ec);
-			if (ec)
+			if (m_bridge_proxy)
 			{
-				// bind 地址有问题, 忽略bind参数.
-				m_option.local_ip_.clear();
-			}
+				auto ret = co_await connect_bridge_proxy(
+					remote_socket,
+					target_host,
+					target_port,
+					ec);
 
-			auto check_condition = [this, bind_interface](
-				const boost::system::error_code&,
-				auto& stream, auto&) mutable
-			{
-				if (m_option.local_ip_.empty())
-					return true;
-
-				tcp::endpoint bind_endpoint(bind_interface, 0);
-				boost::system::error_code err;
-
-				stream.open(bind_endpoint.protocol(), err);
-				if (err)
-					return false;
-
-				stream.bind(bind_endpoint, err);
-				if (err)
-					return false;
-
-				return true;
-			};
-
-			if (m_next_proxy)
-			{
-				tcp::resolver resolver{ executor };
-
-				auto proxy_host = std::string(m_next_proxy->host());
-				auto proxy_port = std::string(m_next_proxy->port());
-				if (proxy_port.empty())
-					proxy_port = m_next_proxy->scheme();
-
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
-					<< ", connect to next proxy: "
-					<< proxy_host
-					<< ":"
-					<< proxy_port;
-
-				auto targets = co_await resolver.async_resolve(
-					proxy_host,
-					proxy_port,
-					net_awaitable[ec]);
-
-				if (ec)
-				{
-					XLOG_WFMT("connection id: {},"
-						" resolver to next proxy {}:{} error: {}",
-						m_connection_id,
-						std::string(m_next_proxy->host()),
-						std::string(m_next_proxy->port()),
-						ec.message());
-
-					co_return false;
-				}
-
-				if (m_option.happyeyeballs_)
-				{
-					co_await asio_util::async_connect(
-						remote_socket,
-						targets,
-						check_condition,
-						net_awaitable[ec]);
-				}
-				else
-				{
-					for (auto endpoint : targets)
-					{
-						remote_socket.close(ec);
-
-						if (!m_option.local_ip_.empty())
-						{
-							tcp::endpoint bind_endpoint(
-								bind_interface,
-								0);
-
-							remote_socket.open(
-								bind_endpoint.protocol(),
-								ec);
-							if (ec)
-								break;
-
-							remote_socket.bind(
-								bind_endpoint,
-								ec);
-							if (ec)
-								break;
-						}
-
-						co_await remote_socket.async_connect(
-							endpoint,
-							net_awaitable[ec]);
-						if (!ec)
-							break;
-					}
-				}
-
-				if (ec)
-				{
-					XLOG_WFMT("connection id: {},"
-						" connect to next proxy {}:{} error: {}",
-						m_connection_id,
-						std::string(m_next_proxy->host()),
-						std::string(m_next_proxy->port()),
-						ec.message());
-
-					co_return false;
-				}
-
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
-					<< ", connect to next proxy: "
-					<< proxy_host
-					<< ":"
-					<< proxy_port
-					<< " success";
-
-				// 如果启用了 noise, 则在向上游代理服务器发起 tcp 连接成功后, 发送 noise
-				// 数据以及接收 noise 数据.
-				if (m_option.scramble_)
-				{
-					if (!co_await noise_handshake(remote_socket, m_outin_key, m_outout_key))
-						co_return false;
-
-					XLOG_DBG << "connection id: "
-						<< m_connection_id
-						<< ", with upstream noise completed";
-				}
-
-				// 使用ssl加密与下一级代理通信.
-				if (m_option.proxy_pass_use_ssl_)
-				{
-					// 设置 ssl cert 证书目录.
-					if (fs::exists(m_option.ssl_cert_path_))
-					{
-						m_ssl_cli_context.add_verify_path(
-							m_option.ssl_cert_path_, ec);
-						if (ec)
-						{
-							XLOG_WFMT("connection id: {}, "
-								"load cert path: {}, "
-								"error: {}",
-								m_connection_id,
-								m_option.ssl_cert_path_,
-								ec.message());
-
-							co_return false;
-						}
-					}
-				}
-
-				auto scheme = m_next_proxy->scheme();
-
-				auto instantiate_stream =
-					[this,
-					&scheme,
-					&proxy_host,
-					&remote_socket,
-					&ec]
-				() mutable -> net::awaitable<proxy_stream_type>
-				{
-					ec = {};
-
-					XLOG_DBG << "connection id: "
-						<< m_connection_id
-						<< ", connect to next proxy: "
-						<< proxy_host
-						<< " instantiate stream";
-
-					if (m_option.proxy_pass_use_ssl_ || scheme == "https")
-					{
-						m_ssl_cli_context.set_verify_mode(net::ssl::verify_peer);
-						auto cert = default_root_certificates();
-						m_ssl_cli_context.add_certificate_authority(
-							net::buffer(cert.data(), cert.size()),
-							ec);
-						if (ec)
-						{
-							XLOG_WFMT("connection id: {},"
-								" add_certificate_authority error: {}",
-								m_connection_id,
-								ec.message());
-						}
-
-						m_ssl_cli_context.use_tmp_dh(
-							net::buffer(default_dh_param()), ec);
-
-						m_ssl_cli_context.set_verify_callback(
-							net::ssl::rfc2818_verification(proxy_host), ec);
-						if (ec)
-						{
-							XLOG_WFMT("connection id: {},"
-								" set_verify_callback error: {}",
-								m_connection_id,
-								ec.message());
-						}
-
-						// 生成 ssl socket 对象.
-						auto sock_stream = init_proxy_stream(
-							std::move(remote_socket), m_ssl_cli_context);
-
-						// get origin ssl stream type.
-						ssl_stream& ssl_socket =
-							boost::variant2::get<ssl_stream>(sock_stream);
-
-						if (m_option.scramble_)
-						{
-							auto& next_layer = ssl_socket.next_layer();
-
-							using NextLayerType =
-								std::decay_t<decltype(next_layer)>;
-
-							if constexpr (!std::same_as<tcp::socket, NextLayerType>)
-							{
-								next_layer.set_scramble_key(
-									m_outout_key
-								);
-
-								next_layer.set_unscramble_key(
-									m_outin_key
-								);
-							}
-						}
-
-						std::string sni = m_option.ssl_sni_.empty()
-							? proxy_host : m_option.ssl_sni_;
-
-						// Set SNI Hostname.
-						if (!SSL_set_tlsext_host_name(
-							ssl_socket.native_handle(), sni.c_str()))
-						{
-							XLOG_WFMT("connection id: {},"
-							" SSL_set_tlsext_host_name error: {}",
-								m_connection_id,
-								::ERR_get_error());
-						}
-
-						XLOG_DBG << "connection id: "
-							<< m_connection_id
-							<< ", do async ssl handshake...";
-
-						// do async handshake.
-						co_await ssl_socket.async_handshake(
-							net::ssl::stream_base::client,
-							net_awaitable[ec]);
-						if (ec)
-						{
-							XLOG_WFMT("connection id: {},"
-								" ssl client protocol handshake error: {}",
-								m_connection_id,
-								ec.message());
-						}
-
-						XLOG_FMT("connection id: {}, ssl handshake: {}",
-							m_connection_id,
-							proxy_host);
-
-						co_return sock_stream;
-					}
-
-					auto sock_stream = init_proxy_stream(
-						std::move(remote_socket));
-
-					auto& sock =
-						boost::variant2::get<tcp_socket>(sock_stream);
-
-					if (m_option.scramble_)
-					{
-						using NextLayerType =
-							std::decay_t<decltype(sock)>;
-
-						if constexpr (!std::same_as<tcp::socket, NextLayerType>)
-						{
-							sock.set_scramble_key(
-								m_outout_key
-							);
-
-							sock.set_unscramble_key(
-								m_outin_key
-							);
-						}
-					}
-
-					co_return sock_stream;
-				};
-
-				m_remote_socket = std::move(co_await instantiate_stream());
-
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
-					<< ", connect to next proxy: "
-					<< proxy_host
-					<< ":"
-					<< proxy_port
-					<< " start upstream handshake with "
-					<< std::string(scheme);
-
-				if (scheme.starts_with("socks"))
-				{
-					socks_client_option opt;
-
-					opt.target_host = target_host;
-					opt.target_port = target_port;
-					opt.proxy_hostname = true;
-					opt.username = std::string(m_next_proxy->user());
-					opt.password = std::string(m_next_proxy->password());
-
-					if (scheme == "socks4")
-						opt.version = socks4_version;
-					else if (scheme == "socks4a")
-						opt.version = socks4a_version;
-
-					co_await async_socks_handshake(
-						m_remote_socket,
-						opt,
-						net_awaitable[ec]);
-				}
-				else if (scheme.starts_with("http"))
-				{
-					http_proxy_client_option opt;
-
-					opt.target_host = target_host;
-					opt.target_port = target_port;
-					opt.username = std::string(m_next_proxy->user());
-					opt.password = std::string(m_next_proxy->password());
-
-					co_await async_http_proxy_handshake(
-						m_remote_socket,
-						opt,
-						net_awaitable[ec]);
-				}
-
-				if (ec)
-				{
-					XLOG_WFMT("connection id: {}"
-						", {} connect to next host {}:{} error: {}",
-						m_connection_id,
-						std::string(scheme),
-						target_host,
-						target_port,
-						ec.message());
-
-					co_return false;
-				}
+				co_return ret;
 			}
 			else
 			{
@@ -2851,8 +2946,49 @@ R"x*x*x(<html>
 						dst_endpoint, "", "");
 				}
 
-				co_await asio_util::async_connect(remote_socket,
-					targets, check_condition, net_awaitable[ec]);
+				if (m_option.happyeyeballs_)
+				{
+					co_await asio_util::async_connect(
+						remote_socket,
+						targets,
+						[this](const auto& ec, auto& stream, auto& endp) {
+							return check_condition(ec, stream, endp);
+						},
+						net_awaitable[ec]);
+				}
+				else
+				{
+					for (auto endpoint : targets)
+					{
+						remote_socket.close(ec);
+
+						if (m_bind_interface)
+						{
+							tcp::endpoint bind_endpoint(
+								*m_bind_interface,
+								0);
+
+							remote_socket.open(
+								bind_endpoint.protocol(),
+								ec);
+							if (ec)
+								break;
+
+							remote_socket.bind(
+								bind_endpoint,
+								ec);
+							if (ec)
+								break;
+						}
+
+						co_await remote_socket.async_connect(
+							endpoint,
+							net_awaitable[ec]);
+						if (!ec)
+							break;
+					}
+				}
+
 				if (ec)
 				{
 					XLOG_WFMT("connection id: {}, connect to target {}:{} error: {}",
@@ -3785,27 +3921,68 @@ R"x*x*x(<html>
 		}
 
 	private:
+		// m_executor 保存当前 io_context 的 executor.
 		net::any_io_executor m_executor;
+
+		// m_local_socket 本地 socket, 即客户端连接的 socket.
 		proxy_stream_type m_local_socket;
+
+		// m_remote_socket 远程 socket, 即连接远程代理服务端或远程服务的 socket.
 		proxy_stream_type m_remote_socket;
+
+		// 用于 socsks5 代理中的 udp 通信.
 		udp::socket m_udp_socket;
+
+		// m_bind_interface 用于向外发起连接时, 指定的 bind 地址.
+		std::optional<net::ip::address> m_bind_interface;
+
+		// m_local_udp_address 用于保存 udp 通信时, 本地的地址.
 		net::ip::address m_local_udp_address;
+
+		// m_timer 用于定时检查 udp 会话是否过期, 由于 udp 通信是无连接的, 如果 2 端长时间
+		// 没有数据通信, 则可能会话已经失效, 此时应该关闭 udp socket 以及相关资源.
 		net::steady_timer m_timer;
+
+		// m_timeout udp 会话超时时间, 默认 30 秒.
 		int m_timeout{ udp_session_expired_time };
+
+		// m_connection_id 当前连接的 id, 用于日志输出.
 		size_t m_connection_id;
+
+		// m_tproxy 是否是 tproxy 模式.
+		bool m_tproxy{ false };
+
+		// m_tproxy_remote tproxy 模式下, 客户端期望请求远程地址.
+		net::ip::tcp::endpoint m_tproxy_remote;
+
+		// m_local_buffer 本地缓冲区, 用于接收客户端的数据的 buffer.
 		net::streambuf m_local_buffer{};
 
+		// m_inin_key 用于解密接收到的数据的 key.
 		std::vector<uint8_t> m_inin_key;
+		// m_inout_key 用于加密发送的数据的 key.
 		std::vector<uint8_t> m_inout_key;
 
+		// m_proxy_server 当前代理服务器对象的弱引用.
 		std::weak_ptr<proxy_server_base> m_proxy_server;
-		proxy_server_option m_option;
-		std::unique_ptr<urls::url_view> m_next_proxy;
 
+		// m_option 当前代理服务器的配置选项.
+		proxy_server_option m_option;
+
+		// m_bridge_proxy 作为中继桥接的时候, 下游代理服务器的地址.
+		std::unique_ptr<urls::url_view> m_bridge_proxy;
+
+		// m_outin_key 用于与下游代理服务器加密通信时, 解密接收到
+		// 下游代理服务器数据的 key.
 		std::vector<uint8_t> m_outin_key;
+		// m_outout_key 用于与下游代理服务器加密通信时, 加密给下
+		// 游代理服务器发送的数据的 key.
 		std::vector<uint8_t> m_outout_key;
 
+		// 用于使用 ssl 加密通信与下游代理服务器通信时的 ssl context.
 		net::ssl::context m_ssl_cli_context{ net::ssl::context::sslv23_client };
+
+		// 当前 session 是否被中止的状态.
 		bool m_abort{ false };
 	};
 
@@ -3974,11 +4151,44 @@ R"x*x*x(<html>
 	public:
 		inline void start()
 		{
+			// 如果作为透明代理.
+			if (m_option.transparent_)
+			{
+#if defined(__linux__)
+
+#  if !defined(IP_TRANSPARENT)
+#    define IP_TRANSPARENT 19
+#  endif
+#  if !defined(IPV6_TRANSPARENT)
+#    define IPV6_TRANSPARENT 75
+#  endif
+
+#  if defined (IP_TRANSPARENT) && defined (IPV6_TRANSPARENT)
+				// 设置 acceptor 为透明代理模式.
+				using transparent = net::detail::socket_option::boolean<
+					IPPROTO_IP, IP_TRANSPARENT>;
+				using transparent6 = net::detail::socket_option::boolean<
+					IPPROTO_IPV6, IPV6_TRANSPARENT>;
+
+				boost::system::error_code error;
+
+				m_acceptor.set_option(transparent(true), error);
+				m_acceptor.set_option(transparent6(true), error);
+#  endif
+
+#else
+				XLOG_WARN << "transparent proxy only support linux";
+#endif
+				// 获取所有本机 ip 地址.
+				net::co_spawn(m_executor,
+					get_local_address(), net::detached);
+			}
+
 			// 同时启动32个连接协程, 开始为 proxy client 提供服务.
 			for (int i = 0; i < 32; i++)
 			{
 				net::co_spawn(m_executor,
-					start_proxy_listen(m_acceptor), net::detached);
+					start_proxy_listen(), net::detached);
 			}
 		}
 
@@ -4023,7 +4233,7 @@ R"x*x*x(<html>
 		// start_proxy_listen 启动一个协程, 用于监听 proxy client 的连接.
 		// 当有新的连接到来时, 会创建一个 proxy_session 对象, 并启动 proxy_session
 		// 的对象.
-		inline net::awaitable<void> start_proxy_listen(tcp_acceptor& a)
+		inline net::awaitable<void> start_proxy_listen()
 		{
 			boost::system::error_code error;
 			net::socket_base::keep_alive keep_alive_opt(true);
@@ -4036,23 +4246,14 @@ R"x*x*x(<html>
 			{
 				tcp_socket socket(m_executor);
 
-				co_await a.async_accept(socket.lowest_layer(), net_awaitable[error]);
+				co_await m_acceptor.async_accept(
+					socket.lowest_layer(), net_awaitable[error]);
 				if (error)
 				{
 					XLOG_ERR << "start_proxy_listen"
 						", async_accept: " << error.message();
 					co_return;
 				}
-
-				socket.set_option(keep_alive_opt, error);
-
-				// 在启用 scramble 时, 刻意开启 Nagle's algorithm 以尽量保证数据包
-				// 被重组, 尽最大可能避免观察者通过观察 ip 数据包大小的规律来分析 tcp
-				// 数据发送调用, 从而增加噪声加扰的强度.
-				if (m_option.scramble_)
-					socket.set_option(delay_opt, error);
-				else
-					socket.set_option(no_delay_opt, error);
 
 				static std::atomic_size_t id{ 1 };
 				size_t connection_id = id++;
@@ -4065,6 +4266,25 @@ R"x*x*x(<html>
 					<< connection_id
 					<< ", start client incoming: "
 					<< client;
+
+				socket.set_option(keep_alive_opt, error);
+
+				// 是否启用透明代理.
+#if defined (__linux__)
+				if (m_option.transparent_)
+				{
+					if (co_await start_transparent_proxy(socket, connection_id))
+						continue;
+				}
+#endif
+
+				// 在启用 scramble 时, 刻意开启 Nagle's algorithm 以尽量保证数据包
+				// 被重组, 尽最大可能避免观察者通过观察 ip 数据包大小的规律来分析 tcp
+				// 数据发送调用, 从而增加噪声加扰的强度.
+				if (m_option.scramble_)
+					socket.set_option(delay_opt, error);
+				else
+					socket.set_option(no_delay_opt, error);
 
 				// 创建 proxy_session 对象.
 				auto new_session =
@@ -4085,14 +4305,147 @@ R"x*x*x(<html>
 			co_return;
 		}
 
+		inline net::awaitable<bool> start_transparent_proxy(tcp_socket& socket, size_t connection_id)
+		{
+#ifndef SO_ORIGINAL_DST
+#  define SO_ORIGINAL_DST 80
+#endif
+			auto sockfd = socket.native_handle();
+
+			sockaddr_storage addr;
+			socklen_t addrlen = sizeof(addr);
+
+			int protocol = addr.ss_family ==
+				AF_INET6 ? IPPROTO_IPV6 : IPPROTO_IP;
+
+			if (::getsockopt(sockfd, protocol, SO_ORIGINAL_DST, (char*)&addr, &addrlen) < 0)
+			{
+				XLOG_WFMT("getsockopt({}, SO_ORIGINAL_DST: {}", (int)sockfd, strerror(errno));
+				co_return false;
+			}
+
+			net::ip::tcp::endpoint remote_endp;
+
+			if (addr.ss_family == AF_INET6)
+			{
+				auto addr6 = reinterpret_cast<sockaddr_in6*>(&addr);
+				auto port = ntohs(addr6->sin6_port);
+
+				net::ip::address_v6::bytes_type bt;
+
+				std::copy(std::begin(addr6->sin6_addr.s6_addr),
+					std::end(addr6->sin6_addr.s6_addr), std::begin(bt));
+
+				remote_endp.address(net::ip::make_address_v6(bt));
+				remote_endp.port(port);
+			}
+			else
+			{
+				auto addr4 = reinterpret_cast<sockaddr_in*>(&addr);
+				auto port = ntohs(addr4->sin_port);
+
+				remote_endp.address(net::ip::address_v4(htonl(addr4->sin_addr.s_addr)));
+				remote_endp.port(port);
+			}
+
+			// 创建透明代理, 开始连接通过代理服务器连接与当前客户端通信.
+			auto it = std::find_if(m_local_addrs.begin(),
+				m_local_addrs.end(), [&](const auto& addr)
+				{
+					if (addr == remote_endp.address())
+						return true;
+					return false;
+				});
+
+			if (it == m_local_addrs.end())
+			{
+				XLOG_DBG << "connection id: "
+					<< connection_id
+					<< ", is tproxy, remote: "
+					<< remote_endp;
+
+				auto self = shared_from_this();
+
+				// 创建 proxy_session 对象用于 tproxy.
+				auto new_session =
+					std::make_shared<proxy_session>(
+						m_executor,
+							init_proxy_stream(std::move(socket)),
+								connection_id,
+									self, true);
+
+				// 保存 proxy_session 对象到 m_clients 中.
+				m_clients[connection_id] = new_session;
+
+				// 设置 tproxy 的 remote 到 session 对象.
+				new_session->set_tproxy_remote(remote_endp);
+				// 启动 proxy_session 对象.
+				new_session->start();
+
+				co_return true;
+			}
+
+			// 执行到这里, 表示客户端直接请求本代理服务, 则按普通代理服务请求处理.
+			co_return false;
+		}
+
+		inline net::awaitable<void> get_local_address()
+		{
+			boost::system::error_code ec;
+
+			auto hostname = net::ip::host_name(ec);
+			if (ec)
+			{
+				XLOG_WARN
+					<< "get_local_address, host_name: "
+					<< ec.message();
+
+				co_return;
+			}
+
+			tcp::resolver resolver(m_executor);
+			tcp::resolver::query query(hostname, "");
+
+			auto it = co_await resolver.async_resolve(query, net_awaitable[ec]);
+			if (ec)
+			{
+				XLOG_WARN
+					<< "get_local_address, async_resolve: "
+					<< ec.message();
+
+				co_return;
+			}
+
+			while (it != tcp::resolver::iterator())
+			{
+				tcp::endpoint ep = *it++;
+				m_local_addrs.insert(ep.address());
+			}
+		}
+
 	private:
+		// m_executor 保存当前 io_context 的 executor.
 		net::any_io_executor m_executor;
+
+		// m_acceptor 用于侦听客户端 tcp 连接请求.
 		tcp_acceptor m_acceptor;
+
+		// m_option 保存当前服务器各选项配置.
 		proxy_server_option m_option;
+
+		// 当前机器的所有 ip 地址.
+		std::set<net::ip::address> m_local_addrs;
+
 		using proxy_session_weak_ptr =
 			std::weak_ptr<proxy_session>;
+
+		// 当前客户端连接列表.
 		std::unordered_map<size_t, proxy_session_weak_ptr> m_clients;
+
+		// 当前服务端作为 ssl 服务时的 ssl context.
 		net::ssl::context m_ssl_srv_context{ net::ssl::context::sslv23 };
+
+		// 当前服务是否中止标志.
 		bool m_abort{ false };
 	};
 

@@ -52,6 +52,7 @@ std::string ssl_ciphers;
 std::string ssl_dhparam;
 std::string ssl_sni;
 
+bool transparent = false;
 bool autoindex = false;
 bool disable_http = false;
 bool disable_insecure = true;
@@ -119,6 +120,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 
 	opt.reuse_port_ = reuse_port;
 	opt.happyeyeballs_ = happyeyeballs;
+	opt.transparent_ = transparent;
 
 	opt.doc_directory_ = doc_dir;
 	opt.autoindex_ = autoindex;
@@ -232,6 +234,8 @@ int main(int argc, char** argv)
 		("reuse_port", po::value<bool>(&reuse_port)->default_value(false), "Enable TCP SO_REUSEPORT option (available since Linux 3.9).")
 		("happyeyeballs", po::value<bool>(&happyeyeballs)->default_value(true), "Enable Happy Eyeballs algorithm for TCP connections.")
 		("local_ip", po::value<std::string>(&local_ip), "Specify local IP for client TCP connection to server.")
+
+		("transparent", po::value<bool>(&transparent)->default_value(false), "Enable transparent proxy mode(only linux).")
 
 		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->default_value(std::vector<std::string>{"jack:1111"}), "List of authorized users(default user: jack:1111) (e.g: user1:passwd1 user2:passwd2).")
 
