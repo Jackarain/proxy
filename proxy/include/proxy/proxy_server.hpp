@@ -1360,6 +1360,8 @@ R"x*x*x(<html>
 					error_code = SOCKS5_CONNECTION_REFUSED;
 				else if (ec == net::error::network_unreachable)
 					error_code = SOCKS5_NETWORK_UNREACHABLE;
+				else if (ec == net::error::host_unreachable)
+					error_code = SOCKS5_HOST_UNREACHABLE;
 				else if (ec)
 					error_code = SOCKS5_GENERAL_SOCKS_SERVER_FAILURE;
 
