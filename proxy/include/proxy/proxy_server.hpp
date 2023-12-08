@@ -12,7 +12,6 @@
 #define INCLUDE__2023_10_18__PROXY_SERVER_HPP
 
 
-#include <boost/asio/error.hpp>
 #include <cstddef>
 #include <filesystem>
 #include <limits>
