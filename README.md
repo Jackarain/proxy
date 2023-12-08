@@ -94,6 +94,7 @@ docker build . -t proxy:v1
 | server_listen | 监听的地址以及端口, 格式为 `addr:port`, 支持 `ipv6-only` |
 | reuse_port | 启用 `TCP SO_REUSEPORT` 选项, 这个选项只在 `linux` 平台有效 |
 | happyeyeballs | 启用 `happyeyeballs` 连接算法, 默认为启用 |
+| transparent | 启用透明代理, 默认禁用, 此选项仅 linux 平台有效 |
 | local_ip | 作为中间级联服务时, 用于向上游服务发起连接时所使用的本地网口 `ip` 地址 |
 | auth_users | 认证信息列表, 客户端必须满足其中一对用户/密码才能握手通过, 默认用户密码是 `jack:1111`, 若需要设置为无需要认证代理模式, 必须置 `auth_users` 参数为 "" |
 | proxy_pass | 当前服务作为中间级联服务时, `proxy_pass` 指定上游代理服务地址, 格式为 `url` 格式, 如果有认证信息并必须包含认证信息, 如: `https://jack:1111@example.com:1080/` |
