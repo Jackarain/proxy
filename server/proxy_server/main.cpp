@@ -9,6 +9,8 @@
 //
 
 
+#include <limits>
+
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
@@ -64,6 +66,7 @@ bool reuse_port = false;
 bool scramble = false;
 bool ssl_prefer_server_ciphers = false;
 
+int64_t linux_so_mark;
 uint16_t noise_length;
 
 
@@ -121,6 +124,8 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.reuse_port_ = reuse_port;
 	opt.happyeyeballs_ = happyeyeballs;
 	opt.transparent_ = transparent;
+	if (linux_so_mark > 0 && linux_so_mark <= std::numeric_limits<uint32_t>::max())
+		opt.so_mark_.emplace(linux_so_mark);
 
 	opt.doc_directory_ = doc_dir;
 	opt.autoindex_ = autoindex;
@@ -236,6 +241,7 @@ int main(int argc, char** argv)
 		("local_ip", po::value<std::string>(&local_ip), "Specify local IP for client TCP connection to server.")
 
 		("transparent", po::value<bool>(&transparent)->default_value(false), "Enable transparent proxy mode(only linux).")
+		("so_mark", po::value<int64_t>(&linux_so_mark)->default_value(-1), "Set SO_MARK for linux transparent proxy mode.")
 
 		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->default_value(std::vector<std::string>{"jack:1111"}), "List of authorized users(default user: jack:1111) (e.g: user1:passwd1 user2:passwd2).")
 

@@ -300,6 +300,9 @@ R"x*x*x(<html>
 		// 是否作为透明代理服务器(仅linux).
 		bool transparent_{ false };
 
+		// so_mark 用于指定发起连接时的 so_mark, 仅在 transparent_ 为 true.
+		std::optional<uint32_t> so_mark_;
+
 		// 作为服务器时, 指定ssl证书目录, 使用固定文件名(ssl_crt.pem,
 		// ssl_dh.pem, ssl_key.pem, ssl_dh.pem, ssl_crt.pwd)
 		// , 这样就不用指定下面: ssl_certificate_、ssl_certificate_key_
@@ -597,6 +600,18 @@ R"x*x*x(<html>
 
 			tcp::socket& remote_socket =
 				net_tcp_socket(m_remote_socket);
+
+#if defined (__linux__)
+			if (m_option.so_mark_)
+			{
+				auto sockfd = remote_socket.native_handle();
+				uint32_t mark = m_option.so_mark_.value();
+
+				if (::setsockopt(sockfd, SOL_SOCKET, SO_MARK, &mark, sizeof(uint32_t)) < 0)
+					XLOG_WFMT("connection id: {}, setsockopt({}, SO_MARK: {}",
+						m_connection_id, sockfd, strerror(errno));
+			}
+#endif
 
 			boost::system::error_code ec;
 
