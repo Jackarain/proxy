@@ -3366,7 +3366,13 @@ R"x*x*x(<html>
 								boost::system::error_code ec;
 								auto hash = file_hash(p, ec);
 
-								handler(ec, hash);
+								auto ex = net::get_associated_executor(handler);
+
+								net::post(ex,
+								[handler = std::move(handler), ec, hash]() mutable
+								{
+									handler(ec, hash);
+								});
 							}
 						).detach();
 					}, token);
