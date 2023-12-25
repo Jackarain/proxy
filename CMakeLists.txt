@@ -343,7 +343,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	add_definitions(-DBOOST_ASIO_HAS_CO_AWAIT)
 endif()
 
-set(Boost_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost)
 add_subdirectory(third_party/boost EXCLUDE_FROM_ALL)
 
 ################################################################################
@@ -378,6 +377,8 @@ endif()
 ################################################################################
 
 add_subdirectory(third_party/fmt)
+set(FMT_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/fmt/include)
+set(FMT_LIBRARIES fmt)
 
 ################################################################################
 
@@ -388,21 +389,15 @@ add_subdirectory(proxy)
 include_directories(third_party
 	${ZLIB_INCLUDE_DIRS}
 	${PROXY_INCLUDE_DIRS}
+	${FMT_INCLUDE_DIRS}
 )
 
 ################################################################################
 
 link_libraries(
-		Boost::thread
-		Boost::date_time
-		Boost::program_options
-
-		Boost::url
-
-		fmt
-
-		${ZLIB_LIBRARIES}
-		${PROXY_LIBRARIES}
+	${FMT_LIBRARIES}
+	${ZLIB_LIBRARIES}
+	${PROXY_LIBRARIES}
 )
 
 ################################################################################

@@ -27,7 +27,7 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/xxhash.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/proxy_socket.hpp
 
-	${CMAKE_CURRENT_SOURCE_DIR}/src/dummy.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/lib_asio_beast.cpp
 )
 
 target_include_directories(libproxy
@@ -41,8 +41,18 @@ target_compile_definitions(libproxy
 )
 
 target_link_libraries(libproxy
+	Boost::thread
+	Boost::date_time
+	Boost::program_options
+	Boost::filesystem
+	Boost::signals2
+	Boost::nowide
+	Boost::url
+	Boost::json
+	Boost::uuid
 	Boost::asio
 	Boost::beast
+
 	fmt
 	${OPENSSL_LIBRARIES}
 )
