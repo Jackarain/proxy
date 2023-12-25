@@ -8,7 +8,9 @@
 #define BOOST_NOWIDE_SOURCE
 
 #ifdef _MSC_VER
+#ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
+#endif
 #elif defined(__MINGW32__) && defined(__STRICT_ANSI__)
 // Need the _w* functions which are extensions on MinGW but not on MinGW-w64
 #include <_mingw.h>
