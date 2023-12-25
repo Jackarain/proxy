@@ -20,6 +20,7 @@
 #include <iostream>
 #include <sstream>
 #include <memory>
+#include <ios>
 
 #include <boost/version.hpp>
 #include <boost/config.hpp>
@@ -218,7 +219,7 @@ inline int platform_init()
 	}
 #endif
 
-	std::ios::sync_with_stdio(false);
+	std::ios_base::sync_with_stdio(false);
 
 	return 0;
 }
