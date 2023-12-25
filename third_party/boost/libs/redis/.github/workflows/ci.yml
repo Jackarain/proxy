@@ -1,0 +1,230 @@
+# CI script to verify that CMake and B2 builds work.
+# B2 builds include only tests that don't require a DB server, to avoid race conditions.
+# CMake tests include the actual project tests and all the CMake integration workflows
+#   recommended by Boost.CI.
+# Windows CMake jobs build the code but don't run the tests,
+#   since we don't have a way to set up a Redis server on Windows (yet).
+# Subcommands are implemented by the tools/ci.py script in a platform-independent manner.
+
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  windows-cmake:
+    name: "CMake ${{matrix.toolset}} ${{matrix.build-type}} C++${{matrix.cxxstd}}"
+    runs-on: ${{matrix.os}}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { toolset: msvc-14.2, os: windows-2019, generator: "Visual Studio 16 2019", cxxstd: '17', build-type: 'Debug',   build-shared-libs: 1 }
+          - { toolset: msvc-14.2, os: windows-2019, generator: "Visual Studio 16 2019", cxxstd: '17', build-type: 'Release', build-shared-libs: 0 }
+          - { toolset: msvc-14.3, os: windows-2022, generator: "Visual Studio 17 2022", cxxstd: '20', build-type: 'Debug',   build-shared-libs: 0 }
+          - { toolset: msvc-14.3, os: windows-2022, generator: "Visual Studio 17 2022", cxxstd: '20', build-type: 'Release', build-shared-libs: 1 }
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: 4
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Setup Boost
+      run: python3 tools/ci.py setup-boost --source-dir=$(pwd)
+
+    - name: Build a Boost distribution using B2
+      run: |
+        python3 tools/ci.py build-b2-distro \
+          --toolset ${{ matrix.toolset }}
+
+    - name: Build a Boost distribution using CMake
+      run: |
+        python3 tools/ci.py build-cmake-distro \
+          --build-type ${{ matrix.build-type }} \
+          --cxxstd ${{ matrix.cxxstd }} \
+          --toolset ${{ matrix.toolset }} \
+          --generator "${{ matrix.generator }}" \
+          --build-shared-libs ${{ matrix.build-shared-libs }}
+        
+    - name: Build the project tests
+      run: |
+        python3 tools/ci.py build-cmake-standalone-tests \
+          --build-type ${{ matrix.build-type }} \
+          --cxxstd ${{ matrix.cxxstd }} \
+          --toolset ${{ matrix.toolset }} \
+          --generator "${{ matrix.generator }}" \
+          --build-shared-libs ${{ matrix.build-shared-libs }}
+
+    # # TODO: re-enable this when a Redis server is available for this job
+    # - name: Run the project tests
+    #   run: |
+    #     python3 tools/ci.py run-cmake-standalone-tests \
+    #       --build-type ${{ matrix.build-type }}
+
+    - name: Run add_subdirectory tests
+      run: |
+        python3 tools/ci.py run-cmake-add-subdirectory-tests \
+          --build-type ${{ matrix.build-type }} \
+          --cxxstd ${{ matrix.cxxstd }} \
+          --toolset ${{ matrix.toolset }} \
+          --generator "${{ matrix.generator }}" \
+          --build-shared-libs ${{ matrix.build-shared-libs }}
+
+    - name: Run find_package tests with the built cmake distribution
+      run: |
+        python3 tools/ci.py run-cmake-find-package-tests \
+          --build-type ${{ matrix.build-type }} \
+          --cxxstd ${{ matrix.cxxstd }} \
+          --toolset ${{ matrix.toolset }} \
+          --generator "${{ matrix.generator }}" \
+          --build-shared-libs ${{ matrix.build-shared-libs }}
+
+    - name: Run find_package tests with the built b2 distribution
+      run: |
+        python3 tools/ci.py run-cmake-b2-find-package-tests \
+          --build-type ${{ matrix.build-type }} \
+          --cxxstd ${{ matrix.cxxstd }} \
+          --toolset ${{ matrix.toolset }} \
+          --generator "${{ matrix.generator }}" \
+          --build-shared-libs ${{ matrix.build-shared-libs }}
+
+  windows-b2:
+    name: "B2 ${{matrix.toolset}}"
+    runs-on: ${{matrix.os}}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { toolset: msvc-14.2, os: windows-2019 }
+          - { toolset: msvc-14.3, os: windows-2022 }
+    env:
+      OPENSSL_ROOT: "C:\\Program Files\\OpenSSL"
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Setup user-config.jam
+      run: cp tools/user-config.jam "${HOMEDRIVE}${HOMEPATH}/"
+
+    - name: Setup Boost
+      run: python3 tools/ci.py setup-boost --source-dir=$(pwd)
+    
+    - name: Build and run project tests using B2
+      run: |
+        python3 tools/ci.py run-b2-tests \
+          --toolset ${{ matrix.toolset }} \
+          --cxxstd 17,20 \
+          --variant debug,release
+
+  posix-cmake:
+    name: "CMake ${{ matrix.toolset }} ${{ matrix.cxxstd }} ${{ matrix.build-type }} ${{ matrix.cxxflags }}"
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { toolset: gcc-11,   install: g++-11,   os: ubuntu-22.04, cxxstd: '17', build-type: 'Debug', ldflags: '' }
+          - { toolset: gcc-11,   install: g++-11,   os: ubuntu-22.04, cxxstd: '20', build-type: 'Release', ldflags: '' }
+          - { toolset: clang-11, install: clang-11, os: ubuntu-22.04, cxxstd: '17', build-type: 'Debug', ldflags: '' }
+          - { toolset: clang-11, install: clang-11, os: ubuntu-22.04, cxxstd: '20', build-type: 'Debug', ldflags: '' }
+          - { toolset: clang-13, install: clang-13, os: ubuntu-22.04, cxxstd: '17', build-type: 'Release', ldflags: '' }
+          - { toolset: clang-13, install: clang-13, os: ubuntu-22.04, cxxstd: '20', build-type: 'Release', ldflags: '' }
+          - { toolset: clang-14, install: 'clang-14 libc++-14-dev libc++abi-14-dev', os: ubuntu-22.04, cxxstd: '17', build-type: 'Debug', cxxflags: '-stdlib=libc++', ldflags: '-lc++' }
+          - { toolset: clang-14, install: 'clang-14 libc++-14-dev libc++abi-14-dev', os: ubuntu-22.04, cxxstd: '20', build-type: 'Release', cxxflags: '-stdlib=libc++', ldflags: '-lc++' }
+    runs-on: ${{ matrix.os }}
+    env:
+      CXXFLAGS: ${{matrix.cxxflags}} -Wall -Wextra
+      LDFLAGS:  ${{matrix.ldflags}}
+      CMAKE_BUILD_PARALLEL_LEVEL: 4
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: sudo apt-get -y install cmake protobuf-compiler redis-server python3 ${{ matrix.install }}
+
+    - name: Setup Boost
+      run: ./tools/ci.py setup-boost --source-dir=$(pwd)
+
+    - name: Build a Boost distribution using B2
+      run: |
+        ./tools/ci.py build-b2-distro \
+          --toolset ${{ matrix.toolset }}
+
+    - name: Build a Boost distribution using CMake
+      run: |
+        ./tools/ci.py build-cmake-distro \
+          --build-type ${{ matrix.build-type }} \
+          --cxxstd ${{ matrix.cxxstd }} \
+          --toolset ${{ matrix.toolset }}
+
+    - name: Build the project tests
+      run: |
+        ./tools/ci.py build-cmake-standalone-tests \
+          --build-type ${{ matrix.build-type }} \
+          --cxxstd ${{ matrix.cxxstd }} \
+          --toolset ${{ matrix.toolset }}
+  
+    - name: Run the project tests
+      run: |
+        ./tools/ci.py run-cmake-standalone-tests \
+          --build-type ${{ matrix.build-type }}
+
+    - name: Run add_subdirectory tests
+      run: |
+        ./tools/ci.py run-cmake-add-subdirectory-tests \
+          --build-type ${{ matrix.build-type }} \
+          --cxxstd ${{ matrix.cxxstd }} \
+          --toolset ${{ matrix.toolset }}
+
+    - name: Run find_package tests with the built cmake distribution
+      run: |
+        ./tools/ci.py run-cmake-find-package-tests \
+          --build-type ${{ matrix.build-type }} \
+          --cxxstd ${{ matrix.cxxstd }} \
+          --toolset ${{ matrix.toolset }}
+
+    - name: Run find_package tests with the built b2 distribution
+      run: |
+        ./tools/ci.py run-cmake-b2-find-package-tests \
+          --build-type ${{ matrix.build-type }} \
+          --cxxstd ${{ matrix.cxxstd }} \
+          --toolset ${{ matrix.toolset }}
+
+  posix-b2:
+    name: "B2 ${{ matrix.toolset }}"
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { toolset: gcc-11,   install: g++-11,   cxxstd: "11,17,20" } # Having C++11 shouldn't break the build
+          - { toolset: clang-14, install: clang-14, cxxstd: "17,20" }
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: sudo apt-get -y install python3 ${{ matrix.install }}
+
+    - name: Setup Boost
+      run: ./tools/ci.py setup-boost --source-dir=$(pwd)
+    
+    - name: Build and run project tests using B2
+      run: |
+        python3 tools/ci.py run-b2-tests \
+          --toolset ${{ matrix.toolset }} \
+          --cxxstd ${{ matrix.cxxstd }} \
+          --variant debug,release

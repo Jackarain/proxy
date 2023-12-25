@@ -181,6 +181,95 @@ int main()
 
     BOOST_TEST_EQ( X::instances, 0 );
 
+    //
+
+    {
+        result<void, int> r;
+        result<void, X> r2 = r;
+
+        BOOST_TEST( r2 );
+        BOOST_TEST_EQ( X::instances, 0 );
+    }
+
+    BOOST_TEST_EQ( X::instances, 0 );
+
+    {
+        result<void, int> const r;
+        result<void, X> r2 = r;
+
+        BOOST_TEST( r2 );
+        BOOST_TEST_EQ( X::instances, 0 );
+    }
+
+    BOOST_TEST_EQ( X::instances, 0 );
+
+    {
+        result<void, X> r2 = result<void, int>();
+
+        BOOST_TEST( r2 );
+        BOOST_TEST_EQ( X::instances, 0 );
+    }
+
+    BOOST_TEST_EQ( X::instances, 0 );
+
+    {
+        result<void, int> r( 5 );
+        result<void, X> r2 = r;
+
+        BOOST_TEST( !r2 );
+        BOOST_TEST_EQ( r2.error(), X(5) );
+        BOOST_TEST_EQ( X::instances, 1 );
+    }
+
+    BOOST_TEST_EQ( X::instances, 0 );
+
+    {
+        result<void, int> const r( 6 );
+        result<void, X> r2 = r;
+
+        BOOST_TEST( !r2 );
+        BOOST_TEST_EQ( r2.error(), X(6) );
+        BOOST_TEST_EQ( X::instances, 1 );
+    }
+
+    {
+        result<void, X> r2 = result<void, int>( 7 );
+
+        BOOST_TEST( !r2 );
+        BOOST_TEST_EQ( r2.error(), X(7) );
+        BOOST_TEST_EQ( X::instances, 1 );
+    }
+
+    BOOST_TEST_EQ( X::instances, 0 );
+
+    //
+
+    {
+        int x = 5;
+
+        result<int&> r( x );
+        result<int const&> r2 = r;
+
+        BOOST_TEST( r2 ) && BOOST_TEST_EQ( *r2, 5 );
+    }
+
+    {
+        int x = 6;
+
+        result<int&> const r( x );
+        result<int const&> r2 = r;
+
+        BOOST_TEST( r2 ) && BOOST_TEST_EQ( *r2, 6 );
+    }
+
+    {
+        int x = 7;
+
+        result<int const&> r2 = result<int&>( x );
+
+        BOOST_TEST( r2 ) && BOOST_TEST_EQ( *r2, 7 );
+    }
+
     {
         BOOST_TEST_TRAIT_TRUE((std::is_constructible<result<long>, result<int>>));
         BOOST_TEST_TRAIT_TRUE((std::is_convertible<result<int>, result<long>>));
@@ -196,6 +285,21 @@ int main()
 
         BOOST_TEST_TRAIT_FALSE((std::is_constructible<result<int, void*>, result<int, int>>));
         BOOST_TEST_TRAIT_FALSE((std::is_convertible<result<int, int>, result<int, void*>>));
+
+        BOOST_TEST_TRAIT_FALSE((std::is_constructible<result<void, void*>, result<void, int>>));
+        BOOST_TEST_TRAIT_FALSE((std::is_convertible<result<void, int>, result<void, void*>>));
+
+        BOOST_TEST_TRAIT_TRUE((std::is_constructible<result<int const&>, result<int&>>));
+        BOOST_TEST_TRAIT_TRUE((std::is_convertible<result<int&>, result<int const&>>));
+
+        BOOST_TEST_TRAIT_FALSE((std::is_constructible<result<int const&>, result<int>>));
+        BOOST_TEST_TRAIT_FALSE((std::is_convertible<result<int>, result<int const&>>));
+
+        BOOST_TEST_TRAIT_FALSE((std::is_constructible<result<int const&>, result<long&>>));
+        BOOST_TEST_TRAIT_FALSE((std::is_convertible<result<long&>, result<int const&>>));
+
+        BOOST_TEST_TRAIT_FALSE((std::is_constructible<result<int const&>, result<long const&>>));
+        BOOST_TEST_TRAIT_FALSE((std::is_convertible<result<long const&>, result<int const&>>));
     }
 
     return boost::report_errors();

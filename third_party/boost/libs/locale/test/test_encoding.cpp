@@ -211,16 +211,16 @@ struct utfutf;
 #    pragma warning(push)
 #    pragma warning(disable : 4309) // narrowing static_cast warning
 #endif
-template<>
-struct utfutf<char, 1> {
-    static const char* ok() { return "grüßen"; }
-    static const char* bad()
+template<typename U8Char>
+struct utfutf<U8Char, 1> {
+    static const U8Char* ok() { return reinterpret_cast<const U8Char*>("grüßen"); }
+    static const U8Char* bad()
     {
-        return "gr\xFF"
-               "üßen";
+        return reinterpret_cast<const U8Char*>("gr\xFF"
+                                               "üßen");
         // split into 2 to make SunCC happy
     }
-    static char bad_char() { return static_cast<char>(0xFF); }
+    static U8Char bad_char() { return static_cast<U8Char>(0xFF); }
 };
 
 template<>
@@ -305,6 +305,8 @@ void test_utf_for()
     } catch(const invalid_charset_error&) { // LCOV_EXCL_LINE
         std::cout << "--- not supported\n"; // LCOV_EXCL_LINE
     }
+    // Testing a codepage which may crash with IConv on macOS, see issue #196
+    test_to_from_utf<Char>("\xa1\xad\xa1\xad", utf<Char>("……"), "gbk");
 
     std::cout << "- Testing correct invalid bytes skipping\n";
     {
@@ -376,6 +378,10 @@ void test_utf_to_utf_for()
     test_from_utf_for_impls(utf<Char>(utf8_string), utf8_string, "UTF-8");
     std::cout << "---- wchar_t\n";
     test_utf_to_utf_for<Char, wchar_t>(utf8_string);
+#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+    std::cout << "---- char8_t\n";
+    test_utf_to_utf_for<Char, char8_t>(utf8_string);
+#endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
     std::cout << "---- char16_t\n";
     test_utf_to_utf_for<Char, char16_t>(utf8_string);
@@ -393,6 +399,10 @@ void test_utf_to_utf()
     test_utf_to_utf_for<char>();
     std::cout << "-- wchar_t\n";
     test_utf_to_utf_for<wchar_t>();
+#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+    std::cout << "-- char8_t\n";
+    test_utf_to_utf_for<char8_t>();
+#endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
     std::cout << "-- char16_t\n";
     test_utf_to_utf_for<char16_t>();
@@ -459,6 +469,10 @@ void test_latin1_conversions()
     test_latin1_conversions_for<char>();
     std::cout << "-- wchar_t\n";
     test_latin1_conversions_for<wchar_t>();
+#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+    std::cout << "-- char8_t\n";
+    test_latin1_conversions_for<char8_t>();
+#endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
     std::cout << "-- char16_t\n";
     test_latin1_conversions_for<char16_t>();
@@ -592,17 +606,17 @@ void test_main(int /*argc*/, char** /*argv*/)
     test_utf_for<char>();
     std::cout << "  wchar_t" << std::endl;
     test_utf_for<wchar_t>();
+#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+    std::cout << "  char8_t" << std::endl;
+    test_utf_for<char8_t>();
+#endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
-    if(backendName == "icu" || backendName == "std") {
-        std::cout << "  char16_t" << std::endl;
-        test_utf_for<char16_t>();
-    }
+    std::cout << "  char16_t" << std::endl;
+    test_utf_for<char16_t>();
 #endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
-    if(backendName == "icu" || backendName == "std") {
-        std::cout << "  char32_t" << std::endl;
-        test_utf_for<char32_t>();
-    }
+    std::cout << "  char32_t" << std::endl;
+    test_utf_for<char32_t>();
 #endif
 
     test_all_combinations();

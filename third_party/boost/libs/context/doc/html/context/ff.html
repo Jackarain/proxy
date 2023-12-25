@@ -1,14 +1,13 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <title>Context switching with fibers</title>
 <link rel="stylesheet" href="../../../../../doc/src/boostbook.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
-<link rel="home" href="../index.html" title="Chapter 1. Context">
-<link rel="up" href="../index.html" title="Chapter 1. Context">
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
+<link rel="home" href="../index.html" title="Chapter&#160;1.&#160;Context">
+<link rel="up" href="../index.html" title="Chapter&#160;1.&#160;Context">
 <link rel="prev" href="requirements.html" title="Requirements">
 <link rel="next" href="ff/implementations__fcontext_t__ucontext_t_and_winfiber.html" title="Implementations: fcontext_t, ucontext_t and WinFiber">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -27,7 +26,7 @@
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="context.ff"></a><a name="ff"></a><a class="link" href="ff.html" title="Context switching with fibers">Context switching with fibers</a>
 </h2></div></div></div>
-<div class="toc"><dl class="toc">
+<div class="toc"><dl>
 <dt><span class="section"><a href="ff/implementations__fcontext_t__ucontext_t_and_winfiber.html">Implementations:
       fcontext_t, ucontext_t and WinFiber</a></span></dt>
 <dt><span class="section"><a href="ff/class__fiber_.html">Class <code class="computeroutput"><span class="identifier">fiber</span></code></a></span></dt>
@@ -57,7 +56,7 @@
     </p>
 <h4>
 <a name="context.ff.h0"></a>
-      <span class="phrase"><a name="context.ff._link_linkend__ff___emphasis_fiber__emphasis___link_"></a></span><a class="link" href="ff.html#context.ff._link_linkend__ff___emphasis_fiber__emphasis___link_"><span class="emphasis"><em>fiber</em></span></a>
+      <span><a name="context.ff._link_linkend__ff___emphasis_fiber__emphasis___link_"></a></span><a class="link" href="ff.html#context.ff._link_linkend__ff___emphasis_fiber__emphasis___link_"><a class="link" href="ff.html#ff"><span class="emphasis"><em>fiber</em></span></a></a>
     </h4>
 <p>
       <a class="link" href="ff.html#ff"><span class="emphasis"><em>fiber</em></span></a> captures the current fiber
@@ -118,7 +117,7 @@
     </p>
 <h4>
 <a name="context.ff.h1"></a>
-      <span class="phrase"><a name="context.ff.usage"></a></span><a class="link" href="ff.html#context.ff.usage">Usage</a>
+      <span><a name="context.ff.usage"></a></span><a class="link" href="ff.html#context.ff.usage">Usage</a>
     </h4>
 <pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">ctx</span><span class="special">=</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">context</span><span class="special">;</span>
 <span class="keyword">int</span> <span class="identifier">a</span><span class="special">;</span>
@@ -172,7 +171,7 @@
     </p>
 <h4>
 <a name="context.ff.h2"></a>
-      <span class="phrase"><a name="context.ff.parameter_passing"></a></span><a class="link" href="ff.html#context.ff.parameter_passing">Parameter
+      <span><a name="context.ff.parameter_passing"></a></span><a class="link" href="ff.html#context.ff.parameter_passing">Parameter
       passing</a>
     </h4>
 <p>
@@ -205,7 +204,7 @@
     </p>
 <h4>
 <a name="context.ff.h3"></a>
-      <span class="phrase"><a name="context.ff.exception_handling"></a></span><a class="link" href="ff.html#context.ff.exception_handling">Exception
+      <span><a name="context.ff.exception_handling"></a></span><a class="link" href="ff.html#context.ff.exception_handling">Exception
       handling</a>
     </h4>
 <p>
@@ -219,18 +218,19 @@
 <th align="left">Important</th>
 </tr>
 <tr><td align="left" valign="top"><p>
-        Do not jump from inside a catch block.
+        Do not jump from inside a catch block and then re-throw the exception in
+        another fiber.
       </p></td></tr>
 </table></div>
 <a name="ff_ontop"></a><h4>
 <a name="context.ff.h4"></a>
-      <span class="phrase"><a name="context.ff.executing_function_on_top_of_a_fiber"></a></span><a class="link" href="ff.html#context.ff.executing_function_on_top_of_a_fiber">Executing
+      <span><a name="context.ff.executing_function_on_top_of_a_fiber"></a></span><a class="link" href="ff.html#context.ff.executing_function_on_top_of_a_fiber">Executing
       function on top of a fiber</a>
     </h4>
 <p>
       Sometimes it is useful to execute a new function on top of a resumed fiber.
       For this purpose <span class="emphasis"><em>continuation::resume_with()</em></span> has to be
-      used. The function passed as argument must accept a rvalue reference to <a class="link" href="ff.html#ff"><span class="emphasis"><em>fiber</em></span></a> and return <a class="link" href="ff.html#ff"><span class="emphasis"><em>fiber</em></span></a>.
+      used. The function passed as argument must accept a rvalue reference to <a class="link" href="ff.html#ff"><span class="emphasis"><em>fiber</em></span></a> and return <code class="computeroutput"><span class="keyword">void</span></code>.
     </p>
 <pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">ctx</span><span class="special">=</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">context</span><span class="special">;</span>
 <span class="keyword">int</span> <span class="identifier">data</span><span class="special">=</span><span class="number">0</span><span class="special">;</span>
@@ -250,7 +250,7 @@
 <span class="identifier">f1</span><span class="special">=</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">move</span><span class="special">(</span><span class="identifier">f1</span><span class="special">).</span><span class="identifier">resume</span><span class="special">();</span>
 <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"f1: returned second time: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">data</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
 <span class="identifier">data</span><span class="special">+=</span><span class="number">1</span><span class="special">;</span>
-<span class="identifier">f1</span><span class="special">=</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">move</span><span class="special">(</span><span class="identifier">f1</span><span class="special">).</span><span class="identifier">resume_with</span><span class="special">([&amp;</span><span class="identifier">data</span><span class="special">](</span><span class="identifier">ctx</span><span class="special">::</span><span class="identifier">fiber</span><span class="special">&amp;&amp;</span> <span class="identifier">f2</span><span class="special">){</span>
+<span class="identifier">f1</span><span class="special">=</span><span class="identifier">f1</span><span class="special">.</span><span class="identifier">resume_with</span><span class="special">([&amp;</span><span class="identifier">data</span><span class="special">](</span><span class="identifier">ctx</span><span class="special">::</span><span class="identifier">fiber</span><span class="special">&amp;&amp;</span> <span class="identifier">f2</span><span class="special">){</span>
     <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"f2: entered: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">data</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
     <span class="identifier">data</span><span class="special">=-</span><span class="number">1</span><span class="special">;</span>
     <span class="keyword">return</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">move</span><span class="special">(</span><span class="identifier">f2</span><span class="special">);</span>
@@ -314,7 +314,7 @@
     </p>
 <h4>
 <a name="context.ff.h5"></a>
-      <span class="phrase"><a name="context.ff.stack_unwinding"></a></span><a class="link" href="ff.html#context.ff.stack_unwinding">Stack
+      <span><a name="context.ff.stack_unwinding"></a></span><a class="link" href="ff.html#context.ff.stack_unwinding">Stack
       unwinding</a>
     </h4>
 <p>
@@ -340,7 +340,7 @@
 </table></div>
 <a name="ff_prealloc"></a><h4>
 <a name="context.ff.h6"></a>
-      <span class="phrase"><a name="context.ff.allocating_control_structures_on_top_of_stack"></a></span><a class="link" href="ff.html#context.ff.allocating_control_structures_on_top_of_stack">Allocating
+      <span><a name="context.ff.allocating_control_structures_on_top_of_stack"></a></span><a class="link" href="ff.html#context.ff.allocating_control_structures_on_top_of_stack">Allocating
       control structures on top of stack</a>
     </h4>
 <p>
@@ -386,7 +386,7 @@
 </pre>
 <h4>
 <a name="context.ff.h7"></a>
-      <span class="phrase"><a name="context.ff.inverting_the_control_flow"></a></span><a class="link" href="ff.html#context.ff.inverting_the_control_flow">Inverting
+      <span><a name="context.ff.inverting_the_control_flow"></a></span><a class="link" href="ff.html#context.ff.inverting_the_control_flow">Inverting
       the control flow</a>
     </h4>
 <pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">ctx</span><span class="special">=</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">context</span><span class="special">;</span>
@@ -488,7 +488,7 @@
 <span class="identifier">source</span><span class="special">=</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">move</span><span class="special">(</span><span class="identifier">source</span><span class="special">).</span><span class="identifier">resume</span><span class="special">();</span>
 <span class="keyword">while</span><span class="special">(!</span><span class="identifier">done</span><span class="special">){</span>
     <span class="identifier">printf</span><span class="special">(</span><span class="string">"Parsed: %c\n"</span><span class="special">,</span><span class="identifier">c</span><span class="special">);</span>
-    <span class="identifier">source</span><span class="special">=</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">move</span><span class="special">(</span><span class="identifier">source</span><span class="special">).</span><span class="identifier">resume</span><span class="special">();</span>
+    <span class="identifier">source</span><span class="special">=</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">Move</span><span class="special">(</span><span class="identifier">source</span><span class="special">).</span><span class="identifier">resume</span><span class="special">();</span>
 <span class="special">}</span>
 
 <span class="identifier">output</span><span class="special">:</span>
@@ -506,11 +506,14 @@
       The data (character) is transferred between the two fibers.
     </p>
 </div>
-<div class="copyright-footer">Copyright © 2014 Oliver Kowalke<p>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright &#169; 2014 Oliver Kowalke<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div>
+</div></td>
+</tr></table>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="requirements.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="ff/implementations__fcontext_t__ucontext_t_and_winfiber.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>

@@ -1,4 +1,4 @@
-//  Copyright (c) 2020 Andrey Semashev
+//  Copyright (c) 2020-2023 Andrey Semashev
 //
 //  Distributed under the Boost Software License, Version 1.0.
 //  See accompanying file LICENSE_1_0.txt or copy at
@@ -12,16 +12,17 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <chrono>
+#include <thread>
+#include <memory>
+#include <utility>
 #include <iostream>
-#include <algorithm>
 #include <boost/config.hpp>
-#include <boost/chrono/chrono.hpp>
-#include <boost/bind/bind.hpp>
-#include <boost/thread/thread.hpp>
-#include <boost/thread/barrier.hpp>
 #include "atomic_wrapper.hpp"
 #include "lightweight_test_stream.hpp"
 #include "test_clock.hpp"
+#include "test_thread.hpp"
+#include "test_barrier.hpp"
 
 //! Since some of the tests below are allowed to fail, we retry up to this many times to pass the test
 BOOST_CONSTEXPR_OR_CONST unsigned int test_retry_count = 5u;
@@ -62,7 +63,7 @@ private:
 
     T m_value1, m_value2, m_value3;
 
-    boost::barrier m_barrier;
+    test_barrier m_barrier;
 
     thread_state m_thread1_state;
     thread_state m_thread2_state;
@@ -81,19 +82,19 @@ public:
 
     bool run()
     {
-        boost::thread thread1(&notify_one_test::thread_func, this, &m_thread1_state);
-        boost::thread thread2(&notify_one_test::thread_func, this, &m_thread2_state);
+        test_thread thread1([this]() { this->thread_func(&this->m_thread1_state); });
+        test_thread thread2([this]() { this->thread_func(&this->m_thread2_state); });
 
-        m_barrier.wait();
+        m_barrier.arrive_and_wait();
 
         test_clock::time_point start_time = test_clock::now();
 
-        boost::this_thread::sleep_for(chrono::milliseconds(200));
+        std::this_thread::sleep_for(chrono::milliseconds(200));
 
         m_wrapper.a.store(m_value2, boost::memory_order_release);
         m_wrapper.a.notify_one();
 
-        boost::this_thread::sleep_for(chrono::milliseconds(200));
+        std::this_thread::sleep_for(chrono::milliseconds(200));
 
         m_wrapper.a.store(m_value3, boost::memory_order_release);
         m_wrapper.a.notify_one();
@@ -141,7 +142,7 @@ public:
 private:
     void thread_func(thread_state* state)
     {
-        m_barrier.wait();
+        m_barrier.arrive_and_wait();
 
         state->m_received_value = m_wrapper.a.wait(m_value1);
         state->m_wakeup_time = test_clock::now();
@@ -187,7 +188,7 @@ private:
 
     T m_value1, m_value2;
 
-    boost::barrier m_barrier;
+    test_barrier m_barrier;
 
     thread_state m_thread1_state;
     thread_state m_thread2_state;
@@ -205,14 +206,14 @@ public:
 
     bool run()
     {
-        boost::thread thread1(&notify_all_test::thread_func, this, &m_thread1_state);
-        boost::thread thread2(&notify_all_test::thread_func, this, &m_thread2_state);
+        test_thread thread1([this]() { this->thread_func(&this->m_thread1_state); });
+        test_thread thread2([this]() { this->thread_func(&this->m_thread2_state); });
 
-        m_barrier.wait();
+        m_barrier.arrive_and_wait();
 
         test_clock::time_point start_time = test_clock::now();
 
-        boost::this_thread::sleep_for(chrono::milliseconds(200));
+        std::this_thread::sleep_for(chrono::milliseconds(200));
 
         m_wrapper.a.store(m_value2, boost::memory_order_release);
         m_wrapper.a.notify_all();
@@ -249,7 +250,7 @@ public:
 private:
     void thread_func(thread_state* state)
     {
-        m_barrier.wait();
+        m_barrier.arrive_and_wait();
 
         state->m_received_value = m_wrapper.a.wait(m_value1);
         state->m_wakeup_time = test_clock::now();

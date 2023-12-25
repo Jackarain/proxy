@@ -1,14 +1,13 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <title>Namespace this_fiber</title>
 <link rel="stylesheet" href="../../../../../../doc/src/boostbook.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
-<link rel="home" href="../../index.html" title="Chapter 1. Fiber">
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
+<link rel="home" href="../../index.html" title="Chapter&#160;1.&#160;Fiber">
 <link rel="up" href="../fiber_mgmt.html" title="Fiber management">
 <link rel="prev" href="id.html" title="Class fiber::id">
 <link rel="next" href="../scheduling.html" title="Scheduling">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -29,9 +28,9 @@
 </h3></div></div></div>
 <p>
         In general, <code class="computeroutput"><span class="identifier">this_fiber</span></code> operations
-        may be called from the <span class="quote">“<span class="quote">main</span>”</span> fiber — the fiber on which function
+        may be called from the <span class="quote">&#8220;<span class="quote">main</span>&#8221;</span> fiber &#8212; the fiber on which function
         <code class="computeroutput"><span class="identifier">main</span><span class="special">()</span></code>
-        is entered — as well as from an explicitly-launched thread’s thread-function.
+        is entered &#8212; as well as from an explicitly-launched thread&#8217;s thread-function.
         That is, in many respects the main fiber on each thread can be treated like
         an explicitly-launched fiber.
       </p>
@@ -53,7 +52,7 @@
         </p>
 <h5>
 <a name="this_fiber_get_id_bridgehead"></a>
-  <span class="phrase"><a name="this_fiber_get_id"></a></span>
+  <span><a name="this_fiber_get_id"></a></span>
   <a class="link" href="this_fiber.html#this_fiber_get_id">Non-member
         function <code class="computeroutput">this_fiber::get_id()</code></a>
 </h5>
@@ -70,7 +69,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Returns:</span></dt>
 <dd><p>
               An instance of <a class="link" href="../fiber_mgmt.html#class_fiber_id"><code class="computeroutput"><span class="identifier">fiber</span><span class="special">::</span><span class="identifier">id</span></code></a> that
@@ -86,7 +85,7 @@
         </p>
 <h5>
 <a name="this_fiber_sleep_until_bridgehead"></a>
-  <span class="phrase"><a name="this_fiber_sleep_until"></a></span>
+  <span><a name="this_fiber_sleep_until"></a></span>
   <a class="link" href="this_fiber.html#this_fiber_sleep_until">Non-member
         function <code class="computeroutput">this_fiber::sleep_until()</code></a>
 </h5>
@@ -104,7 +103,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               Suspends the current fiber until the time point specified by <code class="computeroutput"><span class="identifier">abs_time</span></code> has been reached.
@@ -121,12 +120,12 @@
             </p></dd>
 <dt><span class="term">Note:</span></dt>
 <dd><p>
-              <span class="quote">“<span class="quote">timeout-related exceptions</span>”</span> are as defined in the C++
+              <span class="quote">&#8220;<span class="quote">timeout-related exceptions</span>&#8221;</span> are as defined in the C++
               Standard, section <span class="bold"><strong>30.2.4 Timing specifications
-              [thread.req.timing]</strong></span>: <span class="quote">“<span class="quote">A function that takes an argument
+              [thread.req.timing]</strong></span>: <span class="quote">&#8220;<span class="quote">A function that takes an argument
               which specifies a timeout will throw if, during its execution, a clock,
               time point, or time duration throws an exception. Such exceptions are
-              referred to as <span class="emphasis"><em>timeout-related exceptions.</em></span></span>”</span>
+              referred to as <span class="emphasis"><em>timeout-related exceptions.</em></span></span>&#8221;</span>
             </p></dd>
 </dl>
 </div>
@@ -134,7 +133,7 @@
         </p>
 <h5>
 <a name="this_fiber_sleep_for_bridgehead"></a>
-  <span class="phrase"><a name="this_fiber_sleep_for"></a></span>
+  <span><a name="this_fiber_sleep_for"></a></span>
   <a class="link" href="this_fiber.html#this_fiber_sleep_for">Non-member
         function <code class="computeroutput">this_fiber::sleep_for()</code></a>
 </h5>
@@ -152,7 +151,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               Suspends the current fiber until the time duration specified by <code class="computeroutput"><span class="identifier">rel_time</span></code> has elapsed.
@@ -173,7 +172,7 @@
         </p>
 <h5>
 <a name="this_fiber_yield_bridgehead"></a>
-  <span class="phrase"><a name="this_fiber_yield"></a></span>
+  <span><a name="this_fiber_yield"></a></span>
   <a class="link" href="this_fiber.html#this_fiber_yield">Non-member function
         <code class="computeroutput">this_fiber::yield()</code></a>
 </h5>
@@ -190,7 +189,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               Relinquishes execution control, allowing other fibers to run.
@@ -210,7 +209,7 @@
         </p>
 <h5>
 <a name="this_fiber_properties_bridgehead"></a>
-  <span class="phrase"><a name="this_fiber_properties"></a></span>
+  <span><a name="this_fiber_properties"></a></span>
   <a class="link" href="this_fiber.html#this_fiber_properties">Non-member
         function <code class="computeroutput">this_fiber::properties()</code></a>
 </h5>
@@ -228,7 +227,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Preconditions:</span></dt>
 <dd><p>
               <a class="link" href="fiber.html#use_scheduling_algorithm"><code class="computeroutput">use_scheduling_algorithm()</code></a> has been called from
@@ -264,11 +263,14 @@
 </dl>
 </div>
 </div>
-<div class="copyright-footer">Copyright © 2013 Oliver Kowalke<p>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright &#169; 2013 Oliver Kowalke<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div>
+</div></td>
+</tr></table>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="id.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../fiber_mgmt.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../scheduling.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>

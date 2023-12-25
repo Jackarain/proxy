@@ -1,14 +1,13 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <title>Tuning</title>
 <link rel="stylesheet" href="../../../../../doc/src/boostbook.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
-<link rel="home" href="../index.html" title="Chapter 1. Fiber">
-<link rel="up" href="../index.html" title="Chapter 1. Fiber">
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
+<link rel="home" href="../index.html" title="Chapter&#160;1.&#160;Fiber">
+<link rel="up" href="../index.html" title="Chapter&#160;1.&#160;Fiber">
 <link rel="prev" href="performance.html" title="Performance">
 <link rel="next" href="custom.html" title="Customization">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -29,18 +28,18 @@
 </h2></div></div></div>
 <h4>
 <a name="fiber.tuning.h0"></a>
-      <span class="phrase"><a name="fiber.tuning.disable_synchronization"></a></span><a class="link" href="tuning.html#fiber.tuning.disable_synchronization">Disable
+      <span><a name="fiber.tuning.disable_synchronization"></a></span><a class="link" href="tuning.html#fiber.tuning.disable_synchronization">Disable
       synchronization</a>
     </h4>
 <p>
       With <a class="link" href="overview.html#cross_thread_sync"><code class="computeroutput"><span class="identifier">BOOST_FIBERS_NO_ATOMICS</span></code></a>
-      defined at the compiler’s command line, synchronization between fibers (in different
+      defined at the compiler&#8217;s command line, synchronization between fibers (in different
       threads) is disabled. This is acceptable if the application is single threaded
       and/or fibers are not synchronized between threads.
     </p>
 <h4>
 <a name="fiber.tuning.h1"></a>
-      <span class="phrase"><a name="fiber.tuning.memory_allocation"></a></span><a class="link" href="tuning.html#fiber.tuning.memory_allocation">Memory
+      <span><a name="fiber.tuning.memory_allocation"></a></span><a class="link" href="tuning.html#fiber.tuning.memory_allocation">Memory
       allocation</a>
     </h4>
 <p>
@@ -48,21 +47,21 @@
       environment, especially for <span class="bold"><strong>Boost.Fiber</strong></span> where
       fiber stacks are allocated on the heap. The default user-level memory allocator
       (UMA) of glibc is ptmalloc2 but it can be replaced by another UMA that fit
-      better for the concret work-load For instance Google’s <a href="http://goog-perftools.sourceforge.net/doc/tcmalloc.html" target="_top">TCmalloc</a>
+      better for the concret work-load For instance Google&#8217;s <a href="http://goog-perftools.sourceforge.net/doc/tcmalloc.html" target="_top">TCmalloc</a>
       enables a better performance at the <span class="emphasis"><em>skynet</em></span> microbenchmark
-      than glibc’s default memory allocator.
+      than glibc&#8217;s default memory allocator.
     </p>
 <h4>
 <a name="fiber.tuning.h2"></a>
-      <span class="phrase"><a name="fiber.tuning.scheduling_strategies"></a></span><a class="link" href="tuning.html#fiber.tuning.scheduling_strategies">Scheduling
+      <span><a name="fiber.tuning.scheduling_strategies"></a></span><a class="link" href="tuning.html#fiber.tuning.scheduling_strategies">Scheduling
       strategies</a>
     </h4>
 <p>
       The fibers in a thread are coordinated by a fiber manager. Fibers trade control
       cooperatively, rather than preemptively. Depending on the work-load several
-      strategies of scheduling the fibers are possible <a href="#ftn.fiber.tuning.f0" class="footnote" name="fiber.tuning.f0"><sup class="footnote">[10]</sup></a> that can be implmented on behalf of <a class="link" href="scheduling.html#class_algorithm"><code class="computeroutput">algorithm</code></a>.
+      strategies of scheduling the fibers are possible <sup>[<a name="fiber.tuning.f0" href="#ftn.fiber.tuning.f0" class="footnote">10</a>]</sup> that can be implmented on behalf of <a class="link" href="scheduling.html#class_algorithm"><code class="computeroutput">algorithm</code></a>.
     </p>
-<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<div class="itemizedlist"><ul class="itemizedlist" type="disc">
 <li class="listitem">
           work-stealing: ready fibers are hold in a local queue, when the fiber-scheduler's
           local queue runs out of ready fibers, it randomly selects another fiber-scheduler
@@ -92,7 +91,7 @@
 </ul></div>
 <h4>
 <a name="fiber.tuning.h3"></a>
-      <span class="phrase"><a name="fiber.tuning.ttas_locks"></a></span><a class="link" href="tuning.html#fiber.tuning.ttas_locks">TTAS
+      <span><a name="fiber.tuning.ttas_locks"></a></span><a class="link" href="tuning.html#fiber.tuning.ttas_locks">TTAS
       locks</a>
     </h4>
 <p>
@@ -104,7 +103,7 @@
     </p>
 <h4>
 <a name="fiber.tuning.h4"></a>
-      <span class="phrase"><a name="fiber.tuning.spin_wait_loop"></a></span><a class="link" href="tuning.html#fiber.tuning.spin_wait_loop">Spin-wait
+      <span><a name="fiber.tuning.spin_wait_loop"></a></span><a class="link" href="tuning.html#fiber.tuning.spin_wait_loop">Spin-wait
       loop</a>
     </h4>
 <p>
@@ -114,7 +113,7 @@
       busy waiting on the lock, relaxing the CPU (via pause/yield mnemonic) gives
       the CPU a hint that the code is in a spin-wait loop.
     </p>
-<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<div class="itemizedlist"><ul class="itemizedlist" type="disc">
 <li class="listitem">
           prevents expensive pipeline flushes (speculatively executed load and compare
           instructions are not pushed to pipeline)
@@ -135,22 +134,22 @@
     </p>
 <h4>
 <a name="fiber.tuning.h5"></a>
-      <span class="phrase"><a name="fiber.tuning.exponential_back_off"></a></span><a class="link" href="tuning.html#fiber.tuning.exponential_back_off">Exponential
+      <span><a name="fiber.tuning.exponential_back_off"></a></span><a class="link" href="tuning.html#fiber.tuning.exponential_back_off">Exponential
       back-off</a>
     </h4>
 <p>
       The macro BOOST_FIBERS_RETRY_THRESHOLD determines how many times the CPU iterates
       in the spin-wait loop before yielding the thread or blocking in futex-wait.
       The spinlock tracks how many times the thread failed to acquire the lock. The
-      higher the contention, the longer the thread should back-off. A <span class="quote">“<span class="quote">Binary
-      Exponential Backoff</span>”</span> algorithm together with a randomized contention
+      higher the contention, the longer the thread should back-off. A <span class="quote">&#8220;<span class="quote">Binary
+      Exponential Backoff</span>&#8221;</span> algorithm together with a randomized contention
       window is utilized for this purpose. BOOST_FIBERS_CONTENTION_WINDOW_THRESHOLD
       determines the upper limit of the contention window (expressed as the exponent
       for basis of two).
     </p>
 <h4>
 <a name="fiber.tuning.h6"></a>
-      <span class="phrase"><a name="fiber.tuning.speculative_execution__hardware_transactional_memory_"></a></span><a class="link" href="tuning.html#fiber.tuning.speculative_execution__hardware_transactional_memory_">Speculative
+      <span><a name="fiber.tuning.speculative_execution__hardware_transactional_memory_"></a></span><a class="link" href="tuning.html#fiber.tuning.speculative_execution__hardware_transactional_memory_">Speculative
       execution (hardware transactional memory)</a>
     </h4>
 <p>
@@ -183,7 +182,7 @@
 </table></div>
 <h4>
 <a name="fiber.tuning.h7"></a>
-      <span class="phrase"><a name="fiber.tuning.numa_systems"></a></span><a class="link" href="tuning.html#fiber.tuning.numa_systems">NUMA
+      <span><a name="fiber.tuning.numa_systems"></a></span><a class="link" href="tuning.html#fiber.tuning.numa_systems">NUMA
       systems</a>
     </h4>
 <p>
@@ -193,10 +192,10 @@
     </p>
 <h4>
 <a name="fiber.tuning.h8"></a>
-      <span class="phrase"><a name="fiber.tuning.parameters"></a></span><a class="link" href="tuning.html#fiber.tuning.parameters">Parameters</a>
+      <span><a name="fiber.tuning.parameters"></a></span><a class="link" href="tuning.html#fiber.tuning.parameters">Parameters</a>
     </h4>
 <div class="table">
-<a name="fiber.tuning.parameters_that_migh_be_defiend_at_compiler_s_command_line"></a><p class="title"><b>Table 1.5. Parameters that migh be defiend at compiler's command line</b></p>
+<a name="fiber.tuning.parameters_that_migh_be_defiend_at_compiler_s_command_line"></a><p class="title"><b>Table&#160;1.5.&#160;Parameters that migh be defiend at compiler's command line</b></p>
 <div class="table-contents"><table class="table" summary="Parameters that migh be defiend at compiler's command line">
 <colgroup>
 <col>
@@ -494,18 +493,21 @@
 </table></div>
 </div>
 <br class="table-break"><div class="footnotes">
-<br><hr style="width:100; text-align:left;margin-left: 0">
-<div id="ftn.fiber.tuning.f0" class="footnote"><p><a href="#fiber.tuning.f0" class="para"><sup class="para">[10] </sup></a>
+<br><hr width="100" align="left">
+<div class="footnote"><p><sup>[<a name="ftn.fiber.tuning.f0" href="#fiber.tuning.f0" class="para">10</a>] </sup>
         1024cores.net: <a href="http://www.1024cores.net/home/scalable-architecture/task-scheduling-strategies" target="_top">Task
         Scheduling Strategies</a>
       </p></div>
 </div>
 </div>
-<div class="copyright-footer">Copyright © 2013 Oliver Kowalke<p>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright &#169; 2013 Oliver Kowalke<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div>
+</div></td>
+</tr></table>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="performance.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="custom.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>

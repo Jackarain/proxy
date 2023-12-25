@@ -11,5 +11,6 @@
     ],
     "maintainers": [
         "Vladimir Prus <vladimir.prus -at- gmail.com>"
-    ]
+    ],
+    "cxxstd": "11"
 }

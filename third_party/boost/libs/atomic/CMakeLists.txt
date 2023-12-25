@@ -1,6 +1,6 @@
 # Copyright 2018 Mike Dev
 # Copyright 2019 Peter Dimov
-# Copyright 2020-2022 Andrey Semashev
+# Copyright 2020-2023 Andrey Semashev
 # Distributed under the Boost Software License, Version 1.0.
 # See accompanying file LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt
 
@@ -86,6 +86,10 @@ endif()
 add_library(boost_atomic ${boost_atomic_sources})
 add_library(Boost::atomic ALIAS boost_atomic)
 
+target_compile_features(boost_atomic PUBLIC
+    cxx_static_assert
+)
+
 target_include_directories(boost_atomic PUBLIC include)
 target_include_directories(boost_atomic PRIVATE src)
 
@@ -93,7 +97,6 @@ target_link_libraries(boost_atomic
     PUBLIC
         Boost::assert
         Boost::config
-        Boost::static_assert
         Boost::type_traits
     PRIVATE
         Boost::align

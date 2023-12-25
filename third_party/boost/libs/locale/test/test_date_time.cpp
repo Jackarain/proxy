@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2022-2023 Alexander Grund
 //
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
@@ -14,6 +15,7 @@
 #include <ctime>
 #include <iomanip>
 #include <limits>
+#include <sstream>
 
 #ifdef BOOST_LOCALE_WITH_ICU
 #    include <unicode/uversion.h>
@@ -35,29 +37,35 @@ struct mock_calendar : public boost::locale::abstract_calendar {
     using period_mark = boost::locale::period::marks::period_mark;
 
     mock_calendar() : time(0) { ++num_instances; }
-    mock_calendar(const mock_calendar& other) : time(other.time) { ++num_instances; }
+    mock_calendar(const mock_calendar& other) : time(other.time), tz_(other.tz_), is_dst_(other.is_dst_)
+    {
+        ++num_instances;
+    }
     ~mock_calendar() { --num_instances; }
 
     abstract_calendar* clone() const override { return new mock_calendar(*this); }
     void set_value(period_mark, int) override {}                        // LCOV_EXCL_LINE
     void normalize() override {}                                        // LCOV_EXCL_LINE
     int get_value(period_mark, value_type) const override { return 0; } // LCOV_EXCL_LINE
-    void set_time(const boost::locale::posix_time&) override {}         // LCOV_EXCL_LINE
-    boost::locale::posix_time get_time() const override { return {}; }  // LCOV_EXCL_LINE
+    void set_time(const boost::locale::posix_time& t) override { time = t.seconds * 1e3 + t.nanoseconds / 1e6; }
+    boost::locale::posix_time get_time() const override { return {}; } // LCOV_EXCL_LINE
     double get_time_ms() const override { return time; }
-    void set_option(calendar_option_type, int) override {}                             // LCOV_EXCL_LINE
-    int get_option(calendar_option_type) const override { return 0; }                  // LCOV_EXCL_LINE
+    void set_option(calendar_option_type, int) override {} // LCOV_EXCL_LINE
+    int get_option(calendar_option_type opt) const override { return opt == is_dst ? is_dst_ : false; }
     void adjust_value(period_mark, update_type, int) override {}                       // LCOV_EXCL_LINE
     int difference(const abstract_calendar&, period_mark) const override { return 0; } // LCOV_EXCL_LINE
-    void set_timezone(const std::string&) override {}
-    std::string get_timezone() const override { return "mock TZ"; }
+    void set_timezone(const std::string& tz) override { tz_ = tz; }
+    std::string get_timezone() const override { return tz_; }
     bool same(const abstract_calendar* other) const override
     {
         return dynamic_cast<const mock_calendar*>(other) != nullptr;
     }
 
     static int num_instances;
+    /// Time in ms
     double time;
+    std::string tz_ = "mock TZ";
+    bool is_dst_ = false;
 };
 int mock_calendar::num_instances = 0;
 struct mock_calendar_facet : boost::locale::calendar_facet {
@@ -65,53 +73,150 @@ struct mock_calendar_facet : boost::locale::calendar_facet {
     mock_calendar proto_cal;
 };
 
+struct scoped_timezone {
+    std::string old_tz_;
+    explicit scoped_timezone(const std::string& tz) : old_tz_(boost::locale::time_zone::global(tz)) {}
+    ~scoped_timezone() { boost::locale::time_zone::global(old_tz_); }
+};
+
+static bool equal_period(const boost::locale::date_time_period& lhs, const boost::locale::date_time_period& rhs)
+{
+    return lhs.type == rhs.type && lhs.value == rhs.value;
+}
+
 void test_main(int /*argc*/, char** /*argv*/)
 {
     using namespace boost::locale;
     using namespace boost::locale::period;
+    {
+        date_time_period_set set;
+        TEST_EQ(set.size(), 0u);
+        TEST_THROWS(set[0], std::out_of_range);
+
+        set = day();
+        TEST_EQ(set.size(), 1u);
+        TEST(equal_period(set[0], day(1)));
+        TEST_THROWS(set[1], std::out_of_range);
+        set = day(1);
+        TEST_EQ(set.size(), 1u);
+        TEST(equal_period(set[0], day(1)));
+        set = day(2);
+        TEST_EQ(set.size(), 1u);
+        TEST(equal_period(set[0], day(2)));
+
+        set = day(7) + month(3);
+        TEST_EQ(set.size(), 2u);
+        TEST(equal_period(set[0], day(7)));
+        TEST(equal_period(set[1], month(3)));
+        TEST_THROWS(set[2], std::out_of_range);
+
+        set = year(3) + month(5) + day(7) + hour(13) + minute(17);
+        TEST_EQ(set.size(), 5u);
+        TEST(equal_period(set[0], year(3)));
+        TEST(equal_period(set[1], month(5)));
+        TEST(equal_period(set[2], day(7)));
+        TEST(equal_period(set[3], hour(13)));
+        TEST(equal_period(set[4], minute(17)));
+        TEST_THROWS(set[5], std::out_of_range);
+    }
     std::unique_ptr<calendar> mock_cal;
     {
         auto* cal_facet = new mock_calendar_facet;
         std::locale old_loc = std::locale::global(std::locale(std::locale(), cal_facet));
         mock_calendar::num_instances = 0;
         {
+            scoped_timezone _("global TZ");
             cal_facet->proto_cal.time = 42 * 1e3;
+            cal_facet->proto_cal.is_dst_ = false;
             date_time t1;
             TEST_EQ(t1.time(), 42);
-            TEST_EQ(t1.timezone(), "mock TZ");
+            TEST_EQ(t1.timezone(), "global TZ");
+            TEST(!t1.is_in_daylight_saving_time());
             TEST_EQ(mock_calendar::num_instances, 1);
             cal_facet->proto_cal.time = 99 * 1e3;
+            cal_facet->proto_cal.is_dst_ = true;
+            boost::locale::time_zone::global("global TZ2");
             date_time t2;
+            boost::locale::time_zone::global("global TZ3");
             TEST_EQ(t2.time(), 99);
+            TEST_EQ(t2.timezone(), "global TZ2");
+            TEST(t2.is_in_daylight_saving_time());
             TEST_EQ(mock_calendar::num_instances, 2);
             // Copy construct
             date_time t3 = t1;
             TEST_EQ(t1.time(), 42);
             TEST_EQ(t2.time(), 99);
             TEST_EQ(t3.time(), 42);
+            TEST_EQ(t3.timezone(), "global TZ");
             TEST_EQ(mock_calendar::num_instances, 3);
             // Copy assign
             t3 = t2;
             TEST_EQ(t3.time(), 99);
+            TEST_EQ(t3.timezone(), "global TZ2");
             TEST_EQ(mock_calendar::num_instances, 3); // No new
             {
                 // Move construct
                 date_time t4 = std::move(t1);
                 TEST_EQ(t4.time(), 42);
+                TEST_EQ(t4.timezone(), "global TZ");
                 TEST_EQ(mock_calendar::num_instances, 3); // No new
                 // Move assign
                 t2 = std::move(t4);
                 TEST_EQ(t2.time(), 42);
+                TEST_EQ(t2.timezone(), "global TZ");
                 TEST_LE(mock_calendar::num_instances, 3); // maybe destroy old t2
             }
             // Unchanged after t4 (or old t2) is destroyed
             TEST_EQ(t2.time(), 42);
+            TEST_EQ(t2.timezone(), "global TZ");
             TEST_EQ(mock_calendar::num_instances, 2);
             // Self move, via reference to avoid triggering a compiler warning
             date_time& t2_ref = t2;
             t2_ref = std::move(t2);
             TEST_EQ(t2.time(), 42);
             TEST_EQ(mock_calendar::num_instances, 2);
+
+            // Construct from calendar
+            {
+                const double t = 1337;
+                cal_facet->proto_cal.time = t * 1e3;
+
+                const calendar cal;
+                TEST_EQ(date_time(cal).time(), t);
+                TEST_EQ(date_time(42, cal).time(), 42);
+            }
+            // Constructor from calendar uses calendars TZ
+            {
+                const std::string globalTZ = boost::locale::time_zone::global();
+                TEST_EQ(date_time().timezone(), globalTZ);
+                TEST_EQ(date_time(101).timezone(), globalTZ);
+                TEST_EQ(date_time(year(2001)).timezone(), globalTZ);
+                const std::string calTZ = "calTZ";
+                const calendar cal(calTZ);
+                TEST_EQ(date_time(cal).timezone(), calTZ);
+                TEST_EQ(date_time(101, cal).timezone(), calTZ);
+                TEST_EQ(date_time(year(2001), cal).timezone(), calTZ);
+            }
+
+            // Swap
+            t1 = date_time(99);
+            t2 = date_time(42);
+            TEST_EQ(t1.time(), 99);
+            TEST_EQ(t2.time(), 42);
+            using std::swap;
+            swap(t1, t2);
+            TEST_EQ(t1.time(), 42);
+            TEST_EQ(t2.time(), 99);
+            swap(t1, t1);
+            TEST_EQ(t1.time(), 42);
+            swap(t2, t2);
+            TEST_EQ(t2.time(), 99);
+
+            // Negative times
+            t1 = date_time(-1.25);
+            TEST_EQ(t1.time(), -1.25);
+            t1 = date_time(-0.25);
+            TEST_EQ(t1.time(), -0.25);
         }
         TEST_EQ(mock_calendar::num_instances, 0); // No leaks
         mock_cal.reset(new calendar());
@@ -167,6 +272,24 @@ void test_main(int /*argc*/, char** /*argv*/)
                 TEST(cal_tmp == cal_loc2);
                 TEST_EQ(cal_tmp.get_time_zone(), tz);
                 TEST(cal_tmp.get_locale() == loc2);
+
+                // Stream constructors
+                std::ostringstream ss;
+                calendar cal_s(ss);
+                TEST(cal_s == cal);
+                TEST(cal_s != cal_loc2);
+                TEST(cal_s != cal_tz2);
+                ss.imbue(loc2);
+                cal_s = calendar(ss);
+                TEST(cal_s != cal);
+                TEST(cal_s == cal_loc2);
+                TEST(cal_s != cal_tz2);
+                ss.imbue(loc);
+                ss << boost::locale::as::time_zone("GMT+01:00");
+                cal_s = calendar(ss);
+                TEST(cal_s != cal);
+                TEST(cal_s != cal_loc2);
+                TEST(cal_s == cal_tz2);
             }
             {
                 calendar cal2;
@@ -198,6 +321,23 @@ void test_main(int /*argc*/, char** /*argv*/)
 
             const date_time tp_5_feb_1970_153313 = date_time(a_datetime); // 5th Feb 1970 15:33:13
             TEST_EQ(tp_5_feb_1970_153313.timezone(), tz);
+
+            // Auto-switch the stream when streaming a date-time
+            {
+                empty_stream(ss) << as::datetime << tp_5_feb_1970_153313;
+                const std::string expected = ss.str();
+                empty_stream(ss) << as::posix;
+                TEST_EQ_FMT(tp_5_feb_1970_153313, expected);
+                // And reset to previous
+                TEST_EQ_FMT(123456789, "123456789");
+                // Same with other preset
+                empty_stream(ss) << as::number << 123456789;
+                const std::string expected2 = ss.str();
+                TEST_EQ_FMT(tp_5_feb_1970_153313, expected);
+                // And reset to previous
+                TEST_EQ_FMT(123456789, expected2);
+            }
+
             ss << as::ftime("%Y-%m-%d");
             TEST_EQ_FMT(tp_5_feb_1970_153313, "1970-02-05");
             ss << as::ftime("%Y-%m-%d %H:%M:%S");
@@ -269,9 +409,19 @@ void test_main(int /*argc*/, char** /*argv*/)
             time_point = tp_5_feb_1970_153313;
             time_point <<= minute() * 30;
             TEST_EQ_FMT(time_point, "1970-02-05 15:03:13");
+            // Same as repeated roll
+            time_point = tp_5_feb_1970_153313;
+            for(int i = 0; i < 30; i++)
+                time_point <<= minute();
+            TEST_EQ_FMT(time_point, "1970-02-05 15:03:13");
 
             time_point = tp_5_feb_1970_153313;
             time_point >>= minute(40);
+            TEST_EQ_FMT(time_point, "1970-02-05 15:53:13");
+            // Same as repeated roll
+            time_point = tp_5_feb_1970_153313;
+            for(int i = 0; i < 40; i++)
+                time_point >>= minute();
             TEST_EQ_FMT(time_point, "1970-02-05 15:53:13");
 
             time_point = tp_5_feb_1970_153313;
@@ -369,6 +519,16 @@ void test_main(int /*argc*/, char** /*argv*/)
             TEST(!(time_point < time_point - second()));
             TEST(time_point > time_point - second());
             TEST(!(time_point > time_point + second()));
+            // Difference in ns
+            {
+                const double sec = std::trunc(time_point.time()) + 0.5; // Stay inside current second
+                if(backend_name == "icu") {                             // Only ICU supports sub-second times
+                    TEST(date_time(sec - 0.25) < date_time(sec));
+                    TEST(date_time(sec + 0.25) > date_time(sec));
+                }
+                TEST(date_time(sec - 0.25) <= date_time(sec));
+                TEST(date_time(sec + 0.25) >= date_time(sec));
+            }
 
             TEST_EQ(time_point.get(day()), 5);
             TEST_EQ(time_point.get(year()), 1970);
@@ -551,7 +711,24 @@ void test_main(int /*argc*/, char** /*argv*/)
             tp_gmt += hour();
             TEST_EQ(tp_gmt.get(hour()), tp_gmt1.get(hour()));
         }
+        // Construction from time-set and calendar/time_point normalizes (e.g. invalid day of month)
+        {
+            const calendar cal;
+            date_time tp1(cal);
+            date_time tp2(year(2001) + march() + day(34), cal);
+            TEST_EQ(tp2 / year(), 2001);
+            TEST_EQ(tp2 / month(), 3);
+            TEST_EQ(tp2 / day(), 3);
+            TEST_EQ(tp2 / hour(), tp1 / hour());
+            TEST_EQ(tp2 / minute(), tp1 / minute());
+            TEST_EQ(tp2 / second(), tp1 / second());
+            date_time tp3(tp2, year(2002) + january() + day(35));
+            TEST_EQ(tp3 / year(), 2002);
+            TEST_EQ(tp3 / month(), 1);
+            TEST_EQ(tp3 / day(), 4);
+            TEST_EQ(tp3 / hour(), tp2 / hour());
+            TEST_EQ(tp3 / minute(), tp2 / minute());
+            TEST_EQ(tp3 / second(), tp2 / second());
+        }
     } // for loop
 }
-
-// boostinspect:noascii

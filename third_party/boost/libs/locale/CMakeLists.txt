@@ -46,10 +46,10 @@ target_link_libraries(boost_locale
   PUBLIC
     Boost::assert
     Boost::config
+    Boost::core
     Boost::iterator
     Boost::utility
   PRIVATE
-    Boost::core
     Boost::predef
     Boost::thread
 )

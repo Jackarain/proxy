@@ -1,4 +1,4 @@
-//  Copyright (c) 2020 Andrey Semashev
+//  Copyright (c) 2020-2023 Andrey Semashev
 //
 //  Distributed under the Boost Software License, Version 1.0.
 //  See accompanying file LICENSE_1_0.txt or copy at
@@ -34,16 +34,14 @@
 #include <boost/atomic/atomic_ref.hpp>
 
 #include <cstddef>
-#include <boost/bind/bind.hpp>
-#include <boost/date_time/posix_time/posix_time_types.hpp>
-#include <boost/thread/thread.hpp>
-#include <boost/thread/thread_time.hpp>
-#include <boost/thread/lock_guard.hpp>
-#include <boost/thread/lock_types.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/condition_variable.hpp>
-#include <boost/thread/barrier.hpp>
+#include <cstdlib>
+#include <chrono>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 #include <boost/core/lightweight_test.hpp>
+#include "test_clock.hpp"
+#include "test_barrier.hpp"
 
 // Two threads perform the following operations:
 //
@@ -61,7 +59,7 @@ class total_store_order_test
 public:
     total_store_order_test(void);
 
-    void run(boost::posix_time::time_duration & timeout);
+    void run(steady_clock::duration& timeout);
     bool detected_conflict(void) const { return detected_conflict_; }
 
 private:
@@ -80,7 +78,7 @@ private:
     boost::atomic_ref<int> b_;
 
     char pad2_[512];
-    boost::barrier barrier_;
+    test_barrier barrier_;
 
     int vrfyb1_, vrfya2_;
 
@@ -88,8 +86,8 @@ private:
     boost::atomic<int> termination_consensus_;
 
     bool detected_conflict_;
-    boost::mutex m_;
-    boost::condition_variable c_;
+    std::mutex m_;
+    std::condition_variable c_;
 };
 
 template<boost::memory_order store_order, boost::memory_order load_order>
@@ -102,18 +100,21 @@ total_store_order_test<store_order, load_order>::total_store_order_test(void) :
 }
 
 template<boost::memory_order store_order, boost::memory_order load_order>
-void total_store_order_test<store_order, load_order>::run(boost::posix_time::time_duration & timeout)
+void total_store_order_test<store_order, load_order>::run(steady_clock::duration& timeout)
 {
-    boost::system_time start = boost::get_system_time();
-    boost::system_time end = start + timeout;
+    steady_clock::time_point start = steady_clock::now();
+    steady_clock::time_point end = start + timeout;
 
-    boost::thread t1(boost::bind(&total_store_order_test::thread1fn, this));
-    boost::thread t2(boost::bind(&total_store_order_test::thread2fn, this));
+    std::thread t1([this]() { this->thread1fn(); });
+    std::thread t2([this]() { this->thread2fn(); });
 
     {
-        boost::unique_lock< boost::mutex > guard(m_);
-        while (boost::get_system_time() < end && !detected_conflict_)
-            c_.timed_wait(guard, end);
+        std::unique_lock< std::mutex > lock(m_);
+        while (!detected_conflict_)
+        {
+            if (c_.wait_until(lock, end) == std::cv_status::timeout)
+                break;
+        }
     }
 
     terminate_threads_.store(true, boost::memory_order_relaxed);
@@ -121,7 +122,7 @@ void total_store_order_test<store_order, load_order>::run(boost::posix_time::tim
     t2.join();
     t1.join();
 
-    boost::posix_time::time_duration duration = boost::get_system_time() - start;
+    steady_clock::duration duration = steady_clock::now() - start;
     if (duration < timeout)
         timeout = duration;
 }
@@ -136,11 +137,11 @@ void total_store_order_test<store_order, load_order>::thread1fn(void)
         a_.store(1, store_order);
         int b = b_.load(load_order);
 
-        barrier_.wait();
+        barrier_.arrive_and_wait();
 
         vrfyb1_ = b;
 
-        barrier_.wait();
+        barrier_.arrive_and_wait();
 
         check_conflict();
 
@@ -162,10 +163,10 @@ void total_store_order_test<store_order, load_order>::thread1fn(void)
 
         termination_consensus_.fetch_xor(4, boost::memory_order_relaxed);
 
-        unsigned int delay = rand() % 10000;
+        unsigned int delay = std::rand() % 10000;
         a_.store(0, boost::memory_order_relaxed);
 
-        barrier_.wait();
+        barrier_.arrive_and_wait();
 
         while (delay--)
             backoff_dummy = delay;
@@ -180,11 +181,11 @@ void total_store_order_test<store_order, load_order>::thread2fn(void)
         b_.store(1, store_order);
         int a = a_.load(load_order);
 
-        barrier_.wait();
+        barrier_.arrive_and_wait();
 
         vrfya2_ = a;
 
-        barrier_.wait();
+        barrier_.arrive_and_wait();
 
         check_conflict();
 
@@ -206,10 +207,10 @@ void total_store_order_test<store_order, load_order>::thread2fn(void)
 
         termination_consensus_.fetch_xor(4, boost::memory_order_relaxed);
 
-        unsigned int delay = rand() % 10000;
+        unsigned int delay = std::rand() % 10000;
         b_.store(0, boost::memory_order_relaxed);
 
-        barrier_.wait();
+        barrier_.arrive_and_wait();
 
         while (delay--)
             backoff_dummy = delay;
@@ -221,7 +222,7 @@ void total_store_order_test<store_order, load_order>::check_conflict(void)
 {
     if (vrfyb1_ == 0 && vrfya2_ == 0)
     {
-        boost::lock_guard< boost::mutex > guard(m_);
+        std::lock_guard< std::mutex > guard(m_);
         detected_conflict_ = true;
         terminate_threads_.store(true, boost::memory_order_relaxed);
         c_.notify_all();
@@ -235,7 +236,7 @@ void test_seq_cst(void)
     /* take 10 samples */
     for (std::size_t n = 0; n < 10; n++)
     {
-        boost::posix_time::time_duration timeout(0, 0, 10);
+        steady_clock::duration timeout = std::chrono::seconds(10);
 
         total_store_order_test<boost::memory_order_relaxed, boost::memory_order_relaxed> test;
         test.run(timeout);
@@ -245,9 +246,10 @@ void test_seq_cst(void)
             return;
         }
 
-        std::cout << "seq_cst violation with order=relaxed after " << timeout.total_microseconds() << " us\n";
+        std::chrono::microseconds timeout_us = std::chrono::duration_cast< std::chrono::microseconds >(timeout);
+        std::cout << "seq_cst violation with order=relaxed after " << timeout_us.count() << " us\n";
 
-        sum = sum + timeout.total_microseconds();
+        sum += timeout_us.count();
     }
 
     /* determine maximum likelihood estimate for average time between
@@ -258,9 +260,10 @@ void test_seq_cst(void)
     double avg_race_time_995 = avg_race_time_mle * 2 * 10 / 7.44;
 
     /* 5.298 = 0.995 quantile of exponential distribution */
-    boost::posix_time::time_duration timeout = boost::posix_time::microseconds((long)(5.298 * avg_race_time_995));
+    std::chrono::microseconds timeout_us(static_cast< std::chrono::microseconds::rep >(5.298 * avg_race_time_995));
+    steady_clock::duration timeout = timeout_us;
 
-    std::cout << "run seq_cst for " << timeout.total_microseconds() << " us\n";
+    std::cout << "run seq_cst for " << timeout_us.count() << " us\n";
 
     total_store_order_test<boost::memory_order_seq_cst, boost::memory_order_seq_cst> test;
     test.run(timeout);

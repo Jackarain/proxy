@@ -1517,6 +1517,38 @@ constexpr in_place_error_t in_place_error{};
 
 template<class T, class E = error_code> class result;
 template<class E> class result<void, E>;
+template<class U, class E> class result<U&, E>;
+
+// operator|
+
+template<class T, class E, class U> T operator|( result<T, E> const& r, U&& u );
+template<class T, class E, class U> T operator|( result<T, E>&& r, U&& u );
+
+template<class T, class E, class F> T operator|( result<T, E> const& r, F&& f );
+template<class T, class E, class F> T operator|( result<T, E>&& r, F&& f );
+
+template<class T, class E, class F, class R = ...> R operator|( result<T, E> const& r, F&& f );
+template<class T, class E, class F, class R = ...> R operator|( result<T, E>&& r, F&& f );
+template<class E, class F, class R = ...> R operator|( result<void, E> const& r, F&& f );
+template<class E, class F, class R = ...> R operator|( result<void, E>&& r, F&& f );
+
+// operator&
+
+template<class T, class E, class F, class U = ...>
+  result<U, E> operator&( result<T, E> const& r, F&& f );
+template<class T, class E, class F, class U = ...>
+  result<U, E> operator&( result<T, E>&& r, F&& f );
+
+template<class T, class E, class F, class R = ...> R operator&( result<T, E> const& r, F&& f );
+template<class T, class E, class F, class R = ...> R operator&( result<T, E>&& r, F&& f );
+
+// operator&=
+
+template<class T, class E, class F, class U = ...>
+  result<T, E>& operator&=( result<T, E>& r, F&& f );
+
+template<class T, class E, class F, class R = ...>
+  result<T, E>& operator&=( result<T, E>& r, F&& f );
 
 } // namespace system
 } // namespace boost
@@ -1713,7 +1745,7 @@ Effects: ::
     ensures that `*this` holds the error `E( std::forward<A>(a)... )`.
   - Otherwise, this constructor does not participate in overload resolution.
 Remarks: ::
-  This constructor is only enabled when `sizeof...(T) > 0`.
+  This constructor is only enabled when `sizeof...(A) > 0`.
 
 ```
 template<class... A>
@@ -1747,7 +1779,7 @@ template<class T2, class E2>
 * {blank}
 +
 Ensures: ::
-  If `r2.has_value()` is `true`, `*this` holds the value `T( *r2 )`, otherwise `*this` holds the value `E( r2.error() )`.
+  If `r2.has_value()` is `true`, `*this` holds the value `T( *r2 )`, otherwise `*this` holds the error `E( r2.error() )`.
 Remarks: ::
   This constructor is only enabled when `std::is_convertible<T2, T>::value && std::is_convertible<E2, E>::value` is `true`.
 
@@ -1759,7 +1791,7 @@ template<class T2, class E2>
 * {blank}
 +
 Ensures: ::
-  If `r2.has_value()` is `true`, `*this` holds the value `T( std::move( *r2 ) )`, otherwise `*this` holds the value `E( r2.error() )`.
+  If `r2.has_value()` is `true`, `*this` holds the value `T( std::move( *r2 ) )`, otherwise `*this` holds the error `E( r2.error() )`.
 Remarks: ::
   This constructor is only enabled when `std::is_convertible<T2, T>::value && std::is_convertible<E2, E>::value` is `true`.
 
@@ -1961,6 +1993,9 @@ public:
     template<class... A>
       constexpr result( in_place_error_t, A&&... a );
 
+    template<class E2>
+      constexpr result( result<void, E2> const& r2 );
+
     // queries
 
     constexpr bool has_value() const noexcept;
@@ -2032,7 +2067,7 @@ Effects: ::
     ensures that `*this` holds the error `E( std::forward<A>(a)... )`.
   - Otherwise, this constructor does not participate in overload resolution.
 Remarks: ::
-  This constructor is only enabled when `sizeof...(T) > 0`.
+  This constructor is only enabled when `sizeof...(A) > 0`.
 
 ```
 template<class... A>
@@ -2055,6 +2090,18 @@ Ensures: ::
   `*this` holds the error `E( std::forward<A>(a)... )`.
 Remarks: ::
   This constructor is only enabled when `std::is_constructible<E, A...>::value` is `true`.
+
+```
+template<class E2>
+  constexpr result( result<void, E2> const& r2 );
+```
+[none]
+* {blank}
++
+Ensures: ::
+  If `r2.has_value()` is `true`, `*this` holds an unspecified value, otherwise `*this` holds the error `E( r2.error() )`.
+Remarks: ::
+  This constructor is only enabled when `std::is_convertible<E2, E>::value` is `true`.
 
 #### Queries
 
@@ -2200,6 +2247,533 @@ Effects: ::
   - If `*this` holds an error `e`, `os << "error:" << e`.
 Returns: ::
   `os`.
+
+### result<U&, E>
+
+```
+namespace boost {
+namespace system {
+
+template<class U, class E> class result<U&, E>
+{
+public:
+
+    using value_type = U&;
+    using error_type = E;
+
+    static constexpr in_place_value_t in_place_value{};
+    static constexpr in_place_error_t in_place_error{};
+
+    // constructors
+
+    template<class A>
+      constexpr result( A&& a ) noexcept;
+
+    template<class... A>
+      constexpr result( A&&... a );
+
+    template<class A>
+      constexpr result( in_place_value_t, A&& a ) noexcept;
+
+    template<class... A>
+      constexpr result( in_place_error_t, A&&... a );
+
+    template<class U2, class E2>
+      constexpr result( result<U2&, E2> const& r2 );
+
+    // queries
+
+    constexpr bool has_value() const noexcept;
+    constexpr bool has_error() const noexcept;
+    constexpr explicit operator bool() const noexcept;
+
+    // checked value access
+
+    constexpr U& value( boost::source_location const & loc =
+      BOOST_CURRENT_LOCATION ) const;
+
+    // unchecked value access
+
+    constexpr U* operator->() const noexcept;
+    constexpr U& operator*() const noexcept;
+
+    // error access
+
+    constexpr E error() const &;
+    constexpr E error() &&;
+
+    // emplace
+
+    template<class A>
+      constexpr U& emplace( A&& a ) noexcept;
+
+    // swap
+
+    constexpr void swap( result& r );
+    friend constexpr void swap( result & r1, result & r2 );
+
+    // equality
+
+    friend constexpr bool operator==( result const & r1, result const & r2 );
+    friend constexpr bool operator!=( result const & r1, result const & r2 );
+};
+
+} // namespace system
+} // namespace boost
+```
+
+#### Constructors
+
+```
+template<class A>
+  constexpr result( A&& a ) noexcept;
+```
+[none]
+* {blank}
++
+Ensures: ::
+  `*this` holds the reference `static_cast<U&>( std::forward<A>(a) )`.
+Remarks: ::
+  This constructor is only enabled when `A` is `B&` and `std::is_convertible<B*, U*>::value` is `true`.
+
+```
+template<class... A>
+  constexpr result( A&&... a );
+```
+[none]
+* {blank}
++
+Effects: ::
+  - If `std::is_constructible<E, A...>::value && !std::is_constructible<U&, A...>::value`,
+    ensures that `*this` holds the error `E( std::forward<A>(a)... )`.
+  - Otherwise, this constructor does not participate in overload resolution.
+Remarks: ::
+  This constructor is only enabled when `sizeof...(A) > 0`.
+
+```
+template<class A>
+  constexpr result( in_place_value_t, A&& a ) noexcept;
+```
+[none]
+* {blank}
++
+Ensures: ::
+  `*this` holds the reference `static_cast<U&>( std::forward<A>(a) )`.
+Remarks: ::
+  This constructor is only enabled when `A` is `B&` and `std::is_convertible<B*, U*>::value` is `true`.
+
+```
+template<class... A>
+  constexpr result( in_place_error_t, A&&... a );
+```
+[none]
+* {blank}
++
+Ensures: ::
+  `*this` holds the error `E( std::forward<A>(a)... )`.
+Remarks: ::
+  This constructor is only enabled when `std::is_constructible<E, A...>::value` is `true`.
+
+```
+template<class U2, class E2>
+  constexpr result( result<U2&, E2> const& r2 );
+```
+[none]
+* {blank}
++
+Ensures: ::
+  If `r2.has_value()` is `true`, `*this` holds the reference `static_cast<U&>( *r2 )`, otherwise `*this` holds the error `E( r2.error() )`.
+Remarks: ::
+  This constructor is only enabled when `std::is_convertible<U2*, U*>::value && std::is_convertible<E2, E>::value` is `true`.
+
+#### Queries
+
+```
+constexpr bool has_value() const noexcept;
+```
+[none]
+* {blank}
++
+Returns: ::
+  `true` when `*this` holds a value, `false` otherwise.
+
+```
+constexpr bool has_error() const noexcept;
+```
+[none]
+* {blank}
++
+Returns: ::
+  `!has_value()`.
+
+```
+constexpr explicit operator bool() const noexcept;
+```
+[none]
+* {blank}
++
+Returns: ::
+  `has_value()`.
+
+#### Checked Value Access
+
+```
+constexpr U& value(
+  boost::source_location const & loc = BOOST_CURRENT_LOCATION ) const;
+```
+[none]
+* {blank}
++
+Effects: ::
+  If `*this` holds a reference, returns it. Otherwise,
+  calls `throw_exception_from_error`, passing it a reference to
+  the held error, and `loc`.
+
+#### Unchecked Value Access
+
+```
+constexpr U* operator->() const noexcept;
+```
+[none]
+* {blank}
++
+Returns: ::
+  If `*this` holds a reference, a pointer to its referent. Otherwise, `nullptr`.
+
+```
+constexpr U& operator*() const noexcept;
+```
+[none]
+* {blank}
++
+Requires: :: `*this` holds a reference.
+Returns: ::
+  `*operator\->()`.
+
+#### Error Access
+
+```
+constexpr E error() const &;
+constexpr E error() &&;
+```
+[none]
+* {blank}
++
+Effects: ::
+  If `*this` holds an error, returns it. Otherwise, returns `E()`.
+
+#### emplace
+
+```
+template<class A>
+  constexpr U& emplace( A&& a ) noexcept;
+```
+[none]
+* {blank}
++
+Ensures: ::
+  `*this` holds the reference `static_cast<U&>( std::forward<A>(a)... )`.
+Returns: ::
+  The contained reference.
+Remarks: ::
+  This function is only enabled when `A` is `B&` and `std::is_convertible<B*, U*>::value` is `true`.
+
+#### swap
+
+```
+constexpr void swap( result& r );
+```
+[none]
+* {blank}
++
+Effects: ::
+  Exchanges the contents of `*this` and `r`.
+
+```
+friend constexpr void swap( result & r1, result & r2 );
+```
+[none]
+* {blank}
++
+Effects: ::
+  Exchanges the contents of `r1` and `r2`.
+
+#### Equality
+
+```
+friend constexpr bool operator==( result const & r1, result const & r2 );
+```
+[none]
+* {blank}
++
+Effects: ::
+  - If `r1` holds a reference `t1` and `r2` holds a reference `t2`, returns `t1 == t2`.
+  - If `r1` holds an error `e1` and `r2` holds an error `e2`, returns `e1 == e2`.
+  - Otherwise, returns `false`.
+
+```
+friend constexpr bool operator!=( result const & r1, result const & r2 );
+```
+[none]
+* {blank}
++
+Returns: ::
+  `!( r1 == r2 )`.
+
+### Chaining
+
+#### operator|
+
+```
+template<class T, class E, class U> T operator|( result<T, E> const& r, U&& u );
+template<class T, class E, class U> T operator|( result<T, E>&& r, U&& u );
+```
+[none]
+* {blank}
++
+Returns the value in `r`, or if `r` contains an error, a default value `u`.
++
+Effects: ::
+  - If `r.has_value()` is `true`, returns `*r`.
+  - Otherwise, returns `u`.
+Remarks: ::
+  Only enabled when `U` is convertible to `T`.
+Example: ::
++
+```
+result<int> get_server_port(); // can fail
+
+int get_port()
+{
+    return get_server_port() | 443;
+}
+```
+
+```
+template<class T, class E, class F> T operator|( result<T, E> const& r, F&& f );
+template<class T, class E, class F> T operator|( result<T, E>&& r, F&& f );
+```
+[none]
+* {blank}
++
+Returns the value in `r`, or if `r` contains an error, a default value obtained
+by invoking the function `f`.
++
+Effects: ::
+  - If `r.has_value()` is `true`, returns `*r`.
+  - Otherwise, returns `f()`.
+Remarks: ::
+  Only enabled when `f()` is convertible to `T`.
+Example: ::
++
+```
+result<int> get_server_port(); // can fail
+int get_default_port();
+
+int get_port()
+{
+    return get_server_port() | get_default_port;
+}
+```
++
+Note that the right hand side is `get_default_port` and not `get_default_port()`.
+This is important; spelled this way, the function `get_default_port` is called
+only when `get_server_port_impl()` fails. If it were
++
+```
+    return get_server_port() | get_default_port();
+```
++
+the function would have been called unconditionally.
++
+Another, equivalent, way is to use a lambda
++
+```
+    return get_server_port() | []{ return get_default_port(); };
+```
++
+which isn't necessary here, but would be needed for more complex expressions.
+
+```
+template<class T, class E, class F, class R = ...> R operator|( result<T, E> const& r, F&& f );
+template<class T, class E, class F, class R = ...> R operator|( result<T, E>&& r, F&& f );
+template<class E, class F, class R = ...> R operator|( result<void, E> const& r, F&& f );
+template<class E, class F, class R = ...> R operator|( result<void, E>&& r, F&& f );
+```
+[none]
+* {blank}
++
+Returns the value in `r`, or if `r` contains an error, another `result` obtained
+by invoking the function `f`.
++
+Let `R` be the type of `f()`.
++
+Effects: ::
+  - If `r.has_value()` is `true`, returns `*r`.
+  - Otherwise, returns `f()`.
+Remarks: ::
+  Only enabled when `R` is an instance of `result` and `T` is convertible to `R::value_type`.
+Example: ::
++
+```
+result<int> get_server_port(); // can fail
+result<int> get_default_port(); // can fail
+
+int get_port()
+{
+    return get_server_port() | get_default_port | 443;
+}
+```
+
+#### operator&
+
+```
+template<class T, class E, class F, class U = ...>
+  result<U, E> operator&( result<T, E> const& r, F&& f );
+
+template<class T, class E, class F, class U = ...>
+  result<U, E> operator&( result<T, E>&& r, F&& f );
+```
+[none]
+* {blank}
++
+Returns the error in `r`, or if `r` contains a value, transforms the value by calling `f` on it.
++
+Let `U` be the type of `f(*r)`.
++
+Effects: ::
+  - If `r.has_value()` is `true`, returns `f(*r)`.
+  - Otherwise, returns `r.error()`.
+Remarks: ::
+  Only enabled when `U` is not an instance of `result`.
+Example: ::
++
+```
+struct currency_type
+{
+    char code_[ 4 ] = {};
+};
+
+result<double> get_exchange_rate( currency_type from, currency_type to );
+
+result<double> convert( double amount, currency_type from, currency_type to )
+{
+    return get_exchange_rate( from, to ) & [&](double rate){ return rate * amount; };
+}
+```
+
+```
+template<class T, class E, class F, class R = ...> R operator&( result<T, E> const& r, F&& f );
+template<class T, class E, class F, class R = ...> R operator&( result<T, E>&& r, F&& f );
+```
+[none]
+* {blank}
++
+Returns the error in `r`, or if `r` contains a value, another `result` obtained
+by invoking the function `f` on the value in `r`.
++
+Let `R` be the type of `f(*r)`.
++
+Effects: ::
+  - If `r.has_value()` is `true`, returns `f(*r)`.
+  - Otherwise, returns `r.error()`.
+Remarks: ::
+  Only enabled when `R` is an instance of `result` and `E` is convertible to `R::error_type`.
+Example: ::
++
+```
+struct JsonValue
+{
+    result<JsonValue const&> at( std::size_t i ) const noexcept;
+    result<JsonValue const&> at( std::string_view key ) const noexcept;
+    template<class T> result<T> to_number() const noexcept;
+};
+
+namespace helpers
+{
+
+inline auto at( std::size_t i ) {
+    return [=](JsonValue const& jv){ return jv.at( i ); }; }
+
+inline auto at( std::string_view key ) {
+    return [=](JsonValue const& jv){ return jv.at( key ); }; }
+
+template<class T> inline auto to_number() {
+    return [](JsonValue const& jv){ return jv.to_number<T>(); }; }
+
+} // namespace helpers
+
+int get_port( JsonValue const& config, int def )
+{
+    using namespace helpers;
+    return config.at( "servers" ) & at( 0 ) & at( "port" ) & to_number<int>() | def;
+}
+```
+
+#### operator&=
+
+```
+template<class T, class E, class F, class U = ...>
+  result<T, E>& operator&=( result<T, E>& r, F&& f );
+```
+[none]
+* {blank}
++
+If `r` contains a value, replaces it with the result of invoking the function `f` on the value in `r`.
++
+Let `U` be the type of `f(*r)`.
++
+Effects: :: If `r.has_value()` is `true`, assigns `f(*std::move(r))` to `r`.
+Returns: :: `r`.
+Remarks: ::
+  Only enabled when `U` is not an instance of `result` and is convertible to `T`.
+
+```
+template<class T, class E, class F, class R = ...>
+  result<T, E>& operator&=( result<T, E>& r, F&& f );
+```
+[none]
+* {blank}
++
+If `r` contains a value, replaces `r` with the result of invoking the function `f` on the value in `r`.
++
+Let `R` be the type of `f(*r)`.
++
+Effects: :: If `r.has_value()` is `true`, assigns `f(*std::move(r))` to `r`.
+Returns: :: `r`.
+Remarks: ::
+  Only enabled when `R` is an instance of `result` and is convertible to `result<T, E>`.
+Example: ::
++
+```
+struct JsonValue
+{
+    result<JsonValue const&> at( std::string_view key ) const noexcept;
+};
+
+namespace helpers
+{
+
+inline auto at( std::string_view key ) {
+    return [=](JsonValue const& jv){ return jv.at( key ); }; }
+
+} // namespace helpers
+
+result<JsonValue const&> at_path( JsonValue const& jv,
+    std::initializer_list<std::string_view> path )
+{
+    result<JsonValue const&> r( jv );
+
+    using namespace helpers;
+
+    for( auto key: path )
+    {
+        r &= at( key );
+    }
+
+    return r;
+}
+```
 
 ## <boost/system.hpp>
 

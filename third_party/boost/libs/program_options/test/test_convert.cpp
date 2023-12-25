@@ -3,6 +3,9 @@
 // (See accompanying file LICENSE_1_0.txt
 // or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+// This will eventually stop working when <boost/progress.hpp> is removed
+#define BOOST_TIMER_ENABLE_DEPRECATED
+
 #include <cstring>
 #include <cassert>
 #include <string>

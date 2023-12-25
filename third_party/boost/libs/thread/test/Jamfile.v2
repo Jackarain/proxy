@@ -1099,4 +1099,10 @@ rule generate_self_contained_header_tests
     ;
 
     test-suite test_self_contained_headers : [ generate_self_contained_header_tests ] ;
+
+    test-suite detail
+    :
+          [ run detail/string_trim_test.cpp ]
+          [ run detail/string_to_unsigned_test.cpp ]
+    ;
 }

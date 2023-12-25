@@ -1,14 +1,13 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <title>Template promise&lt;&gt;</title>
 <link rel="stylesheet" href="../../../../../../../doc/src/boostbook.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
-<link rel="home" href="../../../index.html" title="Chapter 1. Fiber">
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
+<link rel="home" href="../../../index.html" title="Chapter&#160;1.&#160;Fiber">
 <link rel="up" href="../futures.html" title="Futures">
 <link rel="prev" href="future.html" title="Future">
 <link rel="next" href="packaged_task.html" title="Template packaged_task&lt;&gt;">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -77,14 +76,14 @@
 </pre>
 <h6>
 <a name="fiber.synchronization.futures.promise.h0"></a>
-          <span class="phrase"><a name="fiber.synchronization.futures.promise.default_constructor"></a></span><a class="link" href="promise.html#fiber.synchronization.futures.promise.default_constructor">Default
+          <span><a name="fiber.synchronization.futures.promise.default_constructor"></a></span><a class="link" href="promise.html#fiber.synchronization.futures.promise.default_constructor">Default
           constructor</a>
         </h6>
 <pre class="programlisting"><span class="identifier">promise</span><span class="special">();</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Creates a promise with an empty <a class="link" href="future.html#shared_state">shared
@@ -98,14 +97,14 @@
 </div>
 <h6>
 <a name="fiber.synchronization.futures.promise.h1"></a>
-          <span class="phrase"><a name="fiber.synchronization.futures.promise.constructor"></a></span><a class="link" href="promise.html#fiber.synchronization.futures.promise.constructor">Constructor</a>
+          <span><a name="fiber.synchronization.futures.promise.constructor"></a></span><a class="link" href="promise.html#fiber.synchronization.futures.promise.constructor">Constructor</a>
         </h6>
 <pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span> <span class="keyword">typename</span> <a href="http://en.cppreference.com/w/cpp/concept/Allocator" target="_top"><code class="computeroutput"><span class="identifier">Allocator</span></code></a> <span class="special">&gt;</span>
 <span class="identifier">promise</span><span class="special">(</span> <a href="http://en.cppreference.com/w/cpp/memory/allocator_arg_t" target="_top"><code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">allocator_arg_t</span></code></a><span class="special">,</span> <span class="identifier">Allocator</span> <span class="identifier">alloc</span><span class="special">);</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Creates a promise with an empty <a class="link" href="future.html#shared_state">shared
@@ -123,13 +122,13 @@
 </div>
 <h6>
 <a name="fiber.synchronization.futures.promise.h2"></a>
-          <span class="phrase"><a name="fiber.synchronization.futures.promise.move_constructor"></a></span><a class="link" href="promise.html#fiber.synchronization.futures.promise.move_constructor">Move constructor</a>
+          <span><a name="fiber.synchronization.futures.promise.move_constructor"></a></span><a class="link" href="promise.html#fiber.synchronization.futures.promise.move_constructor">Move constructor</a>
         </h6>
 <pre class="programlisting"><span class="identifier">promise</span><span class="special">(</span> <span class="identifier">promise</span> <span class="special">&amp;&amp;</span> <span class="identifier">other</span><span class="special">)</span> <span class="keyword">noexcept</span><span class="special">;</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Creates a promise by moving the <a class="link" href="future.html#shared_state">shared
@@ -148,13 +147,13 @@
 </div>
 <h6>
 <a name="fiber.synchronization.futures.promise.h3"></a>
-          <span class="phrase"><a name="fiber.synchronization.futures.promise.destructor"></a></span><a class="link" href="promise.html#fiber.synchronization.futures.promise.destructor">Destructor</a>
+          <span><a name="fiber.synchronization.futures.promise.destructor"></a></span><a class="link" href="promise.html#fiber.synchronization.futures.promise.destructor">Destructor</a>
         </h6>
 <pre class="programlisting"><span class="special">~</span><span class="identifier">promise</span><span class="special">();</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Destroys <code class="computeroutput"><span class="special">*</span><span class="keyword">this</span></code>
@@ -170,7 +169,7 @@
           </p>
 <h5>
 <a name="promise_operator_assign_bridgehead"></a>
-  <span class="phrase"><a name="promise_operator_assign"></a></span>
+  <span><a name="promise_operator_assign"></a></span>
   <a class="link" href="promise.html#promise_operator_assign">Member
           function <code class="computeroutput">operator=</code>()</a>
 </h5>
@@ -180,7 +179,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Transfers the ownership of <a class="link" href="future.html#shared_state">shared state</a>
@@ -201,7 +200,7 @@
           </p>
 <h5>
 <a name="promise_swap_bridgehead"></a>
-  <span class="phrase"><a name="promise_swap"></a></span>
+  <span><a name="promise_swap"></a></span>
   <a class="link" href="promise.html#promise_swap">Member function <code class="computeroutput">swap</code>()</a>
 </h5>
 <p>
@@ -210,7 +209,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Swaps the <a class="link" href="future.html#shared_state">shared state</a> between
@@ -226,7 +225,7 @@
           </p>
 <h5>
 <a name="promise_get_future_bridgehead"></a>
-  <span class="phrase"><a name="promise_get_future"></a></span>
+  <span><a name="promise_get_future"></a></span>
   <a class="link" href="promise.html#promise_get_future">Member
           function <code class="computeroutput">get_future</code>()</a>
 </h5>
@@ -236,7 +235,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Returns:</span></dt>
 <dd><p>
                 A <a class="link" href="future.html#class_future"><code class="computeroutput">future&lt;&gt;</code></a> with the same <a class="link" href="future.html#shared_state">shared
@@ -253,7 +252,7 @@
           </p>
 <h5>
 <a name="promise_set_value_bridgehead"></a>
-  <span class="phrase"><a name="promise_set_value"></a></span>
+  <span><a name="promise_set_value"></a></span>
   <a class="link" href="promise.html#promise_set_value">Member function
           <code class="computeroutput">set_value</code>()</a>
 </h5>
@@ -266,7 +265,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Store the result in the <a class="link" href="future.html#shared_state">shared state</a>
@@ -283,7 +282,7 @@
           </p>
 <h5>
 <a name="promise_set_exception_bridgehead"></a>
-  <span class="phrase"><a name="promise_set_exception"></a></span>
+  <span><a name="promise_set_exception"></a></span>
   <a class="link" href="promise.html#promise_set_exception">Member
           function <code class="computeroutput">set_exception</code>()</a>
 </h5>
@@ -293,7 +292,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Store an exception pointer in the <a class="link" href="future.html#shared_state">shared
@@ -310,7 +309,7 @@
           </p>
 <h5>
 <a name="swap_for_promise_bridgehead"></a>
-  <span class="phrase"><a name="swap_for_promise"></a></span>
+  <span><a name="swap_for_promise"></a></span>
   <a class="link" href="promise.html#swap_for_promise">Non-member function
           <code class="computeroutput">swap()</code></a>
 </h5>
@@ -321,7 +320,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Same as <code class="computeroutput"><span class="identifier">l</span><span class="special">.</span><span class="identifier">swap</span><span class="special">(</span>
@@ -330,11 +329,14 @@
 </dl>
 </div>
 </div>
-<div class="copyright-footer">Copyright © 2013 Oliver Kowalke<p>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright &#169; 2013 Oliver Kowalke<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div>
+</div></td>
+</tr></table>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="future.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../futures.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="packaged_task.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>

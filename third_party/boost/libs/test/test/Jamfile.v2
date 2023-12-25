@@ -166,7 +166,7 @@ test-suite "writing-test-ts"
   [ boost.test-self-test run : writing-test-ts : collection-comparison-test : : : : : : $(requirements_boost_test_full_support)  [ requires cxx11_unified_initialization_syntax ] ] # required by the test content
   [ boost.test-self-test run : writing-test-ts : dont_print_log_value-test : : : : : : $(requirements_datasets) ]
   [ boost.test-self-test run : writing-test-ts : fp-comparisons-test : : : : : : $(requirements_boost_test_full_support) ]
-  [ boost.test-self-test run : writing-test-ts : fp-multiprecision-comparison-test : : : : : : $(requirements_boost_test_full_support) ]
+  [ boost.test-self-test run : writing-test-ts : fp-multiprecision-comparison-test : : : : : : $(requirements_boost_test_full_support) [ requires cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction cxx14_variable_templates cxx14_constexpr ] ]
   [ boost.test-self-test run : writing-test-ts : fp-no-comparison-for-incomplete-types-test ]
   [ boost.test-self-test run : writing-test-ts : fp-relational-operator ]
   [ boost.test-self-test run : writing-test-ts : output_test_stream-test ]

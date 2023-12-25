@@ -1,0 +1,88 @@
+# Copyright 2016-2019 Peter Dimov
+# Copyright 2019, 2022 Andrey Semashev
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
+
+version: 1.0.{build}-{branch}
+
+shallow_clone: true
+
+branches:
+  only:
+    - master
+    - develop
+    - /feature\/.*/
+
+environment:
+  matrix:
+    - TOOLSET: msvc-14.0
+      ADDRMD: 32,64
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    - TOOLSET: msvc-14.1
+      CXXSTD: 14,17,latest
+      ADDRMD: 32,64
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+    - TOOLSET: msvc-14.2
+      ADDRMD: 32,64
+      CXXSTD: 14,17,20,latest
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+    - TOOLSET: msvc-14.3
+      ADDRMD: 32,64
+      CXXSTD: 14,17,20,latest
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+    - TOOLSET: clang-win
+      ADDRMD: 32
+      CXXSTD: 14,17,latest
+      ENV_SCRIPT: C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars32.bat
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+    - TOOLSET: clang-win
+      ADDRMD: 64
+      CXXSTD: 14,17,latest
+      ENV_SCRIPT: C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+    - TOOLSET: gcc
+      CXXSTD: 11,14,1z
+      ADDPATH: C:\cygwin\bin;
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    - TOOLSET: gcc
+      CXXSTD: 11,14,1z
+      ADDPATH: C:\cygwin64\bin;
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    - TOOLSET: gcc
+      CXXSTD: 11,14,1z
+      ADDPATH: C:\mingw\bin;
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    - TOOLSET: gcc
+      CXXSTD: 11,14,1z
+      ADDPATH: C:\mingw-w64\x86_64-6.3.0-posix-seh-rt_v5-rev1\mingw64\bin;
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    - TOOLSET: gcc
+      CXXSTD: 11,14,17
+      ADDPATH: C:\mingw-w64\x86_64-7.3.0-posix-seh-rt_v5-rev0\mingw64\bin;
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    - TOOLSET: gcc
+      CXXSTD: 11,14,17,2a
+      ADDPATH: C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin;
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+
+install:
+  - set GIT_FETCH_JOBS=8
+  - set BOOST_BRANCH=develop
+  - if "%APPVEYOR_REPO_BRANCH%" == "master" set BOOST_BRANCH=master
+  - cd ..
+  - git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
+  - cd boost-root
+  - git submodule update --init tools/boostdep
+  - xcopy /s /e /q %APPVEYOR_BUILD_FOLDER% libs\utility
+  - python tools/boostdep/depinst/depinst.py %DEPINST_ARG_INCLUDE_EXAMPLES% --git_args "--jobs %GIT_FETCH_JOBS%" utility
+  - cmd /c bootstrap
+  - b2 headers
+
+build: off
+
+test_script:
+  - PATH=%ADDPATH%%PATH%
+  - if not "%ENV_SCRIPT%" == "" call "%ENV_SCRIPT%"
+  - if not "%CXXSTD%" == "" set CXXSTD=cxxstd=%CXXSTD%
+  - if not "%ADDRMD%" == "" set ADDRMD=address-model=%ADDRMD%
+  - b2 -j %NUMBER_OF_PROCESSORS% libs/utility/test toolset=%TOOLSET% %CXXSTD% %ADDRMD% variant=debug,release

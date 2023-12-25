@@ -14,7 +14,7 @@
 #define BOOST_THREAD_TEST_TIME_MS 75
 #else
 // Windows, Cygwin, macOS all need this
-#define BOOST_THREAD_TEST_TIME_MS 250
+#define BOOST_THREAD_TEST_TIME_MS 400
 #endif
 #endif
 

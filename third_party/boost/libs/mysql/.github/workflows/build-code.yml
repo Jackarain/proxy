@@ -1,0 +1,32 @@
+#
+# Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+#
+# Distributed under the Boost Software License, Version 1.0. (See accompanying
+# file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+#
+
+name: Build
+
+on:
+  push:
+    branches-ignore: [gh-pages]
+
+
+jobs:
+  osx:
+    runs-on: macos-latest
+    env:
+      OPENSSL_ROOT: /usr/local/opt/openssl
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          unlink /usr/local/bin/python
+          ln -s /usr/local/bin/python3 /usr/local/bin/python
+          source tools/setup_db_osx.sh
+          python tools/ci.py \
+            --build-kind=b2 \
+            --source-dir=$(pwd) \
+            --toolset=clang \
+            --cxxstd=20 \
+            --variant=debug,release \
+            --server-host=127.0.0.1 # Force use IPv4

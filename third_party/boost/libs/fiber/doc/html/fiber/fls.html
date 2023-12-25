@@ -1,14 +1,13 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <title>Fiber local storage</title>
 <link rel="stylesheet" href="../../../../../doc/src/boostbook.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
-<link rel="home" href="../index.html" title="Chapter 1. Fiber">
-<link rel="up" href="../index.html" title="Chapter 1. Fiber">
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
+<link rel="home" href="../index.html" title="Chapter&#160;1.&#160;Fiber">
+<link rel="up" href="../index.html" title="Chapter&#160;1.&#160;Fiber">
 <link rel="prev" href="synchronization/futures/packaged_task.html" title="Template packaged_task&lt;&gt;">
 <link rel="next" href="migration.html" title="Migrating fibers between threads">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -29,7 +28,7 @@
 </h2></div></div></div>
 <h4>
 <a name="fiber.fls.h0"></a>
-      <span class="phrase"><a name="fiber.fls.synopsis"></a></span><a class="link" href="fls.html#fiber.fls.synopsis">Synopsis</a>
+      <span><a name="fiber.fls.synopsis"></a></span><a class="link" href="fls.html#fiber.fls.synopsis">Synopsis</a>
     </h4>
 <p>
       Fiber local storage allows a separate instance of a given data item for each
@@ -37,7 +36,7 @@
     </p>
 <h4>
 <a name="fiber.fls.h1"></a>
-      <span class="phrase"><a name="fiber.fls.cleanup_at_fiber_exit"></a></span><a class="link" href="fls.html#fiber.fls.cleanup_at_fiber_exit">Cleanup
+      <span><a name="fiber.fls.cleanup_at_fiber_exit"></a></span><a class="link" href="fls.html#fiber.fls.cleanup_at_fiber_exit">Cleanup
       at fiber exit</a>
     </h4>
 <p>
@@ -52,7 +51,7 @@
       </p>
 <h5>
 <a name="class_fiber_specific_ptr_bridgehead"></a>
-  <span class="phrase"><a name="class_fiber_specific_ptr"></a></span>
+  <span><a name="class_fiber_specific_ptr"></a></span>
   <a class="link" href="fls.html#class_fiber_specific_ptr">Class
       <code class="computeroutput">fiber_specific_ptr</code></a>
 </h5>
@@ -92,14 +91,14 @@
 </pre>
 <h4>
 <a name="fiber.fls.h2"></a>
-      <span class="phrase"><a name="fiber.fls.constructor"></a></span><a class="link" href="fls.html#fiber.fls.constructor">Constructor</a>
+      <span><a name="fiber.fls.constructor"></a></span><a class="link" href="fls.html#fiber.fls.constructor">Constructor</a>
     </h4>
 <pre class="programlisting"><span class="identifier">fiber_specific_ptr</span><span class="special">();</span>
 <span class="keyword">explicit</span> <span class="identifier">fiber_specific_ptr</span><span class="special">(</span> <span class="keyword">void</span><span class="special">(*</span><span class="identifier">fn</span><span class="special">)(</span><span class="identifier">T</span><span class="special">*)</span> <span class="special">);</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Requires:</span></dt>
 <dd><p>
             <code class="computeroutput"><span class="keyword">delete</span> <span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">get</span><span class="special">()</span></code> is well-formed; <code class="computeroutput"><span class="identifier">fn</span><span class="special">(</span><span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">get</span><span class="special">())</span></code> does not throw
@@ -122,13 +121,13 @@
 </div>
 <h4>
 <a name="fiber.fls.h3"></a>
-      <span class="phrase"><a name="fiber.fls.destructor"></a></span><a class="link" href="fls.html#fiber.fls.destructor">Destructor</a>
+      <span><a name="fiber.fls.destructor"></a></span><a class="link" href="fls.html#fiber.fls.destructor">Destructor</a>
     </h4>
 <pre class="programlisting"><span class="special">~</span><span class="identifier">fiber_specific_ptr</span><span class="special">();</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Requires:</span></dt>
 <dd><p>
             All the fiber specific instances associated to this <a class="link" href="fls.html#class_fiber_specific_ptr"><code class="computeroutput">fiber_specific_ptr</code></a>
@@ -166,7 +165,7 @@
       </p>
 <h5>
 <a name="fiber_specific_ptr_get_bridgehead"></a>
-  <span class="phrase"><a name="fiber_specific_ptr_get"></a></span>
+  <span><a name="fiber_specific_ptr_get"></a></span>
   <a class="link" href="fls.html#fiber_specific_ptr_get">Member
       function <code class="computeroutput">get</code>()</a>
 </h5>
@@ -176,7 +175,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Returns:</span></dt>
 <dd><p>
             The pointer associated with the current fiber.
@@ -201,7 +200,7 @@
       </p>
 <h5>
 <a name="fiber_specific_ptr_operator_arrow_bridgehead"></a>
-  <span class="phrase"><a name="fiber_specific_ptr_operator_arrow"></a></span>
+  <span><a name="fiber_specific_ptr_operator_arrow"></a></span>
   <a class="link" href="fls.html#fiber_specific_ptr_operator_arrow">Member
       function <code class="computeroutput">operator-&gt;</code>()</a>
 </h5>
@@ -211,7 +210,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Requires:</span></dt>
 <dd><p>
             <code class="computeroutput"><span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">get</span><span class="special">()</span></code>
@@ -231,7 +230,7 @@
       </p>
 <h5>
 <a name="fiber_specific_ptr_operator_star_bridgehead"></a>
-  <span class="phrase"><a name="fiber_specific_ptr_operator_star"></a></span>
+  <span><a name="fiber_specific_ptr_operator_star"></a></span>
   <a class="link" href="fls.html#fiber_specific_ptr_operator_star">Member
       function <code class="computeroutput">operator*</code>()</a>
 </h5>
@@ -241,7 +240,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Requires:</span></dt>
 <dd><p>
             <code class="computeroutput"><span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">get</span><span class="special">()</span></code>
@@ -261,7 +260,7 @@
       </p>
 <h5>
 <a name="fiber_specific_ptr_release_bridgehead"></a>
-  <span class="phrase"><a name="fiber_specific_ptr_release"></a></span>
+  <span><a name="fiber_specific_ptr_release"></a></span>
   <a class="link" href="fls.html#fiber_specific_ptr_release">Member
       function <code class="computeroutput">release</code>()</a>
 </h5>
@@ -271,7 +270,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
             Return <code class="computeroutput"><span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">get</span><span class="special">()</span></code>
@@ -293,7 +292,7 @@
       </p>
 <h5>
 <a name="fiber_specific_ptr_reset_bridgehead"></a>
-  <span class="phrase"><a name="fiber_specific_ptr_reset"></a></span>
+  <span><a name="fiber_specific_ptr_reset"></a></span>
   <a class="link" href="fls.html#fiber_specific_ptr_reset">Member
       function <code class="computeroutput">reset</code>()</a>
 </h5>
@@ -303,7 +302,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
             If <code class="computeroutput"><span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">get</span><span class="special">()!=</span><span class="identifier">new_value</span></code> and <code class="computeroutput"><span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">get</span><span class="special">()</span></code> is not <code class="computeroutput"><span class="keyword">nullptr</span></code>,
@@ -321,11 +320,14 @@
 </dl>
 </div>
 </div>
-<div class="copyright-footer">Copyright © 2013 Oliver Kowalke<p>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright &#169; 2013 Oliver Kowalke<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div>
+</div></td>
+</tr></table>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="synchronization/futures/packaged_task.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="migration.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>

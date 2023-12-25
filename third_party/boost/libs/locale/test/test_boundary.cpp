@@ -306,13 +306,17 @@ void test_boundaries(std::string* all, int* first, int* second, lb::boundary_typ
     run_word<char>(all, first, second, nullptr, nullptr, nullptr, g("he_IL.cp1255"), t);
     std::cout << " wchar_t" << std::endl;
     run_word<wchar_t>(all, first, second, nullptr, nullptr, nullptr, g("he_IL.UTF-8"), t);
+#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+    std::cout << " char8_t" << std::endl;
+    run_word<char8_t>(all, first, second, nullptr, nullptr, nullptr, g("he_IL.UTF-8"), t);
+#endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
     std::cout << " char16_t" << std::endl;
-    run_word<char16_t>(all, first, second, 0, 0, 0, g("he_IL.UTF-8"), t);
+    run_word<char16_t>(all, first, second, nullptr, nullptr, nullptr, g("he_IL.UTF-8"), t);
 #endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
     std::cout << " char32_t" << std::endl;
-    run_word<char32_t>(all, first, second, 0, 0, 0, g("he_IL.UTF-8"), t);
+    run_word<char32_t>(all, first, second, nullptr, nullptr, nullptr, g("he_IL.UTF-8"), t);
 #endif
 }
 
@@ -364,6 +368,13 @@ void word_boundary()
     run_word<wchar_t>(txt_empty, zero, zero, zero, zero, zero, utf8_en_locale);
     run_word<wchar_t>(txt_simple, none_simple, zero, word_simple, zero, zero, utf8_en_locale);
     run_word<wchar_t>(txt_all, none_all, num_all, word_all, kana_all, ideo_all, utf8_jp_locale);
+
+#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+    std::cout << " char8_t" << std::endl;
+    run_word<char8_t>(txt_empty, zero, zero, zero, zero, zero, g("ja_JP.UTF-8"));
+    run_word<char8_t>(txt_simple, none_simple, zero, word_simple, zero, zero, utf8_en_locale);
+    run_word<char8_t>(txt_all, none_all, num_all, word_all, kana_all, ideo_all, utf8_jp_locale);
+#endif
 
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
     std::cout << " char16_t" << std::endl;

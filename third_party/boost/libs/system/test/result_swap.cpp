@@ -259,5 +259,55 @@ int main()
         BOOST_TEST_EQ( r2, r2c );
     }
 
+    {
+        int x1 = 1;
+        int x2 = 2;
+
+        result<int&> r1( x1 ), r1c( r1 );
+        result<int&> r2( x2 ), r2c( r2 );
+
+        r1.swap( r2 );
+
+        BOOST_TEST_EQ( r1, r2c );
+        BOOST_TEST_EQ( r2, r1c );
+
+        swap( r1, r2 );
+
+        BOOST_TEST_EQ( r1, r1c );
+        BOOST_TEST_EQ( r2, r2c );
+    }
+
+    {
+        result<int&> r1( 1, generic_category() ), r1c( r1 );
+        result<int&> r2( 2, generic_category() ), r2c( r2 );
+
+        r1.swap( r2 );
+
+        BOOST_TEST_EQ( r1, r2c );
+        BOOST_TEST_EQ( r2, r1c );
+
+        swap( r1, r2 );
+
+        BOOST_TEST_EQ( r1, r1c );
+        BOOST_TEST_EQ( r2, r2c );
+    }
+
+    {
+        int x1 = 1;
+
+        result<int&> r1( x1 ), r1c( r1 );
+        result<int&> r2( 2, generic_category() ), r2c( r2 );
+
+        r1.swap( r2 );
+
+        BOOST_TEST_EQ( r1, r2c );
+        BOOST_TEST_EQ( r2, r1c );
+
+        swap( r1, r2 );
+
+        BOOST_TEST_EQ( r1, r1c );
+        BOOST_TEST_EQ( r2, r2c );
+    }
+
     return boost::report_errors();
 }

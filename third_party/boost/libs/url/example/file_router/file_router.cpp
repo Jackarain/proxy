@@ -154,7 +154,7 @@ main(int argc, char **argv)
         fs::path exec = argv[0];
         exec = exec.filename();
         std::cerr
-            << "Usage: " << exec.c_str()
+            << "Usage: " << exec
             << " <target> <prefix> <doc_root>\n"
                "target: path to make a request\n"
                "prefix: url prefix\n"

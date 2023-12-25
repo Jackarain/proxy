@@ -18,6 +18,7 @@ namespace boost { namespace locale { namespace case_convert_test {
                        const std::basic_string<CharType>& tgt_lower,
                        const std::basic_string<CharType>& tgt_upper)
     {
+        TEST_EQ(boost::locale::normalize(src, boost::locale::norm_default, l), src); // Already normalized
         TEST_EQ(boost::locale::to_upper(src, l), tgt_upper);
         TEST_EQ(boost::locale::to_lower(src, l), tgt_lower);
         TEST_EQ(boost::locale::fold_case(src, l), tgt_lower);
@@ -31,6 +32,17 @@ namespace boost { namespace locale { namespace case_convert_test {
                       to_correct_string<CharType>(src, l),
                       to_correct_string<CharType>(tgt_lower, l),
                       to_correct_string<CharType>(tgt_upper, l));
+    }
+
+    template<typename CharType>
+    void test_no_op_title_case(const std::locale& l, const std::string& src)
+    {
+        const auto src_c = to_correct_string<CharType>(src, l);
+        const auto src_l = boost::locale::to_lower(src, l);
+        const auto src_u = boost::locale::to_upper(src, l);
+        TEST_EQ(boost::locale::to_title(src_c, l), src_c);
+        TEST_EQ(boost::locale::to_title(src_l, l), src_l);
+        TEST_EQ(boost::locale::to_title(src_u, l), src_u);
     }
 
 }}} // namespace boost::locale::case_convert_test

@@ -12,11 +12,28 @@ struct X {};
 int main()
 {
     BOOST_TEST_TRAIT_SAME( result<int>::value_type, int );
-    BOOST_TEST_TRAIT_SAME( result<X>::value_type, X );
-    BOOST_TEST_TRAIT_SAME( result<void>::value_type, void );
-
     BOOST_TEST_TRAIT_SAME( result<int>::error_type, error_code );
+
+    BOOST_TEST_TRAIT_SAME( result<X>::value_type, X );
+    BOOST_TEST_TRAIT_SAME( result<X>::error_type, error_code );
+
+    BOOST_TEST_TRAIT_SAME( result<void>::value_type, void );
+    BOOST_TEST_TRAIT_SAME( result<void>::error_type, error_code );
+
+    BOOST_TEST_TRAIT_SAME( result<int&>::value_type, int& );
+    BOOST_TEST_TRAIT_SAME( result<int&>::error_type, error_code );
+
+    BOOST_TEST_TRAIT_SAME( result<int, X>::value_type, int );
     BOOST_TEST_TRAIT_SAME( result<int, X>::error_type, X );
+
+    BOOST_TEST_TRAIT_SAME( result<X, X>::value_type, X );
+    BOOST_TEST_TRAIT_SAME( result<X, X>::error_type, X );
+
+    BOOST_TEST_TRAIT_SAME( result<void, X>::value_type, void );
+    BOOST_TEST_TRAIT_SAME( result<void, X>::error_type, X );
+
+    BOOST_TEST_TRAIT_SAME( result<int&, X>::value_type, int& );
+    BOOST_TEST_TRAIT_SAME( result<int&, X>::error_type, X );
 
     return boost::report_errors();
 }

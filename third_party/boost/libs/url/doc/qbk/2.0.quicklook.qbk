@@ -118,11 +118,17 @@ of key/value pairs.
 ```
 ]]]
 
-These functions return __decode_view__, which are constant
-views referring to sub-ranges of the underlying URL string.
-By simply referencing the relevant portion of the URL string,
-its components can represent percent-decoded strings without any
-need to allocate memory.
+These functions return views referring to substrings and sub-ranges
+of the underlying URL.
+By simply referencing the relevant portion of the URL string internally,
+its components can represent percent-decoded strings and be converted
+to other types without any previous memory allocation.
+
+[snippet_token_1]
+
+A special `string_token` type can also be used to specify how a portion of the URL should be encoded and returned.
+
+[snippet_token_2]
 
 These functions might also return empty strings
 
@@ -138,7 +144,8 @@ to check for their existence. This happens because some URL
 components are mandatory.
 
 When applicable, the encoded components can also be directly
-accessed through a __string_view__:
+accessed through a __string_view__ without any
+need to allocate memory:
 
 [table [[Code][Output]] [[
 [c++]
@@ -219,12 +226,6 @@ root directory of a web server:
 [c++]
 [snippet_decoding_4b]
 
-For many simpler use cases, converting the view to a
-string might be sufficient:
-
-[c++]
-[snippet_decoding_5a]
-
 [#compound-elements]
 [h3 Compound elements]
 
@@ -297,7 +298,7 @@ not require dynamic memory allocations.
 
 Objects of type __url__ are [@https://en.cppreference.com/w/cpp/concepts/regular std::regular].
 Similarly to built-in types, such as `int`, a __url__ is copyable, movable, assignable, default
-constructible, and equality comparable. They support all of the inspection functions of
+constructible, and equality comparable. They support all the inspection functions of
 __url_view__, and also provide functions to modify all components of the URL.
 
 Changing the scheme is easy:
@@ -309,8 +310,11 @@ Or we can use a predefined constant:
 [snippet_quicklook_modifying_3]
 
 The scheme must be valid, however, or an exception is thrown.
-All modifying functions perform validation on their input. Attemping
-to set part of the URL to an invalid string results in an exception.
+All modifying functions perform validation on their input.
+
+* Attempting to set the URL scheme or port to an invalid string results in an exception.
+* Attempting to set other URL components to invalid strings will get the original input properly percent-encoded for that component.
+
 It is not possible for a __url__ to hold syntactically illegal text.
 
 Modification functions return a reference to the object, so chaining

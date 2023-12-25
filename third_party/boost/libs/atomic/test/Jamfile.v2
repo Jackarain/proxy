@@ -2,7 +2,7 @@
 #
 #  Copyright (c) 2011 Helge Bahmann
 #  Copyright (c) 2012 Tim Blechmann
-#  Copyright (c) 2020 Andrey Semashev
+#  Copyright (c) 2020-2023 Andrey Semashev
 #
 #  Distributed under the Boost Software License, Version 1.0. (See
 #  accompanying file LICENSE_1_0.txt or copy at
@@ -14,8 +14,6 @@ project boost/atomic/test
     : requirements
       <include>.
       <threading>multi
-      <library>/boost/chrono//boost_chrono
-      <library>/boost/thread//boost_thread
       <library>/boost/atomic//boost_atomic
       <target-os>windows:<define>BOOST_USE_WINDOWS_H
       <toolset>gcc,<target-os>windows:<linkflags>"-lkernel32"

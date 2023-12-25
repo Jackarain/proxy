@@ -8,6 +8,13 @@ https://www.boost.org/LICENSE_1_0.txt
 # Revision History
 :idprefix:
 
+## Changes in Boost 1.84
+
+* Added support for `result<U&, E>`.
+* Added `operator|` for `result`.
+* Added `operator&` for `result`.
+* Added `operator&=` for `result`.
+
 ## Changes in Boost 1.81
 
 * The macro `BOOST_SYSTEM_DISABLE_THREADS` can now be defined to disable

@@ -6,6 +6,7 @@
 // https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/locale/utf8_codecvt.hpp>
+#include <boost/locale/util.hpp>
 #include <algorithm>
 #include <cstring>
 #include <iomanip>
@@ -14,6 +15,7 @@
 #include <memory.h>
 #include <wchar.h>
 #define BOOST_LOCALE_ERROR_LIMIT -1
+#include "boostLocale/test/tools.hpp"
 #include "boostLocale/test/unit_test.hpp"
 
 #if defined(BOOST_MSVC) && BOOST_MSVC < 1700
@@ -285,9 +287,64 @@ void test_char_char()
     TEST_EQ(cvt.max_length(), 1);
 }
 
+void test_codecvt_fallback()
+{
+    std::locale l =
+      boost::locale::util::create_codecvt(std::locale::classic(), nullptr, boost::locale::char_facet_t::wchar_f);
+    const cvt_type& cvt = std::use_facet<cvt_type>(l);
+
+    std::mbstate_t mb{};
+    // Fallback converter can convert ASCII
+    const char from[] = "abyzAZ!?019";
+    const char* from_end = std::end(from);
+    const char* from_next = from;
+    wchar_t buf[sizeof(from)]{};
+    wchar_t* to = buf;
+    wchar_t* const to_end = std::end(buf);
+    wchar_t* to_next = to;
+
+    TEST(!cvt.always_noconv());
+    TEST_EQ(cvt.encoding(), 0);
+    TEST_EQ(cvt.max_length(), 1);
+
+    TEST_EQ(cvt.in(mb, from, from_end, from_next, to, to_end, to_next), cvt_type::ok);
+    TEST(from_next == from_end);
+    TEST(to_next == to_end);
+    TEST_EQ(buf, ascii_to<wchar_t>(from));
+
+    char buf2[sizeof(from)]{};
+    char* to2 = buf2;
+    char* const to_end2 = std::end(buf2);
+    char* to_next2 = to2;
+    const wchar_t* to_next_wide = to;
+
+    TEST_EQ(cvt.out(mb, to, to_end, to_next_wide, to2, to_end2, to_next2), cvt_type::ok);
+    TEST(to_next_wide == to_end);
+    TEST(to_next2 == to_end2);
+    TEST_EQ(buf2, ascii_to<char>(from));
+
+    // Non-ASCII is an error
+    *to = L'\x81';
+    to_next_wide = to;
+    to_next2 = to2;
+    TEST_EQ(cvt.out(mb, to, to_end, to_next_wide, to2, to_end2, to_next2), cvt_type::error);
+    TEST(to_next_wide == to);
+    TEST(to_next2 == to2);
+
+    const char from_invalid[] = "\x80";
+    from_end = std::end(from_invalid);
+    from_next = from_invalid;
+    to = buf;
+    to_next = to;
+    TEST_EQ(cvt.in(mb, from_invalid, from_end, from_next, to, to_end, to_next), cvt_type::error);
+    TEST(from_next == from_invalid);
+    TEST(to_next == to);
+}
+
 void test_main(int /*argc*/, char** /*argv*/)
 {
     test_codecvt_conv();
     test_codecvt_err();
     test_char_char();
+    test_codecvt_fallback();
 }

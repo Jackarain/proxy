@@ -15,7 +15,6 @@
 #define BOOST_FILESYSTEM_ALLOW_DEPRECATED
 
 #include <boost/filesystem.hpp>
-#include <boost/filesystem/string_file.hpp>
 
 #include <list>
 #include <vector>
@@ -211,21 +210,6 @@ void path_rename_test()
     }
 }
 
-//  string_file_tests  ---------------------------------------------------------------//
-
-void string_file_tests(const fs::path& temp_dir)
-{
-    std::cout << "string_file_tests..." << std::endl;
-    std::string contents("0123456789");
-    fs::path p(temp_dir / "string_file");
-    save_string_file(p, contents);
-    save_string_file(p, contents);
-    BOOST_TEST_EQ(file_size(p), 10u);
-    std::string round_trip;
-    load_string_file(p, round_trip);
-    BOOST_TEST_EQ(contents, round_trip);
-}
-
 } // unnamed namespace
 
 //--------------------------------------------------------------------------------------//
@@ -295,7 +279,6 @@ int cpp_main(int /*argc*/, char* /*argv*/[])
     path_container_ctor_test();
     path_rename_test();
     normalize_test();
-    string_file_tests(temp_dir);
 
     BOOST_TEST(fs::path("foo/bar").generic() == fs::path("foo/bar"));
 

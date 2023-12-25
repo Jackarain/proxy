@@ -16,6 +16,6 @@
     "category": [
       "Domain", "System"
     ],
-    "cxxstd": "03"
+    "cxxstd": "11"
   }
 ]

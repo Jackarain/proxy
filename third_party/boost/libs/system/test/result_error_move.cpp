@@ -55,7 +55,9 @@ int main()
         BOOST_TEST_EQ( (result<std::string, X>( "s" ).error().v_), 0 );
     }
 
-      {
+    //
+
+    {
         result<void, X> r( 1 );
 
         BOOST_TEST( !r.has_value() );
@@ -86,6 +88,46 @@ int main()
 
         BOOST_TEST_EQ( (result<void, X>().error().v_), 0 );
     }
+
+    //
+
+    {
+        result<double&, X> r( 1 );
+
+        BOOST_TEST( !r.has_value() );
+        BOOST_TEST( r.has_error() );
+
+        BOOST_TEST_EQ( std::move( r ).error().v_, 1 );
+    }
+
+    {
+        BOOST_TEST(( !result<double&, X>( 1 ).has_value() ));
+        BOOST_TEST(( result<double&, X>( 1 ).has_error() ));
+
+        BOOST_TEST_EQ( (result<double&, X>( 1 ).error().v_), 1 );
+    }
+
+    {
+        double x = 1.0;
+
+        result<double&, X> r( x );
+
+        BOOST_TEST( r.has_value() );
+        BOOST_TEST( !r.has_error() );
+
+        BOOST_TEST_EQ( std::move( r ).error().v_, 0 );
+    }
+
+    {
+        double x = 1.0;
+
+        BOOST_TEST(( result<double&, X>( x ).has_value() ));
+        BOOST_TEST(( !result<double&, X>( x ).has_error() ));
+
+        BOOST_TEST_EQ( (result<double&, X>( x ).error().v_), 0 );
+    }
+
+    //
 
     return boost::report_errors();
 }

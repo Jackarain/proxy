@@ -1,9 +1,10 @@
 //
-// Copyright (c) 2022 Alexander Grund
+// Copyright (c) 2022-2023 Alexander Grund
 //
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
+#include <boost/locale/hold_ptr.hpp>
 #include <boost/locale/util.hpp>
 #include <boost/locale/util/locale_data.hpp>
 #include "boostLocale/test/test_helpers.hpp"
@@ -11,6 +12,71 @@
 #include "boostLocale/test/unit_test.hpp"
 #include <cstdlib>
 #include <stdexcept>
+
+namespace {
+struct Dummy {
+    int i_;
+    Dummy(int i) : i_(i) { ++ctr; }
+    ~Dummy() { --ctr; }
+    Dummy(const Dummy&) = delete;
+    Dummy(Dummy&&) = delete;
+
+    int foo() { return i_; }
+    int foo() const { return -i_; }
+
+    static int ctr;
+};
+int Dummy::ctr = 0;
+} // namespace
+
+void test_hold_ptr()
+{
+    {
+        boost::locale::hold_ptr<Dummy> empty;
+        TEST(!empty);
+        auto* raw = new Dummy(42);
+        boost::locale::hold_ptr<Dummy> ptr(raw);
+        const boost::locale::hold_ptr<Dummy>& const_ptr = ptr;
+        TEST_REQUIRE(ptr);
+        TEST(ptr.get() == raw);
+        TEST(const_ptr.get() == raw);
+        // const propagation
+        TEST_EQ((*ptr).foo(), raw->i_);
+        TEST_EQ((*const_ptr).foo(), -raw->i_);
+        TEST_EQ(ptr->foo(), raw->i_);
+        TEST_EQ(const_ptr->foo(), -raw->i_);
+        TEST_EQ(ptr.get()->foo(), raw->i_);
+        TEST_EQ(const_ptr.get()->foo(), -raw->i_);
+        // move construct
+        boost::locale::hold_ptr<Dummy> ptr2 = std::move(ptr);
+        TEST(!ptr);
+        TEST_REQUIRE(ptr2);
+        TEST(ptr2.get() == raw);
+        // move assign
+        ptr = std::move(ptr2);
+        TEST(ptr);
+        TEST_REQUIRE(!ptr2);
+        TEST(ptr.get() == raw);
+        // Swap
+        boost::locale::hold_ptr<Dummy> ptr3(new Dummy(1337));
+        ptr.swap(ptr3);
+        TEST_EQ(ptr->foo(), 1337);
+        TEST_EQ(ptr3->foo(), 42);
+    }
+    TEST_EQ(Dummy::ctr, 0);
+    auto* raw = new Dummy(42);
+    {
+        boost::locale::hold_ptr<Dummy> ptr(new Dummy(1));
+        TEST_EQ(Dummy::ctr, 2);
+        ptr.reset(raw);
+        TEST_EQ(Dummy::ctr, 1);
+        TEST_EQ(ptr->foo(), 42);
+        TEST(ptr.release() == raw);
+        TEST_EQ(Dummy::ctr, 1);
+    }
+    TEST_EQ(Dummy::ctr, 1);
+    delete raw;
+}
 
 void test_get_system_locale()
 {
@@ -291,6 +357,7 @@ void test_try_to_int()
 
 void test_main(int /*argc*/, char** /*argv*/)
 {
+    test_hold_ptr();
     test_get_system_locale();
     test_locale_data();
     test_try_to_int();

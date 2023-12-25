@@ -26,12 +26,14 @@ void test_char()
     std::locale l = gen("C.UTF-8");
 
     test_one<CharType>(l, "Hello World i", "hello world i", "HELLO WORLD I");
+    boost::locale::case_convert_test::test_no_op_title_case<CharType>(l, "Hello world i");
 
     std::string name = "en_US.UTF-8";
 
     std::cout << "- Testing " << name << std::endl;
     l = gen(name);
     test_one<CharType>(l, "Façade", "façade", "FAÇADE");
+    boost::locale::case_convert_test::test_no_op_title_case<CharType>(l, "Hello world i");
 
     name = "tr_TR.UTF-8";
     std::cout << "Testing " << name << std::endl;

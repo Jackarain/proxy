@@ -1,14 +1,13 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <title>Class fiber</title>
 <link rel="stylesheet" href="../../../../../../doc/src/boostbook.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
-<link rel="home" href="../../index.html" title="Chapter 1. Context">
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
+<link rel="home" href="../../index.html" title="Chapter&#160;1.&#160;Context">
 <link rel="up" href="../ff.html" title="Context switching with fibers">
 <link rel="prev" href="implementations__fcontext_t__ucontext_t_and_winfiber.html" title="Implementations: fcontext_t, ucontext_t and WinFiber">
 <link rel="next" href="../cc.html" title="Context switching with call/cc">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -80,7 +79,7 @@
         </p>
 <h5>
 <a name="ff_constructor1_bridgehead"></a>
-  <span class="phrase"><a name="ff_constructor1"></a></span>
+  <span><a name="ff_constructor1"></a></span>
   <a class="link" href="class__fiber_.html#ff_constructor1">Constructor</a>
 </h5>
 <p>
@@ -89,7 +88,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               Creates a invalid fiber.
@@ -104,7 +103,7 @@
         </p>
 <h5>
 <a name="ff_constructor2_bridgehead"></a>
-  <span class="phrase"><a name="ff_constructor2"></a></span>
+  <span><a name="ff_constructor2"></a></span>
   <a class="link" href="class__fiber_.html#ff_constructor2">Constructor</a>
 </h5>
 <p>
@@ -117,7 +116,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               Creates a new fiber and prepares the context to execute <code class="computeroutput"><span class="identifier">fn</span></code>. <code class="computeroutput"><span class="identifier">fixedsize_stack</span></code>
@@ -132,7 +131,7 @@
         </p>
 <h5>
 <a name="ff_destructor%20destructor_bridgehead"></a>
-  <span class="phrase"><a name="ff_destructor%20destructor"></a></span>
+  <span><a name="ff_destructor%20destructor"></a></span>
   <a class="link" href="class__fiber_.html#ff_destructor%20destructor">Destructor</a>
 </h5>
 <p>
@@ -141,7 +140,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               Destructs the associated stack if <code class="computeroutput"><span class="special">*</span><span class="keyword">this</span></code> is a valid fiber, e.g. <span class="emphasis"><em>fiber::operator
@@ -157,7 +156,7 @@
         </p>
 <h5>
 <a name="ff_move%20constructor_bridgehead"></a>
-  <span class="phrase"><a name="ff_move%20constructor"></a></span>
+  <span><a name="ff_move%20constructor"></a></span>
   <a class="link" href="class__fiber_.html#ff_move%20constructor">Move
         constructor</a>
 </h5>
@@ -167,7 +166,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               Moves underlying capture fiber to <code class="computeroutput"><span class="special">*</span><span class="keyword">this</span></code>.
@@ -182,7 +181,7 @@
         </p>
 <h5>
 <a name="ff_move%20assignment_bridgehead"></a>
-  <span class="phrase"><a name="ff_move%20assignment"></a></span>
+  <span><a name="ff_move%20assignment"></a></span>
   <a class="link" href="class__fiber_.html#ff_move%20assignment">Move assignment
         operator</a>
 </h5>
@@ -192,7 +191,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               Moves the state of <code class="computeroutput"><span class="identifier">other</span></code>
@@ -209,7 +208,7 @@
         </p>
 <h5>
 <a name="ff_operator_call_bridgehead"></a>
-  <span class="phrase"><a name="ff_operator_call"></a></span>
+  <span><a name="ff_operator_call"></a></span>
   <a class="link" href="class__fiber_.html#ff_operator_call">Member function
         <code class="computeroutput">operator()</code>()</a>
 </h5>
@@ -222,7 +221,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               Captures current fiber and resumes <code class="computeroutput"><span class="special">*</span><span class="keyword">this</span></code>. The function <code class="computeroutput"><span class="identifier">resume_with</span></code>,
@@ -256,7 +255,7 @@
         </p>
 <h5>
 <a name="ff_operator_bool_bridgehead"></a>
-  <span class="phrase"><a name="ff_operator_bool"></a></span>
+  <span><a name="ff_operator_bool"></a></span>
   <a class="link" href="class__fiber_.html#ff_operator_bool">Member function
         <code class="computeroutput">operator bool</code>()</a>
 </h5>
@@ -266,7 +265,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Returns:</span></dt>
 <dd><p>
               <code class="computeroutput"><span class="keyword">true</span></code> if <code class="computeroutput"><span class="special">*</span><span class="keyword">this</span></code>
@@ -282,7 +281,7 @@
         </p>
 <h5>
 <a name="ff_operator_not_bridgehead"></a>
-  <span class="phrase"><a name="ff_operator_not"></a></span>
+  <span><a name="ff_operator_not"></a></span>
   <a class="link" href="class__fiber_.html#ff_operator_not">Member function <code class="computeroutput">operator!</code>()</a>
 </h5>
 <p>
@@ -291,7 +290,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Returns:</span></dt>
 <dd><p>
               <code class="computeroutput"><span class="keyword">true</span></code> if <code class="computeroutput"><span class="special">*</span><span class="keyword">this</span></code>
@@ -307,7 +306,7 @@
         </p>
 <h5>
 <a name="ff_operator_equal_bridgehead"></a>
-  <span class="phrase"><a name="ff_operator_equal"></a></span>
+  <span><a name="ff_operator_equal"></a></span>
   <a class="link" href="class__fiber_.html#ff_operator_equal">Member function
         <code class="computeroutput">operator==</code>()</a>
 </h5>
@@ -317,7 +316,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Returns:</span></dt>
 <dd><p>
               <code class="computeroutput"><span class="keyword">true</span></code> if <code class="computeroutput"><span class="special">*</span><span class="keyword">this</span></code>
@@ -335,7 +334,7 @@
         </p>
 <h5>
 <a name="ff_operator_notequal_bridgehead"></a>
-  <span class="phrase"><a name="ff_operator_notequal"></a></span>
+  <span><a name="ff_operator_notequal"></a></span>
   <a class="link" href="class__fiber_.html#ff_operator_notequal">Member
         function <code class="computeroutput">operator!=</code>()</a>
 </h5>
@@ -345,7 +344,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Returns:</span></dt>
 <dd><p>
               <code class="computeroutput">! (other == * this)</code>
@@ -360,7 +359,7 @@
         </p>
 <h5>
 <a name="ff_operator_less_bridgehead"></a>
-  <span class="phrase"><a name="ff_operator_less"></a></span>
+  <span><a name="ff_operator_less"></a></span>
   <a class="link" href="class__fiber_.html#ff_operator_less">Member function
         <code class="computeroutput">operator&lt;</code>()</a>
 </h5>
@@ -370,7 +369,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Returns:</span></dt>
 <dd><p>
               <code class="computeroutput"><span class="keyword">true</span></code> if <code class="computeroutput"><span class="special">*</span><span class="keyword">this</span> <span class="special">!=</span> <span class="identifier">other</span></code>
@@ -388,7 +387,7 @@
         </p>
 <h5>
 <a name="ff_operator_greater_bridgehead"></a>
-  <span class="phrase"><a name="ff_operator_greater"></a></span>
+  <span><a name="ff_operator_greater"></a></span>
   <a class="link" href="class__fiber_.html#ff_operator_greater">Member
         function <code class="computeroutput">operator&gt;</code>()</a>
 </h5>
@@ -398,7 +397,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Returns:</span></dt>
 <dd><p>
               <code class="computeroutput"><span class="identifier">other</span> <span class="special">&lt;</span>
@@ -414,7 +413,7 @@
         </p>
 <h5>
 <a name="ff_operator_lesseq_bridgehead"></a>
-  <span class="phrase"><a name="ff_operator_lesseq"></a></span>
+  <span><a name="ff_operator_lesseq"></a></span>
   <a class="link" href="class__fiber_.html#ff_operator_lesseq">Member function
         <code class="computeroutput">operator&lt;=</code>()</a>
 </h5>
@@ -424,7 +423,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Returns:</span></dt>
 <dd><p>
               <code class="computeroutput"><span class="special">!</span> <span class="special">(</span><span class="identifier">other</span> <span class="special">&lt;</span>
@@ -440,7 +439,7 @@
         </p>
 <h5>
 <a name="ff_operator_greatereq_bridgehead"></a>
-  <span class="phrase"><a name="ff_operator_greatereq"></a></span>
+  <span><a name="ff_operator_greatereq"></a></span>
   <a class="link" href="class__fiber_.html#ff_operator_greatereq">Member
         function <code class="computeroutput">operator&gt;=</code>()</a>
 </h5>
@@ -450,7 +449,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Returns:</span></dt>
 <dd><p>
               <code class="computeroutput"><span class="special">!</span> <span class="special">(*</span>
@@ -467,7 +466,7 @@
         </p>
 <h5>
 <a name="ff__bridgehead"></a>
-  <span class="phrase"><a name="ff_"></a></span>
+  <span><a name="ff_"></a></span>
   <a class="link" href="class__fiber_.html#ff_">Non-member function <code class="computeroutput">operator&lt;&lt;()</code></a>
 </h5>
 <p>
@@ -478,7 +477,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               Writes the representation of <code class="computeroutput"><span class="identifier">other</span></code>
@@ -491,11 +490,14 @@
 </dl>
 </div>
 </div>
-<div class="copyright-footer">Copyright © 2014 Oliver Kowalke<p>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright &#169; 2014 Oliver Kowalke<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div>
+</div></td>
+</tr></table>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="implementations__fcontext_t__ucontext_t_and_winfiber.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../ff.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../cc.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>

@@ -24,6 +24,7 @@ void test_char()
     std::cout << "- Testing at least C" << std::endl;
     std::locale l = gen("en_US.UTF-8");
     test_one<CharType>(l, "Hello World i", "hello world i", "HELLO WORLD I");
+    boost::locale::case_convert_test::test_no_op_title_case<CharType>(l, "Hello world i");
 
     std::string name;
 
@@ -32,6 +33,7 @@ void test_char()
         std::cout << "- Testing " << name << std::endl;
         l = gen(name);
         test_one<CharType>(l, "Façade", "façade", "FAÇADE");
+        boost::locale::case_convert_test::test_no_op_title_case<CharType>(l, "Hello world i");
     } else
         std::cout << "- en_US.UTF-8 is not supported, skipping" << std::endl; // LCOV_EXCL_LINE
 
@@ -41,6 +43,7 @@ void test_char()
         l = gen(name);
         test_one<CharType>(l, "Hello World", "hello world", "HELLO WORLD");
         test_one<CharType>(l, "Façade", "façade", "FAÇADE");
+        boost::locale::case_convert_test::test_no_op_title_case<CharType>(l, "Hello world i");
     } else
         std::cout << "- en_US.ISO8859-1 is not supported, skipping" << std::endl; // LCOV_EXCL_LINE
 
@@ -72,6 +75,10 @@ void test_main(int /*argc*/, char** /*argv*/)
     test_char<char>();
     std::cout << "Testing wchar_t" << std::endl;
     test_char<wchar_t>();
+#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+    std::cout << "Testing char8_t" << std::endl;
+    test_char<char8_t>();
+#endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
     std::cout << "Testing char16_t" << std::endl;
     test_char<char16_t>();

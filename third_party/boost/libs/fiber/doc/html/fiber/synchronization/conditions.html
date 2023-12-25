@@ -1,14 +1,13 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <title>Condition Variables</title>
 <link rel="stylesheet" href="../../../../../../doc/src/boostbook.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
-<link rel="home" href="../../index.html" title="Chapter 1. Fiber">
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
+<link rel="home" href="../../index.html" title="Chapter&#160;1.&#160;Fiber">
 <link rel="up" href="../synchronization.html" title="Synchronization">
 <link rel="prev" href="mutex_types.html" title="Mutex Types">
 <link rel="next" href="barriers.html" title="Barriers">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -29,7 +28,7 @@
 </h3></div></div></div>
 <h5>
 <a name="fiber.synchronization.conditions.h0"></a>
-        <span class="phrase"><a name="fiber.synchronization.conditions.synopsis"></a></span><a class="link" href="conditions.html#fiber.synchronization.conditions.synopsis">Synopsis</a>
+        <span><a name="fiber.synchronization.conditions.synopsis"></a></span><a class="link" href="conditions.html#fiber.synchronization.conditions.synopsis">Synopsis</a>
       </h5>
 <pre class="programlisting"><span class="keyword">enum</span> <span class="keyword">class</span> <span class="identifier">cv_status</span><span class="special">;</span> <span class="special">{</span>
     <span class="identifier">no_timeout</span><span class="special">,</span>
@@ -123,7 +122,7 @@
       </p>
 <a name="condition_variable_spurious_wakeups"></a><h5>
 <a name="fiber.synchronization.conditions.h1"></a>
-        <span class="phrase"><a name="fiber.synchronization.conditions.no_spurious_wakeups"></a></span><a class="link" href="conditions.html#fiber.synchronization.conditions.no_spurious_wakeups">No Spurious
+        <span><a name="fiber.synchronization.conditions.no_spurious_wakeups"></a></span><a class="link" href="conditions.html#fiber.synchronization.conditions.no_spurious_wakeups">No Spurious
         Wakeups</a>
       </h5>
 <p>
@@ -156,7 +155,7 @@
       </p>
 <a name="class_cv_status"></a><h5>
 <a name="fiber.synchronization.conditions.h2"></a>
-        <span class="phrase"><a name="fiber.synchronization.conditions.enumeration__code__phrase_role__identifier__cv_status__phrase___code_"></a></span><a class="link" href="conditions.html#fiber.synchronization.conditions.enumeration__code__phrase_role__identifier__cv_status__phrase___code_">Enumeration
+        <span><a name="fiber.synchronization.conditions.enumeration__code__phrase_role__identifier__cv_status__phrase___code_"></a></span><a class="link" href="conditions.html#fiber.synchronization.conditions.enumeration__code__phrase_role__identifier__cv_status__phrase___code_">Enumeration
         <code class="computeroutput"><span class="identifier">cv_status</span></code></a>
       </h5>
 <p>
@@ -169,11 +168,11 @@
 </pre>
 <h5>
 <a name="fiber.synchronization.conditions.h3"></a>
-        <span class="phrase"><a name="fiber.synchronization.conditions._code__phrase_role__identifier__no_timeout__phrase___code_"></a></span><a class="link" href="conditions.html#fiber.synchronization.conditions._code__phrase_role__identifier__no_timeout__phrase___code_"><code class="computeroutput"><span class="identifier">no_timeout</span></code></a>
+        <span><a name="fiber.synchronization.conditions._code__phrase_role__identifier__no_timeout__phrase___code_"></a></span><a class="link" href="conditions.html#fiber.synchronization.conditions._code__phrase_role__identifier__no_timeout__phrase___code_"><code class="computeroutput"><span class="identifier">no_timeout</span></code></a>
       </h5>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               The condition variable was awakened with <code class="computeroutput"><span class="identifier">notify_one</span></code>
@@ -183,11 +182,11 @@
 </div>
 <h5>
 <a name="fiber.synchronization.conditions.h4"></a>
-        <span class="phrase"><a name="fiber.synchronization.conditions._code__phrase_role__identifier__timeout__phrase___code_"></a></span><a class="link" href="conditions.html#fiber.synchronization.conditions._code__phrase_role__identifier__timeout__phrase___code_"><code class="computeroutput"><span class="identifier">timeout</span></code></a>
+        <span><a name="fiber.synchronization.conditions._code__phrase_role__identifier__timeout__phrase___code_"></a></span><a class="link" href="conditions.html#fiber.synchronization.conditions._code__phrase_role__identifier__timeout__phrase___code_"><code class="computeroutput"><span class="identifier">timeout</span></code></a>
       </h5>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               The condition variable was awakened by timeout.
@@ -198,7 +197,7 @@
         </p>
 <h5>
 <a name="class_condition_variable_any_bridgehead"></a>
-  <span class="phrase"><a name="class_condition_variable_any"></a></span>
+  <span><a name="class_condition_variable_any"></a></span>
   <a class="link" href="conditions.html#class_condition_variable_any">Class
         <code class="computeroutput">condition_variable_any</code></a>
 </h5>
@@ -249,13 +248,13 @@
 </pre>
 <h5>
 <a name="fiber.synchronization.conditions.h5"></a>
-        <span class="phrase"><a name="fiber.synchronization.conditions.constructor"></a></span><a class="link" href="conditions.html#fiber.synchronization.conditions.constructor">Constructor</a>
+        <span><a name="fiber.synchronization.conditions.constructor"></a></span><a class="link" href="conditions.html#fiber.synchronization.conditions.constructor">Constructor</a>
       </h5>
 <pre class="programlisting">condition_variable_any<span class="special">()</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               Creates the object.
@@ -268,13 +267,13 @@
 </div>
 <h5>
 <a name="fiber.synchronization.conditions.h6"></a>
-        <span class="phrase"><a name="fiber.synchronization.conditions.destructor"></a></span><a class="link" href="conditions.html#fiber.synchronization.conditions.destructor">Destructor</a>
+        <span><a name="fiber.synchronization.conditions.destructor"></a></span><a class="link" href="conditions.html#fiber.synchronization.conditions.destructor">Destructor</a>
       </h5>
 <pre class="programlisting"><span class="special">~</span>condition_variable_any<span class="special">()</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Precondition:</span></dt>
 <dd><p>
               All fibers waiting on <code class="computeroutput"><span class="special">*</span><span class="keyword">this</span></code> have been notified by a call to
@@ -292,7 +291,7 @@
         </p>
 <h5>
 <a name="condition_variable_any_notify_one_bridgehead"></a>
-  <span class="phrase"><a name="condition_variable_any_notify_one"></a></span>
+  <span><a name="condition_variable_any_notify_one"></a></span>
   <a class="link" href="conditions.html#condition_variable_any_notify_one">Member
         function <code class="computeroutput">notify_one</code>()</a>
 </h5>
@@ -302,7 +301,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               If any fibers are currently <a class="link" href="../overview.html#blocking"><span class="emphasis"><em>blocked</em></span></a>
@@ -325,7 +324,7 @@
         </p>
 <h5>
 <a name="condition_variable_any_notify_all_bridgehead"></a>
-  <span class="phrase"><a name="condition_variable_any_notify_all"></a></span>
+  <span><a name="condition_variable_any_notify_all"></a></span>
   <a class="link" href="conditions.html#condition_variable_any_notify_all">Member
         function <code class="computeroutput">notify_all</code>()</a>
 </h5>
@@ -335,7 +334,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               If any fibers are currently <a class="link" href="../overview.html#blocking"><span class="emphasis"><em>blocked</em></span></a>
@@ -362,7 +361,7 @@
         </p>
 <h5>
 <a name="condition_variable_any_wait_bridgehead"></a>
-  <span class="phrase"><a name="condition_variable_any_wait"></a></span>
+  <span><a name="condition_variable_any_wait"></a></span>
   <a class="link" href="conditions.html#condition_variable_any_wait">Templated
         member function <code class="computeroutput">wait</code>()</a>
 </h5>
@@ -376,7 +375,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Precondition:</span></dt>
 <dd><p>
               <code class="computeroutput"><span class="identifier">lk</span></code> is locked by the
@@ -439,7 +438,7 @@
         </p>
 <h5>
 <a name="condition_variable_any_wait_until_bridgehead"></a>
-  <span class="phrase"><a name="condition_variable_any_wait_until"></a></span>
+  <span><a name="condition_variable_any_wait_until"></a></span>
   <a class="link" href="conditions.html#condition_variable_any_wait_until">Templated
         member function <code class="computeroutput">wait_until</code>()</a>
 </h5>
@@ -456,7 +455,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Precondition:</span></dt>
 <dd><p>
               <code class="computeroutput"><span class="identifier">lk</span></code> is locked by the
@@ -527,7 +526,7 @@
         </p>
 <h5>
 <a name="condition_variable_any_wait_for_bridgehead"></a>
-  <span class="phrase"><a name="condition_variable_any_wait_for"></a></span>
+  <span><a name="condition_variable_any_wait_for"></a></span>
   <a class="link" href="conditions.html#condition_variable_any_wait_for">Templated
         member function <code class="computeroutput">wait_for</code>()</a>
 </h5>
@@ -544,7 +543,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Precondition:</span></dt>
 <dd><p>
               <code class="computeroutput"><span class="identifier">lk</span></code> is locked by the
@@ -617,7 +616,7 @@
         </p>
 <h5>
 <a name="class_condition_variable_bridgehead"></a>
-  <span class="phrase"><a name="class_condition_variable"></a></span>
+  <span><a name="class_condition_variable"></a></span>
   <a class="link" href="conditions.html#class_condition_variable">Class
         <code class="computeroutput">condition_variable</code></a>
 </h5>
@@ -667,13 +666,13 @@
 </pre>
 <h5>
 <a name="fiber.synchronization.conditions.h7"></a>
-        <span class="phrase"><a name="fiber.synchronization.conditions.constructor0"></a></span><a class="link" href="conditions.html#fiber.synchronization.conditions.constructor0">Constructor</a>
+        <span><a name="fiber.synchronization.conditions.constructor0"></a></span><a class="link" href="conditions.html#fiber.synchronization.conditions.constructor0">Constructor</a>
       </h5>
 <pre class="programlisting">condition_variable<span class="special">()</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               Creates the object.
@@ -686,13 +685,13 @@
 </div>
 <h5>
 <a name="fiber.synchronization.conditions.h8"></a>
-        <span class="phrase"><a name="fiber.synchronization.conditions.destructor0"></a></span><a class="link" href="conditions.html#fiber.synchronization.conditions.destructor0">Destructor</a>
+        <span><a name="fiber.synchronization.conditions.destructor0"></a></span><a class="link" href="conditions.html#fiber.synchronization.conditions.destructor0">Destructor</a>
       </h5>
 <pre class="programlisting"><span class="special">~</span>condition_variable<span class="special">()</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Precondition:</span></dt>
 <dd><p>
               All fibers waiting on <code class="computeroutput"><span class="special">*</span><span class="keyword">this</span></code> have been notified by a call to
@@ -710,7 +709,7 @@
         </p>
 <h5>
 <a name="condition_variable_notify_one_bridgehead"></a>
-  <span class="phrase"><a name="condition_variable_notify_one"></a></span>
+  <span><a name="condition_variable_notify_one"></a></span>
   <a class="link" href="conditions.html#condition_variable_notify_one">Member
         function <code class="computeroutput">notify_one</code>()</a>
 </h5>
@@ -720,7 +719,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               If any fibers are currently <a class="link" href="../overview.html#blocking"><span class="emphasis"><em>blocked</em></span></a>
@@ -743,7 +742,7 @@
         </p>
 <h5>
 <a name="condition_variable_notify_all_bridgehead"></a>
-  <span class="phrase"><a name="condition_variable_notify_all"></a></span>
+  <span><a name="condition_variable_notify_all"></a></span>
   <a class="link" href="conditions.html#condition_variable_notify_all">Member
         function <code class="computeroutput">notify_all</code>()</a>
 </h5>
@@ -753,7 +752,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               If any fibers are currently <a class="link" href="../overview.html#blocking"><span class="emphasis"><em>blocked</em></span></a>
@@ -780,7 +779,7 @@
         </p>
 <h5>
 <a name="condition_variable_wait_bridgehead"></a>
-  <span class="phrase"><a name="condition_variable_wait"></a></span>
+  <span><a name="condition_variable_wait"></a></span>
   <a class="link" href="conditions.html#condition_variable_wait">Templated
         member function <code class="computeroutput">wait</code>()</a>
 </h5>
@@ -793,7 +792,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Precondition:</span></dt>
 <dd><p>
               <code class="computeroutput"><span class="identifier">lk</span></code> is locked by the
@@ -856,7 +855,7 @@
         </p>
 <h5>
 <a name="condition_variable_wait_until_bridgehead"></a>
-  <span class="phrase"><a name="condition_variable_wait_until"></a></span>
+  <span><a name="condition_variable_wait_until"></a></span>
   <a class="link" href="conditions.html#condition_variable_wait_until">Templated
         member function <code class="computeroutput">wait_until</code>()</a>
 </h5>
@@ -873,7 +872,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Precondition:</span></dt>
 <dd><p>
               <code class="computeroutput"><span class="identifier">lk</span></code> is locked by the
@@ -944,7 +943,7 @@
         </p>
 <h5>
 <a name="condition_variable_wait_for_bridgehead"></a>
-  <span class="phrase"><a name="condition_variable_wait_for"></a></span>
+  <span><a name="condition_variable_wait_for"></a></span>
   <a class="link" href="conditions.html#condition_variable_wait_for">Templated
         member function <code class="computeroutput">wait_for</code>()</a>
 </h5>
@@ -961,7 +960,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Precondition:</span></dt>
 <dd><p>
               <code class="computeroutput"><span class="identifier">lk</span></code> is locked by the
@@ -1031,11 +1030,14 @@
 </dl>
 </div>
 </div>
-<div class="copyright-footer">Copyright © 2013 Oliver Kowalke<p>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright &#169; 2013 Oliver Kowalke<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div>
+</div></td>
+</tr></table>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="mutex_types.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../synchronization.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="barriers.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>

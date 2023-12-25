@@ -1,0 +1,128 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "B2 Engine Bootstrap",
+            "type": "shell",
+            "windows": {
+                "command": "bootstrap.bat"
+            },
+            "osx": {
+                "command": "./bootstrap.sh"
+            },
+            "linux": {
+                "command": "./bootstrap.sh"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": {
+                "owner": "cpptools",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/src/engine"
+                ],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5
+                }
+            },
+            "group": "build"
+        },
+        {
+            "label": "B2 Engine Build (using build.sh|bat)",
+            "type": "shell",
+            "windows": {
+                "command": "build.bat"
+            },
+            "osx": {
+                "command": "./build.sh"
+            },
+            "linux": {
+                "command": "./build.sh"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/src/engine"
+            },
+            "problemMatcher": {
+                "owner": "cpptools",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/src/engine"
+                ],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5
+                }
+            },
+            "group": "build"
+        },
+        {
+            "label": "B2 Engine Build (using B2)",
+            "type": "shell",
+            "windows": {
+                "command": "${workspaceFolder}\\b2.exe b2"
+            },
+            "osx": {
+                "command": "${workspaceFolder}/b2 b2"
+            },
+            "linux": {
+                "command": "${workspaceFolder}/b2 b2"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": {
+                "owner": "cpptools",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}"
+                ],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5
+                }
+            },
+            "group": "build"
+        },
+        {
+            "label": "B2 Engine Infer",
+            "type": "shell",
+            "osx": {
+                "command": "CXX='infer run -- clang++' ./build.sh clang"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/src/engine"
+            },
+            "problemMatcher": {
+                "owner": "cpptools",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/src/engine"
+                ],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5
+                }
+            }
+        }
+    ]
+}

@@ -1,14 +1,13 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <title>Migrating fibers between threads</title>
 <link rel="stylesheet" href="../../../../../doc/src/boostbook.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
-<link rel="home" href="../index.html" title="Chapter 1. Fiber">
-<link rel="up" href="../index.html" title="Chapter 1. Fiber">
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
+<link rel="home" href="../index.html" title="Chapter&#160;1.&#160;Fiber">
+<link rel="up" href="../index.html" title="Chapter&#160;1.&#160;Fiber">
 <link rel="prev" href="fls.html" title="Fiber local storage">
 <link rel="next" href="callbacks.html" title="Integrating Fibers with Asynchronous Callbacks">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -30,12 +29,12 @@
 </h2></div></div></div>
 <h4>
 <a name="fiber.migration.h0"></a>
-      <span class="phrase"><a name="fiber.migration.overview"></a></span><a class="link" href="migration.html#fiber.migration.overview">Overview</a>
+      <span><a name="fiber.migration.overview"></a></span><a class="link" href="migration.html#fiber.migration.overview">Overview</a>
     </h4>
 <p>
       Each fiber owns a stack and manages its execution state, including all registers
       and CPU flags, the instruction pointer and the stack pointer. That means, in
-      general, a fiber is not bound to a specific thread.<a href="#ftn.fiber.migration.f0" class="footnote" name="fiber.migration.f0"><sup class="footnote">[3]</sup></a><sup>,</sup><a href="#ftn.fiber.migration.f1" class="footnote" name="fiber.migration.f1"><sup class="footnote">[4]</sup></a>
+      general, a fiber is not bound to a specific thread.<sup>[<a name="fiber.migration.f0" href="#ftn.fiber.migration.f0" class="footnote">3</a>]</sup><sup>,</sup><sup>[<a name="fiber.migration.f1" href="#ftn.fiber.migration.f1" class="footnote">4</a>]</sup>
     </p>
 <p>
       Migrating a fiber from a logical CPU with heavy workload to another logical
@@ -50,7 +49,7 @@
       due to increased latency of memory access.
     </p>
 <p>
-      Only fibers that are contained in <a class="link" href="scheduling.html#class_algorithm"><code class="computeroutput">algorithm</code></a>’s ready queue can
+      Only fibers that are contained in <a class="link" href="scheduling.html#class_algorithm"><code class="computeroutput">algorithm</code></a>&#8217;s ready queue can
       migrate between threads. You cannot migrate a running fiber, nor one that is
       <a class="link" href="overview.html#blocking"><span class="emphasis"><em>blocked</em></span></a>. You cannot migrate
       a fiber if its <a class="link" href="scheduling.html#context_is_context"><code class="computeroutput">context::is_context()</code></a> method returns <code class="computeroutput"><span class="keyword">true</span></code> for <code class="computeroutput"><span class="identifier">pinned_context</span></code>.
@@ -63,8 +62,8 @@
 <p>
       Thus, fiber migration is accomplished by sharing state between instances of
       a user-coded <a class="link" href="scheduling.html#class_algorithm"><code class="computeroutput">algorithm</code></a> implementation running on different threads.
-      The fiber’s original thread calls <a class="link" href="scheduling.html#algorithm_awakened"><code class="computeroutput">algorithm::awakened()</code></a>, passing
-      the fiber’s <a class="link" href="scheduling.html#class_context"><code class="computeroutput">context</code></a><code class="literal">*</code>. The <code class="computeroutput"><span class="identifier">awakened</span><span class="special">()</span></code> implementation calls <a class="link" href="scheduling.html#context_detach"><code class="computeroutput">context::detach()</code></a>.
+      The fiber&#8217;s original thread calls <a class="link" href="scheduling.html#algorithm_awakened"><code class="computeroutput">algorithm::awakened()</code></a>, passing
+      the fiber&#8217;s <a class="link" href="scheduling.html#class_context"><code class="computeroutput">context</code></a><code class="literal">*</code>. The <code class="computeroutput"><span class="identifier">awakened</span><span class="special">()</span></code> implementation calls <a class="link" href="scheduling.html#context_detach"><code class="computeroutput">context::detach()</code></a>.
     </p>
 <p>
       At some later point, when the same or a different thread calls <a class="link" href="scheduling.html#algorithm_pick_next"><code class="computeroutput">algorithm::pick_next()</code></a>,
@@ -82,7 +81,7 @@
     </p>
 <h4>
 <a name="fiber.migration.h1"></a>
-      <span class="phrase"><a name="fiber.migration.example_of_work_sharing"></a></span><a class="link" href="migration.html#fiber.migration.example_of_work_sharing">Example
+      <span><a name="fiber.migration.example_of_work_sharing"></a></span><a class="link" href="migration.html#fiber.migration.example_of_work_sharing">Example
       of work sharing</a>
     </h4>
 <p>
@@ -103,7 +102,7 @@
     </p>
 <h4>
 <a name="fiber.migration.h2"></a>
-      <span class="phrase"><a name="fiber.migration.setup_of_threads_and_fibers"></a></span><a class="link" href="migration.html#fiber.migration.setup_of_threads_and_fibers">Setup
+      <span><a name="fiber.migration.setup_of_threads_and_fibers"></a></span><a class="link" href="migration.html#fiber.migration.setup_of_threads_and_fibers">Setup
       of threads and fibers</a>
     </h4>
 <p>
@@ -326,7 +325,7 @@
 </table></div>
 <h4>
 <a name="fiber.migration.h3"></a>
-      <span class="phrase"><a name="fiber.migration.scheduling_fibers"></a></span><a class="link" href="migration.html#fiber.migration.scheduling_fibers">Scheduling
+      <span><a name="fiber.migration.scheduling_fibers"></a></span><a class="link" href="migration.html#fiber.migration.scheduling_fibers">Scheduling
       fibers</a>
     </h4>
 <p>
@@ -338,14 +337,14 @@ before
       any other <span class="bold"><strong>Boost.Fiber</strong></span> operation.
     </p>
 <p>
-      The important point about the ready queue is that it’s a class static, common
+      The important point about the ready queue is that it&#8217;s a class static, common
       to all instances of shared_ready_queue. Fibers that are enqueued via <a class="link" href="scheduling.html#algorithm_awakened"><code class="computeroutput">algorithm::awakened()</code></a> (fibers
       that are ready to be resumed) are thus available to all threads. It is required
-      to reserve a separate, scheduler-specific queue for the thread’s main fiber
+      to reserve a separate, scheduler-specific queue for the thread&#8217;s main fiber
       and dispatcher fibers: these may <span class="emphasis"><em>not</em></span> be shared between
-      threads! When we’re passed either of these fibers, push it there instead of
+      threads! When we&#8217;re passed either of these fibers, push it there instead of
       in the shared queue: it would be Bad News for thread B to retrieve and attempt
-      to execute thread A’s main fiber.
+      to execute thread A&#8217;s main fiber.
     </p>
 <p>
       [awakened_ws]
@@ -362,22 +361,25 @@ before
       The source code above is found in <a href="../../../examples/work_sharing.cpp" target="_top">work_sharing.cpp</a>.
     </p>
 <div class="footnotes">
-<br><hr style="width:100; text-align:left;margin-left: 0">
-<div id="ftn.fiber.migration.f0" class="footnote"><p><a href="#fiber.migration.f0" class="para"><sup class="para">[3] </sup></a>
-        The <span class="quote">“<span class="quote">main</span>”</span> fiber on each thread, that is, the fiber on which
+<br><hr width="100" align="left">
+<div class="footnote"><p><sup>[<a name="ftn.fiber.migration.f0" href="#fiber.migration.f0" class="para">3</a>] </sup>
+        The <span class="quote">&#8220;<span class="quote">main</span>&#8221;</span> fiber on each thread, that is, the fiber on which
         the thread is launched, cannot migrate to any other thread. Also <span class="bold"><strong>Boost.Fiber</strong></span> implicitly creates a dispatcher fiber
-        for each thread — this cannot migrate either.
+        for each thread &#8212; this cannot migrate either.
       </p></div>
-<div id="ftn.fiber.migration.f1" class="footnote"><p><a href="#fiber.migration.f1" class="para"><sup class="para">[4] </sup></a>
+<div class="footnote"><p><sup>[<a name="ftn.fiber.migration.f1" href="#fiber.migration.f1" class="para">4</a>] </sup>
         Of course it would be problematic to migrate a fiber that relies on <a class="link" href="overview.html#thread_local_storage">thread-local storage</a>.
       </p></div>
 </div>
 </div>
-<div class="copyright-footer">Copyright © 2013 Oliver Kowalke<p>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright &#169; 2013 Oliver Kowalke<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div>
+</div></td>
+</tr></table>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="fls.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="callbacks.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>

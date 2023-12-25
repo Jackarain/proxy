@@ -543,23 +543,18 @@ objects that can be used before entring `main()`. Some compilers though (especia
 supporting C++11 `constexpr`) may be smart enough to perform flag initialization statically
 (which is, in C++11 terms, a constant initialization).
 
-This difference is deliberate and is done to support C++03 compilers. C++11 defines the
-`ATOMIC_FLAG_INIT` macro which can be used to statically initialize `std::atomic_flag`
-to a clear state like this:
+C++11 defines the `ATOMIC_FLAG_INIT` macro which can be used to statically initialize
+`std::atomic_flag` to a clear state like this:
 
     std::atomic_flag flag = ATOMIC_FLAG_INIT; // constant initialization
 
-This macro cannot be implemented in C++03 because for that `atomic_flag` would have to be
-an aggregate type, which it cannot be because it has to prohibit copying and consequently
-define the default constructor. Thus the closest equivalent C++03 code using [*Boost.Atomic]
-would be:
+With [*Boost.Atomic], the simple declaration below would have the same effect, if the compiler
+supports C++11 `constexpr`:
 
-    boost::atomic_flag flag; // possibly, dynamic initialization in C++03;
-                             // constant initialization in C++11
+    boost::atomic_flag flag; // constant initialization
 
-The same code is also valid in C++11, so this code can be used universally. However, for
-interface parity with `std::atomic_flag`, if possible, the library also defines the
-`BOOST_ATOMIC_FLAG_INIT` macro, which is equivalent to `ATOMIC_FLAG_INIT`:
+However, for interface parity with `std::atomic_flag`, if possible, the library also defines
+the `BOOST_ATOMIC_FLAG_INIT` macro, which is equivalent to `ATOMIC_FLAG_INIT`:
 
     boost::atomic_flag flag = BOOST_ATOMIC_FLAG_INIT; // constant initialization
 
@@ -1501,16 +1496,7 @@ limitations that cannot be lifted without compiler support:
   padding, `atomic<>` initializing constructor needs to perform runtime conversion
   to the storage type and potentially clear padding bits. This limitation may be
   lifted for more categories of types in the future.
-* [*Default constructor is not trivial in C++03]: Because the initializing
-  constructor has to be defined in `atomic<>`, the default constructor
-  must also be defined. In C++03 the constructor cannot be defined as defaulted
-  and therefore it is not trivial. In C++11 the constructor is defaulted (and trivial,
-  if the default constructor of the value type is). In any case, the default
-  constructor of `atomic<>` performs default initialization of the atomic value,
-  as required in C++11. [*Advice]: In C++03, do not use [*Boost.Atomic] in contexts
-  where trivial default constructor is important (e.g. as a global variable which
-  is required to be statically initialized).
-* [*C++03 compilers may transform computation dependency to control dependency]:
+* [*Compilers may transform computation dependency to control dependency]:
   Crucially, `memory_order_consume` only affects computationally-dependent
   operations, but in general there is nothing preventing a compiler
   from transforming a computation dependency into a control dependency.
@@ -1527,12 +1513,11 @@ limitations that cannot be lifted without compiler support:
 * [*Fence operations may enforce "too strong" compiler ordering]:
   Semantically, `memory_order_acquire`/`memory_order_consume`
   and `memory_order_release` need to restrain reordering of
-  memory operations only in one direction. Since in C++03 there is no
-  way to express this constraint to the compiler, these act
-  as "full compiler barriers" in C++03 implementation. In corner
-  cases this may result in a slightly less efficient code than a C++11 compiler
-  could generate. [*Boost.Atomic] will use compiler intrinsics, if possible,
-  to express the proper ordering constraints.
+  memory operations only in one direction. Since in some compilers there is no
+  way to express this constraint, these may act as "full compiler barriers".
+  In corner cases this may result in a slightly less efficient code than a 
+  more capable compiler could generate. [*Boost.Atomic] will use compiler intrinsics,
+  if possible, to express the proper ordering constraints.
 * [*Atomic operations may enforce "too strong" memory ordering in debug mode]:
   On some compilers, disabling optimizations makes it impossible to provide
   memory ordering constraints as compile-time constants to the compiler intrinsics.
@@ -1634,12 +1619,12 @@ implementation behaves as expected:
 
 [section:tested_compilers Tested compilers]
 
-[*Boost.Atomic] has been tested on and is known to work on
-the following compilers/platforms:
+A C++11 (or later) compiler is required by the library. [*Boost.Atomic] has been tested
+on and is known to work on the following compilers/platforms:
 
-* gcc 4.4 and newer: i386, x86_64, ppc32, ppc64, sparcv9, armv6, alpha
+* gcc 4.6 and newer: i386, x86_64, ppc32, ppc64, sparcv9, armv6, alpha
 * clang 3.5 and newer: i386, x86_64
-* Visual Studio Express 2008 and newer on Windows XP and later: x86, x64, ARM
+* Visual Studio 2015 (MSVC-14.0) and newer on Windows XP and later: x86, x64, ARM
 
 [endsect]
 

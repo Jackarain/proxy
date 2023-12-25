@@ -1,14 +1,13 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <title>Future</title>
 <link rel="stylesheet" href="../../../../../../../doc/src/boostbook.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
-<link rel="home" href="../../../index.html" title="Chapter 1. Fiber">
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
+<link rel="home" href="../../../index.html" title="Chapter&#160;1.&#160;Fiber">
 <link rel="up" href="../futures.html" title="Futures">
 <link rel="prev" href="../futures.html" title="Futures">
 <link rel="next" href="promise.html" title="Template promise&lt;&gt;">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -32,7 +31,7 @@
         </p>
 <a name="shared_state"></a><h6>
 <a name="fiber.synchronization.futures.future.h0"></a>
-          <span class="phrase"><a name="fiber.synchronization.futures.future.shared_state"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future.shared_state">shared
+          <span><a name="fiber.synchronization.futures.future.shared_state"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future.shared_state">shared
           state</a>
         </h6>
 <p>
@@ -55,7 +54,7 @@
         </p>
 <a name="class_future_status"></a><h6>
 <a name="fiber.synchronization.futures.future.h1"></a>
-          <span class="phrase"><a name="fiber.synchronization.futures.future.enumeration__code__phrase_role__identifier__future_status__phrase___code_"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future.enumeration__code__phrase_role__identifier__future_status__phrase___code_">Enumeration
+          <span><a name="fiber.synchronization.futures.future.enumeration__code__phrase_role__identifier__future_status__phrase___code_"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future.enumeration__code__phrase_role__identifier__future_status__phrase___code_">Enumeration
           <code class="computeroutput"><span class="identifier">future_status</span></code></a>
         </h6>
 <p>
@@ -70,11 +69,11 @@
 </pre>
 <h6>
 <a name="fiber.synchronization.futures.future.h2"></a>
-          <span class="phrase"><a name="fiber.synchronization.futures.future._code__phrase_role__identifier__ready__phrase___code_"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future._code__phrase_role__identifier__ready__phrase___code_"><code class="computeroutput"><span class="identifier">ready</span></code></a>
+          <span><a name="fiber.synchronization.futures.future._code__phrase_role__identifier__ready__phrase___code_"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future._code__phrase_role__identifier__ready__phrase___code_"><code class="computeroutput"><span class="identifier">ready</span></code></a>
         </h6>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 The <a class="link" href="future.html#shared_state">shared state</a> is ready.
@@ -83,11 +82,11 @@
 </div>
 <h6>
 <a name="fiber.synchronization.futures.future.h3"></a>
-          <span class="phrase"><a name="fiber.synchronization.futures.future._code__phrase_role__identifier__timeout__phrase___code_"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future._code__phrase_role__identifier__timeout__phrase___code_"><code class="computeroutput"><span class="identifier">timeout</span></code></a>
+          <span><a name="fiber.synchronization.futures.future._code__phrase_role__identifier__timeout__phrase___code_"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future._code__phrase_role__identifier__timeout__phrase___code_"><code class="computeroutput"><span class="identifier">timeout</span></code></a>
         </h6>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 The <a class="link" href="future.html#shared_state">shared state</a> did not become
@@ -108,7 +107,7 @@
           </p>
 <h5>
 <a name="class_future_bridgehead"></a>
-  <span class="phrase"><a name="class_future"></a></span>
+  <span><a name="class_future"></a></span>
   <a class="link" href="future.html#class_future">Template <code class="computeroutput">future&lt;&gt;</code></a>
 </h5>
 <p>
@@ -162,14 +161,14 @@
 </pre>
 <h6>
 <a name="fiber.synchronization.futures.future.h4"></a>
-          <span class="phrase"><a name="fiber.synchronization.futures.future.default_constructor"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future.default_constructor">Default
+          <span><a name="fiber.synchronization.futures.future.default_constructor"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future.default_constructor">Default
           constructor</a>
         </h6>
 <pre class="programlisting"><span class="identifier">future</span><span class="special">()</span> <span class="keyword">noexcept</span><span class="special">;</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Creates a future with no <a class="link" href="future.html#shared_state">shared state</a>.
@@ -183,13 +182,13 @@
 </div>
 <h6>
 <a name="fiber.synchronization.futures.future.h5"></a>
-          <span class="phrase"><a name="fiber.synchronization.futures.future.move_constructor"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future.move_constructor">Move constructor</a>
+          <span><a name="fiber.synchronization.futures.future.move_constructor"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future.move_constructor">Move constructor</a>
         </h6>
 <pre class="programlisting"><span class="identifier">future</span><span class="special">(</span> <span class="identifier">future</span> <span class="special">&amp;&amp;</span> <span class="identifier">other</span><span class="special">)</span> <span class="keyword">noexcept</span><span class="special">;</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Constructs a future with the <a class="link" href="future.html#shared_state">shared
@@ -204,13 +203,13 @@
 </div>
 <h6>
 <a name="fiber.synchronization.futures.future.h6"></a>
-          <span class="phrase"><a name="fiber.synchronization.futures.future.destructor"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future.destructor">Destructor</a>
+          <span><a name="fiber.synchronization.futures.future.destructor"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future.destructor">Destructor</a>
         </h6>
 <pre class="programlisting"><span class="special">~</span><span class="identifier">future</span><span class="special">();</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Destroys the future; ownership is abandoned.
@@ -251,7 +250,7 @@
           </p>
 <h5>
 <a name="future_operator_assign_bridgehead"></a>
-  <span class="phrase"><a name="future_operator_assign"></a></span>
+  <span><a name="future_operator_assign"></a></span>
   <a class="link" href="future.html#future_operator_assign">Member
           function <code class="computeroutput">operator=</code>()</a>
 </h5>
@@ -261,7 +260,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Moves the <a class="link" href="future.html#shared_state">shared state</a> of other
@@ -279,7 +278,7 @@
           </p>
 <h5>
 <a name="future_valid_bridgehead"></a>
-  <span class="phrase"><a name="future_valid"></a></span>
+  <span><a name="future_valid"></a></span>
   <a class="link" href="future.html#future_valid">Member function <code class="computeroutput">valid</code>()</a>
 </h5>
 <p>
@@ -288,7 +287,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Returns <code class="computeroutput"><span class="keyword">true</span></code> if future
@@ -304,7 +303,7 @@
           </p>
 <h5>
 <a name="future_share_bridgehead"></a>
-  <span class="phrase"><a name="future_share"></a></span>
+  <span><a name="future_share"></a></span>
   <a class="link" href="future.html#future_share">Member function <code class="computeroutput">share</code>()</a>
 </h5>
 <p>
@@ -313,7 +312,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Move the state to a <a class="link" href="future.html#class_shared_future"><code class="computeroutput">shared_future&lt;&gt;</code></a>.
@@ -339,7 +338,7 @@
           </p>
 <h5>
 <a name="future_get_bridgehead"></a>
-  <span class="phrase"><a name="future_get"></a></span>
+  <span><a name="future_get"></a></span>
   <a class="link" href="future.html#future_get">Member function <code class="computeroutput">get</code>()</a>
 </h5>
 <p>
@@ -350,7 +349,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Precondition:</span></dt>
 <dd><p>
                 <code class="computeroutput"><span class="keyword">true</span> <span class="special">==</span>
@@ -381,7 +380,7 @@
           </p>
 <h5>
 <a name="future_get_exception_ptr_bridgehead"></a>
-  <span class="phrase"><a name="future_get_exception_ptr"></a></span>
+  <span><a name="future_get_exception_ptr"></a></span>
   <a class="link" href="future.html#future_get_exception_ptr">Member
           function <code class="computeroutput">get_exception_ptr</code>()</a>
 </h5>
@@ -391,7 +390,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Precondition:</span></dt>
 <dd><p>
                 <code class="computeroutput"><span class="keyword">true</span> <span class="special">==</span>
@@ -420,7 +419,7 @@
           </p>
 <h5>
 <a name="future_wait_bridgehead"></a>
-  <span class="phrase"><a name="future_wait"></a></span>
+  <span><a name="future_wait"></a></span>
   <a class="link" href="future.html#future_wait">Member function <code class="computeroutput">wait</code>()</a>
 </h5>
 <p>
@@ -429,7 +428,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Waits until <a class="link" href="promise.html#promise_set_value"><code class="computeroutput">promise::set_value()</code></a> or <a class="link" href="promise.html#promise_set_exception"><code class="computeroutput">promise::set_exception()</code></a> is
@@ -446,7 +445,7 @@
           </p>
 <h5>
 <a name="future_wait_for_bridgehead"></a>
-  <span class="phrase"><a name="future_wait_for"></a></span>
+  <span><a name="future_wait_for"></a></span>
   <a class="link" href="future.html#future_wait_for">Templated member
           function <code class="computeroutput">wait_for</code>()</a>
 </h5>
@@ -457,7 +456,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Waits until <a class="link" href="promise.html#promise_set_value"><code class="computeroutput">promise::set_value()</code></a> or <a class="link" href="promise.html#promise_set_exception"><code class="computeroutput">promise::set_exception()</code></a> is
@@ -481,7 +480,7 @@
           </p>
 <h5>
 <a name="future_wait_until_bridgehead"></a>
-  <span class="phrase"><a name="future_wait_until"></a></span>
+  <span><a name="future_wait_until"></a></span>
   <a class="link" href="future.html#future_wait_until">Templated
           member function <code class="computeroutput">wait_until</code>()</a>
 </h5>
@@ -492,7 +491,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Waits until <a class="link" href="promise.html#promise_set_value"><code class="computeroutput">promise::set_value()</code></a> or <a class="link" href="promise.html#promise_set_exception"><code class="computeroutput">promise::set_exception()</code></a> is
@@ -516,7 +515,7 @@
           </p>
 <h5>
 <a name="class_shared_future_bridgehead"></a>
-  <span class="phrase"><a name="class_shared_future"></a></span>
+  <span><a name="class_shared_future"></a></span>
   <a class="link" href="future.html#class_shared_future">Template
           <code class="computeroutput">shared_future&lt;&gt;</code></a>
 </h5>
@@ -573,14 +572,14 @@
 </pre>
 <h6>
 <a name="fiber.synchronization.futures.future.h7"></a>
-          <span class="phrase"><a name="fiber.synchronization.futures.future.default_constructor0"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future.default_constructor0">Default
+          <span><a name="fiber.synchronization.futures.future.default_constructor0"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future.default_constructor0">Default
           constructor</a>
         </h6>
 <pre class="programlisting"><span class="identifier">shared_future</span><span class="special">();</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Creates a shared_future with no <a class="link" href="future.html#shared_state">shared
@@ -595,14 +594,14 @@
 </div>
 <h6>
 <a name="fiber.synchronization.futures.future.h8"></a>
-          <span class="phrase"><a name="fiber.synchronization.futures.future.move_constructor0"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future.move_constructor0">Move constructor</a>
+          <span><a name="fiber.synchronization.futures.future.move_constructor0"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future.move_constructor0">Move constructor</a>
         </h6>
 <pre class="programlisting"><span class="identifier">shared_future</span><span class="special">(</span> <span class="identifier">future</span><span class="special">&lt;</span> <span class="identifier">R</span> <span class="special">&gt;</span> <span class="special">&amp;&amp;</span> <span class="identifier">other</span><span class="special">)</span> <span class="keyword">noexcept</span><span class="special">;</span>
 <span class="identifier">shared_future</span><span class="special">(</span> <span class="identifier">shared_future</span> <span class="special">&amp;&amp;</span> <span class="identifier">other</span><span class="special">)</span> <span class="keyword">noexcept</span><span class="special">;</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Constructs a shared_future with the <a class="link" href="future.html#shared_state">shared
@@ -617,13 +616,13 @@
 </div>
 <h6>
 <a name="fiber.synchronization.futures.future.h9"></a>
-          <span class="phrase"><a name="fiber.synchronization.futures.future.copy_constructor"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future.copy_constructor">Copy constructor</a>
+          <span><a name="fiber.synchronization.futures.future.copy_constructor"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future.copy_constructor">Copy constructor</a>
         </h6>
 <pre class="programlisting"><span class="identifier">shared_future</span><span class="special">(</span> <span class="identifier">shared_future</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">other</span><span class="special">)</span> <span class="keyword">noexcept</span><span class="special">;</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Constructs a shared_future with the <a class="link" href="future.html#shared_state">shared
@@ -637,13 +636,13 @@
 </div>
 <h6>
 <a name="fiber.synchronization.futures.future.h10"></a>
-          <span class="phrase"><a name="fiber.synchronization.futures.future.destructor0"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future.destructor0">Destructor</a>
+          <span><a name="fiber.synchronization.futures.future.destructor0"></a></span><a class="link" href="future.html#fiber.synchronization.futures.future.destructor0">Destructor</a>
         </h6>
 <pre class="programlisting"><span class="special">~</span><span class="identifier">shared_future</span><span class="special">();</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Destroys the shared_future; ownership is abandoned if not shared.
@@ -658,7 +657,7 @@
           </p>
 <h5>
 <a name="shared_future_operator_assign_bridgehead"></a>
-  <span class="phrase"><a name="shared_future_operator_assign"></a></span>
+  <span><a name="shared_future_operator_assign"></a></span>
   <a class="link" href="future.html#shared_future_operator_assign">Member
           function <code class="computeroutput">operator=</code>()</a>
 </h5>
@@ -670,7 +669,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Moves or copies the <a class="link" href="future.html#shared_state">shared state</a>
@@ -690,7 +689,7 @@
           </p>
 <h5>
 <a name="shared_future_valid_bridgehead"></a>
-  <span class="phrase"><a name="shared_future_valid"></a></span>
+  <span><a name="shared_future_valid"></a></span>
   <a class="link" href="future.html#shared_future_valid">Member
           function <code class="computeroutput">valid</code>()</a>
 </h5>
@@ -700,7 +699,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Returns <code class="computeroutput"><span class="keyword">true</span></code> if shared_future
@@ -716,7 +715,7 @@
           </p>
 <h5>
 <a name="shared_future_get_bridgehead"></a>
-  <span class="phrase"><a name="shared_future_get"></a></span>
+  <span><a name="shared_future_get"></a></span>
   <a class="link" href="future.html#shared_future_get">Member function
           <code class="computeroutput">get</code>()</a>
 </h5>
@@ -728,7 +727,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Precondition:</span></dt>
 <dd><p>
                 <code class="computeroutput"><span class="keyword">true</span> <span class="special">==</span>
@@ -759,7 +758,7 @@
           </p>
 <h5>
 <a name="shared_future_get_exception_ptr_bridgehead"></a>
-  <span class="phrase"><a name="shared_future_get_exception_ptr"></a></span>
+  <span><a name="shared_future_get_exception_ptr"></a></span>
   <a class="link" href="future.html#shared_future_get_exception_ptr">Member
           function <code class="computeroutput">get_exception_ptr</code>()</a>
 </h5>
@@ -769,7 +768,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Precondition:</span></dt>
 <dd><p>
                 <code class="computeroutput"><span class="keyword">true</span> <span class="special">==</span>
@@ -798,7 +797,7 @@
           </p>
 <h5>
 <a name="shared_future_wait_bridgehead"></a>
-  <span class="phrase"><a name="shared_future_wait"></a></span>
+  <span><a name="shared_future_wait"></a></span>
   <a class="link" href="future.html#shared_future_wait">Member
           function <code class="computeroutput">wait</code>()</a>
 </h5>
@@ -808,7 +807,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Waits until <a class="link" href="promise.html#promise_set_value"><code class="computeroutput">promise::set_value()</code></a> or <a class="link" href="promise.html#promise_set_exception"><code class="computeroutput">promise::set_exception()</code></a> is
@@ -825,7 +824,7 @@
           </p>
 <h5>
 <a name="shared_future_wait_for_bridgehead"></a>
-  <span class="phrase"><a name="shared_future_wait_for"></a></span>
+  <span><a name="shared_future_wait_for"></a></span>
   <a class="link" href="future.html#shared_future_wait_for">Templated
           member function <code class="computeroutput">wait_for</code>()</a>
 </h5>
@@ -836,7 +835,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Waits until <a class="link" href="promise.html#promise_set_value"><code class="computeroutput">promise::set_value()</code></a> or <a class="link" href="promise.html#promise_set_exception"><code class="computeroutput">promise::set_exception()</code></a> is
@@ -860,7 +859,7 @@
           </p>
 <h5>
 <a name="shared_future_wait_until_bridgehead"></a>
-  <span class="phrase"><a name="shared_future_wait_until"></a></span>
+  <span><a name="shared_future_wait_until"></a></span>
   <a class="link" href="future.html#shared_future_wait_until">Templated
           member function <code class="computeroutput">wait_until</code>()</a>
 </h5>
@@ -871,7 +870,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Waits until <a class="link" href="promise.html#promise_set_value"><code class="computeroutput">promise::set_value()</code></a> or <a class="link" href="promise.html#promise_set_exception"><code class="computeroutput">promise::set_exception()</code></a> is
@@ -895,7 +894,7 @@
           </p>
 <h5>
 <a name="fibers_async_bridgehead"></a>
-  <span class="phrase"><a name="fibers_async"></a></span>
+  <span><a name="fibers_async"></a></span>
   <a class="link" href="future.html#fibers_async">Non-member function <code class="computeroutput">fibers::async()</code></a>
 </h5>
 <p>
@@ -943,7 +942,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
                 Executes <code class="computeroutput"><span class="identifier">fn</span></code> in a
@@ -988,11 +987,14 @@
           </p></td></tr>
 </table></div>
 </div>
-<div class="copyright-footer">Copyright © 2013 Oliver Kowalke<p>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright &#169; 2013 Oliver Kowalke<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div>
+</div></td>
+</tr></table>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="../futures.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../futures.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="promise.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>

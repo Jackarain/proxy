@@ -149,5 +149,83 @@ int main()
         BOOST_TEST_NE( r1, r2 );
     }
 
+    {
+        int x1 = 1;
+        int x2 = 2;
+
+        result<int&> r1( x1 );
+        result<int&> r2( x2 );
+
+        BOOST_TEST_EQ( r1, r1 );
+        BOOST_TEST_NE( r1, r2 );
+    }
+
+    {
+        int x1 = 1;
+        int x2 = 1;
+
+        result<int&> r1( x1 );
+        result<int&> r2( x2 );
+
+        BOOST_TEST_EQ( r1, r2 );
+    }
+
+    {
+        result<int&> r1( 1, generic_category() );
+        result<int&> r2( 2, generic_category() );
+
+        BOOST_TEST_EQ( r1, r1 );
+        BOOST_TEST_NE( r1, r2 );
+    }
+
+    {
+        int x1 = 1;
+
+        result<int&> r1( x1 );
+        result<int&> r2( 2, generic_category() );
+
+        BOOST_TEST_EQ( r1, r1 );
+        BOOST_TEST_NE( r1, r2 );
+    }
+
+    {
+        X x1( 1 );
+        X x2( 2 );
+
+        result<X&, Y> r1( x1 );
+        result<X&, Y> r2( x2 );
+
+        BOOST_TEST_EQ( r1, r1 );
+        BOOST_TEST_NE( r1, r2 );
+    }
+
+    {
+        X x1( 1 );
+        X x2( 1 );
+
+        result<X&, Y> r1( x1 );
+        result<X&, Y> r2( x2 );
+
+        BOOST_TEST_EQ( r1, r2 );
+    }
+
+    {
+        result<X&, Y> r1( in_place_error, 1 );
+        result<X&, Y> r2( in_place_error, 2 );
+
+        BOOST_TEST_EQ( r1, r1 );
+        BOOST_TEST_NE( r1, r2 );
+    }
+
+    {
+        X x1( 1 );
+
+        result<X&, Y> r1( x1 );
+        result<X&, Y> r2( in_place_error, 2 );
+
+        BOOST_TEST_EQ( r1, r1 );
+        BOOST_TEST_NE( r1, r2 );
+    }
+
     return boost::report_errors();
 }

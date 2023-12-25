@@ -10,8 +10,6 @@
 #if __cplusplus >= 201703L
 
 #include <boost/atomic.hpp>
-#include <boost/static_assert.hpp>
-#include <boost/config.hpp>
 #include <type_traits>
 
 int main(int, char *[])

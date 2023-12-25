@@ -1,14 +1,13 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <title>when_any / when_all functionality</title>
 <link rel="stylesheet" href="../../../../../doc/src/boostbook.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
-<link rel="home" href="../index.html" title="Chapter 1. Fiber">
-<link rel="up" href="../index.html" title="Chapter 1. Fiber">
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
+<link rel="home" href="../index.html" title="Chapter&#160;1.&#160;Fiber">
+<link rel="up" href="../index.html" title="Chapter&#160;1.&#160;Fiber">
 <link rel="prev" href="nonblocking.html" title="Integrating Fibers with Nonblocking I/O">
 <link rel="next" href="when_any/when_any.html" title="when_any">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -28,7 +27,7 @@
 <a name="fiber.when_any"></a><a name="when_any"></a><a class="link" href="when_any.html" title="when_any / when_all functionality">when_any / when_all
     functionality</a>
 </h2></div></div></div>
-<div class="toc"><dl class="toc">
+<div class="toc"><dl>
 <dt><span class="section"><a href="when_any/when_any.html">when_any</a></span></dt>
 <dd><dl>
 <dt><span class="section"><a href="when_any/when_any/when_any__simple_completion.html">when_any,
@@ -60,12 +59,12 @@
 </dl></div>
 <h4>
 <a name="fiber.when_any.h0"></a>
-      <span class="phrase"><a name="fiber.when_any.overview"></a></span><a class="link" href="when_any.html#fiber.when_any.overview">Overview</a>
+      <span><a name="fiber.when_any.overview"></a></span><a class="link" href="when_any.html#fiber.when_any.overview">Overview</a>
     </h4>
 <p>
       A bit of wisdom from the early days of computing still holds true today: prefer
       to model program state using the instruction pointer rather than with Boolean
-      flags. In other words, if the program must <span class="quote">“<span class="quote">do something</span>”</span> and
+      flags. In other words, if the program must <span class="quote">&#8220;<span class="quote">do something</span>&#8221;</span> and
       then do something almost the same, but with minor changes... perhaps parts
       of that something should be broken out as smaller separate functions, rather
       than introducing flags to alter the internal behavior of a monolithic function.
@@ -90,7 +89,7 @@
     </p>
 <p>
       This section presents recipes for achieving the same ends, in the context of
-      a fiber that wants to <span class="quote">“<span class="quote">do something</span>”</span> when one or more other independent
+      a fiber that wants to <span class="quote">&#8220;<span class="quote">do something</span>&#8221;</span> when one or more other independent
       activities have completed. Accordingly, these are <code class="computeroutput"><span class="identifier">wait_something</span><span class="special">()</span></code> functions rather than <code class="computeroutput"><span class="identifier">when_something</span><span class="special">()</span></code> functions. The expectation is that the calling
       fiber asks to launch those independent activities, then waits for them, then
       sequentially proceeds with whatever processing depends on those results.
@@ -120,7 +119,7 @@
     </p>
 <h4>
 <a name="fiber.when_any.h1"></a>
-      <span class="phrase"><a name="fiber.when_any.example_task_function"></a></span><a class="link" href="when_any.html#fiber.when_any.example_task_function">Example
+      <span><a name="fiber.when_any.example_task_function"></a></span><a class="link" href="when_any.html#fiber.when_any.example_task_function">Example
       Task Function</a>
     </h4>
 <p>
@@ -147,7 +146,7 @@
 <p>
     </p>
 <p>
-      with type-specific <code class="computeroutput"><span class="identifier">sleeper</span><span class="special">()</span></code> <span class="quote">“<span class="quote">front ends</span>”</span> for <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span></code>,
+      with type-specific <code class="computeroutput"><span class="identifier">sleeper</span><span class="special">()</span></code> <span class="quote">&#8220;<span class="quote">front ends</span>&#8221;</span> for <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span></code>,
       <code class="computeroutput"><span class="keyword">double</span></code> and <code class="computeroutput"><span class="keyword">int</span></code>.
     </p>
 <p>
@@ -181,11 +180,14 @@
       below.
     </p>
 </div>
-<div class="copyright-footer">Copyright © 2013 Oliver Kowalke<p>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright &#169; 2013 Oliver Kowalke<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div>
+</div></td>
+</tr></table>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="nonblocking.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="when_any/when_any.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>

@@ -682,5 +682,151 @@ int main()
         BOOST_TEST_EQ( r, r2 );
     }
 
+    // reference
+
+    {
+        int x1 = 1;
+        int x2 = 2;
+
+        result<int&> r1( x1 );
+        result<int&> r2( x2 );
+
+        r2 = r1;
+
+        BOOST_TEST_EQ( x1, 1 );
+        BOOST_TEST_EQ( x2, 2 );
+
+        BOOST_TEST_EQ( r1, r2 );
+        BOOST_TEST_EQ( &*r1, &*r2 );
+    }
+
+    {
+        int const x1 = 1;
+        int const x2 = 2;
+
+        result<int const&> r1( x1 );
+        result<int const&> r2( x2 );
+
+        r2 = r1;
+
+        BOOST_TEST_EQ( x1, 1 );
+        BOOST_TEST_EQ( x2, 2 );
+
+        BOOST_TEST_EQ( r1, r2 );
+        BOOST_TEST_EQ( &*r1, &*r2 );
+    }
+
+    {
+        int x1 = 1;
+
+        result<int&> r1( x1 );
+        result<int&> r2( ENOENT, generic_category() );
+
+        r2 = r1;
+
+        BOOST_TEST_EQ( x1, 1 );
+
+        BOOST_TEST_EQ( r1, r2 );
+        BOOST_TEST_EQ( &*r1, &*r2 );
+    }
+
+    {
+        int x1 = 1;
+        int x2 = 2;
+
+        result<int&> const r1( x1 );
+        result<int&> r2( x2 );
+
+        r2 = r1;
+
+        BOOST_TEST_EQ( x1, 1 );
+        BOOST_TEST_EQ( x2, 2 );
+
+        BOOST_TEST_EQ( r1, r2 );
+        BOOST_TEST_EQ( &*r1, &*r2 );
+    }
+
+    {
+        int const x1 = 1;
+        int const x2 = 2;
+
+        result<int const &> const r1( x1 );
+        result<int const &> r2( x2 );
+
+        r2 = r1;
+
+        BOOST_TEST_EQ( x1, 1 );
+        BOOST_TEST_EQ( x2, 2 );
+
+        BOOST_TEST_EQ( r1, r2 );
+        BOOST_TEST_EQ( &*r1, &*r2 );
+    }
+
+    {
+        int x1 = 1;
+
+        result<int&> const r1( x1 );
+        result<int&> r2( ENOENT, generic_category() );
+
+        r2 = r1;
+
+        BOOST_TEST_EQ( x1, 1 );
+
+        BOOST_TEST_EQ( r1, r2 );
+        BOOST_TEST_EQ( &*r1, &*r2 );
+    }
+
+    {
+        int x2 = 2;
+
+        auto ec = make_error_code( errc::invalid_argument );
+
+        result<int&> r1( ec );
+        result<int&> r2( x2 );
+
+        r2 = r1;
+
+        BOOST_TEST_EQ( x2, 2 );
+
+        BOOST_TEST_EQ( r1, r2 );
+    }
+
+    {
+        auto ec = make_error_code( errc::invalid_argument );
+
+        result<int&> r1( ec );
+        result<int&> r2( ENOENT, generic_category() );
+
+        r2 = r1;
+
+        BOOST_TEST_EQ( r1, r2 );
+    }
+
+    {
+        int x2 = 2;
+
+        auto ec = make_error_code( errc::invalid_argument );
+
+        result<int&> const r1( ec );
+        result<int&> r2( x2 );
+
+        r2 = r1;
+
+        BOOST_TEST_EQ( x2, 2 );
+
+        BOOST_TEST_EQ( r1, r2 );
+    }
+
+    {
+        auto ec = make_error_code( errc::invalid_argument );
+
+        result<int&> const r1( ec );
+        result<int&> r2( ENOENT, generic_category() );
+
+        r2 = r1;
+
+        BOOST_TEST_EQ( r1, r2 );
+    }
+
     return boost::report_errors();
 }

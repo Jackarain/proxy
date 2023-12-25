@@ -19,5 +19,14 @@ int main()
     BOOST_TEST_TRAIT_FALSE((std::is_convertible<errc::errc_t, result<bool>>));
     BOOST_TEST_TRAIT_FALSE((std::is_constructible<result<bool>, errc::errc_t>));
 
+    BOOST_TEST_TRAIT_FALSE((std::is_convertible<errc::errc_t, result<int const&>>));
+    BOOST_TEST_TRAIT_FALSE((std::is_constructible<result<int const&>, errc::errc_t>));
+
+    BOOST_TEST_TRAIT_FALSE((std::is_convertible<errc::errc_t, result<double const&>>));
+    BOOST_TEST_TRAIT_FALSE((std::is_constructible<result<double const&>, errc::errc_t>));
+
+    BOOST_TEST_TRAIT_FALSE((std::is_convertible<errc::errc_t, result<bool const&>>));
+    BOOST_TEST_TRAIT_FALSE((std::is_constructible<result<bool const&>, errc::errc_t>));
+
     return boost::report_errors();
 }

@@ -207,6 +207,8 @@ int main()
 
     BOOST_TEST_EQ( X::instances, 0 );
 
+    //
+
     {
         result<void> r;
         result<void> r2( std::move( r ) );
@@ -244,6 +246,150 @@ int main()
 
         BOOST_TEST_EQ( r2.error(), ec );
     }
+
+    //
+
+    {
+        int x1 = 1;
+
+        result<int&> r1( x1 );
+        result<int&> r2( std::move( r1 ) );
+
+        BOOST_TEST( r1.has_value() );
+        BOOST_TEST( !r1.has_error() );
+
+        BOOST_TEST_EQ( r1.value(), 1 );
+        BOOST_TEST_EQ( &*r1, &x1 );
+
+        BOOST_TEST( r2.has_value() );
+        BOOST_TEST( !r2.has_error() );
+
+        BOOST_TEST_EQ( r2.value(), 1 );
+        BOOST_TEST_EQ( &*r2, &x1 );
+    }
+
+    {
+        int const x1 = 1;
+
+        result<int const&> r1( x1 );
+        result<int const&> r2( std::move( r1 ) );
+
+        BOOST_TEST( r1.has_value() );
+        BOOST_TEST( !r1.has_error() );
+
+        BOOST_TEST_EQ( r1.value(), 1 );
+        BOOST_TEST_EQ( &*r1, &x1 );
+
+        BOOST_TEST( r2.has_value() );
+        BOOST_TEST( !r2.has_error() );
+
+        BOOST_TEST_EQ( r2.value(), 1 );
+        BOOST_TEST_EQ( &*r2, &x1 );
+    }
+
+    {
+        int x1 = 1;
+
+        result<int&> r2(( result<int&>( x1 ) ));
+
+        BOOST_TEST( r2.has_value() );
+        BOOST_TEST( !r2.has_error() );
+
+        BOOST_TEST_EQ( r2.value(), 1 );
+        BOOST_TEST_EQ( &*r2, &x1 );
+    }
+
+    {
+        int const x1 = 1;
+
+        result<int const&> r2(( result<int const&>( x1 ) ));
+
+        BOOST_TEST( r2.has_value() );
+        BOOST_TEST( !r2.has_error() );
+
+        BOOST_TEST_EQ( r2.value(), 1 );
+        BOOST_TEST_EQ( &*r2, &x1 );
+    }
+
+    {
+        X x1( 1 );
+
+        result<X&> r1( x1 );
+        result<X&> r2( std::move( r1 ) );
+
+        BOOST_TEST( r1.has_value() );
+        BOOST_TEST( !r1.has_error() );
+
+        BOOST_TEST_EQ( r1.value().v_, 1 );
+        BOOST_TEST_EQ( &*r1, &x1 );
+
+        BOOST_TEST( r2.has_value() );
+        BOOST_TEST( !r2.has_error() );
+
+        BOOST_TEST_EQ( r2.value().v_, 1 );
+        BOOST_TEST_EQ( &*r2, &x1 );
+
+        BOOST_TEST_EQ( X::instances, 1 );
+    }
+
+    BOOST_TEST_EQ( X::instances, 0 );
+
+    {
+        X x1( 1 );
+
+        result<X&> r2(( result<X&>( x1 ) ));
+
+        BOOST_TEST( r2.has_value() );
+        BOOST_TEST( !r2.has_error() );
+
+        BOOST_TEST_EQ( r2.value().v_, 1 );
+        BOOST_TEST_EQ( &*r2, &x1 );
+
+        BOOST_TEST_EQ( X::instances, 1 );
+    }
+
+    BOOST_TEST_EQ( X::instances, 0 );
+
+    {
+        X const x1( 1 );
+
+        result<X const&> r1( x1 );
+        result<X const&> r2( std::move( r1 ) );
+
+        BOOST_TEST( r1.has_value() );
+        BOOST_TEST( !r1.has_error() );
+
+        BOOST_TEST_EQ( r1.value().v_, 1 );
+        BOOST_TEST_EQ( &*r1, &x1 );
+
+        BOOST_TEST( r2.has_value() );
+        BOOST_TEST( !r2.has_error() );
+
+        BOOST_TEST_EQ( r2.value().v_, 1 );
+        BOOST_TEST_EQ( &*r2, &x1 );
+
+        BOOST_TEST_EQ( X::instances, 1 );
+    }
+
+    BOOST_TEST_EQ( X::instances, 0 );
+
+    {
+        X const x1( 1 );
+
+        result<X const&> r2(( result<X const&>( x1 ) ));
+
+        BOOST_TEST( r2.has_value() );
+        BOOST_TEST( !r2.has_error() );
+
+        BOOST_TEST_EQ( r2.value().v_, 1 );
+        BOOST_TEST_EQ( &*r2, &x1 );
+
+        BOOST_TEST_EQ( X::instances, 1 );
+    }
+
+    BOOST_TEST_EQ( X::instances, 0 );
+
+    //
 
     return boost::report_errors();
 }

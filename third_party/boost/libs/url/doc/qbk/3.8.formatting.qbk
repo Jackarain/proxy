@@ -42,14 +42,13 @@ valid:
 [snippet_format_3b]
 
 The function __format_to__ can be used to format URLs
-into any modifiable container that inherits from
-__url_base__.
+into any modifiable URL container.
 
 [c++]
 [snippet_format_4]
 
 As with __std_format__, positional and named arguments are
-also supported.
+supported.
 
 [c++]
 [snippet_format_5a]

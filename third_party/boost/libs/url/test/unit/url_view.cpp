@@ -1052,6 +1052,11 @@ public:
         testParseOriginForm();
 
         testJavadocs();
+
+        {
+            auto r = parse_uri("https://us%65rnam%65:password@%65xampl%65.com:8080/path/to/r%65sourc%65?qu%65ry_param=valu%65#s%65ction");
+            ignore_unused(r);
+        }
     }
 };
 

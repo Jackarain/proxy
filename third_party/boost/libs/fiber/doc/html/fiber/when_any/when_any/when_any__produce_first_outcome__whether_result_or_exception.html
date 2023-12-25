@@ -1,14 +1,13 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <title>when_any, produce first outcome, whether result or exception</title>
 <link rel="stylesheet" href="../../../../../../../doc/src/boostbook.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
-<link rel="home" href="../../../index.html" title="Chapter 1. Fiber">
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
+<link rel="home" href="../../../index.html" title="Chapter&#160;1.&#160;Fiber">
 <link rel="up" href="../when_any.html" title="when_any">
 <link rel="prev" href="when_any__return_value.html" title="when_any, return value">
 <link rel="next" href="when_any__produce_first_success.html" title="when_any, produce first success">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -31,7 +30,7 @@
 <p>
           We may not be running in an environment in which we can guarantee no exception
           will be thrown by any of our task functions. In that case, the above implementations
-          of <code class="computeroutput"><span class="identifier">wait_first_something</span><span class="special">()</span></code> would be naïve: as mentioned in <a class="link" href="../../fiber_mgmt.html#exceptions">the section on Fiber Management</a>, an uncaught
+          of <code class="computeroutput"><span class="identifier">wait_first_something</span><span class="special">()</span></code> would be na&#239;ve: as mentioned in <a class="link" href="../../fiber_mgmt.html#exceptions">the section on Fiber Management</a>, an uncaught
           exception in one of our task fibers would cause <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">terminate</span><span class="special">()</span></code> to be called.
         </p>
 <p>
@@ -75,7 +74,7 @@
 <p>
         </p>
 <p>
-          So far so good — but there's a timing issue. How should we obtain the <code class="computeroutput"><span class="identifier">future</span><span class="special">&lt;&gt;</span></code>
+          So far so good &#8212; but there's a timing issue. How should we obtain the <code class="computeroutput"><span class="identifier">future</span><span class="special">&lt;&gt;</span></code>
           to <a class="link" href="../../synchronization/channels/buffered_channel.html#buffered_channel_push"><code class="computeroutput">buffered_channel::push()</code></a> on the queue?
         </p>
 <p>
@@ -87,7 +86,7 @@
           for the one that completes first. If each fiber launched by <code class="computeroutput"><span class="identifier">wait_first_outcome</span><span class="special">()</span></code>
           were to <code class="computeroutput"><span class="identifier">push</span><span class="special">()</span></code>
           the result of calling <code class="computeroutput"><span class="identifier">async</span><span class="special">()</span></code>, the queue would only ever report the
-          result of the leftmost task item — <span class="emphasis"><em>not</em></span> the one that
+          result of the leftmost task item &#8212; <span class="emphasis"><em>not</em></span> the one that
           completes most quickly.
         </p>
 <p>
@@ -102,11 +101,11 @@
           became ready, at which point we could <code class="computeroutput"><span class="identifier">push</span><span class="special">()</span></code> it to be retrieved by <code class="computeroutput"><span class="identifier">wait_first_outcome</span><span class="special">()</span></code>.
         </p>
 <p>
-          That would work — but there's a simpler tactic that avoids creating an extra
+          That would work &#8212; but there's a simpler tactic that avoids creating an extra
           fiber. We can wrap the task function in a <a class="link" href="../../synchronization/futures/packaged_task.html#class_packaged_task"><code class="computeroutput">packaged_task&lt;&gt;</code></a>.
-          While one naturally thinks of passing a <code class="computeroutput"><span class="identifier">packaged_task</span><span class="special">&lt;&gt;</span></code> to a new fiber — that is, in fact,
+          While one naturally thinks of passing a <code class="computeroutput"><span class="identifier">packaged_task</span><span class="special">&lt;&gt;</span></code> to a new fiber &#8212; that is, in fact,
           what <code class="computeroutput"><span class="identifier">async</span><span class="special">()</span></code>
-          does — in this case, we're already running in the helper fiber at the producer
+          does &#8212; in this case, we're already running in the helper fiber at the producer
           end of the queue! We can simply <span class="emphasis"><em>call</em></span> the <code class="computeroutput"><span class="identifier">packaged_task</span><span class="special">&lt;&gt;</span></code>.
           On return from that call, the task function has completed, meaning that
           the <code class="computeroutput"><span class="identifier">future</span><span class="special">&lt;&gt;</span></code>
@@ -172,11 +171,14 @@
 <p>
         </p>
 </div>
-<div class="copyright-footer">Copyright © 2013 Oliver Kowalke<p>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright &#169; 2013 Oliver Kowalke<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div>
+</div></td>
+</tr></table>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="when_any__return_value.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../when_any.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="when_any__produce_first_success.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>

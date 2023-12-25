@@ -12,11 +12,17 @@
 #include <boost/winapi/config.hpp>
 #include <boost/winapi/basic_types.hpp>
 #include <boost/winapi/time.hpp>
-#include <boost/ratio/ratio.hpp>
+#include <ratio>
 #endif
-#include <boost/chrono/chrono.hpp>
+#include <chrono>
 
-namespace chrono = boost::chrono;
+namespace chrono = std::chrono;
+
+#if defined(BOOST_LIBSTDCXX_VERSION) && BOOST_LIBSTDCXX_VERSION < 40700
+typedef chrono::monotonic_clock steady_clock;
+#else
+typedef chrono::steady_clock steady_clock;
+#endif
 
 #if defined(BOOST_WINDOWS)
 
@@ -29,7 +35,7 @@ struct test_clock
 #else
     typedef boost::winapi::DWORD_ rep;
 #endif
-    typedef boost::milli period;
+    typedef std::milli period;
     typedef chrono::duration< rep, period > duration;
     typedef chrono::time_point< test_clock, duration > time_point;
 
@@ -46,10 +52,8 @@ struct test_clock
     }
 };
 
-#elif defined(BOOST_CHRONO_HAS_CLOCK_STEADY)
-typedef chrono::steady_clock test_clock;
 #else
-typedef chrono::system_clock test_clock;
+typedef steady_clock test_clock;
 #endif
 
 #endif // BOOST_ATOMIC_TEST_TEST_CLOCK_HPP_INCLUDED_

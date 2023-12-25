@@ -32,19 +32,14 @@
 #include <boost/atomic/atomic_ref.hpp>
 
 #include <cstddef>
-#include <algorithm>
+#include <chrono>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <functional>
 #include <boost/config.hpp>
-#include <boost/ref.hpp>
-#include <boost/function.hpp>
-#include <boost/bind/bind.hpp>
-#include <boost/date_time/posix_time/posix_time_types.hpp>
-#include <boost/thread/thread.hpp>
-#include <boost/thread/thread_time.hpp>
-#include <boost/thread/lock_guard.hpp>
-#include <boost/thread/lock_types.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/condition_variable.hpp>
 #include <boost/core/lightweight_test.hpp>
+#include "test_clock.hpp"
 
 /* helper class to let two instances of a function race against each
 other, with configurable timeout and early abort on detection of error */
@@ -54,30 +49,32 @@ public:
     /* concurrently run the function in two threads, until either timeout
     or one of the functions returns "false"; returns true if timeout
     was reached, or false if early abort and updates timeout accordingly */
-    static bool execute(const boost::function<bool(std::size_t)> & fn, boost::posix_time::time_duration & timeout)
+    static bool execute(std::function< bool (std::size_t) > const& fn, steady_clock::duration& timeout)
     {
         concurrent_runner runner(fn);
         runner.wait_finish(timeout);
         return !runner.failure();
     }
 
-
-    concurrent_runner(const boost::function<bool(std::size_t)> & fn) :
+    concurrent_runner(std::function< bool (std::size_t) > const& fn) :
         finished_(false), failure_(false)
     {
-        boost::thread(boost::bind(&concurrent_runner::thread_function, this, fn, 0)).swap(first_thread_);
-        boost::thread(boost::bind(&concurrent_runner::thread_function, this, fn, 1)).swap(second_thread_);
+        first_thread_ = std::thread([this, fn]() { thread_function(fn, 0); });
+        second_thread_ = std::thread([this, fn]() { thread_function(fn, 1); });
     }
 
-    void wait_finish(boost::posix_time::time_duration & timeout)
+    void wait_finish(steady_clock::duration& timeout)
     {
-        boost::system_time start = boost::get_system_time();
-        boost::system_time end = start + timeout;
+        steady_clock::time_point start = steady_clock::now();
+        steady_clock::time_point end = start + timeout;
 
         {
-            boost::unique_lock< boost::mutex > guard(m_);
-            while (boost::get_system_time() < end && !finished())
-                c_.timed_wait(guard, end);
+            std::unique_lock< std::mutex > guard(m_);
+            while (!finished())
+            {
+                if (c_.wait_until(guard, end) == std::cv_status::timeout)
+                    break;
+            }
         }
 
         finished_.store(true, boost::memory_order_relaxed);
@@ -85,7 +82,7 @@ public:
         first_thread_.join();
         second_thread_.join();
 
-        boost::posix_time::time_duration duration = boost::get_system_time() - start;
+        steady_clock::duration duration = steady_clock::now() - start;
         if (duration < timeout)
             timeout = duration;
     }
@@ -101,13 +98,13 @@ public:
     }
 
 private:
-    void thread_function(boost::function<bool(std::size_t)> function, std::size_t instance)
+    void thread_function(std::function< bool (std::size_t) > const& function, std::size_t instance)
     {
         while (!finished())
         {
             if (!function(instance))
             {
-                boost::lock_guard< boost::mutex > guard(m_);
+                std::lock_guard< std::mutex > guard(m_);
                 failure_ = true;
                 finished_.store(true, boost::memory_order_relaxed);
                 c_.notify_all();
@@ -117,17 +114,17 @@ private:
     }
 
 private:
-    boost::mutex m_;
-    boost::condition_variable c_;
+    std::mutex m_;
+    std::condition_variable c_;
 
     boost::atomic<bool> finished_;
     bool failure_;
 
-    boost::thread first_thread_;
-    boost::thread second_thread_;
+    std::thread first_thread_;
+    std::thread second_thread_;
 };
 
-bool racy_add(volatile unsigned int & value, std::size_t instance)
+bool racy_add(unsigned int volatile& value, std::size_t instance)
 {
     std::size_t shift = instance * 8;
     unsigned int mask = 0xff << shift;
@@ -154,13 +151,13 @@ double estimate_avg_race_time(void)
     double sum = 0.0;
 
     /* take 10 samples */
-    for (std::size_t n = 0; n < 10; n++)
+    for (std::size_t n = 0; n < 10; ++n)
     {
-        boost::posix_time::time_duration timeout(0, 0, 10);
+        steady_clock::duration timeout = std::chrono::seconds(10);
 
         volatile unsigned int value(0);
         bool success = concurrent_runner::execute(
-            boost::bind(racy_add, boost::ref(value), boost::placeholders::_1),
+            [&value](std::size_t instance) { return racy_add(value, instance); },
             timeout
         );
 
@@ -169,7 +166,7 @@ double estimate_avg_race_time(void)
             BOOST_ERROR("Failed to establish baseline time for reproducing race condition");
         }
 
-        sum = sum + timeout.total_microseconds();
+        sum += std::chrono::duration_cast< std::chrono::microseconds >(timeout).count();
     }
 
     /* determine maximum likelihood estimate for average time between
@@ -255,17 +252,17 @@ int main(int, char *[])
     double avg_race_time = estimate_avg_race_time();
 
     /* 5.298 = 0.995 quantile of exponential distribution */
-    const boost::posix_time::time_duration timeout = boost::posix_time::microseconds((long)(5.298 * avg_race_time));
+    const steady_clock::duration timeout = std::chrono::microseconds(static_cast< std::chrono::microseconds::rep >(5.298 * avg_race_time));
 
     {
         unsigned int value = 0;
 
         /* testing two different operations in this loop, therefore
         enlarge timeout */
-        boost::posix_time::time_duration tmp(timeout * 2);
+        steady_clock::duration tmp(timeout * 2);
 
         bool success = concurrent_runner::execute(
-            boost::bind(test_arithmetic<unsigned int, 0>, boost::ref(value), boost::placeholders::_1),
+            [&value](std::size_t instance) { return test_arithmetic< unsigned int, 0 >(value, instance); },
             tmp
         );
 
@@ -277,10 +274,10 @@ int main(int, char *[])
 
         /* testing three different operations in this loop, therefore
         enlarge timeout */
-        boost::posix_time::time_duration tmp(timeout * 3);
+        steady_clock::duration tmp(timeout * 3);
 
         bool success = concurrent_runner::execute(
-            boost::bind(test_bitops<unsigned int, 0>, boost::ref(value), boost::placeholders::_1),
+            [&value](std::size_t instance) { return test_bitops< unsigned int, 0 >(value, instance); },
             tmp
         );
 

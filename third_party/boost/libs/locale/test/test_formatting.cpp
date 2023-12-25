@@ -102,6 +102,25 @@ std::string get_ICU_time(format_style_t style, const time_t ts, const char* tz =
     return from_icu_string(fmt->format(ts * 1000., s));
 }
 
+std::string get_ICU_date(format_style_t style, const time_t ts)
+{
+    using icu::DateFormat;
+    DateFormat::EStyle icu_style = DateFormat::kDefault;
+    namespace as = boost::locale::as;
+    if(style == as::date_short)
+        icu_style = DateFormat::kShort;
+    else if(style == as::date_medium)
+        icu_style = DateFormat::kMedium;
+    else if(style == as::date_long)
+        icu_style = DateFormat::kLong;
+    else if(style == as::date_full)
+        icu_style = DateFormat::kFull;
+    std::unique_ptr<icu::DateFormat> fmt(icu::DateFormat::createDateInstance(icu_style, get_icu_test_locale()));
+    fmt->setTimeZone(*icu::TimeZone::getGMT());
+    icu::UnicodeString s;
+    return from_icu_string(fmt->format(ts * 1000., s));
+}
+
 std::string get_ICU_datetime(format_style_t style, const time_t ts)
 {
     using icu::DateFormat;
@@ -127,6 +146,7 @@ const std::string icu_full_gmt_name;
 // clang-format off
 std::string get_ICU_time(...){ return ""; } // LCOV_EXCL_LINE
 std::string get_ICU_datetime(...){ return ""; } // LCOV_EXCL_LINE
+std::string get_ICU_date(...){ return ""; } // LCOV_EXCL_LINE
 // clang-format on
 #endif
 
@@ -710,6 +730,7 @@ void test_format_class(std::string charset = "UTF-8")
     TEST_EQ(do_format<CharType>(loc, "{1}{3}{2}", "hello", "world"), ascii_to<CharType>("helloworld"));
     TEST_EQ(do_format<CharType>(loc, "{1}"), ascii_to<CharType>(""));
     // Invalid indices are ignored
+    TEST_EQ(do_format<CharType>(loc, "b{}e"), ascii_to<CharType>("be"));
     TEST_EQ(do_format<CharType>(loc, "b{0}e", 1), ascii_to<CharType>("be"));
     TEST_EQ(do_format<CharType>(loc, "b{-1}e", 1), ascii_to<CharType>("be"));
     TEST_EQ(do_format<CharType>(loc, "b{1.x}e"), ascii_to<CharType>("be"));
@@ -723,9 +744,24 @@ void test_format_class(std::string charset = "UTF-8")
     TEST_EQ(do_format<CharType>(loc, "End}}"), ascii_to<CharType>("End}"));
     // ...and twice when another trailing brace is added
     TEST_EQ(do_format<CharType>(loc, "End}}}"), ascii_to<CharType>("End}}"));
+    // Escaped braces
+    TEST_EQ(do_format<CharType>(loc, "Unexpected {{ in file"), ascii_to<CharType>("Unexpected { in file"));
+    TEST_EQ(do_format<CharType>(loc, "Unexpected {{ in {1}#{2}", "f", 7), ascii_to<CharType>("Unexpected { in f#7"));
+    TEST_EQ(do_format<CharType>(loc, "Unexpected }} in file"), ascii_to<CharType>("Unexpected } in file"));
+    TEST_EQ(do_format<CharType>(loc, "Unexpected }} in {1}#{2}", "f", 9), ascii_to<CharType>("Unexpected } in f#9"));
 
     // format with multiple types
     TEST_EQ(do_format<CharType>(loc, "{1} {2}", "hello", 2), ascii_to<CharType>("hello 2"));
+
+    // format with locale & encoding
+    {
+#if BOOST_LOCALE_ICU_VERSION >= 400
+        const auto expected = boost::locale::conv::utf_to_utf<CharType>("10,00\xC2\xA0€");
+#else
+        const auto expected = boost::locale::conv::utf_to_utf<CharType>("10,00 €"); // LCOV_EXCL_LINE
+#endif
+        TEST_EQ(do_format<CharType>(loc, "{1,cur,locale=de_DE.UTF-8}", 10), expected);
+    }
 
 #define TEST_FORMAT_CLS(fmt_string, value, expected_str) \
     test_format_class_impl<CharType>(fmt_string, value, expected_str, loc, __LINE__)
@@ -733,11 +769,17 @@ void test_format_class(std::string charset = "UTF-8")
     // Test different types and modifiers
     TEST_FORMAT_CLS("{1}", 1200.1, "1200.1");
     TEST_FORMAT_CLS("Test {1,num}", 1200.1, "Test 1,200.1");
-    TEST_FORMAT_CLS("{{}} {1,number}", 1200.1, "{} 1,200.1");
+    TEST_FORMAT_CLS("{{1}} {1,number}", 3200.4, "{1} 3,200.4");
+    // placeholder in escaped braces, see issue #194
+    TEST_FORMAT_CLS("{{{1}}}", "num", "{num}");
+    TEST_FORMAT_CLS("{{{1}}}", 1200.1, "{1200.1}");
+
     TEST_FORMAT_CLS("{1,num=sci,p=3}", 13.1, "1.310E1");
     TEST_FORMAT_CLS("{1,num=scientific,p=3}", 13.1, "1.310E1");
     TEST_FORMAT_CLS("{1,num=fix,p=3}", 13.1, "13.100");
     TEST_FORMAT_CLS("{1,num=fixed,p=3}", 13.1, "13.100");
+    TEST_FORMAT_CLS("{1,num=hex}", 0x1234, "1234");
+    TEST_FORMAT_CLS("{1,num=oct}", 42, "52");
     TEST_FORMAT_CLS("{1,<,w=3,num}", -1, "-1 ");
     TEST_FORMAT_CLS("{1,>,w=3,num}", 1, "  1");
     TEST_FORMAT_CLS("{per,1}", 0.1, "10%");
@@ -748,7 +790,7 @@ void test_format_class(std::string charset = "UTF-8")
 #if BOOST_LOCALE_ICU_VERSION >= 400
         TEST_FORMAT_CLS("{1,cur,locale=de_DE}", 10, "10,00\xC2\xA0€");
 #else
-        TEST_FORMAT_CLS("{1,cur,locale=de_DE}", 10, "10,00 €"); // LCOV_EXCL_LINE
+        TEST_FORMAT_CLS("{1,cur,locale=de_DE}", 10, "10,00 €");                     // LCOV_EXCL_LINE
 #endif
     }
 #if BOOST_LOCALE_ICU_VERSION >= 402
@@ -803,11 +845,17 @@ void test_format_class(std::string charset = "UTF-8")
     const std::string icu_time_medium = get_ICU_time(as::time_medium, a_datetime);
     const std::string icu_time_long = get_ICU_time(as::time_long, a_datetime);
     const std::string icu_time_full = get_ICU_time(as::time_full, a_datetime);
+    const std::string icu_date_short = get_ICU_date(as::date_short, a_datetime);
+    const std::string icu_date_medium = get_ICU_date(as::date_medium, a_datetime);
+    const std::string icu_date_long = get_ICU_date(as::date_long, a_datetime);
+    const std::string icu_date_full = get_ICU_date(as::date_full, a_datetime);
     const std::string icu_datetime_def = get_ICU_datetime(as::time, a_datetime);
     const std::string icu_datetime_short = get_ICU_datetime(as::time_short, a_datetime);
     const std::string icu_datetime_medium = get_ICU_datetime(as::time_medium, a_datetime);
     const std::string icu_datetime_long = get_ICU_datetime(as::time_long, a_datetime);
     const std::string icu_datetime_full = get_ICU_datetime(as::time_full, a_datetime);
+    // Sanity check
+    TEST_EQ(icu_date_full, "Thursday, February 5, 1970");
 
     TEST_FORMAT_CLS("{1,date,gmt}", a_datetime, "Feb 5, 1970");
     TEST_FORMAT_CLS("{1,time,gmt}", a_datetime, icu_time_def);
@@ -820,8 +868,16 @@ void test_format_class(std::string charset = "UTF-8")
     TEST_FORMAT_CLS("{1,time=m,gmt}", a_datetime, icu_time_medium);
     TEST_FORMAT_CLS("{1,time=long,gmt}", a_datetime, icu_time_long);
     TEST_FORMAT_CLS("{1,time=l,gmt}", a_datetime, icu_time_long);
-    TEST_FORMAT_CLS("{1,date=full,gmt}", a_datetime, "Thursday, February 5, 1970");
-    TEST_FORMAT_CLS("{1,date=f,gmt}", a_datetime, "Thursday, February 5, 1970");
+    TEST_FORMAT_CLS("{1,time=full,gmt}", a_datetime, icu_time_full);
+    TEST_FORMAT_CLS("{1,time=f,gmt}", a_datetime, icu_time_full);
+    TEST_FORMAT_CLS("{1,date=short,gmt}", a_datetime, icu_date_short);
+    TEST_FORMAT_CLS("{1,date=s,gmt}", a_datetime, icu_date_short);
+    TEST_FORMAT_CLS("{1,date=medium,gmt}", a_datetime, icu_date_medium);
+    TEST_FORMAT_CLS("{1,date=m,gmt}", a_datetime, icu_date_medium);
+    TEST_FORMAT_CLS("{1,date=long,gmt}", a_datetime, icu_date_long);
+    TEST_FORMAT_CLS("{1,date=l,gmt}", a_datetime, icu_date_long);
+    TEST_FORMAT_CLS("{1,date=full,gmt}", a_datetime, icu_date_full);
+    TEST_FORMAT_CLS("{1,date=f,gmt}", a_datetime, icu_date_full);
     // Handle timezones and reuse of arguments
     const std::string icu_time_short2 = get_ICU_time(as::time_short, a_datetime, "GMT+01:00");
     TEST_FORMAT_CLS("{1,time=s,gmt};{1,time=s,timezone=GMT+01:00}", a_datetime, icu_time_short + ";" + icu_time_short2);

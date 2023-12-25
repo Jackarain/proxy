@@ -21,6 +21,7 @@ if(NOT TARGET boost_url_all_tests)
 endif()
 
 # Replicate error flags from Jamfile
+set(BOOST_URL_TEST_FLAGS " ")
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND CMAKE_CXX_COMPILER_VERSION_MAJOR EQUAL 7)
     set(BOOST_URL_TEST_FLAGS "-Wall -Werror -Wno-unused-but-set-variable -Wno-maybe-uninitialized")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")

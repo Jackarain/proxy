@@ -1,14 +1,13 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <title>Class fiber</title>
 <link rel="stylesheet" href="../../../../../../doc/src/boostbook.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
-<link rel="home" href="../../index.html" title="Chapter 1. Fiber">
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
+<link rel="home" href="../../index.html" title="Chapter&#160;1.&#160;Fiber">
 <link rel="up" href="../fiber_mgmt.html" title="Fiber management">
 <link rel="prev" href="../fiber_mgmt.html" title="Fiber management">
 <link rel="next" href="id.html" title="Class fiber::id">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -88,14 +87,14 @@
 </pre>
 <h5>
 <a name="fiber.fiber_mgmt.fiber.h0"></a>
-        <span class="phrase"><a name="fiber.fiber_mgmt.fiber.default_constructor"></a></span><a class="link" href="fiber.html#fiber.fiber_mgmt.fiber.default_constructor">Default
+        <span><a name="fiber.fiber_mgmt.fiber.default_constructor"></a></span><a class="link" href="fiber.html#fiber.fiber_mgmt.fiber.default_constructor">Default
         constructor</a>
       </h5>
 <pre class="programlisting"><span class="keyword">constexpr</span> <span class="identifier">fiber</span><span class="special">()</span> <span class="keyword">noexcept</span><span class="special">;</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               Constructs a <a class="link" href="fiber.html#class_fiber"><code class="computeroutput">fiber</code></a> instance that refers to <span class="emphasis"><em>not-a-fiber</em></span>.
@@ -113,7 +112,7 @@
 </div>
 <a name="fiber_fiber"></a><h5>
 <a name="fiber.fiber_mgmt.fiber.h1"></a>
-        <span class="phrase"><a name="fiber.fiber_mgmt.fiber.constructor"></a></span><a class="link" href="fiber.html#fiber.fiber_mgmt.fiber.constructor">Constructor</a>
+        <span><a name="fiber.fiber_mgmt.fiber.constructor"></a></span><a class="link" href="fiber.html#fiber.fiber_mgmt.fiber.constructor">Constructor</a>
       </h5>
 <pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span> <span class="keyword">typename</span> <span class="identifier">Fn</span><span class="special">,</span> <span class="keyword">typename</span> <span class="special">...</span> <span class="identifier">Args</span> <span class="special">&gt;</span>
 <span class="identifier">fiber</span><span class="special">(</span> <span class="identifier">Fn</span> <span class="special">&amp;&amp;</span> <span class="identifier">fn</span><span class="special">,</span> <span class="identifier">Args</span> <span class="special">&amp;&amp;</span> <span class="special">...</span> <span class="identifier">args</span><span class="special">);</span>
@@ -130,7 +129,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Preconditions:</span></dt>
 <dd><p>
               <code class="computeroutput"><span class="identifier">Fn</span></code> must be copyable
@@ -141,7 +140,7 @@
               <code class="computeroutput"><span class="identifier">fn</span></code> is copied or moved
               into internal storage for access by the new fiber. If <a class="link" href="../fiber_mgmt.html#class_launch"><code class="computeroutput">launch</code></a> is
               specified (or defaulted) to <code class="computeroutput"><span class="identifier">post</span></code>,
-              the new fiber is marked <span class="quote">“<span class="quote">ready</span>”</span> and will be entered at
+              the new fiber is marked <span class="quote">&#8220;<span class="quote">ready</span>&#8221;</span> and will be entered at
               the next opportunity. If <code class="computeroutput"><span class="identifier">launch</span></code>
               is specified as <code class="computeroutput"><span class="identifier">dispatch</span></code>,
               the calling fiber is suspended and the new fiber is entered immediately.
@@ -173,14 +172,14 @@
 </div>
 <h5>
 <a name="fiber.fiber_mgmt.fiber.h2"></a>
-        <span class="phrase"><a name="fiber.fiber_mgmt.fiber.move_constructor"></a></span><a class="link" href="fiber.html#fiber.fiber_mgmt.fiber.move_constructor">Move
+        <span><a name="fiber.fiber_mgmt.fiber.move_constructor"></a></span><a class="link" href="fiber.html#fiber.fiber_mgmt.fiber.move_constructor">Move
         constructor</a>
       </h5>
 <pre class="programlisting"><span class="identifier">fiber</span><span class="special">(</span> <span class="identifier">fiber</span> <span class="special">&amp;&amp;</span> <span class="identifier">other</span><span class="special">)</span> <span class="keyword">noexcept</span><span class="special">;</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               Transfers ownership of the fiber managed by <code class="computeroutput"><span class="identifier">other</span></code>
@@ -200,14 +199,14 @@
 </div>
 <h5>
 <a name="fiber.fiber_mgmt.fiber.h3"></a>
-        <span class="phrase"><a name="fiber.fiber_mgmt.fiber.move_assignment_operator"></a></span><a class="link" href="fiber.html#fiber.fiber_mgmt.fiber.move_assignment_operator">Move
+        <span><a name="fiber.fiber_mgmt.fiber.move_assignment_operator"></a></span><a class="link" href="fiber.html#fiber.fiber_mgmt.fiber.move_assignment_operator">Move
         assignment operator</a>
       </h5>
 <pre class="programlisting"><span class="identifier">fiber</span> <span class="special">&amp;</span> <span class="keyword">operator</span><span class="special">=(</span> <span class="identifier">fiber</span> <span class="special">&amp;&amp;</span> <span class="identifier">other</span><span class="special">)</span> <span class="keyword">noexcept</span><span class="special">;</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               Transfers ownership of the fiber managed by <code class="computeroutput"><span class="identifier">other</span></code>
@@ -227,13 +226,13 @@
 </div>
 <h5>
 <a name="fiber.fiber_mgmt.fiber.h4"></a>
-        <span class="phrase"><a name="fiber.fiber_mgmt.fiber.destructor"></a></span><a class="link" href="fiber.html#fiber.fiber_mgmt.fiber.destructor">Destructor</a>
+        <span><a name="fiber.fiber_mgmt.fiber.destructor"></a></span><a class="link" href="fiber.html#fiber.fiber_mgmt.fiber.destructor">Destructor</a>
       </h5>
 <pre class="programlisting"><span class="special">~</span><span class="identifier">fiber</span><span class="special">();</span>
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               If the fiber is <a class="link" href="fiber.html#fiber_joinable"><code class="computeroutput">fiber::joinable()</code></a>, calls std::terminate.
@@ -253,7 +252,7 @@
         </p>
 <h5>
 <a name="fiber_joinable_bridgehead"></a>
-  <span class="phrase"><a name="fiber_joinable"></a></span>
+  <span><a name="fiber_joinable"></a></span>
   <a class="link" href="fiber.html#fiber_joinable">Member function <code class="computeroutput">joinable</code>()</a>
 </h5>
 <p>
@@ -262,7 +261,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Returns:</span></dt>
 <dd><p>
               <code class="computeroutput"><span class="keyword">true</span></code> if <code class="computeroutput"><span class="special">*</span><span class="keyword">this</span></code>
@@ -279,7 +278,7 @@
         </p>
 <h5>
 <a name="fiber_join_bridgehead"></a>
-  <span class="phrase"><a name="fiber_join"></a></span>
+  <span><a name="fiber_join"></a></span>
   <a class="link" href="fiber.html#fiber_join">Member function <code class="computeroutput">join</code>()</a>
 </h5>
 <p>
@@ -288,7 +287,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Preconditions:</span></dt>
 <dd><p>
               the fiber is <a class="link" href="fiber.html#fiber_joinable"><code class="computeroutput">fiber::joinable()</code></a>.
@@ -319,7 +318,7 @@
         </p>
 <h5>
 <a name="fiber_detach_bridgehead"></a>
-  <span class="phrase"><a name="fiber_detach"></a></span>
+  <span><a name="fiber_detach"></a></span>
   <a class="link" href="fiber.html#fiber_detach">Member function <code class="computeroutput">detach</code>()</a>
 </h5>
 <p>
@@ -328,7 +327,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Preconditions:</span></dt>
 <dd><p>
               the fiber is <a class="link" href="fiber.html#fiber_joinable"><code class="computeroutput">fiber::joinable()</code></a>.
@@ -358,7 +357,7 @@
         </p>
 <h5>
 <a name="fiber_get_id_bridgehead"></a>
-  <span class="phrase"><a name="fiber_get_id"></a></span>
+  <span><a name="fiber_get_id"></a></span>
   <a class="link" href="fiber.html#fiber_get_id">Member function <code class="computeroutput">get_id</code>()</a>
 </h5>
 <p>
@@ -367,7 +366,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Returns:</span></dt>
 <dd><p>
               If <code class="computeroutput"><span class="special">*</span><span class="keyword">this</span></code>
@@ -388,7 +387,7 @@
         </p>
 <h5>
 <a name="fiber_properties_bridgehead"></a>
-  <span class="phrase"><a name="fiber_properties"></a></span>
+  <span><a name="fiber_properties"></a></span>
   <a class="link" href="fiber.html#fiber_properties">Templated member
         function <code class="computeroutput">properties</code>()</a>
 </h5>
@@ -399,7 +398,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Preconditions:</span></dt>
 <dd><p>
               <code class="computeroutput"><span class="special">*</span><span class="keyword">this</span></code>
@@ -433,7 +432,7 @@
         </p>
 <h5>
 <a name="fiber_swap_bridgehead"></a>
-  <span class="phrase"><a name="fiber_swap"></a></span>
+  <span><a name="fiber_swap"></a></span>
   <a class="link" href="fiber.html#fiber_swap">Member function <code class="computeroutput">swap</code>()</a>
 </h5>
 <p>
@@ -442,7 +441,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               Exchanges the fiber of execution associated with <code class="computeroutput"><span class="special">*</span><span class="keyword">this</span></code> and <code class="computeroutput"><span class="identifier">other</span></code>,
@@ -465,7 +464,7 @@
         </p>
 <h5>
 <a name="swap_for_fiber_bridgehead"></a>
-  <span class="phrase"><a name="swap_for_fiber"></a></span>
+  <span><a name="swap_for_fiber"></a></span>
   <a class="link" href="fiber.html#swap_for_fiber">Non-member function
         <code class="computeroutput">swap()</code></a>
 </h5>
@@ -475,7 +474,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               Same as <code class="computeroutput"><span class="identifier">l</span><span class="special">.</span><span class="identifier">swap</span><span class="special">(</span> <span class="identifier">r</span><span class="special">)</span></code>.
@@ -490,7 +489,7 @@
         </p>
 <h5>
 <a name="operator&lt;_bridgehead"></a>
-  <span class="phrase"><a name="operator&lt;"></a></span>
+  <span><a name="operator&lt;"></a></span>
   <a class="link" href="fiber.html#operator&lt;">Non-member function <code class="computeroutput">operator&lt;()</code></a>
 </h5>
 <p>
@@ -499,7 +498,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Returns:</span></dt>
 <dd><p>
               <code class="computeroutput"><span class="keyword">true</span></code> if <code class="computeroutput"><span class="identifier">l</span><span class="special">.</span><span class="identifier">get_id</span><span class="special">()</span>
@@ -516,7 +515,7 @@
         </p>
 <h5>
 <a name="use_scheduling_algorithm_bridgehead"></a>
-  <span class="phrase"><a name="use_scheduling_algorithm"></a></span>
+  <span><a name="use_scheduling_algorithm"></a></span>
   <a class="link" href="fiber.html#use_scheduling_algorithm">Non-member
         function <code class="computeroutput">use_scheduling_algorithm()</code></a>
 </h5>
@@ -527,7 +526,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
               Directs <span class="bold"><strong>Boost.Fiber</strong></span> to use <code class="computeroutput"><span class="identifier">SchedAlgo</span></code>, which must be a concrete
@@ -558,7 +557,7 @@
         </p>
 <h5>
 <a name="has_ready_fibers_bridgehead"></a>
-  <span class="phrase"><a name="has_ready_fibers"></a></span>
+  <span><a name="has_ready_fibers"></a></span>
   <a class="link" href="fiber.html#has_ready_fibers">Non-member function
         <code class="computeroutput">has_ready_fibers()</code></a>
 </h5>
@@ -568,7 +567,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Returns:</span></dt>
 <dd><p>
               <code class="computeroutput"><span class="keyword">true</span></code> if scheduler has
@@ -585,11 +584,14 @@
 </dl>
 </div>
 </div>
-<div class="copyright-footer">Copyright © 2013 Oliver Kowalke<p>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright &#169; 2013 Oliver Kowalke<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div>
+</div></td>
+</tr></table>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="../fiber_mgmt.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../fiber_mgmt.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="id.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>

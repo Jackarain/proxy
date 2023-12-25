@@ -1,14 +1,13 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Then There’s Boost.Asio</title>
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
+<title>Then There&#8217;s Boost.Asio</title>
 <link rel="stylesheet" href="../../../../../../doc/src/boostbook.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
-<link rel="home" href="../../index.html" title="Chapter 1. Fiber">
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
+<link rel="home" href="../../index.html" title="Chapter&#160;1.&#160;Fiber">
 <link rel="up" href="../callbacks.html" title="Integrating Fibers with Asynchronous Callbacks">
 <link rel="prev" href="success_error_virtual_methods.html" title="Success/Error Virtual Methods">
 <link rel="next" href="../nonblocking.html" title="Integrating Fibers with Nonblocking I/O">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -25,8 +24,8 @@
 </div>
 <div class="section">
 <div class="titlepage"><div><div><h3 class="title">
-<a name="fiber.callbacks.then_there_s____boost_asio__"></a><a name="callbacks_asio"></a><a class="link" href="then_there_s____boost_asio__.html" title="Then There’s Boost.Asio">Then
-      There’s Boost.Asio</a>
+<a name="fiber.callbacks.then_there_s____boost_asio__"></a><a name="callbacks_asio"></a><a class="link" href="then_there_s____boost_asio__.html" title="Then There&#8217;s Boost.Asio">Then
+      There&#8217;s <a href="http://www.boost.org/doc/libs/release/libs/asio/index.html" target="_top">Boost.Asio</a></a>
 </h3></div></div></div>
 <p>
         Since the simplest form of Boost.Asio asynchronous operation completion token
@@ -35,13 +34,13 @@
         operations.
       </p>
 <p>
-        Fortunately we need not. Boost.Asio incorporates a mechanism<a href="#ftn.fiber.callbacks.then_there_s____boost_asio__.f0" class="footnote" name="fiber.callbacks.then_there_s____boost_asio__.f0"><sup class="footnote">[5]</sup></a> by which the caller can customize the notification behavior of
+        Fortunately we need not. Boost.Asio incorporates a mechanism<sup>[<a name="fiber.callbacks.then_there_s____boost_asio__.f0" href="#ftn.fiber.callbacks.then_there_s____boost_asio__.f0" class="footnote">5</a>]</sup> by which the caller can customize the notification behavior of
         any async operation. Therefore we can construct a <span class="emphasis"><em>completion token</em></span>
         which, when passed to a <a href="http://www.boost.org/doc/libs/release/libs/asio/index.html" target="_top">Boost.Asio</a>
         async operation, requests blocking for the calling fiber.
       </p>
 <p>
-        A typical Asio async function might look something like this:<a href="#ftn.fiber.callbacks.then_there_s____boost_asio__.f1" class="footnote" name="fiber.callbacks.then_there_s____boost_asio__.f1"><sup class="footnote">[6]</sup></a>
+        A typical Asio async function might look something like this:<sup>[<a name="fiber.callbacks.then_there_s____boost_asio__.f1" href="#ftn.fiber.callbacks.then_there_s____boost_asio__.f1" class="footnote">6</a>]</sup>
       </p>
 <pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span> <span class="special">...,</span> <span class="keyword">class</span> <span class="identifier">CompletionToken</span> <span class="special">&gt;</span>
 <span class="emphasis"><em>deduced_return_type</em></span>
@@ -59,7 +58,7 @@
 <span class="special">}</span>
 </pre>
 <p>
-        We will engage that mechanism, which is based on specializing Asio’s <code class="computeroutput"><span class="identifier">handler_type</span><span class="special">&lt;&gt;</span></code>
+        We will engage that mechanism, which is based on specializing Asio&#8217;s <code class="computeroutput"><span class="identifier">handler_type</span><span class="special">&lt;&gt;</span></code>
         template for the <code class="computeroutput"><span class="identifier">CompletionToken</span></code>
         type and the signature of the specific callback. The remainder of this discussion
         will refer back to <code class="computeroutput"><span class="identifier">async_something</span><span class="special">()</span></code> as the Asio async function under consideration.
@@ -127,7 +126,16 @@
         for <code class="computeroutput"><span class="identifier">yield_t</span></code>:
       </p>
 <p>
-        [asio_handler_type]
+</p>
+<pre class="programlisting"><span class="comment">// Handler type specialisation for fibers::asio::yield.</span>
+<span class="comment">// When 'yield' is passed as a completion handler which accepts only</span>
+<span class="comment">// error_code, use yield_handler&lt;void&gt;. yield_handler will take care of the</span>
+<span class="comment">// error_code one way or another.</span>
+<span class="keyword">template</span><span class="special">&lt;</span> <span class="keyword">typename</span> <span class="identifier">ReturnType</span> <span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">handler_type</span><span class="special">&lt;</span> <span class="identifier">fibers</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">yield_t</span><span class="special">,</span> <span class="identifier">ReturnType</span><span class="special">(</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">system</span><span class="special">::</span><span class="identifier">error_code</span><span class="special">)</span> <span class="special">&gt;</span>
+<span class="special">{</span> <span class="keyword">typedef</span> <span class="identifier">fibers</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">detail</span><span class="special">::</span><span class="identifier">yield_handler</span><span class="special">&lt;</span> <span class="keyword">void</span> <span class="special">&gt;</span>    <span class="identifier">type</span><span class="special">;</span> <span class="special">};</span>
+</pre>
+<p>
       </p>
 <p>
         (There are actually four different specializations in <a href="../../../../examples/asio/detail/yield.hpp" target="_top">detail/yield.hpp</a>,
@@ -136,9 +144,9 @@
 <p>
         The above directs Asio to use <code class="computeroutput"><span class="identifier">yield_handler</span></code>
         as the actual handler for an async operation to which <code class="computeroutput"><span class="identifier">yield</span></code>
-        is passed. There’s a generic <code class="computeroutput"><span class="identifier">yield_handler</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code>
+        is passed. There&#8217;s a generic <code class="computeroutput"><span class="identifier">yield_handler</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code>
         implementation and a <code class="computeroutput"><span class="identifier">yield_handler</span><span class="special">&lt;</span><span class="keyword">void</span><span class="special">&gt;</span></code>
-        specialization. Let’s start with the <code class="computeroutput"><span class="special">&lt;</span><span class="keyword">void</span><span class="special">&gt;</span></code> specialization:
+        specialization. Let&#8217;s start with the <code class="computeroutput"><span class="special">&lt;</span><span class="keyword">void</span><span class="special">&gt;</span></code> specialization:
       </p>
 <p>
 </p>
@@ -166,7 +174,7 @@
         <code class="computeroutput"><span class="identifier">async_something</span><span class="special">()</span></code>,
         having consulted the <code class="computeroutput"><span class="identifier">handler_type</span><span class="special">&lt;&gt;</span></code> traits specialization, instantiates
         a <code class="computeroutput"><span class="identifier">yield_handler</span><span class="special">&lt;</span><span class="keyword">void</span><span class="special">&gt;</span></code> to
-        be passed as the actual callback for the async operation. <code class="computeroutput"><span class="identifier">yield_handler</span></code>’s
+        be passed as the actual callback for the async operation. <code class="computeroutput"><span class="identifier">yield_handler</span></code>&#8217;s
         constructor accepts the <code class="computeroutput"><span class="identifier">yield_t</span></code>
         instance (the <code class="computeroutput"><span class="identifier">yield</span></code> object
         passed to the async function) and passes it along to <code class="computeroutput"><span class="identifier">yield_handler_base</span></code>:
@@ -232,14 +240,14 @@
 <p>
         <code class="computeroutput"><span class="identifier">yield_handler_base</span></code> stores
         a copy of the <code class="computeroutput"><span class="identifier">yield_t</span></code> instance
-        — which, as shown above, contains only an <code class="computeroutput"><span class="identifier">error_code</span><span class="special">*</span></code>. It also captures the <a class="link" href="../scheduling.html#class_context"><code class="computeroutput">context</code></a>*
+        &#8212; which, as shown above, contains only an <code class="computeroutput"><span class="identifier">error_code</span><span class="special">*</span></code>. It also captures the <a class="link" href="../scheduling.html#class_context"><code class="computeroutput">context</code></a>*
         for the currently-running fiber by calling <a class="link" href="../scheduling.html#context_active"><code class="computeroutput">context::active()</code></a>.
       </p>
 <p>
         You will notice that <code class="computeroutput"><span class="identifier">yield_handler_base</span></code>
         has one more data member (<code class="computeroutput"><span class="identifier">ycomp_</span></code>)
         that is initialized to <code class="computeroutput"><span class="keyword">nullptr</span></code>
-        by its constructor — though its <code class="computeroutput"><span class="keyword">operator</span><span class="special">()()</span></code> method relies on <code class="computeroutput"><span class="identifier">ycomp_</span></code>
+        by its constructor &#8212; though its <code class="computeroutput"><span class="keyword">operator</span><span class="special">()()</span></code> method relies on <code class="computeroutput"><span class="identifier">ycomp_</span></code>
         being non-null. More on this in a moment.
       </p>
 <p>
@@ -256,11 +264,10 @@
 <pre class="programlisting"><span class="comment">// Without the need to handle a passed value, our yield_handler&lt;void&gt;</span>
 <span class="comment">// specialization is just like async_result_base.</span>
 <span class="keyword">template</span><span class="special">&lt;&gt;</span>
-<span class="keyword">class</span> <span class="identifier">async_result</span><span class="special">&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">yield_t</span><span class="special">,</span> <span class="keyword">void</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">system</span><span class="special">::</span><span class="identifier">error_code</span><span class="special">)</span> <span class="special">&gt;</span> <span class="special">:</span>
+<span class="keyword">class</span> <span class="identifier">async_result</span><span class="special">&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">detail</span><span class="special">::</span><span class="identifier">yield_handler</span><span class="special">&lt;</span> <span class="keyword">void</span> <span class="special">&gt;</span> <span class="special">&gt;</span> <span class="special">:</span>
     <span class="keyword">public</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">detail</span><span class="special">::</span><span class="identifier">async_result_base</span> <span class="special">{</span>
 <span class="keyword">public</span><span class="special">:</span>
-    <span class="keyword">using</span> <span class="identifier">return_type</span> <span class="special">=</span> <span class="keyword">void</span><span class="special">;</span>
-    <span class="keyword">using</span> <span class="identifier">completion_handler_type</span> <span class="special">=</span> <span class="identifier">fibers</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">detail</span><span class="special">::</span><span class="identifier">yield_handler</span><span class="special">&lt;</span><span class="keyword">void</span><span class="special">&gt;;</span>
+    <span class="keyword">typedef</span> <span class="keyword">void</span> <span class="identifier">type</span><span class="special">;</span>
 
     <span class="keyword">explicit</span> <span class="identifier">async_result</span><span class="special">(</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">detail</span><span class="special">::</span><span class="identifier">yield_handler</span><span class="special">&lt;</span> <span class="keyword">void</span> <span class="special">&gt;</span> <span class="special">&amp;</span> <span class="identifier">h</span><span class="special">):</span>
         <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">detail</span><span class="special">::</span><span class="identifier">async_result_base</span><span class="special">{</span> <span class="identifier">h</span> <span class="special">}</span> <span class="special">{</span>
@@ -314,7 +321,7 @@
       </p>
 <p>
         This is how <code class="computeroutput"><span class="identifier">yield_handler_base</span><span class="special">::</span><span class="identifier">ycomp_</span></code>
-        becomes non-null: <code class="computeroutput"><span class="identifier">async_result_base</span></code>’s
+        becomes non-null: <code class="computeroutput"><span class="identifier">async_result_base</span></code>&#8217;s
         constructor injects a pointer back to its own <code class="computeroutput"><span class="identifier">yield_completion</span></code>
         member.
       </p>
@@ -324,20 +331,20 @@
         its <code class="computeroutput"><span class="identifier">error_code</span><span class="special">*</span></code>
         member <code class="computeroutput"><span class="identifier">ec_</span></code> to <code class="computeroutput"><span class="keyword">nullptr</span></code>. If this instance is passed to <code class="computeroutput"><span class="identifier">async_something</span><span class="special">()</span></code>
         (<code class="computeroutput"><span class="identifier">ec_</span></code> is still <code class="computeroutput"><span class="keyword">nullptr</span></code>), the copy stored in <code class="computeroutput"><span class="identifier">yield_handler_base</span></code> will likewise have null
-        <code class="computeroutput"><span class="identifier">ec_</span></code>. <code class="computeroutput"><span class="identifier">async_result_base</span></code>’s
-        constructor sets <code class="computeroutput"><span class="identifier">yield_handler_base</span></code>’s
-        <code class="computeroutput"><span class="identifier">yield_t</span></code>’s <code class="computeroutput"><span class="identifier">ec_</span></code>
+        <code class="computeroutput"><span class="identifier">ec_</span></code>. <code class="computeroutput"><span class="identifier">async_result_base</span></code>&#8217;s
+        constructor sets <code class="computeroutput"><span class="identifier">yield_handler_base</span></code>&#8217;s
+        <code class="computeroutput"><span class="identifier">yield_t</span></code>&#8217;s <code class="computeroutput"><span class="identifier">ec_</span></code>
         member to point to its own <code class="computeroutput"><span class="identifier">error_code</span></code>
         member.
       </p>
 <p>
         The stage is now set. <code class="computeroutput"><span class="identifier">async_something</span><span class="special">()</span></code> initiates the actual async operation, arranging
         to call its <code class="computeroutput"><span class="identifier">yield_handler</span><span class="special">&lt;</span><span class="keyword">void</span><span class="special">&gt;</span></code>
-        instance on completion. Let’s say, for the sake of argument, that the actual
-        async operation’s callback has signature <code class="computeroutput"><span class="keyword">void</span><span class="special">(</span><span class="identifier">error_code</span><span class="special">)</span></code>.
+        instance on completion. Let&#8217;s say, for the sake of argument, that the actual
+        async operation&#8217;s callback has signature <code class="computeroutput"><span class="keyword">void</span><span class="special">(</span><span class="identifier">error_code</span><span class="special">)</span></code>.
       </p>
 <p>
-        But since it’s an async operation, control returns at once to <code class="computeroutput"><span class="identifier">async_something</span><span class="special">()</span></code>.
+        But since it&#8217;s an async operation, control returns at once to <code class="computeroutput"><span class="identifier">async_something</span><span class="special">()</span></code>.
         <code class="computeroutput"><span class="identifier">async_something</span><span class="special">()</span></code>
         calls <code class="computeroutput"><span class="identifier">async_result</span><span class="special">&lt;</span><span class="identifier">yield_handler</span><span class="special">&lt;</span><span class="keyword">void</span><span class="special">&gt;&gt;::</span><span class="identifier">get</span><span class="special">()</span></code>,
         and will return its return value.
@@ -407,7 +414,7 @@
       </p>
 <p>
         Some time later, the async operation completes. It calls <code class="computeroutput"><span class="identifier">yield_handler</span><span class="special">&lt;</span><span class="keyword">void</span><span class="special">&gt;::</span><span class="keyword">operator</span><span class="special">()(</span><span class="identifier">error_code</span> <span class="keyword">const</span><span class="special">&amp;)</span></code> with an <code class="computeroutput"><span class="identifier">error_code</span></code>
-        indicating either success or failure. We’ll consider both cases.
+        indicating either success or failure. We&#8217;ll consider both cases.
       </p>
 <p>
         <code class="computeroutput"><span class="identifier">yield_handler</span><span class="special">&lt;</span><span class="keyword">void</span><span class="special">&gt;</span></code> explicitly
@@ -415,17 +422,17 @@
       </p>
 <p>
         <code class="computeroutput"><span class="identifier">yield_handler_base</span><span class="special">::</span><span class="keyword">operator</span><span class="special">()(</span><span class="identifier">error_code</span> <span class="keyword">const</span><span class="special">&amp;)</span></code> first sets <code class="computeroutput"><span class="identifier">yield_completion</span><span class="special">::</span><span class="identifier">completed_</span></code>
-        <code class="computeroutput"><span class="keyword">true</span></code>. This way, if <code class="computeroutput"><span class="identifier">async_something</span><span class="special">()</span></code>’s
-        async operation completes immediately — if <code class="computeroutput"><span class="identifier">yield_handler_base</span><span class="special">::</span><span class="keyword">operator</span><span class="special">()</span></code> is called even before <code class="computeroutput"><span class="identifier">async_result_base</span><span class="special">::</span><span class="identifier">get</span><span class="special">()</span></code>
-        — the calling fiber will <span class="emphasis"><em>not</em></span> suspend.
+        <code class="computeroutput"><span class="keyword">true</span></code>. This way, if <code class="computeroutput"><span class="identifier">async_something</span><span class="special">()</span></code>&#8217;s
+        async operation completes immediately &#8212; if <code class="computeroutput"><span class="identifier">yield_handler_base</span><span class="special">::</span><span class="keyword">operator</span><span class="special">()</span></code> is called even before <code class="computeroutput"><span class="identifier">async_result_base</span><span class="special">::</span><span class="identifier">get</span><span class="special">()</span></code>
+        &#8212; the calling fiber will <span class="emphasis"><em>not</em></span> suspend.
       </p>
 <p>
         The actual <code class="computeroutput"><span class="identifier">error_code</span></code> produced
         by the async operation is then stored through the stored <code class="computeroutput"><span class="identifier">yield_t</span><span class="special">::</span><span class="identifier">ec_</span></code> pointer.
-        If <code class="computeroutput"><span class="identifier">async_something</span><span class="special">()</span></code>’s
+        If <code class="computeroutput"><span class="identifier">async_something</span><span class="special">()</span></code>&#8217;s
         caller used (e.g.) <code class="computeroutput"><span class="identifier">yield</span><span class="special">[</span><span class="identifier">my_ec</span><span class="special">]</span></code> to bind a local <code class="computeroutput"><span class="identifier">error_code</span></code>
         instance, the actual <code class="computeroutput"><span class="identifier">error_code</span></code>
-        value is stored into the caller’s variable. Otherwise, it is stored into
+        value is stored into the caller&#8217;s variable. Otherwise, it is stored into
         <code class="computeroutput"><span class="identifier">async_result_base</span><span class="special">::</span><span class="identifier">ec_</span></code>.
       </p>
 <p>
@@ -438,11 +445,11 @@
         <code class="computeroutput"><span class="identifier">yield_completion</span><span class="special">::</span><span class="identifier">wait</span><span class="special">()</span></code>,
         which returns to <code class="computeroutput"><span class="identifier">async_result_base</span><span class="special">::</span><span class="identifier">get</span><span class="special">()</span></code>.
       </p>
-<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<div class="itemizedlist"><ul class="itemizedlist" type="disc">
 <li class="listitem">
             If the original caller passed <code class="computeroutput"><span class="identifier">yield</span><span class="special">[</span><span class="identifier">my_ec</span><span class="special">]</span></code> to <code class="computeroutput"><span class="identifier">async_something</span><span class="special">()</span></code> to bind a local <code class="computeroutput"><span class="identifier">error_code</span></code>
             instance, then <code class="computeroutput"><span class="identifier">yield_handler_base</span><span class="special">::</span><span class="keyword">operator</span><span class="special">()</span></code> stored its <code class="computeroutput"><span class="identifier">error_code</span></code>
-            to the caller’s <code class="computeroutput"><span class="identifier">my_ec</span></code>
+            to the caller&#8217;s <code class="computeroutput"><span class="identifier">my_ec</span></code>
             instance, leaving <code class="computeroutput"><span class="identifier">async_result_base</span><span class="special">::</span><span class="identifier">ec_</span></code>
             initialized to success.
           </li>
@@ -456,16 +463,16 @@
             is success, then all is well.
           </li>
 <li class="listitem">
-            Otherwise — the original caller did not bind a local <code class="computeroutput"><span class="identifier">error_code</span></code>
+            Otherwise &#8212; the original caller did not bind a local <code class="computeroutput"><span class="identifier">error_code</span></code>
             and <code class="computeroutput"><span class="identifier">yield_handler_base</span><span class="special">::</span><span class="keyword">operator</span><span class="special">()</span></code> was called with an <code class="computeroutput"><span class="identifier">error_code</span></code>
-            indicating error — <code class="computeroutput"><span class="identifier">async_result_base</span><span class="special">::</span><span class="identifier">get</span><span class="special">()</span></code> throws <code class="computeroutput"><span class="identifier">system_error</span></code>
+            indicating error &#8212; <code class="computeroutput"><span class="identifier">async_result_base</span><span class="special">::</span><span class="identifier">get</span><span class="special">()</span></code> throws <code class="computeroutput"><span class="identifier">system_error</span></code>
             with that <code class="computeroutput"><span class="identifier">error_code</span></code>.
           </li>
 </ul></div>
 <p>
-        The case in which <code class="computeroutput"><span class="identifier">async_something</span><span class="special">()</span></code>’s completion callback has signature <code class="computeroutput"><span class="keyword">void</span><span class="special">()</span></code> is
+        The case in which <code class="computeroutput"><span class="identifier">async_something</span><span class="special">()</span></code>&#8217;s completion callback has signature <code class="computeroutput"><span class="keyword">void</span><span class="special">()</span></code> is
         similar. <code class="computeroutput"><span class="identifier">yield_handler</span><span class="special">&lt;</span><span class="keyword">void</span><span class="special">&gt;::</span><span class="keyword">operator</span><span class="special">()()</span></code>
-        invokes the machinery above with a <span class="quote">“<span class="quote">success</span>”</span> <code class="computeroutput"><span class="identifier">error_code</span></code>.
+        invokes the machinery above with a <span class="quote">&#8220;<span class="quote">success</span>&#8221;</span> <code class="computeroutput"><span class="identifier">error_code</span></code>.
       </p>
 <p>
         A completion callback with signature <code class="computeroutput"><span class="keyword">void</span><span class="special">(</span><span class="identifier">error_code</span><span class="special">,</span> <span class="identifier">T</span><span class="special">)</span></code>
@@ -534,13 +541,12 @@
 <span class="comment">// by handler_type&lt;&gt;::type. A particular asio async method constructs the</span>
 <span class="comment">// yield_handler, constructs this async_result specialization from it, then</span>
 <span class="comment">// returns the result of calling its get() method.</span>
-<span class="keyword">template</span><span class="special">&lt;</span> <span class="keyword">typename</span> <span class="identifier">ReturnType</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">T</span> <span class="special">&gt;</span>
-<span class="keyword">class</span> <span class="identifier">async_result</span><span class="special">&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">yield_t</span><span class="special">,</span> <span class="identifier">ReturnType</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">system</span><span class="special">::</span><span class="identifier">error_code</span><span class="special">,</span> <span class="identifier">T</span><span class="special">)</span> <span class="special">&gt;</span> <span class="special">:</span>
+<span class="keyword">template</span><span class="special">&lt;</span> <span class="keyword">typename</span> <span class="identifier">T</span> <span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">async_result</span><span class="special">&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">detail</span><span class="special">::</span><span class="identifier">yield_handler</span><span class="special">&lt;</span> <span class="identifier">T</span> <span class="special">&gt;</span> <span class="special">&gt;</span> <span class="special">:</span>
     <span class="keyword">public</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">detail</span><span class="special">::</span><span class="identifier">async_result_base</span> <span class="special">{</span>
 <span class="keyword">public</span><span class="special">:</span>
     <span class="comment">// type returned by get()</span>
-    <span class="keyword">using</span> <span class="identifier">return_type</span> <span class="special">=</span> <span class="identifier">T</span><span class="special">;</span>
-    <span class="keyword">using</span> <span class="identifier">completion_handler_type</span> <span class="special">=</span> <span class="identifier">fibers</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">detail</span><span class="special">::</span><span class="identifier">yield_handler</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;;</span>
+    <span class="keyword">typedef</span> <span class="identifier">T</span> <span class="identifier">type</span><span class="special">;</span>
 
     <span class="keyword">explicit</span> <span class="identifier">async_result</span><span class="special">(</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">detail</span><span class="special">::</span><span class="identifier">yield_handler</span><span class="special">&lt;</span> <span class="identifier">T</span> <span class="special">&gt;</span> <span class="special">&amp;</span> <span class="identifier">h</span><span class="special">)</span> <span class="special">:</span>
         <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">detail</span><span class="special">::</span><span class="identifier">async_result_base</span><span class="special">{</span> <span class="identifier">h</span> <span class="special">}</span> <span class="special">{</span>
@@ -550,13 +556,13 @@
     <span class="special">}</span>
 
     <span class="comment">// asio async method returns result of calling get()</span>
-    <span class="identifier">return_type</span> <span class="identifier">get</span><span class="special">()</span> <span class="special">{</span>
+    <span class="identifier">type</span> <span class="identifier">get</span><span class="special">()</span> <span class="special">{</span>
         <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">detail</span><span class="special">::</span><span class="identifier">async_result_base</span><span class="special">::</span><span class="identifier">get</span><span class="special">();</span>
         <span class="keyword">return</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">move</span><span class="special">(</span> <span class="identifier">value_</span><span class="special">);</span>
     <span class="special">}</span>
 
 <span class="keyword">private</span><span class="special">:</span>
-    <span class="identifier">return_type</span> <span class="identifier">value_</span><span class="special">{};</span>
+    <span class="identifier">type</span>                            <span class="identifier">value_</span><span class="special">{};</span>
 <span class="special">};</span>
 </pre>
 <p>
@@ -585,34 +591,37 @@
         When <code class="computeroutput"><span class="identifier">async_result</span><span class="special">&lt;</span><span class="identifier">yield_handler</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;&gt;::</span><span class="identifier">get</span><span class="special">()</span></code> resumes,
         it returns the stored <code class="computeroutput"><span class="identifier">value_</span></code>
         to <code class="computeroutput"><span class="identifier">async_something</span><span class="special">()</span></code>
-        and ultimately to <code class="computeroutput"><span class="identifier">async_something</span><span class="special">()</span></code>’s caller.
+        and ultimately to <code class="computeroutput"><span class="identifier">async_something</span><span class="special">()</span></code>&#8217;s caller.
       </p>
 <p>
         The case of a callback signature <code class="computeroutput"><span class="keyword">void</span><span class="special">(</span><span class="identifier">T</span><span class="special">)</span></code>
         is handled by having <code class="computeroutput"><span class="identifier">yield_handler</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="keyword">operator</span><span class="special">()(</span><span class="identifier">T</span><span class="special">)</span></code> engage
         the <code class="computeroutput"><span class="keyword">void</span><span class="special">(</span><span class="identifier">error_code</span><span class="special">,</span> <span class="identifier">T</span><span class="special">)</span></code> machinery,
-        passing a <span class="quote">“<span class="quote">success</span>”</span> <code class="computeroutput"><span class="identifier">error_code</span></code>.
+        passing a <span class="quote">&#8220;<span class="quote">success</span>&#8221;</span> <code class="computeroutput"><span class="identifier">error_code</span></code>.
       </p>
 <p>
         The source code above is found in <a href="../../../../examples/asio/yield.hpp" target="_top">yield.hpp</a>
         and <a href="../../../../examples/asio/detail/yield.hpp" target="_top">detail/yield.hpp</a>.
       </p>
 <div class="footnotes">
-<br><hr style="width:100; text-align:left;margin-left: 0">
-<div id="ftn.fiber.callbacks.then_there_s____boost_asio__.f0" class="footnote"><p><a href="#fiber.callbacks.then_there_s____boost_asio__.f0" class="para"><sup class="para">[5] </sup></a>
+<br><hr width="100" align="left">
+<div class="footnote"><p><sup>[<a name="ftn.fiber.callbacks.then_there_s____boost_asio__.f0" href="#fiber.callbacks.then_there_s____boost_asio__.f0" class="para">5</a>] </sup>
           This mechanism has been proposed as a conventional way to allow the caller
           of an arbitrary async function to specify completion handling: <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4045.pdf" target="_top">N4045</a>.
         </p></div>
-<div id="ftn.fiber.callbacks.then_there_s____boost_asio__.f1" class="footnote"><p><a href="#fiber.callbacks.then_there_s____boost_asio__.f1" class="para"><sup class="para">[6] </sup></a>
+<div class="footnote"><p><sup>[<a name="ftn.fiber.callbacks.then_there_s____boost_asio__.f1" href="#fiber.callbacks.then_there_s____boost_asio__.f1" class="para">6</a>] </sup>
           per <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4045.pdf" target="_top">N4045</a>
         </p></div>
 </div>
 </div>
-<div class="copyright-footer">Copyright © 2013 Oliver Kowalke<p>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright &#169; 2013 Oliver Kowalke<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div>
+</div></td>
+</tr></table>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="success_error_virtual_methods.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../callbacks.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../nonblocking.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>

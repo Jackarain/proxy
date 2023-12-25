@@ -1,14 +1,13 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <title>NUMA</title>
 <link rel="stylesheet" href="../../../../../doc/src/boostbook.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
-<link rel="home" href="../index.html" title="Chapter 1. Fiber">
-<link rel="up" href="../index.html" title="Chapter 1. Fiber">
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
+<link rel="home" href="../index.html" title="Chapter&#160;1.&#160;Fiber">
+<link rel="up" href="../index.html" title="Chapter&#160;1.&#160;Fiber">
 <link rel="prev" href="speculation.html" title="Specualtive execution">
 <link rel="next" href="gpu_computing.html" title="GPU computing">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -39,7 +38,7 @@
       Local memory is directly attached to the processor's integrated memory controller.
       Memory connected to the memory controller of another micro-processor (multi-socket
       systems) is considered as remote memory. If a memory controller access remote
-      memory it has to traverse the interconnect<a href="#ftn.fiber.numa.f0" class="footnote" name="fiber.numa.f0"><sup class="footnote">[8]</sup></a> and connect to the remote memory controller.<br> Thus accessing
+      memory it has to traverse the interconnect<sup>[<a name="fiber.numa.f0" href="#ftn.fiber.numa.f0" class="footnote">8</a>]</sup> and connect to the remote memory controller.<br> Thus accessing
       remote memory adds additional latency overhead to local memory access. Because
       of the different memory locations, a NUMA-system experiences <span class="emphasis"><em>non-uniform</em></span>
       memory access time.<br> As a consequence the best performance is achieved
@@ -50,7 +49,7 @@
     </p>
 <h4>
 <a name="fiber.numa.h0"></a>
-      <span class="phrase"><a name="fiber.numa.numa_support_in_boost_fiber"></a></span><a class="link" href="numa.html#fiber.numa.numa_support_in_boost_fiber">NUMA
+      <span><a name="fiber.numa.numa_support_in_boost_fiber"></a></span><a class="link" href="numa.html#fiber.numa.numa_support_in_boost_fiber">NUMA
       support in Boost.Fiber</a>
     </h4>
 <p>
@@ -77,7 +76,7 @@
       </p></td></tr>
 </table></div>
 <div class="table">
-<a name="fiber.numa.supported_functionality_operating_systems"></a><p class="title"><b>Table 1.1. Supported functionality/operating systems</b></p>
+<a name="fiber.numa.supported_functionality_operating_systems"></a><p class="title"><b>Table&#160;1.1.&#160;Supported functionality/operating systems</b></p>
 <div class="table-contents"><table class="table" summary="Supported functionality/operating systems">
 <colgroup>
 <col>
@@ -193,7 +192,7 @@
             </td>
 <td>
               <p>
-                +<a href="#ftn.fiber.numa.f1" class="footnote" name="fiber.numa.f1"><sup class="footnote">[a]</sup></a>
+                +<sup>[<a name="fiber.numa.f1" href="#ftn.fiber.numa.f1" class="footnote">a</a>]</sup>
               </p>
             </td>
 </tr>
@@ -272,7 +271,7 @@
             </td>
 </tr>
 </tbody>
-<tbody class="footnotes"><tr><td colspan="7"><div id="ftn.fiber.numa.f1" class="footnote"><p><a href="#fiber.numa.f1" class="para"><sup class="para">[a] </sup></a>
+<tbody class="footnotes"><tr><td colspan="7"><div class="footnote"><p><sup>[<a name="ftn.fiber.numa.f1" href="#fiber.numa.f1" class="para">a</a>] </sup>
                   Windows organizes logical cpus in groups of 64; boost.fiber maps
                   {group-id,cpud-id} to a scalar equivalent to cpu ID of Linux (64
                   * group ID + cpu ID).
@@ -320,7 +319,7 @@
     </p>
 <pre class="programlisting"><span class="keyword">void</span> <span class="identifier">thread</span><span class="special">(</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">uint32_t</span> <span class="identifier">cpu_id</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">uint32_t</span> <span class="identifier">node_id</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">numa</span><span class="special">::</span><span class="identifier">node</span> <span class="special">&gt;</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">topo</span><span class="special">)</span> <span class="special">{</span>
     <span class="comment">// thread registers itself at work-stealing scheduler</span>
-    <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">use_scheduling_algorithm</span><span class="special">&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">numa</span><span class="special">::</span><span class="identifier">algo</span><span class="special">::</span><span class="identifier">work_stealing</span> <span class="special">&gt;(</span> <span class="identifier">cpu_id</span><span class="special">,</span> <span class="identifier">node_id</span><span class="special">,</span> <span class="identifier">topo</span><span class="special">);</span>
+    <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">use_scheduling_algorithm</span><span class="special">&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">algo</span><span class="special">::</span><span class="identifier">numa</span><span class="special">::</span><span class="identifier">work_stealing</span> <span class="special">&gt;(</span> <span class="identifier">cpu_id</span><span class="special">,</span> <span class="identifier">node_id</span><span class="special">,</span> <span class="identifier">topo</span><span class="special">);</span>
     <span class="special">...</span>
 <span class="special">}</span>
 
@@ -342,7 +341,7 @@
     <span class="special">}</span>
 <span class="special">}</span>
 <span class="comment">// start-thread registers itself on work-stealing scheduler</span>
-<span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">use_scheduling_algorithm</span><span class="special">&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">numa</span><span class="special">::</span><span class="identifier">algo</span><span class="special">::</span><span class="identifier">work_stealing</span> <span class="special">&gt;(</span> <span class="identifier">start_cpu_id</span><span class="special">,</span> <span class="identifier">node</span><span class="special">.</span><span class="identifier">id</span><span class="special">,</span> <span class="identifier">topo</span><span class="special">);</span>
+<span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">use_scheduling_algorithm</span><span class="special">&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">algo</span><span class="special">::</span><span class="identifier">numa</span><span class="special">::</span><span class="identifier">work_stealing</span> <span class="special">&gt;(</span> <span class="identifier">start_cpu_id</span><span class="special">,</span> <span class="identifier">node</span><span class="special">.</span><span class="identifier">id</span><span class="special">,</span> <span class="identifier">topo</span><span class="special">);</span>
 <span class="special">...</span>
 </pre>
 <p>
@@ -357,7 +356,7 @@
     </p>
 <h4>
 <a name="fiber.numa.h1"></a>
-      <span class="phrase"><a name="fiber.numa.synopsis"></a></span><a class="link" href="numa.html#fiber.numa.synopsis">Synopsis</a>
+      <span><a name="fiber.numa.synopsis"></a></span><a class="link" href="numa.html#fiber.numa.synopsis">Synopsis</a>
     </h4>
 <pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">fiber</span><span class="special">/</span><span class="identifier">numa</span><span class="special">/</span><span class="identifier">pin_thread</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">fiber</span><span class="special">/</span><span class="identifier">numa</span><span class="special">/</span><span class="identifier">topology</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
@@ -395,7 +394,7 @@
       </p>
 <h5>
 <a name="class_numa_node_bridgehead"></a>
-  <span class="phrase"><a name="class_numa_node"></a></span>
+  <span><a name="class_numa_node"></a></span>
   <a class="link" href="numa.html#class_numa_node">Class <code class="computeroutput">numa::node</code></a>
 </h5>
 <p>
@@ -419,7 +418,7 @@
       </p>
 <h5>
 <a name="numa_node_id_bridgehead"></a>
-  <span class="phrase"><a name="numa_node_id"></a></span>
+  <span><a name="numa_node_id"></a></span>
   <a class="link" href="numa.html#numa_node_id">Data member <code class="computeroutput">id</code></a>
 </h5>
 <p>
@@ -428,7 +427,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
             ID of the NUMA-node
@@ -439,7 +438,7 @@
       </p>
 <h5>
 <a name="numa_node_logical_cpus_bridgehead"></a>
-  <span class="phrase"><a name="numa_node_logical_cpus"></a></span>
+  <span><a name="numa_node_logical_cpus"></a></span>
   <a class="link" href="numa.html#numa_node_logical_cpus">Data
       member <code class="computeroutput">logical_cpus</code></a>
 </h5>
@@ -449,7 +448,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
             set of logical cpu IDs belonging to the NUMA-node
@@ -460,7 +459,7 @@
       </p>
 <h5>
 <a name="numa_node_distance_bridgehead"></a>
-  <span class="phrase"><a name="numa_node_distance"></a></span>
+  <span><a name="numa_node_distance"></a></span>
   <a class="link" href="numa.html#numa_node_distance">Data member
       <code class="computeroutput">distance</code></a>
 </h5>
@@ -470,7 +469,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
             The distance between NUMA-nodes describe the cots of accessing the remote
@@ -491,7 +490,7 @@
       </p>
 <h5>
 <a name="numa_node_operator_less_bridgehead"></a>
-  <span class="phrase"><a name="numa_node_operator_less"></a></span>
+  <span><a name="numa_node_operator_less"></a></span>
   <a class="link" href="numa.html#numa_node_operator_less">Member
       function <code class="computeroutput">operator&lt;</code>()</a>
 </h5>
@@ -501,7 +500,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Returns:</span></dt>
 <dd><p>
             <code class="computeroutput"><span class="keyword">true</span></code> if <code class="computeroutput"><span class="identifier">lhs</span>
@@ -520,7 +519,7 @@
       </p>
 <h5>
 <a name="numa_topology_bridgehead"></a>
-  <span class="phrase"><a name="numa_topology"></a></span>
+  <span><a name="numa_topology"></a></span>
   <a class="link" href="numa.html#numa_topology">Non-member function <code class="computeroutput">numa::topology()</code></a>
 </h5>
 <p>
@@ -537,7 +536,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
             Evaluates the NUMA topology.
@@ -557,7 +556,7 @@
       </p>
 <h5>
 <a name="numa_pin_thread_bridgehead"></a>
-  <span class="phrase"><a name="numa_pin_thread"></a></span>
+  <span><a name="numa_pin_thread"></a></span>
   <a class="link" href="numa.html#numa_pin_thread">Non-member function
       <code class="computeroutput">numa::pin_thread()</code></a>
 </h5>
@@ -576,7 +575,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
             First version pins <code class="computeroutput"><span class="keyword">this</span> <span class="identifier">thread</span></code> to the logical cpu with ID
@@ -595,7 +594,7 @@
       </p>
 <h5>
 <a name="class_numa_work_stealing_bridgehead"></a>
-  <span class="phrase"><a name="class_numa_work_stealing"></a></span>
+  <span><a name="class_numa_work_stealing"></a></span>
   <a class="link" href="numa.html#class_numa_work_stealing">Class
       <code class="computeroutput">numa::work_stealing</code></a>
 </h5>
@@ -645,7 +644,7 @@
 </pre>
 <h4>
 <a name="fiber.numa.h2"></a>
-      <span class="phrase"><a name="fiber.numa.constructor"></a></span><a class="link" href="numa.html#fiber.numa.constructor">Constructor</a>
+      <span><a name="fiber.numa.constructor"></a></span><a class="link" href="numa.html#fiber.numa.constructor">Constructor</a>
     </h4>
 <pre class="programlisting"><span class="identifier">work_stealing</span><span class="special">(</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">uint32_t</span> <span class="identifier">cpu_id</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">uint32_t</span> <span class="identifier">node_id</span><span class="special">,</span>
                <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">fibers</span><span class="special">::</span><span class="identifier">numa</span><span class="special">::</span><span class="identifier">node</span> <span class="special">&gt;</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">topo</span><span class="special">,</span>
@@ -653,7 +652,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
             Constructs work-stealing scheduling algorithm. The thread is pinned to
@@ -680,7 +679,7 @@
       </p>
 <h5>
 <a name="numa_work_stealing_awakened_bridgehead"></a>
-  <span class="phrase"><a name="numa_work_stealing_awakened"></a></span>
+  <span><a name="numa_work_stealing_awakened"></a></span>
   <a class="link" href="numa.html#numa_work_stealing_awakened">Member
       function <code class="computeroutput">awakened</code>()</a>
 </h5>
@@ -690,7 +689,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
             Enqueues fiber <code class="computeroutput"><span class="identifier">f</span></code> onto
@@ -706,7 +705,7 @@
       </p>
 <h5>
 <a name="numa_work_stealing_pick_next_bridgehead"></a>
-  <span class="phrase"><a name="numa_work_stealing_pick_next"></a></span>
+  <span><a name="numa_work_stealing_pick_next"></a></span>
   <a class="link" href="numa.html#numa_work_stealing_pick_next">Member
       function <code class="computeroutput">pick_next</code>()</a>
 </h5>
@@ -716,7 +715,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Returns:</span></dt>
 <dd><p>
             the fiber at the head of the ready queue, or <code class="computeroutput"><span class="keyword">nullptr</span></code>
@@ -738,7 +737,7 @@
       </p>
 <h5>
 <a name="numa_work_stealing_has_ready_fibers_bridgehead"></a>
-  <span class="phrase"><a name="numa_work_stealing_has_ready_fibers"></a></span>
+  <span><a name="numa_work_stealing_has_ready_fibers"></a></span>
   <a class="link" href="numa.html#numa_work_stealing_has_ready_fibers">Member
       function <code class="computeroutput">has_ready_fibers</code>()</a>
 </h5>
@@ -748,7 +747,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Returns:</span></dt>
 <dd><p>
             <code class="computeroutput"><span class="keyword">true</span></code> if scheduler has fibers
@@ -764,7 +763,7 @@
       </p>
 <h5>
 <a name="numa_work_stealing_suspend_until_bridgehead"></a>
-  <span class="phrase"><a name="numa_work_stealing_suspend_until"></a></span>
+  <span><a name="numa_work_stealing_suspend_until"></a></span>
   <a class="link" href="numa.html#numa_work_stealing_suspend_until">Member
       function <code class="computeroutput">suspend_until</code>()</a>
 </h5>
@@ -774,7 +773,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
             Informs <code class="computeroutput"><span class="identifier">work_stealing</span></code>
@@ -791,7 +790,7 @@
       </p>
 <h5>
 <a name="numa_work_stealing_notify_bridgehead"></a>
-  <span class="phrase"><a name="numa_work_stealing_notify"></a></span>
+  <span><a name="numa_work_stealing_notify"></a></span>
   <a class="link" href="numa.html#numa_work_stealing_notify">Member
       function <code class="computeroutput">notify</code>()</a>
 </h5>
@@ -801,7 +800,7 @@
 </pre>
 <div class="variablelist">
 <p class="title"><b></b></p>
-<dl class="variablelist">
+<dl>
 <dt><span class="term">Effects:</span></dt>
 <dd><p>
             Wake up a pending call to <a class="link" href="scheduling.html#work_stealing_suspend_until"><code class="computeroutput">work_stealing::suspend_until()</code></a>,
@@ -814,18 +813,21 @@
 </dl>
 </div>
 <div class="footnotes">
-<br><hr style="width:100; text-align:left;margin-left: 0">
-<div id="ftn.fiber.numa.f0" class="footnote"><p><a href="#fiber.numa.f0" class="para"><sup class="para">[8] </sup></a>
+<br><hr width="100" align="left">
+<div class="footnote"><p><sup>[<a name="ftn.fiber.numa.f0" href="#fiber.numa.f0" class="para">8</a>] </sup>
         On x86 the interconnection is implemented by Intel's Quick Path Interconnect
         (QPI) and AMD's HyperTransport.
       </p></div>
 </div>
 </div>
-<div class="copyright-footer">Copyright © 2013 Oliver Kowalke<p>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright &#169; 2013 Oliver Kowalke<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div>
+</div></td>
+</tr></table>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="speculation.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="gpu_computing.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>

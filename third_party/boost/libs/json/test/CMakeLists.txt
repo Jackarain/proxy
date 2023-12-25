@@ -17,16 +17,22 @@ endif()
 
 file(GLOB_RECURSE BOOST_JSON_TESTS_FILES CONFIGURE_DEPENDS Jamfile *.cpp *.hpp)
 list(FILTER BOOST_JSON_TESTS_FILES EXCLUDE REGEX cmake_install_test/.*$)
+list(FILTER BOOST_JSON_TESTS_FILES EXCLUDE REGEX intrusive_macros\.cpp$)
+list(FILTER BOOST_JSON_TESTS_FILES EXCLUDE REGEX limits\.cpp$)
+list(FILTER BOOST_JSON_TESTS_FILES EXCLUDE REGEX no_exceptions\.cpp$)
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "" FILES ${BOOST_JSON_TESTS_FILES})
 add_executable(boost_json-tests ${BOOST_JSON_TESTS_FILES})
 target_include_directories(boost_json-tests PRIVATE .)
 target_link_libraries(boost_json-tests PRIVATE Boost::json)
+target_compile_options(boost_json-tests PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:/bigobj>
+)
 add_test(NAME boost_json-tests COMMAND boost_json-tests)
 add_dependencies(tests boost_json-tests)
 
 
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "" FILES limits.cpp main.cpp unhygenic_macros.cpp)
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "" FILES limits.cpp main.cpp intrusive_macros.cpp)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../src PREFIX "" FILES ../src/src.cpp)
 add_executable(boost_json-limits limits.cpp main.cpp ../src/src.cpp Jamfile)
 boost_json_setup_properties(boost_json-limits)
@@ -40,6 +46,21 @@ target_compile_definitions(boost_json-limits PRIVATE
 
 add_test(NAME boost_json-limits COMMAND boost_json-limits)
 add_dependencies(tests boost_json-limits)
+
+add_executable(boost_json-no_exceptions no_exceptions.cpp main.cpp ../src/src.cpp Jamfile)
+boost_json_setup_properties(boost_json-no_exceptions)
+
+target_compile_definitions(boost_json-no_exceptions PRIVATE
+    BOOST_JSON_NO_LIB=1
+)
+target_compile_options(boost_json-no_exceptions PRIVATE
+    $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-fno-exceptions>
+    $<$<CXX_COMPILER_ID:MSVC>:/wd4530>
+    $<$<CXX_COMPILER_ID:MSVC>:/wd4577>
+)
+
+add_test(NAME boost_json-no_exceptions COMMAND boost_json-no_exceptions)
+add_dependencies(tests boost_json-no_exceptions)
 
 add_executable(boost_json-intrusive-macro-tests intrusive_macros.cpp main.cpp Jamfile)
 boost_json_setup_properties(boost_json-intrusive-macro-tests)

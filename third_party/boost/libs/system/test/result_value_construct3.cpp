@@ -114,5 +114,29 @@ int main()
         BOOST_TEST( !r.has_error() );
     }
 
+    {
+        int x1 = 1;
+
+        using R = result<int&>;
+        R r( R::in_place_value, x1 );
+
+        BOOST_TEST( r.has_value() );
+        BOOST_TEST( !r.has_error() );
+
+        BOOST_TEST_EQ( r.value(), 1 );
+    }
+
+    {
+        int x1 = 1;
+
+        using R = result<int&, int>;
+        R r( R::in_place_value, x1 );
+
+        BOOST_TEST( r.has_value() );
+        BOOST_TEST( !r.has_error() );
+
+        BOOST_TEST_EQ( *r, 1 );
+    }
+
     return boost::report_errors();
 }

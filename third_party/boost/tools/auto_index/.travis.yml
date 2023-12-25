@@ -1,0 +1,56 @@
+# Copyright 2016, 2017 Peter Dimov
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
+
+language: cpp
+
+sudo: false
+
+python: "2.7"
+
+os:
+  - linux
+  - osx
+
+branches:
+  only:
+    - master
+    - develop
+
+env:
+  matrix:
+    - BOGUS_JOB=true
+
+matrix:
+
+  exclude:
+    - env: BOGUS_JOB=true
+
+  include:
+    - os: linux
+      dist: trusty
+      compiler: g++
+      env: TOOLSET=gcc COMPILER=g++
+    - os: osx
+      env: TOOLSET=clang COMPILER=clang++
+      osx_image: xcode9.3
+
+install:
+  - cd ..
+  - git clone -b $TRAVIS_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+  - cd boost-root
+  - git submodule update --init tools/boostdep
+  - cp -r $TRAVIS_BUILD_DIR/* tools/auto_index
+  - python tools/boostdep/depinst/depinst.py ../tools/auto_index
+  - ./bootstrap.sh
+  - ./b2 headers
+
+script:
+  - |-
+    echo "using $TOOLSET : : $COMPILER ;" > ~/user-config.jam
+  - (cd libs/config/test && ../../../b2 config_info_travis_install toolset=$TOOLSET && ./config_info_travis)
+  - (cd tools/auto_index/test && travis_wait 60 ../../../b2 -j3 toolset=$TOOLSET)
+
+notifications:
+  email:
+    on_success: always

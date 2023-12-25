@@ -211,7 +211,7 @@ std::string to_string(const char32_t c)
     return to_string_char_impl(c);
 }
 
-#if defined(BOOST_CLANG) && BOOST_CLANG_VERSION < 120000 && defined(__cplusplus) && __cplusplus >= 202002L
+#if BOOST_WORKAROUND(BOOST_CLANG_VERSION, < 120000) && BOOST_WORKAROUND(__cplusplus, >= 202002L)
 // Avoid warning due to comparison-to-spaceship-rewrite, happening e.g. for string comparison
 // see https://github.com/llvm/llvm-project/issues/43670
 #    define BOOST_LOCALE_SPACESHIP_NULLPTR_WARNING 1

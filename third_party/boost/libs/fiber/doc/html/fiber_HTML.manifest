@@ -8,7 +8,6 @@ fiber/fiber_mgmt/this_fiber.html
 fiber/scheduling.html
 fiber/stack.html
 fiber/stack/valgrind.html
-fiber/stack/sanitizers.html
 fiber/synchronization.html
 fiber/synchronization/mutex_types.html
 fiber/synchronization/conditions.html

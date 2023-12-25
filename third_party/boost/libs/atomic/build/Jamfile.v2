@@ -8,6 +8,7 @@
 #  http://www.boost.org/LICENSE_1_0.txt)
 
 import common ;
+import config : requires ;
 import path ;
 import project ;
 import feature ;
@@ -41,6 +42,10 @@ rule check-synchronization-lib ( properties * )
 
     return $(result) ;
 }
+
+local cxx_requirements = [ requires
+      cxx11_static_assert
+    ] ;
 
 project boost/atomic
     : requirements
@@ -140,8 +145,10 @@ lib boost_atomic
       <include>../src
       <conditional>@select-arch-specific-sources
       <conditional>@select-platform-specific-sources
+      $(cxx_requirements)
     : usage-requirements
       <conditional>@check-synchronization-lib
+      $(cxx_requirements)
    ;
 
 boost-install boost_atomic ;

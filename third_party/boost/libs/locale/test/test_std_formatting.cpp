@@ -189,11 +189,11 @@ void test_main(int /*argc*/, char** /*argv*/)
             test_by_char<wchar_t, wchar_t>(l1, l2);
 
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
-            std::cout << "\tchar16 UTF-16" << std::endl;
+            std::cout << "\tchar16_t" << std::endl;
             test_by_char<char16_t, char16_t>(l1, l2);
 #endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
-            std::cout << "\tchar32 UTF-32" << std::endl;
+            std::cout << "\tchar32_t" << std::endl;
             test_by_char<char32_t, char32_t>(l1, l2);
 #endif
         }

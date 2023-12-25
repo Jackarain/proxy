@@ -157,5 +157,27 @@ int main()
         BOOST_TEST_EQ( r.error(), error_code( EINVAL, generic_category() ) );
     }
 
+    {
+        auto ec = make_error_code( errc::invalid_argument );
+
+        using R = result<int&>;
+        R r( R::in_place_error, ec );
+
+        BOOST_TEST( !r.has_value() );
+        BOOST_TEST( r.has_error() );
+
+        BOOST_TEST_EQ( r.error(), ec );
+    }
+
+    {
+        using R = result<int&>;
+        R r( R::in_place_error, EINVAL, generic_category() );
+
+        BOOST_TEST( !r.has_value() );
+        BOOST_TEST( r.has_error() );
+
+        BOOST_TEST_EQ( r.error(), error_code( EINVAL, generic_category() ) );
+    }
+
     return boost::report_errors();
 }

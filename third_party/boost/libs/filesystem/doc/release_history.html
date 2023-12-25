@@ -39,6 +39,16 @@
     </td>
 </table>
 
+<h2>1.84.0</h2>
+<ul>
+  <li>As was announced in Boost 1.82.0, C++03 is no longer supported. A C++11 or later compiler is required.</li>
+  <li>Fixed that some <code>directory_entry</code> observers taking <code>error_code&amp; ec</code> argument did not clear the error code on successful return. (<a href="https://github.com/boostorg/filesystem/issues/291">#291</a>)</li>
+  <li>On Windows, improved robustness of date and time conversion and added support for dates before January 1, 1970. (<a href="https://github.com/boostorg/filesystem/issues/293">#293</a>)</li>
+  <li>Removed support for Windows CE that was deprecated since Boost.Filesystem 1.79.0.</li>
+  <li>Removed <code>boost/filesystem/string_file.hpp</code> header. The header was deprecated since Boost.Filesystem 1.79.0.</li>
+  <li><b>Deprecated:</b> Support for Windows versions older than Windows 10 is deprecated and will be removed in Boost 1.87.</li>
+</ul>
+
 <h2>1.83.0</h2>
 <ul>
   <li>Added <code>directory_entry::refresh</code> method that updates internal cached file statuses for the directory entry identified by path.</li>

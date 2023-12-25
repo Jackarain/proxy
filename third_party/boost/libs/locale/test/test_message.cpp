@@ -84,6 +84,13 @@ std::wstring same_w(std::wstring s)
     return s;
 }
 
+#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+std::basic_string<char8_t> same_u8(std::basic_string<char8_t> s)
+{
+    return s;
+}
+#endif
+
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
 std::u16string same_u16(std::u16string s)
 {
@@ -99,6 +106,28 @@ std::u32string same_u32(std::u32string s)
 #endif
 
 namespace impl {
+
+template<class T, std::size_t = sizeof(T)>
+std::true_type is_complete_impl(T*);
+std::false_type is_complete_impl(...);
+
+template<class T>
+using has_ctype = decltype(is_complete_impl(std::declval<std::ctype<T>*>()));
+
+template<typename Char, typename... Ts>
+typename std::enable_if<has_ctype<Char>::value, bool>::type stream_translate(std::basic_ostream<Char>& ss, Ts... args)
+{
+    ss << bl::translate(args...);
+    return true;
+}
+
+// Required for char types not fully supported by the standard library
+// e.g.: error: implicit instantiation of undefined template 'std::ctype<char8_t>'
+template<typename Char, typename... Ts>
+typename std::enable_if<!has_ctype<Char>::value, bool>::type stream_translate(std::basic_ostream<Char>&, Ts...)
+{
+    return false; // LCOV_EXCL_LINE
+}
 
 template<typename Char>
 void test_cntranslate(const std::string& sContext,
@@ -129,8 +158,8 @@ void test_cntranslate(const std::string& sContext,
 
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
-        ss << bl::translate(c, s, p, n);
-        TEST_EQ(ss.str(), expected);
+        if(stream_translate(ss, c, s, p, n))
+            TEST_EQ(ss.str(), expected);
 
         // Copyable & movable
         const string_type s2 = ascii_to<Char>("missing Singular");
@@ -178,14 +207,14 @@ void test_cntranslate(const std::string& sContext,
     {
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
-        ss << bl::as::domain(domain) << bl::translate(c, s, p, n);
-        TEST_EQ(ss.str(), expected);
+        if(stream_translate(ss << bl::as::domain(domain), c, s, p, n))
+            TEST_EQ(ss.str(), expected);
     }
     {
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
-        ss << bl::as::domain(domain) << bl::translate(c.c_str(), s.c_str(), p.c_str(), n);
-        TEST_EQ(ss.str(), expected);
+        if(stream_translate(ss << bl::as::domain(domain), c.c_str(), s.c_str(), p.c_str(), n))
+            TEST_EQ(ss.str(), expected);
     }
     // Missing facet -> No translation
     {
@@ -222,8 +251,8 @@ void test_ntranslate(const std::string& sSingular,
 
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
-        ss << bl::translate(s, p, n);
-        TEST_EQ(ss.str(), expected);
+        if(stream_translate(ss, s, p, n))
+            TEST_EQ(ss.str(), expected);
     }
     TEST_EQ(bl::translate(s, p, n).str(l, domain), expected);
     std::locale tmp_locale;
@@ -233,14 +262,14 @@ void test_ntranslate(const std::string& sSingular,
     {
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
-        ss << bl::as::domain(domain) << bl::translate(s, p, n);
-        TEST_EQ(ss.str(), expected);
+        if(stream_translate(ss << bl::as::domain(domain), s, p, n))
+            TEST_EQ(ss.str(), expected);
     }
     {
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
-        ss << bl::as::domain(domain) << bl::translate(s.c_str(), p.c_str(), n);
-        TEST_EQ(ss.str(), expected);
+        if(stream_translate(ss << bl::as::domain(domain), s.c_str(), p.c_str(), n))
+            TEST_EQ(ss.str(), expected);
     }
 }
 
@@ -268,8 +297,8 @@ void test_ctranslate(const std::string& sContext,
 
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
-        ss << bl::translate(c, original);
-        TEST_EQ(ss.str(), expected);
+        if(stream_translate(ss, c, original))
+            TEST_EQ(ss.str(), expected);
     }
     TEST_EQ(bl::translate(c, original).str(l, domain), expected);
     std::locale tmp_locale;
@@ -279,14 +308,14 @@ void test_ctranslate(const std::string& sContext,
     {
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
-        ss << bl::as::domain(domain) << bl::translate(c, original);
-        TEST_EQ(ss.str(), expected);
+        if(stream_translate(ss << bl::as::domain(domain), c, original))
+            TEST_EQ(ss.str(), expected);
     }
     {
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
-        ss << bl::as::domain(domain) << bl::translate(c.c_str(), original.c_str());
-        TEST_EQ(ss.str(), expected);
+        if(stream_translate(ss << bl::as::domain(domain), c.c_str(), original.c_str()))
+            TEST_EQ(ss.str(), expected);
     }
 }
 
@@ -312,8 +341,8 @@ void test_translate(const std::string& sOriginal,
 
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
-        ss << bl::translate(original);
-        TEST_EQ(ss.str(), expected);
+        if(stream_translate(ss, original))
+            TEST_EQ(ss.str(), expected);
     }
     TEST_EQ(bl::translate(original).str(l, domain), expected);
     std::locale tmp_locale;
@@ -323,14 +352,14 @@ void test_translate(const std::string& sOriginal,
     {
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
-        ss << bl::as::domain(domain) << bl::translate(original);
-        TEST_EQ(ss.str(), expected);
+        if(stream_translate(ss << bl::as::domain(domain), original))
+            TEST_EQ(ss.str(), expected);
     }
     {
         std::basic_ostringstream<Char> ss;
         ss.imbue(l);
-        ss << bl::as::domain(domain) << bl::translate(original.c_str());
-        TEST_EQ(ss.str(), expected);
+        if(stream_translate(ss << bl::as::domain(domain), original.c_str()))
+            TEST_EQ(ss.str(), expected);
     }
 }
 } // namespace impl
@@ -343,15 +372,21 @@ void test_cntranslate(const std::string& c,
                       const std::locale& l,
                       const std::string& domain)
 {
+    std::cout << "  char" << std::endl;
     impl::test_cntranslate<char>(c, s, p, n, expected, l, domain);
+    std::cout << "  wchar_t" << std::endl;
     impl::test_cntranslate<wchar_t>(c, s, p, n, expected, l, domain);
+#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+    std::cout << "  char8_t" << std::endl;
+    impl::test_cntranslate<char8_t>(c, s, p, n, expected, l, domain);
+#endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
-    if(backend == "icu" || backend == "std")
-        impl::test_cntranslate<char16_t>(c, s, p, n, expected, l, domain);
+    std::cout << "  char16_t" << std::endl;
+    impl::test_cntranslate<char16_t>(c, s, p, n, expected, l, domain);
 #endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
-    if(backend == "icu" || backend == "std")
-        impl::test_cntranslate<char32_t>(c, s, p, n, expected, l, domain);
+    std::cout << "  char32_t" << std::endl;
+    impl::test_cntranslate<char32_t>(c, s, p, n, expected, l, domain);
 #endif
 }
 
@@ -362,15 +397,21 @@ void test_ntranslate(const std::string& s,
                      const std::locale& l,
                      const std::string& domain)
 {
+    std::cout << "  char" << std::endl;
     impl::test_ntranslate<char>(s, p, n, expected, l, domain);
+    std::cout << "  wchar_t" << std::endl;
     impl::test_ntranslate<wchar_t>(s, p, n, expected, l, domain);
+#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+    std::cout << "  char8_t" << std::endl;
+    impl::test_ntranslate<char8_t>(s, p, n, expected, l, domain);
+#endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
-    if(backend == "icu" || backend == "std")
-        impl::test_ntranslate<char16_t>(s, p, n, expected, l, domain);
+    std::cout << "  char16_t" << std::endl;
+    impl::test_ntranslate<char16_t>(s, p, n, expected, l, domain);
 #endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
-    if(backend == "icu" || backend == "std")
-        impl::test_ntranslate<char32_t>(s, p, n, expected, l, domain);
+    std::cout << "  char32_t" << std::endl;
+    impl::test_ntranslate<char32_t>(s, p, n, expected, l, domain);
 #endif
 }
 
@@ -380,15 +421,21 @@ void test_ctranslate(const std::string& c,
                      const std::locale& l,
                      const std::string& domain)
 {
+    std::cout << "  char" << std::endl;
     impl::test_ctranslate<char>(c, original, expected, l, domain);
+    std::cout << "  wchar_t" << std::endl;
     impl::test_ctranslate<wchar_t>(c, original, expected, l, domain);
+#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+    std::cout << "  char8_t" << std::endl;
+    impl::test_ctranslate<char8_t>(c, original, expected, l, domain);
+#endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
-    if(backend == "icu" || backend == "std")
-        impl::test_ctranslate<char16_t>(c, original, expected, l, domain);
+    std::cout << "  char16_t" << std::endl;
+    impl::test_ctranslate<char16_t>(c, original, expected, l, domain);
 #endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
-    if(backend == "icu" || backend == "std")
-        impl::test_ctranslate<char32_t>(c, original, expected, l, domain);
+    std::cout << "  char32_t" << std::endl;
+    impl::test_ctranslate<char32_t>(c, original, expected, l, domain);
 #endif
 }
 
@@ -397,15 +444,21 @@ void test_translate(const std::string& original,
                     const std::locale& l,
                     const std::string& domain)
 {
+    std::cout << "  char" << std::endl;
     impl::test_translate<char>(original, expected, l, domain);
+    std::cout << "  wchar_t" << std::endl;
     impl::test_translate<wchar_t>(original, expected, l, domain);
+#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+    std::cout << "  char8_t" << std::endl;
+    impl::test_translate<char8_t>(original, expected, l, domain);
+#endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
-    if(backend == "icu" || backend == "std")
-        impl::test_translate<char16_t>(original, expected, l, domain);
+    std::cout << "  char16_t" << std::endl;
+    impl::test_translate<char16_t>(original, expected, l, domain);
 #endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
-    if(backend == "icu" || backend == "std")
-        impl::test_translate<char32_t>(original, expected, l, domain);
+    std::cout << "  char32_t" << std::endl;
+    impl::test_translate<char32_t>(original, expected, l, domain);
 #endif
 }
 
@@ -517,11 +570,13 @@ void test_main(int argc, char** argv)
         TEST_EQ(same_s(bl::translate("hello")), "שלום");
         TEST_EQ(same_w(bl::translate(to<wchar_t>("hello"))), to<wchar_t>("שלום"));
 
+#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+        TEST_EQ(same_u8(bl::translate(to<char8_t>("hello"))), to<char8_t>("שלום"));
+#endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
         if(backend == "icu" || backend == "std")
             TEST_EQ(same_u16(bl::translate(to<char16_t>("hello"))), to<char16_t>("שלום"));
 #endif
-
 #ifdef BOOST_LOCALE_ENABLE_CHAR32_T
         if(backend == "icu" || backend == "std")
             TEST_EQ(same_u32(bl::translate(to<char32_t>("hello"))), to<char32_t>("שלום"));

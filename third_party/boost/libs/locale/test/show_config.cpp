@@ -58,6 +58,20 @@ void check_locales(const std::vector<const char*>& names)
 
 void test_main(int /*argc*/, char** /*argv*/)
 {
+    std::cout << "- char8_t: ";
+#ifdef __cpp_char8_t
+    std::cout << "yes\n";
+#else
+    std::cout << "no\n";
+#endif
+    std::cout << "- std::basic_string<char8_t>: ";
+#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+    std::cout << "yes\n";
+#elif defined(__cpp_lib_char8_t)
+    std::cout << "partial\n";
+#else
+    std::cout << "no\n";
+#endif
     std::cout << "- Backends: ";
 #ifdef BOOST_LOCALE_WITH_ICU
     std::cout << "icu:" << U_ICU_VERSION << " ";

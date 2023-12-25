@@ -1,14 +1,13 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <title>Overview</title>
 <link rel="stylesheet" href="../../../../../doc/src/boostbook.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
-<link rel="home" href="../index.html" title="Chapter 1. Fiber">
-<link rel="up" href="../index.html" title="Chapter 1. Fiber">
-<link rel="prev" href="../index.html" title="Chapter 1. Fiber">
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.2">
+<link rel="home" href="../index.html" title="Chapter&#160;1.&#160;Fiber">
+<link rel="up" href="../index.html" title="Chapter&#160;1.&#160;Fiber">
+<link rel="prev" href="../index.html" title="Chapter&#160;1.&#160;Fiber">
 <link rel="next" href="overview/implementations__fcontext_t__ucontext_t_and_winfiber.html" title="Implementations: fcontext_t, ucontext_t and WinFiber">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -27,7 +26,7 @@
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
 <a name="fiber.overview"></a><a class="link" href="overview.html" title="Overview">Overview</a>
 </h2></div></div></div>
-<div class="toc"><dl class="toc"><dt><span class="section"><a href="overview/implementations__fcontext_t__ucontext_t_and_winfiber.html">Implementations:
+<div class="toc"><dl><dt><span class="section"><a href="overview/implementations__fcontext_t__ucontext_t_and_winfiber.html">Implementations:
       fcontext_t, ucontext_t and WinFiber</a></span></dt></dl></div>
 <p>
       <span class="bold"><strong>Boost.Fiber</strong></span> provides a framework for micro-/userland-threads
@@ -70,7 +69,7 @@
 </pre>
 <h4>
 <a name="fiber.overview.h0"></a>
-      <span class="phrase"><a name="fiber.overview.fibers_and_threads"></a></span><a class="link" href="overview.html#fiber.overview.fibers_and_threads">Fibers
+      <span><a name="fiber.overview.fibers_and_threads"></a></span><a class="link" href="overview.html#fiber.overview.fibers_and_threads">Fibers
       and Threads</a>
     </h4>
 <p>
@@ -116,13 +115,13 @@
 <p>
       A fiber launched on a particular thread continues running on that thread unless
       migrated. It might be unblocked (see <a class="link" href="overview.html#blocking">Blocking</a>
-      below) by some other thread, but that only transitions the fiber from <span class="quote">“<span class="quote">blocked</span>”</span>
-      to <span class="quote">“<span class="quote">ready</span>”</span> on its current thread — it does not cause the fiber to
+      below) by some other thread, but that only transitions the fiber from <span class="quote">&#8220;<span class="quote">blocked</span>&#8221;</span>
+      to <span class="quote">&#8220;<span class="quote">ready</span>&#8221;</span> on its current thread &#8212; it does not cause the fiber to
       resume on the thread that unblocked it.
     </p>
 <a name="thread_local_storage"></a><h4>
 <a name="fiber.overview.h1"></a>
-      <span class="phrase"><a name="fiber.overview.thread_local_storage"></a></span><a class="link" href="overview.html#fiber.overview.thread_local_storage">thread-local
+      <span><a name="fiber.overview.thread_local_storage"></a></span><a class="link" href="overview.html#fiber.overview.thread_local_storage">thread-local
       storage</a>
     </h4>
 <p>
@@ -132,7 +131,7 @@
     </p>
 <a name="cross_thread_sync"></a><h4>
 <a name="fiber.overview.h2"></a>
-      <span class="phrase"><a name="fiber.overview.boost_fibers_no_atomics"></a></span><a class="link" href="overview.html#fiber.overview.boost_fibers_no_atomics">BOOST_FIBERS_NO_ATOMICS</a>
+      <span><a name="fiber.overview.boost_fibers_no_atomics"></a></span><a class="link" href="overview.html#fiber.overview.boost_fibers_no_atomics">BOOST_FIBERS_NO_ATOMICS</a>
     </h4>
 <p>
       The fiber synchronization objects provided by this library will, by default,
@@ -145,7 +144,7 @@
     </p>
 <a name="blocking"></a><h4>
 <a name="fiber.overview.h3"></a>
-      <span class="phrase"><a name="fiber.overview.blocking"></a></span><a class="link" href="overview.html#fiber.overview.blocking">Blocking</a>
+      <span><a name="fiber.overview.blocking"></a></span><a class="link" href="overview.html#fiber.overview.blocking">Blocking</a>
     </h4>
 <p>
       Normally, when this documentation states that a particular fiber <span class="emphasis"><em>blocks</em></span>
@@ -196,11 +195,14 @@
       </p></td></tr>
 </table></div>
 </div>
-<div class="copyright-footer">Copyright © 2013 Oliver Kowalke<p>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright &#169; 2013 Oliver Kowalke<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div>
+</div></td>
+</tr></table>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="../index.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="overview/implementations__fcontext_t__ucontext_t_and_winfiber.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>

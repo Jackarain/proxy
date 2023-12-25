@@ -8,6 +8,9 @@
 /*!
 \page changelog Changelog
 
+- 1.84.0
+    - Breaking changes
+        - `to_title` for the WinAPI backend returns the string unchanged instead of an empty string
 - 1.83.0
     - Breaking changes
         - Bitwise/binary operators (left/right shift, binary and/or/xor/not) are no longer supported in message catalog files matching GNU gettext behavior

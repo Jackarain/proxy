@@ -12,66 +12,8 @@ if(DEFINED BOOST_CI_INSTALL_TEST AND BOOST_CI_INSTALL_TEST)
     find_package(boost_locale REQUIRED)
 else()
     message("Building Boost")
-    add_subdirectory(../.. boostorg/locale)
-    set(deps
-      # Primary dependencies
-      assert
-      config
-      core
-      iterator
-      predef
-      thread
-
-      # Secondary dependencies
-      algorithm
-      align
-      array
-      atomic
-      bind
-      chrono
-      concept_check
-      container
-      container_hash
-      conversion
-      date_time
-      describe
-      detail
-      exception
-      function
-      function_types
-      functional
-      fusion
-      integer
-      intrusive
-      io
-      lexical_cast
-      move
-      mp11
-      mpl
-      numeric/conversion
-      optional
-      preprocessor
-      range
-      ratio
-      rational
-      regex
-      smart_ptr
-      static_assert
-      system
-      throw_exception
-      tokenizer
-      tuple
-      type_traits
-      typeof
-      unordered
-      utility
-      variant2
-      winapi
-    )
-
-    foreach(dep IN LISTS deps)
-      add_subdirectory(../../../${dep} boostorg/${dep})
-    endforeach()
+    set(BOOST_INCLUDE_LIBRARIES locale)
+    add_subdirectory(../../../.. deps/boost EXCLUDE_FROM_ALL)
 endif()
 
 add_executable(main main.cpp)

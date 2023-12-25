@@ -113,6 +113,14 @@ std::basic_string<Char> to(const std::string& utf8)
     return out;
 }
 
+#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+template<>
+std::basic_string<char8_t> to(const std::string& utf8)
+{
+    return std::basic_string<char8_t>(utf8.begin(), utf8.end());
+}
+#endif
+
 /// Convert an ASCII string to the given char type (i.e. copy only)
 template<typename Char, size_t size>
 inline std::basic_string<Char> ascii_to(const char (&str)[size])

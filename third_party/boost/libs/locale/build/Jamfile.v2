@@ -202,12 +202,19 @@ rule configure-full ( properties * : flags-only )
     local result ;
     local flags-result ;
 
+    if ! <boost.locale.iconv> in $(properties:G)
+    {
+        # The system Iconv on Solaris may have bugs, while the GNU Iconv is fine.
+        # So disable it by default if on Solaris.
+        if <target-os>solaris in $(properties)
+        {
+            properties += <boost.locale.iconv>off ;
+        }
+    }
+
     local found-iconv ;
 
-    # The system Iconv on Solaris may have bugs, while the GNU Iconv is fine.
-    # So enable by default only if not on Solaris.
-    if <boost.locale.iconv>on in $(properties)
-      || ( ! <boost.locale.iconv> in $(properties:G) && ! <target-os>solaris in $(properties) )
+    if ! <boost.locale.iconv>off in $(properties)
     {
         # See if iconv is bundled with standard library.
         if [ configure.builds has_iconv : $(properties) : "iconv (libc)" ]
