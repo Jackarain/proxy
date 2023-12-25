@@ -105,10 +105,6 @@ if (WIN32)
 		-DBOOST_USE_WINAPI_VERSION=0x0601
 	)
 
-	if (MSVC)
-		add_compile_options(/utf8)
-	endif()
-
 endif()
 
 ################################################################################
