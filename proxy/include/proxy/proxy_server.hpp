@@ -423,7 +423,6 @@ R"x*x*x(<html>
 		{
 			std::vector<std::string> command_;
 			string_request& request_;
-			request_parser& parser_;
 			std::string target_;
 			std::string target_path_;
 		};
@@ -3106,7 +3105,7 @@ R"x*x*x(<html>
 
 				std::string target = req.target();
 				boost::smatch what;
-				http_context http_ctx{ {}, req, *parser, target, target_path(req.target()) };
+				http_context http_ctx{ {}, req, target, target_path(req.target()) };
 
 				#define BEGIN_HTTP_ROUTE() if (false) {}
 				#define ON_HTTP_ROUTE(exp, func) \
