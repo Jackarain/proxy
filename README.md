@@ -94,6 +94,8 @@ docker build . -t proxy:v1
 | server_listen | 监听的地址以及端口, 格式为 `addr:port`, 支持 `ipv6-only` |
 | reuse_port | 启用 `TCP SO_REUSEPORT` 选项, 这个选项只在 `linux` 平台有效 |
 | happyeyeballs | 启用 `happyeyeballs` 连接算法, 默认为启用 |
+| v4only | 仅使用 ipv4 向目标地址连接, 默认为不启用 |
+| v6only | 仅使用 ipv6 向目标地址连接, 默认为不启用 |
 | transparent | 启用透明代理, 默认禁用, 此选项仅 linux 平台有效 |
 | so_mark | 用于发起向 `proxy_pass` 连接时设置 so_mark 以方便实现代理流量的策略路由, 仅在 transparent 启动时有效. |
 | local_ip | 作为中间级联服务时, 用于向上游服务发起连接时所使用的本地网口 `ip` 地址 |
