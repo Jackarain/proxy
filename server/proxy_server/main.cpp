@@ -61,6 +61,8 @@ bool disable_insecure = true;
 bool disable_logs;
 bool disable_socks = false;
 bool happyeyeballs = true;
+bool connect_v6only = false;
+bool connect_v4only = false;
 bool proxy_pass_ssl = false;
 bool reuse_port = false;
 bool scramble = false;
@@ -123,6 +125,8 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 
 	opt.reuse_port_ = reuse_port;
 	opt.happyeyeballs_ = happyeyeballs;
+	opt.connect_v4_only_ = connect_v4only;
+	opt.connect_v6_only_ = connect_v6only;
 	opt.transparent_ = transparent;
 	if (linux_so_mark > 0 && linux_so_mark <= std::numeric_limits<uint32_t>::max())
 		opt.so_mark_.emplace(linux_so_mark);
@@ -238,6 +242,10 @@ int main(int argc, char** argv)
 
 		("reuse_port", po::value<bool>(&reuse_port)->default_value(false), "Enable TCP SO_REUSEPORT option (available since Linux 3.9).")
 		("happyeyeballs", po::value<bool>(&happyeyeballs)->default_value(true), "Enable Happy Eyeballs algorithm for TCP connections.")
+
+		("v6only", po::value<bool>(&connect_v6only)->default_value(false), "Enable IPv6 only mode for TCP connections.")
+		("v4only", po::value<bool>(&connect_v4only)->default_value(false), "Enable IPv4 only mode for TCP connections.")
+
 		("local_ip", po::value<std::string>(&local_ip), "Specify local IP for client TCP connection to server.")
 
 		("transparent", po::value<bool>(&transparent)->default_value(false), "Enable transparent proxy mode(only linux).")

@@ -297,6 +297,14 @@ R"x*x*x(<html>
 		// 是否启用 Happy Eyeballs 连接算法, 默认为使用.
 		bool happyeyeballs_{ true };
 
+		// 用于指定是否仅使用 ipv4 地址发起连接, 默认为 false, 即同时使用
+		// ipv4 和 ipv6 地址.
+		bool connect_v4_only_{ false };
+
+		// 用于指定是否仅使用 ipv6 地址发起连接, 默认为 false, 即同时使用
+		// ipv4 和 ipv6 地址.
+		bool connect_v6_only_{ false };
+
 		// 是否作为透明代理服务器(仅linux).
 		bool transparent_{ false };
 
@@ -2624,7 +2632,21 @@ R"x*x*x(<html>
 			{
 				for (auto endpoint : targets)
 				{
-					remote_socket.close(ec);
+					ec = boost::asio::error::host_not_found;
+
+					if (m_option.connect_v4_only_)
+					{
+						if (endpoint.endpoint().address().is_v6())
+							continue;
+					}
+					else if (m_option.connect_v6_only_)
+					{
+						if (endpoint.endpoint().address().is_v4())
+							continue;
+					}
+
+					boost::system::error_code ignore_ec;
+					remote_socket.close(ignore_ec);
 
 					if (m_bind_interface)
 					{
@@ -2974,7 +2996,21 @@ R"x*x*x(<html>
 				{
 					for (auto endpoint : targets)
 					{
-						remote_socket.close(ec);
+						ec = boost::asio::error::host_not_found;
+
+						if (m_option.connect_v4_only_)
+						{
+							if (endpoint.endpoint().address().is_v6())
+								continue;
+						}
+						else if (m_option.connect_v6_only_)
+						{
+							if (endpoint.endpoint().address().is_v4())
+								continue;
+						}
+
+						boost::system::error_code ignore_ec;
+						remote_socket.close(ignore_ec);
 
 						if (m_bind_interface)
 						{
