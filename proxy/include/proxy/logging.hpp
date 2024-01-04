@@ -112,6 +112,17 @@
 # endif
 #endif
 
+#if defined(__ANDROID__)
+# if __has_include(<android/log.h>)
+#   include <android/log.h>
+#   if !defined(DISABLE_WRITE_LOGGING) && !defined(ENABLE_ANDROID_LOG)
+#	 define DISABLE_WRITE_LOGGING
+#   endif
+# else
+#  error "android/log.h not found"
+# endif
+#endif
+
 //////////////////////////////////////////////////////////////////////////
 #ifndef LOGGING_DISABLE_COMPRESS_LOGS
 # if defined(__has_include)
@@ -960,6 +971,21 @@ inline void logger_output_systemd__(
 }
 #endif // USE_SYSTEMD_LOGGING
 
+#ifdef __ANDROID__
+inline void logger_output_android__(
+	const int& level, const std::string& message) noexcept
+{
+	if (level == _logger_info_id__)
+		__android_log_print(ANDROID_LOG_INFO, LOG_APPNAME, "%s", message.c_str());
+	else if (level == _logger_debug_id__)
+		__android_log_print(ANDROID_LOG_DEBUG, LOG_APPNAME, "%s", message.c_str());
+	else if (level == _logger_warn_id__)
+		__android_log_print(ANDROID_LOG_WARN, LOG_APPNAME, "%s", message.c_str());
+	else if (level == _logger_error_id__)
+		__android_log_print(ANDROID_LOG_ERROR, LOG_APPNAME, "%s", message.c_str());
+}
+#endif // __ANDROID__
+
 inline const std::string& logger_level_string__(const int& level) noexcept
 {
 	switch (level)
@@ -1033,10 +1059,21 @@ inline void logger_writer__(int64_t time, const int& level,
 #ifndef DISABLE_WRITE_LOGGING
 	logger.write(time, whole.c_str(), whole.size());
 #endif // !DISABLE_WRITE_LOGGING
-	logger_output_console__(disable_cout, level, prefix, tmp);
+
+	// Output to systemd.
 #ifdef USE_SYSTEMD_LOGGING
 	logger_output_systemd__(level, message);
 #endif // USE_SYSTEMD_LOGGING
+
+	// Output to android.
+#ifdef __ANDROID__
+	logger_output_android__(level, message);
+#endif // __ANDROID__
+
+	// Output to console.
+#if !defined(USE_SYSTEMD_LOGGING) && !defined(__ANDROID__)
+	logger_output_console__(disable_cout, level, prefix, tmp);
+#endif
 }
 
 #if defined(_WIN32) || defined(WIN32)
