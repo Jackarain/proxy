@@ -456,4 +456,5 @@ endif()
 ################################################################################
 
 configure_file(proxy.service.in proxy.service)
+install(TARGETS proxy_server RUNTIME DESTINATION bin)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/proxy.service DESTINATION /usr/lib/systemd/system/)
