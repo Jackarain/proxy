@@ -237,6 +237,12 @@ if (NOT MSVC)
 endif(NOT MSVC)
 
 ################################################################################
+# 全局使用静态链接库
+
+set(BUILD_SHARED_LIBS OFF)
+
+################################################################################
+# 使用 system openssl
 
 if (ENABLE_USE_OPENSSL)
 	if (ENABLE_SYSTEM_OPENSSL)
@@ -262,6 +268,7 @@ if (ENABLE_USE_OPENSSL)
 endif()
 
 ################################################################################
+# 使用 wolfssl
 
 if (ENABLE_USE_WOLFSSL)
 
@@ -272,8 +279,6 @@ if (ENABLE_USE_WOLFSSL)
 	set(WOLFSSL_ASIO ON)
 	# OpenSSL_FOUND 设置为 TRUE, 以便在编译 asio 时, 添加 ssl 代码的编译.
 	set(OpenSSL_FOUND TRUE)
-
-	set(BUILD_SHARED_LIBS OFF)
 
 	# 必须定义 BOOST_ASIO_USE_WOLFSSL 以便 asio 使用 wolfssl.
 	add_definitions(-DBOOST_ASIO_USE_WOLFSSL)
@@ -301,6 +306,7 @@ if (ENABLE_USE_WOLFSSL)
 endif()
 
 ################################################################################
+# 使用 boost asio 和 boost beast
 
 if (ENABLE_BUILD_TESTS)
 	set(USE_BOOST_TEST ON)
@@ -308,7 +314,6 @@ endif()
 
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
-set(BUILD_SHARED_LIBS OFF)
 
 #独立编译asio时, 必须要在使用者项目定义, 否则会将
 #定义BOOST_ASIO_HEADER_ONLY, 使用者将会导致符号冲突.
@@ -343,11 +348,13 @@ endif()
 add_subdirectory(third_party/boost EXCLUDE_FROM_ALL)
 
 ################################################################################
+# 使用 Threads
 
 find_package(Threads)
 link_libraries(${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
 
 ################################################################################
+# 使用 tcmalloc/jemalloc
 
 if (ENABLE_TCMALLOC_STATIC)
 	find_package(Tcmalloc)
@@ -358,6 +365,9 @@ if (ENABLE_JEMALLOC_STATIC)
 	find_package(JeMalloc)
 	link_libraries(${JEMALLOC_LIBRARIES})
 endif()
+
+################################################################################
+# 使用 zlib
 
 if (WIN32 OR NOT ENABLE_SYSTEM_ZLIB)
 	add_subdirectory(third_party/zlib EXCLUDE_FROM_ALL)
@@ -372,16 +382,19 @@ else()
 endif()
 
 ################################################################################
+# 使用 fmt
 
 add_subdirectory(third_party/fmt)
 set(FMT_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/fmt/include)
 set(FMT_LIBRARIES fmt)
 
 ################################################################################
+# 添加 proxy 项目
 
 add_subdirectory(proxy)
 
 ################################################################################
+# 添加 include 目录
 
 include_directories(third_party
 	${ZLIB_INCLUDE_DIRS}
@@ -390,6 +403,7 @@ include_directories(third_party
 )
 
 ################################################################################
+# 添加 link 项目
 
 link_libraries(
 	${FMT_LIBRARIES}
@@ -398,6 +412,7 @@ link_libraries(
 )
 
 ################################################################################
+# windows 下的链接库
 
 if (WIN32)
 
@@ -434,6 +449,7 @@ if (ENABLE_LINKE_TO_LIBATOMIC)
 endif()
 
 ################################################################################
+# 设置输出目录
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -445,16 +461,19 @@ if (WIN32)
 endif()
 
 ################################################################################
+# 添加 server 项目
 
 add_subdirectory(server)
 
 ################################################################################
+# 添加 example 项目
 
 if (ENABLE_BUILD_EXAMPLES)
 	add_subdirectory(example)
 endif()
 
 ################################################################################
+# 安装 proxy_server 服务
 
 configure_file(proxy.service.in proxy.service)
 install(TARGETS proxy_server RUNTIME DESTINATION bin)
