@@ -64,7 +64,17 @@
 #include <boost/regex.hpp>
 
 #include <boost/nowide/convert.hpp>
+
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable: 4819)
+#endif
+
 #include <boost/json/src.hpp>
+
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
 
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -658,14 +668,14 @@ R"x*x*x(<html>
 			boost::system::error_code error;
 
 			// 生成要发送的噪声数据.
-			uint16_t noise_length = m_option.noise_length_;
+			int noise_length = m_option.noise_length_;
 
 			if (noise_length < 16 ||
 				(noise_length > std::numeric_limits<uint16_t>::max() / 2))
 				noise_length = nosie_injection_max_len;
 
 			std::vector<uint8_t> noise =
-				generate_noise(noise_length, global_known_proto);
+				generate_noise(static_cast<uint16_t>(noise_length), global_known_proto);
 
 			// 计算数据发送 key.
 			outkey = compute_key(noise);
@@ -3480,11 +3490,11 @@ R"x*x*x(<html>
 					obj["filesize"] = sz;
 					if (hash)
 					{
-						auto hash = co_await
+						auto ret = co_await
 							async_file_hash(unc_path, net_awaitable[ec]);
 						if (ec)
-							hash = "";
-						obj["hash"] = hash;
+							ret = "";
+						obj["hash"] = ret;
 					}
 				}
 

@@ -36,6 +36,10 @@ using namespace proxy;
 
 using server_ptr = std::shared_ptr<proxy_server>;
 
+#ifdef _MSC_VER
+# pragma warning(disable: 4244)
+#endif
+
 
 //////////////////////////////////////////////////////////////////////////
 

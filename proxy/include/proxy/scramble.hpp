@@ -67,7 +67,7 @@ namespace proxy {
 	}
 
 	// 从噪声数据中恢复噪声数据的长度信息.
-	inline uint16_t extract_noise_length(const std::vector<uint8_t>& data)
+	inline int extract_noise_length(const std::vector<uint8_t>& data)
 	{
 		if (data.size() < 16)
 			return -1;
