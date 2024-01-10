@@ -4386,7 +4386,8 @@ R"x*x*x(<html>
 
 			if (::getsockopt(sockfd, protocol, SO_ORIGINAL_DST, (char*)&addr, &addrlen) < 0)
 			{
-				XLOG_WFMT("getsockopt({}, SO_ORIGINAL_DST: {}", (int)sockfd, strerror(errno));
+				XLOG_WFMT("connection id: {}, getsockopt: {}, SO_ORIGINAL_DST: {}",
+					connection_id, (int)sockfd, strerror(errno));
 				co_return false;
 			}
 
