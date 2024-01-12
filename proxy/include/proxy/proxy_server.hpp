@@ -4550,14 +4550,15 @@ R"x*x*x(<html>
 				{
 					for (auto& l : local_info)
 					{
-						if (l.starts_with(region))
+						if (l == region)
 						{
 							allow.emplace(true);
 							break;
 						}
+						allow.emplace(false);
 					}
 
-					if (allow)
+					if (allow && *allow)
 						break;
 				}
 
@@ -4567,14 +4568,15 @@ R"x*x*x(<html>
 					{
 						for (auto& l : local_info)
 						{
-							if (l.starts_with(region))
+							if (l == region)
 							{
 								allow.emplace(false);
 								break;
 							}
+							allow.emplace(true);
 						}
 
-						if (allow)
+						if (allow && !*allow)
 							break;
 					}
 				}
