@@ -28,6 +28,7 @@ namespace fs = std::filesystem;
 #include "proxy/logging.hpp"
 
 #include "proxy/use_awaitable.hpp"
+#include "proxy/ipip.hpp"
 
 #include "main.hpp"
 
@@ -45,6 +46,10 @@ using server_ptr = std::shared_ptr<proxy_server>;
 
 
 std::vector<std::string> auth_users;
+std::vector<std::string> deny_region;
+std::vector<std::string> allow_region;
+
+std::string ipip_db;
 std::string doc_dir;
 std::string log_dir;
 std::string local_ip;
@@ -126,6 +131,10 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.scramble_ = scramble;
 	opt.noise_length_ = noise_length;
 	opt.local_ip_ = local_ip;
+
+	opt.ipip_db_ = ipip_db;
+	opt.deny_regions_ = deny_region;
+	opt.allow_regions_ = allow_region;
 
 	opt.reuse_port_ = reuse_port;
 	opt.happyeyeballs_ = happyeyeballs;
@@ -257,6 +266,9 @@ int main(int argc, char** argv)
 
 		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->default_value(std::vector<std::string>{"jack:1111"}), "List of authorized users(default user: jack:1111) (e.g: user1:passwd1 user2:passwd2).")
 
+		("allow_region", po::value<std::vector<std::string>>(&allow_region)->multitoken(), "Allow region (e.g: 北京|河南|武汉).")
+		("deny_region", po::value<std::vector<std::string>>(&deny_region)->multitoken(), "Deny region (e.g: 广东|上海|山东).")
+
 		("proxy_pass", po::value<std::string>(&proxy_pass)->default_value("")->value_name(""), "Specify next proxy pass (e.g: socks5://user:passwd@ip:port).")
 		("proxy_pass_ssl", po::value<bool>(&proxy_pass_ssl)->default_value(false, "false")->value_name(""), "Enable SSL for the next proxy pass.")
 
@@ -271,6 +283,7 @@ int main(int argc, char** argv)
 		("ssl_ciphers", po::value<std::string>(&ssl_ciphers)->value_name("ssl_ciphers"), "Specify enabled SSL ciphers")
 		("ssl_prefer_server_ciphers", po::value<bool>(&ssl_prefer_server_ciphers)->default_value(false, "false")->value_name(""), "Prefer server ciphers over client ciphers for SSLv3 and TLS protocols.")
 
+		("ipip_db", po::value<std::string>(&ipip_db)->value_name("")->default_value("17monipdb.datx"), "Specify ipip database filename.")
 		("http_doc", po::value<std::string>(&doc_dir)->value_name("doc"), "Specify document root directory for HTTP server.")
 		("autoindex", po::value<bool>(&autoindex)->default_value(false), "Enable directory listing.")
 		("logs_path", po::value<std::string>(&log_dir)->value_name(""), "Specify directory for log files.")

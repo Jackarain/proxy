@@ -91,6 +91,7 @@
 #include "proxy/default_cert.hpp"
 #include "proxy/fileop.hpp"
 #include "proxy/strutil.hpp"
+#include "proxy/ipip.hpp"
 
 #include "proxy/socks_enums.hpp"
 #include "proxy/socks_client.hpp"
@@ -268,6 +269,18 @@ R"x*x*x(<html>
 		// { {"user1", "passwd1"}, {"user2", "passwd2"} };
 		using auth_users = std::tuple<std::string, std::string>;
 		std::vector<auth_users> auth_users_;
+
+		// allow_regions/deny_regions 用于指定允许/拒绝的地区, 例如:
+		// allow_regions_ = { "中国", "香港", "台湾" };
+		// deny_regions_ = { "美国", "日本" };
+		// allow_regions/deny_regions 为空时, 表示不限制地区.
+		// 必须在设置了 ipip 数据库文件后才能生效.
+		std::vector<std::string> allow_regions_;
+		std::vector<std::string> deny_regions_;
+
+		// ipip 数据库文件, 用于指定 ipip 数据库文件, 用于地区限制.
+		// ipip 数据库文件可以从: https://www.ipip.net 下载.
+		std::string ipip_db_;
 
 		// 多层代理, 当前服务器级连下一个服务器, 对于 client 而言是无感的,
 		// 这是当前服务器通过 proxy_pass_ 指定的下一个代理服务器, 为 client
@@ -4072,6 +4085,13 @@ R"x*x*x(<html>
 
 			boost::system::error_code ec;
 
+			if (fs::exists(m_option.ipip_db_, ec))
+			{
+				m_ipip = std::make_unique<ipip_datx>();
+				if (!m_ipip->load(m_option.ipip_db_))
+					m_ipip.reset();
+			}
+
 			m_acceptor.open(endp.protocol(), ec);
 			if (ec)
 			{
@@ -4328,10 +4348,37 @@ R"x*x*x(<html>
 				auto client = endp.address().to_string();
 				client += ":" + std::to_string(endp.port());
 
+				std::vector<std::string> local_info;
+
+				if (m_ipip)
+				{
+					auto [ret, isp] = m_ipip->lookup(endp.address());
+					if (!ret.empty())
+					{
+						for (auto& c : ret)
+							client += " " + c;
+
+						local_info = ret;
+					}
+
+					if (!isp.empty())
+						client += " " + isp;
+				}
+
 				XLOG_DBG << "connection id: "
 					<< connection_id
 					<< ", start client incoming: "
 					<< client;
+
+				if (!region_filter(local_info))
+				{
+					XLOG_WARN << "connection id: "
+						<< connection_id
+						<< ", region filter: "
+						<< client;
+
+					continue;
+				}
 
 				socket.set_option(keep_alive_opt, error);
 
@@ -4490,6 +4537,55 @@ R"x*x*x(<html>
 			}
 		}
 
+		bool region_filter(const std::vector<std::string>& local_info) const noexcept
+		{
+			auto& deny_region = m_option.deny_regions_;
+			auto& allow_region = m_option.allow_regions_;
+
+			std::optional<bool> allow;
+
+			if (m_ipip && (!allow_region.empty() || !deny_region.empty()))
+			{
+				for (auto& region : allow_region)
+				{
+					for (auto& l : local_info)
+					{
+						if (l.starts_with(region))
+						{
+							allow.emplace(true);
+							break;
+						}
+					}
+
+					if (allow)
+						break;
+				}
+
+				if (!allow)
+				{
+					for (auto& region : deny_region)
+					{
+						for (auto& l : local_info)
+						{
+							if (l.starts_with(region))
+							{
+								allow.emplace(false);
+								break;
+							}
+						}
+
+						if (allow)
+							break;
+					}
+				}
+			}
+
+			if (!allow)
+				return true;
+
+			return *allow;
+		}
+
 	private:
 		// m_executor 保存当前 io_context 的 executor.
 		net::any_io_executor m_executor;
@@ -4502,6 +4598,9 @@ R"x*x*x(<html>
 
 		// 当前机器的所有 ip 地址.
 		std::set<net::ip::address> m_local_addrs;
+
+		// ipip 用于获取 ip 地址的地理位置信息.
+		std::unique_ptr<ipip> m_ipip;
 
 		using proxy_session_weak_ptr =
 			std::weak_ptr<proxy_session>;
