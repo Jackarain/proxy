@@ -3190,11 +3190,8 @@ R"x*x*x(<html>
 				continue;
 			}
 
-			if (!keep_alive)
-			{
-				m_local_socket.shutdown(
-					net::socket_base::shutdown_both, ec);
-			}
+			co_await m_local_socket.lowest_layer().async_wait(
+				net::socket_base::wait_read, net_awaitable[ec]);
 
 			co_return;
 		}
