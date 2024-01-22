@@ -1243,6 +1243,11 @@ inline void toggle_logging()
 	global_logging___ = !global_logging___;
 }
 
+inline void toggle_logging(bool logging)
+{
+	global_logging___ = logging;
+}
+
 inline void toggle_write_logging(bool disable)
 {
 	auto_logger_file__& file =
@@ -1364,6 +1369,8 @@ public:
 	inline logger___& operator<<(const std::string& v)
 	{
 #ifdef LOGGING_ENABLE_AUTO_UTF8
+		if (!global_logging___)
+			return *this;
 		if (!logger_aux__::utf8_check_is_valid(v))
 		{
 			auto wres = logger_aux__::string_wide(v);
@@ -1379,10 +1386,14 @@ public:
 	}
 	inline logger___& operator<<(const std::wstring& v)
 	{
+		if (!global_logging___)
+			return *this;
 		return strcat_impl(*logger_aux__::utf16_utf8(v));
 	}
 	inline logger___& operator<<(const std::u16string& v)
 	{
+		if (!global_logging___)
+			return *this;
 		return strcat_impl(*logger_aux__::utf16_utf8(
 			{(const wchar_t*)v.data(), v.size()}));
 	}
@@ -1395,6 +1406,8 @@ public:
 	inline logger___& operator<<(const std::string_view& v)
 	{
 #ifdef LOGGING_ENABLE_AUTO_UTF8
+		if (!global_logging___)
+			return *this;
 		if (!logger_aux__::utf8_check_is_valid(v))
 		{
 			auto wres = logger_aux__::string_wide(v);
@@ -1412,6 +1425,8 @@ public:
 	{
 		std::string_view sv{v.data(), v.length()};
 #ifdef LOGGING_ENABLE_AUTO_UTF8
+		if (!global_logging___)
+			return *this;
 		if (!logger_aux__::utf8_check_is_valid(sv))
 		{
 			auto wres = logger_aux__::string_wide(sv);
@@ -1429,6 +1444,8 @@ public:
 	{
 		std::string_view sv(v);
 #ifdef LOGGING_ENABLE_AUTO_UTF8
+		if (!global_logging___)
+			return *this;
 		if (!logger_aux__::utf8_check_is_valid(sv))
 		{
 			auto wres = logger_aux__::string_wide(sv);
@@ -1444,6 +1461,8 @@ public:
 	}
 	inline logger___& operator<<(const wchar_t* v)
 	{
+		if (!global_logging___)
+			return *this;
 		return strcat_impl(*logger_aux__::utf16_utf8(v));
 	}
 	inline logger___& operator<<(const void *v)
@@ -1704,6 +1723,8 @@ public:
 #endif
 	inline logger___& operator<<(const std::thread::id& id) noexcept
 	{
+		if (!global_logging___)
+			return *this;
 		std::ostringstream oss;
 		oss << id;
 		out_ += oss.str();
