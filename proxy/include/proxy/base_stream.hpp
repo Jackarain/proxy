@@ -48,7 +48,7 @@ namespace util {
 		base_stream(base_stream&&) = default;
 
 		using executor_type = net::any_io_executor;
-		using lowest_layer_type = tcp::socket;
+		using lowest_layer_type = tcp::socket::lowest_layer_type;
 
 		executor_type get_executor()
 		{
@@ -58,10 +58,8 @@ namespace util {
 
 		lowest_layer_type& lowest_layer()
 		{
-			return boost::variant2::visit([&](auto& t) mutable -> tcp::socket&
-				{
-					return static_cast<tcp::socket&>(t.lowest_layer());
-				}, *this);
+			return boost::variant2::visit([&](auto& t) mutable -> lowest_layer_type&
+				{ return t.lowest_layer(); }, *this);
 		}
 
 		template <typename MutableBufferSequence, typename ReadHandler>
