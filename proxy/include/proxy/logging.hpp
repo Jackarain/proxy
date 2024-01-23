@@ -170,8 +170,19 @@ namespace std {
 //
 // User customization function for hook log, function signature:
 //
-// bool logger_writer(logger_tag,
+// bool tag_invoke(logger_tag,
 //   int64_t time, const int& level, const std::string& message);
+//
+// For example:
+//
+// namespace util {
+//   bool tag_invoke(logger_tag,
+//     int64_t time, const int& level, const std::string& message)
+//   {
+//     // do something.
+//     return true;
+//   }
+// }
 //
 
 
