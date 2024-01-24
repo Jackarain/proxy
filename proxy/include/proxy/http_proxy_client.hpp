@@ -56,19 +56,20 @@ namespace proxy {
 	namespace beast = boost::beast;			// from <boost/beast.hpp>
 	namespace http = beast::http;           // from <boost/beast/http.hpp>
 
-	using http_request = http::request<http::string_body>;
-	using http_response = http::response<http::dynamic_body>;
-
 	// Options for the HTTP proxy client
-	struct http_proxy_client_option {
+	struct http_proxy_client_option
+	{
 		std::string target_host;  // Target server host
 		uint16_t target_port;     // Target server port
-		std::string username;    // User authentication - username
-		std::string password;    // User authentication - password
-		bool ssl{ false };       // Use SSL or not
+		std::string username;     // User authentication - username
+		std::string password;     // User authentication - password
+		bool ssl{ false };        // Use SSL or not
 	};
 
 	namespace detail {
+
+		using http_request = http::request<http::string_body>;
+		using http_response = http::response<http::dynamic_body>;
 
 		template <typename Stream>
 		net::awaitable<boost::system::error_code>
@@ -99,9 +100,8 @@ namespace proxy {
 			if (ec)
 				co_return ec;
 
-			http::response_parser<
-				http_response::body_type> p;
-			boost::beast::flat_buffer buffer{ 1024 };
+			http::response_parser<http_response::body_type> p;
+			beast::flat_buffer buffer{ 1024 };
 
 			do {
 				co_await http::async_read_header(
