@@ -25,6 +25,10 @@ namespace proxy {
 
 		virtual bool load(const std::string& filename) = 0;
 
+		// 根据一个IP查询对应地址信息.
+		// 返回值: <地址信息, 运营商>, 其中 std::vector<std::string> 为地址
+		// 信息, 按地区从大到小排列.
+		// 如: ["中国", "北京", "北京", "联通"], "联通" 为运营商.
 		virtual std::tuple<std::vector<std::string>, std::string>
 		lookup(net::ip::address ip) = 0;
 	};
