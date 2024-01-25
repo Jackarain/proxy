@@ -114,11 +114,11 @@ namespace proxy {
 		{
 			template <typename Stream, typename Handler>
 			void operator()(Handler&& handler,
-				Stream* socket, http_proxy_client_option opt) const
+				Stream* socket, const http_proxy_client_option& opt) const
 			{
 				auto executor = net::get_associated_executor(handler);
 				net::co_spawn(executor,
-					[socket, opt = opt, handler = std::move(handler)]
+					[socket, opt, handler = std::move(handler)]
 				() mutable->net::awaitable<void>
 				{
 					auto ec = co_await do_http_proxy_handshake(*socket, opt);
