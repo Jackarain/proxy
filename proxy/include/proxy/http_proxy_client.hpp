@@ -87,12 +87,9 @@ namespace proxy {
 
 			if (!opt.username.empty())
 			{
-				auto userinfo =
-					opt.username + ":" + opt.password;
-				auto result = strutil::base64_encode(userinfo);
-
-				result = "Basic " + result;
-				req.set(http::field::proxy_authorization, result);
+				const auto userinfo = opt.username + ":" + opt.password;
+				req.set(http::field::proxy_authorization,
+					"Basic " + strutil::base64_encode(userinfo));
 			}
 
 			http::serializer<true, http::string_body> sr(req);
