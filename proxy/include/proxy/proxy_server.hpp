@@ -3412,7 +3412,7 @@ R"x*x*x(<html>
 		{
 			return net::async_initiate<CompletionToken,
 				void (boost::system::error_code, std::string)>(
-					[this, p = p]
+					[this, p]
 					(auto&& handler) mutable
 					{
 						auto bound_handler = net::bind_executor(
@@ -3421,7 +3421,7 @@ R"x*x*x(<html>
 						);
 
 						std::thread(
-							[this, p = p, bound_handler = std::move(bound_handler)]() mutable
+							[this, p, bound_handler = std::move(bound_handler)]() mutable
 							{
 								boost::system::error_code ec;
 								auto hash = file_hash(p, ec);
