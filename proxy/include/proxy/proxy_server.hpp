@@ -3415,19 +3415,18 @@ R"x*x*x(<html>
 					[this, p = p]
 					(auto&& handler) mutable
 					{
+						auto bound_handler = net::bind_executor(
+							net::get_associated_executor(handler),
+							std::move(handler)
+						);
+
 						std::thread(
-							[this, p = p, handler = std::move(handler)]() mutable
+							[this, p = p, bound_handler = std::move(bound_handler)]() mutable
 							{
 								boost::system::error_code ec;
 								auto hash = file_hash(p, ec);
 
-								auto ex = net::get_associated_executor(handler);
-
-								net::post(ex,
-								[handler = std::move(handler), ec, hash]() mutable
-								{
-									handler(ec, hash);
-								});
+								bound_handler(ec, hash);
 							}
 						).detach();
 					}, token);
