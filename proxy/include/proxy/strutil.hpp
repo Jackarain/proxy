@@ -664,16 +664,31 @@ namespace strutil
 		return strs;
 	}
 
+	/**
+	 * @brief Checks if the given character is an alphabetic letter.
+	 * @param c - Character to check.
+	 * @return 1 if c is an alphabetic letter, 0 otherwise.
+	 */
 	constexpr int isalpha(const int& c)
 	{
 		return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ? 1 : 0);
 	}
 
+	/**
+	 * @brief Checks if the given character is a digit.
+	 * @param c - Character to check.
+	 * @return 1 if c is a digit, 0 otherwise.
+	 */
 	constexpr int isdigit(const int& c)
 	{
 		return (c >= '0' && c <= '9' ? 1 : 0);
 	}
 
+	/**
+	 * @brief Checks if the given character is an alphanumeric character (letter or digit).
+	 * @param c - Character to check.
+	 * @return 1 if c is an alphanumeric character, 0 otherwise.
+	 */
 	constexpr int isalnum(const int& c)
 	{
 		return (isalpha(c) || isdigit(c));
@@ -760,6 +775,13 @@ namespace strutil
 		return true;
 	}
 
+	/**
+	 * @brief Converts a float to a formatted string with specified width and precision.
+	 * @param v - The float value to convert.
+	 * @param width - The minimum number of characters to be printed.
+	 * @param precision - The number of digits after the decimal point (default is 3).
+	 * @return Formatted string representation of the float.
+	 */
 	static inline std::string to_string(float v, int width, int precision = 3)
 	{
 		char buf[20] = { 0 };
@@ -767,6 +789,12 @@ namespace strutil
 		return std::string(buf);
 	}
 
+	/**
+	 * @brief Converts a float value to a string with appropriate suffix for data size (kB, MB, etc.).
+	 * @param val - The value to convert and suffix.
+	 * @param suffix - Optional suffix to append after the unit (default is nullptr).
+	 * @return String with value and data size suffix.
+	 */
 	static inline std::string add_suffix(float val, char const* suffix = nullptr)
 	{
 		std::string ret;
@@ -789,6 +817,11 @@ namespace strutil
 		return ret;
 	}
 
+	/**
+	 * @brief Checks if the given character is a whitespace character.
+	 * @param c - Character to check.
+	 * @return true if c is a whitespace character, false otherwise.
+	 */
 	static inline bool is_space(const char c)
 	{
 		if (c == ' ' ||
@@ -801,6 +834,11 @@ namespace strutil
 		return false;
 	}
 
+	/**
+	 * @brief Trims whitespace from both ends of a string view.
+	 * @param sv - The string view to trim.
+	 * @return Trimmed string view.
+	 */
 	static inline std::string_view string_trim(std::string_view sv)
 	{
 		const char* b = sv.data();
@@ -824,6 +862,11 @@ namespace strutil
 		return std::string_view(b, e - b);
 	}
 
+	/**
+	 * @brief Trims whitespace from the beginning of a string view.
+	 * @param sv - The string view to trim.
+	 * @return Trimmed string view from the left.
+	 */
 	static inline std::string_view string_trim_left(std::string_view sv)
 	{
 		const char* b = sv.data();
@@ -838,6 +881,11 @@ namespace strutil
 		return std::string_view(b, e - b);
 	}
 
+	/**
+	 * @brief Trims whitespace from the end of a string view.
+	 * @param sv - The string view to trim.
+	 * @return Trimmed string view from the right.
+	 */
 	static inline std::string_view string_trim_right(std::string_view sv)
 	{
 		const char* b = sv.data();
@@ -855,6 +903,13 @@ namespace strutil
 		return std::string_view(b, e - b);
 	}
 
+	/**
+	 * @brief Converts a range of bytes to a hexadecimal string.
+	 * @param it - Start iterator of the byte range.
+	 * @param end - End iterator of the byte range.
+	 * @param prefix - Prefix for the resulting hex string (default is empty).
+	 * @return Hexadecimal string representation of the byte range.
+	 */
 	template <class Iterator>
 	std::string to_hex(Iterator it, Iterator end, std::string const& prefix)
 	{
@@ -874,16 +929,32 @@ namespace strutil
 		return hex;
 	}
 
+	/**
+	 * @brief Converts binary data to a hexadecimal string without prefix.
+	 * @param data - Binary data as a string_view.
+	 * @return Hexadecimal string representation of the data.
+	 */
 	static inline std::string to_hex(std::string_view data)
 	{
 		return to_hex(data.begin(), data.end(), "");
 	}
 
+
+	/**
+	 * @brief Converts binary data to a hexadecimal string with "0x" prefix.
+	 * @param data - Binary data as a string_view.
+	 * @return Hexadecimal string with "0x" prefix.
+	 */
 	static inline std::string to_hex_prefixed(std::string_view data)
 	{
 		return to_hex(data.begin(), data.end(), "0x");
 	}
 
+	/**
+	 * @brief Converts a hexadecimal character to its decimal value.
+	 * @param c - Hexadecimal character to convert.
+	 * @return Decimal value of the hexadecimal character, or -1 if invalid.
+	 */
 	static inline char from_hex_char(char c) noexcept
 	{
 		if (c >= '0' && c <= '9')
@@ -895,6 +966,12 @@ namespace strutil
 		return -1;
 	}
 
+	/**
+	 * @brief Converts a hexadecimal string to its binary representation.
+	 * @param src - Hexadecimal string to convert.
+	 * @param result - Output vector where binary data will be stored.
+	 * @return true if conversion is successful, false otherwise.
+	 */
 	static inline bool from_hexstring(std::string_view src, std::vector<uint8_t>& result)
 	{
 		unsigned s = (src.size() >= 2 && src[0] == '0' && src[1] == 'x') ? 2 : 0;
@@ -924,6 +1001,11 @@ namespace strutil
 		return true;
 	}
 
+	/**
+	 * @brief Checks if the given string is a valid hexadecimal string.
+	 * @param src - String to check.
+	 * @return true if the string is a valid hexadecimal string, false otherwise.
+	 */
 	static inline bool is_hexstring(std::string const& src) noexcept
 	{
 		auto it = src.begin();
@@ -933,12 +1015,22 @@ namespace strutil
 			[](char c) { return from_hex_char(c) != static_cast<char>(-1); });
 	}
 
+	/**
+	 * @brief Converts a vector of bytes to a string.
+	 * @param data - Vector of bytes to convert.
+	 * @return String representation of the byte vector.
+	 */
 	static inline std::string to_string(std::vector<uint8_t> const& data)
 	{
 		return std::string(
 			(char const*)data.data(), (char const*)(data.data() + data.size()));
 	}
 
+	/**
+	 * @brief Converts a boost::posix_time::ptime to a string representation.
+	 * @param t - The ptime instance to convert.
+	 * @return ISO extended string representation of the ptime, or empty string if not a valid date/time.
+	 */
 	static inline std::string to_string(const boost::posix_time::ptime& t)
 	{
 		if (t.is_not_a_date_time())
