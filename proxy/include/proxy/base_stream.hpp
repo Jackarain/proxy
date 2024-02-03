@@ -63,9 +63,7 @@ namespace util {
 		}
 
 		template <typename MutableBufferSequence, typename ReadHandler>
-		BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
-			void(boost::system::error_code, std::size_t))
-			async_read_some(const MutableBufferSequence& buffers,
+		auto async_read_some(const MutableBufferSequence& buffers,
 				ReadHandler&& handler)
 		{
 			return boost::variant2::visit([&, handler = std::move(handler)](auto& t) mutable
@@ -74,9 +72,7 @@ namespace util {
 		}
 
 		template <typename ConstBufferSequence, typename WriteHandler>
-		BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteHandler,
-			void(boost::system::error_code, std::size_t))
-			async_write_some(const ConstBufferSequence& buffers,
+		auto async_write_some(const ConstBufferSequence& buffers,
 				WriteHandler&& handler)
 		{
 			return boost::variant2::visit([&](auto& t) mutable
