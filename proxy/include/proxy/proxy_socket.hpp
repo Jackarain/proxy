@@ -204,18 +204,14 @@ namespace util {
 		}
 
 		template <typename ConnectHandler>
-		BOOST_ASIO_INITFN_RESULT_TYPE(ConnectHandler,
-			void(boost::system::error_code))
-			async_connect(const tcp::endpoint& endpoint, ConnectHandler&& handler)
+		auto async_connect(const tcp::endpoint& endpoint, ConnectHandler&& handler)
 		{
 			return next_layer_.async_connect(endpoint,
 				std::forward<ConnectHandler>(handler));
 		}
 
 		template <typename MutableBufferSequence, typename ReadHandler>
-		BOOST_ASIO_INITFN_RESULT_TYPE(ReadHandler,
-			void(boost::system::error_code, std::size_t))
-			async_read_some(const MutableBufferSequence& buffers, ReadHandler&& handler)
+		auto async_read_some(const MutableBufferSequence& buffers, ReadHandler&& handler)
 		{
 			return net::async_initiate<ReadHandler,
 				void (boost::system::error_code, std::size_t)>(
@@ -223,9 +219,7 @@ namespace util {
 		}
 
 		template <typename ConstBufferSequence, typename WriteHandler>
-		BOOST_ASIO_INITFN_RESULT_TYPE(WriteHandler,
-			void(boost::system::error_code, std::size_t))
-			async_write_some(const ConstBufferSequence& buffers, WriteHandler&& handler)
+		auto async_write_some(const ConstBufferSequence& buffers, WriteHandler&& handler)
 		{
 			return net::async_initiate<WriteHandler,
 				void (boost::system::error_code, std::size_t)>(
@@ -233,9 +227,7 @@ namespace util {
 		}
 
 		template <typename WaitHandler>
-		BOOST_ASIO_INITFN_RESULT_TYPE(WaitHandler,
-			void(boost::system::error_code))
-			async_wait(net::socket_base::wait_type w, WaitHandler&& handler)
+		auto async_wait(net::socket_base::wait_type w, WaitHandler&& handler)
 		{
 			return next_layer_.async_wait(w, std::forward<WaitHandler>(handler));
 		}
@@ -257,7 +249,7 @@ namespace util {
 			}
 
 			template <typename ReadHandler, typename MutableBufferSequence>
-			void operator()(BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
+			void operator()(ReadHandler&& handler,
 				const MutableBufferSequence& buffers) const
 			{
 				// 读取数据后, 调用 unscramble_ 立即解密数据.
@@ -301,7 +293,7 @@ namespace util {
 			}
 
 			template <typename WriteHandler, typename ConstBufferSequence>
-			void operator()(BOOST_ASIO_MOVE_ARG(WriteHandler) handler,
+			void operator()(WriteHandler&& handler,
 				const ConstBufferSequence& buffers) const
 			{
 				// 发送数据前, 立即调用 scramble_ 加密数据.
