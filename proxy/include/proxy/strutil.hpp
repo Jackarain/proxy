@@ -43,6 +43,7 @@ namespace strutil
 	static inline std::string to_string(T value)
 	{
 		std::stringstream ss;
+		ss.imbue(std::locale::classic());
 		ss << value;
 
 		return ss.str();
