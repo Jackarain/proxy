@@ -62,7 +62,7 @@ jobs:
       - checkout
       - run:
           name: Install cmake
-          command: choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
+          command: choco install -y cmake --installargs 'ADD_CMAKE_TO_PATH=System'
       - run:
           name: Build on windows
           command: |
