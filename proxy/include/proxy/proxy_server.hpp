@@ -521,7 +521,7 @@ R"x*x*x(<html>
 
 			XLOG_DBG << "connection id: "
 				<< m_connection_id
-				<< ", destroyed, remainder: "
+				<< ", destroyed, remaining: "
 				<< num;
 		}
 
