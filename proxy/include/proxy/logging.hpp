@@ -17,12 +17,10 @@
 #include <clocale>
 #include <fstream>
 #include <chrono>
-#include <list>
 #include <mutex>
 #include <memory>
 #include <string>
 #include <tuple>
-#include <version>
 #include <thread>
 #include <functional>
 #include <filesystem>
