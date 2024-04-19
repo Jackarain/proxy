@@ -5,10 +5,10 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 // Home at http://www.boost.org/libs/local_function
 
-#include <boost/spirit/home/phoenix/statement/sequence.hpp>
-#include <boost/spirit/home/phoenix/core/reference.hpp>
-#include <boost/spirit/home/phoenix/core/argument.hpp>
-#include <boost/spirit/home/phoenix/operator/arithmetic.hpp>
+#include <boost/phoenix/statement/sequence.hpp>
+#include <boost/phoenix/core/reference.hpp>
+#include <boost/phoenix/core/argument.hpp>
+#include <boost/phoenix/operator/arithmetic.hpp>
 #include <boost/chrono.hpp>
 #include <iostream>
 #include <vector>

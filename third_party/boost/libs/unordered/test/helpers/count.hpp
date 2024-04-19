@@ -1,5 +1,6 @@
 
 // Copyright 2008-2009 Daniel James.
+// Copyright 2024 Braden Ganetsky.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or move at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -7,6 +8,7 @@
 #define BOOST_UNORDERED_TEST_HELPERS_COUNT_HEAD
 
 #include <boost/core/lightweight_test.hpp>
+#include <boost/container_hash/hash.hpp>
 
 namespace test {
   struct object_count
@@ -84,6 +86,114 @@ namespace test {
       return global_object_count.constructions - constructions_;
     }
   };
-}
+
+  struct smf_count
+  {
+    int default_constructions = 0;
+    int copy_constructions = 0;
+    int move_constructions = 0;
+    int copy_assignments = 0;
+    int move_assignments = 0;
+    int destructions = 0;
+
+#if (BOOST_CXX_VERSION < 201402L) || (defined(_MSC_VER) && _MSC_VER < 1910)
+    smf_count() = default;
+
+    smf_count(int default_constructions_, int copy_constructions_,
+      int move_constructions_, int copy_assignments_, int move_assignments_,
+      int destructions_)
+        : default_constructions(default_constructions_),
+          copy_constructions(copy_constructions_),
+          move_constructions(move_constructions_),
+          copy_assignments(copy_assignments_),
+          move_assignments(move_assignments_), destructions(destructions_)
+    {
+    }
+#endif
+
+    void reset() { *this = smf_count(); }
+
+    void default_construct() { ++default_constructions; }
+    void copy_construct() { ++copy_constructions; }
+    void move_construct() { ++move_constructions; }
+    void copy_assign() { ++copy_assignments; }
+    void move_assign() { ++move_assignments; }
+    void destruct() { ++destructions; }
+
+    friend bool operator==(smf_count const& lhs, smf_count const& rhs)
+    {
+      return lhs.default_constructions == rhs.default_constructions &&
+             lhs.copy_constructions == rhs.copy_constructions &&
+             lhs.move_constructions == rhs.move_constructions &&
+             lhs.copy_assignments == rhs.copy_assignments &&
+             lhs.move_assignments == rhs.move_assignments &&
+             lhs.destructions == rhs.destructions;
+    }
+
+    friend std::ostream& operator<<(std::ostream& out, smf_count const& c)
+    {
+      out << "[default_constructions: " << c.default_constructions
+          << ", copy_constructions: " << c.copy_constructions
+          << ", move_constructions: " << c.move_constructions
+          << ", copy_assignments: " << c.copy_assignments
+          << ", move_assignments: " << c.move_assignments
+          << ", destructions: " << c.destructions << "]";
+      return out;
+    }
+  };
+
+  template <class Tag> class smf_counted_object
+  {
+  public:
+    static smf_count count;
+    static void reset_count() { count.reset(); }
+
+    smf_counted_object(int index) : smf_counted_object() { index_ = index; }
+
+    smf_counted_object() : index_(++running_index)
+    {
+      count.default_construct();
+    }
+    smf_counted_object(smf_counted_object const& rhs) : index_(rhs.index_)
+    {
+      count.copy_construct();
+    }
+    smf_counted_object(smf_counted_object&& rhs) noexcept : index_(rhs.index_)
+    {
+      count.move_construct();
+    }
+    smf_counted_object& operator=(smf_counted_object const& rhs)
+    {
+      count.copy_assign();
+      index_ = rhs.index_;
+      return *this;
+    }
+    smf_counted_object& operator=(smf_counted_object&& rhs) noexcept
+    {
+      count.move_assign();
+      index_ = rhs.index_;
+      return *this;
+    }
+    ~smf_counted_object() { count.destruct(); }
+
+    friend bool operator==(
+      smf_counted_object const& lhs, smf_counted_object const& rhs)
+    {
+      return lhs.index_ == rhs.index_;
+    }
+
+    friend std::size_t hash_value(smf_counted_object const& x)
+    {
+      return boost::hash<int>()(x.index_);
+    }
+
+    int index_;
+
+  private:
+    static int running_index;
+  };
+  template <class Tag> smf_count smf_counted_object<Tag>::count = {};
+  template <class Tag> int smf_counted_object<Tag>::running_index = 0;
+} // namespace test
 
 #endif

@@ -1,6 +1,7 @@
 
 // Copyright 2006-2009 Daniel James.
 // Copyright (C) 2022-2023 Christian Mazakas
+// Copyright (C) 2024 Joaquin M Lopez Munoz.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -112,6 +113,7 @@ namespace find_tests {
     typedef typename test::random_values<X>::iterator value_iterator;
     test::random_values<X> v(500, generator);
     X x(v.begin(), v.end());
+    X const& x_const = x;
 
     compatible_hash h;
     compatible_predicate eq;
@@ -119,6 +121,7 @@ namespace find_tests {
     for (value_iterator it = v.begin(), end = v.end(); it != end; ++it) {
       typename X::key_type key = test::get_key<X>(*it);
       BOOST_TEST(x.find(key) == x.find(compatible_key(key), h, eq));
+      BOOST_TEST(x_const.find(key) == x_const.find(compatible_key(key), h, eq));
     }
 
     test::random_values<X> v2(20, generator);
@@ -126,6 +129,7 @@ namespace find_tests {
     for (value_iterator it = v2.begin(), end = v2.end(); it != end; ++it) {
       typename X::key_type key = test::get_key<X>(*it);
       BOOST_TEST(x.find(key) == x.find(compatible_key(key), h, eq));
+      BOOST_TEST(x_const.find(key) == x_const.find(compatible_key(key), h, eq));
     }
   }
 

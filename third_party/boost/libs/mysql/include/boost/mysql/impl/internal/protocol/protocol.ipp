@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -18,9 +18,9 @@
 #include <boost/mysql/string_view.hpp>
 
 #include <boost/mysql/detail/config.hpp>
+#include <boost/mysql/detail/make_string_view.hpp>
 
 #include <boost/mysql/impl/internal/error/server_error_to_string.hpp>
-#include <boost/mysql/impl/internal/make_string_view.hpp>
 #include <boost/mysql/impl/internal/protocol/basic_types.hpp>
 #include <boost/mysql/impl/internal/protocol/binary_serialization.hpp>
 #include <boost/mysql/impl/internal/protocol/capabilities.hpp>
@@ -154,20 +154,30 @@ boost::mysql::error_code boost::mysql::detail::deserialize_ok_packet(
 // Error packets
 boost::mysql::error_code boost::mysql::detail::deserialize_error_packet(
     span<const std::uint8_t> msg,
-    err_view& output
+    err_view& output,
+    bool has_sql_state
 ) noexcept
 {
     struct err_packet
     {
         // int<1>     header     0xFF ERR packet header
         std::uint16_t error_code;
+        // if capabilities & CLIENT_PROTOCOL_41 {  (modeled here as has_sql_state)
         string_fixed<1> sql_state_marker;
         string_fixed<5> sql_state;
+        // }
         string_eof error_message;
     } pack{};
 
     deserialization_context ctx(msg);
-    auto err = deserialize(ctx, pack.error_code, pack.sql_state_marker, pack.sql_state, pack.error_message);
+    auto err = has_sql_state ? deserialize(
+                                   ctx,
+                                   pack.error_code,
+                                   pack.sql_state_marker,
+                                   pack.sql_state,
+                                   pack.error_message
+                               )
+                             : deserialize(ctx, pack.error_code, pack.error_message);
     if (err != deserialize_errc::ok)
         return to_error_code(err);
 
@@ -182,11 +192,12 @@ boost::mysql::error_code boost::mysql::detail::deserialize_error_packet(
 boost::mysql::error_code boost::mysql::detail::process_error_packet(
     span<const std::uint8_t> msg,
     db_flavor flavor,
-    diagnostics& diag
+    diagnostics& diag,
+    bool has_sql_state
 )
 {
     err_view error_packet{};
-    auto err = deserialize_error_packet(msg, error_packet);
+    auto err = deserialize_error_packet(msg, error_packet, has_sql_state);
     if (err)
         return err;
 
@@ -315,7 +326,8 @@ void boost::mysql::detail::reset_connection_command::serialize(span<std::uint8_t
 boost::mysql::error_code boost::mysql::detail::deserialize_ok_response(
     span<const std::uint8_t> message,
     db_flavor flavor,
-    diagnostics& diag
+    diagnostics& diag,
+    bool& backslash_escapes
 )
 {
     // Header
@@ -329,7 +341,11 @@ boost::mysql::error_code boost::mysql::detail::deserialize_ok_response(
     {
         // Verify that the ok_packet is correct
         ok_view ok{};
-        return deserialize_ok_packet(ctx.to_span(), ok);
+        err = deserialize_ok_packet(ctx.to_span(), ok);
+        if (err)
+            return err;
+        backslash_escapes = ok.backslash_escapes();
+        return error_code();
     }
     else if (header == error_packet_header)
     {
@@ -479,12 +495,11 @@ void boost::mysql::detail::execute_stmt_command::serialize(span<std::uint8_t> bu
     serialization_context ctx(buff.data());
     BOOST_ASSERT(buff.size() >= get_size());
 
-    std::uint32_t statement_id = this->statement_id;
     std::uint8_t flags = 0;
     std::uint32_t iteration_count = 1;
     std::uint8_t new_params_bind_flag = 1;
 
-    ::boost::mysql::detail::serialize(ctx, command_id, statement_id, flags, iteration_count);
+    ::boost::mysql::detail::serialize(ctx, command_id, this->statement_id, flags, iteration_count);
 
     // Number of parameters
     auto num_params = params.size();
@@ -569,7 +584,7 @@ boost::mysql::detail::execute_response boost::mysql::detail::deserialize_execute
         // the number of field definitions to expect. Message type is part
         // of this packet, so we must rewind the context
         ctx.rewind(1);
-        int_lenenc num_fields;
+        int_lenenc num_fields{};
         err = to_error_code(deserialize(ctx, num_fields));
         if (err)
             return err;
@@ -856,8 +871,10 @@ boost::mysql::error_code boost::mysql::detail::deserialize_server_hello(
     }
     else if (msg_type == error_packet_header)
     {
-        // We don't know which DB is yet
-        return process_error_packet(ctx.to_span(), db_flavor::mysql, diag);
+        // We don't know which DB is yet. The server has no knowledge of our capabilities
+        // yet, so it will assume we don't support the 4.1 protocol and send an error
+        // packet without SQL state
+        return process_error_packet(ctx.to_span(), db_flavor::mysql, diag, false);
     }
     else if (msg_type != handshake_protocol_version_10)
     {
@@ -1043,7 +1060,7 @@ boost::mysql::detail::handhake_server_response boost::mysql::detail::deserialize
     {
         // We have received an auth switch request. Deserialize it
         auth_switch auth_sw{};
-        auto err = deserialize_auth_switch(ctx.to_span(), auth_sw);
+        err = deserialize_auth_switch(ctx.to_span(), auth_sw);
         if (err)
             return err;
         return auth_sw;
@@ -1053,9 +1070,9 @@ boost::mysql::detail::handhake_server_response boost::mysql::detail::deserialize
         // We have received an auth more data request. Deserialize it.
         // Note that string_eof never fails deserialization (by definition)
         string_eof auth_more_data;
-        auto err = deserialize(ctx, auth_more_data);
-        BOOST_ASSERT(err == deserialize_errc::ok);
-        boost::ignore_unused(err);
+        auto ec = deserialize(ctx, auth_more_data);
+        BOOST_ASSERT(ec == deserialize_errc::ok);
+        boost::ignore_unused(ec);
 
         // If the special value fast_auth_complete_challenge
         // is received as auth data, it means that the auth is complete

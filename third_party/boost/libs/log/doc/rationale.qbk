@@ -95,7 +95,7 @@ Although the library guarantees that log records made in a given thread are alwa
 
 There are few possible ways to cope with the problem:
 
-* Enforce strict serialization of log record being made throughout the application. This solution implies a severe performance impact in multithreaded applications because log records that otherwise could be processed concurrently would have to go serial. Since this controverses one of the [link log.moti main library goals], it was rejected.
+* Enforce strict serialization of log record being made throughout the application. This solution implies a severe performance impact in multithreaded applications because log records that otherwise could be processed concurrently would have to go serial. Since this controverses one of the [link log.intro.moti main library goals], it was rejected.
 * Attempt to maintain log record ordering on the sink level. This solution is more or less viable. On the downside, it would introduce log record buffering, which in turn would compromise logs reliability. In the case of application crash all buffered records would be lost.
 * Bear with the problem and let mis-ordered records appear in log files occasionally. Order log records upon reading the files, if needed.
 

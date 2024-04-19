@@ -37,20 +37,35 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <atomic>
+
 
 /* The definition of this in winnt.h is not ANSI-C compatible. */
 #undef INVALID_FILE_ATTRIBUTES
 #define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
 
 
-typedef struct path_key_entry
+struct path_key_entry
 {
-    OBJECT * path;
-    OBJECT * key;
-    int exists;
-} path_key_entry;
+    std::atomic<OBJECT*> path;
+    std::atomic<OBJECT*> key;
+    std::atomic<bool> exists;
+    inline path_key_entry() : path(nullptr), key(nullptr), exists(false) {}
+    inline ~path_key_entry()
+    {
+        auto path_v = path.load();
+        if (path_v != nullptr) object_free( path_v );
+        auto key_v = key.load();
+        if (key_v != nullptr) object_free( key_v );
+    }
+};
 
-static struct hash * path_key_cache;
+// static struct hash * path_key_cache;
+static b2::core::concurrent_hash<path_key_entry> & path_key_cache()
+{
+    static b2::core::concurrent_hash<path_key_entry> cache("path to key");
+    return cache;
+}
 
 
 /*
@@ -104,9 +119,6 @@ static int canonicWindowsPath( char const * const path, int32_t path_length,
     char const * p;
     int missing_parent;
 
-    /* This is only called via path_key(), which initializes the cache. */
-    assert( path_key_cache );
-
     if ( !path_length )
         return 1;
 
@@ -142,16 +154,12 @@ static int canonicWindowsPath( char const * const path, int32_t path_length,
         char const * const dir = path;
         const int32_t dir_length = int32_t(p - path);
         OBJECT * dir_obj = object_new_range( dir, dir_length );
-        int found;
-        path_key_entry * const result = (path_key_entry *)hash_insert(
-            path_key_cache, dir_obj, &found );
-        if ( !found )
+        auto entry = path_key_cache().get( dir_obj );
+        path_key_entry * result = entry.first;
+        if ( !entry.second )
         {
             result->path = dir_obj;
-            if ( canonicWindowsPath( dir, dir_length, out ) )
-                result->exists = 1;
-            else
-                result->exists = 0;
+            result->exists = canonicWindowsPath( dir, dir_length, out ) != 0;
             result->key = object_new( out->value );
         }
         else
@@ -231,13 +239,10 @@ static void normalize_path( string * path )
 static path_key_entry * path_key( OBJECT * const path,
     int const known_to_be_canonic )
 {
-    path_key_entry * result;
-    int found;
+    auto entry = path_key_cache().get( path );
+    path_key_entry * result = entry.first;
+    bool found = entry.second;
 
-    if ( !path_key_cache )
-        path_key_cache = hashinit( sizeof( path_key_entry ), "path to key" );
-
-    result = (path_key_entry *)hash_insert( path_key_cache, path, &found );
     if ( !found )
     {
         OBJECT * normalized;
@@ -252,9 +257,9 @@ static path_key_entry * path_key( OBJECT * const path,
             normalized_size = buf->size;
             string_free( buf );
         }
-        nresult = (path_key_entry *)hash_insert( path_key_cache, normalized,
-            &found );
-        if ( !found || nresult == result )
+        auto nentry = path_key_cache().get( normalized );
+        nresult = nentry.first;
+        if ( !nentry.second || nresult == result )
         {
             nresult->path = normalized;
             if ( known_to_be_canonic )
@@ -281,7 +286,7 @@ static path_key_entry * path_key( OBJECT * const path,
         {
             result->path = object_copy( path );
             result->key = object_copy( nresult->key );
-            result->exists = nresult->exists;
+            result->exists = nresult->exists.load();
         }
     }
 
@@ -393,21 +398,9 @@ OBJECT * path_as_key( OBJECT * path )
 }
 
 
-static void free_path_key_entry( void * xentry, void * const data )
-{
-    path_key_entry * entry = (path_key_entry *)xentry;
-    if (entry->path) object_free( entry->path );
-    if (entry->key) object_free( entry->key );
-}
-
-
 void path_done( void )
 {
-    if ( path_key_cache )
-    {
-        hashenumerate( path_key_cache, &free_path_key_entry, 0 );
-        hashdone( path_key_cache );
-    }
+    path_key_cache().reset();
 }
 
 #endif // USE_PATHNT

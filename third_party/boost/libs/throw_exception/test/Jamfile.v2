@@ -8,7 +8,7 @@
 
 import testing ;
 
-local gcc-flags = -Wsign-promo -Wconversion -Wsign-conversion -Wshadow ;
+local gcc-flags = -Wsign-promo -Wconversion -Wsign-conversion -Wshadow -Wundef ;
 
 project
     : requirements
@@ -22,7 +22,6 @@ project
         <toolset>gcc:<cxxflags>$(gcc-flags)
         <toolset>clang:<cxxflags>$(gcc-flags)
     ;
-
 
 run throw_exception_test.cpp ;
 run throw_exception_no_exceptions_test.cpp ;
@@ -43,7 +42,7 @@ lib lib3_throw : lib3_throw.cpp : <define>LIB3_SOURCE=1 <link>shared:<define>LIB
 lib lib4_throw : lib4_throw.cpp : <define>LIB4_SOURCE=1 <link>shared:<define>LIB4_DYN_LINK=1 : : <link>shared:<define>LIB4_DYN_LINK=1 ;
 
 run throw_from_library_test.cpp lib1_throw lib2_throw lib3_throw lib4_throw : : : <link>static : throw_from_library_static ;
-run throw_from_library_test.cpp lib1_throw lib2_throw lib3_throw lib4_throw : : : <link>shared : throw_from_library_shared ;
+run throw_from_library_test.cpp lib1_throw lib2_throw lib3_throw lib4_throw : : : <link>shared <target-os>darwin,<undefined-sanitizer>norecover:<build>no : throw_from_library_shared ;
 
 run throw_exception_nx_test.cpp : : : <exception-handling>off ;
 run throw_exception_nx_test2.cpp : : : <exception-handling>off ;

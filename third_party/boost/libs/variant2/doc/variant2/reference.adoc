@@ -157,7 +157,7 @@ template<class R = /*unspecified*/, class F, class... V>
 // visit_by_index (extension)
 
 template<class R = /*unspecified*/, class V, class... F>
-  constexpr /*see below*/ visit_by_index(V&& v, F&&.. f);
+  constexpr /*see below*/ visit_by_index(V&& v, F&&... f);
 
 // monostate
 
@@ -936,7 +936,7 @@ Remarks: :: If `R` is given explicitly, as in `visit<int>`, the return
 
 ```
 template<class R = /*unspecified*/, class V, class... F>
-  constexpr /*see below*/ visit_by_index(V&& v, F&&.. f);
+  constexpr /*see below*/ visit_by_index(V&& v, F&&... f);
 ```
 [none]
 * {blank}

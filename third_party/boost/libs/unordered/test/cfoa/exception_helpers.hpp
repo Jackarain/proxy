@@ -33,7 +33,7 @@ static std::size_t const num_threads =
 
 std::atomic_bool should_throw{false};
 
-constexpr std::uint32_t throw_threshold = 2500;
+constexpr std::uint32_t throw_threshold = 2300;
 constexpr std::uint32_t alloc_throw_threshold = 10;
 
 void enable_exceptions() { should_throw = true; }

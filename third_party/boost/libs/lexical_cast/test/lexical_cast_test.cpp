@@ -4,7 +4,7 @@
 //
 //  Copyright Terje Sletteb and Kevlin Henney, 2005.
 //  Copyright Alexander Nasonov, 2006.
-//  Copyright Antony Polukhin, 2011-2023.
+//  Copyright Antony Polukhin, 2011-2024.
 //
 //  Distributed under the Boost
 //  Software License, Version 1.0. (See accompanying file
@@ -390,19 +390,6 @@ void test_no_whitespace_stripping()
     BOOST_TEST_THROWS(lexical_cast<int>("123 "), bad_lexical_cast);
 }
 
-void test_volatile_types_conversions()
-{
-    volatile int i1 = 100000;
-    BOOST_TEST_EQ("100000", boost::lexical_cast<std::string>(i1));
-
-    volatile const int i2 = 100000;
-    BOOST_TEST_EQ("100000", boost::lexical_cast<std::string>(i2));
-
-    volatile const long int i3 = 1000000;
-    BOOST_TEST_EQ("1000000", boost::lexical_cast<std::string>(i3));
-}
-
-#ifndef BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION
 void test_traits()
 {
     typedef std::basic_string<char, my_traits<char> > my_string;
@@ -411,6 +398,8 @@ void test_traits()
     BOOST_TEST(boost::lexical_cast<char>(s) == s[0]);
     BOOST_TEST(boost::lexical_cast<my_string>(s) == s);
     BOOST_TEST(boost::lexical_cast<my_string>(-1) == "-1");
+    BOOST_TEST(boost::lexical_cast<int>(my_string("42")) == 42);
+    BOOST_TEST(boost::lexical_cast<double>(my_string("1.0")) == 1.0);
 }
 
 void test_wtraits()
@@ -420,9 +409,9 @@ void test_wtraits()
     my_string const s(L"s");
     BOOST_TEST(boost::lexical_cast<wchar_t>(s) == s[0]);
     BOOST_TEST(boost::lexical_cast<my_string>(s) == s);
-    //BOOST_TEST(boost::lexical_cast<my_string>(-1) == L"-1");
-    // Commented out because gcc 3.3 doesn't support this:
-    // basic_ostream<wchar_t, my_traits<wchar_t> > o; o << -1;
+    BOOST_TEST(boost::lexical_cast<my_string>(-1) == L"-1");
+    BOOST_TEST(boost::lexical_cast<int>(my_string(L"42")) == 42);
+    BOOST_TEST(boost::lexical_cast<double>(my_string(L"1.0")) == 1.0);
 }
 
 void test_allocator()
@@ -468,8 +457,6 @@ void test_wallocator()
     BOOST_TEST(boost::lexical_cast<my_string>(std::wstring(L"s")) == s);
 #endif
 }
-
-#endif
 
 
 void test_char_types_conversions()
@@ -590,13 +577,11 @@ int main()
 #endif
     test_bad_lexical_cast();
     test_no_whitespace_stripping();
-    test_volatile_types_conversions();
-#ifndef BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION
+
     test_traits();
     test_wtraits();
     test_allocator();
     test_wallocator();
-#endif
 
     test_char_types_conversions();
     operators_overload_test();

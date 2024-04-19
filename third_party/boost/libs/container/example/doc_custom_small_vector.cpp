@@ -9,7 +9,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //[doc_custom_small_vector
 #include <boost/container/small_vector.hpp>
-#include <boost/static_assert.hpp>
 
 //Make sure assertions are active
 #ifdef NDEBUG

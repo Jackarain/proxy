@@ -696,7 +696,7 @@ local rule should-clean-project ( project )
     # only those files and the targets they depend on will be built and they
     # will be searched for among targets that would have been built had there
     # been no explicitly requested files.
-    local explicitly-requested-files
+    local explicitly-requested-files ;
 
 
     # List of Boost Build meta-targets, virtual-targets and actual Jam targets

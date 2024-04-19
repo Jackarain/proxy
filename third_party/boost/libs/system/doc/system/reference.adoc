@@ -12,13 +12,6 @@ http://www.boost.org/LICENSE_1_0.txt
 # Reference
 :idprefix: ref_
 
-## Use of {cpp}11 and {cpp}14 Features
-
-The library is documented to use several {cpp}11 and {cpp}14 features,
-including `noexcept`, explicit conversion operators and `constexpr`. The
-actual implementation uses {cpp}11 and {cpp}14 features only when they are
-available, and otherwise falls back on {cpp}03 features.
-
 ## Macros
 
 When `BOOST_SYSTEM_ENABLE_DEPRECATED` is defined, the library provides
@@ -2625,6 +2618,58 @@ int get_port()
 }
 ```
 
+#### operator|=
+
+```
+template<class T, class E, class U> result<T, E>& operator|=( result<T, E>& r, U&& u );
+```
+[none]
+* {blank}
++
+If `r` contains an error, assigns a value to it, constructed from `u`.
++
+Effects: ::
+  If `r.has_value()` is `false`, assigns `u` to `r`.
+Returns: ::
+  `r`.
+Remarks: ::
+  Only enabled when `U` is convertible to `T`.
+
+```
+template<class T, class E, class F> result<T, E>& operator|=( result<T, E>& r, F&& f );
+```
+[none]
+* {blank}
++
+If `r` contains an error, assigns `f()` to it.
++
+Effects: ::
+  If `r.has_value()` is `false`, assigns `f()` to `r`.
+Returns: ::
+  `r`.
+Remarks: ::
+  Only enabled when the type of `f()` is either
+  - convertible to `T` or
+  - an instance of `result` convertible to `result<T, E>`.
+Example: ::
++
+```
+result<response> query_impl( std::string_view server, request const& req );
+
+result<response> query( std::vector<std::string_view> const& servers, request const& req )
+{
+    result<response> r = make_error_code( errc::invalid_argument );
+
+    for( auto const& server: servers )
+    {
+        r |= std::bind( query_impl, server, std::ref( req ) );
+    }
+
+    return r;
+}
+```
+
+
 #### operator&
 
 ```
@@ -2661,6 +2706,24 @@ result<double> convert( double amount, currency_type from, currency_type to )
     return get_exchange_rate( from, to ) & [&](double rate){ return rate * amount; };
 }
 ```
+
+```
+template<class E, class F, class U = ...>
+  result<U, E> operator&( result<void, E> const& r, F&& f );
+```
+[none]
+* {blank}
++
+Returns the error in `r`, or if `r` contains a value, replaces it with the result of calling `f`.
++
+Let `U` be the type of `f()`.
++
+Effects: ::
+  - If `r.has_value()` is `true`, returns `f()`.
+  - Otherwise, returns `r.error()`.
+Remarks: ::
+  Only enabled when `U` is not an instance of `result`.
+
 
 ```
 template<class T, class E, class F, class R = ...> R operator&( result<T, E> const& r, F&& f );
@@ -2709,6 +2772,24 @@ int get_port( JsonValue const& config, int def )
     return config.at( "servers" ) & at( 0 ) & at( "port" ) & to_number<int>() | def;
 }
 ```
+
+```
+template<class E, class F, class R = ...> R operator&( result<void, E> const& r, F&& f );
+```
+[none]
+* {blank}
++
+Returns the error in `r`, or if `r` contains a value, another `result` obtained
+by invoking the function `f`.
++
+Let `R` be the type of `f()`.
++
+Effects: ::
+  - If `r.has_value()` is `true`, returns `f()`.
+  - Otherwise, returns `r.error()`.
+Remarks: ::
+  Only enabled when `R` is an instance of `result` and `E` is convertible to `R::error_type`.
+
 
 #### operator&=
 
@@ -2774,6 +2855,22 @@ result<JsonValue const&> at_path( JsonValue const& jv,
     return r;
 }
 ```
+
+```
+template<class E, class F, class R = ...>
+  result<void, E>& operator&=( result<void, E>& r, F&& f );
+```
+[none]
+* {blank}
++
+If `r` contains a value, replaces `r` with the result of invoking the function `f`.
++
+Let `R` be the type of `f()`.
++
+Effects: :: If `r.has_value()` is `true`, assigns `f()` to `r`.
+Returns: :: `r`.
+Remarks: ::
+  Only enabled when `R` is an instance of `result<void, E2>` and `E2` is convertible to `E`.
 
 ## <boost/system.hpp>
 

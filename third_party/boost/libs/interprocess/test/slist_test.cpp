@@ -37,7 +37,7 @@ int main ()
 {
    if(test::list_test<managed_shared_memory, MyList, false>())
       return 1;
-
+   
    if(test::list_test<managed_shared_memory, MyMoveList, false>())
       return 1;
 
@@ -53,5 +53,6 @@ int main ()
    if(!boost::interprocess::test::test_emplace
       < slist<test::EmplaceInt>, Options>())
       return 1;
+   return 0;
 }
 

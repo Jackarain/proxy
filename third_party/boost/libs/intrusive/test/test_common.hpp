@@ -25,15 +25,15 @@ struct key_type_tester
    struct empty_default{};
    typedef typename pack_options< empty_default, KeyOfValueOption >::type::key_of_value key_of_value_t;
 
-   BOOST_STATIC_ASSERT(( boost::intrusive::detail::is_same< KeyOfValueOption
+   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::intrusive::detail::is_same< KeyOfValueOption
                                                           , key_of_value<int_holder_key_of_value<typename Map::value_type> >
                                                           >::value ));
-   BOOST_STATIC_ASSERT(( boost::intrusive::detail::is_same< key_of_value_t
+   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::intrusive::detail::is_same< key_of_value_t
                                                           , int_holder_key_of_value<typename Map::value_type>
                                                           >::value ));
-   BOOST_STATIC_ASSERT(( boost::intrusive::detail::is_same< typename Map::key_type
+   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::intrusive::detail::is_same< typename Map::key_type
                                                           , typename key_of_value_t::type >::value ));
-   BOOST_STATIC_ASSERT(( boost::intrusive::detail::is_same< typename Map::key_of_value
+   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::intrusive::detail::is_same< typename Map::key_of_value
                                                           , key_of_value_t >::value ));
    static const bool value = true;
 };
@@ -41,11 +41,11 @@ struct key_type_tester
 template <class Map>
 struct key_type_tester<void, Map>
 {
-   BOOST_STATIC_ASSERT(( boost::intrusive::detail::is_same< typename Map::key_type
+   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::intrusive::detail::is_same< typename Map::key_type
                                                           , typename Map::value_type
                                                           >::value ));
 
-   BOOST_STATIC_ASSERT(( boost::intrusive::detail::is_same< typename Map::key_of_value
+   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::intrusive::detail::is_same< typename Map::key_of_value
                                                          , boost::intrusive::detail::identity< typename Map::value_type>
                                                          >::value ));
    static const bool value = true;

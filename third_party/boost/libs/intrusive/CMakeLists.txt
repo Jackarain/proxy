@@ -16,7 +16,5 @@ target_link_libraries( boost_intrusive
     INTERFACE
         Boost::assert
         Boost::config
-        Boost::container_hash
         Boost::move
-        Boost::static_assert
 )

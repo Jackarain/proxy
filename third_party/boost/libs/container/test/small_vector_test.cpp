@@ -14,7 +14,6 @@
 #include "default_init_test.hpp"
 #include "../../intrusive/test/iterator_test.hpp"
 
-#include <boost/container/allocator.hpp>
 #include <boost/container/allocator_traits.hpp>
 
 #include <iostream>
@@ -40,7 +39,7 @@ bool test_small_vector_base_test()
    typedef boost::container::small_vector_base<int> smb_t;
    {
       typedef boost::container::small_vector<int, 5> sm5_t;
-      BOOST_STATIC_ASSERT(sm5_t::static_capacity == 5);
+      BOOST_CONTAINER_STATIC_ASSERT(sm5_t::static_capacity == 5);
       sm5_t sm5;
       smb_t &smb = sm5;
       smb.push_back(1);
@@ -51,7 +50,7 @@ bool test_small_vector_base_test()
    }
    {
       typedef boost::container::small_vector<int, 7> sm7_t;
-      BOOST_STATIC_ASSERT(sm7_t::static_capacity == 7);
+      BOOST_CONTAINER_STATIC_ASSERT(sm7_t::static_capacity == 7);
       sm7_t sm7;
       smb_t &smb = sm7;
       smb.push_back(2);

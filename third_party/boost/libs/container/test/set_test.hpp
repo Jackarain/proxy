@@ -641,9 +641,7 @@ int set_test ()
       typename MyBoostSet::iterator bs_e = boostset.end();
       typename MyStdSet::iterator ss_b   = stdset.begin();
 
-      std::size_t i = 0;
       while(bs_b != bs_e){
-         ++i;
          typename MyBoostSet::iterator bs_i;
          typename MyStdSet::iterator ss_i;
          //find

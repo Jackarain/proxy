@@ -442,6 +442,14 @@
     #define OSPLAT "OSPLAT=PARISC"
 #endif
 
+#if defined( __riscv ) || defined( __riscv__ )
+  #if __riscv_xlen == 64
+    #define OSPLAT "OSPLAT=RISCV64"
+  #elif __riscv_xlen == 32
+    #define OSPLAT "OSPLAT=RISCV32"
+  #endif
+#endif
+
 #ifndef OSPLAT
     #define OSPLAT ""
 #endif

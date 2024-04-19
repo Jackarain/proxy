@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <vector>
 #include <cctype>
 
 //[snippet_headers_3
@@ -1528,9 +1529,11 @@ normalizing()
         //[snippet_normalizing_3
         url_view u1("https://www.boost.org/index.html");
         url u2("https://www.boost.org/doc/../index.html");
+        assert(u1.buffer() != u2.buffer());
         assert(u1 == u2);
         u2.normalize();
         assert(u1.buffer() == u2.buffer());
+        assert(u1 == u2);
         //]
     }
 

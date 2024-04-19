@@ -265,6 +265,7 @@ jobs:
           - { toolset: msvc-14.3, cxxstd: '14,17,20,latest', addrmd: '32,64', os: 'windows-2022', variant: 'debug,release' }
           - { toolset: msvc-14.3, cxxstd: '14',              addrmd: '64',    os: 'windows-2022', variant: 'debug', defines: '_ALLOW_RTCc_IN_STL', cxxflags: '/RTCc'              }
           - { toolset: msvc-14.3, cxxstd: '14',              addrmd: '32',    os: 'windows-2022', variant: 'debug', defines: '_ALLOW_RTCc_IN_STL', cxxflags: '"/RTCc /arch:IA32"' }
+          - { toolset: msvc-14.3, cxxstd: '14,17',           addrmd: '32,64', os: 'windows-2022', variant: 'debug,release', cxxflags: '/permissive-' }
           - { toolset: clang-win, cxxstd: '14,17,latest',    addrmd: '32,64', os: 'windows-2022', variant: 'debug,release' }
           - { toolset: gcc,       cxxstd: '11,14,17,2a',     addrmd: '64',    os: 'windows-2019', variant: 'debug,release' }
 

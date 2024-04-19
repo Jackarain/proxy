@@ -9,12 +9,7 @@
 #include <boost/config.hpp>
 #include <boost/config/workaround.hpp>
 
-#if !defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
-
-BOOST_PRAGMA_MESSAGE( "BOOST_SYSTEM_HAS_SYSTEM_ERROR not defined, test will be skipped" )
-int main() {}
-
-#elif defined(BOOST_SYSTEM_AVOID_STD_GENERIC_CATEGORY)
+#if defined(BOOST_SYSTEM_AVOID_STD_GENERIC_CATEGORY)
 
 BOOST_PRAGMA_MESSAGE( "Skipping test, BOOST_SYSTEM_AVOID_STD_GENERIC_CATEGORY is defined" )
 int main() {}

@@ -419,7 +419,7 @@ class generator
 
         if $(result)
         {
-            generators.dout [ indent ] "  SUCCESS: " $(result) ;
+            generators.dout [ indent ] "  SUCCESS:" $(result) ;
         }
         else
         {
@@ -1446,7 +1446,7 @@ rule construct ( project name ? : target-type : property-set * : sources * : top
         {
             generators.dout [ indent ] "    from" $(s) ;
         }
-        generators.dout [ indent ] "    properties:" [ $(property-set).raw ] ;
+        generators.dout [ indent ] "    properties:" [ $(property-set).str ] ;
     }
 
     local result = [ construct-really $(project) $(name) : $(target-type) :

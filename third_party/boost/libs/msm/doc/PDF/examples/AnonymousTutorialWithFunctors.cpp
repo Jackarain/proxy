@@ -10,7 +10,7 @@
 
 #include <iostream>
 // back-end
-#include <boost/msm/back/state_machine.hpp>
+#include <boost/msm/back11/state_machine.hpp>
 //front-end
 #include <boost/msm/front/state_machine_def.hpp>
 // functors
@@ -100,7 +100,7 @@ namespace
             bool operator()(EVT const& evt,FSM& fsm,SourceState& src,TargetState& tgt)
             {
                 std::cout << "always_false" << std::endl;
-                return true;
+                return false;
             }
         };
 
@@ -127,7 +127,7 @@ namespace
         }
     };
     // Pick a back-end
-    typedef msm::back::state_machine<my_machine_> my_machine;
+    typedef msm::back11::state_machine<my_machine_> my_machine;
 
     //
     // Testing utilities.

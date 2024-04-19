@@ -12,9 +12,9 @@
 #define BOOST_URL_DETAIL_IMPL_SEGMENTS_ITER_IMPL_IPP
 
 #include <boost/url/detail/config.hpp>
-#include <boost/url/detail/path.hpp>
+#include "path.hpp"
 #include <boost/url/detail/segments_iter_impl.hpp>
-#include <boost/url/rfc/detail/path_rules.hpp>
+#include "boost/url/rfc/detail/path_rules.hpp"
 #include <boost/assert.hpp>
 
 namespace boost {

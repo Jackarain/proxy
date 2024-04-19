@@ -1,0 +1,72 @@
+# Copyright 2023 Nikita Kniazev
+#
+# Use, modification, and distribution are subject to the
+# Boost Software License, Version 1.0. (See accompanying file LICENSE.txt)
+
+name: "Extra Tests"
+
+on:
+  push:
+    paths-ignore: #&paths
+      - '.circleci/**'
+      - '.cirrus.yml'
+      - '.drone.star'
+      - '.semaphore/**'
+      - '.travis.yml'
+      - 'appveyor.yml'
+      - 'azure-pipelines.yml'
+      - '.ci/azp-*.yml'
+  pull_request:
+    paths-ignore: #*paths #https://github.com/actions/runner/issues/1182
+      - '.circleci/**'
+      - '.cirrus.yml'
+      - '.drone.star'
+      - '.semaphore/**'
+      - '.travis.yml'
+      - 'appveyor.yml'
+      - 'azure-pipelines.yml'
+      - '.ci/azp-*.yml'
+
+concurrency:
+  # cancel test runners on force-push in pull requests
+  group: ${{ github.event_name == 'push' && github.event.forced && github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  msys2:
+    name: Windows msys2 ${{matrix.msys}} ${{matrix.toolset}}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        msys:
+          - mingw64
+          - mingw32
+          - ucrt64
+          - clang64
+        toolset:
+          - clang
+          - gcc
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+
+      - name: Install Toolset
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{matrix.msys}}
+          pacboy: python:p ${{matrix.toolset}}:p
+
+      - name: Bootstrap
+        run: ./bootstrap.sh ${{matrix.toolset}}
+
+      - name: Test
+        working-directory: test
+        env: { PYTHONUTF8: 1 }
+        run: ./test_all.py ${{matrix.toolset}}
+
+      - name: 'No Warnings'
+        run: ./b2 warnings=all warnings-as-errors=on variant=debug,release debug-symbols=off toolset=${{matrix.toolset}} b2

@@ -1,5 +1,5 @@
 # Copyright 2020-2021 Peter Dimov
-# Copyright 2021-2022 Andrey Semashev
+# Copyright 2021-2024 Andrey Semashev
 #
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
@@ -320,7 +320,7 @@ jobs:
             cxxstd: "03,11,14,17,20,2b"
             os: macos-13
 
-    timeout-minutes: 120
+    timeout-minutes: 45
     runs-on: ${{matrix.os}}
     container: ${{matrix.container}}
 
@@ -348,8 +348,6 @@ jobs:
                 fi
             fi
             git config --global pack.threads 0
-
-      - uses: actions/checkout@v3
 
       - name: Install packages
         if: matrix.install
@@ -465,11 +463,25 @@ jobs:
             then
                 DEPINST_ARGS+=("--git_args" "--jobs $GIT_FETCH_JOBS")
             fi
+            mkdir -p snapshot
+            cd snapshot
+            echo "Downloading library snapshot: https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+            curl -L --retry "$NET_RETRY_COUNT" -o "${LIBRARY}-${GITHUB_SHA}.tar.gz" "https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+            tar -xf "${LIBRARY}-${GITHUB_SHA}.tar.gz"
+            if [ ! -d "${LIBRARY}-${GITHUB_SHA}" ]
+            then
+                echo "Library snapshot does not contain the library directory ${LIBRARY}-${GITHUB_SHA}:"
+                ls -la
+                exit 1
+            fi
+            rm -f "${LIBRARY}-${GITHUB_SHA}.tar.gz"
             cd ..
             git clone -b "$BOOST_BRANCH" --depth 1 "https://github.com/boostorg/boost.git" "boost-root"
             cd boost-root
-            mkdir -p libs/$LIBRARY
-            cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
+            mkdir -p libs
+            rm -rf "libs/$LIBRARY"
+            mv -f "../snapshot/${LIBRARY}-${GITHUB_SHA}" "libs/$LIBRARY"
+            rm -rf "../snapshot"
             git submodule update --init tools/boostdep
             DEPINST_ARGS+=("$LIBRARY")
             python tools/boostdep/depinst/depinst.py "${DEPINST_ARGS[@]}"
@@ -488,7 +500,7 @@ jobs:
       - name: Run tests
         if: matrix.cmake_tests == ''
         run: |
-            cd ../boost-root
+            cd boost-root
             B2_ARGS=("-j" "$BUILD_JOBS" "toolset=${{matrix.toolset}}" "cxxstd=${{matrix.cxxstd}}")
             if [ -n "${{matrix.build_variant}}" ]
             then
@@ -547,10 +559,9 @@ jobs:
             os: windows-2019
 
     runs-on: ${{matrix.os}}
+    timeout-minutes: 45
 
     steps:
-      - uses: actions/checkout@v3
-
       - name: Setup Boost
         shell: cmd
         run: |
@@ -564,10 +575,24 @@ jobs:
             set BOOST_BRANCH=develop
             for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
             echo BOOST_BRANCH: %BOOST_BRANCH%
+            mkdir snapshot
+            cd snapshot
+            echo Downloading library snapshot: https://github.com/%GITHUB_REPOSITORY%/archive/%GITHUB_SHA%.zip
+            curl -L --retry %NET_RETRY_COUNT% -o "%LIBRARY%-%GITHUB_SHA%.zip" "https://github.com/%GITHUB_REPOSITORY%/archive/%GITHUB_SHA%.zip"
+            tar -xf "%LIBRARY%-%GITHUB_SHA%.zip"
+            if not exist "%LIBRARY%-%GITHUB_SHA%\" (
+                echo Library snapshot does not contain the library directory %LIBRARY%-%GITHUB_SHA%:
+                dir
+                exit /b 1
+            )
+            del /f "%LIBRARY%-%GITHUB_SHA%.zip"
             cd ..
             git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
             cd boost-root
-            xcopy /s /e /q %GITHUB_WORKSPACE% libs\%LIBRARY%\
+            if not exist "libs\" mkdir libs
+            if exist "libs\%LIBRARY%\" rmdir /s /q "libs\%LIBRARY%"
+            move /Y "..\snapshot\%LIBRARY%-%GITHUB_SHA%" "libs\%LIBRARY%"
+            rmdir /s /q "..\snapshot"
             git submodule update --init tools/boostdep
             python tools/boostdep/depinst/depinst.py --git_args "--jobs %GIT_FETCH_JOBS%" %LIBRARY%
             cmd /c bootstrap
@@ -576,7 +601,7 @@ jobs:
       - name: Run tests
         shell: cmd
         run: |
-            cd ../boost-root
+            cd boost-root
             b2 -j %NUMBER_OF_PROCESSORS% libs/%LIBRARY%/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} address-model=${{matrix.addrmd}} variant=debug,release embed-manifest-via=linker
 
   posix-cmake-subdir:
@@ -591,13 +616,14 @@ jobs:
           - os: macos-13
 
     runs-on: ${{matrix.os}}
+    timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v3
-
       - name: Install packages
         if: matrix.install
-        run: sudo apt install ${{matrix.install}}
+        run: |
+          sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
+          sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT -y ${{join(matrix.install, ' ')}}
 
       - name: Setup Boost
         run: |
@@ -612,16 +638,34 @@ jobs:
           echo REF: $REF
           BOOST_BRANCH=develop && [ "$REF" = "master" ] && BOOST_BRANCH=master || true
           echo BOOST_BRANCH: $BOOST_BRANCH
+          BUILD_JOBS=$((nproc || sysctl -n hw.ncpu) 2> /dev/null)
+          echo "BUILD_JOBS=$BUILD_JOBS" >> $GITHUB_ENV
+          echo "CMAKE_BUILD_PARALLEL_LEVEL=$BUILD_JOBS" >> $GITHUB_ENV
+          mkdir -p snapshot
+          cd snapshot
+          echo "Downloading library snapshot: https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+          curl -L --retry "$NET_RETRY_COUNT" -o "${LIBRARY}-${GITHUB_SHA}.tar.gz" "https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+          tar -xf "${LIBRARY}-${GITHUB_SHA}.tar.gz"
+          if [ ! -d "${LIBRARY}-${GITHUB_SHA}" ]
+          then
+              echo "Library snapshot does not contain the library directory ${LIBRARY}-${GITHUB_SHA}:"
+              ls -la
+              exit 1
+          fi
+          rm -f "${LIBRARY}-${GITHUB_SHA}.tar.gz"
           cd ..
           git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
           cd boost-root
-          cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
+          mkdir -p libs
+          rm -rf "libs/$LIBRARY"
+          mv -f "../snapshot/${LIBRARY}-${GITHUB_SHA}" "libs/$LIBRARY"
+          rm -rf "../snapshot"
           git submodule update --init tools/boostdep
           python tools/boostdep/depinst/depinst.py --git_args "--jobs $GIT_FETCH_JOBS" $LIBRARY
 
       - name: Use library with add_subdirectory
         run: |
-          cd ../boost-root/libs/$LIBRARY/test/cmake_subdir_test
+          cd boost-root/libs/$LIBRARY/test/cmake_subdir_test
           mkdir __build__ && cd __build__
           cmake ..
           cmake --build . -- -j $BUILD_JOBS
@@ -639,13 +683,14 @@ jobs:
           - os: macos-13
 
     runs-on: ${{matrix.os}}
+    timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v3
-
       - name: Install packages
         if: matrix.install
-        run: sudo apt install ${{matrix.install}}
+        run: |
+          sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
+          sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT -y ${{join(matrix.install, ' ')}}
 
       - name: Setup Boost
         run: |
@@ -660,27 +705,45 @@ jobs:
           echo REF: $REF
           BOOST_BRANCH=develop && [ "$REF" = "master" ] && BOOST_BRANCH=master || true
           echo BOOST_BRANCH: $BOOST_BRANCH
+          BUILD_JOBS=$((nproc || sysctl -n hw.ncpu) 2> /dev/null)
+          echo "BUILD_JOBS=$BUILD_JOBS" >> $GITHUB_ENV
+          echo "CMAKE_BUILD_PARALLEL_LEVEL=$BUILD_JOBS" >> $GITHUB_ENV
+          mkdir -p snapshot
+          cd snapshot
+          echo "Downloading library snapshot: https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+          curl -L --retry "$NET_RETRY_COUNT" -o "${LIBRARY}-${GITHUB_SHA}.tar.gz" "https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+          tar -xf "${LIBRARY}-${GITHUB_SHA}.tar.gz"
+          if [ ! -d "${LIBRARY}-${GITHUB_SHA}" ]
+          then
+              echo "Library snapshot does not contain the library directory ${LIBRARY}-${GITHUB_SHA}:"
+              ls -la
+              exit 1
+          fi
+          rm -f "${LIBRARY}-${GITHUB_SHA}.tar.gz"
           cd ..
           git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
           cd boost-root
-          cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
+          mkdir -p libs
+          rm -rf "libs/$LIBRARY"
+          mv -f "../snapshot/${LIBRARY}-${GITHUB_SHA}" "libs/$LIBRARY"
+          rm -rf "../snapshot"
           git submodule update --init tools/boostdep
           python tools/boostdep/depinst/depinst.py --git_args "--jobs $GIT_FETCH_JOBS" $LIBRARY
 
       - name: Configure
         run: |
-          cd ../boost-root
+          cd boost-root
           mkdir __build__ && cd __build__
           cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DCMAKE_INSTALL_PREFIX=~/.local ..
 
       - name: Install
         run: |
-          cd ../boost-root/__build__
+          cd boost-root/__build__
           cmake --build . --target install -- -j $BUILD_JOBS
 
       - name: Use the installed library
         run: |
-          cd ../boost-root/libs/$LIBRARY/test/cmake_install_test && mkdir __build__ && cd __build__
+          cd boost-root/libs/$LIBRARY/test/cmake_install_test && mkdir __build__ && cd __build__
           cmake -DCMAKE_INSTALL_PREFIX=~/.local ..
           cmake --build . -- -j $BUILD_JOBS
           ctest --output-on-failure --no-tests=error
@@ -697,13 +760,18 @@ jobs:
           - os: macos-13
 
     runs-on: ${{matrix.os}}
+    timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v3
-
       - name: Install packages
-        if: matrix.install
-        run: sudo apt install ${{matrix.install}}
+        run: |
+          if [ -f "/etc/debian_version" ]
+          then
+              sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
+              sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT install -y ninja-build ${{join(matrix.install, ' ')}}
+          else
+              brew install ninja ${{join(matrix.install, ' ')}}
+          fi
 
       - name: Setup Boost
         run: |
@@ -718,27 +786,47 @@ jobs:
           echo REF: $REF
           BOOST_BRANCH=develop && [ "$REF" = "master" ] && BOOST_BRANCH=master || true
           echo BOOST_BRANCH: $BOOST_BRANCH
+          BUILD_JOBS=$((nproc || sysctl -n hw.ncpu) 2> /dev/null)
+          echo BUILD_JOBS: $BUILD_JOBS
+          echo "BUILD_JOBS=$BUILD_JOBS" >> $GITHUB_ENV
+          echo "CMAKE_BUILD_PARALLEL_LEVEL=$BUILD_JOBS" >> $GITHUB_ENV
+          mkdir -p snapshot
+          cd snapshot
+          echo "Downloading library snapshot: https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+          curl -L --retry "$NET_RETRY_COUNT" -o "${LIBRARY}-${GITHUB_SHA}.tar.gz" "https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+          tar -xf "${LIBRARY}-${GITHUB_SHA}.tar.gz"
+          if [ ! -d "${LIBRARY}-${GITHUB_SHA}" ]
+          then
+              echo "Library snapshot does not contain the library directory ${LIBRARY}-${GITHUB_SHA}:"
+              ls -la
+              exit 1
+          fi
+          rm -f "${LIBRARY}-${GITHUB_SHA}.tar.gz"
           cd ..
           git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
           cd boost-root
-          cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
+          mkdir -p libs
+          rm -rf "libs/$LIBRARY"
+          mv -f "../snapshot/${LIBRARY}-${GITHUB_SHA}" "libs/$LIBRARY"
+          rm -rf "../snapshot"
           git submodule update --init tools/boostdep
           python tools/boostdep/depinst/depinst.py --git_args "--jobs $GIT_FETCH_JOBS" $LIBRARY
 
       - name: Configure
         run: |
-          cd ../boost-root
+          cd boost-root
           mkdir __build__ && cd __build__
-          cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DBUILD_TESTING=ON ..
+          # Building tests on Mac OS using makefiles sometimes blocks until timeout, if multiple parallel build jobs are used. Use Ninja instead.
+          cmake -G Ninja -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DBUILD_TESTING=ON ..
 
       - name: Build tests
         run: |
-          cd ../boost-root/__build__
+          cd boost-root/__build__
           cmake --build . --target tests -- -j $BUILD_JOBS
 
       - name: Run tests
         run: |
-          cd ../boost-root/__build__
+          cd boost-root/__build__
           ctest --output-on-failure --no-tests=error
 
   windows-cmake-subdir:
@@ -750,10 +838,9 @@ jobs:
           - os: windows-2022
 
     runs-on: ${{matrix.os}}
+    timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v3
-
       - name: Setup Boost
         shell: cmd
         run: |
@@ -767,17 +854,31 @@ jobs:
           set BOOST_BRANCH=develop
           for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
           echo BOOST_BRANCH: %BOOST_BRANCH%
+          mkdir snapshot
+          cd snapshot
+          echo Downloading library snapshot: https://github.com/%GITHUB_REPOSITORY%/archive/%GITHUB_SHA%.zip
+          curl -L --retry %NET_RETRY_COUNT% -o "%LIBRARY%-%GITHUB_SHA%.zip" "https://github.com/%GITHUB_REPOSITORY%/archive/%GITHUB_SHA%.zip"
+          tar -xf "%LIBRARY%-%GITHUB_SHA%.zip"
+          if not exist "%LIBRARY%-%GITHUB_SHA%\" (
+              echo Library snapshot does not contain the library directory %LIBRARY%-%GITHUB_SHA%:
+              dir
+              exit /b 1
+          )
+          del /f "%LIBRARY%-%GITHUB_SHA%.zip"
           cd ..
           git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
           cd boost-root
-          xcopy /s /e /q %GITHUB_WORKSPACE% libs\%LIBRARY%\
+          if not exist "libs\" mkdir libs
+          if exist "libs\%LIBRARY%\" rmdir /s /q "libs\%LIBRARY%"
+          move /Y "..\snapshot\%LIBRARY%-%GITHUB_SHA%" "libs\%LIBRARY%"
+          rmdir /s /q "..\snapshot"
           git submodule update --init tools/boostdep
-          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" %LIBRARY%
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs %GIT_FETCH_JOBS%" %LIBRARY%
 
       - name: Use library with add_subdirectory (Debug)
         shell: cmd
         run: |
-          cd ../boost-root/libs/%LIBRARY%/test/cmake_subdir_test
+          cd boost-root/libs/%LIBRARY%/test/cmake_subdir_test
           mkdir __build__ && cd __build__
           cmake ..
           cmake --build . --config Debug
@@ -786,7 +887,7 @@ jobs:
       - name: Use library with add_subdirectory (Release)
         shell: cmd
         run: |
-          cd ../boost-root/libs/%LIBRARY%/test/cmake_subdir_test/__build__
+          cd boost-root/libs/%LIBRARY%/test/cmake_subdir_test/__build__
           cmake --build . --config Release
           ctest --output-on-failure --no-tests=error -C Release
 
@@ -799,10 +900,9 @@ jobs:
           - os: windows-2022
 
     runs-on: ${{matrix.os}}
+    timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v3
-
       - name: Setup Boost
         shell: cmd
         run: |
@@ -816,36 +916,50 @@ jobs:
           set BOOST_BRANCH=develop
           for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
           echo BOOST_BRANCH: %BOOST_BRANCH%
+          mkdir snapshot
+          cd snapshot
+          echo Downloading library snapshot: https://github.com/%GITHUB_REPOSITORY%/archive/%GITHUB_SHA%.zip
+          curl -L --retry %NET_RETRY_COUNT% -o "%LIBRARY%-%GITHUB_SHA%.zip" "https://github.com/%GITHUB_REPOSITORY%/archive/%GITHUB_SHA%.zip"
+          tar -xf "%LIBRARY%-%GITHUB_SHA%.zip"
+          if not exist "%LIBRARY%-%GITHUB_SHA%\" (
+              echo Library snapshot does not contain the library directory %LIBRARY%-%GITHUB_SHA%:
+              dir
+              exit /b 1
+          )
+          del /f "%LIBRARY%-%GITHUB_SHA%.zip"
           cd ..
           git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
           cd boost-root
-          xcopy /s /e /q %GITHUB_WORKSPACE% libs\%LIBRARY%\
+          if not exist "libs\" mkdir libs
+          if exist "libs\%LIBRARY%\" rmdir /s /q "libs\%LIBRARY%"
+          move /Y "..\snapshot\%LIBRARY%-%GITHUB_SHA%" "libs\%LIBRARY%"
+          rmdir /s /q "..\snapshot"
           git submodule update --init tools/boostdep
-          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" %LIBRARY%
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs %GIT_FETCH_JOBS%" %LIBRARY%
 
       - name: Configure
         shell: cmd
         run: |
-          cd ../boost-root
+          cd boost-root
           mkdir __build__ && cd __build__
           cmake -DBOOST_INCLUDE_LIBRARIES=%LIBRARY% -DCMAKE_INSTALL_PREFIX=C:/cmake-prefix ..
 
       - name: Install (Debug)
         shell: cmd
         run: |
-          cd ../boost-root/__build__
+          cd boost-root/__build__
           cmake --build . --target install --config Debug
 
       - name: Install (Release)
         shell: cmd
         run: |
-          cd ../boost-root/__build__
+          cd boost-root/__build__
           cmake --build . --target install --config Release
 
       - name: Use the installed library (Debug)
         shell: cmd
         run: |
-          cd ../boost-root/libs/%LIBRARY%/test/cmake_install_test && mkdir __build__ && cd __build__
+          cd boost-root/libs/%LIBRARY%/test/cmake_install_test && mkdir __build__ && cd __build__
           cmake -DCMAKE_INSTALL_PREFIX=C:/cmake-prefix ..
           cmake --build . --config Debug
           ctest --output-on-failure --no-tests=error -C Debug
@@ -853,7 +967,7 @@ jobs:
       - name: Use the installed library (Release)
         shell: cmd
         run: |
-          cd ../boost-root/libs/%LIBRARY%/test/cmake_install_test/__build__
+          cd boost-root/libs/%LIBRARY%/test/cmake_install_test/__build__
           cmake --build . --config Release
           ctest --output-on-failure --no-tests=error -C Release
 
@@ -866,10 +980,9 @@ jobs:
           - os: windows-2022
 
     runs-on: ${{matrix.os}}
+    timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v3
-
       - name: Setup Boost
         shell: cmd
         run: |
@@ -883,40 +996,54 @@ jobs:
           set BOOST_BRANCH=develop
           for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
           echo BOOST_BRANCH: %BOOST_BRANCH%
+          mkdir snapshot
+          cd snapshot
+          echo Downloading library snapshot: https://github.com/%GITHUB_REPOSITORY%/archive/%GITHUB_SHA%.zip
+          curl -L --retry %NET_RETRY_COUNT% -o "%LIBRARY%-%GITHUB_SHA%.zip" "https://github.com/%GITHUB_REPOSITORY%/archive/%GITHUB_SHA%.zip"
+          tar -xf "%LIBRARY%-%GITHUB_SHA%.zip"
+          if not exist "%LIBRARY%-%GITHUB_SHA%\" (
+              echo Library snapshot does not contain the library directory %LIBRARY%-%GITHUB_SHA%:
+              dir
+              exit /b 1
+          )
+          del /f "%LIBRARY%-%GITHUB_SHA%.zip"
           cd ..
           git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
           cd boost-root
-          xcopy /s /e /q %GITHUB_WORKSPACE% libs\%LIBRARY%\
+          if not exist "libs\" mkdir libs
+          if exist "libs\%LIBRARY%\" rmdir /s /q "libs\%LIBRARY%"
+          move /Y "..\snapshot\%LIBRARY%-%GITHUB_SHA%" "libs\%LIBRARY%"
+          rmdir /s /q "..\snapshot"
           git submodule update --init tools/boostdep
-          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" %LIBRARY%
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs %GIT_FETCH_JOBS%" %LIBRARY%
 
       - name: Configure
         shell: cmd
         run: |
-          cd ../boost-root
+          cd boost-root
           mkdir __build__ && cd __build__
           cmake -DBOOST_INCLUDE_LIBRARIES=%LIBRARY% -DBUILD_TESTING=ON ..
 
       - name: Build tests (Debug)
         shell: cmd
         run: |
-          cd ../boost-root/__build__
+          cd boost-root/__build__
           cmake --build . --target tests --config Debug
 
       - name: Run tests (Debug)
         shell: cmd
         run: |
-          cd ../boost-root/__build__
+          cd boost-root/__build__
           ctest --output-on-failure --no-tests=error -C Debug
 
       - name: Build tests (Release)
         shell: cmd
         run: |
-          cd ../boost-root/__build__
+          cd boost-root/__build__
           cmake --build . --target tests --config Release
 
       - name: Run tests (Release)
         shell: cmd
         run: |
-          cd ../boost-root/__build__
+          cd boost-root/__build__
           ctest --output-on-failure --no-tests=error -C Release

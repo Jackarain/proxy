@@ -4,6 +4,18 @@
 
 #include <boost/core/detail/string_view.hpp>
 #include <boost/core/lightweight_test.hpp>
+#include <boost/config.hpp>
+
+#if !defined(BOOST_NO_CXX17_HDR_MEMORY_RESOURCE)
+# if defined(__apple_build_version__)
+// Under macOS, it's possible for the header
+// <memory_resource> to be present, but for
+// libc++.dylib to not have support for it.
+// https://github.com/boostorg/core/issues/162
+#  define BOOST_NO_CXX17_HDR_MEMORY_RESOURCE
+# endif
+#endif
+
 #include <string>
 #if !defined(BOOST_NO_CXX17_HDR_STRING_VIEW)
 # include <string_view>

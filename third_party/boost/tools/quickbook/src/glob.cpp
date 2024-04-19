@@ -184,7 +184,7 @@ namespace quickbook
             switch (*pattern_it) {
             case '*':
                 assert(false);
-                throw new glob_error("Internal error");
+                throw glob_error("Internal error");
             case '[':
                 if (!match_range(pattern_it, pattern_end, *filename_it))
                     return false;

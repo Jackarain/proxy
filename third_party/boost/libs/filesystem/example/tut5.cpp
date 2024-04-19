@@ -47,10 +47,10 @@ int main()
         fs::ofstream f(wide_string);
     }
     {
-        fs::ofstream f(narrow_list);
+        fs::ofstream f(fs::path(narrow_list.begin(), narrow_list.end()));
     }
     {
-        fs::ofstream f(wide_list);
+        fs::ofstream f(fs::path(wide_list.begin(), wide_list.end()));
     }
     narrow_list.pop_back();
     narrow_list.push_back('4');

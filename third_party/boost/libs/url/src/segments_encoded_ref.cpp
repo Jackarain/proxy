@@ -14,7 +14,7 @@
 #include <boost/url/detail/config.hpp>
 #include <boost/url/segments_encoded_ref.hpp>
 #include <boost/url/url.hpp>
-#include <boost/url/detail/path.hpp>
+#include "detail/path.hpp"
 
 namespace boost {
 namespace urls {

@@ -1,12 +1,12 @@
 <html>
 
 <head>
-<meta http-equiv="Content-Language" content="en-us">
-<meta name="GENERATOR" content="Microsoft FrontPage 5.0">
-<meta name="ProgId" content="FrontPage.Editor.Document">
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="Content-Language" content="en-us"/>
+<meta name="GENERATOR" content="Microsoft FrontPage 5.0"/>
+<meta name="ProgId" content="FrontPage.Editor.Document"/>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <title>Filesystem Home</title>
-<link href="styles.css" rel="stylesheet">
+<link href="styles.css" rel="stylesheet"/>
 </head>
 
 <body>
@@ -17,9 +17,9 @@
     <td width="277">
 <a href="../../../index.htm">
 <img src="../../../boost.png" alt="boost.png (6897 bytes)" align="middle"
- width="300" height="86" border="0"></a></td>
+ width="300" height="86" border="0"/></a></td>
     <td align="middle">
-    <font size="7">Filesystem Library<br>
+    <font size="7">Filesystem Library<br/>
     Version 4</font>
     </td>
   </tr>
@@ -40,6 +40,7 @@
     <a href="deprecated.html">Deprecated</a> &nbsp;&nbsp;
     <a href="issue_reporting.html">Bug Reports</a>&nbsp;&nbsp;
     </td>
+  </tr>
 </table>
 <p></p>
 <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse"
@@ -50,18 +51,18 @@
   </tr>
   <tr>
     <td width="100%" bgcolor="#E8F5FF">
-    <a href="#Introduction">Introduction</a><br>
-    <a href="#Documentation">Documentation</a><br>
-    <a href="#Using">Using the library</a><br>
-    <a href="#Coding-guidelines">Coding guidelines</a><br>
-    <a href="#Cautions">Cautions</a><br>
-    <a href="#Headers">Headers</a><br>
-    <a href="#Examples">Example programs</a><br>
-    <a href="#Implementation">Implementation</a><br>
-    <a href="#Macros">Macros</a><br>
-    <a href="#Building">Building the object-library</a><br>
-    <a href="#Cgywin">Notes for Cygwin users</a><br>
-    <a href="#Change-history">Version history<br>
+    <a href="#Introduction">Introduction</a><br/>
+    <a href="#Documentation">Documentation</a><br/>
+    <a href="#Using">Using the library</a><br/>
+    <a href="#Coding-guidelines">Coding guidelines</a><br/>
+    <a href="#Cautions">Cautions</a><br/>
+    <a href="#Headers">Headers</a><br/>
+    <a href="#Examples">Example programs</a><br/>
+    <a href="#Implementation">Implementation</a><br/>
+    <a href="#Macros">Macros</a><br/>
+    <a href="#Building">Building the object-library</a><br/>
+    <a href="#Cygwin">Notes for Cygwin users</a><br/>
+    <a href="#Change-history">Version history<br/>
 &nbsp; with acknowledgements</a></td>
   </tr>
   </table>
@@ -87,7 +88,7 @@ throwing exceptions.</p>
   </blockquote>
 </blockquote>
 <ul>
-  <li><b>Portability between operating systems.</b><br>
+  <li><b>Portability between operating systems.</b><br/>
 &nbsp;<ul>
     <li>At the C++ syntax level, it is convenient to learn and use one interface
     regardless of the operating system.</li>
@@ -95,24 +96,24 @@ throwing exceptions.</p>
     operating systems.</li>
     <li>Dual generic or native path format support encourages program
     portability, yet still allows communication with users in system specific
-    formats.<br>
+    formats.<br/>
 &nbsp;</li>
   </ul>
   </li>
   <li><b>Error handling and reporting via C++ exceptions (the default) or error
-  codes.</b><br>
+  codes.</b><br/>
 &nbsp;<ul>
     <li>C++ exceptions are the preferred error reporting mechanism for most
     applications. The exception thrown includes the detailed error code
     information important for diagnosing the exact cause of file system errors.</li>
     <li>Error reporting via error code allows user code that provides detailed
     error recovery to avoid becoming so littered with try-catch blocks as to be
-    unmaintainable. <br>
+    unmaintainable. <br/>
 &nbsp;</li>
   </ul>
   </li>
   <li><b>Suitable for a broad spectrum of applications, ranging from simple
-  script-like operations to extremely complex production code.</b><br>
+  script-like operations to extremely complex production code.</b><br/>
 &nbsp;<ul>
     <li>At the simple script-like end of the spectrum, the intent is not to
     compete with Python, Perl, or shell languages, but rather to provide
@@ -120,15 +121,15 @@ throwing exceptions.</p>
     <li dir="ltr">
     <p dir="ltr">Finer grained control over operations and error handling is available to
     support more complex applications or other cases where throwing exceptions
-    isn't desired.<br>
-&nbsp;</li>
+    isn't desired.<br/>
+&nbsp;</p></li>
   </ul>
   </li>
   <li>
   <p dir="ltr"><b>Forms the basis for
   <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4100.pdf">
   ISO/IEC TS 18822</a>, the C++ standard library Filesystem Technical
-  Specification.</b></li>
+  Specification.</b></p></li>
 </ul>
 
 <h2><a name="Documentation">Documentation</a></h2>
@@ -190,11 +191,11 @@ example of the difficulties this can cause, note that the following asserts
 may fail:</p>
 <blockquote>
 <p><code>assert( exists( &quot;foo&quot; ) == exists( &quot;foo&quot; ) );&nbsp; //
-(1)<br>
-<br>
-remove_all( &quot;foo&quot; );<br>
-assert( !exists( &quot;foo&quot; ) );&nbsp; // (2)<br>
-<br>
+(1)<br/>
+<br/>
+remove_all( &quot;foo&quot; );<br/>
+assert( !exists( &quot;foo&quot; ) );&nbsp; // (2)<br/>
+<br/>
 assert( is_directory( &quot;foo&quot; ) == is_directory( &quot;foo&quot; ) ); //
 (3)</code></p>
 </blockquote>
@@ -209,7 +210,7 @@ thread, process, or computer.</p>
 existing file &quot;foo&quot; and then creates a directory named &quot;foo&quot;, between the
 example code's two calls to <i>is_directory()</i>.</p>
 </blockquote>
-<h4>E<b>xceptions</b></h4>
+<h4><b>Exceptions</b></h4>
 <p>Unless otherwise specified, Boost.Filesystem functions throw <i>
 <a href="reference.html#basic_filesystem_error-constructors">basic_filesystem_error</a></i>
 exceptions to report failures such as I/O errors. Implementations may also use C++ Standard Library functions
@@ -231,7 +232,7 @@ noexcept</code> never throw exceptions.</p>
 
 <ul>
   <li>Header &lt;<a href="../../../boost/filesystem.hpp">boost/filesystem.hpp</a>&gt;
-  provides access to all features of the library, except file streams.<br>
+  provides access to all features of the library, except file streams.<br/>
 &nbsp;</li>
   <li>Header &lt;<a href="../../../boost/filesystem/fstream.hpp">boost/filesystem/fstream.hpp</a>&gt;
   inherits the same components as the C++ Standard
@@ -390,7 +391,7 @@ time. Howard Hinnant helped with internationalization issues.</p>
 <a href="design.htm#Realities">design realities</a> were developed during
 extensive discussions on the Boost mailing list, followed by comments on the
 initial implementation. Numerous helpful comments were then received during the
-Formal Review.<p>Participants included
+Formal Review. Participants included
 Aaron Brashears,
 Alan Bellingham,
 Aleksey Gurtovoy,
@@ -477,7 +478,8 @@ Toon Knapen,
 Victor Wagner,
 Vincent Finn,
 Vladimir Prus, and
-Yitzhak Sapir
+Yitzhak Sapir.
+</p>
 
 <p>A lengthy discussion on the C++ committee's library reflector illuminated the &quot;illusion
 of portability&quot; problem, particularly in postings by PJ Plauger and Pete Becker.</p>
@@ -485,7 +487,7 @@ of portability&quot; problem, particularly in postings by PJ Plauger and Pete Be
 <p>Walter Landry provided much help illuminating symbolic link use cases for
 version 1.31.0.&nbsp;</p>
 
-<hr>
+<hr/>
 
 <p>&copy; Copyright Beman Dawes, 2002-2005</p>
 <p>&copy; Copyright Andrey Semashev, 2021</p>

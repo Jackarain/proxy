@@ -19,13 +19,77 @@ target_compile_features(boost_redis INTERFACE cxx_std_17)
 
 # Dependencies
 if (BOOST_REDIS_MAIN_PROJECT)
-  # If we're the root project, error if a dependency is not found
-  find_package(Boost 1.83 REQUIRED COMPONENTS headers)
+  # TODO: Understand why we have to list all dependencies below
+  # instead of
+  #set(BOOST_INCLUDE_LIBRARIES redis)
+  #set(BOOST_EXCLUDE_LIBRARIES redis)
+  #add_subdirectory(../.. boostorg/boost EXCLUDE_FROM_ALL)
+
+  set(deps
+    system
+    assert
+    config
+    throw_exception
+    asio
+    variant2
+    mp11
+    winapi
+    predef
+    align
+    context
+    core
+    coroutine
+    static_assert
+    pool
+    date_time
+    smart_ptr
+    exception
+    integer
+    move
+    type_traits
+    algorithm
+    utility
+    io
+    lexical_cast
+    numeric/conversion
+    mpl
+    range
+    tokenizer
+    tuple
+    array
+    bind
+    concept_check
+    function
+    iterator
+    regex
+    unordered
+    preprocessor
+    container
+    conversion
+    container_hash
+    detail
+    optional
+    function_types
+    fusion
+    intrusive
+    describe
+    typeof
+    functional
+    test
+    json
+    endian
+  )
+
+  foreach(dep IN LISTS deps)
+    add_subdirectory(../${dep} boostorg/${dep})
+  endforeach()
+
   find_package(Threads REQUIRED)
   find_package(OpenSSL REQUIRED)
   target_link_libraries(boost_redis
     INTERFACE
-      Boost::headers
+      Boost::system
+      Boost::asio
       Threads::Threads
       OpenSSL::Crypto
       OpenSSL::SSL

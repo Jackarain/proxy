@@ -12,7 +12,7 @@
 
 
 #include <iostream>
-#include <boost/array.hpp>
+#include <array>
 
 #include <boost/numeric/odeint.hpp>
 
@@ -23,8 +23,8 @@
 const size_t n = 6;
 
 typedef point< double , 3 > point_type;
-typedef boost::array< point_type , n > container_type;
-typedef boost::array< double , n > mass_type;
+typedef std::array< point_type , n > container_type;
+typedef std::array< double , n > mass_type;
 //]
 
 

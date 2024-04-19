@@ -14,7 +14,7 @@
 #include <vector>
 #include <iostream>
 
-#include <boost/msm/back/state_machine.hpp>
+#include <boost/msm/back11/state_machine.hpp>
 #include <boost/msm/front/euml/euml.hpp>
 #include <boost/msm/front/euml/stl.hpp>
 
@@ -128,7 +128,7 @@ namespace  // Concrete FSM implementation
 
 
     // choice of back-end
-    typedef msm::back::state_machine<iPodSearch_> iPodSearch;
+    typedef msm::back11::state_machine<iPodSearch_> iPodSearch;
 
     void test()
     {        

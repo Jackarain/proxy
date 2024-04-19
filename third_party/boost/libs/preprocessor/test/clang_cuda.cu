@@ -9,7 +9,7 @@
 #
 # /* See http://www.boost.org for most recent version. */
 #
-# include <libs/preprocessor/test/test_macro.h>
+# include "test_macro.h"
 
 #if defined(__clang__) && defined(__CUDACC__) && defined(__CUDA__)
 

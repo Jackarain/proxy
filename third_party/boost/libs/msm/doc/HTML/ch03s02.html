@@ -39,15 +39,8 @@ a_row&lt; Paused  , open_close ,  Open     , &amp;player_::stop_and_open        
                                     behavior and defining only the guard.</p></li><li class="listitem"><p><code class="code">_row</code> allows omitting action and guard.</p></li></ul></div><p>The signature for an action methods is void method_name (event
                         const&amp;), for example:</p><pre class="programlisting">void stop_playback(stop const&amp;)</pre><p>Action methods return nothing and take the argument as const reference. Of
                         course nothing forbids you from using the same action for several
-                        events:</p><pre class="programlisting">template &lt;class Event&gt; void stop_playback(Eventconst&amp;)</pre><p>Guards have as only difference the return value, which is a
-                        boolean:</p><pre class="programlisting">bool good_disk_format(cd_detected const&amp; evt)</pre><p>The transition table is actually a MPL vector (or list), which brings the
-                        limitation that the default maximum size of the table is 20. If you need
-                        more transitions, overriding this default behavior is necessary, so you need
-                        to add before any header:</p><pre class="programlisting">#define BOOST_MPL_CFG_NO_PREPROCESSED_HEADERS
-#define BOOST_MPL_LIMIT_VECTOR_SIZE 30 //or whatever you need                       
-#define BOOST_MPL_LIMIT_MAP_SIZE 30 //or whatever you need                   </pre><p>The other limitation is that the MPL types are defined only up to 50
-                        entries. For the moment, the only solution to achieve more is to add headers
-                        to the MPL (luckily, this is not very complicated).</p></div><div class="sect2" title="Defining states with entry/exit actions"><div class="titlepage"><div><div><h3 class="title"><a name="d0e406"></a>Defining states with entry/exit actions</h3></div></div></div><p>While states were enums in the MPL book, they now are classes, which
+                        events:</p><pre class="programlisting">template &lt;class Event&gt; void stop_playback(Event const&amp;)</pre><p>Guards have as only difference the return value, which is a
+                        boolean:</p><pre class="programlisting">bool good_disk_format(cd_detected const&amp; evt)</pre></div><div class="sect2" title="Defining states with entry/exit actions"><div class="titlepage"><div><div><h3 class="title"><a name="d0e400"></a>Defining states with entry/exit actions</h3></div></div></div><p>While states were enums in the MPL book, they now are classes, which
                         allows them to hold data, provide entry, exit behaviors and be reusable (as
                         they do not know anything about the containing state machine). To define a
                         state, inherit from the desired state type. You will mainly use simple
@@ -65,7 +58,7 @@ struct Empty : public msm::front::state&lt;&gt;
                         state machine. Being generic facilitates reuse. There are more state types
                         (terminate, interrupt, pseudo states, etc.) corresponding to the UML
                         standard state types. These will be described in details in the next
-                        sections.</p></div><div class="sect2" title="What do you actually do inside actions / guards?"><div class="titlepage"><div><div><h3 class="title"><a name="d0e419"></a>What do you actually do inside actions / guards?</h3></div></div></div><p>State machines define a structure and important parts of the complete
+                        sections.</p></div><div class="sect2" title="What do you actually do inside actions / guards?"><div class="titlepage"><div><div><h3 class="title"><a name="d0e413"></a>What do you actually do inside actions / guards?</h3></div></div></div><p>State machines define a structure and important parts of the complete
                         behavior, but not all. For example if you need to send a rocket to Alpha
                         Centauri, you can have a transition to a state "SendRocketToAlphaCentauri"
                         but no code actually sending the rocket. This is where you need actions. So
@@ -73,7 +66,7 @@ struct Empty : public msm::front::state&lt;&gt;
 {
   fire_rocket();
 }</pre><p>Ok, this was simple. Now, we might want to give a direction. Let us suppose
-                        this information is externally given when needed, it makes sense do use the
+                        this information is externally given when needed, it makes sense to use the
                         event for this:</p><pre class="programlisting">// Event
 struct Fire {Direction direction;};
 template &lt;class Fire&gt; void send_rocket(Fire const&amp; evt)
@@ -105,7 +98,7 @@ template &lt;class Fire&gt; void send_rocket(Fire const&amp; evt)
     {
        fire_rocket(evt.direction, fsm.current_calculation);
     } 
-};</pre><p>Exit actions are also ideal for clanup when the state becomes
+};</pre><p>Exit actions are also ideal for cleanup when the state becomes
                         inactive.</p><p>Another possible use of the entry action is to pass data to substates /
                         submachines. Launching is a substate containing  a <code class="code">data</code> attribute:</p><pre class="programlisting">struct launcher_ : public msm::front::state_machine_def&lt;launcher_&gt;{
 Data current_calculation;
@@ -117,7 +110,7 @@ void on_entry(Event const&amp; evt, Fsm&amp; fsm)
    s.data = fsm.current_calculation;
 } 
 ...
-};</pre><p>The <span class="command"><strong><a class="command" href="ch03s05.html#backend-fsm-constructor-args">set_states</a></strong></span> back-end method allows you to replace a complete
+};</pre><p>The <span class="command"><strong><a class="command" href="ch03s06.html#backend-fsm-constructor-args">set_states</a></strong></span> back-end method allows you to replace a complete
                         state.</p><p>The <span class="command"><strong><a class="command" href="ch03s03.html#functor-front-end-actions">functor</a></strong></span> front-end and eUML offer more capabilities.</p><p>However, this basic front-end also has special capabilities using the row2
                         / irow2 transitions.<span class="command"><strong><a class="command" href="ch03s02.html#basic-row2">_row2, a_row2, row2,
                             g_row2, a_irow2, irow2, g_irow2</a></strong></span> let you call an action located
@@ -135,7 +128,7 @@ template &lt;class Fire&gt; void send_rocket(Fire const&amp; evt)
 ...
 };</pre><p>The same can be implemented inside entry/exit actions. Admittedly, this is
                         a bit awkward. A more natural mechanism is available using the <span class="command"><strong><a class="command" href="ch03s03.html#functor-front-end-actions">functor</a></strong></span>
-                        front-end.</p></div><div class="sect2" title="Defining a simple state machine"><div class="titlepage"><div><div><h3 class="title"><a name="d0e471"></a>Defining a simple state machine</h3></div></div></div><p>Declaring a state machine is straightforward and is done with a high
+                        front-end.</p></div><div class="sect2" title="Defining a simple state machine"><div class="titlepage"><div><div><h3 class="title"><a name="d0e465"></a>Defining a simple state machine</h3></div></div></div><p>Declaring a state machine is straightforward and is done with a high
                         signal / noise ratio. In our player example, we declare the state machine
                         as:</p><pre class="programlisting">struct player_ : public msm::front::state_machine_def&lt;player_&gt;{
                             /* see below */}</pre><p>This declares a state machine using the basic front-end. We now declare
@@ -145,7 +138,7 @@ template &lt;class Fire&gt; void send_rocket(Fire const&amp; evt)
                         states are declared inside the state machine for readability but this is not
                         a requirements, states can be declared wherever you like.</p><p>All what is left to do is to pick a back-end (which is quite simple as
                         there is only one at the moment):</p><p>
-                        </p><pre class="programlisting">typedef msm::back::state_machine&lt;player_&gt; player;</pre><p>
+                        </p><pre class="programlisting">typedef msm::back11::state_machine&lt;player_&gt; player;</pre><p>
                     </p><p>You now have a ready-to-use state machine with entry/exit actions, guards,
                         transition actions, a message queue so that processing an event can generate
                         another event. The state machine also adapted itself to your need and
@@ -154,12 +147,7 @@ template &lt;class Fire&gt; void send_rocket(Fire const&amp; evt)
                         "getting more speed" to know how to get the maximum speed. In a nutshell,
                         MSM cannot know about your usage of some features so you will have to
                         explicitly tell it.</p><p>State objects are built automatically with the state machine. They will
-                        exist until state machine destruction. MSM is using Boost.Fusion behind the
-                        hood. This unfortunately means that if you define more than 10 states, you
-                        will need to extend the default:</p><p>
-                        </p><pre class="programlisting">#define FUSION_MAX_VECTOR_SIZE 20 // or whatever you need
-                        </pre><p>
-                    </p><p>When an unexpected event is fired, the <code class="code">no_transition(event, state
+                        exist until state machine destruction. </p><p>When an unexpected event is fired, the <code class="code">no_transition(event, state
                             machine, state id)</code> method of the state machine is called . By
                         default, this method simply asserts when called. It is possible to overwrite
                         the <code class="code">no_transition</code> method to define a different handling:</p><p>
@@ -170,25 +158,25 @@ void no_transition(Event const&amp; e, Fsm&amp; ,int state){...}</pre><p>
                         creation. The start method will initiate the state machine, meaning it will
                         activate the initial state, which means in turn that the initial state's
                         entry behavior will be called. The reason why we need this will be explained
-                        in the <a class="link" href="ch03s05.html#backend-start">back-end part</a>. After a call
+                        in the <a class="link" href="ch03s06.html#backend-start">back-end part</a>. After a call
                         to start, the state machine is ready to process events. The same way,
-                        calling <code class="code">stop()</code> will cause the last exit actions to be called.</p></div><div class="sect2" title="Defining a submachine"><div class="titlepage"><div><div><h3 class="title"><a name="d0e529"></a>Defining a submachine</h3></div></div></div><p>We now want to extend our last state machine by making the Playing state a
+                        calling <code class="code">stop()</code> will cause the last exit actions to be called.</p></div><div class="sect2" title="Defining a submachine"><div class="titlepage"><div><div><h3 class="title"><a name="d0e518"></a>Defining a submachine</h3></div></div></div><p>We now want to extend our last state machine by making the Playing state a
                         state machine itself (a submachine).</p><p><span class="inlinemediaobject"><img src="../images/CompositeTutorial.jpg" width="60%"></span></p><p>Again, an <a class="link" href="examples/CompositeTutorial.cpp" target="_top">example</a>
                         is also provided.</p><p>A submachine really is a state machine itself, so we declare Playing as
                         such, choosing a front-end and a back-end:</p><p>
                         </p><pre class="programlisting">struct Playing_ : public msm::front::state_machine_def&lt;Playing_&gt;{...} 
-typedef msm::back::state_machine&lt;Playing_&gt; Playing;</pre><p>
+typedef msm::back11::state_machine&lt;Playing_&gt; Playing;</pre><p>
                     </p><p>Like for any state machine, one also needs a transition table and an
                         initial state:</p><p>
                         </p><pre class="programlisting"> 
 struct transition_table : mpl::vector&lt;
 //    Start    Event    Target    Action                      Guard 
-//   +--------+---------+--------+---------------------------+------+ 
-a_row&lt; Song1  , NextSong, Song2  , &amp;Playing_::start_next_song        &gt;,
-a_row&lt; Song2  , NextSong, Song1  , &amp;Playing_::start_prev_song        &gt;,
-a_row&lt; Song2  , NextSong, Song3  , &amp;Playing_::start_next_song        &gt;,
-a_row&lt; Song3  , NextSong, Song2  , &amp;Playing_::start_prev_song        &gt;
-//   +--------+---------+--------+---------------------------+------+ 
+//   +--------+-------------+--------+---------------------------+------+ 
+a_row&lt; Song1  , NextSong    , Song2  , &amp;Playing_::start_next_song        &gt;,
+a_row&lt; Song2  , PreviousSong, Song1  , &amp;Playing_::start_prev_song        &gt;,
+a_row&lt; Song2  , NextSong    , Song3  , &amp;Playing_::start_next_song        &gt;,
+a_row&lt; Song3  , PreviousSong, Song2  , &amp;Playing_::start_prev_song        &gt;
+//   +--------+-------------+--------+---------------------------+------+ 
 &gt; {};
                         </pre><p>
                     </p><p>
@@ -232,7 +220,7 @@ struct some_state : public msm::front::state&lt;&gt;
    typename boost::disable_if&lt;typename has_some_event_property&lt;Event&gt;::type,void&gt;::type
    on_entry(Event const&amp; ,Fsm&amp; )
    {    }
-};                        </pre><p>Now this state can be used in your submachine.</p></div><div class="sect2" title="Orthogonal regions, terminate state, event deferring"><div class="titlepage"><div><div><h3 class="title"><a name="d0e577"></a>Orthogonal regions, terminate state, event deferring</h3></div></div></div><p>It is a very common problem in many state machines to have to handle
+};                        </pre><p>Now this state can be used in your submachine.</p></div><div class="sect2" title="Orthogonal regions, terminate state, event deferring"><div class="titlepage"><div><div><h3 class="title"><a name="d0e566"></a>Orthogonal regions, terminate state, event deferring</h3></div></div></div><p>It is a very common problem in many state machines to have to handle
                         errors. It usually involves defining a transition from all the states to a
                         special error state. Translation: not fun. It is also not practical to find
                         from which state the error originated. The following diagram shows an
@@ -309,13 +297,13 @@ struct some_state : public msm::front::state&lt;&gt;
                         (condition1) defer play event":</p><p>
                         </p><pre class="programlisting">Row   &lt; Empty , play , none    , Defer , condition1   &gt;,
 g_row &lt; Empty , play , Playing , &amp;player_::condition2 &gt;</pre><p>
-                    </p><p>Please have a look at <a class="link" href="examples/Orthogonal-deferred2.cpp" target="_top">this possible implementation</a>.</p></div><div class="sect2" title="History"><div class="titlepage"><div><div><h3 class="title"><a name="d0e668"></a>History</h3></div></div></div><p>UML defines two types of history, Shallow History and Deep History. In the
+                    </p><p>Please have a look at <a class="link" href="examples/Orthogonal-deferred2.cpp" target="_top">this possible implementation</a>.</p></div><div class="sect2" title="History"><div class="titlepage"><div><div><h3 class="title"><a name="d0e657"></a>History</h3></div></div></div><p>UML defines two types of history, Shallow History and Deep History. In the
                         previous examples, if the player was playing the second song and the user
                         pressed pause, leaving Playing, at the next press on the play button, the
                         Playing state would become active and the first song would play again. Soon
                         would the first client complaints follow. They'd of course demand, that if
                         the player was paused, then it should remember which song was playing. But
-                        it the player was stopped, then it should restart from the first song. How
+                        if the player was stopped, then it should restart from the first song. How
                         can it be done? Of course, you could add a bit of programming logic and
                         generate extra events to make the second song start if coming from Pause.
                         Something like: </p><p>
@@ -342,7 +330,7 @@ g_row &lt; Empty , play , Playing , &amp;player_::condition2 &gt;</pre><p>
                         policies in different contexts.</p><p>Concretely, your frontend stays unchanged:</p><p>
                         </p><pre class="programlisting">struct Playing_ : public msm::front::state_machine_def&lt;Playing_&gt;</pre><p>
                     </p><p>You then add the policy to the backend as second parameter:</p><p>
-                        </p><pre class="programlisting">typedef msm::back::state_machine&lt;Playing_,
+                        </p><pre class="programlisting">typedef msm::back11::state_machine&lt;Playing_,msm::back11::state_machine&lt;player_&gt;,
     msm::back::ShallowHistory&lt;mpl::vector&lt;end_pause&gt; &gt; &gt; Playing;</pre><p>
                     </p><p>This states that a shallow history must be activated if the Playing state
                         machine gets activated by the end_pause event and only this one (or any
@@ -356,7 +344,7 @@ g_row &lt; Empty , play , Playing , &amp;player_::condition2 &gt;</pre><p>
                         be added). The reason is that it would conflict with policies which
                         submachines could define. Of course, if for example, Song1 were a state
                         machine itself, it could use the ShallowHistory policy itself thus creating
-                        Deep History for itself. An <a class="link" href="examples/History.cpp" target="_top">example</a> is also provided.</p></div><div class="sect2" title="Completion (anonymous) transitions"><div class="titlepage"><div><div><h3 class="title"><a name="d0e713"></a>Completion (anonymous) transitions</h3></div></div></div><p><span class="command"><strong><a name="anonymous-transitions"></a></strong></span>The following diagram shows an
+                        Deep History for itself. An <a class="link" href="examples/History.cpp" target="_top">example</a> is also provided.</p></div><div class="sect2" title="Completion (anonymous) transitions"><div class="titlepage"><div><div><h3 class="title"><a name="d0e702"></a>Completion (anonymous) transitions</h3></div></div></div><p><span class="command"><strong><a name="anonymous-transitions"></a></strong></span>The following diagram shows an
                         example making use of this feature:</p><p><span class="inlinemediaobject"><img src="../images/Anonymous.jpg" width="60%"></span></p><p>Anonymous transitions are transitions without a named event. This means
                         that the transition automatically fires when the predecessor state is
                         entered (to be exact, after the entry action). Otherwise it is a normal
@@ -383,7 +371,7 @@ g_row &lt; Empty , play , Playing , &amp;player_::condition2 &gt;</pre><p>
                         for example:</p><p>
                         </p><pre class="programlisting">row &lt; State3 , none , State4 , &amp;p::State3ToState4 , &amp;p::always_true &gt;</pre><p>
                     </p><p><a class="link" href="examples/AnonymousTutorial.cpp" target="_top">An implementation</a>
-                        of the state machine diagram is also provided.</p></div><div class="sect2" title="Internal transitions"><div class="titlepage"><div><div><h3 class="title"><a name="d0e740"></a><span class="command"><strong><a name="internal-transitions"></a></strong></span>Internal transitions</h3></div></div></div><p>Internal transitions are transitions executing in the scope of the active
+                        of the state machine diagram is also provided.</p></div><div class="sect2" title="Internal transitions"><div class="titlepage"><div><div><h3 class="title"><a name="d0e729"></a><span class="command"><strong><a name="internal-transitions"></a></strong></span>Internal transitions</h3></div></div></div><p>Internal transitions are transitions executing in the scope of the active
                         state, a simple state or a submachine. One can see them as a self-transition
                         of this state, without an entry or exit action called. This is useful when
                         all you want is to execute some code for a given event in a given
@@ -448,7 +436,7 @@ g_row &lt; Empty , play , Playing , &amp;player_::condition2 &gt;</pre><p>
                         alternative, adding orthogonal regions, because event dispatching will, if
                         accepted by the internal table, not continue to the subregions. This gives
                         you a O(1) dispatch instead of O(number of regions). While the example is
-                        with eUML, the same is also possible with any front-end.</p></div><div class="sect2" title="more row types"><div class="titlepage"><div><div><h3 class="title"><a name="d0e842"></a><span class="command"><strong><a name="basic-row2"></a></strong></span>more row types</h3></div></div></div><p>It is also possible to write transitions using actions and guards not just
+                        with eUML, the same is also possible with any front-end.</p></div><div class="sect2" title="more row types"><div class="titlepage"><div><div><h3 class="title"><a name="d0e831"></a><span class="command"><strong><a name="basic-row2"></a></strong></span>more row types</h3></div></div></div><p>It is also possible to write transitions using actions and guards not just
                         from the state machine but also from its contained states. In this case, one
                         must specify not just a method pointer but also the object on which to call
                         it. This transition row is called, not very originally, <code class="code">row2</code>.
@@ -465,7 +453,7 @@ g_row &lt; Empty , play , Playing , &amp;player_::condition2 &gt;</pre><p>
                         sections.</p><p>These row types allow us to distribute the state machine code among
                         states, making them reusable and more useful. Using transition tables inside
                         states also contributes to this possibility. An <a class="link" href="examples/SimpleTutorial2.cpp" target="_top">example</a> of these new
-                        rows is also provided.</p></div><div class="sect2" title="Explicit entry / entry and exit pseudo-state / fork"><div class="titlepage"><div><div><h3 class="title"><a name="d0e875"></a>Explicit entry / entry and exit pseudo-state / fork</h3></div></div></div><p>MSM (almost) fully supports these features, described in the <span class="command"><strong><a class="command" href="ch02s02.html#uml-history">small UML tutorial</a></strong></span>. Almost because
+                        rows is also provided.</p></div><div class="sect2" title="Explicit entry / entry and exit pseudo-state / fork"><div class="titlepage"><div><div><h3 class="title"><a name="d0e864"></a>Explicit entry / entry and exit pseudo-state / fork</h3></div></div></div><p>MSM (almost) fully supports these features, described in the <span class="command"><strong><a class="command" href="ch02s02.html#uml-history">small UML tutorial</a></strong></span>. Almost because
                         there are currently two limitations: </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>it is only possible to explicitly enter a sub- state of the
                                     target but not a sub-sub state.</p></li><li class="listitem"><p>it is not possible to explicitly exit. Exit points must be
                                     used.</p></li></ul></div><p>Let us see a concrete example:</p><p><span class="inlinemediaobject"><img src="../images/entrytutorial.jpg" width="60%"></span></p><p>We find in this diagram:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>A &#8220;normal&#8221; activation of SubFsm2, triggered by event1. In each
@@ -485,7 +473,7 @@ g_row &lt; Empty , play , Playing , &amp;player_::condition2 &gt;</pre><p>
                                     transition and both regions are exited, as SubFsm2 becomes
                                     inactive. Note that if no transition is defined from
                                     PseudoExit1, an error (as defined in the UML standard) will be
-                                    detected and no_transition called.</p></li></ul></div><p>The example is also <a class="link" href="examples/DirectEntryTutorial.cpp" target="_top">fully implemented</a>.</p><p>This sounds complicated but the syntax is simple.</p><div class="sect3" title="Explicit entry"><div class="titlepage"><div><div><h4 class="title"><a name="d0e921"></a>Explicit entry</h4></div></div></div><p>First, to define that a state is an explicit entry, you have to make
+                                    detected and no_transition called.</p></li></ul></div><p>The example is also <a class="link" href="examples/DirectEntryTutorial.cpp" target="_top">fully implemented</a>.</p><p>This sounds complicated but the syntax is simple.</p><div class="sect3" title="Explicit entry"><div class="titlepage"><div><div><h4 class="title"><a name="d0e910"></a>Explicit entry</h4></div></div></div><p>First, to define that a state is an explicit entry, you have to make
                             it a state and mark it as explicit, giving as template parameters the
                             region id (the region id starts with 0 and corresponds to the first
                             initial state of the initial_state type sequence).</p><p>
@@ -497,7 +485,7 @@ g_row &lt; Empty , play , Playing , &amp;player_::condition2 &gt;</pre><p>
 ...
 };</pre><p>
                         </p><p>And define the submachine as:</p><p>
-                            </p><pre class="programlisting">typedef msm::back::state_machine&lt;SubFsm2_&gt; SubFsm2;</pre><p>
+                            </p><pre class="programlisting">typedef msm::back11::state_machine&lt;SubFsm2_&gt; SubFsm2;</pre><p>
                         </p><p>You can then use it as target in a transition with State1 as
                             source:</p><p>
                             </p><pre class="programlisting">_row &lt; State1, Event2, SubFsm2::direct&lt; SubFsm2_::SubState2&gt; &gt; //SubFsm2_::SubState2: complete name of SubState2 (defined within SubFsm2_)</pre><p>
@@ -505,7 +493,7 @@ g_row &lt; Empty , play , Playing , &amp;player_::condition2 &gt;</pre><p>
                             SubState2 is a nested state, therefore the SubFsm2_::SubState2 syntax.
                             The containing machine (containing State1 and SubFsm2) refers to the
                             backend instance (SubFsm2). SubFsm2::direct states that an explicit
-                            entry is desired.</p><p><span class="command"><strong><a name="explicit-entry-no-region-id"></a></strong></span>Thanks to the <span class="command"><strong><a class="command" href="ch03s05.html#backend-compile-time-analysis">mpl_graph</a></strong></span> library you can also omit to provide the region
+                            entry is desired.</p><p><span class="command"><strong><a name="explicit-entry-no-region-id"></a></strong></span>Thanks to the <span class="command"><strong><a class="command" href="ch03s06.html#backend-compile-time-analysis">mpl_graph</a></strong></span> library you can also omit to provide the region
                             index and let MSM find out for you. The are however two points to note:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>MSM can only find out the region index if the explicit
                                         entry state is somehow connected to an initial state through
                                         a transition, no matter the direction.</p></li><li class="listitem"><p>There is a compile-time cost for this feature.</p></li></ul></div><p><span class="underline">Note (also valid for forks)</span>: in
@@ -520,7 +508,7 @@ g_row &lt; Empty , play , Playing , &amp;player_::condition2 &gt;</pre><p>
                         </p><p><span class="underline">Note (also valid for forks)</span>: At
                             the moment, it is not possible to use a submachine as the target of an
                             explicit entry. Please use entry pseudo states for an almost identical
-                            effect.</p></div><div class="sect3" title="Fork"><div class="titlepage"><div><div><h4 class="title"><a name="d0e973"></a>Fork</h4></div></div></div><p>Need a fork instead of an explicit entry? As a fork is an explicit
+                            effect.</p></div><div class="sect3" title="Fork"><div class="titlepage"><div><div><h4 class="title"><a name="d0e962"></a>Fork</h4></div></div></div><p>Need a fork instead of an explicit entry? As a fork is an explicit
                             entry into states of different regions, we do not change the state
                             definition compared to the explicit entry and specify as target a list
                             of explicit entry states:</p><p>
@@ -533,7 +521,7 @@ g_row &lt; Empty , play , Playing , &amp;player_::condition2 &gt;</pre><p>
                             correct):</p><p>
                             </p><pre class="programlisting">struct SubState2b : public msm::front::state&lt;&gt; , 
                     public msm::front::explicit_entry&lt;1&gt;</pre><p>
-                        </p></div><div class="sect3" title="Entry pseudo states"><div class="titlepage"><div><div><h4 class="title"><a name="d0e990"></a>Entry pseudo states</h4></div></div></div><p> To define an entry pseudo state, you need derive from the
+                        </p></div><div class="sect3" title="Entry pseudo states"><div class="titlepage"><div><div><h4 class="title"><a name="d0e979"></a>Entry pseudo states</h4></div></div></div><p> To define an entry pseudo state, you need derive from the
                             corresponding class and give the region id:</p><p>
                             </p><pre class="programlisting">struct PseudoEntry1 : public msm::front::entry_pseudo_state&lt;0&gt;</pre><p>
                         </p><p>And add the corresponding transition in the top-level state machine's
@@ -543,7 +531,7 @@ g_row &lt; Empty , play , Playing , &amp;player_::condition2 &gt;</pre><p>
                             defines an entry point as a connection between two transitions), for
                             example this time with an action method:</p><p>
                             </p><pre class="programlisting">_row &lt; PseudoEntry1, Event4, SubState3,&amp;SubFsm2_::entry_action &gt;</pre><p>
-                        </p></div><div class="sect3" title="Exit pseudo states"><div class="titlepage"><div><div><h4 class="title"><a name="d0e1014"></a> Exit pseudo states </h4></div></div></div><p>And finally, exit pseudo states are to be used almost the same way,
+                        </p></div><div class="sect3" title="Exit pseudo states"><div class="titlepage"><div><div><h4 class="title"><a name="d0e1003"></a> Exit pseudo states </h4></div></div></div><p>And finally, exit pseudo states are to be used almost the same way,
                             but defined differently: it takes as template argument the event to be
                             forwarded (no region id is necessary):</p><p>
                             </p><pre class="programlisting">struct PseudoExit1 : public exit_pseudo_state&lt;event6&gt;</pre><p>
@@ -592,7 +580,7 @@ struct event2
     event2(Event const&amp; ):val(0){} // will not be used
     event2(event1 const&amp; e)):val(e.val){} // the conversion constructor
     int val;
-}; // what the higher-level fsm wants to get</pre></div></div><div class="sect2" title="Flags"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1064"></a>Flags</h3></div></div></div><p>This <a class="link" href="examples/Flags.cpp" target="_top">tutorial</a> is devoted to a
+}; // what the higher-level fsm wants to get</pre></div></div><div class="sect2" title="Flags"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1053"></a>Flags</h3></div></div></div><p>This <a class="link" href="examples/Flags.cpp" target="_top">tutorial</a> is devoted to a
                         concept not defined in UML: flags. It has been added into MSM after proving
                         itself useful on many occasions. Please, do not be frightened as we are not
                         talking about ugly shortcuts made of an improbable collusion of
@@ -627,7 +615,7 @@ struct event2
                     </p><p> Note. Due to arcane C++ rules, when called inside an action, the correct
                         call is:
                         </p><pre class="programlisting">if (p.<span class="bold"><strong>template</strong></span> is_flag_active&lt;CDLoaded&gt;()) ...</pre><p>
-                    </p><p>The following diagram displays the flag situation in the tutorial.</p><p><span class="inlinemediaobject"><img src="../images/FlagsTutorial.jpg" width="60%"></span></p></div><div class="sect2" title="Event Hierarchy"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1126"></a><span class="command"><strong><a name="event-hierarchy"></a></strong></span>Event Hierarchy</h3></div></div></div><p>There are cases where one needs transitions based on categories of events.
+                    </p><p>The following diagram displays the flag situation in the tutorial.</p><p><span class="inlinemediaobject"><img src="../images/FlagsTutorial.jpg" width="60%"></span></p></div><div class="sect2" title="Event Hierarchy"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1115"></a><span class="command"><strong><a name="event-hierarchy"></a></strong></span>Event Hierarchy</h3></div></div></div><p>There are cases where one needs transitions based on categories of events.
                         An example is text parsing. Let's say you want to parse a string and use a
                         state machine to manage your parsing state. You want to parse 4 digits and
                         decide to use a state for every matched digit. Your state machine could look
@@ -640,7 +628,7 @@ struct char_0 : public digit {}; </pre><p>And to the same for other digits, we c
                         and this will cause a transition with "digit" as trigger to be taken.</p><p>An <a class="link" href="examples/ParsingDigits.cpp" target="_top">example</a> with
                         performance measurement, taken from the documentation of Boost.Xpressive
                         illustrates this example. You might notice that the performance is actually
-                        very good (in this case even better).</p></div><div class="sect2" title="Customizing a state machine / Getting more speed"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1147"></a>Customizing a state machine / Getting more speed</h3></div></div></div><p>MSM is offering many UML features at a high-speed, but sometimes, you just
+                        very good (in this case even better).</p></div><div class="sect2" title="Customizing a state machine / Getting more speed"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1136"></a>Customizing a state machine / Getting more speed</h3></div></div></div><p>MSM is offering many UML features at a high-speed, but sometimes, you just
                         need more speed and are ready to give up some features in exchange. A
                         process_event is handling several tasks: </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>checking for terminate/interrupt states</p></li><li class="listitem"><p>handling the message queue (for entry/exit/transition actions
                                     generating themselves events)</p></li><li class="listitem"><p>handling deferred events</p></li><li class="listitem"><p>catching exceptions (or not)</p></li><li class="listitem"><p>handling the state switching and action calls</p></li></ul></div><p>Of these tasks, only the last one is absolutely necessary to
@@ -666,19 +654,19 @@ struct char_0 : public digit {}; </pre><p>And to the same for other digits, we c
    };</pre><p><span class="underline">Important note</span>: As exit pseudo
                         states are using the message queue to forward events out of a submachine,
                         the <code class="code">no_message_queue</code> option cannot be used with state machines
-                        containing an exit pseudo state.</p></div><div class="sect2" title="Choosing the initial event"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1196"></a>Choosing the initial event</h3></div></div></div><p>A state machine is started using the <code class="code">start</code> method. This
+                        containing an exit pseudo state.</p></div><div class="sect2" title="Choosing the initial event"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1185"></a>Choosing the initial event</h3></div></div></div><p>A state machine is started using the <code class="code">start</code> method. This
                         causes the initial state's entry behavior to be executed. Like every entry
                         behavior, it becomes as parameter the event causing the state to be entered.
                         But when the machine starts, there was no event triggered. In this case, MSM
-                        sends <code class="code">msm::back::state_machine&lt;...&gt;::InitEvent</code>, which might
-                        not be the default you'd want. For this special case, MSM provides a
+                        sends <code class="code">msm::back11::state_machine&lt;...&gt;::InitEvent</code>, which
+                        might not be the default you'd want. For this special case, MSM provides a
                         configuration mechanism in the form of a typedef. If the state machine's
                         front-end definition provides an initial_event typedef set to another event,
                         this event will be used. For example:</p><pre class="programlisting">struct my_initial_event{};
 struct player_ : public msm::front::state_machine_def&lt;player_&gt;{
 ...
 typedef my_initial_event initial_event; 
-};</pre></div><div class="sect2" title="Containing state machine (deprecated)"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1209"></a> Containing state machine (deprecated)</h3></div></div></div><p>This feature is still supported in MSM for backward compatibility but made
+};</pre></div><div class="sect2" title="Containing state machine (deprecated)"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1198"></a> Containing state machine (deprecated)</h3></div></div></div><p>This feature is still supported in MSM for backward compatibility but made
                         obsolete by the fact that every guard/action/entry action/exit action get
                         the state machine passed as argument and might be removed at a later
                         time.</p><p>All of the states defined in the state machine are created upon state

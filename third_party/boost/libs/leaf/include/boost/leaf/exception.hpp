@@ -102,11 +102,7 @@ namespace leaf_detail
     };
 }
 
-} }
-
 ////////////////////////////////////////
-
-namespace boost { namespace leaf {
 
 namespace leaf_detail
 {
@@ -223,7 +219,7 @@ template <class... E>
 #ifndef BOOST_LEAF_NO_EXCEPTIONS
 
 template <class T>
-class result;
+class BOOST_LEAF_SYMBOL_VISIBLE result;
 
 namespace leaf_detail
 {

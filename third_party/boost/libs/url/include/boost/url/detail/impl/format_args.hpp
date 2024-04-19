@@ -106,7 +106,8 @@ measure_impl(
     grammar::lut_chars const& cs,
     void const* a )
 {
-    using ref_t = typename std::remove_reference<A>::type;
+    using ref_t = typename std::remove_cv<
+        typename std::remove_reference<A>::type>::type;
     A const& ref = *static_cast<ref_t*>(
         const_cast<void*>( a ) );
     formatter<ref_t> f;
@@ -123,7 +124,8 @@ format_impl(
     grammar::lut_chars const& cs,
     void const* a )
 {
-    using ref_t = typename std::remove_reference<A>::type;
+    using ref_t = typename std::remove_cv<
+        typename std::remove_reference<A>::type>::type;
     A const& ref = *static_cast<ref_t*>(
             const_cast<void*>( a ) );
     formatter<ref_t> f;

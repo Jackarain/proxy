@@ -56,7 +56,7 @@ def print_annotation(name, value, xml):
         print("}}}")
     else:
         print(name + " {{{")
-        print(value)
+        print(str(value).encode('utf8'))
         print("}}}")
 
 
@@ -113,14 +113,14 @@ def get_toolset():
 
 # Detect the host OS.
 if sys.platform == "cygwin":
-    default_os = "cygwin"
+    host_os = "cygwin"
 elif sys.platform == "win32":
-    default_os = "windows"
+    host_os = "windows"
 elif hasattr(os, "uname"):
-    default_os = os.uname()[0].lower()
+    host_os = os.uname()[0].lower()
 
 
-def expand_toolset(toolset, target_os=default_os):
+def expand_toolset(toolset, target_os):
     match = re.match(r'^(clang|intel)(-[\d\.]+|)$', toolset)
     if match:
         if match.group(1) == "intel" and target_os == "windows":
@@ -133,7 +133,7 @@ def expand_toolset(toolset, target_os=default_os):
     return toolset
 
 
-def prepare_prefixes_and_suffixes(toolset, target_os=default_os):
+def prepare_prefixes_and_suffixes(toolset, target_os):
     ind = toolset.find('-')
     if ind == -1:
         rtoolset = toolset
@@ -143,7 +143,7 @@ def prepare_prefixes_and_suffixes(toolset, target_os=default_os):
     prepare_library_prefix(rtoolset, target_os)
 
 
-def prepare_suffix_map(toolset, target_os=default_os):
+def prepare_suffix_map(toolset, target_os):
     """
       Set up suffix translation performed by the Boost Build testing framework
     to accommodate different toolsets generating targets of the same type using
@@ -175,8 +175,12 @@ def prepare_suffix_map(toolset, target_os=default_os):
         if target_os == "darwin":
             suffixes[".dll"] = ".dylib"
 
+        if toolset == "emscripten":
+            suffixes[".exe"] = ".js" # or .wasm?
+            suffixes[".dll"] = ".so" # .wasn doesn't work for searched libs
 
-def prepare_library_prefix(toolset, target_os=default_os):
+
+def prepare_library_prefix(toolset, target_os):
     """
       Setup whether Boost Build is expected to automatically prepend prefixes
     to its built library targets.
@@ -282,13 +286,8 @@ class Tester(TestCmd.TestCmd):
         self.translate_suffixes = translate_suffixes
         self.use_test_config = use_test_config
 
-        self.target_os = default_os
-        self.toolset = get_toolset()
-        self.expanded_toolset = expand_toolset(self.toolset)
-        self.pass_toolset = pass_toolset
+        self.set_toolset(get_toolset(), _pass_toolset=pass_toolset)
         self.ignore_toolset_requirements = ignore_toolset_requirements
-
-        prepare_prefixes_and_suffixes(pass_toolset and self.toolset or "gcc")
 
         use_default_bjam = "--default-bjam" in sys.argv
 
@@ -333,6 +332,12 @@ class Tester(TestCmd.TestCmd):
 
         os.chdir(self.workdir)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.cleanup()
+
     def cleanup(self):
         try:
             TestCmd.TestCmd.cleanup(self)
@@ -343,12 +348,14 @@ class Tester(TestCmd.TestCmd):
             # this case.
             pass
 
-    def set_toolset(self, toolset, target_os=default_os):
-        self.target_os = target_os
-        self.toolset = toolset
-        self.expanded_toolset = expand_toolset(toolset, target_os)
-        self.pass_toolset = True
-        prepare_prefixes_and_suffixes(toolset, target_os)
+    def set_toolset(self, toolset, target_os=None, _pass_toolset=True):
+        self.toolset = _pass_toolset and toolset or "gcc"
+        if not target_os and self.toolset.startswith("emscripten"):
+            target_os = "unknown"
+        self.target_os = target_os or host_os
+        self.expanded_toolset = expand_toolset(self.toolset, self.target_os)
+        self.pass_toolset = _pass_toolset
+        prepare_prefixes_and_suffixes(self.toolset, self.target_os)
 
     def is_implib_expected(self):
         return self.target_os in ["windows", "cygwin"] and not re.match(r'^clang(-linux)?(-[\d.]+)?$', self.toolset)
@@ -382,11 +389,13 @@ class Tester(TestCmd.TestCmd):
         self.__makedirs(os.path.dirname(nfile), wait)
         if not type(content) == bytes:
             content = content.encode()
-        f = open(nfile, "wb")
         try:
-            f.write(content)
-        finally:
-            f.close()
+            with open(nfile, "wb") as f:
+                f.write(content)
+        except Exception as e:
+            annotation("failure","Could not create file '{}': {}".format(nfile, e))
+            annotate_stack_trace(level=3)
+            self.fail_test(1)
         self.__ensure_newer_than_last_build(nfile)
 
     def rename(self, src, dst):
@@ -458,7 +467,7 @@ class Tester(TestCmd.TestCmd):
         annotation("STDERR", self.stderr())
 
     def run_build_system(self, extra_args=None, subdir="", stdout=None,
-        stderr="", status=0, match=None, pass_toolset=None,
+        stderr="", status=0, match=None, match_filter=None, pass_toolset=None,
         use_test_config=None, ignore_toolset_requirements=None,
         expected_duration=None, **kw):
 
@@ -539,29 +548,15 @@ class Tester(TestCmd.TestCmd):
             annotation("reason", "unexpected status returned by bjam")
             self.fail_test(1)
 
-        if stdout is not None and not match(self.stdout(), stdout):
-            stdout_test = match(self.stdout(), stdout)
-            annotation("failure", "Unexpected stdout")
-            annotation("Expected STDOUT", stdout)
-            annotation("Actual STDOUT", self.stdout())
-            stderr = self.stderr()
-            if stderr:
-                annotation("STDERR", stderr)
-            self.do_diff(self.stdout(), stdout)
-            self.fail_test(1, dump_stdio=False)
+        if stdout is not None:
+            self.do_diff('STDOUT', self.stdout(), stdout, match, match_filter)
 
         # Intel tends to produce some messages to stderr which make tests fail.
         intel_workaround = re.compile("^xi(link|lib): executing.*\n", re.M)
         actual_stderr = re.sub(intel_workaround, "", self.stderr())
 
-        if stderr is not None and not match(actual_stderr, stderr):
-            stderr_test = match(actual_stderr, stderr)
-            annotation("failure", "Unexpected stderr")
-            annotation("Expected STDERR", stderr)
-            annotation("Actual STDERR", self.stderr())
-            annotation("STDOUT", self.stdout())
-            self.do_diff(actual_stderr, stderr)
-            self.fail_test(1, dump_stdio=False)
+        if stderr is not None:
+            self.do_diff('STDERR', actual_stderr, stderr, match, match_filter)
 
         if expected_duration is not None:
             actual_duration = build_time_finish - build_time_start
@@ -570,6 +565,27 @@ class Tester(TestCmd.TestCmd):
                     "finish in under %f seconds." % (actual_duration,
                     expected_duration))
                 self.fail_test(1, dump_stdio=False)
+
+    def do_diff(self, what, actual, expected, matcher, match_filter):
+        actual_lines = actual.splitlines(keepends=True)
+        expected_lines = expected.splitlines(keepends=True)
+        if match_filter is not None:
+            actual_lines = list(filter(match_filter, actual_lines))
+            expected_lines = list(filter(match_filter, expected_lines))
+            match = matcher("".join(actual_lines), "".join(expected_lines))
+            filtered = " (filtered)"
+        else:
+            match = matcher(actual, expected)
+            filtered = ""
+        if match:
+            return
+        diff = "".join(ndiff(expected_lines, actual_lines))
+        annotation("Expected {}".format(what), expected)
+        annotation("Actual {}".format(what), actual)
+        if what.lower() == "stdout":
+            annotation("STDERR", self.stderr())
+        annotation("Difference in {}{}".format(what, filtered), diff)
+        self.fail_test(True, dump_stdio=False)
 
     def glob_file(self, name):
         name = self.adjust_name(name)
@@ -756,6 +772,9 @@ class Tester(TestCmd.TestCmd):
             self.ignore("*.manifest")  # MSVC DLL manifests.
             self.ignore("bin/standalone/msvc/*/msvc-setup.bat")
 
+        # emscripten 'exe' is .js which is a laucnher for .wasm file
+        self.ignore("*.wasm")
+
         # Debug builds of bjam built with gcc produce this profiling data.
         self.ignore("gmon.out")
         self.ignore("*/gmon.out")
@@ -815,11 +834,6 @@ class Tester(TestCmd.TestCmd):
             print("Got:\n")
             print(actual)
             self.fail_test(1)
-
-    def do_diff(self, actual, expected):
-        actual = actual.splitlines(keepends=True)
-        expected = expected.splitlines(keepends=True)
-        annotation("DIFFERENCE", "".join(ndiff(actual, expected)))
 
     # Internal methods.
     def adjust_lib_name(self, name):
@@ -1043,9 +1057,11 @@ class Tester(TestCmd.TestCmd):
                     os.mkdir(path)
                     self.__ensure_newer_than_last_build(path)
             else:
-                os.makedirs(path)
-        except Exception:
-            pass
+                os.makedirs(path, exist_ok=True)
+        except Exception as e:
+            annotation("failure", "Could not create path '{}': {}".format(path, e))
+            annotate_stack_trace(level=3)
+            self.fail_test(1)
 
     def __python_timestamp_resolution(self, path, minimum_resolution):
         """
@@ -1216,10 +1232,10 @@ class List:
         elements = []
         if isstr(s):
             # Have to handle escaped spaces correctly.
-            elements = s.replace("\ ", "\001").split()
+            elements = s.replace("\\ ", "\001").split()
         else:
             elements = s
-        self.l = [e.replace("\001", " ") for e in elements]
+        self.l = [e.replace("\001", "\\ ") for e in elements]
 
     def __len__(self):
         return len(self.l)

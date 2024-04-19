@@ -14,7 +14,7 @@
 #include <iostream>
 #include <cmath>
 
-#include <boost/array.hpp>
+#include <array>
 #include <boost/numeric/odeint.hpp>
 
 using namespace boost::numeric::odeint;
@@ -23,7 +23,7 @@ const int Steps = 4;
 
 typedef double value_type;
 
-typedef boost::array< double , 2 > state_type;
+typedef std::array< double , 2 > state_type;
 
 typedef runge_kutta_fehlberg78<state_type> initializing_stepper_type;
 typedef adams_bashforth_moulton< Steps , state_type > stepper_type;

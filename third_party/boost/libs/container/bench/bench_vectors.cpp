@@ -52,21 +52,21 @@ class MyInt
    int int_;
 
    public:
-   BOOST_CONTAINER_FORCEINLINE explicit MyInt(int i = 0)
+   inline explicit MyInt(int i = 0)
       : int_(i)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE MyInt(const MyInt &other)
+   inline MyInt(const MyInt &other)
       :  int_(other.int_)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE MyInt & operator=(const MyInt &other)
+   inline MyInt & operator=(const MyInt &other)
    {
       int_ = other.int_;
       return *this;
    }
 
-   BOOST_CONTAINER_FORCEINLINE ~MyInt()
+   inline ~MyInt()
    {
       int_ = 0;
    }
@@ -76,20 +76,20 @@ template<class C, bool = boost::container::test::
          has_member_function_callable_with_capacity<C>::value>
 struct capacity_wrapper
 {
-   BOOST_CONTAINER_FORCEINLINE static typename C::size_type get_capacity(const C &c)
+   inline static typename C::size_type get_capacity(const C &c)
    {  return c.capacity(); }
 
-   BOOST_CONTAINER_FORCEINLINE static void set_reserve(C &c, typename C::size_type cp)
+   inline static void set_reserve(C &c, typename C::size_type cp)
    {  c.reserve(cp); }
 };
 
 template<class C>
 struct capacity_wrapper<C, false>
 {
-   BOOST_CONTAINER_FORCEINLINE static typename C::size_type get_capacity(const C &)
+   inline static typename C::size_type get_capacity(const C &)
    {  return 0u; }
 
-   BOOST_CONTAINER_FORCEINLINE static void set_reserve(C &, typename C::size_type )
+   inline static void set_reserve(C &, typename C::size_type )
    { }
 };
 
@@ -97,11 +97,11 @@ const std::size_t RangeSize = 5;
 
 struct insert_end_range
 {
-   BOOST_CONTAINER_FORCEINLINE std::size_t capacity_multiplier() const
+   inline std::size_t capacity_multiplier() const
    {  return RangeSize;  }
 
    template<class C>
-   BOOST_CONTAINER_FORCEINLINE void operator()(C &c, int)
+   inline void operator()(C &c, int)
    {  c.insert(c.end(), &a[0], &a[0]+RangeSize); }
 
    const char *name() const
@@ -112,14 +112,14 @@ struct insert_end_range
 
 struct insert_end_repeated
 {
-   BOOST_CONTAINER_FORCEINLINE std::size_t capacity_multiplier() const
+   inline std::size_t capacity_multiplier() const
    {  return RangeSize;  }
 
    template<class C>
-   BOOST_CONTAINER_FORCEINLINE void operator()(C &c, int i)
+   inline void operator()(C &c, int i)
    {  c.insert(c.end(), RangeSize, MyInt(i)); }
 
-   BOOST_CONTAINER_FORCEINLINE const char *name() const
+   inline const char *name() const
    {  return "insert_end_repeated"; }
 
    MyInt a[RangeSize];
@@ -127,55 +127,55 @@ struct insert_end_repeated
 
 struct push_back
 {
-   BOOST_CONTAINER_FORCEINLINE std::size_t capacity_multiplier() const
+   inline std::size_t capacity_multiplier() const
    {  return 1;  }
 
    template<class C>
-   BOOST_CONTAINER_FORCEINLINE void operator()(C &c, int i)
+   inline void operator()(C &c, int i)
    {  c.push_back(MyInt(i)); }
 
-   BOOST_CONTAINER_FORCEINLINE const char *name() const
+   inline const char *name() const
    {  return "push_back"; }
 };
 
 struct emplace_back
 {
-   BOOST_CONTAINER_FORCEINLINE std::size_t capacity_multiplier() const
+   inline std::size_t capacity_multiplier() const
    {  return 1;  }
 
    template<class C>
-   BOOST_CONTAINER_FORCEINLINE void operator()(C &c, int i)
+   inline void operator()(C &c, int i)
    {  c.emplace_back(i); }
 
-   BOOST_CONTAINER_FORCEINLINE const char *name() const
+   inline const char *name() const
    {  return "emplace_back"; }
 };
 
 struct insert_near_end_repeated
 {
-   BOOST_CONTAINER_FORCEINLINE std::size_t capacity_multiplier() const
+   inline std::size_t capacity_multiplier() const
    {  return RangeSize;  }
 
    template<class C>
-   BOOST_CONTAINER_FORCEINLINE void operator()(C &c, int i)
+   inline void operator()(C &c, int i)
    {  c.insert(c.size() >= 2*RangeSize ? c.end()-2*RangeSize : c.begin(), RangeSize, MyInt(i)); }
 
-   BOOST_CONTAINER_FORCEINLINE const char *name() const
+   inline const char *name() const
    {  return "insert_near_end_repeated"; }
 };
 
 struct insert_near_end_range
 {
-   BOOST_CONTAINER_FORCEINLINE std::size_t capacity_multiplier() const
+   inline std::size_t capacity_multiplier() const
    {  return RangeSize;  }
 
    template<class C>
-   BOOST_CONTAINER_FORCEINLINE void operator()(C &c, int)
+   inline void operator()(C &c, int)
    {
       c.insert(c.size() >= 2*RangeSize ? c.end()-2*RangeSize : c.begin(), &a[0], &a[0]+RangeSize);
    }
 
-   BOOST_CONTAINER_FORCEINLINE const char *name() const
+   inline const char *name() const
    {  return "insert_near_end_range"; }
 
    MyInt a[RangeSize];
@@ -183,11 +183,11 @@ struct insert_near_end_range
 
 struct insert_near_end
 {
-   BOOST_CONTAINER_FORCEINLINE std::size_t capacity_multiplier() const
+   inline std::size_t capacity_multiplier() const
    {  return 1;  }
 
    template<class C>
-   BOOST_CONTAINER_FORCEINLINE void operator()(C &c, int i)
+   inline void operator()(C &c, int i)
    {
       typedef typename C::iterator it_t;
       it_t it (c.end());
@@ -195,19 +195,19 @@ struct insert_near_end
       c.insert(it, MyInt(i));
    }
 
-   BOOST_CONTAINER_FORCEINLINE const char *name() const
+   inline const char *name() const
    {  return "insert_near_end"; }
 };
 
 struct emplace_near_end
 {
-   BOOST_CONTAINER_FORCEINLINE std::size_t capacity_multiplier() const
+   inline std::size_t capacity_multiplier() const
    {
       return 1;
    }
 
    template<class C>
-   BOOST_CONTAINER_FORCEINLINE void operator()(C& c, int i)
+   inline void operator()(C& c, int i)
    {
       typedef typename C::iterator it_t;
       it_t it(c.end());
@@ -215,7 +215,7 @@ struct emplace_near_end
       c.emplace(it, i);
    }
 
-   BOOST_CONTAINER_FORCEINLINE const char* name() const
+   inline const char* name() const
    {
       return "emplace_near_end";
    }

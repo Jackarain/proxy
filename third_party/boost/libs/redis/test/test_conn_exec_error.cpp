@@ -25,7 +25,6 @@ using boost::redis::ignore_t;
 using boost::redis::error;
 using boost::redis::logger;
 using boost::redis::operation;
-using redis::config;
 using namespace std::chrono_literals;
 
 BOOST_AUTO_TEST_CASE(no_ignore_error)

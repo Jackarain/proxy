@@ -31,6 +31,7 @@ DEPENDS all : target1 ;
 ...updating 1 target...
 do-print target1
 updating target1
+
 ...updated 1 target...
 ...found 1 target...
 """)
@@ -64,6 +65,7 @@ do-print target1
     echo updating target1
 
 updating target1
+
 ...updated 1 target...
 ...found 1 target...
 """)
@@ -106,12 +108,15 @@ fail target1
     exit 1
 
 ...failed fail target1...
+
 ...failed updating 1 target...
+   fail target1
 ...found 2 targets...
 ...updating 1 target...
 do-print target2
 
     echo updating target2
+
 
 ...updated 1 target...
 """)
@@ -181,12 +186,14 @@ do-print target1
 
     echo updating target1
 
+
 ...updated 1 target...
 do-print target1
 
     echo updating target1
 
 updating target1
+
 ...updated 1 target...
 ...found 1 target...
 """)
@@ -225,7 +232,9 @@ fail target1
     exit 1
 
 ...failed fail target1...
+
 ...failed updating 1 target...
+   fail target1
 update1:
 update2:
 ...found 1 target...
@@ -283,7 +292,10 @@ fail target2
     exit 1
 
 ...failed fail target2...
+
 ...failed updating 2 targets...
+   fail target1
+   fail target2
 ...found 2 targets...
 ...updating 2 targets...
 fail target3
@@ -293,6 +305,7 @@ fail target3
 fail target4
 
     exit 1
+
 
 ...updated 2 targets...
 ''')
@@ -305,7 +318,9 @@ fail target1
     exit 1
 
 ...failed fail target1...
+
 ...failed updating 1 target...
+   fail target1
 ...found 2 targets...
 ...updating 2 targets...
 fail target3
@@ -313,7 +328,9 @@ fail target3
     exit 1
 
 ...failed fail target3...
+
 ...failed updating 1 target...
+   fail target3
 ''')
 
     t.run_build_system(['-n', '-sIGNORE_MINUS_Q=1', '-ffile.jam'],
@@ -327,6 +344,7 @@ fail target2
 
     exit 1
 
+
 ...updated 2 targets...
 ...found 2 targets...
 ...updating 2 targets...
@@ -337,6 +355,7 @@ fail target3
 fail target4
 
     exit 1
+
 
 ...updated 2 targets...
 ''')
@@ -354,7 +373,10 @@ fail target2
     exit 1
 
 ...failed fail target2...
+
 ...failed updating 2 targets...
+   fail target1
+   fail target2
 ...found 2 targets...
 ...updating 2 targets...
 fail target3
@@ -362,7 +384,9 @@ fail target3
     exit 1
 
 ...failed fail target3...
+
 ...failed updating 1 target...
+   fail target3
 ''')
 
     t.cleanup()

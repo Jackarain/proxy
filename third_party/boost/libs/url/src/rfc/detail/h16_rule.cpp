@@ -11,7 +11,7 @@
 #define BOOST_URL_RFC_DETAIL_IMPL_H16_RULE_HPP
 
 #include <boost/url/detail/config.hpp>
-#include <boost/url/rfc/detail/h16_rule.hpp>
+#include "h16_rule.hpp"
 #include <boost/url/grammar/charset.hpp>
 #include <boost/url/grammar/error.hpp>
 #include <boost/url/grammar/hexdig_chars.hpp>

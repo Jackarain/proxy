@@ -218,33 +218,10 @@ rule length ( s * )
 # Removes duplicates from 'list'.  If 'stable' is
 # passed, then the order of the elements will
 # be unchanged.
-rule unique ( list * : stable ? )
-{
-    local result ;
-    local prev ;
-    if $(stable)
-    {
-        for local f in $(list)
-        {
-            if ! $(f) in $(result)
-            {
-                result += $(f) ;
-            }
-        }
-    }
-    else
-    {
-        for local i in [ SORT $(list) ]
-        {
-            if $(i) != $(prev)
-            {
-                result += $(i) ;
-            }
-            prev = $(i) ;
-        }
-    }
-    return $(result) ;
-}
+#
+# rule unique ( list * : stable ? )
+
+NATIVE_RULE sequence : unique ;
 
 
 # Returns the maximum number in 'elements'. Uses 'ordered' for comparisons or
@@ -367,7 +344,9 @@ rule __test__ ( )
         }
         assert.result 256 : sequence.length $(p2) ;
 
-        assert.result 1 2 3 4 5 : sequence.unique 1 2 3 2 4 3 3 5 5 5 ;
+        assert.result-set-equal 1 2 3 4 5 : sequence.unique 1 2 3 2 4 3 3 5 5 5 ;
+
+        assert.result 1 4 3 2 5 : sequence.unique 1 4 4 3 2 4 3 3 5 5 5 : stable ;
 
         assert.result 5 : sequence.max-element 1 3 5 0 4 ;
 

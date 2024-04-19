@@ -1,3 +1,9 @@
+// Copyright 2023 Peter Dimov.
+// Copyright 2023 Christian Mazakas.
+// Copyright 2023 Ed Catmur
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
+
 #ifdef _MSC_VER
 #pragma warning(disable: 4530) // C++ exception handler used, but unwing semantics not enabled
 #pragma warning(disable: 4577) // noexcept used with no exception handling mode specified

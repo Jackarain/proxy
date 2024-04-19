@@ -105,6 +105,13 @@ void expected_results()
        ".*",                // test data group
        ".*", 50000, 20000); // test function
    add_expected_result(
+       ".*",                // compiler
+       ".*",                // stdlib
+       ".*",                // platform
+       ".*",                // test type(s)
+       "Extra.*",           // test data group
+       ".*", 6000, 3000);   // test function
+   add_expected_result(
        ".*",           // compiler
        ".*",           // stdlib
        ".*",           // platform

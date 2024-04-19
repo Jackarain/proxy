@@ -93,7 +93,7 @@ namespace  // Concrete FSM implementation
         };      
 
         // the initial state of the player SM. Must be defined
-        typedef mpl::vector5<NotHolding,NotPlaying,NoMenuMode,NoOnOffButton,CheckMiddleButton> 
+        typedef boost::mpl::vector5<NotHolding,NotPlaying,NoMenuMode,NoOnOffButton,CheckMiddleButton>
                                     initial_state;
         // transition actions
         void send_ActivateMenu(EndPlay const&)
@@ -142,7 +142,7 @@ namespace  // Concrete FSM implementation
         typedef iPod_ fsm; // makes transition table cleaner
 
         // Transition table for player
-        struct transition_table : mpl::vector<
+        struct transition_table : boost::mpl::vector<
         //     Start               Event           Next                Action                           Guard
         //    +-------------------+---------------+-------------------+--------------------------------+----------------------+
         _row < NotHolding         , Hold          , Holding                                                                   >,

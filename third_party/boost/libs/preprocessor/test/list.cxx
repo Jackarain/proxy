@@ -26,7 +26,7 @@
 # include <boost/preprocessor/seq/elem.hpp>
 # include <boost/preprocessor/seq/size.hpp>
 # include <boost/preprocessor/variadic/elem.hpp>
-# include <libs/preprocessor/test/test.h>
+# include "test.h"
 
 # define LISTNIL BOOST_PP_NIL
 # define LIST (4, (1, (5, (2, BOOST_PP_NIL))))

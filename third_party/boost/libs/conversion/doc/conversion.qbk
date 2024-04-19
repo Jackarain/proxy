@@ -1,6 +1,6 @@
 [/
     Copyright 2016 Mikhail Maximov.
-    Copyright Antony Polukhin, 2020-2023.
+    Copyright Antony Polukhin, 2020-2024.
 
     Distributed under the Boost Software License, Version 1.0. (See accompanying
     file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)
@@ -12,7 +12,7 @@
     [id conversion]
     [version 1.7]
     [authors [Stroustrup, Bjarne], [Abrahams, Dave], [Rasin, Boris], [Polukhin, Antony]]
-    [copyright 2001 Beman Dawes, 2014-2023 Antony Polukhin]
+    [copyright 2001 Beman Dawes, 2014-2024 Antony Polukhin]
     [license
         Distributed under the Boost Software License, Version 1.0.
         (See accompanying file LICENSE_1_0.txt or copy at
@@ -30,8 +30,7 @@ The Conversion Library improves program safety and clarity by performing
 otherwise messy conversions. It includes cast-style function templates designed 
 to complement the C++ Standard's built-in casts.
 
-To reduce coupling, particularly to standard library IOStreams, 
-the Boost Conversion Library is supplied by several headers:
+To reduce coupling, the Boost Conversion Library is supplied by several headers:
 
 # The [@boost:boost/polymorphic_cast.hpp boost/polymorphic_cast.hpp] header
   provides [link polymorphic_cast `polymorphic_cast<>`] and
@@ -42,8 +41,6 @@ the Boost Conversion Library is supplied by several headers:
   [link polymorphic_pointer_cast `polymorphic_pointer_downcast<>`]
 # The [@boost:boost/implicit_cast.hpp boost/implicit_cast.hpp] header provides `implicit_cast<>` 
   to perform implicit casts only (no down-cast, no void*->T*, no U->T if T has only explicit constructors for U).
-# The [@boost:boost/lexical_cast.hpp boost/lexical_cast.hpp] header 
-  provides [@boost:doc/libs/release/libs/lexical_cast/ `lexical_cast<>`] general literal text conversions, such as an `int` represented as a `string`, or vice-versa. 
 
 [endsect]
 

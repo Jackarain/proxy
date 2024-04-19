@@ -8,12 +8,9 @@
 :nofooter:
 :stylesheet: amber.css
 // :source-highlighter: rouge
-// :source-highlighter: pygments
+// :rouge-style: native
 :source-language: jam
 :highlightjsdir: hljs
-// :pygments-style: native
-// :rouge-style: native
-// :pygments-style: friendly
 :caution-caption: ⚑
 :important-caption: ‼
 :note-caption: ℹ
@@ -64,6 +61,8 @@ include::tools.adoc[]
 include::examples.adoc[]
 
 include::bjam.adoc[]
+
+include::code_ref.adoc[]
 
 include::history.adoc[]
 

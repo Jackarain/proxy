@@ -14,9 +14,9 @@
 #include <boost/url/detail/config.hpp>
 #include <boost/url/parse_path.hpp>
 #include <boost/url/error.hpp>
-#include <boost/url/detail/path.hpp>
+#include "detail/path.hpp"
 #include <boost/url/grammar/parse.hpp>
-#include <boost/url/rfc/detail/path_rules.hpp>
+#include "boost/url/rfc/detail/path_rules.hpp"
 
 namespace boost {
 namespace urls {

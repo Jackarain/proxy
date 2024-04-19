@@ -1,11 +1,15 @@
 [/
- / Copyright (c) 2021-2023 Andrey Semashev
+ / Copyright (c) 2021-2024 Andrey Semashev
  /
  / Distributed under the Boost Software License, Version 1.0. (See accompanying
  / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
  /]
 
 [section:changelog Changelog]
+
+[heading Boost 1.85]
+
+* Added support for `pause` instruction on RISC-V. ([github_pr 65])
 
 [heading Boost 1.84]
 

@@ -13,9 +13,14 @@ https://www.boost.org/doc/libs/master/libs/url/doc/html/[image:https://raw.githu
 |===
 |Branch |https://github.com/boostorg/url/tree/master[`master`]
 |https://github.com/boostorg/url/tree/develop[`develop`]
-|Docs
+
+|https://www.boost.org/doc/libs/master/libs/url/doc/html/[Docs]
 |https://www.boost.org/doc/libs/master/libs/url/doc/html/[image:https://img.shields.io/badge/docs-master-brightgreen.svg[Documentation]]
 |https://www.boost.org/doc/libs/develop/libs/url/doc/html/[image:https://img.shields.io/badge/docs-develop-brightgreen.svg[Documentation]]
+
+|https://github.com/[GitHub Actions]
+|https://github.com/boostorg/url/actions/workflows/ci.yml[image:https://github.com/boostorg/url/actions/workflows/ci.yml/badge.svg?branch=master[CI]]
+|https://github.com/boostorg/url/actions/workflows/ci.yml[image:https://github.com/boostorg/url/actions/workflows/ci.yml/badge.svg?branch=develop[CI]]
 
 |https://drone.io/[Drone]
 |https://drone.cpp.al/boostorg/url[image:https://drone.cpp.al/api/badges/boostorg/url/status.svg?ref=refs/heads/master[Build
@@ -23,17 +28,13 @@ Status]]
 |https://drone.cpp.al/boostorg/url[image:https://drone.cpp.al/api/badges/boostorg/url/status.svg?ref=refs/heads/develop[Build
 Status]]
 
-|https://github.com/[GitHub Actions]
-|https://github.com/boostorg/url/actions/workflows/ci.yml[image:https://github.com/boostorg/url/actions/workflows/ci.yml/badge.svg?branch=master[CI]]
-|https://github.com/boostorg/url/actions/workflows/ci.yml[image:https://github.com/boostorg/url/actions/workflows/ci.yml/badge.svg?branch=develop[CI]]
-
-|https://codecov.io[codecov.io]
-|https://codecov.io/gh/boostorg/url/branch/master[image:https://codecov.io/gh/boostorg/url/branch/master/graph/badge.svg[codecov]]
-|https://codecov.io/gh/boostorg/url/branch/develop[image:https://codecov.io/gh/boostorg/url/branch/develop/graph/badge.svg[codecov]]
-
-|Matrix
+|https://www.boost.org/development/tests/master/developer/summary.html[Matrix]
 |http://www.boost.org/development/tests/master/developer/url.html[image:https://img.shields.io/badge/matrix-master-brightgreen.svg[Matrix]]
 |http://www.boost.org/development/tests/develop/developer/url.html[image:https://img.shields.io/badge/matrix-develop-brightgreen.svg[Matrix]]
+
+|https://codecov.io[Codecov]
+|https://codecov.io/gh/boostorg/url/branch/master[image:https://codecov.io/gh/boostorg/url/branch/master/graph/badge.svg[codecov]]
+|https://codecov.io/gh/boostorg/url/branch/develop[image:https://codecov.io/gh/boostorg/url/branch/develop/graph/badge.svg[codecov]]
 |===
 
 == Boost.URL

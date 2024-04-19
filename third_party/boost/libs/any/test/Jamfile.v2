@@ -15,7 +15,7 @@ import testing ;
 project
     : source-location .
     : requirements
-        [ requires cxx11_rvalue_references ]
+        [ requires cxx11_rvalue_references cxx11_static_assert ]
     ;
 
 test-suite any :

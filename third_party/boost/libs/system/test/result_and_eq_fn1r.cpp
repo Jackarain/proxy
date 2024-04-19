@@ -80,6 +80,16 @@ result<int&, E2> fri2( int& )
     return E2();
 }
 
+result<void, E2> fv()
+{
+    return {};
+}
+
+result<void, E2> fv2()
+{
+    return E2();
+}
+
 int main()
 {
     {
@@ -119,6 +129,19 @@ int main()
         BOOST_TEST( r.has_error() );
 
         r &= fri;
+        BOOST_TEST( r.has_error() );
+    }
+
+    {
+        result<void, E2> r;
+
+        r &= fv;
+        BOOST_TEST( r.has_value() );
+
+        r &= fv2;
+        BOOST_TEST( r.has_error() );
+
+        r &= fv;
         BOOST_TEST( r.has_error() );
     }
 

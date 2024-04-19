@@ -552,25 +552,6 @@ a.anchor {
     margin-top: 0;
 }
 
-/* until Doxygen 1.9.4 */
-.left img#MSearchSelect {
-    left: 0;
-    user-select: none;
-    padding-left: 8px;
-}
-
-/* Doxygen 1.9.5 */
-.left span#MSearchSelect {
-    left: 0;
-    user-select: none;
-    margin-left: 8px;
-    padding: 0;
-}
-
-.left #MSearchSelect[src$=".png"] {
-    padding-left: 0
-}
-
 .SelectionMark {
     user-select: none;
 }
@@ -614,9 +595,7 @@ a.anchor {
 
 #MSearchField {
     font-size: var(--navigation-font-size);
-    height: calc(var(--searchbar-height) - 2px);
     background: transparent;
-    width: calc(var(--searchbar-width) - 64px);
 }
 
 .MSearchBoxActive #MSearchField {

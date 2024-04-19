@@ -5,11 +5,11 @@
 // https://www.boost.org/LICENSE_1_0.txt
 //
 
-#include <boost/url/url.hpp>
-#include <cassert>
+#include <boost/url.hpp>
 
-int main()
-{
-    assert(sizeof(boost::urls::url) > 0);
-    return 0;
+int main() {
+  boost::urls::ipv4_address ip_addr({127, 0, 0, 1});
+  if (ip_addr.to_bytes().size() != 4) {
+    throw;
+  }
 }

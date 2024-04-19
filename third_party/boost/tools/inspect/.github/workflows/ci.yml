@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - develop
+      - feature/**
+
+env:
+  UBSAN_OPTIONS: print_stacktrace=1
+
+jobs:
+  posix:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-20.04
+            toolset: gcc
+          - os: ubuntu-22.04
+            toolset: gcc
+          - os: macos-11
+            toolset: clang
+          - os: macos-12
+            toolset: clang
+          - os: macos-13
+            toolset: clang
+
+    runs-on: ${{matrix.os}}
+    container: ${{matrix.container}}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup container environment
+        if: matrix.container
+        run: |
+          apt-get update
+          apt-get -y install sudo python3 git g++
+
+      - name: Install packages
+        if: matrix.install
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install ${{matrix.install}}
+
+      - name: Setup Boost
+        run: |
+          echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          cp -r $GITHUB_WORKSPACE/* tools/inspect
+          git submodule update --init tools/boostdep
+          python3 tools/boostdep/depinst/depinst.py --git_args "--jobs 3" ../tools/inspect
+          ./bootstrap.sh
+          ./b2 -d0 headers
+
+      - name: Create user-config.jam
+        if: matrix.compiler
+        run: |
+          echo "using ${{matrix.toolset}} : : ${{matrix.compiler}} ;" > ~/user-config.jam
+
+      - name: Build tool
+        run: |
+          cd ../boost-root
+          ./b2 -j3 tools/inspect/build toolset=${{matrix.toolset}}
+
+  windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - toolset: msvc-14.0
+            os: windows-2019
+          - toolset: msvc-14.2
+            os: windows-2019
+          - toolset: msvc-14.3
+            os: windows-2022
+          - toolset: gcc
+            os: windows-2019
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Boost
+        shell: cmd
+        run: |
+          echo GITHUB_BASE_REF: %GITHUB_BASE_REF%
+          echo GITHUB_REF: %GITHUB_REF%
+          if "%GITHUB_BASE_REF%" == "" set GITHUB_BASE_REF=%GITHUB_REF%
+          set BOOST_BRANCH=develop
+          for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
+          echo BOOST_BRANCH: %BOOST_BRANCH%
+          cd ..
+          git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          xcopy /s /e /q %GITHUB_WORKSPACE% tools\inspect\
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" ../tools/inspect
+          cmd /c bootstrap
+          b2 -d0 headers
+
+      - name: Build tool
+        shell: cmd
+        run: |
+          cd ../boost-root
+          b2 -j3 tools/inspect/build toolset=${{matrix.toolset}} embed-manifest-via=linker

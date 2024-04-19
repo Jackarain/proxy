@@ -158,20 +158,48 @@ void test_unordered<ContainerDefiner>::test_insert(value_cont_type& values, deta
       <>::type unordered_set_type;
    typedef typename unordered_set_type::bucket_traits bucket_traits;
    typedef typename unordered_set_type::key_of_value  key_of_value;
+   typedef typename unordered_set_type::bucket_ptr bucket_ptr;
 
    const std::size_t ExtraBuckets = unordered_set_type::bucket_overhead;
    typename unordered_set_type::bucket_type buckets[BucketSize + ExtraBuckets];
-   unordered_set_type testset(bucket_traits(
-      pointer_traits<typename unordered_set_type::bucket_ptr>::
-         pointer_to(buckets[0]), sizeof(buckets)/sizeof(*buckets)));
+   const bucket_traits orig_bucket_traits( pointer_traits<bucket_ptr>::pointer_to(buckets[0])
+                                         , sizeof(buckets) / sizeof(*buckets));
+   unordered_set_type testset(orig_bucket_traits);
    testset.insert(&values[0] + 2, &values[0] + 5);
 
    typename unordered_set_type::insert_commit_data commit_data;
    BOOST_TEST ((!testset.insert_check(key_of_value()(values[2]), commit_data).second));
    BOOST_TEST (( testset.insert_check(key_of_value()(values[0]), commit_data).second));
 
+   //Test insert_fast_commit
+   {
+      BOOST_TEST(testset.find(key_of_value()(values[0])) == testset.end());
+      testset.insert_fast_commit(values[0], commit_data);
+      BOOST_TEST(testset.find(key_of_value()(values[0])) != testset.end());
+      testset.erase(key_of_value()(values[0]));
+      BOOST_TEST(testset.find(key_of_value()(values[0])) == testset.end());
+   }
+
+   //Test insert_commit
+   BOOST_IF_CONSTEXPR(!unordered_set_type::incremental)
+   {
+      BOOST_TEST((testset.insert_check(key_of_value()(values[0]), commit_data).second));
+      typename unordered_set_type::bucket_type buckets2[2U + ExtraBuckets];
+      //Two rehashes to be compatible with incremental hashing
+      testset.rehash(bucket_traits(
+         pointer_traits<bucket_ptr>::pointer_to(buckets2[0]), 2U + ExtraBuckets));
+      testset.insert_commit(values[0], commit_data);
+      BOOST_TEST(testset.find(key_of_value()(values[0])) != testset.end());
+      testset.erase(key_of_value()(values[0]));
+      BOOST_TEST(testset.find(key_of_value()(values[0])) == testset.end());
+      //Two rehashes to be compatible with incremental hashing
+      testset.clear();
+      testset.rehash(orig_bucket_traits);
+      testset.insert(&values[0] + 2, &values[0] + 5);
+   }
+
    const unordered_set_type& const_testset = testset;
-   if(unordered_set_type::incremental)
+   BOOST_IF_CONSTEXPR(unordered_set_type::incremental)
    {
       {  int init_values [] = { 4, 5, 1 };
          TEST_INTRUSIVE_SEQUENCE_MAYBEUNIQUE( init_values, const_testset );  }
@@ -600,7 +628,7 @@ void test_unordered<ContainerDefiner>::test_rehash(value_cont_type& values, deta
    typedef typename unordered_type::bucket_ptr    bucket_ptr;
 
    typename unordered_type::bucket_type buckets1[BucketSize + ExtraBuckets];
-   typename unordered_type::bucket_type buckets2 [2 + ExtraBuckets];
+   typename unordered_type::bucket_type buckets2 [BucketSize / 4 + ExtraBuckets];
    typename unordered_type::bucket_type buckets3[BucketSize*2 + ExtraBuckets];
 
    unordered_type testset1(&values[0], &values[0] + 6, bucket_traits(

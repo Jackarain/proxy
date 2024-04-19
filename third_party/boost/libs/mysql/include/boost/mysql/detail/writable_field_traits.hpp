@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -25,7 +25,7 @@ struct writable_field_traits
 };
 
 template <>
-struct writable_field_traits<bool, void, void>
+struct writable_field_traits<bool>
 {
     static constexpr bool is_supported = true;
     static field_view to_field(bool value) noexcept { return field_view(value ? 1 : 0); }
@@ -34,7 +34,8 @@ struct writable_field_traits<bool, void, void>
 template <class T>
 struct writable_field_traits<
     T,
-    typename std::enable_if<std::is_constructible<field_view, const T&>::value>::type,
+    typename std::enable_if<
+        std::is_constructible<field_view, const T&>::value && std::is_object<T>::value>::type,
     void>
 {
     static constexpr bool is_supported = true;
@@ -67,9 +68,8 @@ field_view to_field(const T& value) noexcept
 }
 
 template <class T>
-struct is_writable_field
+struct is_writable_field : std::integral_constant<bool, writable_field_traits<T>::is_supported>
 {
-    static constexpr bool value = writable_field_traits<T>::is_supported;
 };
 
 // field_view_forward_iterator
@@ -117,7 +117,7 @@ struct is_writable_field_tuple_impl : std::false_type
 
 template <class... T>
 struct is_writable_field_tuple_impl<std::tuple<T...>>
-    : mp11::mp_all_of<mp11::mp_list<T...>, is_writable_field>
+    : mp11::mp_all_of<mp11::mp_list<typename std::remove_reference<T>::type...>, is_writable_field>
 {
 };
 

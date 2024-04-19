@@ -97,41 +97,40 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
 
 [
     linux_pipeline(
-        "Linux 14.04 GCC 4.4",
-        "cppalliance/droneubuntu1404:1",
+        "Linux 16.04 GCC 4.4",
+        "cppalliance/droneubuntu1604:1",
         { TOOLSET: 'gcc', COMPILER: 'g++-4.4', CXXSTD: '98,0x' },
         "g++-4.4",
         [ "ppa:ubuntu-toolchain-r/test" ],
     ),
 
     linux_pipeline(
-        "Linux 14.04 GCC 4.6 32/64",
-        "cppalliance/droneubuntu1404:1",
+        "Linux 16.04 GCC 4.6 32/64",
+        "cppalliance/droneubuntu1604:1",
         { TOOLSET: 'gcc', COMPILER: 'g++-4.6', CXXSTD: '98,0x', ADDRMD: '32,64' },
         "g++-4.6-multilib",
         [ "ppa:ubuntu-toolchain-r/test" ],
     ),
 
     linux_pipeline(
-        "Linux 14.04 GCC 4.7 32/64",
-        "cppalliance/droneubuntu1404:1",
+        "Linux 16.04 GCC 4.7 32/64",
+        "cppalliance/droneubuntu1604:1",
         { TOOLSET: 'gcc', COMPILER: 'g++-4.7', CXXSTD: '98,0x', ADDRMD: '32,64' },
         "g++-4.7-multilib",
-        [ "ppa:ubuntu-toolchain-r/test" ],
     ),
 
     linux_pipeline(
-        "Linux 14.04 GCC 4.8* 32/64",
-        "cppalliance/droneubuntu1404:1",
+        "Linux 16.04 GCC 4.8 32/64",
+        "cppalliance/droneubuntu1604:1",
         { TOOLSET: 'gcc', COMPILER: 'g++', CXXSTD: '03,11', ADDRMD: '32,64' },
+        "g++-4.8-multilib",
     ),
 
     linux_pipeline(
-        "Linux 14.04 GCC 4.9 32/64",
-        "cppalliance/droneubuntu1404:1",
+        "Linux 16.04 GCC 4.9 32/64",
+        "cppalliance/droneubuntu1604:1",
         { TOOLSET: 'gcc', COMPILER: 'g++-4.9', CXXSTD: '03,11', ADDRMD: '32,64' },
         "g++-4.9-multilib",
-        [ "ppa:ubuntu-toolchain-r/test" ],
     ),
 
     linux_pipeline(
@@ -194,17 +193,38 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
     ),
 
     linux_pipeline(
-        "Linux 22.04 GCC 12 32 ASAN",
+        "Linux 22.04 GCC 12 32/64",
         "cppalliance/droneubuntu2204:1",
-        { TOOLSET: 'gcc', COMPILER: 'g++-12', CXXSTD: '03,11,14,17,20,2b', ADDRMD: '32' } + asan,
+        { TOOLSET: 'gcc', COMPILER: 'g++-12', CXXSTD: '03,11,14,17,20,2b', ADDRMD: '32,64' },
         "g++-12-multilib",
     ),
 
     linux_pipeline(
-        "Linux 22.04 GCC 12 64 ASAN",
-        "cppalliance/droneubuntu2204:1",
-        { TOOLSET: 'gcc', COMPILER: 'g++-12', CXXSTD: '03,11,14,17,20,2b', ADDRMD: '64' } + asan,
-        "g++-12-multilib",
+        "Linux 23.04 GCC 13 32 ASAN",
+        "cppalliance/droneubuntu2304:1",
+        { TOOLSET: 'gcc', COMPILER: 'g++-13', CXXSTD: '03,11,14,17,20,2b', ADDRMD: '32' } + asan,
+        "g++-13-multilib",
+    ),
+
+    linux_pipeline(
+        "Linux 23.04 GCC 13 64 ASAN",
+        "cppalliance/droneubuntu2304:1",
+        { TOOLSET: 'gcc', COMPILER: 'g++-13', CXXSTD: '03,11,14,17,20,2b', ADDRMD: '64' } + asan,
+        "g++-13-multilib",
+    ),
+
+    linux_pipeline(
+        "Linux 23.04 GCC 13 32 UBSAN",
+        "cppalliance/droneubuntu2304:1",
+        { TOOLSET: 'gcc', COMPILER: 'g++-13', CXXSTD: '03,11,14,17,20,2b', ADDRMD: '32' } + ubsan,
+        "g++-13-multilib",
+    ),
+
+    linux_pipeline(
+        "Linux 23.04 GCC 13 64 UBSAN",
+        "cppalliance/droneubuntu2304:1",
+        { TOOLSET: 'gcc', COMPILER: 'g++-13', CXXSTD: '03,11,14,17,20,2b', ADDRMD: '64' } + ubsan,
+        "g++-13-multilib",
     ),
 
     linux_pipeline(
@@ -313,16 +333,9 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
     ),
 
     linux_pipeline(
-        "Linux 22.04 Clang 14 UBSAN",
+        "Linux 22.04 Clang 14",
         "cppalliance/droneubuntu2204:1",
-        { TOOLSET: 'clang', COMPILER: 'clang++-14', CXXSTD: '03,11,14,17,20,2b' } + ubsan,
-        "clang-14",
-    ),
-
-    linux_pipeline(
-        "Linux 22.04 Clang 14 ASAN",
-        "cppalliance/droneubuntu2204:1",
-        { TOOLSET: 'clang', COMPILER: 'clang++-14', CXXSTD: '03,11,14,17,20,2b' } + asan,
+        { TOOLSET: 'clang', COMPILER: 'clang++-14', CXXSTD: '03,11,14,17,20,2b' },
         "clang-14",
     ),
 
@@ -331,15 +344,27 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
         "cppalliance/droneubuntu2204:1",
         { TOOLSET: 'clang', COMPILER: 'clang++-15', CXXSTD: '03,11,14,17,20,2b' },
         "clang-15",
-        ["deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main"],
     ),
 
     linux_pipeline(
-        "Linux 22.04 Clang 16",
-        "cppalliance/droneubuntu2204:1",
+        "Linux 23.04 Clang 16",
+        "cppalliance/droneubuntu2304:1",
         { TOOLSET: 'clang', COMPILER: 'clang++-16', CXXSTD: '03,11,14,17,20,2b' },
         "clang-16",
-        ["deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main"],
+    ),
+
+    linux_pipeline(
+        "Linux 23.10 Clang 17 UBSAN",
+        "cppalliance/droneubuntu2310:1",
+        { TOOLSET: 'clang', COMPILER: 'clang++-17', CXXSTD: '03,11,14,17,20,2b' } + ubsan,
+        "clang-17",
+    ),
+
+    linux_pipeline(
+        "Linux 23.10 Clang 17 ASAN",
+        "cppalliance/droneubuntu2310:1",
+        { TOOLSET: 'clang', COMPILER: 'clang++-17', CXXSTD: '03,11,14,17,20,2b' } + asan,
+        "clang-17",
     ),
 
     macos_pipeline(
@@ -367,7 +392,7 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
     windows_pipeline(
         "Windows VS2015 msvc-14.0",
         "cppalliance/dronevs2015",
-        { TOOLSET: 'msvc-14.0', CXXSTD: '14,latest', ADDRMD: '32,64' },
+        { TOOLSET: 'msvc-14.0', CXXSTD: '14,latest', B2_DONT_EMBED_MANIFEST: '1' },
     ),
 
     windows_pipeline(

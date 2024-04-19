@@ -85,12 +85,14 @@ local FCA_TESTS =
   contains_tests
   copy_tests
   deduction_tests
+  emplace_smf_tests
   emplace_tests
   equality_tests
   equivalent_keys_tests
   erase_equiv_tests
   erase_if
   erase_tests
+  explicit_alloc_ctor_tests
   extract_tests
   find_tests
   fwd_map_test
@@ -201,8 +203,10 @@ local FOA_TESTS =
   assign_tests
   insert_tests
   insert_hint_tests
+  emplace_smf_tests
   emplace_tests
   erase_tests
+  explicit_alloc_ctor_tests
   merge_tests
   find_tests
   at_tests
@@ -325,6 +329,7 @@ local CFOA_TESTS =
   rw_spinlock_test7
   rw_spinlock_test8
   reentrancy_check_test
+  explicit_alloc_ctor_tests
 ;
 
 for local test in $(CFOA_TESTS)

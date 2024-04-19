@@ -13,7 +13,6 @@
 #include <boost/intrusive/slist.hpp>
 #include <boost/intrusive/set.hpp>
 #include <boost/intrusive/unordered_set.hpp>
-#include <boost/container_hash/hash.hpp>
 #include <boost/intrusive/pointer_traits.hpp>
 #include <vector>
 
@@ -35,7 +34,7 @@ class MyClass
    {  return l.int_ == r.int_; }
 
    friend std::size_t hash_value(const MyClass &v)
-   {  return boost::hash_value(v.int_); }
+   {  return std::size_t(v.int_); }
 };
 
 template<class T, class NodeTraits>

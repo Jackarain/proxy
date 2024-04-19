@@ -1409,6 +1409,26 @@ use [*Boost.Container]? There are several reasons for that:
 
 [section:release_notes Release Notes]
 
+[section:release_notes_boost_1_85_00 Boost 1.85 Release]
+
+* Removed Boost.StaticAssert dependency.
+
+* Fixed bugs/issues:
+   * [@https://github.com/boostorg/container/issues/225 GitHub #225: ['"variable set but not used in dlmalloc_ext_2_8_6.c"]].
+   * [@https://github.com/boostorg/container/issues/242 GitHub #242: ['"Issue with string::rfind"]].
+
+[endsect]
+
+[section:release_notes_boost_1_83_00 Boost 1.83 Release]
+
+* Disabled forceinline for Clang due to code bloat issues, see [@https://lists.boost.org/boost-users/2023/04/91445.php Boost mailing list report]
+
+* Fixed bugs/issues:
+   * [@https://github.com/boostorg/container/issues/225 GitHub #225: ['"variable set but not used in dlmalloc_ext_2_8_6.c"]].
+   * [@https://github.com/boostorg/container/issues/242 GitHub #242: ['"Issue with string::rfind"]].
+
+[endsect]
+
 [section:release_notes_boost_1_82_00 Boost 1.82 Release]
 
 * Fixed bugs/issues:
@@ -1435,7 +1455,7 @@ use [*Boost.Container]? There are several reasons for that:
    * [@https://github.com/boostorg/container/issues/209 GitHub #209: ['"Some boost warnings with my R package (Wclass-memaccess warnings with std::pair)"]].
    * [@https://github.com/boostorg/container/issues/211 GitHub #211: ['"Use atomics for pmr get/set default resource"]].
    * [@https://github.com/boostorg/container/issues/210 GitHub #210: ['"Use sized delete in boost::container::new_allocator if __cpp_sized_deallocation is defined"]].
-   * [@https://github.com/boostorg/container/issues/221 GitHub #218: ['"small_vector static capacity is too small when not a multiple of 8 bytes"]].
+   * [@https://github.com/boostorg/container/issues/218 GitHub #218: ['"small_vector static capacity is too small when not a multiple of 8 bytes"]].
    * [@https://github.com/boostorg/container/issues/221 GitHub #221: ['"flat_set and friends should offer a const sequence_type& sequence() const method (...)"]].
    * [@https://github.com/boostorg/container/pull/222   GitHub #222: ['"Fix incomplete type error when using list with pair"]].
    * [@https://github.com/boostorg/container/issues/223 GitHub #223: ['"Possible copypaste typo"]].

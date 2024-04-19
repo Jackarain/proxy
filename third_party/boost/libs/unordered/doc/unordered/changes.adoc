@@ -6,6 +6,13 @@
 :github-pr-url: https://github.com/boostorg/unordered/pull
 :cpp: C++
 
+== Release 1.85.0
+
+* Optimized `emplace()` for a `value_type` or `init_type` (if applicable) argument to bypass creating an intermediate object. The argument is already the same type as the would-be intermediate object.
+* Optimized `emplace()` for `k,v` arguments on map containers to delay constructing the object until it is certain that an element should be inserted. This optimization happens when the map's `key_type` is move constructible or when the `k` argument is a `key_type`.
+* Fixed support for allocators with `explicit` copy constructors ({github-pr-url}/234[PR#234^]).
+* Fixed bug in the `const` version of `unordered_multimap::find(k, hash, eq)` ({github-pr-url}/238[PR#238^]).
+
 == Release 1.84.0 - Major update
 
 * Added `boost::concurrent_flat_set`.

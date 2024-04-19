@@ -12,7 +12,7 @@
 #include <iostream>
 
 #include <boost/timer.hpp>
-#include <boost/array.hpp>
+#include <array>
 
 #include <boost/numeric/odeint/stepper/runge_kutta4_classic.hpp>
 #include <boost/numeric/odeint/stepper/runge_kutta4.hpp>
@@ -22,7 +22,7 @@
 
 typedef boost::timer timer_type;
 
-typedef boost::array< double , 3 > state_type;
+typedef std::array< double , 3 > state_type;
 
 using namespace boost::numeric::odeint;
 

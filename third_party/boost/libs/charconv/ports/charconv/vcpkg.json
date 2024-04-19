@@ -1,0 +1,38 @@
+{
+  "name": "charconv",
+  "version": "1.83.0",
+  "description": "A C++11 implementation of <charconv>",
+  "homepage": "https://github.com/cppalliance/charconv",
+  "dependencies": [
+    {
+      "name": "boost-build",
+      "host": true,
+      "version>=": "1.81.0"
+    },
+    {
+      "name": "boost-modular-build-helper",
+      "host": true,
+      "version>=": "1.81.0"
+    },
+    {
+      "name": "boost-config",
+      "version>=": "1.81.0"
+    },
+    {
+      "name": "boost-assert",
+      "version>=": "1.81.0"
+    },
+    {
+      "name": "boost-core",
+      "version>=": "1.81.0"
+    },
+    {
+      "name": "boost-vcpkg-helpers",
+      "version>=": "1.81.0"
+    },
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    }
+    ]
+}

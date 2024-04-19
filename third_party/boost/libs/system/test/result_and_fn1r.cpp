@@ -85,6 +85,26 @@ result<void, E2> fri3( int& )
     return {};
 }
 
+result<int, E2> fk()
+{
+    return 7;
+}
+
+result<int, E2> fk2()
+{
+    return E2();
+}
+
+result<void, E2> fk3()
+{
+    return {};
+}
+
+result<void, E2> fk4()
+{
+    return E2();
+}
+
 int main()
 {
     {
@@ -340,6 +360,142 @@ int main()
 
     {
         result<void, E2> r2 = result<int&, E>( in_place_error ) & fri3;
+        BOOST_TEST( r2.has_error() );
+    }
+
+    {
+        result<void, E> r;
+
+        {
+            result<int, E2> r2 = r & fk;
+            BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( *r2, 7 );
+        }
+
+        {
+            result<int, E2> r2 = r & fk2;
+            BOOST_TEST( r2.has_error() );
+        }
+
+        {
+            result<void, E2> r2 = r & fk3;
+            BOOST_TEST( r2.has_value() );
+        }
+
+        {
+            result<void, E2> r2 = r & fk4;
+            BOOST_TEST( r2.has_error() );
+        }
+    }
+
+    {
+        result<void, E> const r;
+
+        {
+            result<int, E2> r2 = r & fk;
+            BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( *r2, 7 );
+        }
+
+        {
+            result<int, E2> r2 = r & fk2;
+            BOOST_TEST( r2.has_error() );
+        }
+
+        {
+            result<void, E2> r2 = r & fk3;
+            BOOST_TEST( r2.has_value() );
+        }
+
+        {
+            result<void, E2> r2 = r & fk4;
+            BOOST_TEST( r2.has_error() );
+        }
+    }
+
+    {
+        result<int, E2> r2 = result<void, E>() & fk;
+        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( *r2, 7 );
+    }
+
+    {
+        result<int, E2> r2 = result<void, E>() & fk2;
+        BOOST_TEST( r2.has_error() );
+    }
+
+    {
+        result<void, E2> r2 = result<void, E>() & fk3;
+        BOOST_TEST( r2.has_value() );
+    }
+
+    {
+        result<void, E2> r2 = result<void, E>() & fk4;
+        BOOST_TEST( r2.has_error() );
+    }
+
+    {
+        result<void, E> r( in_place_error );
+
+        {
+            result<int, E2> r2 = r & fk;
+            BOOST_TEST( r2.has_error() );
+        }
+
+        {
+            result<int, E2> r2 = r & fk2;
+            BOOST_TEST( r2.has_error() );
+        }
+
+        {
+            result<void, E2> r2 = r & fk3;
+            BOOST_TEST( r2.has_error() );
+        }
+
+        {
+            result<void, E2> r2 = r & fk4;
+            BOOST_TEST( r2.has_error() );
+        }
+    }
+
+    {
+        result<void, E> const r( in_place_error );
+
+        {
+            result<int, E2> r2 = r & fk;
+            BOOST_TEST( r2.has_error() );
+        }
+
+        {
+            result<int, E2> r2 = r & fk2;
+            BOOST_TEST( r2.has_error() );
+        }
+
+        {
+            result<void, E2> r2 = r & fk3;
+            BOOST_TEST( r2.has_error() );
+        }
+
+        {
+            result<void, E2> r2 = r & fk4;
+            BOOST_TEST( r2.has_error() );
+        }
+    }
+
+    {
+        result<int, E2> r2 = result<void, E>( in_place_error ) & fk;
+        BOOST_TEST( r2.has_error() );
+    }
+
+    {
+        result<int, E2> r2 = result<void, E>( in_place_error ) & fk2;
+        BOOST_TEST( r2.has_error() );
+    }
+
+    {
+        result<void, E2> r2 = result<void, E>( in_place_error ) & fk3;
+        BOOST_TEST( r2.has_error() );
+    }
+
+    {
+        result<void, E2> r2 = result<void, E>( in_place_error ) & fk4;
         BOOST_TEST( r2.has_error() );
     }
 

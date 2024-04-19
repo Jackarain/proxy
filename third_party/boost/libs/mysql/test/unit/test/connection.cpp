@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -7,120 +7,51 @@
 
 #include <boost/mysql/buffer_params.hpp>
 #include <boost/mysql/connection.hpp>
+#include <boost/mysql/handshake_params.hpp>
 #include <boost/mysql/metadata_mode.hpp>
-#include <boost/mysql/results.hpp>
 #include <boost/mysql/tcp.hpp>
 #include <boost/mysql/tcp_ssl.hpp>
 
+#include <boost/asio/deferred.hpp>
 #include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include "test_common/printing.hpp"
-#include "test_unit/create_ok.hpp"
-#include "test_unit/create_ok_frame.hpp"
-#include "test_unit/netfun_maker.hpp"
-#include "test_unit/test_stream.hpp"
 
 using namespace boost::mysql;
-using namespace boost::mysql::test;
-namespace net = boost::asio;
+namespace asio = boost::asio;
+using asio::deferred;
 
 BOOST_AUTO_TEST_SUITE(test_connection_)
 
-using test_connection = connection<test_stream>;
-
-using query_netfun_maker = netfun_maker_mem<void, test_connection, const string_view&, results&>;
-
-struct
-{
-    query_netfun_maker::signature query;
-    const char* name;
-} all_fns[] = {
-    {query_netfun_maker::sync_errc(&test_connection::execute),           "sync" },
-    {query_netfun_maker::async_errinfo(&test_connection::async_execute), "async"},
-};
-
 BOOST_AUTO_TEST_CASE(init_ctor)
 {
-    net::io_context ctx;
+    asio::io_context ctx;
     tcp_connection c{ctx.get_executor()};
     BOOST_CHECK_NO_THROW(c.stream().get_executor());
 }
 
 BOOST_AUTO_TEST_CASE(init_ctor_with_buffer_params)
 {
-    net::io_context ctx;
+    asio::io_context ctx;
     tcp_connection c{buffer_params(4096), ctx.get_executor()};
     BOOST_CHECK_NO_THROW(c.stream().get_executor());
 }
 
 BOOST_AUTO_TEST_CASE(init_ctor_with_buffer_params_rvalue)
 {
-    net::io_context ctx;
+    asio::io_context ctx;
     tcp_connection::stream_type sock{ctx.get_executor()};
     tcp_connection c{buffer_params(4096), std::move(sock)};
     BOOST_CHECK_NO_THROW(c.stream().get_executor());
 }
 
 // move ctor
-BOOST_AUTO_TEST_CASE(use_move_constructed_connection)
-{
-    for (const auto& fns : all_fns)
-    {
-        BOOST_TEST_CONTEXT(fns.name)
-        {
-            // Construct connection
-            test_connection conn;
-
-            // Use it
-            conn.stream().add_bytes(create_ok_frame(1, ok_builder().build()));
-            results result;
-            fns.query(conn, "SELECT * FROM myt", result).validate_no_error();
-
-            // Move construct another connection from conn
-            test_connection conn2(std::move(conn));
-
-            // Using it works (no dangling pointer)
-            conn2.stream().add_bytes(create_ok_frame(1, ok_builder().affected_rows(42).build()));
-            fns.query(conn2, "DELETE FROM myt", result).validate_no_error();
-            BOOST_TEST(result.affected_rows() == 42u);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE(use_move_assigned_connection)
-{
-    for (const auto& fns : all_fns)
-    {
-        BOOST_TEST_CONTEXT(fns.name)
-        {
-            // Construct two connections
-            test_connection conn1;
-            test_connection conn2;
-
-            // Use them
-            conn1.stream().add_bytes(create_ok_frame(1, ok_builder().build()));
-            conn2.stream().add_bytes(create_ok_frame(1, ok_builder().build()));
-            results result;
-            fns.query(conn1, "SELECT * FROM myt", result).validate_no_error();
-            fns.query(conn2, "SELECT * FROM myt", result).validate_no_error();
-
-            // Move assign
-            conn2 = std::move(conn1);
-
-            // Using it works (no dangling pointer)
-            conn2.stream().add_bytes(create_ok_frame(1, ok_builder().affected_rows(42).build()));
-            fns.query(conn2, "DELETE FROM myt", result).validate_no_error();
-            BOOST_TEST(result.affected_rows() == 42u);
-        }
-    }
-}
-
-// move ctor
 BOOST_AUTO_TEST_CASE(move_ctor)
 {
-    net::io_context ctx;
+    asio::io_context ctx;
     tcp_connection c1{ctx.get_executor()};
     tcp_connection c2{std::move(c1)};
     BOOST_CHECK_NO_THROW(c2.stream().get_executor());
@@ -129,7 +60,7 @@ BOOST_AUTO_TEST_CASE(move_ctor)
 // move assign
 BOOST_AUTO_TEST_CASE(move_assign_to_moved_from)
 {
-    net::io_context ctx;
+    asio::io_context ctx;
     tcp_connection moved_from{ctx.get_executor()};
     tcp_connection other{std::move(moved_from)};
     tcp_connection conn{ctx.get_executor()};
@@ -139,7 +70,7 @@ BOOST_AUTO_TEST_CASE(move_assign_to_moved_from)
 
 BOOST_AUTO_TEST_CASE(move_assign_to_valid)
 {
-    net::io_context ctx;
+    asio::io_context ctx;
     tcp_connection c1{ctx.get_executor()};
     tcp_connection c2{ctx.get_executor()};
     c1 = std::move(c2);
@@ -148,7 +79,7 @@ BOOST_AUTO_TEST_CASE(move_assign_to_valid)
 
 BOOST_AUTO_TEST_CASE(set_meta_mode)
 {
-    net::io_context ctx;
+    asio::io_context ctx;
 
     // Default metadata mode
     tcp_connection conn{ctx.get_executor()};
@@ -160,17 +91,17 @@ BOOST_AUTO_TEST_CASE(set_meta_mode)
 }
 
 // rebind_executor
-using other_exec = net::strand<net::any_io_executor>;
+using other_exec = asio::strand<asio::any_io_executor>;
 static_assert(
     std::is_same<
         typename tcp_connection::rebind_executor<other_exec>::other,
-        connection<net::basic_stream_socket<net::ip::tcp, other_exec>>>::value,
+        connection<asio::basic_stream_socket<asio::ip::tcp, other_exec>>>::value,
     ""
 );
 static_assert(
     std::is_same<
         typename tcp_ssl_connection::rebind_executor<other_exec>::other,
-        connection<net::ssl::stream<net::basic_stream_socket<net::ip::tcp, other_exec>>>>::value,
+        connection<asio::ssl::stream<asio::basic_stream_socket<asio::ip::tcp, other_exec>>>>::value,
     ""
 );
 
@@ -178,26 +109,82 @@ static_assert(
 struct stream_archetype
 {
     // Executor
-    using executor_type = net::any_io_executor;
+    using executor_type = asio::any_io_executor;
     executor_type get_executor() { return {}; }
 
     // Reading
-    std::size_t read_some(net::mutable_buffer, error_code&) { return 0; }
+    std::size_t read_some(asio::mutable_buffer, error_code&) { return 0; }
 
     template <class CompletionToken>
-    void async_read_some(net::mutable_buffer, CompletionToken&&)
+    void async_read_some(asio::mutable_buffer, CompletionToken&&)
     {
     }
 
     // Writing
-    std::size_t write_some(net::const_buffer, error_code&) { return 0; }
+    std::size_t write_some(asio::const_buffer, error_code&) { return 0; }
 
     template <class CompletionToken>
-    void async_write_some(net::const_buffer, CompletionToken&&)
+    void async_write_some(asio::const_buffer, CompletionToken&&)
     {
     }
 };
 
-connection<stream_archetype> conn;
+connection<stream_archetype> archetype_conn;
+
+// spotcheck: deferred compiles even in C++11
+void deferred_spotcheck()
+{
+    asio::io_context ctx;
+    tcp_connection conn(ctx);
+    handshake_params params("myuser", "mypasswd");
+    asio::ip::tcp::endpoint ep;
+    diagnostics diag;
+    results result;
+    execution_state st;
+    statement stmt;
+    std::string str;
+    const std::string const_str;
+
+    (void)conn.async_handshake(params, deferred);
+    (void)conn.async_handshake(params, diag, deferred);
+
+    (void)conn.async_execute("SELECT 1", result, deferred);
+    (void)conn.async_execute(str, result, deferred);
+    (void)conn.async_execute(const_str, result, deferred);
+    (void)conn.async_execute("SELECT 1", result, diag, deferred);
+    (void)conn.async_execute(str, result, diag, deferred);
+    (void)conn.async_execute(const_str, result, diag, deferred);
+
+    (void)conn.async_start_execution("SELECT 1", st, deferred);
+    (void)conn.async_start_execution(str, st, deferred);
+    (void)conn.async_start_execution(const_str, st, deferred);
+    (void)conn.async_start_execution("SELECT 1", st, diag, deferred);
+    (void)conn.async_start_execution(str, st, diag, deferred);
+    (void)conn.async_start_execution(const_str, st, diag, deferred);
+
+    (void)conn.async_read_some_rows(st, deferred);
+    (void)conn.async_read_some_rows(st, diag, deferred);
+
+    (void)conn.async_read_resultset_head(st, deferred);
+    (void)conn.async_read_resultset_head(st, diag, deferred);
+
+    (void)conn.async_prepare_statement("SELECT 1", deferred);
+    (void)conn.async_prepare_statement("SELECT 1", diag, deferred);
+
+    (void)conn.async_close_statement(stmt, deferred);
+    (void)conn.async_close_statement(stmt, diag, deferred);
+
+    (void)conn.async_reset_connection(deferred);
+    (void)conn.async_reset_connection(diag, deferred);
+
+    (void)conn.async_ping(deferred);
+    (void)conn.async_ping(diag, deferred);
+
+    (void)conn.async_quit(deferred);
+    (void)conn.async_quit(diag, deferred);
+
+    (void)conn.async_close(deferred);
+    (void)conn.async_close(diag, deferred);
+}
 
 BOOST_AUTO_TEST_SUITE_END()  // test_connection

@@ -9,6 +9,12 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
+
+#define BOOST_MOVE_ADAPTIVE_SORT_INVARIANTS
+
 #include <cstdlib>   //std::srand
 #include <iostream>  //std::cout
 
@@ -74,6 +80,13 @@ int main()
    instantiate_smalldiff_iterators();
 
    const std::size_t NIter = 100;
+
+   test_random_shuffled<order_move_type>(1001, 3, NIter);
+   test_random_shuffled<order_move_type>(1001, 65, NIter);
+   test_random_shuffled<order_move_type>(1001, 101, NIter);
+   test_random_shuffled<order_move_type>(1001, 200, NIter);
+
+
    //Below absolute minimal unique values
    test_random_shuffled<order_move_type>(10001, 3,   NIter);   
    //Above absolute minimal unique values, below internal buffer

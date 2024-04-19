@@ -270,6 +270,10 @@ namespace boost { namespace property_tree
         const self_type &get_child(const path_type &path,
                                    const self_type &default_value) const;
 
+        /** Prevents calls to get_child with temporary default values */
+        void get_child(const path_type &path,
+                       const self_type &&default_value) const = delete;
+
         /** Get the child at the given path, or return boost::null. */
         optional<self_type &> get_child_optional(const path_type &path);
 

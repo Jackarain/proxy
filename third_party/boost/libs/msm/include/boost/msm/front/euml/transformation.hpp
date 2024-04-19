@@ -12,6 +12,9 @@
 #define BOOST_MSM_FRONT_EUML_TRANSFORMATION_H
 
 #include <algorithm>
+
+#include <boost/fusion/container/set.hpp>
+
 #include <boost/msm/front/euml/common.hpp>
 
 namespace boost { namespace msm { namespace front { namespace euml
@@ -89,7 +92,7 @@ struct BackInserter_ : euml_action<BackInserter_<T> >
             typename ::boost::remove_reference<
                 typename get_result_type<T,EVT,FSM,SourceState,TargetState>::type>::type> type;
     };
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     typename ::boost::enable_if<
@@ -144,7 +147,7 @@ struct FrontInserter_ : euml_action<FrontInserter_<T> >
             typename ::boost::remove_reference<
                 typename get_result_type<T,EVT,FSM,SourceState,TargetState>::type>::type> type;
     };
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     typename ::boost::enable_if<
@@ -199,7 +202,7 @@ struct Inserter_ : euml_action<Inserter_<T,Pos> >
             typename ::boost::remove_reference<
                 typename get_result_type<T,EVT,FSM,SourceState,TargetState>::type>::type> type;
     };
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     typename ::boost::enable_if<
@@ -257,7 +260,7 @@ struct Transform_<Param1,Param2,Param3,Param4,Param5,
     {
         typedef typename get_result_type<Param3,EVT,FSM,SourceState,TargetState>::type type;
     };
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     typename ::boost::enable_if<
@@ -296,7 +299,7 @@ struct Transform_<Param1,Param2,Param3,Param4,Param5,
     {
         typedef typename get_result_type<Param4,EVT,FSM,SourceState,TargetState>::type type;
     };
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     typename ::boost::enable_if<

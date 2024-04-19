@@ -19,6 +19,10 @@ http://www.boost.org/LICENSE_1_0.txt
 
 `mp_transform<F, L1<T1...>, L2<T2...>, ..., Ln<Tn...>>` applies `F` to each successive tuple of elements and returns `L1<F<T1, T2, ..., Tn>...>`.
 
+Has limited support of value lists as `L...` under {cpp}17 (for one to three lists.)
+In that case, elements are wrapped with `mp_value` before being passed to `F`, and
+are unwrapped afterwards. The result is `L1<F<mp_value<T1>, mp_value<T2>, ...>::value...>`.
+
 .Using mp_transform to produce a list of pointers from a list of pointees
 ```
 template<class T> using add_pointer_t =
@@ -414,6 +418,28 @@ Supports a value list as `L` under {cpp}17.
 
 Same as `mp_take_c`, but with a type argument `N`. `N::value` must be a nonnegative number.
 
+## mp_slice_c<L, I, J>
+
+    template<class L, std::size_t I, std::size_t J> using mp_slice_c = mp_drop_c<mp_take_c<L, J>, I>;
+
+`mp_slice_c<L, I, J>` returns a list of the same form as `L` containing the elements from index `I` (inclusive) to index `J` (exclusive).
+
+Supports a value list as `L` under {cpp}17.
+
+.mp_slice_c
+[cols="<.^4m,8*^.^1m",width=85%]
+|===
+|*L1*|A~0~|...|A~i~|...|A~j-1~|A~j~|...|A~n-1~
+9+|
+|*mp_slice_c<L1, I, J>* 2+>||A~i~|...|A~j-1~ 3+|
+|===
+
+## mp_slice<L, I, J>
+
+    template<class L, class I, class J> using mp_slice = mp_drop<mp_take<L, J>, I>;
+
+Same as `mp_slice_c`, but with type arguments `I` and `J`. `I::value` and `J::value` must be nonnegative numbers.
+
 ## mp_back<L>
 
     template<class L> using mp_back = mp_at_c<L, mp_size<L>::value - 1>;
@@ -699,6 +725,8 @@ Like `mp_nth_element`, but takes a quoted metafunction.
 
 It's equivalent to `mp_fold<mp_rest<L>, mp_first<L>, F>`, where `F<T, U>` returns `mp_if<P<T, U>, T, U>`.
 
+Supports a value list as `L` under {cpp}17. In that case, the element is returned wrapped with `mp_value`.
+
 ## mp_min_element_q<L, Q>
 
     template<class L, class Q> using mp_min_element_q = mp_min_element<L, Q::template fn>;
@@ -712,6 +740,8 @@ As `mp_min_element`, but takes a quoted metafunction.
 `mp_max_element<L, P>` returns the maximal element of the list `L` according to the ordering `mp_to_bool<P<T, U>>`.
 
 It's equivalent to `mp_fold<mp_rest<L>, mp_first<L>, F>`, where `F<T, U>` returns `mp_if<P<U, T>, T, U>`.
+
+Supports a value list as `L` under {cpp}17. In that case, the element is returned wrapped with `mp_value`.
 
 ## mp_max_element_q<L, Q>
 
@@ -844,6 +874,39 @@ As `mp_pairwise_fold`, but takes a quoted metafunction.
 ----
 template<class L, template<class...> class P> using is_sorted =
     mp_none_of<mp_pairwise_fold_q<L, mp_bind<P, _2, _1>>, mp_to_bool>;
+----
+
+## mp_sliding_fold<L, N, F>
+
+    template<class L, class N, template<class...> class F> using mp_sliding_fold = /*...*/;
+
+`mp_sliding_fold<L, N, F>` returns a list of the same form as `L` whose elements are
+the result of the application of the n-ary metafunction `F` to each n-tuple of adjacent
+elements of `L`. That is, `mp_sliding_fold<L<T1, T2, T3, T4>, mp_size_t<3>, F>` is
+`L<F<T1, T2, T3>, F<T2, T3, T4>>`.
+
+The result has `N-1` fewer elements than the original.
+If `L` has fewer than `N::value` elements, the result is an empty list.
+
+.Using mp_sliding_fold
+----
+template<class L, class N> using local_maximum =
+    mp_sliding_fold<L, N, mp_max>;
+----
+
+## mp_sliding_fold_q<L, N, Q>
+
+    template<class L, class N, class Q> using mp_sliding_fold_q =
+        mp_sliding_fold<L, N, Q::template fn>;
+
+As `mp_sliding_fold`, but takes a quoted metafunction.
+
+.Using mp_sliding_fold_q
+----
+struct average { template<class... C> using fn = mp_int<mp_plus<C...>::value / sizeof...(C)>; };
+
+template<class L, class N> using moving_average =
+    mp_sliding_fold_q<L, N, average>;
 ----
 
 ## mp_iterate<V, F, R>

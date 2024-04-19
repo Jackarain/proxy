@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -8,10 +8,12 @@
 #ifndef BOOST_MYSQL_TEST_INTEGRATION_INCLUDE_TEST_INTEGRATION_COMMON_HPP
 #define BOOST_MYSQL_TEST_INTEGRATION_INCLUDE_TEST_INTEGRATION_COMMON_HPP
 
+#include <boost/mysql/connect_params.hpp>
 #include <boost/mysql/execution_state.hpp>
 #include <boost/mysql/handshake_params.hpp>
 #include <boost/mysql/metadata_collection_view.hpp>
 #include <boost/mysql/results.hpp>
+#include <boost/mysql/ssl_mode.hpp>
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ssl/context.hpp>
@@ -19,20 +21,34 @@
 #include <boost/test/unit_test.hpp>
 
 #include <initializer_list>
-#include <thread>
 
 #include "test_integration/er_connection.hpp"
 #include "test_integration/er_network_variant.hpp"
+#include "test_integration/get_endpoint.hpp"
 #include "test_integration/metadata_validator.hpp"
-#include "test_integration/network_test.hpp"
 
 namespace boost {
 namespace mysql {
 namespace test {
 
+constexpr const char* default_user = "integ_user";
+constexpr const char* default_passwd = "integ_password";
+constexpr const char* default_db = "boost_mysql_integtests";
+
+inline connect_params default_connect_params(ssl_mode ssl = ssl_mode::enable)
+{
+    connect_params res;
+    res.server_address.emplace_host_and_port(get_hostname());
+    res.username = default_user;
+    res.password = default_passwd;
+    res.database = default_db;
+    res.ssl = ssl;
+    return res;
+}
+
 struct network_fixture_base
 {
-    handshake_params params{"integ_user", "integ_password", "boost_mysql_integtests"};
+    handshake_params params{default_user, default_passwd, default_db};
     boost::asio::io_context ctx;
     boost::asio::ssl::context ssl_ctx{boost::asio::ssl::context::tls_client};
 };
@@ -154,6 +170,14 @@ inline std::vector<network_sample> create_all_network_samples()
 inline const std::vector<network_sample>& all_network_samples()
 {
     static std::vector<network_sample> res = create_all_network_samples();
+    return res;
+}
+
+inline std::vector<network_sample> all_network_samples_with_handshake()
+{
+    std::vector<network_sample> res;
+    for (auto* var : all_variants_with_handshake())
+        res.emplace_back(var);
     return res;
 }
 

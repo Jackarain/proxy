@@ -130,7 +130,8 @@ struct doc_grammar_test
         }
         {
         //[code_grammar_1_5
-        system::result< unsigned short > rv = parse( "16384", unsigned_rule< unsigned short >{} );
+        system::result< unsigned short > rv =
+            parse( "16384", unsigned_rule< unsigned short >{} );
         //]
         ignore_unused(rv);
         }

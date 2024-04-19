@@ -104,11 +104,6 @@
           <listitem><code>Sequence</code> must meet the requirements of
             <libraryname>MPL</libraryname>'s <emphasis>Sequence</emphasis>
             concept.</listitem>
-          <listitem>Due to standard conformance problems in several compilers,
-            <code>make_recursive_variant_over</code> may not be supported on
-            your compiler. See
-            <code><macroname>BOOST_VARIANT_NO_TYPE_SEQUENCE_SUPPORT</macroname></code>
-            for more information.</listitem>
         </itemizedlist>
       </description>
     </class>

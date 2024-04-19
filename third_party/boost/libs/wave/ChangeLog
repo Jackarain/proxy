@@ -18,6 +18,10 @@ TODO (known issues):
 
 CHANGELOG
 
+Boost V1.85:
+  - Fixed #200: Emitted pragmas lack terminating newline
+  - Fixed #202: YYMARKER not updated when fill called on BOOST_WAVE_BSIZE boundary
+
 Boost V1.84:
   - Fixed #188: Segmentation fault when "#pragma\n" is encountered
 

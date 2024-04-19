@@ -3,6 +3,7 @@ steps:
     set -e
     uname -a
     ./.ci/linux-cxx-install.sh
+    python3 --version
   displayName: Install
 - bash: |
     set -e
@@ -11,9 +12,14 @@ steps:
     ./build.sh ${TOOLSET}
     ./b2 -v
     cd ../..
+    echo "using ${TOOLSET%%-[0-9]*} : : ${CXX} ;" > ${HOME}/user-config.jam
   displayName: Build
 - bash: |
     set -e
+    echo "Available system locales:"
+    locale -a
+    echo "Switch to C.UTF-8 locale."
+    export LC_ALL=C.UTF-8
     cd test
     ./test_all.py ${TOOLSET}
     cd ..

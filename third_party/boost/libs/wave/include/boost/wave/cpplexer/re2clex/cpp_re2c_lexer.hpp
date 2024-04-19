@@ -273,7 +273,8 @@ lexer<IteratorT, PositionT, TokenT>::get(TokenT& result)
     case T_ANY_TRIGRAPH:
         if (boost::wave::need_convert_trigraphs(language)) {
             value = impl::convert_trigraph(
-                string_type((char const *)scanner.tok));
+                string_type((char const *)scanner.tok,
+                            scanner.cur-scanner.tok));
         }
         else {
             value = string_type((char const *)scanner.tok,

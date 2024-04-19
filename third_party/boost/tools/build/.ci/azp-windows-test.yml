@@ -1,25 +1,31 @@
 steps:
 - powershell: |
+    Set-PSDebug -Trace 1
     cd src/engine
+    $env:HOME = $env:HOMEDRIVE + $env:HOMEPATH
     $env:path += ';' + $env:CXX_PATH
     cmd /c build.bat $env:TOOLSET
     ./b2.exe -v
     cd ../..
   displayName: Build
 - powershell: |
+    Set-PSDebug -Trace 1
     $env:HOME = $env:HOMEDRIVE + $env:HOMEPATH
+    $env:path += ';' + $env:CXX_PATH
     cd test
     echo "using" $env:TEST_TOOLSET ":" ":" $env:CXX ";" > ${env:HOME}/user-config.jam
-    py test_all.py $env:TEST_TOOLSET
+    py -X utf8 test_all.py $env:TEST_TOOLSET
     cd ..
   displayName: Test
 - powershell: |
+    Set-PSDebug -Trace 1
     $env:HOME = $env:HOMEDRIVE + $env:HOMEPATH
     $env:path += ';' + $env:CXX_PATH
     echo "using" $env:TEST_TOOLSET ":" ":" $env:CXX ";" > ${env:HOME}/user-config.jam
     ./src/engine/b2.exe --debug-configuration b2 warnings-as-errors=on variant=debug,release toolset=$env:TEST_TOOLSET
   displayName: "No Warnings"
 - powershell: |
+    Set-PSDebug -Trace 1
     $env:HOME = $env:HOMEDRIVE + $env:HOMEPATH
     $env:path += ';' + $env:CXX_PATH
     echo "using" $env:TEST_TOOLSET ":" ":" $env:CXX ";" > ${env:HOME}/user-config.jam

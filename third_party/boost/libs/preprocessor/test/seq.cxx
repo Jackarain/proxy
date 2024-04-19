@@ -36,7 +36,7 @@
 # include <boost/preprocessor/variadic/elem.hpp>
 # include <boost/preprocessor/variadic/size.hpp>
 # include <boost/preprocessor/variadic/has_opt.hpp>
-# include <libs/preprocessor/test/test.h>
+# include "test.h"
 
 # define SEQ_NONE ()
 # define SEQ (4)(1)(5)(2)

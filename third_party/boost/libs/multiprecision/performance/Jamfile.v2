@@ -149,11 +149,11 @@ test-suite performance :
           
 [ exe delaunay_test : delaunay_test.cpp /boost/system//boost_system /boost/chrono//boost_chrono ]
 
-[ exe voronoi_performance : voronoi_performance.cpp /boost/system//boost_system /boost/chrono//boost_chrono
-   : release
-          [ check-target-builds ../config//has_gmp : <define>TEST_GMP <source>gmp : ]
-          [ check-target-builds ../config//has_tommath : <define>TEST_TOMMATH <source>$(TOMMATH) : ]
-   ]
+#[ exe voronoi_performance : voronoi_performance.cpp /boost/system//boost_system /boost/chrono//boost_chrono
+#   : release
+#          [ check-target-builds ../config//has_gmp : <define>TEST_GMP <source>gmp : ]
+#          [ check-target-builds ../config//has_tommath : <define>TEST_TOMMATH <source>$(TOMMATH) : ]
+#   ]
 
 [ obj obj_linpack_benchmark_mpfr : linpack-benchmark.cpp
           : release

@@ -116,8 +116,8 @@ class lut_chars
         unsigned char ch) noexcept
     {
         return ch == 255
-            ? construct(ch, pred(ch))
-            : construct(ch, pred(ch)) +
+            ? construct(ch, pred(static_cast<char>(ch)))
+            : construct(ch, pred(static_cast<char>(ch))) +
                 construct(pred, ch + 1);
     }
 
@@ -257,6 +257,14 @@ public:
     bool
     operator()(
         unsigned char ch) const noexcept
+    {
+        return operator()(static_cast<char>(ch));
+    }
+
+    /// @copydoc operator()(unsigned char) const
+    constexpr
+    bool
+    operator()(char ch) const noexcept
     {
         return mask_[lo(ch)] & hi(ch);
     }

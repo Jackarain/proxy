@@ -31,10 +31,11 @@ set(__ignore__ ${CMAKE_C_COMPILER})
 # Options
 #
 #-------------------------------------------------
-option(BOOST_URL_BUILD_TESTS "Build boost::url tests" ${BUILD_TESTING})
+option(BOOST_URL_BUILD_TESTS "Build boost::url tests even if BUILD_TESTING is OFF" OFF)
 option(BOOST_URL_BUILD_FUZZERS "Build boost::url fuzzers" OFF)
 option(BOOST_URL_BUILD_EXAMPLES "Build boost::url examples" ${BOOST_URL_IS_ROOT})
 option(BOOST_URL_DISABLE_THREADS "Disable threads" OFF)
+option(BOOST_URL_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 set(BOOST_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.." CACHE STRING "Boost source dir to use when running CMake from this directory")
 
 #-------------------------------------------------
@@ -62,7 +63,7 @@ foreach (BOOST_URL_DEPENDENCY ${BOOST_URL_DEPENDENCIES})
     endif ()
 endforeach ()
 # Conditional dependencies
-if (BOOST_URL_BUILD_TESTS)
+if (BUILD_TESTING OR BOOST_URL_BUILD_TESTS)
     set(BOOST_URL_UNIT_TEST_LIBRARIES container filesystem unordered)
 endif()
 if (BOOST_URL_BUILD_EXAMPLES)
@@ -77,7 +78,7 @@ set(BOOST_EXCLUDE_LIBRARIES url)
 # Add Boost Subdirectory
 #
 #-------------------------------------------------
-if (NOT BOOST_SUPERPROJECT_VERSION)
+if (BOOST_URL_IS_ROOT)
     set(CMAKE_FOLDER Dependencies)
     # Find absolute BOOST_SRC_DIR
     if (NOT IS_ABSOLUTE ${BOOST_SRC_DIR})
@@ -96,6 +97,10 @@ if (NOT BOOST_SUPERPROJECT_VERSION)
 
     # Create Boost interface targets
     if (BOOST_SRC_DIR_IS_VALID)
+        # From BOOST_SRC_DIR
+        if (BUILD_SHARED_LIBS)
+            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+        endif()
         set(BOOST_EXCLUDE_LIBRARIES ${PROJECT_NAME})
         set(PREV_BUILD_TESTING ${BUILD_TESTING})
         set(BUILD_TESTING OFF CACHE BOOL "Build the tests." FORCE)
@@ -103,6 +108,7 @@ if (NOT BOOST_SUPERPROJECT_VERSION)
         set(BUILD_TESTING ${PREV_BUILD_TESTING} CACHE BOOL "Build the tests." FORCE)
         set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${BOOST_SRC_DIR}/tools/cmake/include")
     else ()
+        # From Boost Package
         find_package(Boost REQUIRED COMPONENTS container)
         foreach (BOOST_INCLUDE_LIBRARY ${BOOST_INCLUDE_LIBRARIES})
             if (NOT TARGET Boost::${BOOST_INCLUDE_LIBRARY})
@@ -133,6 +139,7 @@ function(boost_url_setup_properties target)
     target_link_libraries(${target} PUBLIC ${BOOST_URL_DEPENDENCIES})
     target_compile_definitions(${target} PUBLIC $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,BOOST_URL_DYN_LINK=1,BOOST_URL_STATIC_LINK=1>)
     target_compile_definitions(${target} PRIVATE BOOST_URL_SOURCE)
+    target_compile_options(${target} PUBLIC $<$<CXX_COMPILER_ID:MSVC>:/EHsc>)
 endfunction()
 add_library(boost_url ${BOOST_URL_HEADERS} ${BOOST_URL_SOURCES})
 add_library(Boost::url ALIAS boost_url)
@@ -143,7 +150,7 @@ boost_url_setup_properties(boost_url)
 # Tests
 #
 #-------------------------------------------------
-if (BOOST_URL_BUILD_TESTS)
+if (BUILD_TESTING OR BOOST_URL_BUILD_TESTS)
     if (BOOST_URL_IS_ROOT)
         include(CTest)
     endif ()

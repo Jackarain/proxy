@@ -110,7 +110,7 @@ struct PlayingMode_ : public msm::front::state_machine_def<PlayingMode_>
     };
     struct SetPosition : public msm::front::state<>
     {
-        typedef mpl::vector1<NoFastFwd>     flag_list;
+        typedef boost::mpl::vector1<NoFastFwd>     flag_list;
         template <class Event,class FSM>
         void on_entry(Event const&,FSM& ) {std::cout << "starting: PlayingMode::SetPosition" << std::endl;}
         template <class Event,class FSM>
@@ -204,11 +204,11 @@ struct PlayingMode_ : public msm::front::state_machine_def<PlayingMode_>
         }
     };
     // initial states / orthogonal zones
-    typedef mpl::vector5<Playing,WaitingForNextPrev,WaitingForEnd,NoForward,StdDisplay> 
+    typedef boost::mpl::vector5<Playing,WaitingForNextPrev,WaitingForEnd,NoForward,StdDisplay>
                             initial_state;
     typedef PlayingMode_ fsm; // makes transition table cleaner
     // Transition table for player
-    struct transition_table : mpl::vector19<
+    struct transition_table : boost::mpl::vector19<
             //    Start                 Event                Next                 Action                     Guard
             //   +--------------------+---------------------+--------------------+--------------------------+----------------------+
             _row < Playing            , PlayPause           , Paused                                                               >,

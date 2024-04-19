@@ -476,7 +476,7 @@ jobs:
 
           - lib: filesystem
             bopts: toolset=clang-win install
-            copts: "-G \"Visual Studio 17 2022\" -T clangcl -DBoost_COMPILER=\"clangw14;clangw15\""
+            copts: "-G \"Visual Studio 17 2022\" -T clangcl -DBoost_COMPILER=\"clangw14;clangw15;clangw16;clangw17;clangw18\""
             os: windows-2022
 
           # other libraries

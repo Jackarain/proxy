@@ -25,8 +25,8 @@
 # include <boost/preprocessor/variadic/size.hpp>
 # include <boost/preprocessor/variadic/elem.hpp>
 # include <boost/preprocessor/variadic/has_opt.hpp>
-# include <libs/preprocessor/test/test.h>
-# include <libs/preprocessor/test/tuple_elem_bug_test.cxx>
+# include "test.h"
+# include "tuple_elem_bug_test.cxx"
 
 # define TUPLE (0, 1, 2, 3, 4, 5)
 # define TUPLE_NONE ()

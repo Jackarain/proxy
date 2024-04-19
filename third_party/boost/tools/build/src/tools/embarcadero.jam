@@ -6,7 +6,7 @@
 
 #| tag::doc[]
 
-[[bbv2.reference.tools.compiler.borland]]
+[[bbv2.reference.tools.compiler.embarcadero]]
 = Embarcadero C++ Compiler
 
 The `embarcadero` module supports the 32-bit command line C++ compiler

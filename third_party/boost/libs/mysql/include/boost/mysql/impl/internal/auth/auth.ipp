@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -8,14 +8,15 @@
 #ifndef BOOST_MYSQL_IMPL_INTERNAL_AUTH_AUTH_IPP
 #define BOOST_MYSQL_IMPL_INTERNAL_AUTH_AUTH_IPP
 
-#include "boost/mysql/detail/config.hpp"
 #pragma once
 
 #include <boost/mysql/client_errc.hpp>
 #include <boost/mysql/string_view.hpp>
 
+#include <boost/mysql/detail/config.hpp>
+#include <boost/mysql/detail/make_string_view.hpp>
+
 #include <boost/mysql/impl/internal/auth/auth.hpp>
-#include <boost/mysql/impl/internal/make_string_view.hpp>
 
 #include <algorithm>
 #include <cstring>
@@ -62,7 +63,7 @@ BOOST_MYSQL_STATIC_OR_INLINE
 error_code mnp_compute_response(
     string_view password,
     boost::span<const std::uint8_t> challenge,
-    bool,  // use_ssl
+    bool,  // secure_channel
     std::vector<std::uint8_t>& output
 )
 {
@@ -132,13 +133,13 @@ BOOST_MYSQL_STATIC_OR_INLINE
 error_code csha2p_compute_response(
     string_view password,
     boost::span<const std::uint8_t> challenge,
-    bool use_ssl,
+    bool secure_channel,
     std::vector<std::uint8_t>& output
 )
 {
     if (should_perform_full_auth(challenge))
     {
-        if (!use_ssl)
+        if (!secure_channel)
         {
             return make_error_code(client_errc::auth_plugin_requires_ssl);
         }
@@ -167,7 +168,7 @@ struct authentication_plugin
     using calculator_signature = error_code (*)(
         string_view password,
         boost::span<const std::uint8_t> challenge,
-        bool use_ssl,
+        bool secure_channel,
         std::vector<std::uint8_t>& output
     );
 
@@ -206,7 +207,7 @@ boost::mysql::error_code boost::mysql::detail::compute_auth_response(
     string_view plugin_name,
     string_view password,
     span<const std::uint8_t> challenge,
-    bool use_ssl,
+    bool secure_channel,
     auth_response& output
 )
 {
@@ -223,7 +224,7 @@ boost::mysql::error_code boost::mysql::detail::compute_auth_response(
         }
         else
         {
-            return plugin->calculator(password, challenge, use_ssl, output.data);
+            return plugin->calculator(password, challenge, secure_channel, output.data);
         }
     }
     else

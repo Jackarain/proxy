@@ -110,7 +110,7 @@ async_execute(basic_process<Executor> proc,
                          WaitHandler && handler BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(Executor))
 {
     std::unique_ptr<basic_process<Executor>> pro_(new basic_process<Executor>(std::move(proc)));
-    auto exec = proc.get_executor();
+    auto exec = pro_->get_executor();
     return BOOST_PROCESS_V2_ASIO_NAMESPACE::async_compose<WaitHandler, void(error_code, int)>(
             detail::execute_op<Executor>{std::move(pro_)}, handler, exec);
 }

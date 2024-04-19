@@ -1,6 +1,6 @@
 #include <iostream>
 // back-end
-#include <boost/msm/back/state_machine.hpp>
+#include <boost/msm/back11/state_machine.hpp>
 //front-end
 #include <boost/msm/front/state_machine_def.hpp>
 #include <boost/msm/front/euml/euml.hpp>
@@ -112,7 +112,7 @@ namespace
 
     };
     // Playing Submachine back-end
-    typedef boost::msm::back::state_machine<Playing_> Playing_impl;
+    typedef boost::msm::back11::state_machine<Playing_> Playing_impl;
 
     // state not defining any entry or exit
     struct Paused_impl : public msm::front::state<> , public msm::front::euml::euml_state<Paused_impl>
@@ -164,7 +164,7 @@ namespace
         }
     };
     // Pick a back-end
-    typedef msm::back::state_machine<player_> player;
+    typedef msm::back11::state_machine<player_> player;
 
     //
     // Testing utilities.

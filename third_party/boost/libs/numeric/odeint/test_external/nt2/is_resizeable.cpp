@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_SUITE( nt2_is_resizeable )
 
 BOOST_AUTO_TEST_CASE_TEMPLATE( is_resizeable, T, fp_types )
 {
-  BOOST_STATIC_ASSERT(( boost::numeric::odeint::is_resizeable< nt2::table<T> >::value ));
+  static_assert(( boost::numeric::odeint::is_resizeable< nt2::table<T> >::value ), "Table is not resizeable");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

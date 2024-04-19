@@ -664,7 +664,6 @@ int main(int argc, char* argv[])
 
   return 0;
 }<!-- end include file --></pre>
-   </blockquote>
     </td>
   </tr>
 </table>
@@ -806,7 +805,7 @@ more flexible because class <code>path</code> itself is far more flexible:</p>
   <li>Class <code>path</code> supports multiple character types and encodings, including Unicode, to
   ease internationalization.</li>
   <li>Class <code>path</code> supports multiple source types, such as iterators for null terminated
-  sequences, iterator ranges, containers (including <code>std::basic_string</code>),
+  sequences, iterator ranges, string class types (including <code>std::basic_string</code> and <code>std::basic_string_view</code>),
   and <code><a href="reference.html#Class-directory_entry">directory_entry</a></code>'s,
   so functions taking paths don't need to provide several overloads.</li>
   <li>Class <code>path</code> supports both native and generic pathname formats, so programs can be
@@ -862,8 +861,8 @@ int main()
   { fs::ofstream f(L&quot;smile\u263A&quot;); }
   { fs::ofstream f(narrow_string); }
   { fs::ofstream f(wide_string); }
-  { fs::ofstream f(narrow_list); }
-  { fs::ofstream f(wide_list); }
+  { fs::ofstream f(fs::path(narrow_list.begin(), narrow_list.end())); }
+  { fs::ofstream f(fs::path(wide_list.begin(), wide_list.end())); }
   narrow_list.pop_back();
   narrow_list.push_back('4');
   wide_list.pop_back();
@@ -1077,7 +1076,7 @@ as we go along. Here is the invocation we will talk about in detail:</p>
       <pre>$ ./path_info /foo bar baa.txt
 
 composed path:
-  operator<<()---------: "/foo/bar/baa.txt"
+  operator&lt;&lt;()---------: "/foo/bar/baa.txt"
   make_preferred()-----: "/foo/bar/baa.txt"
 
 elements:

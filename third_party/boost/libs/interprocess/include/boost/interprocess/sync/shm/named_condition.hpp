@@ -33,6 +33,7 @@
 #include <boost/interprocess/sync/shm/named_creation_functor.hpp>
 #include <boost/interprocess/sync/named_mutex.hpp>
 #include <boost/interprocess/permissions.hpp>
+#include <boost/interprocess/timed_utils.hpp>
 #if defined (BOOST_INTERPROCESS_NAMED_MUTEX_USES_POSIX_SEMAPHORES)
    #include <boost/interprocess/sync/interprocess_mutex.hpp>
    #include <boost/interprocess/sync/scoped_lock.hpp>

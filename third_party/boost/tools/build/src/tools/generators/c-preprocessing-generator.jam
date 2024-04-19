@@ -39,6 +39,10 @@ class C-preprocessing-generator : generator
         {
             return ;
         }
+        # generator.construct-result adds relevant features for self.rule-name
+        # which is not the action rule that would be used...
+        local relevant = [ $(preprocessor[1]).get <relevant> ] ;
+        property-set = [ $(property-set).add-raw <relevant>$(relevant) ] ;
         # Clone preprocessor action with our source and target
         local preproc-action = [ $(preprocessor[2]).action ] ;
         local action-class = [ modules.peek $(preproc-action) : __class__ ] ;

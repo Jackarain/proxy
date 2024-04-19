@@ -5,24 +5,15 @@
 #include <boost/system/error_code.hpp>
 #include <boost/system/error_category.hpp>
 #include <boost/core/lightweight_test.hpp>
-#include <boost/config/pragma_message.hpp>
 #include <boost/config.hpp>
 #include <cerrno>
-
-#if !defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
-
-BOOST_PRAGMA_MESSAGE( "BOOST_SYSTEM_HAS_SYSTEM_ERROR not defined, test will be skipped" )
-int main() {}
-
-#else
-
 #include <system_error>
 
 class my_category_impl: public std::error_category
 {
 public:
 
-    char const* name() const BOOST_NOEXCEPT
+    char const* name() const noexcept
     {
         return "mycat";
     }
@@ -73,5 +64,3 @@ int main()
 
     return boost::report_errors();
 }
-
-#endif

@@ -16,9 +16,9 @@
 #include <boost/url/grammar/optional_rule.hpp>
 #include <boost/url/grammar/parse.hpp>
 #include <boost/url/grammar/tuple_rule.hpp>
-#include <boost/url/rfc/detail/host_rule.hpp>
-#include <boost/url/rfc/detail/port_rule.hpp>
-#include <boost/url/rfc/detail/userinfo_rule.hpp>
+#include "detail/host_rule.hpp"
+#include "detail/port_rule.hpp"
+#include "detail/userinfo_rule.hpp"
 
 namespace boost {
 namespace urls {

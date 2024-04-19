@@ -2,7 +2,7 @@
     [quickbook 1.6]
     [version 1.0]
     [id stacktrace]
-    [copyright 2016-2023 Antony Polukhin]
+    [copyright 2016-2024 Antony Polukhin]
     [category Language Features Emulation]
     [license
         Distributed under the Boost Software License, Version 1.0.
@@ -120,13 +120,79 @@ Previous run crashed:
  9# 0x0000000000402209
 ```
 
-[warning There's a temptation to write a signal handler that prints the stacktrace on `SIGSEGV` or abort. Unfortunately, there's no cross platform way to do that without a risk of deadlocking. Not all the platforms provide means for even getting stacktrace in async signal safe way.
+[warning There's a temptation to write a signal handler that prints the stacktrace on `SIGSEGV` or abort. Unfortunately,
+there's no cross platform way to do that without a risk of deadlocking.
+Not all the platforms provide means for even getting stacktrace in async signal safe way.
 
 Signal handler is often invoked on a separate stack and trash is returned on attempt to get a trace!
 
 Generic recommendation is to *avoid signal handlers! Use* platform specific ways to store and decode *core files*.
+
+See [link stacktrace.theoretical_async_signal_safety "Theoretical async signal safety"] for more info.
 ]
 
+
+[endsect]
+
+[section Stacktrace from arbitrary exception]
+
+[warning At the moment the functionality is only available for some of the
+         popular C++ runtimes for POSIX systems and requires *libbacktrace*.
+         Make sure that your platform is supported by running some tests.
+]
+
+The library provides a way to get stacktrace from an exception as if the
+stacktrace was captured at the point the exception was thrown. Works even if
+the exception was thrown from a third party binary library.
+
+Link with
+`boost_stacktrace_from_exception` library (or just `LD_PRELOAD` it!) and call
+boost::stacktrace::stacktrace::from_current_exception() to get the trace:
+
+```
+#include <iostream>
+#include <stdexcept>
+#include <string_view>
+#include <boost/stacktrace.hpp>
+
+void foo(std::string_view key);
+void bar(std::string_view key);
+
+int main() {
+  try {
+    foo("test1");
+    bar("test2");
+  } catch (const std::exception& exc) {
+    boost::stacktrace::stacktrace trace = boost::stacktrace::from_current_exception();  // <---
+    std::cerr << "Caught exception: " << exc.what() << ", trace:\n" << trace;
+  }
+}
+```
+
+The output of the above sample may be the following:
+
+```
+Caught exception: std::map::at, trace:
+ 0# get_data_from_config(std::string_view) at /home/axolm/basic.cpp:600
+ 1# bar(std::string_view) at /home/axolm/basic.cpp:6
+ 2# main at /home/axolm/basic.cpp:17
+```
+
+With the above technique a developer can locate the source file and the function
+that has thrown the exception without a debugger help. it is especially useful
+for testing in containers (github CI, other CIs), where the developer has no
+direct access to the testing environment and reproducing the issue is
+complicated.
+
+Note that linking with `boost_stacktrace_from_exception` may increase memory
+consumption of the application, as the exceptions now additionally store traces.
+
+At runtime switch boost::stacktrace::this_thread::set_capture_stacktraces_at_throw()
+allows to disable/enable capturing and storing traces in exceptions.
+
+To disable the `boost_stacktrace_from_exception` library builds the
+`boost.stacktrace.from_exception=off` option, for example
+`./b2 boost.stacktrace.from_exception=off`.
 
 [endsect]
 
@@ -233,43 +299,6 @@ Terminate called:
 
 [endsect]
 
-[/
-[section Store stacktraces into shared memory]
-
-There's a way to serialize stacktrace in async safe manner and share that serialized representation with another process. Here's another example with signal handlers.
-
-This example is very close to the [link stacktrace.getting_started.handle_terminates_aborts_and_seg "Handle terminates, aborts and Segmentation Faults"], but this time we are dumping stacktrace into shared memory:
-
-[getting_started_terminate_handlers_shmem]
-
-After registering signal handlers and catching a signal, we may print stacktrace dumps on program restart:
-
-[getting_started_on_program_restart_shmem]
-
-The program output will be the following:
-
-```
-Previous run crashed and left trace in shared memory:
- 0# 0x00007FD51C7218EF
- 1# my_signal_handler2(int) at ../example/terminate_handler.cpp:68
- 2# 0x00007FD51B833CB0
- 3# 0x00007FD51B833C37
- 4# 0x00007FD51B837028
- 5# 0x00007FD51BE44BBD
- 6# 0x00007FD51BE42B96
- 7# 0x00007FD51BE42BE1
- 8# bar(int) at ../example/terminate_handler.cpp:18
- 9# foo(int) at ../example/terminate_handler.cpp:22
-10# bar(int) at ../example/terminate_handler.cpp:14
-11# foo(int) at ../example/terminate_handler.cpp:22
-12# run_3(char const**) at ../example/terminate_handler.cpp:152
-13# main at ../example/terminate_handler.cpp:207
-14# 0x00007FD51B81EF45
-15# 0x0000000000402999
-```
-
-[endsect] 
-]
 
 [endsect]
 
@@ -286,9 +315,9 @@ By default Boost.Stacktrace is a header-only library, but you may change that an
 In header only mode library could be tuned by macro. If one of the link macro from above is defined, you have to manually link with one of the libraries:
 [table:libconfig Config
     [[Macro name or default] [Library] [Effect] [Platforms] [Uses debug information [footnote This will provide more readable backtraces with *source code locations* if the binary is built with debug information.]] [Uses dynamic exports information [footnote This will provide readable function names in backtrace for functions that are exported by the binary. Compiling with `-rdynamic` flag, without `-fvisibility=hidden` or marking functions as exported produce a better stacktraces.]] ]
-    [[['default for MSVC, Intel on Windows, MinGW-w64] / *BOOST_STACKTRACE_USE_WINDBG*] [*boost_stacktrace_windbg*] [ Uses `dbgeng.h` to show debug info. May require linking with *ole32* and *dbgeng*. ] [MSVC, MinGW-w64, Intel on Windows] [yes] [no]]
+    [[['default for MSVC, Intel on Windows, MinGW-w64] / *BOOST_STACKTRACE_USE_WINDBG*] [*boost_stacktrace_windbg*] [ Uses `dbgeng.h` to show debug info, stores the implementation internals in a static varaible protected with mutex. May require linking with *ole32* and *dbgeng*. ] [MSVC, MinGW-w64, Intel on Windows] [yes] [no]]
     [[['default for other platforms]] [*boost_stacktrace_basic*] [Uses compiler intrinsics to collect stacktrace and if possible `::dladdr` to show information about the symbol. Requires linking with *libdl* library on POSIX platforms.] [Any compiler on POSIX or MinGW] [no] [yes]]
-    [[*BOOST_STACKTRACE_USE_WINDBG_CACHED*] [*boost_stacktrace_windbg_cached*] [ Uses `dbgeng.h` to show debug info and caches internals in TLS for better performance. Useful only for cases when traces are gathered very often. May require linking with *ole32* and *dbgeng*. ] [MSVC, Intel on Windows] [yes] [no]]
+    [[*BOOST_STACKTRACE_USE_WINDBG_CACHED*] [*boost_stacktrace_windbg_cached*] [ Uses `dbgeng.h` to show debug info and caches implementation internals in TLS for better performance. Useful only for cases when traces are gathered very often. May require linking with *ole32* and *dbgeng*. ] [MSVC, Intel on Windows] [yes] [no]]
     [[*BOOST_STACKTRACE_USE_BACKTRACE*] [*boost_stacktrace_backtrace*] [Requires linking with *libdl* on POSIX and *libbacktrace* libraries[footnote Some *libbacktrace* packages SEGFAULT if there's a concurrent work with the same `backtrace_state` instance. To avoid that issue the Boost.Stacktrace library uses `thread_local` states, unfortunately this may consume a lot of memory if you often create and destroy execution threads in your application. Define *BOOST_STACKTRACE_BACKTRACE_FORCE_STATIC* to force single instance, but make sure that [@https://github.com/boostorg/stacktrace/blob/develop/test/thread_safety_checking.cpp thread_safety_checking.cpp] works well in your setup. ]. *libbacktrace* is probably already installed in your system[footnote If you are using Clang with libstdc++ you could get into troubles of including `<backtrace.h>`, because on some platforms Clang does not search for headers in the GCC's include paths and any attempt to add GCC's include path leads to linker errors. To explicitly specify a path to the `<backtrace.h>` header you could define the *BOOST_STACKTRACE_BACKTRACE_INCLUDE_FILE* to a full path to the header. For example on Ubuntu Xenial use the command line option *-DBOOST_STACKTRACE_BACKTRACE_INCLUDE_FILE=</usr/lib/gcc/x86_64-linux-gnu/5/include/backtrace.h>* while building with Clang. ], or built into your compiler.
 
      Otherwise (if you are a *MinGW*/*MinGW-w64* user for example) it can be downloaded [@https://github.com/ianlancetaylor/libbacktrace from here] or [@https://github.com/gcc-mirror/gcc/tree/master/libbacktrace from here]. ] [Any compiler on POSIX, or MinGW, or MinGW-w64] [yes] [yes]]
@@ -334,7 +363,33 @@ There are multiple ways to deal with that issue if you distribute PDB files alon
 
 [endsect]
 
-[section Acknowledgements]
+[section Theoretical async signal safety]
+
+In theory, walking the stack without decoding and demangling should be async signal safe.
+
+In practice, it is not:
+
+* Looks like a page fault while dumping the trace on a containerized/virtualized
+  Windows system has a chance to deadlock. Page fault could happen easily
+  as we have to write the dump either to memory or to a file.
+* On POSIX systems a deadlock could happen if a signal is received when throwing
+  an exception [@https://github.com/boostorg/stacktrace/issues/131 #131].
+  Theoretically this could be worked around by bypassing the mutex locking
+  in C++-runtime at exception throw
+  ([@https://github.com/userver-framework/userver/blob/4246909c99506d3ab34bd130a5154b4acc8e87de/core/src/engine/task/exception_hacks.cpp#L241-L244 sample implementation]
+  in the 🐙 userver framework), or by using a very modern runtime
+  (glibc-2.35+ with [@https://gcc.gnu.org/bugzilla/show_bug.cgi?id=71744#c32 modern]
+  libgcc or [@https://reviews.llvm.org/D130668 modern] LLVM's libunwind).
+* `-fomit-frame-pointer` like flags add additional complexity to the stack
+  walking implementation, which may also negatively affect the signal safety.
+
+As a rule of thumb: do *not* capture stack traces in signal handlers unless you
+are absolutely sure in your environment and inspected all of its source codes.
+
+
+[endsect]
+
+[section Acknowledgments]
 
 In order of helping and advising:
 
@@ -342,6 +397,8 @@ In order of helping and advising:
 * Great thanks to Nat Goodspeed for requesting [classref boost::stacktrace::frame] like class.
 * Great thanks to Niall Douglas for making an initial review, helping with some platforms and giving great hints on library design.
 * Great thanks to all the library reviewers.
+* Great thanks to Andrei Nekrashevich for prototyping the idea of stacktraces
+  from arbitrary exception in `libsfe`.
 
 [endsect]
 

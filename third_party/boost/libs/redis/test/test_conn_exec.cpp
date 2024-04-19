@@ -6,6 +6,7 @@
 
 #include <boost/redis/connection.hpp>
 #include <boost/system/errc.hpp>
+#include <boost/asio/detached.hpp>
 #define BOOST_TEST_MODULE conn-exec
 #include <boost/test/included/unit_test.hpp>
 #include <iostream>
@@ -17,13 +18,13 @@
 // container.
 
 namespace net = boost::asio;
+using boost::redis::config;
 using boost::redis::connection;
-using boost::redis::request;
-using boost::redis::response;
 using boost::redis::generic_response;
 using boost::redis::ignore;
 using boost::redis::operation;
-using boost::redis::config;
+using boost::redis::request;
+using boost::redis::response;
 
 // Sends three requests where one of them has a hello with a priority
 // set, which means it should be executed first.
@@ -122,7 +123,7 @@ BOOST_AUTO_TEST_CASE(cancel_request_if_not_connected)
 
 BOOST_AUTO_TEST_CASE(correct_database)
 {
-   config cfg;
+   auto cfg = make_test_config();
    cfg.database_index = 2;
 
    net::io_context ioc;
@@ -152,5 +153,38 @@ BOOST_AUTO_TEST_CASE(correct_database)
    auto const index_str = value.substr(pos + 3, 1);
    auto const index = std::stoi(index_str);
    BOOST_CHECK_EQUAL(cfg.database_index.value(), index);
+}
+
+BOOST_AUTO_TEST_CASE(large_number_of_concurrent_requests_issue_170)
+{
+   // See https://github.com/boostorg/redis/issues/170
+
+   std::string payload;
+   payload.resize(1024);
+   std::fill(std::begin(payload), std::end(payload), 'A');
+
+   net::io_context ioc;
+   auto conn = std::make_shared<connection>(ioc);
+
+   auto cfg = make_test_config();
+   cfg.health_check_interval = std::chrono::seconds(0);
+   conn->async_run(cfg, {}, net::detached);
+
+   int counter = 0;
+   int const repeat = 8000;
+
+   for (int i = 0; i < repeat; ++i) {
+      auto req = std::make_shared<request>();
+      req->push("PING", payload);
+      conn->async_exec(*req, ignore, [req, &counter, conn](auto ec, auto) {
+         BOOST_TEST(!ec);
+         if (++counter == repeat)
+            conn->cancel();
+      });
+   }
+
+   ioc.run();
+
+   BOOST_CHECK_EQUAL(counter, repeat);
 }
 

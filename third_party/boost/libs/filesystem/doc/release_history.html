@@ -1,12 +1,12 @@
 <html>
 
 <head>
-<meta http-equiv="Content-Language" content="en-us">
-<meta name="GENERATOR" content="Microsoft FrontPage 5.0">
-<meta name="ProgId" content="FrontPage.Editor.Document">
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="Content-Language" content="en-us"/>
+<meta name="GENERATOR" content="Microsoft FrontPage 5.0"/>
+<meta name="ProgId" content="FrontPage.Editor.Document"/>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <title>Filesystem Release History</title>
-<link href="styles.css" rel="stylesheet">
+<link href="styles.css" rel="stylesheet"/>
 </head>
 
 <body>
@@ -15,7 +15,7 @@
   <tr>
     <td width="277">
 <a href="../../../index.htm">
-<img src="../../../boost.png" alt="boost.png (6897 bytes)" align="middle" width="300" height="86" border="0"></a></td>
+<img src="../../../boost.png" alt="boost.png (6897 bytes)" align="middle" width="300" height="86" border="0"/></a></td>
     <td align="middle">
     <font size="7">Filesystem Release History</font>
     </td>
@@ -37,7 +37,23 @@
     <a href="deprecated.html">Deprecated</a> &nbsp;&nbsp;
     <a href="issue_reporting.html">Bug Reports</a>&nbsp;&nbsp;
     </td>
+  </tr>
 </table>
+
+<h2>1.85.0</h2>
+<ul>
+  <li><code>path::generic_path</code> and <code>path::generic_string</code> methods now remove duplicate directory separators in the returned paths.</li>
+  <li><b>v4:</b> <code>path::generic_path</code>, <code>path::generic_string</code>, <code>path::make_preferred</code> and <code>path::lexically_normal</code> avoid converting between backslashes and forward slashes in path root names. For example, on Windows, <code>path("\\\\?\\c:\\foo").generic_string()</code> now returns "\\?\c:/foo" instead of "//?/c:/foo". Similarly, <code>path("\\\\host/share/foo/..").lexically_normal()</code> now returns "\\host\share".</li>
+  <li><b>v4:</b> <code>equivalent</code> now indicates error if either one of the paths doesn't exist.</li>
+  <li><b>v4:</b> <code>absolute</code> now returns a path with a trailing directory separator when the input path has an empty <code>relative_path()</code>. (<a href="https://github.com/boostorg/filesystem/issues/301">#301</a>)</li>
+  <li>Added a <code>unique_path</code> overload taking a single <code>error_code&amp; ec</code> argument. The overload generates a unique path using the default path model.</li>
+  <li><code>weakly_canonical</code> now produces an absolute path if the input path is relative and contains no elements that exist in the filesystem. (<a href="https://github.com/boostorg/filesystem/issues/300">#300</a>)</li>
+  <li>Added a new <code>copy_options::ignore_attribute_errors</code> option for <code>copy_file</code> and <code>copy</code> operations. The new option allows to ignore possible errors while copying file attributes. (<a href="https://github.com/boostorg/filesystem/issues/179">#179</a>)</li>
+  <li>On Linux, <code>copy_file</code> backends based on <code>sendfile</code> and <code>copy_file_range</code> system calls will attempt to preallocate storage for the target file. This may reduce filesystem fragmentation and provide early error indication if there is not enough free space. Not all filesystems support this feature; file copying proceeds if storage preallocation is not supported.</li>
+  <li>On POSIX systems that support <a href="https://pubs.opengroup.org/onlinepubs/9699919799/functions/fdopendir.html"><code>fdopendir</code></a>, <code>openat</code> and related APIs defined in POSIX.1-2008, as well as on Windows, <code>recursive_directory_iterator</code> now uses file descriptors/handles instead of paths to query the file statuses and open nested directories during iteration. This makes directory iteration more resilient to concurrent modifications of the filesystem.</li>
+  <li>Removed APIs that were previously declared deprecated. In particular, <code>path</code> and <code>recursive_directory_iterator</code> member functions, <code>is_regular</code>, <code>copy_directory</code>, <code>symbolic_link_exists</code>, <code>complete</code>, <code>copy_option</code>, <code>symlink_option</code>, as well as <code>boost/filesystem/convenience.hpp</code> and <code>boost/filesystem/path_traits.hpp</code> headers were removed. Possible replacements for the removed components are mentioned in <a href="deprecated.html#Deprecated-names">Deprecated names and features</a> section.</li>
+  <li>Support for <code>path</code> construction, assignment and appending from container types (e.g. <code>std::vector&lt;char&gt;</code>) is now disabled by default. Users can still enable this functionality by defining <code>BOOST_FILESYSTEM_DEPRECATED</code>. This functionality remains deprecated and will be completely removed in a future release.</li>
+</ul>
 
 <h2>1.84.0</h2>
 <ul>
@@ -70,7 +86,7 @@
   <li>Due to changes in Boost.System and some other libraries used in Boost.Filesystem, the support for C++03 is deprecated. C++11 will become the minimum starting with Boost.Filesystem 1.84.</li>
   <li>Fixed compilation errors that could have been caused by <code>path</code> conversion constructors being too permissive on the accepted arguments. (<a href="https://github.com/boostorg/filesystem/issues/273">#273</a>)</li>
   <li><b>v4:</b> <code>path::remove_filename</code> now presesrves the trailing directory separator. (<a href="https://github.com/boostorg/filesystem/issues/271">#271</a>)</li>
-  <li>Added <code>path::remove_filename_and_trailing_separators</li>, which removes the filename and directory separators preceding it from the path. This behavior is similar to <code>path::remove_filename</code> in Filesystem <b>v3</b>, but is also usable in <b>v4</b>.
+  <li>Added <code>path::remove_filename_and_trailing_separators</code>, which removes the filename and directory separators preceding it from the path. This behavior is similar to <code>path::remove_filename</code> in Filesystem <b>v3</b>, but is also usable in <b>v4</b>.</li>
   <li>Added <code>path::replace_filename</code>, which replaces filename in a path.</li>
   <li>Updated implementation of the library version selection to avoid ODR violations. (<a href="https://github.com/boostorg/filesystem/issues/279">#279</a>)</li>
   <li>On Windows, added a workaround for querying file attributes for files in SMBv1 shares. Previously, directories in SMBv1 shares could have been reported as regular files. This does not affect SMBv2 or later. (<a href="https://github.com/boostorg/filesystem/issues/282">#282</a>)</li>
@@ -196,7 +212,7 @@
   <li><code>equivalent</code> on POSIX systems now returns the actual error code from the OS if one of the paths does not resolve to a file. Previously the function would return an error code of 1. (<a href="https://github.com/boostorg/filesystem/issues/141">#141</a>)</li>
   <li><code>equivalent</code> no longer considers file size and last modification time in order to test whether the two paths refer to the same file. These checks could result in a false negative if the file was modified during the <code>equivalent</code> call.</li>
   <li><b>New:</b> Added <code>absolute</code> overloads taking <code>error_code</code> argument.</li>
-  <li>Operations that have <code>current_path()</code> as the default value of their arguments and also have an <code>error_code</code> argument will use the <code>current_path(error_code& ec)</code> overload to obtain the current path, so that its failure is reported via the <code>error_code</code> argument instead of an exception.</li>
+  <li>Operations that have <code>current_path()</code> as the default value of their arguments and also have an <code>error_code</code> argument will use the <code>current_path(error_code&amp; ec)</code> overload to obtain the current path, so that its failure is reported via the <code>error_code</code> argument instead of an exception.</li>
   <li><code>space</code> now initializes the <code>space_info</code> structure members to -1 values on error, as required by C++20 ([fs.op.space]/1).</li>
   <li><code>space</code> on Windows now accepts paths referring to arbitrary files, not only directories. This is similar to POSIX systems and corresponds to the operation description in C++20. (<a href="https://github.com/boostorg/filesystem/issues/73">#73</a>)</li>
   <li><b>New:</b> Added implementation of <code>temp_directory_path</code> for Windows CE. (<a href="https://github.com/boostorg/filesystem/pull/25">PR#25</a>)</li>
@@ -292,12 +308,12 @@
   gives problems in C++/CLI.</i> Unless the macro BOOST_FILESYSTEM_NO_DEPRECATED
   is defined, the original <code>generic()</code> will continue to be supplied
   as a workaround for existing user code. But <code>generic()</code>is
-  deprecated. User code should migrate to the new name.</li>
+  deprecated. User code should migrate to the new name.</p></li>
   <li><b>New:</b> Class <code>path</code> adds constexpr constants <code>
   separator</code> and <code>dot</code> of the type appropriate for the
   platform, and adds query functions <a href="reference.html#filename_is_dot">
   <code>filename_is_do</code>t</a> and <code>
-  <a href="reference.html#filename_is_dot­_dot">filename_is_dot_dot</a></code>.
+  <a href="reference.html#filename_is_dot_dot">filename_is_dot_dot</a></code>.
   These add convenience and the implementations may be more efficient that user
   coded equivalent functions.</li>
   <li>Fix <a href="https://svn.boost.org/trac/boost/ticket/12578">#12578</a>, <i>
@@ -338,7 +354,7 @@
   perseverance. Resolves tickets
   <a href="https://svn.boost.org/trac/boost/ticket/1976">#1976</a>,
   <a href="https://svn.boost.org/trac/boost/ticket/5897">#5897</a>,
-  <a href="https://svn.boost.org/trac/boost/ticket/6249">#6249</a></li>
+  <a href="https://svn.boost.org/trac/boost/ticket/6249">#6249</a></p></li>
   <li><b>New:</b> Class <code>path</code> now has
   <a href="reference.html#path-iterators"> <code>reverse_iterator</code>,
   <code>const_reverse_iterator</code>, <code>rbegin()</code>, and <code>rend()</code></a>. </li>
@@ -379,7 +395,7 @@
   <li>
   <p>Fix <a href="https://svn.boost.org/trac/boost/ticket/11288">#11288</a>, <i>
   <font face="Arial">A patch to avoid redundant string allocations</font></i>,
-  by applying a patch submitted by Yevhen Ivannikov.</li>
+  by applying a patch submitted by Yevhen Ivannikov.</p></li>
   <li>Fix <a href="https://svn.boost.org/trac/boost/ticket/11175">#11175</a>,
   out-of-date documentation causing users to incorrectly expect that the library
   could be used with exceptions disabled.</li>
@@ -390,11 +406,11 @@
   <p>Fix <a href="https://svn.boost.org/trac/boost/ticket/7258">#7258</a>,
   <i><code>create_directories</code> returns false if the path ends with a slash</i>.
   Also fix related issues if path contains <i>dot</i> or <i>dot-dot</i>
-  elements, and added test cases to the test suite.</li>
+  elements, and added test cases to the test suite.</p></li>
   <li>
   <p>Reference docs editorial cleanups: Use same style sheet as the
   rest of the documentation. Tweak tab font size. Fix excessively long lines in
-  tables, synopsis.</li>
+  tables, synopsis.</p></li>
   <li>Resolve <a href="https://svn.boost.org/trac/boost/ticket/10766">
   #10766</a>, <i>parent_path() with redundant separator returns wrong value</i>,
   by adding examples and notes to the reference documentation to show why the
@@ -680,7 +696,7 @@
   fixing missing and broken links, and adding missing functions.</li>
   <li>Miscellaneous implementation code cleanup. </li>
 </ul>
-<hr>
+<hr/>
 <p>&copy; Copyright Beman Dawes, 2011</p>
 <p>&copy; Copyright Andrey Semashev, 2019-2021</p>
 <p> Use, modification, and distribution are subject to the Boost Software

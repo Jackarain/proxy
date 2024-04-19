@@ -15,7 +15,6 @@
 #include <set>
 #include <vector>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/filesystem/convenience.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/next_prior.hpp>

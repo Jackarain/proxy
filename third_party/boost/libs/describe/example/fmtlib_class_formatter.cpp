@@ -18,7 +18,7 @@ template<class T> struct fmt::formatter<T, char, std::enable_if_t<
 
         if( it != end && *it != '}' )
         {
-            ctx.error_handler().on_error( "invalid format" );
+            throw_format_error( "invalid format" );
         }
 
         return it;

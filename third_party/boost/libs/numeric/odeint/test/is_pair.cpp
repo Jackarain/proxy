@@ -38,12 +38,12 @@ BOOST_AUTO_TEST_CASE( test_is_pair )
     typedef std::pair< const int , int > type5;
     typedef std::pair< const int& , int > type6;
 
-    BOOST_STATIC_ASSERT(( is_pair< type1 >::value ));
-    BOOST_STATIC_ASSERT(( is_pair< type2 >::value ));
-    BOOST_STATIC_ASSERT(( is_pair< type3 >::value ));
-    BOOST_STATIC_ASSERT(( is_pair< type4 >::value ));
-    BOOST_STATIC_ASSERT(( is_pair< type5 >::value ));
-    BOOST_STATIC_ASSERT(( is_pair< type6 >::value ));
+    static_assert(( is_pair< type1 >::value ), "Not a pair");
+    static_assert(( is_pair< type2 >::value ), "Not a pair");
+    static_assert(( is_pair< type3 >::value ), "Not a pair");
+    static_assert(( is_pair< type4 >::value ), "Not a pair");
+    static_assert(( is_pair< type5 >::value ), "Not a pair");
+    static_assert(( is_pair< type6 >::value ), "Not a pair");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -440,8 +440,14 @@ struct tommath_int
       if ((base != 10) && m_data.sign)
          BOOST_MP_THROW_EXCEPTION(std::runtime_error("Formatted output in bases 8 or 16 is only available for positive numbers"));
 
+      // Check against known removed macro that was removed around the same time as type was changed
+      #ifdef mp_tobinary
       int s;
+      #else
+      size_t s;
+      #endif
       detail::check_tommath_result(mp_radix_size(const_cast< ::mp_int*>(&m_data), base, &s));
+
       std::unique_ptr<char[]> a(new char[s + 1]);
 #ifndef mp_to_binary
       detail::check_tommath_result(mp_toradix_n(const_cast< ::mp_int*>(&m_data), a.get(), base, s + 1));
@@ -950,8 +956,15 @@ class numeric_limits<boost::multiprecision::number<boost::multiprecision::tommat
    static constexpr bool               has_infinity      = false;
    static constexpr bool               has_quiet_NaN     = false;
    static constexpr bool               has_signaling_NaN = false;
-   static constexpr float_denorm_style has_denorm        = denorm_absent;
-   static constexpr bool               has_denorm_loss   = false;
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
+   static constexpr float_denorm_style       has_denorm      = denorm_absent;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+   static constexpr bool                     has_denorm_loss = false;
    static number_type                        infinity() { return number_type(); }
    static number_type                        quiet_NaN() { return number_type(); }
    static number_type                        signaling_NaN() { return number_type(); }
@@ -992,8 +1005,15 @@ template <boost::multiprecision::expression_template_option ExpressionTemplates>
 constexpr bool numeric_limits<boost::multiprecision::number<boost::multiprecision::tommath_int, ExpressionTemplates> >::has_quiet_NaN;
 template <boost::multiprecision::expression_template_option ExpressionTemplates>
 constexpr bool numeric_limits<boost::multiprecision::number<boost::multiprecision::tommath_int, ExpressionTemplates> >::has_signaling_NaN;
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
 template <boost::multiprecision::expression_template_option ExpressionTemplates>
 constexpr float_denorm_style numeric_limits<boost::multiprecision::number<boost::multiprecision::tommath_int, ExpressionTemplates> >::has_denorm;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 template <boost::multiprecision::expression_template_option ExpressionTemplates>
 constexpr bool numeric_limits<boost::multiprecision::number<boost::multiprecision::tommath_int, ExpressionTemplates> >::has_denorm_loss;
 template <boost::multiprecision::expression_template_option ExpressionTemplates>

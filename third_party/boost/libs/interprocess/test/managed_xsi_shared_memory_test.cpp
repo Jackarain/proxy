@@ -56,7 +56,8 @@ int main ()
 
    file_mapping::remove(ShmemName);
    {  ipcdetail::file_wrapper(create_only, ShmemName, read_write); }
-   xsi_key key(ShmemName, 1);
+
+   xsi_key key(ShmemName, static_cast<boost::uint8_t>(boost::interprocess::ipcdetail::get_current_system_highres_rand()));
    file_mapping::remove(ShmemName);
    int shmid;
 

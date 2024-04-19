@@ -38,7 +38,7 @@ struct rebinder
          , Option1
          , Option2
          > type;
-      BOOST_STATIC_ASSERT((key_type_tester<typename common_t::key_of_value_opt, type>::value));
+      BOOST_INTRUSIVE_STATIC_ASSERT((key_type_tester<typename common_t::key_of_value_opt, type>::value));
    };
 };
 

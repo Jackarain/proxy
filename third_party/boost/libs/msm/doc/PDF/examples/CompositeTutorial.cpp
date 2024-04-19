@@ -10,7 +10,7 @@
 
 #include <iostream>
 // back-end
-#include <boost/msm/back/state_machine.hpp>
+#include <boost/msm/back11/state_machine.hpp>
 //front-end
 #include <boost/msm/front/state_machine_def.hpp>
 
@@ -133,7 +133,7 @@ namespace  // Concrete FSM implementation
             }
         };
         // back-end
-        typedef msm::back::state_machine<Playing_> Playing;
+        typedef msm::back11::state_machine<Playing_> Playing;
 
 
         // state not defining any entry or exit
@@ -191,7 +191,7 @@ namespace  // Concrete FSM implementation
 
     };
     // Pick a back-end
-    typedef msm::back::state_machine<player_> player;
+    typedef msm::back11::state_machine<player_> player;
 
     //
     // Testing utilities.

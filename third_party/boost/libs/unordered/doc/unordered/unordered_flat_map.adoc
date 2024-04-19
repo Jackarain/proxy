@@ -750,6 +750,8 @@ Returns:;; The `bool` component of the return type is `true` if an insert took p
 If an insert took place, then the iterator points to the newly inserted element. Otherwise, it points to the element with equivalent key.
 Throws:;; If an exception is thrown by an operation other than a call to `hasher` the function has no effect.
 Notes:;; Can invalidate iterators, pointers and references, but only if the insert causes the load to be greater than the maximum load. +
++
+If `args...` is of the form `k,v`, it delays constructing the whole object until it is certain that an element should be inserted, using only the `k` argument to check.
 
 ---
 
@@ -769,6 +771,8 @@ Returns:;; The `bool` component of the return type is `true` if an insert took p
 If an insert took place, then the iterator points to the newly inserted element. Otherwise, it points to the element with equivalent key.
 Throws:;; If an exception is thrown by an operation other than a call to `hasher` the function has no effect.
 Notes:;; Can invalidate iterators, pointers and references, but only if the insert causes the load to be greater than the maximum load. +
++
+If `args...` is of the form `k,v`, it delays constructing the whole object until it is certain that an element should be inserted, using only the `k` argument to check.
 
 ---
 

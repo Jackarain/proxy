@@ -12,6 +12,10 @@
 #include "test.hpp"
 #include "check_integral_constant.hpp"
 
+#ifndef BOOST_NO_CXX23_HDR_STDFLOAT
+#include <stdfloat>
+#endif
+
 TT_TEST_BEGIN(is_floating_point)
 
 BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<float>::value, true);
@@ -34,6 +38,38 @@ BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<__float128>::value, true);
 BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<const __float128>::value, true);
 BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<volatile __float128>::value, true);
 BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<const volatile __float128>::value, true);
+#endif
+#ifndef BOOST_NO_CXX23_HDR_STDFLOAT
+#if defined(__STDCPP_FLOAT16_T__)
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<std::float16_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<const std::float16_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<volatile std::float16_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<const volatile std::float16_t>::value, true);
+#endif
+#if defined(__STDCPP_FLOAT32_T__)
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<std::float32_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<const std::float32_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<volatile std::float32_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<const volatile std::float32_t>::value, true);
+#endif
+#if defined(__STDCPP_FLOAT64_T__)
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<std::float32_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<const std::float32_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<volatile std::float32_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<const volatile std::float32_t>::value, true);
+#endif
+#if defined(__STDCPP_FLOAT128_T__)
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<std::float128_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<const std::float128_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<volatile std::float128_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<const volatile std::float128_t>::value, true);
+#endif
+#if defined(__STDCPP_BFLOAT16_T__)
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<std::bfloat16_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<const std::bfloat16_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<volatile std::bfloat16_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_floating_point<const volatile std::bfloat16_t>::value, true);
+#endif
 #endif
 
 //

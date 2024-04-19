@@ -4,7 +4,7 @@
 // https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/preprocessor/comparison.hpp>
-#include "test_macro.h"
+# include "test_macro.h"
 
 /* equality */
 

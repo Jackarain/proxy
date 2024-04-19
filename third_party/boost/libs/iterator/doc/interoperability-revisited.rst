@@ -2,7 +2,6 @@
  Interoperability Revisited 
 ++++++++++++++++++++++++++++
 
-:date: $Date$
 :copyright: Copyright Thomas Witt 2004.
 
 .. Distributed under the Boost

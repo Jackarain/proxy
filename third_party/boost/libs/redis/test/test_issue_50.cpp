@@ -19,6 +19,7 @@
 #include <boost/test/included/unit_test.hpp>
 #include <tuple>
 #include <iostream>
+#include "common.hpp"
 
 #if defined(BOOST_ASIO_HAS_CO_AWAIT)
 
@@ -86,13 +87,14 @@ periodic_task(std::shared_ptr<connection> conn) -> net::awaitable<void>
   conn->cancel(operation::reconnection);
 }
 
-auto co_main(config cfg) -> net::awaitable<void>
+auto co_main(config) -> net::awaitable<void>
 {
    auto ex = co_await net::this_coro::executor;
    auto conn = std::make_shared<connection>(ex);
 
    net::co_spawn(ex, receiver(conn), net::detached);
    net::co_spawn(ex, periodic_task(conn), net::detached);
+   auto cfg = make_test_config();
    conn->async_run(cfg, {}, net::consign(net::detached, conn));
 }
 

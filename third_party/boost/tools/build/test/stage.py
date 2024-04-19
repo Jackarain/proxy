@@ -9,7 +9,7 @@
 
 import BoostBuild
 
-t = BoostBuild.Tester(use_test_config=False)
+t = BoostBuild.Tester(["link=shared"], use_test_config=False)
 
 t.write("jamroot.jam", "")
 t.write("jamfile.jam", """\

@@ -59,7 +59,7 @@ void test_owner_dead_mutex_do_lock(M &mtx, EOwnerDeadLockType lock_type)
       break;
 
       case OwnerDeadTimedLock:
-      mtx.timed_lock(boost_systemclock_delay(10));
+      mtx.timed_lock(boost_systemclock_delay_ms(10));
       break;
    }
 }

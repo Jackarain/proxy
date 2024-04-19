@@ -32,7 +32,7 @@ jobs:
         standard: [ c++14, c++17 ]
         suite: [ github_ci_block_1, github_ci_block_2 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: '0'
       - name: Set TOOLSET
@@ -94,7 +94,7 @@ jobs:
         standard: [ c++14, c++17 ]
         suite: [ github_ci_block_1, github_ci_block_2 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: '0'
       - name: Set TOOLSET
@@ -156,7 +156,7 @@ jobs:
         standard: [ c++17, c++2a ]
         suite: [ specfun_mpfr, specfun_gmp, specfun_cpp_dec_float, specfun_cpp_bin_float, specfun_float128 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: '0'
       - name: Set TOOLSET
@@ -218,7 +218,7 @@ jobs:
         standard: [ c++14, c++17, c++20 ]
         suite: [ standalone ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: '0'
       - name: Set TOOLSET
@@ -280,7 +280,7 @@ jobs:
         standard: [ c++17 ]
         suite: [ arithmetic_tests, functions_and_limits, conversions, cpp_int_tests, misc ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: '0'
       - name: Set TOOLSET
@@ -342,7 +342,7 @@ jobs:
         standard: [ c++17 ]
         suite: [ arithmetic_tests, functions_and_limits, misc ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: '0'
       - name: Set TOOLSET
@@ -406,7 +406,7 @@ jobs:
         standard: [ 14, 17 ]
         suite: [ github_ci_block_1, github_ci_block_2 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: '0'
       - name: Checkout main boost
@@ -449,7 +449,7 @@ jobs:
         standard: [ 14, latest ]
         suite: [ github_ci_block_1, github_ci_block_2 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: '0'
       - name: Checkout main boost
@@ -492,7 +492,7 @@ jobs:
         standard: [ 14, 17, 20 ]
         suite: [ github_ci_block_1, github_ci_block_2 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: '0'
       - name: Checkout main boost
@@ -530,7 +530,7 @@ jobs:
         standard: [ 14, 17, 2a ]
         suite: [ github_ci_block_1, github_ci_block_2 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: '0'
       - name: Checkout main boost

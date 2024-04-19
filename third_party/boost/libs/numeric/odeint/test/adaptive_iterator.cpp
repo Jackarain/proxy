@@ -22,7 +22,7 @@
 #include <vector>
 
 #include <boost/numeric/odeint/config.hpp>
-#include <boost/array.hpp>
+#include <array>
 #include <boost/range/algorithm/copy.hpp>
 #include <boost/range/algorithm/for_each.hpp>
 #include <boost/mpl/vector.hpp>

@@ -16,7 +16,7 @@ void frame_init( FRAME * frame )
     frame->prev = 0;
     frame->prev_user = 0;
     lol_init( frame->args );
-    frame->module = root_module();
+    frame->module = b2::ensure_valid(root_module());
     frame->rulename = "module scope";
     frame->file = 0;
     frame->line = -1;

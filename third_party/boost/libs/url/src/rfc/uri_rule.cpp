@@ -13,10 +13,10 @@
 #include <boost/url/detail/config.hpp>
 #include <boost/url/rfc/uri_rule.hpp>
 #include <boost/url/rfc/query_rule.hpp>
-#include <boost/url/rfc/detail/fragment_part_rule.hpp>
-#include <boost/url/rfc/detail/hier_part_rule.hpp>
-#include <boost/url/rfc/detail/query_part_rule.hpp>
-#include <boost/url/rfc/detail/scheme_rule.hpp>
+#include "detail/fragment_part_rule.hpp"
+#include "detail/hier_part_rule.hpp"
+#include "detail/query_part_rule.hpp"
+#include "detail/scheme_rule.hpp"
 #include <boost/url/grammar/delim_rule.hpp>
 #include <boost/url/grammar/tuple_rule.hpp>
 #include <boost/url/grammar/optional_rule.hpp>

@@ -57,12 +57,12 @@ BOOST_AUTO_TEST_CASE(request_retry_false)
 
    auto c2 = [&](auto ec, auto){
       std::cout << "c2" << std::endl;
-      BOOST_CHECK_EQUAL(ec, boost::system::errc::errc_t::operation_canceled);
+      BOOST_CHECK_EQUAL(ec, boost::asio::error::operation_aborted);
    };
 
    auto c1 = [&](auto ec, auto){
       std::cout << "c1" << std::endl;
-      BOOST_CHECK_EQUAL(ec, boost::system::errc::errc_t::operation_canceled);
+      BOOST_CHECK_EQUAL(ec, boost::asio::error::operation_aborted);
    };
 
    auto c0 = [&](auto ec, auto){
@@ -74,7 +74,7 @@ BOOST_AUTO_TEST_CASE(request_retry_false)
 
    conn->async_exec(req0, ignore, c0);
 
-   config cfg;
+   auto cfg = make_test_config();
    cfg.health_check_interval = 5s;
    run(conn);
 
@@ -137,7 +137,7 @@ BOOST_AUTO_TEST_CASE(request_retry_true)
 
    conn->async_exec(req0, ignore, c0);
 
-   config cfg;
+   auto cfg = make_test_config();
    cfg.health_check_interval = 5s;
    conn->async_run(cfg, {}, [&](auto ec){
       std::cout << ec.message() << std::endl;

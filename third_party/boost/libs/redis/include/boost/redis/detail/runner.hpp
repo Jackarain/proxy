@@ -30,6 +30,8 @@
 namespace boost::redis::detail
 {
 
+void push_hello(config const& cfg, request& req);
+
 template <class Runner, class Connection, class Logger>
 struct hello_op {
    Runner* runner_ = nullptr;
@@ -42,9 +44,6 @@ struct hello_op {
    {
       BOOST_ASIO_CORO_REENTER (coro_)
       {
-         runner_->hello_req_.clear();
-         if (runner_->hello_resp_.has_value())
-            runner_->hello_resp_.value().clear();
          runner_->add_hello();
 
          BOOST_ASIO_CORO_YIELD
@@ -232,17 +231,10 @@ private:
 
    void add_hello()
    {
-      if (!cfg_.username.empty() && !cfg_.password.empty() && !cfg_.clientname.empty())
-         hello_req_.push("HELLO", "3", "AUTH", cfg_.username, cfg_.password, "SETNAME", cfg_.clientname);
-      else if (cfg_.username.empty() && cfg_.password.empty() && cfg_.clientname.empty())
-         hello_req_.push("HELLO", "3");
-      else if (cfg_.clientname.empty())
-         hello_req_.push("HELLO", "3", "AUTH", cfg_.username, cfg_.password);
-      else
-         hello_req_.push("HELLO", "3", "SETNAME", cfg_.clientname);
-
-      if (cfg_.database_index && cfg_.database_index.value() != 0)
-         hello_req_.push("SELECT", cfg_.database_index.value());
+      hello_req_.clear();
+      if (hello_resp_.has_value())
+         hello_resp_.value().clear();
+      push_hello(cfg_, hello_req_);
    }
 
    bool has_error_in_response() const noexcept

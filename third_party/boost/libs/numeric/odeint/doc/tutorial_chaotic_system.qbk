@@ -44,7 +44,7 @@ const double sigma = 10.0;
 const double R = 28.0;
 const double b = 8.0 / 3.0;
 
-typedef boost::array< double , 3 > lorenz_state_type;
+typedef std::array< double , 3 > lorenz_state_type;
 
 void lorenz( const lorenz_state_type &x , lorenz_state_type &dxdt , double t )
 {

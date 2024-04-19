@@ -18,7 +18,7 @@
 #ifndef BOOST_LIBS_NUMERIC_ODEINT_TEST_DUMMY_STEPPER_HPP_INCLUDED
 #define BOOST_LIBS_NUMERIC_ODEINT_TEST_DUMMY_STEPPER_HPP_INCLUDED
 
-#include <boost/array.hpp>
+#include <array>
 #include <boost/numeric/odeint/stepper/stepper_categories.hpp>
 #include <boost/numeric/odeint/stepper/controlled_step_result.hpp>
 
@@ -30,7 +30,7 @@ struct dummy_stepper
 {
     typedef double value_type;
     typedef value_type time_type;
-    typedef boost::array< value_type , 1 > state_type;
+    typedef std::array< value_type , 1 > state_type;
     typedef state_type deriv_type;
     typedef unsigned short order_type;
     typedef stepper_tag stepper_category;
@@ -48,7 +48,7 @@ struct dummy_dense_output_stepper
 {
     typedef double value_type;
     typedef value_type time_type;
-    typedef boost::array< value_type , 1 > state_type;
+    typedef std::array< value_type , 1 > state_type;
     typedef state_type deriv_type;
     typedef dense_output_stepper_tag stepper_category;
 
@@ -100,7 +100,7 @@ struct dummy_controlled_stepper
 {
     typedef double value_type;
     typedef value_type time_type;
-    typedef boost::array< value_type , 1 > state_type;
+    typedef std::array< value_type , 1 > state_type;
     typedef state_type deriv_type;
     typedef controlled_stepper_tag stepper_category;
 

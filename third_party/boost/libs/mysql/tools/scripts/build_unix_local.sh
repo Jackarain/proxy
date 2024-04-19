@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+# Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -10,7 +10,7 @@ set -e
 
 BK=b2
 IMAGE=build-gcc13
-SHA=c94b77a716a0cc2cf5f489d9a97e9a0aefa7c0de
+SHA=1f4d636dddc2f5af1774b42e6177a06457808330
 CONTAINER=builder-$IMAGE-$BK
 FULL_IMAGE=ghcr.io/anarthal-containers/$IMAGE:$SHA
 DB=mysql8
@@ -37,9 +37,10 @@ docker exec $CONTAINER python /opt/boost-mysql/tools/ci.py --source-dir=/opt/boo
     --address-model=64 \
     --address-sanitizer=0 \
     --undefined-sanitizer=0 \
-    --cxxstd=20 \
+    --cxxstd=11 \
     --variant=debug \
     --separate-compilation=1 \
+    --use-ts-executor=0 \
     --cmake-standalone-tests=1 \
     --cmake-add-subdir-tests=1 \
     --cmake-install-tests=1 \

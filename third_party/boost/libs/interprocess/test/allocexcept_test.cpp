@@ -55,14 +55,16 @@ int main ()
       BOOST_TRY{
          //Fill vector until there is no more memory
          MyVect myvec(myallocator);
-         std::size_t i;
-         for(i = 0; true; ++i){
-            myvec.push_back(InstanceCounter());
+         while(true){
+            InstanceCounter a;
+            myvec.push_back(a);
          }
       }
       BOOST_CATCH(boost::interprocess::bad_alloc &){
-         if(InstanceCounter::counter != 0)
+         if (InstanceCounter::counter != 0) {
+            std::cout << "Error: InstanceCounter::counter: " << InstanceCounter::counter;
             return 1;
+         }
       } BOOST_CATCH_END
 
       //We'll provoke an exception, let's see if exception handling works
@@ -76,12 +78,16 @@ int main ()
          }
       }
       BOOST_CATCH(boost::interprocess::bad_alloc &){
-         if(InstanceCounter::counter != 0)
+         if(InstanceCounter::counter != 0){
+            std::cout << "Error: InstanceCounter::counter: " << InstanceCounter::counter;
             return 1;
+         }
       }
       BOOST_CATCH(std::length_error &){
-         if(InstanceCounter::counter != 0)
+         if(InstanceCounter::counter != 0){
+            std::cout << "Error: InstanceCounter::counter: " << InstanceCounter::counter;
             return 1;
+         }
       } BOOST_CATCH_END
    }
    BOOST_CATCH(...){

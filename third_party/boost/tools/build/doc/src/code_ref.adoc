@@ -1,0 +1,14 @@
+[[b2.reference.code]]
+= Implementation Reference
+
+This includes reference documentation for the internals of the B2 engine code.
+Even though the Jam facing build system interfaces are also implemented in the
+engine, they are documented in the general reference section. This goes deeper
+and includes parts of engine mechanism and data structures. It is meant for
+those making changes to the engine itself.
+
+:leveloffset: +1
+
+include::../../src/engine/lists.h[tag=reference]
+
+:leveloffset: -1

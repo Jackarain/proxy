@@ -13,7 +13,7 @@
 #include <boost/url/detail/config.hpp>
 #include <boost/url/encode.hpp>
 #include <boost/url/detail/format_args.hpp>
-#include <boost/url/detail/replacement_field_rule.hpp>
+#include "boost/url/detail/replacement_field_rule.hpp"
 #include <boost/url/grammar/delim_rule.hpp>
 #include <boost/url/grammar/optional_rule.hpp>
 #include <boost/url/grammar/parse.hpp>

@@ -176,7 +176,7 @@ rule maybe-force-rebuild ( targets * )
         {
             all-targets += [ virtual-target.traverse $(t) ] ;
         }
-        for local t in [ sequence.unique $(all-targets) ]
+        for local t in $(all-targets)
         {
             $(t).always ;
         }

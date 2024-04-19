@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -20,7 +20,9 @@ namespace test {
 
 inline void validate_string_contains(std::string value, const std::vector<std::string>& to_check)
 {
-    std::transform(value.begin(), value.end(), value.begin(), &tolower);
+    std::transform(value.begin(), value.end(), value.begin(), [](char c) {
+        return static_cast<char>(tolower(c));
+    });
     for (const auto& elm : to_check)
     {
         BOOST_TEST(

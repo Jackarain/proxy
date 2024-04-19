@@ -125,7 +125,7 @@ static void import_base_rules( module_t * class_, OBJECT * base )
 }
 
 
-OBJECT * make_class_module( LIST * xname, LIST * bases, FRAME * frame )
+OBJECT * make_class_module( LIST * xname, LIST * bases )
 {
     OBJECT     * name = class_module_name( list_front( xname ) );
     OBJECT   * * pp;

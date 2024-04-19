@@ -16,6 +16,7 @@
 #include <boost/version.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/directory.hpp>
 
 namespace boost { namespace wave { namespace util
 {
@@ -205,6 +206,17 @@ namespace boost { namespace wave { namespace util
         if (p.string().empty())
             return true;
         return boost::filesystem::create_directories(p);
+    }
+
+    // starting with Boost 1.85 no_push was renamed to disable_recursion_pending for consistency
+    // with std::filesystem (deprecated some point before that)
+    inline void no_push(boost::filesystem::recursive_directory_iterator & it)
+    {
+#if BOOST_VERSION >= 108400 && BOOST_FILESYSTEM_VERSION >= 3
+        it.disable_recursion_pending();
+#else
+        it.no_push();
+#endif
     }
 }}}
 

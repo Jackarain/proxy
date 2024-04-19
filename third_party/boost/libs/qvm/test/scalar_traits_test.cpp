@@ -38,6 +38,8 @@ tester<is_scalar<long double>::value> t13;
 tester<!is_scalar<vec<float,4> >::value> t14;
 tester<!is_scalar<mat<float,4,4> >::value> t15;
 tester<!is_scalar<quat<float> >::value> t16;
+tester<is_scalar<signed long long>::value> t17;
+tester<is_scalar<unsigned long long>::value> t18;
 
 int
 main()

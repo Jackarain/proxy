@@ -12,7 +12,7 @@
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/grammar/parse.hpp>
-#include <boost/url/rfc/detail/ipv6_addrz_rule.hpp>
+#include "ipv6_addrz_rule.hpp"
 #include <boost/url/rfc/ipv6_address_rule.hpp>
 #include <boost/url/rfc/unreserved_chars.hpp>
 #include <boost/url/rfc/pct_encoded_rule.hpp>

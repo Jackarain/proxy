@@ -2,20 +2,29 @@
 //
 //  See http://www.boost.org for most recent version, including documentation.
 //
-//  Copyright Antony Polukhin, 2011-2023.
+//  Copyright Antony Polukhin, 2011-2024.
 //
 //  Distributed under the Boost
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt).
 
+#ifndef BOOST_LEXICAL_CAST_DETAIL_TEST_ON_OLD
 #include <boost/lexical_cast.hpp>
+#else
+// Make sure that tests work the same way on non-optimized version
+#include "lexical_cast_old.hpp"
+#endif
 
 #include <boost/cstdint.hpp>
 #include <boost/core/lightweight_test.hpp>
+#include <boost/type_traits/is_same.hpp>
+#include <boost/type_traits/is_signed.hpp>
 
 #ifndef BOOST_TEST_CLOSE_FRACTION
 // Naiive, but works for most tests in this file 
-#define BOOST_TEST_CLOSE_FRACTION(x, y, eps) BOOST_TEST(x - y + eps <= eps * 2)
+#define BOOST_TEST_CLOSE_FRACTION(x, y, eps) \
+    BOOST_TEST(x - y + eps <= eps * 2); \
+    BOOST_TEST(y - x + eps <= eps * 2);
 #endif
 
 #if (defined(__CYGWIN__) || defined(__FreeBSD__) || defined(__NetBSD__) \
@@ -303,6 +312,13 @@ void test_float_typess_for_overflows()
                 && lexical_cast<test_t>( (std::numeric_limits<double>::min)() )
                 <= (std::numeric_limits<double>::min)() + std::numeric_limits<test_t>::epsilon()
         );
+
+        BOOST_TEST(
+                (std::numeric_limits<double>::min)() / 2 - std::numeric_limits<test_t>::epsilon()
+                <= lexical_cast<test_t>( (std::numeric_limits<double>::min)() / 2 )
+                && lexical_cast<test_t>( (std::numeric_limits<double>::min)() / 2 )
+                <= (std::numeric_limits<double>::min)() / 2 + std::numeric_limits<test_t>::epsilon()
+        );
     }
 
     if ( sizeof(test_t) < sizeof(long double) )
@@ -313,6 +329,13 @@ void test_float_typess_for_overflows()
                 <= lexical_cast<test_t>( (std::numeric_limits<long double>::min)() )
                 && lexical_cast<test_t>( (std::numeric_limits<long double>::min)() )
                 <= (std::numeric_limits<long double>::min)() + std::numeric_limits<test_t>::epsilon()
+        );
+
+        BOOST_TEST(
+                (std::numeric_limits<long double>::min)() / 2 - std::numeric_limits<test_t>::epsilon()
+                <= lexical_cast<test_t>( (std::numeric_limits<long double>::min)() / 2 )
+                && lexical_cast<test_t>( (std::numeric_limits<long double>::min)() / 2 )
+                <= (std::numeric_limits<long double>::min)() / 2 + std::numeric_limits<test_t>::epsilon()
         );
     }
 }
@@ -488,6 +511,7 @@ void test_conversion_from_to_float()
 }
 
 
+
 void test_conversion_from_to_float()
 {
     test_conversion_from_to_float<float>();
@@ -505,27 +529,45 @@ void test_conversion_from_to_long_double()
     BOOST_TEST(true);
 }
 
-
-template <typename Float>
-double make_volatile_float_roundtrip() {
-    volatile Float v = 1.0;
-    return static_cast<double>(boost::lexical_cast<Float>(v));
-}
-
-void test_volatile_floats()
+template <class Integral, class Float>
+void test_conversion_integral_float()
 {
-    // Inspired by test case from https://github.com/boostorg/lexical_cast/issues/50
-    BOOST_TEST_EQ(make_volatile_float_roundtrip<float>(), 1.0);
-    BOOST_TEST_EQ(make_volatile_float_roundtrip<double>(), 1.0);
-#if !defined(BOOST_LEXICAL_CAST_NO_LONG_DOUBLE_MATH_FUNCTIONS)
-    BOOST_TEST_EQ(make_volatile_float_roundtrip<long double>(), 1.0);
+    BOOST_TEST_CLOSE_FRACTION(lexical_cast<Float>(static_cast<Float>(1)), static_cast<Float>(1), std::numeric_limits<Float>::epsilon());
+    BOOST_TEST_CLOSE_FRACTION(lexical_cast<Float>(static_cast<Float>(1.1234)), static_cast<Float>(1.1234), std::numeric_limits<Float>::epsilon());
+    BOOST_TEST_CLOSE_FRACTION(lexical_cast<Float>(static_cast<Float>(-1.1234)), static_cast<Float>(-1.1234), std::numeric_limits<Float>::epsilon());
+
+    BOOST_TEST_CLOSE_FRACTION(lexical_cast<Float>(static_cast<Integral>(0)), static_cast<Float>(0), std::numeric_limits<Float>::epsilon());
+    BOOST_TEST_CLOSE_FRACTION(lexical_cast<Float>(static_cast<Integral>(1)), static_cast<Float>(1), std::numeric_limits<Float>::epsilon());
+
+#ifndef __CYGWIN__
+    BOOST_TEST_CLOSE_FRACTION(lexical_cast<Float>((std::numeric_limits<Integral>::max)()), static_cast<Float>((std::numeric_limits<Integral>::max)()), std::numeric_limits<Float>::epsilon());
+    BOOST_TEST_CLOSE_FRACTION(lexical_cast<Float>((std::numeric_limits<Integral>::min)()), static_cast<Float>((std::numeric_limits<Integral>::min)()), std::numeric_limits<Float>::epsilon());
 #endif
 
-    volatile float v = 1.0;
-    BOOST_TEST_EQ(boost::lexical_cast<float>(v), 1.0f);
-#if !defined(BOOST_LEXICAL_CAST_NO_LONG_DOUBLE_MATH_FUNCTIONS)
-    BOOST_TEST_EQ(boost::lexical_cast<long double>(v), 1.0);
-#endif
+    BOOST_TEST_EQ(lexical_cast<Integral>(static_cast<Float>(0.0)), 0);
+    BOOST_TEST_EQ(lexical_cast<Integral>(static_cast<Float>(1.0)), 1);
+    BOOST_TEST_EQ(lexical_cast<Integral>(static_cast<Float>(8.0)), 8);
+    BOOST_TEST_EQ(lexical_cast<Integral>(static_cast<Float>(16.0)), 16);
+
+    if (boost::is_signed<Integral>::value) {
+        BOOST_TEST_EQ(lexical_cast<Integral>(static_cast<Float>(-1.0)), -1);
+        BOOST_TEST_EQ(lexical_cast<Integral>(static_cast<Float>(-8.0)), -8);
+        BOOST_TEST_EQ(lexical_cast<Integral>(static_cast<Float>(-16.0)), -16);
+    } else {
+        BOOST_TEST_EQ(lexical_cast<Integral>(static_cast<Float>(-1.0)), (std::numeric_limits<Integral>::max)());
+        BOOST_TEST_EQ(lexical_cast<Integral>(static_cast<Float>(-8.0)), (std::numeric_limits<Integral>::max)() - 7);
+        BOOST_TEST_EQ(lexical_cast<Integral>(static_cast<Float>(-16.0)), (std::numeric_limits<Integral>::max)() - 15);
+    }
+
+    BOOST_TEST_THROWS(lexical_cast<Integral>(static_cast<Float>(0.5)), bad_lexical_cast);
+    BOOST_TEST_THROWS(lexical_cast<Integral>(static_cast<Float>(-0.5)), bad_lexical_cast);
+    BOOST_TEST_THROWS(lexical_cast<Integral>(static_cast<Float>(1.5)), bad_lexical_cast);
+    BOOST_TEST_THROWS(lexical_cast<Integral>(static_cast<Float>(-1.5)), bad_lexical_cast);
+
+    BOOST_TEST_THROWS(lexical_cast<Integral>((std::numeric_limits<Float>::min)()), bad_lexical_cast);
+    BOOST_TEST_THROWS(lexical_cast<Integral>((std::numeric_limits<Float>::max)()), bad_lexical_cast);
+    BOOST_TEST_THROWS(lexical_cast<Integral>((std::numeric_limits<Float>::epsilon)()), bad_lexical_cast);
+    BOOST_TEST_THROWS(lexical_cast<Integral>((std::numeric_limits<Float>::lowest)()), bad_lexical_cast);
 }
 
 
@@ -534,7 +576,19 @@ int main()
     test_conversion_from_to_float();
     test_conversion_from_to_double();
     test_conversion_from_to_long_double();
-    test_volatile_floats();
+
+    test_conversion_integral_float<int, float>();
+    test_conversion_integral_float<int, double>();
+    test_conversion_integral_float<unsigned short, float>();
+    test_conversion_integral_float<unsigned short, double>();
+    test_conversion_integral_float<short, float>();
+    test_conversion_integral_float<short, double>();
+    test_conversion_integral_float<long int, float>();
+    test_conversion_integral_float<long int, double>();
+    test_conversion_integral_float<long long, float>();
+    test_conversion_integral_float<long long, double>();
+    test_conversion_integral_float<unsigned long long, float>();
+    test_conversion_integral_float<unsigned long long, double>();
 
     return boost::report_errors();
 }

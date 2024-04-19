@@ -13,7 +13,7 @@
 # include <boost/preprocessor/arithmetic/add.hpp>
 # include <boost/preprocessor/arithmetic/dec.hpp>
 # include <boost/preprocessor/control.hpp>
-# include <libs/preprocessor/test/test.h>
+# include "test.h"
 
 # define TR(x) 1
 

@@ -2,7 +2,7 @@
 //
 //  See http://www.boost.org for most recent version, including documentation.
 //
-//  Copyright Antony Polukhin, 2013-2023.
+//  Copyright Antony Polukhin, 2013-2024.
 //  Copyright Ruslan Arutyunyan, 2019-2021.
 //
 //  Distributed under the Boost
@@ -14,14 +14,11 @@
 #include <utility>
 
 #include <boost/any/basic_any.hpp>
-#include "test.hpp"
 
 
-int main()
-{
+int main() {
     boost::anys::basic_any<> const cvalue(10);
     int i = boost::any_cast<int&&>(cvalue);
     (void)i;
-    return EXIT_SUCCESS;
 }
 

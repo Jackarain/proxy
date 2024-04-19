@@ -31,9 +31,48 @@ common_install () {
   export SELF=`basename $REPO_NAME`
   export BOOST_CI_TARGET_BRANCH="$TRAVIS_BRANCH"
   export BOOST_CI_SRC_FOLDER=$(pwd)
+  : ${B2_DONT_BOOTSTRAP:=$B2_SEPARATE_BOOTSTRAP}
 
   . ./ci/common_install.sh
+
+  if [ "x$B2_TOOLSET" = "xgcc-4.9" ]; then
+      # this is ridiculously hacky, but the alternative is building gcc-4.9
+      # for Ubuntu 18.04 manually
+      pushd /etc/apt
+
+      # temporally pretend we are Ubuntu 16.04
+      sed 's/bionic/xenial/g' < sources.list > sources.list-xenial
+      mv sources.list sources.list-bionic
+      ln -sT sources.list-xenial sources.list
+      sudo -E apt-get -o Acquire::Retries=3 update
+      sudo -E DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 -y \
+          --no-install-suggests --no-install-recommends install g++-4.9
+
+      # put everything back
+      rm sources.list sources.list-xenial
+      mv sources.list-bionic sources.list
+      sudo -E apt-get -o Acquire::Retries=3 update
+
+      popd
+  fi
+
+  if [ "$B2_SEPARATE_BOOTSTRAP" = 1 ]; then
+    pushd tools/build
+    B2_TOOLSET= ./bootstrap.sh
+    popd
+    cp tools/build/b2 .
+  fi
 }
+
+common_cmake () {
+    export CXXFLAGS="-Wall -Wextra -Werror"
+    export CMAKE_SHARED_LIBS=${CMAKE_SHARED_LIBS:-1}
+    export CMAKE_NO_TESTS=${CMAKE_NO_TESTS:-error}
+    if [ $CMAKE_NO_TESTS = "error" ]; then
+        CMAKE_BUILD_TESTING="-DBUILD_TESTING=ON"
+    fi
+}
+
 
 if [ "$DRONE_JOB_BUILDTYPE" == "boost" ]; then
 
@@ -128,12 +167,7 @@ common_install
 
 echo '==================================> COMPILE'
 
-export CXXFLAGS="-Wall -Wextra -Werror"
-export CMAKE_SHARED_LIBS=${CMAKE_SHARED_LIBS:-1}
-export CMAKE_NO_TESTS=${CMAKE_NO_TESTS:-error}
-if [ $CMAKE_NO_TESTS = "error" ]; then
-    CMAKE_BUILD_TESTING="-DBUILD_TESTING=ON"
-fi
+common_cmake
 
 mkdir __build_static
 cd __build_static
@@ -151,6 +185,61 @@ cmake -DBoost_VERBOSE=1 ${CMAKE_BUILD_TESTING} -DCMAKE_INSTALL_PREFIX=iprefix \
     -DBOOST_INCLUDE_LIBRARIES=$SELF -DBUILD_SHARED_LIBS=ON ${CMAKE_OPTIONS} ..
 cmake --build . --target install
 ctest --output-on-failure --no-tests=$CMAKE_NO_TESTS -R boost_$SELF
+
+fi
+
+elif [ "$DRONE_JOB_BUILDTYPE" == "cmake-mainproject" ]; then
+
+echo '==================================> INSTALL'
+
+common_install
+
+echo '==================================> COMPILE'
+
+common_cmake
+
+mkdir __build_static
+cd __build_static
+cmake -DBoost_VERBOSE=1 ${CMAKE_BUILD_TESTING} -DCMAKE_INSTALL_PREFIX=iprefix \
+    ${CMAKE_OPTIONS} ../libs/json
+cmake --build . --target install
+ctest --output-on-failure --no-tests=$CMAKE_NO_TESTS
+cd ..
+
+if [ "$CMAKE_SHARED_LIBS" = 1 ]; then
+
+mkdir __build_shared
+cd __build_shared
+cmake -DBoost_VERBOSE=1 ${CMAKE_BUILD_TESTING} -DCMAKE_INSTALL_PREFIX=iprefix \
+    -DBUILD_SHARED_LIBS=ON ${CMAKE_OPTIONS} ../libs/json
+cmake --build . --target install
+ctest --output-on-failure --no-tests=$CMAKE_NO_TESTS
+
+fi
+
+elif [ "$DRONE_JOB_BUILDTYPE" == "cmake-subdirectory" ]; then
+
+echo '==================================> INSTALL'
+
+common_install
+
+echo '==================================> COMPILE'
+
+common_cmake
+
+mkdir __build_static
+cd __build_static
+cmake ${CMAKE_BUILD_TESTING} ${CMAKE_OPTIONS} ../libs/json/test/cmake-subdir
+cmake --build . --target check
+cd ..
+
+if [ "$CMAKE_SHARED_LIBS" = 1 ]; then
+
+mkdir __build_shared
+cd __build_shared
+cmake ${CMAKE_BUILD_TESTING} -DBUILD_SHARED_LIBS=ON ${CMAKE_OPTIONS} \
+    ../libs/json/test/cmake-subdir
+cmake --build . --target check
 
 fi
 

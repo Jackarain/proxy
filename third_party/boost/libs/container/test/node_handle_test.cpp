@@ -8,7 +8,6 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 #include <boost/core/lightweight_test.hpp>
-#include <boost/static_assert.hpp>
 #include <boost/container/node_handle.hpp>
 #include <boost/container/new_allocator.hpp>
 #include <boost/move/utility_core.hpp>
@@ -177,16 +176,16 @@ typedef allocator_traits<node_alloc_t>::portable_rebind_alloc<test_pair>::type v
 void test_types()
 {
    //set
-   BOOST_STATIC_ASSERT(( dtl::is_same<node_handle_set_t::value_type, test_pair>::value ));
-   BOOST_STATIC_ASSERT(( dtl::is_same<node_handle_set_t::key_type, test_pair>::value ));
-   BOOST_STATIC_ASSERT(( dtl::is_same<node_handle_set_t::mapped_type, test_pair>::value ));
-   BOOST_STATIC_ASSERT(( dtl::is_same<node_handle_set_t::allocator_type, value_allocator_type>::value ));
+   BOOST_CONTAINER_STATIC_ASSERT(( dtl::is_same<node_handle_set_t::value_type, test_pair>::value ));
+   BOOST_CONTAINER_STATIC_ASSERT(( dtl::is_same<node_handle_set_t::key_type, test_pair>::value ));
+   BOOST_CONTAINER_STATIC_ASSERT(( dtl::is_same<node_handle_set_t::mapped_type, test_pair>::value ));
+   BOOST_CONTAINER_STATIC_ASSERT(( dtl::is_same<node_handle_set_t::allocator_type, value_allocator_type>::value ));
 
    //map
-   BOOST_STATIC_ASSERT(( dtl::is_same<node_handle_map_t::value_type, test_pair>::value ));
-   BOOST_STATIC_ASSERT(( dtl::is_same<node_handle_map_t::key_type, int>::value ));
-   BOOST_STATIC_ASSERT(( dtl::is_same<node_handle_map_t::mapped_type, unsigned>::value ));
-   BOOST_STATIC_ASSERT(( dtl::is_same<node_handle_map_t::allocator_type, value_allocator_type>::value ));
+   BOOST_CONTAINER_STATIC_ASSERT(( dtl::is_same<node_handle_map_t::value_type, test_pair>::value ));
+   BOOST_CONTAINER_STATIC_ASSERT(( dtl::is_same<node_handle_map_t::key_type, int>::value ));
+   BOOST_CONTAINER_STATIC_ASSERT(( dtl::is_same<node_handle_map_t::mapped_type, unsigned>::value ));
+   BOOST_CONTAINER_STATIC_ASSERT(( dtl::is_same<node_handle_map_t::allocator_type, value_allocator_type>::value ));
 }
 
 void test_default_constructor()

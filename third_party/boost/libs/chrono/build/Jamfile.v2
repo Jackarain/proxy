@@ -8,6 +8,10 @@
 
 # See library home page at http://www.boost.org/libs/chrono
 
+import config : requires ;
+
+local cxx11-requirements = [ requires cxx11_hdr_ratio cxx11_template_aliases cxx11_decltype cxx11_char16_t cxx11_char32_t ] ;
+
 project boost/chrono
     : source-location ../src
     : requirements
@@ -103,8 +107,9 @@ SOURCES = chrono thread_clock process_cpu_clocks ;
 lib boost_chrono
     : $(SOURCES).cpp
     :
-    <link>shared:<define>BOOST_ALL_DYN_LINK=1 # tell source we're building dll's
-    <link>static:<define>BOOST_All_STATIC_LINK=1 # tell source we're building static lib's
+    $(cxx11-requirements)
+    <link>shared:<define>BOOST_CHRONO_DYN_LINK=1 # tell source we're building dll's
+    <link>static:<define>BOOST_CHRONO_STATIC_LINK=1 # tell source we're building static lib's
     ;
 
 boost-install boost_chrono ;

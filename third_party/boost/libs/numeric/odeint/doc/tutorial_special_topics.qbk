@@ -65,7 +65,7 @@ Like the __tut_solar_system, the FPU is solved again by a symplectic solver, but
 
 [fpu_system_function]
 
-You can also use `boost::array< double , N >` for the state type.
+You can also use `std::array< double , N >` for the state type.
 
 Now, you have to define your initial values and perform the integration:
 

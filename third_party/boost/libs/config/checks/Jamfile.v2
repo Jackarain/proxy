@@ -119,6 +119,7 @@ obj cxx14_return_type_deduction : test_case.cpp : <define>TEST_BOOST_NO_CXX14_RE
 obj cxx14_std_exchange : test_case.cpp : <define>TEST_BOOST_NO_CXX14_STD_EXCHANGE ;
 obj cxx14_variable_templates : test_case.cpp : <define>TEST_BOOST_NO_CXX14_VARIABLE_TEMPLATES ;
 obj cxx17 : test_case.cpp : <define>TEST_BOOST_NO_CXX17 ;
+obj cxx17_auto_nontype_template_params : test_case.cpp : <define>TEST_BOOST_NO_CXX17_AUTO_NONTYPE_TEMPLATE_PARAMS ;
 obj cxx17_deduction_guides : test_case.cpp : <define>TEST_BOOST_NO_CXX17_DEDUCTION_GUIDES ;
 obj cxx17_fold_expressions : test_case.cpp : <define>TEST_BOOST_NO_CXX17_FOLD_EXPRESSIONS ;
 obj cxx17_hdr_any : test_case.cpp : <define>TEST_BOOST_NO_CXX17_HDR_ANY ;

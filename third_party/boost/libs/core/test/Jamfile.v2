@@ -39,6 +39,10 @@ compile-fail checked_delete_fail.cpp
   : $(warnings-as-errors-off) ;
 compile-fail checked_delete_fail2.cpp
   : $(warnings-as-errors-off) ;
+compile-fail checked_deleter_compile_fail_adl.cpp
+  : $(warnings-as-errors-off) ;
+compile-fail checked_array_deleter_compile_fail_adl.cpp
+  : $(warnings-as-errors-off) ;
 
 compile ref_ct_test.cpp ;
 run ref_test.cpp ;
@@ -187,7 +191,17 @@ compile-fail scoped_enum_compile_fail_conv_to_int.cpp
 
 run underlying_type.cpp ;
 
+compile-fail null_deleter_compile_fail_adl.cpp
+  : $(warnings-as-errors-off) ;
+
 run fclose_deleter_test.cpp : : : <target-os>windows:<define>_CRT_SECURE_NO_WARNINGS <target-os>windows:<define>_CRT_SECURE_NO_DEPRECATE ;
+compile-fail fclose_deleter_compile_fail_adl.cpp
+  : <target-os>windows:<define>_CRT_SECURE_NO_WARNINGS <target-os>windows:<define>_CRT_SECURE_NO_DEPRECATE $(warnings-as-errors-off) ;
+
+run functor_test.cpp ;
+compile-fail functor_compile_fail_adl.cpp
+  : $(warnings-as-errors-off) ;
+
 
 run pointer_traits_pointer_test.cpp ;
 run pointer_traits_element_type_test.cpp ;
@@ -251,6 +265,7 @@ run allocator_destroy_test.cpp ;
 run allocator_construct_n_test.cpp ;
 run allocator_destroy_n_test.cpp ;
 run allocator_traits_test.cpp ;
+compile allocator_pmr_test.cpp ;
 
 lib lib_typeid : lib_typeid.cpp : <link>shared:<define>LIB_TYPEID_DYN_LINK=1 ;
 
@@ -351,6 +366,9 @@ compile sv_windows_h_test.cpp ;
 compile-fail sv_nullptr_fail.cpp
   : $(warnings-as-errors-off) ;
 
+compile sv_construct_test_cx.cpp ;
+compile sv_construct_test_cx2.cpp ;
+
 run span_test.cpp ;
 run span_types_test.cpp ;
 run span_constructible_test.cpp ;
@@ -378,7 +396,11 @@ run memory_resource_test.cpp ;
 run data_test.cpp ;
 run size_test.cpp ;
 
-local with-serialization = <library>/boost//serialization/<warnings>off $(warnings-as-errors-off) <undefined-sanitizer>norecover:<link>static ;
+import ../../config/checks/config : requires ;
+
+local CPP11 = [ requires cxx11_variadic_templates cxx11_template_aliases cxx11_decltype cxx11_constexpr cxx11_noexcept ] ;
+
+local with-serialization = <library>/boost//serialization/<warnings>off $(warnings-as-errors-off) <undefined-sanitizer>norecover:<link>static $(CPP11) ;
 
 run serialization_nvp_test.cpp : : : $(with-serialization) <undefined-sanitizer>norecover:<build>no ;
 run serialization_split_free_test.cpp : : : $(with-serialization) ;

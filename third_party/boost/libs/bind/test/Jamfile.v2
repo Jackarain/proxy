@@ -9,6 +9,23 @@
 # bring in rules for testing
 import testing ;
 
+local gcc-flags = -Wundef ;
+
+project
+  : default-build
+
+    <warnings>pedantic
+
+  : requirements
+
+    <toolset>msvc:<warnings-as-errors>on
+    <toolset>gcc:<warnings-as-errors>on
+    <toolset>clang:<warnings-as-errors>on
+
+    <toolset>gcc:<cxxflags>$(gcc-flags)
+    <toolset>clang:<cxxflags>$(gcc-flags)
+  ;
+
 # quick test (for CI)
 run quick.cpp ;
 
@@ -60,7 +77,8 @@ run bind_type_test.cpp ;
 run bind_unique_ptr_test.cpp ;
 run bind_nested_rv_test.cpp ;
 compile arg_copy_test.cpp ;
-compile-fail arg_copy_fail.cpp ;
+compile-fail arg_copy_fail.cpp
+  : <warnings>off ;
 run placeholder_std_bind_test.cpp ;
 run bind_fastcall_test.cpp ;
 run bind_stdcall_test.cpp ;
@@ -83,3 +101,9 @@ run apply_test.cpp ;
 run apply_test2.cpp ;
 run apply_rv_test.cpp ;
 run apply_rv_test2.cpp ;
+run bind_over_test.cpp ;
+run bind_over_mf_test.cpp ;
+run bind_over_mf2_test.cpp ;
+run mem_fn_cdecl_ref_test.cpp ;
+run mem_fn_stdcall_ref_test.cpp ;
+run mem_fn_fastcall_ref_test.cpp ;

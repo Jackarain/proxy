@@ -54,7 +54,7 @@ rule native ( path )
 #
 rule is-rooted ( path )
 {
-    return [ MATCH "^(/)" : $(path) ] ;
+    return [ MATCH "^(/|@)" : $(path) ] ;
 }
 
 
@@ -281,15 +281,6 @@ local rule .glob-tree ( roots * : patterns * : exclude-patterns * )
     }
     return $(result) ;
 }
-
-
-# Returns true is the specified file exists.
-#
-rule exists ( file )
-{
-    return [ path.glob $(file:D) : $(file:D=) ] ;
-}
-NATIVE_RULE path : exists ;
 
 
 # Find out the absolute name of path and returns the list of all the parents,
@@ -832,7 +823,7 @@ rule __test__ ( )
     {
         join "a" "/b" ;
     }
-    catch only first element may be rooted ;
+    catch only the first element may be rooted ;
 
     local CWD = "/home/ghost/build" ;
     assert.result : all-parents . : . : $(CWD) ;
@@ -1010,6 +1001,17 @@ rule __test__ ( )
     #assert.result "disk:Jamfile." : native-VMS "/disk:Jamfile." ;
     #assert.result "disk:[my_docs.work]Jamfile." : native-VMS
     #    "/disk:/my_docs/work/Jamfile." ;
+
+    assert.result c:/foo/bar : normalize-all c:/x/../foo/./xx/yy/../../bar ;
+    assert.result .          : normalize-all .                             ;
+    assert.result ..         : normalize-all ..                            ;
+    assert.result ../..      : normalize-all ../..                         ;
+    assert.result ..         : normalize-all ./..                          ;
+    assert.result / /        : normalize-all / \\                          ;
+    assert.result a          : normalize-all a                             ;
+    assert.result a          : normalize-all a/                            ;
+    assert.result /a         : normalize-all /a/                           ;
+    assert.result /          : normalize-all /a/..                         ;
 
     modules.poke path : os : $(save-os) ;
 }

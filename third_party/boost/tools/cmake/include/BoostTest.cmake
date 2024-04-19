@@ -1,4 +1,4 @@
-# Copyright 2018, 2019 Peter Dimov
+# Copyright 2018-2023 Peter Dimov
 # Distributed under the Boost Software License, Version 1.0.
 # See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt
 
@@ -8,8 +8,10 @@ set(BOOST_TEST_LINK_LIBRARIES "")
 set(BOOST_TEST_COMPILE_DEFINITIONS "")
 set(BOOST_TEST_COMPILE_OPTIONS "")
 set(BOOST_TEST_COMPILE_FEATURES "")
+set(BOOST_TEST_INCLUDE_DIRECTORIES "")
 set(BOOST_TEST_SOURCES "")
 set(BOOST_TEST_WORKING_DIRECTORY "")
+set(BOOST_TEST_PREFIX "")
 
 # Include guard
 
@@ -46,18 +48,19 @@ endfunction()
 #   COMPILE_DEFINITIONS defs...
 #   COMPILE_OPTIONS opts...
 #   COMPILE_FEATURES features...
+#   INCLUDE_DIRECTORIES dirs...
 # )
 
 function(boost_test)
 
-  cmake_parse_arguments(_ "IGNORE_TEST_GLOBALS" "TYPE;PREFIX;NAME;WORKING_DIRECTORY" "SOURCES;ARGUMENTS;LIBRARIES;LINK_LIBRARIES;COMPILE_DEFINITIONS;COMPILE_OPTIONS;COMPILE_FEATURES" ${ARGN})
+  cmake_parse_arguments(_
+    "IGNORE_TEST_GLOBALS"
+    "TYPE;PREFIX;NAME;WORKING_DIRECTORY"
+    "SOURCES;ARGUMENTS;LIBRARIES;LINK_LIBRARIES;COMPILE_DEFINITIONS;COMPILE_OPTIONS;COMPILE_FEATURES;INCLUDE_DIRECTORIES"
+    ${ARGN})
 
   if(NOT __TYPE)
     set(__TYPE run)
-  endif()
-
-  if(NOT __PREFIX)
-    set(__PREFIX ${PROJECT_NAME})
   endif()
 
   if(NOT __NAME)
@@ -65,8 +68,6 @@ function(boost_test)
     get_filename_component(__NAME ${__NAME} NAME_WE)
     string(MAKE_C_IDENTIFIER ${__NAME} __NAME)
   endif()
-
-  set(__NAME ${__PREFIX}-${__NAME})
 
   if(__UNPARSED_ARGUMENTS)
     message(AUTHOR_WARNING "Extra arguments for test '${__NAME}' ignored: ${__UNPARSED_ARGUMENTS}")
@@ -86,8 +87,10 @@ function(boost_test)
     set(BOOST_TEST_COMPILE_DEFINITIONS "")
     set(BOOST_TEST_COMPILE_OPTIONS "")
     set(BOOST_TEST_COMPILE_FEATURES "")
+    set(BOOST_TEST_INCLUDE_DIRECTORIES "")
     set(BOOST_TEST_SOURCES "")
     set(BOOST_TEST_WORKING_DIRECTORY "")
+    set(BOOST_TEST_PREFIX "")
 
   endif()
 
@@ -95,11 +98,22 @@ function(boost_test)
   list(APPEND BOOST_TEST_COMPILE_DEFINITIONS ${__COMPILE_DEFINITIONS})
   list(APPEND BOOST_TEST_COMPILE_OPTIONS ${__COMPILE_OPTIONS})
   list(APPEND BOOST_TEST_COMPILE_FEATURES ${__COMPILE_FEATURES})
+  list(APPEND BOOST_TEST_INCLUDE_DIRECTORIES ${__INCLUDE_DIRECTORIES})
   list(APPEND BOOST_TEST_SOURCES ${__SOURCES})
 
   if(__WORKING_DIRECTORY)
     set(BOOST_TEST_WORKING_DIRECTORY ${__WORKING_DIRECTORY})
   endif()
+
+  if(__PREFIX)
+    set(BOOST_TEST_PREFIX ${__PREFIX})
+  endif()
+
+  if(NOT BOOST_TEST_PREFIX)
+    set(BOOST_TEST_PREFIX ${PROJECT_NAME})
+  endif()
+
+  set(__NAME ${BOOST_TEST_PREFIX}-${__NAME})
 
   if(MSVC)
 
@@ -151,6 +165,10 @@ function(boost_test)
     add_custom_target(tests)
   endif()
 
+  if(NOT TARGET tests-quick)
+    add_custom_target(tests-quick)
+  endif()
+
   if(__TYPE STREQUAL "compile")
 
     add_library(${__NAME} STATIC EXCLUDE_FROM_ALL ${BOOST_TEST_SOURCES})
@@ -158,8 +176,13 @@ function(boost_test)
     target_compile_definitions(${__NAME} PRIVATE ${BOOST_TEST_COMPILE_DEFINITIONS})
     target_compile_options(${__NAME} PRIVATE ${BOOST_TEST_COMPILE_OPTIONS})
     target_compile_features(${__NAME} PRIVATE ${BOOST_TEST_COMPILE_FEATURES})
+    target_include_directories(${__NAME} PRIVATE ${BOOST_TEST_INCLUDE_DIRECTORIES})
 
     add_dependencies(tests ${__NAME})
+
+    if("${__NAME}" MATCHES "quick")
+      add_dependencies(tests-quick ${__NAME})
+    endif()
 
   elseif(__TYPE STREQUAL "compile-fail")
 
@@ -168,6 +191,7 @@ function(boost_test)
     target_compile_definitions(${__NAME} PRIVATE ${BOOST_TEST_COMPILE_DEFINITIONS})
     target_compile_options(${__NAME} PRIVATE ${BOOST_TEST_COMPILE_OPTIONS})
     target_compile_features(${__NAME} PRIVATE ${BOOST_TEST_COMPILE_FEATURES})
+    target_include_directories(${__NAME} PRIVATE ${BOOST_TEST_INCLUDE_DIRECTORIES})
 
     add_test(NAME ${__TYPE}-${__NAME} COMMAND "${CMAKE_COMMAND}" --build ${CMAKE_BINARY_DIR} --target ${__NAME} --config $<CONFIG>)
 
@@ -180,8 +204,13 @@ function(boost_test)
     target_compile_definitions(${__NAME} PRIVATE ${BOOST_TEST_COMPILE_DEFINITIONS})
     target_compile_options(${__NAME} PRIVATE ${BOOST_TEST_COMPILE_OPTIONS})
     target_compile_features(${__NAME} PRIVATE ${BOOST_TEST_COMPILE_FEATURES})
+    target_include_directories(${__NAME} PRIVATE ${BOOST_TEST_INCLUDE_DIRECTORIES})
 
     add_dependencies(tests ${__NAME})
+
+    if("${__NAME}" MATCHES "quick")
+      add_dependencies(tests-quick ${__NAME})
+    endif()
 
   elseif(__TYPE STREQUAL "link-fail")
 
@@ -190,14 +219,20 @@ function(boost_test)
     target_compile_definitions(compile-${__NAME} PRIVATE ${BOOST_TEST_COMPILE_DEFINITIONS})
     target_compile_options(compile-${__NAME} PRIVATE ${BOOST_TEST_COMPILE_OPTIONS})
     target_compile_features(compile-${__NAME} PRIVATE ${BOOST_TEST_COMPILE_FEATURES})
+    target_include_directories(compile-${__NAME} PRIVATE ${BOOST_TEST_INCLUDE_DIRECTORIES})
 
     add_dependencies(tests compile-${__NAME})
+
+    if("${__NAME}" MATCHES "quick")
+      add_dependencies(tests-quick compile-${__NAME})
+    endif()
 
     add_executable(${__NAME} EXCLUDE_FROM_ALL $<TARGET_OBJECTS:compile-${__NAME}>)
     target_link_libraries(${__NAME} ${BOOST_TEST_LINK_LIBRARIES})
     target_compile_definitions(${__NAME} PRIVATE ${BOOST_TEST_COMPILE_DEFINITIONS})
     target_compile_options(${__NAME} PRIVATE ${BOOST_TEST_COMPILE_OPTIONS})
     target_compile_features(${__NAME} PRIVATE ${BOOST_TEST_COMPILE_FEATURES})
+    target_include_directories(${__NAME} PRIVATE ${BOOST_TEST_INCLUDE_DIRECTORIES})
 
     add_test(NAME ${__TYPE}-${__NAME} COMMAND "${CMAKE_COMMAND}" --build ${CMAKE_BINARY_DIR} --target ${__NAME} --config $<CONFIG>)
     set_tests_properties(${__TYPE}-${__NAME} PROPERTIES WILL_FAIL TRUE RUN_SERIAL TRUE)
@@ -209,8 +244,13 @@ function(boost_test)
     target_compile_definitions(${__NAME} PRIVATE ${BOOST_TEST_COMPILE_DEFINITIONS})
     target_compile_options(${__NAME} PRIVATE ${BOOST_TEST_COMPILE_OPTIONS})
     target_compile_features(${__NAME} PRIVATE ${BOOST_TEST_COMPILE_FEATURES})
+    target_include_directories(${__NAME} PRIVATE ${BOOST_TEST_INCLUDE_DIRECTORIES})
 
     add_dependencies(tests ${__NAME})
+
+    if("${__NAME}" MATCHES "quick")
+      add_dependencies(tests-quick ${__NAME})
+    endif()
 
     add_test(NAME ${__TYPE}-${__NAME} COMMAND ${__NAME} ${__ARGUMENTS})
 

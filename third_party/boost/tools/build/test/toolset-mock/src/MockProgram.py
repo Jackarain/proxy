@@ -190,7 +190,7 @@ def allow_properties(*args):
 # Use this in the stdout argument of command to print the command
 # for running another script.
 def script(name):
-    return os.path.join(os.path.dirname(__file__), "bin", re.sub('\.py$', '', name))
+    return os.path.join(os.path.dirname(__file__), "bin", re.sub('\\.py$', '', name))
 
 def match(command_line):
     for (p, stdout) in known_patterns:

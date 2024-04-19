@@ -19,7 +19,6 @@
 
 #include <boost/move/detail/to_raw_pointer.hpp>
 
-#include <boost/static_assert.hpp>
 #include <boost/core/lightweight_test.hpp>
 
 namespace boost{
@@ -88,7 +87,7 @@ struct nonhook_node_member_value_traits
 
    static const link_mode_type link_mode = Link_Mode;
 
-   BOOST_STATIC_ASSERT((Link_Mode == safe_link || Link_Mode == auto_unlink));
+   BOOST_INTRUSIVE_STATIC_ASSERT((Link_Mode == safe_link || Link_Mode == auto_unlink));
 
    static node_ptr to_node_ptr(reference value)
    {

@@ -11,7 +11,6 @@
 #include <boost/interprocess/indexes/flat_map_index.hpp>
 #include <boost/interprocess/indexes/map_index.hpp>
 #include <boost/interprocess/indexes/null_index.hpp>
-#include <boost/interprocess/indexes/unordered_map_index.hpp>
 #include <boost/interprocess/indexes/iset_index.hpp>
 #include <boost/interprocess/indexes/iunordered_set_index.hpp>
 
@@ -26,6 +25,7 @@
 #include <cstddef>
 #include <new>
 #include <cstring>
+#include <typeinfo>
 
 using namespace boost::interprocess;
 
@@ -462,18 +462,6 @@ bool test_each_algo()
       if(!test_segment_manager<segment_manager_t>())
          return false;
    }
-   /*
-   {
-      typedef segment_manager< char, MemoryAlgorithm, null_index > segment_manager_t;
-      if(!test_segment_manager<segment_manager_t>())
-         return false;
-   }*/
-   /*
-   {
-      typedef segment_manager< char, MemoryAlgorithm, unordered_map_index > segment_manager_t;
-      if(!test_segment_manager<segment_manager_t>())
-         return false;
-   }*/
    {
       typedef segment_manager< char, MemoryAlgorithm, iset_index > segment_manager_t;
       if(!test_segment_manager<segment_manager_t>())

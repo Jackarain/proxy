@@ -775,6 +775,12 @@ rule translate-dependencies ( specification * : project-id : location )
     return $(result) ;
 }
 
+rule str ( property )
+{
+    local value = [ utility.str $(property:G=) ] ;
+    return $(property:G)$(value) ;
+}
+
 
 # Class maintaining a property set -> string mapping.
 #

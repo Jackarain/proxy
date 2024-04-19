@@ -16,5 +16,6 @@ int main()
 {
     int fd = open(".", O_DIRECTORY | O_RDONLY | O_NOFOLLOW);
     DIR* dir = fdopendir(fd);
-    return dir != 0;
+    int internal_fd = dirfd(dir);
+    return dir != 0 && internal_fd >= 0;
 }

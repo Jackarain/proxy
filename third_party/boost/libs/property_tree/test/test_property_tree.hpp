@@ -57,6 +57,13 @@ void test_debug(PTREE *)
 #endif
 }
 
+#if defined(__clang__) && defined(__has_warning)
+# if __has_warning( "-Wself-assign-overloaded" )
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wself-assign-overloaded"
+# endif
+#endif
+
 void test_constructor_destructor_assignment(PTREE *)
 {
 
@@ -105,6 +112,12 @@ void test_constructor_destructor_assignment(PTREE *)
     //BOOST_TEST(PTREE::debug_get_instances_count() == 0);
 
 }
+
+#if defined(__clang__) && defined(__has_warning)
+# if __has_warning( "-Wself-assign-overloaded" )
+#  pragma clang diagnostic pop
+# endif
+#endif
 
 void test_insertion(PTREE *)
 {
@@ -585,148 +598,150 @@ void test_get_put(PTREE *)
     
     typedef std::basic_string<CHTYPE> str_t;
 
-    // Temporary storage
-    str_t tmp_string;
-    boost::optional<int> opt_int;
-    boost::optional<long> opt_long;
-    boost::optional<double> opt_double;
-    boost::optional<float> opt_float;
-    boost::optional<str_t> opt_string;
-    boost::optional<CHTYPE> opt_char;
-    boost::optional<bool> opt_bool;
-    
-    // Do insertions via put
-    PTREE pt;
-    PTREE &pt1 = pt.put(T("k1"), 1);
-    PTREE &pt2 = pt.put(T("k2.k"), 2.5);
-    PTREE &pt3 = pt.put(T("k3.k.k"), T("ala ma kota"));
-    PTREE &pt4 = pt.put(T("k4.k.k.k"), CHTYPE('c'));
-    PTREE &pt5 = pt.put(T("k5.k.k.k.f"), false);
-    PTREE &pt6 = pt.put(T("k5.k.k.k.t"), true);
-
-    // Check instances count
-    //BOOST_TEST(PTREE::debug_get_instances_count() == 17);
-
-    // Check if const char * version returns std::string
-    BOOST_TEST(typeid(pt.get_value(T(""))) == typeid(str_t));
-    
-    // Do extractions via get (throwing version)
-    BOOST_TEST(pt.get<int>(T("k1")) == 1);
-    BOOST_TEST(pt.get<long>(T("k1")) == 1);
-    BOOST_TEST(pt.get<double>(T("k2.k")) == 2.5);
-    BOOST_TEST(pt.get<float>(T("k2.k")) == 2.5f);
-    BOOST_TEST(pt.get<str_t>(T("k3.k.k")) == str_t(T("ala ma kota")));
-    BOOST_TEST(pt.get<CHTYPE>(T("k4.k.k.k")) == CHTYPE('c'));
-    BOOST_TEST(pt.get<bool>(T("k5.k.k.k.f")) == false);
-    BOOST_TEST(pt.get<bool>(T("k5.k.k.k.t")) == true);
-
-    // Do extractions via get (default value version)
-    BOOST_TEST(pt.get(T("k1"), 0) == 1);
-    BOOST_TEST(pt.get(T("k1"), 0L) == 1);
-    BOOST_TEST(pt.get(T("k2.k"), 0.0) == 2.5);
-    BOOST_TEST(pt.get(T("k2.k"), 0.0f) == 2.5f);
-    BOOST_TEST(pt.get(T("k3.k.k"), str_t()) == str_t(T("ala ma kota")));
-    BOOST_TEST(pt.get(T("k3.k.k"), T("")) == T("ala ma kota"));
-    BOOST_TEST(pt.get(T("k4.k.k.k"), CHTYPE('\0')) == CHTYPE('c'));
-    BOOST_TEST(pt.get(T("k5.k.k.k.f"), true) == false);
-    BOOST_TEST(pt.get(T("k5.k.k.k.t"), false) == true);
-
-    // Do extractions via get (optional version)
-    opt_int = pt.get_optional<int>(T("k1"));
-    BOOST_TEST(opt_int && *opt_int == 1);
-    opt_long = pt.get_optional<long>(T("k1"));
-    BOOST_TEST(opt_long && *opt_long == 1);
-    opt_double = pt.get_optional<double>(T("k2.k"));
-    BOOST_TEST(opt_double && *opt_double == 2.5);
-    opt_float = pt.get_optional<float>(T("k2.k"));
-    BOOST_TEST(opt_float && *opt_float == 2.5f);
-    opt_string = pt.get_optional<str_t>(T("k3.k.k"));
-    BOOST_TEST(opt_string && *opt_string == str_t(T("ala ma kota")));
-    opt_char = pt.get_optional<CHTYPE>(T("k4.k.k.k"));
-    BOOST_TEST(opt_char && *opt_char == CHTYPE('c'));
-    opt_bool = pt.get_optional<bool>(T("k5.k.k.k.f"));
-    BOOST_TEST(opt_bool && *opt_bool == false);
-    opt_bool = pt.get_optional<bool>(T("k5.k.k.k.t"));
-    BOOST_TEST(opt_bool && *opt_bool == true);
-
-    // Do insertions via put_value
-    pt1.put_value(short(1));
-    pt2.put_value(2.5f);
-    pt3.put_value(str_t(T("ala ma kota")));
-    pt4.put_value(CHTYPE('c'));
-    pt5.put_value(false);
-    pt6.put_value(true);
-
-    // Do extractions via get_value (throwing version)
-    BOOST_TEST(pt1.get_value<int>() == 1);
-    BOOST_TEST(pt1.get_value<long>() == 1);
-    BOOST_TEST(pt2.get_value<double>() == 2.5);
-    BOOST_TEST(pt2.get_value<float>() == 2.5f);
-    BOOST_TEST(pt3.get_value<str_t>() == str_t(T("ala ma kota")));
-    BOOST_TEST(pt4.get_value<CHTYPE>() == CHTYPE('c'));
-    BOOST_TEST(pt5.get_value<bool>() == false);
-    BOOST_TEST(pt6.get_value<bool>() == true);
-
-    // Do extractions via get_value (default value version)
-    BOOST_TEST(pt1.get_value(0) == 1);
-    BOOST_TEST(pt1.get_value(0L) == 1);
-    BOOST_TEST(pt2.get_value(0.0) == 2.5);
-    BOOST_TEST(pt2.get_value(0.0f) == 2.5f);
-    BOOST_TEST(pt3.get_value(str_t()) == str_t(T("ala ma kota")));
-    BOOST_TEST(pt3.get_value(T("")) == T("ala ma kota"));
-    BOOST_TEST(pt4.get_value(CHTYPE('\0')) == CHTYPE('c'));
-    BOOST_TEST(pt5.get_value(true) == false);
-    BOOST_TEST(pt6.get_value(false) == true);
-
-    // Do extractions via get_value (optional version)
-    opt_int = pt1.get_value_optional<int>();
-    BOOST_TEST(opt_int && *opt_int == 1);
-    opt_long = pt1.get_value_optional<long>();
-    BOOST_TEST(opt_long && *opt_long == 1);
-    opt_double = pt2.get_value_optional<double>();
-    BOOST_TEST(opt_double && *opt_double == 2.5);
-    opt_float = pt2.get_value_optional<float>();
-    BOOST_TEST(opt_float && *opt_float == 2.5f);
-    opt_string = pt3.get_value_optional<str_t>();
-    BOOST_TEST(opt_string && *opt_string == str_t(T("ala ma kota")));
-    opt_char = pt4.get_value_optional<CHTYPE>();
-    BOOST_TEST(opt_char && *opt_char == CHTYPE('c'));
-    opt_bool = pt5.get_value_optional<bool>();
-    BOOST_TEST(opt_bool && *opt_bool == false);
-    opt_bool = pt6.get_value_optional<bool>();
-    BOOST_TEST(opt_bool && *opt_bool == true);
-
-    // Do incorrect extractions (throwing version)
-    try
     {
-        pt.get<int>(T("k2.k.bogus.path"));
-        BOOST_ERROR("No required exception thrown");
-    }
-    catch (boost::property_tree::ptree_bad_path &) { }
-    catch (...)
-    {
-        BOOST_ERROR("Wrong exception type thrown");
-    }
-    try
-    {
-        pt.get<int>(T("k2.k"));
-        BOOST_ERROR("No required exception thrown");
-    }
-    catch (boost::property_tree::ptree_bad_data &) { }
-    catch (...)
-    {
-        BOOST_ERROR("Wrong exception type thrown");
-    }
+        // Temporary storage
+        str_t tmp_string;
+        boost::optional<int> opt_int;
+        boost::optional<long> opt_long;
+        boost::optional<double> opt_double;
+        boost::optional<float> opt_float;
+        boost::optional<str_t> opt_string;
+        boost::optional<CHTYPE> opt_char;
+        boost::optional<bool> opt_bool;
 
-    // Do incorrect extractions (default value version)
-    BOOST_TEST(pt.get(T("k2.k"), -7) == -7);
-    BOOST_TEST(pt.get(T("k3.k.k"), -7) == -7);
-    BOOST_TEST(pt.get(T("k4.k.k.k"), -7) == -7);
+        // Do insertions via put
+        PTREE pt;
+        PTREE &pt1 = pt.put(T("k1"), 1);
+        PTREE &pt2 = pt.put(T("k2.k"), 2.5);
+        PTREE &pt3 = pt.put(T("k3.k.k"), T("ala ma kota"));
+        PTREE &pt4 = pt.put(T("k4.k.k.k"), CHTYPE('c'));
+        PTREE &pt5 = pt.put(T("k5.k.k.k.f"), false);
+        PTREE &pt6 = pt.put(T("k5.k.k.k.t"), true);
 
-    // Do incorrect extractions (optional version)
-    BOOST_TEST(!pt.get_optional<int>(T("k2.k")));
-    BOOST_TEST(!pt.get_optional<int>(T("k3.k.k")));
-    BOOST_TEST(!pt.get_optional<int>(T("k4.k.k.k")));
+        // Check instances count
+        //BOOST_TEST(PTREE::debug_get_instances_count() == 17);
+
+        // Check if const char * version returns std::string
+        BOOST_TEST(typeid(pt.get_value(T(""))) == typeid(str_t));
+
+        // Do extractions via get (throwing version)
+        BOOST_TEST(pt.get<int>(T("k1")) == 1);
+        BOOST_TEST(pt.get<long>(T("k1")) == 1);
+        BOOST_TEST(pt.get<double>(T("k2.k")) == 2.5);
+        BOOST_TEST(pt.get<float>(T("k2.k")) == 2.5f);
+        BOOST_TEST(pt.get<str_t>(T("k3.k.k")) == str_t(T("ala ma kota")));
+        BOOST_TEST(pt.get<CHTYPE>(T("k4.k.k.k")) == CHTYPE('c'));
+        BOOST_TEST(pt.get<bool>(T("k5.k.k.k.f")) == false);
+        BOOST_TEST(pt.get<bool>(T("k5.k.k.k.t")) == true);
+
+        // Do extractions via get (default value version)
+        BOOST_TEST(pt.get(T("k1"), 0) == 1);
+        BOOST_TEST(pt.get(T("k1"), 0L) == 1);
+        BOOST_TEST(pt.get(T("k2.k"), 0.0) == 2.5);
+        BOOST_TEST(pt.get(T("k2.k"), 0.0f) == 2.5f);
+        BOOST_TEST(pt.get(T("k3.k.k"), str_t()) == str_t(T("ala ma kota")));
+        BOOST_TEST(pt.get(T("k3.k.k"), T("")) == T("ala ma kota"));
+        BOOST_TEST(pt.get(T("k4.k.k.k"), CHTYPE('\0')) == CHTYPE('c'));
+        BOOST_TEST(pt.get(T("k5.k.k.k.f"), true) == false);
+        BOOST_TEST(pt.get(T("k5.k.k.k.t"), false) == true);
+
+        // Do extractions via get (optional version)
+        opt_int = pt.get_optional<int>(T("k1"));
+        BOOST_TEST(opt_int && *opt_int == 1);
+        opt_long = pt.get_optional<long>(T("k1"));
+        BOOST_TEST(opt_long && *opt_long == 1);
+        opt_double = pt.get_optional<double>(T("k2.k"));
+        BOOST_TEST(opt_double && *opt_double == 2.5);
+        opt_float = pt.get_optional<float>(T("k2.k"));
+        BOOST_TEST(opt_float && *opt_float == 2.5f);
+        opt_string = pt.get_optional<str_t>(T("k3.k.k"));
+        BOOST_TEST(opt_string && *opt_string == str_t(T("ala ma kota")));
+        opt_char = pt.get_optional<CHTYPE>(T("k4.k.k.k"));
+        BOOST_TEST(opt_char && *opt_char == CHTYPE('c'));
+        opt_bool = pt.get_optional<bool>(T("k5.k.k.k.f"));
+        BOOST_TEST(opt_bool && *opt_bool == false);
+        opt_bool = pt.get_optional<bool>(T("k5.k.k.k.t"));
+        BOOST_TEST(opt_bool && *opt_bool == true);
+
+        // Do insertions via put_value
+        pt1.put_value(short(1));
+        pt2.put_value(2.5f);
+        pt3.put_value(str_t(T("ala ma kota")));
+        pt4.put_value(CHTYPE('c'));
+        pt5.put_value(false);
+        pt6.put_value(true);
+
+        // Do extractions via get_value (throwing version)
+        BOOST_TEST(pt1.get_value<int>() == 1);
+        BOOST_TEST(pt1.get_value<long>() == 1);
+        BOOST_TEST(pt2.get_value<double>() == 2.5);
+        BOOST_TEST(pt2.get_value<float>() == 2.5f);
+        BOOST_TEST(pt3.get_value<str_t>() == str_t(T("ala ma kota")));
+        BOOST_TEST(pt4.get_value<CHTYPE>() == CHTYPE('c'));
+        BOOST_TEST(pt5.get_value<bool>() == false);
+        BOOST_TEST(pt6.get_value<bool>() == true);
+
+        // Do extractions via get_value (default value version)
+        BOOST_TEST(pt1.get_value(0) == 1);
+        BOOST_TEST(pt1.get_value(0L) == 1);
+        BOOST_TEST(pt2.get_value(0.0) == 2.5);
+        BOOST_TEST(pt2.get_value(0.0f) == 2.5f);
+        BOOST_TEST(pt3.get_value(str_t()) == str_t(T("ala ma kota")));
+        BOOST_TEST(pt3.get_value(T("")) == T("ala ma kota"));
+        BOOST_TEST(pt4.get_value(CHTYPE('\0')) == CHTYPE('c'));
+        BOOST_TEST(pt5.get_value(true) == false);
+        BOOST_TEST(pt6.get_value(false) == true);
+
+        // Do extractions via get_value (optional version)
+        opt_int = pt1.get_value_optional<int>();
+        BOOST_TEST(opt_int && *opt_int == 1);
+        opt_long = pt1.get_value_optional<long>();
+        BOOST_TEST(opt_long && *opt_long == 1);
+        opt_double = pt2.get_value_optional<double>();
+        BOOST_TEST(opt_double && *opt_double == 2.5);
+        opt_float = pt2.get_value_optional<float>();
+        BOOST_TEST(opt_float && *opt_float == 2.5f);
+        opt_string = pt3.get_value_optional<str_t>();
+        BOOST_TEST(opt_string && *opt_string == str_t(T("ala ma kota")));
+        opt_char = pt4.get_value_optional<CHTYPE>();
+        BOOST_TEST(opt_char && *opt_char == CHTYPE('c'));
+        opt_bool = pt5.get_value_optional<bool>();
+        BOOST_TEST(opt_bool && *opt_bool == false);
+        opt_bool = pt6.get_value_optional<bool>();
+        BOOST_TEST(opt_bool && *opt_bool == true);
+
+        // Do incorrect extractions (throwing version)
+        try
+        {
+            pt.get<int>(T("k2.k.bogus.path"));
+            BOOST_ERROR("No required exception thrown");
+        }
+        catch (boost::property_tree::ptree_bad_path &) { }
+        catch (...)
+        {
+            BOOST_ERROR("Wrong exception type thrown");
+        }
+        try
+        {
+            pt.get<int>(T("k2.k"));
+            BOOST_ERROR("No required exception thrown");
+        }
+        catch (boost::property_tree::ptree_bad_data &) { }
+        catch (...)
+        {
+            BOOST_ERROR("Wrong exception type thrown");
+        }
+
+        // Do incorrect extractions (default value version)
+        BOOST_TEST(pt.get(T("k2.k"), -7) == -7);
+        BOOST_TEST(pt.get(T("k3.k.k"), -7) == -7);
+        BOOST_TEST(pt.get(T("k4.k.k.k"), -7) == -7);
+
+        // Do incorrect extractions (optional version)
+        BOOST_TEST(!pt.get_optional<int>(T("k2.k")));
+        BOOST_TEST(!pt.get_optional<int>(T("k3.k.k")));
+        BOOST_TEST(!pt.get_optional<int>(T("k4.k.k.k")));
+    }
 
     // Test multiple puts with the same key
     {
@@ -797,75 +812,90 @@ void test_get_put(PTREE *)
                                     
 void test_get_child_put_child(PTREE *)
 {
-    PTREE pt(T("ala ma kota"));
-
-    // Do insertions via put_child
-    PTREE pt1, pt2, pt3;
-    pt1.put_child(T("k1"), PTREE());
-    pt1.put_child(T("k2.k"), PTREE());
-    pt2.put_child(T("k1"), pt);
-    pt2.put_child(T("k2.k"), pt);
-
-    // Const references to test const versions of methods
-    const PTREE &cpt1 = pt1, &cpt2 = pt2;
-
-    // Do correct extractions via get_child (throwing version)
-    BOOST_TEST(pt1.get_child(T("k1")).empty());
-    BOOST_TEST(pt1.get_child(T("k2.k")).empty());
-    BOOST_TEST(pt2.get_child(T("k1")) == pt);
-    BOOST_TEST(pt2.get_child(T("k2.k")) == pt);
-    BOOST_TEST(cpt1.get_child(T("k1")).empty());
-    BOOST_TEST(cpt1.get_child(T("k2.k")).empty());
-    BOOST_TEST(cpt2.get_child(T("k1")) == pt);
-    BOOST_TEST(cpt2.get_child(T("k2.k")) == pt);
-
-    // Do correct extractions via get_child (default value version)
-    BOOST_TEST(pt1.get_child(T("k1"), PTREE(T("def"))) != PTREE(T("def")));
-    BOOST_TEST(pt1.get_child(T("k2.k"), PTREE(T("def"))) != PTREE(T("def")));
-    BOOST_TEST(pt2.get_child(T("k1"), PTREE(T("def"))) == pt);
-    BOOST_TEST(pt2.get_child(T("k2.k"), PTREE(T("def"))) == pt);
-    BOOST_TEST(cpt1.get_child(T("k1"), PTREE(T("def"))) != PTREE(T("def")));
-    BOOST_TEST(cpt1.get_child(T("k2.k"), PTREE(T("def"))) != PTREE(T("def")));
-    BOOST_TEST(cpt2.get_child(T("k1"), PTREE(T("def"))) == pt);
-    BOOST_TEST(cpt2.get_child(T("k2.k"), PTREE(T("def"))) == pt);
-
-    // Do correct extractions via get_child (optional version)
-    boost::optional<PTREE &> opt;
-    boost::optional<const PTREE &> copt;
-    opt = pt1.get_child_optional(T("k1"));
-    BOOST_TEST(opt);
-    opt = pt1.get_child_optional(T("k2.k"));
-    BOOST_TEST(opt);
-    opt = pt2.get_child_optional(T("k1"));
-    BOOST_TEST(opt && *opt == pt);
-    opt = pt2.get_child_optional(T("k2.k"));
-    BOOST_TEST(opt && *opt == pt);
-    copt = cpt1.get_child_optional(T("k1"));
-    BOOST_TEST(copt);
-    copt = cpt1.get_child_optional(T("k2.k"));
-    BOOST_TEST(copt);
-    copt = cpt2.get_child_optional(T("k1"));
-    BOOST_TEST(copt && *copt == pt);
-    copt = cpt2.get_child_optional(T("k2.k"));
-    BOOST_TEST(copt && *copt == pt);
-
-    // Do incorrect extractions via get_child (throwing version)
-    try
     {
-        pt.get_child(T("k2.k.bogus.path"));
-        BOOST_ERROR("No required exception thrown");
-    }
-    catch (boost::property_tree::ptree_bad_path &) { }
-    catch (...)
-    {
-        BOOST_ERROR("Wrong exception type thrown");
-    }
+        PTREE pt(T("ala ma kota"));
 
-    // Do incorrect extractions via get_child (default value version)
-    BOOST_TEST(&pt.get_child(T("k2.k.bogus.path"), pt3) == &pt3);
+        // Do insertions via put_child
+        PTREE pt1, pt2, pt3;
+        pt1.put_child(T("k1"), PTREE());
+        pt1.put_child(T("k2.k"), PTREE());
+        pt2.put_child(T("k1"), pt);
+        pt2.put_child(T("k2.k"), pt);
 
-    // Do incorrect extractions via get_child (optional version)
-    BOOST_TEST(!pt.get_child_optional(T("k2.k.bogus.path")));
+        // Const references to test const versions of methods
+        const PTREE &cpt1 = pt1, &cpt2 = pt2;
+
+        // Do correct extractions via get_child (throwing version)
+        BOOST_TEST(pt1.get_child(T("k1")).empty());
+        BOOST_TEST(pt1.get_child(T("k2.k")).empty());
+        BOOST_TEST(pt2.get_child(T("k1")) == pt);
+        BOOST_TEST(pt2.get_child(T("k2.k")) == pt);
+        BOOST_TEST(cpt1.get_child(T("k1")).empty());
+        BOOST_TEST(cpt1.get_child(T("k2.k")).empty());
+        BOOST_TEST(cpt2.get_child(T("k1")) == pt);
+        BOOST_TEST(cpt2.get_child(T("k2.k")) == pt);
+
+        // Do correct extractions via get_child (default value version)
+        PTREE dflt(T("def"));
+        BOOST_TEST(pt1.get_child(T("k1"), dflt) != dflt);
+        BOOST_TEST(pt1.get_child(T("k2.k"), dflt) != dflt);
+        BOOST_TEST(pt2.get_child(T("k1"), dflt) == pt);
+        BOOST_TEST(pt2.get_child(T("k2.k"), dflt) == pt);
+        BOOST_TEST(cpt1.get_child(T("k1"), dflt) != dflt);
+        BOOST_TEST(cpt1.get_child(T("k2.k"), dflt) != dflt);
+        BOOST_TEST(cpt2.get_child(T("k1"), dflt) == pt);
+        BOOST_TEST(cpt2.get_child(T("k2.k"), dflt) == pt);
+
+        // Ensure that get_child does not compile when using temporaries as the default value.
+        BOOST_TEST((!boost::mp11::mp_valid<get_child_accepts_default_of_type, const PTREE&, CHTYPE, PTREE>::value));
+        BOOST_TEST((!boost::mp11::mp_valid<get_child_accepts_default_of_type, const PTREE&, CHTYPE, const PTREE>::value));
+        BOOST_TEST((!boost::mp11::mp_valid<get_child_accepts_default_of_type, PTREE&, CHTYPE, PTREE>::value));
+        BOOST_TEST((!boost::mp11::mp_valid<get_child_accepts_default_of_type, PTREE&, CHTYPE, const PTREE>::value));
+
+        // Test get_child_accepts_default_of_type itself
+        BOOST_TEST((boost::mp11::mp_valid<get_child_accepts_default_of_type, const PTREE&, CHTYPE, PTREE&>::value));
+        BOOST_TEST((boost::mp11::mp_valid<get_child_accepts_default_of_type, const PTREE&, CHTYPE, const PTREE&>::value));
+        BOOST_TEST((boost::mp11::mp_valid<get_child_accepts_default_of_type, PTREE&, CHTYPE, PTREE&>::value));
+        BOOST_TEST((boost::mp11::mp_valid<get_child_accepts_default_of_type, PTREE&, CHTYPE, const PTREE&>::value));
+
+        // Do correct extractions via get_child (optional version)
+        boost::optional<PTREE &> opt;
+        boost::optional<const PTREE &> copt;
+        opt = pt1.get_child_optional(T("k1"));
+        BOOST_TEST(opt);
+        opt = pt1.get_child_optional(T("k2.k"));
+        BOOST_TEST(opt);
+        opt = pt2.get_child_optional(T("k1"));
+        BOOST_TEST(opt && *opt == pt);
+        opt = pt2.get_child_optional(T("k2.k"));
+        BOOST_TEST(opt && *opt == pt);
+        copt = cpt1.get_child_optional(T("k1"));
+        BOOST_TEST(copt);
+        copt = cpt1.get_child_optional(T("k2.k"));
+        BOOST_TEST(copt);
+        copt = cpt2.get_child_optional(T("k1"));
+        BOOST_TEST(copt && *copt == pt);
+        copt = cpt2.get_child_optional(T("k2.k"));
+        BOOST_TEST(copt && *copt == pt);
+
+        // Do incorrect extractions via get_child (throwing version)
+        try
+        {
+            pt.get_child(T("k2.k.bogus.path"));
+            BOOST_ERROR("No required exception thrown");
+        }
+        catch (boost::property_tree::ptree_bad_path &) { }
+        catch (...)
+        {
+            BOOST_ERROR("Wrong exception type thrown");
+        }
+
+        // Do incorrect extractions via get_child (default value version)
+        BOOST_TEST(&pt.get_child(T("k2.k.bogus.path"), pt3) == &pt3);
+
+        // Do incorrect extractions via get_child (optional version)
+        BOOST_TEST(!pt.get_child_optional(T("k2.k.bogus.path")));
+    }
 
     // Test multiple puts with the same key
     {
@@ -997,13 +1027,27 @@ void test_path(PTREE *)
 
     // Test operator /
     {
+        path p = path(T("key1")) / path(T("key2.key3"));
+        BOOST_TEST(pt.get<int>(p, 0) == 1);
+    }
+    {
+        path p = path(T("key1.key2")) / path(T("key3"));
+        BOOST_TEST(pt.get<int>(p, 0) == 1);
+    }
+    {
         path p = path(T("key1")) / T("key2.key3");
         BOOST_TEST(pt.get<int>(p, 0) == 1);
     }
-
-    // Test operator /
     {
         path p = T("key1.key2") / path(T("key3"));
+        BOOST_TEST(pt.get<int>(p, 0) == 1);
+    }
+    {
+        path p = path(T("key1")) / std::basic_string<CHTYPE>(T("key2.key3"));
+        BOOST_TEST(pt.get<int>(p, 0) == 1);
+    }
+    {
+        path p = std::basic_string<CHTYPE>(T("key1.key2")) / path(T("key3"));
         BOOST_TEST(pt.get<int>(p, 0) == 1);
     }
 

@@ -11,6 +11,7 @@
 #include <boost/interprocess/detail/portable_intermodule_singleton.hpp>
 #include <iostream>
 #include <cstdlib> //for std::abort
+#include <typeinfo>
 
 using namespace boost::interprocess;
 

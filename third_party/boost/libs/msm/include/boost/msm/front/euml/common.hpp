@@ -36,6 +36,7 @@
 #endif
 
 #include <boost/fusion/container/vector.hpp>
+#include <boost/fusion/container/set.hpp>
 #include <boost/fusion/include/at_c.hpp>
 #include <boost/fusion/include/make_map.hpp>
 #include <boost/fusion/include/pair.hpp>
@@ -325,14 +326,14 @@ struct make_invalid_type
 template <class ROW>
 struct make_vector_one_row 
 {
-    typedef boost::mpl::vector<ROW> type;
+    typedef boost::fusion::vector<ROW> type;
 };
 template <class T>
 T make_T(T t) {return t;}
 
 struct make_vector_no_row 
 {
-    typedef boost::mpl::vector0<> type;
+    typedef boost::fusion::vector<> type;
 };
 
 struct NoAction : euml_action<NoAction>
@@ -351,7 +352,7 @@ struct NoAction : euml_action<NoAction>
         typedef bool type;
     };
     // this functor can be used in both modes, state action and transition action
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class Event,class FSM,class STATE>
     bool operator()(Event const&,FSM&,STATE& )
@@ -378,7 +379,7 @@ struct GetSource_ : euml_action<GetSource_<Index> >
         typedef typename ::boost::fusion::result_of::at_key<typename SourceState::attributes_type,
                                                         Index >::type type;
     };
-    typedef ::boost::mpl::set<action_tag> tag_type;
+    typedef ::boost::fusion::set<action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     typename transition_action_result<EVT,FSM,SourceState,TargetState>::type 
@@ -395,7 +396,7 @@ struct GetSource_<void> : euml_action<GetSource_<void> >
     {
         typedef SourceState& type;
     };
-    typedef ::boost::mpl::set<action_tag> tag_type;
+    typedef ::boost::fusion::set<action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     typename transition_action_result<EVT,FSM,SourceState,TargetState>::type 
@@ -428,7 +429,7 @@ struct GetTarget_ : euml_action<GetTarget_<Index> >
         typedef typename ::boost::fusion::result_of::at_key<typename TargetState::attributes_type,
                                                         Index >::type type;
     };
-    typedef ::boost::mpl::set<action_tag> tag_type;
+    typedef ::boost::fusion::set<action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     typename transition_action_result<EVT,FSM,SourceState,TargetState>::type 
@@ -445,7 +446,7 @@ struct GetTarget_<void> : euml_action<GetTarget_<void> >
     {
         typedef TargetState& type;
     };
-    typedef ::boost::mpl::set<action_tag> tag_type;
+    typedef ::boost::fusion::set<action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     typename transition_action_result<EVT,FSM,SourceState,TargetState>::type 
@@ -478,7 +479,7 @@ struct GetState_ : euml_action<GetState_<Index> >
         typedef typename ::boost::fusion::result_of::at_key<typename STATE::attributes_type,
                                                         Index >::type type;
     };
-    typedef ::boost::mpl::set<state_action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag> tag_type;
 
     template <class Event,class FSM,class STATE>
     typename state_action_result<Event,FSM,STATE>::type
@@ -497,7 +498,7 @@ struct GetState_<void> : euml_action<GetState_<void> >
     {
         typedef STATE& type;
     };
-    typedef ::boost::mpl::set<state_action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag> tag_type;
 
     template <class Event,class FSM,class STATE>
     typename state_action_result<Event,FSM,STATE>::type
@@ -538,7 +539,7 @@ struct GetEvent_ : euml_action<GetEvent_<Index> >
             typename ::boost::fusion::result_of::at_key<typename EVT::attributes_type,
                                                         Index >::type>::type type;
     };
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class Event,class FSM,class STATE>
     typename state_action_result<Event,FSM,STATE>::type
@@ -566,7 +567,7 @@ struct GetEvent_<void> : euml_action<GetEvent_<void> >
     {
         typedef EVT const& type;
     };
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class Event,class FSM,class STATE>
     typename state_action_result<Event,FSM,STATE>::type
@@ -611,7 +612,7 @@ struct GetFsm_ : euml_action<GetFsm_<Index> >
         typedef typename ::boost::fusion::result_of::at_key<typename FSM::attributes_type,
                                                         Index >::type type;
     };
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class Event,class FSM,class STATE>
     typename state_action_result<Event,FSM,STATE>::type
@@ -641,7 +642,7 @@ struct GetFsm_<void> : euml_action<GetFsm_<void> >
     {
         typedef FSM& type;
     };
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class Event,class FSM,class STATE>
     typename state_action_result<Event,FSM,STATE>::type
@@ -685,7 +686,7 @@ struct SubState_ : euml_action<SubState_<StateName, Param1> >
         typedef StateName& type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     StateName& operator()(EVT const& evt,FSM& fsm,SourceState& src,TargetState& tgt)const
@@ -713,7 +714,7 @@ struct SubState_ <StateName,void>
         typedef StateName& type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     StateName& operator()(EVT const&,FSM& fsm,SourceState& ,TargetState& )const
@@ -768,7 +769,7 @@ struct GetAttribute_  : euml_action<GetAttribute_<Target, Index> >
                     Index >::type type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     typename ::boost::enable_if<
@@ -816,7 +817,7 @@ struct Source_ : euml_action<Source_<Index> >
             ::boost::fusion::result_of::at_key<typename SourceState::attributes_type,
                                                Index >::type type;
     };
-    typedef ::boost::mpl::set<action_tag> tag_type;
+    typedef ::boost::fusion::set<action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     typename transition_action_result<EVT,FSM,SourceState,TargetState>::type 
@@ -836,7 +837,7 @@ struct Target_ : euml_action<Target_<Index> >
             ::boost::fusion::result_of::at_key<typename TargetState::attributes_type,
                                                Index >::type type;
     };
-    typedef ::boost::mpl::set<action_tag> tag_type;
+    typedef ::boost::fusion::set<action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     typename transition_action_result<EVT,FSM,SourceState,TargetState>::type 
@@ -857,7 +858,7 @@ struct State_ : euml_action<State_<Index> >
             ::boost::fusion::result_of::at_key<typename STATE::attributes_type,
                                                Index >::type type;
     };
-    typedef ::boost::mpl::set<state_action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag> tag_type;
 
     template <class Event,class FSM,class STATE>
     typename state_action_result<Event,FSM,STATE>::type
@@ -885,7 +886,7 @@ struct Event_ : euml_action<Event_<Index> >
             typename ::boost::fusion::result_of::at_key<typename EVT::attributes_type,
                                                         Index >::type>::type type;
     };
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class Event,class FSM,class STATE>
     typename state_action_result<Event,FSM,STATE>::type
@@ -912,7 +913,7 @@ struct State_Attribute_ : euml_action<State_Attribute_<StateType,Index> >
             ::boost::fusion::result_of::at_key<typename StateType::attributes_type,
                                                Index >::type type;
     };
-    typedef ::boost::mpl::set<state_action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag> tag_type;
 
     template <class Event,class FSM,class STATE>
     typename state_action_result<Event,FSM,STATE>::type
@@ -941,7 +942,7 @@ struct Fsm_ : euml_action<Fsm_<Index> >
             ::boost::fusion::result_of::at_key<typename FSM::attributes_type,
                                                Index >::type type;
     };
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class Event,class FSM,class STATE>
     typename state_action_result<Event,FSM,STATE>::type
@@ -972,7 +973,7 @@ struct True_ : euml::euml_action<True_>
     {
         typedef bool type;
     };
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     bool operator()(EVT const&,FSM&,SourceState& ,TargetState& )
@@ -1002,7 +1003,7 @@ struct False_ : euml::euml_action<False_>
     {
         typedef bool type;
     };
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     bool operator()(EVT const&,FSM&,SourceState& ,TargetState& )
@@ -1034,7 +1035,7 @@ struct Int_ : euml_action<Int_<Val> >
     {
         typedef int type;
     };
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     int operator()(EVT const& , FSM& ,SourceState& ,TargetState& )
@@ -1063,7 +1064,7 @@ struct Char_ : euml_action<Char_<Val> >
     {
         typedef char type;
     };
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     char operator()(EVT const& , FSM& ,SourceState& ,TargetState& )
@@ -1092,7 +1093,7 @@ struct Size_t_ : euml_action<Size_t_<Val> >
     {
         typedef size_t type;
     };
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     size_t operator()(EVT const& , FSM& ,SourceState& ,TargetState& )
@@ -1123,7 +1124,7 @@ struct String_ : euml_action<String_<T> >
     {
         typedef char const* type;
     };
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     char const* operator()(EVT const& , FSM& ,SourceState& ,TargetState& )
@@ -1154,7 +1155,7 @@ struct Predicate_ : euml_action<Predicate_<T> >
     {
         typedef T type;
     };
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     T operator()(EVT const& , FSM& ,SourceState& ,TargetState& )
@@ -1182,7 +1183,7 @@ struct Process_ : euml_action<Process_<ToProcessEvt, Param1, Param2, Param3, Par
         typedef void type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     void operator()(EVT const& evt,FSM& fsm,SourceState& src,TargetState& tgt)const
@@ -1216,7 +1217,7 @@ struct Process_ <ToProcessEvt,void,void,void,void>
         typedef void type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     void operator()(EVT const&,FSM& fsm,SourceState& ,TargetState& )const
@@ -1245,7 +1246,7 @@ struct Process_ <ToProcessEvt,Param1,void,void,void>
         typedef void type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     void operator()(EVT const& evt,FSM& fsm,SourceState& src,TargetState& tgt)const
@@ -1274,7 +1275,7 @@ struct Process_ <ToProcessEvt,Param1,Param2,void,void>
         typedef void type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     void operator()(EVT const& evt,FSM& fsm,SourceState& src,TargetState& tgt)const
@@ -1305,7 +1306,7 @@ struct Process_ <ToProcessEvt,Param1,Param2,Param3,void>
         typedef void type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     void operator()(EVT const& evt,FSM& fsm,SourceState& src,TargetState& tgt)const
@@ -1339,7 +1340,7 @@ struct Process_ <GetEvent_<void>,void,void,void,void>
         typedef void type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     void operator()(EVT const& evt,FSM& fsm,SourceState& ,TargetState& )const
@@ -1384,7 +1385,7 @@ struct Reprocess_ : euml_action<Reprocess_<Param1, Param2, Param3, Param4> >
         typedef void type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     void operator()(EVT const& evt,FSM& fsm,SourceState& src,TargetState& tgt)const
@@ -1418,7 +1419,7 @@ struct Reprocess_ <void,void,void,void>
         typedef void type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     void operator()(EVT const& evt,FSM& fsm,SourceState& ,TargetState& )const
@@ -1447,7 +1448,7 @@ struct Reprocess_ <Param1,void,void,void>
         typedef void type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     void operator()(EVT const& evt,FSM& fsm,SourceState& src,TargetState& tgt)const
@@ -1476,7 +1477,7 @@ struct Reprocess_ <Param1,Param2,void,void>
         typedef void type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     void operator()(EVT const& evt,FSM& fsm,SourceState& src,TargetState& tgt)const
@@ -1507,7 +1508,7 @@ struct Reprocess_ <Param1,Param2,Param3,void>
         typedef void type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     void operator()(EVT const& evt,FSM& fsm,SourceState& src,TargetState& tgt)const
@@ -1555,7 +1556,7 @@ struct Process2_ : euml_action<Process2_<ToProcessEvt,Value, Param1, Param2, Par
         typedef void type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     void operator()(EVT const& evt,FSM& fsm,SourceState& src,TargetState& tgt)const
@@ -1588,7 +1589,7 @@ struct Process2_ <ToProcessEvt,Value,void,void,void>
         typedef void type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     void operator()(EVT const& evt,FSM& fsm,SourceState& src,TargetState& tgt)const
@@ -1617,7 +1618,7 @@ struct Process2_ <ToProcessEvt,Value,Param1,void,void>
         typedef void type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     void operator()(EVT const& evt,FSM& fsm,SourceState& src,TargetState& tgt)const
@@ -1646,7 +1647,7 @@ struct Process2_ <ToProcessEvt,Value,Param1,Param2,void>
         typedef void type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     void operator()(EVT const& evt,FSM& fsm,SourceState& src,TargetState& tgt)const
@@ -1698,7 +1699,7 @@ struct Get_Flag_ <Flag,Param1
         typedef bool type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     bool operator()(EVT const&,FSM& fsm,SourceState& ,TargetState& )const
@@ -1730,7 +1731,7 @@ struct Get_Flag_ <Flag,Param1
         typedef bool type;
     };
 
-    typedef ::boost::mpl::set<state_action_tag,action_tag> tag_type;
+    typedef ::boost::fusion::set<state_action_tag,action_tag> tag_type;
 
     template <class EVT,class FSM,class SourceState,class TargetState>
     bool operator()(EVT const& evt,FSM& fsm,SourceState& src,TargetState& tgt)const
@@ -1762,7 +1763,7 @@ Get_Flag_Helper const is_flag_ = Get_Flag_Helper();
 // deferring an event
 struct DeferEvent_ : euml_action< DeferEvent_ >
 {
-    typedef ::boost::mpl::set<action_tag> tag_type;
+    typedef ::boost::fusion::set<action_tag> tag_type;
     // mark as deferring to avoid stack overflows in certain conditions
     typedef int deferring_action;
     template <class EVT,class FSM,class SourceState,class TargetState>
@@ -1851,7 +1852,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename transition_action_result<EVT,FSM,SourceState,TargetState>::type                        \
         operator()(EVT const& , FSM& ,SourceState& ,TargetState& )const {                               \
@@ -1870,7 +1871,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -1893,7 +1894,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -1916,7 +1917,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -1939,7 +1940,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -1964,7 +1965,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -1987,7 +1988,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -2021,7 +2022,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -2044,7 +2045,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -2067,7 +2068,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -2090,7 +2091,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -2115,7 +2116,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -2138,7 +2139,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -2176,7 +2177,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -2199,7 +2200,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -2222,7 +2223,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -2245,7 +2246,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -2268,7 +2269,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -2302,7 +2303,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -2325,7 +2326,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -2348,7 +2349,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -2371,7 +2372,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \
@@ -2394,7 +2395,7 @@ Exit_Pt_Helper const exit_pt_ = Exit_Pt_Helper();
         typedef result_state type;} ;                                                                   \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         struct transition_action_result { typedef result_trans type;};                                  \
-        typedef ::boost::mpl::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
+        typedef ::boost::fusion::set<boost::msm::front::state_action_tag,boost::msm::front::action_tag> tag_type; \
         template <class EVT,class FSM,class SourceState,class TargetState>                              \
         typename ::boost::enable_if<typename ::boost::mpl::has_key<                                     \
         typename Param1::tag_type,boost::msm::front::action_tag>::type,                                 \

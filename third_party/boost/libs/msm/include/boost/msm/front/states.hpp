@@ -13,12 +13,54 @@
 
 #include <boost/mpl/bool.hpp>
 #include <boost/mpl/vector.hpp>
+#include <boost/mpl/transform.hpp>
+
+#include <boost/fusion/include/vector.hpp>
+#include <boost/fusion/include/make_vector.hpp>
+
 #include <boost/msm/front/common_states.hpp>
 #include <boost/msm/row_tags.hpp>
-#include <boost/msm/back/metafunctions.hpp>
+//#include <boost/msm/back/metafunctions.hpp>
 
 namespace boost { namespace msm { namespace front
 {
+
+// transformation metafunction to end interrupt flags
+template <class Event>
+struct transform_to_end_interrupt
+{
+    typedef boost::msm::EndInterruptFlag<Event> type;
+};
+// transform a sequence of events into another one of EndInterruptFlag<Event>
+template <class Events>
+struct apply_end_interrupt_flag
+{
+    typedef typename
+        ::boost::mpl::transform<
+        Events,transform_to_end_interrupt< ::boost::mpl::placeholders::_1> >::type type;
+};
+// returns a mpl vector containing all end interrupt events if sequence, otherwise the same event
+template <class Event>
+struct get_interrupt_events
+{
+    typedef typename ::boost::mpl::eval_if<
+        ::boost::mpl::is_sequence<Event>,
+        boost::msm::front::apply_end_interrupt_flag<Event>,
+        boost::fusion::result_of::make_vector<boost::msm::EndInterruptFlag<Event> > >::type type;
+};
+
+template <class Events>
+struct build_interrupt_state_flag_list
+{
+    typedef ::boost::fusion::vector<boost::msm::InterruptedFlag> first_part;
+    typedef typename ::boost::fusion::result_of::as_vector<
+        typename ::boost::fusion::result_of::insert_range<
+            first_part,
+            typename ::boost::fusion::result_of::end< first_part >::type,
+            Events
+         >::type
+    >::type type;
+};
 
 struct no_sm_ptr 
 {
@@ -49,10 +91,10 @@ struct state :  public boost::msm::front::detail::state_base<BASE>, SMPtrPolicy
 {
     // tags
     // default: no flag
-    typedef ::boost::mpl::vector0<>       flag_list;
-    typedef ::boost::mpl::vector0<>       internal_flag_list;
+    typedef ::boost::fusion::vector0<>       flag_list;
+    typedef ::boost::fusion::vector0<>       internal_flag_list;
     //default: no deferred events
-    typedef ::boost::mpl::vector0<>       deferred_events;
+    typedef ::boost::fusion::vector0<>       deferred_events;
 };
 
 // terminate state simply defines the TerminateFlag flag
@@ -61,10 +103,10 @@ template<class BASE = default_base_state,class SMPtrPolicy = no_sm_ptr>
 struct terminate_state : public boost::msm::front::detail::state_base<BASE>, SMPtrPolicy
 {
     // tags
-    typedef ::boost::mpl::vector0<>                               flag_list;
-    typedef ::boost::mpl::vector< boost::msm::TerminateFlag>      internal_flag_list;
+    typedef ::boost::fusion::vector0<>                               flag_list;
+    typedef ::boost::fusion::vector< boost::msm::TerminateFlag>      internal_flag_list;
     //default: no deferred events
-    typedef ::boost::mpl::vector0<>                               deferred_events;
+    typedef ::boost::fusion::vector0<>                               deferred_events;
 };
 
 // terminate state simply defines the InterruptedFlag and EndInterruptFlag<EndInterruptEvent> flags
@@ -74,13 +116,13 @@ template <class EndInterruptEvent,class BASE = default_base_state,class SMPtrPol
 struct interrupt_state : public boost::msm::front::detail::state_base<BASE>, SMPtrPolicy
 {
     // tags
-    typedef ::boost::mpl::vector0<>                           flag_list;
-    typedef typename boost::msm::back::build_interrupt_state_flag_list<
-        typename boost::msm::back::get_interrupt_events<EndInterruptEvent>::type
+    typedef ::boost::fusion::vector0<>                           flag_list;
+    typedef typename boost::msm::front::build_interrupt_state_flag_list<
+        typename boost::msm::front::get_interrupt_events<EndInterruptEvent>::type
     >::type internal_flag_list; 
 
     //default: no deferred events
-    typedef ::boost::mpl::vector0<>                           deferred_events;
+    typedef ::boost::fusion::vector0<>                           deferred_events;
 };
 
 // not a state but a bunch of extra typedefs to handle direct entry into a composite state. To be derived from
@@ -105,10 +147,10 @@ struct entry_pseudo_state
     enum {zone_index=ZoneIndex};
     typedef int explicit_entry_state;
     // default: no flag
-    typedef ::boost::mpl::vector0<>       flag_list;
-    typedef ::boost::mpl::vector0<>       internal_flag_list;
+    typedef ::boost::fusion::vector0<>       flag_list;
+    typedef ::boost::fusion::vector0<>       internal_flag_list;
     //default: no deferred events
-    typedef ::boost::mpl::vector0<>       deferred_events;
+    typedef ::boost::fusion::vector0<>       deferred_events;
 };
 
 // to be derived from. Makes a state an exit (pseudo) state. Actually an almost full-fledged state
@@ -123,10 +165,10 @@ struct exit_pseudo_state : public boost::msm::front::detail::state_base<BASE> , 
     typedef int         pseudo_exit;
 
     // default: no flag
-    typedef ::boost::mpl::vector0<>  flag_list;
-    typedef ::boost::mpl::vector0<>  internal_flag_list;
+    typedef ::boost::fusion::vector0<>  flag_list;
+    typedef ::boost::fusion::vector0<>  internal_flag_list;
     //default: no deferred events
-    typedef ::boost::mpl::vector0<>  deferred_events;
+    typedef ::boost::fusion::vector0<>  deferred_events;
 };
 
 }}}

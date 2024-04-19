@@ -14,7 +14,7 @@ class objc-scanner : c-scanner
 
     rule pattern ( )
     {
-        return "#[ \t]*include|import[ ]*(<(.*)>|\"(.*)\")" ;
+        return "^[ \t]*#[ \t]*include|import[ ]*(<(.+)>|\"(.+)\")" ;
     }
 }
 

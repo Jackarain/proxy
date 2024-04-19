@@ -105,18 +105,6 @@ void test_member_methods()
 
         info.date_time_pattern(std::string("Pattern"));
         TEST_EQ(info.date_time_pattern<char>(), "Pattern");
-
-        info.date_time_pattern(ascii_to<wchar_t>("WChar Pattern"));
-        TEST_EQ(info.date_time_pattern<wchar_t>(), ascii_to<wchar_t>("WChar Pattern"));
-        TEST_THROWS(info.date_time_pattern<char>(), std::bad_cast);
-
-        info.date_time_pattern(ascii_to<char16_t>("Char16 Pattern"));
-        TEST_THROWS(info.date_time_pattern<wchar_t>(), std::bad_cast);
-        TEST_EQ(info.date_time_pattern<char16_t>(), ascii_to<char16_t>("Char16 Pattern"));
-
-        info.date_time_pattern(ascii_to<char32_t>("Char32 Pattern"));
-        TEST_THROWS(info.date_time_pattern<char16_t>(), std::bad_cast);
-        TEST_EQ(info.date_time_pattern<char32_t>(), ascii_to<char32_t>("Char32 Pattern"));
     }
 }
 
@@ -212,8 +200,60 @@ void test_manipulators()
     TEST_EQ(info2.date_time_pattern<wchar_t>(), L"My TZ");
 }
 
+void test_any_string()
+{
+    boost::locale::detail::any_string s;
+    TEST_THROWS(s.get<char>(), std::bad_cast);
+    TEST_THROWS(s.get<wchar_t>(), std::bad_cast);
+
+    s.set<char>("Char Pattern");
+    TEST_EQ(s.get<char>(), "Char Pattern");
+    TEST_THROWS(s.get<wchar_t>(), std::bad_cast);
+
+    s.set<wchar_t>(ascii_to<wchar_t>("WChar Pattern"));
+    TEST_EQ(s.get<wchar_t>(), ascii_to<wchar_t>("WChar Pattern"));
+    TEST_THROWS(s.get<char>(), std::bad_cast);
+
+    s.set<char16_t>(ascii_to<char16_t>("Char16 Pattern"));
+    TEST_EQ(s.get<char16_t>(), ascii_to<char16_t>("Char16 Pattern"));
+    TEST_THROWS(s.get<char>(), std::bad_cast);
+
+    s.set<char32_t>(ascii_to<char32_t>("Char32 Pattern"));
+    TEST_EQ(s.get<char32_t>(), ascii_to<char32_t>("Char32 Pattern"));
+    TEST_THROWS(s.get<char16_t>(), std::bad_cast);
+
+#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+    s.set<char8_t>(ascii_to<char8_t>("Char8 Pattern"));
+    TEST_EQ(s.get<char8_t>(), ascii_to<char8_t>("Char8 Pattern"));
+    TEST_THROWS(s.get<char32_t>(), std::bad_cast);
+#endif
+
+    boost::locale::detail::any_string s1, s2, empty;
+    s1.set<char>("Char");
+    s2.set<wchar_t>(ascii_to<wchar_t>("WChar"));
+    // Copy ctor
+    boost::locale::detail::any_string s3(s1);
+    TEST_EQ(s3.get<char>(), "Char");
+    TEST_EQ(s1.get<char>(), "Char");
+    // Ensure deep copy
+    s3.set<char>("Foo");
+    TEST_EQ(s3.get<char>(), "Foo");
+    TEST_EQ(s1.get<char>(), "Char");
+    // Copy assign
+    s3 = s2;
+    TEST_EQ(s3.get<wchar_t>(), ascii_to<wchar_t>("WChar"));
+    TEST_EQ(s2.get<wchar_t>(), ascii_to<wchar_t>("WChar"));
+    // Move assign
+    s3 = std::move(s1);
+    TEST_EQ(s3.get<char>(), "Char");
+    // From empty
+    s3 = empty;
+    TEST_THROWS(s3.get<char>(), std::bad_cast);
+}
+
 void test_main(int /*argc*/, char** /*argv*/)
 {
+    test_any_string();
     test_member_methods();
     test_manipulators();
 }

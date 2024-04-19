@@ -108,9 +108,11 @@
 #define VERSION_MAJOR_SYM JAM_STRINGIZE(VERSION_MAJOR)
 #define VERSION_MINOR_SYM JAM_STRINGIZE(VERSION_MINOR)
 #define VERSION_PATCH_SYM JAM_STRINGIZE(VERSION_PATCH)
-#define VERSION VERSION_MAJOR_SYM "." VERSION_MINOR_SYM
+#define VERSION VERSION_MAJOR_SYM "." VERSION_MINOR_SYM "." VERSION_PATCH_SYM
 #define JAMVERSYM "JAMVERSION=" VERSION
 
+#include "bind.h"
+#include "bindjam.h"
 #include "builtins.h"
 #include "class.h"
 #include "compile.h"
@@ -134,7 +136,7 @@
 #include "timestamp.h"
 #include "variable.h"
 #include "execcmd.h"
-#include "sysinfo.h"
+#include "mod_sysinfo.h"
 
 #include <errno.h>
 #include <string.h>
@@ -148,6 +150,11 @@
 #ifdef unix
 # include <sys/utsname.h>
 # include <signal.h>
+#endif
+
+#ifdef WIN32
+# define WIN32_LEAN_AND_MEAN
+# include <windows.h>
 #endif
 
 struct globs globs =
@@ -204,8 +211,6 @@ static void run_unit_tests()
 #endif
 
 int anyhow = 0;
-
-void regex_done();
 
 char const * saved_argv0;
 
@@ -329,13 +334,7 @@ int guarded_main( int argc, char * * argv )
     /* Version info. */
     if ( ( s = getoptval( optv, 'v', 0 ) ) )
     {
-        out_printf( "B2 Version %s. %s.\n", VERSION, OSMINOR );
-        out_printf( "  Copyright 1993-2002 Christopher Seiwald and Perforce Software, Inc.\n" );
-        out_printf( "  Copyright 2001 David Turner.\n" );
-        out_printf( "  Copyright 2001-2004 David Abrahams.\n" );
-        out_printf( "  Copyright 2002-2019 Rene Rivera.\n" );
-        out_printf( "  Copyright 2003-2015 Vladimir Prus.\n" );
-        out_printf( "\n  DEFAULTS: jobs = %i\n", globs.jobs);
+        out_printf( "B2 %s (%s, jobs=%i)\n\n", VERSION, OSMINOR, globs.jobs );
         return EXITOK;
     }
 
@@ -574,7 +573,13 @@ int guarded_main( int argc, char * * argv )
             }
 
             if ( !n  )
+            {
+                /* Initialize the native API bindings. */
+                b2::jam::bind_jam(frame);
+
+                /* LUnch the bootstrap to load up the build system. */
                 status = b2::startup::bootstrap(frame) ? 0 : 13;
+            }
         }
 
         /* FIXME: What shall we do if builtin_update_now,
@@ -611,6 +616,44 @@ int guarded_main( int argc, char * * argv )
 
     return status ? EXITBAD : EXITOK;
 }
+
+#ifdef WIN32
+namespace {
+
+struct SetConsoleCodepage
+{
+    SetConsoleCodepage()
+    {
+        // Check whether UTF-8 is actually the default encoding for this process
+        if (GetACP() != CP_UTF8)
+            return;
+
+        orig_console_cp = GetConsoleCP();
+        if (orig_console_cp != 0 && orig_console_cp != CP_UTF8)
+            SetConsoleCP(CP_UTF8);
+        orig_console_output_cp = GetConsoleOutputCP();
+        if (orig_console_output_cp != 0 && orig_console_output_cp != CP_UTF8)
+            SetConsoleOutputCP(CP_UTF8);
+    }
+
+    ~SetConsoleCodepage()
+    {
+        // Restore original console codepage
+        if (orig_console_cp != 0 && orig_console_cp != CP_UTF8)
+            SetConsoleCP(orig_console_cp);
+        if (orig_console_output_cp != 0 && orig_console_output_cp != CP_UTF8)
+            SetConsoleOutputCP(orig_console_output_cp);
+    }
+
+private:
+    UINT orig_console_cp = 0;
+    UINT orig_console_output_cp = 0;
+};
+
+static const SetConsoleCodepage g_console_codepage_setter{};
+
+}
+#endif
 
 int main( int argc, char * * argv )
 {
@@ -655,7 +698,6 @@ int main( int argc, char * * argv )
     search_done();
     class_done();
     modules_done();
-    regex_done();
     cwd_done();
     path_done();
     function_done();

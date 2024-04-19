@@ -14,14 +14,12 @@ def test_glob(files, glob, expected, setup=""):
     t.write("file.jam", setup + """
     for local p in [ SORT %s ]
     {
-        ECHO $(p) ;
+        ECHO $(p:T) ;
     }
     UPDATE ;
     """ % glob)
     for f in files:
         t.write(f, "")
-    # convert / into \ on windows
-    expected = [os.path.join(*p.split("/")) for p in expected]
     expected.sort()
     t.run_build_system(stdout="\n".join(expected + [""]))
     t.cleanup()

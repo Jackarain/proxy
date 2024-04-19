@@ -1,8 +1,8 @@
 #include "common.hpp"
 #include <iostream>
+#include <cstdlib>
 #include <boost/asio/consign.hpp>
 #include <boost/asio/co_spawn.hpp>
-
 
 namespace net = boost::asio;
 
@@ -29,6 +29,27 @@ run(
    conn->async_run(cfg, {l}, run_callback{conn, op, ec});
 }
 
+std::string safe_getenv(const char* name, const char* default_value)
+{
+    // MSVC doesn't like getenv
+#ifdef BOOST_MSVC
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
+    const char* res = std::getenv(name);
+#ifdef BOOST_MSVC
+#pragma warning(pop)
+#endif
+    return res ? res : default_value;
+}
+
+boost::redis::config make_test_config()
+{
+   boost::redis::config cfg;
+   cfg.addr.host = safe_getenv("BOOST_REDIS_TEST_SERVER", "localhost");
+   return cfg;
+}
+
 #ifdef BOOST_ASIO_HAS_CO_AWAIT
 auto start(net::awaitable<void> op) -> int
 {
@@ -48,5 +69,4 @@ auto start(net::awaitable<void> op) -> int
 
    return 1;
 }
-
 #endif // BOOST_ASIO_HAS_CO_AWAIT

@@ -38,7 +38,7 @@ struct config {
     * [HELLO](https://redis.io/commands/hello/) command.  If left
     * empty `HELLO` will be sent without authentication parameters.
     */
-   std::string username;
+   std::string username = "default";
 
    /** @brief Password passed to the
     * [HELLO](https://redis.io/commands/hello/) command.  If left

@@ -9,6 +9,8 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include <boost/interprocess/detail/workaround.hpp>
+#if BOOST_CXX_VERSION >=201103L
+
 //[doc_unordered_map
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
@@ -95,4 +97,9 @@ int main ()
    return 0;
 }
 //]
-
+#else
+int main()
+{
+   return 0;
+}
+#endif //#if BOOST_CXX_VERSION >=201103L

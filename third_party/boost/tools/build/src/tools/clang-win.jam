@@ -78,10 +78,16 @@ rule init ( version ? : command * : options * )
     version ?= [ MATCH "version ([0-9.]+)" : $(version-output) ] ;
     local target = [ MATCH "Target: ([A-Za-z0-9_]+)" : $(version-output) ] ;
 
-    local default-addr = 32 ;
-    if $(target) = x86_64 { default-addr = 64 ; }
+    local default-addr ;
+    local default-arch ;
+    switch $(target) {
+    case x86_64  : default-arch = x86 ; default-addr = 64 ;
+    case i386    : default-arch = x86 ; default-addr = 32 ;
+    case aarch64 : default-arch = arm ; default-addr = 64 ;
+    case arm     : default-arch = arm ; default-addr = 32 ;
+    }
 
-    .notice "using compiler '$(compiler)', version '$(version)', target '$(target)', default address-model=$(default-addr)" ;
+    .notice "using compiler '$(compiler)', version '$(version)', target '$(target)', default architecture=$(default-arch) address-model=$(default-addr)" ;
 
     local condition = [ common.check-init-parameters clang-win : version $(version) ] ;
 
@@ -189,11 +195,17 @@ rule init ( version ? : command * : options * )
             }
 
             local cond = "$(condition)/<architecture>$(arch)/<address-model>$(addr)" ;
-            if $(addr) = $(default-addr) && $(arch) = x86
+            if $(addr) = $(default-addr)
+            {
+                cond += "$(condition)/<architecture>$(arch)/<address-model>" ;
+            }
+            if $(arch) = $(default-arch)
+            {
+                cond += "$(condition)/<architecture>/<address-model>$(addr)" ;
+            }
+            if $(addr) = $(default-addr) && $(arch) = $(default-arch)
             {
                 cond += "$(condition)/<architecture>/<address-model>" ;
-                cond += "$(condition)/<architecture>/<address-model>$(addr)" ;
-                cond += "$(condition)/<architecture>$(arch)/<address-model>" ;
             }
 
             toolset.flags clang-win.compile .CC $(cond) : $(compiler) --target=$(clang-arch)-pc-windows-msvc ;

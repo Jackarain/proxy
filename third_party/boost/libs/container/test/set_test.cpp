@@ -590,8 +590,8 @@ int main ()
    typedef multiset< int*, std::less<int*>, std::allocator<int*>
                    , tree_assoc_options< optimize_size<false>, tree_type<avl_tree> >::type > avlmset_size_optimized_no;
 
-   BOOST_STATIC_ASSERT(sizeof(rbmset_size_optimized_yes) < sizeof(rbset_size_optimized_no));
-   BOOST_STATIC_ASSERT(sizeof(avlset_size_optimized_yes) < sizeof(avlmset_size_optimized_no));
+   BOOST_CONTAINER_STATIC_ASSERT(sizeof(rbmset_size_optimized_yes) < sizeof(rbset_size_optimized_no));
+   BOOST_CONTAINER_STATIC_ASSERT(sizeof(avlset_size_optimized_yes) < sizeof(avlmset_size_optimized_no));
 
    ////////////////////////////////////
    //    Iterator testing
@@ -626,7 +626,7 @@ int main ()
    {
       typedef boost::container::set<int> cont;
       typedef boost::container::dtl::tree<int, void, std::less<int>, void, void> tree;
-      BOOST_STATIC_ASSERT_MSG(
+      BOOST_CONTAINER_STATIC_ASSERT_MSG(
         !(boost::has_trivial_destructor_after_move<cont>::value !=
           boost::has_trivial_destructor_after_move<tree>::value)
         , "has_trivial_destructor_after_move(set, default allocator) test failed");
@@ -635,7 +635,7 @@ int main ()
    {
       typedef boost::container::set<int, std::less<int>, std::allocator<int> > cont;
       typedef boost::container::dtl::tree<int, void, std::less<int>, std::allocator<int>, void> tree;
-      BOOST_STATIC_ASSERT_MSG(
+      BOOST_CONTAINER_STATIC_ASSERT_MSG(
         !(boost::has_trivial_destructor_after_move<cont>::value !=
           boost::has_trivial_destructor_after_move<tree>::value)
         , "has_trivial_destructor_after_move(set, std::allocator) test failed");
@@ -644,7 +644,7 @@ int main ()
    {
       typedef boost::container::multiset<int> cont;
       typedef boost::container::dtl::tree<int, void, std::less<int>, void, void> tree;
-      BOOST_STATIC_ASSERT_MSG(
+      BOOST_CONTAINER_STATIC_ASSERT_MSG(
         !(boost::has_trivial_destructor_after_move<cont>::value !=
           boost::has_trivial_destructor_after_move<tree>::value)
         , "has_trivial_destructor_after_move(multiset, default allocator) test failed");
@@ -653,7 +653,7 @@ int main ()
    {
       typedef boost::container::multiset<int, std::less<int>, std::allocator<int> > cont;
       typedef boost::container::dtl::tree<int, void, std::less<int>, std::allocator<int>, void> tree;
-      BOOST_STATIC_ASSERT_MSG(
+      BOOST_CONTAINER_STATIC_ASSERT_MSG(
         !(boost::has_trivial_destructor_after_move<cont>::value !=
           boost::has_trivial_destructor_after_move<tree>::value)
         , "has_trivial_destructor_after_move(multiset, std::allocator) test failed");

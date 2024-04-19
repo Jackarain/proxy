@@ -13,5 +13,5 @@
         "Error-handling",
         "Programming"
     ],
-    "cxxstd": "03"
+    "cxxstd": "11"
 }

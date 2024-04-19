@@ -23,13 +23,15 @@ macro(make_test TEST_NAME STANDARD)
     boost_redis_src
     boost_redis_tests_common
     boost_redis_project_options
+    Boost::unit_test_framework
   )
   target_compile_features(${EXE_NAME} PRIVATE cxx_std_${STANDARD})
   add_test(${EXE_NAME} ${EXE_NAME})
 endmacro()
 
 make_test(test_conn_quit 17)
-make_test(test_conn_tls 17)
+# TODO: Configure a Redis server with TLS in the CI and reenable this test.
+#make_test(test_conn_tls 17)
 make_test(test_low_level 17)
 make_test(test_conn_exec_retry 17)
 make_test(test_conn_exec_error 17)
@@ -46,6 +48,7 @@ make_test(test_conn_exec_cancel2 20)
 make_test(test_conn_echo_stress 20)
 make_test(test_conn_run_cancel 20)
 make_test(test_issue_50 20)
+make_test(test_issue_181 17)
 
 # Coverage
 set(

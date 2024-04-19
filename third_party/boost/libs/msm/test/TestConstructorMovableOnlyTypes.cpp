@@ -13,7 +13,6 @@
 // file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#include <iostream>
 #include <memory>
 // back-end
 #include <boost/msm/back/state_machine.hpp>

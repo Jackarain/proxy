@@ -1,18 +1,18 @@
 <html>
 
 <head>
-<meta http-equiv="Content-Language" content="en-us">
-<meta name="GENERATOR" content="Microsoft FrontPage 5.0">
-<meta name="ProgId" content="FrontPage.Editor.Document">
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="Content-Language" content="en-us"/>
+<meta name="GENERATOR" content="Microsoft FrontPage 5.0"/>
+<meta name="ProgId" content="FrontPage.Editor.Document"/>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <title>Portability Guide</title>
-<link href="styles.css" rel="stylesheet">
+<link href="styles.css" rel="stylesheet"/>
 </head>
 
 <body bgcolor="#FFFFFF">
 
 <h1>
-<img border="0" src="../../../boost.png" align="center" width="300" height="86">Path
+<img border="0" src="../../../boost.png" align="center" width="300" height="86"/>Path
 Name Portability
 Guide</h1>
 
@@ -31,11 +31,12 @@ Guide</h1>
     <a href="deprecated.html">Deprecated</a> &nbsp;&nbsp;
     <a href="issue_reporting.html">Bug Reports </a>&nbsp;&nbsp;
     </td>
+  </tr>
 </table>
 
 <p>
-<a href="#Introduction">Introduction</a><br>
-<a href="#name_check_functions">name_check functions</a><br>
+<a href="#Introduction">Introduction</a><br/>
+<a href="#name_check_functions">name_check functions</a><br/>
 <a href="#recommendations">File and directory name recommendations</a></p>
 <h2><a name="Introduction">Introduction</a></h2>
 <p>Like any other C++ program which performs I/O operations, there is no
@@ -92,10 +93,10 @@ portability yet not overly restrict expressiveness.</p>
     std::string&amp;<i> name</i>)</code></td>
     <td><b>Returns:</b> <i>true</i> if <code>!name.empty() &amp;&amp; name</code> contains only the characters
     specified in<i> Portable Filename Character Set</i> rules as defined in by
-    POSIX (<a href="http://www.opengroup.org/onlinepubs/007904975/basedefs/xbd_chap03.html">www.opengroup.org/onlinepubs/007904975/basedefs/xbd_chap03.html</a>).<br>
+    POSIX (<a href="http://www.opengroup.org/onlinepubs/007904975/basedefs/xbd_chap03.html">www.opengroup.org/onlinepubs/007904975/basedefs/xbd_chap03.html</a>).<br/>
     The allowed characters are <code>0-9</code>, <code>a-z</code>, <code>A-Z</code>,
     <code>'.'</code>, <code>'_'</code>, and <code>'-'</code>.<p><b>Use:</b>
-    applications which must be portable to any POSIX system.</td>
+    applications which must be portable to any POSIX system.</p></td>
   </tr>
   <tr>
     <td align="left" valign="top"><code><a name="windows_name">windows_name</a>(const
@@ -111,7 +112,7 @@ portability yet not overly restrict expressiveness.</p>
     <p><b>Note:</b> Reserved device names are not valid as file names, but are
     not being detected because they are still valid as a path. Specifically,
     CON, PRN, AUX, CLOCK$, NUL, COM[1-9], LPT[1-9], and these names followed by
-    an extension (for example, NUL.tx7).</td>
+    an extension (for example, NUL.tx7).</p></td>
   </tr>
   <tr>
     <td align="left" valign="top"><code><a name="portable_name">portable_name</a>(const
@@ -120,14 +121,14 @@ portability yet not overly restrict expressiveness.</p>
     &amp;&amp; (name</code> is <code>&quot;.&quot;</code> or <code>&quot;..&quot;</code>, and the first character not a period or hyphen<code>)</code>.<p><b>Use:</b> applications which must be portable to a wide variety of
     modern operating systems, large and small, and to some legacy O/S's. The
     first character not a period or hyphen restriction is a requirement of
-    several older operating systems.</td>
+    several older operating systems.</p></td>
   </tr>
   <tr>
     <td align="left" valign="top"><code><a name="portable_directory_name">
     portable_directory_name</a>(const std::string&amp;<i> name</i>)</code></td>
     <td><b>Returns:</b> <code>portable_name(name) &amp;&amp; (name</code> is <code>&quot;.&quot;</code>
     or <code>&quot;..&quot;</code>&nbsp; or contains no periods<code>)</code>.<p><b>Use:</b> applications
-    which must be portable to a wide variety of platforms, including OpenVMS.</td>
+    which must be portable to a wide variety of platforms, including OpenVMS.</p></td>
   </tr>
   <tr>
     <td align="left" valign="top"><code><a name="portable_file_name">
@@ -136,7 +137,7 @@ portability yet not overly restrict expressiveness.</p>
     non-period characters.<p><b>Use:</b>
     applications which must be portable to a wide variety of platforms,
     including OpenVMS and other systems which have a concept of &quot;file extension&quot;
-    but limit its length.</td>
+    but limit its length.</p></td>
   </tr>
   <tr>
     <td align="left" valign="top"><code><a name="native">native</a>(const
@@ -145,7 +146,7 @@ portability yet not overly restrict expressiveness.</p>
     true</i> for names considered valid by the operating system's native file
     systems.<p><b>Note:</b> May return <i>true</i> for some names not considered valid
     by the operating system under all conditions (particularly on operating systems which support
-    multiple file systems.)</td>
+    multiple file systems.)</p></td>
   </tr>
 </table>
 
@@ -160,7 +161,7 @@ portability yet not overly restrict expressiveness.</p>
   <tr>
     <td valign="top">Limit file and directory names to the characters A-Z, a-z, 0-9, period, hyphen, and
     underscore.<p>Use any of the &quot;portable_&quot; <a href="#name_check_functions">
-    name check functions</a> to enforce this recommendation.</td>
+    name check functions</a> to enforce this recommendation.</p></td>
     <td valign="top">These are the characters specified by the POSIX standard for portable directory and
     file names, and are also valid for Windows, Mac, and many other modern file systems.</td>
   </tr>
@@ -170,7 +171,7 @@ portability yet not overly restrict expressiveness.</p>
     Use <a href="#portable_name">portable_name</a>,
     <a href="#portable_directory_name">portable_directory_name</a>, or
     <a href="#portable_file_name">portable_file_name</a> to enforce this
-    recommendation.</td>
+    recommendation.</p></td>
     <td valign="top">Some operating systems treat have special rules for the
     first character of names. POSIX, for example. Windows does not permit period
     as the last character.</td>
@@ -178,14 +179,14 @@ portability yet not overly restrict expressiveness.</p>
   <tr>
     <td valign="top">Do not use periods in directory names.<p>Use
     <a href="#portable_directory_name">portable_directory_name</a> to enforce
-    this recommendation.</td>
+    this recommendation.</p></td>
     <td valign="top">Requirement for ISO-9660 without Juliet extensions, OpenVMS filesystem, and other legacy systems.</td>
   </tr>
   <tr>
     <td valign="top">Do not use more that one period in a file name, and limit
     the portion after the period to three characters.<p>Use
     <a href="#portable_file_name">portable_file_name</a> to enforce this
-    recommendation.</td>
+    recommendation.</p></td>
     <td valign="top">Requirement for ISO-9660 level 1, OpenVMS filesystem, and
     other legacy systems. </td>
   </tr>
@@ -217,18 +218,18 @@ portability yet not overly restrict expressiveness.</p>
   </tr>
   <tr>
     <td valign="top">Limit the length of any one name in a path.&nbsp; Pick the specific limit according to
-    the operating systems and or file systems you wish portability to:<br>
-    &nbsp;&nbsp; Not a concern::&nbsp; POSIX, Windows, MAC OS X.<br>
-    &nbsp;&nbsp; 31 characters: Classic Mac OS<br>
-&nbsp;&nbsp; 8 characters + period + 3 characters: ISO 9660 level 1<br>
-&nbsp;&nbsp; 32 characters: ISO 9660 level 2 and 3<br>
+    the operating systems and or file systems you wish portability to:<br/>
+    &nbsp;&nbsp; Not a concern::&nbsp; POSIX, Windows, MAC OS X.<br/>
+    &nbsp;&nbsp; 31 characters: Classic Mac OS<br/>
+&nbsp;&nbsp; 8 characters + period + 3 characters: ISO 9660 level 1<br/>
+&nbsp;&nbsp; 32 characters: ISO 9660 level 2 and 3<br/>
 &nbsp;&nbsp; 128 characters (64 if Unicode): ISO 9660 with Juliet extensions</td>
     <td valign="top">Limiting name length can markedly reduce the expressiveness of file names, yet placing
     only very high limits on lengths inhibits widest portability.</td>
   </tr>
 </table>
 
-<hr>
+<hr/>
 
 <p>&copy; Copyright Beman Dawes, 2002, 2003</p>
 <p> Use, modification, and distribution are subject to the Boost Software

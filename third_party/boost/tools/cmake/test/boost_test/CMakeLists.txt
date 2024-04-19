@@ -43,13 +43,20 @@ boost_test(TYPE run SOURCES requires_no_exceptions.cpp COMPILE_OPTIONS -fno-exce
 
 boost_test(TYPE compile-fail SOURCES emits_warning.cpp COMPILE_OPTIONS -Wall -Werror)
 
+boost_test(TYPE compile NAME compile_subdir SOURCES include_subdir.cpp INCLUDE_DIRECTORIES subdir)
+boost_test(TYPE link NAME link_subdir SOURCES include_subdir.cpp INCLUDE_DIRECTORIES subdir)
+boost_test(TYPE run NAME run_subdir SOURCES include_subdir.cpp INCLUDE_DIRECTORIES subdir)
+
 # boost_test, w/ globals
 
 set(BOOST_TEST_COMPILE_OPTIONS -fno-rtti -fno-exceptions)
 set(BOOST_TEST_LINK_LIBRARIES Boost::config)
+set(BOOST_TEST_INCLUDE_DIRECTORIES subdir)
+set(BOOST_TEST_PREFIX boost_cmake_test_globals)
 
-boost_test(SOURCES requires_no_rtti.cpp PREFIX boost_cmake_test_globals)
-boost_test(SOURCES requires_no_exceptions.cpp PREFIX boost_cmake_test_globals)
+boost_test(SOURCES requires_no_rtti.cpp)
+boost_test(SOURCES requires_no_exceptions.cpp)
+boost_test(SOURCES include_subdir.cpp)
 
 # boost_test_jamfile
 

@@ -38,24 +38,24 @@ struct format_test
     testFormat()
     {
         {
-            url u = format("http:");
+            url u = urls::format("http:");
             BOOST_TEST_CSTR_EQ( u.buffer(), "http:" );
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
         }
         {
-            url u = format("{}:", "http");
-            BOOST_TEST_CSTR_EQ( u.buffer(), "http:" );
-            BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
-            BOOST_TEST_NOT( u.has_authority() );
-        }
-        {
-            url u = format("{}:", "http");
+            url u = urls::format("{}:", "http");
             BOOST_TEST_CSTR_EQ( u.buffer(), "http:" );
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST_NOT( u.has_authority() );
         }
         {
-            url u = format("{}://", "http");
+            url u = urls::format("{}:", "http");
+            BOOST_TEST_CSTR_EQ( u.buffer(), "http:" );
+            BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
+            BOOST_TEST_NOT( u.has_authority() );
+        }
+        {
+            url u = urls::format("{}://", "http");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -104,7 +104,7 @@ struct format_test
         };
 
         {
-            url u = format("{}:///", "http");
+            url u = urls::format("{}:///", "http");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http:///");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -115,7 +115,7 @@ struct format_test
 
         }
         {
-            url u = format("{}://{}", "http", "a.b");
+            url u = urls::format("{}://{}", "http", "a.b");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://a.b");
             BOOST_TEST_CSTR_EQ(u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -123,7 +123,7 @@ struct format_test
             BOOST_TEST( u.encoded_path().empty() );
         }
         {
-            url u = format("{}://[{}]", "http", "fe80::1ff:fe23:4567:890a");
+            url u = urls::format("{}://[{}]", "http", "fe80::1ff:fe23:4567:890a");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://[fe80::1ff:fe23:4567:890a]");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -132,7 +132,7 @@ struct format_test
             BOOST_TEST( u.encoded_path().empty() );
         }
         {
-            url u = format("{}:?q", "http");
+            url u = urls::format("{}:?q", "http");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http:?q");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST_NOT( u.has_authority() );
@@ -140,7 +140,7 @@ struct format_test
             BOOST_TEST_CSTR_EQ( u.encoded_query(), "q" );
         }
         {
-            url u = format("{}:/", "http");
+            url u = urls::format("{}:/", "http");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http:/");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST_NOT( u.has_authority() );
@@ -149,7 +149,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("{}:path:to:joe", "mailto");
+            url u = urls::format("{}:path:to:joe", "mailto");
             BOOST_TEST_CSTR_EQ(u.buffer(), "mailto:path:to:joe");
             BOOST_TEST_CSTR_EQ( u.scheme(), "mailto" );
             BOOST_TEST_NOT( u.has_authority() );
@@ -158,7 +158,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("{}:{}", "mailto", "joe");
+            url u = urls::format("{}:{}", "mailto", "joe");
             BOOST_TEST_CSTR_EQ(u.buffer(), "mailto:joe");
             BOOST_TEST_CSTR_EQ( u.scheme(), "mailto" );
             BOOST_TEST_NOT( u.has_authority() );
@@ -167,7 +167,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("{}:{}/a/{}/b", "http", 'a', 'b');
+            url u = urls::format("{}:{}/a/{}/b", "http", 'a', 'b');
             BOOST_TEST_CSTR_EQ(u.buffer(), "http:a/a/b/b");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST_NOT( u.has_authority() );
@@ -176,7 +176,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("http://www.a.org");
+            url u = urls::format("http://www.a.org");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://www.a.org");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -185,7 +185,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("{}://www.a.org", "http");
+            url u = urls::format("{}://www.a.org", "http");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://www.a.org");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -194,7 +194,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("{}://{}", "http", "a.b");
+            url u = urls::format("{}://{}", "http", "a.b");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://a.b");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -203,7 +203,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("{}://u@www.a.org", "http");
+            url u = urls::format("{}://u@www.a.org", "http");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://u@www.a.org");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -215,7 +215,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("{}://{}@www.a.org", "http", "user");
+            url u = urls::format("{}://{}@www.a.org", "http", "user");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://user@www.a.org");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -227,7 +227,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("{}://{}:{}@www.a.org", "http", "u", "p");
+            url u = urls::format("{}://{}:{}@www.a.org", "http", "u", "p");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://u:p@www.a.org");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -240,7 +240,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("{}://{}:{}@{}", "http", "u", "p", "a.b");
+            url u = urls::format("{}://{}:{}@{}", "http", "u", "p", "a.b");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://u:p@a.b");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -253,7 +253,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("{}://{}:{}@{}:80", "http", 'u', 'p', "a.b");
+            url u = urls::format("{}://{}:{}@{}:80", "http", 'u', 'p', "a.b");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://u:p@a.b:80");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -269,7 +269,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("{}://{}:{}@{}:", "http", 'u', 'p', "a.b");
+            url u = urls::format("{}://{}:{}@{}:", "http", 'u', 'p', "a.b");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://u:p@a.b:");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -285,7 +285,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("{}://{}:{}@{}:{}", "http", 'u', 'p', "a.b", 80);
+            url u = urls::format("{}://{}:{}@{}:{}", "http", 'u', 'p', "a.b", 80);
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://u:p@a.b:80");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -301,7 +301,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("{}://{}?k=v", "http", "a.b");
+            url u = urls::format("{}://{}?k=v", "http", "a.b");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://a.b?k=v");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -317,7 +317,7 @@ struct format_test
             params_equal( u.encoded_params(), {{"k", "v"}});
         }
         {
-            url u = format("{}://{}?{}", "http", "a.b", "k=v");
+            url u = urls::format("{}://{}?{}", "http", "a.b", "k=v");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://a.b?k=v");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -333,7 +333,7 @@ struct format_test
             params_equal( u.encoded_params(), {{"k", "v"}});
         }
         {
-            url u = format("{}://{}:{}@{}:{}/{}/{}/{}?{}", "http", 'u', 'p', "a.b", 80, 'a', 'b', 'c', "k=v");
+            url u = urls::format("{}://{}:{}@{}:{}/{}/{}/{}?{}", "http", 'u', 'p', "a.b", 80, 'a', 'b', 'c', "k=v");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://u:p@a.b:80/a/b/c?k=v");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -353,7 +353,7 @@ struct format_test
         }
 
         {
-            url u = format("/a/b/c/d");
+            url u = urls::format("/a/b/c/d");
             BOOST_TEST_CSTR_EQ(u.buffer(), "/a/b/c/d");
             BOOST_TEST_NOT( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -365,7 +365,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("/{}/b/{}/d", 'a', 'c');
+            url u = urls::format("/{}/b/{}/d", 'a', 'c');
             BOOST_TEST_CSTR_EQ(u.buffer(), "/a/b/c/d");
             BOOST_TEST_NOT( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -374,7 +374,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("/{}/b/{}/d?q", 'a', 'c');
+            url u = urls::format("/{}/b/{}/d?q", 'a', 'c');
             BOOST_TEST_CSTR_EQ(u.buffer(), "/a/b/c/d?q");
             BOOST_TEST_NOT( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -384,7 +384,7 @@ struct format_test
             params_equal( u.encoded_params(), {{"q", ""}});
         }
         {
-            url u = format("/{}/b/{}/d?{}", 'a', 'c', "k=v");
+            url u = urls::format("/{}/b/{}/d?{}", 'a', 'c', "k=v");
             BOOST_TEST_CSTR_EQ(u.buffer(), "/a/b/c/d?k=v");
             BOOST_TEST_NOT( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -395,7 +395,7 @@ struct format_test
         }
 
         {
-            url u = format("");
+            url u = urls::format("");
             BOOST_TEST_CSTR_EQ(u.buffer(), "");
             BOOST_TEST_NOT( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -405,7 +405,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("/");
+            url u = urls::format("/");
             BOOST_TEST_CSTR_EQ(u.buffer(), "/");
             BOOST_TEST_NOT( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -415,7 +415,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("a");
+            url u = urls::format("a");
             BOOST_TEST_CSTR_EQ(u.buffer(), "a");
             BOOST_TEST_NOT( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -425,7 +425,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("//www.a.com");
+            url u = urls::format("//www.a.com");
             BOOST_TEST_CSTR_EQ(u.buffer(), "//www.a.com");
             BOOST_TEST( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -434,7 +434,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("//{}", "a.b");
+            url u = urls::format("//{}", "a.b");
             BOOST_TEST_CSTR_EQ(u.buffer(), "//a.b");
             BOOST_TEST( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -443,7 +443,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("abc");
+            url u = urls::format("abc");
             BOOST_TEST_CSTR_EQ(u.buffer(), "abc");
             BOOST_TEST_NOT( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -454,7 +454,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("{}", "v");
+            url u = urls::format("{}", "v");
             BOOST_TEST_CSTR_EQ(u.buffer(), "v");
             BOOST_TEST_NOT( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -465,7 +465,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("{}", 0);
+            url u = urls::format("{}", 0);
             BOOST_TEST_CSTR_EQ(u.buffer(), "0");
             BOOST_TEST_NOT( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -476,7 +476,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("{}", 0U);
+            url u = urls::format("{}", 0U);
             BOOST_TEST_CSTR_EQ(u.buffer(), "0");
             BOOST_TEST_NOT( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -487,7 +487,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("/a");
+            url u = urls::format("/a");
             BOOST_TEST_CSTR_EQ(u.buffer(), "/a");
             BOOST_TEST_NOT( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -498,7 +498,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("/{}", 'a');
+            url u = urls::format("/{}", 'a');
             BOOST_TEST_CSTR_EQ(u.buffer(), "/a");
             BOOST_TEST_NOT( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -509,7 +509,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("/a/b/c/d");
+            url u = urls::format("/a/b/c/d");
             BOOST_TEST_CSTR_EQ(u.buffer(), "/a/b/c/d");
             BOOST_TEST_NOT( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -520,7 +520,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("/{}/b/{}/d", 'a', 'c');
+            url u = urls::format("/{}/b/{}/d", 'a', 'c');
             BOOST_TEST_CSTR_EQ(u.buffer(), "/a/b/c/d");
             BOOST_TEST_NOT( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -531,7 +531,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_query() );
         }
         {
-            url u = format("a?q#f");
+            url u = urls::format("a?q#f");
             BOOST_TEST_CSTR_EQ(u.buffer(), "a?q#f");
             BOOST_TEST_NOT( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -545,7 +545,7 @@ struct format_test
             BOOST_TEST_CSTR_EQ( u.encoded_fragment(), "f" );
         }
         {
-            url u = format("a?{}#{}", 'q', 'f');
+            url u = urls::format("a?{}#{}", 'q', 'f');
             BOOST_TEST_CSTR_EQ(u.buffer(), "a?q#f");
             BOOST_TEST_NOT( u.has_authority() );
             BOOST_TEST_NOT( u.has_userinfo() );
@@ -560,7 +560,7 @@ struct format_test
         }
 
         {
-            url u = format("http://www.a.com");
+            url u = urls::format("http://www.a.com");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://www.a.com");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -569,7 +569,7 @@ struct format_test
             BOOST_TEST( u.encoded_path().empty() );
         }
         {
-            url u = format("{}://{}", "http", "a.b");
+            url u = urls::format("{}://{}", "http", "a.b");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://a.b");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -578,7 +578,7 @@ struct format_test
             BOOST_TEST( u.encoded_path().empty() );
         }
         {
-            url u = format("{}://{}?q#f", "http", "a.b");
+            url u = urls::format("{}://{}?q#f", "http", "a.b");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://a.b?q#f");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -593,7 +593,7 @@ struct format_test
             BOOST_TEST_CSTR_EQ( u.encoded_fragment(), "f" );
         }
         {
-            url u = format("{}://{}?{}#{}", "http", "a.b", 'q', 'f');
+            url u = urls::format("{}://{}?{}#{}", "http", "a.b", 'q', 'f');
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://a.b?q#f");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -609,7 +609,7 @@ struct format_test
         }
 
         {
-            url u = format("{}://{}", "http", "a.b");
+            url u = urls::format("{}://{}", "http", "a.b");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://a.b");
             BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
             BOOST_TEST( u.has_authority() );
@@ -622,7 +622,7 @@ struct format_test
             BOOST_TEST_NOT( u.has_fragment() );
         }
         {
-            url u = format("{}", 'p');
+            url u = urls::format("{}", 'p');
             BOOST_TEST_CSTR_EQ(u.buffer(), "p");
             BOOST_TEST_NOT( u.has_authority() );
             BOOST_TEST( u.encoded_host().empty() );
@@ -635,7 +635,7 @@ struct format_test
         {
             std::string p = "path/to";
             url u =
-                format("http{}://{}.{}.com:{}/{}/file.txt?k={}#frag-{}",
+                urls::format("http{}://{}.{}.com:{}/{}/file.txt?k={}#frag-{}",
                     's',
                     "www",
                     "h/o/s/t",
@@ -660,31 +660,46 @@ struct format_test
             BOOST_TEST_CSTR_EQ( u.encoded_fragment(), "frag-X" );
         }
 
-        BOOST_TEST_CSTR_EQ(format("{}://{}?{}#{}", "http", "a.b", 'q', 'f').buffer(), "http://a.b?q#f");
-        BOOST_TEST_CSTR_EQ(format("{}://{}?{}#{}", "http", "a.b", 'q').buffer(), "http://a.b?q#");
+        BOOST_TEST_CSTR_EQ(urls::format("{}://{}?{}#{}", "http", "a.b", 'q', 'f').buffer(), "http://a.b?q#f");
+        BOOST_TEST_CSTR_EQ(urls::format("{}://{}?{}#{}", "http", "a.b", 'q').buffer(), "http://a.b?q#");
 
-        BOOST_TEST_CSTR_EQ(format("{}", 'c').buffer(), "c");
-        BOOST_TEST_CSTR_EQ(format("//{}", ':').buffer(), "//%3A");
-        BOOST_TEST_CSTR_EQ(format("mailto:{}", "joe").buffer(), "mailto:joe");
-        BOOST_TEST_NO_THROW(format("user/{}", static_cast<unsigned int>(-1)));
-        BOOST_TEST_NO_THROW(format("user/{}", static_cast<unsigned long long int>(-1)));
-        BOOST_TEST_CSTR_EQ(format("user/{}", 1).buffer(), "user/1");
-        BOOST_TEST_CSTR_EQ(format("user/{}", 5678).buffer(), "user/5678");
-        BOOST_TEST_CSTR_EQ(format("user/{}", static_cast<long long int>(-1)).buffer(), "user/-1");
-        BOOST_TEST_CSTR_EQ(format("{}", X{}).buffer(), "X");
+        BOOST_TEST_CSTR_EQ(urls::format("{}", 'c').buffer(), "c");
+        BOOST_TEST_CSTR_EQ(urls::format("//{}", ':').buffer(), "//%3A");
+        BOOST_TEST_CSTR_EQ(urls::format("mailto:{}", "joe").buffer(), "mailto:joe");
+        BOOST_TEST_NO_THROW(urls::format("user/{}", static_cast<unsigned int>(-1)));
+        BOOST_TEST_NO_THROW(urls::format("user/{}", static_cast<unsigned long long int>(-1)));
+        BOOST_TEST_CSTR_EQ(urls::format("user/{}", 1).buffer(), "user/1");
+        BOOST_TEST_CSTR_EQ(urls::format("user/{}", 5678).buffer(), "user/5678");
+        BOOST_TEST_CSTR_EQ(urls::format("user/{}", static_cast<long long int>(-1)).buffer(), "user/-1");
+        BOOST_TEST_CSTR_EQ(urls::format("{}", X{}).buffer(), "X");
+
+        // const& arg
+        {
+            const unsigned short int port{80};
+            url u = urls::format("{}://{}:{}", "http", "a.b", port);
+            BOOST_TEST_CSTR_EQ(u.buffer(), "http://a.b:80");
+            BOOST_TEST_CSTR_EQ( u.scheme(), "http" );
+            BOOST_TEST( u.has_authority() );
+            BOOST_TEST_CSTR_EQ( u.encoded_host(), "a.b" );
+            BOOST_TEST( u.has_port() );
+            BOOST_TEST_CSTR_EQ( u.port(), "80" );
+            BOOST_TEST_EQ( u.port_number(), 80 );
+            BOOST_TEST( u.encoded_path().empty() );
+            BOOST_TEST_NOT( u.has_query() );
+        }
 
         // first segment contains ':'
-        BOOST_TEST_CSTR_EQ(format("{}:{}", "http", "joe:").buffer(), "http:joe:");
+        BOOST_TEST_CSTR_EQ(urls::format("{}:{}", "http", "joe:").buffer(), "http:joe:");
         {
-            url u = format("{}", "joe:");
+            url u = urls::format("{}", "joe:");
             BOOST_TEST_CSTR_EQ(u.buffer(), "joe%3A");
             BOOST_TEST_CSTR_EQ(u.encoded_path(), "joe%3A");
             BOOST_TEST_NOT(u.is_path_absolute());
             segs_equal(u.encoded_segments(), {"joe%3A"});
         }
-        BOOST_TEST_CSTR_EQ(format("{}", "::joe:").buffer(), "%3A%3Ajoe%3A");
+        BOOST_TEST_CSTR_EQ(urls::format("{}", "::joe:").buffer(), "%3A%3Ajoe%3A");
         {
-            url u = format("{}", "::joe:/b:");
+            url u = urls::format("{}", "::joe:/b:");
             BOOST_TEST_CSTR_EQ(u.buffer(), "%3A%3Ajoe%3A/b:");
             BOOST_TEST_CSTR_EQ(u.encoded_path(), "%3A%3Ajoe%3A/b:");
             BOOST_TEST_NOT(u.is_path_absolute());
@@ -693,13 +708,13 @@ struct format_test
 
         // path starts with "//"
         {
-            url u = format("{}://{}", "http", "joe");
+            url u = urls::format("{}://{}", "http", "joe");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http://joe");
             BOOST_TEST(u.has_authority());
             BOOST_TEST_CSTR_EQ(u.host(), "joe");
         }
         {
-            url u = format("{}:{}", "http", "//joe");
+            url u = urls::format("{}:{}", "http", "//joe");
             BOOST_TEST_CSTR_EQ(u.buffer(), "http:/.//joe");
             BOOST_TEST_NOT(u.has_authority());
             BOOST_TEST_CSTR_EQ(u.encoded_path(), "/.//joe");
@@ -707,13 +722,13 @@ struct format_test
             segs_equal(u.encoded_segments(), {"", "joe"});
         }
         {
-            url u = format("//{}", "joe");
+            url u = urls::format("//{}", "joe");
             BOOST_TEST_CSTR_EQ(u.buffer(), "//joe");
             BOOST_TEST(u.has_authority());
             BOOST_TEST_CSTR_EQ(u.host(), "joe");
         }
         {
-            url u = format("{}", "//joe");
+            url u = urls::format("{}", "//joe");
             BOOST_TEST_CSTR_EQ(u.buffer(), "/.//joe");
             BOOST_TEST_NOT(u.has_authority());
             BOOST_TEST_CSTR_EQ(u.encoded_path(), "/.//joe");
@@ -722,18 +737,18 @@ struct format_test
         }
 
         // invalid format strings
-        BOOST_TEST_THROWS(format("{:"), system::system_error);
-        BOOST_TEST_THROWS(format("{}://www.a.com", "1nvalid scheme"), system::system_error);
-        BOOST_TEST_THROWS(format("{}://{}:{}@{}:a", "http", 'u', 'p', "a.b"), system::system_error);
-        BOOST_TEST_THROWS(format("{}://[", "http"), system::system_error);
-        BOOST_TEST_THROWS(format("{://"), system::system_error);
-        BOOST_TEST_THROWS(format("http:%"), system::system_error);
-        BOOST_TEST_THROWS(format("{}:\\", "A"), system::system_error);
+        BOOST_TEST_THROWS(urls::format("{:"), system::system_error);
+        BOOST_TEST_THROWS(urls::format("{}://www.a.com", "1nvalid scheme"), system::system_error);
+        BOOST_TEST_THROWS(urls::format("{}://{}:{}@{}:a", "http", 'u', 'p', "a.b"), system::system_error);
+        BOOST_TEST_THROWS(urls::format("{}://[", "http"), system::system_error);
+        BOOST_TEST_THROWS(urls::format("{://"), system::system_error);
+        BOOST_TEST_THROWS(urls::format("http:%"), system::system_error);
+        BOOST_TEST_THROWS(urls::format("{}:\\", "A"), system::system_error);
 
         // static_url
         {
             static_url<30> u;
-            format_to(u, "{}://{}", "https", "www.boost.org");
+            urls::format_to(u, "{}://{}", "https", "www.boost.org");
             BOOST_TEST_CSTR_EQ(u.buffer(), "https://www.boost.org");
             BOOST_TEST_CSTR_EQ(u.scheme(), "https");
             BOOST_TEST(u.has_authority());
@@ -743,89 +758,89 @@ struct format_test
         }
         {
             static_url<30> u;
-            format_to(u, "{s}://{h}", {{"s", "https"}, {"h", "www.boost.org"}});
+            urls::format_to(u, "{s}://{h}", {{"s", "https"}, {"h", "www.boost.org"}});
             BOOST_TEST_CSTR_EQ(u.buffer(), "https://www.boost.org");
         }
         {
             static_url<10> u;
-            BOOST_TEST_THROWS(format_to(u, "{}://{}", "https", "www.boost.org"), system::system_error);
+            BOOST_TEST_THROWS(urls::format_to(u, "{}://{}", "https", "www.boost.org"), system::system_error);
         }
 
 
         // escaped '{' always throws because '{'s are not allowed in URLs
-        BOOST_TEST_THROWS(format("{scheme}:{path}/{{}", "mailto", 'a'), system::system_error);
+        BOOST_TEST_THROWS(urls::format("{scheme}:{path}/{{}", "mailto", 'a'), system::system_error);
 
         // "{}" with no format arg is ignored
-        BOOST_TEST_CSTR_EQ(format("/{}/{}/{}", 'a', 'b').buffer(), "/a/b/");
+        BOOST_TEST_CSTR_EQ(urls::format("/{}/{}/{}", 'a', 'b').buffer(), "/a/b/");
 
         // format specs
         {
-            BOOST_TEST_CSTR_EQ(format("{:}", 'a').buffer(), "a");
-            BOOST_TEST_CSTR_EQ(format("{:c}", 'a').buffer(), "a");
-            BOOST_TEST_CSTR_EQ(format("{:^1s}", 'a').buffer(), "a");
-            BOOST_TEST_CSTR_EQ(format("{:^3s}", 'a').buffer(), "%20a%20");
-            BOOST_TEST_CSTR_EQ(format("{:.^5s}", 'a').buffer(), "..a..");
-            BOOST_TEST_CSTR_EQ(format("{:.<5s}", 'a').buffer(), "a....");
-            BOOST_TEST_CSTR_EQ(format("{:.>5s}", 'a').buffer(), "....a");
-            BOOST_TEST_CSTR_EQ(format("{:.>{}s}", 'a', 5).buffer(), "....a");
-            BOOST_TEST_CSTR_EQ(format("{:.>{1}s}", 'a', 5).buffer(), "....a");
-            BOOST_TEST_CSTR_EQ(format("{0:.>{2}s}/{1}", 'a', 'b', 5).buffer(), "....a/b");
-            BOOST_TEST_CSTR_EQ(format("{:.>{b}s}", 'a', arg("b", 5)).buffer(), "....a");
-            BOOST_TEST_CSTR_EQ(format("{:.>{b}s}", 'a', arg("b", '5')).buffer(), "....a");
-            BOOST_TEST_THROWS(format("{:cx}", 'a'), system::system_error);
+            BOOST_TEST_CSTR_EQ(urls::format("{:}", 'a').buffer(), "a");
+            BOOST_TEST_CSTR_EQ(urls::format("{:c}", 'a').buffer(), "a");
+            BOOST_TEST_CSTR_EQ(urls::format("{:^1s}", 'a').buffer(), "a");
+            BOOST_TEST_CSTR_EQ(urls::format("{:^3s}", 'a').buffer(), "%20a%20");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.^5s}", 'a').buffer(), "..a..");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.<5s}", 'a').buffer(), "a....");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.>5s}", 'a').buffer(), "....a");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.>{}s}", 'a', 5).buffer(), "....a");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.>{1}s}", 'a', 5).buffer(), "....a");
+            BOOST_TEST_CSTR_EQ(urls::format("{0:.>{2}s}/{1}", 'a', 'b', 5).buffer(), "....a/b");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.>{b}s}", 'a', arg("b", 5)).buffer(), "....a");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.>{b}s}", 'a', arg("b", '5')).buffer(), "....a");
+            BOOST_TEST_THROWS(urls::format("{:cx}", 'a'), system::system_error);
 
-            BOOST_TEST_CSTR_EQ(format("{:d}", 99).buffer(), "99");
-            BOOST_TEST_CSTR_EQ(format("{:#d}", 99).buffer(), "99");
-            BOOST_TEST_CSTR_EQ(format("{:^1d}", 99).buffer(), "99");
-            BOOST_TEST_CSTR_EQ(format("{:+d}", 99).buffer(), "+99");
-            BOOST_TEST_CSTR_EQ(format("{: d}", std::size_t(99)).buffer(), "%2099");
-            BOOST_TEST_CSTR_EQ(format("{:+d}", std::size_t(99)).buffer(), "+99");
-            BOOST_TEST_CSTR_EQ(format("{: d}", 99).buffer(), "%2099");
-            BOOST_TEST_CSTR_EQ(format("{:^6d}", 99).buffer(), "%20%2099%20%20");
-            BOOST_TEST_CSTR_EQ(format("{:.^6d}", 99).buffer(), "..99..");
-            BOOST_TEST_CSTR_EQ(format("{:.<6d}", 99).buffer(), "99....");
-            BOOST_TEST_CSTR_EQ(format("{:.>6d}", 99).buffer(), "....99");
-            BOOST_TEST_CSTR_EQ(format("{:.^6d}", std::size_t(99)).buffer(), "..99..");
-            BOOST_TEST_CSTR_EQ(format("{:.<6d}", std::size_t(99)).buffer(), "99....");
-            BOOST_TEST_CSTR_EQ(format("{:.>6d}", std::size_t(99)).buffer(), "....99");
-            BOOST_TEST_CSTR_EQ(format("{:>06d}", 99).buffer(), "000099");
-            BOOST_TEST_CSTR_EQ(format("{:>06d}", std::size_t(99)).buffer(), "000099");
-            BOOST_TEST_CSTR_EQ(format("{:>+06d}", 99).buffer(), "+00099");
-            BOOST_TEST_CSTR_EQ(format("{:> 06d}", 99).buffer(), "%2000099");
-            BOOST_TEST_CSTR_EQ(format("{:.>{}d}", 99, 6).buffer(), "....99");
-            BOOST_TEST_CSTR_EQ(format("{:.>{1}d}", 99, 6).buffer(), "....99");
-            BOOST_TEST_CSTR_EQ(format("{0:.>{2}d}/{1}", 99, 'b', 6).buffer(), "....99/b");
-            BOOST_TEST_CSTR_EQ(format("{:.>{b}d}", 99, arg("b", 6)).buffer(), "....99");
-            BOOST_TEST_CSTR_EQ(format("{:.>{}d}", std::size_t(99), 6).buffer(), "....99");
-            BOOST_TEST_CSTR_EQ(format("{:.>{1}d}", std::size_t(99), 6).buffer(), "....99");
-            BOOST_TEST_CSTR_EQ(format("{0:.>{2}d}/{1}", std::size_t(99), 'b', 6).buffer(), "....99/b");
-            BOOST_TEST_CSTR_EQ(format("{:.>{b}d}", std::size_t(99), arg("b", 6)).buffer(), "....99");
-            BOOST_TEST_CSTR_EQ(format("{:.>{b}d}", 99, arg("b", '6')).buffer(), "....99");
-            BOOST_TEST_THROWS(format("{:dx}", 99), system::system_error);
+            BOOST_TEST_CSTR_EQ(urls::format("{:d}", 99).buffer(), "99");
+            BOOST_TEST_CSTR_EQ(urls::format("{:#d}", 99).buffer(), "99");
+            BOOST_TEST_CSTR_EQ(urls::format("{:^1d}", 99).buffer(), "99");
+            BOOST_TEST_CSTR_EQ(urls::format("{:+d}", 99).buffer(), "+99");
+            BOOST_TEST_CSTR_EQ(urls::format("{: d}", std::size_t(99)).buffer(), "%2099");
+            BOOST_TEST_CSTR_EQ(urls::format("{:+d}", std::size_t(99)).buffer(), "+99");
+            BOOST_TEST_CSTR_EQ(urls::format("{: d}", 99).buffer(), "%2099");
+            BOOST_TEST_CSTR_EQ(urls::format("{:^6d}", 99).buffer(), "%20%2099%20%20");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.^6d}", 99).buffer(), "..99..");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.<6d}", 99).buffer(), "99....");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.>6d}", 99).buffer(), "....99");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.^6d}", std::size_t(99)).buffer(), "..99..");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.<6d}", std::size_t(99)).buffer(), "99....");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.>6d}", std::size_t(99)).buffer(), "....99");
+            BOOST_TEST_CSTR_EQ(urls::format("{:>06d}", 99).buffer(), "000099");
+            BOOST_TEST_CSTR_EQ(urls::format("{:>06d}", std::size_t(99)).buffer(), "000099");
+            BOOST_TEST_CSTR_EQ(urls::format("{:>+06d}", 99).buffer(), "+00099");
+            BOOST_TEST_CSTR_EQ(urls::format("{:> 06d}", 99).buffer(), "%2000099");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.>{}d}", 99, 6).buffer(), "....99");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.>{1}d}", 99, 6).buffer(), "....99");
+            BOOST_TEST_CSTR_EQ(urls::format("{0:.>{2}d}/{1}", 99, 'b', 6).buffer(), "....99/b");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.>{b}d}", 99, arg("b", 6)).buffer(), "....99");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.>{}d}", std::size_t(99), 6).buffer(), "....99");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.>{1}d}", std::size_t(99), 6).buffer(), "....99");
+            BOOST_TEST_CSTR_EQ(urls::format("{0:.>{2}d}/{1}", std::size_t(99), 'b', 6).buffer(), "....99/b");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.>{b}d}", std::size_t(99), arg("b", 6)).buffer(), "....99");
+            BOOST_TEST_CSTR_EQ(urls::format("{:.>{b}d}", 99, arg("b", '6')).buffer(), "....99");
+            BOOST_TEST_THROWS(urls::format("{:dx}", 99), system::system_error);
 
         }
 
         // positional arguments
         {
-            BOOST_TEST_CSTR_EQ(format("{}/{}/{}", 'a', 'b', 'c').buffer(), "a/b/c");
-            BOOST_TEST_CSTR_EQ(format("{0}/{1}/{2}", 'a', 'b', 'c').buffer(), "a/b/c");
-            BOOST_TEST_CSTR_EQ(format("{2}/{1}/{0}", 'a', 'b', 'c').buffer(), "c/b/a");
-            BOOST_TEST_CSTR_EQ(format("//{0}{1}{0}.com", "abra", "cad").buffer(), "//abracadabra.com");
-            BOOST_TEST_CSTR_EQ(format("{0}/{}/{}/{1}/{}", 'a', 'b', 'c').buffer(), "a/a/b/b/c");
-            BOOST_TEST_CSTR_EQ(format("https://www.boost.org/en/{0}-{1}", "fast", "library").buffer(), "https://www.boost.org/en/fast-library");
-            BOOST_TEST_CSTR_EQ(format("https://www.boost.org/en/{1}-{0}", "rapida", "biblioteca").buffer(), "https://www.boost.org/en/biblioteca-rapida");
+            BOOST_TEST_CSTR_EQ(urls::format("{}/{}/{}", 'a', 'b', 'c').buffer(), "a/b/c");
+            BOOST_TEST_CSTR_EQ(urls::format("{0}/{1}/{2}", 'a', 'b', 'c').buffer(), "a/b/c");
+            BOOST_TEST_CSTR_EQ(urls::format("{2}/{1}/{0}", 'a', 'b', 'c').buffer(), "c/b/a");
+            BOOST_TEST_CSTR_EQ(urls::format("//{0}{1}{0}.com", "abra", "cad").buffer(), "//abracadabra.com");
+            BOOST_TEST_CSTR_EQ(urls::format("{0}/{}/{}/{1}/{}", 'a', 'b', 'c').buffer(), "a/a/b/b/c");
+            BOOST_TEST_CSTR_EQ(urls::format("https://www.boost.org/en/{0}-{1}", "fast", "library").buffer(), "https://www.boost.org/en/fast-library");
+            BOOST_TEST_CSTR_EQ(urls::format("https://www.boost.org/en/{1}-{0}", "rapida", "biblioteca").buffer(), "https://www.boost.org/en/biblioteca-rapida");
         }
 
         // named arguments
         {
             // examples from openAPI
             // https://swagger.io/specification/#paths-object
-            BOOST_TEST_CSTR_EQ(format("/pets/{petId}", arg("petId", 30)).buffer(), "/pets/30");
-            BOOST_TEST_CSTR_EQ(format("/pets/{name}", arg("name", "ted")).buffer(), "/pets/ted");
-            BOOST_TEST_CSTR_EQ(format("/users/{userid}/address", arg("userid", 30)).buffer(), "/users/30/address");
-            BOOST_TEST_CSTR_EQ(format("~12.0~1repositories~1{username}/get", arg("username", "boostorg")).buffer(), "~12.0~1repositories~1boostorg/get");
+            BOOST_TEST_CSTR_EQ(urls::format("/pets/{petId}", arg("petId", 30)).buffer(), "/pets/30");
+            BOOST_TEST_CSTR_EQ(urls::format("/pets/{name}", arg("name", "ted")).buffer(), "/pets/ted");
+            BOOST_TEST_CSTR_EQ(urls::format("/users/{userid}/address", arg("userid", 30)).buffer(), "/users/30/address");
+            BOOST_TEST_CSTR_EQ(urls::format("~12.0~1repositories~1{username}/get", arg("username", "boostorg")).buffer(), "~12.0~1repositories~1boostorg/get");
             BOOST_TEST_CSTR_EQ(
-                format(
+                urls::format(
                     "https://{username}.gigantic-server.com:{port}/{basePath}/{path}",
                     arg("username", "joe"),
                     arg("port", 80),
@@ -833,17 +848,17 @@ struct format_test
                     arg("path", "index.html")).buffer(),
                 "https://joe.gigantic-server.com:80/v2/index.html");
             BOOST_TEST_CSTR_EQ(
-                format(
+                urls::format(
                     "https://{username}.gigantic-server.com:{port}/{basePath}/{path}",
                     arg("basePath", "v2"),
                     arg("path", "index.html"),
                     arg("port", 80),
                     arg("username", "joe")).buffer(),
                 "https://joe.gigantic-server.com:80/v2/index.html");
-            BOOST_TEST_CSTR_EQ(format("/pets/{petId}/{unknown}", arg("petId", 30)).buffer(), "/pets/30/");
+            BOOST_TEST_CSTR_EQ(urls::format("/pets/{petId}/{unknown}", arg("petId", 30)).buffer(), "/pets/30/");
             // initializer-list overload
             BOOST_TEST_CSTR_EQ(
-                format(
+                urls::format(
                     "https://{username}.gigantic-server.com:{port}/{basePath}/{path}",
                     {{"basePath", "v2"}, {"path", "index.html"}, {"port", 80}, {"username", "joe"}}).buffer(),
                 "https://joe.gigantic-server.com:80/v2/index.html");

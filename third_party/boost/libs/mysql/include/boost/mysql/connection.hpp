@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -9,6 +9,7 @@
 #define BOOST_MYSQL_CONNECTION_HPP
 
 #include <boost/mysql/buffer_params.hpp>
+#include <boost/mysql/defaults.hpp>
 #include <boost/mysql/diagnostics.hpp>
 #include <boost/mysql/error_code.hpp>
 #include <boost/mysql/execution_state.hpp>
@@ -20,10 +21,11 @@
 #include <boost/mysql/string_view.hpp>
 
 #include <boost/mysql/detail/access.hpp>
+#include <boost/mysql/detail/algo_params.hpp>
+#include <boost/mysql/detail/any_stream.hpp>
 #include <boost/mysql/detail/any_stream_impl.hpp>
-#include <boost/mysql/detail/channel_ptr.hpp>
+#include <boost/mysql/detail/connection_impl.hpp>
 #include <boost/mysql/detail/execution_concepts.hpp>
-#include <boost/mysql/detail/network_algorithms.hpp>
 #include <boost/mysql/detail/rebind_executor.hpp>
 #include <boost/mysql/detail/socket_stream.hpp>
 #include <boost/mysql/detail/throw_on_error_loc.hpp>
@@ -31,6 +33,7 @@
 
 #include <boost/assert.hpp>
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -62,13 +65,7 @@ class static_execution_state;
 template <class Stream>
 class connection
 {
-    detail::channel_ptr channel_;
-
-    diagnostics& shared_diag() noexcept { return channel_.shared_diag(); }
-
-#ifndef BOOST_MYSQL_DOXYGEN
-    friend struct detail::access;
-#endif
+    detail::connection_impl impl_;
 
 public:
     /**
@@ -105,11 +102,7 @@ public:
         class... Args,
         class EnableIf = typename std::enable_if<std::is_constructible<Stream, Args...>::value>::type>
     connection(const buffer_params& buff_params, Args&&... args)
-        : channel_(
-              buff_params.initial_read_size(),
-              std::unique_ptr<detail::any_stream>(new detail::any_stream_impl<Stream>(std::forward<Args>(args
-              )...))
-          )
+        : impl_(buff_params.initial_read_size(), detail::make_stream<Stream>(std::forward<Args>(args)...))
     {
     }
 
@@ -144,7 +137,7 @@ public:
      * \par Exception safety
      * No-throw guarantee.
      */
-    Stream& stream() noexcept { return detail::cast<Stream>(channel_.stream()); }
+    Stream& stream() noexcept { return detail::cast<Stream>(impl_.stream()); }
 
     /**
      * \brief Retrieves the underlying Stream object.
@@ -153,7 +146,7 @@ public:
      * \par Exception safety
      * No-throw guarantee.
      */
-    const Stream& stream() const noexcept { return detail::cast<Stream>(channel_.stream()); }
+    const Stream& stream() const noexcept { return detail::cast<Stream>(impl_.stream()); }
 
     /**
      * \brief Returns whether the connection negotiated the use of SSL or not.
@@ -172,7 +165,7 @@ public:
      *
      * \returns Whether the connection is using SSL.
      */
-    bool uses_ssl() const noexcept { return channel_.stream().ssl_active(); }
+    bool uses_ssl() const noexcept { return impl_.ssl_active(); }
 
     /**
      * \brief Returns the current metadata mode that this connection is using.
@@ -182,7 +175,7 @@ public:
      *
      * \returns The matadata mode that will be used for queries and statement executions.
      */
-    metadata_mode meta_mode() const noexcept { return channel_.meta_mode(); }
+    metadata_mode meta_mode() const noexcept { return impl_.meta_mode(); }
 
     /**
      * \brief Sets the metadata mode.
@@ -197,7 +190,7 @@ public:
      *
      * \param v The new metadata mode.
      */
-    void set_meta_mode(metadata_mode v) noexcept { channel_.set_meta_mode(v); }
+    void set_meta_mode(metadata_mode v) noexcept { impl_.set_meta_mode(v); }
 
     /**
      * \brief Establishes a connection to a MySQL server.
@@ -225,7 +218,7 @@ public:
             detail::is_socket_stream<Stream>::value,
             "connect can only be used if Stream satisfies the SocketStream concept"
         );
-        detail::connect_interface<Stream>(channel_.get(), endpoint, params, ec, diag);
+        impl_.connect<typename Stream::lowest_layer_type::endpoint_type>(endpoint, params, ec, diag);
     }
 
     /// \copydoc connect
@@ -267,7 +260,7 @@ public:
             detail::is_socket_stream<Stream>::value,
             "async_connect can only be used if Stream satisfies the SocketStream concept"
         );
-        return async_connect(endpoint, params, this->shared_diag(), std::forward<CompletionToken>(token));
+        return async_connect(endpoint, params, impl_.shared_diag(), std::forward<CompletionToken>(token));
     }
 
     /// \copydoc async_connect
@@ -287,8 +280,7 @@ public:
             detail::is_socket_stream<Stream>::value,
             "async_connect can only be used if Stream satisfies the SocketStream concept"
         );
-        return detail::async_connect_interface<Stream>(
-            channel_.get(),
+        return impl_.async_connect<typename Stream::lowest_layer_type::endpoint_type>(
             endpoint,
             params,
             diag,
@@ -307,7 +299,7 @@ public:
      */
     void handshake(const handshake_params& params, error_code& ec, diagnostics& diag)
     {
-        detail::handshake_interface(channel_.get(), params, ec, diag);
+        impl_.run(impl_.make_params_handshake(params, diag), ec);
     }
 
     /// \copydoc handshake
@@ -330,29 +322,25 @@ public:
      */
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_handshake(
+    auto async_handshake(
         const handshake_params& params,
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
-    )
+    ) BOOST_MYSQL_RETURN_TYPE(detail::async_handshake_t<CompletionToken&&>)
     {
-        return async_handshake(params, shared_diag(), std::forward<CompletionToken>(token));
+        return async_handshake(params, impl_.shared_diag(), std::forward<CompletionToken>(token));
     }
 
     /// \copydoc async_handshake
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_handshake(
+    auto async_handshake(
         const handshake_params& params,
         diagnostics& diag,
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
-    )
+    ) BOOST_MYSQL_RETURN_TYPE(detail::async_handshake_t<CompletionToken&&>)
     {
-        return detail::async_handshake_interface(
-            channel_.get(),
-            params,
-            diag,
+        return impl_.async_run(
+            impl_.make_params_handshake(params, diag),
             std::forward<CompletionToken>(token)
         );
     }
@@ -375,7 +363,7 @@ public:
     template <BOOST_MYSQL_EXECUTION_REQUEST ExecutionRequest, BOOST_MYSQL_RESULTS_TYPE ResultsType>
     void execute(const ExecutionRequest& req, ResultsType& result, error_code& err, diagnostics& diag)
     {
-        detail::execute_interface(channel_.get(), req, result, err, diag);
+        impl_.execute(req, result, err, diag);
     }
 
     /// \copydoc execute
@@ -410,17 +398,16 @@ public:
         BOOST_MYSQL_RESULTS_TYPE ResultsType,
         BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
             CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_execute(
+    auto async_execute(
         ExecutionRequest&& req,
         ResultsType& result,
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
-    )
+    ) BOOST_MYSQL_RETURN_TYPE(detail::async_execute_t<ExecutionRequest&&, ResultsType, CompletionToken&&>)
     {
         return async_execute(
             std::forward<ExecutionRequest>(req),
             result,
-            shared_diag(),
+            impl_.shared_diag(),
             std::forward<CompletionToken>(token)
         );
     }
@@ -431,16 +418,14 @@ public:
         BOOST_MYSQL_RESULTS_TYPE ResultsType,
         BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
             CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_execute(
+    auto async_execute(
         ExecutionRequest&& req,
         ResultsType& result,
         diagnostics& diag,
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
-    )
+    ) BOOST_MYSQL_RETURN_TYPE(detail::async_execute_t<ExecutionRequest&&, ResultsType, CompletionToken&&>)
     {
-        return detail::async_execute_interface(
-            channel_.get(),
+        return impl_.async_execute(
             std::forward<ExecutionRequest>(req),
             result,
             diag,
@@ -482,7 +467,7 @@ public:
         diagnostics& diag
     )
     {
-        detail::start_execution_interface(channel_.get(), req, st, err, diag);
+        impl_.start_execution(req, st, err, diag);
     }
 
     /// \copydoc start_execution
@@ -519,17 +504,20 @@ public:
         BOOST_MYSQL_EXECUTION_STATE_TYPE ExecutionStateType,
         BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
             CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_start_execution(
+    auto async_start_execution(
         ExecutionRequest&& req,
         ExecutionStateType& st,
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
     )
+        BOOST_MYSQL_RETURN_TYPE(detail::async_start_execution_t<
+                                ExecutionRequest&&,
+                                ExecutionStateType,
+                                CompletionToken&&>)
     {
         return async_start_execution(
             std::forward<ExecutionRequest>(req),
             st,
-            shared_diag(),
+            impl_.shared_diag(),
             std::forward<CompletionToken>(token)
         );
     }
@@ -540,16 +528,18 @@ public:
         BOOST_MYSQL_EXECUTION_STATE_TYPE ExecutionStateType,
         BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
             CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_start_execution(
+    auto async_start_execution(
         ExecutionRequest&& req,
         ExecutionStateType& st,
         diagnostics& diag,
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
     )
+        BOOST_MYSQL_RETURN_TYPE(detail::async_start_execution_t<
+                                ExecutionRequest&&,
+                                ExecutionStateType,
+                                CompletionToken&&>)
     {
-        return detail::async_start_execution_interface(
-            channel_.get(),
+        return impl_.async_start_execution(
             std::forward<ExecutionRequest>(req),
             st,
             diag,
@@ -558,7 +548,7 @@ public:
     }
 
     /**
-     * \brief (Deprecated) Executes a SQL text query.
+     * \brief (Deprecated - will be removed in Boost 1.86) Executes a SQL text query.
      * \details
      * Sends `query_string` to the server for execution and reads the response into `result`.
      * query_string should be encoded using the connection's character set.
@@ -572,16 +562,18 @@ public:
      * vulnerable to SQL injection attacks</b>. If your query contains patameters unknown at
      * compile time, use prepared statements instead of this function.
      *
-     * \par Deprecation notice
-     * This function is only provided for backwards-compatibility. For new code, please
+     * \par Deprecation warning
+     * This function is deprecated and will be removed in Boost 1.86. Please
      * use \ref execute or \ref async_execute instead.
      */
+    BOOST_DEPRECATED("query is deprecated and will be removed in Boost 1.86. Use execute, instead")
     void query(string_view query_string, results& result, error_code& err, diagnostics& diag)
     {
         execute(query_string, result, err, diag);
     }
 
     /// \copydoc query
+    BOOST_DEPRECATED("query is deprecated and will be removed in Boost 1.86. Use execute, instead")
     void query(string_view query_string, results& result) { execute(query_string, result); }
 
     /**
@@ -597,21 +589,23 @@ public:
      */
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_query(
+    BOOST_DEPRECATED("async_query is deprecated and will be removed in Boost 1.86. Use async_execute, instead"
+    )
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code)) async_query(
         string_view query_string,
         results& result,
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
     )
     {
-        return async_query(query_string, result, shared_diag(), std::forward<CompletionToken>(token));
+        return async_query(query_string, result, impl_.shared_diag(), std::forward<CompletionToken>(token));
     }
 
     /// \copydoc async_query
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_query(
+    BOOST_DEPRECATED("async_query is deprecated and will be removed in Boost 1.86. Use async_execute, instead"
+    )
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code)) async_query(
         string_view query_string,
         results& result,
         diagnostics& diag,
@@ -622,7 +616,7 @@ public:
     }
 
     /**
-     * \brief (Deprecated) Starts a text query as a multi-function operation.
+     * \brief (Deprecated - will be removed in Boost 1.86) Starts a text query as a multi-function operation.
      * \details
      * Writes the query request and reads the initial server response and the column
      * metadata, but not the generated rows or subsequent resultsets, if any.
@@ -636,16 +630,22 @@ public:
      * \n
      * `query_string` should be encoded using the connection's character set.
      *
-     * \par Deprecation notice
-     * This function is only provided for backwards-compatibility. For new code, please
-     * use \ref start_execution or \ref async_start_execution instead.
+     * \par Deprecation warning
+     * This function is deprecated and will be removed in Boost 1.86. Please
+     * use \ref execute or \ref async_execute instead.
      */
+    BOOST_DEPRECATED(
+        "start_query is deprecated and will be removed in Boost 1.86. Use start_execution, instead"
+    )
     void start_query(string_view query_string, execution_state& st, error_code& err, diagnostics& diag)
     {
         start_execution(query_string, st, err, diag);
     }
 
     /// \copydoc start_query
+    BOOST_DEPRECATED(
+        "start_query is deprecated and will be removed in Boost 1.86. Use start_execution, instead"
+    )
     void start_query(string_view query_string, execution_state& st) { start_execution(query_string, st); }
 
     /**
@@ -661,21 +661,27 @@ public:
      */
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_start_query(
+    BOOST_DEPRECATED(
+        "async_start_query is deprecated and will be removed in Boost 1.86. Use async_start_execution, "
+        "instead"
+    )
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code)) async_start_query(
         string_view query_string,
         execution_state& st,
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
     )
     {
-        return async_start_query(query_string, st, shared_diag(), std::forward<CompletionToken>(token));
+        return async_start_query(query_string, st, impl_.shared_diag(), std::forward<CompletionToken>(token));
     }
 
     /// \copydoc async_start_query
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_start_query(
+    BOOST_DEPRECATED(
+        "async_start_query is deprecated and will be removed in Boost 1.86. Use async_start_execution, "
+        "instead"
+    )
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code)) async_start_query(
         string_view query_string,
         execution_state& st,
         diagnostics& diag,
@@ -694,7 +700,7 @@ public:
      */
     statement prepare_statement(string_view stmt, error_code& err, diagnostics& diag)
     {
-        return detail::prepare_statement_interface(channel_.get(), stmt, err, diag);
+        return impl_.run(detail::prepare_statement_algo_params{&diag, stmt}, err);
     }
 
     /// \copydoc prepare_statement
@@ -720,35 +726,31 @@ public:
      */
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code, ::boost::mysql::statement))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code, statement))
-    async_prepare_statement(
+    auto async_prepare_statement(
         string_view stmt,
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
-    )
+    ) BOOST_MYSQL_RETURN_TYPE(detail::async_prepare_statement_t<CompletionToken&&>)
     {
-        return async_prepare_statement(stmt, shared_diag(), std::forward<CompletionToken>(token));
+        return async_prepare_statement(stmt, impl_.shared_diag(), std::forward<CompletionToken>(token));
     }
 
     /// \copydoc async_prepare_statement
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code, ::boost::mysql::statement))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code, statement))
-    async_prepare_statement(
+    auto async_prepare_statement(
         string_view stmt,
         diagnostics& diag,
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
-    )
+    ) BOOST_MYSQL_RETURN_TYPE(detail::async_prepare_statement_t<CompletionToken&&>)
     {
-        return detail::async_prepare_statement_interface(
-            channel_.get(),
-            stmt,
-            diag,
+        return impl_.async_run(
+            detail::prepare_statement_algo_params{&diag, stmt},
             std::forward<CompletionToken>(token)
         );
     }
 
     /**
-     * \brief (Deprecated) Executes a prepared statement.
+     * \brief (Deprecated - will be removed in Boost 1.86) Executes a prepared statement.
      * \details
      * Executes a statement with the given parameters and reads the response into `result`.
      * \n
@@ -762,8 +764,8 @@ public:
      * Metadata in `result` will be populated according to `conn.meta_mode()`, where `conn`
      * is the connection that prepared this statement.
      *
-     * \par Deprecation notice
-     * This function is only provided for backwards-compatibility. For new code, please
+     * \par Deprecation warning
+     * This function is deprecated and will be removed in Boost 1.86. Please
      * use \ref execute or \ref async_execute instead.
      *
      * \par Preconditions
@@ -773,6 +775,8 @@ public:
         BOOST_MYSQL_WRITABLE_FIELD_TUPLE WritableFieldTuple,
         class EnableIf =
             typename std::enable_if<detail::is_writable_field_tuple<WritableFieldTuple>::value>::type>
+    BOOST_DEPRECATED("execute_statement is deprecated and will be removed in Boost 1.86. Use execute, instead"
+    )
     void execute_statement(
         const statement& stmt,
         const WritableFieldTuple& params,
@@ -789,6 +793,8 @@ public:
         BOOST_MYSQL_WRITABLE_FIELD_TUPLE WritableFieldTuple,
         class EnableIf =
             typename std::enable_if<detail::is_writable_field_tuple<WritableFieldTuple>::value>::type>
+    BOOST_DEPRECATED("execute_statement is deprecated and will be removed in Boost 1.86. Use execute, instead"
+    )
     void execute_statement(const statement& stmt, const WritableFieldTuple& params, results& result)
     {
         execute(stmt.bind(params), result);
@@ -811,8 +817,10 @@ public:
             CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type),
         class EnableIf =
             typename std::enable_if<detail::is_writable_field_tuple<WritableFieldTuple>::value>::type>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_execute_statement(
+    BOOST_DEPRECATED(
+        "async_execute_statement is deprecated and will be removed in Boost 1.86. Use async_execute, instead"
+    )
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code)) async_execute_statement(
         const statement& stmt,
         WritableFieldTuple&& params,
         results& result,
@@ -823,7 +831,7 @@ public:
             stmt,
             std::forward<WritableFieldTuple>(params),
             result,
-            shared_diag(),
+            impl_.shared_diag(),
             std::forward<CompletionToken>(token)
         );
     }
@@ -835,8 +843,10 @@ public:
             CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type),
         class EnableIf =
             typename std::enable_if<detail::is_writable_field_tuple<WritableFieldTuple>::value>::type>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_execute_statement(
+    BOOST_DEPRECATED(
+        "async_execute_statement is deprecated and will be removed in Boost 1.86. Use async_execute, instead"
+    )
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code)) async_execute_statement(
         const statement& stmt,
         WritableFieldTuple&& params,
         results& result,
@@ -853,7 +863,8 @@ public:
     }
 
     /**
-     * \brief (Deprecated) Starts a statement execution as a multi-function operation.
+     * \brief (Deprecated - will be removed in Boost 1.86) Starts a statement execution
+     *        as a multi-function operation.
      * \details
      * Writes the execute request and reads the initial server response and the column
      * metadata, but not the generated rows or subsequent resultsets, if any. After this operation completes,
@@ -867,9 +878,9 @@ public:
      * The statement actual parameters (`params`) are passed as a `std::tuple` of elements.
      * String parameters should be encoded using the connection's character set.
      *
-     * \par Deprecation notice
-     * This function is only provided for backwards-compatibility. For new code, please
-     * use \ref start_execution or \ref async_start_execution instead.
+     * \par Deprecation warning
+     * This function is deprecated and will be removed in Boost 1.86. Please
+     * use \ref execute or \ref async_execute instead.
      *
      * \par Preconditions
      *    `stmt.valid() == true`
@@ -878,6 +889,10 @@ public:
         BOOST_MYSQL_WRITABLE_FIELD_TUPLE WritableFieldTuple,
         class EnableIf =
             typename std::enable_if<detail::is_writable_field_tuple<WritableFieldTuple>::value>::type>
+    BOOST_DEPRECATED(
+        "start_statement_execution is deprecated and will be removed in Boost 1.86. Use start_execution, "
+        "instead"
+    )
     void start_statement_execution(
         const statement& stmt,
         const WritableFieldTuple& params,
@@ -894,6 +909,10 @@ public:
         BOOST_MYSQL_WRITABLE_FIELD_TUPLE WritableFieldTuple,
         class EnableIf =
             typename std::enable_if<detail::is_writable_field_tuple<WritableFieldTuple>::value>::type>
+    BOOST_DEPRECATED(
+        "start_statement_execution is deprecated and will be removed in Boost 1.86. Use start_execution, "
+        "instead"
+    )
     void start_statement_execution(
         const statement& stmt,
         const WritableFieldTuple& params,
@@ -921,8 +940,11 @@ public:
             CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type),
         class EnableIf =
             typename std::enable_if<detail::is_writable_field_tuple<WritableFieldTuple>::value>::type>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_start_statement_execution(
+    BOOST_DEPRECATED(
+        "async_start_statement_execution is deprecated and will be removed in Boost 1.86. Use "
+        "async_start_execution, instead"
+    )
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code)) async_start_statement_execution(
         const statement& stmt,
         WritableFieldTuple&& params,
         execution_state& st,
@@ -933,7 +955,7 @@ public:
             stmt,
             std::forward<WritableFieldTuple>(params),
             st,
-            shared_diag(),
+            impl_.shared_diag(),
             std::forward<CompletionToken>(token)
         );
     }
@@ -945,8 +967,11 @@ public:
             CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type),
         class EnableIf =
             typename std::enable_if<detail::is_writable_field_tuple<WritableFieldTuple>::value>::type>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_start_statement_execution(
+    BOOST_DEPRECATED(
+        "async_start_statement_execution is deprecated and will be removed in Boost 1.86. Use "
+        "async_start_execution, instead"
+    )
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code)) async_start_statement_execution(
         const statement& stmt,
         WritableFieldTuple&& params,
         execution_state& st,
@@ -963,7 +988,9 @@ public:
     }
 
     /**
-     * \brief (Deprecated) Starts a statement execution as a multi-function operation.
+     * \brief (Deprecated - will be removed in Boost 1.86) Starts a statement execution as a multi-function
+     *        operation.
+     *
      * \details
      * Writes the execute request and reads the initial server response and the column
      * metadata, but not the generated rows or any subsequent resultsets, if any. After this operation
@@ -976,14 +1003,18 @@ public:
      * The statement actual parameters are passed as an iterator range.
      * String parameters should be encoded using the connection's character set.
      *
-     * \par Deprecation notice
-     * This function is only provided for backwards-compatibility. For new code, please
-     * use \ref start_execution or \ref async_start_execution instead.
+     * \par Deprecation warning
+     * This function is deprecated and will be removed in Boost 1.86. Please
+     * use \ref execute or \ref async_execute instead.
      *
      * \par Preconditions
      *    `stmt.valid() == true`
      */
     template <BOOST_MYSQL_FIELD_VIEW_FORWARD_ITERATOR FieldViewFwdIterator>
+    BOOST_DEPRECATED(
+        "start_statement_execution is deprecated and will be removed in Boost 1.86. Use start_execution, "
+        "instead"
+    )
     void start_statement_execution(
         const statement& stmt,
         FieldViewFwdIterator params_first,
@@ -998,6 +1029,10 @@ public:
 
     /// \copydoc start_statement_execution(const statement&,FieldViewFwdIterator,FieldViewFwdIterator,execution_state&,error_code&,diagnostics&)
     template <BOOST_MYSQL_FIELD_VIEW_FORWARD_ITERATOR FieldViewFwdIterator>
+    BOOST_DEPRECATED(
+        "start_statement_execution is deprecated and will be removed in Boost 1.86. Use start_execution, "
+        "instead"
+    )
     void start_statement_execution(
         const statement& stmt,
         FieldViewFwdIterator params_first,
@@ -1022,8 +1057,11 @@ public:
         BOOST_MYSQL_FIELD_VIEW_FORWARD_ITERATOR FieldViewFwdIterator,
         BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
             CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_start_statement_execution(
+    BOOST_DEPRECATED(
+        "async_start_statement_execution is deprecated and will be removed in Boost 1.86. Use "
+        "async_start_execution, instead"
+    )
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code)) async_start_statement_execution(
         const statement& stmt,
         FieldViewFwdIterator params_first,
         FieldViewFwdIterator params_last,
@@ -1036,7 +1074,7 @@ public:
             params_first,
             params_last,
             st,
-            shared_diag(),
+            impl_.shared_diag(),
             std::forward<CompletionToken>(token)
         );
     }
@@ -1046,8 +1084,11 @@ public:
         BOOST_MYSQL_FIELD_VIEW_FORWARD_ITERATOR FieldViewFwdIterator,
         BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
             CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_start_statement_execution(
+    BOOST_DEPRECATED(
+        "async_start_statement_execution is deprecated and will be removed in Boost 1.86. Use "
+        "async_start_execution, instead"
+    )
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code)) async_start_statement_execution(
         const statement& stmt,
         FieldViewFwdIterator params_first,
         FieldViewFwdIterator params_last,
@@ -1068,13 +1109,17 @@ public:
      * \brief Closes a statement, deallocating it from the server.
      * \details
      * After this operation succeeds, `stmt` must not be used again for execution.
+     * \par Performance warning
+     * This function is currently affected by a peformance issue described
+     * in https://github.com/boostorg/mysql/issues/181. Consider using
+     * \ref reset_connection or \ref async_reset_connection instead.
      * \n
      * \par Preconditions
      *    `stmt.valid() == true`
      */
     void close_statement(const statement& stmt, error_code& err, diagnostics& diag)
     {
-        detail::close_statement_interface(channel_.get(), stmt, err, diag);
+        impl_.run(impl_.make_params_close_statement(stmt, diag), err);
     }
 
     /// \copydoc close_statement
@@ -1097,29 +1142,25 @@ public:
      */
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_close_statement(
+    auto async_close_statement(
         const statement& stmt,
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
-    )
+    ) BOOST_MYSQL_RETURN_TYPE(detail::async_close_statement_t<CompletionToken&&>)
     {
-        return async_close_statement(stmt, shared_diag(), std::forward<CompletionToken>(token));
+        return async_close_statement(stmt, impl_.shared_diag(), std::forward<CompletionToken>(token));
     }
 
     /// \copydoc async_close_statement
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_close_statement(
+    auto async_close_statement(
         const statement& stmt,
         diagnostics& diag,
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
-    )
+    ) BOOST_MYSQL_RETURN_TYPE(detail::async_close_statement_t<CompletionToken&&>)
     {
-        return detail::async_close_statement_interface(
-            channel_.get(),
-            stmt,
-            diag,
+        return impl_.async_run(
+            impl_.make_params_close_statement(stmt, diag),
             std::forward<CompletionToken>(token)
         );
     }
@@ -1132,8 +1173,8 @@ public:
      * `st.should_read_rows() == false`, returns an empty `rows_view`.
      * \n
      * The number of rows that will be read depends on the input buffer size. The bigger the buffer,
-     * the greater the batch size (up to a maximum). You can set the initial buffer size in `connection`'s
-     * constructor, using \ref buffer_params::initial_read_size. The buffer may be
+     * the greater the batch size (up to a maximum). You can set the initial buffer size in the
+     * constructor. The buffer may be
      * grown bigger by other read operations, if required.
      * \n
      * The returned view points into memory owned by `*this`. It will be valid until
@@ -1141,7 +1182,7 @@ public:
      */
     rows_view read_some_rows(execution_state& st, error_code& err, diagnostics& diag)
     {
-        return detail::read_some_rows_dynamic_interface(channel_.get(), st, err, diag);
+        return impl_.run(impl_.make_params_read_some_rows(st, diag), err);
     }
 
     /// \copydoc read_some_rows(execution_state&,error_code&,diagnostics&)
@@ -1163,29 +1204,25 @@ public:
      */
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code, ::boost::mysql::rows_view))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code, rows_view))
-    async_read_some_rows(
+    auto async_read_some_rows(
         execution_state& st,
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
-    )
+    ) BOOST_MYSQL_RETURN_TYPE(detail::async_read_some_rows_dynamic_t<CompletionToken&&>)
     {
-        return async_read_some_rows(st, shared_diag(), std::forward<CompletionToken>(token));
+        return async_read_some_rows(st, impl_.shared_diag(), std::forward<CompletionToken>(token));
     }
 
     /// \copydoc async_read_some_rows(execution_state&,CompletionToken&&)
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code, ::boost::mysql::rows_view))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code, rows_view))
-    async_read_some_rows(
+    auto async_read_some_rows(
         execution_state& st,
         diagnostics& diag,
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
-    )
+    ) BOOST_MYSQL_RETURN_TYPE(detail::async_read_some_rows_dynamic_t<CompletionToken&&>)
     {
-        return detail::async_read_some_rows_dynamic_interface(
-            channel_.get(),
-            st,
-            diag,
+        return impl_.async_run(
+            impl_.make_params_read_some_rows(st, diag),
             std::forward<CompletionToken>(token)
         );
     }
@@ -1227,7 +1264,7 @@ public:
         diagnostics& diag
     )
     {
-        return detail::read_some_rows_static_interface(channel_.get(), st, output, err, diag);
+        return impl_.run(impl_.make_params_read_some_rows(st, output, diag), err);
     }
 
     /**
@@ -1313,7 +1350,7 @@ public:
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
     )
     {
-        return async_read_some_rows(st, output, shared_diag(), std::forward<CompletionToken>(token));
+        return async_read_some_rows(st, output, impl_.shared_diag(), std::forward<CompletionToken>(token));
     }
 
     /**
@@ -1363,11 +1400,8 @@ public:
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
     )
     {
-        return detail::async_read_some_rows_static_interface(
-            channel_.get(),
-            st,
-            output,
-            diag,
+        return impl_.async_run(
+            impl_.make_params_read_some_rows(st, output, diag),
             std::forward<CompletionToken>(token)
         );
     }
@@ -1395,7 +1429,7 @@ public:
     template <BOOST_MYSQL_EXECUTION_STATE_TYPE ExecutionStateType>
     void read_resultset_head(ExecutionStateType& st, error_code& err, diagnostics& diag)
     {
-        return detail::read_resultset_head_interface(channel_.get(), st, err, diag);
+        return impl_.run(impl_.make_params_read_resultset_head(st, diag), err);
     }
 
     /// \copydoc read_resultset_head
@@ -1418,13 +1452,12 @@ public:
         BOOST_MYSQL_EXECUTION_STATE_TYPE ExecutionStateType,
         BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
             CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_read_resultset_head(
+    auto async_read_resultset_head(
         ExecutionStateType& st,
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
-    )
+    ) BOOST_MYSQL_RETURN_TYPE(detail::async_read_resultset_head_t<CompletionToken&&>)
     {
-        return async_read_resultset_head(st, shared_diag(), std::forward<CompletionToken>(token));
+        return async_read_resultset_head(st, impl_.shared_diag(), std::forward<CompletionToken>(token));
     }
 
     /// \copydoc async_read_resultset_head
@@ -1432,17 +1465,14 @@ public:
         BOOST_MYSQL_EXECUTION_STATE_TYPE ExecutionStateType,
         BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
             CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_read_resultset_head(
+    auto async_read_resultset_head(
         ExecutionStateType& st,
         diagnostics& diag,
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
-    )
+    ) BOOST_MYSQL_RETURN_TYPE(detail::async_read_resultset_head_t<CompletionToken&&>)
     {
-        return detail::async_read_resultset_head_interface(
-            channel_.get(),
-            st,
-            diag,
+        return impl_.async_run(
+            impl_.make_params_read_resultset_head(st, diag),
             std::forward<CompletionToken>(token)
         );
     }
@@ -1458,7 +1488,7 @@ public:
      * in a long-running query, the ping request won't be answered until the query is
      * finished.
      */
-    void ping(error_code& err, diagnostics& diag) { detail::ping_interface(channel_.get(), err, diag); }
+    void ping(error_code& err, diagnostics& diag) { impl_.run(impl_.make_params_ping(diag), err); }
 
     /// \copydoc ping
     void ping()
@@ -1478,19 +1508,21 @@ public:
      */
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_ping(CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    auto async_ping(CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+        BOOST_MYSQL_RETURN_TYPE(detail::async_ping_t<CompletionToken&&>)
     {
-        return async_ping(shared_diag(), std::forward<CompletionToken>(token));
+        return async_ping(impl_.shared_diag(), std::forward<CompletionToken>(token));
     }
 
     /// \copydoc async_ping
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_ping(diagnostics& diag, CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    auto async_ping(
+        diagnostics& diag,
+        CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
+    ) BOOST_MYSQL_RETURN_TYPE(detail::async_ping_t<CompletionToken&&>)
     {
-        return detail::async_ping_interface(channel_.get(), diag, std::forward<CompletionToken>(token));
+        return impl_.async_run(impl_.make_params_ping(diag), std::forward<CompletionToken>(token));
     }
 
     /**
@@ -1502,7 +1534,8 @@ public:
      *   \li Releases all table locks.
      *   \li Drops all temporary tables.
      *   \li Resets all session system variables to their default values (including the ones set by `SET
-     * NAMES`) and clears all user-defined variables. \li Closes all prepared statements.
+     *       NAMES`) and clears all user-defined variables.
+     *   \li Closes all prepared statements.
      * \n
      * A full reference on the affected session state can be found
      * <a href="https://dev.mysql.com/doc/c-api/8.0/en/mysql-reset-connection.html">here</a>.
@@ -1512,10 +1545,21 @@ public:
      * \n
      * The connection must be connected and authenticated before calling this function.
      * This function involves communication with the server, and thus may fail.
+     *
+     * \par Warning on character sets
+     * This function will restore the connection's character set and collation **to the server's default**,
+     * and not to the one specified during connection establishment. Some servers have `latin1` as their
+     * default character set, which is not usually what you want. Use a `SET NAMES` statement after using
+     * this function to be sure.
+     * \n
+     * You can find the character set that your server will use after reset by running:
+     * \code
+     * "SELECT @@global.character_set_client, @@global.character_set_results;"
+     * \endcode
      */
     void reset_connection(error_code& err, diagnostics& diag)
     {
-        detail::reset_connection_interface(channel_.get(), err, diag);
+        impl_.run(impl_.make_params_reset_connection(diag), err);
     }
 
     /// \copydoc reset_connection
@@ -1536,24 +1580,22 @@ public:
      */
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_reset_connection(CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    auto async_reset_connection(CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+        BOOST_MYSQL_RETURN_TYPE(detail::async_reset_connection_t<CompletionToken&&>)
     {
-        return async_reset_connection(shared_diag(), std::forward<CompletionToken>(token));
+        return async_reset_connection(impl_.shared_diag(), std::forward<CompletionToken>(token));
     }
 
     /// \copydoc async_reset_connection
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_reset_connection(
+    auto async_reset_connection(
         diagnostics& diag,
         CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
-    )
+    ) BOOST_MYSQL_RETURN_TYPE(detail::async_reset_connection_t<CompletionToken&&>)
     {
-        return detail::async_reset_connection_interface(
-            channel_.get(),
-            diag,
+        return impl_.async_run(
+            impl_.make_params_reset_connection(diag),
             std::forward<CompletionToken>(token)
         );
     }
@@ -1572,7 +1614,7 @@ public:
             detail::is_socket_stream<Stream>::value,
             "close can only be used if Stream satisfies the SocketStream concept"
         );
-        detail::close_connection_interface(channel_.get(), err, diag);
+        impl_.run(impl_.make_params_close(diag), err);
     }
 
     /// \copydoc close
@@ -1596,31 +1638,29 @@ public:
      */
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_close(CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    auto async_close(CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+        BOOST_MYSQL_RETURN_TYPE(detail::async_close_connection_t<CompletionToken&&>)
     {
         static_assert(
             detail::is_socket_stream<Stream>::value,
             "async_close can only be used if Stream satisfies the SocketStream concept"
         );
-        return async_close(shared_diag(), std::forward<CompletionToken>(token));
+        return async_close(impl_.shared_diag(), std::forward<CompletionToken>(token));
     }
 
     /// \copydoc async_close
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_close(diagnostics& diag, CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    auto async_close(
+        diagnostics& diag,
+        CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
+    ) BOOST_MYSQL_RETURN_TYPE(detail::async_close_connection_t<CompletionToken&&>)
     {
         static_assert(
             detail::is_socket_stream<Stream>::value,
             "async_close can only be used if Stream satisfies the SocketStream concept"
         );
-        return detail::async_close_connection_interface(
-            channel_.get(),
-            diag,
-            std::forward<CompletionToken>(token)
-        );
+        return impl_.async_run(impl_.make_params_close(diag), std::forward<CompletionToken>(token));
     }
 
     /**
@@ -1633,10 +1673,7 @@ public:
      * requirements, use \ref connection::close instead of this function,
      * as it also takes care of closing the underlying stream.
      */
-    void quit(error_code& err, diagnostics& diag)
-    {
-        detail::quit_connection_interface(channel_.get(), err, diag);
-    }
+    void quit(error_code& err, diagnostics& diag) { impl_.run(impl_.make_params_quit(diag), err); }
 
     /// \copydoc quit
     void quit()
@@ -1655,23 +1692,21 @@ public:
      */
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_quit(CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    auto async_quit(CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+        BOOST_MYSQL_RETURN_TYPE(detail::async_quit_connection_t<CompletionToken&&>)
     {
-        return async_quit(shared_diag(), std::forward<CompletionToken>(token));
+        return async_quit(impl_.shared_diag(), std::forward<CompletionToken>(token));
     }
 
     /// \copydoc async_quit
     template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void(::boost::mysql::error_code))
                   CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken, void(error_code))
-    async_quit(diagnostics& diag, CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    auto async_quit(
+        diagnostics& diag,
+        CompletionToken&& token BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type)
+    ) BOOST_MYSQL_RETURN_TYPE(detail::async_quit_connection_t<CompletionToken&&>)
     {
-        return detail::async_quit_connection_interface(
-            channel_.get(),
-            diag,
-            std::forward<CompletionToken>(token)
-        );
+        return impl_.async_run(impl_.make_params_quit(diag), std::forward<CompletionToken>(token));
     }
 
     /**
@@ -1688,12 +1723,6 @@ public:
         using other = connection<typename detail::rebind_executor<Stream, Executor1>::type>;
     };
 };
-
-/// The default TCP port for the MySQL protocol.
-constexpr unsigned short default_port = 3306;
-
-/// The default TCP port for the MySQL protocol, as a string. Useful for hostname resolution.
-constexpr const char* default_port_string = "3306";
 
 }  // namespace mysql
 }  // namespace boost

@@ -1,5 +1,5 @@
 /* Documentation snippet
-(C) 2017-2023 Niall Douglas <http://www.nedproductions.biz/> (7 commits), Andrzej Krzemienski <akrzemi1@gmail.com> (4 commits) and Krzemienski <sg0897542@global.ad.sabre.com> (2 commits)
+(C) 2017-2024 Niall Douglas <http://www.nedproductions.biz/> (7 commits), Andrzej Krzemienski <akrzemi1@gmail.com> (4 commits) and Krzemienski <sg0897542@global.ad.sabre.com> (2 commits)
 File Created: Mar 2017
 
 

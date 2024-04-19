@@ -8,7 +8,12 @@
 import testing ;
 
 # Sun does not automatically detect type-of emulation mode (force it).
-project : requirements <toolset>sun:<define>BOOST_TYPEOF_EMULATION ;
+project :
+  requirements
+    <toolset>sun:<define>BOOST_TYPEOF_EMULATION
+    <toolset>gcc:<cxxflags>-Wno-unused-local-typedefs
+    <toolset>clang:<cxxflags>-Wno-unused-local-typedefs
+    ;
 
 run add_cxx11_lambda.cpp ;
 run add_global_functor.cpp ;
@@ -16,15 +21,15 @@ run add_local_functor.cpp ;
 run add_phoenix.cpp ;
 
 run const_block.cpp ;
-compile-fail const_block_error.cpp : <variant>debug : ;
+compile-fail const_block_error.cpp : <variant>debug ;
 run const_block_error.cpp : <variant>release : ;
-compile-fail const_block_error_cxx11_lambda.cpp ;
+compile-fail const_block_error_cxx11_lambda.cpp : <variant>debug ;
 
 run expensive_copy_cxx11_lambda.cpp ;
 run expensive_copy_local_function.cpp ;
 
 run gcc_access.cpp ;
-run gcc_lambda.cpp ;
+run gcc_lambda.cpp : : : <build>no <toolset>gcc:<build>yes ;
 run gcc_cxx11_lambda.cpp ;
 run gcc_square.cpp ;
 run gcc_store.cpp ;

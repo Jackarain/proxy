@@ -14,7 +14,7 @@
 
 
 #include <iostream>
-#include <boost/array.hpp>
+#include <array>
 
 #include <gmpxx.h>
 
@@ -25,7 +25,7 @@ using namespace boost::numeric::odeint;
 
 //[ gmpxx_lorenz
 typedef mpf_class value_type;
-typedef boost::array< value_type , 3 > state_type;
+typedef std::array< value_type , 3 > state_type;
 
 struct lorenz
 {

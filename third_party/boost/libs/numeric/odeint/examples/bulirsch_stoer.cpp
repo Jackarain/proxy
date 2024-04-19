@@ -14,7 +14,7 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 
-#include <boost/array.hpp>
+#include <array>
 #include <boost/ref.hpp>
 
 #include <boost/numeric/odeint/config.hpp>
@@ -26,7 +26,7 @@
 using namespace std;
 using namespace boost::numeric::odeint;
 
-typedef boost::array< double , 1 > state_type;
+typedef std::array< double , 1 > state_type;
 
 /*
  * x' = ( - x*sin t  + 2 tan x ) y

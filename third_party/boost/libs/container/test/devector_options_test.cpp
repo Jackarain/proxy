@@ -56,7 +56,7 @@ void test_stored_size_type()
    //Test size reduction
    {
       typedef devector<unsigned char, void, options_t> devector_t;
-      BOOST_STATIC_ASSERT( sizeof(Unsigned) >= sizeof(std::size_t) ||
+      BOOST_CONTAINER_STATIC_ASSERT( sizeof(Unsigned) >= sizeof(std::size_t) ||
                            sizeof(devector_t) < sizeof(devector<unsigned char>) );
    }
    

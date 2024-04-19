@@ -27,7 +27,7 @@ examples and tests cmake is supported, for example
 
 ```cpp
 # Linux
-$ BOOST_ROOT=/opt/boost_1_81_0 cmake --preset g++-11
+$ BOOST_ROOT=/opt/boost_1_84_0 cmake --preset g++-11
 
 # Windows 
 $ cmake -G "Visual Studio 17 2022" -A x64 -B bin64 -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
@@ -676,7 +676,41 @@ https://lists.boost.org/Archives/boost/2023/01/253944.php.
 
 ## Changelog
 
-### develop
+### Boost 1.85
+
+* ([Issue 170](https://github.com/boostorg/redis/issues/170))
+  Under load and on low-latency networks it is possible to start
+  receiving responses before the write operation completed and while
+  the request is still marked as staged and not written. This messes
+  up with the heuristics that classifies responses as unsolicied or
+  not.
+
+* ([Issue 168](https://github.com/boostorg/redis/issues/168)).
+  Provides a way of passing a custom SSL context to the connection.
+  The design here differs from that of Boost.Beast and Boost.MySql
+  since in Boost.Redis the connection owns the context instead of only
+  storing a reference to a user provided one. This is ok so because
+  apps need only one connection for their entire application, which
+  makes the overhead of one ssl-context per connection negligible.
+
+* ([Issue 181](https://github.com/boostorg/redis/issues/181)).
+  See a detailed description of this bug in
+  [this](https://github.com/boostorg/redis/issues/181#issuecomment-1913346983)
+  comment.
+
+* ([Issue 182](https://github.com/boostorg/redis/issues/182)).
+  Sets `"default"` as the default value of `config::username`. This
+  makes it simpler to use the `requirepass` configuration in Redis.
+
+* ([Issue 189](https://github.com/boostorg/redis/issues/189)).
+  Fixes narrowing convertion by using `std::size_t` instead of
+  `std::uint64_t` for the sizes of bulks and aggregates. The code
+  relies now on `std::from_chars` returning an error if a value
+  greater than 32 is received on platforms on which the size
+  of`std::size_t` is 32.
+
+
+### Boost 1.84 (First release in Boost)
 
 * Deprecates the `async_receive` overload that takes a response. Users
   should now first call `set_receive_response` to avoid constantly and

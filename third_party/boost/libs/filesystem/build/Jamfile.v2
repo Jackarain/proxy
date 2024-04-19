@@ -1,7 +1,7 @@
 # Boost Filesystem Library Build Jamfile
 
 # (C) Copyright Beman Dawes 2002-2006
-# (C) Copyright Andrey Semashev 2020, 2021
+# (C) Copyright Andrey Semashev 2020-2024
 # Distributed under the Boost Software License, Version 1.0.
 # See www.boost.org/LICENSE_1_0.txt
 
@@ -9,6 +9,7 @@
 
 import project ;
 import configure ;
+import config : requires ;
 
 lib bcrypt ;
 lib advapi32 ;
@@ -122,6 +123,19 @@ rule check-linkflag-no-undefined ( properties * )
     return $(result) ;
 }
 
+local cxx_requirements = [ requires
+    cxx11_rvalue_references
+    cxx11_scoped_enums
+    cxx11_noexcept
+    cxx11_nullptr
+    cxx11_defaulted_functions
+    cxx11_defaulted_moves
+    cxx11_deleted_functions
+    cxx11_function_template_default_args
+    cxx11_final
+    cxx11_override
+] ;
+
 project boost/filesystem
     : requirements
       <host-os>hpux,<toolset>gcc:<define>_INCLUDE_STDC__SOURCE_199901
@@ -136,6 +150,7 @@ project boost/filesystem
       [ check-target-builds ../config//has_fdopendir_nofollow "has fdopendir(O_NOFOLLOW)" : <define>BOOST_FILESYSTEM_HAS_FDOPENDIR_NOFOLLOW ]
       [ check-target-builds ../config//has_dirent_d_type "has dirent::d_type" : <define>BOOST_FILESYSTEM_HAS_DIRENT_D_TYPE ]
       [ check-target-builds ../config//has_posix_at_apis "has POSIX *at APIs" : <define>BOOST_FILESYSTEM_HAS_POSIX_AT_APIS ]
+      [ check-target-builds ../config//has_fallocate "has fallocate" : <define>BOOST_FILESYSTEM_HAS_FALLOCATE ]
       <conditional>@check-statx
       <conditional>@select-windows-crypto-api
       <conditional>@check-cxx20-atomic-ref
@@ -187,14 +202,17 @@ rule select-platform-specific-sources ( properties * )
 }
 
 lib boost_filesystem
-    : $(SOURCES).cpp
-    : <define>BOOST_FILESYSTEM_SOURCE
+    : ## sources ##
+      $(SOURCES).cpp
+    : ## requirements ##
+      <define>BOOST_FILESYSTEM_SOURCE
       <conditional>@select-platform-specific-sources
       <include>../src
       <link>shared:<define>BOOST_FILESYSTEM_DYN_LINK=1
       <link>static:<define>BOOST_FILESYSTEM_STATIC_LINK=1
-    :
-    :
+      $(cxx_requirements)
+    : usage-requirements
+      $(cxx_requirements)
     ;
 
 boost-install boost_filesystem ;

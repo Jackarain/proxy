@@ -10,7 +10,7 @@
 # /* See http://www.boost.org for most recent version. */
 #
 # include <boost/preprocessor/slot.hpp>
-# include <libs/preprocessor/test/test.h>
+# include "test.h"
 # include <boost/preprocessor/slot/counter.hpp>
 
 # define X() 4

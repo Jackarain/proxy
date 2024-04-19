@@ -9,7 +9,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //[doc_custom_deque
 #include <boost/container/deque.hpp>
-#include <boost/static_assert.hpp>
 
 //Make sure assertions are active
 #ifdef NDEBUG

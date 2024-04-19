@@ -115,8 +115,9 @@ re_encode_unsafe(
         detail::hexdigs[opt.lower_case];
     auto const encode = [end, hex](
         char*& dest,
-        unsigned char c) noexcept
+        char c0) noexcept
     {
+        auto c = static_cast<unsigned char>(c0);
         ignore_unused(end);
         *dest++ = '%';
         BOOST_ASSERT(dest != end);

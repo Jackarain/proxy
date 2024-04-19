@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -38,6 +38,7 @@ constexpr std::uint16_t num = 32768;              // Field is num (for clients)
 namespace status_flags {
 
 constexpr std::uint32_t more_results = 8;
+constexpr std::uint32_t no_backslash_escapes = 512;
 constexpr std::uint32_t out_params = 4096;
 
 }  // namespace status_flags

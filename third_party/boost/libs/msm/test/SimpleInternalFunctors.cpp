@@ -8,14 +8,12 @@
 // file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#include <iostream>
 // back-end
 #include <boost/msm/back/state_machine.hpp>
 //front-end
 #include <boost/msm/front/state_machine_def.hpp>
 #include <boost/msm/front/functor_row.hpp>
 #include <boost/msm/front/euml/common.hpp>
-
 #ifndef BOOST_MSM_NONSTANDALONE_TEST
 #define BOOST_TEST_MODULE MyTest
 #endif
@@ -258,7 +256,7 @@ namespace
 //    static char const* const state_names[] = { "Stopped", "Open", "Empty", "Playing", "Paused" };
 
 
-    BOOST_AUTO_TEST_CASE( my_test )
+    BOOST_AUTO_TEST_CASE( simple_internal_functors_test )
     {     
         player p;
 

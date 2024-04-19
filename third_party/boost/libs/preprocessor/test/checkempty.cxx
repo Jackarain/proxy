@@ -9,7 +9,7 @@
 #
 # /* See http://www.boost.org for most recent version. */
 #
-# include <libs/preprocessor/test/test.h>
+# include "test.h"
 # include <boost/preprocessor/facilities/check_empty.hpp>
 
 # if BOOST_PP_VARIADIC_HAS_OPT()

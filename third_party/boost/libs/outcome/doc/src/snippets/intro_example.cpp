@@ -1,5 +1,5 @@
 /* Example of Outcome
-(C) 2017-2023 Niall Douglas <http://www.nedproductions.biz/> (4 commits), Andrzej Krzemienski <akrzemi1@gmail.com> (3 commits), akrzemi1 <akrzemi1@gmail.com> (1 commit) and Andrzej Krzemieński <akrzemi1@gmail.com> (1 commit)
+(C) 2017-2024 Niall Douglas <http://www.nedproductions.biz/> (4 commits), Andrzej Krzemienski <akrzemi1@gmail.com> (3 commits), akrzemi1 <akrzemi1@gmail.com> (1 commit) and Andrzej Krzemieński <akrzemi1@gmail.com> (1 commit)
 
 
 Boost Software License - Version 1.0 - August 17th, 2003

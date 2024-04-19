@@ -29,7 +29,6 @@ using boost::redis::response;
 using boost::redis::generic_response;
 using boost::redis::ignore;
 using boost::redis::ignore_t;
-using boost::redis::config;
 using boost::redis::logger;
 using boost::redis::connection;
 using namespace std::chrono_literals;
@@ -39,8 +38,8 @@ auto implicit_cancel_of_req_written() -> net::awaitable<void>
    auto ex = co_await net::this_coro::executor;
    auto conn = std::make_shared<connection>(ex);
 
-   config cfg;
-   cfg.health_check_interval = std::chrono::seconds{0};
+   auto cfg = make_test_config();
+   cfg.health_check_interval = std::chrono::seconds::zero();
    run(conn, cfg);
 
    // See NOTE1.
@@ -106,7 +105,7 @@ BOOST_AUTO_TEST_CASE(test_cancel_of_req_written_on_run_canceled)
 
    conn->async_exec(req0, ignore, c0);
 
-   config cfg;
+   auto cfg = make_test_config();
    cfg.health_check_interval = std::chrono::seconds{5};
    run(conn);
 

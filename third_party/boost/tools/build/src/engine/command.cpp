@@ -80,7 +80,7 @@ CMD * cmd_new( RULE * rule, LIST * targets, LIST * sources, LIST * shell )
     string_new( cmd->buf );
 
     frame_init( frame );
-    frame->module = rule->module;
+    frame->module = b2::ensure_valid(rule->module);
     lol_init( frame->args );
     lol_add( frame->args, list_copy( targets ) );
     lol_add( frame->args, list_copy( sources ) );

@@ -275,7 +275,7 @@ if the sizes of the state and the internal variable differ and only resizes if
 they are different.
 
 [note You only have to worry about memory allocation when using dynamically
-sized vector types. If your state type is heap allocated, like `boost::array`,
+sized vector types. If your state type is heap allocated, like `std::array`,
 no memory allocation is required whatsoever.]
 
 By default the resizing parameter is `initially_resizer`, meaning that the
@@ -290,7 +290,7 @@ everything themselves. The third class of resizer is the `never_resizer` which
 means that the internal variables are never adjusted automatically and always
 have to be adjusted by hand       .
 
-There is a second mechanism which influences the resizing and which controls if a state type is at least resizeable - a meta-function `is_resizeable`. This meta-function returns a static Boolean value if any type is resizable. For example it will return `true` for `std::vector< T >` but `false` for `boost::array< T >`. By default and for unknown types `is_resizeable` returns `false`, so if you have your own type you need to specialize this meta-function. For more details on the resizing mechanism see the section __adapt_state_types.
+There is a second mechanism which influences the resizing and which controls if a state type is at least resizeable - a meta-function `is_resizeable`. This meta-function returns a static Boolean value if any type is resizable. For example it will return `true` for `std::vector< T >` but `false` for `std::array< T >`. By default and for unknown types `is_resizeable` returns `false`, so if you have your own type you need to specialize this meta-function. For more details on the resizing mechanism see the section __adapt_state_types.
 
 
 
@@ -398,10 +398,10 @@ like - presumably arbitrary precision types. One could also instantiate
 the coefficients directly
 
 ``
-const boost::array< double , 1 > heun_a1 = {{ 1.0 / 3.0 }};
-const boost::array< double , 2 > heun_a2 = {{ 0.0 , 2.0 / 3.0 }};
-const boost::array< double , 3 > heun_b = {{ 1.0 / 4.0 , 0.0 , 3.0 / 4.0 }};
-const boost::array< double , 3 > heun_c = {{ 0.0 , 1.0 / 3.0 , 2.0 / 3.0 }};
+const std::array< double , 1 > heun_a1 = {{ 1.0 / 3.0 }};
+const std::array< double , 2 > heun_a2 = {{ 0.0 , 2.0 / 3.0 }};
+const std::array< double , 3 > heun_b = {{ 1.0 / 4.0 , 0.0 , 3.0 / 4.0 }};
+const std::array< double , 3 > heun_c = {{ 0.0 , 1.0 / 3.0 , 2.0 / 3.0 }};
 ``
 
 But then you are nailed down to use doubles.

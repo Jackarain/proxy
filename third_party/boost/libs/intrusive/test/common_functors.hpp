@@ -30,7 +30,7 @@ class delete_disposer
       void operator()(Pointer p)
    {
       typedef typename boost::intrusive::iterator_traits<Pointer>::value_type value_type;
-      BOOST_STATIC_ASSERT(( detail::is_same<T, value_type>::value ));
+      BOOST_INTRUSIVE_STATIC_ASSERT(( detail::is_same<T, value_type>::value ));
       delete boost::movelib::to_raw_pointer(p);
    }
 };

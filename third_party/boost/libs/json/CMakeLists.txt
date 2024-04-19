@@ -75,8 +75,10 @@ function(boost_json_setup_properties target)
             Boost::assert
             Boost::config
             Boost::container
+            Boost::container_hash
             Boost::core
             Boost::describe
+            Boost::endian
             Boost::mp11
             Boost::system
             Boost::throw_exception

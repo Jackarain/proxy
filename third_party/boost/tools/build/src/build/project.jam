@@ -244,10 +244,20 @@ rule add-project-search ( root : search-paths + )
 }
 
 
-local rule search ( name )
+rule search ( name )
 {
     if [ path.is-rooted $(name) ]
     {
+        # Check for a regular B2 project at an exactly matched registered
+        # search path location.
+        for local dir in "$(.search-path.$(name))"
+        {
+            local jamfile = [ path.glob $(dir) : $(JAMROOT) $(JAMFILE) ] ;
+            if $(jamfile)
+            {
+                return $(dir) ;
+            }
+        }
         # Check for a regular B2 project relative to the search path and
         # project subdir.
         for local dir in "$(.search-path./)"
@@ -261,14 +271,25 @@ local rule search ( name )
         }
         # Do searching for various dir names and jamfiles based on the built
         # basename <a>_<b>_<c>[.jam].
-        local base = [ path.basename $(name) ] ;
         local root = [ path.parent $(name) ] ;
+        local base = [ path.basename $(name) ] ;
+        local sub = $(base) ;
         while $(base)
         {
             # Check for a regular B2 project in the search path and subdir base.
             for local dir in $(.search-path.$(root))
             {
                 dir = [ path.join $(dir) $(base) ] ;
+                local jamfile = [ path.glob $(dir) : $(JAMROOT) $(JAMFILE) ] ;
+                if $(jamfile)
+                {
+                    return $(dir) ;
+                }
+            }
+            # Check for a regular B2 project in the search path and subdir subpath.
+            for local dir in $(.search-path.$(root))
+            {
+                dir = [ path.join $(dir) $(sub) ] ;
                 local jamfile = [ path.glob $(dir) : $(JAMROOT) $(JAMFILE) ] ;
                 if $(jamfile)
                 {
@@ -286,12 +307,14 @@ local rule search ( name )
             }
             if [ path.has-parent $(root) ]
             {
+                sub = [ path.join [ path.basename $(root) ] $(sub) ] ;
                 base = [ path.basename $(root) ] $(base) ;
                 base = $(base:L:J=_) ;
                 root = [ path.parent $(root) ] ;
             }
             else
             {
+                sub = ;
                 base = ;
                 root = ;
             }
@@ -474,7 +497,7 @@ local rule load-jamfile ( dir : jamfile-module : synthesize ? )
     {
         import errors ;
         errors.error "Multiple Jamfiles found at '$(dir)'" :
-            "Filenames are: " $(jamfile-to-load:D=) ;
+            "Filenames are:" $(jamfile-to-load:D=) ;
     }
 
     if ! $(jamfile-to-load) && $(synthesize)
@@ -1006,7 +1029,7 @@ class project-attributes
         print.section $(id:E=(none)) ;
         print.list-start ;
         print.list-item "Parent project:" $(self.parent:E=(none)) ;
-        print.list-item "Requirements:" [ $(self.requirements).raw ] ;
+        print.list-item "Requirements:" [ $(self.requirements).str ] ;
         print.list-item "Default build:" $(self.default-build) ;
         print.list-item "Source location:" $(self.source-location) ;
         print.list-item "Projects to build:" [ sequence.insertion-sort
@@ -1548,8 +1571,49 @@ module project-rules
     # Defines search paths for resolving global, i.e. rooted, project references.
     rule project-search ( root : search-paths + )
     {
-        import path ;
         import project ;
         project.add-project-search $(root) : $(search-paths) ;
+    }
+
+    # Adds the project, or subdirectory of the project, location to the search
+    # of importing modules.
+    rule import-search ( reference )
+    {
+        import modules ;
+        import path ;
+        import project ;
+        local dir ;
+        if ! $(dir)
+        {
+            local project-dir = [ project.search $(reference) ] ;
+            if $(project-dir)
+            {
+                # Resolved it as a project reference.
+                dir = [ path.native $(project-dir) ] ;
+            }
+        }
+        if ! $(dir)
+        {
+            local os-dir = [ path.root [ path.make $(reference) ] [ path.pwd ] ] ;
+            if ! [ CHECK_IF_FILE [ path.native $(os-dir) ] ]
+            {
+                # It's not a file, i.e. it's a directory.
+                dir = [ path.native $(os-dir) ] ;
+            }
+        }
+        if $(dir)
+        {
+            local b2-path = [ modules.peek : BOOST_BUILD_PATH ] ;
+            if ! $(dir) in $(b2-path)
+            {
+                modules.poke : BOOST_BUILD_PATH : $(dir) $(b2-path) ;
+            }
+        }
+        else
+        {
+            import errors ;
+            errors.error Unable find project reference '$(reference)'. ;
+            return ;
+        }
     }
 }

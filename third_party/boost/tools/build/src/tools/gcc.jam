@@ -385,8 +385,6 @@ local rule compile-link-flags ( * )
         }
     }
 
-    # -mthreads is obsolete at least since mingw-w64 fork ~2011 and is not presented in clang
-    threading-flags <target-os>windows/<toolset>gcc : -mthreads ;
     threading-flags <target-os>windows/<threadapi>pthread : -pthread ;
     threading-flags <target-os>cygwin/<threadapi>pthread : -pthread ;
     threading-flags <target-os>solaris  : -pthreads : rt ;
@@ -1035,12 +1033,12 @@ rule link.dll ( targets * : sources * : properties * )
 
 actions link bind LIBRARIES
 {
-    "$(CONFIG_COMMAND)" @($(<[1]:T).rsp:O=FC:<=@":>=":E=-L"$(LINKPATH)" -Wl,$(RPATH_OPTION:E=-R)$(SPACE)-Wl,$(RPATH) -Wl,-rpath-link$(SPACE)-Wl,"$(RPATH_LINK)" -o "$(<)" $(START-GROUP) "$(>:T)" "$(LIBRARIES)" $(FINDLIBS-ST-PFX) -l$(FINDLIBS-ST) $(FINDLIBS-SA-PFX) -l$(FINDLIBS-SA) $(END-GROUP) $(OPTIONS) $(USER_OPTIONS))
+    "$(CONFIG_COMMAND)" @($(<[1]:T).rsp:O=FC:<=@":>=":E=-L"$(LINKPATH)" -Wl,$(RPATH_OPTION)$(SPACE)-Wl,$(RPATH) -Wl,-rpath-link$(SPACE)-Wl,"$(RPATH_LINK)" -o "$(<:T)" $(START-GROUP) "$(>:T)" "$(LIBRARIES)" $(FINDLIBS-ST-PFX) -l$(FINDLIBS-ST) $(FINDLIBS-SA-PFX) -l$(FINDLIBS-SA) $(END-GROUP) $(OPTIONS) $(USER_OPTIONS))
 }
 
 actions link.dll bind LIBRARIES
 {
-    "$(CONFIG_COMMAND)" @($(<[1]:T).rsp:O=FC:<=@":>=":E=-L"$(LINKPATH)" -Wl,$(RPATH_OPTION:E=-R)$(SPACE)-Wl,$(RPATH) -Wl,$(IMPLIB_OPTION:E=--out-implib),"$(<[2])" -o "$(<[1])" $(HAVE_SONAME)-Wl,$(SONAME_OPTION)$(SPACE)-Wl,"$(SONAME_PREFIX:E=)$(<[1]:D=)" $(SHARED_OPTION:E=-shared) $(START-GROUP) "$(>:T)" "$(LIBRARIES)" $(FINDLIBS-ST-PFX) -l$(FINDLIBS-ST) $(FINDLIBS-SA-PFX) -l$(FINDLIBS-SA) $(END-GROUP) $(OPTIONS) $(USER_OPTIONS))
+    "$(CONFIG_COMMAND)" @($(<[1]:T).rsp:O=FC:<=@":>=":E=-L"$(LINKPATH)" -Wl,$(RPATH_OPTION)$(SPACE)-Wl,$(RPATH) -Wl,$(IMPLIB_OPTION:E=--out-implib),"$(<[2]:T)" -o "$(<[1]:T)" $(HAVE_SONAME)-Wl,$(SONAME_OPTION)$(SPACE)-Wl,"$(SONAME_PREFIX:E=)$(<[1]:D=)" $(SHARED_OPTION:E=-shared) $(START-GROUP) "$(>:T)" "$(LIBRARIES)" $(FINDLIBS-ST-PFX) -l$(FINDLIBS-ST) $(FINDLIBS-SA-PFX) -l$(FINDLIBS-SA) $(END-GROUP) $(OPTIONS) $(USER_OPTIONS))
 }
 
 ###
@@ -1093,7 +1091,7 @@ rule archive ( targets * : sources * : properties * )
 #
 actions piecemeal archive
 {
-    "$(.AR)" $(AROPTIONS) $(.ARFLAGS) "$(<)" @($(<[-1]:T).rsp:O=FC:<=@":>=":E="$(>)")
+    "$(.AR)" $(AROPTIONS) $(.ARFLAGS) "$(<)" @($(<[-1]:T).rsp:O=FC:<=@":>=":E="$(>:T)")
 }
 
 ###

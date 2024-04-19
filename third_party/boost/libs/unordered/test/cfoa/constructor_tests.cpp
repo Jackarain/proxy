@@ -712,9 +712,9 @@ namespace {
 
       BOOST_TEST_EQ(raii::default_constructor, 0u);
       BOOST_TEST_EQ(
-        raii::copy_constructor, value_type_cardinality * init_list.size());
+        raii::copy_constructor, value_type_cardinality * init_list.size() / 2u);
       BOOST_TEST_EQ(
-        raii::move_constructor, value_type_cardinality * 11u);
+        raii::move_constructor, 0u);
     }
     check_raii_counts();
 
@@ -730,9 +730,9 @@ namespace {
 
       BOOST_TEST_EQ(raii::default_constructor, 0u);
       BOOST_TEST_EQ(
-        raii::copy_constructor, value_type_cardinality * init_list.size());
+        raii::copy_constructor, value_type_cardinality * init_list.size() / 2u);
       BOOST_TEST_EQ(
-        raii::move_constructor, value_type_cardinality * 11u);
+        raii::move_constructor, 0u);
     }
     check_raii_counts();
 
@@ -748,9 +748,9 @@ namespace {
 
       BOOST_TEST_EQ(raii::default_constructor, 0u);
       BOOST_TEST_EQ(
-        raii::copy_constructor, value_type_cardinality * init_list.size());
+        raii::copy_constructor, value_type_cardinality * init_list.size() / 2u);
       BOOST_TEST_EQ(
-        raii::move_constructor, value_type_cardinality * 11u);
+        raii::move_constructor, 0u);
     }
     check_raii_counts();
 
@@ -766,9 +766,9 @@ namespace {
 
       BOOST_TEST_EQ(raii::default_constructor, 0u);
       BOOST_TEST_EQ(
-        raii::copy_constructor, value_type_cardinality * init_list.size());
+        raii::copy_constructor, value_type_cardinality * init_list.size() / 2u);
       BOOST_TEST_EQ(
-        raii::move_constructor, value_type_cardinality * 11u);
+        raii::move_constructor, 0u);
     }
     check_raii_counts();
   }
@@ -867,6 +867,9 @@ namespace {
   template <class X, class GF>
   void flat_constructor(X*, GF gen_factory, test::random_generator rg)
   {
+    using value_type = typename X::value_type;
+    static constexpr auto value_type_cardinality =
+      value_cardinality<value_type>::value;
     using allocator_type = typename X::allocator_type;
 
     auto gen = gen_factory.template get<X>();
@@ -886,8 +889,8 @@ namespace {
       auto const old_cc = +raii::copy_constructor;
 
       BOOST_TEST_EQ(old_dc, 0u);
-      BOOST_TEST_GT(old_mc, 0u);
-      BOOST_TEST_GT(old_cc, 0u);
+      BOOST_TEST_EQ(old_mc, 0u);
+      BOOST_TEST_EQ(old_cc, value_type_cardinality * flat.size());
 
       X x(std::move(flat));
 
@@ -931,8 +934,8 @@ namespace {
       auto const old_cc = +raii::copy_constructor;
 
       BOOST_TEST_EQ(old_dc, 0u);
-      BOOST_TEST_GT(old_mc, 0u);
-      BOOST_TEST_GT(old_cc, 0u);
+      BOOST_TEST_EQ(old_mc, 0u);
+      BOOST_TEST_EQ(old_cc, 2u * value_type_cardinality * x.size());
 
       flat_container<X> flat(std::move(x));
 

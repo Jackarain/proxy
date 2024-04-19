@@ -30,8 +30,6 @@ int main()
         BOOST_TEST_EQ( r.error(), ec );
     }
 
-#if defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
-
     {
         auto ec = make_error_code( std::errc::invalid_argument );
 
@@ -42,8 +40,6 @@ int main()
 
         BOOST_TEST_EQ( r.error(), ec );
     }
-
-#endif
 
     return boost::report_errors();
 }

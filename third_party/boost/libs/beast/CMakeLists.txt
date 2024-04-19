@@ -83,11 +83,11 @@ endfunction()
 #
 #-------------------------------------------------------------------------------
 
-project (Beast VERSION 351)
+project (Beast VERSION 353)
 
 set_property (GLOBAL PROPERTY USE_FOLDERS ON)
 option (Beast_BUILD_EXAMPLES "Build examples" ON)
-option (Beast_BUILD_TESTS "Build tests" ON)
+option (Beast_BUILD_TESTS "Build tests" ${BUILD_TESTING})
 option (Beast_ENABLE_HANDLER_TRACKING "Define BOOST_ASIO_ENABLE_HANDLER_TRACKING when building libraries" OFF)
 option (Boost_USE_STATIC_LIBS "Use Static Boost libraries" ON)
 

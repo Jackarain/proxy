@@ -39,7 +39,7 @@ exe a2 : a.cpp [ lib helper : helper.cpp ] ;
 """)
 
 t.run_build_system()
-t.expect_addition("bin/$toolset/debug/link-static*/a.exe")
+t.expect_addition("bin/$toolset/debug*/a.exe")
 t.expect_addition("bin/$toolset/debug*/a__helper.lib")
 t.expect_addition("bin/$toolset/debug*/a2__helper.lib")
 

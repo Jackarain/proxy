@@ -22,4 +22,4 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../../extra PREFIX "_extra" FILES 
 
 # CTest Target
 add_test(NAME boost_url_extra COMMAND boost_url_extra)
-add_dependencies(boost_url_all_tests boost_url_extra)
+add_dependencies(tests boost_url_extra)

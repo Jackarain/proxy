@@ -8,7 +8,6 @@
 // file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#include <iostream>
 // back-end
 #include <boost/msm/back/state_machine.hpp>
 //front-end
@@ -223,7 +222,7 @@ namespace
 //    static char const* const state_names[] = { "State1", "SubFsm2","State2"  };
 
 
-    BOOST_AUTO_TEST_CASE( my_test )
+    BOOST_AUTO_TEST_CASE( entries_test )
     {     
         Fsm p;
 

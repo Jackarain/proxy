@@ -243,5 +243,14 @@ test-suite wave
                 /boost/thread//boost_thread
                 /boost/filesystem//boost_filesystem
         ]
+
+        [
+            run
+            # sources
+                ../testwave/fill_boundary.cpp
+                /boost/wave//boost_wave
+                /boost/thread//boost_thread
+                /boost/filesystem//boost_filesystem
+        ]
     ;
 

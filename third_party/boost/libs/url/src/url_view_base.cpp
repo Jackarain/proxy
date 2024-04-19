@@ -15,8 +15,8 @@
 #include <boost/url/url_view_base.hpp>
 #include <boost/url/url_view.hpp>
 #include <boost/url/detail/except.hpp>
-#include <boost/url/detail/normalize.hpp>
-#include <boost/url/detail/over_allocator.hpp>
+#include "detail/normalize.hpp"
+#include "detail/over_allocator.hpp"
 
 namespace boost {
 namespace urls {

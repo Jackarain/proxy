@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -667,7 +667,7 @@ BOOST_AUTO_TEST_CASE(tuples)
         fields
     );
     throw_on_error(err);
-    BOOST_TEST((storage_1[0] == row1_tuple{10, "abc"}));
+    BOOST_TEST((storage_1[0] == row1_tuple{std::uint16_t(10), "abc"}));
 
     // EOF r1
     add_ok(st, create_ok_r1(true));
@@ -689,7 +689,7 @@ BOOST_AUTO_TEST_CASE(tuples)
         fields
     );
     throw_on_error(err);
-    BOOST_TEST((storage_3[0] == row3_tuple{4.2f, 90.0, 9}));
+    BOOST_TEST((storage_3[0] == row3_tuple{4.2f, 90.0, std::uint8_t(9)}));
 
     // OK r3
     add_ok(st, create_ok_r3());

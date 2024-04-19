@@ -77,12 +77,13 @@ make bar : baz ;
     t.write("baz", "nothing")
 
     expected_output = """\
-\.\.\.found 4 targets\.\.\.
-\.\.\.updating 2 targets\.\.\.
+\\.\\.\\.found 4 targets\\.\\.\\.
+\\.\\.\\.updating 2 targets\\.\\.\\.
 make bar
 time foo
-bar +user: [0-9\.]+ +system: +[0-9\.]+ +clock: +[0-9\.]+ *
-\.\.\.updated 2 targets\.\.\.$
+bar +user: [0-9.]+ +system: +[0-9.]+ +clock: +[0-9.]+ *
+
+\\.\\.\\.updated 2 targets\\.\\.\\.$
 """
 
     t.run_build_system(["-ffile.jam", "-d+1"], stdout=expected_output,

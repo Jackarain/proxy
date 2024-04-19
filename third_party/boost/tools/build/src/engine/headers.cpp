@@ -32,8 +32,8 @@
 #include "modules.h"
 #include "object.h"
 #include "parse.h"
+#include "regexp.h"
 #include "rules.h"
-#include "subst.h"
 #include "variable.h"
 #include "output.h"
 
@@ -43,10 +43,6 @@
 
 #include <errno.h>
 #include <string.h>
-
-#ifndef OPT_HEADER_CACHE_EXT
-static LIST * headers1( LIST *, OBJECT * file, int rec, regexp * re[] );
-#endif
 
 
 /*
@@ -62,7 +58,7 @@ void headers( TARGET * t )
     #ifndef OPT_HEADER_CACHE_EXT
     LIST   * headlist = L0;
     #endif
-    regexp * re[ MAXINC ];
+    b2::regex::program re_prog[MAXINC];
     int rec = 0;
     LISTITER iter;
     LISTITER end;
@@ -83,7 +79,8 @@ void headers( TARGET * t )
     end = list_end( hdrscan );
     for ( ; ( rec < MAXINC ) && iter != end; iter = list_next( iter ) )
     {
-        re[ rec++ ] = regex_compile( list_item( iter ) );
+        re_prog[ rec ].reset( list_item( iter )->str() );
+        rec += 1;
     }
 
     /* Doctor up call to HDRRULE rule */
@@ -93,9 +90,9 @@ void headers( TARGET * t )
         frame_init( frame );
         lol_add( frame->args, list_new( object_copy( t->name ) ) );
 #ifdef OPT_HEADER_CACHE_EXT
-        lol_add( frame->args, hcache( t, rec, re, hdrscan ) );
+        lol_add( frame->args, hcache( t, rec, re_prog, hdrscan ) );
 #else
-        lol_add( frame->args, headers1( headlist, t->boundname, rec, re ) );
+        lol_add( frame->args, headers1( headlist, t->boundname, rec, re_prog ) );
 #endif
 
         if ( lol_get( frame->args, 1 ) )
@@ -116,15 +113,17 @@ void headers( TARGET * t )
  * headers1() - using regexp, scan a file and build include LIST.
  */
 
-#ifndef OPT_HEADER_CACHE_EXT
-static
-#endif
-LIST * headers1( LIST * l, OBJECT * file, int rec, regexp * re[] )
+LIST * headers1( LIST * l, OBJECT * file, int rec, b2::regex::program re[] )
 {
     FILE * f;
     char buf[ 1024 ];
     int i;
-    static regexp * re_macros = 0;
+
+    /* The following regexp is used to detect cases where a file is included
+     * through a line like "#include MACRO".
+     */
+    b2::regex::program re_macros(
+        "#[ \t]*include[ \t]*([A-Za-z][A-Za-z0-9_]*).*$" );
 
 #ifdef OPT_IMPROVED_PATIENCE_EXT
     static int count = 0;
@@ -136,15 +135,10 @@ LIST * headers1( LIST * l, OBJECT * file, int rec, regexp * re[] )
     }
 #endif
 
-    /* The following regexp is used to detect cases where a file is included
-     * through a line like "#include MACRO".
-     */
-    if ( re_macros == 0 )
+    if ( file->as_string().size == 0 )
     {
-        OBJECT * re_str = object_new(
-            "#[ \t]*include[ \t]*([A-Za-z][A-Za-z0-9_]*).*$" );
-        re_macros = regex_compile( re_str );
-        object_free( re_str );
+        /* If the scanning was fed empty file names we just ignore them. */
+        return l;
     }
 
     if ( !( f = fopen( object_str( file ), "r" ) ) )
@@ -159,34 +153,34 @@ LIST * headers1( LIST * l, OBJECT * file, int rec, regexp * re[] )
     while ( fgets( buf, sizeof( buf ), f ) )
     {
         for ( i = 0; i < rec; ++i )
-            if ( regexec( re[ i ], buf ) && re[ i ]->startp[ 1 ] )
+        {
+            auto re_i = re [ i ].search( buf );
+            if ( re_i && re_i[ 1 ].begin() )
             {
-                ( (char *)re[ i ]->endp[ 1 ] )[ 0 ] = '\0';
+                std::string header(re_i[ 1 ].begin(), re_i[ 1 ].end());
                 if ( DEBUG_HEADER )
-                    out_printf( "header found: %s\n", re[ i ]->startp[ 1 ] );
-                l = list_push_back( l, object_new( re[ i ]->startp[ 1 ] ) );
+                    out_printf( "header found: %s\n", header.c_str() );
+                l = list_push_back( l, object_new( header.c_str() ) );
             }
+        }
 
         /* Special treatment for #include MACRO. */
-        if ( regexec( re_macros, buf ) && re_macros->startp[ 1 ] )
+        auto re_macros_i = re_macros.search( buf );
+        if ( re_macros_i && re_macros_i[ 1 ].end() != nullptr )
         {
-            OBJECT * header_filename;
-            OBJECT * macro_name;
-
-            ( (char *)re_macros->endp[ 1 ] )[ 0 ] = '\0';
+            std::string macro_name(re_macros_i[ 1 ].begin(), re_macros_i[ 1 ].end());
 
             if ( DEBUG_HEADER )
-                out_printf( "macro header found: %s", re_macros->startp[ 1 ] );
+                out_printf( "macro header found: %s", macro_name.c_str() );
 
-            macro_name = object_new( re_macros->startp[ 1 ] );
-            header_filename = macro_header_get( macro_name );
-            object_free( macro_name );
-            if ( header_filename )
+            b2::value_ref macro_name_v(macro_name);
+            b2::value_ref header_filename_v(macro_header_get( macro_name_v ));
+            if ( header_filename_v.has_value() )
             {
                 if ( DEBUG_HEADER )
-                    out_printf( " resolved to '%s'\n", object_str( header_filename )
+                    out_printf( " resolved to '%s'\n", header_filename_v->str()
                         );
-                l = list_push_back( l, object_copy( header_filename ) );
+                l = list_push_back( l, header_filename_v );
             }
             else
             {
@@ -198,10 +192,4 @@ LIST * headers1( LIST * l, OBJECT * file, int rec, regexp * re[] )
 
     fclose( f );
     return l;
-}
-
-
-void regerror( char const * s )
-{
-    out_printf( "re error %s\n", s );
 }

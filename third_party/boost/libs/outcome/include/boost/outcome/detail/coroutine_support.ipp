@@ -1,5 +1,5 @@
 /* Tells C++ coroutines about Outcome's result
-(C) 2019-2023 Niall Douglas <http://www.nedproductions.biz/> (12 commits)
+(C) 2019-2024 Niall Douglas <http://www.nedproductions.biz/> (12 commits)
 File Created: Oct 2019
 
 
@@ -36,7 +36,6 @@ DEALINGS IN THE SOFTWARE.
 #define BOOST_OUTCOME_DETAIL_COROUTINE_SUPPORT_HPP
 
 #include <atomic>
-#include <cassert>
 #include <exception>
 
 #ifndef BOOST_OUTCOME_COROUTINE_HEADER_TYPE
@@ -215,7 +214,7 @@ namespace awaitables
       void return_value(container_type &&value)
       {
         BOOST_OUTCOME_V2_AWAITABLES_DEBUG_PRINTER(this << " promise returns value");
-        assert(!result_set.load(std::memory_order_acquire));
+        BOOST_OUTCOME_ASSERT(!result_set.load(std::memory_order_acquire));
         if(result_set.load(std::memory_order_acquire))
         {
           result.~container_type();  // could throw
@@ -226,7 +225,7 @@ namespace awaitables
       void return_value(const container_type &value)
       {
         BOOST_OUTCOME_V2_AWAITABLES_DEBUG_PRINTER(this << " promise returns value");
-        assert(!result_set.load(std::memory_order_acquire));
+        BOOST_OUTCOME_ASSERT(!result_set.load(std::memory_order_acquire));
         if(result_set.load(std::memory_order_acquire))
         {
           result.~container_type();  // could throw
@@ -237,7 +236,7 @@ namespace awaitables
       void unhandled_exception()
       {
         BOOST_OUTCOME_V2_AWAITABLES_DEBUG_PRINTER(this << " promise unhandled exception");
-        assert(!result_set.load(std::memory_order_acquire));
+        BOOST_OUTCOME_ASSERT(!result_set.load(std::memory_order_acquire));
         if(result_set.load(std::memory_order_acquire))
         {
           result.~container_type();
@@ -329,13 +328,13 @@ namespace awaitables
       void return_void() noexcept
       {
         BOOST_OUTCOME_V2_AWAITABLES_DEBUG_PRINTER(this << " promise returns void");
-        assert(!result_set.load(std::memory_order_acquire));
+        BOOST_OUTCOME_ASSERT(!result_set.load(std::memory_order_acquire));
         result_set.store(true, std::memory_order_release);
       }
       void unhandled_exception()
       {
         BOOST_OUTCOME_V2_AWAITABLES_DEBUG_PRINTER(this << " promise unhandled exception");
-        assert(!result_set.load(std::memory_order_acquire));
+        BOOST_OUTCOME_ASSERT(!result_set.load(std::memory_order_acquire));
         std::rethrow_exception(std::current_exception());  // throws
       }
       auto initial_suspend() noexcept
@@ -437,7 +436,7 @@ namespace awaitables
       container_type await_resume()
       {
         BOOST_OUTCOME_V2_AWAITABLES_DEBUG_PRINTER(&_h.promise() << " await_resume");
-        assert(_h.promise().result_set.load(std::memory_order_acquire));
+        BOOST_OUTCOME_ASSERT(_h.promise().result_set.load(std::memory_order_acquire));
         if(!_h.promise().result_set.load(std::memory_order_acquire))
         {
           std::terminate();
@@ -513,7 +512,7 @@ namespace awaitables
         }
         void return_void() noexcept
         {
-          assert(result_set.load(std::memory_order_acquire) >= 0);
+          BOOST_OUTCOME_ASSERT(result_set.load(std::memory_order_acquire) >= 0);
           if(result_set.load(std::memory_order_acquire) == 1)
           {
             result.~container_type();  // could throw
@@ -522,7 +521,7 @@ namespace awaitables
         }
         suspend_always yield_value(container_type &&value)
         {
-          assert(result_set.load(std::memory_order_acquire) >= 0);
+          BOOST_OUTCOME_ASSERT(result_set.load(std::memory_order_acquire) >= 0);
           if(result_set.load(std::memory_order_acquire) == 1)
           {
             result.~container_type();  // could throw
@@ -533,7 +532,7 @@ namespace awaitables
         }
         suspend_always yield_value(const container_type &value)
         {
-          assert(result_set.load(std::memory_order_acquire) >= 0);
+          BOOST_OUTCOME_ASSERT(result_set.load(std::memory_order_acquire) >= 0);
           if(result_set.load(std::memory_order_acquire) == 1)
           {
             result.~container_type();  // could throw
@@ -544,7 +543,7 @@ namespace awaitables
         }
         void unhandled_exception()
         {
-          assert(result_set.load(std::memory_order_acquire) >= 0);
+          BOOST_OUTCOME_ASSERT(result_set.load(std::memory_order_acquire) >= 0);
           if(result_set.load(std::memory_order_acquire) == 1)
           {
             result.~container_type();
@@ -637,7 +636,7 @@ namespace awaitables
         {
           _h();
         }
-        assert(p.result_set.load(std::memory_order_acquire) >= 0);
+        BOOST_OUTCOME_ASSERT(p.result_set.load(std::memory_order_acquire) >= 0);
         if(p.result_set.load(std::memory_order_acquire) < 0)
         {
           std::terminate();

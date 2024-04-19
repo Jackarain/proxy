@@ -5,6 +5,7 @@
 # https://www.boost.org/LICENSE_1_0.txt
 
 set -ex
+export PATH=~/.local/bin:/usr/local/bin:$PATH
 
 DRONE_BUILD_DIR=$(pwd)
 

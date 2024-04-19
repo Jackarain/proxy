@@ -44,6 +44,7 @@ echo [subtest_b] 0
 echo [subtest_b] 1
 echo [subtest_b] 2
 
+
 ...updated 2 targets...
 """)
 t.expect_nothing_more()

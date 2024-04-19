@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+# Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -14,6 +14,9 @@ project /boost/mysql/test ;
 
 # Support header-only builds
 feature.feature boost.mysql.separate-compilation : on off : propagated composite ;
+
+# Support builds with BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT
+feature.feature boost.mysql.use-ts-executor : on off : propagated composite ;
 
 # System libraries
 if [ os.name ] = NT
@@ -82,27 +85,31 @@ local requirements =
         <define>BOOST_ASIO_DISABLE_BOOST_BIND=1
         <define>BOOST_ASIO_DISABLE_BOOST_DATE_TIME=1
         <define>BOOST_ASIO_DISABLE_BOOST_REGEX=1
+        <define>BOOST_ASIO_DISABLE_BOOST_COROUTINE=1
         <define>BOOST_ASIO_HAS_DEFAULT_FUNCTION_TEMPLATE_ARGUMENTS=1
         <define>BOOST_ALLOW_DEPRECATED_HEADERS=1
-        <toolset>msvc:<cxxflags>"/bigobj"
-        <toolset>msvc-14.1:<cxxflags>"/permissive-"
-        <toolset>msvc-14.2:<cxxflags>"/permissive-"
+        # Disable warning C4702: unreachable code, produced by Boost.Asio buffer.hpp 
+        <toolset>msvc:<cxxflags>"/bigobj /wd4702 /permissive-"
         <toolset>msvc:<define>_SCL_SECURE_NO_WARNINGS=1
         <toolset>msvc:<define>_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING
         <toolset>msvc:<define>_SILENCE_CXX17_ADAPTOR_TYPEDEFS_DEPRECATION_WARNING
         <toolset>msvc:<define>_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING
-        <toolset>gcc-13:<cxxflags>-Wno-dangling-reference # GCC13 doesn't understand view types
+        # GCC13 doesn't understand view types and issues array bound warnings that don't make sense.
+        <toolset>gcc-13:<cxxflags>"-Wno-dangling-reference -Wno-array-bounds"
+        <toolset>gcc:<cxxflags>-Wno-implicit-fallthrough # Required by Asio SSL components
         <target-os>linux:<define>_XOPEN_SOURCE=600
         <target-os>linux:<define>_GNU_SOURCE=1
         <target-os>windows:<define>_WIN32_WINNT=0x0601
         <define>BOOST_ASIO_SEPARATE_COMPILATION
         <include>../include
+        <boost.mysql.use-ts-executor>on:<define>BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT
     ;
 
 alias boost_mysql
     :
         ssl
         crypto
+        /boost/charconv//boost_charconv
     : requirements
         [ requires
             cxx11_defaulted_moves
@@ -140,6 +147,10 @@ alias common_test_sources
         common/src/entry_point.cpp
         common/src/tracker_executor.cpp
     ;
+
+# Boost.Context causes failures with warnings-as-errors
+# under libc++, because it builds objects that raise a -stdlib=libc++ unused warning
+alias boost_context_lib : /boost/context//boost_context/<warnings-as-errors>off ;
 
 alias boost_mysql_test
     :

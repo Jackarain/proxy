@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2023 Marcelo Zimbres Silva (mzimbres@gmail.com)
+/* Copyright (c) 2018-2024 Marcelo Zimbres Silva (mzimbres@gmail.com)
  *
  * Distributed under the Boost Software License, Version 1.0. (See
  * accompanying file LICENSE.txt)
@@ -15,8 +15,6 @@
 #include <optional>
 
 namespace boost::redis::resp3 {
-
-using int_type = std::uint64_t;
 
 class parser {
 public:
@@ -38,7 +36,7 @@ private:
    std::array<std::size_t, max_embedded_depth + 1> sizes_;
 
    // Contains the length expected in the next bulk read.
-   int_type bulk_length_;
+   std::size_t bulk_length_;
 
    // The type of the next bulk. Contains type::invalid if no bulk is
    // expected.

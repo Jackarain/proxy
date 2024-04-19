@@ -11,17 +11,17 @@
 #define BOOST_URL_DETAIL_IMPL_PATTERN_IPP
 
 #include <boost/url/detail/config.hpp>
-#include <boost/url/detail/pattern.hpp>
-#include <boost/url/detail/pct_format.hpp>
-#include <boost/url/detail/replacement_field_rule.hpp>
+#include "pattern.hpp"
+#include "pct_format.hpp"
+#include "boost/url/detail/replacement_field_rule.hpp"
 #include <boost/url/grammar/alpha_chars.hpp>
 #include <boost/url/grammar/optional_rule.hpp>
 #include <boost/url/grammar/token_rule.hpp>
-#include <boost/url/rfc/detail/charsets.hpp>
-#include <boost/url/rfc/detail/host_rule.hpp>
-#include <boost/url/rfc/detail/path_rules.hpp>
-#include <boost/url/rfc/detail/port_rule.hpp>
-#include <boost/url/rfc/detail/scheme_rule.hpp>
+#include "../rfc/detail/charsets.hpp"
+#include "../rfc/detail/host_rule.hpp"
+#include "boost/url/rfc/detail/path_rules.hpp"
+#include "../rfc/detail/port_rule.hpp"
+#include "../rfc/detail/scheme_rule.hpp"
 
 namespace boost {
 namespace urls {

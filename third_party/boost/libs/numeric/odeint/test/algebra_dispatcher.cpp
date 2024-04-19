@@ -31,7 +31,7 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/static_assert.hpp>
 #include <boost/type_traits/is_same.hpp>
-#include <boost/array.hpp>
+#include <array>
 #include <boost/mpl/list.hpp>
 
 using namespace boost::unit_test;
@@ -43,38 +43,38 @@ BOOST_AUTO_TEST_SUITE( algebra_dispatcher_test )
 BOOST_AUTO_TEST_CASE( range_algebra_with_vector )
 {
     typedef runge_kutta4< std::vector< double > > stepper_type;
-    BOOST_STATIC_ASSERT(( boost::is_same< stepper_type::algebra_type , range_algebra >::value ));
+    static_assert(( boost::is_same< stepper_type::algebra_type , range_algebra >::value ), "Not range algebra");
 }
 
 BOOST_AUTO_TEST_CASE( array_algebra_with_array )
 {
-    typedef runge_kutta4< boost::array< double , 2 > > stepper_type;
-    BOOST_STATIC_ASSERT(( boost::is_same< stepper_type::algebra_type , array_algebra >::value ));
+    typedef runge_kutta4< std::array< double , 2 > > stepper_type;
+    static_assert(( boost::is_same< stepper_type::algebra_type , array_algebra >::value ), "Not array algebra");
 }
 
 BOOST_AUTO_TEST_CASE( range_algebra_with_array )
 {
-    typedef runge_kutta4< boost::array< double , 2 > , double , boost::array< double , 2 > , double , range_algebra > stepper_type;
-    BOOST_STATIC_ASSERT(( boost::is_same< stepper_type::algebra_type , range_algebra >::value ));
+    typedef runge_kutta4< std::array< double , 2 > , double , std::array< double , 2 > , double , range_algebra > stepper_type;
+    static_assert(( boost::is_same< stepper_type::algebra_type , range_algebra >::value ), "Not range algebra");
 }
 
 BOOST_AUTO_TEST_CASE( fusion_algebra_with_fusion_vector )
 {
     typedef runge_kutta4< boost::fusion::vector< double > > stepper_type;
-    BOOST_STATIC_ASSERT(( boost::is_same< stepper_type::algebra_type , fusion_algebra >::value ));
+    static_assert(( boost::is_same< stepper_type::algebra_type , fusion_algebra >::value ), "Not fusion algebra");
 }
 
 BOOST_AUTO_TEST_CASE( fusion_algebra_with_fusion_vector2 )
 {
     typedef runge_kutta_fehlberg78< boost::fusion::vector< double > > stepper_type;
-    BOOST_STATIC_ASSERT(( boost::is_same< stepper_type::algebra_type , fusion_algebra >::value ));
+    static_assert(( boost::is_same< stepper_type::algebra_type , fusion_algebra >::value ), "Not fusion algebra");
 }
 
 typedef boost::mpl::list< float , double , long double , std::complex< double > , std::complex< float > > fp_types;
 BOOST_AUTO_TEST_CASE_TEMPLATE( vector_space_algebra_with_floating_point , T , fp_types )
 {
     typedef runge_kutta_fehlberg78< T > stepper_type;
-    BOOST_STATIC_ASSERT(( boost::is_same< typename stepper_type::algebra_type , vector_space_algebra >::value ));
+    static_assert(( boost::is_same< typename stepper_type::algebra_type , vector_space_algebra >::value ), "Not vector space algebra");
 }
 
 

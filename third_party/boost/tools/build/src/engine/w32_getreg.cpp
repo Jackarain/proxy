@@ -111,9 +111,8 @@ LIST * builtin_system_registry( FRAME * frame, int flags )
 
              case REG_DWORD:
                  {
-                     char buf[100];
-                     sprintf( buf, "%lu", *(PDWORD)data );
-                     result = list_push_back( result, object_new(buf) );
+                     result = list_push_back( result,
+                        b2::value::as_string( *(PDWORD)data ) );
                  }
                  break;
 

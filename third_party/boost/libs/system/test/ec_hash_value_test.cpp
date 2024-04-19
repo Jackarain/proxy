@@ -7,9 +7,7 @@
 #include <boost/system/system_category.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <cerrno>
-#if defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
 #include <system_error>
-#endif
 
 namespace sys = boost::system;
 
@@ -69,8 +67,6 @@ int main()
         BOOST_TEST( e2 == e3 || hash_value( e2 ) != hash_value( e3 ) );
     }
 
-#if defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
-
     // std:: wrapping against normal
     {
         std::error_code e1( EINVAL, std::generic_category() );
@@ -125,8 +121,6 @@ int main()
         BOOST_TEST( e2 != e3 || hash_value( e2 ) == hash_value( e3 ) );
         BOOST_TEST( e2 == e3 || hash_value( e2 ) != hash_value( e3 ) );
     }
-
-#endif
 
     return boost::report_errors();
 }

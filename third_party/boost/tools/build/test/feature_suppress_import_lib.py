@@ -26,7 +26,7 @@ __declspec(dllexport)
 f() {}
 """)
 
-t.run_build_system()
+t.run_build_system(["link=shared"])
 t.expect_addition("bin/$toolset/debug*/l.obj")
 t.expect_addition("bin/$toolset/debug*/l.dll")
 

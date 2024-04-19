@@ -6,7 +6,7 @@
  /]
 
 [library Boost.Intrusive
-    [quickbook 1.6]
+    [quickbook 1.7]
     [authors [Krzikalla, Olaf], [Gaztanaga, Ion]]
     [copyright 2005 Olaf Krzikalla, 2006-2015 Ion Gaztanaga]
     [id intrusive]
@@ -1304,7 +1304,11 @@ And they also can receive additional options:
    in containers. Default: `equal< std::equal_to<T> >`
 
 *  [*`hash<class Hash>`]: Hash function to be used in the container.
-   Default: `hash< boost::hash<T> >`
+   Default: internal hash functor that hashes scalar types, triggering unqualified call to
+           `hash_value`for non-scalar types (boost::hash<T> compatible protocol). If
+           the ADL call does not find a viable candidate a boost::hash<T>() call is tried
+           in case the user has included boost/container_hash/hash.hpp and a viable
+           candidate is found there. Fails otherwise.
 
 *  [*`bucket_traits<class BucketTraits>`]: A type that wraps the bucket vector to
    be used by the unordered container. Default: a type initialized by the address
@@ -3884,7 +3888,42 @@ to be inserted in intrusive containers are allocated using `std::vector` or `std
 
 [endsect]
 
+[import ../../../tools/auto_index/include/auto_index_helpers.qbk]
+
+[section:index Indexes]
+
+[named_index class_name Class Index]
+[named_index typedef_name Typedef Index]
+[named_index function_name Function Index]
+[/named_index macro_name Macro Index]
+[/index]
+
+[endsect]
+
 [section:release_notes Release Notes]
+
+[section:release_notes_boost_1_85_00 Boost 1.85 Release]
+
+* Fixed bugs:
+   * [@https://github.com/boostorg/intrusive/issues/81 GitHub #81: ['unordered_set rehash breaks insert_commit_data]]
+   * [@https://github.com/boostorg/intrusive/issues/83 GitHub #83: ['\[docs\] Index is missing]]
+
+* Potentially breaking: Unordered containers use now by default an internal a `boost::hash`-protocol compatible internal hash functor.
+   * Reasons:
+      * Since Boost 1.84 Boost.ContainerHash requires C++11, breaking Boost.Intrusive C++03 users.
+      * To avoid header inclusion dependency on Boost.ContainerHash, which indirectly also brings other libraries (Boost.Describe, Boost.Mp11...).
+   * The new default hash function:
+       * Handles scalar types directly (in case scalar types are used with `key_of_value`) with trivial hashes (similar to `boost::hash`).
+       * For other types (most Boost.Intrusive users are here), uses ADL-based `hash_function` call, just like `boost::hash`.
+       * If that ADL lookup fails, forward declares `boost::hash` and calls through an object of that type. If the user has included `boost/container_hash/hash.hpp`
+         before or after including Boost.Intrusive, `boost::hash` will be properly called.
+   * It's possible that some Boost.Intrusive users were using Boost.ContainerHash functions/features without including the needed
+     `boost/container_hash/hash.hpp` header, since it was indirectly included through Boost.Intrusive. Those users will need to
+     explicitly include `boost/container_hash/hash.hpp`to obtain Boost.ContainerHash features.
+
+* Boost.Intrusive no longer depends on Boost.StaticCast.
+
+[endsect]
 
 [section:release_notes_boost_1_82_00 Boost 1.82 Release]
 
@@ -4120,7 +4159,7 @@ to be inserted in intrusive containers are allocated using `std::vector` or `std
 *  Big refactoring in order to reduce template and debug symbol bloat. Test object files have been slashed
    to half in MSVC compilers in Debug mode. Toolchains without Identical COMDAT Folding (ICF) should notice size improvements.
 
-*  Implemented [link intrusive.scary_iterators SCARY iterators].
+*  Implemented [link intrusive.boost_intrusive_iterators.scary_iterators SCARY iterators].
 
 [endsect]
 
@@ -4310,18 +4349,6 @@ helpful discussions.
 
 *  Special thanks to [*Steven Watanabe] and [*Tobias Schwinger] for their
    invaluable suggestions and improvements.
-
-[endsect]
-
-[include auto_index_helpers.qbk]
-
-[section:index Indexes]
-
-[named_index class_name Class Index]
-[named_index typedef_name Typedef Index]
-[named_index function_name Function Index]
-[named_index macro_name Macro Index]
-[/index]
 
 [endsect]
 

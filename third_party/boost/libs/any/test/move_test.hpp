@@ -1,6 +1,6 @@
 //  See http://www.boost.org for most recent version, including documentation.
 //
-//  Copyright Antony Polukhin, 2013-2023.
+//  Copyright Antony Polukhin, 2013-2024.
 //  Copyright Ruslan Arutyunyan, 2019.
 //
 //  Distributed under the Boost
@@ -14,8 +14,7 @@
 #include <string>
 #include <utility>
 
-#include "test.hpp"
-#include <boost/move/move.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include <boost/type_index.hpp>
 
 namespace any_tests {
@@ -28,18 +27,14 @@ struct move_tests // test definitions
         Any value0 = move_copy_conting_class();
         move_copy_conting_class::copy_count = 0;
         move_copy_conting_class::moves_count = 0;
-        Any value(boost::move(value0));
+        Any value(std::move(value0));
 
-        check(value0.empty(), "moved away value is empty");
-        check_false(value.empty(), "empty");
-        check_equal(value.type(), boost::typeindex::type_id<move_copy_conting_class>(), "type");
-        check_non_null(boost::any_cast<move_copy_conting_class>(&value), "any_cast<move_copy_conting_class>");
-        check_equal(
-            move_copy_conting_class::copy_count, 0u,
-            "checking copy counts");
-        check_equal(
-            move_copy_conting_class::moves_count, 0u,
-            "checking move counts");
+        BOOST_TEST(value0.empty());
+        BOOST_TEST(!value.empty());
+        BOOST_TEST(value.type() == boost::typeindex::type_id<move_copy_conting_class>());
+        BOOST_TEST(boost::any_cast<move_copy_conting_class>(&value));
+        BOOST_TEST_EQ(move_copy_conting_class::copy_count, 0u);
+        BOOST_TEST_EQ(move_copy_conting_class::moves_count, 0u);
     }
 
     static void test_move_assignment()
@@ -48,18 +43,14 @@ struct move_tests // test definitions
         Any value = move_copy_conting_class();
         move_copy_conting_class::copy_count = 0;
         move_copy_conting_class::moves_count = 0;
-        value = boost::move(value0);
+        value = std::move(value0);
 
-        check(value0.empty(), "moved away is empty");
-        check_false(value.empty(), "empty");
-        check_equal(value.type(), boost::typeindex::type_id<move_copy_conting_class>(), "type");
-        check_non_null(boost::any_cast<move_copy_conting_class>(&value), "any_cast<move_copy_conting_class>");
-        check_equal(
-            move_copy_conting_class::copy_count, 0u,
-            "checking copy counts");
-        check_equal(
-            move_copy_conting_class::moves_count, 0u,
-            "checking move counts");
+        BOOST_TEST(value0.empty());
+        BOOST_TEST(!value.empty());
+        BOOST_TEST(value.type() == boost::typeindex::type_id<move_copy_conting_class>());
+        BOOST_TEST(boost::any_cast<move_copy_conting_class>(&value));
+        BOOST_TEST_EQ(move_copy_conting_class::copy_count, 0u);
+        BOOST_TEST_EQ(move_copy_conting_class::moves_count, 0u);
     }
 
     static void test_copy_construction()
@@ -69,16 +60,12 @@ struct move_tests // test definitions
         move_copy_conting_class::moves_count = 0;
         Any value(value0);
 
-        check_false(value0.empty(), "copied value is not empty");
-        check_false(value.empty(), "empty");
-        check_equal(value.type(), boost::typeindex::type_id<move_copy_conting_class>(), "type");
-        check_non_null(boost::any_cast<move_copy_conting_class>(&value), "any_cast<move_copy_conting_class>");
-        check_equal(
-            move_copy_conting_class::copy_count, 1u,
-            "checking copy counts");
-        check_equal(
-            move_copy_conting_class::moves_count, 0u,
-            "checking move counts");
+        BOOST_TEST(!value0.empty());
+        BOOST_TEST(!value.empty());
+        BOOST_TEST(value.type() == boost::typeindex::type_id<move_copy_conting_class>());
+        BOOST_TEST(boost::any_cast<move_copy_conting_class>(&value));
+        BOOST_TEST_EQ(move_copy_conting_class::copy_count, 1u);
+        BOOST_TEST_EQ(move_copy_conting_class::moves_count, 0u);
     }
 
     static void test_copy_assignment()
@@ -89,16 +76,12 @@ struct move_tests // test definitions
         move_copy_conting_class::moves_count = 0;
         value = value0;
 
-        check_false(value0.empty(), "copied value is not empty");
-        check_false(value.empty(), "empty");
-        check_equal(value.type(), boost::typeindex::type_id<move_copy_conting_class>(), "type");
-        check_non_null(boost::any_cast<move_copy_conting_class>(&value), "any_cast<move_copy_conting_class>");
-        check_equal(
-            move_copy_conting_class::copy_count, 1u,
-            "checking copy counts");
-        check_equal(
-            move_copy_conting_class::moves_count, 0u,
-            "checking move counts");
+        BOOST_TEST(!value0.empty());
+        BOOST_TEST(!value.empty());
+        BOOST_TEST(value.type() == boost::typeindex::type_id<move_copy_conting_class>());
+        BOOST_TEST(boost::any_cast<move_copy_conting_class>(&value));
+        BOOST_TEST_EQ(move_copy_conting_class::copy_count, 1u);
+        BOOST_TEST_EQ(move_copy_conting_class::moves_count, 0u);
     }
 
     static void test_move_construction_from_value()
@@ -107,18 +90,14 @@ struct move_tests // test definitions
         move_copy_conting_class::copy_count = 0;
         move_copy_conting_class::moves_count = 0;
 
-        Any value(boost::move(value0));
+        Any value(std::move(value0));
 
-        check_false(value.empty(), "empty");
-        check_equal(value.type(), boost::typeindex::type_id<move_copy_conting_class>(), "type");
-        check_non_null(boost::any_cast<move_copy_conting_class>(&value), "any_cast<move_copy_conting_class>");
+        BOOST_TEST(!value.empty());
+        BOOST_TEST(value.type() == boost::typeindex::type_id<move_copy_conting_class>());
+        BOOST_TEST(boost::any_cast<move_copy_conting_class>(&value));
 
-        check_equal(
-            move_copy_conting_class::copy_count, 0u,
-            "checking copy counts");
-        check_equal(
-            move_copy_conting_class::moves_count, 1u,
-            "checking move counts");
+        BOOST_TEST_EQ(move_copy_conting_class::copy_count, 0u);
+        BOOST_TEST_EQ(move_copy_conting_class::moves_count, 1u);
      }
 
     static void test_move_assignment_from_value()
@@ -127,18 +106,14 @@ struct move_tests // test definitions
         Any value;
         move_copy_conting_class::copy_count = 0;
         move_copy_conting_class::moves_count = 0;
-        value = boost::move(value0);
+        value = std::move(value0);
 
-        check_false(value.empty(), "empty");
-        check_equal(value.type(), boost::typeindex::type_id<move_copy_conting_class>(), "type");
-        check_non_null(boost::any_cast<move_copy_conting_class>(&value), "any_cast<move_copy_conting_class>");
+        BOOST_TEST(!value.empty());
+        BOOST_TEST(value.type() == boost::typeindex::type_id<move_copy_conting_class>());
+        BOOST_TEST(boost::any_cast<move_copy_conting_class>(&value));
 
-        check_equal(
-            move_copy_conting_class::copy_count, 0u,
-            "checking copy counts");
-        check_equal(
-            move_copy_conting_class::moves_count, 1u,
-            "checking move counts");
+        BOOST_TEST_EQ(move_copy_conting_class::copy_count, 0u);
+        BOOST_TEST_EQ(move_copy_conting_class::moves_count, 1u);
     }
 
     static void test_copy_construction_from_value()
@@ -148,16 +123,12 @@ struct move_tests // test definitions
         move_copy_conting_class::moves_count = 0;
         Any value(value0);
 
-        check_false(value.empty(), "empty");
-        check_equal(value.type(), boost::typeindex::type_id<move_copy_conting_class>(), "type");
-        check_non_null(boost::any_cast<move_copy_conting_class>(&value), "any_cast<move_copy_conting_class>");
+        BOOST_TEST(!value.empty());
+        BOOST_TEST(value.type() == boost::typeindex::type_id<move_copy_conting_class>());
+        BOOST_TEST(boost::any_cast<move_copy_conting_class>(&value));
 
-        check_equal(
-            move_copy_conting_class::copy_count, 1u,
-            "checking copy counts");
-        check_equal(
-            move_copy_conting_class::moves_count, 0u,
-            "checking move counts");
+        BOOST_TEST_EQ(move_copy_conting_class::copy_count, 1u);
+        BOOST_TEST_EQ(move_copy_conting_class::moves_count, 0u);
      }
 
     static void test_copy_assignment_from_value()
@@ -168,16 +139,12 @@ struct move_tests // test definitions
         move_copy_conting_class::moves_count = 0;
         value = value0;
 
-        check_false(value.empty(), "empty");
-        check_equal(value.type(), boost::typeindex::type_id<move_copy_conting_class>(), "type");
-        check_non_null(boost::any_cast<move_copy_conting_class>(&value), "any_cast<move_copy_conting_class>");
+        BOOST_TEST(!value.empty());
+        BOOST_TEST(value.type() == boost::typeindex::type_id<move_copy_conting_class>());
+        BOOST_TEST(boost::any_cast<move_copy_conting_class>(&value));
 
-        check_equal(
-            move_copy_conting_class::copy_count, 1u,
-            "checking copy counts");
-        check_equal(
-            move_copy_conting_class::moves_count, 0u,
-            "checking move counts");
+        BOOST_TEST_EQ(move_copy_conting_class::copy_count, 1u);
+        BOOST_TEST_EQ(move_copy_conting_class::moves_count, 0u);
     }
 
     static const Any helper_method() {
@@ -204,28 +171,19 @@ struct move_tests // test definitions
 
         move_copy_conting_class value1 = boost::any_cast<move_copy_conting_class&&>(value);
 
-        check_equal(
-            move_copy_conting_class::copy_count, 0u,
-            "checking copy counts");
-        check_equal(
-            move_copy_conting_class::moves_count, 1u,
-            "checking move counts");
+        BOOST_TEST_EQ(move_copy_conting_class::copy_count, 0u);
+        BOOST_TEST_EQ(move_copy_conting_class::moves_count, 1u);
         (void)value1;
-// Following code shall fail to compile
+
         const Any cvalue = value0;
         move_copy_conting_class::copy_count = 0;
         move_copy_conting_class::moves_count = 0;
 
         move_copy_conting_class value2 = boost::any_cast<const move_copy_conting_class&>(cvalue);
 
-        check_equal(
-            move_copy_conting_class::copy_count, 1u,
-            "checking copy counts");
-        check_equal(
-            move_copy_conting_class::moves_count, 0u,
-            "checking move counts");
+        BOOST_TEST_EQ(move_copy_conting_class::copy_count, 1u);
+        BOOST_TEST_EQ(move_copy_conting_class::moves_count, 0u);
         (void)value2;
-//
     }
 
     class move_copy_conting_class {
@@ -253,25 +211,19 @@ struct move_tests // test definitions
     };
 
     static int run_tests() {
-        typedef test<const char *, void (*)()> test_case;
-        const test_case test_cases[] =
-        {
-            { "move construction of any",             test_move_construction      },
-            { "move assignment of any",               test_move_assignment        },
-            { "copy construction of any",             test_copy_construction      },
-            { "copy assignment of any",               test_copy_assignment        },
+        test_move_construction();
+        test_move_assignment();
+        test_copy_construction();
+        test_copy_assignment();
+        
+        test_move_construction_from_value();
+        test_move_assignment_from_value();
+        test_copy_construction_from_value();
+        test_copy_assignment_from_value();
+        test_construction_from_const_any_rv();
+        test_cast_to_rv();
 
-            { "move construction from value",         test_move_construction_from_value },
-            { "move assignment from value",           test_move_assignment_from_value  },
-            { "copy construction from value",         test_copy_construction_from_value },
-            { "copy assignment from value",           test_copy_assignment_from_value },
-            { "constructing from const any&&",        test_construction_from_const_any_rv },
-            { "casting to rvalue reference",          test_cast_to_rv }
-        };
-        typedef const test_case * test_case_iterator;
-
-        tester<test_case_iterator> test_suite(test_cases, test_cases + sizeof(test_cases) / sizeof(test_cases[0]));
-        return test_suite() ? EXIT_SUCCESS : EXIT_FAILURE;
+        return boost::report_errors();
     }
 }; // struct move_tests
 

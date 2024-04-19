@@ -3,15 +3,6 @@
 // http://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/system/error_category.hpp>
-#include <boost/config/pragma_message.hpp>
-
-#if !defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
-
-BOOST_PRAGMA_MESSAGE( "BOOST_SYSTEM_HAS_SYSTEM_ERROR not defined, test will be skipped" )
-int main() {}
-
-#else
-
 #include <boost/core/lightweight_test.hpp>
 #include <boost/core/snprintf.hpp>
 #include <system_error>
@@ -22,7 +13,7 @@ class user_category: public boost::system::error_category
 {
 public:
 
-    virtual const char * name() const BOOST_NOEXCEPT
+    virtual const char * name() const noexcept
     {
         return "user";
     }
@@ -53,5 +44,3 @@ int main()
     BOOST_TEST_CSTR_EQ( cat.name(), "user" );
     return boost::report_errors();
 }
-
-#endif

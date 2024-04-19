@@ -16,8 +16,7 @@ set(tests_c ${tests_common})
 set(tests_cpp ${tests_common} iteration repetition checkempty vaopt quick)
 
 set(BOOST_TEST_LINK_LIBRARIES Boost::preprocessor)
-
-include_directories(../../..) # for `include <libs/preprocessor/...>` to work
+set(BOOST_TEST_INCLUDE_DIRECTORIES .)
 
 foreach(test IN LISTS tests_c)
 

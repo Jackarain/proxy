@@ -30,7 +30,7 @@ class c-scanner : scanner
 
     rule pattern ( )
     {
-        return "#[ \t]*include[ \t]*(<(.*)>|\"(.*)\")" ;
+        return "^[ \t]*#[ \t]*include[ \t]*(<(.+)>|\"(.+)\")" ;
     }
 
     rule process ( target : matches * : binding )

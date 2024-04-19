@@ -11,7 +11,7 @@
 #define BOOST_URL_IMPL_SCHEME_RULE_IPP
 
 #include <boost/url/detail/config.hpp>
-#include <boost/url/rfc/detail/scheme_rule.hpp>
+#include "scheme_rule.hpp"
 #include <boost/url/grammar/alpha_chars.hpp>
 #include <boost/url/grammar/delim_rule.hpp>
 #include <boost/url/grammar/lut_chars.hpp>

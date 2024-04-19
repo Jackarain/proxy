@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -21,6 +21,8 @@
 #include "test_integration/common.hpp"
 #include "test_integration/er_network_variant.hpp"
 #include "test_integration/get_endpoint.hpp"
+#include "test_integration/network_test.hpp"
+#include "test_integration/server_ca.hpp"
 #include "test_integration/streams.hpp"
 #include "test_integration/tcp_network_fixture.hpp"
 
@@ -186,18 +188,18 @@ struct caching_sha2_fixture : handshake_fixture
 {
     void load_sha256_cache(string_view user, string_view password)
     {
-        tcp_ssl_connection conn(ctx, ssl_ctx);
-        conn.connect(get_endpoint<tcp_socket>(), handshake_params(user, password));
-        conn.close();
+        tcp_ssl_connection root_conn(ctx, ssl_ctx);
+        root_conn.connect(get_endpoint<tcp_socket>(), handshake_params(user, password));
+        root_conn.close();
     }
 
     void clear_sha256_cache()
     {
-        tcp_ssl_connection conn(ctx, ssl_ctx);
+        tcp_ssl_connection root_conn(ctx, ssl_ctx);
         boost::mysql::results result;
-        conn.connect(get_endpoint<tcp_socket>(), handshake_params("root", ""));
-        conn.execute("FLUSH PRIVILEGES", result);
-        conn.close();
+        root_conn.connect(get_endpoint<tcp_socket>(), handshake_params("root", ""));
+        root_conn.execute("FLUSH PRIVILEGES", result);
+        root_conn.close();
     }
 };
 
@@ -299,30 +301,6 @@ BOOST_AUTO_TEST_SUITE_END()  // caching_sha2_password
 
 // SSL certificate validation
 BOOST_AUTO_TEST_SUITE(ssl_certificate_validation)
-
-// The CA file that signed the server's certificate
-constexpr const char CA_PEM[] = R"%(-----BEGIN CERTIFICATE-----
-MIIDZzCCAk+gAwIBAgIUWznm2UoxXw3j7HCcp9PpiayTvFQwDQYJKoZIhvcNAQEL
-BQAwQjELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxDjAMBgNVBAoM
-BW15c3FsMQ4wDAYDVQQDDAVteXNxbDAgFw0yMDA0MDQxNDMwMjNaGA8zMDE5MDgw
-NjE0MzAyM1owQjELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxDjAM
-BgNVBAoMBW15c3FsMQ4wDAYDVQQDDAVteXNxbDCCASIwDQYJKoZIhvcNAQEBBQAD
-ggEPADCCAQoCggEBAN0WYdvsDb+a0TxOGPejcwZT0zvTrf921mmDUlrLN1Z0hJ/S
-ydgQCSD7Q+6za4lTFZCXcvs52xvvS2gfC0yXyYLCT/jA4RQRxuF+/+w1gDWEbGk0
-KzEpsBuKrEIvEaVdoS78SxInnW/aegshdrRRocp4JQ6KHsZgkLTxSwPfYSUmMUo0
-cRO0Q/ak3VK8NP13A6ZFvZjrBxjS3cSw9HqilgADcyj1D4EokvfI1C9LrgwgLlZC
-XVkjjBqqoMXGGlnXOEK+pm8bU68HM/QvMBkb1Amo8pioNaaYgqJUCP0Ch0iu1nUU
-HtsWt6emXv0jANgIW0oga7xcT4MDGN/M+IRWLTECAwEAAaNTMFEwHQYDVR0OBBYE
-FNxhaGwf5ePPhzK7yOAKD3VF6wm2MB8GA1UdIwQYMBaAFNxhaGwf5ePPhzK7yOAK
-D3VF6wm2MA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAAoeJCAX
-IDCFoAaZoQ1niI6Ac/cds8G8It0UCcFGSg+HrZ0YujJxWIruRCUG60Q2OAbEvn0+
-uRpTm+4tV1Wt92WFeuRyqkomozx0g4CyfsxGX/x8mLhKPFK/7K9iTXM4/t+xQC4f
-J+iRmPVsMKQ8YsHYiWVhlOMH9XJQiqERCB2kOKJCH6xkaF2k0GbM2sGgbS7Z6lrd
-fsFTOIVx0VxLVsZnWX3byE9ghnDR5jn18u30Cpb/R/ShxNUGIHqRa4DkM5la6uZX
-W1fpSW11JBSUv4WnOO0C2rlIu7UJWOROqZZ0OsybPRGGwagcyff2qVRuI2XFvAMk
-OzBrmpfHEhF6NDU=
------END CERTIFICATE-----
-)%";
 
 BOOST_MYSQL_NETWORK_TEST(certificate_valid, handshake_fixture, net_samples_ssl)
 {

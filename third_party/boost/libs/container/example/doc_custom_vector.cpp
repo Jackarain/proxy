@@ -9,7 +9,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //[doc_custom_vector
 #include <boost/container/vector.hpp>
-#include <boost/static_assert.hpp>
 
 //Make sure assertions are active
 #ifdef NDEBUG
@@ -27,7 +26,7 @@ int main ()
 
    //Size-optimized vector is smaller than the default one.
    typedef vector<int, new_allocator<int>, size_option_t > size_optimized_vector_t;
-   BOOST_STATIC_ASSERT(( sizeof(size_optimized_vector_t) < sizeof(vector<int>) ));
+   assert(( sizeof(size_optimized_vector_t) < sizeof(vector<int>) ));
 
    //Requesting capacity for more elements than representable by "unsigned char"
    //is an error in the size optimized vector.

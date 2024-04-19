@@ -9,7 +9,6 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include <boost/container/pmr/string.hpp>
-#include <boost/static_assert.hpp>
 #include <boost/container/detail/type_traits.hpp>
 
 int main()
@@ -19,13 +18,13 @@ int main()
 
    typedef basic_string<char, std::char_traits<char>, pmr::polymorphic_allocator<char> > string_t;
    typedef basic_string<wchar_t, std::char_traits<wchar_t>, pmr::polymorphic_allocator<wchar_t> > wstring_t;
-   BOOST_STATIC_ASSERT(( is_same<string_t, pmr::string>::value ));
-   BOOST_STATIC_ASSERT(( is_same<string_t, pmr::basic_string_of<char>::type>::value ));
-   BOOST_STATIC_ASSERT(( is_same<wstring_t, pmr::wstring>::value ));
-   BOOST_STATIC_ASSERT(( is_same<wstring_t, pmr::basic_string_of<wchar_t>::type>::value ));
+   BOOST_CONTAINER_STATIC_ASSERT(( is_same<string_t, pmr::string>::value ));
+   BOOST_CONTAINER_STATIC_ASSERT(( is_same<string_t, pmr::basic_string_of<char>::type>::value ));
+   BOOST_CONTAINER_STATIC_ASSERT(( is_same<wstring_t, pmr::wstring>::value ));
+   BOOST_CONTAINER_STATIC_ASSERT(( is_same<wstring_t, pmr::basic_string_of<wchar_t>::type>::value ));
    #if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
-      BOOST_STATIC_ASSERT(( is_same<string_t, pmr::string >::value ));
-      BOOST_STATIC_ASSERT(( is_same<wstring_t, pmr::wstring >::value ));
+      BOOST_CONTAINER_STATIC_ASSERT(( is_same<string_t, pmr::string >::value ));
+      BOOST_CONTAINER_STATIC_ASSERT(( is_same<wstring_t, pmr::wstring >::value ));
    #endif
    return 0;
 }

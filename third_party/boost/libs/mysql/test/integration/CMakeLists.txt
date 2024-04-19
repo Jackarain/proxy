@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+# Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -33,6 +33,9 @@ add_executable(
     test/multi_queries.cpp
     test/static_interface.cpp
     test/reconnect.cpp
+    test/any_connection.cpp
+    test/character_set_tracking.cpp
+    test/connection_pool.cpp
     test/db_specific.cpp
     test/database_types.cpp
 )
@@ -47,6 +50,11 @@ target_link_libraries(
     boost_mysql_testing
     Boost::mysql
     Boost::context
+)
+target_compile_definitions(
+    boost_mysql_integrationtests
+    PRIVATE
+    BOOST_ALLOW_DEPRECATED # Integration tests still exercise the old execution interface
 )
 boost_mysql_common_target_settings(boost_mysql_integrationtests)
 if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.16)

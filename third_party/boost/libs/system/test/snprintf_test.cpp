@@ -2,6 +2,10 @@
 // Distributed under the Boost Software License, Version 1.0.
 // http://www.boost.org/LICENSE_1_0.txt
 
+#if defined(__GNUC__) && __GNUC__ >= 7
+# pragma GCC diagnostic ignored "-Wformat-truncation"
+#endif
+
 #include <boost/system/detail/snprintf.hpp>
 #include <boost/core/lightweight_test.hpp>
 

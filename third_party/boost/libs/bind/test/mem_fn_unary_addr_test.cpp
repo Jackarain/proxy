@@ -1,5 +1,4 @@
 #include <boost/config.hpp>
-#include <boost/detail/workaround.hpp>
 
 #if defined(BOOST_MSVC)
 #pragma warning(disable: 4786)  // identifier truncated in debug info
@@ -19,16 +18,7 @@
 //
 
 #include <boost/mem_fn.hpp>
-
-#if defined(BOOST_MSVC) && (BOOST_MSVC < 1300)
-#pragma warning(push, 3)
-#endif
-
 #include <iostream>
-
-#if defined(BOOST_MSVC) && (BOOST_MSVC < 1300)
-#pragma warning(pop)
-#endif
 
 unsigned int hash = 0;
 
@@ -83,19 +73,10 @@ public:
     }
 };
 
-#if defined( BOOST_BORLANDC ) && BOOST_WORKAROUND( BOOST_BORLANDC, BOOST_TESTED_AT( 0x620 ) )
-namespace boost
-{
-#endif
-
 template<class T> T * get_pointer( Y< T > const & y )
 {
     return y.get();
 }
-
-#if defined( BOOST_BORLANDC ) && BOOST_WORKAROUND( BOOST_BORLANDC, BOOST_TESTED_AT( 0x620 ) )
-} // namespace boost
-#endif
 
 int detect_errors(bool x)
 {

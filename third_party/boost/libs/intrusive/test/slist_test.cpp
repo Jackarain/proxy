@@ -355,48 +355,15 @@ void test_slist< ListType, ValueContainer >
          TEST_INTRUSIVE_SEQUENCE( init_values, testlist2.begin() );  }
    }
 
-   {  //splice in the same list
-      list_type testlist1 (values.begin(), values.begin() + 5);
-
-      {  int init_values [] = { 1, 2, 3, 4, 5 };
-         TEST_INTRUSIVE_SEQUENCE( init_values, testlist1.begin() );  }
-
-      //nop 1
-      testlist1.splice_after (testlist1.before_begin(), testlist1, testlist1.before_begin(), ++testlist1.before_begin());
-      {  int init_values [] = { 1, 2, 3, 4, 5 };
-         TEST_INTRUSIVE_SEQUENCE( init_values, testlist1.begin() );  }
-
-      //nop 2
-      testlist1.splice_after (++testlist1.before_begin(), testlist1, testlist1.before_begin(), ++testlist1.before_begin());
-      {  int init_values [] = { 1, 2, 3, 4, 5 };
-         TEST_INTRUSIVE_SEQUENCE( init_values, testlist1.begin() );  }
-
-      //nop 3
-      testlist1.splice_after (testlist1.before_begin(), testlist1, ++testlist1.before_begin(), ++testlist1.before_begin());
-      {  int init_values [] = { 1, 2, 3, 4, 5 };
-         TEST_INTRUSIVE_SEQUENCE( init_values, testlist1.begin() );  }
-
-      testlist1.splice_after (testlist1.before_begin(), testlist1, ++testlist1.before_begin(), ++++testlist1.before_begin());
-      {  int init_values [] = { 2, 1, 3, 4, 5 };
-         TEST_INTRUSIVE_SEQUENCE( init_values, testlist1.begin() );  }
-
-      testlist1.splice_after (testlist1.before_begin(), testlist1, ++testlist1.before_begin(), ++++++testlist1.before_begin());
-      {  int init_values [] = { 1, 3, 2, 4, 5 };
-         TEST_INTRUSIVE_SEQUENCE( init_values, testlist1.begin() );  }
-
-      testlist1.splice_after (++++++++testlist1.before_begin(), testlist1, testlist1.before_begin(), ++++testlist1.before_begin());
-      {  int init_values [] = { 2, 4, 1, 3, 5 };
-         TEST_INTRUSIVE_SEQUENCE( init_values, testlist1.begin() );  }
-   }
-
    {  //Now test swap when testlist2 is empty
       list_type testlist1 (values.begin(), values.begin() + 2);
       list_type testlist2;
+      BOOST_TEST(testlist2.empty());
       testlist1.swap(testlist2);
       BOOST_TEST (testlist1.empty());
       {  int init_values [] = { 1, 2 };
          TEST_INTRUSIVE_SEQUENCE( init_values, testlist2.begin() );  }
-   }
+   } 
    {  //Now test swap when testlist1 is empty
       list_type testlist2 (values.begin(), values.begin() + 2);
       list_type testlist1;
@@ -456,6 +423,42 @@ void test_slist< ListType, ValueContainer >
       BOOST_TEST((&values[0])->is_linked());
       {  int init_values [] = { 1 };
          TEST_INTRUSIVE_SEQUENCE( init_values, testlist1.begin() );  }
+   }
+
+   {  //splice in the same list
+      list_type testlist1 (values.begin(), values.begin() + 5);
+
+      {  int init_values [] = { 1, 2, 3, 4, 5 };
+         TEST_INTRUSIVE_SEQUENCE( init_values, testlist1.begin() );  }
+
+      //nop 1
+      testlist1.splice_after (testlist1.before_begin(), testlist1, testlist1.before_begin(), ++testlist1.before_begin());
+      {  int init_values [] = { 1, 2, 3, 4, 5 };
+         TEST_INTRUSIVE_SEQUENCE( init_values, testlist1.begin() );  }
+
+      //nop 2
+      testlist1.splice_after (++testlist1.before_begin(), testlist1, testlist1.before_begin(), ++testlist1.before_begin());
+      {  int init_values [] = { 1, 2, 3, 4, 5 };
+         TEST_INTRUSIVE_SEQUENCE( init_values, testlist1.begin() );  }
+      
+      //nop 3
+      testlist1.splice_after (testlist1.before_begin(), testlist1, ++testlist1.before_begin(), ++testlist1.before_begin());
+      {  int init_values [] = { 1, 2, 3, 4, 5 };
+         TEST_INTRUSIVE_SEQUENCE( init_values, testlist1.begin() );  }
+
+      #if !defined(BOOST_MSVC) || (BOOST_MSVC != 1900) //Visual 2015 has problems generating this test code
+      testlist1.splice_after (testlist1.before_begin(), testlist1, ++testlist1.before_begin(), ++++testlist1.before_begin());
+      {  int init_values [] = { 2, 1, 3, 4, 5 };
+         TEST_INTRUSIVE_SEQUENCE( init_values, testlist1.begin() );  }
+
+      testlist1.splice_after (testlist1.before_begin(), testlist1, ++testlist1.before_begin(), ++++++testlist1.before_begin());
+      {  int init_values [] = { 1, 3, 2, 4, 5 };
+         TEST_INTRUSIVE_SEQUENCE( init_values, testlist1.begin() );  }
+
+      testlist1.splice_after (++++++++testlist1.before_begin(), testlist1, testlist1.before_begin(), ++++testlist1.before_begin());
+      {  int init_values [] = { 2, 4, 1, 3, 5 };
+         TEST_INTRUSIVE_SEQUENCE( init_values, testlist1.begin() );  }
+      #endif
    }
 }
 
@@ -683,13 +686,13 @@ int main(int, char* [])
 {
    // test (plain/smart pointers) x (nonconst/const size) x (void node allocator)
    test_main_template<void*, false, true>()();
-   test_main_template<boost::intrusive::smart_ptr<void>, false, true>()();
    test_main_template<void*, true, true>()();
+
+   test_main_template<boost::intrusive::smart_ptr<void>, false, true>()();
    test_main_template<boost::intrusive::smart_ptr<void>, true, true>()();
    // test (bounded pointers) x ((nonconst/const size) x (special node allocator)
    test_main_template_bptr< true >()();
    test_main_template_bptr< false >()();
-
 
    return boost::report_errors();
 }

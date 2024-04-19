@@ -13,7 +13,7 @@ t = BoostBuild.Tester(use_test_config=False)
 
 t.set_tree("../example/libraries")
 
-t.run_build_system()
+t.run_build_system(["link=shared"])
 
 t.expect_addition(["app/bin/$toolset/debug*/app.exe",
                    "util/foo/bin/$toolset/debug*/bar.dll"])

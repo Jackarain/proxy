@@ -1,9 +1,11 @@
 // Copyright (C) 2023 Christian Mazakas
 // Copyright (C) 2023 Joaquin M Lopez Munoz
+// Copyright (C) 2024 Braden Ganetsky
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #include "helpers.hpp"
+#include "../helpers/count.hpp"
 
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
@@ -51,7 +53,7 @@ namespace {
 
   struct lvalue_emplacer_type
   {
-    template <class T, class X> void operator()(std::vector<T>& values, X& x)
+    template <class T, class X> void call_impl(std::vector<T>& values, X& x)
     {
       static constexpr auto value_type_cardinality = 
         value_cardinality<typename X::value_type>::value;
@@ -66,15 +68,23 @@ namespace {
         }
       });
       BOOST_TEST_EQ(num_inserts, x.size());
-      BOOST_TEST_EQ(
-        raii::default_constructor, value_type_cardinality * values.size());
 
-      BOOST_TEST_EQ(raii::copy_constructor, 0u);
-      BOOST_TEST_GE(raii::move_constructor, value_type_cardinality * x.size());
+      std::uint64_t const default_constructors = value_type_cardinality == 2
+                                                   ? values.size() + num_inserts
+                                                   : values.size();
+      BOOST_TEST_EQ(raii::default_constructor, default_constructors);
 
       BOOST_TEST_EQ(raii::copy_constructor, 0u);
       BOOST_TEST_EQ(raii::copy_assignment, 0u);
       BOOST_TEST_EQ(raii::move_assignment, 0u);
+    }
+    template <class T, class X> void operator()(std::vector<T>& values, X& x)
+    {
+      static constexpr auto value_type_cardinality =
+        value_cardinality<typename X::value_type>::value;
+
+      call_impl(values, x);
+      BOOST_TEST_GE(raii::move_constructor, value_type_cardinality * x.size());
     }
   } lvalue_emplacer;
 
@@ -82,12 +92,9 @@ namespace {
   {
     template <class T, class X> void operator()(std::vector<T>& values, X& x)
     {
-      static constexpr auto value_type_cardinality = 
-        value_cardinality<typename X::value_type>::value;
-
       x.reserve(values.size());
-      lvalue_emplacer_type::operator()(values, x);
-      BOOST_TEST_EQ(raii::move_constructor, value_type_cardinality * x.size());
+      lvalue_emplacer_type::call_impl(values, x);
+      BOOST_TEST_EQ(raii::move_constructor, x.size());
     }
   } norehash_lvalue_emplacer;
 
@@ -170,6 +177,74 @@ namespace {
     }
   } lvalue_emplace_or_visit;
 
+  struct copy_emplacer_type
+  {
+    template <class T, class X> void operator()(std::vector<T>& values, X& x)
+    {
+      static constexpr auto value_type_cardinality =
+        value_cardinality<typename X::value_type>::value;
+
+      std::atomic<std::uint64_t> num_inserts{0};
+      thread_runner(values, [&x, &num_inserts](boost::span<T> s) {
+        for (auto const& r : s) {
+          bool b = x.emplace(r);
+          if (b) {
+            ++num_inserts;
+          }
+        }
+      });
+      BOOST_TEST_EQ(num_inserts, x.size());
+      BOOST_TEST_EQ(raii::default_constructor, 0u);
+
+      BOOST_TEST_EQ(raii::copy_constructor, value_type_cardinality * x.size());
+      BOOST_TEST_GT(raii::move_constructor, 0u);
+
+      BOOST_TEST_EQ(raii::copy_assignment, 0u);
+      BOOST_TEST_EQ(raii::move_assignment, 0u);
+    }
+  } copy_emplacer;
+
+  struct move_emplacer_type
+  {
+    template <class T, class X> void operator()(std::vector<T>& values, X& x)
+    {
+      static constexpr auto value_type_cardinality =
+        value_cardinality<typename X::value_type>::value;
+
+      std::atomic<std::uint64_t> num_inserts{0};
+      thread_runner(values, [&x, &num_inserts](boost::span<T> s) {
+        for (auto& r : s) {
+          bool b = x.emplace(std::move(r));
+          if (b) {
+            ++num_inserts;
+          }
+        }
+      });
+      BOOST_TEST_EQ(num_inserts, x.size());
+      BOOST_TEST_EQ(raii::default_constructor, 0u);
+
+#if defined(BOOST_MSVC)
+#pragma warning(push)
+#pragma warning(disable : 4127) // conditional expression is constant
+#endif
+      if (std::is_same<T, typename X::value_type>::value &&
+          !std::is_same<typename X::key_type,
+            typename X::value_type>::value) { // map value_type can only be
+                                              // copied, no move
+        BOOST_TEST_EQ(raii::copy_constructor, x.size());
+      } else {
+        BOOST_TEST_EQ(raii::copy_constructor, 0u);
+      }
+#if defined(BOOST_MSVC)
+#pragma warning(pop) // C4127
+#endif
+      BOOST_TEST_GT(raii::move_constructor, value_type_cardinality * x.size());
+
+      BOOST_TEST_EQ(raii::copy_assignment, 0u);
+      BOOST_TEST_EQ(raii::move_assignment, 0u);
+    }
+  } move_emplacer;
+
   template <class X, class GF, class F>
   void emplace(X*, GF gen_factory, F emplacer, test::random_generator rg)
   {
@@ -220,8 +295,178 @@ UNORDERED_TEST(
   ((map)(set))
   ((value_type_generator_factory)(init_type_generator_factory))
   ((lvalue_emplacer)(norehash_lvalue_emplacer)
-   (lvalue_emplace_or_cvisit)(lvalue_emplace_or_visit))
+   (lvalue_emplace_or_cvisit)(lvalue_emplace_or_visit)(copy_emplacer)(move_emplacer))
   ((default_generator)(sequential)(limited_range)))
+
+// clang-format on
+
+namespace {
+  using converting_key_type = basic_raii<struct converting_key_tag_>;
+  using converting_value_type = basic_raii<struct converting_value_tag_>;
+
+  class counted_key_type : public basic_raii<struct counted_key_tag_>
+  {
+  public:
+    using basic_raii::basic_raii;
+    counted_key_type() = default;
+    counted_key_type(const converting_key_type& k) : counted_key_type(k.x_) {}
+  };
+  class counted_value_type : public basic_raii<struct counted_value_tag_>
+  {
+  public:
+    using basic_raii::basic_raii;
+    counted_value_type() = default;
+    counted_value_type(const converting_value_type& v)
+        : counted_value_type(v.x_)
+    {
+    }
+  };
+
+  void reset_counts()
+  {
+    counted_key_type::reset_counts();
+    counted_value_type::reset_counts();
+    converting_key_type::reset_counts();
+    converting_value_type::reset_counts();
+  }
+
+  using test::smf_count;
+
+  template <class T> smf_count count_for()
+  {
+    return test::smf_count{
+      (int)T::default_constructor.load(std::memory_order_relaxed),
+      (int)T::copy_constructor.load(std::memory_order_relaxed),
+      (int)T::move_constructor.load(std::memory_order_relaxed),
+      (int)T::copy_assignment.load(std::memory_order_relaxed),
+      (int)T::move_assignment.load(std::memory_order_relaxed),
+      (int)T::destructor.load(std::memory_order_relaxed)};
+  }
+
+  enum emplace_kind
+  {
+    copy,
+    move
+  };
+
+  enum emplace_status
+  {
+    fail,
+    success
+  };
+
+  struct counted_key_checker_type
+  {
+    using key_type = counted_key_type;
+    void operator()(emplace_kind kind, emplace_status status)
+    {
+      int copies = (kind == copy && status == success) ? 1 : 0;
+      int moves = (kind == move && status == success) ? 1 : 0;
+      BOOST_TEST_EQ(
+        count_for<counted_key_type>(), (smf_count{0, copies, moves, 0, 0, 0}));
+    }
+  } counted_key_checker;
+
+  struct converting_key_checker_type
+  {
+    using key_type = converting_key_type;
+    void operator()(emplace_kind, emplace_status status)
+    {
+      int moves = (status == success) ? 1 : 0;
+      BOOST_TEST_EQ(
+        count_for<counted_key_type>(), (smf_count{1, 0, moves, 0, 0, 1}));
+    }
+  } converting_key_checker;
+
+  struct counted_value_checker_type
+  {
+    using mapped_type = counted_value_type;
+    void operator()(emplace_kind kind, emplace_status status)
+    {
+      int copies = (kind == copy && status == success) ? 1 : 0;
+      int moves = (kind == move && status == success) ? 1 : 0;
+      BOOST_TEST_EQ(count_for<counted_value_type>(),
+        (smf_count{0, copies, moves, 0, 0, 0}));
+    }
+  } counted_value_checker;
+
+  struct converting_value_checker_type
+  {
+    using mapped_type = converting_value_type;
+    void operator()(emplace_kind, emplace_status status)
+    {
+      int ctors = (status == success) ? 1 : 0;
+      BOOST_TEST_EQ(
+        count_for<counted_value_type>(), (smf_count{ctors, 0, 0, 0, 0, 0}));
+    }
+  } converting_value_checker;
+
+  template <class X, class KC, class VC>
+  void emplace_map_key_value(
+    X*, emplace_kind kind, KC key_checker, VC value_checker)
+  {
+    using container = X;
+    using key_type = typename KC::key_type;
+    using mapped_type = typename VC::mapped_type;
+
+    container x;
+    key_type key{};
+    key_type key2 = key;
+    mapped_type value{};
+    mapped_type value2 = value;
+
+    {
+      reset_counts();
+      auto ret = (kind == copy) ? x.emplace(key, value)
+                                : x.emplace(std::move(key), std::move(value));
+      BOOST_TEST_EQ(ret, true);
+      key_checker(kind, success);
+      value_checker(kind, success);
+      BOOST_TEST_EQ(
+        count_for<converting_key_type>(), (smf_count{0, 0, 0, 0, 0, 0}));
+      BOOST_TEST_EQ(
+        count_for<converting_value_type>(), (smf_count{0, 0, 0, 0, 0, 0}));
+    }
+
+    {
+      reset_counts();
+      bool ret = x.emplace(key2, value2);
+      BOOST_TEST_EQ(ret, false);
+      key_checker(kind, fail);
+      value_checker(kind, fail);
+      BOOST_TEST_EQ(
+        count_for<converting_key_type>(), (smf_count{0, 0, 0, 0, 0, 0}));
+      BOOST_TEST_EQ(
+        count_for<converting_value_type>(), (smf_count{0, 0, 0, 0, 0, 0}));
+    }
+
+    {
+      reset_counts();
+      bool ret = x.emplace(std::move(key2), std::move(value2));
+      BOOST_TEST_EQ(ret, false);
+      key_checker(kind, fail);
+      value_checker(kind, fail);
+      BOOST_TEST_EQ(
+        count_for<converting_key_type>(), (smf_count{0, 0, 0, 0, 0, 0}));
+      BOOST_TEST_EQ(
+        count_for<converting_value_type>(), (smf_count{0, 0, 0, 0, 0, 0}));
+    }
+  }
+
+  boost::unordered::concurrent_flat_map<counted_key_type, counted_value_type>*
+    test_counted_flat_map = {};
+
+} // namespace
+
+// clang-format off
+
+UNORDERED_TEST(
+  emplace_map_key_value,
+  ((test_counted_flat_map))
+  ((copy)(move))
+  ((counted_key_checker)(converting_key_checker))
+  ((counted_value_checker)(converting_value_checker))
+)
 
 // clang-format on
 

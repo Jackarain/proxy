@@ -15,7 +15,6 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/core/lightweight_test.hpp>
 
-#include <cstddef>
 #include <exception>
 
 #include <windows.h>
@@ -84,7 +83,7 @@ bool obtain_restore_privilege()
     }
 
     TOKEN_PRIVILEGES tp;
-    if (!LookupPrivilegeValue(NULL, SE_RESTORE_NAME, &tp.Privileges[0].Luid))
+    if (!LookupPrivilegeValue(nullptr, SE_RESTORE_NAME, &tp.Privileges[0].Luid))
     {
         DWORD err = GetLastError();
         CloseHandle(hToken);
@@ -95,7 +94,7 @@ bool obtain_restore_privilege()
     tp.PrivilegeCount = 1;
     tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
 
-    if (!AdjustTokenPrivileges(hToken, FALSE, &tp, sizeof(TOKEN_PRIVILEGES), NULL, NULL))
+    if (!AdjustTokenPrivileges(hToken, FALSE, &tp, sizeof(TOKEN_PRIVILEGES), nullptr, nullptr))
     {
         DWORD err = GetLastError();
         CloseHandle(hToken);
@@ -114,7 +113,7 @@ bool create_io_reparse_file_placeholder(const wchar_t* name)
         return false;
     }
 
-    HANDLE hHandle = CreateFileW(name, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_FLAG_OPEN_REPARSE_POINT, 0);
+    HANDLE hHandle = CreateFileW(name, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, CREATE_ALWAYS, FILE_FLAG_OPEN_REPARSE_POINT, 0);
     if (hHandle == INVALID_HANDLE_VALUE)
     {
         DWORD err = GetLastError();
@@ -134,7 +133,7 @@ bool create_io_reparse_file_placeholder(const wchar_t* name)
     pReparse->ReparseTag = IO_REPARSE_TAG_FILE_PLACEHOLDER;
 
     DWORD dwLen;
-    bool ret = !!DeviceIoControl(hHandle, FSCTL_SET_REPARSE_POINT, pReparse, pReparse->ReparseDataLength + REPARSE_DATA_BUFFER_HEADER_SIZE, NULL, 0, &dwLen, NULL);
+    bool ret = !!DeviceIoControl(hHandle, FSCTL_SET_REPARSE_POINT, pReparse, pReparse->ReparseDataLength + REPARSE_DATA_BUFFER_HEADER_SIZE, nullptr, 0, &dwLen, nullptr);
     if (!ret)
     {
         DWORD err = GetLastError();
@@ -148,10 +147,10 @@ bool create_io_reparse_file_placeholder(const wchar_t* name)
 
 int main()
 {
-    boost::filesystem::path rpt = boost::filesystem::temp_directory_path() / "reparse_point_test.txt";
+    boost::filesystem::path rpt = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path(L"bfs_reparse_point_test-%%%%-%%%%.txt");
+    std::cout << "Creating file placeholder reparse point: " << rpt.string() << std::endl;
 
     BOOST_TEST(create_io_reparse_file_placeholder(rpt.native().c_str()));
-    std::cout << "Created file placeholder reparse point: " << rpt.string() << std::endl;
     BOOST_TEST_NO_THROW(BOOST_TEST(boost::filesystem::status(rpt).type() == boost::filesystem::reparse_file));
     BOOST_TEST_NO_THROW(BOOST_TEST(boost::filesystem::remove(rpt)));
 

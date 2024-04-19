@@ -12,9 +12,9 @@
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/rfc/ipv4_address_rule.hpp>
-#include <boost/url/rfc/detail/host_rule.hpp>
-#include <boost/url/rfc/detail/ip_literal_rule.hpp>
-#include <boost/url/rfc/detail/reg_name_rule.hpp>
+#include "host_rule.hpp"
+#include "ip_literal_rule.hpp"
+#include "reg_name_rule.hpp"
 #include <boost/url/grammar/parse.hpp>
 
 namespace boost {

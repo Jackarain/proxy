@@ -18,7 +18,7 @@
 # include <boost/preprocessor/facilities/intercept.hpp>
 # include <boost/preprocessor/logical/bitor.hpp>
 # include <boost/preprocessor/repetition.hpp>
-# include <libs/preprocessor/test/test.h>
+# include "test.h"
 
 # define MAX 10
 

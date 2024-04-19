@@ -24,7 +24,7 @@ using namespace boost::numeric::odeint;
 
 typedef boost::multiprecision::cpp_dec_float_50 value_type;
 
-typedef boost::array< value_type , 3 > state_type;
+typedef std::array< value_type , 3 > state_type;
 //]
 
 //[ mp_lorenz_rhs

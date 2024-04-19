@@ -34,12 +34,12 @@ namespace boost { namespace multiprecision { namespace detail {
    template <class Iterator>
    std::size_t find_first_of(Iterator begin, Iterator end, const char* what)
    {
-      return std::find_if(begin, end, is_in_string(what)) - begin;
+      return static_cast<std::size_t>(std::find_if(begin, end, is_in_string(what)) - begin);
    }
    template <class Iterator>
    std::size_t find_first_not_of(Iterator begin, Iterator end, const char* what)
    {
-      return std::find_if(begin, end, is_not_in_string(what)) - begin;
+      return static_cast<std::size_t>(std::find_if(begin, end, is_not_in_string(what)) - begin);
    }
 
 

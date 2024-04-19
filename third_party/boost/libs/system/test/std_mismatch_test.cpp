@@ -12,24 +12,8 @@
 # define _CRT_SECURE_NO_WARNINGS
 
 #include <boost/system/error_code.hpp>
-#include <boost/config.hpp>
-#include <boost/config/pragma_message.hpp>
-#include <iostream>
-
-#if !defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
-
-BOOST_PRAGMA_MESSAGE( "BOOST_SYSTEM_HAS_SYSTEM_ERROR not defined, test will be skipped" )
-
-int main()
-{
-  std::cout
-    << "The version of the C++ standard library being used does not"
-    " support header <system_error> so interoperation will not be tested.\n";
-}
-
-#else
-
 #include <boost/core/lightweight_test.hpp>
+#include <boost/config.hpp>
 #include <system_error>
 #include <cerrno>
 #include <string>
@@ -53,14 +37,8 @@ static void test_system_category()
 
 int main()
 {
-    std::cout
-      << "The version of the C++ standard library being used"
-      " supports header <system_error> so interoperation will be tested.\n";
-
     test_generic_category();
     test_system_category();
 
     return boost::report_errors();
 }
-
-#endif

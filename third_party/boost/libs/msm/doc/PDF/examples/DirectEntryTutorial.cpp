@@ -11,7 +11,7 @@
 #include <vector>
 #include <iostream>
 // back-end
-#include <boost/msm/back/state_machine.hpp>
+#include <boost/msm/back11/state_machine.hpp>
 //front-end
 #include <boost/msm/front/state_machine_def.hpp>
 
@@ -54,7 +54,7 @@ namespace
         };
         struct SubFsm2_ : public msm::front::state_machine_def<SubFsm2_>
         {
-            typedef msm::back::state_machine<SubFsm2_> SubFsm2;
+            typedef msm::back11::state_machine<SubFsm2_> SubFsm2;
 
             template <class Event,class FSM>
             void on_entry(Event const&,FSM& ) {std::cout << "entering: SubFsm2" << std::endl;}
@@ -145,7 +145,7 @@ namespace
                     << " on event " << typeid(e).name() << std::endl;
             }
         };
-        typedef msm::back::state_machine<SubFsm2_> SubFsm2;
+        typedef msm::back11::state_machine<SubFsm2_> SubFsm2;
 
         // the initial state of the player SM. Must be defined
         typedef State1 initial_state;
@@ -178,7 +178,7 @@ namespace
                 << " on event " << typeid(e).name() << std::endl;
         }
     };
-    typedef msm::back::state_machine<Fsm_> Fsm;
+    typedef msm::back11::state_machine<Fsm_> Fsm;
 
     //
     // Testing utilities.

@@ -57,9 +57,6 @@ lib mixed_cxxstd : mixed_cxxstd.cpp : <link>shared:<define>MIXED_CXXSTD_DYN_LINK
 run test_mixed_cxxstd.cpp mixed_cxxstd : : : <link>shared : mixed_cxxstd_shared ;
 run test_mixed_cxxstd.cpp mixed_cxxstd : : : <link>static : mixed_cxxstd_static ;
 
-run test_mixed_cxxstd.cpp mixed_cxxstd/<cxxstd>98 : : : <link>shared : mixed_cxxstd_shared_98 ;
-run test_mixed_cxxstd.cpp mixed_cxxstd/<cxxstd>98 : : : <link>static : mixed_cxxstd_static_98 ;
-
 run test_mixed_cxxstd.cpp mixed_cxxstd/<cxxstd>0x : : : <link>shared : mixed_cxxstd_shared_0x ;
 run test_mixed_cxxstd.cpp mixed_cxxstd/<cxxstd>0x : : : <link>static : mixed_cxxstd_static_0x ;
 
@@ -72,9 +69,6 @@ lib return_function : return_function.cpp : <link>shared:<define>RETURN_FUNCTION
 
 run test_return_function.cpp return_function : : : <link>shared : return_function_shared ;
 run test_return_function.cpp return_function : : : <link>static : return_function_static ;
-
-run test_return_function.cpp return_function/<cxxstd>98 : : : <link>shared : return_function_shared_98 ;
-run test_return_function.cpp return_function/<cxxstd>98 : : : <link>static : return_function_static_98 ;
 
 run test_return_function.cpp return_function/<cxxstd>0x : : : <link>shared : return_function_shared_0x ;
 run test_return_function.cpp return_function/<cxxstd>0x : : : <link>static : return_function_static_0x ;

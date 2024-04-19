@@ -8,8 +8,4 @@ if(HAVE_BOOST_TEST)
 
 boost_test_jamfile(FILE Jamfile.v2 LINK_LIBRARIES Boost::assert Boost::core)
 
-if(BOOST_SUPERPROJECT_VERSION)
-  boost_test(SOURCES check_cmake_version.cpp ARGUMENTS ${PROJECT_VERSION} LINK_LIBRARIES Boost::core Boost::config)
-endif()
-
 endif()

@@ -1,13 +1,13 @@
 #
-# Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+# Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 #
 
 _triggers = { "branch": [ "master", "develop", "drone*", "feature/*", "bugfix/*", "fix/*", "pr/*" ] }
-_container_tag = '454e58d36a2e801a1a6b4e9fd2f995c3087740b1'
-_win_container_tag = '454e58d36a2e801a1a6b4e9fd2f995c3087740b1'
+_container_tag = '1f4d636dddc2f5af1774b42e6177a06457808330'
+_win_container_tag = '1f4d636dddc2f5af1774b42e6177a06457808330'
 
 
 def _image(name):
@@ -24,8 +24,9 @@ def _b2_command(
     variant,
     stdlib='native',
     address_model='64',
-    server_host='localhost',
+    server_host='127.0.0.1',
     separate_compilation=1,
+    use_ts_executor=0,
     address_sanitizer=0,
     undefined_sanitizer=0
 ):
@@ -40,6 +41,7 @@ def _b2_command(
                 '--address-model={} '.format(address_model) + \
                 '--server-host={} '.format(server_host) + \
                 '--separate-compilation={} '.format(separate_compilation) + \
+                '--use-ts-executor={} '.format(use_ts_executor) + \
                 '--address-sanitizer={} '.format(address_sanitizer) + \
                 '--undefined-sanitizer={} '.format(undefined_sanitizer)
 
@@ -56,7 +58,7 @@ def _cmake_command(
     install_tests=1,
     generator='Ninja',
     db='mysql8',
-    server_host='localhost'
+    server_host='127.0.0.1'
 ):
     return 'python tools/ci.py ' + \
                 '--build-kind=cmake ' + \
@@ -135,6 +137,7 @@ def linux_b2(
     stdlib='native',
     address_model='64',
     separate_compilation=1,
+    use_ts_executor = 0,
     address_sanitizer=0,
     undefined_sanitizer=0,
     arch='amd64',
@@ -148,6 +151,7 @@ def linux_b2(
         address_model=address_model,
         server_host='mysql',
         separate_compilation=separate_compilation,
+        use_ts_executor=use_ts_executor,
         address_sanitizer=address_sanitizer,
         undefined_sanitizer=undefined_sanitizer
     )
@@ -167,7 +171,8 @@ def windows_b2(
     toolset,
     cxxstd,
     variant,
-    address_model = '64'
+    address_model = '64',
+    use_ts_executor = 0
 ):
     command = _b2_command(
         source_dir='$Env:DRONE_WORKSPACE',
@@ -175,7 +180,8 @@ def windows_b2(
         cxxstd=cxxstd,
         variant=variant,
         address_model=address_model,
-        server_host='localhost'
+        server_host='127.0.0.1',
+        use_ts_executor=use_ts_executor
     )
     return _pipeline(name=name, image=image, os='windows', command=command, db=None)
 
@@ -218,7 +224,7 @@ def windows_cmake(
         build_shared_libs=build_shared_libs,
         generator='Visual Studio 17 2022',
         db='mysql8',
-        server_host='localhost'
+        server_host='127.0.0.1'
     )
     return _pipeline(
         name=name,
@@ -265,6 +271,7 @@ def main(ctx):
         linux_b2('Linux B2 clang-16-sanit',       _image('build-clang16'),       toolset='clang-16',  cxxstd='20', address_sanitizer=1, undefined_sanitizer=1),
         linux_b2('Linux B2 clang-16-i386-sanit',  _image('build-clang16-i386'),  toolset='clang-16',  cxxstd='20', address_model=32, address_sanitizer=1, undefined_sanitizer=1),
         linux_b2('Linux B2 gcc-5',                _image('build-gcc5'),          toolset='gcc-5',     cxxstd='11'), # gcc-5 C++14 doesn't like my constexpr field_view
+        linux_b2('Linux B2 gcc-5-ts-executor',    _image('build-gcc5'),          toolset='gcc-5',     cxxstd='11', use_ts_executor=1),
         linux_b2('Linux B2 gcc-6',                _image('build-gcc6'),          toolset='gcc-6',     cxxstd='14,17'),
         linux_b2('Linux B2 gcc-10',               _image('build-gcc10'),         toolset='gcc-10',    cxxstd='17,20'),
         linux_b2('Linux B2 gcc-11',               _image('build-gcc11'),         toolset='gcc-11',    cxxstd='20'),
@@ -274,10 +281,11 @@ def main(ctx):
         linux_b2('Linux B2 gcc-13-sanit',         _image('build-gcc13'),         toolset='gcc-13',    cxxstd='20', variant='debug', address_sanitizer=1, undefined_sanitizer=1),
 
         # B2 Windows
-        windows_b2('Windows B2 msvc14.1 32-bit', _win_image('build-msvc14_1'), toolset='msvc-14.1', cxxstd='11,14,17', variant='release',       address_model='32'),
-        windows_b2('Windows B2 msvc14.1 64-bit', _win_image('build-msvc14_1'), toolset='msvc-14.1', cxxstd='14,17',    variant='release',       address_model='64'),
-        windows_b2('Windows B2 msvc14.2',        _win_image('build-msvc14_2'), toolset='msvc-14.2', cxxstd='14,17',    variant='release',       address_model='64'),
-        windows_b2('Windows B2 msvc14.3',        _win_image('build-msvc14_3'), toolset='msvc-14.3', cxxstd='17,20',    variant='debug,release', address_model='64'),
+        windows_b2('Windows B2 msvc14.1 32-bit',      _win_image('build-msvc14_1'), toolset='msvc-14.1', cxxstd='11,14,17', variant='release',       address_model='32'),
+        windows_b2('Windows B2 msvc14.1 64-bit',      _win_image('build-msvc14_1'), toolset='msvc-14.1', cxxstd='14,17',    variant='release'),
+        windows_b2('Windows B2 msvc14.2',             _win_image('build-msvc14_2'), toolset='msvc-14.2', cxxstd='14,17',    variant='release'),
+        windows_b2('Windows B2 msvc14.3',             _win_image('build-msvc14_3'), toolset='msvc-14.3', cxxstd='17,20',    variant='debug,release'),
+        windows_b2('Windows B2 msvc14.3-ts-executor', _win_image('build-msvc14_3'), toolset='msvc-14.3', cxxstd='20',       variant='release',       use_ts_executor=1),
 
         # Docs
         docs()

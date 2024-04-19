@@ -29,6 +29,24 @@ jobs:
       matrix:
         include:
           - {
+              name: "Ubuntu 22.04 Jammy (armhf)",
+              image: "multiarch/ubuntu-debootstrap:armhf-jammy",
+              cxx: "g++",
+              toolset: "gcc",
+            }
+          - {
+              name: "Ubuntu 22.04 Jammy (arm64)",
+              image: "multiarch/ubuntu-debootstrap:arm64-jammy",
+              cxx: "g++",
+              toolset: "gcc",
+            }
+          - {
+              name: "Ubuntu 22.04 Jammy (ppc64el)",
+              image: "multiarch/ubuntu-debootstrap:ppc64el-jammy",
+              cxx: "g++",
+              toolset: "gcc",
+            }
+          - {
               name: "Ubuntu 20.04 Focal (armhf)",
               image: "multiarch/ubuntu-debootstrap:armhf-focal",
               cxx: "g++",

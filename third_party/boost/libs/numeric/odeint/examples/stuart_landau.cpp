@@ -12,7 +12,7 @@
 
 #include <iostream>
 #include <complex>
-#include <boost/array.hpp>
+#include <array>
 
 #include <boost/numeric/odeint.hpp>
 

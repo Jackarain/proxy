@@ -88,7 +88,7 @@ local rule check-target-platform
 }
 
 # Declare flags for compilation.
-toolset.flags qcc.compile OPTIONS <debug-symbols>on : -gstabs+ ;
+toolset.flags qcc.compile OPTIONS <debug-symbols>on : -g ;
 
 # Declare flags and action for compilation.
 toolset.flags qcc.compile OPTIONS <optimization>off : -O0 ;
@@ -215,7 +215,7 @@ generators.register [ new qcc-linking-generator qcc.link.dll : LIB OBJ
 
 # Declare flags for linking.
 # First, the common flags.
-toolset.flags qcc.link OPTIONS <debug-symbols>on : -gstabs+ ;
+toolset.flags qcc.link OPTIONS <debug-symbols>on : -g ;
 toolset.flags qcc.link OPTIONS <profiling>on : -p ;
 toolset.flags qcc.link OPTIONS <linkflags> ;
 toolset.flags qcc.link LINKPATH <library-path> ;

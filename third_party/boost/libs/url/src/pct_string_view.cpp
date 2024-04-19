@@ -13,7 +13,7 @@
 #include <boost/url/detail/config.hpp>
 #include <boost/url/error.hpp>
 #include <boost/url/pct_string_view.hpp>
-#include <boost/url/detail/decode.hpp>
+#include "detail/decode.hpp"
 #include <boost/url/grammar/hexdig_chars.hpp>
 #include <boost/url/detail/except.hpp>
 

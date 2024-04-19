@@ -1,12 +1,12 @@
 <html>
 
 <head>
-<meta http-equiv="Content-Language" content="en-us">
-<meta name="GENERATOR" content="Microsoft FrontPage 5.0">
-<meta name="ProgId" content="FrontPage.Editor.Document">
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="Content-Language" content="en-us"/>
+<meta name="GENERATOR" content="Microsoft FrontPage 5.0"/>
+<meta name="ProgId" content="FrontPage.Editor.Document"/>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <title>Filesystem Relative Proposal</title>
-<link href="styles.css" rel="stylesheet">
+<link href="styles.css" rel="stylesheet"/>
 </head>
 
 <body>
@@ -15,9 +15,9 @@
   <tr>
     <td width="277">
 <a href="../../../index.htm">
-<img src="../../../boost.png" alt="boost.png (6897 bytes)" align="middle" width="300" height="86" border="0"></a></td>
+<img src="../../../boost.png" alt="boost.png (6897 bytes)" align="middle" width="300" height="86" border="0"/></a></td>
     <td align="middle">
-    <font size="7">Filesystem Relative<br>
+    <font size="7">Filesystem Relative<br/>
     Draft Proposal</font>
     </td>
   </tr>
@@ -38,40 +38,41 @@
     <a href="deprecated.html">Deprecated</a> &nbsp;&nbsp;
     <a href="issue_reporting.html">Bug Reports </a>&nbsp;&nbsp;
     </td>
+  </tr>
 </table>
 
 <p><a href="#Introduction">
-      Introduction</a><br>
-&nbsp;&nbsp;&nbsp; <a href="#Acknowledgement">Acknowledgement</a><br>
-&nbsp;&nbsp; &nbsp;<a href="#Preliminary-implementation">Preliminary implementation</a><br>
-<a href="#Requirements">Requirements</a><br>
-<a href="#Issues">Issues</a><br>
+      Introduction</a><br/>
+&nbsp;&nbsp;&nbsp; <a href="#Acknowledgement">Acknowledgement</a><br/>
+&nbsp;&nbsp; &nbsp;<a href="#Preliminary-implementation">Preliminary implementation</a><br/>
+<a href="#Requirements">Requirements</a><br/>
+<a href="#Issues">Issues</a><br/>
 <a href="#Design-decisions">
-      Design decisions</a><br>
+      Design decisions</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#Provide-separate-relative">Provide separate lexical and
-      operational <code>relative</code> functions</a><br>
+      operational <code>relative</code> functions</a><br/>
 &nbsp;&nbsp;&nbsp; <a href="#Provide-separate-proximate">Provide
-separate lexical and operational <code>proximate</code> functions</a><br>
-&nbsp;&nbsp;&nbsp; <a href="#Add-lexical-functions">Add lexical functions as <code>path</code> member functions</a><br>
+separate lexical and operational <code>proximate</code> functions</a><br/>
+&nbsp;&nbsp;&nbsp; <a href="#Add-lexical-functions">Add lexical functions as <code>path</code> member functions</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#Provide-normal">Provide a non-member function
 <code>lexically_normal</code> returning a
-      normal form path</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#Provide-weakly">Provide a <code>weakly_canonical</code> operational function</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#just-work">Resolve issues in ways that &quot;just work&quot; for users</a><br>
+      normal form path</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#Provide-weakly">Provide a <code>weakly_canonical</code> operational function</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#just-work">Resolve issues in ways that &quot;just work&quot; for users</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#mismatch">Specify <code>lexical relative</code> in terms
-      of <code>std::mismatch</code></a><br>
+      of <code>std::mismatch</code></a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#Specify-op-rel-weakly">Specify operational <code>relative</code> in terms of <code>
-      weakly_canonical</code></a><br>
+      weakly_canonical</code></a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#Specify-op-rel-lex-rel">Specify operational <code>relative</code> in terms of
       <code>lexically
-      relative</code></a><br>
-<a href="#Proposed-wording">Proposed wording</a><br>
-&nbsp;&nbsp;&nbsp; <a href="#Define-normal-form">Define <i>normal form</i></a><br>
-&nbsp;&nbsp;&nbsp; <a href="#New-class-path-member-functions">New class path member functions</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href="#Synopsis-path">Synopsis</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href="#Specification-path">Specification</a><br>
-&nbsp;&nbsp;&nbsp; <a href="#operational-functions">New operational functions</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href="#Synopsis-ops">Synopsis</a><br>
+      relative</code></a><br/>
+<a href="#Proposed-wording">Proposed wording</a><br/>
+&nbsp;&nbsp;&nbsp; <a href="#Define-normal-form">Define <i>normal form</i></a><br/>
+&nbsp;&nbsp;&nbsp; <a href="#New-class-path-member-functions">New class path member functions</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href="#Synopsis-path">Synopsis</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href="#Specification-path">Specification</a><br/>
+&nbsp;&nbsp;&nbsp; <a href="#operational-functions">New operational functions</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href="#Synopsis-ops">Synopsis</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href="#Specification-ops">Specification</a></p>
 
 <h2>
@@ -114,26 +115,25 @@ feature/relative2</a> branch of the Boost Filesystem Git repository. See
 <a href="https://github.com/boostorg/filesystem/tree/feature/relative2">
 github.com/boostorg/filesystem/tree/feature/relative2</a></p>
 <h2><a name="Requirements">Requirements</a></h2>
-<b><a name="Requirement-1">Requirement 1</a>:</b> Some uses require symlinks be followed; i.e. the path must be resolved in
-  the actual file system.<p><b><a name="Requirement-2">Requirement 2</a>: </b>Some uses require symlinks not be followed; i.e. the path must not be
+<p><b><a name="Requirement-1">Requirement 1</a>:</b> Some uses require symlinks be followed; i.e. the path must be resolved in
+  the actual file system.</p>
+<p><b><a name="Requirement-2">Requirement 2</a>: </b>Some uses require symlinks not be followed; i.e. the path must not be
   resolved in the actual file system.</p>
-<b><a name="Requirement-3">Requirement 3</a>: </b>Some uses require removing redundant current directory (<i>dot</i>)
-  or parent directory (<i>dot-dot</i>) placeholders.<p><b>
-<a name="Requirement-4">Requirement 4</a>: </b>Some uses do not require removing redundant current directory (<i>dot</i>)
-  or parent directory (<i>dot-dot</i>) placeholders since the path is known to
-be
-already in normal form.</p>
+<p><b><a name="Requirement-3">Requirement 3</a>: </b>Some uses require removing redundant current directory (<i>dot</i>)
+  or parent directory (<i>dot-dot</i>) placeholders.</p>
+<p><b><a name="Requirement-4">Requirement 4</a>: </b>Some uses do not require removing redundant current directory (<i>dot</i>)
+  or parent directory (<i>dot-dot</i>) placeholders since the path is known to be already in normal form.</p>
 <h2><a name="Issues">Issues</a></h2>
 <p><b><a name="Issue-1">Issue 1</a>:</b> What happens if <code>p</code>
 and <code>base</code> are themselves relative?</p>
-<b><a name="Issue-2">Issue 2</a>:</b> What happens if there is no common prefix? Is this an error, the whole of
-  <code>p</code> is relative to <code>base</code>, or something else?<p><b>
-<a name="Issue-3">Issue 3</a>:</b> What happens if <code>p</code>, <code>base</code>, or both are empty?</p>
-<b><a name="Issue-4">Issue 4</a>:</b> What happens if <code>p</code> and <code>base</code> are the same?<p>
-<b><a name="Issue-5">Issue 5</a>:</b> How is the &quot;common prefix&quot; determined?</p>
-<b><a name="Issue-6">Issue 6</a>:</b> What happens if portions of <code>p</code> or <code>base</code> exist but
-  the entire path does not exist and yet symlinks need to be followed?<p><b>
-<a name="Issue-7">Issue 7</a>:</b> What happens when a symlink in the existing portion of a path is affected
+<p><b><a name="Issue-2">Issue 2</a>:</b> What happens if there is no common prefix? Is this an error, the whole of
+  <code>p</code> is relative to <code>base</code>, or something else?</p>
+<p><b><a name="Issue-3">Issue 3</a>:</b> What happens if <code>p</code>, <code>base</code>, or both are empty?</p>
+<p><b><a name="Issue-4">Issue 4</a>:</b> What happens if <code>p</code> and <code>base</code> are the same?</p>
+<p><b><a name="Issue-5">Issue 5</a>:</b> How is the &quot;common prefix&quot; determined?</p>
+<p><b><a name="Issue-6">Issue 6</a>:</b> What happens if portions of <code>p</code> or <code>base</code> exist but
+  the entire path does not exist and yet symlinks need to be followed?</p>
+<p><b><a name="Issue-7">Issue 7</a>:</b> What happens when a symlink in the existing portion of a path is affected
   by a directory (<i>dot-dot</i>) placeholder in a later non-existent portion of
   the path?</p>
 <p><b><a name="Issue-8">Issue 8</a>:</b> Overly complex semantics (and thus
@@ -353,7 +353,7 @@ path lexically_proximate(const path&amp; base) const;</pre>
 <p><i>Returns:</i> <code>*this</code> in <a href="#normal-form">normal form</a>.</p>
 <p><i>Remarks:</i> Uses <code>operator/=</code> to compose the returned path.</p>
 <p>[<i>Example:</i></p>
-<p><code>assert(path(&quot;foo/./bar/..&quot;).lexically_normal() == &quot;foo&quot;);<br>
+<p><code>assert(path(&quot;foo/./bar/..&quot;).lexically_normal() == &quot;foo&quot;);<br/>
 assert(path(&quot;foo/.///bar/../&quot;).lexically_normal() == &quot;foo/.&quot;);</code></p>
 <p>The above assertions will succeed.<i> </i>On Windows, the
 returned path&#39;s <i>directory-separator</i> characters will be backslashes rather than slashes, but that
@@ -376,13 +376,13 @@ does not affect <code>path</code> equality.<i> —end example</i>]</p>
     <li>
   <code>path()</code> if the first mismatched element of <code>*this</code> is equal to <code>
   begin()</code> or the first mismatched element
-  of <code>base</code> is equal to <code>base.begin()</code>, or<br>&nbsp;
+  of <code>base</code> is equal to <code>base.begin()</code>, or<br/>&nbsp;
     </li>
     <li>
   <code>path(&quot;.&quot;)</code> if the first mismatched element of <code>
   *this</code> is equal to <code>
   end()</code> and the first mismatched element
-  of <code>base</code> is equal to <code>base.end()</code>, or<br>&nbsp;
+  of <code>base</code> is equal to <code>base.end()</code>, or<br/>&nbsp;
     </li>
     <li>An object of class <code>path</code> composed via application of <code>
     operator/= path(&quot;..&quot;)</code> for each element in the half-open
@@ -395,11 +395,11 @@ does not affect <code>path</code> equality.<i> —end example</i>]</p>
 </ul>
 
 <p>[<i>Example:</i></p>
-<p><code>assert(path(&quot;/a/d&quot;).lexically_relative(&quot;/a/b/c&quot;) ==  &quot;../../d&quot;);<br>
-assert(path(&quot;/a/b/c&quot;).lexically_relative(&quot;/a/d&quot;) ==  &quot;../b/c&quot;);<br>
-assert(path(&quot;a/b/c&quot;).lexically_relative(&quot;a&quot;) == &quot;b/c&quot;);<br>
-assert(path(&quot;a/b/c&quot;).lexically_relative(&quot;a/b/c/x/y&quot;) ==  &quot;../..&quot;);<br>
-assert(path(&quot;a/b/c&quot;).lexically_relative(&quot;a/b/c&quot;) ==  &quot;.&quot;);<br>
+<p><code>assert(path(&quot;/a/d&quot;).lexically_relative(&quot;/a/b/c&quot;) ==  &quot;../../d&quot;);<br/>
+assert(path(&quot;/a/b/c&quot;).lexically_relative(&quot;/a/d&quot;) ==  &quot;../b/c&quot;);<br/>
+assert(path(&quot;a/b/c&quot;).lexically_relative(&quot;a&quot;) == &quot;b/c&quot;);<br/>
+assert(path(&quot;a/b/c&quot;).lexically_relative(&quot;a/b/c/x/y&quot;) ==  &quot;../..&quot;);<br/>
+assert(path(&quot;a/b/c&quot;).lexically_relative(&quot;a/b/c&quot;) ==  &quot;.&quot;);<br/>
 assert(path(&quot;a/b&quot;).lexically_relative(&quot;c/d&quot;) ==  &quot;&quot;);</code></p>
 <p>The above assertions will succeed.<i> </i>On Windows, the
 returned path&#39;s <i>directory-separator</i>s will be backslashes rather than
@@ -499,7 +499,7 @@ path proximate(const path&amp; p, const path&amp; base, system::error_code&amp; 
   <p><i>Throws:</i> As specified in Error reporting.</p>
 </blockquote>
 
-<hr>
+<hr/>
 <p>&copy; Copyright Beman Dawes 2015</p>
 <p>Distributed under the Boost Software License, Version 1.0. See
 <a href="http://www.boost.org/LICENSE_1_0.txt">www.boost.org/LICENSE_1_0.txt</a></p>

@@ -529,20 +529,20 @@ build-project outside/project ;
     t.write("outside/project/Jamroot", "run ../other/test.cpp ;")
     t.run_build_system(["--dump-tests", "-n", "-d0"],
                        match=TestCmd.match_re, stdout=
-"""boost-test\(RUN\) ".*/pass-run" : "pass-run\.cpp"
-boost-test\(RUN_FAIL\) ".*/fail-run" : "fail-run\.cpp"
-boost-test\(LINK\) ".*/pass-link" : "pass-link\.cpp"
-boost-test\(LINK_FAIL\) ".*/fail-link" : "fail-link\.cpp"
-boost-test\(COMPILE\) ".*/pass-compile" : "pass-compile\.cpp"
-boost-test\(COMPILE_FAIL\) ".*/fail-compile" : "fail-compile\.cpp"
-boost-test\(RUN\) "any/test" : "libs/any/test\.cpp"
-boost-test\(RUN\) "any/test" : "libs/any/test/test\.cpp"
-boost-test\(RUN\) "any/test" : "libs/any/example/test\.cpp"
-boost-test\(RUN\) "bcp/test" : "tools/bcp/test/test\.cpp"
-boost-test\(RUN\) "bcp/test" : "tools/bcp/example/test\.cpp"
-boost-test\(RUN\) ".*/subdir/test/test" : "subdir/test/test\.cpp"
-boost-test\(RUN\) "test" : "status/test\.cpp"
-boost-test\(RUN\) ".*/outside/project/test" : "../other/test.cpp"
+"""boost-test\\(RUN\\) ".*/pass-run" : "pass-run\\.cpp"
+boost-test\\(RUN_FAIL\\) ".*/fail-run" : "fail-run\\.cpp"
+boost-test\\(LINK\\) ".*/pass-link" : "pass-link\\.cpp"
+boost-test\\(LINK_FAIL\\) ".*/fail-link" : "fail-link\\.cpp"
+boost-test\\(COMPILE\\) ".*/pass-compile" : "pass-compile\\.cpp"
+boost-test\\(COMPILE_FAIL\\) ".*/fail-compile" : "fail-compile\\.cpp"
+boost-test\\(RUN\\) "any/test" : "libs/any/test\\.cpp"
+boost-test\\(RUN\\) "any/test" : "libs/any/test/test\\.cpp"
+boost-test\\(RUN\\) "any/test" : "libs/any/example/test\\.cpp"
+boost-test\\(RUN\\) "bcp/test" : "tools/bcp/test/test\\.cpp"
+boost-test\\(RUN\\) "bcp/test" : "tools/bcp/example/test\\.cpp"
+boost-test\\(RUN\\) ".*/subdir/test/test" : "subdir/test/test\\.cpp"
+boost-test\\(RUN\\) "test" : "status/test\\.cpp"
+boost-test\\(RUN\\) ".*/outside/project/test" : "../other/test.cpp"
 """)
     t.cleanup()
 

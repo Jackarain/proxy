@@ -2455,6 +2455,7 @@ pp_iterator_functor<ContextT>::on_pragma(
 #endif
         }
     }
+    expanded.push_back(result_type(T_NEWLINE, "\n", act_token.get_position()));
 
     // the queues should be empty at this point
     BOOST_ASSERT(unput_queue.empty());

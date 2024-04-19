@@ -7,6 +7,7 @@
 
 # bring in rules for testing
 import testing ;
+import ../../config/checks/config : requires ;
 
 project /boost/random/test : requirements <toolset>msvc:<define>_SCL_SECURE_NO_WARNINGS ;
 
@@ -55,6 +56,7 @@ run test_lagged_fibonacci19937.cpp /boost//unit_test_framework ;
 run test_lagged_fibonacci23209.cpp /boost//unit_test_framework ;
 run test_lagged_fibonacci44497.cpp /boost//unit_test_framework ;
 run test_zero_seed.cpp /boost//unit_test_framework ;
+run test_splitmix64.cpp /boost//unit_test_framework ;
 
 run niederreiter_base2_validate.cpp /boost//unit_test_framework ;
 run sobol_validate.cpp /boost//unit_test_framework ;
@@ -143,6 +145,6 @@ explicit statistic_tests ;
 #
 # Multiprecision tests:
 #
-run multiprecision_int_test.cpp /boost//unit_test_framework ;
-# This one runs too slow in debug mode, we really need inline expansions turned on amonst other things:
-run multiprecision_float_test.cpp /boost//unit_test_framework : : : release ;
+run multiprecision_int_test.cpp /boost//unit_test_framework : : : [ requires cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction cxx14_variable_templates cxx14_constexpr ] ;
+# This one runs too slow in debug mode, we really need inline expansions turned on amongst other things:
+run multiprecision_float_test.cpp /boost//unit_test_framework : : : [ requires cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction cxx14_variable_templates cxx14_constexpr ] release ;

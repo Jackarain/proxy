@@ -107,11 +107,19 @@ class TreeDifference:
         self.modified_files = list(filter(not_dir, self.modified_files))
         self.touched_files = list(filter(not_dir, self.touched_files))
 
+    @staticmethod
+    def _pprint_filelist(names):
+        names = sorted(names)
+        s = repr(names)
+        if len(s) < 70:
+            return s
+        return "".join("\n  - {}".format(name) for name in names)
+
     def pprint(self, file=sys.stdout):
-        file.write("Added files   : %s\n" % self.added_files)
-        file.write("Removed files : %s\n" % self.removed_files)
-        file.write("Modified files: %s\n" % self.modified_files)
-        file.write("Touched files : %s\n" % self.touched_files)
+        file.write("Added files   : %s\n" % self._pprint_filelist(self.added_files))
+        file.write("Removed files : %s\n" % self._pprint_filelist(self.removed_files))
+        file.write("Modified files: %s\n" % self._pprint_filelist(self.modified_files))
+        file.write("Touched files : %s\n" % self._pprint_filelist(self.touched_files))
 
     def empty(self):
         return not (self.added_files or self.removed_files or

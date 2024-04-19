@@ -25,6 +25,9 @@ environment:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       TOOLSET: msvc-14.2
       CXXSTD: 14,17
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+      TOOLSET: msvc-14.3
+      CXXSTD: 14,17,20
 ##
 ## cygwin and mingw disabled for now, failing to build
 ## for reasons unrelated to wave

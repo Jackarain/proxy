@@ -53,7 +53,7 @@ class MyClass
    {  return l.int_ == r.int_; }
 
    friend std::size_t hash_value(const MyClass &v)
-   {  return boost::hash_value(v.int_); }
+   {  return std::size_t(v.int_); }
 
    friend bool priority_order(const MyClass &l, const MyClass &r)
    {  return l.int_ < r.int_; }

@@ -31,16 +31,16 @@ template<class ManagedSharedMemory
 int set_test ()
 {
    typedef typename MyShmSet::value_type IntType;
-   const int memsize = 65536;
+   const int Memsize = 128u * 1024u;
    const char *const shMemName = test::get_process_id_name();
    const int max = 100;
 
    BOOST_TRY{
       //Create shared memory
       shared_memory_object::remove(shMemName);
-      ManagedSharedMemory segment(create_only, shMemName, memsize);
+      ManagedSharedMemory segment(create_only, shMemName, Memsize);
 
-      segment.reserve_named_objects(100);
+      segment.reserve_named_objects(10);
 
       //Shared memory allocator must be always be initialized
       //since it has no default constructor
@@ -508,16 +508,16 @@ template<class ManagedSharedMemory
 int set_test_copyable ()
 {
    typedef typename MyShmSet::value_type IntType;
-   const int memsize = 65536;
+   const int Memsize = 128u * 1024u;
    const char *const shMemName = test::get_process_id_name();
    const int max = 100;
 
    BOOST_TRY{
       //Create shared memory
       shared_memory_object::remove(shMemName);
-      ManagedSharedMemory segment(create_only, shMemName, memsize);
+      ManagedSharedMemory segment(create_only, shMemName, Memsize);
 
-      segment.reserve_named_objects(100);
+      segment.reserve_named_objects(10);
 
       //Shared memory allocator must be always be initialized
       //since it has no default constructor

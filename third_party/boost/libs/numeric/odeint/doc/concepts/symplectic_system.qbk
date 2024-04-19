@@ -54,7 +54,7 @@ Symplectic systems are used in symplectic steppers like `symplectic_rkn_sb3a_mcl
 
 [table
   [[Name] [Expression] [Type] [Semantics]]
-  [[Check for pair] [`boost::is_pair< System >::type`] [`boost::mpl::true_`] [Check if System is a pair]]
+  [[Check for pair] [`boost::is_pair< System >::type`] [`std::integral_constant<bool, true>`] [Check if System is a pair]]
   [[Calculate ['dq/dt = f(p)]] [`sys.first( p , dqdt )`] [`void`] [Calculates ['f(p)], the result is stored into `dqdt`] ]
   [[Calculate ['dp/dt = g(q)]] [`sys.second( q , dpdt )`] [`void`] [Calculates ['g(q)], the result is stored into `dpdt`] ]
 ]
@@ -92,7 +92,7 @@ We call this concept ['SimpleSymplecticSystem]
 
 [table
   [[Name] [Expression] [Type] [Semantics]]
-  [[Check for pair] [`boost::is_pair< System >::type`] [`boost::mpl::false_`] [Check if System is a pair, should be evaluated to false in this case.]]
+  [[Check for pair] [`boost::is_pair< System >::type`] [`std::integral_constant<bool, false>`] [Check if System is a pair, should be evaluated to false in this case.]]
   [[Calculate ['dp/dt = g(q)]] [`sys( q , dpdt )`] [`void`] [Calculates ['g(q)], the result is stored into `dpdt`] ]
 ]
 

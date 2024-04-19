@@ -229,7 +229,6 @@ void file_archscan( char const * arch, scanback func, void * closure )
     {
         FILELISTITER iter = filelist_begin( archive->members );
         FILELISTITER const end = filelist_end( archive->members );
-        char buf[ MAXJPATH ];
 
         for ( ; iter != end ; iter = filelist_next( iter ) )
         {
@@ -237,11 +236,10 @@ void file_archscan( char const * arch, scanback func, void * closure )
 
             /* Construct member path: 'archive-path(member-name)'
              */
-            sprintf( buf, "%s(%s)",
-                object_str( archive->file->name ),
-                object_str( member_file->name ) );
             {
-                OBJECT * member = object_new( buf );
+                OBJECT * member = b2::value::format( "%s(%s)",
+                    object_str( archive->file->name ),
+                    object_str( member_file->name ) );
                 (*func)( closure, member, 1 /* time valid */, &member_file->time );
                 object_free( member );
             }
@@ -354,13 +352,13 @@ int file_collect_archive_content_( file_archive_info_t * const archive )
         if ( DEBUG_BINDSCAN )
             out_printf( "archive name %s found\n", lar_name );
 
-        sprintf( buf, "%s", lar_name );
+        auto name = b2::value::format( "%s", lar_name );
 
-        if ( strcmp( buf, "") != 0 )
+        if ( name->as_string().size > 0 )
         {
             file_info_t * member = 0;
 
-            archive->members = filelist_push_back( archive->members, object_new( buf ) );
+            archive->members = filelist_push_back( archive->members, name);
             member = filelist_back( archive->members );
             member->is_file = 1;
             member->is_dir = 0;
@@ -419,13 +417,13 @@ static void collect_archive_content_small( int fd, file_archive_info_t * const a
 
         ar_hdr.hdr._ar_name.ar_name[ lar_namlen ] = '\0';
 
-        sprintf( buf, "%s", ar_hdr.hdr._ar_name.ar_name );
+        auto name = b2::value::format( "%s", ar_hdr.hdr._ar_name.ar_name );
 
-        if ( strcmp( buf, "") != 0 )
+        if ( name->as_string().size > 0 )
         {
             file_info_t * member = 0;
 
-            archive->members = filelist_push_back( archive->members, object_new( buf ) );
+            archive->members = filelist_push_back( archive->members, name );
             member = filelist_back( archive->members );
             member->is_file = 1;
             member->is_dir = 0;
@@ -474,13 +472,13 @@ static void collect_archive_content_big( int fd, file_archive_info_t * const arc
 
         ar_hdr.hdr._ar_name.ar_name[ lar_namlen ] = '\0';
 
-        sprintf( buf, "%s", ar_hdr.hdr._ar_name.ar_name );
+        auto name = b2::value::format( "%s", ar_hdr.hdr._ar_name.ar_name );
 
-        if ( strcmp( buf, "") != 0 )
+        if ( name->as_string().size > 0 )
         {
             file_info_t * member = 0;
 
-            archive->members = filelist_push_back( archive->members, object_new( buf ) );
+            archive->members = filelist_push_back( archive->members, name );
             member = filelist_back( archive->members );
             member->is_file = 1;
             member->is_dir = 0;

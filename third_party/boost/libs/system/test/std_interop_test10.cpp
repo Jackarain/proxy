@@ -4,16 +4,7 @@
 
 #include <boost/system/error_code.hpp>
 #include <boost/core/lightweight_test.hpp>
-#include <boost/config/pragma_message.hpp>
 #include <cerrno>
-
-#if !defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
-
-BOOST_PRAGMA_MESSAGE( "BOOST_SYSTEM_HAS_SYSTEM_ERROR not defined, test will be skipped" )
-int main() {}
-
-#else
-
 #include <system_error>
 
 int main()
@@ -62,5 +53,3 @@ int main()
 
     return boost::report_errors();
 }
-
-#endif

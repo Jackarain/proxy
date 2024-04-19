@@ -1,0 +1,36 @@
+# Copyright 2023 René Ferdinand Rivera Morell
+# Use, modification, and distribution are subject to the
+# Boost Software License, Version 1.0. (See accompanying file LICENSE.txt)
+
+name: "Backports"
+
+on:
+  pull_request_target:
+    types: [closed]
+    branches: ["main"]
+  issue_comment:
+    types: [created]
+    branches: ["main"]
+permissions:
+  contents: write # so it can comment
+  pull-requests: write # so it can create pull requests
+
+jobs:
+  backport:
+    runs-on: ubuntu-latest
+    name: "Backport"
+    if: >
+      (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.merged
+      ) || (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request &&
+        github.event.comment.user.id != 97796249 &&
+        contains(github.event.comment.body, '/backport')
+      )
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@master
+      - name: "Backport PR"
+        uses: korthout/backport-action@main

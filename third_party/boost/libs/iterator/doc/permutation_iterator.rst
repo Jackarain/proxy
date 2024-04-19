@@ -10,7 +10,6 @@
 :Contact: dave@boost-consulting.com, jsiek@osl.iu.edu
 :organization: `Boost Consulting`_, Indiana University `Open Systems
                Lab`_
-:date: $Date$
 :copyright: Copyright Toon Knapen, David Abrahams, Roland Richter, and Jeremy Siek 2003. 
 
 .. _`Boost Consulting`: http://www.boost-consulting.com

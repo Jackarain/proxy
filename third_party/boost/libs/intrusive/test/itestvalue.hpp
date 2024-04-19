@@ -15,7 +15,6 @@
 
 #include <iostream>
 #include <boost/intrusive/options.hpp>
-#include <boost/container_hash/hash.hpp>
 #include <boost/intrusive/pointer_traits.hpp>
 #include "nonhook_node.hpp"
 #include "int_holder.hpp"
@@ -127,33 +126,8 @@ struct testvalue
    {  return other1.value_.int_ != other2;  }
 
    friend std::size_t hash_value(const testvalue&t)
-   {
-      boost::hash<int> hasher;
-      return hasher((&t)->int_value());
-   }
-   /*
-   static std::size_t priority_hash(const testvalue &t)
-   {  return boost::hash<int>()((&t)->int_value()); }
+   {  return hash_value(t.value_);  }
 
-   static std::size_t priority_hash(int i)
-   {  return boost::hash<int>()(i); }
-
-   template <class T, class U>
-   static bool priority_order_impl(const T& t1, const U& t2)
-   {
-      std::size_t hash1 = (priority_hash)(t1);
-      boost::hash_combine(hash1, -hash1);
-      std::size_t hash2 = (priority_hash)(t2);
-      boost::hash_combine(hash2, -hash2);
-      return hash1 < hash2;
-   }
-
-   friend bool priority_order(const testvalue &t1, int t2)
-   {  return (priority_order_impl)(t1, t2);  }
-
-   friend bool priority_order(int t1, const testvalue &t2)
-   {  return (priority_order_impl)(t1, t2);  }
-*/
    template < typename Node_Algorithms >
    friend void swap_nodes(testvalue& lhs, testvalue& rhs)
    {  lhs.swap_nodes(rhs);  }
@@ -162,17 +136,6 @@ struct testvalue
       (std::ostream& s, const testvalue& t)
    {  return s << t.value_.int_value();   }
 };
-
-/*
-bool priority_order(int t1, int t2)
-{
-   std::size_t hash1 = boost::hash<int>()(t1);
-   boost::hash_combine(hash1, &t1);
-   std::size_t hash2 = boost::hash<int>()(t2);
-   boost::hash_combine(hash2, &t2);
-   return hash1 < hash2;
-}
-*/
 
 struct even_odd
 {

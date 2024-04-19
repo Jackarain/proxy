@@ -15,7 +15,7 @@
 #include <random>
 
 #include <boost/timer.hpp>
-#include <boost/array.hpp>
+#include <array>
 
 #include <boost/numeric/odeint.hpp>
 
@@ -26,7 +26,7 @@ typedef boost::timer timer_type;
 typedef double fp_type;
 //typedef float fp_type;
 
-typedef boost::array<fp_type, 3> state_type;
+typedef std::array<fp_type, 3> state_type;
 typedef std::vector<state_type> state_vec;
 
 //---------------------------------------------------------------------------

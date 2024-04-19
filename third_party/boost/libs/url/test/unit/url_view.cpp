@@ -683,6 +683,12 @@ public:
             BOOST_TEST_EQ(u.query(), "k=");
         }
         {
+            url_view u("http://?k[]=");
+            BOOST_TEST(u.has_query());
+            BOOST_TEST_EQ(u.encoded_query(), "k[]=");
+            BOOST_TEST_EQ(u.query(), "k[]=");
+        }
+        {
             url_view u("http://?#");
             BOOST_TEST(u.has_query());
             BOOST_TEST_EQ(u.encoded_query(), "");

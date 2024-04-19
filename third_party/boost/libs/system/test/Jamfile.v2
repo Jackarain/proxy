@@ -75,7 +75,9 @@ system-run generic_category_test.cpp ;
 system-run system_category_test.cpp ;
 system-run after_main_test.cpp ;
 system-run failed_test.cpp ;
-system-run failed_constexpr_test.cpp ;
+run failed_constexpr_test.cpp : : :
+    # GCC w/ UBSAN doesn't consider `cat_ != 0` a constant expression
+    <toolset>gcc,<undefined-sanitizer>norecover:<build>no ;
 
 # Quick (CI) test
 run quick.cpp ;
@@ -106,7 +108,6 @@ run system_category_test2.cpp ;
 run system_category_test3.cpp ;
 
 run windows_error_test.cpp ;
-run cygwin_error_test.cpp ;
 run linux_error_test.cpp ;
 
 link errc_test3.cpp ;
@@ -166,43 +167,43 @@ run std_interop_test16.cpp ;
 
 # result
 
-import ../../config/checks/config : requires ;
-
-CPP11 = [ requires cxx11_variadic_templates cxx11_template_aliases cxx11_decltype cxx11_constexpr cxx11_noexcept ] <toolset>gcc-4.7:<build>no ;
-
-run result_default_construct.cpp : : : $(CPP11) ;
-run result_value_construct.cpp : : : $(CPP11) ;
-run result_error_construct.cpp : : : $(CPP11) ;
-run result_copy_construct.cpp : : : $(CPP11) ;
-run result_move_construct.cpp : : : $(CPP11) ;
-run result_copy_assign.cpp : : : $(CPP11) ;
-run result_move_assign.cpp : : : $(CPP11) ;
-run result_value_access.cpp : : : $(CPP11) ;
-run result_error_access.cpp : : : $(CPP11) ;
-run result_swap.cpp : : : $(CPP11) <toolset>gcc-10:<cxxflags>"-Wno-maybe-uninitialized" ;
-run result_eq.cpp : : : $(CPP11) ;
-run result_range_for.cpp : : : $(CPP11) ;
-run result_value_construct2.cpp : : : $(CPP11) ;
-run result_error_construct2.cpp : : : $(CPP11) ;
-run result_errc_construct.cpp : : : $(CPP11) ;
-run result_convert_construct.cpp : : : $(CPP11) ;
-run result_typedefs.cpp : : : $(CPP11) ;
-run result_value_construct3.cpp : : : $(CPP11) ;
-run result_error_construct3.cpp : : : $(CPP11) ;
-run result_emplace.cpp : : : $(CPP11) ;
-run result_error_construct4.cpp : : : $(CPP11) ;
-run result_value_construct4.cpp : : : $(CPP11) ;
-run result_value_construct5.cpp : : : $(CPP11) ;
-run result_error_move.cpp : : : $(CPP11) ;
-run result_value_construct6.cpp : : : $(CPP11) ;
-run result_value_construct7.cpp : : : $(CPP11) ;
-run result_error_construct5.cpp : : : $(CPP11) ;
-run result_or_value.cpp : : : $(CPP11) ;
-compile-fail result_or_value_fail.cpp : $(CPP11) ;
-compile-fail result_or_value_fail2.cpp : $(CPP11) ;
-run result_or_fn0v.cpp : : : $(CPP11) ;
-run result_or_fn0r.cpp : : : $(CPP11) ;
-run result_and_fn1v.cpp : : : $(CPP11) ;
-run result_and_fn1r.cpp : : : $(CPP11) ;
-run result_and_eq_fn1v.cpp : : : $(CPP11) ;
-run result_and_eq_fn1r.cpp : : : $(CPP11) ;
+run result_default_construct.cpp ;
+run result_value_construct.cpp ;
+run result_error_construct.cpp ;
+run result_copy_construct.cpp ;
+run result_move_construct.cpp ;
+run result_copy_assign.cpp ;
+run result_move_assign.cpp ;
+run result_value_access.cpp ;
+run result_error_access.cpp ;
+run result_swap.cpp : : : <toolset>gcc-10:<cxxflags>"-Wno-maybe-uninitialized" ;
+run result_eq.cpp ;
+run result_range_for.cpp ;
+run result_value_construct2.cpp ;
+run result_error_construct2.cpp ;
+run result_errc_construct.cpp ;
+run result_convert_construct.cpp ;
+run result_typedefs.cpp ;
+run result_value_construct3.cpp ;
+run result_error_construct3.cpp ;
+run result_emplace.cpp ;
+run result_error_construct4.cpp ;
+run result_value_construct4.cpp ;
+run result_value_construct5.cpp ;
+run result_error_move.cpp ;
+run result_value_construct6.cpp ;
+run result_value_construct7.cpp ;
+run result_error_construct5.cpp ;
+run result_or_value.cpp ;
+compile-fail result_or_value_fail.cpp ;
+compile-fail result_or_value_fail2.cpp ;
+run result_or_fn0v.cpp ;
+run result_or_fn0r.cpp ;
+run result_and_fn1v.cpp ;
+run result_and_fn1r.cpp ;
+run result_and_eq_fn1v.cpp ;
+run result_and_eq_fn1r.cpp ;
+run result_in_place_use.cpp ;
+run result_or_eq_value.cpp ;
+run result_or_eq_fn0v.cpp ;
+run result_or_eq_fn0r.cpp ;

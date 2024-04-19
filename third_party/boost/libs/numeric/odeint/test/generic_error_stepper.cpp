@@ -32,7 +32,7 @@
 #include <boost/numeric/odeint/stepper/runge_kutta_cash_karp54.hpp>
 #include <boost/numeric/odeint/stepper/runge_kutta_cash_karp54_classic.hpp>
 
-#include <boost/array.hpp>
+#include <array>
 
 using namespace boost::unit_test;
 using namespace boost::numeric::odeint;
@@ -40,7 +40,7 @@ using namespace boost::numeric::odeint;
 namespace fusion = boost::fusion;
 
 typedef double value_type;
-typedef boost::array< value_type , 2 > state_type;
+typedef std::array< value_type , 2 > state_type;
 
 void sys( const state_type &x , state_type &dxdt , const value_type &t )
 {
@@ -50,11 +50,11 @@ void sys( const state_type &x , state_type &dxdt , const value_type &t )
 
 typedef explicit_error_generic_rk< 6 , 5 , 4 , 5 , state_type> error_rk_generic_type;
 
-const boost::array< double , 1 > a1 = {{ 0.2 }};
-const boost::array< double , 2 > a2 = {{ 3.0/40.0 , 9.0/40 }};
-const boost::array< double , 3 > a3 = {{ 0.3 , -0.9 , 1.2 }};
-const boost::array< double , 4 > a4 = {{ -11.0/54.0 , 2.5 , -70.0/27.0 , 35.0/27.0 }};
-const boost::array< double , 5 > a5 = {{ 1631.0/55296.0 , 175.0/512.0 , 575.0/13824.0 , 44275.0/110592.0 , 253.0/4096.0 }};
+const std::array< double , 1 > a1 = {{ 0.2 }};
+const std::array< double , 2 > a2 = {{ 3.0/40.0 , 9.0/40 }};
+const std::array< double , 3 > a3 = {{ 0.3 , -0.9 , 1.2 }};
+const std::array< double , 4 > a4 = {{ -11.0/54.0 , 2.5 , -70.0/27.0 , 35.0/27.0 }};
+const std::array< double , 5 > a5 = {{ 1631.0/55296.0 , 175.0/512.0 , 575.0/13824.0 , 44275.0/110592.0 , 253.0/4096.0 }};
 
 const error_rk_generic_type::coef_a_type a = fusion::make_vector( a1 , a2 , a3 , a4 , a5 );
 const error_rk_generic_type::coef_b_type b = {{ 37.0/378.0 , 0.0 , 250.0/621.0 , 125.0/594.0 , 0.0 , 512.0/1771.0 }};

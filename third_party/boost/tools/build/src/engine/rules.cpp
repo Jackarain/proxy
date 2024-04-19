@@ -97,7 +97,7 @@ void target_include_many( target_ptr const including, list_ptr const included_na
  * target_module.
  */
 
-static rule_ptr enter_rule( object_ptr rulename, module_ptr target_module )
+static rule_ptr enter_rule( b2::value_ptr rulename, module_ptr target_module )
 {
     int found;
     rule_ptr const r = (rule_ptr)hash_insert( demand_rules( target_module ),
@@ -109,7 +109,7 @@ static rule_ptr enter_rule( object_ptr rulename, module_ptr target_module )
         r->module = 0;
         r->actions = 0;
         r->exported = 0;
-        r->module = target_module;
+        r->module = b2::ensure_valid(target_module);
     }
     return r;
 }
@@ -121,7 +121,7 @@ static rule_ptr enter_rule( object_ptr rulename, module_ptr target_module )
  * src_module.
  */
 
-static rule_ptr define_rule( module_ptr src_module, object_ptr rulename,
+static rule_ptr define_rule( module_ptr src_module, b2::value_ptr rulename,
     module_ptr target_module )
 {
     rule_ptr const r = enter_rule( rulename, target_module );
@@ -131,7 +131,7 @@ static rule_ptr define_rule( module_ptr src_module, object_ptr rulename,
         set_rule_body( r, 0 );
         set_rule_actions( r, 0 );
         /* r will be executed in the source module. */
-        r->module = src_module;
+        r->module = b2::ensure_valid(src_module);
     }
     return r;
 }
@@ -154,7 +154,7 @@ void rule_free( rule_ptr r )
  * bindtarget() - return pointer to TARGET, creating it if necessary.
  */
 
-target_ptr bindtarget( object_ptr const target_name )
+target_ptr bindtarget( b2::value_ptr const target_name )
 {
     int found;
     target_ptr t;
@@ -203,7 +203,7 @@ void bind_explicitly_located_targets()
  * touch_target() - mark a target to simulate being new.
  */
 
-void touch_target( object_ptr const t )
+void touch_target( b2::value_ptr const t )
 {
     bindtarget( t )->flags |= T_FLAG_TOUCHED;
 }
@@ -341,7 +341,7 @@ static settings_ptr settings_freelist;
  * head of the settings chain.
  */
 
-settings_ptr addsettings( settings_ptr head, int flag, object_ptr symbol,
+settings_ptr addsettings( settings_ptr head, int flag, b2::value_ptr symbol,
     list_ptr value )
 {
     settings_ptr v;
@@ -535,7 +535,7 @@ static void set_rule_body( rule_ptr rule, function_ptr procedure )
  * global module.
  */
 
-static object_ptr global_rule_name( rule_ptr r )
+static b2::value_ptr global_rule_name( rule_ptr r )
 {
     if ( r->module == root_module() )
         return object_copy( r->name );
@@ -564,7 +564,7 @@ static rule_ptr global_rule( rule_ptr r )
         return r;
 
     {
-        object_ptr name = global_rule_name( r );
+        b2::value_ptr name = global_rule_name( r );
         rule_ptr const result = define_rule( r->module, name, root_module() );
         object_free( name );
         return result;
@@ -578,7 +578,7 @@ static rule_ptr global_rule( rule_ptr r )
  * exported to the global module as modulename.rulename.
  */
 
-rule_ptr new_rule_body( module_ptr m, object_ptr rulename, function_ptr procedure,
+rule_ptr new_rule_body( module_ptr m, b2::value_ptr rulename, function_ptr procedure,
     int exported )
 {
     rule_ptr const local = define_rule( m, rulename, m );
@@ -621,7 +621,7 @@ static rule_actions_ptr actions_new( function_ptr command, list_ptr bindlist,
 }
 
 
-rule_ptr new_rule_actions( module_ptr m, object_ptr rulename, function_ptr command,
+rule_ptr new_rule_actions( module_ptr m, b2::value_ptr rulename, function_ptr command,
     list_ptr bindlist, int flags )
 {
     rule_ptr const local = define_rule( m, rulename, m );
@@ -639,7 +639,7 @@ rule_ptr new_rule_actions( module_ptr m, object_ptr rulename, function_ptr comma
  * modules, look in module 'name1' for rule 'name2'.
  */
 
-rule_ptr lookup_rule( object_ptr rulename, module_ptr m, int local_only )
+rule_ptr lookup_rule( b2::value_ptr rulename, module_ptr m, bool local_only )
 {
     rule_ptr r;
     rule_ptr result = 0;
@@ -659,8 +659,8 @@ rule_ptr lookup_rule( object_ptr rulename, module_ptr m, int local_only )
             /* Now, r->name keeps the module name, and p + 1 keeps the rule
              * name.
              */
-            object_ptr rule_part = object_new( p + 1 );
-            object_ptr module_part;
+            b2::value_ptr rule_part = object_new( p + 1 );
+            b2::value_ptr module_part;
             {
                 string buf[ 1 ];
                 string_new( buf );
@@ -698,11 +698,18 @@ rule_ptr lookup_rule( object_ptr rulename, module_ptr m, int local_only )
 }
 
 
-rule_ptr bindrule( object_ptr rulename, module_ptr m )
+rule_ptr find_rule( b2::value_ptr rulename, module_ptr m )
 {
-    rule_ptr result = lookup_rule( rulename, m, 0 );
+    rule_ptr result = lookup_rule( rulename, m, false );
     if ( !result )
-        result = lookup_rule( rulename, root_module(), 0 );
+        result = lookup_rule( rulename, root_module(), false );
+    return result;
+}
+
+
+rule_ptr bindrule( b2::value_ptr rulename, module_ptr m )
+{
+    rule_ptr result = find_rule( rulename, m );
     /* We have only one caller, 'evaluate_rule', which will complain about
      * calling an undefined rule. We could issue the error here, but we do not
      * have the necessary information, such as frame.
@@ -713,7 +720,7 @@ rule_ptr bindrule( object_ptr rulename, module_ptr m )
 }
 
 
-rule_ptr import_rule( rule_ptr source, module_ptr m, object_ptr name )
+rule_ptr import_rule( rule_ptr source, module_ptr m, b2::value_ptr name )
 {
     rule_ptr const dest = define_rule( source->module, name, m );
     set_rule_body( dest, source->procedure );

@@ -30,7 +30,7 @@ BINDRULE = bind-rule ;
 
 rule bind-rule ( target : path )
 {
-    ECHO "found:" $(target) at $(path) ;
+    ECHO "found:" $(target) at $(path:T) ;
 }
 
 DEPENDS all : fake-target ;
@@ -38,8 +38,8 @@ DEPENDS all : fake-target ;
 
 t.run_build_system(["-ffile.jam"], stdout="""\
 found: all at all
-found: file-to-bind at subdir1%sfile-to-bind
+found: file-to-bind at subdir1/file-to-bind
 ...found 3 targets...
-""" % os.sep)
+""")
 
 t.cleanup()

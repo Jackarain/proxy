@@ -24,7 +24,7 @@ namespace msm = boost::msm;
 
 struct MenuMode_ : public msm::front::state_machine_def<MenuMode_>
 {
-    typedef mpl::vector1<MenuActive>        flag_list;
+    typedef boost::mpl::vector1<MenuActive>        flag_list;
     struct WaitingForSongChoice : public msm::front::state<>
     {
         template <class Event,class FSM>
@@ -49,7 +49,7 @@ struct MenuMode_ : public msm::front::state_machine_def<MenuMode_>
     typedef WaitingForSongChoice initial_state;
     typedef MenuMode_ fsm; // makes transition table cleaner
     // Transition table for player
-    struct transition_table : mpl::vector2<
+    struct transition_table : boost::mpl::vector2<
         //     Start                 Event           Next                Action                   Guard
         //    +---------------------+------------------+-------------------+---------------------+----------------------+
         _row < WaitingForSongChoice , MenuMiddleButton , StartCurrentSong                                               >,

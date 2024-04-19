@@ -1,6 +1,7 @@
 // Boost.Bimap
 //
 // Copyright (c) 2006-2007 Matias Capeletto
+// Copyright (c) 2024 Joaquin M Lopez Munoz
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
@@ -26,6 +27,7 @@
 #include <boost/bimap/bimap.hpp>
 #include <boost/bimap/unordered_set_of.hpp>
 
+#include <libs/bimap/test/strong_type.hpp>
 
 int test_bimap_info()
 {
@@ -116,10 +118,40 @@ int test_tagged_bimap_info()
     return 0;
 }
 
+void test_heterogeneous_access_bimap_info()
+{
+    using namespace boost::bimaps;
+
+    typedef bimap
+    < 
+      set_of< int, std::less< strong<int> > >,
+      unordered_set_of
+      <
+        int, boost::hash< strong<int> >, std::equal_to< strong<int> >
+      >,
+      with_info<int> 
+    > bm_type;
+
+    bm_type bm;
+    bm.insert(bm_type::value_type(1,1,0));
+
+    BOOST_TEST( bm.left.info_at(strong<int>(1)) == 0 );
+    BOOST_TEST( bm.right.info_at(strong<int>(1)) == 0 );
+
+    bm.left.info_at(strong<int>(1))=1;
+    BOOST_TEST( bm.left.info_at(strong<int>(1)) == 1 );
+    BOOST_TEST( bm.right.info_at(strong<int>(1)) == 1 );
+
+    bm.right.info_at(strong<int>(1))=2;
+    BOOST_TEST( bm.left.info_at(strong<int>(1)) == 2 );
+    BOOST_TEST( bm.right.info_at(strong<int>(1)) == 2 );
+}
+
 int main()
 {
     test_bimap_info();
     test_tagged_bimap_info();
+    test_heterogeneous_access_bimap_info();
     return boost::report_errors();
 }
 

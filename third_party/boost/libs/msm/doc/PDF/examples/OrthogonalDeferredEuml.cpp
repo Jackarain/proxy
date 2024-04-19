@@ -11,7 +11,7 @@
 #include <vector>
 #include <iostream>
 
-#include <boost/msm/back/state_machine.hpp>
+#include <boost/msm/back11/state_machine.hpp>
 #include <boost/msm/front/euml/euml.hpp>
 
 using namespace std;
@@ -114,7 +114,7 @@ namespace  // Concrete FSM implementation
                                         configure_<< PlayingPaused << CDLoaded //flags
                                         ),Playing_)
     // choice of back-end
-    typedef msm::back::state_machine<Playing_> Playing_type;
+    typedef msm::back11::state_machine<Playing_> Playing_type;
     Playing_type const Playing;
 
     // guard conditions
@@ -171,7 +171,7 @@ namespace  // Concrete FSM implementation
                                       player_) //fsm name
 
     // choice of back-end
-    typedef msm::back::state_machine<player_> player;
+    typedef msm::back11::state_machine<player_> player;
 
     //
     // Testing utilities.

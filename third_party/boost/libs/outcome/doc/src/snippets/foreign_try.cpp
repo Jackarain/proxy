@@ -1,5 +1,5 @@
 /* Example of Outcome try used with foreign object
-(C) 2019-2023 Niall Douglas <http://www.nedproductions.biz/> (1 commit)
+(C) 2019-2024 Niall Douglas <http://www.nedproductions.biz/> (1 commit)
 
 
 Boost Software License - Version 1.0 - August 17th, 2003

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+# Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -31,7 +31,7 @@ endfunction()
 function(boost_mysql_common_target_settings TARGET_NAME)
     boost_mysql_set_windows_version(${TARGET_NAME})
 
-    if(MSVC)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
         target_compile_definitions(
             ${TARGET_NAME}
             PUBLIC
@@ -39,7 +39,7 @@ function(boost_mysql_common_target_settings TARGET_NAME)
         )
         target_compile_options(${TARGET_NAME} PUBLIC /bigobj) # Prevent failures on Windows
     else()
-        target_compile_options(${TARGET_NAME} PUBLIC -Wall -Wextra -pedantic -Werror)
+        target_compile_options(${TARGET_NAME} PUBLIC -Wall -Wextra)
     endif()
 
     set_target_properties(${TARGET_NAME} PROPERTIES CXX_EXTENSIONS OFF) # disable extensions

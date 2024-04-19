@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -67,6 +67,40 @@ enum class client_errc : int
 
     /// The static interface encountered an error when parsing a field into a C++ data structure.
     static_row_parsing_error,
+
+    /// (EXPERIMENTAL) An operation controlled by Boost.MySQL timed out.
+    timeout,
+
+    /// (EXPERIMENTAL) An operation controlled by Boost.MySQL was cancelled.
+    cancelled,
+
+    /// (EXPERIMENTAL) Getting a connection from a connection_pool failed because the
+    /// pool is not running. Ensure that you're calling connection_pool::async_run.
+    pool_not_running,
+
+    /// (EXPERIMENTAL) An invalid byte sequence was found while trying to decode a string.
+    invalid_encoding,
+
+    /// (EXPERIMENTAL) A formatting operation could not format one of its arguments.
+    unformattable_value,
+
+    /// (EXPERIMENTAL) An format string with invalid syntax was provided to a SQL formatting function.
+    format_string_invalid_syntax,
+
+    /// (EXPERIMENTAL) A format string with an invalid byte sequence was provided to a SQL formatting
+    /// function.
+    format_string_invalid_encoding,
+
+    /// (EXPERIMENTAL) A format string mixes manual (e.g. {0}) and automatic (e.g. {}) indexing.
+    format_string_manual_auto_mix,
+
+    /// (EXPERIMENTAL) A format argument referenced by a format string was not found. Check the number
+    /// of format arguments passed and their names.
+    format_arg_not_found,
+
+    /// (EXPERIMENTAL) The character set used by the connection is not known by the client. Use
+    /// set_character_set or async_set_character_set before invoking operations that require a known charset.
+    unknown_character_set,
 };
 
 BOOST_MYSQL_DECL

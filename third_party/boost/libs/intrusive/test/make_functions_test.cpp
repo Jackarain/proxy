@@ -20,7 +20,6 @@
 #include <boost/intrusive/treap_set.hpp>
 #include <boost/intrusive/detail/mpl.hpp>
 #include <boost/intrusive/pointer_traits.hpp>
-#include <boost/static_assert.hpp>
 #include "smart_ptr.hpp"
 #include <vector>
 
@@ -71,7 +70,7 @@ class MyClass
    {  return l.int_ == r.int_; }
 
    friend std::size_t hash_value(const MyClass &v)
-   {  return boost::hash_value(v.int_); }
+   {  return std::size_t(v.int_); }
 
    friend bool priority_order(const MyClass &l, const MyClass &r)
    {  return l.int_ < r.int_; }
@@ -160,52 +159,52 @@ int main()
    }
 
    //Check defined types and implicitly defined types are equal
-   BOOST_STATIC_ASSERT((detail::is_same<make_list_base_hook<void_pointer<void*>, link_mode<safe_link> >::type
+   BOOST_INTRUSIVE_STATIC_ASSERT((detail::is_same<make_list_base_hook<void_pointer<void*>, link_mode<safe_link> >::type
                      ,make_list_base_hook<>::type
                      >::value));
 
-   BOOST_STATIC_ASSERT((detail::is_same<make_slist_base_hook<void_pointer<void*>, link_mode<safe_link> >::type
+   BOOST_INTRUSIVE_STATIC_ASSERT((detail::is_same<make_slist_base_hook<void_pointer<void*>, link_mode<safe_link> >::type
                      ,make_slist_base_hook<>::type
                      >::value));
 
-   BOOST_STATIC_ASSERT((detail::is_same<make_set_base_hook<void_pointer<void*>, link_mode<safe_link> >::type
+   BOOST_INTRUSIVE_STATIC_ASSERT((detail::is_same<make_set_base_hook<void_pointer<void*>, link_mode<safe_link> >::type
                      ,make_set_base_hook<>::type
                      >::value));
 
-   BOOST_STATIC_ASSERT((detail::is_same<make_unordered_set_base_hook<void_pointer<void*>, link_mode<safe_link> >::type
+   BOOST_INTRUSIVE_STATIC_ASSERT((detail::is_same<make_unordered_set_base_hook<void_pointer<void*>, link_mode<safe_link> >::type
                      ,make_unordered_set_base_hook<>::type
                      >::value));
 
-   BOOST_STATIC_ASSERT((detail::is_same<make_avl_set_base_hook<void_pointer<void*>, link_mode<safe_link> >::type
+   BOOST_INTRUSIVE_STATIC_ASSERT((detail::is_same<make_avl_set_base_hook<void_pointer<void*>, link_mode<safe_link> >::type
                      ,make_avl_set_base_hook<>::type
                      >::value));
 
-   BOOST_STATIC_ASSERT((detail::is_same<make_bs_set_base_hook<void_pointer<void*>, link_mode<safe_link> >::type
+   BOOST_INTRUSIVE_STATIC_ASSERT((detail::is_same<make_bs_set_base_hook<void_pointer<void*>, link_mode<safe_link> >::type
                      ,make_bs_set_base_hook<>::type
                      >::value));
 
    //Check defined types and implicitly defined types are unequal
-   BOOST_STATIC_ASSERT(!(detail::is_same<make_list_base_hook<void_pointer<void*>, link_mode<normal_link> >::type
+   BOOST_INTRUSIVE_STATIC_ASSERT(!(detail::is_same<make_list_base_hook<void_pointer<void*>, link_mode<normal_link> >::type
                      ,make_list_base_hook<>::type
                      >::value));
 
-   BOOST_STATIC_ASSERT(!(detail::is_same<make_slist_base_hook<void_pointer<void*>, link_mode<normal_link> >::type
+   BOOST_INTRUSIVE_STATIC_ASSERT(!(detail::is_same<make_slist_base_hook<void_pointer<void*>, link_mode<normal_link> >::type
                      ,make_slist_base_hook<>::type
                      >::value));
 
-   BOOST_STATIC_ASSERT(!(detail::is_same<make_set_base_hook<void_pointer<void*>, link_mode<normal_link> >::type
+   BOOST_INTRUSIVE_STATIC_ASSERT(!(detail::is_same<make_set_base_hook<void_pointer<void*>, link_mode<normal_link> >::type
                      ,make_set_base_hook<>::type
                      >::value));
 
-   BOOST_STATIC_ASSERT(!(detail::is_same<make_unordered_set_base_hook<void_pointer<void*>, link_mode<normal_link> >::type
+   BOOST_INTRUSIVE_STATIC_ASSERT(!(detail::is_same<make_unordered_set_base_hook<void_pointer<void*>, link_mode<normal_link> >::type
                      ,make_unordered_set_base_hook<>::type
                      >::value));
 
-   BOOST_STATIC_ASSERT(!(detail::is_same<make_avl_set_base_hook<void_pointer<void*>, link_mode<normal_link> >::type
+   BOOST_INTRUSIVE_STATIC_ASSERT(!(detail::is_same<make_avl_set_base_hook<void_pointer<void*>, link_mode<normal_link> >::type
                      ,make_avl_set_base_hook<>::type
                      >::value));
 
-   BOOST_STATIC_ASSERT(!(detail::is_same<make_bs_set_base_hook<void_pointer<void*>, link_mode<normal_link> >::type
+   BOOST_INTRUSIVE_STATIC_ASSERT(!(detail::is_same<make_bs_set_base_hook<void_pointer<void*>, link_mode<normal_link> >::type
                      ,make_bs_set_base_hook<>::type
                      >::value));
 

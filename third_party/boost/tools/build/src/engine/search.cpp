@@ -27,12 +27,15 @@
 
 #include <string.h>
 
+namespace {
 
 typedef struct _binding
 {
     OBJECT * binding;
     OBJECT * target;
 } BINDING;
+
+}
 
 static struct hash * explicit_bindings = 0;
 

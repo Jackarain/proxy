@@ -30,6 +30,7 @@
 #include <boost/intrusive/detail/minimal_less_equal_header.hpp>   //std::less
 #include <boost/container/detail/minimal_char_traits_header.hpp>  //std::char_traits
 #include <boost/container/detail/placement_new.hpp>
+#include <boost/intrusive/detail/hash.hpp>
 
 //!\file
 //!Describes index adaptor of boost::intrusive::unordered_set container, to use it
@@ -88,25 +89,35 @@ struct iunordered_set_index_aux
       }
    };
 
-    struct hash_function
-    {
-        typedef value_type argument_type;
-        typedef std::size_t result_type;
+   struct hash_function
+   {
+      typedef value_type argument_type;
+      typedef std::size_t result_type;
 
-        std::size_t operator()(const value_type &val) const
-        {
-            const char_type *beg = ipcdetail::to_raw_pointer(val.name()),
-                            *end = beg + val.name_length();
-            return boost::hash_range(beg, end);
-        }
+      std::size_t hash_char_range(const char_type* beg, const char_type* end) const
+      {
+         std::size_t seed = 0;
+         while (beg != end) {
+            boost::intrusive::detail::hash_combine_size_t(seed, boost::intrusive::detail::internal_hash_functor<char_type>()(*beg));
+            ++beg;
+         }
+         return seed;
+      }
 
-        std::size_t operator()(const intrusive_compare_key_type &i) const
-        {
-            const char_type *beg = i.mp_str,
-                            *end = beg + i.m_len;
-            return boost::hash_range(beg, end);
-        }
-    };
+      std::size_t operator()(const value_type &val) const
+      {
+         const char_type* beg = ipcdetail::to_raw_pointer(val.name()),
+                        * end = beg + val.name_length();
+         return hash_char_range(beg, end);
+      }
+
+      std::size_t operator()(const intrusive_compare_key_type &i) const
+      {
+         const char_type *beg = i.mp_str,
+                           *end = beg + i.m_len;
+         return hash_char_range(beg, end);
+      }
+   };
 
    typedef typename bi::make_unordered_set
       < value_type

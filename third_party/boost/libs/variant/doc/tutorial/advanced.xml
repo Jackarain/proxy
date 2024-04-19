@@ -3,7 +3,7 @@
   "http://www.boost.org/tools/boostbook/dtd/boostbook.dtd">
 <!--
     Copyright 2003, Eric Friedman, Itay Maman.
-    Copyright 2013-2023 Antony Polukhin.
+    Copyright 2013-2024 Antony Polukhin.
 
     Distributed under the Boost Software License, Version 1.0. (See accompanying
     file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -89,13 +89,6 @@ typedef <classname>mpl::push_front</classname>&lt; types_initial, int &gt;::type
 <programlisting><classname>boost::variant</classname>&lt; int, std::string &gt; v2;</programlisting>
 
   </para>
-
-  <para><emphasis role="bold">Portability</emphasis>: Unfortunately, due to
-    standard conformance issues in several compilers,
-    <code>make_variant_over</code> is not universally available. On these
-    compilers the library indicates its lack of support for the syntax via the
-    definition of the preprocessor symbol
-    <code><macroname>BOOST_VARIANT_NO_TYPE_SEQUENCE_SUPPORT</macroname></code>.</para>
 
 </section>
 

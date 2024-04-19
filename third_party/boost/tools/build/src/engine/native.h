@@ -30,6 +30,6 @@ typedef struct native_rule_t
 /* MSVC debugger gets confused unless the native_rule_t typedef is provided. */
 
 void declare_native_rule( char const * module, char const * rule,
-    char const * * args, LIST * (*f)( FRAME *, int32_t ), int32_t version );
+    char const * * args, function_builtin_t f, int32_t version );
 
 #endif

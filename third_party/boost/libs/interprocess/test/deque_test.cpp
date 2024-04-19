@@ -120,7 +120,7 @@ bool do_test()
    //Alias deque types
    typedef deque<IntType, shmem_allocator_t>   MyShmDeque;
    typedef std::deque<int>                     MyStdDeque;
-   const int Memsize = 65536;
+   const int Memsize = 128u*1024u;
    const char *const shMemName = test::get_process_id_name();
    const int max = 100;
 
@@ -130,7 +130,7 @@ bool do_test()
       //Create shared memory
       my_managed_shared_memory segment(create_only, shMemName, Memsize);
 
-      segment.reserve_named_objects(100);
+      segment.reserve_named_objects(10);
 
       //Shared memory allocator must be always be initialized
       //since it has no default constructor

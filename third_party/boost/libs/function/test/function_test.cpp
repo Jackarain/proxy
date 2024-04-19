@@ -754,7 +754,6 @@ static void test_move_semantics()
   BOOST_CHECK(!f1.empty());
   BOOST_CHECK(global_int == 1);
   
-#ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
   // Testing rvalue constructors
   f1_type f2(static_cast<f1_type&&>(f1));
   BOOST_CHECK(f1.empty());
@@ -796,8 +795,6 @@ static void test_move_semantics()
   BOOST_CHECK(global_int == 5);
   f4 = static_cast<f1_type&&>(f5);
   BOOST_CHECK(global_int == 4);
-  
-#endif  
 }
 
 int main()

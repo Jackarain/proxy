@@ -35,6 +35,7 @@
 #include <boost/interprocess/permissions.hpp>
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
+#include <boost/interprocess/timed_utils.hpp>
 #include <boost/interprocess/sync/detail/condition_any_algorithm.hpp>
 
 //!\file

@@ -10,16 +10,16 @@ namespace boost::redis {
 
 connection::connection(
    executor_type ex,
-   asio::ssl::context::method method,
+   asio::ssl::context ctx,
    std::size_t max_read_size)
-: impl_{ex, method, max_read_size}
+: impl_{ex, std::move(ctx), max_read_size}
 { }
 
 connection::connection(
    asio::io_context& ioc,
-   asio::ssl::context::method method,
+   asio::ssl::context ctx,
    std::size_t max_read_size)
-: impl_{ioc.get_executor(), method, max_read_size}
+: impl_{ioc.get_executor(), std::move(ctx), max_read_size}
 { }
 
 void

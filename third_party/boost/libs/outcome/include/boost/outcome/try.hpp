@@ -1,5 +1,5 @@
 /* Try operation macros
-(C) 2017-2023 Niall Douglas <http://www.nedproductions.biz/> (20 commits)
+(C) 2017-2024 Niall Douglas <http://www.nedproductions.biz/> (20 commits)
 File Created: July 2017
 
 
@@ -55,30 +55,60 @@ namespace detail
   struct value_overload
   {
   };
-  //#ifdef __APPLE__
-  //  BOOST_OUTCOME_TEMPLATE(class T, class R = decltype(std::declval<T>()._xcode_workaround_as_failure()))
-  //#else
+  // #ifdef __APPLE__
+  //   BOOST_OUTCOME_TEMPLATE(class T, class R = decltype(std::declval<T>()._xcode_workaround_as_failure()))
+  // #else
   BOOST_OUTCOME_TEMPLATE(class T, class R = decltype(std::declval<T>().as_failure()))
-  //#endif
+  // #endif
   BOOST_OUTCOME_TREQUIRES(BOOST_OUTCOME_TPRED(BOOST_OUTCOME_V2_NAMESPACE::is_failure_type<R>))
-  constexpr inline bool has_as_failure(int /*unused */) { return true; }
-  template <class T> constexpr inline bool has_as_failure(...) { return false; }
+  constexpr inline bool has_as_failure(int /*unused */)
+  {
+    return true;
+  }
+  template <class T> constexpr inline bool has_as_failure(...)
+  {
+    return false;
+  }
   BOOST_OUTCOME_TEMPLATE(class T)
   BOOST_OUTCOME_TREQUIRES(BOOST_OUTCOME_TEXPR(std::declval<T>().assume_error()))
-  constexpr inline bool has_assume_error(int /*unused */) { return true; }
-  template <class T> constexpr inline bool has_assume_error(...) { return false; }
+  constexpr inline bool has_assume_error(int /*unused */)
+  {
+    return true;
+  }
+  template <class T> constexpr inline bool has_assume_error(...)
+  {
+    return false;
+  }
   BOOST_OUTCOME_TEMPLATE(class T)
   BOOST_OUTCOME_TREQUIRES(BOOST_OUTCOME_TEXPR(std::declval<T>().error()))
-  constexpr inline bool has_error(int /*unused */) { return true; }
-  template <class T> constexpr inline bool has_error(...) { return false; }
+  constexpr inline bool has_error(int /*unused */)
+  {
+    return true;
+  }
+  template <class T> constexpr inline bool has_error(...)
+  {
+    return false;
+  }
   BOOST_OUTCOME_TEMPLATE(class T)
   BOOST_OUTCOME_TREQUIRES(BOOST_OUTCOME_TEXPR(std::declval<T>().assume_value()))
-  constexpr inline bool has_assume_value(int /*unused */) { return true; }
-  template <class T> constexpr inline bool has_assume_value(...) { return false; }
+  constexpr inline bool has_assume_value(int /*unused */)
+  {
+    return true;
+  }
+  template <class T> constexpr inline bool has_assume_value(...)
+  {
+    return false;
+  }
   BOOST_OUTCOME_TEMPLATE(class T)
   BOOST_OUTCOME_TREQUIRES(BOOST_OUTCOME_TEXPR(std::declval<T>().value()))
-  constexpr inline bool has_value(int /*unused */) { return true; }
-  template <class T> constexpr inline bool has_value(...) { return false; }
+  constexpr inline bool has_value(int /*unused */)
+  {
+    return true;
+  }
+  template <class T> constexpr inline bool has_value(...)
+  {
+    return false;
+  }
 }  // namespace detail
 
 /*! AWAITING HUGO JSON CONVERSION TOOL

@@ -10,10 +10,11 @@
 
 #define FUSION_MAX_VECTOR_SIZE 20
 
-#include <boost/msm/back/state_machine.hpp>
+#include <boost/msm/back11/state_machine.hpp>
 #include "char_event_dispatcher.hpp"
 #include <boost/msm/front/state_machine_def.hpp>
 #include <boost/msm/front/functor_row.hpp>
+#define BOOST_TIMER_ENABLE_DEPRECATED
 #include <boost/timer.hpp>
 
 namespace msm = boost::msm;
@@ -250,7 +251,7 @@ namespace test_fsm // Concrete FSM implementation
                 << " on event " << typeid(e).name() << std::endl;
         }
     };
-    typedef msm::back::state_machine<parsing_> parsing;
+    typedef msm::back11::state_machine<parsing_> parsing;
 }
 
 #ifndef WIN32

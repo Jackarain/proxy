@@ -47,7 +47,7 @@ static int scanmode = SCAN_NORMAL;
 static int anyerrors = 0;
 
 
-static char * symdump( YYSTYPE * );
+static std::string symdump( YYSTYPE * );
 
 #define BIGGEST_TOKEN 10240  /* no single token can be larger */
 
@@ -77,7 +77,7 @@ void yyerror( char const * s )
      * hold the information about where reading it broke.
      */
     out_printf( "%s:%d: %s at %s\n", object_str( yylval.file ), yylval.line, s,
-            symdump( &yylval ) );
+            symdump( &yylval ).c_str() );
     ++anyerrors;
 }
 
@@ -239,7 +239,7 @@ static int use_new_scanner = 0;
 void do_token_warning()
 {
     out_printf( "%s:%d: %s %s\n", object_str( yylval.file ), yylval.line, "Unescaped special character in",
-            symdump( &yylval ) );
+            symdump( &yylval ).c_str() );
 }
 
 #define token_warning() has_token_warning = 1
@@ -685,7 +685,76 @@ int yylex()
                 }
 
         if ( yylval.type == ARG )
+        {
+            #if 0
+            auto arg_len = std::strlen( buf );
+            if ( arg_len > 2 && buf[arg_len - 2] == ':' )
+            {
+                auto k = buf[arg_len - 1];
+                if ( k == 'n' )
+                {
+                    // Check that it's in number format "[+-][0-9]+ ([.][0-9]+)?"
+                    bool not_a_number = false;
+                    char * buf_i = buf;
+                    char * buf_e = buf + arg_len - 2;
+                    if ( !not_a_number && buf_i != buf_e )
+                    {
+                        // [+-]
+                        if ( *buf_i == '+' || *buf_i == '-' )
+                            ++buf_i;
+                    }
+                    if ( !not_a_number && buf_i != buf_e )
+                    {
+                        // [0-9]+
+                        if ( buf_i == buf_e || *buf < '0' || '9' < *buf_i )
+                            not_a_number = true;
+                        else
+                        {
+                            ++buf_i;
+                            while (buf_i != buf_e && '0' <= *buf_i && *buf_i <= '9')
+                                buf_i += 1;
+                        }
+                    }
+                    // ([.][0-9]+)?
+                    if ( !not_a_number && buf_i != buf_e && '.' == *buf_i )
+                    {
+                        // [.]
+                        buf_i += 1;
+                        // [0-9]+
+                        if ( buf_i == buf_e || *buf < '0' || '9' < *buf_i )
+                            not_a_number = true;
+                        else
+                        {
+                            ++buf_i;
+                            while (buf_i != buf_e && '0' <= *buf_i && *buf_i <= '9')
+                                buf_i += 1;
+                        }
+                    }
+                    if ( not_a_number || buf_i != buf_e )
+                    {
+                        // Invalid number, we parse as a string instead.
+                        yylval.string = b2::value::make( buf );
+                    }
+                    else
+                    {
+                        // Valid number, convert.
+                        yylval.string = b2::value::make( std::strtod( buf, nullptr ) );
+                    }
+                }
+                else
+                {
+                    yylval.string = b2::value::make( buf );
+                }
+
+            }
+            else
+            {
+                yylval.string = b2::value::make( buf );
+            }
+            #else
             yylval.string = object_new( buf );
+            #endif
+        }
 
         if ( scanmode == SCAN_NORMAL && yylval.type == ARG )
             scanmode = SCAN_XASSIGN;
@@ -695,7 +764,7 @@ int yylex()
     }
 
     if ( DEBUG_SCAN )
-        out_printf( "scan %s\n", symdump( &yylval ) );
+        out_printf( "scan %s\n", symdump( &yylval ).c_str() );
 
     return yylval.type;
 
@@ -708,18 +777,17 @@ eof:
 }
 
 
-static char * symdump( YYSTYPE * s )
+static std::string symdump( YYSTYPE * s )
 {
-    static char buf[ BIGGEST_TOKEN + 20 ];
     switch ( s->type )
     {
-        case EOF   : sprintf( buf, "EOF"                                        ); break;
-        case 0     : sprintf( buf, "unknown symbol %s", object_str( s->string ) ); break;
-        case ARG   : sprintf( buf, "argument %s"      , object_str( s->string ) ); break;
-        case STRING: sprintf( buf, "string \"%s\""    , object_str( s->string ) ); break;
-        default    : sprintf( buf, "keyword %s"       , s->keyword              ); break;
+        case EOF   : return "EOF"; break;
+        case 0     : return std::string("unknown symbol ") + s->string->str(); break;
+        case ARG   : return std::string("argument ") + s->string->str(); break;
+        case STRING: return std::string("string \"") + s->string->str() + "\""; break;
+        default    : return std::string("keyword ") + s->keyword; break;
     }
-    return buf;
+    return "";
 }
 
 

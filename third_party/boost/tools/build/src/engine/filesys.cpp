@@ -1,6 +1,6 @@
 /*
  *  Copyright 2001-2004 David Abrahams.
- *  Copyright 2005 Rene Rivera.
+ *  Copyright 2005-2023 René Ferdinand Rivera Morell.
  *  Distributed under the Boost Software License, Version 1.0.
  *  (See accompanying file LICENSE.txt or https://www.bfgroup.xyz/b2/LICENSE.txt)
  */
@@ -38,7 +38,21 @@
 
 #include <assert.h>
 #include <sys/stat.h>
+#include <cstdio>
+#include <cstdint>
+#include <mutex>
 
+#ifdef OS_NT
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
+#if !defined(OS_NT)
+#include <sys/mman.h>
+#define USE_MMAP 0
+#else
+#define USE_MMAP 0
+#endif
 
 /* Internal OS specific implementation details - have names ending with an
  * underscore and are expected to be implemented in an OS specific fileXXX.c
@@ -56,14 +70,20 @@ void file_archive_query_( file_archive_info_t * const );
 static void file_archivescan_impl( OBJECT * path, archive_scanback func,
                                    void * closure );
 static void file_dirscan_impl( OBJECT * dir, scanback func, void * closure );
-static void free_file_archive_info( void * xarchive, void * data );
-static void free_file_info( void * xfile, void * data );
 
 static void remove_files_atexit( void );
 
+static b2::core::concurrent_hash<file_info_t> & filecache()
+{
+    static b2::core::concurrent_hash<file_info_t> cache("file_info");
+    return cache;
+}
 
-static struct hash * filecache_hash;
-static struct hash * archivecache_hash;
+static b2::core::concurrent_hash<file_archive_info_t> & archivecache()
+{
+    static b2::core::concurrent_hash<file_archive_info_t> cache("file_archive_info");
+    return cache;
+}
 
 
 /*
@@ -77,24 +97,11 @@ static struct hash * archivecache_hash;
 file_archive_info_t * file_archive_info( OBJECT * const path, int * found )
 {
     OBJECT * path_key = path_as_key( path );
-    file_archive_info_t * archive;
-
-    if ( !archivecache_hash )
-        archivecache_hash = hashinit( sizeof( file_archive_info_t ),
-            "file_archive_info" );
-
-    archive = (file_archive_info_t *)hash_insert( archivecache_hash, path_key,
-            found );
-
-    if ( !*found )
-    {
-        archive->name = path_key;
-        archive->file = 0;
-        archive->members = FL0;
-    }
-    else
+    auto info = archivecache().get( path_key, file_archive_info_t(path_key) );
+    file_archive_info_t * archive = info.first;
+    if ( info.second )
         object_free( path_key );
-
+    *found = info.second ? 1 : 0;
     return archive;
 }
 
@@ -189,17 +196,8 @@ void file_dirscan( OBJECT * dir, scanback func, void * closure )
 void file_done()
 {
     remove_files_atexit();
-    if ( filecache_hash )
-    {
-        hashenumerate( filecache_hash, free_file_info, (void *)0 );
-        hashdone( filecache_hash );
-    }
-
-    if ( archivecache_hash )
-    {
-        hashenumerate( archivecache_hash, free_file_archive_info, (void *)0 );
-        hashdone( archivecache_hash );
-    }
+    filecache().reset();
+    archivecache().reset();
 }
 
 
@@ -214,21 +212,11 @@ void file_done()
 file_info_t * file_info( OBJECT * const path, int * found )
 {
     OBJECT * path_key = path_as_key( path );
-    file_info_t * finfo;
-
-    if ( !filecache_hash )
-        filecache_hash = hashinit( sizeof( file_info_t ), "file_info" );
-
-    finfo = (file_info_t *)hash_insert( filecache_hash, path_key, found );
-    if ( !*found )
-    {
-        finfo->name = path_key;
-        finfo->files = L0;
-    }
-    else
+    auto info = filecache().get( path_key, file_info_t(path_key) );
+    if ( info.second )
         object_free( path_key );
-
-    return finfo;
+    *found = info.second ? 1 : 0;
+    return info.first;
 }
 
 
@@ -409,7 +397,6 @@ static void file_archivescan_impl( OBJECT * path, archive_scanback func, void * 
     {
         FILELISTITER iter = filelist_begin( archive->members );
         FILELISTITER const end = filelist_end( archive->members );
-        char buf[ MAXJPATH ];
 
         for ( ; iter != end ; iter = filelist_next( iter ) )
         {
@@ -418,12 +405,10 @@ static void file_archivescan_impl( OBJECT * path, archive_scanback func, void * 
 
             /* Construct member path: 'archive-path(member-name)'
              */
-            sprintf( buf, "%s(%s)",
-                object_str( archive->file->name ),
-                object_str( member_file->name ) );
-
             {
-                OBJECT * member = object_new( buf );
+                OBJECT * member = b2::value::format( "%s(%s)",
+                    object_str( archive->file->name ),
+                    object_str( member_file->name ) );
                 (*func)( closure, member, symbols, 1, &member_file->time );
                 object_free( member );
             }
@@ -477,22 +462,6 @@ static void file_dirscan_impl( OBJECT * dir, scanback func, void * closure )
             (*func)( closure, ffq->name, 1 /* stat()'ed */, &ffq->time );
         }
     }
-}
-
-
-static void free_file_archive_info( void * xarchive, void * data )
-{
-    file_archive_info_t * const archive = (file_archive_info_t *)xarchive;
-
-    if ( archive ) filelist_free( archive->members );
-}
-
-
-static void free_file_info( void * xfile, void * data )
-{
-    file_info_t * const file = (file_info_t *)xfile;
-    object_free( file->name );
-    list_free( file->files );
 }
 
 
@@ -577,7 +546,6 @@ FILELIST * filelist_push_front( FILELIST * list, OBJECT * path )
     item->value = b2::jam::make_ptr<file_info_t>();
 
     file = item->value;
-    memset( file, 0, sizeof( *file ) );
 
     file->name = path;
     file->files = L0;
@@ -608,10 +576,7 @@ FILELIST * filelist_pop_front( FILELIST * list )
     if ( item )
     {
         if ( item->value )
-        {
-            free_file_info( item->value, 0 );
             b2::jam::free_ptr( item->value );
-        }
 
         list->head = item->next;
         list->size--;
@@ -642,7 +607,7 @@ void filelist_free( FILELIST * list )
 
 int filelist_empty( FILELIST * list )
 {
-    return ( list == FL0 );
+    return ( list == nullptr );
 }
 
 
@@ -706,3 +671,83 @@ file_info_t * filelist_back(  FILELIST * list )
 
     return list->tail->value;
 }
+
+namespace b2 { namespace filesys {
+
+namespace {
+std::size_t file_query_data_size_(const std::string & filepath)
+{
+    #ifndef OS_NT
+    struct stat statbuf;
+    if (stat(filepath.c_str(), &statbuf) == 0)
+    {
+        return statbuf.st_size;
+    }
+    #else
+    WIN32_FILE_ATTRIBUTE_DATA file_data;
+    if (filepath.size() < MAX_PATH)
+    {
+        if (GetFileAttributesExA(filepath.c_str(), GetFileExInfoStandard, &file_data) == 0)
+            return 0;
+    }
+    else
+    {
+        int wchar_count = MultiByteToWideChar(CP_UTF8, 0, filepath.c_str(), -1, nullptr, 0);
+        std::wstring filepathw(wchar_count, 0);
+        MultiByteToWideChar(CP_UTF8, 0, filepath.c_str(), -1, &filepathw[0],
+            wchar_count);
+        filepathw = LR"(\\?\)"+filepathw;
+        if (GetFileAttributesExW(filepathw.c_str(), GetFileExInfoStandard, &file_data) == 0)
+            return 0;
+    }
+    auto file_size =
+        (std::uint64_t(file_data.nFileSizeHigh)<<(sizeof(file_data.nFileSizeLow)*8))
+        | std::uint64_t(file_data.nFileSizeLow);
+    return std::size_t(file_size);
+    #endif
+    return 0;
+}
+}
+
+file_buffer::file_buffer(const std::string & filepath)
+{
+    data_size = file_query_data_size_(filepath);
+    file = std::fopen(filepath.c_str(), "r");
+    #if USE_MMAP
+    if (file)
+    {
+        is_memory_mapped = true;
+        auto p = mmap(
+            nullptr, data_size, PROT_READ, MAP_PRIVATE, fileno(file), 0);
+        if (p != MAP_FAILED)
+        {
+            data_c.reset(static_cast<char*>(p));
+            // madvise(data_c.get(), data_size, MADV_SEQUENTIAL);
+        }
+    }
+    #endif
+    if (!data_c && file)
+    {
+        data_c.reset(new char[data_size]);
+        if (std::fread(data_c.get(), data_size, 1, file) != 1)
+        {
+            data_size = 0;
+            data_c.reset();
+        }
+        std::fclose(file);
+        file = nullptr;
+    }
+}
+
+file_buffer::~file_buffer()
+{
+    #if USE_MMAP
+    if (is_memory_mapped && data_c)
+    {
+        munmap(data_c.release(), data_size);
+        std::fclose(file);
+    }
+    #endif
+}
+
+}}

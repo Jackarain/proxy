@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -16,7 +16,6 @@ namespace mysql {
 namespace detail {
 
 constexpr std::size_t MAX_PACKET_SIZE = 0xffffff;
-constexpr std::size_t HEADER_SIZE = 4;
 
 // The binary collation number, used to distinguish blobs from strings
 constexpr std::uint16_t binary_collation = 63;

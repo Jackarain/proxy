@@ -8,19 +8,17 @@
 // file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#include <iostream>
 // back-end
 #include <boost/msm/back/state_machine.hpp>
 //front-end
 #include <boost/msm/front/state_machine_def.hpp>
 // functors
 #include <boost/msm/front/functor_row.hpp>
-#include <boost/msm/front/euml/common.hpp>
 // for And_ operator
-#include <boost/msm/front/euml/operator.hpp>
+#include <boost/msm/front/operator.hpp>
 
 #ifndef BOOST_MSM_NONSTANDALONE_TEST
-#define BOOST_TEST_MODULE MyTest
+#define BOOST_TEST_MODULE SimpleWithFunctorsTest
 #endif
 #include <boost/test/unit_test.hpp>
 
@@ -28,9 +26,6 @@ using namespace std;
 namespace msm = boost::msm;
 namespace mpl = boost::mpl;
 using namespace msm::front;
-// for And_ operator
-using namespace msm::front::euml;
-
 namespace
 {
     // events
@@ -297,7 +292,7 @@ namespace
 //    static char const* const state_names[] = { "Stopped", "Open", "Empty", "Playing", "Paused" };
 
 
-    BOOST_AUTO_TEST_CASE( my_test )
+    BOOST_AUTO_TEST_CASE( SimpleWithFunctorsTest )
     {     
         player p;
 

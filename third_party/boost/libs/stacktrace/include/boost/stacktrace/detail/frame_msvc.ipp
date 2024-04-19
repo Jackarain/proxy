@@ -1,4 +1,4 @@
-// Copyright Antony Polukhin, 2016-2023.
+// Copyright Antony Polukhin, 2016-2024.
 //
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
@@ -20,6 +20,8 @@
 #include <boost/stacktrace/detail/to_hex_array.hpp>
 #include <windows.h>
 #include "dbgeng.h"
+
+#include <mutex>
 
 #ifdef BOOST_MSVC
 #   pragma comment(lib, "ole32.lib")
@@ -138,14 +140,30 @@ class debugging_symbols: boost::noncopyable {
     }
 
 #ifndef BOOST_STACKTRACE_USE_WINDBG_CACHED
-
-    com_holder< ::IDebugSymbols> idebug_;
-public:
-    debugging_symbols() noexcept
-    {
-        try_init_com(idebug_);
+    static std::mutex& get_mutex_inst() noexcept {
+        static std::mutex m;
+        return m;
     }
 
+    static com_holder< ::IDebugSymbols>& get_static_debug_inst() noexcept {
+        // [class.mfct]: A static local variable or local type in a member function always refers to the same entity, whether
+        // or not the member function is inline.
+        static com_holder< ::IDebugSymbols> idebug;
+
+        if (!idebug.is_inited()) {
+            try_init_com(idebug);
+        }
+
+        return idebug;
+    }
+
+    std::lock_guard<std::mutex> guard_;
+    com_holder< ::IDebugSymbols>& idebug_;
+public:
+    debugging_symbols() noexcept
+        : guard_( get_mutex_inst() )
+        , idebug_( get_static_debug_inst() )
+    {}
 #else
 
 #ifdef BOOST_NO_CXX11_THREAD_LOCAL

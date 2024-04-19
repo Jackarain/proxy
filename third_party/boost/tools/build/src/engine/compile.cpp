@@ -38,10 +38,13 @@
 #include "variable.h"
 #include "output.h"
 #include "startup.h"
+#include "value.h"
 
 #include <assert.h>
 #include <stdarg.h>
 #include <string.h>
+
+#include <string>
 
 
 static void debug_compile( int which, char const * s, FRAME * );
@@ -59,7 +62,7 @@ void unknown_rule( FRAME *, char const * key, module_t *, OBJECT * rule_name );
 
 LIST * evaluate_rule( RULE * rule, OBJECT * rulename, FRAME * frame )
 {
-    LIST          * result = L0;
+    b2::list_ref result;
     profile_frame   prof[ 1 ];
     module_t      * prev_module = frame->module;
 
@@ -87,7 +90,7 @@ LIST * evaluate_rule( RULE * rule, OBJECT * rulename, FRAME * frame )
     if ( rule->procedure && rule->module != prev_module )
     {
         /* Propagate current module to nested rule invocations. */
-        frame->module = rule->module;
+        frame->module = b2::ensure_valid(rule->module);
     }
 
     /* Record current rule name in frame. */
@@ -147,7 +150,7 @@ LIST * evaluate_rule( RULE * rule, OBJECT * rulename, FRAME * frame )
     if ( rule->procedure )
     {
         auto function = b2::jam::make_unique_bare_jptr( rule->procedure, function_refer, function_free );
-        result = function_run( function.get(), frame );
+        result.reset( function_run( function.get(), frame ) );
     }
 
     if ( DEBUG_PROFILE && rule->procedure )
@@ -156,7 +159,7 @@ LIST * evaluate_rule( RULE * rule, OBJECT * rulename, FRAME * frame )
     if ( DEBUG_COMPILE )
         debug_compile( -1, 0, frame );
 
-    return result;
+    return result.release();
 }
 
 
@@ -169,34 +172,113 @@ LIST * evaluate_rule( RULE * rule, OBJECT * rulename, FRAME * frame )
  * which might be implemented in Jam.
  */
 
-LIST * call_rule( OBJECT * rulename, FRAME * caller_frame, ... )
+LIST * call_rule( OBJECT * rulename, FRAME * caller_frame, LOL * args )
 {
-    va_list va;
-    LIST * result;
-
     FRAME inner[ 1 ];
     frame_init( inner );
     inner->prev = caller_frame;
     inner->prev_user = caller_frame->module->user_module
         ? caller_frame
         : caller_frame->prev_user;
-    inner->module = caller_frame->module;
+    inner->module = b2::ensure_valid(caller_frame->module);
 
-    va_start( va, caller_frame );
-    for ( ; ; )
+    for ( int32_t a = 0; a < args->count; ++a)
     {
-        LIST * const l = va_arg( va, LIST * );
-        if ( !l )
-            break;
-        lol_add( inner->args, l );
+        lol_add( inner->args, list_copy(lol_get(args, a)) );
     }
-    va_end( va );
 
-    result = evaluate_rule( bindrule( rulename, inner->module ), rulename, inner );
+    b2::list_ref result( evaluate_rule( bindrule( rulename, inner->module ), rulename, inner ), true );
 
     frame_free( inner );
 
-    return result;
+    return result.release();
+}
+
+LIST * call_rule( OBJECT * rulename, FRAME * caller_frame, LIST * arg, ... )
+{
+    b2::lists args;
+    if ( arg )
+    {
+        args.push_back( b2::list_cref( arg ) );
+        va_list va;
+        va_start( va, arg );
+        for ( ; ; )
+        {
+            LIST * l = va_arg( va, LIST * );
+            if ( !l )
+                break;
+            args.push_back( b2::list_cref( l ) );
+        }
+        va_end( va );
+    }
+
+    return call_rule( rulename, caller_frame, args );
+}
+
+
+LIST * call_member_rule(
+	OBJECT * rulename, FRAME * caller_frame, b2::list_ref && self_, b2::lists && args_)
+{
+    b2::list_ref self(std::move(self_));
+    b2::lists args(std::move(args_));
+    if (self.empty())
+    {
+        backtrace_line(caller_frame);
+        out_printf("warning: object is empty\n");
+        backtrace(caller_frame);
+        return L0;
+    }
+
+    /* FIXME: handle generic case */
+    assert( self.length() == 1 );
+
+    module_ptr module = bindmodule(self[0]);
+    rule_ptr rule = nullptr;
+    b2::value_ref real_rulename;
+
+    if (module->class_module)
+    {
+        rule = bindrule(rulename, module);
+        if (rule->procedure)
+        {
+            real_rulename = b2::value_ref(function_rulename(rule->procedure));
+        }
+        else
+        {
+            real_rulename = std::string(module->name->str())+"."+rulename->str();
+        }
+    }
+    else
+    {
+        real_rulename = std::string(self[0]->str())+"."+rulename->str();
+        rule = bindrule(real_rulename, caller_frame->module);
+    }
+
+    FRAME inner[ 1 ];
+    frame_init( inner );
+    inner->prev = caller_frame;
+    inner->prev_user = caller_frame->module->user_module
+        ? caller_frame : caller_frame->prev_user;
+    inner->module = b2::ensure_valid(caller_frame->module);
+
+    args.swap( inner->args[0] );
+
+    if (self.length() > 1)
+    {
+        b2::list_ref trailing;
+        for (int i = 1; i < self.length(); ++i)
+            trailing.push_back(std::string(self[i]->str())+"."+rulename->str());
+        if (inner->args->count == 0)
+            lol_add(inner->args, trailing.release());
+        else
+        {
+            trailing.append(b2::list_cref(inner->args->list[0]));
+            list_free(inner->args->list[0]);
+            inner->args->list[0] = trailing.release();
+        }
+    }
+
+    return evaluate_rule(rule, real_rulename, inner);
 }
 
 

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -21,7 +21,7 @@ void boost::mysql::resultset::assign(resultset_view v)
         rws_ = v.rows();
         affected_rows_ = v.affected_rows();
         last_insert_id_ = v.last_insert_id();
-        warnings_ = v.warning_count();
+        warnings_ = static_cast<std::uint16_t>(v.warning_count());
         info_.assign(v.info().begin(), v.info().end());
         is_out_params_ = v.is_out_params();
     }

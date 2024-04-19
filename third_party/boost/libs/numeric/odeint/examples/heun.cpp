@@ -20,7 +20,7 @@
 #include <boost/fusion/container/vector.hpp>
 #include <boost/fusion/container/generation/make_vector.hpp>
 
-#include <boost/array.hpp>
+#include <array>
 
 #include <boost/numeric/odeint.hpp>
 
@@ -33,7 +33,7 @@ namespace fusion = boost::fusion;
 
 //[ heun_define_coefficients
 template< class Value = double >
-struct heun_a1 : boost::array< Value , 1 > {
+struct heun_a1 : std::array< Value , 1 > {
     heun_a1( void )
     {
         (*this)[0] = static_cast< Value >( 1 ) / static_cast< Value >( 3 );
@@ -41,7 +41,7 @@ struct heun_a1 : boost::array< Value , 1 > {
 };
 
 template< class Value = double >
-struct heun_a2 : boost::array< Value , 2 >
+struct heun_a2 : std::array< Value , 2 >
 {
     heun_a2( void )
     {
@@ -52,7 +52,7 @@ struct heun_a2 : boost::array< Value , 2 >
 
 
 template< class Value = double >
-struct heun_b : boost::array< Value , 3 >
+struct heun_b : std::array< Value , 3 >
 {
     heun_b( void )
     {
@@ -63,7 +63,7 @@ struct heun_b : boost::array< Value , 3 >
 };
 
 template< class Value = double >
-struct heun_c : boost::array< Value , 3 >
+struct heun_c : std::array< Value , 3 >
 {
     heun_c( void )
     {
@@ -157,7 +157,7 @@ int main( int argc , char **argv )
 
 
     //[ heun_example
-    typedef boost::array< double , 3 > state_type;
+    typedef std::array< double , 3 > state_type;
     heun< state_type > h;
     state_type x = {{ 10.0 , 10.0 , 10.0 }};
 

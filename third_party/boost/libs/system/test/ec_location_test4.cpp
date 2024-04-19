@@ -59,8 +59,6 @@ int main()
         BOOST_TEST_EQ( ec.location(), boost::source_location() );
     }
 
-#if defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
-
     {
         std::error_code e2( val, std::generic_category() );
 
@@ -86,8 +84,6 @@ int main()
         BOOST_TEST( !ec.has_location() );
         BOOST_TEST_EQ( ec.location(), boost::source_location() );
     }
-
-#endif
 
     return boost::report_errors();
 }

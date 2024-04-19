@@ -34,13 +34,13 @@ BOOST_AUTO_TEST_SUITE( is_resizeable )
 BOOST_AUTO_TEST_CASE( test_compile_time_matrix )
 {
     typedef Eigen::Matrix< double , 1 , 1 > matrix_type;
-    BOOST_STATIC_ASSERT(( boost::numeric::odeint::is_resizeable< matrix_type >::value ));
+    static_assert(( boost::numeric::odeint::is_resizeable< matrix_type >::value ), "Matrix is not resizeable");
 }
 
 BOOST_AUTO_TEST_CASE( test_compile_time_array )
 {
     typedef Eigen::Array< double , 1 , 1 > array_type;
-    BOOST_STATIC_ASSERT(( boost::numeric::odeint::is_resizeable< array_type >::value ));
+    static_assert(( boost::numeric::odeint::is_resizeable< array_type >::value ), "Array is not resizeable");
 }
 
 

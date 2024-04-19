@@ -20,7 +20,6 @@
 #include <boost/move/utility_core.hpp>
 #include <boost/move/adl_move_swap.hpp>
 #include <boost/intrusive/detail/mpl.hpp>
-#include <boost/static_assert.hpp>
 #include "iterator_test.hpp"
 #include <cstdlib>
 

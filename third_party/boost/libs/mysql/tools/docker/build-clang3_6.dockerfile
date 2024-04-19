@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+# Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -15,6 +15,9 @@ RUN \
         libssl-dev \
         git \
         python3 \
+        python3-requests \
+        # Workaround for https://github.com/bfgroup/b2/issues/354
+        g++ \
         mysql-client && \
     add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
     apt-get --no-install-recommends -y install clang-3.6 && \

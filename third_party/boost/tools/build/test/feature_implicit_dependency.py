@@ -87,14 +87,14 @@ explicit input ;
 flags make-ccc AAAPATH : <aaa-path> ;
 rule make-ccc ( target : sources * : properties * )
 {
-    ECHO aaa path\: [ on $(target) return $(AAAPATH) ] ;
+    ECHO aaa path\\: [ on $(target) return $(AAAPATH) ] ;
     common.copy $(target) : $(sources) ;
 }
 
 flags make-ddd BBBPATH : <bbb-path> ;
 rule make-ddd ( target : sources * : properties * )
 {
-    ECHO bbb path\: [ on $(target) return $(BBBPATH) ] ;
+    ECHO bbb path\\: [ on $(target) return $(BBBPATH) ] ;
     common.copy $(target) : $(sources) ;
 }
 

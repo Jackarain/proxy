@@ -31,7 +31,7 @@ using namespace boost::numeric::odeint;
 template< class Stepper1 , class Stepper2 >
 void check_stepper_type( const Stepper1 &s1 , const Stepper2 &s2 )
 {
-    BOOST_STATIC_ASSERT(( boost::is_same< Stepper1 , Stepper2 >::value ));
+    static_assert(( boost::is_same< Stepper1 , Stepper2 >::value ), "Stepper1 and Stepper2 must be the same type");
 }
 
 BOOST_AUTO_TEST_SUITE( generation_test )

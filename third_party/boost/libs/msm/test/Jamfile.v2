@@ -6,7 +6,10 @@
 # Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
 # http://www.boost.org/LICENSE_1_0.txt)
 
+# bring in rules for testing
 import testing ;
+import os ;
+import ../../config/checks/config : requires ;
 
 project msm
     :
@@ -41,10 +44,50 @@ test-suite msm-unit-tests
     [ run SimpleInternalEuml.cpp ]
     [ run SimpleInternalFunctors.cpp ]
     [ run SimpleMachine.cpp ]
+    [ run KleeneDeferred.cpp ]
     [ run SimpleWithFunctors.cpp ]
     [ run Serialize.cpp ]
     [ run SerializeWithHistory.cpp ]
     [ run SerializeSimpleEuml.cpp ]
     [ run TestConstructor.cpp ]
+    [ run ManyDeferTransitions.cpp ]
+    [ run Back11AnonymousAndGuard.cpp ]
+    [ run Back11Throwing.cpp ]
+    [ run Back11KleeneDeferred.cpp  : :
+        : [ requires cxx11_variadic_templates ] ]
+    [ run Back11Anonymous.cpp  : :
+        : [ requires cxx11_variadic_templates ] ]
+    [ run Back11BigWithFunctors.cpp  : :
+        : [ requires cxx11_variadic_templates ] ]    
+    [ run Back11CompositeMachine.cpp  : :
+        : [ requires cxx11_variadic_templates ] ]
+    [ run Back11Entries.cpp  : :
+        : [ requires cxx11_variadic_templates ] ]
+    [ run Back11OrthogonalDeferred3.cpp  : :
+        : [ requires cxx11_variadic_templates ] ]
+    [ run Back11SimpleInternalEuml.cpp  : :
+        : [ requires cxx11_variadic_templates ] ]
+    [ run Back11SimpleInternalFunctors.cpp  : :
+        : [ requires cxx11_variadic_templates ] ]
+    [ run Back11SimpleMachine.cpp  : :
+        : [ requires cxx11_variadic_templates ] ]
+    [ run Back11SimpleWithFunctors.cpp  : :
+        : [ requires cxx11_variadic_templates ] ]
+    [ run Back11TestDeferIn2Regions.cpp  : :
+        : [ requires cxx11_variadic_templates ] ]
+    [ run Back11ManyDeferTransitions.cpp  : :
+        : [ requires cxx11_variadic_templates ] ]
+    [ run Back11SimpleWithPuml.cpp  : :
+        : [ requires cxx20_hdr_version cxx20_hdr_barrier cxx20_hdr_compare cxx20_hdr_format cxx20_hdr_ranges cxx20_hdr_numbers  ] ]
+    [ run Back11OnlyStringPuml.cpp  : :
+        : [ requires cxx20_hdr_version cxx20_hdr_barrier cxx20_hdr_compare cxx20_hdr_format cxx20_hdr_ranges cxx20_hdr_numbers  ] ]
+    [ run Back11SimpleInternalWithPuml.cpp  : :
+        : [ requires cxx20_hdr_version cxx20_hdr_barrier cxx20_hdr_compare cxx20_hdr_format cxx20_hdr_ranges cxx20_hdr_numbers  ] ]
+    [ run Back11OrthogonalDeferred3WithPuml.cpp  : :
+        : [ requires cxx20_hdr_version cxx20_hdr_barrier cxx20_hdr_compare cxx20_hdr_format cxx20_hdr_ranges cxx20_hdr_numbers  ] ]
+    [ run puml_syntax.cpp  : :
+        : [ requires cxx20_hdr_version cxx20_hdr_barrier cxx20_hdr_compare cxx20_hdr_format cxx20_hdr_ranges cxx20_hdr_numbers  ] ]
+    [ run puml_syntax_2.cpp  : :
+        : [ requires cxx20_hdr_version cxx20_hdr_barrier cxx20_hdr_compare cxx20_hdr_format cxx20_hdr_ranges cxx20_hdr_numbers  ] ]
     ;
 

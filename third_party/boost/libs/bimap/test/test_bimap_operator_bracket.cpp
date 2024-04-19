@@ -1,6 +1,7 @@
 // Boost.Bimap
 //
 // Copyright (c) 2006-2007 Matias Capeletto
+// Copyright (c) 2024 Joaquin M Lopez Munoz
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
@@ -28,6 +29,7 @@
 #include <boost/bimap/vector_of.hpp>
 #include <boost/bimap/unconstrained_set_of.hpp>
 
+#include <libs/bimap/test/strong_type.hpp>
 
 void test_bimap_operator_bracket()
 {
@@ -187,6 +189,44 @@ void test_bimap_operator_bracket()
         BOOST_TEST( b.right.at("two") == 2 );
     }
 
+    // Heterogeneous access test (1)
+    {
+        typedef bimap
+        <
+          set_of<int, std::less< strong<int> > >,
+          list_of<std::string>                    
+        > bm;
+
+        bm b;
+
+        b.left[1] = "0";
+        b.left[semistrong<int>(1)] = "1";
+        BOOST_TEST( b.left.at(strong<int>(1)) == "1");
+        b.left.at(strong<int>(1)) = "2";
+        BOOST_TEST( b.left.at(strong<int>(1)) == "2");
+    }
+
+    // Heterogeneous access test (2)
+    {
+        typedef bimap
+        <
+          list_of<int>,
+          unordered_set_of
+          <
+            std::string,
+            boost::hash< strong<std::string> >,
+            std::equal_to< strong<std::string> >
+          >
+        > bm;
+
+        bm b;
+
+        b.right["1"]=0;
+        b.right[semistrong<std::string>("1")] = 1;
+        BOOST_TEST( b.right.at(strong<std::string>("1")) == 1);
+        b.right.at(strong<std::string>("1")) = 2;
+        BOOST_TEST( b.right.at(strong<std::string>("1")) == 2);
+    }
 }
 
 int main()

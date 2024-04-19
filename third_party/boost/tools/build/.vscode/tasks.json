@@ -98,31 +98,6 @@
                 }
             },
             "group": "build"
-        },
-        {
-            "label": "B2 Engine Infer",
-            "type": "shell",
-            "osx": {
-                "command": "CXX='infer run -- clang++' ./build.sh clang"
-            },
-            "options": {
-                "cwd": "${workspaceFolder}/src/engine"
-            },
-            "problemMatcher": {
-                "owner": "cpptools",
-                "fileLocation": [
-                    "relative",
-                    "${workspaceFolder}/src/engine"
-                ],
-                "pattern": {
-                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
-                    "file": 1,
-                    "line": 2,
-                    "column": 3,
-                    "severity": 4,
-                    "message": 5
-                }
-            }
         }
     ]
 }

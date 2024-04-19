@@ -70,20 +70,36 @@ int main()
     using boost::container_hash::is_tuple_like;
 
     BOOST_TEST_TRAIT_FALSE((is_tuple_like<void>));
+    BOOST_TEST_TRAIT_FALSE((is_tuple_like<void const>));
+
     BOOST_TEST_TRAIT_FALSE((is_tuple_like<int>));
+    BOOST_TEST_TRAIT_FALSE((is_tuple_like<int const>));
+
     BOOST_TEST_TRAIT_FALSE((is_tuple_like<X>));
+    BOOST_TEST_TRAIT_FALSE((is_tuple_like<X const>));
+
     BOOST_TEST_TRAIT_FALSE((is_tuple_like<int[2]>));
+    BOOST_TEST_TRAIT_FALSE((is_tuple_like<int const [2]>));
 
 #if !defined(BOOST_NO_CXX11_HDR_TUPLE) && !BOOST_WORKAROUND(BOOST_MSVC, <= 1800)
 
     BOOST_TEST_TRAIT_TRUE((is_tuple_like< std::pair<int, X> >));
+    BOOST_TEST_TRAIT_TRUE((is_tuple_like< std::pair<int, X> const>));
 
     BOOST_TEST_TRAIT_TRUE((is_tuple_like< std::tuple<> >));
+    BOOST_TEST_TRAIT_TRUE((is_tuple_like< std::tuple<> const>));
+
     BOOST_TEST_TRAIT_TRUE((is_tuple_like< std::tuple<X> >));
+    BOOST_TEST_TRAIT_TRUE((is_tuple_like< std::tuple<X> const>));
+
     BOOST_TEST_TRAIT_TRUE((is_tuple_like< std::tuple<X, X> >));
+    BOOST_TEST_TRAIT_TRUE((is_tuple_like< std::tuple<X, X> const>));
+
     BOOST_TEST_TRAIT_TRUE((is_tuple_like< std::tuple<X, X, X> >));
+    BOOST_TEST_TRAIT_TRUE((is_tuple_like< std::tuple<X, X, X> const>));
 
     BOOST_TEST_TRAIT_TRUE((is_tuple_like<user::Y>));
+    BOOST_TEST_TRAIT_TRUE((is_tuple_like<user::Y const>));
 
 #endif
 

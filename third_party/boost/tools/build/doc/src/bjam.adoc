@@ -1466,7 +1466,7 @@ Craig McPeeters has extended Perforce Jam to solve such problems, and
 that extension was integrated in Boost.Jam.
 
 Any target can be assigned a _semaphore_, by setting a variable called
-`SEMAPHORE` on that target. The value of the variable is the semaphore
+`JAM_SEMAPHORE` on that target. The value of the variable is the semaphore
 name. It must be different from names of any declared target, but is
 arbitrary otherwise.
 

@@ -29,7 +29,7 @@ Ordinary differential equations occur nearly everywhere in natural sciences. For
 Numerical approximations for the solution ['x(t)] are calculated iteratively. The easiest algorithm is the Euler scheme, where starting at ['x(0)] one finds ['x(dt) = x(0) + dt f(x(0),0)]. Now one can use ['x(dt)] and obtain ['x(2dt)] in a similar way and so on. The Euler method is of order 1, that means the error at each step is ['~ dt[super 2]]. This is, of course, not very satisfying, which is why the Euler method is rarely used for real life problems and serves just as illustrative example. 
 
 The main focus of odeint is to provide numerical methods implemented in a way where the algorithm is completely independent on the data structure used to represent the state /x/.
-In doing so, odeint is applicable for a broad variety of situations and it can be used with many other libraries. Besides the usual case where the state is defined as a `std::vector` or a `boost::array`, we provide native support for the following libraries:
+In doing so, odeint is applicable for a broad variety of situations and it can be used with many other libraries. Besides the usual case where the state is defined as a `std::vector` or a `std::array`, we provide native support for the following libraries:
 
 * __ublas
 * __thrust, making odeint naturally running on CUDA devices
@@ -88,7 +88,7 @@ first order ODEs by introducing the new variables ['q=x] and ['p=x'] such that [
 [rhs_function]
 
 Here we chose `vector<double>` as the state type, but others are also
-possible, for example `boost::array<double,2>`. odeint is designed in such a
+possible, for example `std::array<double,2>`. odeint is designed in such a
 way that you can easily use your own state types. Next, the ODE is defined
 which is in this case a simple function calculating ['f(x)]. The parameter
 signature of this function is crucial: the integration methods will always

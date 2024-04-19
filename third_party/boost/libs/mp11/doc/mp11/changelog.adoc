@@ -1,5 +1,5 @@
 ////
-Copyright 2019-2020 Peter Dimov
+Copyright 2019-2023 Peter Dimov
 
 Distributed under the Boost Software License, Version 1.0.
 
@@ -9,6 +9,13 @@ http://www.boost.org/LICENSE_1_0.txt
 
 [#changelog]
 # Revision History
+
+## Changes in 1.85.0
+
+* Added `mp_sliding_fold`, a generalization of `mp_pairwise_fold` (contributed by Braden Ganetsky)
+* Added `mp_slice` (thanks to Braden Ganetsky)
+* Added value list support to `mp_min_element`, `mp_max_element`.
+* Added limited value list support to `mp_transform`.
 
 ## Changes in 1.83.0
 

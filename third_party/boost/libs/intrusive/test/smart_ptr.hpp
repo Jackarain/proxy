@@ -15,6 +15,7 @@
 #include <boost/intrusive/pointer_traits.hpp>
 #include <boost/intrusive/detail/iterator.hpp>
 #include <boost/move/adl_move_swap.hpp>
+#include <iosfwd>
 
 #if (defined _MSC_VER)
 #  pragma once

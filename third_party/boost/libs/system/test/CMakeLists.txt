@@ -84,7 +84,6 @@ boost_test(TYPE run SOURCES system_category_test2.cpp)
 boost_test(TYPE run SOURCES system_category_test3.cpp)
 
 boost_test(TYPE run SOURCES windows_error_test.cpp)
-boost_test(TYPE run SOURCES cygwin_error_test.cpp)
 boost_test(TYPE run SOURCES linux_error_test.cpp)
 
 boost_test(TYPE link SOURCES errc_test3.cpp)
@@ -138,8 +137,6 @@ boost_test(TYPE run SOURCES std_interop_test16.cpp)
 
 # result
 
-set(BOOST_TEST_COMPILE_FEATURES cxx_std_11)
-
 boost_test(TYPE run SOURCES result_default_construct.cpp)
 boost_test(TYPE run SOURCES result_value_construct.cpp)
 boost_test(TYPE run SOURCES result_error_construct.cpp)
@@ -176,3 +173,7 @@ boost_test(TYPE run SOURCES result_and_fn1v.cpp)
 boost_test(TYPE run SOURCES result_and_fn1r.cpp)
 boost_test(TYPE run SOURCES result_and_eq_fn1v.cpp)
 boost_test(TYPE run SOURCES result_and_eq_fn1r.cpp)
+boost_test(TYPE run SOURCES result_in_place_use.cpp)
+boost_test(TYPE run SOURCES result_or_eq_value.cpp)
+boost_test(TYPE run SOURCES result_or_eq_fn0v.cpp)
+boost_test(TYPE run SOURCES result_or_eq_fn0r.cpp)

@@ -153,14 +153,15 @@ std::string to_string(const std::vector<T>& v)
 }
 
 /// Put the char into the stream making sure it is readable
-/// Fallback to the unicode representation of it (e.g. U+00A0)
+/// Fallback to the Unicode representation of it (e.g. U+00A0)
 template<typename Char>
 void stream_char(std::ostream& s, const Char c)
 {
     if((c >= '!' && c <= '~') || c == ' ')
         s << static_cast<char>(c);
     else
-        s << "U+" << std::hex << std::uppercase << std::setw(sizeof(Char)) << static_cast<unsigned>(c);
+        s << "U+" << std::hex << std::uppercase << std::setw(sizeof(Char)) << std::setfill('0')
+          << static_cast<unsigned>(c);
 }
 
 template<typename Char>

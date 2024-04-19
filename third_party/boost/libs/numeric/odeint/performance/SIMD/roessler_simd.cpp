@@ -16,7 +16,7 @@
 #include <random>
 
 #include <boost/timer.hpp>
-#include <boost/array.hpp>
+#include <array>
 
 #include <boost/numeric/odeint.hpp>
 #include <boost/simd/sdk/simd/pack.hpp>
@@ -38,7 +38,7 @@ typedef double fp_type;
 //typedef float fp_type;
  
 typedef simd::pack<fp_type> simd_pack;
-typedef boost::array<simd_pack, dim> state_type;
+typedef std::array<simd_pack, dim> state_type;
 // use the simd allocator to get properly aligned memory
 typedef std::vector< state_type, simd::allocator< state_type > > state_vec;
 

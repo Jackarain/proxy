@@ -1,5 +1,5 @@
 /* Example of Outcome used with error code enums
-(C) 2017-2023 Niall Douglas <http://www.nedproductions.biz/> (3 commits) and Andrzej Krzemienski <akrzemi1@gmail.com> (1 commit)
+(C) 2017-2024 Niall Douglas <http://www.nedproductions.biz/> (3 commits) and Andrzej Krzemienski <akrzemi1@gmail.com> (1 commit)
 
 
 Boost Software License - Version 1.0 - August 17th, 2003

@@ -375,11 +375,16 @@ compile-fail shared_from_fail.cpp ;
 compile-fail weak_from_fail.cpp ;
 
 compile sp_override_test.cpp ;
+
+local gcc-flags = -Wundef ;
+
 compile sp_pedantic_test.cpp
   : <warnings>pedantic
     <toolset>msvc:<warnings-as-errors>on
     <toolset>gcc:<warnings-as-errors>on
+    <toolset>gcc:<cxxflags>$(gcc-flags)
     <toolset>clang:<warnings-as-errors>on
+    <toolset>clang:<cxxflags>$(gcc-flags)
     <toolset>clang-15:<cxxflags>-Wno-deprecated-builtins
     ;
 
@@ -400,20 +405,22 @@ run lsp_hash_test.cpp
   : : : $(cnhash)  ;
 run lsp_hash_test2.cpp ;
 
+local MT = <threading>multi [ requires cxx11_decltype cxx11_noexcept ] <toolset>gcc-4.6:<build>no ;
+
 run atomic_count_mt_test.cpp
-  : : : <threading>multi ;
+  : : : $(MT) ;
 
 run spinlock_mt_test.cpp
-  : : : <threading>multi ;
+  : : : $(MT) ;
 
 run spinlock_pool_mt_test.cpp
-  : : : <threading>multi ;
+  : : : $(MT) ;
 
 run shared_ptr_mt_test.cpp
-  : : : <threading>multi ;
+  : : : $(MT) ;
 
 run weak_ptr_mt_test.cpp
-  : : : <threading>multi ;
+  : : : $(MT) ;
 
 compile sp_report_implementation.cpp ;
 

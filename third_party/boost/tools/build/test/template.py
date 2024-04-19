@@ -21,7 +21,7 @@ exe hello : hello.cpp ;
 
 t.write("hello.cpp", """
 int main() {}
-"""
+""")
 
 # Run the build.
 t.run_build_system()

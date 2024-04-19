@@ -1,4 +1,4 @@
-# Copyright 2021-2023 Andrey Semashev
+# Copyright 2021-2024 Andrey Semashev
 #
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
@@ -150,6 +150,15 @@ jobs:
             install:
               - g++-12
               - g++-12-multilib
+              - linux-libc-dev:i386
+          - toolset: gcc-13
+            cxxstd64: "11,14,17,20,23,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
+            cxxstd32: "11,11-gnu"
+            os: ubuntu-latest
+            container: ubuntu:23.04
+            install:
+              - g++-13
+              - g++-13-multilib
               - linux-libc-dev:i386
           - name: UBSAN
             toolset: gcc-11
@@ -399,17 +408,33 @@ jobs:
             source_keys:
               - "https://apt.llvm.org/llvm-snapshot.gpg.key"
           - toolset: clang
-            compiler: clang++-16
-            cxxstd64: "11,14,17,20,2b"
+            compiler: clang++-17
+            cxxstd64: "11,14,17,20,23,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
+            cxxstd32: "11,11-gnu"
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            install:
+              - clang-17
+              - g++-11
+              - g++-11-multilib
+              - linux-libc-dev:i386
+            gcc_toolchain: 11
+            sources:
+              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main"
+            source_keys:
+              - "https://apt.llvm.org/llvm-snapshot.gpg.key"
+          - toolset: clang
+            compiler: clang++-17
+            cxxstd64: "11,14,17,20,23"
             cxxflags: -stdlib=libc++
             linkflags: -stdlib=libc++
             os: ubuntu-22.04
             install:
-              - clang-16
-              - libc++-16-dev
-              - libc++abi-16-dev
+              - clang-17
+              - libc++-17-dev
+              - libc++abi-17-dev
             sources:
-              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main"
+              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main"
             source_keys:
               - "https://apt.llvm.org/llvm-snapshot.gpg.key"
           - name: UBSAN
@@ -439,7 +464,7 @@ jobs:
             cmake_tests: 1
             os: ubuntu-20.04
 
-    timeout-minutes: 120
+    timeout-minutes: 30
     runs-on: ${{matrix.os}}
     container: ${{matrix.container}}
 
@@ -476,8 +501,6 @@ jobs:
                 ls "/Library/Developer/CommandLineTools/SDKs"
             fi
             git config --global pack.threads 0
-
-      - uses: actions/checkout@v3
 
       - name: Install packages
         if: matrix.install
@@ -593,11 +616,25 @@ jobs:
             then
                 DEPINST_ARGS+=("--git_args" "--jobs $GIT_FETCH_JOBS")
             fi
+            mkdir -p snapshot
+            cd snapshot
+            echo "Downloading library snapshot: https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+            curl -L --retry "$NET_RETRY_COUNT" -o "${LIBRARY}-${GITHUB_SHA}.tar.gz" "https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+            tar -xf "${LIBRARY}-${GITHUB_SHA}.tar.gz"
+            if [ ! -d "${LIBRARY}-${GITHUB_SHA}" ]
+            then
+                echo "Library snapshot does not contain the library directory ${LIBRARY}-${GITHUB_SHA}:"
+                ls -la
+                exit 1
+            fi
+            rm -f "${LIBRARY}-${GITHUB_SHA}.tar.gz"
             cd ..
             git clone -b "$BOOST_BRANCH" --depth 1 "https://github.com/boostorg/boost.git" "boost-root"
             cd boost-root
-            mkdir -p libs/$LIBRARY
-            cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
+            mkdir -p libs
+            rm -rf "libs/$LIBRARY"
+            mv -f "../snapshot/${LIBRARY}-${GITHUB_SHA}" "libs/$LIBRARY"
+            rm -rf "../snapshot"
             git submodule update --init tools/boostdep
             DEPINST_ARGS+=("$LIBRARY")
             python tools/boostdep/depinst/depinst.py "${DEPINST_ARGS[@]}"
@@ -619,7 +656,7 @@ jobs:
       - name: Run tests
         if: matrix.cmake_tests == ''
         run: |
-            cd ../boost-root
+            cd boost-root
             B2_ARGS=("-j" "$BUILD_JOBS" "toolset=${{matrix.toolset}}")
             if [ -n "${{matrix.build_variant}}" ]
             then
@@ -674,7 +711,7 @@ jobs:
             then
                 export MACOSX_DEPLOYMENT_TARGET="${{matrix.macosx_version_min}}"
             fi
-            cd ../boost-root
+            cd boost-root
             mkdir __build_static__ && cd __build_static__
             cmake ../libs/$LIBRARY/test/test_cmake
             cmake --build . --target boost_${LIBRARY}_cmake_self_test -j $BUILD_JOBS
@@ -720,12 +757,10 @@ jobs:
             cmake_tests: 1
             os: windows-2022
 
-    timeout-minutes: 120
+    timeout-minutes: 30
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
-
       - name: Setup Boost
         run: |
             echo GITHUB_REPOSITORY: %GITHUB_REPOSITORY%
@@ -738,10 +773,24 @@ jobs:
             set BOOST_BRANCH=develop
             for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
             echo BOOST_BRANCH: %BOOST_BRANCH%
+            mkdir snapshot
+            cd snapshot
+            echo Downloading library snapshot: https://github.com/%GITHUB_REPOSITORY%/archive/%GITHUB_SHA%.zip
+            curl -L --retry %NET_RETRY_COUNT% -o "%LIBRARY%-%GITHUB_SHA%.zip" "https://github.com/%GITHUB_REPOSITORY%/archive/%GITHUB_SHA%.zip"
+            tar -xf "%LIBRARY%-%GITHUB_SHA%.zip"
+            if not exist "%LIBRARY%-%GITHUB_SHA%\" (
+                echo Library snapshot does not contain the library directory %LIBRARY%-%GITHUB_SHA%:
+                dir
+                exit /b 1
+            )
+            del /f "%LIBRARY%-%GITHUB_SHA%.zip"
             cd ..
             git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
             cd boost-root
-            xcopy /s /e /q %GITHUB_WORKSPACE% libs\%LIBRARY%\
+            if not exist "libs\" mkdir libs
+            if exist "libs\%LIBRARY%\" rmdir /s /q "libs\%LIBRARY%"
+            move /Y "..\snapshot\%LIBRARY%-%GITHUB_SHA%" "libs\%LIBRARY%"
+            rmdir /s /q "..\snapshot"
             git submodule update --init tools/boostdep
             python tools/boostdep/depinst/depinst.py --git_args "--jobs %GIT_FETCH_JOBS%" %LIBRARY%
             if "${{matrix.cmake_tests}}" == "" (
@@ -752,7 +801,7 @@ jobs:
       - name: Run tests
         if: matrix.cmake_tests == ''
         run: |
-            cd ../boost-root
+            cd boost-root
             set "B2_ARGS=-j %NUMBER_OF_PROCESSORS% toolset=${{matrix.toolset}} embed-manifest-via=linker"
             if not "${{matrix.build_variant}}" == "" ( set "B2_ARGS=%B2_ARGS% variant=${{matrix.build_variant}}" ) else ( set "B2_ARGS=%B2_ARGS% variant=%DEFAULT_BUILD_VARIANT%" )
             if not "${{matrix.instruction_set}}" == "" ( set "B2_ARGS=%B2_ARGS% instruction-set=${{matrix.instruction_set}}" ) else ( set "B2_ARGS=%B2_ARGS% instruction-set=%DEFAULT_INSTRUCTION_SET%" )
@@ -776,7 +825,7 @@ jobs:
       - name: Run CMake tests
         if: matrix.cmake_tests
         run: |
-            cd ../boost-root
+            cd boost-root
             mkdir __build_static__
             cd __build_static__
             cmake ../libs/%LIBRARY%/test/test_cmake

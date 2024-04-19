@@ -266,7 +266,7 @@ int main ()
       typedef boost::container::slist<int> cont;
       typedef cont::allocator_type allocator_type;
       typedef boost::container::allocator_traits<allocator_type>::pointer pointer;
-      BOOST_STATIC_ASSERT_MSG(
+      BOOST_CONTAINER_STATIC_ASSERT_MSG(
         !(boost::has_trivial_destructor_after_move<cont>::value !=
           boost::has_trivial_destructor_after_move<allocator_type>::value &&
           boost::has_trivial_destructor_after_move<pointer>::value)
@@ -277,7 +277,7 @@ int main ()
       typedef boost::container::slist<int, std::allocator<int> > cont;
       typedef cont::allocator_type allocator_type;
       typedef boost::container::allocator_traits<allocator_type>::pointer pointer;
-      BOOST_STATIC_ASSERT_MSG(
+      BOOST_CONTAINER_STATIC_ASSERT_MSG(
         !(boost::has_trivial_destructor_after_move<cont>::value !=
           boost::has_trivial_destructor_after_move<allocator_type>::value &&
           boost::has_trivial_destructor_after_move<pointer>::value)

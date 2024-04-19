@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -39,6 +39,10 @@
  * \par Thread safety
  * Distinct objects: safe. \n
  * Shared objects: unsafe. \n
+ *
+ * Specify this for new async operations. Include the error codes that we may return.
+ * \par Errors
+ * \li \ref client_errc::X when condition Y
  */
 
 #endif

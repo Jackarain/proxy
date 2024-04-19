@@ -25,7 +25,7 @@
 
 #include <boost/numeric/odeint/config.hpp>
 
-#include <boost/array.hpp>
+#include <array>
 #include <boost/ref.hpp>
 #include <boost/iterator/counting_iterator.hpp>
 

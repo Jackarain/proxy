@@ -3,7 +3,7 @@
   "http://www.boost.org/tools/boostbook/dtd/boostbook.dtd">
 <!--
     Copyright 2003, Eric Friedman, Itay Maman.
-    Copyright 2016-2023 Antony Polukhin.
+    Copyright 2016-2024 Antony Polukhin.
 
     Distributed under the Boost Software License, Version 1.0. (See accompanying
     file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -88,21 +88,6 @@
         same expansion as
         <code><macroname>BOOST_VARIANT_ENUM_PARAMS</macroname></code> -- but
         without the first term.</para>
-    </description>
-  </macro>
-
-  <macro name="BOOST_VARIANT_NO_TYPE_SEQUENCE_SUPPORT">
-    <purpose>
-      <simpara>Indicates absence of support for specifying the bounded types
-        of a <code><classname>variant</classname></code> by the elements of a
-        type sequence.</simpara>
-    </purpose>
-
-    <description>
-      <para>Defined only if
-        <code><classname>make_variant_over</classname></code> and
-        <code><classname>make_recursive_variant_over</classname></code>
-        are not supported for some reason on the target compiler.</para>
     </description>
   </macro>
 

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+# Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -39,19 +39,27 @@ docca.reference reference.qbk
         <doxygen:param>SEARCH_INCLUDES=NO
         <doxygen:param>"PREDEFINED=\\
             BOOST_MYSQL_DOXYGEN \\
+            __cpp_lib_string_view \\
+            __cpp_char8_t \\
+            \"BOOST_DEPRECATED(a)=\" \\
+            \"BOOST_ATTRIBUTE_NODISCARD=[[nodiscard]]\" \\
             \"BOOST_ASIO_INITFN_RESULT_TYPE(t,a)=auto\" \\
             \"BOOST_ASIO_COMPLETION_TOKEN_FOR(sig)=class\" \\
             \"BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ct,sig)=auto\" \\
             \"BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(ex)=\" \\
             \"BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(ex)=\" \\
+            \"BOOST_MYSQL_RETURN_TYPE(...)=\" \\
             \"protected=private\" \\
             \"BOOST_CXX14_CONSTEXPR=constexpr\" \\
+            \"BOOST_MYSQL_CONSTEVAL=consteval\" \\
             \"BOOST_MYSQL_CXX14\" \\
             \"BOOST_MYSQL_WRITABLE_FIELD_TUPLE=class\" \\
             \"BOOST_MYSQL_FIELD_VIEW_FORWARD_ITERATOR=class\" \\
             \"BOOST_MYSQL_EXECUTION_REQUEST=class\" \\
             \"BOOST_MYSQL_RESULTS_TYPE=class\" \\
             \"BOOST_MYSQL_EXECUTION_STATE_TYPE=class\" \\
+            \"BOOST_MYSQL_OUTPUT_STRING=class\" \\
+            \"BOOST_MYSQL_FORMATTABLE=class\" \\
             \"BOOST_MYSQL_DECL=\" \\
             "
         <doxygen:param>SKIP_FUNCTION_MACROS=NO

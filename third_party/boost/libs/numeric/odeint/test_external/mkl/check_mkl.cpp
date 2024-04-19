@@ -22,7 +22,7 @@
 using namespace boost::numeric::odeint;
 
 typedef double value_type;
-typedef boost::array< value_type , 1 > state_type;
+typedef std::array< value_type , 1 > state_type;
 
 
 void constant_system( state_type &x , state_type &dxdt , value_type t )

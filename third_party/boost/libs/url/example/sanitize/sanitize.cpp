@@ -263,10 +263,14 @@ extract_uri_components(
    url_components &out)
 {
     if (s.starts_with("//") && !s.starts_with("///"))
+    {
         return extract_scheme_relative(s.substr(2), out);
+    }
 
     if (s.starts_with('/'))
+    {
         return extract_relative_ref(s, out);
+    }
 
     // extract scheme
     // first char in a scheme must be letter (we accept uppercase here)
@@ -289,9 +293,17 @@ extract_uri_components(
     // The usual route, parse scheme first
     core::string_view scheme_relative = s;
     if (has_scheme)
+    {
         scheme_relative = s.substr(out.scheme.size() + 1);
+    }
 
     const bool has_authority = scheme_relative.starts_with("//");
+    if (has_authority)
+    {
+        scheme_relative = scheme_relative.substr(2);
+        return extract_scheme_relative(scheme_relative, out);
+    }
+
     const bool is_relative_ref = !has_scheme && !has_authority;
     if (is_relative_ref)
     {
@@ -319,9 +331,6 @@ extract_uri_components(
         // if the first_seg is really a seg, parse as relative ref
         return extract_relative_ref(s, out);
     }
-
-    if (has_authority)
-        scheme_relative = scheme_relative.substr(2);
 
     // all that's left is a relative path
     return extract_relative_ref(scheme_relative, out);

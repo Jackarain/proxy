@@ -1,5 +1,5 @@
 /* Example of how to marshall Outcomes at namespace boundaries
-(C) 2017-2023 Niall Douglas <http://www.nedproductions.biz/> (11 commits)
+(C) 2017-2024 Niall Douglas <http://www.nedproductions.biz/> (11 commits)
 
 
 Boost Software License - Version 1.0 - August 17th, 2003

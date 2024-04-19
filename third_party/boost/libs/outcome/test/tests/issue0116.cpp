@@ -1,5 +1,5 @@
 /* Unit testing for outcomes
-(C) 2013-2023 Niall Douglas <http://www.nedproductions.biz/> (2 commits)
+(C) 2013-2024 Niall Douglas <http://www.nedproductions.biz/> (2 commits)
 
 
 Boost Software License - Version 1.0 - August 17th, 2003

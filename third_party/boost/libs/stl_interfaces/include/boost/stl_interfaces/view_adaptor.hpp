@@ -242,9 +242,22 @@ namespace boost { namespace stl_interfaces {
             typename Enable =
                 std::enable_if_t<detail::is_invocable_v<F const &, T>>>
 #endif
-        constexpr decltype(auto) operator()(T && t) const
+        constexpr decltype(auto) operator()(T && t) const &
         {
             return f_((T &&) t);
+        }
+
+#if BOOST_STL_INTERFACES_USE_CONCEPTS
+        template<typename T>
+        requires std::invocable<F &&, T>
+#else
+        template<
+            typename T,
+            typename Enable = std::enable_if_t<detail::is_invocable_v<F &&, T>>>
+#endif
+        constexpr decltype(auto) operator()(T && t) &&
+        {
+            return std::move(f_)((T &&) t);
         }
 
     private:
@@ -295,7 +308,7 @@ namespace boost { namespace stl_interfaces {
         {
 #if BOOST_STL_INTERFACES_USE_CONCEPTS
             if constexpr (std::is_invocable_v<F const &, Args...>) {
-                return f((Args &&) args...);
+                return f_((Args &&) args...);
             } else {
                 return closure(
                     stl_interfaces::bind_back(f_, (Args &&) args...));

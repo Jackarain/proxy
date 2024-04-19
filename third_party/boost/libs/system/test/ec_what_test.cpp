@@ -62,8 +62,6 @@ int main()
         BOOST_TEST_EQ( ec.what(), ec.message() + " [system:5 at " + loc.to_string() + "]" );
     }
 
-#if defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
-
     {
         std::error_code ec;
         sys::error_code ec2( ec );
@@ -84,8 +82,6 @@ int main()
 
         BOOST_TEST_EQ( ec2.what(), ec2.message() + " [std:system:5]" );
     }
-
-#endif
 
     return boost::report_errors();
 }

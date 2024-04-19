@@ -27,6 +27,7 @@
 #include <new>
 #include <set>
 #include <vector>
+#include <typeinfo>
 
 // local
 #include "get_process_id_name.hpp"

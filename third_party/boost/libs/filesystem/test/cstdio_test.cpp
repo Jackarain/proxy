@@ -14,7 +14,6 @@
 #include <boost/config.hpp>
 #include <string>
 #include <iostream>
-#include <cstddef>
 #include <cstdio> // for std::fclose
 
 #include <boost/filesystem/detail/utf8_codecvt_facet.hpp>
@@ -34,18 +33,18 @@ private:
     std::FILE* m_file;
 
 public:
-    auto_fclose() BOOST_NOEXCEPT : m_file(NULL) {}
-    explicit auto_fclose(std::FILE* file) BOOST_NOEXCEPT : m_file(file) {}
-    ~auto_fclose() BOOST_NOEXCEPT
+    auto_fclose() noexcept : m_file(nullptr) {}
+    explicit auto_fclose(std::FILE* file) noexcept : m_file(file) {}
+    ~auto_fclose() noexcept
     {
         if (m_file)
             std::fclose(m_file);
     }
 
-    std::FILE* get() const BOOST_NOEXCEPT { return m_file; }
+    std::FILE* get() const noexcept { return m_file; }
 
-    BOOST_DELETED_FUNCTION(auto_fclose(auto_fclose const&))
-    BOOST_DELETED_FUNCTION(auto_fclose& operator=(auto_fclose const&))
+    auto_fclose(auto_fclose const&) = delete;
+    auto_fclose& operator=(auto_fclose const&) = delete;
 };
 
 void test(fs::path const& p)
@@ -54,17 +53,17 @@ void test(fs::path const& p)
     {
         std::cout << " in test 1\n";
         auto_fclose file(fs::fopen(p, "w"));
-        BOOST_TEST(file.get() != NULL);
+        BOOST_TEST(file.get() != nullptr);
     }
     {
         std::cout << " in test 2\n";
         auto_fclose file(fs::fopen(p, "r"));
-        BOOST_TEST(file.get() != NULL);
+        BOOST_TEST(file.get() != nullptr);
     }
     {
         std::cout << " in test 3\n";
         auto_fclose file(fs::fopen(p / p.filename(), "w")); // should fail
-        BOOST_TEST(file.get() == NULL);
+        BOOST_TEST(file.get() == nullptr);
     }
 
     if (cleanup)
@@ -80,7 +79,7 @@ int cpp_main(int argc, char*[])
 
     // test narrow characters
     std::cout << "narrow character tests:\n";
-    test("narrow_fopen_test");
+    test(fs::unique_path("narrow_fopen_test-%%%%-%%%%.txt"));
 
     // So that tests are run with known encoding, use Boost UTF-8 codecvt
     std::locale global_loc = std::locale();
@@ -95,7 +94,8 @@ int cpp_main(int argc, char*[])
     std::wstring ws(L"wide_fopen_test_");
     ws.push_back(static_cast< wchar_t >(0x2780));
     ws.push_back(static_cast< wchar_t >(0x263A));
-    test(ws);
+    ws.append(L"-%%%%-%%%%.txt");
+    test(fs::unique_path(ws));
 
     return ::boost::report_errors();
 }

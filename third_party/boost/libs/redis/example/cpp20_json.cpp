@@ -15,13 +15,11 @@
 
 #if defined(BOOST_ASIO_HAS_CO_AWAIT)
 
-#define BOOST_JSON_NO_LIB
-#define BOOST_CONTAINER_NO_LIB
 #include <boost/json/serialize.hpp>
 #include <boost/json/parse.hpp>
 #include <boost/json/value_from.hpp>
+#include <boost/json/value_to.hpp>
 #include <boost/redis/resp3/serialization.hpp>
-#include <boost/json/src.hpp>
 
 namespace asio = boost::asio;
 using namespace boost::describe;

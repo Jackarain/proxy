@@ -100,7 +100,7 @@ void function_test()
 
 struct Y
 {
-    short operator()(short & r) const { return global_result = ++r; }
+    short operator()(short & r) const { return static_cast<short>( global_result = ++r ); }
     int operator()(int a, int b) const { return global_result = a + 10 * b; }
     long operator() (long a, long b, long c) const { return global_result = a + 10 * b + 100 * c; }
     void operator() (long a, long b, long c, long d) const { global_result = a + 10 * b + 100 * c + 1000 * d; }

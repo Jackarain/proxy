@@ -21,7 +21,7 @@ class user_category: public sys::error_category
 {
 public:
 
-    virtual const char * name() const BOOST_NOEXCEPT
+    virtual const char * name() const noexcept
     {
         return "user";
     }

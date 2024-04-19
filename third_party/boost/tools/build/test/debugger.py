@@ -45,7 +45,7 @@ def test_run():
     run(t, """\
 (b2db) run -ftest.jam
 Starting program: {{bjam}} -ftest.jam
-Child {{\d+}} exited with status 0
+Child {{\\d+}} exited with status 0
 (b2db) quit
 """)
 
@@ -60,7 +60,7 @@ def test_exit_status():
 (b2db) run -ftest.jam
 Starting program: {{bjam}} -ftest.jam
 
-Child {{\d+}} exited with status 1
+Child {{\\d+}} exited with status 1
 (b2db) quit
 """)
     t.cleanup()
@@ -384,7 +384,7 @@ Breakpoint 3, h ( ) at test.jam:12
 Deleted breakpoint 3
 (b2db) run -ftest.jam
 Starting program: {{bjam}} -ftest.jam
-Child {{\d+}} exited with status 0
+Child {{\\d+}} exited with status 0
 (b2db) quit
 """)
     t.cleanup()
@@ -473,7 +473,7 @@ Breakpoint 1, module scope at test.jam:14
 (b2db) clear test.jam:12
 Deleted breakpoint 4
 (b2db) continue
-Child {{\d+}} exited with status 0
+Child {{\\d+}} exited with status 0
 (b2db) quit
 """)
     t.cleanup()
@@ -553,7 +553,7 @@ Starting program: {{bjam}} -ftest.jam
 Breakpoint 1, module scope at test.jam:1
 1	        UPDATE ;
 (b2db) run -ftest.jam
-Child {{\d+}} exited with status 0
+Child {{\\d+}} exited with status 0
 Starting program: {{bjam}} -ftest.jam
 Breakpoint 1, module scope at test.jam:1
 1	        UPDATE ;

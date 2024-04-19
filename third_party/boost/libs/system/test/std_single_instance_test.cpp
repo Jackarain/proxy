@@ -6,12 +6,7 @@
 #include <boost/config/pragma_message.hpp>
 #include <boost/config/helper_macros.hpp>
 
-#if !defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
-
-BOOST_PRAGMA_MESSAGE( "BOOST_SYSTEM_HAS_SYSTEM_ERROR not defined, test will be skipped" )
-int main() {}
-
-#elif defined(STD_SINGLE_INSTANCE_SHARED) && defined(__CYGWIN__)
+#if defined(STD_SINGLE_INSTANCE_SHARED) && defined(__CYGWIN__)
 
 BOOST_PRAGMA_MESSAGE( "Skipping Windows/DLL test, __CYGWIN__" )
 int main() {}

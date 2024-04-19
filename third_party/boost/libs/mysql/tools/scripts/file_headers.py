@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+# Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -27,6 +27,7 @@ BASE_FOLDERS = [
     'src',
     'test',
     'tools',
+    'bench',
     '.github'
 ]
 BASE_FILES = [
@@ -36,7 +37,7 @@ BASE_FILES = [
 HTML_GEN_PATH = path.join(REPO_BASE, 'doc', 'html')
 
 HEADER_TEMPLATE = '''{begin}
-{linesym} Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+{linesym} Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 {linesym}
 {linesym} Distributed under the Boost Software License, Version 1.0. (See accompanying
 {linesym} file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -225,6 +226,7 @@ FILE_PROCESSORS : List[Tuple[str, BaseProcessor]] = [
     ('.csv', IgnoreProcessor()),
     ('.tar.gz', IgnoreProcessor()),
     ('.json', IgnoreProcessor()),
+    ('.txt', IgnoreProcessor()),
 ]
 
 def process_file(fpath: str):

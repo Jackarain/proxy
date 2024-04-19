@@ -10,12 +10,27 @@
 
 #define _HAS_ITERATOR_DEBUGGING 0
 
+#define _SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING
+
+// -Wdeprecated-copy-with-user-provided-copy in boost/format/group.hpp
+
+#if defined(__clang__) && defined(__has_warning)
+# if __has_warning( "-Wdeprecated-copy-with-user-provided-copy" )
+#  pragma clang diagnostic ignored "-Wdeprecated-copy-with-user-provided-copy"
+# endif
+// clang 10..12 emits this instead
+# if __has_warning( "-Wdeprecated-copy" )
+#  pragma clang diagnostic ignored "-Wdeprecated-copy"
+# endif
+#endif
+
 #include <boost/property_tree/ptree.hpp>
 #include <boost/format.hpp>
 #include <boost/shared_array.hpp>
 #include <iostream>
 #include <ctime>
 #include <algorithm>
+#include <random>
 
 using namespace std;
 using namespace boost;
@@ -30,10 +45,10 @@ void prepare_keys(int size)
     // Prepare keys
     keys.clear();
     for (int i = 0; i < size; ++i)
-        keys.push_back((format("%d") % i).str());
+        keys.push_back((boost::format("%d") % i).str());
     shuffled_keys = keys;
-    srand(0);
-    random_shuffle(shuffled_keys.begin(), shuffled_keys.end());
+    // Seed the engine with default seed every time
+    std::shuffle(shuffled_keys.begin(), shuffled_keys.end(), std::mt19937());
 }
 
 void clock_push_back(int size)
@@ -43,7 +58,7 @@ void clock_push_back(int size)
     shared_array<ptree> pt_array(new ptree[max_repeats]);
 
     int n = 0;
-    clock_t t1 = clock(), t2;
+    clock_t t1 = clock(), t2 = t1;
     do
     {
         if (n >= max_repeats)
@@ -88,13 +103,12 @@ void clock_erase(int size)
     int max_repeats = 100000 / size;
     shared_array<ptree> pt_array(new ptree[max_repeats]);
 
-    ptree pt;
     for (int n = 0; n < max_repeats; ++n)
         for (int i = 0; i < size; ++i)
             pt_array[n].push_back(ptree::value_type(keys[i], ptree("data")));
 
     int n = 0;
-    clock_t t1 = clock(), t2;
+    clock_t t1 = clock(), t2 = t1;
     do
     {
         if (n >= max_repeats)

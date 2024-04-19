@@ -152,6 +152,11 @@ Developing in the `b2` engine, the C++ part, requires two steps to be
 effective: building the "stable" engine, and developing the
 "in-progress" engine.
 
+CAUTION: The `b2` only supports building when the version of the engine
+matches the version of the build files. This is an important consideration
+to take when deciding what to choose as "stable" and "in-progress" engine.
+These instructions are written assuming the engine and the build versions match.
+
 What is the "stable" engine is up to you. It only refers to a build of the
 engine you know is at a good working state. When you are at a point the
 source is stable you can run `bootstrap.sh/bat` from the root. That will

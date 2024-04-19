@@ -20,4 +20,5 @@ b2 -d0 headers
 
 if not "%CXXSTD%" == "" set CXXSTD=cxxstd=%CXXSTD%
 if not "%ADDRMD%" == "" set ADDRMD=address-model=%ADDRMD%
-b2 --abbreviate-paths -j3 libs/%LIBRARY%/test toolset=%TOOLSET% %CXXSTD% %ADDRMD% variant=debug,release embed-manifest-via=linker
+if not "%CXXFLAGS%" == "" set CXXFLAGS=cxxflags=%CXXFLAGS%
+b2 --abbreviate-paths -j3 libs/%LIBRARY%/test toolset=%TOOLSET% %CXXSTD% %ADDRMD% %CXXFLAGS% variant=debug,release embed-manifest-via=linker

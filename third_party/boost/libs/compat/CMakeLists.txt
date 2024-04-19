@@ -15,6 +15,8 @@ target_include_directories(boost_compat INTERFACE include)
 target_link_libraries(boost_compat
   INTERFACE
     Boost::assert
+    Boost::config
+    Boost::throw_exception
 )
 
 target_compile_features(boost_compat INTERFACE cxx_std_11)

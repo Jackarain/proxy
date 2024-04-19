@@ -15,8 +15,6 @@
  */
 
 void load_builtins();
-void init_set();
-void init_path();
 void init_regex();
 void init_property_set();
 void init_sequence();
@@ -48,7 +46,6 @@ LIST *builtin_update( FRAME * frame, int flags );
 LIST *builtin_update_now( FRAME * frame, int flags );
 LIST *builtin_import_module( FRAME * frame, int flags );
 LIST *builtin_imported_modules( FRAME * frame, int flags );
-LIST *builtin_instance( FRAME * frame, int flags );
 LIST *builtin_sort( FRAME * frame, int flags );
 LIST *builtin_normalize_path( FRAME * frame, int flags );
 LIST *builtin_native_rule( FRAME * frame, int flags );

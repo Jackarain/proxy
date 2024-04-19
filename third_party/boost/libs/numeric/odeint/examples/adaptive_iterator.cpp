@@ -17,7 +17,7 @@
 #include <algorithm>
 #include <cassert>
 
-#include <boost/array.hpp>
+#include <array>
 
 #include <boost/range/algorithm.hpp>
 #include <boost/range/adaptor/filtered.hpp>
@@ -55,7 +55,7 @@ struct lorenz
 
 int main( int argc , char **argv )
 {
-    typedef boost::array< double , 3 > state_type;
+    typedef std::array< double , 3 > state_type;
 
     /*
      * Controlled steppers with time iterator

@@ -8,7 +8,6 @@
 // file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#include <iostream>
 // back-end
 #include <boost/msm/back/state_machine.hpp>
 //front-end
@@ -216,7 +215,7 @@ namespace
         > {};
         // Replaces the default no-transition response.
         template <class FSM,class Event>
-        void no_transition(Event const& e, FSM&,int state)
+        void no_transition(Event const&, FSM&,int)
         {
             BOOST_FAIL("no_transition called!");
         }

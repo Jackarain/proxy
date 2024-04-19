@@ -5,11 +5,10 @@
  */
 
 /*
-Copyright 2020 René Ferdinand Rivera Morell
+Copyright 2020-2022 René Ferdinand Rivera Morell
 Distributed under the Boost Software License, Version 1.0.
 (See accompanying file LICENSE.txt or https://www.bfgroup.xyz/b2/LICENSE.txt)
 */
-
 
 /*
  * pathsys.h - PATHNAME struct
@@ -29,59 +28,74 @@ Distributed under the Boost Software License, Version 1.0.
 #define PATHSYS_VP_20020211_H
 
 #include "config.h"
-#include "object.h"
 #include "jam_strings.h"
+#include "lists.h"
+#include "object.h"
 
 #include <string>
 
-
 typedef struct _pathpart
 {
-    char const * ptr;
-    int32_t len;
+	char const * ptr;
+	int32_t len;
 } PATHPART;
 
 typedef struct _pathname
 {
-    PATHPART part[ 6 ];
+	PATHPART part[6];
 
-#define f_grist   part[ 0 ]
-#define f_root    part[ 1 ]
-#define f_dir     part[ 2 ]
-#define f_base    part[ 3 ]
-#define f_suffix  part[ 4 ]
-#define f_member  part[ 5 ]
+#define f_grist part[0]
+#define f_root part[1]
+#define f_dir part[2]
+#define f_base part[3]
+#define f_suffix part[4]
+#define f_member part[5]
+
+	inline std::string part_str(const PATHPART & p) const
+	{
+		return std::string(p.ptr, p.len);
+	}
+	inline std::string grist() const { return part_str(f_grist); }
+	inline std::string root() const { return part_str(f_root); }
+	inline std::string dir() const { return part_str(f_dir); }
+	inline std::string base() const { return part_str(f_base); }
+	inline std::string suffix() const { return part_str(f_suffix); }
+	inline std::string member() const { return part_str(f_member); }
+
+	_pathname(const char * file);
+	_pathname() = default;
 } PATHNAME;
 
+void path_build(PATHNAME *, string * file);
+void path_parse(char const * file, PATHNAME *);
+void path_parent(PATHNAME *);
+int path_translate_to_os(char const *, string * file);
 
-void path_build( PATHNAME *, string * file );
-void path_parse( char const * file, PATHNAME * );
-void path_parent( PATHNAME * );
-int path_translate_to_os( char const *, string * file );
+inline _pathname::_pathname(const char * file) { path_parse(file, this); }
 
 /* Given a path, returns an object containing an equivalent path in canonical
  * format that can be used as a unique key for that path. Equivalent paths such
  * as a/b, A\B, and a\B on NT all yield the same key.
  */
-OBJECT * path_as_key( OBJECT * path );
+OBJECT * path_as_key(OBJECT * path);
 
 /* Called as an optimization when we know we have a path that is already in its
  * canonical/long/key form. Avoids the need for some subsequent path_as_key()
  * call to do a potentially expensive path conversion requiring access to the
  * actual underlying file system.
  */
-void path_register_key( OBJECT * canonic_path );
+void path_register_key(OBJECT * canonic_path);
 
 /* Returns a static pointer to the system dependent path to the temporary
  * directory. NOTE: Does *not* include a trailing path separator.
  */
-string const * path_tmpdir( void );
+string const * path_tmpdir(void);
 
 /* Returns a new temporary name. */
-OBJECT * path_tmpnam( void );
+OBJECT * path_tmpnam(void);
 
 /* Returns a new temporary path. */
-OBJECT * path_tmpfile( void );
+OBJECT * path_tmpfile(void);
 
 /* Give the first argument to 'main', return a full path to our executable.
  * Returns null in the unlikely case it cannot be determined. Caller is
@@ -89,35 +103,30 @@ OBJECT * path_tmpfile( void );
  *
  * Implemented in jam.c
  */
-char * executable_path( char const * argv0 );
+char * executable_path(char const * argv0);
 
-void path_done( void );
+void path_done(void);
 
-namespace b2
+namespace b2 { namespace paths {
+
+inline bool is_rooted(const std::string & p)
 {
-    namespace paths
-    {
-        inline bool is_rooted(const std::string &p)
-        {
-            #if NT
-            return
-                (p.size() >= 1 && (p[0] == '/' || p[0] == '\\')) ||
-                (p.size() >= 3 && p[1] == ':' && (p[2] == '/' || p[2] == '\\'));
-            #else
-            return
-                (p.size() >= 1 && (p[0] == '/' || p[0] == '\\'));
-            #endif
-        }
-        inline bool is_relative(const std::string &p)
-        {
-            return
-                (p.size() >= 3 && (
-                    (p[0] == '.' && p[1] == '.' && (p[2] == '/' || p[2] == '\\')) ||
-                    (p[0] == '.' && (p[1] == '/' || p[1] == '\\'))
-                    ));
-        }
-        std::string normalize(const std::string &p);
-    }
+#if NT
+	return (p.size() >= 1 && (p[0] == '/' || p[0] == '\\'))
+		|| (p.size() >= 3 && p[1] == ':' && (p[2] == '/' || p[2] == '\\'));
+#else
+	return (p.size() >= 1 && (p[0] == '/' || p[0] == '\\'));
+#endif
 }
+inline bool is_relative(const std::string & p)
+{
+	return (p.size() >= 3
+		&& ((p[0] == '.' && p[1] == '.' && (p[2] == '/' || p[2] == '\\'))
+			|| (p[0] == '.' && (p[1] == '/' || p[1] == '\\'))));
+}
+std::string normalize(const std::string & p);
+std::string rooted(const std::string & p, const std::string & r);
+
+}} // namespace b2::paths
 
 #endif

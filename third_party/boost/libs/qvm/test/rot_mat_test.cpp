@@ -93,21 +93,21 @@ namespace
         for( float x1=0; x1<6.28f; x1+=0.5f )
             for( float z2=0; z2<6.28f; z2+=0.5f )
                 for( float y3=0; y3<6.28f; y3+=0.5f )
-                {
-                mat<float,D,D> const m2 = rotx_mat<D>(x1) * rotz_mat<D>(z2) * roty_mat<D>(y3);
                     {
-                    mat<float,D,D> m1 = rot_mat_xzy<D>(x1,z2,y3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                    mat<float,D,D> const m2 = rotx_mat<D>(x1) * rotz_mat<D>(z2) * roty_mat<D>(y3);
+                        {
+                        mat<float,D,D> m1 = rot_mat_xzy<D>(x1,z2,y3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
+                        {
+                        mat<float,D,D> m1; set_rot_xzy(m1,x1,z2,y3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
+                        {
+                        mat<float,D,D> m1 = identity_mat<float,D>(); rotate_xzy(m1,x1,z2,y3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
                     }
-                    {
-                    mat<float,D,D> m1; set_rot_xzy(m1,x1,z2,y3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
-                    }
-                    {
-                    mat<float,D,D> m1 = identity_mat<float,D>(); rotate_xzy(m1,x1,z2,y3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
-                    }
-                }
         }
 
     template <int D>
@@ -118,21 +118,21 @@ namespace
         for( float x1=0; x1<6.28f; x1+=0.5f )
             for( float y2=0; y2<6.28f; y2+=0.5f )
                 for( float z3=0; z3<6.28f; z3+=0.5f )
-                {
-                mat<float,D,D> const m2 = rotx_mat<D>(x1) * roty_mat<D>(y2) * rotz_mat<D>(z3);
                     {
-                    mat<float,D,D> m1 = rot_mat_xyz<D>(x1,y2,z3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.007f);
+                    mat<float,D,D> const m2 = rotx_mat<D>(x1) * roty_mat<D>(y2) * rotz_mat<D>(z3);
+                        {
+                        mat<float,D,D> m1 = rot_mat_xyz<D>(x1,y2,z3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.007f);
+                        }
+                        {
+                        mat<float,D,D> m1; set_rot_xyz(m1,x1,y2,z3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.007f);
+                        }
+                        {
+                        mat<float,D,D> m1 = identity_mat<float,D>(); rotate_xyz(m1,x1,y2,z3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.007f);
+                        }
                     }
-                    {
-                    mat<float,D,D> m1; set_rot_xyz(m1,x1,y2,z3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.007f);
-                    }
-                    {
-                    mat<float,D,D> m1 = identity_mat<float,D>(); rotate_xyz(m1,x1,y2,z3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.007f);
-                    }
-                }
         }
 
     template <int D>
@@ -143,21 +143,21 @@ namespace
         for( float y1=0; y1<6.28f; y1+=0.5f )
             for( float x2=0; x2<6.28f; x2+=0.5f )
                 for( float z3=0; z3<6.28f; z3+=0.5f )
-                {
-                mat<float,D,D> const m2 = roty_mat<D>(y1) * rotx_mat<D>(x2) * rotz_mat<D>(z3);
                     {
-                    mat<float,D,D> m1 = rot_mat_yxz<D>(y1,x2,z3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                    mat<float,D,D> const m2 = roty_mat<D>(y1) * rotx_mat<D>(x2) * rotz_mat<D>(z3);
+                        {
+                        mat<float,D,D> m1 = rot_mat_yxz<D>(y1,x2,z3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
+                        {
+                        mat<float,D,D> m1; set_rot_yxz(m1,y1,x2,z3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
+                        {
+                        mat<float,D,D> m1 = identity_mat<float,D>(); rotate_yxz(m1,y1,x2,z3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
                     }
-                    {
-                    mat<float,D,D> m1; set_rot_yxz(m1,y1,x2,z3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
-                    }
-                    {
-                    mat<float,D,D> m1 = identity_mat<float,D>(); rotate_yxz(m1,y1,x2,z3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
-                    }
-                }
         }
 
     template <int D>
@@ -168,21 +168,21 @@ namespace
         for( float y1=0; y1<6.28f; y1+=0.5f )
             for( float z2=0; z2<6.28f; z2+=0.5f )
                 for( float x3=0; x3<6.28f; x3+=0.5f )
-                {
-                mat<float,D,D> const m2 = roty_mat<D>(y1) * rotz_mat<D>(z2) * rotx_mat<D>(x3);
                     {
-                    mat<float,D,D> m1 = rot_mat_yzx<D>(y1,z2,x3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.007f);
+                    mat<float,D,D> const m2 = roty_mat<D>(y1) * rotz_mat<D>(z2) * rotx_mat<D>(x3);
+                        {
+                        mat<float,D,D> m1 = rot_mat_yzx<D>(y1,z2,x3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.007f);
+                        }
+                        {
+                        mat<float,D,D> m1; set_rot_yzx(m1,y1,z2,x3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.007f);
+                        }
+                        {
+                        mat<float,D,D> m1 = identity_mat<float,D>(); rotate_yzx(m1,y1,z2,x3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.007f);
+                        }
                     }
-                    {
-                    mat<float,D,D> m1; set_rot_yzx(m1,y1,z2,x3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.007f);
-                    }
-                    {
-                    mat<float,D,D> m1 = identity_mat<float,D>(); rotate_yzx(m1,y1,z2,x3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.007f);
-                    }
-                }
         }
 
     template <int D>
@@ -193,21 +193,21 @@ namespace
         for( float z1=0; z1<6.28f; z1+=0.5f )
             for( float y2=0; y2<6.28f; y2+=0.5f )
                 for( float x3=0; x3<6.28f; x3+=0.5f )
-                {
-                mat<float,D,D> const m2 = rotz_mat<D>(z1) * roty_mat<D>(y2) * rotx_mat<D>(x3);
                     {
-                    mat<float,D,D> m1 = rot_mat_zyx<D>(z1,y2,x3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                    mat<float,D,D> const m2 = rotz_mat<D>(z1) * roty_mat<D>(y2) * rotx_mat<D>(x3);
+                        {
+                        mat<float,D,D> m1 = rot_mat_zyx<D>(z1,y2,x3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
+                        {
+                        mat<float,D,D> m1; set_rot_zyx(m1,z1,y2,x3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
+                        {
+                        mat<float,D,D> m1 = identity_mat<float,D>(); rotate_zyx(m1,z1,y2,x3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
                     }
-                    {
-                    mat<float,D,D> m1; set_rot_zyx(m1,z1,y2,x3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
-                    }
-                    {
-                    mat<float,D,D> m1 = identity_mat<float,D>(); rotate_zyx(m1,z1,y2,x3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
-                    }
-                }
         }
 
     template <int D>
@@ -218,21 +218,21 @@ namespace
         for( float z1=0; z1<6.28f; z1+=0.5f )
             for( float x2=0; x2<6.28f; x2+=0.5f )
                 for( float y3=0; y3<6.28f; y3+=0.5f )
-                {
-                mat<float,D,D> const m2 = rotz_mat<D>(z1) * rotx_mat<D>(x2) * roty_mat<D>(y3);
                     {
-                    mat<float,D,D> m1 = rot_mat_zxy<D>(z1,x2,y3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.01f);
+                    mat<float,D,D> const m2 = rotz_mat<D>(z1) * rotx_mat<D>(x2) * roty_mat<D>(y3);
+                        {
+                        mat<float,D,D> m1 = rot_mat_zxy<D>(z1,x2,y3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.01f);
+                        }
+                        {
+                        mat<float,D,D> m1; set_rot_zxy(m1,z1,x2,y3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.01f);
+                        }
+                        {
+                        mat<float,D,D> m1 = identity_mat<float,D>(); rotate_zxy(m1,z1,x2,y3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.01f);
+                        }
                     }
-                    {
-                    mat<float,D,D> m1; set_rot_zxy(m1,z1,x2,y3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.01f);
-                    }
-                    {
-                    mat<float,D,D> m1 = identity_mat<float,D>(); rotate_zxy(m1,z1,x2,y3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.01f);
-                    }
-                }
         }
 
     template <int D>
@@ -243,21 +243,21 @@ namespace
         for( float x1=0; x1<6.28f; x1+=0.5f )
             for( float z2=0; z2<6.28f; z2+=0.5f )
                 for( float x3=0; x3<6.28f; x3+=0.5f )
-                {
-                mat<float,D,D> const m2 = rotx_mat<D>(x1) * rotz_mat<D>(z2) * rotx_mat<D>(x3);
                     {
-                    mat<float,D,D> m1 = rot_mat_xzx<D>(x1,z2,x3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                    mat<float,D,D> const m2 = rotx_mat<D>(x1) * rotz_mat<D>(z2) * rotx_mat<D>(x3);
+                        {
+                        mat<float,D,D> m1 = rot_mat_xzx<D>(x1,z2,x3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
+                        {
+                        mat<float,D,D> m1; set_rot_xzx(m1,x1,z2,x3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
+                        {
+                        mat<float,D,D> m1 = identity_mat<float,D>(); rotate_xzx(m1,x1,z2,x3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
                     }
-                    {
-                    mat<float,D,D> m1; set_rot_xzx(m1,x1,z2,x3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
-                    }
-                    {
-                    mat<float,D,D> m1 = identity_mat<float,D>(); rotate_xzx(m1,x1,z2,x3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
-                    }
-                }
         }
 
     template <int D>
@@ -268,21 +268,21 @@ namespace
         for( float x1=0; x1<6.28f; x1+=0.5f )
             for( float y2=0; y2<6.28f; y2+=0.5f )
                 for( float x3=0; x3<6.28f; x3+=0.5f )
-                {
-                mat<float,D,D> const m2 = rotx_mat<D>(x1) * roty_mat<D>(y2) * rotx_mat<D>(x3);
                     {
-                    mat<float,D,D> m1 = rot_mat_xyx<D>(x1,y2,x3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                    mat<float,D,D> const m2 = rotx_mat<D>(x1) * roty_mat<D>(y2) * rotx_mat<D>(x3);
+                        {
+                        mat<float,D,D> m1 = rot_mat_xyx<D>(x1,y2,x3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
+                        {
+                        mat<float,D,D> m1; set_rot_xyx(m1,x1,y2,x3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
+                        {
+                        mat<float,D,D> m1 = identity_mat<float,D>(); rotate_xyx(m1,x1,y2,x3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
                     }
-                    {
-                    mat<float,D,D> m1; set_rot_xyx(m1,x1,y2,x3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
-                    }
-                    {
-                    mat<float,D,D> m1 = identity_mat<float,D>(); rotate_xyx(m1,x1,y2,x3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
-                    }
-                }
         }
 
     template <int D>
@@ -293,21 +293,21 @@ namespace
         for( float y1=0; y1<6.28f; y1+=0.5f )
             for( float x2=0; x2<6.28f; x2+=0.5f )
                 for( float y3=0; y3<6.28f; y3+=0.5f )
-                {
-                mat<float,D,D> const m2 = roty_mat<D>(y1) * rotx_mat<D>(x2) * roty_mat<D>(y3);
                     {
-                    mat<float,D,D> m1 = rot_mat_yxy<D>(y1,x2,y3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                    mat<float,D,D> const m2 = roty_mat<D>(y1) * rotx_mat<D>(x2) * roty_mat<D>(y3);
+                        {
+                        mat<float,D,D> m1 = rot_mat_yxy<D>(y1,x2,y3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
+                        {
+                        mat<float,D,D> m1; set_rot_yxy(m1,y1,x2,y3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
+                        {
+                        mat<float,D,D> m1 = identity_mat<float,D>(); rotate_yxy(m1,y1,x2,y3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
                     }
-                    {
-                    mat<float,D,D> m1; set_rot_yxy(m1,y1,x2,y3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
-                    }
-                    {
-                    mat<float,D,D> m1 = identity_mat<float,D>(); rotate_yxy(m1,y1,x2,y3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
-                    }
-                }
         }
 
     template <int D>
@@ -318,21 +318,21 @@ namespace
         for( float y1=0; y1<6.28f; y1+=0.5f )
             for( float z2=0; z2<6.28f; z2+=0.5f )
                 for( float y3=0; y3<6.28f; y3+=0.5f )
-                {
-                mat<float,D,D> const m2 = roty_mat<D>(y1) * rotz_mat<D>(z2) * roty_mat<D>(y3);
                     {
-                    mat<float,D,D> m1 = rot_mat_yzy<D>(y1,z2,y3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                    mat<float,D,D> const m2 = roty_mat<D>(y1) * rotz_mat<D>(z2) * roty_mat<D>(y3);
+                        {
+                        mat<float,D,D> m1 = rot_mat_yzy<D>(y1,z2,y3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
+                        {
+                        mat<float,D,D> m1; set_rot_yzy(m1,y1,z2,y3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
+                        {
+                        mat<float,D,D> m1 = identity_mat<float,D>(); rotate_yzy(m1,y1,z2,y3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
                     }
-                    {
-                    mat<float,D,D> m1; set_rot_yzy(m1,y1,z2,y3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
-                    }
-                    {
-                    mat<float,D,D> m1 = identity_mat<float,D>(); rotate_yzy(m1,y1,z2,y3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
-                    }
-                }
         }
 
     template <int D>
@@ -343,21 +343,21 @@ namespace
         for( float z1=0; z1<6.28f; z1+=0.5f )
             for( float y2=0; y2<6.28f; y2+=0.5f )
                 for( float z3=0; z3<6.28f; z3+=0.5f )
-                {
-                mat<float,D,D> const m2 = rotz_mat<D>(z1) * roty_mat<D>(y2) * rotz_mat<D>(z3);
                     {
-                    mat<float,D,D> m1 = rot_mat_zyz<D>(z1,y2,z3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                    mat<float,D,D> const m2 = rotz_mat<D>(z1) * roty_mat<D>(y2) * rotz_mat<D>(z3);
+                        {
+                        mat<float,D,D> m1 = rot_mat_zyz<D>(z1,y2,z3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
+                        {
+                        mat<float,D,D> m1; set_rot_zyz(m1,z1,y2,z3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
+                        {
+                        mat<float,D,D> m1 = identity_mat<float,D>(); rotate_zyz(m1,z1,y2,z3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
                     }
-                    {
-                    mat<float,D,D> m1; set_rot_zyz(m1,z1,y2,z3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
-                    }
-                    {
-                    mat<float,D,D> m1 = identity_mat<float,D>(); rotate_zyz(m1,z1,y2,z3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
-                    }
-                }
         }
 
     template <int D>
@@ -368,21 +368,21 @@ namespace
         for( float z1=0; z1<6.28f; z1+=0.5f )
             for( float x2=0; x2<6.28f; x2+=0.5f )
                 for( float z3=0; z3<6.28f; z3+=0.5f )
-                {
-                mat<float,D,D> const m2 = rotz_mat<D>(z1) * rotx_mat<D>(x2) * rotz_mat<D>(z3);
                     {
-                    mat<float,D,D> m1 = rot_mat_zxz<D>(z1,x2,z3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                    mat<float,D,D> const m2 = rotz_mat<D>(z1) * rotx_mat<D>(x2) * rotz_mat<D>(z3);
+                        {
+                        mat<float,D,D> m1 = rot_mat_zxz<D>(z1,x2,z3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
+                        {
+                        mat<float,D,D> m1; set_rot_zxz(m1,z1,x2,z3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
+                        {
+                        mat<float,D,D> m1 = identity_mat<float,D>(); rotate_zxz(m1,z1,x2,z3);
+                        BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
+                        }
                     }
-                    {
-                    mat<float,D,D> m1; set_rot_zxz(m1,z1,x2,z3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
-                    }
-                    {
-                    mat<float,D,D> m1 = identity_mat<float,D>(); rotate_zxz(m1,z1,x2,z3);
-                    BOOST_QVM_TEST_CLOSE(m1.a,m2.a,0.0002f);
-                    }
-                }
         }
     }
 

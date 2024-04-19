@@ -8,6 +8,11 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 
+//boost::unordered is supported only in C++11 and newer
+#include <boost/config.hpp>
+
+#if BOOST_CXX_VERSION >=201103L
+
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 #include "get_process_id_name.hpp"
@@ -95,3 +100,10 @@ int main()
    bip::shared_memory_object::remove(bip::test::get_process_id_name());
    return 0;
 }
+
+#else
+int main()
+{
+   return 0;
+}
+#endif //#if BOOST_CXX_VERSION >=201103L

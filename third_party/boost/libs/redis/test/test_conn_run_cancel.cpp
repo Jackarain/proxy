@@ -20,7 +20,6 @@
 namespace net = boost::asio;
 
 using boost::redis::operation;
-using boost::redis::config;
 using boost::redis::connection;
 using boost::system::error_code;
 using net::experimental::as_tuple;
@@ -41,7 +40,7 @@ auto async_cancel_run_with_timer() -> net::awaitable<void>
    st.expires_after(1s);
 
    error_code ec1, ec2;
-   config cfg;
+   auto cfg = make_test_config();
    logger l;
    co_await (conn.async_run(cfg, l, redir(ec1)) || st.async_wait(redir(ec2)));
 
@@ -67,7 +66,7 @@ async_check_cancellation_not_missed(int n, std::chrono::milliseconds ms) -> net:
    for (auto i = 0; i < n; ++i) {
       timer.expires_after(ms);
       error_code ec1, ec2;
-      config cfg;
+      auto cfg = make_test_config();
       logger l;
       co_await (conn.async_run(cfg, l, redir(ec1)) || timer.async_wait(redir(ec2)));
       BOOST_CHECK_EQUAL(ec1, boost::asio::error::operation_aborted);

@@ -1,0 +1,16 @@
+// Copyright 2024 Peter Dimov.
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt)
+
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/random_generator.hpp>
+
+int main()
+{
+    boost::uuids::random_generator gen;
+
+    boost::uuids::uuid u1 = gen();
+    boost::uuids::uuid u2 = gen();
+
+    return u1 == u2;
+}

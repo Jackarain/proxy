@@ -304,15 +304,14 @@ struct dispatch_table < Fsm, Stt, Event, ::boost::msm::back::favor_compile_time>
     }
 
     // The singleton instance.
-    static const dispatch_table instance;
+    static const dispatch_table& instance() {
+        static dispatch_table table;
+        return table;
+    }
 
  public: // data members
      chain_row entries[max_state+1];
 };
-
-template <class Fsm,class Stt, class Event>
-const boost::msm::back::dispatch_table<Fsm,Stt, Event,favor_compile_time>
-dispatch_table<Fsm,Stt, Event,favor_compile_time>::instance;
 
 }}} // boost::msm::back
 

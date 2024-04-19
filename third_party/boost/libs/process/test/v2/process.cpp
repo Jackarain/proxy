@@ -625,7 +625,7 @@ BOOST_AUTO_TEST_CASE(async_request_exit)
 #endif
     );
 
-    asio::steady_timer tim{ctx, std::chrono::milliseconds(50)};
+    asio::steady_timer tim{ctx, std::chrono::milliseconds(250)};
     asio::cancellation_signal sig;
 
     bpv::async_execute(std::move(proc),

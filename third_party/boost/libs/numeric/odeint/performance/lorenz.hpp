@@ -13,7 +13,7 @@
 #ifndef LORENZ_HPP_
 #define LORENZ_HPP_
 
-#include <boost/array.hpp>
+#include <array>
 
 struct lorenz
 {

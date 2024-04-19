@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -11,24 +11,18 @@
 #pragma once
 
 #include <boost/mysql/date.hpp>
+#include <boost/mysql/string_view.hpp>
 
-#include <cstdio>
+#include <boost/mysql/impl/internal/dt_to_string.hpp>
+
+#include <cstddef>
 #include <ostream>
 
 std::ostream& boost::mysql::operator<<(std::ostream& os, const date& value)
 {
-    // Worst-case output is 14 chars, extra space just in case
     char buffer[32]{};
-    snprintf(
-        buffer,
-        sizeof(buffer),
-        "%04u-%02u-%02u",
-        static_cast<unsigned>(value.year()),
-        static_cast<unsigned>(value.month()),
-        static_cast<unsigned>(value.day())
-    );
-    os << buffer;
-    return os;
+    std::size_t sz = detail::date_to_string(value.year(), value.month(), value.day(), buffer);
+    return os << string_view(buffer, sz);
 }
 
 #endif

@@ -1,3 +1,26 @@
+Version 353:
+
+* Fix unreachable code warning in `buffers_cat.hpp`
+* Fix zlib name conflicts
+* Status code list confirms with IANA registry
+* Add `const_iterator` to `buffers_adaptor::subrange`
+* Improve documentation
+
+--------------------------------------------------------------------------------
+
+Version 352:
+
+* Fix paragraph separation issue in the documentation
+* Improve documentation for `http::message::prepare_payload()`
+* Strengthen the buffer contract on `flat_buffer` and `flat_static_buffer`
+* Add a non-allocating overload for the error category message function
+* Replace internal uses of `beast::bind_front_handler` with `asio::prepend`
+* Specialize `asio::associator` for `bind_wrapper` and `bind_front_wrapper`
+* Fix an infinite loop bug in `websocker_server_awaitable.cpp`
+* Fix the write loop in advanced server examples
+
+--------------------------------------------------------------------------------
+
 Version 351:
 
 * Use the explicit type std::size_t when completing transfer_op
@@ -8,21 +31,21 @@ Version 350:
 
 * Allocation and invocation hooks are removed
 * `detail::bind_default_executor` helper is removed
-* Improved documentation for `websocket::stream::async_write_some`
+* Improve documentation for `websocket::stream::async_write_some`
 
 --------------------------------------------------------------------------------
 
 Version 349:
 
-* Added support for `immediate_executor`
+* Add support for `immediate_executor`
 * `BOOST_ASIO_INITFN_AUTO_RES` replaces `BOOST_ASIO_INITFN_RESULT_TYPE`
-* Updated license info for `work_guard`
-* Corrected handler requirements of ping/pong
-* Improved Drone caching
+* Update license info for `work_guard`
+* Correct handler requirements of ping/pong
+* Improve Drone caching
 * `server-flex-awaitable` example now resets parser
 * OpenSSL 1.1.1.2100 or later is required for x86
 * GCC 5.0 or later is required
-* Introduced self-hosted GitHub actions runners
+* Introduce self-hosted GitHub actions runners
 * Minor documentation fixes and updates
 
 --------------------------------------------------------------------------------

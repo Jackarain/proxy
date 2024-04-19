@@ -10,7 +10,6 @@
 
 #include <boost/intrusive/detail/iterator.hpp>
 #include <boost/intrusive/detail/mpl.hpp>
-#include <boost/static_assert.hpp>
 
 namespace boost{  namespace intrusive {  namespace test{
 
@@ -120,8 +119,8 @@ void test_iterator_compatible(C &c)
    test_iterator_operations(get_reverse_iterator<C>::begin(c), get_reverse_iterator<C>::end(c));
    test_iterator_operations(get_const_reverse_iterator<C>::begin(c), get_const_reverse_iterator<C>::end(c));
    //Make sure dangeous conversions are not possible
-   BOOST_STATIC_ASSERT((!boost::intrusive::detail::is_convertible<const_iterator, iterator>::value));
-   BOOST_STATIC_ASSERT((!boost::intrusive::detail::is_convertible<const_reverse_iterator, reverse_iterator>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((!boost::intrusive::detail::is_convertible<const_iterator, iterator>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((!boost::intrusive::detail::is_convertible<const_reverse_iterator, reverse_iterator>::value));
    //Test iterator conversions
    {  
       const_iterator ci;
@@ -163,34 +162,34 @@ void test_iterator_input_and_compatible(C &c)
 
    using boost::move_detail::is_same;
    //Trivial typedefs
-   BOOST_STATIC_ASSERT((!is_same<iterator, const_iterator>::value));
-   BOOST_STATIC_ASSERT((!is_same<reverse_iterator, const_reverse_iterator>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((!is_same<iterator, const_iterator>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((!is_same<reverse_iterator, const_reverse_iterator>::value));
    //difference_type
    typedef typename C::difference_type difference_type;
-   BOOST_STATIC_ASSERT((is_same<difference_type, typename nit_traits::difference_type>::value));
-   BOOST_STATIC_ASSERT((is_same<difference_type, typename cit_traits::difference_type>::value));
-   BOOST_STATIC_ASSERT((is_same<difference_type, typename rnit_traits::difference_type>::value));
-   BOOST_STATIC_ASSERT((is_same<difference_type, typename crit_traits::difference_type>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<difference_type, typename nit_traits::difference_type>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<difference_type, typename cit_traits::difference_type>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<difference_type, typename rnit_traits::difference_type>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<difference_type, typename crit_traits::difference_type>::value));
    //value_type
    typedef typename C::value_type value_type;
-   BOOST_STATIC_ASSERT((is_same<value_type, typename nit_traits::value_type>::value));
-   BOOST_STATIC_ASSERT((is_same<value_type, typename cit_traits::value_type>::value));
-   BOOST_STATIC_ASSERT((is_same<value_type, typename rnit_traits::value_type>::value));
-   BOOST_STATIC_ASSERT((is_same<value_type, typename crit_traits::value_type>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<value_type, typename nit_traits::value_type>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<value_type, typename cit_traits::value_type>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<value_type, typename rnit_traits::value_type>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<value_type, typename crit_traits::value_type>::value));
    //pointer
    typedef typename C::pointer pointer;
    typedef typename C::const_pointer const_pointer;
-   BOOST_STATIC_ASSERT((is_same<pointer,        typename nit_traits::pointer>::value));
-   BOOST_STATIC_ASSERT((is_same<const_pointer,  typename cit_traits::pointer>::value));
-   BOOST_STATIC_ASSERT((is_same<pointer,        typename rnit_traits::pointer>::value));
-   BOOST_STATIC_ASSERT((is_same<const_pointer,  typename crit_traits::pointer>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<pointer,        typename nit_traits::pointer>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<const_pointer,  typename cit_traits::pointer>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<pointer,        typename rnit_traits::pointer>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<const_pointer,  typename crit_traits::pointer>::value));
    //reference
    typedef typename C::reference reference;
    typedef typename C::const_reference const_reference;
-   BOOST_STATIC_ASSERT((is_same<reference,         typename nit_traits::reference>::value));
-   BOOST_STATIC_ASSERT((is_same<const_reference,   typename cit_traits::reference>::value));
-   BOOST_STATIC_ASSERT((is_same<reference,         typename rnit_traits::reference>::value));
-   BOOST_STATIC_ASSERT((is_same<const_reference,   typename crit_traits::reference>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<reference,         typename nit_traits::reference>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<const_reference,   typename cit_traits::reference>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<reference,         typename rnit_traits::reference>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<const_reference,   typename crit_traits::reference>::value));
    //Dynamic tests
    test_iterator_compatible(c);
 }
@@ -321,10 +320,10 @@ void test_iterator_forward(C &c)
 
    using boost::intrusive::detail::is_same;
    //iterator_category
-   BOOST_STATIC_ASSERT((is_same<std::forward_iterator_tag, typename nit_traits::iterator_category>::value));
-   BOOST_STATIC_ASSERT((is_same<std::forward_iterator_tag, typename cit_traits::iterator_category>::value));
-   BOOST_STATIC_ASSERT((is_same<std::forward_iterator_tag, typename rnit_traits::iterator_category>::value));
-   BOOST_STATIC_ASSERT((is_same<std::forward_iterator_tag, typename crit_traits::iterator_category>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<std::forward_iterator_tag, typename nit_traits::iterator_category>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<std::forward_iterator_tag, typename cit_traits::iterator_category>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<std::forward_iterator_tag, typename rnit_traits::iterator_category>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<std::forward_iterator_tag, typename crit_traits::iterator_category>::value));
    //Test dynamic
    test_iterator_forward_and_compatible(c);
 }
@@ -343,10 +342,10 @@ void test_iterator_bidirectional(C &c)
 
    using boost::intrusive::detail::is_same;
    //iterator_category
-   BOOST_STATIC_ASSERT((is_same<std::bidirectional_iterator_tag, typename nit_traits::iterator_category>::value));
-   BOOST_STATIC_ASSERT((is_same<std::bidirectional_iterator_tag, typename cit_traits::iterator_category>::value));
-   BOOST_STATIC_ASSERT((is_same<std::bidirectional_iterator_tag, typename rnit_traits::iterator_category>::value));
-   BOOST_STATIC_ASSERT((is_same<std::bidirectional_iterator_tag, typename crit_traits::iterator_category>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<std::bidirectional_iterator_tag, typename nit_traits::iterator_category>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<std::bidirectional_iterator_tag, typename cit_traits::iterator_category>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<std::bidirectional_iterator_tag, typename rnit_traits::iterator_category>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<std::bidirectional_iterator_tag, typename crit_traits::iterator_category>::value));
    //Test dynamic
    test_iterator_bidirectional_and_compatible(c);
 }
@@ -365,10 +364,10 @@ void test_iterator_random(C &c)
 
    using boost::intrusive::detail::is_same;
    //iterator_category
-   BOOST_STATIC_ASSERT((is_same<std::random_access_iterator_tag, typename nit_traits::iterator_category>::value));
-   BOOST_STATIC_ASSERT((is_same<std::random_access_iterator_tag, typename cit_traits::iterator_category>::value));
-   BOOST_STATIC_ASSERT((is_same<std::random_access_iterator_tag, typename rnit_traits::iterator_category>::value));
-   BOOST_STATIC_ASSERT((is_same<std::random_access_iterator_tag, typename crit_traits::iterator_category>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<std::random_access_iterator_tag, typename nit_traits::iterator_category>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<std::random_access_iterator_tag, typename cit_traits::iterator_category>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<std::random_access_iterator_tag, typename rnit_traits::iterator_category>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((is_same<std::random_access_iterator_tag, typename crit_traits::iterator_category>::value));
    //Test dynamic
    test_iterator_random_and_compatible(c);
 }

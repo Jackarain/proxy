@@ -19,7 +19,7 @@
 = Microsoft Visual C++
 
 The `msvc` module supports the
-http://msdn.microsoft.com/visualc/[Microsoft Visual C++] command-line
+https://docs.microsoft.com/en-us/cpp/[Microsoft Visual C++] command-line
 tools on Microsoft Windows. The supported products and versions of
 command line tools are listed below:
 
@@ -2000,6 +2000,7 @@ local rule register-toolset-really ( )
         toolset.flags msvc.link LINKFLAGS <debug-symbols>on : /DEBUG ;
         toolset.flags msvc.link DEF_FILE <def-file> ;
         toolset.flags msvc.link MANIFEST_FILE <embed-manifest-via>linker : <embed-manifest-file> ;
+        toolset.flags msvc.link EMBED_MANIFEST_FILE <embed-manifest-via>mt : <embed-manifest-file> ;
 
         # The linker disables the default optimizations when using /DEBUG so we
         # have to enable them manually for release builds with debug symbols.

@@ -1,8 +1,8 @@
 # Copyright 2018-2021 Peter Dimov
 # Distributed under the Boost Software License, Version 1.0.
-# See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt
+# https://www.boost.org/LICENSE_1_0.txt
 
-cmake_minimum_required(VERSION 3.5...3.20)
+cmake_minimum_required(VERSION 3.8...3.20)
 
 project(boost_system VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
 
@@ -20,6 +20,8 @@ target_link_libraries(boost_system
     Boost::winapi
 )
 
+target_compile_features(boost_system INTERFACE cxx_std_11)
+
 if(CMAKE_VERSION VERSION_GREATER 3.18 AND CMAKE_GENERATOR MATCHES "Visual Studio")
 
   file(GLOB_RECURSE boost_system_IDEFILES CONFIGURE_DEPENDS include/*.hpp)
@@ -29,7 +31,7 @@ if(CMAKE_VERSION VERSION_GREATER 3.18 AND CMAKE_GENERATOR MATCHES "Visual Studio
 
 endif()
 
-if(BUILD_TESTING)
+if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
 
   add_subdirectory(test)
 

@@ -27,11 +27,11 @@ int main(int argc, char* argv[])
              it != recursive_directory_iterator();
              ++it)
         {
-            if (it.level() > 1)
+            if (it.depth() > 1)
                 it.pop();
             else
             {
-                for (int i = 0; i <= it.level(); ++i)
+                for (int i = 0; i <= it.depth(); ++i)
                     std::cout << "  ";
 
                 std::cout << it->path() << '\n';

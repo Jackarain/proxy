@@ -18,7 +18,6 @@ target_link_libraries(boost_lexical_cast
     Boost::container
     Boost::core
     Boost::integer
-    Boost::numeric_conversion
     Boost::throw_exception
     Boost::type_traits
 )

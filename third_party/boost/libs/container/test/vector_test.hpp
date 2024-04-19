@@ -22,7 +22,6 @@
 #include <boost/move/utility_core.hpp>
 #include <boost/move/iterator.hpp>
 #include <boost/move/make_unique.hpp>
-#include <boost/static_assert.hpp>
 
 #include "print_container.hpp"
 #include "check_equal_containers.hpp"
@@ -347,7 +346,7 @@ int vector_move_assignable_only(boost::container::dtl::true_type)
          IntType aux_vect[50];
          for(int i = 0; i < 50; ++i){
             IntType new_int(-1);
-            BOOST_STATIC_ASSERT((boost::container::test::is_copyable<boost::container::test::movable_int>::value == false));
+            BOOST_CONTAINER_STATIC_ASSERT((boost::container::test::is_copyable<boost::container::test::movable_int>::value == false));
             aux_vect[i] = boost::move(new_int);
          }
          int aux_vect2[50];

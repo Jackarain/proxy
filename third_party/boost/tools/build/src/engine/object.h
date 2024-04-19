@@ -5,76 +5,35 @@
  * This file is part of Jam - see jam.c for Copyright information.
  */
 
-/*
- * object.h - object manipulation routines
- */
-
 #ifndef BOOST_JAM_OBJECT_H
 #define BOOST_JAM_OBJECT_H
 
 #include "config.h"
-#include <string>
-#include <cstring>
+#include "value.h"
 
-typedef struct _object OBJECT;
-
-typedef OBJECT * object_ptr;
-
-OBJECT * object_new( char const * const );
-OBJECT * object_new_range( char const * const, int32_t size );
-void object_done( void );
-
-#if defined(NDEBUG) && !defined(BJAM_NO_MEM_CACHE)
-
-struct hash_header
+using OBJECT = b2::value;
+inline b2::value_ptr object_new_range(const char * string, int32_t size)
 {
-    unsigned int hash;
-    struct hash_item * next;
-};
-
-#define object_str( obj ) ((char const *)(obj))
-#define object_copy( obj ) (obj)
-#define object_free( obj ) ((void)0)
-#define object_equal( lhs, rhs ) ((lhs) == (rhs))
-#define object_hash( obj ) (((struct hash_header *)((char *)(obj) - sizeof(struct hash_header)))->hash)
-
-#else
-
-char const * object_str  ( OBJECT * );
-OBJECT *     object_copy ( OBJECT * );
-void         object_free ( OBJECT * & );
-int          object_equal( OBJECT *, OBJECT * );
-unsigned int object_hash ( OBJECT * );
-
-#endif
-
-namespace b2 { namespace jam {
-
-    struct object
-    {
-        inline object(const object &o)
-            : obj(object_copy(o.obj)) {}
-
-        inline explicit object(OBJECT *o)
-            : obj(object_copy(o)) {}
-        inline explicit object(const char * val)
-            : obj(object_new(val)) {}
-        inline explicit object(const std::string &val)
-            : obj(object_new(val.c_str())) {}
-
-        inline ~object() { if (obj) object_free(obj); }
-        inline OBJECT * release() { OBJECT *r = obj; obj = nullptr; return r; }
-
-        inline operator OBJECT*() const { return obj; }
-        inline operator std::string() const { return object_str(obj); }
-
-        inline bool operator==(OBJECT *o) const { return std::strcmp(object_str(obj), object_str(o)) == 0; }
-
-        private:
-
-        OBJECT * obj = nullptr;
-    };
-
-}}
+	return b2::value::make(string, size);
+}
+inline b2::value_ptr object_new(const char * string)
+{
+	return b2::value::make(string);
+}
+inline b2::value_ptr object_copy(b2::value_ptr obj)
+{
+	return b2::value::copy(obj);
+}
+inline void object_free(b2::value_ptr & obj) { b2::value::free(obj); }
+inline int object_equal(b2::value_ptr a, b2::value_ptr b)
+{
+	return a->equal_to(*b);
+}
+inline unsigned int object_hash(b2::value_ptr obj)
+{
+	return (unsigned int)(obj->hash64);
+}
+inline const char * object_str(b2::value_ptr obj) { return obj->str(); }
+inline void object_done(void) { b2::value::done(); }
 
 #endif

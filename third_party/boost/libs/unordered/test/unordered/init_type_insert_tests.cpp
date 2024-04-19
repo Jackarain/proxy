@@ -12,12 +12,6 @@
 
 #include <boost/config.hpp>
 
-#if defined(BOOST_LIBSTDCXX_VERSION)
-#if BOOST_LIBSTDCXX_VERSION < 60000
-#define BOOST_UNORDERED_NO_INIT_TYPE_TESTS
-#endif
-#endif
-
 struct move_only
 {
   int x_ = -1;

@@ -55,6 +55,7 @@ docca.reference reference.qbk
         <doxygen:param>SHOW_FILES=NO
         <doxygen:param>SHOW_NAMESPACES=NO
         <doxygen:param>CLASS_DIAGRAMS=NO
+        <doxygen:param>GENERATE_TAGFILE=url.tag.xml
 
         # <doxygen:param>ALLOW_UNICODE_NAMES=NO
         # <doxygen:param>GROUP_NESTED_COMPOUNDS=NO

@@ -1,0 +1,30 @@
+# Input
+input:
+  # Directories that contain documented source files
+  include:
+    - ../include
+  # Patterns to filter out the source-files in the directories
+  file-patterns:
+    - '*.hpp'
+source-root: ..
+
+# Filters
+filters:
+  symbols:
+    exclude:
+      - 'boost::urls::detail'
+      - 'boost::urls::*::detail'
+      - 'boost::empty_'
+inaccessible-members: never
+inaccessible-bases: never
+
+# Generator
+generate: adoc
+base-url: https://www.github.com/boostorg/url/blob/develop/include/ # boost/url/url_view.hpp
+
+# Style
+verbose: true
+multipage: true
+
+# BUILD_TESTING is required for header-only functionality to be extracted
+cmake: '-D BUILD_TESTING=ON -D BOOST_URL_BUILD_EXAMPLES=OFF'

@@ -9,6 +9,7 @@
 // ----------------------------------------------------------------------------
 #include "test_utils.hpp"
 #include <boost/any.hpp>
+#include <boost/mp11.hpp>
 #include <boost/range.hpp>
 #include <list>
 #include <cmath>
@@ -66,6 +67,11 @@ struct any_translator
         return boost::any(v);
     }
 };
+
+// Checks the validity of calling get_child with a default value type
+template<class P, class C, class D>
+using get_child_accepts_default_of_type = decltype(
+    std::declval<P>().get_child(std::declval<const C*>(), std::declval<D>()));
 
 namespace boost { namespace property_tree {
     template <typename E>

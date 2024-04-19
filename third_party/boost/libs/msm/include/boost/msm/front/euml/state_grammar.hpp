@@ -45,8 +45,8 @@ template<class StateNameTag,
          class EntryFunctor=NoAction, 
          class ExitFunctor=NoAction,
          class Attributes= ::boost::fusion::vector<>,
-         class Flags = ::boost::mpl::vector0<>,
-         class Defer = ::boost::mpl::vector0<>,
+         class Flags = ::boost::fusion::vector0<>,
+         class Defer = ::boost::fusion::vector0<>,
          class BASE = ::boost::msm::front::default_base_state>
 struct func_state :  public ::boost::msm::front::detail::state_base<BASE,Attributes>, 
                      euml_state_intern<func_state<StateNameTag,EntryFunctor,ExitFunctor,Attributes,Flags,Defer,BASE> >
@@ -59,7 +59,7 @@ struct func_state :  public ::boost::msm::front::detail::state_base<BASE,Attribu
     typedef StateNameTag state_name_tag;
     // flags
     typedef Flags       flag_list;
-    typedef ::boost::mpl::vector0<> internal_flag_list;
+    typedef ::boost::fusion::vector0<> internal_flag_list;
     // deferred events
     typedef Defer       deferred_events;
 
@@ -81,8 +81,8 @@ template<class StateNameTag,
          class EntryFunctor=NoAction, 
          class ExitFunctor=NoAction,
          class Attributes= ::boost::fusion::vector<>,
-         class Flags = ::boost::mpl::vector0<>,
-         class Defer = ::boost::mpl::vector0<>,
+         class Flags = ::boost::fusion::vector0<>,
+         class Defer = ::boost::fusion::vector0<>,
          class BASE = default_base_state>
 struct entry_func_state :  public ::boost::msm::front::detail::state_base<BASE,Attributes>, 
                            euml_state_intern<entry_func_state<StateNameTag,ZoneIndex,EntryFunctor,ExitFunctor,Attributes,Flags,Defer,BASE> >
@@ -100,7 +100,7 @@ struct entry_func_state :  public ::boost::msm::front::detail::state_base<BASE,A
 
     // flags
     typedef Flags       flag_list;
-    typedef ::boost::mpl::vector0<> internal_flag_list;
+    typedef ::boost::fusion::vector0<> internal_flag_list;
     // deferred events
     typedef Defer       deferred_events;
 
@@ -121,8 +121,8 @@ template<class StateNameTag,
          class EntryFunctor=NoAction, 
          class ExitFunctor=NoAction,
          class Attributes= ::boost::fusion::vector<>,
-         class Flags = ::boost::mpl::vector0<>,
-         class Defer = ::boost::mpl::vector0<>,
+         class Flags = ::boost::fusion::vector0<>,
+         class Defer = ::boost::fusion::vector0<>,
          class BASE = default_base_state>
 struct explicit_entry_func_state :  public ::boost::msm::front::detail::state_base<BASE,Attributes>, 
                                     public ::boost::msm::front::explicit_entry<ZoneIndex>,
@@ -137,7 +137,7 @@ struct explicit_entry_func_state :  public ::boost::msm::front::detail::state_ba
     typedef StateNameTag state_name_tag;
     // flags
     typedef Flags       flag_list;
-    typedef ::boost::mpl::vector0<> internal_flag_list;
+    typedef ::boost::fusion::vector0<> internal_flag_list;
     // deferred events
     typedef Defer       deferred_events;
 
@@ -159,8 +159,8 @@ template<class StateNameTag,
          class EntryFunctor=NoAction, 
          class ExitFunctor=NoAction,
          class Attributes= ::boost::fusion::vector<>,
-         class Flags = ::boost::mpl::vector0<>,
-         class Defer = ::boost::mpl::vector0<>,
+         class Flags = ::boost::fusion::vector0<>,
+         class Defer = ::boost::fusion::vector0<>,
          class BASE = default_base_state>
 struct exit_func_state :   public ::boost::msm::front::detail::state_base<BASE,Attributes>, 
                            euml_state_intern<exit_func_state<StateNameTag,Event,EntryFunctor,ExitFunctor,Attributes,Flags,Defer,BASE> >
@@ -178,7 +178,7 @@ struct exit_func_state :   public ::boost::msm::front::detail::state_base<BASE,A
 
     // flags
     typedef Flags       flag_list;
-    typedef ::boost::mpl::vector0<> internal_flag_list;
+    typedef ::boost::fusion::vector0<> internal_flag_list;
     // deferred events
     typedef Defer       deferred_events;
 
@@ -589,7 +589,7 @@ template <class Seq>
 struct transform_to_fusion_pair 
 {
     typedef typename ::boost::mpl::fold<
-        Seq,::boost::mpl::vector<>,
+        Seq,::boost::fusion::vector<>,
         ::boost::mpl::push_back< ::boost::mpl::placeholders::_1, 
                                  get_attribute_type< ::boost::mpl::placeholders::_2> >
         >::type type;
@@ -634,13 +634,13 @@ struct BuildAttributes
    > 
 {};
 
-// helper to build a mpl::vector from a << list
+// helper to build a fusion::vector from a << list
  struct BuildMplVectorHelper
    : proto::make<
        ::boost::mpl::pop_front<
           proto::fold_tree<
               proto::_
-            , ::boost::mpl::vector0<>()
+            , ::boost::fusion::vector0<>()
             , ::boost::mpl::push_back<proto::_state, proto::_>()
            >
        >
@@ -714,7 +714,7 @@ struct BuildInit
        ::boost::mpl::pop_front<
           proto::fold_tree<
               proto::_
-            , ::boost::mpl::vector0<>()
+            , ::boost::fusion::vector0<>()
             , ::boost::mpl::push_back<proto::_state, proto::_>()
            >
        >
@@ -850,9 +850,9 @@ template<class StateNameTag,
          class EntryFunctor=NoAction, 
          class ExitFunctor=NoAction,
          class Attributes= ::boost::fusion::vector<>,
-         class Flags = ::boost::mpl::vector0<>,
-         class Defer = ::boost::mpl::vector0<>,
-         class Configuration = ::boost::mpl::vector0<>,
+         class Flags = ::boost::fusion::vector0<>,
+         class Defer = ::boost::fusion::vector0<>,
+         class Configuration = ::boost::fusion::vector0<>,
          class NoTransitionFunctor = NoAction,
          class OnExceptionFunctor = NoAction,
          class BASE = ::boost::msm::front::default_base_state>
@@ -871,7 +871,7 @@ struct func_state_machine :  public ::boost::msm::front::detail::state_base<BASE
     // flags
     typedef StateNameTag state_name_tag;
     typedef Flags                        flag_list;
-    typedef ::boost::mpl::vector0<>      internal_flag_list;
+    typedef ::boost::fusion::vector0<>      internal_flag_list;
     // deferred events
     typedef Defer                        deferred_events;
     // customization (message queue, exceptions)
@@ -1223,14 +1223,14 @@ typename ::boost::mpl::eval_if<
     boost::result_of<ActionGrammar(Expr2)>,
     make_invalid_type>::type,
 typename boost::result_of<BuildAttributes(Attr)>::type,
-::boost::mpl::vector<boost::msm::TerminateFlag> 
+::boost::fusion::vector<boost::msm::TerminateFlag>
 >
 build_terminate_state(Expr1 const& ,Expr2 const& ,Attr const&)
 {
     typedef typename boost::result_of<ActionGrammar(Expr1)>::type entry_action;
     typedef typename boost::result_of<ActionGrammar(Expr2)>::type exit_action;
     typedef typename boost::result_of<BuildAttributes(Attr)>::type attributes_type;
-    return func_state<StateNameTag,entry_action,exit_action,attributes_type, ::boost::mpl::vector< ::boost::msm::TerminateFlag> >();
+    return func_state<StateNameTag,entry_action,exit_action,attributes_type, ::boost::fusion::vector< ::boost::msm::TerminateFlag> >();
 }
 
 template <class StateNameTag,class Expr1,class Expr2>
@@ -1246,14 +1246,14 @@ typename ::boost::mpl::eval_if<
     boost::result_of<ActionGrammar(Expr2)>,
     make_invalid_type>::type,
 ::boost::fusion::vector<>,
-::boost::mpl::vector<boost::msm::TerminateFlag> 
+::boost::fusion::vector<boost::msm::TerminateFlag>
 >
 build_terminate_state(Expr1 const& ,Expr2 const& )
 {
     typedef typename boost::result_of<ActionGrammar(Expr1)>::type entry_action;
     typedef typename boost::result_of<ActionGrammar(Expr2)>::type exit_action;
     return func_state<StateNameTag,entry_action,exit_action,
-                      ::boost::fusion::vector<>, ::boost::mpl::vector< ::boost::msm::TerminateFlag> >();
+                      ::boost::fusion::vector<>, ::boost::fusion::vector< ::boost::msm::TerminateFlag> >();
 }
 
 template <class StateNameTag,class Expr1>
@@ -1266,12 +1266,12 @@ typename ::boost::mpl::eval_if<
     make_invalid_type>::type,
 NoAction,
 ::boost::fusion::vector<>,
-::boost::mpl::vector<boost::msm::TerminateFlag> 
+::boost::fusion::vector<boost::msm::TerminateFlag>
 >
 build_terminate_state(Expr1 const& )
 {
     typedef typename boost::result_of<ActionGrammar(Expr1)>::type entry_action;
-    return func_state<StateNameTag,entry_action,NoAction,::boost::fusion::vector<>,::boost::mpl::vector<boost::msm::TerminateFlag> >();
+    return func_state<StateNameTag,entry_action,NoAction,::boost::fusion::vector<>,::boost::fusion::vector<boost::msm::TerminateFlag> >();
 }
 template<class StateNameTag>
 inline
@@ -1280,11 +1280,11 @@ StateNameTag,
 NoAction,
 NoAction,
 ::boost::fusion::vector<>,
-::boost::mpl::vector<boost::msm::TerminateFlag> 
+::boost::fusion::vector<boost::msm::TerminateFlag>
 >
 build_terminate_state()
 {
-    return func_state<StateNameTag,NoAction,NoAction,::boost::fusion::vector<>,::boost::mpl::vector<boost::msm::TerminateFlag> >();
+    return func_state<StateNameTag,NoAction,NoAction,::boost::fusion::vector<>,::boost::fusion::vector<boost::msm::TerminateFlag> >();
 }
 
 template <class StateNameTag,class Expr1,class Expr2,class Attr,class Configure,class BASE,class EndInterruptEvent>
@@ -1373,7 +1373,7 @@ typename ::boost::mpl::eval_if<
     boost::result_of<ActionGrammar(Expr2)>,
     make_invalid_type>::type,
 typename boost::result_of<BuildAttributes(Attr)>::type,
-::boost::mpl::vector<boost::msm::InterruptedFlag, boost::msm::EndInterruptFlag<EndInterruptEvent> > 
+::boost::fusion::vector<boost::msm::InterruptedFlag, boost::msm::EndInterruptFlag<EndInterruptEvent> >
 >
 build_interrupt_state(EndInterruptEvent const&,Expr1 const& ,Expr2 const& ,Attr const&)
 {
@@ -1381,7 +1381,7 @@ build_interrupt_state(EndInterruptEvent const&,Expr1 const& ,Expr2 const& ,Attr 
     typedef typename boost::result_of<ActionGrammar(Expr2)>::type exit_action;
     typedef typename boost::result_of<BuildAttributes(Attr)>::type attributes_type;
     return func_state<StateNameTag,entry_action,exit_action,attributes_type, 
-                     ::boost::mpl::vector< boost::msm::InterruptedFlag, boost::msm::EndInterruptFlag<EndInterruptEvent> > >();
+                     ::boost::fusion::vector< boost::msm::InterruptedFlag, boost::msm::EndInterruptFlag<EndInterruptEvent> > >();
 }
 
 template <class StateNameTag,class Expr1,class Expr2,class EndInterruptEvent>
@@ -1397,7 +1397,7 @@ typename ::boost::mpl::eval_if<
     boost::result_of<ActionGrammar(Expr2)>,
     make_invalid_type>::type,
 ::boost::fusion::vector<>,
-::boost::mpl::vector<boost::msm::InterruptedFlag, boost::msm::EndInterruptFlag<EndInterruptEvent> > 
+::boost::fusion::vector<boost::msm::InterruptedFlag, boost::msm::EndInterruptFlag<EndInterruptEvent> >
 >
 build_interrupt_state(EndInterruptEvent const&,Expr1 const& ,Expr2 const& )
 {
@@ -1405,7 +1405,7 @@ build_interrupt_state(EndInterruptEvent const&,Expr1 const& ,Expr2 const& )
     typedef typename boost::result_of<ActionGrammar(Expr2)>::type exit_action;
     return func_state<StateNameTag,entry_action,exit_action,
                       ::boost::fusion::vector<>, 
-                      ::boost::mpl::vector< boost::msm::InterruptedFlag, boost::msm::EndInterruptFlag<EndInterruptEvent> > >();
+                      ::boost::fusion::vector< boost::msm::InterruptedFlag, boost::msm::EndInterruptFlag<EndInterruptEvent> > >();
 }
 
 template <class StateNameTag,class Expr1,class EndInterruptEvent>
@@ -1418,13 +1418,13 @@ typename ::boost::mpl::eval_if<
     make_invalid_type>::type,
 NoAction,
 ::boost::fusion::vector<>,
-::boost::mpl::vector<boost::msm::InterruptedFlag, boost::msm::EndInterruptFlag<EndInterruptEvent> > 
+::boost::fusion::vector<boost::msm::InterruptedFlag, boost::msm::EndInterruptFlag<EndInterruptEvent> >
 >
 build_interrupt_state(EndInterruptEvent const&, Expr1 const&)
 {
     typedef typename boost::result_of<ActionGrammar(Expr1)>::type entry_action;
     return func_state<StateNameTag,entry_action,NoAction, ::boost::fusion::vector<>,
-                     ::boost::mpl::vector<boost::msm::InterruptedFlag, boost::msm::EndInterruptFlag<EndInterruptEvent> > >();
+                     ::boost::fusion::vector<boost::msm::InterruptedFlag, boost::msm::EndInterruptFlag<EndInterruptEvent> > >();
 }
 
 template <class StateNameTag,class EndInterruptEvent>
@@ -1434,12 +1434,12 @@ StateNameTag,
 NoAction,
 NoAction,
 ::boost::fusion::vector<>,
-::boost::mpl::vector<boost::msm::InterruptedFlag, boost::msm::EndInterruptFlag<EndInterruptEvent> > 
+::boost::fusion::vector<boost::msm::InterruptedFlag, boost::msm::EndInterruptFlag<EndInterruptEvent> >
 >
 build_interrupt_state(EndInterruptEvent const&)
 {
     return func_state<StateNameTag,NoAction,NoAction, ::boost::fusion::vector<>,
-                      ::boost::mpl::vector<boost::msm::InterruptedFlag, boost::msm::EndInterruptFlag<EndInterruptEvent> > >();
+                      ::boost::fusion::vector<boost::msm::InterruptedFlag, boost::msm::EndInterruptFlag<EndInterruptEvent> > >();
 }
 
 template <class StateNameTag,int ZoneIndex,class Expr1,class Expr2,class Attr,class Configure,class BASE>

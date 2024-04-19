@@ -14,6 +14,7 @@
 #include <boost/regex.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/directory.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/detail/lightweight_main.hpp>
 #include <iostream>
@@ -267,10 +268,10 @@ void process_ipp_file(const fs::path& file, bool positive_test)
 
    // get the output filesnames:
    boost::regex file_regex("boost_([^.]+)\\.ipp");
-   positive_file = file.branch_path() / boost::regex_replace(file.leaf().string(), file_regex, "$1_pass.cpp");
-   negative_file = file.branch_path() / boost::regex_replace(file.leaf().string(), file_regex, "$1_fail.cpp");
-   write_test_file(positive_file, macro_name, namespace_name, file.leaf().string(), positive_test, true);
-   write_test_file(negative_file, macro_name, namespace_name, file.leaf().string(), positive_test, false);
+   positive_file = file.parent_path() / boost::regex_replace(file.filename().string(), file_regex, "$1_pass.cpp");
+   negative_file = file.parent_path() / boost::regex_replace(file.filename().string(), file_regex, "$1_fail.cpp");
+   write_test_file(positive_file, macro_name, namespace_name, file.filename().string(), positive_test, true);
+   write_test_file(negative_file, macro_name, namespace_name, file.filename().string(), positive_test, false);
    
    // always create config_test data,
    // positive and negative tests go to separate streams, because for some
@@ -280,7 +281,7 @@ void process_ipp_file(const fs::path& file, bool positive_test)
    if(!positive_test)
       *pout << "n";
    *pout << "def " << macro_name 
-      << "\n#include \"" << file.leaf().string() << "\"\n#else\nnamespace "
+      << "\n#include \"" << file.filename().string() << "\"\n#else\nnamespace "
       << namespace_name << " = empty_boost;\n#endif\n";
 
    config_test2 << "   if(0 != " << namespace_name << "::test())\n"
@@ -291,12 +292,12 @@ void process_ipp_file(const fs::path& file, bool positive_test)
 
    // always generate the jamfile data:
    jamfile << "test-suite \"" << macro_name << "\" : \n"
-      "[ run " << positive_file.leaf().string() << " <template>config_options ]\n"
-      "[ compile-fail " << negative_file.leaf().string() << " <template>config_options ] ;\n";
+      "[ run " << positive_file.filename().string() << " <template>config_options ]\n"
+      "[ compile-fail " << negative_file.filename().string() << " <template>config_options ] ;\n";
 
    jamfile_v2 << "test-suite \"" << macro_name << "\" : \n"
-      "[ run ../" << positive_file.leaf().string() << " ]\n"
-      "[ compile-fail ../" << negative_file.leaf().string() << " ] ;\n";
+      "[ run ../" << positive_file.filename().string() << " ]\n"
+      "[ compile-fail ../" << negative_file.filename().string() << " ] ;\n";
 
    // Generate data for the Build-checks test file:
    build_config_test << "#ifdef TEST_" << macro_name << std::endl;
@@ -597,7 +598,7 @@ int cpp_main(int argc, char* argv[])
    {
       // try __FILE__:
       fs::path p(__FILE__);
-      config_path = p.branch_path().branch_path() / "test";
+      config_path = p.parent_path().parent_path() / "test";
    }
    std::cout << "Info: Boost.Config test path set as: " << config_path.string() << std::endl;
 
@@ -608,7 +609,7 @@ int cpp_main(int argc, char* argv[])
    std::map<fs::path, bool> files_to_process;
    while(i != j)
    {
-      if(boost::regex_match(i->path().leaf().string(), ipp_match, ipp_mask))
+      if(boost::regex_match(i->path().filename().string(), ipp_match, ipp_mask))
       {
          files_to_process[*i] = ipp_match[1].matched;
       }

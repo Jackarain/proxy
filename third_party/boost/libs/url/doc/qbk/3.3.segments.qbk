@@ -59,6 +59,8 @@ First we observe these invariants about paths and segments:
 
 The following URL
 contains a path with three segments: "path", "to", and "file.txt":
+
+[teletype]
 ```
 http://www.example.com/path/to/file.txt
 ```
@@ -67,6 +69,7 @@ To understand the relationship between the path and segments,
 we define this function `segs` which returns a list of
 strings corresponding to the elements in a container of segments:
 
+[c++]
 [code_container_4_1]
 
 In this table we show the result of invoking `segs` with

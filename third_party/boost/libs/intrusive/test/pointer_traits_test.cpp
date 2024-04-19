@@ -8,7 +8,6 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 #include <boost/intrusive/detail/mpl.hpp>
-#include <boost/static_assert.hpp>
 #include <boost/intrusive/pointer_traits.hpp>
 #include <boost/core/lightweight_test.hpp>
 
@@ -162,13 +161,13 @@ int main()
    int dummy;
 
    //Raw pointer
-   BOOST_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
+   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
                        <int*>::element_type, int>::value ));
-   BOOST_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
+   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
                        <int*>::pointer, int*>::value ));
-   BOOST_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
+   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
                        <int*>::difference_type, std::ptrdiff_t>::value ));
-   BOOST_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
+   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
                        <int*>::rebind_pointer<double>::type
                        , double*>::value ));
    BOOST_TEST(boost::intrusive::pointer_traits<int*>::pointer_to(dummy) == &dummy);
@@ -177,13 +176,13 @@ int main()
    BOOST_TEST(boost::intrusive::pointer_traits<DD*>:: dynamic_cast_from((B*)0)    == 0);
 
    //Complete smart pointer
-   BOOST_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
+   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
                        < CompleteSmartPtr<int> >::element_type, int>::value ));
-   BOOST_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
+   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
                        < CompleteSmartPtr<int> >::pointer, CompleteSmartPtr<int> >::value ));
-   BOOST_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
+   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
                        < CompleteSmartPtr<int> >::difference_type, char>::value ));
-   BOOST_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
+   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
                        < CompleteSmartPtr<int> >::rebind_pointer<double>::type
                        , CompleteSmartPtr<double> >::value ));
    //pointer_to
@@ -204,13 +203,13 @@ int main()
    BOOST_TEST(CompleteSmartPtrStats::dynamic_cast_called == 1);
 
    //Simple smart pointer
-   BOOST_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
+   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
                        < SimpleSmartPtr<int> >::element_type, int>::value ));
-   BOOST_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
+   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
                        < SimpleSmartPtr<int> >::pointer, SimpleSmartPtr<int> >::value ));
-   BOOST_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
+   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
                        < SimpleSmartPtr<int> >::difference_type, std::ptrdiff_t>::value ));
-   BOOST_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
+   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::intrusive::detail::is_same<boost::intrusive::pointer_traits
                        < SimpleSmartPtr<int> >::rebind_pointer<double>::type
                        , SimpleSmartPtr<double> >::value ));
 

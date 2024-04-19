@@ -131,25 +131,98 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { toolset: gcc-11,   install: g++-11,   os: ubuntu-22.04, cxxstd: '17', build-type: 'Debug', ldflags: '' }
-          - { toolset: gcc-11,   install: g++-11,   os: ubuntu-22.04, cxxstd: '20', build-type: 'Release', ldflags: '' }
-          - { toolset: clang-11, install: clang-11, os: ubuntu-22.04, cxxstd: '17', build-type: 'Debug', ldflags: '' }
-          - { toolset: clang-11, install: clang-11, os: ubuntu-22.04, cxxstd: '20', build-type: 'Debug', ldflags: '' }
-          - { toolset: clang-13, install: clang-13, os: ubuntu-22.04, cxxstd: '17', build-type: 'Release', ldflags: '' }
-          - { toolset: clang-13, install: clang-13, os: ubuntu-22.04, cxxstd: '20', build-type: 'Release', ldflags: '' }
-          - { toolset: clang-14, install: 'clang-14 libc++-14-dev libc++abi-14-dev', os: ubuntu-22.04, cxxstd: '17', build-type: 'Debug', cxxflags: '-stdlib=libc++', ldflags: '-lc++' }
-          - { toolset: clang-14, install: 'clang-14 libc++-14-dev libc++abi-14-dev', os: ubuntu-22.04, cxxstd: '20', build-type: 'Release', cxxflags: '-stdlib=libc++', ldflags: '-lc++' }
+          - toolset: gcc-11
+            install: g++-11
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            cxxstd: '17'
+            build-type: 'Debug'
+            ldflags: ''
+
+          - toolset: gcc-11
+            install: g++-11
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            cxxstd: '20'
+            build-type: 'Release'
+            ldflags: ''
+
+          - toolset: clang-11
+            install: clang-11
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            cxxstd: '17'
+            build-type: 'Debug'
+            ldflags: ''
+
+          - toolset: clang-11
+            install: clang-11
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            cxxstd: '20'
+            build-type: 'Debug'
+            ldflags: ''
+
+          - toolset: clang-13
+            install: clang-13
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            cxxstd: '17'
+            build-type: 'Release'
+            ldflags: ''
+
+          - toolset: clang-13
+            install: clang-13
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            cxxstd: '20'
+            build-type: 'Release'
+            ldflags: ''
+
+          - toolset: clang-14
+            install: 'clang-14 libc++-14-dev libc++abi-14-dev'
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            cxxstd: '17'
+            build-type: 'Debug'
+            cxxflags: '-stdlib=libc++'
+            ldflags: '-lc++'
+
+          - toolset: clang-14
+            install: 'clang-14 libc++-14-dev libc++abi-14-dev'
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            cxxstd: '20'
+            build-type: 'Release'
+            cxxflags: '-stdlib=libc++'
+            ldflags: '-lc++'
+
     runs-on: ${{ matrix.os }}
+    container: ${{matrix.container}}
     env:
       CXXFLAGS: ${{matrix.cxxflags}} -Wall -Wextra
       LDFLAGS:  ${{matrix.ldflags}}
       CMAKE_BUILD_PARALLEL_LEVEL: 4
+      BOOST_REDIS_TEST_SERVER: redis
+
+    services:
+      redis:
+        image: redis
+
     steps:
     - name: Checkout
       uses: actions/checkout@v3
 
+    - name: Setup container environment
+      if: matrix.container
+      run: |
+        apt-get update
+        apt-get -y install sudo python3 git g++ libssl-dev protobuf-compiler redis-server
+
     - name: Install dependencies
-      run: sudo apt-get -y install cmake protobuf-compiler redis-server python3 ${{ matrix.install }}
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install cmake protobuf-compiler redis-server python3 ${{ matrix.install }}
 
     - name: Setup Boost
       run: ./tools/ci.py setup-boost --source-dir=$(pwd)
@@ -209,15 +282,32 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { toolset: gcc-11,   install: g++-11,   cxxstd: "11,17,20" } # Having C++11 shouldn't break the build
-          - { toolset: clang-14, install: clang-14, cxxstd: "17,20" }
-    runs-on: ubuntu-22.04
+          - toolset: gcc-11
+            install: g++-11
+            cxxstd: "11,17,20" # Having C++11 shouldn't break the build
+            os: ubuntu-latest
+            container: ubuntu:22.04
+          - toolset: clang-14
+            install: clang-14
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            cxxstd: "17,20"
+    runs-on: ${{ matrix.os }}
+    container: ${{matrix.container}}
     steps:
     - name: Checkout
       uses: actions/checkout@v3
 
+    - name: Setup container environment
+      if: matrix.container
+      run: |
+        apt-get update
+        apt-get -y install sudo python3 git g++ libssl-dev
+
     - name: Install dependencies
-      run: sudo apt-get -y install python3 ${{ matrix.install }}
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install python3 ${{ matrix.install }}
 
     - name: Setup Boost
       run: ./tools/ci.py setup-boost --source-dir=$(pwd)

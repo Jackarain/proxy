@@ -24,6 +24,7 @@ add_library(boost_locale
   src/boost/locale/shared/localization_backend.cpp
   src/boost/locale/shared/message.cpp
   src/boost/locale/shared/mo_lambda.cpp
+  src/boost/locale/shared/std_collate_adapter.hpp
   src/boost/locale/util/codecvt_converter.cpp
   src/boost/locale/util/default_locale.cpp
   src/boost/locale/util/encoding.cpp

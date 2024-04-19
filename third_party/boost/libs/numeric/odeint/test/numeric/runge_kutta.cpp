@@ -19,7 +19,7 @@
 #include <iostream>
 #include <cmath>
 
-#include <boost/array.hpp>
+#include <array>
 
 #include <boost/test/unit_test.hpp>
 
@@ -34,7 +34,7 @@ namespace mpl = boost::mpl;
 
 typedef double value_type;
 
-typedef boost::array< double , 2 > state_type;
+typedef std::array< double , 2 > state_type;
 
 // harmonic oscillator, analytic solution x[0] = sin( t )
 struct osc

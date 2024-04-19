@@ -165,7 +165,7 @@ class type_info;
 #if (defined(BOOST_MSVC) && BOOST_MSVC < 1900) || (defined(BOOST_GCC) && BOOST_GCC < 40700)
 #  define BOOST_TEST_DEFAULTED_FUNCTION(fun, body) fun body
 #else
-#  define BOOST_TEST_DEFAULTED_FUNCTION(fun, body) BOOST_DEFAULTED_FUNCTION(fun, body);
+#  define BOOST_TEST_DEFAULTED_FUNCTION(fun, body) BOOST_DEFAULTED_FUNCTION(fun, body)
 #endif
 
 //____________________________________________________________________________//

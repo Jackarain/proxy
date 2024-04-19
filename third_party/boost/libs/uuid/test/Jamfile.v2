@@ -224,3 +224,5 @@ test-suite uuid :
       : test_detail_random_provider_happy_getrandom_syscall ]
 
     ;
+
+run quick.cpp ;

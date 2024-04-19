@@ -25,6 +25,8 @@
 #pragma warning(pop)
 #endif
 
+#include <boost/random/detail/seed.hpp>
+#include <boost/random/detail/seed_impl.hpp>
 #include <boost/concept_archetype.hpp>
 #include <boost/concept/requires.hpp>
 #include <boost/mpl/assert.hpp>
@@ -141,8 +143,10 @@ public:
         e.discard(z);
 
         // extension
+        #if 0
         (void)E(sb, se);
         e.seed(sb, se);
+        #endif
     }
     
 private:
@@ -150,7 +154,7 @@ private:
     E v;
     const E x;
     seed_seq_archetype<> q;
-    typename detail::seed_type<result_type>::type s;
+    typename boost::random::detail::seed_type<result_type>::type s;
     uintmax_t z;
     
     input_iterator_archetype<boost::uint32_t> sb, se;

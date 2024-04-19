@@ -33,7 +33,7 @@
 #include <boost/interprocess/permissions.hpp>
 #include <boost/container/detail/type_traits.hpp>  //alignment_of, aligned_storage
 #include <boost/interprocess/sync/spin/wait.hpp>
-#include <boost/interprocess/detail/timed_utils.hpp>
+#include <boost/interprocess/timed_utils.hpp>
 #include <boost/move/move.hpp>
 #include <boost/cstdint.hpp>
 
@@ -388,7 +388,7 @@ class managed_open_or_create_impl
       , const void *addr, ConstructFunc construct_func
       , bool ronly, bool cow)
    {
-      const usduration TimeoutSec(usduration_seconds(MaxInitializeTimeSec));
+      const usduration TimeoutSec(usduration_from_seconds(MaxInitializeTimeSec));
 
       if(FileBased){
          offset_t filesize = 0;

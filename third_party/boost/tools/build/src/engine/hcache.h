@@ -15,6 +15,6 @@
 
 void hcache_init( void );
 void hcache_done( void );
-LIST * hcache( TARGET * t, int rec, regexp * re[], LIST * hdrscan );
+LIST * hcache( TARGET * t, int rec, b2::regex::program re[], LIST * hdrscan );
 
 #endif

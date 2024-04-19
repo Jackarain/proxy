@@ -33,6 +33,8 @@ obj has_dirent_d_type : has_dirent_d_type.cpp : <include>../src ;
 explicit has_dirent_d_type ;
 obj has_posix_at_apis : has_posix_at_apis.cpp : <include>../src ;
 explicit has_posix_at_apis ;
+obj has_fallocate : has_fallocate.cpp : <include>../src ;
+explicit has_fallocate ;
 
 lib bcrypt ;
 explicit bcrypt ;

@@ -10,8 +10,11 @@
 #ifndef BOOST_PROPERTY_TREE_DETAIL_INFO_PARSER_WRITE_HPP_INCLUDED
 #define BOOST_PROPERTY_TREE_DETAIL_INFO_PARSER_WRITE_HPP_INCLUDED
 
-#include "boost/property_tree/ptree.hpp"
-#include "boost/property_tree/detail/info_parser_utils.hpp"
+#include <boost/property_tree/detail/info_parser_error.hpp>
+#include <boost/property_tree/detail/info_parser_utils.hpp>
+#include <boost/property_tree/detail/info_parser_writer_settings.hpp>
+#include <boost/property_tree/ptree.hpp>
+
 #include <string>
 
 namespace boost { namespace property_tree { namespace info_parser

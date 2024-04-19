@@ -11,9 +11,9 @@
 #define BOOST_URL_DETAIL_IMPL_IPVFUTURE_RULE_IPP
 
 #include <boost/url/detail/config.hpp>
-#include <boost/url/rfc/detail/ipvfuture_rule.hpp>
+#include "ipvfuture_rule.hpp"
 #include <boost/url/error.hpp>
-#include <boost/url/rfc/detail/charsets.hpp>
+#include "charsets.hpp"
 #include <boost/url/grammar/charset.hpp>
 #include <boost/url/grammar/delim_rule.hpp>
 #include <boost/url/grammar/hexdig_chars.hpp>

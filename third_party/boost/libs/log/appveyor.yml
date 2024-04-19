@@ -72,11 +72,6 @@ environment:
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
     - TOOLSET: gcc
       ADDRESS_MODEL: 32
-      CXXSTD: 11
-      ADDPATH: C:\mingw\bin
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-    - TOOLSET: gcc
-      ADDRESS_MODEL: 32
       CXXSTD: 11,14
       ADDPATH: C:\mingw-w64\i686-6.3.0-posix-dwarf-rt_v5-rev1\mingw32\bin
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015

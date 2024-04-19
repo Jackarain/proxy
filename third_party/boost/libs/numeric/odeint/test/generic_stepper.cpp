@@ -31,7 +31,7 @@
 #include <boost/numeric/odeint/stepper/runge_kutta4.hpp>
 #include <boost/numeric/odeint/stepper/runge_kutta4_classic.hpp>
 
-#include <boost/array.hpp>
+#include <array>
 
 using namespace boost::unit_test;
 using namespace boost::numeric::odeint;
@@ -39,7 +39,7 @@ using namespace boost::numeric::odeint;
 namespace fusion = boost::fusion;
 
 typedef double value_type;
-typedef boost::array< value_type , 2 > state_type;
+typedef std::array< value_type , 2 > state_type;
 
 void sys( const state_type &x , state_type &dxdt , const value_type &t )
 {
@@ -50,9 +50,9 @@ void sys( const state_type &x , state_type &dxdt , const value_type &t )
 typedef explicit_generic_rk< 4 , 4 , state_type> rk_generic_type;
 typedef runge_kutta4< state_type > rk4_generic_type;
 
-const boost::array< double , 1 > a1 = {{ 0.5 }};
-const boost::array< double , 2 > a2 = {{ 0.0 , 0.5 }};
-const boost::array< double , 3 > a3 = {{ 0.0 , 0.0 , 1.0 }};
+const std::array< double , 1 > a1 = {{ 0.5 }};
+const std::array< double , 2 > a2 = {{ 0.0 , 0.5 }};
+const std::array< double , 3 > a3 = {{ 0.0 , 0.0 , 1.0 }};
 
 const rk_generic_type::coef_a_type a = fusion::make_vector( a1 , a2 , a3 );
 const rk_generic_type::coef_b_type b = {{ 1.0/6 , 1.0/3 , 1.0/3 , 1.0/6 }};

@@ -3993,7 +3993,9 @@ Returns: :: A matrix of unspecified type, of `Dim` rows and `Dim` columns parame
 
 Throws: :: In case the axis vector has zero magnitude, throws <<zero_magnitude_error,`zero_magnitude_error`>>.
 
-NOTE: These functions are not view proxies; they return a temp object.
+NOTE: These functions are semantically equivalent to multiplying matrices returned by <<rotx_mat>> / <<roty_mat>> / <<rotz_mat>>. For example, `rot_mat_yzx<3>(a, b, c)` is semantically equivalent to `roty_mat<3>(a) * rotz_mat<3>(b) * rotx_mat<3>(c)`.
+
+WARNING: These functions are not view proxies; they return a temp object.
 
 '''
 

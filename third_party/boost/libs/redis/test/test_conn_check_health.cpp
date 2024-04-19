@@ -22,10 +22,8 @@ using boost::redis::ignore;
 using boost::redis::operation;
 using boost::redis::generic_response;
 using boost::redis::consume_one;
-using redis::config;
 
 // TODO: Test cancel(health_check) 
-
 
 struct push_callback {
    connection* conn1;
@@ -73,14 +71,12 @@ struct push_callback {
 BOOST_AUTO_TEST_CASE(check_health)
 {
    net::io_context ioc;
-
-
    connection conn1{ioc};
 
    request req1;
    req1.push("CLIENT", "PAUSE", "10000", "ALL");
 
-   config cfg1;
+   auto cfg1 = make_test_config();
    cfg1.health_check_id = "conn1";
    cfg1.reconnect_wait_interval = std::chrono::seconds::zero();
    error_code res1;
@@ -95,7 +91,7 @@ BOOST_AUTO_TEST_CASE(check_health)
    // sending MONITOR. I will therefore open a second connection.
    connection conn2{ioc};
 
-   config cfg2;
+   auto cfg2 = make_test_config();
    cfg2.health_check_id = "conn2";
    error_code res2;
    conn2.async_run(cfg2, {}, [&](auto ec){

@@ -7,12 +7,20 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.dll-path]]`dll-path`::
+[[bbv2.builtin.features.dll-path]]`dll-path` (_Unix_ only)::
+*Allowed values:* A directory path to shared libraries.
++
 Specifies an additional directory where the system should look for shared
-libraries when the executable or shared library is run. This feature only
-affects Unix compilers. Please see
-<<Why are the `dll-path` and `hardcode-dll-paths` properties useful?>>
-in <<Frequently Asked Questions>> for details.
+libraries when the target is run.
++
+WARNING: Note that a relative path will be prepended with the directory of the relevant
+`jam` file - as supplied on the `b2` command line - thus _severely_ limiting its
+practical use!.
++
+Please see the link:#bbv2.faq.dll-path[FAQ entry on the
+`dll-path` and `hardcode-dll-paths`] for details, and the
+link:#bbv2.builtin.features.hardcode-dll-paths[`hardcode-dll-paths`] feature
+to automatically add paths for development.
 
 |# # end::doc[]
 
@@ -22,19 +30,26 @@ feature.feature dll-path
 
 #| tag::hardcode-doc[]
 
-[[bbv2.builtin.features.hardcode-dll-paths]]`hardcode-dll-paths`::
-*Allowed values:* `true`, `false`.
+[[bbv2.builtin.features.hardcode-dll-paths]]`hardcode-dll-paths` (_Unix_ only)::
+*Allowed values:* `true`, `false`. +
+*Defaults to:* `true`(link:#bbv2.reference.rules.exe[`exe`]),
+               `false`(link:#bbv2.reference.rules.install[`install`]) +
+*Ignored for:* link:#bbv2.reference.rules.lib[`lib`]
+
 +
-Controls automatic generation of dll-path properties.
+When an ``exe``cutable is built with `<hardcode-dll-paths>true` (default),
+the target binary will be linked with an _rpath list_ that contains all the
+paths to the directories of used shared libraries.
 +
-This property is specific to Unix systems. If an executable is built with
-`<hardcode-dll-paths>true`, the generated binary will contain the list of all
-the paths to the used shared libraries. As the result, the executable can be
-run without changing system paths to shared libraries or installing the
-libraries to system paths. This is very convenient during development. Please
-see the <<bbv2.faq.dll-path,FAQ entry>> for details. Note that on Mac OSX,
-the paths are unconditionally hardcoded by the linker, and it is not possible
-to disable that behavior
+When a target is ``install``ed with `<hardcode-dll-paths>true`, those same
+paths, and any added with link:bbv2.builtin.features.dll-path[`<dll-path>`],
+are propagated through to the resulting binary.
++
+The purpose of this feature is to aid development; the resulting executable
+(`exe` - but not `install` target) can by default be run, without
+changing system paths to shared libraries or installing the libraries to
+system paths. +
+Please see the <<bbv2.faq.dll-path,FAQ entry>> for details.
 
 |# # end::hardcode-doc[]
 

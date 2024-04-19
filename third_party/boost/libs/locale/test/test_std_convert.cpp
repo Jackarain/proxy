@@ -42,7 +42,16 @@ void test_char()
         std::cout << "Testing " << name << std::endl;
         l = gen(name);
         test_one<CharType>(l, "Hello World", "hello world", "HELLO WORLD");
-        test_one<CharType>(l, "Façade", "façade", "FAÇADE");
+#if BOOST_LOCALE_USE_WIN32_API
+        name = "English_United States";
+#endif
+        // Check that ç can be converted to Ç by the stdlib (fails on e.g. FreeBSD libstd++)
+        if(std::toupper('\xe7', std::locale(name)) == '\xc7')
+            test_one<CharType>(l, "Façade", "façade", "FAÇADE");
+        else {
+            std::cout << "- en_US.ISO8859-1 (" << name << ") not well supported. "; // LCOV_EXCL_LINE
+            std::cout << "Skipping conv test" << std::endl;                         // LCOV_EXCL_LINE
+        }
         boost::locale::case_convert_test::test_no_op_title_case<CharType>(l, "Hello world i");
     } else
         std::cout << "- en_US.ISO8859-1 is not supported, skipping" << std::endl; // LCOV_EXCL_LINE

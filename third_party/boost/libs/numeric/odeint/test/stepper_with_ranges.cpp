@@ -28,7 +28,7 @@
 #include <utility>
 #include <iostream>
 
-#include <boost/array.hpp>
+#include <array>
 #include <boost/range.hpp>
 #include <boost/ref.hpp>
 
@@ -40,7 +40,7 @@
 #include <boost/numeric/odeint/stepper/dense_output_runge_kutta.hpp>
 
 typedef std::vector< double > state_type;
-typedef boost::array< double , 3 > state_type2;
+typedef std::array< double , 3 > state_type2;
 
 /* explicitly force range algebra for this array! */
 namespace boost { namespace numeric { namespace odeint {
@@ -138,9 +138,9 @@ struct ham_sys
 struct vector_fixture
 {
     const static size_t dim = 6;
-    boost::array< double , dim > in;
-    boost::array< double , dim > q;
-    boost::array< double , dim > p;
+    std::array< double , dim > in;
+    std::array< double , dim > q;
+    std::array< double , dim > p;
     state_type err;
 
     vector_fixture( void )

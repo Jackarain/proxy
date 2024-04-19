@@ -1,6 +1,7 @@
 // Boost.Bimap
 //
 // Copyright (c) 2006-2007 Matias Capeletto
+// Copyright (c) 2024 Joaquin M Lopez Munoz
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
@@ -34,6 +35,7 @@
 // bimap container
 #include <boost/bimap/bimap.hpp>
 
+#include <libs/bimap/test/strong_type.hpp>
 #include <libs/bimap/test/test_bimap.hpp>
 
 struct  left_tag {};
@@ -153,6 +155,43 @@ void test_bimap()
         test_associative_container(bm,data);
         test_simple_unordered_associative_container(bm,data);
 
+    }
+    //--------------------------------------------------------------------
+    {
+        typedef bimap
+        <
+            unordered_set_of
+            < 
+                int, boost::hash< strong<int> >, std::equal_to< strong<int> >
+            >,
+            unordered_multiset_of<
+                int, boost::hash< strong<int> >, std::equal_to< strong<int> >
+            >,
+            unordered_set_of_relation<>
+
+        > bm_type;
+
+        std::set< bm_type::value_type > data;
+        data.insert( bm_type::value_type(1,1) );
+        data.insert( bm_type::value_type(2,2) );
+        data.insert( bm_type::value_type(3,3) );
+        data.insert( bm_type::value_type(4,4) );
+
+        std::map<int,int> sided_data;
+        sided_data.emplace(1,1);
+        sided_data.emplace(2,2);
+        sided_data.emplace(3,3);
+        sided_data.emplace(4,4);
+
+        bm_type bm;
+
+        test_basic_bimap(bm,data,sided_data,sided_data);
+        test_associative_container(bm,data);
+        test_simple_unordered_associative_container(bm,data);
+        test_pair_heterogeneous_associative_container< strong<int> >(
+          bm.left,sided_data);
+        test_pair_heterogeneous_associative_container< strong<int> >(
+          bm.right,sided_data);
     }
     //--------------------------------------------------------------------
 }

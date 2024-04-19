@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2023 Marcelo Zimbres Silva (mzimbres@gmail.com)
+/* Copyright (c) 2018-2024 Marcelo Zimbres Silva (mzimbres@gmail.com)
  *
  * Distributed under the Boost Software License, Version 1.0. (See
  * accompanying file LICENSE.txt)
@@ -13,7 +13,7 @@
 
 namespace boost::redis::resp3 {
 
-void to_int(int_type& i, std::string_view sv, system::error_code& ec)
+void to_int(std::size_t& i, std::string_view sv, system::error_code& ec)
 {
    auto const res = std::from_chars(sv.data(), sv.data() + std::size(sv), i);
    if (res.ec != std::errc())
@@ -29,7 +29,7 @@ void parser::reset()
 {
    depth_ = 0;
    sizes_ = {{1}};
-   bulk_length_ = (std::numeric_limits<unsigned long>::max)();
+   bulk_length_ = (std::numeric_limits<std::size_t>::max)();
    bulk_ = type::invalid;
    consumed_ = 0;
    sizes_[0] = 2; // The sentinel must be more than 1.
@@ -189,7 +189,7 @@ parser::consume_impl(
       case type::attribute:
       case type::map:
       {
-         int_type l = -1;
+         std::size_t l = -1;
          to_int(l, elem, ec);
          if (ec)
             return {};

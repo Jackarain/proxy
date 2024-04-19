@@ -346,6 +346,9 @@ test-suite "BOOST_NO_CXX14_VARIABLE_TEMPLATES" :
 test-suite "BOOST_NO_CXX17" : 
 [ run ../no_cxx17_pass.cpp ]
 [ compile-fail ../no_cxx17_fail.cpp ] ;
+test-suite "BOOST_NO_CXX17_AUTO_NONTYPE_TEMPLATE_PARAMS" : 
+[ run ../no_cxx17_auto_nontype_template_params_pass.cpp ]
+[ compile-fail ../no_cxx17_auto_nontype_template_params_fail.cpp ] ;
 test-suite "BOOST_NO_CXX17_DEDUCTION_GUIDES" : 
 [ run ../no_cxx17_deduction_guides_pass.cpp ]
 [ compile-fail ../no_cxx17_deduction_guides_fail.cpp ] ;

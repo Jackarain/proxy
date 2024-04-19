@@ -2,7 +2,7 @@
 //
 //  See http://www.boost.org for most recent version, including documentation.
 //
-//  Copyright Antony Polukhin, 2011-2023.
+//  Copyright Antony Polukhin, 2011-2024.
 //
 //  Distributed under the Boost
 //  Software License, Version 1.0. (See accompanying file
@@ -167,11 +167,36 @@ void test_inf_nan_templated()
 void test_inf_nan_float()
 {
     test_inf_nan_templated<float >();
+
+    BOOST_TEST(is_pos_nan(lexical_cast<float>(std::numeric_limits<float>::quiet_NaN())));
+    BOOST_TEST(is_neg_nan(lexical_cast<float>(-std::numeric_limits<float>::quiet_NaN())));
+    BOOST_TEST(is_pos_inf(lexical_cast<float>(std::numeric_limits<float>::infinity())));
+    BOOST_TEST(is_neg_inf(lexical_cast<float>(-std::numeric_limits<float>::infinity())));
+
+    BOOST_TEST(is_pos_nan(lexical_cast<float>(std::numeric_limits<double>::quiet_NaN())));
+    BOOST_TEST(is_neg_nan(lexical_cast<float>(-std::numeric_limits<double>::quiet_NaN())));
+    BOOST_TEST(is_pos_inf(lexical_cast<float>(std::numeric_limits<double>::infinity())));
+    BOOST_TEST(is_neg_inf(lexical_cast<float>(-std::numeric_limits<double>::infinity())));
 }
 
 void test_inf_nan_double()
 {
     test_inf_nan_templated<double >();
+
+    BOOST_TEST(is_pos_nan(lexical_cast<double>(std::numeric_limits<float>::quiet_NaN())));
+    BOOST_TEST(is_neg_nan(lexical_cast<double>(-std::numeric_limits<float>::quiet_NaN())));
+    BOOST_TEST(is_pos_inf(lexical_cast<double>(std::numeric_limits<float>::infinity())));
+    BOOST_TEST(is_neg_inf(lexical_cast<double>(-std::numeric_limits<float>::infinity())));
+
+    BOOST_TEST(is_pos_nan(lexical_cast<double>(std::numeric_limits<double>::quiet_NaN())));
+    BOOST_TEST(is_neg_nan(lexical_cast<double>(-std::numeric_limits<double>::quiet_NaN())));
+    BOOST_TEST(is_pos_inf(lexical_cast<double>(std::numeric_limits<double>::infinity())));
+    BOOST_TEST(is_neg_inf(lexical_cast<double>(-std::numeric_limits<double>::infinity())));
+
+    BOOST_TEST(is_pos_nan(lexical_cast<double>(std::numeric_limits<long double>::quiet_NaN())));
+    BOOST_TEST(is_neg_nan(lexical_cast<double>(-std::numeric_limits<long double>::quiet_NaN())));
+    BOOST_TEST(is_pos_inf(lexical_cast<double>(std::numeric_limits<long double>::infinity())));
+    BOOST_TEST(is_neg_inf(lexical_cast<double>(-std::numeric_limits<long double>::infinity())));
 }
 
 void test_inf_nan_long_double()

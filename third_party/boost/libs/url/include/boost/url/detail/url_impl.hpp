@@ -76,7 +76,8 @@ struct BOOST_URL_DECL url_impl : parts_base
     pct_string_view pct_get(int, int) const noexcept;
     void set_size(int, std::size_t) noexcept;
     void split(int, std::size_t) noexcept;
-    void adjust(int, int, std::size_t) noexcept;
+    void adjust_right(int first, int last, std::size_t n) noexcept;
+    void adjust_left(int first, int last, std::size_t n) noexcept;
     void collapse(int, int, std::size_t) noexcept;
 
     void apply_scheme(core::string_view) noexcept;

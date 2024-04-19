@@ -26,7 +26,7 @@
 #include <utility>
 #include <iostream>
 
-#include <boost/array.hpp>
+#include <array>
 
 #include <boost/test/unit_test.hpp>
 
@@ -39,7 +39,7 @@ using namespace boost::unit_test;
 using namespace boost::numeric::odeint;
 
 typedef double value_type;
-typedef boost::array< value_type , 3 > state_type;
+typedef std::array< value_type , 3 > state_type;
 
 const double sigma = 10.0;
 const double R = 28.0;

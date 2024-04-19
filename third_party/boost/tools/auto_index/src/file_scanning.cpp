@@ -345,7 +345,7 @@ void process_script(const std::string& script)
       else if(regex_match(line, what, scan_parser))
       {
          std::string f = unquote(what[1].str());
-         if(!boost::filesystem::path(f).is_complete())
+         if(!boost::filesystem::path(f).is_absolute())
          {
             if(prefix.size())
             {
@@ -379,7 +379,7 @@ void process_script(const std::string& script)
          std::string d = unquote(what[1].str());
          std::string m = unquote(what[2].str());
          bool r = unquote(what[3].str()) == "true";
-         if(!boost::filesystem::path(d).is_complete())
+         if(!boost::filesystem::path(d).is_absolute())
          {
             if(prefix.size())
             {

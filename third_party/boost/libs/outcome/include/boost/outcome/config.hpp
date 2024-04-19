@@ -1,5 +1,5 @@
 /* Configure Boost.Outcome with Boost
-(C) 2015-2023 Niall Douglas <http://www.nedproductions.biz/> (7 commits)
+(C) 2015-2024 Niall Douglas <http://www.nedproductions.biz/> (7 commits)
 File Created: August 2015
 
 
@@ -157,8 +157,8 @@ exported Boost.Outcome v2 namespace.
 
 #include <cstdint>  // for uint32_t etc
 #include <initializer_list>
-#include <iosfwd>   // for future serialisation
-#include <new>      // for placement in moves etc
+#include <iosfwd>  // for future serialisation
+#include <new>     // for placement in moves etc
 #include <type_traits>
 
 #ifndef BOOST_OUTCOME_USE_STD_IN_PLACE_TYPE
@@ -204,6 +204,11 @@ BOOST_OUTCOME_V2_NAMESPACE_END
 #else
 #include <memory>  // for std::addressof
 #define BOOST_OUTCOME_ADDRESS_OF(...) std::addressof(__VA_ARGS__)
+#endif
+
+#ifndef BOOST_OUTCOME_ASSERT
+#include <boost/assert.hpp>
+#define BOOST_OUTCOME_ASSERT(...) BOOST_ASSERT(__VA_ARGS__)
 #endif
 
 #ifndef BOOST_OUTCOME_TRIVIAL_ABI

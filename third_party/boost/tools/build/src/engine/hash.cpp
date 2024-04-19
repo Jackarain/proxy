@@ -274,6 +274,12 @@ static void hashrehash( struct hash * hp )
 }
 
 
+#if defined(__clang__) && defined(__has_feature)
+#if __has_feature(address_sanitizer)
+// This function calls not properly type-erased callbacks
+__attribute__((no_sanitize("undefined")))
+#endif
+#endif
 void hashenumerate( struct hash * hp, void (* f)( void *, void * ), void * data
     )
 {

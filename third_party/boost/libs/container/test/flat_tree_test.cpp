@@ -11,7 +11,6 @@
 #include <boost/container/small_vector.hpp>
 #include <boost/container/stable_vector.hpp>
 #include <boost/container/static_vector.hpp>
-#include <boost/static_assert.hpp>
 
 #include <iostream>
 
@@ -133,7 +132,7 @@ int main ()
               std::less<int>, void> tree;
       typedef tree::container_type container_type;
       typedef tree::key_compare key_compare;
-      BOOST_STATIC_ASSERT_MSG ((boost::has_trivial_destructor_after_move<tree>::value ==
+      BOOST_CONTAINER_STATIC_ASSERT_MSG ((boost::has_trivial_destructor_after_move<tree>::value ==
           boost::has_trivial_destructor_after_move<container_type>::value &&
           boost::has_trivial_destructor_after_move<key_compare>::value)
           , "has_trivial_destructor_after_move(default allocator) test failed");
@@ -144,7 +143,7 @@ int main ()
               std::less<int>, std::allocator<int> > tree;
       typedef tree::container_type container_type;
       typedef tree::key_compare key_compare;
-      BOOST_STATIC_ASSERT_MSG( (boost::has_trivial_destructor_after_move<tree>::value ==
+      BOOST_CONTAINER_STATIC_ASSERT_MSG( (boost::has_trivial_destructor_after_move<tree>::value ==
           boost::has_trivial_destructor_after_move<container_type>::value &&
           boost::has_trivial_destructor_after_move<key_compare>::value)
           , "has_trivial_destructor_after_move(std::allocator) test failed");

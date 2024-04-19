@@ -1,4 +1,4 @@
-// Copyright Antony Polukhin, 2016-2023.
+// Copyright Antony Polukhin, 2016-2024.
 //
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
@@ -35,6 +35,20 @@
 
 namespace boost { namespace stacktrace {
 
+namespace impl {
+
+#if defined(__GNUC__) && defined(__ELF__)
+
+BOOST_NOINLINE BOOST_SYMBOL_VISIBLE __attribute__((weak))
+const char* current_exception_stacktrace() noexcept;
+
+BOOST_NOINLINE BOOST_SYMBOL_VISIBLE __attribute__((weak))
+bool& ref_capture_stacktraces_at_throw() noexcept;
+
+#endif
+
+} // namespace impl
+
 /// Class that on construction copies minimal information about call stack into its internals and provides access to that information.
 /// @tparam Allocator Allocator to use during stack capture.
 template <class Allocator>
@@ -65,7 +79,7 @@ class basic_stacktrace {
     }
 
     BOOST_NOINLINE void init(std::size_t frames_to_skip, std::size_t max_depth) {
-        BOOST_CONSTEXPR_OR_CONST std::size_t buffer_size = 128;
+        constexpr std::size_t buffer_size = 128;
         if (!max_depth) {
             return;
         }
@@ -121,7 +135,7 @@ public:
     ///
     /// @b Complexity: O(N) where N is call sequence length, O(1) if BOOST_STACKTRACE_USE_NOOP is defined.
     ///
-    /// @b Async-Handler-Safety: Safe if Allocator construction, copying, Allocator::allocate and Allocator::deallocate are async signal safe.
+    /// @b Async-Handler-Safety: \asyncsafe if Allocator construction, copying, Allocator::allocate and Allocator::deallocate are async signal safe.
     BOOST_FORCEINLINE basic_stacktrace() noexcept
         : impl_()
     {
@@ -132,7 +146,7 @@ public:
     ///
     /// @b Complexity: O(N) where N is call sequence length, O(1) if BOOST_STACKTRACE_USE_NOOP is defined.
     ///
-    /// @b Async-Handler-Safety: Safe if Allocator construction, copying, Allocator::allocate and Allocator::deallocate are async signal safe.
+    /// @b Async-Handler-Safety: \asyncsafe if Allocator construction, copying, Allocator::allocate and Allocator::deallocate are async signal safe.
     ///
     /// @param a Allocator that would be passed to underlying storage.
     BOOST_FORCEINLINE explicit basic_stacktrace(const allocator_type& a) noexcept
@@ -145,7 +159,7 @@ public:
     ///
     /// @b Complexity: O(N) where N is call sequence length, O(1) if BOOST_STACKTRACE_USE_NOOP is defined.
     ///
-    /// @b Async-Handler-Safety: Safe if Allocator construction, copying, Allocator::allocate and Allocator::deallocate are async signal safe.
+    /// @b Async-Handler-Safety: \asyncsafe if Allocator construction, copying, Allocator::allocate and Allocator::deallocate are async signal safe.
     ///
     /// @param skip How many top calls to skip and do not store in *this.
     ///
@@ -163,14 +177,14 @@ public:
 
     /// @b Complexity: O(st.size())
     ///
-    /// @b Async-Handler-Safety: Safe if Allocator construction, copying, Allocator::allocate and Allocator::deallocate are async signal safe.
+    /// @b Async-Handler-Safety: \asyncsafe if Allocator construction, copying, Allocator::allocate and Allocator::deallocate are async signal safe.
     basic_stacktrace(const basic_stacktrace& st)
         : impl_(st.impl_)
     {}
 
     /// @b Complexity: O(st.size())
     ///
-    /// @b Async-Handler-Safety: Safe if Allocator construction, copying, Allocator::allocate and Allocator::deallocate are async signal safe.
+    /// @b Async-Handler-Safety: \asyncsafe if Allocator construction, copying, Allocator::allocate and Allocator::deallocate are async signal safe.
     basic_stacktrace& operator=(const basic_stacktrace& st) {
         impl_ = st.impl_;
         return *this;
@@ -179,21 +193,21 @@ public:
 #ifdef BOOST_STACKTRACE_DOXYGEN_INVOKED
     /// @b Complexity: O(1)
     ///
-    /// @b Async-Handler-Safety: Safe if Allocator::deallocate is async signal safe.
+    /// @b Async-Handler-Safety: \asyncsafe if Allocator::deallocate is async signal safe.
     ~basic_stacktrace() noexcept = default;
 #endif
 
 #if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
     /// @b Complexity: O(1)
     ///
-    /// @b Async-Handler-Safety: Safe if Allocator construction and copying are async signal safe.
+    /// @b Async-Handler-Safety: \asyncsafe if Allocator construction and copying are async signal safe.
     basic_stacktrace(basic_stacktrace&& st) noexcept
         : impl_(std::move(st.impl_))
     {}
 
     /// @b Complexity: O(st.size())
     ///
-    /// @b Async-Handler-Safety: Safe if Allocator construction and copying are async signal safe.
+    /// @b Async-Handler-Safety: \asyncsafe if Allocator construction and copying are async signal safe.
     basic_stacktrace& operator=(basic_stacktrace&& st)
 #ifndef BOOST_NO_CXX11_HDR_TYPE_TRAITS
         noexcept(( std::is_nothrow_move_assignable< std::vector<boost::stacktrace::frame, Allocator> >::value ))
@@ -210,7 +224,7 @@ public:
     ///
     /// @b Complexity: O(1)
     ///
-    /// @b Async-Handler-Safety: Safe.
+    /// @b Async-Handler-Safety: \asyncsafe.
     size_type size() const noexcept {
         return impl_.size();
     }
@@ -222,43 +236,43 @@ public:
     ///
     /// @b Complexity: O(1).
     ///
-    /// @b Async-Handler-Safety: Safe.
+    /// @b Async-Handler-Safety: \asyncsafe.
     const_reference operator[](std::size_t frame_no) const noexcept {
         return impl_[frame_no];
     }
 
     /// @b Complexity: O(1)
     ///
-    /// @b Async-Handler-Safety: Safe.
+    /// @b Async-Handler-Safety: \asyncsafe.
     const_iterator begin() const noexcept { return impl_.begin(); }
     /// @b Complexity: O(1)
     ///
-    /// @b Async-Handler-Safety: Safe.
+    /// @b Async-Handler-Safety: \asyncsafe.
     const_iterator cbegin() const noexcept { return impl_.begin(); }
     /// @b Complexity: O(1)
     ///
-    /// @b Async-Handler-Safety: Safe.
+    /// @b Async-Handler-Safety: \asyncsafe.
     const_iterator end() const noexcept { return impl_.end(); }
     /// @b Complexity: O(1)
     ///
-    /// @b Async-Handler-Safety: Safe.
+    /// @b Async-Handler-Safety: \asyncsafe.
     const_iterator cend() const noexcept { return impl_.end(); }
 
     /// @b Complexity: O(1)
     ///
-    /// @b Async-Handler-Safety: Safe.
+    /// @b Async-Handler-Safety: \asyncsafe.
     const_reverse_iterator rbegin() const noexcept { return impl_.rbegin(); }
     /// @b Complexity: O(1)
     ///
-    /// @b Async-Handler-Safety: Safe.
+    /// @b Async-Handler-Safety: \asyncsafe.
     const_reverse_iterator crbegin() const noexcept { return impl_.rbegin(); }
     /// @b Complexity: O(1)
     ///
-    /// @b Async-Handler-Safety: Safe.
+    /// @b Async-Handler-Safety: \asyncsafe.
     const_reverse_iterator rend() const noexcept { return impl_.rend(); }
     /// @b Complexity: O(1)
     ///
-    /// @b Async-Handler-Safety: Safe.
+    /// @b Async-Handler-Safety: \asyncsafe.
     const_reverse_iterator crend() const noexcept { return impl_.rend(); }
 
 
@@ -267,7 +281,7 @@ public:
     ///
     /// @b Complexity: O(1)
     ///
-    /// @b Async-Handler-Safety: Safe.
+    /// @b Async-Handler-Safety: \asyncsafe.
     constexpr explicit operator bool () const noexcept { return !empty(); }
 
     /// @brief Allows to check that stack trace failed.
@@ -275,7 +289,7 @@ public:
     ///
     /// @b Complexity: O(1)
     ///
-    /// @b Async-Handler-Safety: Safe.
+    /// @b Async-Handler-Safety: \asyncsafe.
     bool empty() const noexcept { return !size(); }
 
     const std::vector<boost::stacktrace::frame, Allocator>& as_vector() const noexcept {
@@ -340,13 +354,51 @@ public:
 
         return ret;
     }
+
+    /// Returns a basic_stacktrace object containing a stacktrace captured at
+    /// the point where the currently handled exception was thrown by its
+    /// initial throw-expression (i.e. not a rethrow), or an empty
+    /// basic_stacktrace object if:
+    ///
+    /// - the `boost_stacktrace_from_exception` library is not linked to the
+    ///   current binary, or
+    /// - the initialization of stacktrace failed, or
+    /// - stacktrace captures are not enabled for the throwing thread, or
+    /// - no exception is being handled, or
+    /// - due to implementation-defined reasons.
+    ///
+    /// `alloc` is passed to the constructor of the stacktrace object.
+    /// Rethrowing an exception using a throw-expression with no operand does
+    /// not alter the captured stacktrace.
+    ///
+    /// Implements https://wg21.link/p2370r1
+    static basic_stacktrace<Allocator> from_current_exception(const allocator_type& alloc = allocator_type()) noexcept {
+        // Matches the constant from implementation
+        constexpr std::size_t kStacktraceDumpSize = 4096;
+
+        const char* trace = nullptr;
+#if defined(__GNUC__) && defined(__ELF__)
+        if (impl::current_exception_stacktrace) {
+            trace = impl::current_exception_stacktrace();
+        }
+#endif
+
+        if (trace) {
+            try {
+                return basic_stacktrace<Allocator>::from_dump(trace, kStacktraceDumpSize, alloc);
+            } catch (const std::exception&) {
+                // ignore
+            }
+        }
+        return basic_stacktrace<Allocator>{0, 0, alloc};
+    }
 };
 
 /// @brief Compares stacktraces for less, order is platform dependent.
 ///
 /// @b Complexity: Amortized O(1); worst case O(size())
 ///
-/// @b Async-Handler-Safety: Safe.
+/// @b Async-Handler-Safety: \asyncsafe.
 template <class Allocator1, class Allocator2>
 bool operator< (const basic_stacktrace<Allocator1>& lhs, const basic_stacktrace<Allocator2>& rhs) noexcept {
     return lhs.size() < rhs.size() || (lhs.size() == rhs.size() && lhs.as_vector() < rhs.as_vector());
@@ -356,7 +408,7 @@ bool operator< (const basic_stacktrace<Allocator1>& lhs, const basic_stacktrace<
 ///
 /// @b Complexity: Amortized O(1); worst case O(size())
 ///
-/// @b Async-Handler-Safety: Safe.
+/// @b Async-Handler-Safety: \asyncsafe.
 template <class Allocator1, class Allocator2>
 bool operator==(const basic_stacktrace<Allocator1>& lhs, const basic_stacktrace<Allocator2>& rhs) noexcept {
     return lhs.as_vector() == rhs.as_vector();

@@ -55,6 +55,7 @@ criteria for inclusion is that the utility component be:
 [include exchange.qbk]
 [include explicit_operator_bool.qbk]
 [include first_scalar.qbk]
+[include functor.qbk]
 [include identity.qbk]
 [include ignore_unused.qbk]
 [include is_same.qbk]

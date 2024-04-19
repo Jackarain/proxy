@@ -908,7 +908,9 @@ Inserts an object, constructed with the arguments `args`, in the table if and on
 Requires:;; `value_type` is constructible from `args`.
 Returns:;; `true` if an insert took place.
 Concurrency:;; Blocking on rehashing of `*this`.
-Notes:;; Invalidates pointers and references to elements if a rehashing is issued.
+Notes:;; Invalidates pointers and references to elements if a rehashing is issued. +
++
+If `args...` is of the form `k,v`, it delays constructing the whole object until it is certain that an element should be inserted, using only the `k` argument to check.
 
 ---
 

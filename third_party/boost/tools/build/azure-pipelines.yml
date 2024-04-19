@@ -20,6 +20,7 @@ trigger:
     - .semaphore/*
     - .travis.yml
     - appveyor.yml
+    - README.*
 pr:
   branches:
     include:
@@ -33,13 +34,18 @@ variables:
 - { name: linux_latest_vm, value: 'ubuntu-22.04' }
 - { name: linux_latest_os, value: 'focal' }
 - { name: windows_latest_vm, value: 'windows-2022' }
-- { name: clang_latest, value: '15' }
-- { name: gcc_latest, value: '12' }
+- { name: clang_latest, value: '17' }
+- { name: gcc_latest, value: '13' }
 - { name: vc_latest, value: 'vc143' }
 - { name: vs_latest, value: '2022' }
-- { name: xc_latest, value: '14.2' }
-- { name: macos_latest_vm, value: 'macOS-12' }
+- { name: xc_latest, value: '15.0.1' }
+- { name: macos_latest_vm, value: 'macOS-13' }
 
+resources:
+  containers:
+    - { container: ubuntu_2004, image: 'ubuntu:20.04', options: '--name container -v /usr/bin/docker:/tmp/docker:ro' }
+    - { container: ubuntu_1804, image: 'ubuntu:18.04', options: '--name container -v /usr/bin/docker:/tmp/docker:ro' }
+    - { container: ubuntu_1604, image: 'ubuntu:16.04', options: '--name container -v /usr/bin/docker:/tmp/docker:ro' }
 
 stages:
 
@@ -96,8 +102,10 @@ stages:
     strategy:
       matrix:
         VS ${{variables.vs_latest}}: {TOOLSET: "${{variables.vc_latest}}", TEST_TOOLSET: msvc, VM_IMAGE: "${{variables.windows_latest_vm}}"}
+        Clang ${{variables.clang_latest}} (VS${{variables.vs_latest}}): {TOOLSET: clang-win, TEST_TOOLSET: clang-win, VM_IMAGE: "${{variables.windows_latest_vm}}"}
     pool:
       vmImage: $(VM_IMAGE)
+    continueOnError: 'true'
     steps:
     - template: .ci/azp-windows-test.yml
 
@@ -105,22 +113,23 @@ stages:
     strategy:
       matrix:
         Xcode ${{variables.xc_latest}}: {XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app", VM_IMAGE: "${{variables.macos_latest_vm}}"}
-        GCC ${{variables.gcc_latest}}: {TOOLSET: "gcc-${{variables.gcc_latest}}", XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app", VM_IMAGE: "${{variables.macos_latest_vm}}"}
+        # GCC ${{variables.gcc_latest}}: {TOOLSET: "gcc-${{variables.gcc_latest}}", XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app", VM_IMAGE: "${{variables.macos_latest_vm}}"}
     pool:
       vmImage: $(VM_IMAGE)
     steps:
     - template: .ci/azp-macos-test.yml
 
-  - job: 'Linux_ASAN'
+  - job: 'Linux_Sanitzer'
     strategy:
       matrix:
-        # Clang ${{variables.clang_latest}}: {TOOLSET: "clang-${{variables.clang_latest}}", PACKAGES: "clang-${{variables.clang_latest}}", LLVM_OS: "${{variables.linux_latest_os}}", LLVM_VER: "${{variables.clang_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
-        GCC ${{variables.gcc_latest}}: {TOOLSET: "gcc-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
+        Address (GCC ${{variables.gcc_latest}}): {SANITIZER: "address-sanitizer", TOOLSET: "gcc-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
+        Thread (GCC ${{variables.gcc_latest}}): {SANITIZER: "thread-sanitizer", TOOLSET: "gcc-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
+        UB (GCC ${{variables.gcc_latest}}): {SANITIZER: "undefined-sanitizer", TOOLSET: "gcc-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
     pool:
       vmImage: $(VM_IMAGE)
     continueOnError: 'true'
     steps:
-    - template: .ci/azp-linux-asan-test.yml
+    - template: .ci/azp-linux-sanitizer-test.yml
 
 - stage: Extra
   dependsOn: []
@@ -206,22 +215,47 @@ stages:
   - job: 'Linux'
     strategy:
       matrix:
-        # GCC 12: {TOOLSET: gcc-12, PACKAGES: g++-12, VM_IMAGE: "${{variables.linux_latest_vm}}"}
+        GCC 12: {TOOLSET: gcc-12, PACKAGES: g++-12, VM_IMAGE: "${{variables.linux_latest_vm}}"}
         GCC 11: {TOOLSET: gcc-11, PACKAGES: g++-11, VM_IMAGE: "${{variables.linux_latest_vm}}"}
         GCC 10: {TOOLSET: gcc-10, PACKAGES: g++-10, VM_IMAGE: "${{variables.linux_latest_vm}}"}
         GCC 9: {TOOLSET: gcc-9, PACKAGES: g++-9, VM_IMAGE: "${{variables.linux_latest_vm}}"}
-        # GCC 8: {TOOLSET: gcc-8, PACKAGES: g++-8, VM_IMAGE: "ubuntu-20.04"}
-        # GCC 7: {TOOLSET: gcc-7, PACKAGES: g++-7, VM_IMAGE: "ubuntu-20.04"}
-        # Clang 15: {TOOLSET: clang-15, PACKAGES: clang-15, LLVM_VER: 15, LLVM_OS: "${{variables.linux_latest_os}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
+        Clang 16: {TOOLSET: clang-16, PACKAGES: clang-16, LLVM_VER: 16, LLVM_OS: "${{variables.linux_latest_os}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
+        Clang 15: {TOOLSET: clang-15, PACKAGES: clang-15, LLVM_VER: 15, LLVM_OS: "${{variables.linux_latest_os}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
         Clang 14: {TOOLSET: clang-14, PACKAGES: clang-14, LLVM_VER: 14, LLVM_OS: "${{variables.linux_latest_os}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
         Clang 13: {TOOLSET: clang-13, PACKAGES: clang-13, LLVM_VER: 13, LLVM_OS: "${{variables.linux_latest_os}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
         Clang 12: {TOOLSET: clang-12, PACKAGES: clang-12, LLVM_VER: 12, LLVM_OS: "${{variables.linux_latest_os}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
         Clang 11: {TOOLSET: clang-11, PACKAGES: clang-11, LLVM_VER: 11, LLVM_OS: "${{variables.linux_latest_os}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
         Clang 10: {TOOLSET: clang-10, PACKAGES: clang-10, LLVM_VER: 10, LLVM_OS: "${{variables.linux_latest_os}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
-        Clang 9: {TOOLSET: clang-9, PACKAGES: clang-9, LLVM_VER: 9, LLVM_OS: "${{variables.linux_latest_os}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
     pool:
       vmImage: $(VM_IMAGE)
     steps:
+    - template: .ci/azp-linux-test.yml
+
+  - job: 'Co_Linux'
+    strategy:
+      matrix:
+        GCC 8: {CXX: g++-8, TOOLSET: gcc-8, PACKAGES: g++-8, CONTAINER: "ubuntu_1804"}
+        GCC 7: {CXX: g++-7, TOOLSET: gcc-7, PACKAGES: g++-7, CONTAINER: "ubuntu_1804"}
+        GCC 6: {CXX: g++-6, TOOLSET: gcc-6, PACKAGES: g++-6, CONTAINER: "ubuntu_1804"}
+        GCC 5: {CXX: g++-5, TOOLSET: gcc-5, PACKAGES: g++-5, CONTAINER: "ubuntu_1804"}
+        GCC 4.9: {CXX: g++-4.9, TOOLSET: gcc-4.9, PACKAGES: g++-4.9, CONTAINER: "ubuntu_1604"}
+        GCC 4.8: {CXX: g++-4.8, TOOLSET: gcc-4.8, PACKAGES: g++-4.8, CONTAINER: "ubuntu_1804"}
+        GCC 4.7: {CXX: g++-4.7, TOOLSET: gcc-4.7, PACKAGES: g++-4.7, CONTAINER: "ubuntu_1604"}
+        Clang 9: {CXX: clang++-9, TOOLSET: clang-9, PACKAGES: clang-9, LLVM_VER: 9, LLVM_OS: 'bionic', CONTAINER: "ubuntu_1804"}
+        Clang 8: {CXX: clang++-8, TOOLSET: clang-8, PACKAGES: clang-8, LLVM_VER: 8, LLVM_OS: 'bionic', CONTAINER: "ubuntu_1804"}
+        Clang 7: {CXX: clang++-7, TOOLSET: clang-7, PACKAGES: clang-7, LLVM_VER: 7, LLVM_OS: 'bionic', CONTAINER: "ubuntu_1804"}
+        Clang 6: {CXX: clang++-6.0, TOOLSET: clang-6.0, PACKAGES: clang-6.0, LLVM_VER: 6.0, LLVM_OS: 'bionic', CONTAINER: "ubuntu_1804"}
+        Clang 5: {CXX: clang++-5.0, TOOLSET: clang-5.0, PACKAGES: clang-5.0, LLVM_VER: 5.0, LLVM_OS: 'bionic', CONTAINER: "ubuntu_1804"}
+        Clang 4: {CXX: clang++-4.0, TOOLSET: clang-4.0, PACKAGES: clang-4.0, CONTAINER: "ubuntu_1804"}
+        Clang 3.9: {CXX: clang++-3.9, TOOLSET: clang-3.9, PACKAGES: clang-3.9, CONTAINER: "ubuntu_1804"}
+        Clang 3.8: {CXX: clang++-3.8, TOOLSET: clang-3.8, PACKAGES: clang-3.8, CONTAINER: "ubuntu_1604"}
+        Clang 3.7: {CXX: clang++-3.7, TOOLSET: clang-3.7, PACKAGES: clang-3.7, CONTAINER: "ubuntu_1604"}
+        Clang 3.6: {CXX: clang++-3.6, TOOLSET: clang-3.6, PACKAGES: clang-3.6, CONTAINER: "ubuntu_1604"}
+    pool:
+      vmImage: 'ubuntu-20.04'
+    container: $[ variables['CONTAINER'] ]
+    steps:
+    - template: .ci/azp-linux-prep-container.yml
     - template: .ci/azp-linux-test.yml
 
   - job: 'Windows'
@@ -238,27 +272,14 @@ stages:
   - job: 'macOS'
     strategy:
       matrix:
-        # Xcode 14.2: {XCODE_APP: /Applications/Xcode_14.2.app, VM_IMAGE: 'macOS-12'}
-        Xcode 14.1: {XCODE_APP: /Applications/Xcode_14.1.app, VM_IMAGE: 'macOS-12'}
+        Xcode 14.3.1: {XCODE_APP: /Applications/Xcode_14.3.1.app, VM_IMAGE: 'macOS-13'}
+        Xcode 14.2: {XCODE_APP: /Applications/Xcode_14.2.app, VM_IMAGE: 'macOS-13'}
+        Xcode 14.1: {XCODE_APP: /Applications/Xcode_14.1.app, VM_IMAGE: 'macOS-13'}
         Xcode 14.0.1: {XCODE_APP: /Applications/Xcode_14.0.1.app, VM_IMAGE: 'macOS-12'}
         Xcode 13.4.1: {XCODE_APP: /Applications/Xcode_13.4.1.app, VM_IMAGE: 'macOS-12'}
-        # Xcode 13.3.1: {XCODE_APP: /Applications/Xcode_13.3.1.app, VM_IMAGE: 'macOS-12'}
-        # Xcode 13.2.1: {XCODE_APP: /Applications/Xcode_13.2.1.app, VM_IMAGE: 'macOS-12'}
-        # Xcode 13.1: {XCODE_APP: /Applications/Xcode_13.1.app, VM_IMAGE: 'macOS-12'}
-        # Xcode 13.0: {XCODE_APP: /Applications/Xcode_13.0.app, VM_IMAGE: 'macOS-11'}
         Xcode 12.5.1: {XCODE_APP: /Applications/Xcode_12.5.1.app, VM_IMAGE: 'macOS-11'}
         Xcode 12.4: {XCODE_APP: /Applications/Xcode_12.4.app, VM_IMAGE: 'macOS-11'}
-        # Xcode 12.3: {XCODE_APP: /Applications/Xcode_12.3.app, VM_IMAGE: 'macOS-10.15'}
-        # Xcode 12.2: {XCODE_APP: /Applications/Xcode_12.2.app, VM_IMAGE: 'macOS-10.15'}
-        # Xcode 12.1.1: {XCODE_APP: /Applications/Xcode_12.1.1.app, VM_IMAGE: 'macOS-10.15'}
-        # Xcode 12.0.1: {XCODE_APP: /Applications/Xcode_12.0.1.app, VM_IMAGE: 'macOS-10.15'}
         Xcode 11.7: {XCODE_APP: /Applications/Xcode_11.7.app, VM_IMAGE: 'macOS-11'}
-        # Xcode 11.6: {XCODE_APP: /Applications/Xcode_11.6.app, VM_IMAGE: 'macOS-10.15'}
-        # Xcode 11.5: {XCODE_APP: /Applications/Xcode_11.5.app, VM_IMAGE: 'macOS-10.15'}
-        # Xcode 11.4.1: {XCODE_APP: /Applications/Xcode_11.4.1.app, VM_IMAGE: 'macOS-10.15'}
-        # Xcode 11.3.1: {XCODE_APP: /Applications/Xcode_11.3.1.app, VM_IMAGE: 'macOS-10.15'}
-        # Xcode 11.3: {XCODE_APP: /Applications/Xcode_11.3.app, VM_IMAGE: 'macOS-10.15'}
-        # Xcode 11.2.1: {XCODE_APP: /Applications/Xcode_11.2.1.app, VM_IMAGE: 'macOS-10.15'}
     pool:
       vmImage: $(VM_IMAGE)
     steps:
@@ -372,6 +393,8 @@ stages:
     displayName: 'Release Linux'
     strategy:
       matrix:
+        1.83.0 .. GCC ${{variables.gcc_latest}}: {BOOST_VERSION: 1.83.0, BOOST_VERSION_U: 1_83_0, TOOLSET: gcc, CXX: "g++-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
+        1.82.0 .. GCC ${{variables.gcc_latest}}: {BOOST_VERSION: 1.82.0, BOOST_VERSION_U: 1_82_0, TOOLSET: gcc, CXX: "g++-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
         1.81.0 .. GCC ${{variables.gcc_latest}}: {BOOST_VERSION: 1.81.0, BOOST_VERSION_U: 1_81_0, TOOLSET: gcc, CXX: "g++-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
         1.80.0 .. GCC ${{variables.gcc_latest}}: {BOOST_VERSION: 1.80.0, BOOST_VERSION_U: 1_80_0, TOOLSET: gcc, CXX: "g++-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
         1.79.0 .. GCC ${{variables.gcc_latest}}: {BOOST_VERSION: 1.79.0, BOOST_VERSION_U: 1_79_0, TOOLSET: gcc, CXX: "g++-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
@@ -419,6 +442,8 @@ stages:
       vmImage: "${{variables.macos_latest_vm}}"
     strategy:
       matrix:
+        1.83.0 .. Xcode ${{variables.xc_latest}}: {BOOST_VERSION: 1.83.0, BOOST_VERSION_U: 1_83_0, TOOLSET: clang, CXX: clang++, XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app"}
+        1.82.0 .. Xcode ${{variables.xc_latest}}: {BOOST_VERSION: 1.82.0, BOOST_VERSION_U: 1_82_0, TOOLSET: clang, CXX: clang++, XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app"}
         1.81.0 .. Xcode ${{variables.xc_latest}}: {BOOST_VERSION: 1.81.0, BOOST_VERSION_U: 1_81_0, TOOLSET: clang, CXX: clang++, XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app"}
         1.80.0 .. Xcode ${{variables.xc_latest}}: {BOOST_VERSION: 1.80.0, BOOST_VERSION_U: 1_80_0, TOOLSET: clang, CXX: clang++, XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app"}
         1.79.0 .. Xcode ${{variables.xc_latest}}: {BOOST_VERSION: 1.79.0, BOOST_VERSION_U: 1_79_0, TOOLSET: clang, CXX: clang++, XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app"}
@@ -455,7 +480,7 @@ stages:
         cd boost_${BOOST_VERSION_U}
         CXX_PATH=`which ${CXX}`
         echo "using ${TOOLSET} : : ${CXX_PATH} ;" > ${HOME}/user-config.jam
-        "${BUILD_SOURCESDIRECTORY}/src/engine/b2" --debug-configuration --build-type=complete --layout=versioned -n -d1 toolset=${TOOLSET} install
+        "${BUILD_SOURCESDIRECTORY}/src/engine/b2" --debug-configuration --layout=versioned -n -d1 toolset=${TOOLSET} install
         popd
       displayName: Test
 
@@ -465,6 +490,8 @@ stages:
       vmImage: "${{variables.windows_latest_vm}}"
     strategy:
       matrix:
+        1.83.0 .. VS ${{variables.vs_latest}}: {BOOST_VERSION: 1.83.0, BOOST_VERSION_U: 1_83_0, TOOLSET: "${{variables.vc_latest}}"}
+        1.82.0 .. VS ${{variables.vs_latest}}: {BOOST_VERSION: 1.82.0, BOOST_VERSION_U: 1_82_0, TOOLSET: "${{variables.vc_latest}}"}
         1.81.0 .. VS ${{variables.vs_latest}}: {BOOST_VERSION: 1.81.0, BOOST_VERSION_U: 1_81_0, TOOLSET: "${{variables.vc_latest}}"}
         1.80.0 .. VS ${{variables.vs_latest}}: {BOOST_VERSION: 1.80.0, BOOST_VERSION_U: 1_80_0, TOOLSET: "${{variables.vc_latest}}"}
         1.79.0 .. VS ${{variables.vs_latest}}: {BOOST_VERSION: 1.79.0, BOOST_VERSION_U: 1_79_0, TOOLSET: "${{variables.vc_latest}}"}

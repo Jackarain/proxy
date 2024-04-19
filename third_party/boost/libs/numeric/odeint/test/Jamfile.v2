@@ -1,12 +1,14 @@
 # Copyright 2012-2013 Karsten Ahnert
 # Copyright 2012-2013 Mario Mulansky
 # Copyright 2013 Pascal Germroth
+# Copyright 2023 Matt Borland
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 # bring in rules for testing
 
 import testing ;
+import ../../config/checks/config : requires ;
 
 # make sure you are using a new version of boost.build, otherwise the local
 # odeint will not be included properly
@@ -25,21 +27,22 @@ project
       <link>static
       <toolset>clang:<cxxflags>-Wno-unused-variable
       # <cxxflags>-D_SCL_SECURE_NO_WARNINGS
-    ;
+    [ requires cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction cxx14_variable_templates cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction ]    ;
 
 test-suite "odeint"
     :
     [ run euler_stepper.cpp ]
-    [ run runge_kutta_concepts.cpp ]
-    [ run runge_kutta_error_concepts.cpp ]
-    [ run runge_kutta_controlled_concepts.cpp ]
+    # The following 3 tests use Boost.Multiprecision which requires C++14
+    [ run runge_kutta_concepts.cpp : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj [ requires cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction cxx14_variable_templates cxx14_constexpr ] ]
+    [ run runge_kutta_error_concepts.cpp : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj [ requires cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction cxx14_variable_templates cxx14_constexpr ] ]
+    [ run runge_kutta_controlled_concepts.cpp : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj [ requires cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction cxx14_variable_templates cxx14_constexpr ] ]
     [ run resizing.cpp ]
     [ run default_operations.cpp ]
     [ run range_algebra.cpp ]
     [ run implicit_euler.cpp ]
 # disable in clang
-    [ run fusion_algebra.cpp : : : <toolset>clang:<build>no ]
-    [ run stepper_with_units.cpp : : : <toolset>clang:<build>no ]
+    [ run fusion_algebra.cpp : : : <toolset>clang:<build>no <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj ]
+    [ run stepper_with_units.cpp : : : <toolset>clang:<build>no <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj ]
     [ run stepper_copying.cpp ]
     [ run stepper_with_ranges.cpp ]
     [ run rosenbrock4.cpp ]
@@ -83,8 +86,8 @@ test-suite "odeint"
     [ run step_size_limitation.cpp ]
     [ run integrate_overflow.cpp ]
     [ compile unwrap_boost_reference.cpp ]
-    [ compile unwrap_reference.cpp : <cxxflags>-std=c++0x : unwrap_reference_C++11 ]
-    [ compile std_array.cpp : <cxxflags>-std=c++0x ]
+    [ compile unwrap_reference.cpp ]
+    [ compile std_array.cpp ]
     : 
         <testing.launcher>valgrind
     ;

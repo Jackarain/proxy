@@ -15,7 +15,7 @@
 #include <vector>
 #include <iostream>
 #include <boost/random.hpp>
-#include <boost/array.hpp>
+#include <array>
 
 #include <boost/numeric/odeint.hpp>
 
@@ -26,8 +26,8 @@ template< size_t N > class stochastic_euler
 {
 public:
 
-    typedef boost::array< double , N > state_type;
-    typedef boost::array< double , N > deriv_type;
+    typedef std::array< double , N > state_type;
+    typedef std::array< double , N > deriv_type;
     typedef double value_type;
     typedef double time_type;
     typedef unsigned short order_type;
@@ -71,8 +71,8 @@ class stochastic_euler
 {
 public:
 
-    typedef boost::array< double , N > state_type;
-    typedef boost::array< double , N > deriv_type;
+    typedef std::array< double , N > state_type;
+    typedef std::array< double , N > deriv_type;
     typedef double value_type;
     typedef double time_type;
     typedef unsigned short order_type;
@@ -97,7 +97,7 @@ public:
 
 //[ stochastic_euler_ornstein_uhlenbeck_def
 const static size_t N = 1;
-typedef boost::array< double , N > state_type;
+typedef std::array< double , N > state_type;
 
 struct ornstein_det
 {

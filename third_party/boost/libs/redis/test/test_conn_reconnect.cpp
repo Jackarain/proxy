@@ -19,7 +19,6 @@ using boost::system::error_code;
 using boost::redis::request;
 using boost::redis::response;
 using boost::redis::ignore;
-using boost::redis::config;
 using boost::redis::logger;
 using boost::redis::operation;
 using boost::redis::connection;
@@ -40,7 +39,7 @@ net::awaitable<void> test_reconnect_impl()
    int i = 0;
    for (; i < 5; ++i) {
       error_code ec1, ec2;
-      config cfg;
+      auto cfg = make_test_config();
       logger l;
       co_await conn->async_exec(req, ignore, net::redirect_error(net::use_awaitable, ec1));
       //BOOST_TEST(!ec);
@@ -76,7 +75,7 @@ auto async_test_reconnect_timeout() -> net::awaitable<void>
    req1.push("BLPOP", "any", 0);
 
    st.expires_after(std::chrono::seconds{1});
-   config cfg;
+   auto cfg = make_test_config();
    co_await (
       conn->async_exec(req1, ignore, redir(ec1)) ||
       st.async_wait(redir(ec3))
@@ -100,7 +99,7 @@ auto async_test_reconnect_timeout() -> net::awaitable<void>
 
    std::cout << "ccc" << std::endl;
 
-   BOOST_CHECK_EQUAL(ec1, boost::system::errc::errc_t::operation_canceled);
+   BOOST_CHECK_EQUAL(ec1, boost::asio::error::operation_aborted);
 }
 
 BOOST_AUTO_TEST_CASE(test_reconnect_and_idle)

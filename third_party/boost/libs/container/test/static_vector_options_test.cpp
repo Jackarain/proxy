@@ -44,7 +44,7 @@ void test_alignment()
    const std::size_t Capacity = 10u;
    {  //extended alignment
       const std::size_t extended_alignment = sizeof(int)*4u;
-      BOOST_STATIC_ASSERT(extended_alignment > dtl::alignment_of<int>::value);
+      BOOST_CONTAINER_STATIC_ASSERT(extended_alignment > dtl::alignment_of<int>::value);
       #if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
       using options_t = static_vector_options_t< inplace_alignment<extended_alignment> >;
       #else

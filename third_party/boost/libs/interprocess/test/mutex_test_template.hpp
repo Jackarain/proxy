@@ -27,7 +27,7 @@
 #include "util.hpp"
 #include <boost/interprocess/detail/os_thread_functions.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
-
+#include <typeinfo>
 #include <iostream>
 
 namespace boost { namespace interprocess { namespace test {
@@ -106,7 +106,7 @@ struct test_timedlock
       // Test the lock's constructors.
       {
          // Construct and initialize an ptime for a fast time out.
-         timed_lock_type lock(interprocess_mutex, ptime_delay(1*BaseSeconds));
+         timed_lock_type lock(interprocess_mutex, ptime_delay_ms(unsigned(1*BaseMs)));
          BOOST_INTERPROCESS_CHECK(lock ? true : false);
       }
       {
@@ -123,7 +123,7 @@ struct test_timedlock
       BOOST_INTERPROCESS_CHECK(lock ? true : false);
       lock.unlock();
       BOOST_INTERPROCESS_CHECK(!lock);
-      BOOST_INTERPROCESS_CHECK(lock.timed_lock(boost_systemclock_delay(3*BaseSeconds)));
+      BOOST_INTERPROCESS_CHECK(lock.timed_lock(boost_systemclock_delay_ms(1*BaseMs)));
       BOOST_INTERPROCESS_CHECK(lock ? true : false);
    }
 };
@@ -158,15 +158,15 @@ struct test_recursive_lock
       }
       {
          //This should always lock
-         lock_twice_timed<lock_type>(mx, ptime_delay(2*BaseSeconds));
+         lock_twice_timed<lock_type>(mx, ptime_delay_ms(2*BaseMs));
       }
       {
          //This should always lock
-         lock_twice_timed<lock_type>(mx, boost_systemclock_delay(2*BaseSeconds));
+         lock_twice_timed<lock_type>(mx, boost_systemclock_delay_ms(2*BaseMs));
       }
       {
          //This should always lock
-         lock_twice_timed<lock_type>(mx, std_systemclock_delay(2*BaseSeconds));
+         lock_twice_timed<lock_type>(mx, std_systemclock_delay_ms(2*BaseMs));
       }
    }
 };
@@ -179,11 +179,11 @@ void lock_and_sleep(void *arg, M &sm)
 {
    data<M> *pdata = static_cast<data<M>*>(arg);
    boost::interprocess::scoped_lock<M> l(sm);
-   if(pdata->m_secs){
-      boost::interprocess::ipcdetail::thread_sleep(unsigned(1000*pdata->m_secs));
+   if(pdata->m_msecs){
+      boost::interprocess::ipcdetail::thread_sleep_ms(unsigned(pdata->m_msecs));
    }
    else{
-      boost::interprocess::ipcdetail::thread_sleep(unsigned(1000*2*BaseSeconds));
+      boost::interprocess::ipcdetail::thread_sleep_ms(unsigned(2*BaseMs));
    }
 
    ++shared_val;
@@ -193,21 +193,13 @@ void lock_and_sleep(void *arg, M &sm)
 template<typename M>
 void lock_and_catch_errors(void *arg, M &sm)
 {
-   data<M> *pdata = static_cast<data<M>*>(arg);
    BOOST_TRY
    {
-      boost::interprocess::scoped_lock<M> l(sm);
-      if(pdata->m_secs){
-         boost::interprocess::ipcdetail::thread_sleep(unsigned(1000*pdata->m_secs));
-      }
-      else{
-         boost::interprocess::ipcdetail::thread_sleep(unsigned(1000*2*BaseSeconds));
-      }
-      ++shared_val;
-      pdata->m_value = shared_val;
+      lock_and_sleep(arg, sm);
    }
    BOOST_CATCH(interprocess_exception const & e)
    {
+      data<M>* pdata = static_cast<data<M>*>(arg);
       pdata->m_error = e.get_error_code();
    } BOOST_CATCH_END
 }
@@ -218,7 +210,7 @@ void try_lock_and_sleep(void *arg, M &sm)
    data<M> *pdata = static_cast<data<M>*>(arg);
    boost::interprocess::scoped_lock<M> l(sm, boost::interprocess::defer_lock);
    if (l.try_lock()){
-      boost::interprocess::ipcdetail::thread_sleep(unsigned(1000*2*BaseSeconds));
+      boost::interprocess::ipcdetail::thread_sleep_ms(unsigned(2*BaseMs));
       ++shared_val;
       pdata->m_value = shared_val;
    }
@@ -240,17 +232,17 @@ void timed_lock_and_sleep(void *arg, M &sm)
       l (sm, boost::interprocess::defer_lock);
    bool r = false;
    if(pdata->m_flags == (int)TimedLock){
-      r = l.timed_lock(std_systemclock_delay(pdata->m_secs));
+      r = l.timed_lock(std_systemclock_delay_ms(unsigned(pdata->m_msecs)));
    }
    else if (pdata->m_flags == (int)TryLockUntil) {
-      r = l.try_lock_until(ptime_delay(pdata->m_secs));
+      r = l.try_lock_until(ptime_delay_ms(unsigned(pdata->m_msecs)));
    }
    else if (pdata->m_flags == (int)TryLockFor) {
-      r = l.try_lock_for(boost_systemclock_seconds(pdata->m_secs));
+      r = l.try_lock_for(boost_systemclock_ms(unsigned(pdata->m_msecs)));
    }
 
    if (r){
-      boost::interprocess::ipcdetail::thread_sleep(unsigned(1000*2*BaseSeconds));
+      boost::interprocess::ipcdetail::thread_sleep_ms(unsigned(2*BaseMs));
       ++shared_val;
       pdata->m_value = shared_val;
    }
@@ -266,21 +258,19 @@ void test_mutex_lock()
    data<M> d1(1);
    data<M> d2(2);
 
-   // Locker one launches, holds the lock for 2*BaseSeconds seconds.
+   // Locker one launches, holds the lock for 2*BaseMs seconds.
    boost::interprocess::ipcdetail::OS_thread_t tm1;
    boost::interprocess::ipcdetail::thread_launch(tm1, thread_adapter<M>(&lock_and_sleep, &d1, mtx));
 
-   //Wait 1*BaseSeconds
-   boost::interprocess::ipcdetail::thread_sleep(unsigned(1000*1*BaseSeconds));
+   //Wait 1*BaseMs
+   boost::interprocess::ipcdetail::thread_sleep_ms(unsigned(1*BaseMs));
 
-   // Locker two launches, but it won't hold the lock for 2*BaseSeconds seconds.
+   // Locker two launches, but it won't hold the lock for 2*BaseMs seconds.
    boost::interprocess::ipcdetail::OS_thread_t tm2;
    boost::interprocess::ipcdetail::thread_launch(tm2, thread_adapter<M>(&lock_and_sleep, &d2, mtx));
 
    //Wait completion
-
    boost::interprocess::ipcdetail::thread_join(tm1);
-   boost::interprocess::ipcdetail::thread_sleep(unsigned(1000*1*BaseSeconds));
    boost::interprocess::ipcdetail::thread_join(tm2);
 
    BOOST_INTERPROCESS_CHECK(d1.m_value == 1);
@@ -294,28 +284,25 @@ void test_mutex_lock_timeout()
 
    M mtx;
 
-   int wait_time_s = BOOST_INTERPROCESS_TIMEOUT_WHEN_LOCKING_DURATION_MS / 1000;
-   if (wait_time_s == 0 )
-      wait_time_s = 1;
+   unsigned wait_time_ms = BOOST_INTERPROCESS_TIMEOUT_WHEN_LOCKING_DURATION_MS;
 
-   data<M> d1(1, wait_time_s * 3);
-   data<M> d2(2, wait_time_s * 2);
+   data<M> d1(1, (int)wait_time_ms * 3);
+   data<M> d2(2, (int)wait_time_ms * 1);
 
-   // Locker one launches, and holds the lock for wait_time_s * 2 seconds.
+   // Locker one launches, and holds the lock for wait_time_ms * 3.
    boost::interprocess::ipcdetail::OS_thread_t tm1;
    boost::interprocess::ipcdetail::thread_launch(tm1, thread_adapter<M>(&lock_and_sleep, &d1, mtx));
 
-   //Wait 1*BaseSeconds
-   boost::interprocess::ipcdetail::thread_sleep(unsigned(1000*wait_time_s));
+   //Wait until tm1 acquires the lock
+   boost::interprocess::ipcdetail::thread_sleep_ms(wait_time_ms);
 
-   // Locker two launches, and attempts to hold the lock for wait_time_s * 2 seconds.
+   // Locker two launches, and attempts to hold the lock for wait_time_ms * 2.
    boost::interprocess::ipcdetail::OS_thread_t tm2;
    boost::interprocess::ipcdetail::thread_launch(tm2, thread_adapter<M>(&lock_and_catch_errors, &d2, mtx));
 
    //Wait completion
-   boost::interprocess::ipcdetail::thread_join(tm1);
-   boost::interprocess::ipcdetail::thread_sleep(unsigned(1000*1*BaseSeconds));
    boost::interprocess::ipcdetail::thread_join(tm2);
+   boost::interprocess::ipcdetail::thread_join(tm1);
 
    BOOST_INTERPROCESS_CHECK(d1.m_value == 1);
    BOOST_INTERPROCESS_CHECK(d2.m_value == -1);
@@ -333,12 +320,12 @@ void test_mutex_try_lock()
    data<M> d1(1);
    data<M> d2(2);
 
-   // Locker one launches, holds the lock for 2*BaseSeconds seconds.
+   // Locker one launches, holds the lock for 2*BaseMs seconds.
    boost::interprocess::ipcdetail::OS_thread_t tm1;
    boost::interprocess::ipcdetail::thread_launch(tm1, thread_adapter<M>(&try_lock_and_sleep, &d1, mtx));
 
-   //Wait 1*BaseSeconds
-   boost::interprocess::ipcdetail::thread_sleep(unsigned(1000*1*BaseSeconds));
+   //Wait 1*BaseMs
+   boost::interprocess::ipcdetail::thread_sleep_ms(unsigned(1*BaseMs));
 
    // Locker two launches, but it should fail acquiring the lock
    boost::interprocess::ipcdetail::OS_thread_t tm2;
@@ -358,21 +345,22 @@ void test_mutex_timed_lock()
 {
    for (int flag = 0; flag != (int)ETimedLockFlagsMax; ++flag)
    {
+      //int flag = 2;
       shared_val = 0;
 
       M mtx, m2;
 
-      data<M> d1(1, 2*BaseSeconds, flag);
-      data<M> d2(2, 2*BaseSeconds, flag);
+      data<M> d1(1, 2*BaseMs, flag);
+      data<M> d2(2, 2*BaseMs, flag);
 
-      // Locker one launches, holds the lock for 2*BaseSeconds seconds.
+      // Locker one launches, holds the lock for 2*BaseMs seconds.
       boost::interprocess::ipcdetail::OS_thread_t tm1;
       boost::interprocess::ipcdetail::thread_launch(tm1, thread_adapter<M>(&timed_lock_and_sleep, &d1, mtx));
 
-      //Wait 1*BaseSeconds
-      boost::interprocess::ipcdetail::thread_sleep(unsigned(1000*1*BaseSeconds));
+      //Wait 1*BaseMs
+      boost::interprocess::ipcdetail::thread_sleep_ms(unsigned(1*BaseMs));
 
-      // Locker two launches, holds the lock for 2*BaseSeconds seconds.
+      // Locker two launches, holds the lock for 2*BaseMs seconds.
       boost::interprocess::ipcdetail::OS_thread_t tm2;
       boost::interprocess::ipcdetail::thread_launch(tm2, thread_adapter<M>(&timed_lock_and_sleep, &d2, mtx));
 

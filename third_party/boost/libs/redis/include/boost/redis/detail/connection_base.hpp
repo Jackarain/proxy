@@ -113,7 +113,7 @@ struct exec_op {
    asio::coroutine coro{};
 
    template <class Self>
-   void operator()(Self& self , system::error_code ec = {})
+   void operator()(Self& self , system::error_code ec = {}, std::size_t = 0)
    {
       BOOST_ASIO_CORO_REENTER (coro)
       {
@@ -130,7 +130,6 @@ struct exec_op {
 EXEC_OP_WAIT:
          BOOST_ASIO_CORO_YIELD
          info_->async_wait(std::move(self));
-         BOOST_ASSERT(ec == asio::error::operation_aborted);
 
          if (info_->ec_) {
             self.complete(info_->ec_, 0);
@@ -140,18 +139,18 @@ EXEC_OP_WAIT:
          if (info_->stop_requested()) {
             // Don't have to call remove_request as it has already
             // been by cancel(exec).
-            return self.complete(ec, 0);
+            return self.complete(asio::error::operation_aborted, 0);
          }
 
          if (is_cancelled(self)) {
-            if (info_->is_written()) {
+            if (!info_->is_waiting()) {
                using c_t = asio::cancellation_type;
                auto const c = self.get_cancellation_state().cancelled();
                if ((c & c_t::terminal) != c_t::none) {
                   // Cancellation requires closing the connection
                   // otherwise it stays in inconsistent state.
                   conn_->cancel(operation::run);
-                  return self.complete(ec, 0);
+                  return self.complete(asio::error::operation_aborted, 0);
                } else {
                   // Can't implement other cancelation types, ignoring.
                   self.get_cancellation_state().clear();
@@ -163,7 +162,7 @@ EXEC_OP_WAIT:
             } else {
                // Cancelation can be honored.
                conn_->remove_request(info_);
-               self.complete(ec, 0);
+               self.complete(asio::error::operation_aborted, 0);
                return;
             }
          }
@@ -395,9 +394,9 @@ public:
    /// Constructs from an executor.
    connection_base(
       executor_type ex,
-      asio::ssl::context::method method,
+      asio::ssl::context ctx,
       std::size_t max_read_size)
-   : ctx_{method}
+   : ctx_{std::move(ctx)}
    , stream_{std::make_unique<next_layer_type>(ex, ctx_)}
    , writer_timer_{ex}
    , receive_channel_{ex, 256}
@@ -410,10 +409,6 @@ public:
 
    /// Returns the ssl context.
    auto const& get_ssl_context() const noexcept
-      { return ctx_;}
-
-   /// Returns the ssl context.
-   auto& get_ssl_context() noexcept
       { return ctx_;}
 
    /// Resets the underlying stream.
@@ -511,11 +506,15 @@ public:
    usage get_usage() const noexcept
       { return usage_; }
 
+   auto run_is_canceled() const noexcept
+      { return cancel_run_called_; }
+
 private:
    using receive_channel_type = asio::experimental::channel<executor_type, void(system::error_code, std::size_t)>;
    using runner_type = runner<executor_type>;
    using adapter_type = std::function<void(std::size_t, resp3::basic_node<std::string_view> const&, system::error_code&)>;
    using receiver_adapter_type = std::function<void(resp3::basic_node<std::string_view> const&, system::error_code&)>;
+   using exec_notifier_type = receive_channel_type;
 
    auto use_ssl() const noexcept
       { return runner_.get_config().use_ssl;}
@@ -527,10 +526,10 @@ private:
       {
          BOOST_ASSERT(ptr != nullptr);
 
-         if (ptr->is_written()) {
-            return !ptr->req_->get_config().cancel_if_unresponded;
-         } else {
+         if (ptr->is_waiting()) {
             return !ptr->req_->get_config().cancel_on_connection_lost;
+         } else {
+            return !ptr->req_->get_config().cancel_if_unresponded;
          }
       };
 
@@ -543,8 +542,9 @@ private:
       });
 
       reqs_.erase(point, std::end(reqs_));
+
       std::for_each(std::begin(reqs_), std::end(reqs_), [](auto const& ptr) {
-         return ptr->reset_status();
+         return ptr->mark_waiting();
       });
 
       return ret;
@@ -555,7 +555,7 @@ private:
       auto f = [](auto const& ptr)
       {
          BOOST_ASSERT(ptr != nullptr);
-         return ptr->is_written();
+         return !ptr->is_waiting();
       };
 
       auto point = std::stable_partition(std::begin(reqs_), std::end(reqs_), f);
@@ -579,6 +579,12 @@ private:
          } break;
          case operation::run:
          {
+            // Protects the code below from being called more than
+            // once, see https://github.com/boostorg/redis/issues/181
+            if (std::exchange(cancel_run_called_, true)) {
+               return;
+            }
+
             close();
             writer_timer_.cancel();
             receive_channel_.cancel();
@@ -605,8 +611,9 @@ private:
       // partition of unwritten requests instead of them all.
       std::for_each(std::begin(reqs_), std::end(reqs_), [](auto const& ptr) {
          BOOST_ASSERT_MSG(ptr != nullptr, "Expects non-null pointer.");
-         if (ptr->is_staged())
+         if (ptr->is_staged()) {
             ptr->mark_written();
+         }
       });
    }
 
@@ -615,25 +622,15 @@ private:
       using node_type = resp3::basic_node<std::string_view>;
       using wrapped_adapter_type = std::function<void(node_type const&, system::error_code&)>;
 
-      enum class action
-      {
-         stop,
-         proceed,
-         none,
-      };
-
       explicit req_info(request const& req, adapter_type adapter, executor_type ex)
-      : timer_{ex}
-      , action_{action::none}
+      : notifier_{ex, 1}
       , req_{&req}
       , adapter_{}
       , expected_responses_{req.get_expected_responses()}
-      , status_{status::none}
+      , status_{status::waiting}
       , ec_{{}}
       , read_size_{0}
       {
-         timer_.expires_at((std::chrono::steady_clock::time_point::max)());
-
          adapter_ = [this, adapter](node_type const& nd, system::error_code& ec)
          {
             auto const i = req_->get_expected_responses() - expected_responses_;
@@ -643,18 +640,16 @@ private:
 
       auto proceed()
       {
-         timer_.cancel();
-         action_ = action::proceed;
+         notifier_.try_send(std::error_code{}, 0);
       }
 
       void stop()
       {
-         timer_.cancel();
-         action_ = action::stop;
+         notifier_.close();
       }
 
-      [[nodiscard]] auto is_waiting_write() const noexcept
-         { return !is_written() && !is_staged(); }
+      [[nodiscard]] auto is_waiting() const noexcept
+         { return status_ == status::waiting; }
 
       [[nodiscard]] auto is_written() const noexcept
          { return status_ == status::written; }
@@ -668,27 +663,26 @@ private:
       void mark_staged() noexcept
          { status_ = status::staged; }
 
-      void reset_status() noexcept
-         { status_ = status::none; }
+      void mark_waiting() noexcept
+         { status_ = status::waiting; }
 
       [[nodiscard]] auto stop_requested() const noexcept
-         { return action_ == action::stop;}
+         { return !notifier_.is_open();}
 
       template <class CompletionToken>
       auto async_wait(CompletionToken token)
       {
-         return timer_.async_wait(std::move(token));
+         return notifier_.async_receive(std::move(token));
       }
 
    //private:
       enum class status
-      { none
+      { waiting
       , staged
       , written
       };
 
-      timer_type timer_;
-      action action_;
+      exec_notifier_type notifier_;
       request const* req_;
       wrapped_adapter_type adapter_;
 
@@ -716,7 +710,7 @@ private:
    void cancel_push_requests()
    {
       auto point = std::stable_partition(std::begin(reqs_), std::end(reqs_), [](auto const& ptr) {
-         return !(ptr->is_staged() && ptr->req_->get_expected_responses() == 0);
+            return !(ptr->is_staged() && ptr->req_->get_expected_responses() == 0);
       });
 
       std::for_each(point, std::end(reqs_), [](auto const& ptr) {
@@ -737,7 +731,7 @@ private:
 
       if (info->req_->has_hello_priority()) {
          auto rend = std::partition_point(std::rbegin(reqs_), std::rend(reqs_), [](auto const& e) {
-               return e->is_waiting_write();
+               return e->is_waiting();
          });
 
          std::rotate(std::rbegin(reqs_), std::rbegin(reqs_) + 1, rend);
@@ -781,7 +775,7 @@ private:
       // Coalesces the requests and marks them staged. After a
       // successful write staged requests will be marked as written.
       auto const point = std::partition_point(std::cbegin(reqs_), std::cend(reqs_), [](auto const& ri) {
-            return !ri->is_waiting_write();
+            return !ri->is_waiting();
       });
 
       std::for_each(point, std::cend(reqs_), [this](auto const& ri) {
@@ -798,7 +792,14 @@ private:
 
    bool is_waiting_response() const noexcept
    {
-      return !std::empty(reqs_) && reqs_.front()->is_written();
+      if (std::empty(reqs_))
+         return false;
+
+      // Under load and on low-latency networks we might start
+      // receiving responses before the write operation completed and
+      // the request is still maked as staged and not written.  See
+      // https://github.com/boostorg/redis/issues/170
+      return !reqs_.front()->is_waiting();
    }
 
    void close()
@@ -814,36 +815,39 @@ private:
 
    auto is_next_push()
    {
-      // We handle unsolicited events in the following way
-      //
-      // 1. Its resp3 type is a push.
-      //
-      // 2. A non-push type is received with an empty requests
-      //    queue. I have noticed this is possible (e.g. -MISCONF).
-      //    I expect them to have type push so we can distinguish
-      //    them from responses to commands, but it is a
-      //    simple-error. If we are lucky enough to receive them
-      //    when the command queue is empty we can treat them as
-      //    server pushes, otherwise it is impossible to handle
-      //    them properly
-      //
-      // 3. The request does not expect any response but we got
-      //    one. This may happen if for example, subscribe with
-      //    wrong syntax.
-      //
-      // Useful links:
+      BOOST_ASSERT(!read_buffer_.empty());
+
+      // Useful links to understand the heuristics below.
       //
       // - https://github.com/redis/redis/issues/11784
       // - https://github.com/redis/redis/issues/6426
-      //
+      // - https://github.com/boostorg/redis/issues/170
 
-      BOOST_ASSERT(!read_buffer_.empty());
+      // The message's resp3 type is a push.
+      if (resp3::to_type(read_buffer_.front()) == resp3::type::push)
+         return true;
 
-      return
-         (resp3::to_type(read_buffer_.front()) == resp3::type::push)
-          || reqs_.empty()
-          || (!reqs_.empty() && reqs_.front()->expected_responses_ == 0)
-          || !is_waiting_response(); // Added to deal with MONITOR.
+      // This is non-push type and the requests queue is empty. I have
+      // noticed this is possible, for example with -MISCONF. I don't
+      // know why they are not sent with a push type so we can
+      // distinguish them from responses to commands. If we are lucky
+      // enough to receive them when the command queue is empty they
+      // can be treated as server pushes, otherwise it is impossible
+      // to handle them properly
+      if (reqs_.empty())
+         return true;
+
+      // The request does not expect any response but we got one. This
+      // may happen if for example, subscribe with wrong syntax.
+      if (reqs_.front()->expected_responses_ == 0)
+         return true;
+
+      // Added to deal with MONITOR and also to fix PR170 which
+      // happens under load and on low-latency networks, where we
+      // might start receiving responses before the write operation
+      // completed and the request is still maked as staged and not
+      // written.
+      return reqs_.front()->is_waiting();
    }
 
    auto get_suggested_buffer_growth() const noexcept
@@ -928,6 +932,7 @@ private:
       read_buffer_.clear();
       parser_.reset();
       on_push_ = false;
+      cancel_run_called_ = false;
    }
 
    asio::ssl::context ctx_;
@@ -949,6 +954,7 @@ private:
    reqs_type reqs_;
    resp3::parser parser_{};
    bool on_push_ = false;
+   bool cancel_run_called_ = false;
 
    usage usage_;
 };

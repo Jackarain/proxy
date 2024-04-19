@@ -257,7 +257,7 @@ const char *bug_data_pr7180_1 =
     "    ]\n"
     "}\n";
 const char *bug_data_pr7180_2 =
-    "{\"a\":[\"1\",\"2\"]}\n";
+    "{\"a\":[\"1\",\"2\"]}";
 
 struct ReadFunc
 {

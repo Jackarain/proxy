@@ -3655,8 +3655,7 @@ just must specify [boost::interprocess::map_index map_index] as a template param
             ,  boost::interprocess::map_index
             >  my_managed_shared_memory;
 
-[*Boost.Interprocess] plans to offer an *unordered_map* based index as soon as this
-container is included in Boost. If these indexes are not enough for you, you can define
+If these indexes are not enough for you, you can define
 your own index type. To know how to do this, go to
 [link interprocess.customizing_interprocess.custom_indexes Building custom indexes] section.
 
@@ -6823,6 +6822,27 @@ thank them:
 
 [section:release_notes Release Notes]
 
+[section:release_notes_boost_1_85_00 Boost 1.85 Release]
+
+*  Remove broken `unordered_map_index` class.
+*  Fix broken C+03 support due to several Boost libraries moving to C++11.
+
+[endsect]
+
+[section:release_notes_boost_1_83_00 Boost 1.83 Release]
+
+*  Fixed bugs:
+   * [@https://github.com/boostorg/interprocess/pull/188   GitHub #188 (['"Fix: emscripten doesn't support shm"])].
+
+[endsect]
+
+[section:release_notes_boost_1_82_00 Boost 1.82 Release]
+
+*  Fixed bugs:
+   * [@https://github.com/boostorg/interprocess/issues/195   GitHub #195 (['"namespace conflict on constructing objects in segment manager with named proxy in combination with boost geometry"])].
+
+[endsect]
+
 [section:release_notes_boost_1_80_00 Boost 1.80 Release]
 
 *  Fixed bugs:
@@ -7612,7 +7632,7 @@ shared memory, allocators and containers used to design [*Boost.Interprocess].
 
 * Instantiating C++ objects in shared memory: [@http://www.cs.ubc.ca/local/reading/proceedings/cascon94/htm/english/abs/hon.htm ['"Using objects in shared memory for C++ application"] ].
 
-* A shared memory allocator and relative pointer: [@http://home.earthlink.net/~joshwalker1/writing/SharedMemory.html ['"Taming Shared Memory"] ].
+* A shared memory allocator and relative pointer: [@https://web.archive.org/web/20050313052229/https://home.earthlink.net/~joshwalker1/writing/SharedMemory.html  ['"Taming Shared Memory"] ].
 
 [endsect]
 

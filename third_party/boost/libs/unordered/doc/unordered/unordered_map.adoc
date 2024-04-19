@@ -797,7 +797,9 @@ If an insert took place, then the iterator points to the newly inserted element.
 Throws:;; If an exception is thrown by an operation other than a call to `hasher` the function has no effect.
 Notes:;; Can invalidate iterators, but only if the insert causes the load factor to be greater to or equal to the maximum load factor. +
 +
-Pointers and references to elements are never invalidated.
+Pointers and references to elements are never invalidated. +
++
+If `args...` is of the form `k,v`, it delays constructing the whole object until it is certain that an element should be inserted, using only the `k` argument to check. This optimization happens when the map's `key_type` is move constructible or when the `k` argument is a `key_type`.
 
 ---
 
@@ -818,7 +820,9 @@ Notes:;; The standard is fairly vague on the meaning of the hint. But the only p
 +
 Can invalidate iterators, but only if the insert causes the load factor to be greater to or equal to the maximum load factor. +
 +
-Pointers and references to elements are never invalidated.
+Pointers and references to elements are never invalidated. +
++
+If `args...` is of the form `k,v`, it delays constructing the whole object until it is certain that an element should be inserted, using only the `k` argument to check. This optimization happens when the map's `key_type` is move constructible or when the `k` argument is a `key_type`.
 
 ---
 

@@ -14,7 +14,7 @@
 # ifndef BOOST_LIBS_PREPROCESSOR_REGRESSION_TEST_H
 # define BOOST_LIBS_PREPROCESSOR_REGRESSION_TEST_H
 #
-# include <libs/preprocessor/test/test_macro.h>
-# include <libs/preprocessor/test/test_main.h>
+# include "test_macro.h"
+#include "test_main.h"
 #
 # endif

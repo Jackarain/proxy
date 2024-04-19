@@ -1,5 +1,5 @@
 # Copyright (C) 2001-2003 Douglas Gregor
-# Copyright (C) Antony Polukhin, 2011-2023
+# Copyright (C) Antony Polukhin, 2011-2024
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -12,7 +12,7 @@ import ../../config/checks/config : requires ;
 
 project
     : requirements
-        [ requires cxx11_rvalue_references ]
+        [ requires cxx11_rvalue_references cxx11_static_assert cxx11_template_aliases ]
         <link>static
         <toolset>gcc-4.7:<cxxflags>-ftrapv
         <toolset>gcc-4.6:<cxxflags>-ftrapv
@@ -42,8 +42,16 @@ test-suite conversion
     [ run abstract_test.cpp ]
     [ run noncopyable_test.cpp ]
     [ run vc8_bug_test.cpp ]
+    [ run implicit_convert.cpp ]
     [ run wchars_test.cpp ]
     [ run float_types_test.cpp ]
+
+    # Make sure that LexicalCast works the same way as some of the C++ Standard Libraries
+    [ run float_types_test.cpp : : : <define>BOOST_LEXICAL_CAST_DETAIL_TEST_ON_OLD
+        <toolset>msvc:<build>no  # could have outdated behavior in some border cases
+        : float_types_non_opt
+    ]
+
     [ run inf_nan_test.cpp ]
     [ run containers_test.cpp : : : <toolset>gcc:<cxxflags>-Wno-long-long <toolset>clang:<cxxflags>-Wno-long-long ]
     [ run empty_input_test.cpp ]
@@ -54,9 +62,9 @@ test-suite conversion
     [ run no_exceptions_test.cpp : : : <exception-handling>off
         <define>_HAS_EXCEPTIONS=0 # MSVC stdlib
         <define>_STLP_NO_EXCEPTIONS # STLPort
-        -<library>/boost/test//boost_unit_test_framework # uses lightweight_test
     ]
     [ run iterator_range_test.cpp ]
+    [ run string_view_test.cpp ]
     [ run arrays_test.cpp : : :
         <toolset>msvc:<cxxflags>/wd4512 # assignment operator could not be generated
     ]
@@ -64,6 +72,7 @@ test-suite conversion
     [ run stream_detection_test.cpp ]
     [ run stream_traits_test.cpp ]
     [ compile-fail to_pointer_test.cpp ]
+    [ compile-fail from_volatile.cpp ]
     [ run filesystem_test.cpp ../../filesystem/build//boost_filesystem/<link>static ]
     [ run try_lexical_convert.cpp ]
   ;

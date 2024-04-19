@@ -8,14 +8,13 @@
 // file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#include <iostream>
 // back-end
 #include <boost/msm/back/state_machine.hpp>
 //front-end
 #include <boost/msm/front/state_machine_def.hpp>
 #include <boost/msm/front/euml/euml.hpp>
 #ifndef BOOST_MSM_NONSTANDALONE_TEST
-#define BOOST_TEST_MODULE MyTest
+#define BOOST_TEST_MODULE MyOrthogonalDeferredEumlTest
 #endif
 #include <boost/test/unit_test.hpp>
 
@@ -152,7 +151,7 @@ namespace
 
     //static char const* const state_names[] = { "Stopped", "Paused","Open", "Empty", "Playing" ,"AllOk","ErrorMode","ErrorTerminate" };
 
-    BOOST_AUTO_TEST_CASE( my_test )
+    BOOST_AUTO_TEST_CASE(MyOrthogonalDeferredEumlTest)
     {
         player p;
         // needed to start the highest-level SM. This will call on_entry and mark the start of the SM

@@ -256,13 +256,13 @@ struct C
   ~C() { delete contained_ ; }
 
   template<class InPlaceFactory>
-  void construct ( InPlaceFactory const& aFactory, boost::__in_place_factory_base__* )
+  void construct ( InPlaceFactory const& aFactory, const boost::__in_place_factory_base__* )
   {
     aFactory.template apply<X>(contained_);
   }
 
   template<class TypedInPlaceFactory>
-  void construct ( TypedInPlaceFactory const& aFactory, boost::__typed_in_place_factory_base__* )
+  void construct ( TypedInPlaceFactory const& aFactory, const boost::__typed_in_place_factory_base__* )
   {
     aFactory.apply(contained_);
   }

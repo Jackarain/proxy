@@ -1305,9 +1305,12 @@ Operation: loading of a <code>multi_index_container</code> <code>m'</code> from 
 input archive (XML archive) <code>ar</code>.
 
 <blockquote>
-<b>Requires:</b> Additionally to the general requirements, <code>key_eq()</code>
-must be serialization-compatible with <code>m.get&lt;i&gt;().key_eq()</code>,
-where <code>i</code> is the position of the hashed index in the container.<br>
+<b>Requires:</b> Additionally to the general requirements, the binary predicate
+<code><i>value_eq</i>(m'.get&lt;i&gt;())</code> must be serialization-compatible with
+<code><i>value_eq</i>(m.get&lt;i&gt;())</code>, where
+<code><i>value_eq</i>(c)(x,y)</code> is defined as
+<code>c.key_eq()(c.key_extractor()(x),c.key_extractor()(y))</code>
+and <code>i</code> is the position of the hashed index in the container.<br>
 <b>Postconditions:</b> On successful loading, the range 
 [<code>begin()</code>, <code>end()</code>) contains restored copies of every
 element in [<code>m.get&lt;i&gt;().begin()</code>, <code>m.get&lt;i&gt;().end()</code>),
@@ -1371,9 +1374,9 @@ Sequenced indices
 
 <br>
 
-<p>Revised August 30th 2021</p>
+<p>Revised March 15th 2024</p>
 
-<p>&copy; Copyright 2003-2021 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
+<p>&copy; Copyright 2003-2024 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
 Distributed under the Boost Software 
 License, Version 1.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">
 LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">

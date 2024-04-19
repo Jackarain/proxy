@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+# Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -160,10 +160,18 @@ SERVER_ERROR_TO_STRING_TEMPLATE='''
 #include <boost/mysql/detail/config.hpp>
 #include <boost/mysql/impl/internal/error/server_error_to_string.hpp>
 
+namespace boost {{
+namespace mysql {{
+namespace detail {{
+
 BOOST_MYSQL_STATIC_IF_COMPILED
 constexpr const char* common_error_messages[] = {{
 {common_entries}
 }};
+
+}} // namespace detail
+}} // namespace mysql
+}} // namespace boost
 
 const char* boost::mysql::detail::common_error_to_string(int v) noexcept
 {{
@@ -234,7 +242,8 @@ def parse_err_header(fname: Path) -> pd.DataFrame:
         x.startswith('ER_ERROR_FIRST') or
         x.startswith('ER_ERROR_LAST') or
         x == 'ER_LAST_MYSQL_ERROR_MESSAGE' or
-        x.startswith('ER_UNUSED')
+        x.startswith('ER_UNUSED') or
+        x.endswith('__UNUSED')
     ))]
     return df
 

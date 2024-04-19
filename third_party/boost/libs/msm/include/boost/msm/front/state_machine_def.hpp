@@ -14,8 +14,8 @@
 #include <exception>
 #include <boost/assert.hpp>
 
+#include <boost/fusion/include/vector.hpp>
 #include <boost/mpl/vector.hpp>
-
 #include <boost/msm/row_tags.hpp>
 #include <boost/msm/back/common_types.hpp>
 #include <boost/msm/front/states.hpp>
@@ -30,12 +30,12 @@ struct state_machine_def :  public boost::msm::front::detail::state_base<BaseSta
 {
     // tags
     // default: no flag
-    typedef ::boost::mpl::vector0<>               flag_list;
-    typedef ::boost::mpl::vector0<>               internal_flag_list;
+    typedef ::boost::fusion::vector0<>               flag_list;
+    typedef ::boost::fusion::vector0<>               internal_flag_list;
     //default: no deferred events
-    typedef ::boost::mpl::vector0<>               deferred_events;
+    typedef ::boost::fusion::vector0<>               deferred_events;
     // customization (message queue, exceptions)
-    typedef ::boost::mpl::vector0<>               configuration;
+    typedef ::boost::fusion::vector0<>               configuration;
 
     typedef BaseState                             BaseAllStates;
     template<

@@ -18,18 +18,11 @@
 //
 
 #include <boost/mem_fn.hpp>
+#include <boost/core/lightweight_test.hpp>
 
-#if defined(BOOST_MSVC) && (BOOST_MSVC < 1300)
-#pragma warning(push, 3)
+#if defined(BOOST_CLANG_VERSION) && BOOST_CLANG_VERSION >= 130000
+# pragma clang diagnostic ignored "-Wunused-but-set-variable"
 #endif
-
-#include <iostream>
-
-#if defined(BOOST_MSVC) && (BOOST_MSVC < 1300)
-#pragma warning(pop)
-#endif
-
-#include <boost/detail/lightweight_test.hpp>
 
 struct X
 {

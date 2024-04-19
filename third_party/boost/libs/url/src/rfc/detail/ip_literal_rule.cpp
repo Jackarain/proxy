@@ -13,12 +13,12 @@
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/rfc/ipv6_address_rule.hpp>
-#include <boost/url/rfc/detail/ip_literal_rule.hpp>
-#include <boost/url/rfc/detail/ipv6_addrz_rule.hpp>
+#include "ip_literal_rule.hpp"
+#include "ipv6_addrz_rule.hpp"
 #include <boost/url/grammar/delim_rule.hpp>
 #include <boost/url/grammar/parse.hpp>
 #include <boost/url/grammar/tuple_rule.hpp>
-#include <boost/url/rfc/detail/ipvfuture_rule.hpp>
+#include "ipvfuture_rule.hpp"
 
 namespace boost {
 namespace urls {

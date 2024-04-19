@@ -17,7 +17,7 @@
 #ifndef PREPARE_STEPPER_TESTING_HPP_
 #define PREPARE_STEPPER_TESTING_HPP_
 
-#include <boost/array.hpp>
+#include <array>
 #include <vector>
 #include <complex>
 
@@ -38,11 +38,11 @@ using namespace boost::numeric::odeint;
 typedef std::vector< double > vector_type;
 typedef std::vector< std::complex<double> > complex_vector_type;
 typedef double vector_space_type;
-typedef boost::array< double , 1 > array_type;
-typedef boost::array< std::complex<double> , 1 > complex_array_type;
+typedef std::array< double , 1 > array_type;
+typedef std::array< std::complex<double> , 1 > complex_array_type;
 
 typedef boost::multiprecision::cpp_dec_float_50 mp_type;
-typedef boost::array< mp_type , 1 > mp_array_type;
+typedef std::array< mp_type , 1 > mp_array_type;
 
 typedef mpl::vector< vector_type , complex_vector_type , vector_space_type ,
                      array_type , complex_array_type , mp_type , mp_array_type

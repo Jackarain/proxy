@@ -12,6 +12,10 @@
 #include "test.hpp"
 #include "check_integral_constant.hpp"
 
+#ifndef BOOST_NO_CXX23_HDR_STDFLOAT
+#include <stdfloat>
+#endif
+
 TT_TEST_BEGIN(is_pod)
 
 BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<bool>::value, true);
@@ -186,12 +190,38 @@ BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<boost::uint128_type>::value, true);
 BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<boost::float128_type>::value, true);
 #endif
 
+#ifndef BOOST_NO_CXX23_HDR_STDFLOAT
+#if defined(__STDCPP_FLOAT16_T__)
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<std::float16_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<const std::float16_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<volatile std::float16_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<const volatile std::float16_t>::value, true);
+#endif
+#if defined(__STDCPP_FLOAT32_T__)
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<std::float32_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<const std::float32_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<volatile std::float32_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<const volatile std::float32_t>::value, true);
+#endif
+#if defined(__STDCPP_FLOAT64_T__)
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<std::float32_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<const std::float32_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<volatile std::float32_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<const volatile std::float32_t>::value, true);
+#endif
+#if defined(__STDCPP_FLOAT128_T__)
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<std::float128_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<const std::float128_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<volatile std::float128_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<const volatile std::float128_t>::value, true);
+#endif
+#if defined(__STDCPP_BFLOAT16_T__)
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<std::bfloat16_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<const std::bfloat16_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<volatile std::bfloat16_t>::value, true);
+BOOST_CHECK_INTEGRAL_CONSTANT(::tt::is_pod<const volatile std::bfloat16_t>::value, true);
+#endif
+#endif
+
 TT_TEST_END
-
-
-
-
-
-
-
 

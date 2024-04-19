@@ -414,23 +414,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-20.04
-            shared: OFF
-          - os: ubuntu-20.04
-            shared: ON
-          - os: ubuntu-22.04
-            shared: OFF
-          - os: ubuntu-22.04
-            shared: ON
-          - os: macos-11
-            shared: OFF
-          - os: macos-11
-            shared: ON
-          - os: macos-12
-            shared: OFF
-          - os: macos-12
-            shared: ON
+        os: [ ubuntu-20.04, ubuntu-22.04, macos-11, macos-12, macos-13 ]
+        shared: [ ON, OFF ]
 
     runs-on: ${{matrix.os}}
 
@@ -506,6 +491,9 @@ jobs:
           - os: macos-12
             include: timer
             shared: ON
+          - os: macos-13
+            include: timer
+            shared: ON
 
     runs-on: ${{matrix.os}}
 
@@ -542,3 +530,46 @@ jobs:
         run: |
           cd ../boost-root/__build__
           cmake --build . --target check
+
+  posix-check-quick:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-20.04, ubuntu-22.04, macos-11, macos-12, macos-13 ]
+        shared: [ ON, OFF ]
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install packages
+        if: matrix.install
+        run: sudo apt install ${{matrix.install}}
+
+      - name: Setup Boost
+        run: |
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          git submodule update --init --jobs 3
+          rm -rf tools/cmake/*
+          cp -r $GITHUB_WORKSPACE/* tools/cmake
+
+      - name: Configure Boost
+        run: |
+          cd ../boost-root
+          mkdir __build__ && cd __build__
+          cmake -DBoost_VERBOSE=${{matrix.verbose}} -DBUILD_TESTING=ON -DBUILD_SHARED_LIBS=${{matrix.shared}} ..
+
+      - name: Test Boost
+        run: |
+          cd ../boost-root/__build__
+          cmake --build . --target check-quick

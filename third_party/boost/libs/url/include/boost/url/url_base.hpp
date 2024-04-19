@@ -2696,6 +2696,13 @@ public:
         this URL are unspecified and a @ref result
         with an `system::error_code` is returned.
 
+        @note Abnormal hrefs where the number of ".."
+        segments exceeds the number of segments in
+        the base path are handled by including the
+        unmatched ".." segments in the result, as described
+        in <a href="https://www.rfc-editor.org/errata/eid4547"
+        >Errata 4547</a>.
+
         @par Example
         @code
         url base1( "/one/two/three" );
@@ -2839,6 +2846,13 @@ private:
 
     If an error occurs, the contents of
     `dest` is unspecified and `ec` is set.
+
+    @note Abnormal hrefs where the number of ".."
+    segments exceeds the number of segments in
+    the base path are handled by including the
+    unmatched ".." segments in the result, as described
+    in <a href="https://www.rfc-editor.org/errata/eid4547"
+    >Errata 4547</a>.
 
     @par Example
     @code

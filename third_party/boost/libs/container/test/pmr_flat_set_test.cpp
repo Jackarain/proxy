@@ -9,7 +9,6 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include <boost/container/pmr/flat_set.hpp>
-#include <boost/static_assert.hpp>
 #include <boost/container/detail/type_traits.hpp>
 
 int main()
@@ -18,9 +17,9 @@ int main()
    using boost::container::dtl::is_same;
 
    typedef flat_set<int, std::less<int>, pmr::polymorphic_allocator<int> > intcontainer_t;
-   BOOST_STATIC_ASSERT(( is_same<intcontainer_t, pmr::flat_set_of<int>::type >::value ));
+   BOOST_CONTAINER_STATIC_ASSERT(( is_same<intcontainer_t, pmr::flat_set_of<int>::type >::value ));
    #if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
-      BOOST_STATIC_ASSERT(( is_same<intcontainer_t, pmr::flat_set<int> >::value ));
+      BOOST_CONTAINER_STATIC_ASSERT(( is_same<intcontainer_t, pmr::flat_set<int> >::value ));
    #endif
    return 0;
 }

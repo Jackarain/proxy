@@ -1,0 +1,460 @@
+= Testing B2
+:copyright: Copyright 2023 René Ferdinand Rivera Morell; Copyright 2002-2005 Vladimir Prus; Copyright 2008 Jurko Gospodnetic
+:author_1: René Ferdinand Rivera Morell
+:author_2: Vladimir Prus
+:author_3: Jurko Gospodnetic
+:toc: left
+:sectanchors:
+:sectnums:
+:nofooter:
+:stylesheet: amber.css
+
+
+== Introduction for users
+
+The testing system for B2 is a small set of Python modules and scripts for
+automatically testing user-observable behavior. It uses components from testing
+systems of SCons and Subversion, together with some additional functionality.
+
+To run the tests you need to:
+
+. Get the source tree of B2
+. Have http://www.python.org/[Python 3] installed. Prior versions are no longer
+  compatible.
+. Build the B2 engine.
+. Configure at least one toolset. You can edit `site-config.jam` or
+  `user-config.jam` to add new toolsets. Or you can create file
+  `test-config.jam` in `test` directory. In this case, `site-config.jam` and
+  `user-config.jam` will be ignored for testing.
+. Make sure that in the configuration jam file(s) that you use you generate no
+  console output, ie. with the B2 `ECHO` rule. Such console output in the
+  configuration jam file(s) will cause a number of tests to automatically fail
+  which would otherwise succeed.
+
+When all is set, you can run all the tests using the `test_all.py` script or
+you can run a specific test by starting its Python script directly.
+
+Examples:
+
+[source,shell]
+----
+./test_all.py
+./generators_test.py
+----
+
+or
+
+[source,shell]
+----
+python3 test_all.py
+python3 generators_test.py
+----
+
+If everything is OK, you will see a list of passed tests. Otherwise, a failure
+will be reported.
+
+=== Command line options
+
+Test scripts will use the toolset you configured to be the default or you can
+specify a specific one on the command line:
+
+[source,shell]
+----
+python3 test_all.py borland
+python3 generators_test.py msvc-7.1
+----
+
+Other test script flags you can specify on the command line are:
+
+`--default-bjam`::
+By default the test system will use the Boost Jam executable found built in its
+default development build location. This option makes it use the default one
+available on your system, i.e. the one found in the system path.
+
+`--preserve`::
+In case of a failed test its working directory will be copied to the
+"failed_test" directory under the current directory.
+
+`--verbose`::
+Makes the test system and the run build system display additional output. Note
+though that this may cause tests that check the build system output to fail.
+
+
+== Introduction for developers
+
+It is suggested that every new functionality come together with tests, and that
+bugfixes are accompanied by tests. There's no need to say that tests are good,
+but two points are extremely important:
+
+* For an interpreted language like Jam, without any static checks, testing is
+  simply the only safeguard we can have.
+
+* Good tests allow us to change internal design much more safely, and we have
+  not gotten everything nailed down yet.
+
+Adding a new test is simple:
+
+. Go to `test/test_all.py` and add new test name to the list at the end of the
+  file. Suppose the test name is "hello".
+. Add a new python module, in this example "hello.py", to do the actual testing.
+
+The module, in general will perform these basic actions:
+
+. Set up the initial working directory state
+. Run the build system and check the results:
+.. generated output,
+.. changes made to the working directory,
+.. new content of the working directory.
+. Add, remove or touch files or change their content and then repeat the
+  previous step until satisfied.
+. Clean up
+
+The "hello.py" module might contain:
+
+[source,python]
+----
+from BoostBuild import List
+
+# Create a temporary working directory
+t = BoostBuild.Tester()
+
+# Create the needed files
+t.write("jamroot.jam", "")
+t.write("jamfile.jam", """
+exe hello : hello.cpp ;
+""")
+t.write("hello.cpp", """
+int main()
+{
+    return 0;
+}
+
+""")
+
+t.run_build_system()
+
+# First, create a list of three pathnames.
+file_list = List("bin/$toolset/debug/") * List("hello.exe hello.obj")
+# Second, assert that those files were added as result of the last build system invocation.
+t.expect_addition(file_list)
+
+# Invoke the build system once again.
+t.run_build_system("clean")
+# Check if the files added previously were removed.
+t.expect_removal(file_list)
+
+# Remove temporary directories
+t.cleanup()
+----
+
+The test directory contains a file "template.py" which can be used as a start
+for your own tests.
+
+Overview of the most important methods of class `Tester` follows.
+
+=== Changing the working directory
+
+The class `Tester` creates a temporary directory in its constructor and changes
+to that directory. It can be modified by calling these methods:
+
+`set_tree`::
+sets the content of the working directory to be equal to the content of the
+specified directory. This method is preferable when directory tree for testing
+is large.
+
+`write`::
+sets the content of file in a working directory. This is optimal if you want to
+create a directory tree with 3-4 small files.
+
+`touch`::
+changes the modification times of a file
+
+=== Examining the working directory and changing it
+
+The method read, inherited from the `TestCmd` class, can be used to read any
+file in the working directory and check its content. `Tester` adds another
+method for tracking changes. Whenever the build system is run (using
+<<run_build_system>> ), the working dir state before and after running is
+recorded. In addition, difference between the two states -- i.e. lists of files
+that were added, removed, modified or touched -- are stored in two member
+variables - `tree_difference` and `unexpected_difference`.
+
+After than, the test author may specify that some change is expected, for
+example, by calling `expect_addition("foo")`. This call will check if the file
+was indeed added, and if so, will remove its name from the list of added files
+in `unexpected_difference`. Likewise, it is possible to specify that some
+changes are not interesting, for example a call to `ignore("*.obj")` will just
+remove every file with the ".obj" extension from `unexpected_difference`.
+
+When test has finished with expectations and ignoring, the member
+`unexpected_difference` will contain the list of all changes not yet accounted
+for. It is possible to assure that this list is empty by calling the
+`expect_nothing_more` member function.
+
+=== Test result
+
+Any of the `expect*` methods below will fail the test if the expectation is not
+met. It is also possible to perform manually arbitrary test and explicitly
+cause the test to either pass or fail. Ordinary filesystem functions can be
+used to work with the directory tree. Methods `pass_test` and `fail_test` are
+used to explicitly give the test outcome.
+
+Typically, after test termination, the working directory is erased. See the
+"--preserve" command line option for information on how to preserve the working
+directory content for failed tests for debugging purposes.
+
+== Reference documentation
+
+The test system is composed of class `Tester`, derived form `TestCmd.TestCmd`,
+and helper class List. `Tester` and `List` methods are described below.
+
+The documentation frequently refers to `filename`. In all cases, files are
+specified in unix style: a sequence of components, separated by "/". This is
+true on all platforms. In some contexts a list of files is allowed. In those
+cases any object with a sequence interface is allowed.
+
+[#__init__,reftext=__init__]
+=== `__init__(self, arguments="", executable="bjam", match=TestCmd.match_exact, boost_build_path=None, translate_suffixes=True, pass_toolset=True, use_test_config=True, ignore_toolset_requirements=True, workdir="", **keywords)`
+
+*Optional arguments*:
+
+`arguments`:: Arguments passed to the run executable.
+
+`executable`:: Name of the executable to invoke.
+
+`match`:: Function to use for comparing actual and expected file contents.
+
+`boost_build_path`:: Boost build path to be passed to the run executable.
+
+`translate_suffixes`:: Whether to update suffixes on the the file names passed
+from the test script so they match those actually created by the current
+toolset. For example, static library files are specified by using the `.lib`
+suffix but when the `gcc` toolset is used it actually creates them using the
+`.a` suffix.
+
+`pass_toolset`:: Whether the test system should pass the specified toolset to
+the run executable.
+
+`use_test_config`:: Whether the test system should tell the run executable to
+read in the `test_config.jam` configuration file.
+
+`ignore_toolset_requirements`:: Whether the test system should tell the run
+executable to ignore toolset requirements.
+
+`workdir`:: Indicates an absolute directory where the test will be run from.
+
+*Optional arguments inherited from the base class*:
+
+`description`:: Test description string displayed in case of a failed test.
+
+`subdir`:: List of subdirectories to automatically create under the working
+directory. Each subdirectory needs to be specified separately parent coming
+before its child.
+
+`verbose`:: Flag that may be used to enable more verbose test system output.
+Note that it does not also enable more verbose build system output like the
+"--verbose" command line option does.
+
+*Effects*:
+
+. Remembers the current working directory in member `original_workdir`.
+. Determines the location of the executable (`b2` by default) and build system
+  files, assuming that the current directory is `test`. Formulates `b2`
+  invocation command, which will include explicit setting for the
+  `BOOST_BUILD_PATH` variable and arguments passed to this methods, if any.
+  This command will be used by subsequent invocation of <<run_build_system>>.
+  Finally, initializes the base class.
+. Changes the current working directory to the temporary working directory
+  created by the base constructor.
+. If you want to run a test in an existing directory, pass it as `workdir`.
+. Most parameters passed to this constructor function may be overruled for each
+  specific test system run using <<run_build_system>> parameters.
+
+[#set_tree,reftext=set_tree]
+=== `set_tree(self, tree_location)`
+
+*Effects*:
+
+Replaces the content of the current working directory with the content of
+directory at `tree_location`. If `tree_location` is not absolute pathname, it
+will be treated as relative to `self.original_workdir`. This methods also
+explicitly makes the copied files writeable.
+
+[#write,reftext=write]
+=== `write(self, name, content)`
+
+*Effects*:
+
+Writes the specified `content` to the file given by `name` under the temporary
+working directory. If the file already exists, it is overwritten. Any required
+directories are automatically created.
+
+[#copy,reftext=copy]
+=== `copy(self, src, dst)`
+
+*Effects*:
+
+Equivalent to `self.write(self.read(src), dst)`.
+
+[#touch,reftext=touch]
+=== `touch(self, names)`
+
+*Effects*:
+
+Sets the access and modification times for all files in `names` to the current
+time. All the elements in `names` should be relative paths.
+
+[#run_build_system,reftext=run_build_system]
+=== `run_build_system(self, extra_args="", subdir="", stdout=None, stderr="", status=0, match=None, pass_toolset=None, use_test_config=None, ignore_toolset_requirements=None, expected_duration=None, **kw)`
+
+*Effects*:
+
+. Stores the state of the working directory in `self.previous_tree`.
+. Changes to `subdir`, if it is specified. It is relative to the
+  `original_workdir` or the workdir specified in `__init`.
+. Invokes the `b2` executable, passing `extra_args` to it. The binary should be
+  located under `<test_invocation_dir>/../src/engine`. This is to make sure
+  tests use the version of `b2` build from source.
+. Compares the `stdout`, `stderr` and exit status of build system invocation
+  with values to appropriate parameters, if they are not `None`. If any
+  difference is found, the test fails.
+. If the `expected_duration` parameter is specified then it represents the
+  maximal allowed time in seconds for the test to run. The test will be marked
+  as failed if its duration is greater than the given `expected_duration`
+  parameter value.
+. Stores the new state of the working directory in `self.tree`. Computes the
+  difference between previous and current trees and stores them in variables
+  `self.tree_difference` and `self.unexpected_difference`. Both variables are
+  instances of class `tree.Trees_different`, which have four attributes:
+  `added_files`, `removed_files`, `modified_files` and `touched_files`. Each is
+  a list of strings.
+
+[#read,reftext=read]
+=== `read(self, name)`
+
+*Effects*:
+
+Read the specified file and returns it content. Raises an exception is the file
+is absent.
+
+[#read_and_strip,reftext=read_and_strip]
+=== `read_and_strip(self, name)`
+
+*Effects*:
+
+Read the specified file and returns it content, after removing trailing
+whitespace from every line. Raises an exception is the file is absent.
+
+*Rationale*:
+
+Although this method is questionable, there are a lot of cases when `b2` or
+shells it uses insert spaces. It seems that introducing this method is much
+simpler than dealing with all those cases.
+
+=== Methods for declaring expectations
+
+Accordingly to the number of changes kinds that are detected, there are four
+methods that specify that test author expects a specific change to occur. They
+check `self.unexpected_difference`, and if the change is present there, it is
+removed. Otherwise, test fails.
+
+Each method accepts a list of names. Those names use / path separator on all
+systems. Additionally, the test system translates suffixes appropriately. For
+the test to be portable, suffixes should use Windows convention: `exe` for
+executables, `dll` for dynamic libraries and `lib` for static libraries.
+Lastly, the string "$toolset" in file names is replaced by the name of tested
+toolset.
+
+NOTE: The List helper class might be useful to create lists of names.
+
+NOTE: The file content can be examined using the `TestCmd.read` function.
+
+The members are:
+
+* `expect_addition`
+* `expect_removal`
+* `expect_modification`
+* `expect_nothing`
+
+Note that `expect_modification` is used to check that a either file content or
+timestamp has changed. The rationale is that some compilers change content even
+if sources does not change, and it's easier to have a method which checks for
+both content and time changes.
+
+There's also a member `expect_nothing_more`, which checks that all the changes
+are either expected or ignored, in other words that `unexpected_difference` is
+empty by now.
+
+Lastly, there's a method to compare file content with expected content:
+
+`expect_content(self, name, content, exact=0)`
+
+The method fails the test if the content of file identified by `name` is
+different from `content`. If `exact` is true, the file content is used as-is,
+otherwise, two transformations are applied:
+
+* The `read_and_strip` method is used to read the file, which removes trailing
+  whitespace
+* Each backslash in the file content is converted to forward slash.
+
+=== Methods for ignoring changes
+
+There are five methods which ignore changes made to the working tree. They
+silently remove elements from `self.unexpected_difference`, and don't generate
+error if element is not found. They accept shell style wildcard.
+
+The following methods correspond to four kinds of changes:
+
+* `ignore_addition(self, wildcard)`
+* `ignore_removal(self, wildcard)`
+* `ignore_modification(self, wildcard)`
+* `ignore_touch(self, wildcard)`
+
+The method `ignore(self, wildcard)` ignores all the changes made to files that
+match a wildcard.
+
+=== Methods for explicitly specifying results
+
+==== `pass_test(self, condition=1)`
+
+WARNING: At this moment, the method should not be used.
+
+==== `fail_test(self, condition=1)`
+
+*Effects*: Cause the test to fail if `condition` is true.
+
+=== Helper class List
+
+The class has sequence interface and two additional methods.
+
+==== `__init__(self, string)`
+
+*Effects*: Splits the `string` on unescaped spaces and tabs. The split
+components can further be retrieved using standard sequence access.
+
+==== `__mul__(self, other)`
+
+*Effects*: Returns an `List` instance, which elements are all possible
+concatenations of two string, first of which is from `self`, and second of
+which is from `other`.
+
+The class also defines `+__str__+` and `+__repr__+` methods. Finally, there's
+`+__coerce__+` method which allows to convert strings to instances of List.
+
+Example:
+
+[source,python]
+----
+l = "a b" * List("c d")
+for e in l:
+    print e
+----
+
+will output:
+
+----
+ac
+ad
+bc
+bd
+----

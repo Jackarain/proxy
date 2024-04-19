@@ -6,17 +6,8 @@
 #include <boost/system/error_category.hpp>
 #include <boost/system/errc.hpp>
 #include <boost/core/lightweight_test.hpp>
-#include <boost/config/pragma_message.hpp>
 #include <boost/config.hpp>
 #include <cerrno>
-
-#if !defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
-
-BOOST_PRAGMA_MESSAGE( "BOOST_SYSTEM_HAS_SYSTEM_ERROR not defined, test will be skipped" )
-int main() {}
-
-#else
-
 #include <system_error>
 
 enum my_errc
@@ -28,12 +19,12 @@ class my_category: public boost::system::error_category
 {
 public:
 
-    char const* name() const BOOST_NOEXCEPT
+    char const* name() const noexcept
     {
         return "mycat";
     }
 
-    boost::system::error_condition default_error_condition( int ev ) const BOOST_NOEXCEPT
+    boost::system::error_condition default_error_condition( int ev ) const noexcept
     {
         switch( ev )
         {
@@ -123,5 +114,3 @@ int main()
 
     return boost::report_errors();
 }
-
-#endif

@@ -8,7 +8,8 @@
  *  Copyright 2022 René Ferdinand Rivera Morell
  *  Copyright 2001-2004 David Abrahams.
  *  Distributed under the Boost Software License, Version 1.0.
- *  (See accompanying file LICENSE.txt or https://www.bfgroup.xyz/b2/LICENSE.txt)
+ *  (See accompanying file LICENSE.txt or
+ * https://www.bfgroup.xyz/b2/LICENSE.txt)
  */
 
 /*
@@ -44,19 +45,19 @@ typedef struct _action ACTION;
 typedef struct _actions ACTIONS;
 typedef struct _settings SETTINGS;
 
-typedef RULE* rule_ptr;
-typedef TARGET* target_ptr;
-typedef TARGETS* targets_ptr;
-typedef ACTION* action_ptr;
-typedef ACTIONS* actions_ptr;
-typedef SETTINGS* settings_ptr;
+typedef RULE * rule_ptr;
+typedef TARGET * target_ptr;
+typedef TARGETS * targets_ptr;
+typedef ACTION * action_ptr;
+typedef ACTIONS * actions_ptr;
+typedef SETTINGS * settings_ptr;
 
-typedef RULE& rule_ref;
-typedef TARGET& target_ref;
-typedef TARGETS& targets_ref;
-typedef ACTION& action_ref;
-typedef ACTIONS& actions_ref;
-typedef SETTINGS& settings_ref;
+typedef RULE & rule_ref;
+typedef TARGET & target_ref;
+typedef TARGETS & targets_ref;
+typedef ACTION & action_ref;
+typedef ACTIONS & actions_ref;
+typedef SETTINGS & settings_ref;
 
 using rule_uptr = b2::jam::unique_jptr<_rule>;
 using target_uptr = b2::jam::unique_jptr<_target>;
@@ -68,11 +69,12 @@ using settings_uptr = b2::jam::unique_jptr<_settings>;
 /* RULE - a generic jam rule, the product of RULE and ACTIONS. */
 
 /* Build actions corresponding to a rule. */
-struct rule_actions {
-    int reference_count;
-    function_ptr command; /* command string from ACTIONS */
-    list_ptr bindlist;
-    int flags; /* modifiers on ACTIONS */
+struct rule_actions
+{
+	int reference_count;
+	function_ptr command; /* command string from ACTIONS */
+	list_ptr bindlist;
+	int flags; /* modifiers on ACTIONS */
 };
 
 #define RULE_NEWSRCS 0x01 /* $(>) is updated sources only */
@@ -82,82 +84,88 @@ struct rule_actions {
 #define RULE_PIECEMEAL 0x10 /* split exec so each $(>) is small */
 #define RULE_EXISTING 0x20 /* $(>) is pre-existing sources only */
 
-typedef struct rule_actions* rule_actions_ptr;
+typedef struct rule_actions * rule_actions_ptr;
 
-struct _rule {
-    object_ptr name;
-    function_ptr procedure;
-    rule_actions_ptr actions; /* build actions, or NULL for no actions */
-    module_ptr module; /* module in which this rule is executed */
-    int exported; /* nonzero if this rule is supposed to appear in
-                   * the global module and be automatically
-                   * imported into other modules
-                   */
+struct _rule
+{
+	b2::value_ptr name;
+	function_ptr procedure;
+	rule_actions_ptr actions; /* build actions, or NULL for no actions */
+	module_ptr module; /* module in which this rule is executed */
+	int exported; /* nonzero if this rule is supposed to appear in
+				   * the global module and be automatically
+				   * imported into other modules
+				   */
 };
 
 /* ACTIONS - a chain of ACTIONs. */
-struct _actions {
-    actions_ptr next;
-    actions_ptr tail; /* valid only for head */
-    action_ptr action;
+struct _actions
+{
+	actions_ptr next;
+	actions_ptr tail; /* valid only for head */
+	action_ptr action;
 };
 
 /* ACTION - a RULE instance with targets and sources. */
-struct _action {
-    rule_ptr rule;
-    targets_uptr targets;
-    targets_uptr sources; /* aka $(>) */
-    char running; /* has been started */
+struct _action
+{
+	rule_ptr rule;
+	targets_uptr targets;
+	targets_uptr sources; /* aka $(>) */
+	char running; /* has been started */
 #define A_INIT 0
 #define A_RUNNING_NOEXEC 1
 #define A_RUNNING 2
-    int refs;
+	int refs;
 
-    /* WARNING: These variables are used to pass state required by make1cmds and
-     * are not valid anywhere else.
-     */
-    void* first_cmd; /* Pointer to the first CMD created by this action */
-    void* last_cmd; /* Pointer to the last CMD created by this action */
+	/* WARNING: These variables are used to pass state required by make1cmds and
+	 * are not valid anywhere else.
+	 */
+	void * first_cmd; /* Pointer to the first CMD created by this action */
+	void * last_cmd; /* Pointer to the last CMD created by this action */
 };
 
 /* SETTINGS - variables to set when executing a TARGET's ACTIONS. */
-struct _settings {
-    settings_ptr next;
-    object_ptr symbol; /* symbol name for var_set() */
-    list_ptr value; /* symbol value for var_set() */
+struct _settings
+{
+	settings_ptr next;
+	b2::value_ptr symbol; /* symbol name for var_set() */
+	list_ptr value; /* symbol value for var_set() */
 };
 
 /* TARGETS - a chain of TARGETs. */
-struct _targets {
-    targets_uptr next = nullptr;
-    targets_ptr tail = nullptr; /* valid only for head */
-    target_ptr target = nullptr;
+struct _targets
+{
+	targets_uptr next = nullptr;
+	targets_ptr tail = nullptr; /* valid only for head */
+	target_ptr target = nullptr;
 
-    ~_targets()
-    {
-        targets_uptr sink = std::move(next);
-        while ( sink ) sink = std::move(sink->next);
-    }
+	~_targets()
+	{
+		targets_uptr sink = std::move(next);
+		while (sink) sink = std::move(sink->next);
+	}
 };
 
 /* TARGET - an entity (e.g. a file) that can be built. */
-struct _target {
-    object_ptr name;
-    object_ptr boundname; /* if search() relocates target */
-    actions_ptr actions; /* rules to execute, if any */
-    settings_ptr settings; /* variables to define */
+struct _target
+{
+	b2::value_ptr name;
+	b2::value_ptr boundname; /* if search() relocates target */
+	actions_ptr actions; /* rules to execute, if any */
+	settings_ptr settings; /* variables to define */
 
-    targets_uptr depends; /* dependencies */
-    targets_uptr dependants; /* the inverse of dependencies */
-    targets_uptr rebuilds; /* targets that should be force-rebuilt
-                            * whenever this one is
-                            */
-    target_ptr includes; /* internal includes node */
+	targets_uptr depends; /* dependencies */
+	targets_uptr dependants; /* the inverse of dependencies */
+	targets_uptr rebuilds; /* targets that should be force-rebuilt
+							* whenever this one is
+							*/
+	target_ptr includes; /* internal includes node */
 
-    timestamp time; /* update time */
-    timestamp leaf; /* update time of leaf sources */
+	timestamp time; /* update time */
+	timestamp leaf; /* update time of leaf sources */
 
-    short flags; /* status info */
+	short flags; /* status info */
 
 #define T_FLAG_TEMP 0x0001 /* TEMPORARY applied */
 #define T_FLAG_NOCARE 0x0002 /* NOCARE applied */
@@ -187,16 +195,16 @@ struct _target {
 
 #define T_FLAG_PRECIOUS 0x0800
 
-    char binding; /* how target relates to a real file or
-                   * folder
-                   */
+	char binding; /* how target relates to a real file or
+				   * folder
+				   */
 
 #define T_BIND_UNBOUND 0 /* a disembodied name */
 #define T_BIND_MISSING 1 /* could not find real file */
 #define T_BIND_PARENTS 2 /* using parent's timestamp */
 #define T_BIND_EXISTS 3 /* real file, timestamp valid */
 
-    char fate; /* make0()'s diagnosis */
+	char fate; /* make0()'s diagnosis */
 
 #define T_FATE_INIT 0 /* nothing done to target */
 #define T_FATE_MAKING 1 /* make0(target) on stack */
@@ -219,7 +227,7 @@ struct _target {
 #define T_FATE_CANTFIND 11 /* no rules to make missing target */
 #define T_FATE_CANTMAKE 12 /* can not find dependencies */
 
-    char progress; /* tracks make1() progress */
+	char progress; /* tracks make1() progress */
 
 #define T_MAKE_INIT 0 /* make1(target) not yet called */
 #define T_MAKE_ONSTACK 1 /* make1(target) on stack */
@@ -232,32 +240,33 @@ struct _target {
 #define T_MAKE_SEMAPHORE 5 /* Special target type for semaphores */
 #endif
 
-    char status; /* exec_cmd() result */
+	char status; /* exec_cmd() result */
 
 #ifdef OPT_SEMAPHORE
-    target_ptr semaphore; /* used in serialization */
+	target_ptr semaphore; /* used in serialization */
 #endif
 
-    int asynccnt; /* child deps outstanding */
-    targets_uptr parents; /* used by make1() for completion */
-    target_ptr scc_root; /* used by make to resolve cyclic includes
-                          */
-    target_ptr rescanning; /* used by make0 to mark visited targets
-                            * when rescanning
-                            */
-    int depth; /* The depth of the target in the make0
-                * stack.
-                */
-    char* cmds; /* type-punned command list */
+	int asynccnt; /* child deps outstanding */
+	targets_uptr parents; /* used by make1() for completion */
+	target_ptr scc_root; /* used by make to resolve cyclic includes
+						  */
+	target_ptr rescanning; /* used by make0 to mark visited targets
+							* when rescanning
+							*/
+	int depth; /* The depth of the target in the make0
+				* stack.
+				*/
+	char * cmds; /* type-punned command list */
 
-    char const* failed;
+	char const * failed;
 };
 
 /* Action related functions. */
 void action_free(action_ptr);
 actions_ptr actionlist(actions_ptr, action_ptr);
 void freeactions(actions_ptr);
-settings_ptr addsettings(settings_ptr, int flag, object_ptr symbol, list_ptr value);
+settings_ptr addsettings(
+	settings_ptr, int flag, b2::value_ptr symbol, list_ptr value);
 void pushsettings(module_ptr, settings_ptr);
 void popsettings(module_ptr, settings_ptr);
 settings_ptr copysettings(settings_ptr);
@@ -266,29 +275,63 @@ void actions_refer(rule_actions_ptr);
 void actions_free(rule_actions_ptr);
 
 /* Rule related functions. */
-rule_ptr bindrule(object_ptr rulename, module_ptr);
-rule_ptr import_rule(rule_ptr source, module_ptr, object_ptr name);
+rule_ptr find_rule(b2::value_ptr rulename, module_ptr m);
+rule_ptr bindrule(b2::value_ptr rulename, module_ptr);
+rule_ptr import_rule(rule_ptr source, module_ptr, b2::value_ptr name);
 void rule_localize(rule_ptr rule, module_ptr module);
-rule_ptr new_rule_body(module_ptr, object_ptr rulename, function_ptr func, int exprt);
-rule_ptr new_rule_actions(module_ptr, object_ptr rulename, function_ptr command, list_ptr bindlist, int flags);
+rule_ptr new_rule_body(
+	module_ptr, b2::value_ptr rulename, function_ptr func, int exprt);
+rule_ptr new_rule_actions(module_ptr,
+	b2::value_ptr rulename,
+	function_ptr command,
+	list_ptr bindlist,
+	int flags);
 void rule_free(rule_ptr);
 
 /* Target related functions. */
 void bind_explicitly_located_targets();
-target_ptr bindtarget(object_ptr const);
+target_ptr bindtarget(b2::value_ptr const);
 targets_uptr targetchain(targets_uptr, targets_uptr);
-void targetentry(targets_uptr&, target_ptr);
-void target_include(target_ptr const including,
-    target_ptr const included);
-void target_include_many(target_ptr const including,
-    list_ptr const included_names);
-void targetlist(targets_uptr&, list_ptr target_names);
-void touch_target(object_ptr const);
+void targetentry(targets_uptr &, target_ptr);
+void target_include(target_ptr const including, target_ptr const included);
+void target_include_many(
+	target_ptr const including, list_ptr const included_names);
+void targetlist(targets_uptr &, list_ptr target_names);
+void touch_target(b2::value_ptr const);
 void clear_includes(target_ptr);
 target_ptr target_scc(target_ptr);
 targets_uptr targets_pop(targets_uptr);
 
 /* Final module cleanup. */
 void rules_done();
+
+namespace b2 {
+struct target_ref
+{
+	target_ref(value_ref name)
+		: target(bindtarget(name))
+	{}
+
+	operator TARGET *() const { return target; }
+
+	void on_set(value_ref n, const list_ref & v)
+	{
+		list_ref val_to_set(v);
+		target->settings = addsettings(
+			target->settings, 0 /*VAR_SET*/, n, val_to_set.release());
+	}
+	template <class N, class V>
+	void on_set(N n, V v)
+	{
+		value_ref name_to_set(n);
+		list_ref val_to_set(v);
+		target->settings = addsettings(
+			target->settings, 0 /*VAR_SET*/, name_to_set, val_to_set.release());
+	}
+
+	private:
+	TARGET * target = nullptr;
+};
+} // namespace b2
 
 #endif

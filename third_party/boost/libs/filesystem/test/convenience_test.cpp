@@ -19,9 +19,9 @@
 #endif
 
 #include <boost/filesystem/path.hpp>
-#include <boost/filesystem/convenience.hpp>
 #include <boost/filesystem/directory.hpp>
 #include <boost/filesystem/exception.hpp>
+#include <boost/filesystem/operations.hpp>
 
 #include <boost/core/lightweight_test.hpp>
 #include <boost/detail/lightweight_main.hpp>

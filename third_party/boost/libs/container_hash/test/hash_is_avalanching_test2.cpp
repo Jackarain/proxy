@@ -44,7 +44,11 @@ int main()
 
 #endif
 
+#if defined(_LIBCPP_VERSION) && _LIBCPP_VERSION >= 160000
+// std::char_traits<Ch> is deprecated for non-char types
+#else
     BOOST_TEST_TRAIT_FALSE(( hash_is_avalanching< boost::hash<std::basic_string_view<my_char> > > ));
+#endif
 
     return boost::report_errors();
 }

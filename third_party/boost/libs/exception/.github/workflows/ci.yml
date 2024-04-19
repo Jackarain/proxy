@@ -66,6 +66,12 @@ jobs:
             os: ubuntu-22.04
             install: g++-12-multilib
             address-model: 32,64
+          - toolset: gcc-13
+            cxxstd: "03,11,14,17,20,2b"
+            container: ubuntu:23.04
+            os: ubuntu-latest
+            install: g++-13-multilib
+            address-model: 32,64
           - toolset: clang
             compiler: clang++-3.9
             cxxstd: "03,11,14"
@@ -119,19 +125,42 @@ jobs:
           - toolset: clang
             compiler: clang++-13
             cxxstd: "03,11,14,17,20,2b"
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: clang-13
           - toolset: clang
             compiler: clang++-14
             cxxstd: "03,11,14,17,20,2b"
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: clang-14
+          - toolset: clang
+            compiler: clang++-15
+            cxxstd: "03,11,14,17,20,2b"
+            container: ubuntu:22.04
+            os: ubuntu-latest
+            install: clang-15
+          - toolset: clang
+            compiler: clang++-16
+            cxxstd: "03,11,14,17,20,2b"
+            container: ubuntu:23.04
+            os: ubuntu-latest
+            install: clang-16
+          - toolset: clang
+            compiler: clang++-17
+            cxxstd: "03,11,14,17,20,2b"
+            container: ubuntu:23.10
+            os: ubuntu-latest
+            install: clang-17
           - toolset: clang
             cxxstd: "03,11,14,17,2a"
             os: macos-11
           - toolset: clang
             cxxstd: "03,11,14,17,20,2b"
             os: macos-12
+          - toolset: clang
+            cxxstd: "03,11,14,17,20,2b"
+            os: macos-13
 
     runs-on: ${{matrix.os}}
     container: ${{matrix.container}}
@@ -147,7 +176,7 @@ jobs:
         if: matrix.container
         run: |
           apt-get update
-          apt-get -y install sudo python git g++
+          apt-get -y install sudo python3 git g++
 
       - name: Install packages
         if: matrix.install
@@ -173,7 +202,7 @@ jobs:
           cd boost-root
           cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
           git submodule update --init tools/boostdep
-          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+          python3 tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
           ./bootstrap.sh
           ./b2 -d0 headers
 
@@ -245,4 +274,3 @@ jobs:
         run: |
           cd ../boost-root
           b2 -j3 libs/%LIBRARY%/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} address-model=${{matrix.addrmd}} variant=debug,release exception-handling=on,off rtti=on,off embed-manifest-via=linker
-

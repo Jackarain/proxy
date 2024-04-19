@@ -7,6 +7,7 @@
 
 
 import testing ;
+import ../../config/checks/config : requires ;
 
 use-project boost : $(BOOST_ROOT) ;
 
@@ -25,7 +26,7 @@ test-suite "odeint"
      :
      [ run regression_147.cpp ]
      [ compile regression_149.cpp ]
-     [ run regression_168.cpp ]
+     [ run regression_168.cpp : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj [ requires cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction cxx14_variable_templates cxx14_constexpr ] ]
      [ run regression_189.cpp ]
      : <testing.launcher>valgrind
      ;

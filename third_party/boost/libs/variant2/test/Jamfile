@@ -133,3 +133,5 @@ run variant_json_value_from.cpp : : : $(JSON) ;
 run variant_json_value_to.cpp : : : $(JSON) ;
 
 compile variant_uses_double_storage.cpp ;
+
+run variant_derived_construct2.cpp ;

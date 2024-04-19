@@ -3,6 +3,7 @@
 // https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/compat/latch.hpp>
+#include <boost/compat/shared_lock.hpp>
 
 int main()
 {

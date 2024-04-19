@@ -16,7 +16,7 @@ Property tree resembles (almost is) a standard container with value type of `pai
 
 To find the value of `pi` we might do the following:
 
- __ptree__::__ptree_const_iterator__ it = pt.__ptree_find__("pi");
+ __ptree__::__ptree_const_assoc_iterator__ it = pt.__ptree_find__("pi");
  double pi = boost::lexical_cast<double>(it->second.__ptree_data__());
 
 This looks quite cumbersome, and would be even more so if `pi` value was not stored so near the top of the tree, and we cared just a little bit more about errors. Fortunately, there is another, correct way of doing it:

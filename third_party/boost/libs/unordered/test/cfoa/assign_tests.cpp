@@ -968,11 +968,9 @@ namespace {
       BOOST_TEST_EQ(x.key_eq(), key_equal(2));
 
       BOOST_TEST_EQ(
-        raii::copy_constructor, value_type_cardinality * values.size());
-      BOOST_TEST_EQ(
-        raii::destructor, value_type_cardinality * values.size());
-      BOOST_TEST_EQ(
-        raii::move_constructor, value_type_cardinality * reference_cont.size());
+        raii::copy_constructor, value_type_cardinality * reference_cont.size());
+      BOOST_TEST_EQ(raii::destructor, 0u);
+      BOOST_TEST_EQ(raii::move_constructor, 0u);
       BOOST_TEST_EQ(raii::copy_assignment, 0u);
       BOOST_TEST_EQ(raii::move_assignment, 0u);
     }
@@ -998,11 +996,9 @@ namespace {
       BOOST_TEST_EQ(flat.key_eq(), key_equal(2));
 
       BOOST_TEST_EQ(
-        raii::copy_constructor, value_type_cardinality * values.size());
-      BOOST_TEST_EQ(
-        raii::destructor, value_type_cardinality * values.size());
-      BOOST_TEST_EQ(
-        raii::move_constructor, value_type_cardinality * reference_cont.size());
+        raii::copy_constructor, value_type_cardinality * reference_cont.size());
+      BOOST_TEST_EQ(raii::destructor, 0u);
+      BOOST_TEST_EQ(raii::move_constructor, 0u);
       BOOST_TEST_EQ(raii::copy_assignment, 0u);
       BOOST_TEST_EQ(raii::move_assignment, 0u);
     }
@@ -1030,14 +1026,11 @@ namespace {
       BOOST_TEST_EQ(x.key_eq(), key_equal(2));
 
       BOOST_TEST_EQ(
-        raii::copy_constructor, value_type_cardinality * values.size());
+        raii::copy_constructor, value_type_cardinality * reference_cont.size());
       BOOST_TEST_EQ(
-        raii::destructor,
-        value_type_cardinality * values.size() + 
-        value_type_cardinality * reference_cont.size());
+        raii::destructor, value_type_cardinality * reference_cont.size());
       BOOST_TEST_EQ(
-        raii::move_constructor,
-        2 * value_type_cardinality * reference_cont.size());
+        raii::move_constructor, value_type_cardinality * reference_cont.size());
       BOOST_TEST_EQ(raii::copy_assignment, 0u);
       BOOST_TEST_EQ(raii::move_assignment, 0u);
     }
@@ -1063,14 +1056,11 @@ namespace {
       BOOST_TEST_EQ(flat.key_eq(), key_equal(2));
 
       BOOST_TEST_EQ(
-        raii::copy_constructor, value_type_cardinality * values.size());
+        raii::copy_constructor, value_type_cardinality * reference_cont.size());
       BOOST_TEST_EQ(
-        raii::destructor,
-        value_type_cardinality * values.size() +
-        value_type_cardinality * reference_cont.size());
+        raii::destructor, value_type_cardinality * reference_cont.size());
       BOOST_TEST_EQ(
-        raii::move_constructor, 
-        2 * value_type_cardinality * reference_cont.size());
+        raii::move_constructor, value_type_cardinality * reference_cont.size());
       BOOST_TEST_EQ(raii::copy_assignment, 0u);
       BOOST_TEST_EQ(raii::move_assignment, 0u);
     }

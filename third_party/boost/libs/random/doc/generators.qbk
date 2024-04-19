@@ -83,6 +83,7 @@ numbers mean faster random number generation.
   [[__ranlux64_4_01] [~10[sup 171]] [`24*sizeof(double)`] [[ranlux64_4_speed]] [-]]
   [[__ranlux24] [~10[sup 171]] [`24*sizeof(uint32_t)`] [[ranlux24_speed]] [-]]
   [[__ranlux48] [~10[sup 171]] [`12*sizeof(uint64_t)`] [[ranlux48_speed]] [-]]
+  [[__splitmix64] [2[sup 64]] [`sizeof(uint64_t)`] [[-]] [-]]
 ]
 
 As observable from the table, there is generally a quality/performance/memory

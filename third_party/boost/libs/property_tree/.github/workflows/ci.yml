@@ -8,6 +8,10 @@ on:
       - develop
       - feature/**
 
+concurrency:
+  group: ${{format('{0}:{1}', github.repository, github.ref)}}
+  cancel-in-progress: true
+
 env:
   UBSAN_OPTIONS: print_stacktrace=1
 
@@ -135,6 +139,12 @@ jobs:
             container: ubuntu:23.04
             install: clang-16
           - toolset: clang
+            compiler: clang++-17
+            cxxstd: "11,14,17,20,2b"
+            os: ubuntu-latest
+            container: ubuntu:23.10
+            install: clang-17
+          - toolset: clang
             cxxstd: "11,14,17,2a"
             os: macos-11
           - toolset: clang
@@ -184,7 +194,7 @@ jobs:
           cd boost-root
           cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
           git submodule update --init tools/boostdep
-          python3 tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+          python3 tools/boostdep/depinst/depinst.py --git_args "--jobs 3" -I examples $LIBRARY
           ./bootstrap.sh
           ./b2 -d0 headers
 
@@ -248,7 +258,7 @@ jobs:
           cd boost-root
           xcopy /s /e /q %GITHUB_WORKSPACE% libs\%LIBRARY%\
           git submodule update --init tools/boostdep
-          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" %LIBRARY%
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" -I examples %LIBRARY%
           cmd /c bootstrap
           b2 -d0 headers
 
@@ -256,7 +266,7 @@ jobs:
         shell: cmd
         run: |
           cd ../boost-root
-          b2 -j1 libs/%LIBRARY%/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} address-model=${{matrix.addrmd}} ${{matrix.cxxflags}} variant=debug,release embed-manifest-via=linker
+          b2 -j1 --abbreviate-paths libs/%LIBRARY%/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} address-model=${{matrix.addrmd}} ${{matrix.cxxflags}} variant=debug,release embed-manifest-via=linker
 
   posix-cmake-subdir:
     strategy:
@@ -402,7 +412,7 @@ jobs:
           cd boost-root
           cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
           git submodule update --init tools/boostdep
-          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" -I examples $LIBRARY
 
       - name: Configure
         run: |
@@ -567,7 +577,7 @@ jobs:
           cd boost-root
           xcopy /s /e /q %GITHUB_WORKSPACE% libs\%LIBRARY%\
           git submodule update --init tools/boostdep
-          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" %LIBRARY%
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" -I examples %LIBRARY%
 
       - name: Configure
         shell: cmd

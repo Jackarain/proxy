@@ -43,7 +43,7 @@ with non-standard state types:
 
 Again, odeint already provides basic interfaces for most of the usual state
 types.
-So if you use a `std::vector`, or a `boost::array` as state type no additional
+So if you use a `std::vector`, or a `std::array` as state type no additional
 work is required, they just work out of the box.
 
 [section Construction/Resizing]
@@ -51,7 +51,7 @@ work is required, they just work out of the box.
 We distinguish between two basic state types: fixed sized and dynamically
 sized.
 For fixed size state types the default constructor `state_type()` already
-allocates the required memory, prominent example is `boost::array<T,N>`.
+allocates the required memory, prominent example is `std:array<T,N>`.
 Dynamically sized types have to be resized to make sure enough memory is
 allocated, the standard constructor does not take care of the resizing.
 Examples for this are the STL containers like `vector<double>`.

@@ -15,10 +15,12 @@ auto redir(boost::system::error_code& ec)
 auto start(boost::asio::awaitable<void> op) -> int;
 #endif // BOOST_ASIO_HAS_CO_AWAIT
 
+boost::redis::config make_test_config();
+
 void
 run(
    std::shared_ptr<boost::redis::connection> conn,
-   boost::redis::config cfg = {},
+   boost::redis::config cfg = make_test_config(),
    boost::system::error_code ec = boost::asio::error::operation_aborted,
    boost::redis::operation op = boost::redis::operation::receive,
    boost::redis::logger::level l = boost::redis::logger::level::disabled);

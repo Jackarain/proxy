@@ -10,7 +10,7 @@
 # /* See http://www.boost.org for most recent version. */
 #
 # include <boost/preprocessor/facilities/is_empty.hpp>
-# include <libs/preprocessor/test/test.h>
+# include "test.h"
 
 #if (BOOST_PP_CONFIG_FLAGS() & BOOST_PP_CONFIG_STRICT()) && !BOOST_PP_VARIADICS_MSVC
 

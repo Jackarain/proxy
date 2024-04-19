@@ -9,7 +9,6 @@
 //////////////////////////////////////////////////////////////////////////////
 #include <vector>
 
-#include <boost/static_assert.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/container/allocator.hpp>
 #include <boost/container/detail/container_or_allocator_rebind.hpp>
@@ -463,8 +462,8 @@ struct get_real_stored_allocator<flat_multimap<Key, T, Compare, Allocator> >
 
 bool test_heterogeneous_lookups()
 {
-   BOOST_STATIC_ASSERT((dtl::is_transparent<less_transparent>::value));
-   BOOST_STATIC_ASSERT(!(dtl::is_transparent<std::less<int> >::value));
+   BOOST_CONTAINER_STATIC_ASSERT((dtl::is_transparent<less_transparent>::value));
+   BOOST_CONTAINER_STATIC_ASSERT(!(dtl::is_transparent<std::less<int> >::value));
    typedef flat_map<int, char, less_transparent> map_t;
    typedef flat_multimap<int, char, less_transparent> mmap_t;
    typedef map_t::value_type value_type;
@@ -776,7 +775,7 @@ int main()
          typedef boost::container::new_allocator<value_t> alloc_or_cont_t;
          typedef boost::container::flat_map<int, int> cont;
          typedef boost::container::dtl::flat_tree<value_t, key_of_value_t, std::less<int>, alloc_or_cont_t> tree;
-         BOOST_STATIC_ASSERT_MSG( boost::has_trivial_destructor_after_move<cont>::value ==
+         BOOST_CONTAINER_STATIC_ASSERT_MSG( boost::has_trivial_destructor_after_move<cont>::value ==
                                   boost::has_trivial_destructor_after_move<tree>::value
                                 , "has_trivial_destructor_after_move(flat_map, default) test failed");
       }
@@ -785,7 +784,7 @@ int main()
          typedef boost::container::vector<value_t> alloc_or_cont_t;
          typedef boost::container::flat_map<int, int, std::less<int>, alloc_or_cont_t> cont;
          typedef boost::container::dtl::flat_tree<value_t, key_of_value_t, std::less<int>, alloc_or_cont_t> tree;
-         BOOST_STATIC_ASSERT_MSG( boost::has_trivial_destructor_after_move<cont>::value ==
+         BOOST_CONTAINER_STATIC_ASSERT_MSG( boost::has_trivial_destructor_after_move<cont>::value ==
                                   boost::has_trivial_destructor_after_move<tree>::value
                                 , "has_trivial_destructor_after_move(flat_map, vector) test failed");
       }
@@ -794,7 +793,7 @@ int main()
          typedef std::vector<value_t> alloc_or_cont_t;
          typedef boost::container::flat_map<int, int, std::less<int>, alloc_or_cont_t> cont;
          typedef boost::container::dtl::flat_tree<value_t, key_of_value_t, std::less<int>, alloc_or_cont_t> tree;
-         BOOST_STATIC_ASSERT_MSG( boost::has_trivial_destructor_after_move<cont>::value ==
+         BOOST_CONTAINER_STATIC_ASSERT_MSG( boost::has_trivial_destructor_after_move<cont>::value ==
                                   boost::has_trivial_destructor_after_move<tree>::value
                                 , "has_trivial_destructor_after_move(flat_map, std::vector) test failed");
       }
@@ -803,7 +802,7 @@ int main()
          typedef boost::container::new_allocator<value_t> alloc_or_cont_t;
          typedef boost::container::flat_multimap<int, int> cont;
          typedef boost::container::dtl::flat_tree<value_t, key_of_value_t, std::less<int>, alloc_or_cont_t> tree;
-         BOOST_STATIC_ASSERT_MSG( boost::has_trivial_destructor_after_move<cont>::value ==
+         BOOST_CONTAINER_STATIC_ASSERT_MSG( boost::has_trivial_destructor_after_move<cont>::value ==
                                   boost::has_trivial_destructor_after_move<tree>::value
                                 , "has_trivial_destructor_after_move(flat_multimap, default) test failed");
       }
@@ -812,7 +811,7 @@ int main()
          typedef boost::container::vector<value_t> alloc_or_cont_t;
          typedef boost::container::flat_multimap<int, int, std::less<int>, alloc_or_cont_t> cont;
          typedef boost::container::dtl::flat_tree<value_t, key_of_value_t, std::less<int>, alloc_or_cont_t> tree;
-         BOOST_STATIC_ASSERT_MSG( boost::has_trivial_destructor_after_move<cont>::value ==
+         BOOST_CONTAINER_STATIC_ASSERT_MSG( boost::has_trivial_destructor_after_move<cont>::value ==
                                   boost::has_trivial_destructor_after_move<tree>::value
                                 , "has_trivial_destructor_after_move(flat_multimap, vector) test failed");
       }
@@ -821,7 +820,7 @@ int main()
          typedef std::vector<value_t> alloc_or_cont_t;
          typedef boost::container::flat_multimap<int, int, std::less<int>, alloc_or_cont_t> cont;
          typedef boost::container::dtl::flat_tree<value_t, key_of_value_t, std::less<int>, alloc_or_cont_t> tree;
-         BOOST_STATIC_ASSERT_MSG (boost::has_trivial_destructor_after_move<cont>::value ==
+         BOOST_CONTAINER_STATIC_ASSERT_MSG (boost::has_trivial_destructor_after_move<cont>::value ==
                                   boost::has_trivial_destructor_after_move<tree>::value
                                  , "has_trivial_destructor_after_move(flat_multimap, std::vector) test failed");
       }

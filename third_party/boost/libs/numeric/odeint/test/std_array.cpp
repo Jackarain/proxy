@@ -38,11 +38,10 @@ BOOST_AUTO_TEST_CASE( test_case )
     state_type x = {0.0, 0.0, 0.0};
 
     typedef boost::numeric::odeint::runge_kutta4<state_type> stepper_type;
-// check if array algebra is selected, but only if odeint detects c++11
-#ifdef BOOST_NUMERIC_ODEINT_CXX11
-    BOOST_STATIC_ASSERT(( boost::is_same< stepper_type::algebra_type , 
-                          boost::numeric::odeint::array_algebra >::value ));
-#endif
+
+    static_assert(( boost::is_same< stepper_type::algebra_type , 
+                          boost::numeric::odeint::array_algebra >::value ), "Not array algebra");
+
     stepper_type stepper1;
     stepper1.do_step(rhs, x, 0.0, 0.1);
 

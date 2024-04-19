@@ -1,5 +1,5 @@
 /* Unit testing for outcomes
-(C) 2013-2023 Niall Douglas <http://www.nedproductions.biz/> (1 commit)
+(C) 2013-2024 Niall Douglas <http://www.nedproductions.biz/> (1 commit)
 
 
 Boost Software License - Version 1.0 - August 17th, 2003
@@ -31,6 +31,8 @@ DEALINGS IN THE SOFTWARE.
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/unit_test_monitor.hpp>
+
+#pragma clang diagnostic ignored "-Wunneeded-internal-declaration"
 
 namespace
 {

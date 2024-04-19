@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -34,9 +34,26 @@ static std::unordered_map<std::string, er_network_variant*> make_variants_map()
     return res;
 }
 
+static std::vector<er_network_variant*> make_all_variants_with_handshake()
+{
+    std::vector<er_network_variant*> res;
+    for (auto* var : all_variants())
+    {
+        if (var->supports_handshake())
+            res.push_back(var);
+    }
+    return res;
+}
+
 boost::span<er_network_variant*> boost::mysql::test::all_variants()
 {
     static auto res = make_all_variants();
+    return res;
+}
+
+boost::span<er_network_variant*> boost::mysql::test::all_variants_with_handshake()
+{
+    static auto res = make_all_variants_with_handshake();
     return res;
 }
 

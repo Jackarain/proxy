@@ -1,6 +1,6 @@
 //
 // Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
-// Copyright (c) 2021-2023 Alexander Grund
+// Copyright (c) 2021-2024 Alexander Grund
 //
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
@@ -8,6 +8,12 @@
 /*!
 \page changelog Changelog
 
+- 1.85.0
+    - Breaking changes
+        - `collator` does no longer derive from `std::collator` avoiding possible type confusion
+        - `date_time` stores time in second resolution for the ICU backend, where sub-second resolution was added/fixed in Boost 1.81
+        - `comparator` in case of errors now throws on construction instead of on use as documented
+        - Character encoding conversion using IConv throws a `std::runtime_error` when the used IConv library is detected to be faulty (instead of running into an infinite loop)
 - 1.84.0
     - Breaking changes
         - `to_title` for the WinAPI backend returns the string unchanged instead of an empty string

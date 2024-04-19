@@ -38,7 +38,7 @@ jobs:
   CheckFormatting:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: DoozyX/clang-format-lint-action@v0.14
         with:
           exclude: './doc'
@@ -59,9 +59,9 @@ jobs:
   Create_Boost_Documentation:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Fetch Boost.CI
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: boostorg/boost-ci
           ref: master
@@ -305,9 +305,21 @@ jobs:
         run: ci/build.sh
         env: {B2_FLAGS: -a boost.locale.icu=on  boost.locale.iconv=off}
 
-      - name: Upload coverage
+      - name: Collect coverage
         if: matrix.coverage
         run: ci/codecov.sh "upload"
+        env:
+          BOOST_CI_CODECOV_IO_UPLOAD: skip
+
+      - name: Upload coverage
+        if: matrix.coverage
+        uses: codecov/codecov-action@v4
+        with:
+          disable_search: true
+          file: coverage.info
+          name: Github Actions
+          token: ${{secrets.CODECOV_TOKEN}}
+          verbose: true
 
       - name: Run coverity
         if: matrix.coverity && github.event_name == 'push' && (github.ref_name == 'develop' || github.ref_name == 'master')
@@ -333,10 +345,10 @@ jobs:
     env: {ICU_VERSION: '71.1'}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Fetch Boost.CI
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: boostorg/boost-ci
           ref: master
@@ -351,7 +363,7 @@ jobs:
         run: ci\github\install.bat
 
       - name: Get cached ICU
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-icu
         with:
           path: ICU
@@ -421,9 +433,13 @@ jobs:
 
       - name: Upload coverage
         if: matrix.coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
-          files: __out/cobertura.xml
+          disable_search: true
+          file: __out/cobertura.xml
+          name: Github Actions
+          token: ${{secrets.CODECOV_TOKEN}}
+          verbose: true
 
   MSYS2:
     defaults:
@@ -439,7 +455,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup MSYS2 environment
         uses: msys2/setup-msys2@v2
@@ -450,7 +466,7 @@ jobs:
           pacboy: gcc:p cmake:p ninja:p
 
       - name: Fetch Boost.CI
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: boostorg/boost-ci
           ref: master
@@ -503,9 +519,9 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Fetch Boost.CI
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: boostorg/boost-ci
           ref: master
@@ -536,7 +552,7 @@ jobs:
             echo "LD_LIBRARY_PATH=$ICU_ROOT/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
       - name: Get cached ICU
         if: matrix.icu
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-icu
         with:
           path: ICU

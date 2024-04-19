@@ -56,7 +56,7 @@ typedef boost::mpl::range_c< size_t , 1 , 6 > vector_of_steps;
 BOOST_AUTO_TEST_CASE_TEMPLATE( test_init_and_steps , step_type , vector_of_steps )
 {
     const static size_t steps = step_type::value;
-    typedef boost::array< value_type , 3 > state_type;
+    typedef std::array< value_type , 3 > state_type;
 
     adams_bashforth_moulton< steps , state_type > stepper;
     state_type x = {{ 10.0 , 10.0 , 10.0 }};
@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE( test_init_and_steps , step_type , vector_of_steps
 
 BOOST_AUTO_TEST_CASE( test_copying )
 {
-    typedef boost::array< double , 1 > state_type;
+    typedef std::array< double , 1 > state_type;
     typedef adams_bashforth_moulton< 2 , state_type > stepper_type;
 
     stepper_type s1;
@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE( test_copying )
 
 BOOST_AUTO_TEST_CASE( test_instantiation )
 {
-    typedef boost::array< double , 3 > state_type;
+    typedef std::array< double , 3 > state_type;
     adams_bashforth_moulton< 1 , state_type > s1;
     adams_bashforth_moulton< 2 , state_type > s2;
     adams_bashforth_moulton< 3 , state_type > s3;

@@ -10,11 +10,11 @@
 #ifndef BOOST_URL_RFC_DETAIL_PATH_RULES_HPP
 #define BOOST_URL_RFC_DETAIL_PATH_RULES_HPP
 
-#include <boost/url/rfc/pchars.hpp>
-#include <boost/url/rfc/pct_encoded_rule.hpp>
-#include <boost/url/grammar/delim_rule.hpp>
-#include <boost/url/grammar/range_rule.hpp>
-#include <boost/url/grammar/tuple_rule.hpp>
+#include "boost/url/rfc/pchars.hpp"
+#include "boost/url/rfc/pct_encoded_rule.hpp"
+#include "boost/url/grammar/delim_rule.hpp"
+#include "boost/url/grammar/range_rule.hpp"
+#include "boost/url/grammar/tuple_rule.hpp"
 
 namespace boost {
 namespace urls {

@@ -161,6 +161,20 @@ test_signal_signal_connect()
 
     BOOST_CHECK(s2(-3) == 9);
     BOOST_CHECK(s1(3) == 6);
+
+    // disconnect by slot
+    s1.disconnect(s2);
+    BOOST_CHECK(s1(3) == -3);
+
+    // disconnect by reference wrapped slot
+    s1.connect(s2);
+    BOOST_CHECK(s1(3) == 6);
+    s1.disconnect(boost::ref(s2));
+    BOOST_CHECK(s1(3) == -3);
+
+    // reconnect s2 to test auto-disconnect on destruction
+    s1.connect(s2);
+    BOOST_CHECK(s1(3) == 6);
   } // s2 goes out of scope and disconnects
   BOOST_CHECK(s1(3) == -3);
 }

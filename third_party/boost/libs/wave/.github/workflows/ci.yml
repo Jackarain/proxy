@@ -65,17 +65,29 @@ jobs:
             llvm_ver: ""
             toolset: "gcc-7"
             cxxstd: "11,14,17"
-          - name: "TOOLSET=clang CXXSTD=11,14,1z Job 4"
+          - name: "TOOLSET=gcc-9 CXXSTD=11,14,17,20 Job 6"
+            buildtype: "boost"
+            packages: "g++-9"
+            packages_to_remove: ""
+            os: "ubuntu-20.04"
+            container: "ubuntu:16.04"
+            cxx: "g++-9"
+            sources: ""
+            llvm_os: ""
+            llvm_ver: ""
+            toolset: "gcc-9"
+            cxxstd: "11,14,17,20"
+          - name: "TOOLSET=clang CXXSTD=11,14,17,20 Job 4"
             buildtype: "boost"
             packages: ""
             packages_to_remove: ""
-            os: "ubuntu-18.04"
+            os: "ubuntu-20.04"
             cxx: "clang++"
             sources: ""
             llvm_os: ""
             llvm_ver: ""
             toolset: "clang"
-            cxxstd: "11,14,1z"
+            cxxstd: "11,14,17,20"
 
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
@@ -178,17 +190,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: "TOOLSET=clang CXXSTD=11,14,1z Job 5"
+          - name: "TOOLSET=clang CXXSTD=11,14,17,20 Job 5"
             buildtype: "boost"
             packages: ""
-            os: "macos-10.15"
+            os: "macos-12"
             cxx: "clang++"
             sources: ""
             llvm_os: ""
             llvm_ver: ""
-            xcode_version: 11.7
+            xcode_version: 14.2.0
             toolset: "clang"
-            cxxstd: "11,14,1z"
+            cxxstd: "11,14,17,20"
 
     runs-on: ${{ matrix.os }}
 

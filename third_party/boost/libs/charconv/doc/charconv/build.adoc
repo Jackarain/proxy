@@ -1,0 +1,73 @@
+////
+Copyright 2023 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+= Getting Started
+:idprefix: build_
+
+== B2
+
+Run the following commands to clone the latest versions of Boost and Charconv, prepare the Boost.Build system for use, and build the libraries with C++11 as the default standard:
+[source, bash]
+----
+git clone https://github.com/boostorg/boost
+cd boost
+git submodule update --init
+cd ..
+./bootstrap
+./b2 cxxstd=11
+----
+
+To install the development environment, run:
+
+[source, bash]
+----
+sudo ./b2 install cxxstd=11
+----
+
+The value of cxxstd must be at least 11. https://www.boost.org/doc/libs/1_84_0/tools/build/doc/html/index.html[See the b2 documentation] under `cxxstd` for all valid values.
+
+== vcpkg
+
+Run the following commands to clone the latest version of Charconv and install it using vcpkg:
+[source, bash]
+----
+git clone https://github.com/boostorg/charconv
+cd charconv
+vcpkg install charconv --overlay-ports=ports/charconv
+----
+
+Any required Boost packages not currently installed in your development environment will be installed automatically.
+
+== Conan
+
+Run the following commands to clone the latest version of Charconv and build a boost_charconv package using your default profile:
+[source, bash]
+----
+git clone https://github.com/boostorg/charconv
+conan create charconv/conan --build missing
+----
+
+The package will be put in the local Conan cache along with all direct and transitive dependencies.
+
+TIP: Since Charconv only depends on a few header-only Boost libraries, you can save time by requesting header-only Boost:
+
+[source, bash]
+----
+conan create charconv/conan -o 'boost*:header_only=True' --build missing
+----
+
+After the package is built, you can use it in your own projects.
+For example, using a `conanfile.txt`:
+
+[source, bash]
+----
+[requires]
+boost_charconv/1.0.0
+----
+
+== Dependencies
+
+This library depends on: Boost.Assert, Boost.Config, Boost.Core, and  https://gcc.gnu.org/onlinedocs/libquadmath/[libquadmath] on supported platforms (e.g. Linux with x86, x86_64, PPC64, and IA64).

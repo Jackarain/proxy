@@ -86,13 +86,19 @@ public:
       using other = basic_connection<Executor1>;
    };
 
-   /// Contructs from an executor.
+   /** @brief Constructor
+    *
+    *  @param ex Executor on which connection operation will run.
+    *  @param ctx SSL context.
+    *  @param max_read_size Maximum read size that is passed to
+    *  the internal `asio::dynamic_buffer` constructor.
+    */
    explicit
    basic_connection(
       executor_type ex,
-      asio::ssl::context::method method = asio::ssl::context::tls_client,
+      asio::ssl::context ctx = asio::ssl::context{asio::ssl::context::tlsv12_client},
       std::size_t max_read_size = (std::numeric_limits<std::size_t>::max)())
-   : impl_{ex, method, max_read_size}
+   : impl_{ex, std::move(ctx), max_read_size}
    , timer_{ex}
    { }
 
@@ -100,9 +106,9 @@ public:
    explicit
    basic_connection(
       asio::io_context& ioc,
-      asio::ssl::context::method method = asio::ssl::context::tls_client,
+      asio::ssl::context ctx = asio::ssl::context{asio::ssl::context::tlsv12_client},
       std::size_t max_read_size = (std::numeric_limits<std::size_t>::max)())
-   : basic_connection(ioc.get_executor(), method, max_read_size)
+   : basic_connection(ioc.get_executor(), std::move(ctx), max_read_size)
    { }
 
    /** @brief Starts underlying connection operations.
@@ -286,10 +292,6 @@ public:
    auto const& get_ssl_context() const noexcept
       { return impl_.get_ssl_context();}
 
-   /// Returns the ssl context.
-   auto& get_ssl_context() noexcept
-      { return impl_.get_ssl_context();}
-
    /// Resets the underlying stream.
    void reset_stream()
       { impl_.reset_stream(); }
@@ -343,14 +345,14 @@ public:
    explicit
    connection(
       executor_type ex,
-      asio::ssl::context::method method = asio::ssl::context::tls_client,
+      asio::ssl::context ctx = asio::ssl::context{asio::ssl::context::tlsv12_client},
       std::size_t max_read_size = (std::numeric_limits<std::size_t>::max)());
 
    /// Contructs from a context.
    explicit
    connection(
       asio::io_context& ioc,
-      asio::ssl::context::method method = asio::ssl::context::tls_client,
+      asio::ssl::context ctx = asio::ssl::context{asio::ssl::context::tlsv12_client},
       std::size_t max_read_size = (std::numeric_limits<std::size_t>::max)());
 
    /// Returns the underlying executor.
@@ -422,6 +424,10 @@ public:
    /// Returns connection usage information.
    usage get_usage() const noexcept
       { return impl_.get_usage(); }
+
+   /// Returns the ssl context.
+   auto const& get_ssl_context() const noexcept
+      { return impl_.get_ssl_context();}
 
 private:
    void

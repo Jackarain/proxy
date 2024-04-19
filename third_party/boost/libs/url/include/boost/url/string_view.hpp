@@ -26,7 +26,7 @@ namespace urls {
     buffer extends until it is no longer
     referenced.
 
-    @note This alias is no longer supported and
+    @warning This alias is no longer supported and
     should not be used in new code. Please use
     `core::string_view` instead.
 

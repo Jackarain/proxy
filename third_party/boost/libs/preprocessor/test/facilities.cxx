@@ -13,7 +13,7 @@
 # include <boost/preprocessor/facilities.hpp>
 # include <boost/preprocessor/arithmetic/add.hpp>
 # include <boost/preprocessor/arithmetic/mul.hpp>
-# include <libs/preprocessor/test/test.h>
+# include "test.h"
 
 BEGIN BOOST_PP_APPLY(BOOST_PP_NIL) 0 == 0 END
 BEGIN BOOST_PP_APPLY((0)) == 0 END

@@ -11,7 +11,7 @@
 #define BOOST_URL_DETAIL_IMPL_ANY_SEGMENTS_ITER_IPP
 
 #include <boost/url/detail/config.hpp>
-#include <boost/url/rfc/detail/charsets.hpp>
+#include "../rfc/detail/charsets.hpp"
 #include <boost/url/detail/any_segments_iter.hpp>
 #include <boost/core/detail/string_view.hpp>
 #include <boost/url/encode.hpp>

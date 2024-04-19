@@ -269,27 +269,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-20.04
-            shared: OFF
-          - os: ubuntu-20.04
-            shared: ON
-          - os: ubuntu-22.04
-            shared: OFF
-          - os: ubuntu-22.04
-            shared: ON
-          - os: macos-11
-            shared: OFF
-          - os: macos-11
-            shared: ON
-          - os: macos-12
-            shared: OFF
-          - os: macos-12
-            shared: ON
-          - os: macos-13
-            shared: OFF
-          - os: macos-13
-            shared: ON
+        os: [ ubuntu-20.04, ubuntu-22.04, macos-11, macos-12, macos-13 ]
+        shared: [ OFF, ON ]
 
     runs-on: ${{matrix.os}}
 
@@ -332,27 +313,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-20.04
-            shared: OFF
-          - os: ubuntu-20.04
-            shared: ON
-          - os: ubuntu-22.04
-            shared: OFF
-          - os: ubuntu-22.04
-            shared: ON
-          - os: macos-11
-            shared: OFF
-          - os: macos-11
-            shared: ON
-          - os: macos-12
-            shared: OFF
-          - os: macos-12
-            shared: ON
-          - os: macos-13
-            shared: OFF
-          - os: macos-13
-            shared: ON
+        os: [ ubuntu-20.04, ubuntu-22.04, macos-11, macos-12, macos-13 ]
+        shared: [ OFF, ON ]
 
     runs-on: ${{matrix.os}}
 
@@ -411,27 +373,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-20.04
-            shared: OFF
-          - os: ubuntu-20.04
-            shared: ON
-          - os: ubuntu-22.04
-            shared: OFF
-          - os: ubuntu-22.04
-            shared: ON
-          - os: macos-11
-            shared: OFF
-          - os: macos-11
-            shared: ON
-          - os: macos-12
-            shared: OFF
-          - os: macos-12
-            shared: ON
-          - os: macos-13
-            shared: OFF
-          - os: macos-13
-            shared: ON
+        os: [ ubuntu-20.04, ubuntu-22.04, macos-11, macos-12, macos-13 ]
+        shared: [ OFF, ON ]
 
     runs-on: ${{matrix.os}}
 
@@ -482,11 +425,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: windows-2019
-            shared: OFF
-          - os: windows-2022
-            shared: OFF
+        os: [ windows-2019, windows-2022 ]
+        shared: [ OFF, ON ]
 
     runs-on: ${{matrix.os}}
 
@@ -533,15 +473,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: windows-2019
-            shared: OFF
-          - os: windows-2019
-            shared: ON
-          - os: windows-2022
-            shared: OFF
-          - os: windows-2022
-            shared: ON
+        os: [ windows-2019, windows-2022 ]
+        shared: [ OFF, ON ]
 
     runs-on: ${{matrix.os}}
 
@@ -608,15 +541,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: windows-2019
-            shared: OFF
-          - os: windows-2019
-            shared: ON
-          - os: windows-2022
-            shared: OFF
-          - os: windows-2022
-            shared: ON
+        os: [ windows-2019, windows-2022 ]
+        shared: [ OFF, ON ]
 
     runs-on: ${{matrix.os}}
 

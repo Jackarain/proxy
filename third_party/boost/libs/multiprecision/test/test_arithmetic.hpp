@@ -16,6 +16,7 @@
 #include <iomanip>
 #include "test.hpp"
 #include <boost/multiprecision/detail/standalone_config.hpp>
+#include <boost/multiprecision/integer.hpp>
 
 #ifndef BOOST_MP_STANDALONE
 #include <boost/integer/common_factor_rt.hpp>
@@ -1186,16 +1187,16 @@ void test_float_funcs(const std::integral_constant<bool, true>&)
    a = -2;
    a = fabs(a);
    BOOST_CHECK_EQUAL(a, 2);
-   a = 2.5;
+   a = static_cast<Real>(2.5);
    a = floor(a);
    BOOST_CHECK_EQUAL(a, 2);
-   a = 2.5;
+   a = static_cast<Real>(2.5);
    a = ceil(a);
    BOOST_CHECK_EQUAL(a, 3);
-   a = 2.5;
+   a = static_cast<Real>(2.5);
    a = trunc(a);
    BOOST_CHECK_EQUAL(a, 2);
-   a = 2.25;
+   a = static_cast<Real>(2.25);
    a = round(a);
    BOOST_CHECK_EQUAL(a, 2);
    a = 2;
@@ -1203,7 +1204,10 @@ void test_float_funcs(const std::integral_constant<bool, true>&)
    BOOST_CHECK_EQUAL(a, 4);
    int i;
    a = frexp(a, &i);
-   BOOST_CHECK_EQUAL(a, 0.5);
+   BOOST_IF_CONSTEXPR(std::is_convertible<double, Real>::value)
+   {
+      BOOST_CHECK_EQUAL(a, 0.5);
+   }
 
    Real tol = std::numeric_limits<Real>::epsilon() * 3;
    a        = 4;
@@ -1219,31 +1223,31 @@ void test_float_funcs(const std::integral_constant<bool, true>&)
    a = log10(a);
    BOOST_CHECK_CLOSE_FRACTION(a, Real(log10(Real(3))), tol);
 
-   a = 0.5;
+   a = static_cast<Real>(0.5);
    a = sin(a);
    BOOST_CHECK_CLOSE_FRACTION(a, Real(sin(Real(0.5))), tol);
-   a = 0.5;
+   a = static_cast<Real>(0.5);
    a = cos(a);
    BOOST_CHECK_CLOSE_FRACTION(a, Real(cos(Real(0.5))), tol);
-   a = 0.5;
+   a = static_cast<Real>(0.5);
    a = tan(a);
    BOOST_CHECK_CLOSE_FRACTION(a, Real(tan(Real(0.5))), tol);
-   a = 0.5;
+   a = static_cast<Real>(0.5);
    a = asin(a);
    BOOST_CHECK_CLOSE_FRACTION(a, Real(asin(Real(0.5))), tol);
-   a = 0.5;
+   a = static_cast<Real>(0.5);
    a = acos(a);
    BOOST_CHECK_CLOSE_FRACTION(a, Real(acos(Real(0.5))), tol);
-   a = 0.5;
+   a = static_cast<Real>(0.5);
    a = atan(a);
    BOOST_CHECK_CLOSE_FRACTION(a, Real(atan(Real(0.5))), tol);
-   a = 0.5;
+   a = static_cast<Real>(0.5);
    a = sinh(a);
    BOOST_CHECK_CLOSE_FRACTION(a, Real(sinh(Real(0.5))), tol);
-   a = 0.5;
+   a = static_cast<Real>(0.5);
    a = cosh(a);
    BOOST_CHECK_CLOSE_FRACTION(a, Real(cosh(Real(0.5))), tol);
-   a = 0.5;
+   a = static_cast<Real>(0.5);
    a = tanh(a);
    BOOST_CHECK_CLOSE_FRACTION(a, Real(tanh(Real(0.5))), tol);
    // fmod, need to check all the sign permutations:
@@ -1378,39 +1382,42 @@ void test_float_funcs(const std::integral_constant<bool, true>&)
 template <class T, class U>
 void compare_NaNs(const T& a, const U& b)
 {
-   BOOST_CHECK_EQUAL(a == b, false);
-   BOOST_CHECK_EQUAL(a != b, true);
-   BOOST_CHECK_EQUAL(a <= b, false);
-   BOOST_CHECK_EQUAL(a >= b, false);
-   BOOST_CHECK_EQUAL(a > b, false);
-   BOOST_CHECK_EQUAL(a < b, false);
-   //
-   // Again where LHS may be an expression template:
-   //
-   BOOST_CHECK_EQUAL(1 * a == b, false);
-   BOOST_CHECK_EQUAL(1 * a != b, true);
-   BOOST_CHECK_EQUAL(1 * a <= b, false);
-   BOOST_CHECK_EQUAL(1 * a >= b, false);
-   BOOST_CHECK_EQUAL(1 * a > b, false);
-   BOOST_CHECK_EQUAL(1 * a < b, false);
-   //
-   // Again where RHS may be an expression template:
-   //
-   BOOST_CHECK_EQUAL(a == b * 1, false);
-   BOOST_CHECK_EQUAL(a != b * 1, true);
-   BOOST_CHECK_EQUAL(a <= b * 1, false);
-   BOOST_CHECK_EQUAL(a >= b * 1, false);
-   BOOST_CHECK_EQUAL(a > b * 1, false);
-   BOOST_CHECK_EQUAL(a < b * 1, false);
-   //
-   // Again where LHS and RHS may be an expression templates:
-   //
-   BOOST_CHECK_EQUAL(1 * a == b * 1, false);
-   BOOST_CHECK_EQUAL(1 * a != b * 1, true);
-   BOOST_CHECK_EQUAL(1 * a <= b * 1, false);
-   BOOST_CHECK_EQUAL(1 * a >= b * 1, false);
-   BOOST_CHECK_EQUAL(1 * a > b * 1, false);
-   BOOST_CHECK_EQUAL(1 * a < b * 1, false);
+   BOOST_IF_CONSTEXPR(std::is_convertible<U, T>::value)
+   {
+      BOOST_CHECK_EQUAL(a == b, false);
+      BOOST_CHECK_EQUAL(a != b, true);
+      BOOST_CHECK_EQUAL(a <= b, false);
+      BOOST_CHECK_EQUAL(a >= b, false);
+      BOOST_CHECK_EQUAL(a > b, false);
+      BOOST_CHECK_EQUAL(a < b, false);
+      //
+      // Again where LHS may be an expression template:
+      //
+      BOOST_CHECK_EQUAL(1 * a == b, false);
+      BOOST_CHECK_EQUAL(1 * a != b, true);
+      BOOST_CHECK_EQUAL(1 * a <= b, false);
+      BOOST_CHECK_EQUAL(1 * a >= b, false);
+      BOOST_CHECK_EQUAL(1 * a > b, false);
+      BOOST_CHECK_EQUAL(1 * a < b, false);
+      //
+      // Again where RHS may be an expression template:
+      //
+      BOOST_CHECK_EQUAL(a == b * 1, false);
+      BOOST_CHECK_EQUAL(a != b * 1, true);
+      BOOST_CHECK_EQUAL(a <= b * 1, false);
+      BOOST_CHECK_EQUAL(a >= b * 1, false);
+      BOOST_CHECK_EQUAL(a > b * 1, false);
+      BOOST_CHECK_EQUAL(a < b * 1, false);
+      //
+      // Again where LHS and RHS may be an expression templates:
+      //
+      BOOST_CHECK_EQUAL(1 * a == b * 1, false);
+      BOOST_CHECK_EQUAL(1 * a != b * 1, true);
+      BOOST_CHECK_EQUAL(1 * a <= b * 1, false);
+      BOOST_CHECK_EQUAL(1 * a >= b * 1, false);
+      BOOST_CHECK_EQUAL(1 * a > b * 1, false);
+      BOOST_CHECK_EQUAL(1 * a < b * 1, false);
+   }
 }
 
 template <class Real, class T>
@@ -1438,24 +1445,36 @@ void test_float_ops(const std::integral_constant<int, boost::multiprecision::num
    Real   v(512);
    e_type exponent;
    Real   r = frexp(v, &exponent);
-   BOOST_CHECK_EQUAL(r, 0.5);
+   BOOST_IF_CONSTEXPR(std::is_convertible<double, Real>::value)
+   {
+      BOOST_CHECK_EQUAL(r, 0.5);
+   }
    BOOST_CHECK_EQUAL(exponent, 10);
    BOOST_CHECK_EQUAL(v, 512);
    v = 1 / v;
    r = frexp(v, &exponent);
-   BOOST_CHECK_EQUAL(r, 0.5);
+   BOOST_IF_CONSTEXPR(std::is_convertible<double, Real>::value)
+   {
+      BOOST_CHECK_EQUAL(r, 0.5);
+   }
    BOOST_CHECK_EQUAL(exponent, -8);
    BOOST_CHECK_EQUAL(ldexp(Real(2), e_type(5)), 64);
    BOOST_CHECK_EQUAL(ldexp(Real(2), e_type(-5)), Real(2) / 32);
    v = 512;
    e_type exp2;
    r = frexp(v, &exp2);
-   BOOST_CHECK_EQUAL(r, 0.5);
+   BOOST_IF_CONSTEXPR(std::is_convertible<double, Real>::value)
+   {
+      BOOST_CHECK_EQUAL(r, 0.5);
+   }
    BOOST_CHECK_EQUAL(exp2, 10);
    BOOST_CHECK_EQUAL(v, 512);
    v = 1 / v;
    r = frexp(v, &exp2);
-   BOOST_CHECK_EQUAL(r, 0.5);
+   BOOST_IF_CONSTEXPR(std::is_convertible<double, Real>::value)
+   {
+      BOOST_CHECK_EQUAL(r, 0.5);
+   }
    BOOST_CHECK_EQUAL(exp2, -8);
    //
    // scalbn and logb, these are the same as ldexp and frexp unless the radix is
@@ -1463,8 +1482,11 @@ void test_float_ops(const std::integral_constant<int, boost::multiprecision::num
    //
    BOOST_IF_CONSTEXPR (std::numeric_limits<Real>::is_specialized && std::numeric_limits<Real>::radix)
    {
-      BOOST_CHECK_EQUAL(scalbn(Real(2), 5), 2 * pow(double(std::numeric_limits<Real>::radix), 5));
-      BOOST_CHECK_EQUAL(scalbn(Real(2), -5), Real(2) / pow(double(std::numeric_limits<Real>::radix), 5));
+      BOOST_IF_CONSTEXPR(std::is_convertible<double, Real>::value)
+      {
+         BOOST_CHECK_EQUAL(scalbn(Real(2), 5), 2 * pow(double(std::numeric_limits<Real>::radix), 5));
+         BOOST_CHECK_EQUAL(scalbn(Real(2), -5), Real(2) / pow(double(std::numeric_limits<Real>::radix), 5));
+      }
       v        = 512;
       exponent = ilogb(v);
       r        = scalbn(v, -exponent);
@@ -1484,68 +1506,71 @@ void test_float_ops(const std::integral_constant<int, boost::multiprecision::num
    // pow and exponent:
    //
    #ifndef BOOST_MP_STANDALONE
-   v = 3.25;
-   r = pow(v, 0);
-   BOOST_CHECK_EQUAL(r, 1);
-   r = pow(v, 1);
-   BOOST_CHECK_EQUAL(r, 3.25);
-   r = pow(v, 2);
-   BOOST_CHECK_EQUAL(r, boost::math::pow<2>(3.25));
-   r = pow(v, 3);
-   BOOST_CHECK_EQUAL(r, boost::math::pow<3>(3.25));
-
-   BOOST_IF_CONSTEXPR(std::numeric_limits<Real>::digits10 > 11)
+   BOOST_IF_CONSTEXPR(std::is_convertible<double, Real>::value)
    {
-      // (13/4)^4
-      // 28561 / 256
-      // 111.56640625
-      r = pow(v, 4);
-      BOOST_CHECK_EQUAL(r, boost::math::pow<4>(Real(3.25)));
-   }
+      v = 3.25;
+      r = pow(v, 0);
+      BOOST_CHECK_EQUAL(r, 1);
+      r = pow(v, 1);
+      BOOST_CHECK_EQUAL(r, 3.25);
+      r = pow(v, 2);
+      BOOST_CHECK_EQUAL(r, boost::math::pow<2>(3.25));
+      r = pow(v, 3);
+      BOOST_CHECK_EQUAL(r, boost::math::pow<3>(3.25));
 
-   BOOST_IF_CONSTEXPR(std::numeric_limits<Real>::digits10 > 13)
-   {
-      // (13/4)^5
-      // 371293 / 1024
-      // 362.5908203125
-      r = pow(v, 5);
-      BOOST_CHECK_EQUAL(r, boost::math::pow<5>(Real(3.25)));
-   }
+      BOOST_IF_CONSTEXPR(std::numeric_limits<Real>::digits10 > 11)
+      {
+         // (13/4)^4
+         // 28561 / 256
+         // 111.56640625
+         r = pow(v, 4);
+         BOOST_CHECK_EQUAL(r, boost::math::pow<4>(Real(3.25)));
+      }
 
-   BOOST_IF_CONSTEXPR(std::numeric_limits<Real>::digits10 > 16)
-   {
-      // (13/4)^6
-      // 4826809 / 4096
-      // 1178.420166015625
-      r = pow(v, 6);
-      BOOST_CHECK_EQUAL(r, boost::math::pow<6>(Real(3.25)));
-   }
+      BOOST_IF_CONSTEXPR(std::numeric_limits<Real>::digits10 > 13)
+      {
+         // (13/4)^5
+         // 371293 / 1024
+         // 362.5908203125
+         r = pow(v, 5);
+         BOOST_CHECK_EQUAL(r, boost::math::pow<5>(Real(3.25)));
+      }
 
-   BOOST_IF_CONSTEXPR(std::numeric_limits<Real>::digits10 > 26)
-   {
-      // (13/4)^10
-      // 137858491849 / 1048576
-      // 131472.10297489166259765625
-      r = pow(v, 10);
-      BOOST_CHECK_EQUAL(r, boost::math::pow<10>(Real(3.25)));
-   }
+      BOOST_IF_CONSTEXPR(std::numeric_limits<Real>::digits10 > 16)
+      {
+         // (13/4)^6
+         // 4826809 / 4096
+         // 1178.420166015625
+         r = pow(v, 6);
+         BOOST_CHECK_EQUAL(r, boost::math::pow<6>(Real(3.25)));
+      }
 
-   BOOST_IF_CONSTEXPR(std::numeric_limits<Real>::digits10 > 38)
-   {
-      // (13/4)^15
-      // 51185893014090757 / 1073741824
-      // 47670577.665875439532101154327392578125
-      r = pow(v, 15);
-      BOOST_CHECK_EQUAL(r, boost::math::pow<15>(Real(3.25)));
-   }
+      BOOST_IF_CONSTEXPR(std::numeric_limits<Real>::digits10 > 26)
+      {
+         // (13/4)^10
+         // 137858491849 / 1048576
+         // 131472.10297489166259765625
+         r = pow(v, 10);
+         BOOST_CHECK_EQUAL(r, boost::math::pow<10>(Real(3.25)));
+      }
 
-   BOOST_IF_CONSTEXPR(std::numeric_limits<Real>::digits10 > 63)
-   {
-      // (13/4)^25
-      // 7056410014866816666030739693 / 1125899906842624
-      // 6267351095760.54642313524184960016327750054188072681427001953125
-      r = pow(v, 25);
-      BOOST_CHECK_EQUAL(r, boost::math::pow<25>(Real(3.25)));
+      BOOST_IF_CONSTEXPR(std::numeric_limits<Real>::digits10 > 38)
+      {
+         // (13/4)^15
+         // 51185893014090757 / 1073741824
+         // 47670577.665875439532101154327392578125
+         r = pow(v, 15);
+         BOOST_CHECK_EQUAL(r, boost::math::pow<15>(Real(3.25)));
+      }
+
+      BOOST_IF_CONSTEXPR(std::numeric_limits<Real>::digits10 > 63)
+      {
+         // (13/4)^25
+         // 7056410014866816666030739693 / 1125899906842624
+         // 6267351095760.54642313524184960016327750054188072681427001953125
+         r = pow(v, 25);
+         BOOST_CHECK_EQUAL(r, boost::math::pow<25>(Real(3.25)));
+      }
    }
    #endif
 
@@ -1602,7 +1627,7 @@ void test_float_ops(const std::integral_constant<int, boost::multiprecision::num
    BOOST_IF_CONSTEXPR (std::numeric_limits<Real>::has_quiet_NaN)
    {
       #ifndef BOOST_MP_STANDALONE
-      v = 20.25;
+      v = static_cast<Real>(20.25);
       r = std::numeric_limits<Real>::quiet_NaN();
       BOOST_CHECK((boost::math::isnan)(v + r));
       BOOST_CHECK((boost::math::isnan)(r + v));
@@ -1635,7 +1660,7 @@ void test_float_ops(const std::integral_constant<int, boost::multiprecision::num
    //
    BOOST_IF_CONSTEXPR (std::numeric_limits<Real>::has_infinity)
    {
-      v = 20.25;
+      v = static_cast<Real>(20.25);
       r = std::numeric_limits<Real>::infinity();
 
       #ifndef BOOST_MP_STANDALONE
@@ -3262,7 +3287,10 @@ void test()
    BOOST_CHECK_EQUAL(ac, 8 * 500L);
    ac = 8 * 500L;
    ac = ac + b + c;
-   BOOST_CHECK_EQUAL(ac, 8 * 500L + 64 + 500);
+   if (std::numeric_limits<Real>::digits > boost::multiprecision::msb(8 * 500L + 64 + 500))
+   {
+      BOOST_CHECK_EQUAL(ac, 8 * 500L + 64 + 500);
+   }
    ac = a;
    ac = b + c + ac;
    BOOST_CHECK_EQUAL(ac, 8 + 64 + 500);
@@ -3337,7 +3365,10 @@ void test()
       BOOST_CHECK_EQUAL(ac, 8 - (500 - 64));
       ac = a;
       ac -= b * c;
-      BOOST_CHECK_EQUAL(ac, 8 - 500 * 64);
+      if (std::numeric_limits<Real>::digits > boost::multiprecision::msb(std::abs(8 - 500 * 64)))
+      {
+         BOOST_CHECK_EQUAL(ac, 8 - 500 * 64);
+      }
    }
    ac = a;
    ac += ac * b;
@@ -3441,9 +3472,12 @@ void test()
    a = 20;
    b = 30;
    c = (a * b) + 22;
-   BOOST_CHECK_EQUAL(c, 20 * 30 + 22);
-   c = 22 + (a * b);
-   BOOST_CHECK_EQUAL(c, 20 * 30 + 22);
+   if (std::numeric_limits<Real>::digits > boost::multiprecision::msb(20 * 30 + 22))
+   {
+      BOOST_CHECK_EQUAL(c, 20 * 30 + 22);
+      c = 22 + (a * b);
+      BOOST_CHECK_EQUAL(c, 20 * 30 + 22);
+   }
    c  = 10;
    ac = a + b * c;
    BOOST_CHECK_EQUAL(ac, 20 + 30 * 10);

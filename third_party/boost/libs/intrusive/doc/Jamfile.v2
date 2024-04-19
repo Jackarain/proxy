@@ -7,10 +7,11 @@
 #
 # See http://www.boost.org/libs/intrusive for documentation.
 
-using auto-index ;
-
 import doxygen ;
 import quickbook ;
+
+using auto-index ;
+
 path-constant here : . ;
 
 
@@ -19,13 +20,14 @@ doxygen autodoc
    :
       [ glob ../../../boost/intrusive/*.hpp ]
    :
-   <doxygen:param>HIDE_UNDOC_MEMBERS=YES
-   <doxygen:param>HIDE_UNDOC_MEMBERS=YES
-   <doxygen:param>HIDE_UNDOC_CLASSES=YES
-   <doxygen:param>EXTRACT_PRIVATE=NO
-   <doxygen:param>ENABLE_PREPROCESSING=YES
-   <doxygen:param>MACRO_EXPANSION=YES
-   <doxygen:param>"PREDEFINED=\"BOOST_INTRUSIVE_DOXYGEN_INVOKED\" \\
+        <doxygen:param>EXTRACT_ALL=NO
+        <doxygen:param>HIDE_UNDOC_MEMBERS=YES
+        <doxygen:param>HIDE_UNDOC_CLASSES=YES
+        <doxygen:param>EXTRACT_PRIVATE=NO
+        <doxygen:param>ENABLE_PREPROCESSING=YES
+        <doxygen:param>EXPAND_ONLY_PREDEF=YES
+        <doxygen:param>MACRO_EXPANSION=YES
+        <doxygen:param>"PREDEFINED=\"BOOST_INTRUSIVE_DOXYGEN_INVOKED\" \\
                   \"BOOST_INTRUSIVE_IMPDEF(T)=implementation_defined\" \\
                   \"BOOST_INTRUSIVE_SEEDOC(T)=see_documentation\" \\
                   \"BOOST_INTRUSIVE_DOC1ST(T1,T2)=T1\" \\

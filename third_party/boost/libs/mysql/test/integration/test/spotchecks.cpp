@@ -1,10 +1,12 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#include <boost/mysql/any_connection.hpp>
+#include <boost/mysql/character_set.hpp>
 #include <boost/mysql/client_errc.hpp>
 #include <boost/mysql/common_server_errc.hpp>
 #include <boost/mysql/connection.hpp>
@@ -13,23 +15,19 @@
 #include <boost/mysql/results.hpp>
 #include <boost/mysql/row_view.hpp>
 #include <boost/mysql/rows_view.hpp>
+#include <boost/mysql/ssl_mode.hpp>
 
 #include <boost/mysql/detail/config.hpp>
 
 #include "test_common/create_basic.hpp"
+#include "test_common/netfun_maker.hpp"
 #include "test_integration/common.hpp"
 #include "test_integration/er_connection.hpp"
-#include "test_integration/metadata_validator.hpp"
+#include "test_integration/network_test.hpp"
 #include "test_integration/static_rows.hpp"
 
+using namespace boost::mysql;
 using namespace boost::mysql::test;
-using boost::mysql::common_server_errc;
-using boost::mysql::execution_state;
-using boost::mysql::field_view;
-using boost::mysql::results;
-using boost::mysql::row_view;
-
-namespace {
 
 BOOST_AUTO_TEST_SUITE(test_spotchecks)
 
@@ -41,7 +39,7 @@ auto err_net_samples = create_network_samples({
 });
 
 // Handshake
-BOOST_MYSQL_NETWORK_TEST(handshake_success, network_fixture, all_network_samples())
+BOOST_MYSQL_NETWORK_TEST(handshake_success, network_fixture, all_network_samples_with_handshake())
 {
     setup_and_physical_connect(sample.net);
     conn->handshake(params).validate_no_error();
@@ -179,8 +177,8 @@ BOOST_MYSQL_NETWORK_TEST(start_statement_execution_legacy_it_success, network_fi
 
     // Execute
     execution_state st;
-    std::forward_list<field_view> params{field_view("item"), field_view(42)};
-    conn->start_statement_execution(stmt, params.begin(), params.end(), st).validate_no_error();
+    std::forward_list<field_view> stmt_params{field_view("item"), field_view(42)};
+    conn->start_statement_execution(stmt, stmt_params.begin(), stmt_params.end(), st).validate_no_error();
     validate_2fields_meta(st.meta(), "empty_table");
     BOOST_TEST(st.should_read_rows());
 }
@@ -196,8 +194,8 @@ BOOST_MYSQL_NETWORK_TEST(start_statement_execution_legacy_it_error, network_fixt
 
     // Execute
     execution_state st;
-    std::forward_list<field_view> params{field_view("f0"), field_view("bad_date")};
-    conn->start_statement_execution(stmt, params.begin(), params.end(), st)
+    std::forward_list<field_view> stmt_params{field_view("f0"), field_view("bad_date")};
+    conn->start_statement_execution(stmt, stmt_params.begin(), stmt_params.end(), st)
         .validate_error(
             common_server_errc::er_truncated_wrong_value,
             {"field_date", "bad_date", "incorrect date value"}
@@ -214,8 +212,8 @@ BOOST_MYSQL_NETWORK_TEST(start_execution_stmt_it_success, network_fixture, all_n
 
     // Execute
     execution_state st;
-    std::forward_list<field_view> params{field_view("item"), field_view(42)};
-    conn->start_execution(stmt.bind(params.cbegin(), params.cend()), st).validate_no_error();
+    std::forward_list<field_view> stmt_params{field_view("item"), field_view(42)};
+    conn->start_execution(stmt.bind(stmt_params.cbegin(), stmt_params.cend()), st).validate_no_error();
     validate_2fields_meta(st.meta(), "empty_table");
     BOOST_TEST(st.should_read_rows());
 }
@@ -314,8 +312,8 @@ BOOST_MYSQL_NETWORK_TEST(execute_statement_iterator_success, network_fixture, er
 
     // Execute
     results result;
-    std::forward_list<field_view> params{field_view("item"), field_view(42)};
-    conn->execute(stmt.bind(params.cbegin(), params.cend()), result).validate_no_error();
+    std::forward_list<field_view> stmt_params{field_view("item"), field_view(42)};
+    conn->execute(stmt.bind(stmt_params.cbegin(), stmt_params.cend()), result).validate_no_error();
     BOOST_TEST(result.rows().size() == 0u);
 }
 
@@ -431,7 +429,8 @@ BOOST_MYSQL_NETWORK_TEST(ping_success, network_fixture, all_network_samples())
     conn->ping().validate_no_error();
 }
 
-BOOST_MYSQL_NETWORK_TEST(ping_error, network_fixture, all_network_samples())
+// TODO
+BOOST_MYSQL_NETWORK_TEST(ping_error, network_fixture, all_network_samples_with_handshake())
 {
     setup(sample.net);
 
@@ -457,20 +456,20 @@ BOOST_MYSQL_NETWORK_TEST(reset_connection_success, network_fixture, all_network_
 }
 
 // Quit connection: no server error spotcheck
-BOOST_MYSQL_NETWORK_TEST(quit_success, network_fixture, all_network_samples())
+BOOST_MYSQL_NETWORK_TEST(quit_success, network_fixture, all_network_samples_with_handshake())
 {
     setup_and_connect(sample.net);
 
     // Quit
     conn->quit().validate_no_error();
 
-    // We are no longer able to query
-    results result;
-    conn->query("SELECT 1", result).validate_any_error();
+    // TODO: we can't just query() and expect an error, because that's not reliable as a test.
+    // We should have a flag to check whether the connection is connected or not
 }
 
 // Close connection: no server error spotcheck
-BOOST_MYSQL_NETWORK_TEST(close_connection_success, network_fixture, all_network_samples())
+// TODO: all_network_samples_with_handshake
+BOOST_MYSQL_NETWORK_TEST(close_connection_success, network_fixture, all_network_samples_with_handshake())
 {
     setup_and_connect(sample.net);
 
@@ -571,6 +570,64 @@ BOOST_MYSQL_NETWORK_TEST(read_some_rows_error, network_fixture, err_net_samples)
 }
 #endif
 
-BOOST_AUTO_TEST_SUITE_END()  // test_spotchecks
+// set_character_set. Since this is only available in any_connection, we spotcheck this
+// with netmakers and don't cover all streams
+using set_charset_netmaker = netfun_maker_mem<void, any_connection, const character_set&>;
 
-}  // namespace
+struct
+{
+    string_view name;
+    set_charset_netmaker::signature set_character_set;
+} set_charset_all_fns[] = {
+    {"sync_errc", set_charset_netmaker::sync_errc(&any_connection::set_character_set)},
+    {"sync_exc", set_charset_netmaker::sync_exc(&any_connection::set_character_set)},
+    {"async_errinfo", set_charset_netmaker::async_errinfo(&any_connection::async_set_character_set, false)},
+    {"async_noerrinfo", set_charset_netmaker::async_noerrinfo(&any_connection::async_set_character_set, false)
+    },
+};
+
+BOOST_AUTO_TEST_CASE(spotcheck_success)
+{
+    for (const auto& fns : set_charset_all_fns)
+    {
+        BOOST_TEST_CONTEXT(fns.name)
+        {
+            // Setup
+            boost::asio::io_context ctx;
+            any_connection conn(ctx);
+            conn.connect(default_connect_params());
+
+            // Issue the command
+            fns.set_character_set(conn, ascii_charset).validate_no_error();
+
+            // Success
+            BOOST_TEST(conn.current_character_set()->name == "ascii");
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(spotcheck_error)
+{
+    for (const auto& fns : set_charset_all_fns)
+    {
+        BOOST_TEST_CONTEXT(fns.name)
+        {
+            // Setup
+            boost::asio::io_context ctx;
+            any_connection conn(ctx);
+            conn.connect(default_connect_params(ssl_mode::disable));
+
+            // Issue the command
+            fns.set_character_set(conn, character_set{"bad_charset", nullptr})
+                .validate_error_exact(
+                    common_server_errc::er_unknown_character_set,
+                    "Unknown character set: 'bad_charset'"
+                );
+
+            // The character set was not modified
+            BOOST_TEST(conn.current_character_set()->name == "utf8mb4");
+        }
+    }
+}
+
+BOOST_AUTO_TEST_SUITE_END()  // test_spotchecks

@@ -11,7 +11,7 @@
 #
 # include <boost/preprocessor/config/limits.hpp>
 # include <boost/preprocessor/arithmetic.hpp>
-# include <libs/preprocessor/test/test.h>
+# include "test.h"
 
 /* addition */
 

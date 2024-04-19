@@ -275,7 +275,13 @@ T newton_raphson_iterate(F f, T guess, T min, T max, int digits, std::uintmax_t&
       if (fabs(delta * 2) > fabs(delta2))
       {
          // Last two steps haven't converged.
-         delta = (delta > 0) ? (result - min) / 2 : (result - max) / 2;
+         T shift = (delta > 0) ? (result - min) / 2 : (result - max) / 2;
+         if ((result != 0) && (fabs(shift) > fabs(result)))
+         {
+            delta = sign(delta) * fabs(result); // protect against huge jumps!
+         }
+         else
+            delta = shift;
          // reset delta1/2 so we don't take this branch next time round:
          delta1 = 3 * delta;
          delta2 = 3 * delta;
@@ -536,13 +542,13 @@ namespace detail {
          last_f0 = f0;
          delta2 = delta1;
          delta1 = delta;
-#ifndef BOOST_NO_EXCEPTIONS
+#ifndef BOOST_MATH_NO_EXCEPTIONS
          try
 #endif
          {
             detail::unpack_tuple(f(result), f0, f1, f2);
          }
-#ifndef BOOST_NO_EXCEPTIONS
+#ifndef BOOST_MATH_NO_EXCEPTIONS
          catch (const std::overflow_error&)
          {
             f0 = max > 0 ? tools::max_value<T>() : -tools::min_value<T>();
@@ -784,35 +790,35 @@ inline T schroeder_iterate(F f, T guess, T min, T max, int digits) noexcept(poli
    * so this default should recover full precision even in this somewhat pathological case.
    * For isolated roots, the problem is so rapidly convergent that this doesn't matter at all.
    */
-template<class Complex, class F>
-Complex complex_newton(F g, Complex guess, int max_iterations = std::numeric_limits<typename Complex::value_type>::digits)
+template<class ComplexType, class F>
+ComplexType complex_newton(F g, ComplexType guess, int max_iterations = std::numeric_limits<typename ComplexType::value_type>::digits)
 {
-   typedef typename Complex::value_type Real;
+   typedef typename ComplexType::value_type Real;
    using std::norm;
    using std::abs;
    using std::max;
    // z0, z1, and z2 cannot be the same, in case we immediately need to resort to Muller's Method:
-   Complex z0 = guess + Complex(1, 0);
-   Complex z1 = guess + Complex(0, 1);
-   Complex z2 = guess;
+   ComplexType z0 = guess + ComplexType(1, 0);
+   ComplexType z1 = guess + ComplexType(0, 1);
+   ComplexType z2 = guess;
 
    do {
       auto pair = g(z2);
       if (norm(pair.second) == 0)
       {
          // Muller's method. Notation follows Numerical Recipes, 9.5.2:
-         Complex q = (z2 - z1) / (z1 - z0);
+         ComplexType q = (z2 - z1) / (z1 - z0);
          auto P0 = g(z0);
          auto P1 = g(z1);
-         Complex qp1 = static_cast<Complex>(1) + q;
-         Complex A = q * (pair.first - qp1 * P1.first + q * P0.first);
+         ComplexType qp1 = static_cast<ComplexType>(1) + q;
+         ComplexType A = q * (pair.first - qp1 * P1.first + q * P0.first);
 
-         Complex B = (static_cast<Complex>(2) * q + static_cast<Complex>(1)) * pair.first - qp1 * qp1 * P1.first + q * q * P0.first;
-         Complex C = qp1 * pair.first;
-         Complex rad = sqrt(B * B - static_cast<Complex>(4) * A * C);
-         Complex denom1 = B + rad;
-         Complex denom2 = B - rad;
-         Complex correction = (z1 - z2) * static_cast<Complex>(2) * C;
+         ComplexType B = (static_cast<ComplexType>(2) * q + static_cast<ComplexType>(1)) * pair.first - qp1 * qp1 * P1.first + q * q * P0.first;
+         ComplexType C = qp1 * pair.first;
+         ComplexType rad = sqrt(B * B - static_cast<ComplexType>(4) * A * C);
+         ComplexType denom1 = B + rad;
+         ComplexType denom2 = B - rad;
+         ComplexType correction = (z1 - z2) * static_cast<ComplexType>(2) * C;
          if (norm(denom1) > norm(denom2))
          {
             correction /= denom1;
@@ -864,7 +870,7 @@ Complex complex_newton(F g, Complex guess, int max_iterations = std::numeric_lim
 #endif
 
 
-#if !defined(BOOST_NO_CXX17_IF_CONSTEXPR)
+#if !defined(BOOST_MATH_NO_CXX17_IF_CONSTEXPR)
 // https://stackoverflow.com/questions/48979861/numerically-stable-method-for-solving-quadratic-equations/50065711
 namespace detail
 {

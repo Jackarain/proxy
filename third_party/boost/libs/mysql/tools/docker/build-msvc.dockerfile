@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+# Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -20,4 +20,5 @@ RUN powershell -Command \
     Copy-Item 'C:/Program Files (x86)/OpenSSL-Win32/' -Recurse -Destination 'C:/openssl-32/' ; \
     choco install --no-progress -y --force --version $OPENSSL_VERSION openssl ; \
     Copy-Item 'C:/Program Files/OpenSSL-Win64/' -Recurse -Destination 'C:/openssl-64/' ; \
-    choco uninstall -y openssl
+    choco uninstall -y openssl ; \
+    pip install requests

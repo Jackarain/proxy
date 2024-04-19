@@ -1,5 +1,5 @@
 /* Example of Outcome used with C APIs
-(C) 2017-2023 Niall Douglas <http://www.nedproductions.biz/> (2 commits)
+(C) 2017-2024 Niall Douglas <http://www.nedproductions.biz/> (2 commits)
 
 
 Boost Software License - Version 1.0 - August 17th, 2003
@@ -30,7 +30,7 @@ DEALINGS IN THE SOFTWARE.
 #include <cstring>  // for memcpy
 #include <string>
 
-#include "../../../include/boost/outcome/experimental/status-code/status-code/system_code_from_exception.hpp"
+#include "../../../include/boost/outcome/experimental/status-code/system_code_from_exception.hpp"
 #include "../../../include/boost/outcome/experimental/status_result.hpp"
 
 //! [function]
@@ -63,7 +63,7 @@ outcome_e::status_result<size_t> to_string(char *buffer, size_t bufferlen, int v
     // win32_code).
     //
     // Note that using this function requires including
-    // <boost/outcome/experimental/status-code/system_code_from_exception.hpp>
+    // <boost/outcome/experimental/system_code_from_exception.hpp>
     // It is NOT included by Experimental Outcome by default.
     return outcome_e::system_code_from_exception();
   }

@@ -13,13 +13,13 @@
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/decode_view.hpp>
-#include <boost/url/detail/decode.hpp>
+#include "decode.hpp"
 #include <boost/url/segments_encoded_view.hpp>
-#include <boost/url/detail/normalize.hpp>
 #include <boost/url/grammar/ci_string.hpp>
 #include <boost/assert.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <cstring>
+#include "normalize.hpp"
 
 namespace boost {
 namespace urls {
@@ -293,13 +293,14 @@ std::size_t
 remove_dot_segments(
     char* dest0,
     char const* end,
-    core::string_view s) noexcept
+    core::string_view input) noexcept
 {
     // 1. The input buffer `s` is initialized with
     // the now-appended path components and the
     // output buffer `dest0` is initialized to
     // the empty string.
     char* dest = dest0;
+    bool const is_absolute = input.starts_with('/');
 
     // Step 2 is a loop through 5 production rules:
     // https://www.rfc-editor.org/rfc/rfc3986#section-5.2.4
@@ -348,12 +349,7 @@ remove_dot_segments(
         n = 0;
         for (char c: dots)
         {
-            if (str.empty())
-            {
-                n = 0;
-                return false;
-            }
-            else if (str.starts_with(c))
+            if (str.starts_with(c))
             {
                 str.remove_prefix(1);
                 ++n;
@@ -386,45 +382,48 @@ remove_dot_segments(
 
     // Rule A
     std::size_t n;
-    while (!s.empty())
+    while (!input.empty())
     {
-        if (dot_starts_with(s, "../", n))
+        if (dot_starts_with(input, "../", n))
         {
             // Errata 4547
             append(dest, end, "../");
-            s.remove_prefix(n);
+            input.remove_prefix(n);
             continue;
         }
-        else if (!dot_starts_with(s, "./", n))
+        else if (!dot_starts_with(input, "./", n))
         {
             break;
         }
-        s.remove_prefix(n);
+        input.remove_prefix(n);
     }
 
     // Rule D
-    if( dot_equal(s, "."))
+    if( dot_equal(input, "."))
     {
-        s = {};
+        input = {};
     }
-    else if( dot_equal(s, "..") )
+    else if( dot_equal(input, "..") )
     {
         // Errata 4547
         append(dest, end, "..");
-        s = {};
+        input = {};
     }
 
     // 2. While the input buffer is not empty,
     // loop as follows:
-    while (!s.empty())
+    while (!input.empty())
     {
         // Rule B
-        if (dot_starts_with(s, "/./", n))
+        bool const is_dot_seg = dot_starts_with(input, "/./", n);
+        if (is_dot_seg)
         {
-            s.remove_prefix(n - 1);
+            input.remove_prefix(n - 1);
             continue;
         }
-        if (dot_equal(s, "/."))
+
+        bool const is_final_dot_seg = dot_equal(input, "/.");
+        if (is_final_dot_seg)
         {
             // We can't remove "." from a core::string_view
             // So what we do here is equivalent to
@@ -433,73 +432,129 @@ remove_dot_segments(
             // iteration, which would append this
             // '/' to  the output, as required by
             // Rule E
-            append(dest, end, s.substr(0, 1));
-            s = {};
+            append(dest, end, input.substr(0, 1));
+            input = {};
             break;
         }
 
         // Rule C
-        if (dot_starts_with(s, "/../", n))
+        bool const is_dotdot_seg = dot_starts_with(input, "/../", n);
+        if (is_dotdot_seg)
         {
-            std::size_t p = core::string_view(
-                dest0, dest - dest0).find_last_of('/');
-            if (p != core::string_view::npos)
+            core::string_view cur_out(dest0, dest - dest0);
+            std::size_t p = cur_out.find_last_of('/');
+            bool const has_multiple_segs = p != core::string_view::npos;
+            if (has_multiple_segs)
             {
                 // output has multiple segments
                 // "erase" [p, end] if not "/.."
                 core::string_view last_seg(dest0 + p, dest - (dest0 + p));
-                if (!dot_equal(last_seg, "/.."))
+                bool const prev_is_dotdot_seg = dot_equal(last_seg, "/..");
+                if (!prev_is_dotdot_seg)
+                {
                     dest = dest0 + p;
+                }
                 else
+                {
                     append(dest, end, "/..");
+                }
             }
             else if (dest0 != dest)
             {
-                // one segment in the output
-                dest = dest0;
-                s.remove_prefix(1);
+                // Only one segment in the output: remove it
+                core::string_view last_seg(dest0, dest - dest0);
+                bool const prev_is_dotdot_seg = dot_equal(last_seg, "..");
+                if (!prev_is_dotdot_seg)
+                {
+                    dest = dest0;
+                    if (!is_absolute)
+                    {
+                        input.remove_prefix(1);
+                    }
+                }
+                else
+                {
+                    append(dest, end, "/..");
+                }
             }
             else
             {
-                // output is empty
-                append(dest, end, "/..");
+                // Output is empty
+                if (is_absolute)
+                {
+                    append(dest, end, "/..");
+                }
+                else
+                {
+                    append(dest, end, "..");
+                }
             }
-            s.remove_prefix(n-1);
+            input.remove_prefix(n - 1);
             continue;
         }
-        if (dot_equal(s, "/.."))
+
+        bool const is_final_dotdot_seg = dot_equal(input, "/..");
+        if (is_final_dotdot_seg)
         {
-            std::size_t p = core::string_view(
-                dest0, dest - dest0).find_last_of('/');
-            if (p != core::string_view::npos)
+            core::string_view cur_out(dest0, dest - dest0);
+            std::size_t p = cur_out.find_last_of('/');
+            bool const has_multiple_segs = p != core::string_view::npos;
+            if (has_multiple_segs)
             {
-                // erase [p, end]
-                dest = dest0 + p;
-                append(dest, end, "/");
+                // output has multiple segments
+                // "erase" [p, end] if not "/.."
+                core::string_view last_seg(dest0 + p, dest - (dest0 + p));
+                bool const prev_is_dotdot_seg = dot_equal(last_seg, "/..");
+                if (!prev_is_dotdot_seg)
+                {
+                    dest = dest0 + p;
+                    append(dest, end, "/");
+                }
+                else
+                {
+                    append(dest, end, "/..");
+                }
             }
             else if (dest0 != dest)
             {
-                dest = dest0;
+                // Only one segment in the output: remove it
+                core::string_view last_seg(dest0, dest - dest0);
+                bool const prev_is_dotdot_seg = dot_equal(last_seg, "..");
+                if (!prev_is_dotdot_seg) {
+                    dest = dest0;
+                }
+                else
+                {
+                    append(dest, end, "/..");
+                }
             }
             else
             {
-                append(dest, end, "/..");
+                // Output is empty: append dotdot
+                if (is_absolute)
+                {
+                    append(dest, end, "/..");
+                }
+                else
+                {
+                    append(dest, end, "..");
+                }
             }
-            s = {};
+            input = {};
             break;
         }
 
         // Rule E
-        std::size_t p = s.find_first_of('/', 1);
+        std::size_t p = input.find_first_of('/', 1);
         if (p != core::string_view::npos)
         {
-            append(dest, end, s.substr(0, p));
-            s.remove_prefix(p);
+            append(dest, end, input.substr(0, p));
+            input.remove_prefix(p);
         }
         else
         {
-            append(dest, end, s);
-            s = {};
+            append(dest, end, input);
+            input = {};
         }
     }
 

@@ -1,0 +1,308 @@
+# Copyright 2020-2021 Peter Dimov
+# Copyright 2021 Andrey Semashev
+# Copyright 2021 Alexander Grund
+# Copyright 2022 James E. King III
+# Copyright 2023 Matt Borland
+#
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
+---
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - develop
+      - bugfix/**
+      - feature/**
+      - fix/**
+      - pr/**
+
+concurrency:
+  group: ${{format('{0}:{1}', github.repository, github.ref)}}
+  cancel-in-progress: true
+
+env:
+  GIT_FETCH_JOBS: 8
+  NET_RETRY_COUNT: 5
+  B2_CI_VERSION: 1
+  B2_VARIANT: debug,release
+  B2_LINK: shared,static
+  LCOV_BRANCH_COVERAGE: 0
+  CODECOV_NAME: Github Actions
+
+jobs:
+  posix:
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux, gcc
+          - { compiler: gcc-5,     cxxstd: '03,11,14,1z',    os: ubuntu-22.04, container: 'ubuntu:18.04' }
+          - { compiler: gcc-6,     cxxstd: '03,11,14,17',    os: ubuntu-22.04, container: 'ubuntu:18.04' }
+          - { compiler: gcc-7,     cxxstd: '03,11,14,17',    os: ubuntu-20.04 }
+          - { compiler: gcc-8,     cxxstd: '03,11,14,17,2a', os: ubuntu-20.04 }
+          - { compiler: gcc-9,     cxxstd: '03,11,14,17,2a', os: ubuntu-20.04 }
+          - { compiler: gcc-10,    cxxstd: '03,11,14,17,20', os: ubuntu-20.04 }
+          - { compiler: gcc-11,    cxxstd: '03,11,14,17,20', os: ubuntu-20.04 }
+          - { compiler: gcc-12,    cxxstd: '03,11,14,17,20', os: ubuntu-22.04 }
+          - { name: GCC w/ sanitizers, sanitize: yes,
+              compiler: gcc-12,    cxxstd: '03,11,14,17,20', os: ubuntu-22.04 }
+          #- { name: Collect coverage, coverage: yes,
+          #    compiler: gcc-8,     cxxstd: '03,11',          os: ubuntu-20.04, install: 'g++-8-multilib', address-model: '32,64' }
+
+          # Linux, clang
+          - { compiler: clang-5.0, cxxstd: '03,11,14,1z',    os: ubuntu-22.04, container: 'ubuntu:18.04' }
+          - { compiler: clang-6.0, cxxstd: '03,11,14,17',    os: ubuntu-22.04, container: 'ubuntu:18.04' }
+          - { compiler: clang-7,   cxxstd: '03,11,14,17',    os: ubuntu-22.04, container: 'ubuntu:18.04' }
+          # Note: clang-8 does not fully support C++20, so it is not compatible with some libstdc++ versions in this mode
+          - { compiler: clang-8,   cxxstd: '03,11,14,17,2a', os: ubuntu-22.04, container: 'ubuntu:18.04', install: 'clang-8 g++-7', gcc_toolchain: 7 }
+          - { compiler: clang-9,   cxxstd: '03,11,14,17,2a', os: ubuntu-20.04 }
+          - { compiler: clang-10,  cxxstd: '03,11,14,17,20', os: ubuntu-20.04 }
+          - { compiler: clang-11,  cxxstd: '03,11,14,17,20', os: ubuntu-20.04 }
+          - { compiler: clang-12,  cxxstd: '03,11,14,17,20', os: ubuntu-20.04 }
+          # Clang isn't compatible with libstdc++-13, so use the slightly older one
+          - { compiler: clang-13,  cxxstd: '03,11,14,17,20', os: ubuntu-22.04, install: 'clang-13 g++-12', gcc_toolchain: 12 }
+          - { compiler: clang-14,  cxxstd: '03,11,14,17,20', os: ubuntu-22.04, install: 'clang-14 g++-12', gcc_toolchain: 12 }
+          - { compiler: clang-15,  cxxstd: '03,11,14,17,20', os: ubuntu-22.04, install: 'clang-15 g++-12', gcc_toolchain: 12 }
+          - { compiler: clang-16,  cxxstd: '11,14,17,20,2b', os: ubuntu-latest, container: 'ubuntu:23.04' }
+          - { compiler: clang-17,  cxxstd: '11,14,17,20,2b', os: ubuntu-latest, container: 'ubuntu:23.10' }
+
+          # libc++
+          - { compiler: clang-6.0, cxxstd: '03,11,14',       os: ubuntu-22.04, container: 'ubuntu:18.04', stdlib: libc++, install: 'clang-6.0 libc++-dev libc++abi-dev' }
+          - { compiler: clang-12,  cxxstd: '03,11,14,17,20', os: ubuntu-20.04, stdlib: libc++, install: 'clang-12 libc++-12-dev libc++abi-12-dev' }
+          - { name: Clang w/ sanitizers, sanitize: yes,
+              compiler: clang-12,  cxxstd: '03,11,14,17,20', os: ubuntu-20.04, stdlib: libc++, install: 'clang-12 libc++-12-dev libc++abi-12-dev' }
+
+          # OSX, clang
+          - { compiler: clang,     cxxstd: '03,11,14,17,20',    os: macos-12 }
+          - { name: MacOS w/ clang and sanitizers,
+              compiler: clang,     cxxstd: '03,11,14,17,20,2b', os: macos-13, sanitize: yes }
+
+    timeout-minutes: 120
+    runs-on: ${{matrix.os}}
+    container: ${{matrix.container}}
+    env: {B2_USE_CCACHE: 1}
+
+    steps:
+      - name: Setup environment
+        run: |
+          if [ -f "/etc/debian_version" ]; then
+              echo "DEBIAN_FRONTEND=noninteractive" >> $GITHUB_ENV
+              export DEBIAN_FRONTEND=noninteractive
+          fi
+          if [ -n "${{matrix.container}}" ] && [ -f "/etc/debian_version" ]; then
+              apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
+              apt-get -o Acquire::Retries=$NET_RETRY_COUNT install -y sudo software-properties-common curl
+              # Need (newer) git, and the older Ubuntu container may require requesting the key manually using port 80
+              curl -sSL --retry ${NET_RETRY_COUNT:-5} 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0xE1DD270288B4E6030699E45FA1715D88E1DF1F24' | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/git-core_ubuntu_ppa.gpg
+              for i in {1..${NET_RETRY_COUNT:-3}}; do sudo -E add-apt-repository -y ppa:git-core/ppa && break || sleep 10; done
+              apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
+              osver=$(lsb_release -sr | cut -f1 -d.)
+              pkgs="g++ git"
+              # Ubuntu 22+ has only Python 3 in the repos
+              if [ -n "$osver" ] && [ "$osver" -ge "22" ]; then
+                pkgs+=" python-is-python3 libpython3-dev"
+              else
+                pkgs+=" python libpython-dev"
+              fi
+              apt-get -o Acquire::Retries=$NET_RETRY_COUNT install -y $pkgs
+          fi
+          # For jobs not compatible with ccache, use "ccache: no" in the matrix
+          if [[ "${{ matrix.ccache }}" == "no" ]]; then
+              echo "B2_USE_CCACHE=0" >> $GITHUB_ENV
+          fi
+          git config --global pack.threads 0
+
+      - uses: actions/checkout@v3
+        with:
+          # For coverage builds fetch the whole history, else only 1 commit using a 'fake ternary'
+          fetch-depth: ${{ matrix.coverage && '0' || '1' }}
+
+      - name: Cache ccache
+        uses: actions/cache@v3
+        if: env.B2_USE_CCACHE
+        with:
+          path: ~/.ccache
+          key: ${{matrix.os}}-${{matrix.container}}-${{matrix.compiler}}-${{github.sha}}
+          restore-keys: ${{matrix.os}}-${{matrix.container}}-${{matrix.compiler}}-
+
+      - name: Fetch Boost.CI
+        uses: actions/checkout@v3
+        with:
+          repository: boostorg/boost-ci
+          ref: master
+          path: boost-ci-cloned
+
+      - name: Get CI scripts folder
+        run: |
+          # Copy ci folder if not testing Boost.CI
+          [[ "$GITHUB_REPOSITORY" =~ "boost-ci" ]] || cp -r boost-ci-cloned/ci .
+          rm -rf boost-ci-cloned
+
+      - name: Install packages
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          SOURCE_KEYS=(${{join(matrix.source_keys, ' ')}})
+          SOURCES=(${{join(matrix.sources, ' ')}})
+          # Add this by default
+          SOURCES+=(ppa:ubuntu-toolchain-r/test)
+          for key in "${SOURCE_KEYS[@]}"; do
+              for i in {1..$NET_RETRY_COUNT}; do
+                  keyfilename=$(basename -s .key $key)
+                  curl -sSL --retry ${NET_RETRY_COUNT:-5} "$key" | sudo gpg --dearmor > /etc/apt/trusted.gpg.d/${keyfilename} && break || sleep 10
+              done
+          done
+          for source in "${SOURCES[@]}"; do
+              for i in {1..$NET_RETRY_COUNT}; do
+                  sudo add-apt-repository $source && break || sleep 10
+              done
+          done
+          sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
+          if [[ -z "${{matrix.install}}" ]]; then
+              pkgs="${{matrix.compiler}}"
+              pkgs="${pkgs/gcc-/g++-}"
+          else
+              pkgs="${{matrix.install}}"
+          fi
+          sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT install -y $pkgs
+
+      - name: Setup GCC Toolchain
+        if: matrix.gcc_toolchain
+        run: |
+          GCC_TOOLCHAIN_ROOT="$HOME/gcc-toolchain"
+          echo "GCC_TOOLCHAIN_ROOT=$GCC_TOOLCHAIN_ROOT" >> $GITHUB_ENV
+          if ! command -v dpkg-architecture; then
+              apt-get install -y dpkg-dev
+          fi
+          MULTIARCH_TRIPLET="$(dpkg-architecture -qDEB_HOST_MULTIARCH)"
+          mkdir -p "$GCC_TOOLCHAIN_ROOT"
+          ln -s /usr/include "$GCC_TOOLCHAIN_ROOT/include"
+          ln -s /usr/bin "$GCC_TOOLCHAIN_ROOT/bin"
+          mkdir -p "$GCC_TOOLCHAIN_ROOT/lib/gcc/$MULTIARCH_TRIPLET"
+          ln -s "/usr/lib/gcc/$MULTIARCH_TRIPLET/${{matrix.gcc_toolchain}}" "$GCC_TOOLCHAIN_ROOT/lib/gcc/$MULTIARCH_TRIPLET/${{matrix.gcc_toolchain}}"
+
+      - name: Setup Boost
+        env:
+          B2_ADDRESS_MODEL: ${{matrix.address-model}}
+          B2_COMPILER: ${{matrix.compiler}}
+          B2_CXXSTD: ${{matrix.cxxstd}}
+          B2_SANITIZE: ${{matrix.sanitize}}
+          B2_STDLIB: ${{matrix.stdlib}}
+          # More entries can be added in the same way, see the B2_ARGS assignment in ci/enforce.sh for the possible keys.
+          # B2_DEFINES: ${{matrix.defines}}
+          # Variables set here (to non-empty) will override the top-level environment variables, e.g.
+          # B2_VARIANT: ${{matrix.variant}}
+          # Set the (B2) target(s) to build, defaults to the test folder of the current library
+          # Can alternatively be done like this in the build step or in the build command of the build step, e.g. `run: B2_TARGETS=libs/$SELF/doc ci/build.sh`
+          # B2_TARGETS: libs/foo/test//bar
+        run: source ci/github/install.sh
+
+      #- name: Setup coverage collection
+      #  if: matrix.coverage
+      #  run: ci/github/codecov.sh "setup"
+
+      - name: Run tests
+        if: '!matrix.coverity'
+        run: ci/build.sh
+
+      #- name: Upload coverage
+      #  if: matrix.coverage
+      #  run: ci/codecov.sh "upload"
+
+  windows:
+    defaults:
+      run:
+        shell: cmd
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { toolset: msvc-14.0, cxxstd: '14,latest',      addrmd: '32,64', os: windows-2019 }
+          - { toolset: msvc-14.2, cxxstd: '14,17,20',       addrmd: '32,64', os: windows-2019 }
+          - { toolset: msvc-14.3, cxxstd: '14,17,20,latest',addrmd: '32,64', os: windows-2022 }
+          #- { name: Collect coverage, coverage: yes,
+          #    toolset: msvc-14.3, cxxstd: 'latest',         addrmd: '64',    os: windows-2022 }
+          - { toolset: clang-win, cxxstd: '14,17,latest',   addrmd: '32,64', os: windows-2022 }
+          #- { toolset: gcc,       cxxstd: '03,11,14,17,2a', addrmd: '64',    os: windows-2019 }
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Fetch Boost.CI
+        uses: actions/checkout@v3
+        with:
+          repository: boostorg/boost-ci
+          ref: master
+          path: boost-ci-cloned
+      - name: Get CI scripts folder
+        run: |
+          REM Copy ci folder if not testing Boost.CI
+          if "%GITHUB_REPOSITORY%" == "%GITHUB_REPOSITORY:boost-ci=%" xcopy /s /e /q /i /y boost-ci-cloned\ci .\ci
+          rmdir /s /q boost-ci-cloned
+
+      - name: Setup Boost
+        run: ci\github\install.bat
+
+      - name: Run tests
+        if: '!matrix.coverage'
+        run: ci\build.bat
+        env:
+          B2_TOOLSET: ${{matrix.toolset}}
+          B2_CXXSTD: ${{matrix.cxxstd}}
+          B2_ADDRESS_MODEL: ${{matrix.addrmd}}
+
+  MSYS2:
+    defaults:
+      run:
+        shell: msys2 {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        #  - { sys: MINGW32, compiler: gcc, cxxstd: '03,11,17,20' }
+          - { sys: MINGW64, compiler: gcc, cxxstd: '03,11,17,20' }
+
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup MSYS2 environment
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{matrix.sys}}
+          update: true
+          install: git python
+          pacboy: gcc:p cmake:p ninja:p
+
+      - name: Fetch Boost.CI
+        uses: actions/checkout@v3
+        with:
+          repository: boostorg/boost-ci
+          ref: master
+          path: boost-ci-cloned
+      - name: Get CI scripts folder
+        run: |
+          # Copy ci folder if not testing Boost.CI
+          [[ "$GITHUB_REPOSITORY" =~ "boost-ci" ]] || cp -r boost-ci-cloned/ci .
+          rm -rf boost-ci-cloned
+
+      - name: Setup Boost
+        env:
+          B2_COMPILER: ${{matrix.compiler}}
+          B2_CXXSTD: ${{matrix.cxxstd}}
+          B2_SANITIZE: ${{matrix.sanitize}}
+          B2_STDLIB: ${{matrix.stdlib}}
+        run: ci/github/install.sh
+
+      - name: Run tests
+        run: ci/build.sh

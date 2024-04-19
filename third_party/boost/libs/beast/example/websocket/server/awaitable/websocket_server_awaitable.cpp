@@ -63,8 +63,10 @@ do_session(stream ws)
     // Accept the websocket handshake
     co_await ws.async_accept();
 
-    for(;;)
-        try {
+    try
+    {
+        for(;;)
+        {
             // This buffer will hold the incoming message
             beast::flat_buffer buffer;
 
@@ -74,14 +76,13 @@ do_session(stream ws)
             // Echo the message back
             ws.text(ws.got_text());
             co_await ws.async_write(buffer.data());
-
         }
-        catch(boost::system::system_error & se)
-        {
-            if (se.code() != websocket::error::closed)
-                throw;
-
-        }
+    }
+    catch(const boost::system::system_error & se)
+    {
+        if (se.code() != websocket::error::closed)
+            throw;
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -111,12 +112,15 @@ do_listen(
                 do_session(stream(co_await acceptor.async_accept())),
                 [](std::exception_ptr e)
                 {
-                    try
+                    if (e)
                     {
-                        std::rethrow_exception(e);
-                    }
-                    catch (std::exception &e) {
-                        std::cerr << "Error in session: " << e.what() << "\n";
+                        try
+                        {
+                            std::rethrow_exception(e);
+                        }
+                        catch (std::exception &e) {
+                            std::cerr << "Error in session: " << e.what() << "\n";
+                        }
                     }
                 });
 }

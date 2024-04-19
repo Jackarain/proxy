@@ -23,6 +23,7 @@ project
 
 # include-only
 compile mp11.cpp ;
+compile complex_h.cpp ;
 
 # list
 run mp_size.cpp ;
@@ -73,7 +74,9 @@ run mp_is_value_list.cpp ;
 
 # algorithm
 run mp_transform.cpp ;
+run mp_transform_2.cpp ;
 run mp_transform_q.cpp ;
+run mp_transform_q_2.cpp ;
 run mp_transform_sf.cpp ;
 run mp_transform_if.cpp ;
 run mp_transform_if_q.cpp ;
@@ -99,6 +102,8 @@ run mp_at_2.cpp ;
 run mp_at_sf.cpp : : : <toolset>gcc-4.7:<warnings>all ;
 run mp_take.cpp ;
 run mp_take_2.cpp ;
+run mp_slice.cpp ;
+run mp_slice_2.cpp ;
 run mp_replace.cpp ;
 run mp_replace_if.cpp ;
 run mp_replace_if_q.cpp ;
@@ -141,9 +146,13 @@ run mp_with_index_cx.cpp ;
 run mp_from_sequence.cpp ;
 run mp_from_sequence_2.cpp ;
 run mp_min_element.cpp ;
+run mp_min_element_2.cpp ;
 run mp_min_element_q.cpp ;
+run mp_min_element_q_2.cpp ;
 run mp_max_element.cpp ;
+run mp_max_element_2.cpp ;
 run mp_max_element_q.cpp ;
+run mp_max_element_q_2.cpp ;
 run mp_nth_element.cpp ;
 run mp_nth_element_q.cpp ;
 run mp_back.cpp ;
@@ -158,6 +167,8 @@ run mp_partial_sum.cpp ;
 run mp_iterate.cpp ;
 run mp_pairwise_fold.cpp ;
 run mp_pairwise_fold_q.cpp ;
+run mp_sliding_fold.cpp ;
+run mp_sliding_fold_q.cpp ;
 run mp_intersperse.cpp ;
 run mp_split.cpp ;
 run mp_join.cpp ;

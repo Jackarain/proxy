@@ -39,7 +39,7 @@ struct rebinder
          , Option1
          , Option2
          > type;
-      BOOST_STATIC_ASSERT((key_type_tester<typename common_t::key_of_value_opt, type>::value));
+      BOOST_INTRUSIVE_STATIC_ASSERT((key_type_tester<typename common_t::key_of_value_opt, type>::value));
    };
 };
 
@@ -124,32 +124,19 @@ int main()
 {
    //Combinations: VoidPointer x ConstantTimeSize x DefaultHolder x Map
    //Minimize them selecting different combinations for raw and smart pointers
-   //Start with ('false', 'false', 'false') in sets and 'false', 'false', 'true' in multisets
 
    //void pointer
    test_main_template<void*, false, false, false, Base>::execute();
-   //test_main_template<void*, false, false, true>::execute();
    test_main_template<void*, false, true, false, Member>::execute();
-   //test_main_template<void*, false, true,  true>::execute();
    test_main_template<void*,  true, false, false, Base>::execute();
-   //test_main_template<void*,  true, false, true>::execute();
-   test_main_template<void*,  true, true, false, Member>::execute();
    test_main_template<void*,  true, true,  true, NonMember>::execute();
 
    //smart_ptr
-   //test_main_template<smart_ptr<void>, false, false, false>::execute();
    test_main_template<smart_ptr<void>, false, false,  true, Base>::execute();
-   //test_main_template<smart_ptr<void>, false,  true, false>::execute();
    test_main_template<smart_ptr<void>, false,  true,  true, Member>::execute();
-   //test_main_template<smart_ptr<void>,  true, false, false>::execute();
-   test_main_template<smart_ptr<void>,  true, false, true, NonMember>::execute();
-   //test_main_template<smart_ptr<void>,  true,  true, false>::execute();
-   //test_main_template<smart_ptr<void>,  true,  true,  true>::execute();
 
    //bounded_ptr (bool ConstantTimeSize, bool Map)
    test_main_template_bptr< false, false >::execute();
-   //test_main_template_bptr< false,  true >::execute();
-   //test_main_template_bptr<  true, false >::execute();
    test_main_template_bptr<  true,  true >::execute();
 
    return boost::report_errors();

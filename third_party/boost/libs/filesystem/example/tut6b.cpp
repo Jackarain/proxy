@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
         for (recursive_directory_iterator it(argv[1]);
              it != recursive_directory_iterator();)
         {
-            for (int i = 0; i <= it.level(); ++i)
+            for (int i = 0; i <= it.depth(); ++i)
                 std::cout << "  ";
 
             std::cout << it->path() << '\n';

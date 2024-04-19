@@ -90,7 +90,6 @@ parameters whose identity can be deduced from their types.
 :Authors:       David Abrahams, Daniel Wallin
 :Contact:       dave@boost-consulting.com, daniel@boostpro.com
 :organization:  `BoostPro Computing`_
-:date:          $Date: 2005/07/17 19:53:01 $
 
 :copyright:     Copyright David Abrahams, Daniel Wallin
                 2005-2009. Distributed under the Boost Software License,

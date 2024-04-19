@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
                        exclude_dirs.end(),
                        fs::canonical(it->path())) != exclude_dirs.end())) {
             // skip recursion here
-            it.no_push();
+            boost::wave::util::no_push(it);
         }
     }
 

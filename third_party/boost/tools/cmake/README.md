@@ -498,8 +498,8 @@ include(FetchContent)
 
 FetchContent_Declare(
   Boost
-  URL https://github.com/boostorg/boost/releases/download/boost-1.81.0/boost-1.81.0.tar.xz
-  URL_MD5 6cf0cdd797bca685910d527ae3c08cb3
+  URL https://github.com/boostorg/boost/releases/download/boost-1.84.0/boost-1.84.0.tar.xz
+  URL_MD5 893b5203b862eb9bbd08553e24ff146a
   DOWNLOAD_EXTRACT_TIMESTAMP ON
 )
 

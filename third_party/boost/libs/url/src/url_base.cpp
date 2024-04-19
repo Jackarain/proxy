@@ -20,24 +20,24 @@
 #include <boost/url/url_view.hpp>
 #include <boost/url/detail/any_params_iter.hpp>
 #include <boost/url/detail/any_segments_iter.hpp>
-#include <boost/url/detail/decode.hpp>
+#include "detail/decode.hpp"
 #include <boost/url/detail/encode.hpp>
 #include <boost/url/detail/except.hpp>
-#include <boost/url/detail/move_chars.hpp>
-#include <boost/url/detail/normalize.hpp>
-#include <boost/url/detail/path.hpp>
-#include <boost/url/detail/print.hpp>
+#include "detail/normalize.hpp"
+#include "detail/path.hpp"
+#include "detail/print.hpp"
 #include <boost/url/grammar/ci_string.hpp>
 #include <boost/url/rfc/authority_rule.hpp>
 #include <boost/url/rfc/query_rule.hpp>
-#include <boost/url/rfc/detail/charsets.hpp>
-#include <boost/url/rfc/detail/host_rule.hpp>
-#include <boost/url/rfc/detail/ipvfuture_rule.hpp>
-#include <boost/url/rfc/detail/path_rules.hpp>
-#include <boost/url/rfc/detail/port_rule.hpp>
-#include <boost/url/rfc/detail/scheme_rule.hpp>
-#include <boost/url/rfc/detail/userinfo_rule.hpp>
+#include "rfc/detail/charsets.hpp"
+#include "rfc/detail/host_rule.hpp"
+#include "rfc/detail/ipvfuture_rule.hpp"
+#include "boost/url/rfc/detail/path_rules.hpp"
+#include "rfc/detail/port_rule.hpp"
+#include "rfc/detail/scheme_rule.hpp"
+#include "rfc/detail/userinfo_rule.hpp"
 #include <boost/url/grammar/parse.hpp>
+#include "detail/move_chars.hpp"
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
@@ -224,12 +224,12 @@ remove_scheme()
     // (po and qo are invalidated)
     if (need_resize)
     {
-        impl_.adjust(id_user, id_end, 0 - sn);
+        impl_.adjust_left(id_user, id_end, sn);
     }
     else
     {
-        impl_.adjust(id_user, id_path, 0 - sn);
-        impl_.adjust(id_query, id_end, 0 - sn + 2 * cn);
+        impl_.adjust_left(id_user, id_path, sn);
+        impl_.adjust_left(id_query, id_end, sn - 2 * cn);
     }
     if (encode_colon)
     {
@@ -304,8 +304,8 @@ set_encoded_authority(
         dest[n - 1] = '/';
     impl_.apply_authority(a);
     if(need_slash)
-        impl_.adjust(
-            id_query, id_end, 1);
+        impl_.adjust_right(
+                id_query, id_end, 1);
     return *this;
 }
 
@@ -2023,7 +2023,7 @@ resize_impl(
     impl_.collapse(first, last,
         impl_.offset(last) + n);
     // shift (last, end) right
-    impl_.adjust(last, id_end, n);
+    impl_.adjust_right(last, id_end, n);
     s_[size()] = '\0';
     return s_ + impl_.offset(first);
 }
@@ -2063,8 +2063,7 @@ shrink_impl(
     impl_.collapse(first,  last,
         impl_.offset(last) - n);
     // shift (last, end) left
-    impl_.adjust(
-        last, id_end, 0 - n);
+    impl_.adjust_left(last, id_end, n);
     s_[size()] = '\0';
     return s_ + impl_.offset(first);
 }

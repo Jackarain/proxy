@@ -21,7 +21,15 @@
 #endif
 #endif
 
-#if defined(BOOST_CONTAINER_TEST_HAS_CONCEPTS) //common_iterator
+//Detect Clang vs libstdc++ incompatibility
+//"include/c++/12/bits/stl_iterator.h: error: requires clause differs in template redeclaration"
+#if defined(__clang_version__) && (__clang_major__ <= 15) && defined(BOOST_GNU_STDLIB)
+
+#define BOOST_CONTAINER_TEST_CLANG_UNSUPPORTED_LIBSTDCPP
+
+#endif
+
+#if defined(BOOST_CONTAINER_TEST_HAS_CONCEPTS) && !defined(BOOST_CONTAINER_TEST_CLANG_UNSUPPORTED_LIBSTDCPP)
 
 #include <boost/container/vector.hpp>
 #include <boost/container/list.hpp>

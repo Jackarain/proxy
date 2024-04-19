@@ -41,8 +41,6 @@
 #include <boost/assert.hpp>
 #include <boost/config.hpp>
 
-#include <boost/static_assert.hpp>
-
 #ifndef BOOST_NO_EXCEPTIONS
 #include <stdexcept>
 #endif // BOOST_NO_EXCEPTIONS

@@ -6,12 +6,7 @@
 #include <boost/config.hpp>
 #include <boost/config/pragma_message.hpp>
 
-#if !defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
-
-BOOST_PRAGMA_MESSAGE( "Skipping test, BOOST_SYSTEM_HAS_SYSTEM_ERROR is not defined" )
-int main() {}
-
-#elif !defined(BOOST_MSSTL_VERSION) || BOOST_MSSTL_VERSION < 140
+#if !defined(BOOST_MSSTL_VERSION) || BOOST_MSSTL_VERSION < 140
 
 BOOST_PRAGMA_MESSAGE( "Skipping test, BOOST_MSSTL_VERSION is not defined or is less than 140" )
 int main() {}

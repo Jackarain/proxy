@@ -11,6 +11,9 @@
     ],
     "maintainers": [
         "Karsten Ahnert <karsten.ahnert -at- gmx.de>",
-        "Mario Mulansky <mario.mulansky -at- gmx.net>"
-    ]
+        "Mario Mulansky <mario.mulansky -at- gmx.net>",
+        "Matt Borland <matt -at- mattborland.com>",
+        "Nick Thompson <nathompson7 -at- protonmail.com>"
+    ],
+    "cxxstd": "11"
 }

@@ -48,16 +48,16 @@ int map_test ()
    typedef typename MyShmMap::key_type    IntType;
    typedef boost::interprocess::pair<IntType, IntType>         IntPairType;
    typedef typename MyStdMap::value_type  StdPairType;
-   const int memsize = 65536;
+   const int Memsize = 128u * 1024u;
    const char *const shMemName = test::get_process_id_name();
    const int max = 100;
 
    BOOST_TRY{
       //Create shared memory
       shared_memory_object::remove(shMemName);
-      ManagedSharedMemory segment(create_only, shMemName, memsize);
+      ManagedSharedMemory segment(create_only, shMemName, Memsize);
 
-      segment.reserve_named_objects(100);
+      segment.reserve_named_objects(10);
 
       //Shared memory allocator must be always be initialized
       //since it has no default constructor
@@ -503,16 +503,16 @@ int map_test_copyable ()
    typedef boost::interprocess::pair<IntType, IntType>         IntPairType;
    typedef typename MyStdMap::value_type  StdPairType;
 
-   const int memsize = 65536;
+   const int Memsize = 128u * 1024u;
    const char *const shMemName = test::get_process_id_name();
    const int max = 100;
 
    BOOST_TRY{
    //Create shared memory
    shared_memory_object::remove(shMemName);
-   ManagedSharedMemory segment(create_only, shMemName, memsize);
+   ManagedSharedMemory segment(create_only, shMemName, Memsize);
 
-   segment.reserve_named_objects(100);
+   segment.reserve_named_objects(10);
 
    //Shared memory allocator must be always be initialized
    //since it has no default constructor

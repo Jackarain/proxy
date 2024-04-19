@@ -15,7 +15,7 @@
 # if !defined __cplusplus
 #include <wchar.h>
 #endif
-# include <libs/preprocessor/test/test.h>
+# include "test.h"
 
 #define VDATA 1,2,3,4
 #define NDATA

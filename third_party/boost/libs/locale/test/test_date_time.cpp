@@ -48,7 +48,11 @@ struct mock_calendar : public boost::locale::abstract_calendar {
     void normalize() override {}                                        // LCOV_EXCL_LINE
     int get_value(period_mark, value_type) const override { return 0; } // LCOV_EXCL_LINE
     void set_time(const boost::locale::posix_time& t) override { time = t.seconds * 1e3 + t.nanoseconds / 1e6; }
-    boost::locale::posix_time get_time() const override { return {}; } // LCOV_EXCL_LINE
+    boost::locale::posix_time get_time() const override
+    {
+        const auto seconds = static_cast<int64_t>(time / 1e3);
+        return {seconds, static_cast<uint32_t>((time - seconds * 1e3) * 1e6)};
+    }
     double get_time_ms() const override { return time; }
     void set_option(calendar_option_type, int) override {} // LCOV_EXCL_LINE
     int get_option(calendar_option_type opt) const override { return opt == is_dst ? is_dst_ : false; }
@@ -217,6 +221,19 @@ void test_main(int /*argc*/, char** /*argv*/)
             TEST_EQ(t1.time(), -1.25);
             t1 = date_time(-0.25);
             TEST_EQ(t1.time(), -0.25);
+
+            // Comparison in subsecond differences (only if backend supports it)
+            t1.time(42.5);
+            t2.time(42.25);
+            TEST(t1 >= t2);
+            TEST(t1 > t2);
+            t1.time(t2.time() - 0.1);
+            TEST(t1 <= t2);
+            TEST(t1 < t2);
+            t1.time(t2.time());
+            TEST(t1 <= t2);
+            TEST(t1 >= t2);
+            TEST(t1 == t2);
         }
         TEST_EQ(mock_calendar::num_instances, 0); // No leaks
         mock_cal.reset(new calendar());
@@ -385,6 +402,13 @@ void test_main(int /*argc*/, char** /*argv*/)
             // All at once
             time_point = year(1989) + month(2) + day(5) + hour(7) + minute(9) + second(11);
             TEST_EQ_FMT(time_point, "1989-03-05 07:09:11");
+            {
+                // Construction and setting of a timepoint to a fully specified value must be equal
+                // See issue #221
+                date_time explicit_time_point = year(1989) + month(2) + day(5) + hour(7) + minute(9) + second(11);
+                TEST(time_point == explicit_time_point);
+                TEST_EQ(time_point.time(), explicit_time_point.time());
+            }
             // Partials:
             time_point = year(1970) + february() + day(5);
             TEST_EQ_FMT(time_point, "1970-02-05 07:09:11");
@@ -522,12 +546,20 @@ void test_main(int /*argc*/, char** /*argv*/)
             // Difference in ns
             {
                 const double sec = std::trunc(time_point.time()) + 0.5; // Stay inside current second
-                if(backend_name == "icu") {                             // Only ICU supports sub-second times
-                    TEST(date_time(sec - 0.25) < date_time(sec));
-                    TEST(date_time(sec + 0.25) > date_time(sec));
-                }
                 TEST(date_time(sec - 0.25) <= date_time(sec));
                 TEST(date_time(sec + 0.25) >= date_time(sec));
+                // See issue #221: Supporting subseconds is confusing,
+                // especially as it is/was only support by ICU
+                {
+                    date_time var0, var1;
+                    const auto floorTime = std::floor(sec);
+                    var0.time(floorTime + 0.9);
+                    var1.time(floorTime + 0.2);
+                    TEST_EQ((var0 - var1) / second(), 0);
+                    // Adding a seconds should lead to a second difference
+                    var1 += second(1);
+                    TEST_EQ((var1 - var0) / second(), 1);
+                }
             }
 
             TEST_EQ(time_point.get(day()), 5);

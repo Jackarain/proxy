@@ -8,10 +8,6 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/config.hpp>
 
-#if defined(BOOST_NO_CXX11_NULLPTR)
-#error "This test requires support for C++11 nullptr"
-#endif
-
 int main()
 {
     boost::filesystem::path p(nullptr);

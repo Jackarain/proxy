@@ -68,5 +68,11 @@ BOOST_AUTO_TEST_CASE( regression_189 )
             stiff_system() , x2 , 0.0 , 50.0 , 0.01 ,
             std::cout << phoenix::arg_names::arg2 << " " << phoenix::arg_names::arg1[0] << "\n" );
     num_of_steps_expected = 1531;
+
+    // Apple ARM arch takes one additional step
+    #if defined(__aarch64__) && defined(__APPLE__)
+    ++num_of_steps_expected;
+    #endif
+
     BOOST_CHECK_EQUAL( num_of_steps2 , num_of_steps_expected );
 }

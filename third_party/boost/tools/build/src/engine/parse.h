@@ -68,6 +68,8 @@ struct _PARSE {
 
 void parse_file( OBJECT *, FRAME * );
 void parse_string( OBJECT * name, const char * * lines, FRAME * frame );
+void parse_buffer( OBJECT * name, const char * buffer, FRAME * frame );
+void parse_include( OBJECT * target, FRAME * frame );
 void parse_save( PARSE * );
 
 PARSE * parse_make(

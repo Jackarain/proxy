@@ -16,7 +16,7 @@
 #include <fstream>
 #include <cmath>
 
-#include <boost/array.hpp>
+#include <array>
 
 #include <boost/numeric/odeint/config.hpp>
 
@@ -27,7 +27,7 @@
 using namespace std;
 using namespace boost::numeric::odeint;
 
-typedef boost::array< double , 3 > state_type;
+typedef std::array< double , 3 > state_type;
 
 /*
  * x1' = x2*x3

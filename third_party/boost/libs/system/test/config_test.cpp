@@ -51,15 +51,5 @@ int main()
 #else
   std::cout << "BOOST_NO_ANSI_APIS is not defined" << std::endl;
 #endif
-#ifdef BOOST_NO_CXX11_NOEXCEPT
-  std::cout << "BOOST_NO_CXX11_NOEXCEPT is defined" << std::endl;
-#else
-  std::cout << "BOOST_NO_CXX11_NOEXCEPT is not defined" << std::endl;
-#endif
-#ifdef BOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS
-  std::cout << "BOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS is defined" << std::endl;
-#else
-  std::cout << "BOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS is not defined" << std::endl;
-#endif
   return 0;
 }

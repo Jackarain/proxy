@@ -9,7 +9,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //[doc_custom_devector
 #include <boost/container/devector.hpp>
-#include <boost/static_assert.hpp>
 
 //Make sure assertions are active
 #ifdef NDEBUG
@@ -29,7 +28,7 @@ int main ()
 
    //Size-optimized devector is smaller than the default one.
    typedef devector<int, new_allocator<int>, size_option_t > size_optimized_devector_t;
-   BOOST_STATIC_ASSERT(( sizeof(size_optimized_devector_t) < sizeof(devector<int>) ));
+   assert(( sizeof(size_optimized_devector_t) < sizeof(devector<int>) ));
 
    //Requesting capacity for more elements than representable by "unsigned char" is an error
    bool exception_thrown = false;

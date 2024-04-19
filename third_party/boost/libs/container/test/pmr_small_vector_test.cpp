@@ -9,7 +9,6 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include <boost/container/pmr/small_vector.hpp>
-#include <boost/static_assert.hpp>
 #include <boost/container/detail/type_traits.hpp>
 
 int main()
@@ -18,9 +17,9 @@ int main()
    using boost::container::dtl::is_same;
 
    typedef small_vector<int, 2, pmr::polymorphic_allocator<int> > intcontainer_t;
-   BOOST_STATIC_ASSERT(( is_same<intcontainer_t, pmr::small_vector_of<int, 2>::type >::value ));
+   BOOST_CONTAINER_STATIC_ASSERT(( is_same<intcontainer_t, pmr::small_vector_of<int, 2>::type >::value ));
    #if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
-      BOOST_STATIC_ASSERT(( is_same<intcontainer_t, pmr::small_vector<int, 2> >::value ));
+      BOOST_CONTAINER_STATIC_ASSERT(( is_same<intcontainer_t, pmr::small_vector<int, 2> >::value ));
    #endif
    return 0;
 }

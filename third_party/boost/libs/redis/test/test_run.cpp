@@ -31,7 +31,7 @@ BOOST_AUTO_TEST_CASE(resolve_bad_host)
 {
    net::io_context ioc;
 
-   config cfg;
+   auto cfg = make_test_config();
    cfg.addr.host = "Atibaia";
    cfg.addr.port = "6379";
    cfg.resolve_timeout = 10h;
@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(resolve_with_timeout)
 {
    net::io_context ioc;
 
-   config cfg;
+   auto cfg = make_test_config();
    cfg.addr.host = "occase.de";
    cfg.addr.port = "6379";
    cfg.resolve_timeout = 1ms;
@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE(connect_bad_port)
 {
    net::io_context ioc;
 
-   config cfg;
+   auto cfg = make_test_config();
    cfg.addr.host = "127.0.0.1";
    cfg.addr.port = "1";
    cfg.resolve_timeout = 10h;

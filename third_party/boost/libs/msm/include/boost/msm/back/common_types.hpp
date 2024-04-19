@@ -27,7 +27,7 @@ typedef enum
     HANDLED_DEFERRED=4
 } HandledEnum;
 
-typedef HandledEnum execute_return;
+typedef ::boost::msm::back::HandledEnum execute_return;
 
 // source of event provided to RTC algorithm
 enum EventSourceEnum

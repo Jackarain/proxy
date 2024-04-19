@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -61,11 +61,18 @@ struct err_view
     std::uint16_t error_code;
     string_view error_message;
 };
-BOOST_ATTRIBUTE_NODISCARD BOOST_MYSQL_DECL error_code
-deserialize_error_packet(span<const std::uint8_t> message, err_view& pack) noexcept;
+BOOST_ATTRIBUTE_NODISCARD BOOST_MYSQL_DECL error_code deserialize_error_packet(
+    span<const std::uint8_t> message,
+    err_view& pack,
+    bool has_sql_state = true
+) noexcept;
 
-BOOST_ATTRIBUTE_NODISCARD BOOST_MYSQL_DECL error_code
-process_error_packet(span<const std::uint8_t> message, db_flavor flavor, diagnostics& diag);
+BOOST_ATTRIBUTE_NODISCARD BOOST_MYSQL_DECL error_code process_error_packet(
+    span<const std::uint8_t> message,
+    db_flavor flavor,
+    diagnostics& diag,
+    bool has_sql_state = true
+);
 
 // Column definition
 BOOST_ATTRIBUTE_NODISCARD BOOST_MYSQL_DECL error_code
@@ -93,9 +100,15 @@ struct reset_connection_command
 };
 
 // Deserializes a response that may be an OK or an error packet.
-// Applicable for ping and reset connection
-BOOST_ATTRIBUTE_NODISCARD BOOST_MYSQL_DECL error_code
-deserialize_ok_response(span<const std::uint8_t> message, db_flavor flavor, diagnostics& diag);
+// Applicable for commands like ping and reset connection.
+// If the response is an OK packet, sets backslash_escapes according to the
+// OK packet's server status flags
+BOOST_ATTRIBUTE_NODISCARD BOOST_MYSQL_DECL error_code deserialize_ok_response(
+    span<const std::uint8_t> message,
+    db_flavor flavor,
+    diagnostics& diag,
+    bool& backslash_escapes
+);
 
 // Query
 struct query_command

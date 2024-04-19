@@ -208,21 +208,6 @@ struct block_header
    }
 };
 
-inline void array_construct(void *mem, std::size_t num, in_place_interface &table)
-{
-   //Try constructors
-   std::size_t constructed = 0;
-   BOOST_TRY{
-      table.construct_n(mem, num, constructed);
-   }
-   //If there is an exception call destructors and erase index node
-   BOOST_CATCH(...){
-      std::size_t destroyed = 0;
-      table.destroy_n(mem, constructed, destroyed);
-      BOOST_RETHROW
-   } BOOST_CATCH_END
-}
-
 template<class CharT>
 struct intrusive_compare_key
 {

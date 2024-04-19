@@ -24,6 +24,7 @@
 #include "variable.h"
 #include "output.h"
 #include "startup.h"
+#include "mod_sysinfo.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -38,6 +39,13 @@
 #include <utility>
 #include <vector>
 #include <array>
+
+#if defined(B2_DEBUG) && B2_DEBUG
+// #define B2_FUNCTION_STACK_VALIDATE 1
+#define B2_FUNCTION_STACK_VALIDATE 0
+#else
+#define B2_FUNCTION_STACK_VALIDATE 0
+#endif
 
 /*
 #define FUNCTION_DEBUG_PROFILE
@@ -192,7 +200,7 @@ struct _function
 typedef struct _builtin_function
 {
     FUNCTION base;
-    LIST * ( * func )( FRAME *, int32_t flags );
+    function_builtin_t func;
     int32_t flags;
 } BUILTIN_FUNCTION;
 
@@ -213,11 +221,11 @@ typedef struct _jam_function
 } JAM_FUNCTION;
 
 
+namespace
+{
 typedef struct _stack STACK;
 typedef STACK* stack_ptr;
 
-namespace
-{
     template <typename T>
     using remove_cref_t
         = typename std::remove_const<
@@ -260,7 +268,6 @@ namespace
         typename select_last_impl<(sizeof...(A) == 1), type_list<A...> >
             ::template type<A...>;
     #endif
-}
 
 struct _stack
 {
@@ -268,20 +275,33 @@ struct _stack
 
     _stack()
     {
+        // The LIFO stack goes from start end (high/right) to (low/left).
+        // Byte size of the function stack.
         int32_t const size = 1 << 21;
+        // The beginning of the stack memory.
         start = BJAM_MALLOC( size );
+        // The current past-end/tail of the stack memory.
         end = (char *)start + size;
+        // The next available stack location.
         data = end;
     }
 
+    #if defined(__clang__) && defined(__has_feature)
+    #if __has_feature(address_sanitizer)
+    // This function calls not properly type-erased callbacks
+    __attribute__((no_sanitize("undefined")))
+    #endif
+    #endif
     void done()
     {
         if ( cleanups_size > cleanups_t::size_type(0) )
         {
+            // Call any left over cleanup functions to deallocate items that
+            // reference resources.
             while ( cleanups_size > 0 )
             {
                 cleanups_size -= 1;
-                cleanups[cleanups_size]( this );
+                cleanups[cleanups_size].clean( this );
             }
         }
         BJAM_FREE( start );
@@ -306,30 +326,86 @@ struct _stack
 
     // Move "v" to a new slot in ther stack. Returns a reference to the new item.
     template <class T>
-    remove_cref_t<T> & push( T v );
+    remove_cref_t<T> & push( T v, FRAME * frame = nullptr );
 
     // Copy "v" into "n" new items at the top of the stack. Returns a pointer
-    // to the first, i.e. top most, new item.
+    // to the first, i.e. top/front most, new item.
     template <class T>
-    remove_cref_t<T> * push( T v, int32_t n );
+    remove_cref_t<T> * push( T v, int32_t n, FRAME * frame = nullptr );
 
-    // Removes the top most "T" item from the stack and returns a copy of it.
+    // Removes the top/left most "T" item from the stack and returns a copy of
+    // it.
     template <class T>
     remove_cref_t<T> pop()
     {
         using U = remove_cref_t<T>;
+        // Copy the top/left item.
         U result = top<U>();
+        // Remove the obsolete top item.
         pop<T>( 1 );
         return result;
     }
 
-    // Removes the top "n" "T" items from the stack.
+    // Removes the top/left "n" "T" items from the stack.
     template <class T>
     void pop( int32_t n )
     {
+        // Debugging validation.
+        using U = remove_cref_t<T>;
+        for (auto c = 0; c < n; ++c)
+            cleanups[cleanups_size-c-1].check<U>().reset();
+        // The removal of the n items happens by skipping the stack pointer
+        // past the n items.
         set_data( nth<T>( n ) );
+        // We also "skip" the cleanups. As the caller has dealt with that in
+        // some form.
         cleanups_size -= n;
     }
+
+    //
+    template <class T>
+    void swap( int32_t a, int32_t b )
+    {
+        std::swap( this->top<T>(a), this->top<T>(b) );
+        std::swap(
+            this->cleanups[cleanups_size-a-1],
+            this->cleanups[cleanups_size-b-1] );
+    }
+
+    // RAII checks that the stack returns to a starting point at the end of a
+    // scope.
+    struct check
+    {
+        check(FRAME * f, STACK * s)
+        {
+            #if B2_FUNCTION_STACK_VALIDATE
+            frame = f;
+            stack = s;
+            saved = s->get<char>();
+            #endif
+        }
+
+        check & operator()()
+        {
+            #if B2_FUNCTION_STACK_VALIDATE
+            if (stack->get<char>() != saved)
+            {
+                backtrace_line( frame );
+                err_printf( "error: stack check failed.\n" );
+                backtrace( frame );
+                b2::ensure( false );
+            }
+            #endif
+            return *this;
+        }
+
+        private:
+        #if B2_FUNCTION_STACK_VALIDATE
+        FRAME * frame = nullptr;
+        STACK * stack = nullptr;
+        char * saved = nullptr;
+        #endif
+    };
 
     private:
 
@@ -337,7 +413,57 @@ struct _stack
     void * end = nullptr;
     void * data = nullptr;
     using cleanup_f = void(*)( _stack* );
-    using cleanups_t = std::array<cleanup_f, (1<<21)/sizeof(void*)>;
+    struct cleanup_t
+    {
+        cleanup_f clean = nullptr;
+        #if B2_FUNCTION_STACK_VALIDATE
+        const char * type_name = nullptr;
+        std::string native_stack;
+        std::string jam_stack;
+        #endif
+        inline cleanup_t() = default;
+        template <class T>
+        inline cleanup_t(cleanup_f f, FRAME * frame, T*_) : clean(f)
+        {
+            #if B2_FUNCTION_STACK_VALIDATE
+            type_name = typeid(T).name();
+            native_stack = b2::stacktrace::to_string();
+            jam_stack = b2::jam::backtrace::to_string(frame);
+            #endif
+        }
+        inline cleanup_t & reset()
+        {
+            clean = nullptr;
+            #if B2_FUNCTION_STACK_VALIDATE
+            type_name = nullptr;
+            native_stack = "";
+            jam_stack = "";
+            #endif
+            return *this;
+        }
+        template <class T>
+        inline cleanup_t & check()
+        {
+            #if B2_FUNCTION_STACK_VALIDATE
+            static const char * type_name_c = typeid(T).name();
+            if (type_name_c != this->type_name)
+            {
+                err_printf(
+                    "Stack type mismatch, trying to pop '%s' have '%s'"
+                    " originally from:\n"
+                    "(jam, recent first)\n"
+                    "%s\n"
+                    "(native, recent first)\n"
+                    "%s\n",
+                    type_name_c, this->type_name, jam_stack.c_str(),
+                    native_stack.c_str());
+            }
+            b2::ensure(type_name_c == this->type_name);
+            #endif
+            return *this;
+        }
+    };
+    using cleanups_t = std::array<cleanup_t, (1 << 21)/sizeof(void*)>;
     cleanups_t cleanups;
     cleanups_t::size_type cleanups_size = 0;
 
@@ -360,6 +486,7 @@ struct _stack
         return data;
     }
 
+    // Get a pointer from the current top/left onward to the nth item.
     template <typename T>
     remove_cref_t<T> * nth( int32_t n )
     {
@@ -406,7 +533,7 @@ struct _stack
     }
 
     template <typename T>
-    void cleanup_push(int32_t n, T*_ = nullptr);
+    void cleanup_push(int32_t n, FRAME * frame, T*_ = nullptr);
 };
 
 template <>
@@ -417,26 +544,30 @@ void _stack::cleanup_item<LIST*>(_stack * s, LIST**)
 }
 
 template <class T>
-remove_cref_t<T> & _stack::push( T v )
+remove_cref_t<T> & _stack::push( T v, FRAME * frame )
 {
-    return *push<T>( v, 1 );
+    return *push<T>( v, 1, frame );
 }
 
 template <class T>
-remove_cref_t<T> * _stack::push( T v, int32_t n )
+remove_cref_t<T> * _stack::push( T v, int32_t n, FRAME * frame )
 {
     using U = remove_cref_t<T>;
     set_data( nth<T>( -n ) );
     std::uninitialized_fill_n( nth<U>( 0 ), n, v );
-    cleanup_push<U>( n );
+    cleanup_push<U>( n, frame );
     return nth<U>( 0 );
 }
 
 template <typename T>
-void _stack::cleanup_push( int32_t n, T*_ )
+void _stack::cleanup_push( int32_t n, FRAME * frame, T*t )
 {
-    std::uninitialized_fill_n( &cleanups[cleanups_size], n, (cleanup_f)&_stack::cleanup_item<T> );
+    using U = remove_cref_t<T>;
+    cleanup_t c((cleanup_f)&_stack::cleanup_item<T>, frame, (U*)(t));
+    std::uninitialized_fill_n( &cleanups[cleanups_size], n, c );
     cleanups_size += n;
+}
+
 }
 
 static STACK * stack_global()
@@ -590,7 +721,7 @@ static LIST * function_call_rule( JAM_FUNCTION * function, FRAME * frame,
 {
     FRAME inner;
     int32_t i;
-    b2::jam::list first( s->pop<LIST *>(), true );
+    b2::list_ref first( s->pop<LIST *>(), true );
     LIST * result = L0;
     OBJECT * rulename;
 
@@ -645,120 +776,22 @@ static LIST * function_call_rule( JAM_FUNCTION * function, FRAME * frame,
 
 static LIST * function_call_member_rule( JAM_FUNCTION * function, FRAME * frame, STACK * s, int32_t n_args, OBJECT * rulename, OBJECT * file, int32_t line )
 {
-    FRAME   inner[ 1 ];
-    int32_t i;
-    LIST * first = s->pop<LIST *>();
-    LIST * result = L0;
-    RULE * rule;
-    module_t * module;
-    OBJECT * real_rulename = 0;
-
-    frame->file = file;
-    frame->line = line;
-
-    if ( list_empty( first ) )
-    {
-        backtrace_line( frame );
-        out_printf( "warning: object is empty\n" );
-        backtrace( frame );
-
-        list_free( first );
-
-        for( i = 0; i < n_args; ++i )
-        {
-            list_free( s->pop<LIST *>() );
-        }
-
-        return result;
-    }
-
-    /* FIXME: handle generic case */
-    assert( list_length( first ) == 1 );
-
-    module = bindmodule( list_front( first ) );
-    if ( module->class_module )
-    {
-        rule = bindrule( rulename, module );
-        if ( rule->procedure )
-        {
-            real_rulename = object_copy( function_rulename( rule->procedure ) );
-        }
-        else
-        {
-            string buf[ 1 ];
-            string_new( buf );
-            string_append( buf, object_str( module->name ) );
-            string_push_back( buf, '.' );
-            string_append( buf, object_str( rulename ) );
-            real_rulename = object_new( buf->value );
-            string_free( buf );
-        }
-    }
-    else
-    {
-        string buf[ 1 ];
-        string_new( buf );
-        string_append( buf, object_str( list_front( first ) ) );
-        string_push_back( buf, '.' );
-        string_append( buf, object_str( rulename ) );
-        real_rulename = object_new( buf->value );
-        string_free( buf );
-        rule = bindrule( real_rulename, frame->module );
-    }
-
-    frame_init( inner );
-
-    inner->prev = frame;
-    inner->prev_user = frame->module->user_module ? frame : frame->prev_user;
-    inner->module = frame->module;  /* This gets fixed up in evaluate_rule(), below. */
-
     if ( n_args > LOL_MAX )
     {
         out_printf( "ERROR: member rules are limited to %d arguments\n", LOL_MAX );
-        backtrace( inner );
+        backtrace( frame );
         b2::clean_exit( EXITBAD );
     }
 
-    for( i = 0; i < n_args; ++i )
-    {
-        lol_add( inner->args, s->top<LIST*>( n_args - i - 1 ) );
-    }
+    b2::list_ref first(s->pop<LIST *>(), true);
 
-    for( i = 0; i < n_args; ++i )
-    {
+    b2::lists args;
+    for (b2::lists::size_type i = 0; i < n_args; ++i)
+        args.push_back(b2::list_ref(s->top<LIST*>( n_args - i - 1 ), true));
+    for (b2::lists::size_type i = 0; i < n_args; ++i)
         s->pop<LIST *>();
-    }
 
-    if ( list_length( first ) > 1 )
-    {
-        string buf[ 1 ];
-        LIST * trailing = L0;
-        LISTITER iter = list_begin( first ), end = list_end( first );
-        iter = list_next( iter );
-        string_new( buf );
-        for ( ; iter != end; iter = list_next( iter ) )
-        {
-            string_append( buf, object_str( list_item( iter ) ) );
-            string_push_back( buf, '.' );
-            string_append( buf, object_str( rulename ) );
-            trailing = list_push_back( trailing, object_new( buf->value ) );
-            string_truncate( buf, 0 );
-        }
-        string_free( buf );
-        if ( inner->args->count == 0 )
-            lol_add( inner->args, trailing );
-        else
-        {
-            LIST * * const l = &inner->args->list[ 0 ];
-            *l = list_append( trailing, *l );
-        }
-    }
-
-    list_free( first );
-    result = evaluate_rule( rule, real_rulename, inner );
-    frame_free( inner );
-    object_free( real_rulename );
-    return result;
+    return call_member_rule( rulename, frame, std::move(first), std::move(args) );
 }
 
 
@@ -1055,7 +1088,7 @@ static int32_t expand_modifiers( STACK * s, int32_t n )
                 iter[ i ] = list_begin( args[ i ] );
             }
         }
-        s->pop<LIST*>( n );
+        s->pop<LISTITER>( n );
     }
     return total;
 }
@@ -3260,8 +3293,9 @@ void function_location( FUNCTION * function_, OBJECT * * file, int32_t * line )
 static struct arg_list * arg_list_compile_builtin( char const * * args,
     int32_t * num_arguments );
 
-FUNCTION * function_builtin( LIST * ( * func )( FRAME * frame, int32_t flags ),
-    int32_t flags, char const * * args )
+FUNCTION * function_builtin(
+    std::function<LIST* (FRAME *, int32_t flags)> func,
+    int32_t flags, const char * * args )
 {
     BUILTIN_FUNCTION * result = (BUILTIN_FUNCTION*)BJAM_MALLOC( sizeof( BUILTIN_FUNCTION ) );
     result->base.type = FUNCTION_BUILTIN;
@@ -3269,7 +3303,7 @@ FUNCTION * function_builtin( LIST * ( * func )( FRAME * frame, int32_t flags ),
     result->base.rulename = 0;
     result->base.formal_arguments = arg_list_compile_builtin( args,
         &result->base.num_formal_arguments );
-    result->func = func;
+    new (&(result->func)) function_builtin_t(func);
     result->flags = flags;
     return (FUNCTION *)result;
 }
@@ -3374,7 +3408,7 @@ static void type_check_range( OBJECT * type_name, LISTITER iter, LISTITER end,
 
         /* Prepare the argument list */
         lol_add( frame.args, list_new( object_copy( list_item( iter ) ) ) );
-        b2::jam::list error(
+        b2::list_ref error(
             evaluate_rule(
                 bindrule( type_name, frame.module ), type_name, &frame ),
             true );
@@ -3472,7 +3506,7 @@ void argument_list_push( struct arg_list * formal, int32_t formal_count,
         for ( j = 0; j < formal[ i ].size; ++j )
         {
             struct argument * formal_arg = &formal[ i ].args[ j ];
-            b2::jam::list value;
+            b2::list_ref value;
 
             switch ( formal_arg->flags )
             {
@@ -3512,12 +3546,12 @@ void argument_list_push( struct arg_list * formal, int32_t formal_count,
             {
                 LIST * * const old = &frame->module->fixed_variables[
                     formal_arg->index ];
-                s->push( *old );
+                s->push( *old, frame );
                 *old = value.release();
             }
             else
                 s->push( var_swap( frame->module, formal_arg->arg_name,
-                    value.release() ) );
+                    value.release() ), frame );
         }
 
         if ( actual_iter != actual_end )
@@ -4080,6 +4114,8 @@ void function_free( FUNCTION * function_ )
     {
         assert( function_->type == FUNCTION_BUILTIN );
         if ( function_->rulename ) object_free( function_->rulename );
+        BUILTIN_FUNCTION * func = (BUILTIN_FUNCTION *)function_;
+        func->func.~function_builtin_t();
     }
 
     BJAM_FREE( function_ );
@@ -4270,15 +4306,14 @@ LIST * function_execute_write_file(
 
 LIST * function_run( FUNCTION * function_, FRAME * frame )
 {
+    _stack::check check_stack(frame, stack_global());
+
     STACK * s = stack_global();
     JAM_FUNCTION * function;
     instruction * code;
     LIST * l;
     LIST * r;
     LIST * result = L0;
-#ifndef NDEBUG
-    char * saved_stack = s->get<char>();
-#endif
 
     PROFILE_ENTER_LOCAL(function_run);
 
@@ -4392,7 +4427,7 @@ LIST * function_run( FUNCTION * function_, FRAME * frame )
         case INSTR_SWAP:
         {
             PROFILE_ENTER_LOCAL(function_run_INSTR_SWAP);
-            std::swap( s->top<LIST*>(), s->top<LIST*>( code->arg ) );
+            s->swap<LIST*>( 0, code->arg );
             PROFILE_EXIT_LOCAL(function_run_INSTR_SWAP);
             break;
         }
@@ -4629,18 +4664,7 @@ LIST * function_run( FUNCTION * function_, FRAME * frame )
             if ( function_->formal_arguments )
                 argument_list_pop( function_->formal_arguments,
                     function_->num_formal_arguments, frame, s );
-#ifndef NDEBUG
-            if ( !( saved_stack == s->get<char>() ) )
-            {
-                frame->file = function->file;
-                frame->line = function->line;
-                backtrace_line( frame );
-                out_printf( "error: stack check failed.\n" );
-                backtrace( frame );
-                assert( saved_stack == s->get<char>() );
-            }
-            assert( saved_stack == s->get<char>() );
-#endif
+            check_stack();
             debug_on_exit_function( function->base.rulename );
             PROFILE_EXIT_LOCAL(function_run_INSTR_RETURN);
             PROFILE_EXIT_LOCAL(function_run);
@@ -4656,7 +4680,7 @@ LIST * function_run( FUNCTION * function_, FRAME * frame )
             PROFILE_ENTER_LOCAL(function_run_INSTR_PUSH_LOCAL);
             LIST * value = s->pop<LIST *>();
             s->push( function_swap_variable( function, frame, code->arg,
-                value ) );
+                value ), frame );
             PROFILE_EXIT_LOCAL(function_run_INSTR_PUSH_LOCAL);
             break;
         }
@@ -5220,32 +5244,11 @@ LIST * function_run( FUNCTION * function_, FRAME * frame )
         case INSTR_INCLUDE:
         {
             PROFILE_ENTER_LOCAL(function_run_INSTR_INCLUDE);
-            b2::jam::list nt( s->pop<LIST *>(), true );
+            b2::list_ref nt( s->pop<LIST *>(), true );
             if ( !nt.empty() )
             {
-                TARGET * const t = bindtarget( *nt.begin() );
+                parse_include( *nt.begin(), frame );
 
-                /* DWA 2001/10/22 - Perforce Jam cleared the arguments here,
-                 * which prevented an included file from being treated as part
-                 * of the body of a rule. I did not see any reason to do that,
-                 * so I lifted the restriction.
-                 */
-
-                /* Bind the include file under the influence of "on-target"
-                 * variables. Though they are targets, include files are not
-                 * built with make().
-                 */
-
-                pushsettings( root_module(), t->settings );
-                /* We do not expect that a file to be included is generated by
-                 * some action. Therefore, pass 0 as third argument. If the name
-                 * resolves to a directory, let it error out.
-                 */
-                object_free( t->boundname );
-                t->boundname = search( t->name, &t->time, 0, 0 );
-                popsettings( root_module(), t->settings );
-
-                parse_file( t->boundname, frame );
 #ifdef JAM_DEBUGGER
                 frame->function = function_;
 #endif
@@ -5264,10 +5267,10 @@ LIST * function_run( FUNCTION * function_, FRAME * frame )
             LIST * const module_name = s->pop<LIST *>();
             module_t * outer_module = frame->module;
             frame->module = !list_empty( module_name )
-                ? bindmodule( list_front( module_name ) )
-                : root_module();
+                ? b2::ensure_valid(bindmodule( list_front( module_name ) ))
+                : b2::ensure_valid(root_module());
             list_free( module_name );
-            s->push( outer_module );
+            s->push( b2::ensure_valid(outer_module) );
             PROFILE_EXIT_LOCAL(function_run_INSTR_PUSH_MODULE);
             break;
         }
@@ -5275,7 +5278,7 @@ LIST * function_run( FUNCTION * function_, FRAME * frame )
         case INSTR_POP_MODULE:
         {
             PROFILE_ENTER_LOCAL(function_run_INSTR_POP_MODULE);
-            frame->module = s->pop<module_t *>();
+            frame->module = b2::ensure_valid(s->pop<module_t *>());
             PROFILE_EXIT_LOCAL(function_run_INSTR_POP_MODULE);
             break;
         }
@@ -5285,13 +5288,16 @@ LIST * function_run( FUNCTION * function_, FRAME * frame )
             PROFILE_ENTER_LOCAL(function_run_INSTR_CLASS);
             LIST * bases = s->pop<LIST *>();
             LIST * name = s->pop<LIST *>();
-            OBJECT * class_module = make_class_module( name, bases, frame );
+            OBJECT * class_module = make_class_module( name, bases );
 
             module_t * outer_module = frame->module;
-            frame->module = bindmodule( class_module );
+            // out_printf("function_run: OUTER-CLASS = %s, %s\n",
+            //     outer_module->name ? outer_module->name->str() : "<>",
+            //     class_module->str());
+            frame->module = b2::ensure_valid(bindmodule( class_module ));
             object_free( class_module );
 
-            s->push( outer_module );
+            s->push( b2::ensure_valid(outer_module) );
             PROFILE_EXIT_LOCAL(function_run_INSTR_CLASS);
             break;
         }
@@ -5362,10 +5368,58 @@ LIST * function_run( FUNCTION * function_, FRAME * frame )
     }
 
     PROFILE_EXIT_LOCAL(function_run);
+
+    return L0;
 }
 
 
 void function_done( void )
 {
     stack_global()->done();
+}
+
+b2::jam::module_scope_in_function::module_scope_in_function(
+    FRAME * frame_, const char * module_name_)
+    : module_frame(frame_)
+{
+    saved_module = b2::ensure_valid(module_frame->module);
+    module_frame->module = module_name_ == nullptr
+        ? b2::ensure_valid(root_module())
+        : b2::ensure_valid(bindmodule(value_ref(module_name_)));
+}
+
+b2::jam::module_scope_in_function::~module_scope_in_function()
+{
+    module_frame->module = b2::ensure_valid(saved_module);
+}
+
+std::string b2::jam::backtrace::to_string(frame * f)
+{
+    std::string result;
+    for (auto i : backtrace::to_list(f))
+    {
+        if (!result.empty()) result += "\n";
+        result += i->str();
+    }
+    return result;
+}
+
+b2::list_ref b2::jam::backtrace::to_list(frame * f)
+{
+    b2::list_ref result;
+    for (; f != nullptr; f = f->prev)
+    {
+        std::string line;
+        if (f->module->name != nullptr)
+        {
+            line += f->module->name->str();
+            line += ".";
+        }
+        line += f->rulename == nullptr ? "???" : f->rulename;
+        line += " at ";
+        line += f->file == nullptr ? "(builtin)" : f->file->str();
+        line += ":" + std::to_string(f->line);
+        result.push_back(line);
+    }
+    return result;
 }

@@ -53,8 +53,8 @@ struct rebinder
          , Option1
          , Option2
          > type;
-      BOOST_STATIC_ASSERT((key_type_tester<typename common_t::key_of_value_opt, type>::value));
-      BOOST_STATIC_ASSERT((boost::intrusive::test::is_multikey_true<type>::value));
+      BOOST_INTRUSIVE_STATIC_ASSERT((key_type_tester<typename common_t::key_of_value_opt, type>::value));
+      BOOST_INTRUSIVE_STATIC_ASSERT((boost::intrusive::test::is_multikey_true<type>::value));
    };
 };
 
@@ -157,25 +157,16 @@ int main()
 
    //void pointer
    test_main_template<void*, false, false, false, Base, false>::execute();
-   test_main_template<void*, false,  true, false, Member, false>::execute();
-   test_main_template<void*,  true, false, false, NonMember, false>::execute();
-   test_main_template<void*,  true,  true, false, Base, false>::execute();
-   test_main_template<void*, false, false, false, Base, true>::execute();
-   test_main_template<void*, false,  true, false, Member, true>::execute();
-   test_main_template<void*,  true, false, false, NonMember, true>::execute();
-   test_main_template<void*,  true,  true, false, Base, true>::execute();
-   test_main_template<void*,  false,  true, false, Base, true>::execute();
+   test_main_template<void*,  true,  true, false, Member, false>::execute();
+   test_main_template<void*, false, false,  true, NonMember, false>::execute();
+   test_main_template<void*,  true,  true, false, Member, true>::execute();
+   test_main_template<void*, false, false,  true, NonMember, true>::execute();
+   test_main_template<void*,  true,  true, true, Base, true>::execute();
 
    //smart_ptr
    test_main_template<smart_ptr<void>, false, false, false, Member, false>::execute();
-   test_main_template<smart_ptr<void>, false,  true, false, NonMember, false>::execute();
-   test_main_template<smart_ptr<void>,  true, false, false, Base, false>::execute();
-   test_main_template<smart_ptr<void>,  true,  true, false, Member, false>::execute();
-   test_main_template<smart_ptr<void>,  true, true,  false, Base, true>::execute();
-
-   test_main_template<smart_ptr<void>, false, false, false, Member, true>::execute();
-   test_main_template<smart_ptr<void>, false, true, false, NonMember, true>::execute();
-   test_main_template<smart_ptr<void>, true, false, false, Base, true>::execute();
+   test_main_template<smart_ptr<void>, false,  true,  true, NonMember, false>::execute();
+   test_main_template<smart_ptr<void>,  true,  true,  true, Base, true>::execute();
 
    ////bounded_ptr (bool ConstantTimeSize, bool Map)
    //test_main_template_bptr< false, false >::execute();

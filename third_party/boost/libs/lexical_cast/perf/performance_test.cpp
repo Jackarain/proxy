@@ -1,4 +1,4 @@
-//  (C) Copyright Antony Polukhin, 2012-2023.
+//  (C) Copyright Antony Polukhin, 2012-2024.
 //  Use, modification and distribution are subject to the
 //  Boost Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -14,10 +14,14 @@
 
 #include <boost/lexical_cast.hpp>
 
-#include <boost/chrono.hpp>
 #include <fstream>
 #include <cstring>
+#include <string_view>
+
+#include <boost/array.hpp>
+#include <boost/chrono.hpp>
 #include <boost/container/string.hpp>
+#include <boost/range/iterator_range.hpp>
 
 // File to output data
 std::fstream fout;
@@ -91,6 +95,12 @@ struct structure_sprintf {
         sprintf(buffer, conv, in_val.c_str());
         OutT out_val(buffer);
     }
+
+    template <class OutT, class BufferT>
+    static inline void test(BufferT* buffer, std::string_view in_val, const char* const conv) {
+        sprintf(buffer, conv, in_val.data());  // in_val is zero terminated in this program
+        OutT out_val(buffer);
+    }
 };
 
 struct structure_sscanf {
@@ -116,6 +126,12 @@ struct structure_sscanf {
     static inline void test(BufferT* /*buffer*/, const boost::iterator_range<const char*>& in_val, const char* const conv) {
         OutT out_val;
         sscanf(in_val.begin(), conv, &out_val);
+    }
+
+    template <class OutT, class BufferT>
+    static inline void test(BufferT* /*buffer*/, std::string_view in_val, const char* const conv) {
+        OutT out_val;
+        sscanf(in_val.data(), conv, &out_val);  // in_val is zero terminated in this program
     }
 };
 
@@ -312,6 +328,12 @@ struct to_array_50 {
     }
 };
 
+struct to_string_view {
+    std::string_view operator()(const char* const c) const {
+        return std::string_view{c};
+    }
+};
+
 int main(int argc, char** argv) {
     BOOST_ASSERT(argc >= 2);
     std::string output_path(argv[1]);
@@ -354,6 +376,7 @@ int main(int argc, char** argv) {
     string_like_test_set<to_uchar_conv>("unsigned char*");
     string_like_test_set<to_schar_conv>("signed char*");
     string_like_test_set<to_iterator_range>("iterator_range<char*>");
+    string_like_test_set<to_string_view>("std::string_view");
     string_like_test_set<to_array_50>("array<char, 50>");
 
     perf_test<int, structure_fake>("int->int", 100, "");

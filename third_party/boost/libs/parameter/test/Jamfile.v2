@@ -9,7 +9,7 @@
 import os ;
 import testing ;
 
-project boost/parameter
+project
     :
         default-build
         <warnings>off

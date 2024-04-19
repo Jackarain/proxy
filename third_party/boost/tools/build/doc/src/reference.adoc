@@ -179,6 +179,31 @@ are not allowed.
 [[bbv2.reference.rules.test-suite]]`test-suite`::
 This rule is deprecated and equivalent to `alias`.
 
+[[bbv2.reference.rules.import-search]]`import-search`::
++
+====
+[horizontal]
+Jam:: `rule import-search ( reference )`
+====
++
+Adds the given `reference` path to the set of directories that an `import` will
+search. The `reference` can be a plain directory or a known project path. If a
+project path is given it will be searched for and resolved to include any
+sub-project path in the reference. If a directory is given it will be rooted
+relative to the current project location. Example project path usage:
++
+----
+import-search /boost/config/checks ;
+import-search /boost/predef/tools/checks ;
+----
++
+
+:leveloffset: +1
+
+include::../../src/engine/mod_jam_builtin.h[tag=reference]
+
+:leveloffset: -1
+
 [[bbv2.overview.builtins.features]]
 == Builtin features
 
@@ -741,140 +766,17 @@ This section describes the modules that are provided by B2. The
 import rule allows rules from one module to be used in another module or
 Jamfile.
 
-[[bbv2.reference.modules.modules]]
-=== modules
-
-The `modules` module defines basic functionality for handling modules.
-
-A module defines a number of rules that can be used in other modules.
-Modules can contain code at the top level to initialize the module. This
-code is executed the first time the module is loaded.
-
-NOTE: A Jamfile is a special kind of module which is managed by the build
-system. Although they cannot be loaded directly by users, the other
-features of modules are still useful for Jamfiles.
-
-Each module has its own namespaces for variables and rules. If two
-modules A and B both use a variable named X, each one gets its own copy
-of X. They won't interfere with each other in any way. Similarly,
-importing rules into one module has no effect on any other module.
-
-Every module has two special variables. `$(__file__)` contains the name
-of the file that the module was loaded from and `$(__name__)` contains
-the name of the module.
-
-NOTE: `$(__file__)` does not contain the full path to the file. If you need
-this, use `modules.binding`.
-
-1. `rule binding ( module-name )`
-+
-Returns the filesystem binding of the given module.
-+
-For example, a module can get its own location with:
-+
-[source,jam]
-----
-me = [ modules.binding $(__name__) ] ;
-----
-
-2. `rule poke ( module-name ? : variables + : value * )`
-+
-Sets the module-local value of a variable.
-+
-For example, to set a variable in the global module:
-+
-[source,jam]
-----
-modules.poke : ZLIB_INCLUDE : /usr/local/include ;
-----
-
-3. `rule peek ( module-name ? : variables + )`
-+
-Returns the module-local value of a variable.
-+
-For example, to read a variable from the global module:
-+
-[source,jam]
-----
-local ZLIB_INCLUDE = [ modules.peek : ZLIB_INCLUDE ] ;
-----
-
-4. `rule call-in ( module-name ? : rule-name args * : * )`
-+
-Call the given rule locally in the given module. Use this for rules
-accepting rule names as arguments, so that the passed rule may be
-invoked in the context of the rule's caller (for example, if the rule
-accesses module globals or is a local rule).
-+
-NOTE: rules called this way may accept at most 8 parameters.
-+
-Example:
-+
-[source,jam]
-----
-rule filter ( f : values * )
-{
-    local m = [ CALLER_MODULE ] ;
-    local result ;
-    for v in $(values)
-    {
-        if [ modules.call-in $(m) : $(f) $(v) ]
-        {
-            result += $(v) ;
-        }
-    }
-    return result ;
-}
-----
-
-5. `rule load ( module-name : filename ? : search * )`
-+
-Load the indicated module if it is not already loaded.
-+
-`module-name`::
-  Name of module to load.
-+
-`filename`::
-  (partial) path to file; Defaults to `$(module-name).jam`
-+
-`search`::
-  Directories in which to search for filename. Defaults to
-  `$(BOOST_BUILD_PATH)`.
-
-6. `rule import ( module-names + : rules-opt * : rename-opt * )`
-+
-Load the indicated module and import rule names into the current module.
-Any members of `rules-opt` will be available without qualification in
-the caller's module. Any members of `rename-opt` will be taken as the
-names of the rules in the caller's module, in place of the names they
-have in the imported module. If `rules-opt = '*'`, all rules from the
-indicated module are imported into the caller's module. If `rename-opt`
-is supplied, it must have the same number of elements as `rules-opt`.
-+
-NOTE: The `import` rule is available without qualification in all modules.
-+
-Examples:
-+
-[source,jam]
-----
-import path ;
-import path : * ;
-import path : join ;
-import path : native make : native-path make-path ;
-----
-
-7. `rule clone-rules ( source-module target-module )`
-+
-Define exported copies in `$(target-module)` of all rules exported from
-`$(source-module)`. Also make them available in the global module with
-qualification, so that it is just as though the rules were defined
-originally in `$(target-module)`.
-
 :leveloffset: +2
 
-include::path.adoc[]
+include::../../src/engine/mod_jam_modules.h[tag=reference]
+include::../../src/engine/mod_jam_class.h[tag=reference]
+include::../../src/engine/mod_jam_errors.h[tag=reference]
+include::../../src/engine/mod_regex.h[tag=reference]
+include::../../src/engine/mod_set.h[tag=reference]
+include::../../src/engine/mod_string.h[tag=reference]
+include::../../src/engine/mod_version.h[tag=reference]
 
-include::regex.adoc[]
+include::path.adoc[]
 
 include::sequence.adoc[]
 

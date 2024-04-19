@@ -275,7 +275,7 @@ class project-target : abstract-target
             targets += $(g[2-]) ;
         }
         targets.decrease-indent ;
-        return $(usage-requirements) [ sequence.unique $(targets) ] ;
+        return $(usage-requirements) [ sequence.unique $(targets) : stable ] ;
     }
 
     # Computes and returns a list of abstract-target instances which must be
@@ -809,7 +809,7 @@ class main-target : abstract-target
             }
         }
         end-building $(__name__) ;
-        return $(usage-requirements) [ sequence.unique $(result) ] ;
+        return $(usage-requirements) [ sequence.unique $(result) : stable ] ;
     }
 
     # Generates the main target with the given property set and returns a list
@@ -1307,12 +1307,11 @@ class basic-target : abstract-target
             local fn = [ full-name ] ;
             ECHO [ targets.indent ] "Building target '$(fn)'" ;
             targets.increase-indent ;
-            ECHO [ targets.indent ] Build "request:" $(property-set)
-                [ $(property-set).raw ] ;
+            ECHO [ targets.indent ] Build "request:" [ $(property-set).str ] ;
             local cf = [ build-system.command-line-free-features ] ;
-            ECHO [ targets.indent ] Command line free "features:" [ $(cf).raw ] ;
+            ECHO [ targets.indent ] Command line free "features:" [ $(cf).str ] ;
             ECHO [ targets.indent ] Target "requirements:"
-                [ $(self.requirements).raw ] ;
+                [ $(self.requirements).str ] ;
         }
         targets.push-target $(__name__) ;
 
@@ -1331,8 +1330,8 @@ class basic-target : abstract-target
             if [ modules.peek : .debug-building ]
             {
                 ECHO ;
-                ECHO [ targets.indent ] "Common properties: "
-                    [ $(rproperties).raw ] ;
+                ECHO [ targets.indent ] "Common properties:"
+                    [ $(rproperties).str ] ;
             }
 
             local skip ;
@@ -1369,7 +1368,7 @@ class basic-target : abstract-target
                 {
                     ECHO ;
                     ECHO [ targets.indent ] "Usage requirements for"
-                        $(self.name)": " $(usage-requirements) ;
+                        $(self.name)":" $(usage-requirements) ;
                 }
 
                 #  Skipping this target if a dependency is skipped.
@@ -1391,8 +1390,8 @@ class basic-target : abstract-target
 
                     if [ modules.peek : .debug-building ]
                     {
-                        ECHO [ targets.indent ] "Build properties: "
-                            [ $(rproperties).raw ] ;
+                        ECHO [ targets.indent ] "Build properties:"
+                            [ $(rproperties).str ] ;
                     }
 
                     local extra = [ $(rproperties).get <source> ] ;
@@ -1452,7 +1451,7 @@ class basic-target : abstract-target
                         if [ modules.peek : .debug-building ]
                         {
                             ECHO [ targets.indent ] "Usage requirements from"
-                                $(self.name)": " [ $(ur).raw ] ;
+                                $(self.name)":" [ $(ur).str ] ;
                         }
 
                         self.generated.$(property-set) = $(ur) $(result) ;
@@ -1482,7 +1481,7 @@ class basic-target : abstract-target
                 ur = $(ur[0]) ;
                 targets.increase-indent ;
                 ECHO [ targets.indent ] "Usage requirements from"
-                    $(self.name)": " [ $(ur).raw ] ;
+                    $(self.name)":" [ $(ur).str ] ;
                 targets.decrease-indent ;
             }
         }
@@ -1660,7 +1659,7 @@ class typed-target : basic-target
                 $(self.type) : $(property-set) ] ;
             ECHO "WARNING: Unable to construct" [ full-name ]
                 "of type" $(self.type)
-                "with these properties:" [ $(property-set).raw ] ;
+                "with these properties:" [ $(property-set).str ] ;
             ECHO "WARNING: Considered these as possible generators:" ;
             for local gen in $(viable-generators)
             {

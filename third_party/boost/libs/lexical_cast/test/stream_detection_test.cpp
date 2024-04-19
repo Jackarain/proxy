@@ -2,7 +2,7 @@
 //
 //  See http://www.boost.org for most recent version, including documentation.
 //
-//  Copyright Antony Polukhin, 2011-2023.
+//  Copyright Antony Polukhin, 2011-2024.
 //
 //  Distributed under the Boost
 //  Software License, Version 1.0. (See accompanying file
@@ -255,13 +255,14 @@ void test_istream_character_detection() {
     test_bistr_instr_impl<bistreamable_hard2>();
 }
 
-
 struct wistreamble_ostreamable { enum ENU {value = 200}; };
 std::ostream& operator << (std::ostream& ostr, const wistreamble_ostreamable&) {
     return ostr << wistreamble_ostreamable::value;
 }
 std::wistream& operator >> (std::wistream& istr, const wistreamble_ostreamable&) {
-    int i; istr >> i; BOOST_TEST_EQ(i, wistreamble_ostreamable::value);
+    int i = 100;
+    istr >> i;
+    BOOST_TEST_EQ(i, wistreamble_ostreamable::value);
     return istr;
 }
 
@@ -277,6 +278,7 @@ std::istream& operator >> (std::istream& istr, const istreamble_wostreamable&) {
 void test_mixed_stream_character_detection() {
     //boost::lexical_cast<std::wstring>(std::string("qwe")); // TODO: ALLOW IT AS EXTENSION!
 
+    BOOST_TEST_EQ(boost::lexical_cast<int>(wistreamble_ostreamable::value), wistreamble_ostreamable::value);
     boost::lexical_cast<wistreamble_ostreamable>(wistreamble_ostreamable::value);
     BOOST_TEST_EQ(boost::lexical_cast<int>(wistreamble_ostreamable()), wistreamble_ostreamable::value);
 

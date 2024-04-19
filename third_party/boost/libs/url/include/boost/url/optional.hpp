@@ -18,7 +18,7 @@ namespace urls {
 
 /** The type of optional used by the library
 
-    @note This alias is no longer supported and
+    @warning This alias is no longer supported and
     should not be used in new code. Please use
     `boost::optional` instead.
 

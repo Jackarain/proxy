@@ -11,7 +11,6 @@
 :organization: `Boost Consulting`_, Indiana University `Open Systems
                Lab`_, University of Hanover `Institute for Transport
                Railway Operation and Construction`_
-:date: $Date$
 :copyright: Copyright David Abrahams, Jeremy Siek, and Thomas Witt 2003. 
 
 .. _`Boost Consulting`: http://www.boost-consulting.com

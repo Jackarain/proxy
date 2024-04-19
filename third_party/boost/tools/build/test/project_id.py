@@ -146,7 +146,7 @@ project foo ;
 """)
     t.run_build_system(status=1)
     t.expect_output_lines("""\
-error: at jamroot.jam:4
+error: at jamroot.jam:4: in modules.load from module Jamfile<*>
 error: Attempt to redeclare already registered project id '/foo'.
 error: Original project:
 error:     Name: Jamfile<*>

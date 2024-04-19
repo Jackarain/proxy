@@ -1523,7 +1523,7 @@ struct url_base_test
             u.set_query("!@#$%^&*()_+=-;:'{}[]|\\?/>.<,");
             BOOST_TEST(u.has_query());
             BOOST_TEST(u.encoded_query() ==
-                "!@%23$%25%5E&*()_+=-;:'%7B%7D%5B%5D%7C%5C?/%3E.%3C,");
+                "!@%23$%25%5E&*()_+=-;:'%7B%7D[]%7C%5C?/%3E.%3C,");
             BOOST_TEST_EQ(u.params().size(), 2u);
             BOOST_TEST_EQ((*u.params().begin()).key, "!@#$%^");
             BOOST_TEST_EQ((*u.params().begin()).value, "");

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -92,7 +92,7 @@ int main(int argc, char** argv)
     {
         // Some errors include additional diagnostics, like server-provided error messages.
         // Security note: diagnostics::server_message may contain user-supplied values (e.g. the
-        // field value that caused the error) and is encoded using to the connection's encoding
+        // field value that caused the error) and is encoded using to the connection's character set
         // (UTF-8 by default). Treat is as untrusted input.
         std::cerr << "Error: " << err.what() << '\n'
                   << "Server diagnostics: " << err.get_diagnostics().server_message() << std::endl;

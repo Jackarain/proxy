@@ -24,7 +24,6 @@ using boost::redis::response;
 using boost::redis::ignore;
 using boost::redis::ignore_t;
 using boost::redis::logger;
-using boost::redis::config;
 using boost::redis::connection;
 using boost::redis::usage;
 using boost::redis::error;
@@ -79,7 +78,7 @@ echo_session(
 auto async_echo_stress(std::shared_ptr<connection> conn) -> net::awaitable<void>
 {
    auto ex = co_await net::this_coro::executor;
-   config cfg;
+   auto cfg = make_test_config();
    cfg.health_check_interval = std::chrono::seconds::zero();
    run(conn, cfg,
        boost::asio::error::operation_aborted,
@@ -92,14 +91,14 @@ auto async_echo_stress(std::shared_ptr<connection> conn) -> net::awaitable<void>
 
    // Number of coroutines that will send pings sharing the same
    // connection to redis.
-   int const sessions = 1000;
+   int const sessions = 150;
 
    // The number of pings that will be sent by each session.
-   int const msgs = 500;
+   int const msgs = 200;
 
    // The number of publishes that will be sent by each session with
    // each message.
-   int const n_pubs = 100;
+   int const n_pubs = 25;
 
    // This is the total number of pushes we will receive.
    int total_pushes = sessions * msgs * n_pubs + 1;

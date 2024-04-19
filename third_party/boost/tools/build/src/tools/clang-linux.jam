@@ -21,6 +21,7 @@ import type ;
 import numbers ;
 import os ;
 import property ;
+import rc ;
 import set ;
 
 feature.extend-subfeature toolset clang : platform : linux ;
@@ -86,6 +87,23 @@ rule init ( version ? :  command * : options * ) {
     archiver = $(root)/bin/ar ;
     }
   toolset.flags clang-linux.archive .AR $(condition) : $(archiver[1]) ;
+
+    # - Resource compiler.
+    local rc = [ common.get-invocation-command-nodefault clang-linux : windres :
+        [ feature.get-values <rc> : $(options) ] : $(bin) : search-path ] ;
+    local rc-type = [ feature.get-values <rc-type> : $(options) ] ;
+    rc-type ?= windres ;
+    if ! $(rc)
+    {
+        # If we can not find an RC compiler we fallback to a null one that
+        # creates empty object files. This allows the same Jamfiles to work
+        # across the board. The null RC uses assembler to create the empty
+        # objects, so configure that.
+        rc = [ common.get-invocation-command clang-linux : as : : $(bin) : search-path ]
+            ;
+        rc-type = null ;
+    }
+    rc.configure $(rc) : $(condition) : <rc-type>$(rc-type) ;
 }
 
 rule get-full-version ( command-string )

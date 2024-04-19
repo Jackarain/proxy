@@ -25,7 +25,7 @@ public:
 
         if( i1 != i2 )
         {
-            ctx.error_handler().on_error( "invalid format" );
+            throw_format_error( "invalid format" );
         }
 
         return i1;

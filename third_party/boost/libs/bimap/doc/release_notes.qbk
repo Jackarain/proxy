@@ -14,6 +14,10 @@ http://www.boost.org/LICENSE_1_0.txt)
 
 [section Release notes]
 
+[heading Boost 1.85 release]
+
+* Fixed heterogeneous lookup for side collections ([@https://github.com/boostorg/bimap/pull/42 PR#42]).
+
 [heading Boost 1.53 release]
 
 * Refactor map_view_iterator to improve error messages.

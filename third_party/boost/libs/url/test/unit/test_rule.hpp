@@ -26,13 +26,10 @@ template<class F>
 void
 for_each_char(F const& f)
 {
-    unsigned char u = 0;
-    do
+    for (int i = 0; i < 256; ++i)
     {
-        f(static_cast<
-            char>(u));
+        f(static_cast<char>(i));
     }
-    while(++u != 0);
 }
 
 template<class CharSet>
@@ -60,7 +57,7 @@ test_char_set(
     for_each_char(
     [&cs](char c)
     {
-        if(cs(0) || ! cs(c))
+        if(cs(static_cast<unsigned char>(0)) || ! cs(c))
         {
             if(cs(c))
             {

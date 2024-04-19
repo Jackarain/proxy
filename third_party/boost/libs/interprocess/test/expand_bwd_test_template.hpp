@@ -17,6 +17,7 @@
 #include <algorithm> //std::equal
 #include <vector>
 #include <iostream>
+#include <typeinfo>
 
 namespace boost { namespace interprocess { namespace test {
 

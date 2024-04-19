@@ -116,6 +116,8 @@ generators.register
 generators.register
     [ class.new flag-check-generator EXE : <toolset>msvc : "(LNK4044)" ] ;
 generators.register
+    [ class.new flag-check-generator EXE : <toolset>clang : "(LNK4044)" ] ; # FIXME: <toolset>clang-win doesn't work but <toolset>clang does
+generators.register
     [ class.new flag-check-generator OBJ : <toolset>intel : "(#10006)" ] ;
 generators.register
     [ class.new flag-check-generator EXE : <toolset>intel : "(#10006)" ] ;

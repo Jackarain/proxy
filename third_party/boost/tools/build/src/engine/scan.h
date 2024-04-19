@@ -5,6 +5,13 @@
  */
 
 /*
+This file is ALSO:
+Copyright 2022 René Ferdinand Rivera Morell
+Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE.txt or https://www.bfgroup.xyz/b2/LICENSE.txt)
+*/
+
+/*
  * scan.h - the jam yacc scanner
  *
  * External functions:
@@ -24,9 +31,8 @@
 
 #include "config.h"
 #include "lists.h"
-#include "object.h"
 #include "parse.h"
-
+#include "value.h"
 
 /*
  * YYSTYPE - value of a lexical token
@@ -36,36 +42,41 @@
 
 typedef struct _YYSTYPE
 {
-    int          type;
-    OBJECT     * string;
-    PARSE      * parse;
-    LIST       * list;
-    int          number;
-    OBJECT     * file;
-    int          line;
-    char const * keyword;
+	int type;
+	b2::value_ptr string;
+	PARSE * parse;
+	list_ptr list;
+	int number;
+	b2::value_ptr file;
+	int line;
+	char const * keyword;
 } YYSTYPE;
 
 extern YYSTYPE yylval;
 
-int yymode( int n );
-void yyerror( char const * s );
+int yymode(int n);
+void yyerror(char const * s);
 int yyanyerrors();
-void yyfparse( OBJECT * s );
-void yyfdone( void );
-void yysparse( OBJECT * name, const char * * lines );
+void yyfparse(OBJECT * s);
+void yyfdone(void);
+void yysparse(OBJECT * name, const char ** lines);
 int yyline();
 int yylex();
 int yyparse();
-void yyinput_last_read_token( OBJECT * * name, int * line );
+void yyinput_last_read_token(OBJECT ** name, int * line);
 
-#define SCAN_NORMAL  0  /* normal parsing */
-#define SCAN_STRING  1  /* look only for matching } */
-#define SCAN_PUNCT   2  /* only punctuation keywords */
-#define SCAN_COND    3  /* look for operators that can appear in conditions. */
-#define SCAN_PARAMS  4  /* The parameters of a rule "()*?+" */
-#define SCAN_CALL    5  /* Inside a rule call. [].*/
-#define SCAN_CASE    6  /* A case statement.  We only recognize ':' as special. */
-#define SCAN_CONDB   7  /* The beginning of a condition (ignores leading comparison operators, so that if <x> in $(y) works.)*/
-#define SCAN_ASSIGN  8  /* The list may be terminated by an assignment operator. */
-#define SCAN_XASSIGN 9  /* The next token might be an assignment, but to token afterwards cannot. */
+#define SCAN_NORMAL 0 /* normal parsing */
+#define SCAN_STRING 1 /* look only for matching } */
+#define SCAN_PUNCT 2 /* only punctuation keywords */
+#define SCAN_COND 3 /* look for operators that can appear in conditions. */
+#define SCAN_PARAMS 4 /* The parameters of a rule "()*?+" */
+#define SCAN_CALL 5 /* Inside a rule call. [].*/
+#define SCAN_CASE 6 /* A case statement.  We only recognize ':' as special. */
+#define SCAN_CONDB \
+	7 /* The beginning of a condition (ignores leading comparison operators, \
+		 so that if <x> in $(y) works.)*/
+#define SCAN_ASSIGN \
+	8 /* The list may be terminated by an assignment operator. */
+#define SCAN_XASSIGN \
+	9 /* The next token might be an assignment, but to token afterwards \
+		 cannot. */

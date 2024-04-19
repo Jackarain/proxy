@@ -19,7 +19,7 @@
 #include<boost/intrusive/splaytree.hpp>
 #include<boost/intrusive/treap.hpp>
 #include<boost/intrusive/hashtable.hpp>
-#include<boost/functional/hash.hpp>
+
 #include <vector>    //std::vector
 #include <cstddef>   //std::size_t
 
@@ -47,7 +47,7 @@ class MyClass : public any_base_hook<>
    {  return l.int_ == r.int_; }
 
    friend std::size_t hash_value(const MyClass &o)
-   {  return boost::hash<int>()(o.get());  }
+   {  return std::size_t(o.get());  }
 
    friend bool priority_order(const MyClass &a, const MyClass &b)
    {  return a.int_ < b.int_;  }

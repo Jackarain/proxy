@@ -252,9 +252,9 @@ def test_generated_target_names():
 
       We use the following target generation structure with differently named
     BBX targets:
-                       /---> BB1 ---\
+                       /---> BB1 ---\\
                 AAA --<----> BB2 ---->--> CCC --(composing)--> DDD
-                       \---> BB3 ---/
+                       \\---> BB3 ---/
 
       The extra generator at the end is needed because generating a top-level
     CCC target directly would requires us to explicitly specify a name for it.

@@ -14,12 +14,9 @@
 #include <utility>
 
 #include <boost/any/basic_any.hpp>
-#include "test.hpp"
 
-int main()
-{
+int main() {
     int i = boost::any_cast<int&>(boost::anys::basic_any<>(10));
     (void)i;
-    return EXIT_SUCCESS;
 }
 

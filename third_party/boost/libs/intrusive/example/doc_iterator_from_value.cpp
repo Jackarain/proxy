@@ -12,7 +12,6 @@
 //[doc_iterator_from_value
 #include <boost/intrusive/list.hpp>
 #include <boost/intrusive/unordered_set.hpp>
-#include <boost/container_hash/hash.hpp>
 #include <vector>
 
 using namespace boost::intrusive;
@@ -39,7 +38,9 @@ class intrusive_data
 
    //The hash function
    friend std::size_t hash_value(const intrusive_data &i)
-   {  return boost::hash<int>()(i.data_id_);  }
+   {  //Use your favorite hash function, like boost::hash or std::hash
+      return std::size_t(i.data_id_);
+   }
 };
 
 //Definition of the intrusive list that will hold intrusive_data

@@ -13,11 +13,11 @@ struct http_category_impl: public error_category
 {
     // clang++ 3.8 and below: initialization of const object
     // requires a user-provided default constructor
-    BOOST_SYSTEM_CONSTEXPR http_category_impl() BOOST_NOEXCEPT
+    BOOST_SYSTEM_CONSTEXPR http_category_impl() noexcept
     {
     }
 
-    char const * name() const BOOST_NOEXCEPT
+    char const * name() const noexcept
     {
         return "http";
     }
@@ -30,7 +30,7 @@ struct http_category_impl: public error_category
         return buffer;
     }
 
-    bool failed( int ev ) const BOOST_NOEXCEPT
+    bool failed( int ev ) const noexcept
     {
         return !( ev >= 200 && ev < 300 );
     }

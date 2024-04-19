@@ -3,31 +3,8 @@
 # it tries to access prebuilt targets using absolute
 # paths. It used to be broken on Windows.
 
-import os ;
-
-local dll-suffix = so ;
-local prefix = "lib" ;
-if [ os.name ] in NT
-{
-   if [ MATCH ^(gcc) : $toolset ]
-   {
-      dll-suffix = dll.a ;
-      prefix = lib ;
-   }
-   else
-   {
-      dll-suffix = lib ;
-      prefix = "" ;
-   }
-}
-else if [ os.name ] in CYGWIN
-{
-    dll-suffix = dll.a ;
-}
-else if [ os.name ] in MACOSX
-{
-   dll-suffix = dylib ;
-}
+import modules ;
+LIBNAME = [ modules.peek : LIBNAME ] ;
 
 project ext ;
 
@@ -35,13 +12,13 @@ project ext ;
 local pwd = [ PWD ] ;
 
 lib a :
-    : <file>$(pwd)/ext/debug/$(prefix)a.$(dll-suffix) <variant>debug
+    : <file>$(pwd)/ext/debug/$(LIBNAME:E=LIBNAME-not-defined) <variant>debug
     :
     : <include>debug
     ;
 
 lib a :
-    : <file>$(pwd)/ext/release/$(prefix)a.$(dll-suffix) <variant>release
+    : <file>$(pwd)/ext/release/$(LIBNAME:E=LIBNAME-not-defined) <variant>release
     :
     : <include>release
     ;

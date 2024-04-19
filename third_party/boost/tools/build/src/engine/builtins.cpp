@@ -22,16 +22,17 @@
 #include "object.h"
 #include "parse.h"
 #include "pathsys.h"
+#include "regexp.h"
 #include "rules.h"
 #include "jam_strings.h"
 #include "startup.h"
-#include "subst.h"
 #include "timestamp.h"
 #include "variable.h"
 #include "output.h"
 
 #include <string>
 
+#include <assert.h>
 #include <ctype.h>
 #include <stdlib.h>
 
@@ -345,12 +346,6 @@ void load_builtins()
     }
 
     {
-        char const * args[] = { "instance_module", ":", "class_module", 0 };
-        bind_builtin( "INSTANCE",
-                      builtin_instance, 0, args );
-    }
-
-    {
         char const * args[] = { "sequence", "*", 0 };
         bind_builtin( "SORT",
                       builtin_sort, 0, args );
@@ -476,9 +471,6 @@ void load_builtins()
 #endif
 
     /* Initialize builtin modules. */
-    init_set();
-    init_path();
-    init_regex();
     init_property_set();
     init_sequence();
     init_order();
@@ -499,7 +491,6 @@ LIST * builtin_calc( FRAME * frame, int flags )
     long lhs_value;
     long rhs_value;
     long result_value;
-    char buffer[ 16 ];
     char const * lhs;
     char const * op;
     char const * rhs;
@@ -527,8 +518,7 @@ LIST * builtin_calc( FRAME * frame, int flags )
     else
         return L0;
 
-    sprintf( buffer, "%ld", result_value );
-    result = list_push_back( result, object_new( buffer ) );
+    result = list_push_back( result, b2::value::as_string(result_value) );
     return result;
 }
 
@@ -954,56 +944,97 @@ LIST * builtin_glob_recursive( FRAME * frame, int flags )
 }
 
 
+LIST * builtin_subst( FRAME * frame, int flags )
+{
+    LIST * result = L0;
+    LIST * const arg1 = lol_get( frame->args, 0 );
+    LISTITER iter = list_begin( arg1 );
+    LISTITER const end = list_end( arg1 );
+
+    if ( iter != end && list_next( iter ) != end && list_next( list_next( iter )
+        ) != end )
+    {
+        char const * const source = object_str( list_item( iter ) );
+        b2::regex::program re( list_item( list_next( iter ) )->str() );
+
+        if ( auto re_i = re.search(source) )
+        {
+            LISTITER subst = list_next( iter );
+
+            while ( ( subst = list_next( subst ) ) != end )
+            {
+#define BUFLEN 4096
+                char buf[ BUFLEN + 1 ];
+                char const * in = object_str( list_item( subst ) );
+                char * out = buf;
+
+                for ( ; *in && out < buf + BUFLEN; ++in )
+                {
+                    if ( *in == '\\' || *in == '$' )
+                    {
+                        ++in;
+                        if ( *in == 0 )
+                            break;
+                        if ( *in >= '0' && *in <= '9' )
+                        {
+                            unsigned int const n = *in - '0';
+                            size_t const srclen = re_i[n].size();
+                            size_t const remaining = buf + BUFLEN - out;
+                            size_t const len = srclen < remaining
+                                ? srclen
+                                : remaining;
+                            memcpy( out, re_i[ n ].begin(), len );
+                            out += len;
+                            continue;
+                        }
+                        /* fall through and copy the next character */
+                    }
+                    *out++ = *in;
+                }
+                *out = 0;
+
+                result = list_push_back( result, object_new( buf ) );
+#undef BUFLEN
+            }
+        }
+    }
+
+    return result;
+}
+
+
 /*
  * builtin_match() - MATCH rule, regexp matching
  */
 
 LIST * builtin_match( FRAME * frame, int flags )
 {
-    LIST * l;
-    LIST * r;
-    LIST * result = L0;
-    LISTITER l_iter;
-    LISTITER l_end;
-    LISTITER r_iter;
-    LISTITER r_end;
+    b2::list_ref result;
 
     string buf[ 1 ];
     string_new( buf );
 
-    /* For each pattern */
-
-    l = lol_get( frame->args, 0 );
-    l_iter = list_begin( l );
-    l_end = list_end( l );
-    for ( ; l_iter != l_end; l_iter = list_next( l_iter ) )
+    /* For each pattern, compile regex and search through strings. */
+    b2::list_cref patterns( lol_get( frame->args, 0 ) );
+    for ( auto pattern : patterns )
     {
-        /* Result is cached and intentionally never freed. */
-        regexp * re = regex_compile( list_item( l_iter ) );
+        b2::regex::program re( pattern->str() );
 
-        /* For each string to match against. */
-        r = lol_get( frame->args, 1 );
-        r_iter = list_begin( r );
-        r_end = list_end( r );
-        for ( ; r_iter != r_end; r_iter = list_next( r_iter ) )
+        /* For each text string to match against. */
+        b2::list_cref texts( lol_get( frame->args, 1 ) );
+        for ( auto text : texts )
         {
-            if ( regexec( re, object_str( list_item( r_iter ) ) ) )
+            if ( auto re_i = re.search( text->str() ) )
             {
-                int i;
-                int top;
-
                 /* Find highest parameter */
-
-                for ( top = NSUBEXP; top-- > 1; )
-                    if ( re->startp[ top ] )
-                        break;
-
+                int top = NSUBEXP-1;
+                while ( !re_i[top].begin() ) top -= 1;
                 /* And add all parameters up to highest onto list. */
                 /* Must have parameters to have results! */
-                for ( i = 1; i <= top; ++i )
+                for ( int i = 1; i <= top ; ++i )
                 {
-                    string_append_range( buf, re->startp[ i ], re->endp[ i ] );
-                    result = list_push_back( result, object_new( buf->value ) );
+                    string_append_range( buf, re_i[i].begin(), re_i[i].end() );
+                    result.push_back( object_new( buf->value ) );
                     string_truncate( buf, 0 );
                 }
             }
@@ -1011,7 +1042,7 @@ LIST * builtin_match( FRAME * frame, int flags )
     }
 
     string_free( buf );
-    return result;
+    return result.release();
 }
 
 
@@ -1375,10 +1406,8 @@ LIST * builtin_backtrace( FRAME * frame, int flags )
     {
         char const * file;
         int line;
-        char buf[ 32 ];
         string module_name[ 1 ];
         get_source_line( frame, &file, &line );
-        sprintf( buf, "%d", line );
         string_new( module_name );
         if ( frame->module->name )
         {
@@ -1386,7 +1415,7 @@ LIST * builtin_backtrace( FRAME * frame, int flags )
             string_append( module_name, "." );
         }
         result = list_push_back( result, object_new( file ) );
-        result = list_push_back( result, object_new( buf ) );
+        result = list_push_back( result, b2::value::as_string(line) );
         result = list_push_back( result, object_new( module_name->value ) );
         result = list_push_back( result, object_new( frame->rulename ) );
         string_free( module_name );
@@ -1550,18 +1579,6 @@ LIST * builtin_imported_modules( FRAME * frame, int flags )
 }
 
 
-LIST * builtin_instance( FRAME * frame, int flags )
-{
-    LIST * arg1 = lol_get( frame->args, 0 );
-    LIST * arg2 = lol_get( frame->args, 1 );
-    module_t * const instance     = bindmodule( list_front( arg1 ) );
-    module_t * const class_module = bindmodule( list_front( arg2 ) );
-    instance->class_module = class_module;
-    module_set_fixed_variables( instance, class_module->num_fixed_variables );
-    return L0;
-}
-
-
 LIST * builtin_sort( FRAME * frame, int flags )
 {
     return list_sort( lol_get( frame->args, 0 ) );
@@ -1674,12 +1691,10 @@ LIST * builtin_nearest_user_location( FRAME * frame, int flags )
         LIST * result = L0;
         char const * file;
         int line;
-        char buf[ 32 ];
 
         get_source_line( nearest_user_frame, &file, &line );
-        sprintf( buf, "%d", line );
         result = list_push_back( result, object_new( file ) );
-        result = list_push_back( result, object_new( buf ) );
+        result = list_push_back( result, b2::value::as_string(line) );
         return result;
     }
 }
@@ -1709,8 +1724,13 @@ LIST * builtin_md5( FRAME * frame, int flags )
     md5_append( &state, (md5_byte_t const *)s, strlen( s ) );
     md5_finish( &state, digest );
 
+    static const char hex_digit[] = "0123456789abcdef";
     for ( di = 0; di < 16; ++di )
-        sprintf( hex_output + di * 2, "%02x", digest[ di ] );
+    {
+        hex_output[di*2+0] = hex_digit[digest[di]>>4];
+        hex_output[di*2+1] = hex_digit[digest[di]&0xF];
+    }
+    hex_output[16*2] = '\0';
 
     return list_new( object_new( hex_output ) );
 }
@@ -1721,7 +1741,6 @@ LIST * builtin_file_open( FRAME * frame, int flags )
     char const * name = object_str( list_front( lol_get( frame->args, 0 ) ) );
     char const * mode = object_str( list_front( lol_get( frame->args, 1 ) ) );
     int fd;
-    char buffer[ sizeof( "4294967295" ) ];
 
     if ( strcmp(mode, "t") == 0 )
     {
@@ -1751,8 +1770,7 @@ LIST * builtin_file_open( FRAME * frame, int flags )
 
     if ( fd != -1 )
     {
-        sprintf( buffer, "%d", fd );
-        return list_new( object_new( buffer ) );
+        return list_new( b2::value::as_string(fd) );
     }
     return L0;
 }
@@ -1938,30 +1956,6 @@ LIST *builtin_debug_print_helper( FRAME * frame, int flags )
 #endif
 
 
-void lol_build( LOL * lol, char const * * elements )
-{
-    LIST * l = L0;
-    lol_init( lol );
-
-    while ( elements && *elements )
-    {
-        if ( !strcmp( *elements, ":" ) )
-        {
-            lol_add( lol, l );
-            l = L0;
-        }
-        else
-        {
-            l = list_push_back( l, object_new( *elements ) );
-        }
-        ++elements;
-    }
-
-    if ( l != L0 )
-        lol_add( lol, l );
-}
-
-
 #ifdef HAVE_POPEN
 
 #if defined(_MSC_VER) || defined(__BORLANDC__) || defined(__MINGW64__) || defined(__MINGW32__)
@@ -2117,8 +2111,7 @@ LIST * builtin_shell( FRAME * frame, int flags )
         /* Harmonize VMS success status with POSIX */
         if ( exit_status == 1 ) exit_status = EXIT_SUCCESS;
 #endif
-        sprintf( buffer, "%d", exit_status );
-        result = list_push_back( result, object_new( buffer ) );
+        result = list_push_back( result, b2::value::as_string(exit_status) );
     }
 
     return result;

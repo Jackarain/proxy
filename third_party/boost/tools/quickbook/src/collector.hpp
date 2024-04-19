@@ -75,9 +75,9 @@ namespace quickbook
 
       private:
         std::stack<string_stream> streams;
+        string_stream default_;
         boost::reference_wrapper<string_stream> main;
         boost::reference_wrapper<string_stream> top;
-        string_stream default_;
     };
 
     template <typename T>

@@ -14,20 +14,17 @@ project
 
   : requirements
 
-    <toolset>msvc:<warnings-as-errors>on
-    <toolset>gcc:<warnings-as-errors>on
-    <toolset>clang:<warnings-as-errors>on
-    <toolset>msvc:<cxxflags>"/we4265" # Extra errors that are disabled by default
-    <toolset>gcc:<cxxflags>"-Wno-unused-but-set-variable"      # Warnings in dependencies
-    <toolset>gcc-7:<cxxflags>"-Wno-maybe-uninitialized"        # Warnings in dependencies
-    <toolset>clang-4:<cxxflags>"-Wno-unused-but-set-variable"  # Warnings in dependencies
-    <toolset>clang-5:<cxxflags>"-Wno-unused-but-set-variable"  # Warnings in dependencies
-    <toolset>clang-6:<cxxflags>"-Wno-unused-but-set-variable"  # Warnings in dependencies
-    <toolset>clang-13:<cxxflags>"-Wno-unused-but-set-variable" # Warnings in dependencies
-    <toolset>clang-14:<cxxflags>"-Wno-unused-but-set-variable" # Warnings in dependencies
-    <toolset>clang-15:<cxxflags>"-Wno-unused-but-set-variable" # Warnings in dependencies
+    # Extra errors that are disabled by default
+    <toolset>msvc:<cxxflags>"/we4265"
+
+    # Warnings in dependencies
+    <toolset>gcc:<cxxflags>"-Wno-unused-but-set-variable"
+    <toolset>gcc:<cxxflags>"-Wno-maybe-uninitialized"
+    <toolset>clang:<cxxflags>"-Wno-unused-but-set-variable"
     <toolset>gcc,<target-os>windows:<cxxflags>"-Wno-error=array-bounds"
-    <undefined-sanitizer>norecover:<link>static                # different typeinfos confuse ubsan
+
+    # Different typeinfos confuse ubsan
+    <undefined-sanitizer>norecover:<link>static
     <undefined-sanitizer>norecover:<visibility>global
     ;
 
@@ -38,9 +35,6 @@ project
 
   : requirements
 
-    <toolset>msvc:<warnings-as-errors>on
-    <toolset>gcc:<warnings-as-errors>on
-    <toolset>clang:<warnings-as-errors>on
     <toolset>gcc:<cxxflags>"-Wno-unused-but-set-variable"      # Warnings in dependencies
     <toolset>clang:<cxxflags>"-Wno-unknown-warning-option"
     <toolset>clang-13:<cxxflags>"-Wno-unused-but-set-variable" # Warnings in dependencies

@@ -62,13 +62,9 @@ namespace http {
 
     @param parser The parser to use.
 
-    @return The number of bytes transferred from the stream.
+    @return The number of bytes consumed by the parser.
 
     @throws system_error Thrown on failure.
-
-    @note The function returns the total number of bytes transferred from the
-    stream. This may be zero for the case where there is sufficient pre-existing
-    message data in the dynamic buffer.
 */
 template<
     class SyncReadStream,
@@ -121,11 +117,7 @@ read_some(
 
     @param ec Set to the error, if any occurred.
 
-    @return The number of bytes transferred from the stream.
-
-    @note The function returns the total number of bytes transferred from the
-    stream. This may be zero for the case where there is sufficient pre-existing
-    message data in the dynamic buffer.
+    @return The number of bytes consumed by the parser.
 */
 template<
     class SyncReadStream,
@@ -189,7 +181,7 @@ read_some(
     @code
     void handler(
         error_code const& error,        // result of operation
-        std::size_t bytes_transferred   // the total number of bytes transferred from the stream
+        std::size_t bytes_transferred   // the number of bytes consumed by the parser
     );
     @endcode
     If the handler has an associated immediate executor,
@@ -198,10 +190,6 @@ read_some(
     this function. Invocation of the handler will be performed in a
     manner equivalent to using `net::post`.
 
-    @note The completion handler will receive as a parameter the total number
-    of bytes transferred from the stream. This may be zero for the case where
-    there is sufficient pre-existing message data in the dynamic buffer.
-
     @par Per-Operation Cancellation
 
     This asynchronous operation supports cancellation for the following
@@ -209,10 +197,9 @@ read_some(
 
     @li @c net::cancellation_type::terminal
 
-    if the `stream` also supports terminal cancellation.
-
-    `terminal` cancellation leaves the stream in an undefined state,
-    so that only closing it is guaranteed to succeed.
+    if the `stream` also supports terminal cancellation, `terminal`
+    cancellation leaves the stream in an undefined state, so that only
+    closing it is guaranteed to succeed.
 
 */
 template<
@@ -271,14 +258,12 @@ async_read_some(
 
     @param parser The parser to use.
 
-    @return The number of bytes transferred from the stream.
+    @return The number of bytes consumed by the parser.
 
     @throws system_error Thrown on failure.
 
-    @note The function returns the total number of bytes transferred from the
-    stream. This may be zero for the case where there is sufficient pre-existing
-    message data in the dynamic buffer. The implementation will call
-    @ref basic_parser::eager with the value `false` on the parser passed in.
+    @note The implementation will call @ref basic_parser::eager with the value
+    `false` on the parser passed in.
 */
 template<
     class SyncReadStream,
@@ -330,12 +315,10 @@ read_header(
 
     @param ec Set to the error, if any occurred.
 
-    @return The number of bytes transferred from the stream.
+    @return The number of bytes consumed by the parser.
 
-    @note The function returns the total number of bytes transferred from the
-    stream. This may be zero for the case where there is sufficient pre-existing
-    message data in the dynamic buffer. The implementation will call
-    @ref basic_parser::eager with the value `false` on the parser passed in.
+    @note The implementation will call @ref basic_parser::eager with the value
+    `false` on the parser passed in.
 */
 template<
     class SyncReadStream,
@@ -398,7 +381,7 @@ read_header(
     @code
     void handler(
         error_code const& error,        // result of operation
-        std::size_t bytes_transferred   // the total number of bytes transferred from the stream
+        std::size_t bytes_transferred   // the number of bytes consumed by the parser
     );
     @endcode
     If the handler has an associated immediate executor,
@@ -407,11 +390,8 @@ read_header(
     this function. Invocation of the handler will be performed in a
     manner equivalent to using `net::post`.
 
-    @note The completion handler will receive as a parameter the total number
-    of bytes transferred from the stream. This may be zero for the case where
-    there is sufficient pre-existing message data in the dynamic buffer. The
-    implementation will call @ref basic_parser::eager with the value `false`
-    on the parser passed in.
+    @note The implementation will call @ref basic_parser::eager with the value
+    `false` on the parser passed in.
 
     @par Per-Operation Cancellation
 
@@ -420,10 +400,9 @@ read_header(
 
     @li @c net::cancellation_type::terminal
 
-    if the `stream` also supports terminal cancellation.
-
-    `terminal` cancellation leaves the stream in an undefined state,
-    so that only closing it is guaranteed to succeed.
+    if the `stream` also supports terminal cancellation, `terminal`
+    cancellation leaves the stream in an undefined state, so that only
+    closing it is guaranteed to succeed.
 
 */
 template<
@@ -482,14 +461,12 @@ async_read_header(
 
     @param parser The parser to use.
 
-    @return The number of bytes transferred from the stream.
+    @return The number of bytes consumed by the parser.
 
     @throws system_error Thrown on failure.
 
-    @note The function returns the total number of bytes transferred from the
-    stream. This may be zero for the case where there is sufficient pre-existing
-    message data in the dynamic buffer. The implementation will call
-    @ref basic_parser::eager with the value `true` on the parser passed in.
+    @note The implementation will call @ref basic_parser::eager with the value
+    `true` on the parser passed in.
 */
 template<
     class SyncReadStream,
@@ -541,12 +518,10 @@ read(
 
     @param ec Set to the error, if any occurred.
 
-    @return The number of bytes transferred from the stream.
+    @return The number of bytes consumed by the parser.
 
-    @note The function returns the total number of bytes transferred from the
-    stream. This may be zero for the case where there is sufficient pre-existing
-    message data in the dynamic buffer. The implementation will call
-    @ref basic_parser::eager with the value `true` on the parser passed in.
+    @note The implementation will call @ref basic_parser::eager with the value
+    `true` on the parser passed in.
 */
 template<
     class SyncReadStream,
@@ -609,7 +584,7 @@ read(
     @code
     void handler(
         error_code const& error,        // result of operation
-        std::size_t bytes_transferred   // the total number of bytes transferred from the stream
+        std::size_t bytes_transferred   // the number of bytes consumed by the parser
     );
     @endcode
     If the handler has an associated immediate executor,
@@ -618,11 +593,8 @@ read(
     this function. Invocation of the handler will be performed in a
     manner equivalent to using `net::post`.
 
-    @note The completion handler will receive as a parameter the total number
-    of bytes transferred from the stream. This may be zero for the case where
-    there is sufficient pre-existing message data in the dynamic buffer. The
-    implementation will call @ref basic_parser::eager with the value `true`
-    on the parser passed in.
+    @note The implementation will call @ref basic_parser::eager with the value
+    `true` on the parser passed in.
 
     @par Per-Operation Cancellation
 
@@ -631,10 +603,9 @@ read(
 
     @li @c net::cancellation_type::terminal
 
-    if the `stream` also supports terminal cancellation.
-
-    `terminal` cancellation leaves the stream in an undefined state,
-    so that only closing it is guaranteed to succeed.
+    if the `stream` also supports terminal cancellation, `terminal`
+    cancellation leaves the stream in an undefined state, so that only
+    closing it is guaranteed to succeed.
 
 */
 template<
@@ -696,14 +667,12 @@ async_read(
     is undefined. The type must be meet the <em>MoveAssignable</em> and
     <em>MoveConstructible</em> requirements.
 
-    @return The number of bytes transferred from the stream.
+    @return The number of bytes consumed by the parser.
 
     @throws system_error Thrown on failure.
 
-    @note The function returns the total number of bytes transferred from the
-    stream. This may be zero for the case where there is sufficient pre-existing
-    message data in the dynamic buffer. The implementation will call
-    @ref basic_parser::eager with the value `true` on the parser passed in.
+    @note The implementation will call @ref basic_parser::eager with the value
+    `true` on the parser passed in.
 */
 template<
     class SyncReadStream,
@@ -758,12 +727,10 @@ read(
 
     @param ec Set to the error, if any occurred.
 
-    @return The number of bytes transferred from the stream.
+    @return The number of bytes consumed by the parser.
 
-    @note The function returns the total number of bytes transferred from the
-    stream. This may be zero for the case where there is sufficient pre-existing
-    message data in the dynamic buffer. The implementation will call
-    @ref basic_parser::eager with the value `true` on the parser passed in.
+    @note The implementation will call @ref basic_parser::eager with the value
+    `true` on the parser passed in.
 */
 template<
     class SyncReadStream,
@@ -829,7 +796,7 @@ read(
     @code
     void handler(
         error_code const& error,        // result of operation
-        std::size_t bytes_transferred   // the total number of bytes transferred from the stream
+        std::size_t bytes_transferred   // the number of bytes consumed by the parser
     );
     @endcode
     If the handler has an associated immediate executor,
@@ -838,11 +805,8 @@ read(
     this function. Invocation of the handler will be performed in a
     manner equivalent to using `net::post`.
 
-    @note The completion handler will receive as a parameter the total number
-    of bytes transferred from the stream. This may be zero for the case where
-    there is sufficient pre-existing message data in the dynamic buffer. The
-    implementation will call @ref basic_parser::eager with the value `true`
-    on the parser passed in.
+    @note The implementation will call @ref basic_parser::eager with the value
+    `true` on the parser passed in.
 
     @par Per-Operation Cancellation
 
@@ -851,10 +815,9 @@ read(
 
     @li @c net::cancellation_type::terminal
 
-    if the `stream` also supports terminal cancellation.
-
-    `terminal` cancellation leaves the stream in an undefined state,
-    so that only closing it is guaranteed to succeed.
+    if the `stream` also supports terminal cancellation, `terminal`
+    cancellation leaves the stream in an undefined state, so that only
+    closing it is guaranteed to succeed.
 
 */
 template<

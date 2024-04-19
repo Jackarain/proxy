@@ -6,6 +6,12 @@
 
 #include <boost/bind/protect.hpp>
 #include <boost/core/lightweight_test_trait.hpp>
+#include <boost/config.hpp>
+
+#if defined(BOOST_MSVC)
+# pragma warning( disable: 4510 ) // default constructor could not be generated
+# pragma warning( disable: 4610 ) // class can never be instantiated - constructor required
+#endif
 
 template<class T, class F> void test( F )
 {

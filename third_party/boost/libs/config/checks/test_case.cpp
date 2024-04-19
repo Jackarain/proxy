@@ -551,6 +551,11 @@
 #     error "Defect macro BOOST_NO_CXX17 is defined."
 #  endif
 #endif
+#ifdef TEST_BOOST_NO_CXX17_AUTO_NONTYPE_TEMPLATE_PARAMS
+#  ifdef BOOST_NO_CXX17_AUTO_NONTYPE_TEMPLATE_PARAMS
+#     error "Defect macro BOOST_NO_CXX17_AUTO_NONTYPE_TEMPLATE_PARAMS is defined."
+#  endif
+#endif
 #ifdef TEST_BOOST_NO_CXX17_DEDUCTION_GUIDES
 #  ifdef BOOST_NO_CXX17_DEDUCTION_GUIDES
 #     error "Defect macro BOOST_NO_CXX17_DEDUCTION_GUIDES is defined."

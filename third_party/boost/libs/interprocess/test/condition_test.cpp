@@ -13,23 +13,10 @@
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include "condition_test_template.hpp"
 
-#if defined(BOOST_INTERPROCESS_WINDOWS)
-#include <boost/interprocess/sync/windows/condition.hpp>
-#include <boost/interprocess/sync/windows/mutex.hpp>
-#include <boost/interprocess/sync/spin/condition.hpp>
-#include <boost/interprocess/sync/spin/mutex.hpp>
-#endif
-
 using namespace boost::interprocess;
 
 int main ()
 {
-   #if defined(BOOST_INTERPROCESS_WINDOWS)
-      if(!test::do_test_condition<ipcdetail::winapi_condition, ipcdetail::winapi_mutex>())
-         return 1;
-      if(!test::do_test_condition<ipcdetail::spin_condition, ipcdetail::spin_mutex>())
-         return 1;
-   #endif
    if(!test::do_test_condition<interprocess_condition, interprocess_mutex>())
       return 1;
 

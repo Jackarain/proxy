@@ -17,6 +17,11 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#if defined(BOOST_GCC) && BOOST_GCC >= 130000 && BOOST_GCC < 140000
+// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=113256
+# pragma GCC diagnostic ignored "-Wdangling-reference"
+#endif
+
 #include <boost/bind/bind.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <utility>

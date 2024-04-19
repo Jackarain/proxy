@@ -43,8 +43,6 @@ static int intr;
 void argv_from_shell( char const * * argv, LIST * shell, char const * command,
     int32_t const slot )
 {
-    static char jobno[ 12 ];
-
     int i;
     int gotpercent = 0;
     LISTITER iter = list_begin( shell );
@@ -52,14 +50,14 @@ void argv_from_shell( char const * * argv, LIST * shell, char const * command,
 
     assert( 0 <= slot );
     assert( slot < 999 );
-    sprintf( jobno, "%d", slot + 1 );
+    auto jobno = b2::value::as_string( slot + 1 );
 
     for ( i = 0; iter != end && i < MAXARGC; ++i, iter = list_next( iter ) )
     {
         switch ( object_str( list_item( iter ) )[ 0 ] )
         {
             case '%': argv[ i ] = command; ++gotpercent; break;
-            case '!': argv[ i ] = jobno; break;
+            case '!': argv[ i ] = jobno->str(); break;
             default : argv[ i ] = object_str( list_item( iter ) );
         }
     }

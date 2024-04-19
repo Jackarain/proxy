@@ -2,6 +2,8 @@
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt)
 
+#define _SILENCE_CXX17_ADAPTOR_TYPEDEFS_DEPRECATION_WARNING
+
 #include <boost/bind/protect.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <boost/config.hpp>

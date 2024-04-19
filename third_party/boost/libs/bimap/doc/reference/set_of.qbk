@@ -159,8 +159,7 @@ look at it as a whole, you will be using a set view.
 
         iterator ``[link reference_set_of_erase_iterator erase]``(iterator position);
 
-        template< class CompatibleKey >
-        size_type ``[link reference_set_of_erase_key erase]``(const CompatibleKey & x);
+        size_type ``[link reference_set_of_erase_key erase]``(const key_type & x);
 
         iterator ``[link reference_set_of_erase_iterator_iterator erase]``(iterator first,  iterator last);
 
@@ -472,10 +471,8 @@ the one that was deleted, or `end()` if no such element exists.
 
 [#reference_set_of_erase_key]
 
-    template< class CompatibleKey >
-    size_type erase(const CompatibleKey & x);
+    size_type erase(const key_type & x);
 
-* [*Requires: ] `CompatibleKey` is a compatible key of `key_compare`.
 * [*Effects:] Deletes the elements with key equivalent to `x`.
 * [*Returns:] Number of elements deleted.
 * [link set_of_complexity_signature
@@ -826,7 +823,7 @@ They are only provided if the other collection type is mutable
     template< class CompatibleKey >
     mapped_type & operator[](const CompatibleKey & k);
 
-* [*Requires: ] `CompatibleKey` is a compatible key of `key_compare`.
+* [*Requires: ] `CompatibleKey` is a compatible key of `key_compare`. `key_type` is constructible from `const CompatibleKey &`.
 * [*Effects: ] `return insert(value_type(k,mapped_type()))->second;`
 * [*Complexity:] O(log(n)).
 * [*Note:] Only provided when `set_of` is used and the other collection

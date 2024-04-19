@@ -1,11 +1,12 @@
 <html>
 
 <head>
-<meta name="GENERATOR" content="Microsoft FrontPage 5.0">
-<meta name="ProgId" content="FrontPage.Editor.Document">
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="GENERATOR" content="Microsoft FrontPage 5.0"/>
+<meta name="ProgId" content="FrontPage.Editor.Document"/>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <title>Filesystem V3 Intro</title>
-<link href="styles.css" rel="stylesheet">
+<link href="styles.css" rel="stylesheet"/>
+</head>
 
 <body>
 
@@ -13,10 +14,10 @@
   <tr>
     <td width="277">
 <a href="../../../index.htm">
-<img src="../../../boost.png" alt="boost.png (6897 bytes)" align="middle" width="300" height="86" border="0"></a></td>
+<img src="../../../boost.png" alt="boost.png (6897 bytes)" align="middle" width="300" height="86" border="0"/></a></td>
     <td align="middle">
     <font size="7">Filesystem
-    Version 3<br>
+    Version 3<br/>
     Introduction</font></td>
   </tr>
 </table>
@@ -36,6 +37,7 @@
     <a href="deprecated.html">Deprecated</a> &nbsp;&nbsp;
     <a href="issue_reporting.html">Bug Reports </a>&nbsp;&nbsp;
     </td>
+  </tr>
 </table>
 
 <h1>Boost Filesystem Version 3</h1>
@@ -49,21 +51,21 @@ changes include:</p>
   and <code>wpath</code> instantiations. Character types <code>char</code>,
   <code>wchar_t</code>, <code>char16_t</code>, and <code>char32_t</code> are
   supported. This is a major simplification of the path abstraction,
-  particularly for functions that take path arguments.<br>
+  particularly for functions that take path arguments.<br/>
 &nbsp;</li>
-  <li>New <code>class path</code> members include:<br>
+  <li>New <code>class path</code> members include:<br/>
 &nbsp;<ul>
   <li><code><a href="reference.html#path-has_stem">has_stem</a>()</code></li>
   <li><code><a href="reference.html#path-has_extension">has_extension</a>()</code></li>
   <li><code><a href="reference.html#path-is_absolute">is_absolute</a>()</code>. This renames <code>is_complete()</code>, which
   is now deprecated.</li>
   <li><code><a href="reference.html#path-is_relative">is_relative</a>()</code></li>
-  <li><code><a href="reference.html#path-make_preferred">make_preferred</a>()<br>
+  <li><code><a href="reference.html#path-make_preferred">make_preferred</a>()<br/>
 &nbsp;</code></li>
 </ul>
 
   </li>
-  <li>New or improved operations functions include:<br>
+  <li>New or improved operations functions include:<br/>
 &nbsp;<ul>
     <li><code><a href="reference.html#absolute">absolute</a>()</code>. This replaces the operations function <code>
   complete()</code>, which is now deprecated. Semantics are now provided for a
@@ -75,14 +77,14 @@ changes include:</p>
     <li><code><a href="reference.html#resize_file">resize_file</a>()</code> function added. Supported on both POSIX and
     Windows. Used to shrink or grow a regular file.</li>
     <li><code><a href="reference.html#unique_path">unique_path</a>()</code> function added. Supported on both POSIX and
-    Windows. Used to generate a secure temporary pathname.<br>
+    Windows. Used to generate a secure temporary pathname.<br/>
 &nbsp;</li>
   </ul>
   </li>
   <li>Support for error reporting via <code>error_code</code> is now uniform
-  throughout the operations functions.<br>
+  throughout the operations functions.<br/>
 &nbsp;</li>
-  <li>Documentation has been reworked, including re-writes of major portions.<br>
+  <li>Documentation has been reworked, including re-writes of major portions.<br/>
 &nbsp;</li>
   <li>A new <a href="tutorial.html">Tutorial</a> provides a hopefully much
   gentler and more complete introduction for new users. Current users might want
@@ -105,7 +107,7 @@ several Boost releases. Version 2 was removed in Boost 1.50.0.</p>
   overloaded functions, that depends on <code>path</code> and <code>wpath</code>
   being two distinct types will fail to compile and must be restructured.
   Restructuring may be as simple as removing one of the overloads, but also
-  might require more complex redesign.<br>
+  might require more complex redesign.<br/>
 &nbsp;</li>
   <li>Certain functions now return <code>path</code> objects rather than <code>
   string or wstring</code> objects:<ul>
@@ -119,8 +121,8 @@ several Boost releases. Version 2 was removed in Boost 1.50.0.</p>
   accepts a <code>path</code>, all is well. If the result is being used in a
   context requiring a <code>std::string</code> or <code>std::wstring</code>,
   then <code>.string()</code> or <code>.wstring()</code> respectively must be
-  appended to the function call.<br>
-&nbsp;</li>
+  appended to the function call.<br/>
+&nbsp;</p></li>
   <li>&nbsp;<code>path::iterator::value_type</code> and&nbsp; <code>
   path::const_iterator::value_type</code> is <code>path</code> rather than <code>
   basic_string</code>.</li>
@@ -129,18 +131,18 @@ several Boost releases. Version 2 was removed in Boost 1.50.0.</p>
 <ul>
   <li>Compilers and standard libraries that do not fully support wide characters
   and wide character strings (<code>std::wstring</code>) are no longer
-  supported.<br>
+  supported.<br/>
 &nbsp;</li>
   <li>Cygwin versions prior to 1.7 are no longer supported because they lack
   wide string support. Cygwin now compiles only for the Windows API and path
-  syntax.<br>
+  syntax.<br/>
 &nbsp;</li>
-  <li>MinGW versions not supporting wide strings are no longer supported.<br>
+  <li>MinGW versions not supporting wide strings are no longer supported.<br/>
 &nbsp;</li>
   <li>Microsoft VC++ 7.1 and earlier are no longer supported.</li>
 </ul>
 
-<hr>
+<hr/>
 <p>&copy; Copyright Beman Dawes, 2009</p>
 <p>Distributed under the Boost Software License, Version 1.0. See
 <a href="http://www.boost.org/LICENSE_1_0.txt">www.boost.org/LICENSE_1_0.txt</a></p>

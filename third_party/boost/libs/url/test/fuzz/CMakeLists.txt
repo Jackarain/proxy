@@ -58,7 +58,7 @@ add_dependencies(untar_corpus untar_seeds)
 # Target that runs all fuzz targets
 get_filename_component(BOOST_URL_FUZZER_CORPUS_PARENT_DIR ${BOOST_URL_FUZZER_CORPUS_PATH} DIRECTORY)
 add_custom_target(
-    fuzz
+    boost_url_fuzz_all
     COMMAND ${CMAKE_COMMAND} -E echo "Archive corpus from \"${BOOST_URL_FUZZER_CORPUS_DIR}\" to \"${BOOST_URL_FUZZER_CORPUS_PATH}\""
     COMMAND ${CMAKE_COMMAND} -E tar cf ${BOOST_URL_FUZZER_CORPUS_PATH} ${BOOST_URL_FUZZER_CORPUS_DIR}
     WORKING_DIRECTORY ${BOOST_URL_FUZZER_CORPUS_PARENT_DIR}
@@ -110,7 +110,7 @@ function(add_boost_url_fuzzer NAME)
         COMMAND ${CMAKE_COMMAND} -E remove_directory ${BOOST_URL_FUZZER_MERGED_CORPUS_DIR}/${NAME}
         DEPENDS untar_corpus fuzzer_${NAME})
     add_dependencies(fuzz_${NAME} fuzzer_${NAME})
-    add_dependencies(fuzz fuzz_${NAME})
+    add_dependencies(boost_url_fuzz_all fuzz_${NAME})
     set_property(TARGET fuzz_${NAME} PROPERTY ENVIRONMENT "UBSAN_OPTIONS=halt_on_error=false")
 
     if (BOOST_URL_FUZZER_ADD_TO_CTEST)
@@ -128,3 +128,5 @@ foreach(BOOST_URL_FUZZER_SOURCE_FILE ${BOOST_URL_FUZZER_SOURCE_FILES})
     string(REGEX REPLACE "(.*).cpp" "\\1" RULE_NAME ${BOOST_URL_FUZZER_SOURCE_FILE})
     add_boost_url_fuzzer(${RULE_NAME} ${BOOST_URL_FUZZER_SOURCE_FILE})
 endforeach()
+
+add_dependencies(tests boost_url_fuzz_all)

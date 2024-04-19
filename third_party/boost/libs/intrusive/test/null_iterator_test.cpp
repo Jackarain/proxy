@@ -20,7 +20,6 @@
 
 #include <boost/core/lightweight_test.hpp>
 #include <boost/aligned_storage.hpp>
-#include <boost/static_assert.hpp>
 #include <cstring>
 #include <new>
 
@@ -42,14 +41,14 @@ static buffer_t buffer_0xFF;
 template<class Iterator>
 const Iterator &on_0x00_buffer()
 {
-   BOOST_STATIC_ASSERT(sizeof(buffer_t) >= sizeof(Iterator));
+   BOOST_INTRUSIVE_STATIC_ASSERT(sizeof(buffer_t) >= sizeof(Iterator));
    return * ::new(std::memset(&buffer_0x00, 0x00, sizeof(buffer_0x00))) Iterator();
 }
 
 template<class Iterator>
 const Iterator &on_0xFF_buffer()
 {
-   BOOST_STATIC_ASSERT(sizeof(buffer_t) >= sizeof(Iterator));
+   BOOST_INTRUSIVE_STATIC_ASSERT(sizeof(buffer_t) >= sizeof(Iterator));
    return * ::new(std::memset(&buffer_0xFF, 0xFF, sizeof(buffer_0xFF))) Iterator();
 }
 

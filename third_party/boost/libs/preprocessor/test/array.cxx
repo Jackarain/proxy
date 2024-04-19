@@ -13,7 +13,7 @@
 #
 # include <boost/preprocessor/config/limits.hpp>
 # include <boost/preprocessor/array.hpp>
-# include <libs/preprocessor/test/test.h>
+# include "test.h"
 # include <boost/preprocessor/facilities/is_empty.hpp>
 # include <boost/preprocessor/list/at.hpp>
 # include <boost/preprocessor/list/size.hpp>

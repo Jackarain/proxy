@@ -16,6 +16,11 @@
 
 #include <boost/process/filesystem.hpp>
 
+#if !defined(BOOST_PROCESS_USE_STD_FS)
+#include <boost/filesystem/directory.hpp>
+#endif
+
+
 #include <system_error>
 
 

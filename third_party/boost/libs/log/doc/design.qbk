@@ -1,5 +1,5 @@
 [/
-              Copyright Andrey Semashev 2007 - 2022.
+              Copyright Andrey Semashev 2007 - 2024.
      Distributed under the Boost Software License, Version 1.0.
         (See accompanying file LICENSE_1_0.txt or copy at
               http://www.boost.org/LICENSE_1_0.txt)
@@ -35,13 +35,13 @@ There are three kinds of attribute sets:
 
 You can see in the figure that the former two sets are maintained by the logging core and thus need not be passed by the log source in order to initiate logging. Attributes that participate in the global attribute set are attached to any log record ever made. Obviously, thread-specific attributes are attached only to the records made from the thread in which they were registered in the set. The source-specific attribute set is maintained by the source that initiates logging, these attributes are attached only to the records being made through that particular source.
 
-When a source initiates logging, attribute values are acquired from attributes of all three attribute sets. These attribute values then form a single set of named attribute values, which is processed further. You can add more attribute values to the set; these values will only be attached to the particular log record and will not be associated with the logging source or logging core. As you may notice, it is possible for a same-named attribute to appear in several attribute sets. Such conflicts are solved on priority basis: global attributes have the least priority, source-specific attributes have the highest; the lower priority attributes are discarded from consideration in case of conflicts.
+When a source initiates logging, attribute values are acquired from attributes of all three attribute sets. These attribute values then form a single set of named attribute values, which is processed further. You can add more attribute values to the set; these values will only be attached to the particular log record and will not be associated with the logging source or logging core. As you may notice, it is possible for a same-named attribute to appear in several attribute sets. Such conflicts are solved on precedence basis: global attributes have the least precedence, source-specific attributes have the highest; the lower precedence attributes are discarded from consideration in case of conflicts.
 
 [heading Logging core and filtering]
 
 When the set of attribute values is composed, the logging core decides if this log record is going to be processed in sinks. This is called filtering. There are two layers of filtering available: the global filtering is applied first within the logging core itself and allows quickly wiping away unneeded log records; the sink-specific filtering is applied second, for each sink separately. The sink-specific filtering allows directing log records to particular sinks. Note that at this point it is not significant which logging source emitted the record, the filtering relies solely on the set of attribute values attached to the record.
 
-It must be mentioned that for a given log record filtering is performed only once. Obviously, only those attribute values attached to the record before filtering starts can participate in filtering. Some attribute values, like log record message, are typically attached to the record after the filtering is done; such values cannot be used in filters, they can only be used by formatters and sinks themselves.
+It must be mentioned that for a given log record filtering is performed only once. Obviously, only the attribute values that were attached to the record before filtering starts can participate in filtering. Some attribute values, like log record message, are typically attached to the record after the filtering is done; such values cannot be used in filters, they can only be used by formatters and sinks themselves.
 
 [heading Sinks and formatting]
 

@@ -20,7 +20,7 @@
 
 namespace odeint = boost::numeric::odeint;
 
-typedef boost::array< double , 3 > state_type;
+typedef std::array< double , 3 > state_type;
 
 //[ ode_wrapper
 template< class Obj , class Mem >

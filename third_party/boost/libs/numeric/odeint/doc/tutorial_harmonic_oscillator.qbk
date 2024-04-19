@@ -16,7 +16,7 @@
 
 [section Define the ODE]
 
-First of all, you have to specify the data type that represents a state ['x] of your system. Mathematically, this usually is an n-dimensional vector with real numbers or complex numbers as scalar objects. For odeint the most natural way is to use `vector< double >` or `vector< complex< double > >` to represent the system state. However, odeint can deal with other container types as well, e.g. `boost::array< double , N >`, as long as it fulfills some requirements defined below.
+First of all, you have to specify the data type that represents a state ['x] of your system. Mathematically, this usually is an n-dimensional vector with real numbers or complex numbers as scalar objects. For odeint the most natural way is to use `vector< double >` or `vector< complex< double > >` to represent the system state. However, odeint can deal with other container types as well, e.g. `std::array< double , N >`, as long as it fulfills some requirements defined below.
 
 To integrate a differential equation numerically, one also has to define the rhs of the equation ['x' = f(x)]. In odeint you supply this function in terms of an object that implements the ()-operator with a certain parameter structure. Hence, the straightforward way would be to just define a function, e.g:
 

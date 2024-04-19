@@ -30,7 +30,7 @@ struct debug_child_data_t
 };
 
 extern struct debug_child_data_t debug_child_data;
-extern b2::jam::list debug_print_result;
+extern b2::list_ref debug_print_result;
 extern const char debugger_opt[];
 extern int debug_interface;
 

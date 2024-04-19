@@ -27,7 +27,6 @@ using boost::redis::response;
 using boost::redis::ignore;
 using boost::redis::ignore_t;
 using boost::system::error_code;
-using redis::config;
 using boost::redis::logger;
 using namespace std::chrono_literals;
 
@@ -67,7 +66,7 @@ BOOST_AUTO_TEST_CASE(receives_push_waiting_resps)
 
    conn->async_exec(req1, ignore, c1);
 
-   run(conn, {}, {});
+   run(conn, make_test_config(), {});
 
    bool push_received = false;
    conn->async_receive([&, conn](auto ec, auto){
@@ -217,7 +216,8 @@ BOOST_AUTO_TEST_CASE(test_push_adapter)
       BOOST_CHECK_EQUAL(ec, boost::system::errc::errc_t::operation_canceled);
    });
 
-   conn->async_run({}, {}, [](auto ec){
+   auto cfg = make_test_config();
+   conn->async_run(cfg, {}, [](auto ec){
       BOOST_CHECK_EQUAL(ec, boost::redis::error::incompatible_size);
    });
 
@@ -257,9 +257,8 @@ BOOST_AUTO_TEST_CASE(many_subscribers)
 
    auto c11 =[&](auto ec, auto...)
    {
-      std::cout << "quit sent" << std::endl;
+      std::cout << "quit sent: " << ec.message() << std::endl;
       conn->cancel(operation::reconnection);
-      BOOST_TEST(!ec);
    };
    auto c10 =[&](auto ec, auto...)
    {
@@ -319,7 +318,7 @@ BOOST_AUTO_TEST_CASE(many_subscribers)
 
    conn->async_exec(req0, ignore,  c0);
 
-   run(conn, {}, {});
+   run(conn, make_test_config(), {});
 
    net::co_spawn(ioc.get_executor(), push_consumer3(conn), net::detached);
    ioc.run();

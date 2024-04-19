@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+# Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -13,32 +13,54 @@ path-constant this_dir : . ;
 local hostname = [ os.environ BOOST_MYSQL_SERVER_HOST ] ;
 if $(hostname) = ""
 {
-    hostname = "localhost" ;
+    hostname = "127.0.0.1" ;
+}
+
+# Builds and run a "regular" example
+rule run_regular_example (
+    example_name :
+    sources *
+)
+{
+    run
+        "$(example_name).cpp"
+        /boost/mysql/test//boost_mysql_compiled
+        $(sources)
+    :
+        <testing.arg>"example_user example_password $(hostname)"
+    ;
+}
+
+# Builds and runs a example that needs a Python runner
+rule run_python_example (
+    example_name :
+    python_runner :
+    sources *
+)
+{
+    run
+            $(sources)
+            /boost/mysql/test//boost_mysql_compiled
+        : requirements
+            <testing.launcher>"python $(this_dir)/private/$(python_runner)"
+            <testing.arg>$(hostname)
+        : target-name "boost_mysql_example_$(example_name)"
+    ;
 }
 
 # "Regular" examples
-local regular_examples =
-    snippets
-    tutorial
-    async_callbacks
-    async_coroutinescpp20
-    async_futures
-    metadata
-    ssl
-    timeouts
-;
+run_regular_example snippets ;
+run_regular_example tutorial ;
+run_regular_example async_callbacks ;
+run_regular_example async_coroutinescpp20 ;
+run_regular_example async_futures ;
+run_regular_example metadata ;
+run_regular_example ssl ;
+run_regular_example timeouts ;
+run_regular_example async_coroutines : /boost/mysql/test//boost_context_lib ;
+run_regular_example any_connection : /boost/mysql/test//boost_context_lib ;
 
-for local example in $(regular_examples)
-{
-    run
-            "$(example).cpp"
-            /boost/mysql/test//boost_mysql_compiled
-        :
-            <testing.arg>"example_user example_password $(hostname)"
-        ;
-}
-
-# Order management examples. These must be run several times through a Python script
+# Order management examples
 local order_examples =
     prepared_statements_cpp11
     prepared_statements_cpp14
@@ -48,24 +70,14 @@ local order_examples =
 
 for local example in $(order_examples)
 {
-    run
-            "order_management/$(example).cpp"
-            /boost/mysql/test//boost_mysql_compiled
-        : requirements
-            <testing.launcher>"python $(this_dir)/private/run_stored_procedures.py"
-            <testing.arg>$(hostname)
-        : target-name "boost_mysql_example_$(example)"
-    ;
+    run_python_example $(example) : run_stored_procedures.py : order_management/$(example).cpp ;
 }
 
-# Coroutines, which requires Boost.Context
-run
-        async_coroutines.cpp
-        /boost/mysql/test//boost_mysql_compiled
-        /boost/context//boost_context
-    :
-        <testing.arg>"example_user example_password $(hostname)"
-    ;
+# Other examples that need a Python script
+run_python_example patch_updates : run_patch_updates.py : patch_updates.cpp ;
+run_python_example dynamic_filters : run_dynamic_filters.py : dynamic_filters.cpp /boost/mysql/test//boost_context_lib ;
+run_python_example batch_inserts : run_batch_inserts.py : batch_inserts.cpp /boost/json//boost_json ;
+run_python_example batch_inserts_generic : run_batch_inserts.py : batch_inserts_generic.cpp /boost/json//boost_json ;
 
 # UNIX. Honor BOOST_MYSQL_NO_UNIX_SOCKET_TESTS for homogeneity with cmake
 if [ os.environ BOOST_MYSQL_NO_UNIX_SOCKET_TESTS ] = "" {
@@ -83,4 +95,25 @@ run
         /boost/mysql/test//boost_mysql_compiled
     : requirements
         <testing.arg>"example_user example_password $(hostname) $(this_dir)/private/test_script.sql"
+    ;
+
+# Connection pool
+run
+        connection_pool/main.cpp
+        connection_pool/repository.cpp
+        connection_pool/handle_request.cpp
+        connection_pool/server.cpp
+        /boost/mysql/test//boost_mysql_compiled
+        /boost/mysql/test//boost_context_lib
+        /boost/json//boost_json
+        /boost/url//boost_url
+    : requirements
+            <testing.launcher>"python $(this_dir)/private/run_connection_pool.py"
+            <testing.arg>$(hostname)
+            # MSVC 14.1 fails with an internal compiler error while building server.cpp for this config
+            <toolset>msvc-14.1,<address-model>32,<cxxstd>17,<variant>release:<build>no
+            # Uses heavily Boost.Context coroutines, which aren't fully supported by asan
+            <address-sanitizer>norecover:<build>no
+            <address-sanitizer>enable:<build>no
+    : target-name boost_mysql_example_connection_pool
     ;

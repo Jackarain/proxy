@@ -1351,6 +1351,7 @@
   <!-- Handle Destructors -->
   <xsl:template name="destructor">
     <destructor>
+      <xsl:call-template name="function.attributes"/>
       <xsl:call-template name="function.children"/>
     </destructor>
     <xsl:text>&#10;</xsl:text><!-- Newline -->

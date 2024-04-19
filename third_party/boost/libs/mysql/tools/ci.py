@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+# Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -48,7 +48,7 @@ def _cmake_bool(value: bool) -> str:
 
 def _common_settings(
     boost_root: Path,
-    server_host: str = 'localhost',
+    server_host: str = '127.0.0.1',
     db: str = 'mysql8'
 ) -> None:
     _add_to_path(boost_root)
@@ -118,7 +118,7 @@ def _install_boost(
             _run(["python", "tools/boostdep/depinst/depinst.py", "--include", "example", "mysql"])
         else:
             _run(['python', 'tools/boostdep/depinst/depinst.py', '../tools/quickbook'])
-
+    
     # Bootstrap
     if is_clean:
         if _is_windows:
@@ -185,6 +185,7 @@ def _b2_build(
     separate_compilation: bool = True,
     address_sanitizer: bool = False,
     undefined_sanitizer: bool = False,
+    use_ts_executor: bool = False,
 ) -> None:
     # Config
     os.environ['UBSAN_OPTIONS'] = 'print_stacktrace=1'
@@ -212,13 +213,16 @@ def _b2_build(
         'variant={}'.format(variant),
         'stdlib={}'.format(stdlib),
         'boost.mysql.separate-compilation={}'.format('on' if separate_compilation else 'off'),
+        'boost.mysql.use-ts-executor={}'.format('on' if use_ts_executor else 'off'),
     ] + (['address-sanitizer=norecover'] if address_sanitizer else [])     # can only be disabled by omitting the arg
       + (['undefined-sanitizer=norecover'] if undefined_sanitizer else []) # can only be disabled by omitting the arg
       + [
+        'warnings=extra',
         'warnings-as-errors=on',
         '-j4',
         'libs/mysql/test',
         'libs/mysql/test/integration//boost_mysql_integrationtests',
+        'libs/mysql/test/thread_safety',
         'libs/mysql/example'
     ])
 
@@ -271,10 +275,11 @@ def _cmake_build(
         _run([
             'b2',
             '--prefix={}'.format(b2_distro),
-            '--with-system',
             '--with-context',
-            '--with-date_time',
             '--with-test',
+            '--with-json',
+            '--with-url',
+            '--with-charconv',
             '-d0',
         ] + (['cxxstd={}'.format(cxxstd)] if cxxstd else []) + [
             'install'
@@ -509,9 +514,10 @@ def main():
     parser.add_argument('--stdlib', choices=['native', 'libc++'], default='native')
     parser.add_argument('--address-model', choices=['32', '64'], default='64')
     parser.add_argument('--separate-compilation', type=_str2bool, default=True)
+    parser.add_argument('--use-ts-executor', type=_str2bool, default=False)
     parser.add_argument('--address-sanitizer', type=_str2bool, default=False)
     parser.add_argument('--undefined-sanitizer', type=_str2bool, default=False)
-    parser.add_argument('--server-host', default='localhost')
+    parser.add_argument('--server-host', default='127.0.0.1')
 
     args = parser.parse_args()
 
@@ -527,6 +533,7 @@ def main():
             stdlib=args.stdlib,
             address_model=args.address_model,
             separate_compilation=args.separate_compilation,
+            use_ts_executor=args.use_ts_executor,
             address_sanitizer=args.address_sanitizer,
             undefined_sanitizer=args.undefined_sanitizer,
             clean=args.clean,

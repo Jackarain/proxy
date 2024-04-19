@@ -12,6 +12,12 @@
 #define BOOST_INTERPROCESS_TEST_NAMED_CONDITION_HELPERS_HEADER
 
 #include <boost/interprocess/detail/config_begin.hpp>
+#include <boost/interprocess/sync/cv_status.hpp>
+#include <boost/interprocess/detail/interprocess_tester.hpp>
+#include <boost/interprocess/sync/detail/locks.hpp>
+#include "condition_test_template.hpp"
+#include "named_creation_template.hpp"
+#include "get_process_id_name.hpp"
 
 namespace boost { namespace interprocess { namespace test {
 

@@ -192,6 +192,13 @@ ICU_OPTS =
 exe has_icu : $(TOP)/build/has_icu_test.cpp : $(ICU_OPTS) ;
 explicit has_icu ;
 
+# Separate pair of obj & exe rules so the CPP file is built with the changed include paths
+obj has_iconv_with_icu_obj : $(TOP)/build/has_iconv.cpp : $(ICU_OPTS) ;
+exe has_iconv_with_icu : has_external_iconv_with_icu_obj : $(ICU_OPTS) ;
+explicit has_iconv_with_icu ;
+obj has_external_iconv_with_icu_obj : $(TOP)/build/has_iconv.cpp iconv : $(ICU_OPTS) ;
+exe has_external_iconv_with_icu : has_external_iconv_with_icu_obj iconv : $(ICU_OPTS) ;
+explicit has_external_iconv_with_icu ;
 
 # This function is called whenever the 'boost_locale' metatarget
 # below is generated and figures out what external components we have,
@@ -212,25 +219,8 @@ rule configure-full ( properties * : flags-only )
         }
     }
 
-    local found-iconv ;
-
-    if ! <boost.locale.iconv>off in $(properties)
-    {
-        # See if iconv is bundled with standard library.
-        if [ configure.builds has_iconv : $(properties) : "iconv (libc)" ]
-        {
-            found-iconv = true ;
-        } else if [ configure.builds has_external_iconv : $(properties) : "iconv (separate)" ]
-        {
-            found-iconv = true ;
-            result += <library>iconv ;
-        }
-    }
-    if $(found-iconv)
-    {
-        flags-result += <define>BOOST_LOCALE_WITH_ICONV=1 ;
-    }
-
+    local internal_iconv_target = has_iconv ;
+    local external_iconv_target = has_external_iconv ;
     local found-icu ;
 
     if ! <boost.locale.icu>off in $(properties)
@@ -256,7 +246,29 @@ rule configure-full ( properties * : flags-only )
             result += <source>icu/$(ICU_SOURCES).cpp
                       <library>/boost/thread//boost_thread
                       ;
+            # ICU might introduce an own iconv, so check for that.
+            internal_iconv_target = has_iconv_with_icu ;
+            external_iconv_target = has_external_iconv_with_icu ;
         }
+    }
+
+    local found-iconv ;
+
+    if ! <boost.locale.iconv>off in $(properties)
+    {
+        # See if iconv is bundled with standard library.
+        if [ configure.builds $(internal_iconv_target) : $(properties) : "iconv (libc)" ]
+        {
+            found-iconv = true ;
+        } else if [ configure.builds $(external_iconv_target) : $(properties) : "iconv (separate)" ]
+        {
+            found-iconv = true ;
+            result += <library>iconv ;
+        }
+    }
+    if $(found-iconv)
+    {
+        flags-result += <define>BOOST_LOCALE_WITH_ICONV=1 ;
     }
 
     if ! $(found-iconv) && ! $(found-icu) && ! <target-os>windows in $(properties) && ! <target-os>cygwin in $(properties)

@@ -65,6 +65,7 @@ link dll
 001 - linked
 install installed_dll
 002 - installed
+
 ...updated 3 targets...
 """)
 

@@ -47,31 +47,31 @@ class request {
 public:
    /// Request configuration options.
    struct config {
-      /** \brief If `true` 
-       * `boost::redis::connection::async_exec` will complete with error if the
-       * connection is lost. Affects only requests that haven't been
-       * sent yet.
+      /** \brief If `true` calls to `connection::async_exec` will
+       * complete with error if the connection is lost while the
+       * request hasn't been sent yet.
        */
       bool cancel_on_connection_lost = true;
 
-      /** \brief If `true` the request will complete with
-       * boost::redis::error::not_connected if `async_exec` is called before
-       * the connection with Redis was established.
+      /** \brief If `true` `connection::async_exec` will complete with
+       * `boost::redis::error::not_connected` if the call happens
+       * before the connection with Redis was established.
        */
       bool cancel_if_not_connected = false;
 
-      /** \brief If `false` `boost::redis::connection::async_exec` will not
+      /** \brief If `false` `connection::async_exec` will not
        * automatically cancel this request if the connection is lost.
        * Affects only requests that have been written to the socket
-       * but remained unresponded when `boost::redis::connection::async_run`
-       * completed.
+       * but remained unresponded when
+       * `boost::redis::connection::async_run` completed.
        */
       bool cancel_if_unresponded = true;
 
-      /** \brief If this request has a `HELLO` command and this flag is
-       * `true`, the `boost::redis::connection` will move it to the front of
-       * the queue of awaiting requests. This makes it possible to
-       * send `HELLO` and authenticate before other commands are sent.
+      /** \brief If this request has a `HELLO` command and this flag
+       * is `true`, the `boost::redis::connection` will move it to the
+       * front of the queue of awaiting requests. This makes it
+       * possible to send `HELLO` and authenticate before other
+       * commands are sent.
        */
       bool hello_with_priority = true;
    };

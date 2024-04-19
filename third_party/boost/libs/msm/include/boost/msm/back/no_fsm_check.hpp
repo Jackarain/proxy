@@ -13,7 +13,6 @@
 
 #include <boost/mpl/assert.hpp>
 
-#include <boost/msm/back/metafunctions.hpp>
 
 namespace boost { namespace msm { namespace back
 {

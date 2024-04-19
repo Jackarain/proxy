@@ -115,7 +115,7 @@ template<class T>
 using has_ctype = decltype(is_complete_impl(std::declval<std::ctype<T>*>()));
 
 template<typename Char, typename... Ts>
-typename std::enable_if<has_ctype<Char>::value, bool>::type stream_translate(std::basic_ostream<Char>& ss, Ts... args)
+typename std::enable_if<has_ctype<Char>::value, bool>::type stream_translate(std::basic_ostream<Char>& ss, Ts&&... args)
 {
     ss << bl::translate(args...);
     return true;
@@ -124,7 +124,7 @@ typename std::enable_if<has_ctype<Char>::value, bool>::type stream_translate(std
 // Required for char types not fully supported by the standard library
 // e.g.: error: implicit instantiation of undefined template 'std::ctype<char8_t>'
 template<typename Char, typename... Ts>
-typename std::enable_if<!has_ctype<Char>::value, bool>::type stream_translate(std::basic_ostream<Char>&, Ts...)
+typename std::enable_if<!has_ctype<Char>::value, bool>::type stream_translate(std::basic_ostream<Char>&, Ts&&...)
 {
     return false; // LCOV_EXCL_LINE
 }

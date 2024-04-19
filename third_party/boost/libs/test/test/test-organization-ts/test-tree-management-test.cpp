@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE( manual_test_case_creation_test )
     BOOST_TEST( tc1->p_expected_failures == 0U );
     BOOST_TEST( tc1->p_timeout == 0U );
     BOOST_TEST( tc1->p_name == const_string( "empty_" ) );
-    BOOST_TEST( tc1->p_test_func );
+    BOOST_TEST( static_cast<bool>(tc1->p_test_func.get()) );
     BOOST_TEST( tc1->p_default_status == test_unit::RS_INHERIT );
     BOOST_TEST( tc1->p_run_status == test_unit::RS_INVALID );
     BOOST_TEST( !tc1->is_enabled() );

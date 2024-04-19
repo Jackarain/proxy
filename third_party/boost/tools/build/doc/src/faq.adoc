@@ -255,38 +255,80 @@ obj b : b.cpp : <variant>release:<optimization>off ;
 ----
 
 [[bbv2.faq.dll-path]]
-== Why are the `dll-path` and `hardcode-dll-paths` properties useful?
+== Why are the link:#bbv2.builtin.features.dll-path[`dll-path`] and link:#bbv2.builtin.features.hardcode-dll-paths[`hardcode-dll-paths`] properties useful?
 
 NOTE: This entry is specific to Unix systems.
 
 Before answering the questions, let us recall a few points about shared
-libraries. Shared libraries can be used by several applications, or
-other libraries, without physically including the library in the
-application which can greatly decrease the total application size. It is
-also possible to upgrade a shared library when the application is
-already installed.
+libraries. Shared libraries can be used by several applications -- or
+other libraries -- without physically including the library in the linked
+binary. This can greatly decrease the total application size. It is also
+possible to upgrade a shared library after an application is already installed.
 
-However, in order for application depending on shared libraries to be
-started the OS may need to find the shared library when the application
-is started. The dynamic linker will search in a system-defined list of
-paths, load the library and resolve the symbols. Which means that you
+However, in order for an application depending on shared libraries to be
+started, the OS will need to find the shared libraries.
+The dynamic linker will search in a system-defined list of
+paths, load the library and resolve the symbols. This means that you
 should either change the system-defined list, given by the
 `LD_LIBRARY_PATH` environment variable, or install the libraries to a
 system location. This can be inconvenient when developing, since the
 libraries are not yet ready to be installed, and cluttering system paths
 may be undesirable. Luckily, on Unix there is another way.
 
-An executable can include a list of additional library paths, which will
-be searched before system paths. This is excellent for development
-because the build system knows the paths to all libraries and can
-include them in the executables. That is done when the
-`hardcode-dll-paths` feature has the `true` value, which is the default.
-When the executables should be installed, the story is different.
+Using the link:#bbv2.builtin.features.hardcode-dll-paths[`hardcode-dll-paths`]
+and link:#bbv2.builtin.features.dll-path[`dll-path`] features,
+a target can be linked with an additional list of library directory paths
+that will be searched before the system paths --
+these are called "_runtime library search paths_" or "_run paths_", or
+"_run path list_", depending on which platform's documentation you're reading
+-- See your platform's dynamic linker _man page_ or
+https://en.wikipedia.org/wiki/Rpath[Wikipedia] for more.
 
-Obviously, installed executable should not contain hardcoded paths to
-your development tree. (The `install` rule explicitly disables the
-`hardcode-dll-paths` feature for that reason.) However, you can use the
-`dll-path` feature to add explicit paths manually. For example:
+NOTE: We'll just use _rpath list_ for conciseness below.
+
+=== `hardcode-dll-paths`
+The link:#bbv2.builtin.features.hardcode-dll-paths[`hardcode-dll-paths`]
+feature for link:#bbv2.reference.rules.exe[`exe`] targets, is especially
+helpful for development; As the build system already knows the paths to all
+the used shared libraries, it will by default automatically add them to the
+executable _rpath list_.
+
+When the executable is installed however, the story is different;
+Obviously, installed executables should not contain hardcoded paths to
+your development tree. The link:#bbv2.reference.rules.install[`install`]
+rule therefore implicitly (i.e. by default) negates the
+link:#bbv2.builtin.features.hardcode-dll-paths[`hardcode-dll-paths`]
+feature, by re-linking an executable _without_ the automatic paths
+if necessary.
+
+    - For the link:#bbv2.reference.rules.exe[`exe`] rule:
+        * With `<hardcode-dll-paths>true` (default), the paths to all
+          directories with used shared libraries are _automatically_ added
+          to the target's _rpath list_.
+
+        * An explicit `<hardcode-dll-paths>false` property is needed to
+          _disable_ the automatic adding  of directory paths to the shared
+          libraries.
+
+    - For the link:#bbv2.reference.rules.install[`install`] rule:
+        * If so desired, an explicit `<hardcode-dll-paths>true` is needed
+          to propagate the _rpath list_, added to the source
+          targets, through to the `install` targets. (This include explicit
+          link:#bbv2.builtin.features.dll-path[`dll-path`] entries added
+          to the source targets.)
+
+        * By default, the implicit `<hardcode-dll-paths>false` property,
+          will ensure that the source targets' _rpath lists_ are _**not**_
+          propagated through to the `install` targets.
+
+    - The `<hardcode-dll-paths>` feature is ignored for the
+      link:#bbv2.reference.rules.lib[`lib`] rule.
+
+=== `dll-path`
+As an alternative -- or in addition -- you can use the
+link:#bbv2.builtin.features.dll-path[`dll-path`] feature to add explicit
+directory paths manually to the _rpath list_. +
+For example:
 
 [source,jam]
 ----
@@ -297,8 +339,9 @@ install installed : application : <dll-path>/usr/lib/snake
 will allow the application to find libraries placed in the
 `/usr/lib/snake` directory.
 
-If you install libraries to a nonstandard location and add an explicit
-path, you get more control over libraries which will be used. A library
+=== Conclusion
+If you install libraries to a non-standard location and add an explicit
+path, you get more control over libraries that will be used. A library
 of the same name in a system location will not be inadvertently used. If
 you install libraries to a system location and do not add any paths, the
 system administrator will have more control. Each library can be
@@ -308,11 +351,57 @@ Which approach is best depends on your situation. If the libraries are
 relatively standalone and can be used by third party applications, they
 should be installed in the system location. If you have lots of
 libraries which can be used only by your application, it makes sense to
-install them to a nonstandard directory and add an explicit path, like
+install them to a non-standard directory and add an explicit path, like
 the example above shows. Please also note that guidelines for different
 systems differ in this respect. For example, the Debian GNU guidelines
 prohibit any additional search paths while Solaris guidelines suggest
 that they should always be used.
+
+.Shared Library Search Path Summary
+(Applicable to the client target -
+ i.e. the target that _uses_ the shared library.)
+|===
+|Rule |Feature |Value | _Rpath List_ Additions
+
+|`exe`
+|`hardcode-dll-paths` |`true` (default)
+|The _absolute paths_ to the directories of all shared libraries. +
+ If these are targets themselves, their _build directory_ paths are added.
+
+|`exe`
+|`hardcode-dll-paths` |`false`
+| _(none)_
+
+|`install`
+|`hardcode-dll-paths` |`true`
+|Propagate _rpath list_ from the sources (`exe` & `lib` targets)
+ to the installed binary. (This include explicit
+ link:#bbv2.builtin.features.dll-path[`dll-path`]
+ entries added to the source targets.)
+
+|`install`
+|`hardcode-dll-paths` |`false` (default)
+| _(none)_
+
+|`lib`
+|`hardcode-dll-paths` |_disabled_ +
+(no effect)
+| _(none)_
+
+|`exe`, `lib`, `install`
+|`dll-path` |_(Absolute path)_
+|The _absolute path_ as specified.
+
+|`exe`, `lib`, `install`
+|`dll-path` |_(Relative path)_ +
+ ⚠️
+|A path comprised of the specified relative path,
+ prepended with the path to the _jam_ directory,
+ as specified on the command line.
+
+  ⚠️ WARNING: The resulting path will depend on the specific
+ command line invocation, thus severely limited in practical use.
+|===
 
 [[bbv2.recipes.site-config]]
 == Targets in site-config.jam

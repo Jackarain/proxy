@@ -1,5 +1,5 @@
 /* Example use of std::error implicit conversion
-(C) 2018-2023 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
+(C) 2018-2024 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
 File Created: Sept 2018
 
 
@@ -34,7 +34,7 @@ DEALINGS IN THE SOFTWARE.
 #if !defined(__GNUC__) || __GNUC__ > 6  // GCC 6 chokes on this
 
 #include "../../../include/boost/outcome/experimental/status_result.hpp"
-#include "../../../include/boost/outcome/experimental/status-code/status-code/nested_status_code.hpp"
+#include "../../../include/boost/outcome/experimental/status-code/nested_status_code.hpp"
 
 /* Original note to WG21:
 

@@ -48,13 +48,13 @@ int main ()
          scoped_lock<file_lock> sl(flock, try_to_lock);
          }
          {
-         scoped_lock<file_lock> sl(flock, test::ptime_delay(1));
+         scoped_lock<file_lock> sl(flock, test::ptime_delay_ms(1));
          }
          {
-         scoped_lock<file_lock> sl(flock, test::boost_systemclock_delay(1));
+         scoped_lock<file_lock> sl(flock, test::boost_systemclock_delay_ms(1));
          }
          {
-         scoped_lock<file_lock> sl(flock, test::std_systemclock_delay(1));
+         scoped_lock<file_lock> sl(flock, test::std_systemclock_delay_ms(1));
          }
       }
       #if defined(BOOST_INTERPROCESS_WCHAR_NAMED_RESOURCES)

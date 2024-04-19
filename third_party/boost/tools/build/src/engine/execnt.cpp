@@ -1219,9 +1219,8 @@ static FILE * open_command_file( int32_t const slot )
         DWORD const procID = GetCurrentProcessId();
         string const * const tmpdir = path_tmpdir();
         string_new( command_file );
-        string_reserve( command_file, tmpdir->size + 64 );
-        command_file->size = sprintf( command_file->value,
-            "%s\\jam%lu-%02d-##.bat", tmpdir->value, procID, slot );
+        string_copy( command_file, b2::value::format( "%s\\jam%lu-%02d-##.bat",
+            tmpdir->value, procID, slot )->str() );
     }
 
     /* For some reason opening a command file can fail intermittently. But doing
@@ -1321,7 +1320,6 @@ static void string_new_from_argv( string * result, char const * const * argv )
 static void reportWindowsError( char const * const apiName, int32_t slot )
 {
     char * errorMessage;
-    char buf[24];
     string * err_buf;
     timing_info time;
     DWORD const errorCode = GetLastError();
@@ -1343,8 +1341,8 @@ static void reportWindowsError( char const * const apiName, int32_t slot )
         err_buf = cmdtab[ slot ].buffer_out;
     string_append( err_buf, apiName );
     string_append( err_buf, "() Windows API failed: " );
-    sprintf( buf, "%lu", errorCode );
-    string_append( err_buf, buf );
+    auto errorCode_s = std::to_string( errorCode );
+    string_append( err_buf, errorCode_s.c_str() );
 
     if ( !apiResult )
         string_append( err_buf, ".\n" );

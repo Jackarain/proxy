@@ -643,8 +643,8 @@ int main ()
    typedef multimap< int*, int*, std::less<int*>, std::allocator< std::pair<int *const, int*> >
                    , tree_assoc_options< optimize_size<false>, tree_type<avl_tree> >::type > avlmmap_size_optimized_no;
 
-   BOOST_STATIC_ASSERT(sizeof(rbmmap_size_optimized_yes) < sizeof(rbmap_size_optimized_no));
-   BOOST_STATIC_ASSERT(sizeof(avlmap_size_optimized_yes) < sizeof(avlmmap_size_optimized_no));
+   BOOST_CONTAINER_STATIC_ASSERT(sizeof(rbmmap_size_optimized_yes) < sizeof(rbmap_size_optimized_no));
+   BOOST_CONTAINER_STATIC_ASSERT(sizeof(avlmap_size_optimized_yes) < sizeof(avlmmap_size_optimized_no));
 
    ////////////////////////////////////
    //    has_trivial_destructor_after_move testing
@@ -658,7 +658,7 @@ int main ()
       {
          typedef boost::container::map<int, int> cont;
          typedef boost::container::dtl::tree<value_type, int, std::less<int>, void, void> tree;
-         BOOST_STATIC_ASSERT_MSG(
+         BOOST_CONTAINER_STATIC_ASSERT_MSG(
            !(boost::has_trivial_destructor_after_move<cont>::value !=
              boost::has_trivial_destructor_after_move<tree>::value)
             , "has_trivial_destructor_after_move(map, default allocator) test failed");
@@ -667,7 +667,7 @@ int main ()
       {
          typedef boost::container::map<int, int, std::less<int>, std::allocator<value_type> > cont;
          typedef boost::container::dtl::tree<value_type, int, std::less<int>, std::allocator<value_type>, void> tree;
-         BOOST_STATIC_ASSERT_MSG(
+         BOOST_CONTAINER_STATIC_ASSERT_MSG(
             !(boost::has_trivial_destructor_after_move<cont>::value !=
              boost::has_trivial_destructor_after_move<tree>::value)
             , "has_trivial_destructor_after_move(map, std::allocator) test failed");
@@ -680,7 +680,7 @@ int main ()
          //       default allocator
          typedef boost::container::multimap<int, int> cont;
          typedef boost::container::dtl::tree<value_type, int, std::less<int>, void, void> tree;
-         BOOST_STATIC_ASSERT_MSG(
+         BOOST_CONTAINER_STATIC_ASSERT_MSG(
            !(boost::has_trivial_destructor_after_move<cont>::value !=
              boost::has_trivial_destructor_after_move<tree>::value)
            , "has_trivial_destructor_after_move(multimap, default allocator) test failed");
@@ -689,7 +689,7 @@ int main ()
       {
          typedef boost::container::multimap<int, int, std::less<int>, std::allocator<value_type> > cont;
          typedef boost::container::dtl::tree<value_type, int, std::less<int>, std::allocator<value_type>, void> tree;
-         BOOST_STATIC_ASSERT_MSG(
+         BOOST_CONTAINER_STATIC_ASSERT_MSG(
            !(boost::has_trivial_destructor_after_move<cont>::value !=
              boost::has_trivial_destructor_after_move<tree>::value)
            , "has_trivial_destructor_after_move(multimap, std::allocator) test failed");

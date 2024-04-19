@@ -59,6 +59,13 @@ if(CMAKE_SOURCE_DIR STREQUAL Boost_SOURCE_DIR)
   add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --no-tests=error -C $<CONFIG>)
   add_dependencies(check tests)
 
+  if(NOT TARGET tests-quick)
+    add_custom_target(tests-quick)
+  endif()
+
+  add_custom_target(check-quick COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --no-tests=error -C $<CONFIG> -R quick)
+  add_dependencies(check-quick tests-quick)
+
   # link=static|shared
   option(BUILD_SHARED_LIBS "Build shared libraries")
 
@@ -107,8 +114,11 @@ else()
     set(BOOST_ENABLE_PYTHON OFF)
   endif()
 
+  if(NOT DEFINED BOOST_SKIP_INSTALL_RULES)
+    set(BOOST_SKIP_INSTALL_RULES ON)
+  endif()
+
   set(BUILD_TESTING OFF)
-  set(BOOST_SKIP_INSTALL_RULES ON)
 
 endif()
 
@@ -169,13 +179,15 @@ function(__boost_auto_install __boost_lib)
 
       get_target_property(__boost_lib_incdir "boost_${__boost_lib_target}" INTERFACE_INCLUDE_DIRECTORIES)
 
-      if(__boost_lib_incdir STREQUAL "${BOOST_SUPERPROJECT_SOURCE_DIR}/libs/${__boost_lib}/include")
+      set(incdir "${BOOST_SUPERPROJECT_SOURCE_DIR}/libs/${__boost_lib}/include")
+
+      if("${__boost_lib_incdir}" STREQUAL "${incdir}" OR "${__boost_lib_incdir}" STREQUAL "$<BUILD_INTERFACE:${incdir}>")
 
         boost_message(DEBUG "Enabling installation for '${__boost_lib}'")
-        boost_install(TARGETS "boost_${__boost_lib_target}" VERSION "${BOOST_SUPERPROJECT_VERSION}" HEADER_DIRECTORY "${BOOST_SUPERPROJECT_SOURCE_DIR}/libs/${__boost_lib}/include")
+        boost_install(TARGETS "boost_${__boost_lib_target}" VERSION "${BOOST_SUPERPROJECT_VERSION}" HEADER_DIRECTORY "${incdir}")
 
       else()
-        boost_message(DEBUG "Not enabling installation for '${__boost_lib}'; interface include directory '${__boost_lib_incdir}' does not equal '${BOOST_SUPERPROJECT_SOURCE_DIR}/libs/${__boost_lib}/include'")
+        boost_message(DEBUG "Not enabling installation for '${__boost_lib}'; interface include directory '${__boost_lib_incdir}' does not equal '${incdir}' or '$<BUILD_INTERFACE:${incdir}>'")
       endif()
 
     else()

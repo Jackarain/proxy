@@ -770,11 +770,9 @@ void make0
 
 static char const * target_name( TARGET * t )
 {
-    static char buf[ 1000 ];
     if ( t->flags & T_FLAG_INTERNAL )
     {
-        sprintf( buf, "%s (internal node)", object_str( t->name ) );
-        return buf;
+        return b2::value::format( "%s (internal node)", t->name->str() )->str();
     }
     return object_str( t->name );
 }

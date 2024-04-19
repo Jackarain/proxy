@@ -18,7 +18,7 @@ def read_text(path, root):
         data = path.read_bytes()
         i = data.rfind(b'\n', 0, e.start) + 1
         j = data.find(b'\n', e.end)
-        e.reason += f'\nOn line: {data[i:j]}\nIn file {path.relative_to(root)}'
+        e.reason += '\nOn line: {}\nIn file {}'.format(data[i:j],path.relative_to(root))
         raise
 
 
@@ -41,7 +41,7 @@ def main():
 
     if '-v' in sys.argv:
         for incl, tags in sorted(already_included.items()):
-            print(f'* {incl}: {tags}')
+            print('* {}: {}'.format(incl,tags))
 
     fail = False
     #for path in (root / 'src').rglob('*.[jch]*'):
@@ -56,13 +56,13 @@ def main():
         path = path.relative_to(root).as_posix()
         already_included_tags = already_included.get(str(path))
         if already_included_tags is None:
-            print(f'{path} has documentation but is not included anywhere, uses tags: {", ".join(tags)}')
+            print('{} has documentation but is not included anywhere, uses tags: {}'.format(path,", ".join(tags)))
             fail = True
             continue
 
         tags -= already_included_tags
         if tags:
-            print(f'{path} has unused in documentation tags: {", ".join(tags)}')
+            print('{} has unused in documentation tags: {}'.format(path,", ".join(tags)))
             fail = True
 
     if not fail and __name__ == '__main__':

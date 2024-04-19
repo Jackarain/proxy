@@ -10,7 +10,7 @@
 
 #include <iostream>
 // back-end
-#include <boost/msm/back/state_machine.hpp>
+#include <boost/msm/back11/state_machine.hpp>
 //front-end
 #include <boost/msm/front/state_machine_def.hpp>
 
@@ -129,7 +129,10 @@ namespace
         // then it will remember the last active state and reactivate it
         // also possible: AlwaysHistory, the last active state will always be reactivated
         // or NoHistory, always restart from the initial state
-        typedef msm::back::state_machine<Playing_,msm::back::ShallowHistory<mpl::vector<end_pause> > > Playing;
+        typedef msm::back11::state_machine<
+            Playing_,
+            msm::back11::state_machine<player_>,
+            msm::back::ShallowHistory<mpl::vector<end_pause> > > Playing;
 
         // state not defining any entry or exit
         struct Paused : public msm::front::state<>
@@ -190,7 +193,7 @@ namespace
 
     };
     // Pick a back-end
-    typedef msm::back::state_machine<player_> player;
+    typedef msm::back11::state_machine<player_> player;
 
     //
     // Testing utilities.

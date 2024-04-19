@@ -10,7 +10,7 @@
 
 #include <iostream>
 // back-end
-#include <boost/msm/back/state_machine.hpp>
+#include <boost/msm/back11/state_machine.hpp>
 #include <boost/msm/front/euml/euml.hpp>
 
 namespace msm = boost::msm;
@@ -145,7 +145,7 @@ namespace
                                       my_machine_) //fsm name
 
     // Pick a back-end
-    typedef msm::back::state_machine<my_machine_> my_machine;
+    typedef msm::back11::state_machine<my_machine_> my_machine;
 
     //
     // Testing utilities.

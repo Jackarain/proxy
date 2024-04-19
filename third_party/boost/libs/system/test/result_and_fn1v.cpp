@@ -50,6 +50,11 @@ int& h( int& )
     return x;
 }
 
+int k()
+{
+    return 7;
+}
+
 int main()
 {
     {
@@ -150,6 +155,46 @@ int main()
 
     {
         result<int&, E> r2 = result<int&, E>( in_place_error ) & h;
+
+        BOOST_TEST( r2.has_error() );
+    }
+
+    {
+        result<void> r;
+        result<int> r2 = r & k;
+
+        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( *r2, 7 );
+    }
+
+    {
+        result<void> const r;
+        result<int> r2 = r & k;
+
+        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( *r2, 7 );
+    }
+
+    {
+        result<int> r2 = result<void>() & k;
+
+        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( *r2, 7 );
+    }
+
+    {
+        result<void, E> r( in_place_error );
+        result<int, E> r2 = r & k;
+
+        BOOST_TEST( r2.has_error() );
+    }
+
+    {
+        result<void, E> const r( in_place_error );
+        result<int, E> r2 = r & k;
+
+        BOOST_TEST( r2.has_error() );
+    }
+
+    {
+        result<int, E> r2 = result<void, E>( in_place_error ) & k;
 
         BOOST_TEST( r2.has_error() );
     }

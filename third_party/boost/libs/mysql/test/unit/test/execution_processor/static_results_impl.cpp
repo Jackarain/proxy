@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -738,10 +738,10 @@ BOOST_AUTO_TEST_CASE(tuples)
 
     // Verify
     std::vector<row1_tuple> expected_r1{
-        row1_tuple{10, "abc"}
+        row1_tuple{std::uint16_t(10), "abc"}
     };
     std::vector<row3_tuple> expected_r3{
-        row3_tuple{4.2f, 90.0, 9}
+        row3_tuple{4.2f, 90.0, std::uint8_t(9)}
     };
     BOOST_TEST(st.is_complete());
     check_meta_r1(st.get_meta(0));

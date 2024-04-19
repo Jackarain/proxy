@@ -22,7 +22,6 @@
 #include <boost/config.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/convenience.hpp>
 
 #include <boost/wave/token_ids.hpp>
 #include <boost/wave/util/macro_helpers.hpp>
