@@ -84,7 +84,6 @@
 
 
 #include "proxy/use_awaitable.hpp"
-#include "proxy/scoped_exit.hpp"
 #include "proxy/async_connect.hpp"
 #include "proxy/logging.hpp"
 #include "proxy/base_stream.hpp"

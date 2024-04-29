@@ -16,7 +16,6 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/fileop.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/strutil.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/logging.hpp
-	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/scoped_exit.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/socks_client.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/socks_enums.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/socks_error_code.hpp
