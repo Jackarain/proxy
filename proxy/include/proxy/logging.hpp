@@ -147,6 +147,8 @@
 #  pragma warning(disable: 4244 4127)
 # endif // _MSC_VER
 
+#if _LIBCPP_VERSION < 170000
+
 # include <fmt/ostream.h>
 # include <fmt/printf.h>
 # include <fmt/format.h>
@@ -157,6 +159,8 @@ namespace std {
 	using ::fmt::vformat;
 	using ::fmt::make_format_args;
 }
+
+#endif // _LIBCPP_VERSION
 
 # ifdef _MSC_VER
 #  pragma warning(pop)
