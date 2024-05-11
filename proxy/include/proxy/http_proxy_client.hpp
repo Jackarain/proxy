@@ -35,7 +35,6 @@
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
-#include <boost/beast/ssl.hpp>
 #include <boost/beast/version.hpp>
 
 #ifdef _MSC_VER
@@ -63,7 +62,6 @@ namespace proxy {
 		uint16_t target_port;     // Target server port
 		std::string username;     // User authentication - username
 		std::string password;     // User authentication - password
-		bool ssl{ false };        // Use SSL or not
 	};
 
 	namespace detail {
