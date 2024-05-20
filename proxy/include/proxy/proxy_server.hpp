@@ -258,6 +258,18 @@ R"x*x*x(<html>
 
 	//////////////////////////////////////////////////////////////////////////
 
+	// 检测 host 是否是域名或主机名, 如果是域名则返回 true, 否则返回 false.
+	inline bool detect_hostname(const std::string& host) noexcept
+	{
+		boost::system::error_code ec;
+		net::ip::address::from_string(host, ec);
+		if (ec)
+			return true;
+		return false;
+	}
+
+	//////////////////////////////////////////////////////////////////////////
+
 	// proxy server 参数选项, 用于指定 proxy server 的各种参数.
 	struct proxy_server_option
 	{
@@ -2612,7 +2624,11 @@ R"x*x*x(<html>
 			tcp::resolver resolver{ executor };
 
 			auto proxy_host = std::string(m_bridge_proxy->host());
-			auto proxy_port = std::string(m_bridge_proxy->port());
+			std::string proxy_port;
+			if (m_bridge_proxy->port_number() == 0)
+				proxy_port = std::to_string(urls::default_port(m_bridge_proxy->scheme_id()));
+			else
+				proxy_port = std::to_string(m_bridge_proxy->port_number());
 			if (proxy_port.empty())
 				proxy_port = m_bridge_proxy->scheme();
 
@@ -2623,21 +2639,37 @@ R"x*x*x(<html>
 				<< ":"
 				<< proxy_port;
 
-			auto targets = co_await resolver.async_resolve(
-				proxy_host,
-				proxy_port,
-				net_awaitable[ec]);
+			tcp::resolver::results_type targets;
 
-			if (ec)
+			if (!detect_hostname(proxy_host))
 			{
-				XLOG_WFMT("connection id: {},"
-					" resolver to next proxy {}:{} error: {}",
-					m_connection_id,
-					std::string(m_bridge_proxy->host()),
-					std::string(m_bridge_proxy->port()),
-					ec.message());
+				net::ip::tcp::endpoint endp(
+					net::ip::address::from_string(proxy_host),
+					m_bridge_proxy->port_number() ?
+						m_bridge_proxy->port_number() :
+							urls::default_port(m_bridge_proxy->scheme_id()));
 
-				co_return false;
+				targets = tcp::resolver::results_type::create(
+					endp, proxy_host, m_bridge_proxy->scheme());
+			}
+			else
+			{
+				targets = co_await resolver.async_resolve(
+					proxy_host,
+					proxy_port,
+					net_awaitable[ec]);
+
+				if (ec)
+				{
+					XLOG_WFMT("connection id: {},"
+						" resolver to next proxy {}:{} error: {}",
+						m_connection_id,
+						std::string(m_bridge_proxy->host()),
+						std::string(m_bridge_proxy->port()),
+						ec.message());
+
+					co_return false;
+				}
 			}
 
 			if (m_option.happyeyeballs_)
@@ -4498,7 +4530,7 @@ R"x*x*x(<html>
 			co_return false;
 		}
 
-		inline net::awaitable<void> get_local_address()
+		inline net::awaitable<void> get_local_address() noexcept
 		{
 			boost::system::error_code ec;
 
@@ -4509,6 +4541,12 @@ R"x*x*x(<html>
 					<< "get_local_address, host_name: "
 					<< ec.message();
 
+				co_return;
+			}
+
+			if (!detect_hostname(hostname))
+			{
+				m_local_addrs.insert(net::ip::make_address(hostname, ec));
 				co_return;
 			}
 
