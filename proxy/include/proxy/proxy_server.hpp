@@ -1598,7 +1598,8 @@ R"x*x*x(<html>
 			udp::endpoint local_endp;
 
 			char read_buffer[4096];
-			size_t total = 0;
+			size_t send_total = 0;
+			size_t recv_total = 0;
 
 			const char* rbuf = &read_buffer[96];
 			char* wbuf = &read_buffer[96];
@@ -1684,13 +1685,7 @@ R"x*x*x(<html>
 					auto head_size = rp - rbuf;
 					auto udp_size = bytes - head_size;
 
-					XLOG_DBG << "connection id: "
-						<< m_connection_id
-						<< ", udp forward, send "
-						<< local_endp
-						<< " to "
-						<< remote_endp;
-					total++;
+					send_total++;
 
 					co_await m_udp_socket.async_send_to(
 						net::buffer(rp, udp_size),
@@ -1728,13 +1723,7 @@ R"x*x*x(<html>
 						write<uint16_t>(remote_endp.port(), wp);
 					}
 
-					XLOG_DBG << "connection id: "
-						<< m_connection_id
-						<< ", udp forward, recv "
-						<< remote_endp
-						<< " to "
-						<< local_endp;
-					total++;
+					recv_total++;
 
 					// 更新 wbuf 指针到 udp header 位置.
 					wbuf = wbuf - head_size;
@@ -1748,8 +1737,10 @@ R"x*x*x(<html>
 
 			XLOG_DBG << "connection id: "
 				<< m_connection_id
-				<< ", packet total: "
-				<< total
+				<< ", recv total: "
+				<< recv_total
+				<< ", send total: "
+				<< send_total
 				<< ", forward_udp quit";
 
 			co_return;
