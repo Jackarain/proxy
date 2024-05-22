@@ -425,7 +425,7 @@ R"x*x*x(<html>
 	//////////////////////////////////////////////////////////////////////////
 
 	// proxy server 虚基类, 任何 proxy server 的实现, 必须基于这个基类.
-	// 这样 proxy_session 才能通过虚基类指针访问proxy server的具体实
+	// 这样 proxy_session 才能通过虚基类指针访问 proxy server 的具体实
 	// 现以及虚函数方法.
 	class proxy_server_base {
 	public:
@@ -451,9 +451,8 @@ R"x*x*x(<html>
 
 	//////////////////////////////////////////////////////////////////////////
 
-	// proxy_session 抽象类, 它被设计为一个模板抽象类, 模板参数Stream
-	// 指定与本地通信的stream对象, 默认使用tcp::socket, 可根据此
-	// async_read/async_write等接口实现专用的stream类, 比如实现加密.
+	// proxy_session 用于处理代理服务器的连接, 一个 proxy_session 对应一个
+	// 客户端连接, 用于处理客户端的请求, 并将请求转发到目标服务器.
 	class proxy_session
 		: public proxy_session_base
 		, public std::enable_shared_from_this<proxy_session>
