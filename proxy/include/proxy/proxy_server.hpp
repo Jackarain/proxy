@@ -4037,7 +4037,7 @@ R"x*x*x(<html>
 		// 没有数据通信, 则可能会话已经失效, 此时应该关闭 udp socket 以及相关资源.
 		net::steady_timer m_timer;
 
-		// m_timeout udp 会话超时时间, 默认 30 秒.
+		// m_timeout udp 会话超时时间, 默认 600 秒.
 		int m_timeout{ udp_session_expired_time };
 
 		// m_connection_id 当前连接的 id, 用于日志输出.
