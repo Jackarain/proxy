@@ -319,7 +319,7 @@ R"x*x*x(<html>
 		// 当前服务将会在连接到 proxy_pass_ 成功后，首先传递 proxy protocol
 		// 以告之 proxy_pass_ 来源 IP/PORT 以及目标 IP/PORT.
 		// 注意：此选项当前未实现.
-		bool haproxy_{ false };
+		// bool haproxy_{ false };
 
 		// 指定当前proxy server向外发起连接时, 绑定到哪个本地地址, 在多网卡
 		// 的服务器上, 可以指定此参数, 默认为空, 表示不指定, 由系统自动选择.
