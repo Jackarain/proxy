@@ -79,6 +79,7 @@ bool ssl_prefer_server_ciphers = false;
 
 int64_t linux_so_mark;
 uint16_t noise_length;
+int udp_timeout;
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -131,6 +132,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.scramble_ = scramble;
 	opt.noise_length_ = noise_length;
 	opt.local_ip_ = local_ip;
+	opt.udp_timeout_ = udp_timeout;
 
 	opt.ipip_db_ = ipip_db;
 	opt.deny_regions_ = deny_region;
@@ -263,6 +265,8 @@ int main(int argc, char** argv)
 
 		("transparent", po::value<bool>(&transparent)->default_value(false), "Enable transparent proxy mode(only linux).")
 		("so_mark", po::value<int64_t>(&linux_so_mark)->default_value(-1), "Set SO_MARK for linux transparent proxy mode.")
+
+		("udp_timeout", po::value<int>(&udp_timeout)->default_value(60), "Set UDP timeout for UDP connections.")
 
 		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->default_value(std::vector<std::string>{"jack:1111"}), "List of authorized users(default user: jack:1111) (e.g: user1:passwd1 user2:passwd2).")
 

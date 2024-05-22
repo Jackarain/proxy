@@ -239,7 +239,7 @@ R"x*x*x(<html>
 	//////////////////////////////////////////////////////////////////////////
 
 	// udp_session_expired_time 用于指定 udp session 的过期时间, 单位为秒.
-	inline const int udp_session_expired_time = 600;
+	inline const int udp_session_expired_time = 60;
 
 	// nosie_injection_max_len 用于指定噪声注入的最大长度, 单位为字节.
 	inline const uint16_t nosie_injection_max_len = 0x0fff;
@@ -344,6 +344,9 @@ R"x*x*x(<html>
 
 		// so_mark 用于指定发起连接时的 so_mark, 仅在 transparent_ 为 true.
 		std::optional<uint32_t> so_mark_;
+
+		// udp 超时时间, 用于指定 udp 连接的超时时间, 单位为秒.
+		int udp_timeout_{ udp_session_expired_time };
 
 		// 作为服务器时, 指定ssl证书目录, 使用固定文件名(ssl_crt.pem,
 		// ssl_dh.pem, ssl_key.pem, ssl_dh.pem, ssl_crt.pwd)
@@ -544,6 +547,9 @@ R"x*x*x(<html>
 
 			// 保存 server 的参数选项.
 			m_option = server->option();
+
+			// 设置 udp 超时时间.
+			m_udp_timeout = m_option.udp_timeout_;
 
 			// 将 local_ip 转换为 ip::address 对象, 用于后面向外发起连接时
 			// 绑定到指定的本地地址.
@@ -1604,9 +1610,13 @@ R"x*x*x(<html>
 			const char* rbuf = &read_buffer[96];
 			char* wbuf = &read_buffer[96];
 
+			// 保存 udp 超时时间.
+			auto udp_timeout = m_udp_timeout;
+
 			while (!m_abort)
 			{
-				m_timeout = udp_session_expired_time;
+				// 重置 udp 超时时间.
+				m_udp_timeout = udp_timeout;
 
 				auto bytes = co_await m_udp_socket.async_receive_from(
 					net::buffer(wbuf, 4000),
@@ -1764,7 +1774,7 @@ R"x*x*x(<html>
 					break;
 				}
 
-				if (--m_timeout <= 0)
+				if (--m_udp_timeout <= 0)
 				{
 					XLOG_DBG << "connection id: "
 						<< m_connection_id
@@ -4037,8 +4047,8 @@ R"x*x*x(<html>
 		// 没有数据通信, 则可能会话已经失效, 此时应该关闭 udp socket 以及相关资源.
 		net::steady_timer m_timer;
 
-		// m_timeout udp 会话超时时间, 默认 600 秒.
-		int m_timeout{ udp_session_expired_time };
+		// m_timeout udp 会话超时时间, 默认 60 秒.
+		int m_udp_timeout{ udp_session_expired_time };
 
 		// m_connection_id 当前连接的 id, 用于日志输出.
 		size_t m_connection_id;
