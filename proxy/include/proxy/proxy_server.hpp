@@ -1199,21 +1199,11 @@ R"x*x*x(<html>
 
 			net::streambuf wbuf;
 
-			// 客户端不支持认证, 而如果服务端需要认证, 回复客户端不接受.
-			if (method == SOCKS5_AUTH_UNACCEPTABLE)
-			{
-				// 回复客户端, 不接受客户端的的代理请求.
-				auto wp = net::buffer_cast<char*>(wbuf.prepare(1024));
-				write<uint8_t>(socks_version, wp);
-				write<uint8_t>(SOCKS5_AUTH_UNACCEPTABLE, wp);
-			}
-			else
-			{
-				// 回复客户端, server所选择的代理方式.
-				auto wp = net::buffer_cast<char*>(wbuf.prepare(1024));
-				write<uint8_t>(socks_version, wp);
-				write<uint8_t>((uint8_t)method, wp);
-			}
+			// 回复客户端, server所选择的代理方式.
+			auto wp = net::buffer_cast<char*>(wbuf.prepare(1024));
+			write<uint8_t>(socks_version, wp);
+			write<uint8_t>((uint8_t)method, wp);
+
 			wbuf.commit(2);
 
 			//  +----+--------+
