@@ -69,6 +69,7 @@ bool disable_http = false;
 bool disable_insecure = true;
 bool disable_logs;
 bool disable_socks = false;
+bool disable_udp = false;
 bool happyeyeballs = true;
 bool connect_v6only = false;
 bool connect_v4only = false;
@@ -128,6 +129,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 
 	opt.disable_http_ = disable_http;
 	opt.disable_socks_ = disable_socks;
+	opt.disable_udp_ = disable_udp;
 	opt.disable_insecure_ = disable_insecure;
 	opt.scramble_ = scramble;
 	opt.noise_length_ = noise_length;
@@ -294,6 +296,7 @@ int main(int argc, char** argv)
 		("disable_logs", po::value<bool>(&disable_logs)->value_name(""), "Disable logging.")
 		("disable_http", po::value<bool>(&disable_http)->value_name("")->default_value(false), "Disable HTTP protocol.")
 		("disable_socks", po::value<bool>(&disable_socks)->value_name("")->default_value(false), "Disable SOCKS proxy protocol.")
+		("disable_udp", po::value<bool>(&disable_udp)->value_name("")->default_value(false), "Disable UDP protocol.")
 		("disable_insecure", po::value<bool>(&disable_insecure)->value_name("")->default_value(false), "Disable insecure protocol.")
 		("scramble", po::value<bool>(&scramble)->value_name("")->default_value(false), "Noise-based data security.")
 		("noise_length", po::value<uint16_t>(&noise_length)->value_name("length")->default_value(0x0fff), "Length of the noise data.")

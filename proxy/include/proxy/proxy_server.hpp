@@ -402,6 +402,9 @@ R"x*x*x(<html>
 		// 加密连接.
 		bool disable_insecure_{ false };
 
+		// 禁止 udp 服务, 服务端不提供 udp 代理服务.
+		bool disable_udp_{ false };
+
 		// 启用噪声注入以干扰流量分析, 从而达到数据安全的目的.
 		// 此功能必须在 server/client 两端同时启用才有效, 此功能表示在启
 		// 用 ssl 协议时, 在 ssl 握手后双方互相发送一段随机长度的随机数据
@@ -1383,6 +1386,15 @@ R"x*x*x(<html>
 			}
 			else if (command == SOCKS5_CMD_UDP)
 			do {
+				if (m_option.disable_udp_)
+				{
+					XLOG_DBG << "connection id: "
+						<< m_connection_id
+						<< ", udp protocol disabled";
+					ec = net::error::connection_refused;
+					break;
+				}
+
 				if (atyp == SOCKS5_ATYP_DOMAINNAME)
 				{
 					tcp::resolver resolver{ executor };
