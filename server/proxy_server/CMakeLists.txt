@@ -23,6 +23,17 @@ else()
 	message(STATUS "proxy_server set cxx standard: C++20")
 endif()
 
+if (ANDROID)
+    # 查找 Android log 库.
+    find_library(
+        log-lib
+        log
+    )
+
+    # target_link_libraries 目标中链接 log 库.
+    target_link_libraries(proxy_server ${log-lib})
+endif()
+
 if(ENABLE_BUILD_WERROR)
 	if(MSVC)
 		target_compile_options(proxy_server PRIVATE /W4 /WX)

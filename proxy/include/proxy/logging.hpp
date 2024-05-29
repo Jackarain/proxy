@@ -147,7 +147,7 @@
 #  pragma warning(disable: 4244 4127)
 # endif // _MSC_VER
 
-#if _LIBCPP_VERSION < 170000
+#if (_LIBCPP_VERSION < 170000) || defined(__ANDROID__)
 
 # include <fmt/ostream.h>
 # include <fmt/printf.h>
