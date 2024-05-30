@@ -65,11 +65,14 @@ std::string ssl_sni;
 
 bool transparent = false;
 bool autoindex = false;
+bool htpasswd = false;
+
 bool disable_http = false;
 bool disable_insecure = true;
 bool disable_logs;
 bool disable_socks = false;
 bool disable_udp = false;
+
 bool happyeyeballs = true;
 bool connect_v6only = false;
 bool connect_v4only = false;
@@ -150,6 +153,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 
 	opt.doc_directory_ = doc_dir;
 	opt.autoindex_ = autoindex;
+	opt.htpasswd_ = htpasswd;
 
 	server = proxy_server::make(
 		ioc.get_executor(), listen, opt);
@@ -291,13 +295,17 @@ int main(int argc, char** argv)
 
 		("ipip_db", po::value<std::string>(&ipip_db)->value_name("")->default_value("17monipdb.datx"), "Specify ipip database filename.")
 		("http_doc", po::value<std::string>(&doc_dir)->value_name("doc"), "Specify document root directory for HTTP server.")
+		("htpasswd", po::value<bool>(&htpasswd)->value_name("")->default_value(false), "Enable WWW-Authenticate for HTTP server.")
+
 		("autoindex", po::value<bool>(&autoindex)->default_value(false), "Enable directory listing.")
 		("logs_path", po::value<std::string>(&log_dir)->value_name(""), "Specify directory for log files.")
+
 		("disable_logs", po::value<bool>(&disable_logs)->value_name(""), "Disable logging.")
 		("disable_http", po::value<bool>(&disable_http)->value_name("")->default_value(false), "Disable HTTP protocol.")
 		("disable_socks", po::value<bool>(&disable_socks)->value_name("")->default_value(false), "Disable SOCKS proxy protocol.")
 		("disable_udp", po::value<bool>(&disable_udp)->value_name("")->default_value(false), "Disable UDP protocol.")
 		("disable_insecure", po::value<bool>(&disable_insecure)->value_name("")->default_value(false), "Disable insecure protocol.")
+
 		("scramble", po::value<bool>(&scramble)->value_name("")->default_value(false), "Noise-based data security.")
 		("noise_length", po::value<uint16_t>(&noise_length)->value_name("length")->default_value(0x0fff), "Length of the noise data.")
 	;

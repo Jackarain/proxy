@@ -170,6 +170,15 @@ R"x*x*x(<html>
 </body>
 </html>)x*x*x";
 
+	inline const char* fake_401_content =
+R"x*x*x(<html>
+<head><title>401 Authorization Required</title></head>
+<body>
+<center><h1>401 Authorization Required</h1></center>
+<hr><center>nginx/1.20.2</center>
+</body>
+</html>)x*x*x";
+
 	inline const char* fake_403_content =
 R"x*x*x(<html>
 <head><title>403 Forbidden</title></head>
@@ -387,6 +396,10 @@ R"x*x*x(<html>
 		// 示.
 		bool autoindex_;
 
+		// 用于指定是否启用 http basic auth 认证, 默认为 false,
+		// 即不启用, 如果启用, 则需要设置 auth_users_ 参数.
+		bool htpasswd_{ false };
+
 		// 禁用 http 服务, 客户端无法通过明文的 http 协议与之通信, 包括
 		// ssl 加密的 https 以及不加密的 http 服务, 同时也包括 http(s)
 		// proxy 也会被禁用.
@@ -481,7 +494,7 @@ R"x*x*x(<html>
 			PROXY_AUTH_ILLEGAL,
 		};
 
-		inline std::string proxy_auth_error_message(int code) const
+		inline std::string pauth_error_message(int code) const
 		{
 			switch (code)
 			{
@@ -2045,7 +2058,7 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline int http_proxy_authorization(std::string_view pa)
+		inline int http_authorization(std::string_view pa)
 		{
 			if (m_option.auth_users_.empty())
 				return PROXY_AUTH_SUCCESS;
@@ -2146,7 +2159,7 @@ R"x*x*x(<html>
 
 				// http 代理认证, 如果请求的 rarget 不是 http url 或认证
 				// 失败, 则按正常 web 请求处理.
-				auto auth = http_proxy_authorization(pa);
+				auto auth = http_authorization(pa);
 				if (auth != PROXY_AUTH_SUCCESS || expect_url.has_error())
 				{
 					if (!expect_url.has_error())
@@ -2154,7 +2167,7 @@ R"x*x*x(<html>
 						XLOG_WARN << "connection id: "
 							<< m_connection_id
 							<< ", proxy err: "
-							<< proxy_auth_error_message(auth);
+							<< pauth_error_message(auth);
 
 						co_return !first;
 					}
@@ -2163,6 +2176,36 @@ R"x*x*x(<html>
 					// 这里直接返回错误页面.
 					if (m_option.doc_directory_.empty())
 						co_return !first;
+
+					// htpasswd 表示需要用户认证.
+					if (m_option.htpasswd_)
+					{
+						// 处理 http 认证, 如果客户没有传递认证信息, 则返回 401.
+						// 如果用户认证信息没有设置, 则直接返回 401.
+						auto auth = req[http::field::authorization];
+						if (auth.empty() || m_option.auth_users_.empty())
+						{
+							XLOG_WARN << "connection id: "
+								<< m_connection_id
+								<< ", auth error: "
+								<< (auth.empty() ? "no auth" : "no user");
+
+							co_await unauthorized_http_route(req);
+							co_return true;
+						}
+
+						auto auth_result = http_authorization(auth);
+						if (auth_result != PROXY_AUTH_SUCCESS)
+						{
+							XLOG_WARN << "connection id: "
+								<< m_connection_id
+								<< ", auth error: "
+								<< pauth_error_message(auth_result);
+
+							co_await unauthorized_http_route(req);
+							co_return true;
+						}
+					}
 
 					// 如果不允许目录索引, 检查请求的是否为文件, 如果是具体文件则按文
 					// 件请求处理, 否则返回 403.
@@ -2319,13 +2362,13 @@ R"x*x*x(<html>
 					: ", proxy_authorization: " + pa);
 
 			// http 代理认证.
-			auto auth = http_proxy_authorization(pa);
+			auto auth = http_authorization(pa);
 			if (auth != PROXY_AUTH_SUCCESS)
 			{
 				XLOG_WARN << "connection id: "
 					<< m_connection_id
 					<< ", proxy err: "
-					<< proxy_auth_error_message(auth);
+					<< pauth_error_message(auth);
 
 				auto fake_page = fmt::vformat(fake_407_content_fmt,
 					fmt::make_format_args(server_date_string()));
@@ -4034,6 +4077,36 @@ R"x*x*x(<html>
 					<< ", forbidden http route err: "
 					<< ec.message();
 			}
+
+			co_return;
+		}
+
+		inline net::awaitable<void> unauthorized_http_route(const string_request& request)
+		{
+			boost::system::error_code ec;
+
+			string_response res{ http::status::unauthorized, request.version() };
+			res.set(http::field::server, version_string);
+			res.set(http::field::date, server_date_string());
+			res.set(http::field::content_type, "text/html; charset=UTF-8");
+			res.set(http::field::www_authenticate, "Basic realm=\"proxy\"");
+
+			res.keep_alive(true);
+			res.body() = fake_401_content;
+			res.prepare_payload();
+
+			http::serializer<false, string_body, http::fields> sr(res);
+			co_await http::async_write(
+				m_local_socket, sr, net_awaitable[ec]);
+			if (ec)
+			{
+				XLOG_WARN << "connection id: "
+					<< m_connection_id
+					<< ", unauthorized http route err: "
+					<< ec.message();
+			}
+
+			co_return;
 		}
 
 	private:
