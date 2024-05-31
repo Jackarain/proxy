@@ -494,6 +494,7 @@ R"x*x*x(<html>
 			PROXY_AUTH_ILLEGAL,
 		};
 
+		// http 认证错误代码对应的错误信息.
 		inline std::string pauth_error_message(int code) const noexcept
 		{
 			switch (code)
@@ -511,8 +512,15 @@ R"x*x*x(<html>
 			}
 		}
 
+		// http_ranges 用于保存 http range 请求头的解析结果.
+		// 例如: bytes=0-100,200-300,400-500
+		// 解析后的结果为: { {0, 100}, {200, 300}, {400, 500} }
+		// 例如: bytes=0-100,200-300,400-500,600
+		// 解析后的结果为: { {0, 100}, {200, 300}, {400, 500}, {600, -1} }
+		// 如果解析失败, 则返回空数组.
 		using http_ranges = std::vector<std::pair<int64_t, int64_t>>;
 
+		// parser_http_ranges 用于解析 http range 请求头.
 		http_ranges parser_http_ranges(std::string range) const noexcept
 		{
 			range = strutil::remove_spaces(range);
@@ -548,6 +556,7 @@ R"x*x*x(<html>
 			return results;
 		};
 
+		// net_tcp_socket 用于将 stream 转换为 tcp::socket 对象.
 		template <typename Stream>
 		tcp::socket& net_tcp_socket(Stream& socket)
 		{
