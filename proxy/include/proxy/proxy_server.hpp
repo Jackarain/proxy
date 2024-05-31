@@ -521,8 +521,9 @@ R"x*x*x(<html>
 		using http_ranges = std::vector<std::pair<int64_t, int64_t>>;
 
 		// parser_http_ranges 用于解析 http range 请求头.
-		http_ranges parser_http_ranges(std::string range) const noexcept
+		inline http_ranges parser_http_ranges(std::string range) noexcept
 		{
+			// 去掉前后空白.
 			range = strutil::remove_spaces(range);
 
 			// range 必须以 bytes= 开头, 否则返回空数组.
@@ -532,41 +533,55 @@ R"x*x*x(<html>
 			// 去掉开头的 bytes= 字符串.
 			boost::ireplace_first(range, "bytes=", "");
 
-			// 使用正则表达式解析 range.
-			boost::sregex_iterator it(
-				range.begin(), range.end(),
-				boost::regex{ "((\\d+)-(\\d+))+" });
-
-			// 解析结果保存在 results 中.
 			http_ranges results;
-			std::for_each(it, {}, [&results](const auto& what) mutable
-				{
-					results.emplace_back(
-						std::make_pair(
-							std::atoll(what[2].str().c_str()),
-							std::atoll(what[3].str().c_str())));
-				});
 
-			// 如果开始为-或者结尾为-, 则表示只有一个数字, 则将其作为开始
-			// 或者结束, 开始按 http range request 规则解析
-			// 例如: bytes=-100, bytes=100-
-			// 解析后的结果为: { {-1, 100}, {100, -1} }
-			if (results.empty() && !range.empty())
+			// 获取其中所有 range 字符串.
+			auto ranges = split(range, ",");
+			for (const auto& str : ranges)
 			{
-				if (range.front() == '-')
+				auto r = split(std::string(str), "-");
+
+				// range 只有一个数值.
+				if (r.size() == 1)
 				{
-					auto r = -std::atoll(range.c_str());
-					results.emplace_back(std::make_pair(-1, r));
+					if (str.front() == '-') {
+						auto pos = std::atoll(r.front().data());
+						results.emplace_back(-1, pos);
+					} else {
+						auto pos = std::atoll(r.front().data());
+						results.emplace_back(pos, -1);
+					}
+				}
+				else if (r.size() == 2)
+				{
+					// range 有 start 和 end 的情况, 解析成整数到容器.
+					auto& start_str = r[0];
+					auto& end_str = r[1];
+
+					if (start_str.empty() && !end_str.empty())
+					{
+						auto end = std::atoll(end_str.data());
+						results.emplace_back(-1, end);
+					}
+					else
+					{
+						auto start = std::atoll(start_str.data());
+						auto end = std::atoll(end_str.data());
+						if (end_str.empty())
+							end = -1;
+
+						results.emplace_back(start, end);
+					}
 				}
 				else
 				{
-					auto r = std::atoll(range.c_str());
-					results.emplace_back(std::make_pair(r, -1));
+					// 在一个 range 项中不应该存在3个'-', 否则则是无效项.
+					return {};
 				}
 			}
 
 			return results;
-		};
+		}
 
 		// net_tcp_socket 用于将 stream 转换为 tcp::socket 对象.
 		template <typename Stream>
@@ -3895,12 +3910,12 @@ R"x*x*x(<html>
 					}
 					else if (r.second >= 0)
 					{
-						// 计算起始位置和结束位置, 例如 Range: -500
-						// 则表示读取文件末尾的 500 字节.
+						// 计算起始位置和结束位置, 例如 Range: -5
+						// 则表示读取文件末尾的 5 字节.
 						// content_length - r.second 表示起始位置.
 						// content_length - 1 表示结束位置.
-						// 例如文件长度为 1000 字节, 则起始位置为 500,
-						// 结束位置为 999, 一共 500 字节.
+						// 例如文件长度为 10 字节, 则起始位置为 5,
+						// 结束位置为 9(数据总长度为[0-9]), 一共 5 字节.
 						r.first = content_length - r.second;
 						r.second = content_length - 1;
 					}
