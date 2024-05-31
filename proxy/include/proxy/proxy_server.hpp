@@ -524,12 +524,20 @@ R"x*x*x(<html>
 		http_ranges parser_http_ranges(std::string range) const noexcept
 		{
 			range = strutil::remove_spaces(range);
+
+			// range 必须以 bytes= 开头, 否则返回空数组.
+			if (!range.starts_with("bytes="))
+				return {};
+
+			// 去掉开头的 bytes= 字符串.
 			boost::ireplace_first(range, "bytes=", "");
 
+			// 使用正则表达式解析 range.
 			boost::sregex_iterator it(
 				range.begin(), range.end(),
 				boost::regex{ "((\\d+)-(\\d+))+" });
 
+			// 解析结果保存在 results 中.
 			http_ranges results;
 			std::for_each(it, {}, [&results](const auto& what) mutable
 				{
@@ -539,14 +547,18 @@ R"x*x*x(<html>
 							std::atoll(what[3].str().c_str())));
 				});
 
+			// 如果开始为-或者结尾为-, 则表示只有一个数字, 则将其作为开始
+			// 或者结束, 开始按 http range request 规则解析
+			// 例如: bytes=-100, bytes=100-
+			// 解析后的结果为: { {-1, 100}, {100, -1} }
 			if (results.empty() && !range.empty())
 			{
 				if (range.front() == '-')
 				{
-					auto r = std::atoll(range.c_str());
-					results.emplace_back(std::make_pair(r, -1));
+					auto r = -std::atoll(range.c_str());
+					results.emplace_back(std::make_pair(-1, r));
 				}
-				else if (range.back() == '-')
+				else
 				{
 					auto r = std::atoll(range.c_str());
 					results.emplace_back(std::make_pair(r, -1));
@@ -3860,21 +3872,51 @@ R"x*x*x(<html>
 					", range: " + std::string(request["Range"])
 					: std::string());
 
-			auto range = parser_http_ranges(request["Range"]);
 			http::status st = http::status::ok;
-			if (!range.empty())
+			auto range = parser_http_ranges(request["Range"]);
+
+			// 只支持一个 range 的请求, 不支持多个 range 的请求.
+			if (range.size() == 1)
 			{
 				st = http::status::partial_content;
 				auto& r = range.front();
 
-				if (r.second == -1)
+				// 起始位置为 -1, 表示从文件末尾开始读取, 例如 Range: -500
+				// 则表示读取文件末尾的 500 字节.
+				if (r.first == -1)
 				{
-					if (r.first < 0)
+					// 如果第二个参数也为 -1, 则表示请求有问题, 返回 416.
+					if (r.second < 0)
 					{
-						r.first = content_length + r.first;
+						co_await default_http_route(request,
+							fake_416_content,
+							http::status::range_not_satisfiable);
+						co_return;
+					}
+					else if (r.second >= 0)
+					{
+						// 计算起始位置和结束位置, 例如 Range: -500
+						// 则表示读取文件末尾的 500 字节.
+						// content_length - r.second 表示起始位置.
+						// content_length - 1 表示结束位置.
+						// 例如文件长度为 1000 字节, 则起始位置为 500,
+						// 结束位置为 999, 一共 500 字节.
+						r.first = content_length - r.second;
 						r.second = content_length - 1;
 					}
-					else if (r.first >= 0)
+				}
+				else if (r.second == -1)
+				{
+					// 起始位置为正数, 表示从文件头开始读取, 例如 Range: 500
+					// 则表示读取文件头的 500 字节.
+					if (r.first < 0)
+					{
+						co_await default_http_route(request,
+							fake_416_content,
+							http::status::range_not_satisfiable);
+						co_return;
+					}
+					else
 					{
 						r.second = content_length - 1;
 					}
@@ -3915,6 +3957,7 @@ R"x*x*x(<html>
 					r.first,
 					r.second,
 					content_length);
+
 				content_length = r.second - r.first + 1;
 				res.set(http::field::content_range, content_range);
 			}
