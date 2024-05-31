@@ -494,7 +494,7 @@ R"x*x*x(<html>
 			PROXY_AUTH_ILLEGAL,
 		};
 
-		inline std::string pauth_error_message(int code) const
+		inline std::string pauth_error_message(int code) const noexcept
 		{
 			switch (code)
 			{
@@ -510,6 +510,43 @@ R"x*x*x(<html>
 				return "auth unknown";
 			}
 		}
+
+		using http_ranges = std::vector<std::pair<int64_t, int64_t>>;
+
+		http_ranges parser_http_ranges(std::string range) const noexcept
+		{
+			range = strutil::remove_spaces(range);
+			boost::ireplace_first(range, "bytes=", "");
+
+			boost::sregex_iterator it(
+				range.begin(), range.end(),
+				boost::regex{ "((\\d+)-(\\d+))+" });
+
+			http_ranges results;
+			std::for_each(it, {}, [&results](const auto& what) mutable
+				{
+					results.emplace_back(
+						std::make_pair(
+							std::atoll(what[2].str().c_str()),
+							std::atoll(what[3].str().c_str())));
+				});
+
+			if (results.empty() && !range.empty())
+			{
+				if (range.front() == '-')
+				{
+					auto r = std::atoll(range.c_str());
+					results.emplace_back(std::make_pair(r, -1));
+				}
+				else if (range.back() == '-')
+				{
+					auto r = std::atoll(range.c_str());
+					results.emplace_back(std::make_pair(r, -1));
+				}
+			}
+
+			return results;
+		};
 
 		template <typename Stream>
 		tcp::socket& net_tcp_socket(Stream& socket)
@@ -3738,42 +3775,6 @@ R"x*x*x(<html>
 				{ ".m3u8", "application/vnd.apple.mpegurl" },
 			};
 
-			using ranges = std::vector<std::pair<int64_t, int64_t>>;
-			static auto get_ranges = [](std::string range) -> ranges
-			{
-				range = strutil::remove_spaces(range);
-				boost::ireplace_first(range, "bytes=", "");
-
-				boost::sregex_iterator it(
-					range.begin(), range.end(),
-					boost::regex{ "((\\d+)-(\\d+))+" });
-
-				ranges result;
-				std::for_each(it, {}, [&result](const auto& what) mutable
-					{
-						result.emplace_back(
-							std::make_pair(
-								std::atoll(what[2].str().c_str()),
-								std::atoll(what[3].str().c_str())));
-					});
-
-				if (result.empty() && !range.empty())
-				{
-					if (range.front() == '-')
-					{
-						auto r = std::atoll(range.c_str());
-						result.emplace_back(std::make_pair(r, -1));
-					}
-					else if (range.back() == '-')
-					{
-						auto r = std::atoll(range.c_str());
-						result.emplace_back(std::make_pair(r, -1));
-					}
-				}
-
-				return result;
-			};
-
 			boost::system::error_code ec;
 
 			auto& request = hctx.request_;
@@ -3850,7 +3851,7 @@ R"x*x*x(<html>
 					", range: " + std::string(request["Range"])
 					: std::string());
 
-			auto range = get_ranges(request["Range"]);
+			auto range = parser_http_ranges(request["Range"]);
 			http::status st = http::status::ok;
 			if (!range.empty())
 			{
