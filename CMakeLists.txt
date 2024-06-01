@@ -16,6 +16,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 ################################################################################
 
+if (ENABLE_GIT_VERSION)
+	find_package(Git)
+	gitGetVersion(${CMAKE_CURRENT_SOURCE_DIR} proxy)
+	set(VERSION_GIT ${proxy_WC_REVISION_HASH})
+	string(TIMESTAMP PVERSION "%Y%m%d-${VERSION_GIT}-${CMAKE_SYSTEM_NAME}")
+endif()
+
 # Disable in-source builds to prevent source tree corruption.
 if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
   message(FATAL_ERROR "
@@ -72,17 +79,6 @@ option(ENABLE_JEMALLOC_STATIC		"Build with Jemalloc support" OFF)
 
 option(ENABLE_BUILD_EXAMPLES		"build proxy examples" OFF)
 option(ENABLE_LINKE_TO_LIBATOMIC	"link to libatomic.so - some platform requires it" OFF)
-
-################################################################################
-
-if (ENABLE_GIT_VERSION)
-	find_package(Git)
-	gitGetVersion(${CMAKE_CURRENT_SOURCE_DIR} proxy)
-	set(VERSION_GIT ${proxy_WC_REVISION_HASH})
-	string(TIMESTAMP PVERSION "${VERSION_GIT} (%Y-%m-%d %H:%M:%S)")
-	add_definitions(-DVERSION_GIT=\"${PVERSION}\")
-	message(STATUS "Git Version: ${PVERSION}")
-endif()
 
 ################################################################################
 

@@ -252,16 +252,8 @@ inline std::string version_info()
 	os_name = BOOST_PLATFORM;
 #endif
 
-	std::string git_version;
-
-#ifdef VERSION_GIT
-	git_version = VERSION_GIT;
-#else
-	git_version = __DATE__ + " " + __TIME__;
-#endif
-
-	oss << "Built: " << git_version
-		<< ", " << os_name
+	oss << "Built on " << __DATE__ << " " << __TIME__
+		<< " runs on " << os_name
 		<< ", " << BOOST_COMPILER
 		<< ", Boost " << BOOST_LIB_VERSION
 		<< ", SSL: " << OPENSSL_VERSION_TEXT
