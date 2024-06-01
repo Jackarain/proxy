@@ -521,7 +521,7 @@ R"x*x*x(<html>
 		using http_ranges = std::vector<std::pair<int64_t, int64_t>>;
 
 		// parser_http_ranges 用于解析 http range 请求头.
-		inline http_ranges parser_http_ranges(std::string range) noexcept
+		inline http_ranges parser_http_ranges(std::string range) const noexcept
 		{
 			// 去掉前后空白.
 			range = strutil::remove_spaces(range);
