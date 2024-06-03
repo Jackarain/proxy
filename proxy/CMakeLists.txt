@@ -61,6 +61,8 @@ target_link_libraries(libproxy
 #source_group("Header Files\\proxy" FILES ${libproxy_HEADERS})
 #source_group("Source Files" FILES ${libproxy_SRCS})
 
+target_compile_definitions(libproxy PUBLIC -DVERSION_GIT=\"${PVERSION}\")
+
 set_target_properties(libproxy PROPERTIES OUTPUT_NAME proxy PREFIX "lib" CLEAN_DIRECT_OUTPUT 1)
 
 if (MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.29.30129 AND CMAKE_VERSION VERSION_GREATER 3.20.3)

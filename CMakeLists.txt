@@ -80,7 +80,6 @@ if (ENABLE_GIT_VERSION)
 	gitGetVersion(${CMAKE_CURRENT_SOURCE_DIR} proxy)
 	set(VERSION_GIT ${proxy_WC_REVISION_HASH})
 	string(TIMESTAMP PVERSION "${VERSION_GIT} (%Y-%m-%d %H:%M:%S)")
-	add_definitions(-DVERSION_GIT=\"${PVERSION}\")
 	message(STATUS "Git Version: ${PVERSION}")
 endif()
 

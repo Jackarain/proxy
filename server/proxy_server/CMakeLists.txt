@@ -13,6 +13,8 @@ target_link_libraries(proxy_server
     ${PROXY_LIBRARIES}
 )
 
+target_compile_definitions(proxy_server PUBLIC -DVERSION_GIT=\"${PVERSION}\")
+
 set_property(TARGET proxy_server PROPERTY FOLDER "server/proxy_server")
 
 if (MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.29.30129 AND CMAKE_VERSION VERSION_GREATER 3.20.3)
