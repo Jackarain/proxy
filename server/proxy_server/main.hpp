@@ -257,7 +257,7 @@ inline std::string version_info()
 #ifdef VERSION_GIT
 	git_version = VERSION_GIT;
 #else
-	git_version = __DATE__ + " " + __TIME__;
+	git_version = __DATE__ + std::string(" ") + __TIME__;
 #endif
 
 	oss << "Built: " << git_version
