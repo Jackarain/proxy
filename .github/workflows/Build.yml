@@ -45,6 +45,39 @@ jobs:
           name: proxy_server-linux_glibc_x64
           path: build/bin/proxy_server
 
+  MiMalloc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update OS and Compilers
+        run: |
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          sudo apt install -y cmake gcc-12 g++-12 ninja-build
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 10
+
+      - name: Build mimalloc
+        run: |
+          git clone https://github.com/microsoft/mimalloc.git
+          cd mimalloc && mkdir build && cd build && git checkout tags/v2.1.2
+          echo "Building mimalloc..."
+          cmake -DCMAKE_BUILD_TYPE=Release -DMI_BUILD_STATIC=ON -DMI_BUILD_SHARED=OFF -DMI_BUILD_TESTS=OFF -DMI_BUILD_OBJECT=ON ..
+          make -j4
+          echo "Installing mimalloc..."
+          sudo make install
+
+      - name: Build proxy
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF -DENABLE_MIMALLOC_STATIC=ON -G Ninja
+          cmake --build build --config Release
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: proxy_server-linux_mimalloc
+          path: build/bin/proxy_server
+
   Windows:
     runs-on: windows-latest
     steps:
