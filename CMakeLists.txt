@@ -69,6 +69,7 @@ option(ENABLE_STATIC_LINK_TO_GCC	"Build static link to gcc" ON)
 
 option(ENABLE_TCMALLOC_STATIC		"Build with Tcmalloc support" OFF)
 option(ENABLE_JEMALLOC_STATIC		"Build with Jemalloc support" OFF)
+option(ENABLE_MIMALLOC_STATIC		"Build with mimalloc support" OFF)
 
 option(ENABLE_BUILD_EXAMPLES		"build proxy examples" OFF)
 option(ENABLE_LINKE_TO_LIBATOMIC	"link to libatomic.so - some platform requires it" OFF)
@@ -87,6 +88,22 @@ endif()
 
 find_program(MOLD_LINKER mold)
 find_program(LLD_LINKER lld)
+
+################################################################################
+
+if (ENABLE_MIMALLOC_STATIC)
+	if (UNIX AND NOT APPLE)
+		# 必须先编译安装 mimalloc 库(这里限制版本为2.1.2) 编译安装办法：
+		# git clone https://github.com/microsoft/mimalloc.git
+		# mkdir build && cd build && git checkout tags/v2.1.2
+		# cmake -DCMAKE_BUILD_TYPE=Release -DMI_BUILD_STATIC=ON -DMI_BUILD_SHARED=OFF -DMI_BUILD_TESTS=OFF -DMI_BUILD_OBJECT=ON ..
+		# make -j4 && make install
+		set(MIMALLOC_OBJECT "/usr/local/lib/mimalloc-2.1/mimalloc.o")
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${MIMALLOC_OBJECT} -lpthread")
+	else()
+		message(FATAL_ERROR "mimalloc only support linux!!!")
+	endif()
+endif()
 
 ################################################################################
 
