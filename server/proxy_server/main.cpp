@@ -325,7 +325,11 @@ int main(int argc, char** argv)
 	if (vm.count("help") || argc == 1)
 	{
 		version_info();
-		std::cout << desc;
+		std::cout << desc
+				  << "\n"
+				  << R"(Email bug reports, questions, discussions to <jack.wgm@gmail.com>
+and/or open issues at https://github.com/Jackarain/proxy)"
+				  << "\n";
 		return EXIT_SUCCESS;
 	}
 
