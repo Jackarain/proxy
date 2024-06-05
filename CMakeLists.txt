@@ -62,8 +62,8 @@ option(ENABLE_SYSTEM_OPENSSL		"Build with system openssl support" OFF)
 option(ENABLE_USE_WOLFSSL			"Build with wolfssl support" OFF)
 option(ENABLE_USE_OPENSSL			"Build with openssl support" ON)
 
-option(ENABLE_MOLD					"build using mold" OFF)
-option(ENABLE_LLD					"build using lld" OFF)
+option(ENABLE_MOLD					"Build using mold" OFF)
+option(ENABLE_LLD					"Build using lld" OFF)
 
 option(ENABLE_STATIC_LINK_TO_GCC	"Build static link to gcc" ON)
 
@@ -71,16 +71,20 @@ option(ENABLE_TCMALLOC_STATIC		"Build with Tcmalloc support" OFF)
 option(ENABLE_JEMALLOC_STATIC		"Build with Jemalloc support" OFF)
 option(ENABLE_MIMALLOC_STATIC		"Build with mimalloc support" OFF)
 
-option(ENABLE_BUILD_EXAMPLES		"build proxy examples" OFF)
-option(ENABLE_LINKE_TO_LIBATOMIC	"link to libatomic.so - some platform requires it" OFF)
+option(ENABLE_BUILD_EXAMPLES		"Build proxy examples" OFF)
+option(ENABLE_LINKE_TO_LIBATOMIC	"Link to libatomic.so - some platform requires it" OFF)
 
 ################################################################################
 
 if (ENABLE_GIT_VERSION)
 	find_package(Git)
 	gitGetVersion(${CMAKE_CURRENT_SOURCE_DIR} proxy)
-	set(VERSION_GIT ${proxy_WC_REVISION_HASH})
-	string(TIMESTAMP PVERSION "${VERSION_GIT} (%Y-%m-%d %H:%M:%S)")
+	string(STRIP "${proxy_WC_REVISION_HASH}" VERSION_GIT)
+	if (VERSION_GIT STREQUAL "")
+		string(TIMESTAMP PVERSION "(%Y-%m-%d %H:%M:%S)")
+	else()
+		string(TIMESTAMP PVERSION "${VERSION_GIT} (%Y-%m-%d %H:%M:%S)")
+	endif()
 	message(STATUS "Git Version: ${PVERSION}")
 endif()
 
