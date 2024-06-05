@@ -102,69 +102,67 @@ if(GIT_EXECUTABLE)
        OUTPUT_VARIABLE ${prefix}_WC_REVISION_HASH
        OUTPUT_STRIP_TRAILING_WHITESPACE)
     set(${prefix}_WC_REVISION ${${prefix}_WC_REVISION_HASH})
-    if(NOT ${GIT_error} EQUAL 0)
-      message(SEND_ERROR "Command \"${GIT_EXECUTBALE} rev-parse --verify -q --short=7 HEAD\" in directory ${dir} failed with output:\n${GIT_error}")
-    else(NOT ${GIT_error} EQUAL 0)
+    if ("${GIT_error}" STREQUAL "")
       execute_process(COMMAND ${GIT_EXECUTABLE} name-rev ${${prefix}_WC_REVISION_HASH}
          WORKING_DIRECTORY ${dir}
          OUTPUT_VARIABLE ${prefix}_WC_REVISION_NAME
           OUTPUT_STRIP_TRAILING_WHITESPACE)
-    endif(NOT ${GIT_error} EQUAL 0)
 
-    execute_process(COMMAND ${GIT_EXECUTABLE} config --get remote.origin.url
-       WORKING_DIRECTORY ${dir}
-       OUTPUT_VARIABLE ${prefix}_WC_URL
-       OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-    execute_process(COMMAND ${GIT_EXECUTABLE} show -s --format="%ci" ${${prefix}_WC_REVISION_HASH}
-       WORKING_DIRECTORY ${dir}
-       OUTPUT_VARIABLE ${prefix}_show_output
-       OUTPUT_STRIP_TRAILING_WHITESPACE)
-    string(REGEX REPLACE "^([0-9][0-9][0-9][0-9]\\-[0-9][0-9]\\-[0-9][0-9]).*"
-      "\\1" ${prefix}_WC_LAST_CHANGED_DATE "${${prefix}_show_output}")
-
-    set(${prefix}_WC_GITSVN False)
-
-    # Check if this git is likely to be a git-svn repository
-    execute_process(COMMAND ${GIT_EXECUTABLE} config --get-regexp "^svn-remote"
-      WORKING_DIRECTORY ${dir}
-      OUTPUT_VARIABLE git_config_output
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-      )
-
-    if(NOT "${git_config_output}" STREQUAL "")
-      # In case git-svn is used, attempt to extract svn info
-      execute_process(COMMAND ${GIT_EXECUTABLE} svn info
+      execute_process(COMMAND ${GIT_EXECUTABLE} config --get remote.origin.url
         WORKING_DIRECTORY ${dir}
-        TIMEOUT 3
-        ERROR_VARIABLE git_svn_info_error
-        OUTPUT_VARIABLE ${prefix}_WC_INFO
-        RESULT_VARIABLE git_svn_info_result
+        OUTPUT_VARIABLE ${prefix}_WC_URL
         OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-      if(${git_svn_info_result} EQUAL 0)
-        set(${prefix}_WC_GITSVN True)
-        string(REGEX REPLACE "^(.*\n)?URL: ([^\n]+).*"
-          "\\2" ${prefix}_WC_URL "${${prefix}_WC_INFO}")
-        string(REGEX REPLACE "^(.*\n)?Revision: ([^\n]+).*"
-          "\\2" ${prefix}_WC_REVISION "${${prefix}_WC_INFO}")
-        string(REGEX REPLACE "^(.*\n)?Repository Root: ([^\n]+).*"
-          "\\2" ${prefix}_WC_ROOT "${${prefix}_WC_INFO}")
-        string(REGEX REPLACE "^(.*\n)?Last Changed Author: ([^\n]+).*"
-          "\\2" ${prefix}_WC_LAST_CHANGED_AUTHOR "${${prefix}_WC_INFO}")
-        string(REGEX REPLACE "^(.*\n)?Last Changed Rev: ([^\n]+).*"
-          "\\2" ${prefix}_WC_LAST_CHANGED_REV "${${prefix}_WC_INFO}")
-        string(REGEX REPLACE "^(.*\n)?Last Changed Date: ([^\n]+).*"
-          "\\2" ${prefix}_WC_LAST_CHANGED_DATE "${${prefix}_WC_INFO}")
-      endif(${git_svn_info_result} EQUAL 0)
-    endif(NOT "${git_config_output}" STREQUAL "")
+      execute_process(COMMAND ${GIT_EXECUTABLE} show -s --format="%ci" ${${prefix}_WC_REVISION_HASH}
+        WORKING_DIRECTORY ${dir}
+        OUTPUT_VARIABLE ${prefix}_show_output
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+      string(REGEX REPLACE "^([0-9][0-9][0-9][0-9]\\-[0-9][0-9]\\-[0-9][0-9]).*"
+        "\\1" ${prefix}_WC_LAST_CHANGED_DATE "${${prefix}_show_output}")
 
-    # If there is no 'remote.origin', default to "NA" value and print a warning message.
-    if(NOT ${prefix}_WC_URL)
-      #message(WARNING "No remote origin set for git repository: ${dir}" )
-      set( ${prefix}_WC_URL "NA" )
-    else()
-      set(${prefix}_WC_ROOT ${${prefix}_WC_URL})
+      set(${prefix}_WC_GITSVN False)
+
+      # Check if this git is likely to be a git-svn repository
+      execute_process(COMMAND ${GIT_EXECUTABLE} config --get-regexp "^svn-remote"
+        WORKING_DIRECTORY ${dir}
+        OUTPUT_VARIABLE git_config_output
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+
+      if(NOT "${git_config_output}" STREQUAL "")
+        # In case git-svn is used, attempt to extract svn info
+        execute_process(COMMAND ${GIT_EXECUTABLE} svn info
+          WORKING_DIRECTORY ${dir}
+          TIMEOUT 3
+          ERROR_VARIABLE git_svn_info_error
+          OUTPUT_VARIABLE ${prefix}_WC_INFO
+          RESULT_VARIABLE git_svn_info_result
+          OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+        if(${git_svn_info_result} EQUAL 0)
+          set(${prefix}_WC_GITSVN True)
+          string(REGEX REPLACE "^(.*\n)?URL: ([^\n]+).*"
+            "\\2" ${prefix}_WC_URL "${${prefix}_WC_INFO}")
+          string(REGEX REPLACE "^(.*\n)?Revision: ([^\n]+).*"
+            "\\2" ${prefix}_WC_REVISION "${${prefix}_WC_INFO}")
+          string(REGEX REPLACE "^(.*\n)?Repository Root: ([^\n]+).*"
+            "\\2" ${prefix}_WC_ROOT "${${prefix}_WC_INFO}")
+          string(REGEX REPLACE "^(.*\n)?Last Changed Author: ([^\n]+).*"
+            "\\2" ${prefix}_WC_LAST_CHANGED_AUTHOR "${${prefix}_WC_INFO}")
+          string(REGEX REPLACE "^(.*\n)?Last Changed Rev: ([^\n]+).*"
+            "\\2" ${prefix}_WC_LAST_CHANGED_REV "${${prefix}_WC_INFO}")
+          string(REGEX REPLACE "^(.*\n)?Last Changed Date: ([^\n]+).*"
+            "\\2" ${prefix}_WC_LAST_CHANGED_DATE "${${prefix}_WC_INFO}")
+        endif(${git_svn_info_result} EQUAL 0)
+      endif(NOT "${git_config_output}" STREQUAL "")
+
+      # If there is no 'remote.origin', default to "NA" value and print a warning message.
+      if(NOT ${prefix}_WC_URL)
+        #message(WARNING "No remote origin set for git repository: ${dir}" )
+        set( ${prefix}_WC_URL "NA" )
+      else()
+        set(${prefix}_WC_ROOT ${${prefix}_WC_URL})
+      endif()
     endif()
 
   endmacro(GIT_WC_INFO)
@@ -178,18 +176,20 @@ find_package_handle_standard_args(Git DEFAULT_MSG GIT_EXECUTABLE)
 
 function(gitGetVersion source_dir prefix)
 	if(GIT_FOUND)
-		GIT_WC_INFO(${source_dir} ${prefix})
-		if(NOT ${prefix}_WC_REVISION_HASH)
-			set(${prefix}_WC_REVISION_HASH "n/a")
-		endif()
+    if ("${GIT_error}" STREQUAL "")
+      GIT_WC_INFO(${source_dir} ${prefix})
+      if(NOT ${prefix}_WC_REVISION_HASH)
+        set(${prefix}_WC_REVISION_HASH "n/a")
+      endif()
 
-		string(REPLACE " " ";" hash_name ${${prefix}_WC_REVISION_NAME})
-		list(GET hash_name 1 name)
-		if (NOT name)
-			set(name "n/a")
-		endif()
+      string(REPLACE " " ";" hash_name ${${prefix}_WC_REVISION_NAME})
+      list(GET hash_name 1 name)
+      if (NOT name)
+        set(name "n/a")
+      endif()
 
-		set(${prefix}_WC_REVISION_HASH ${${prefix}_WC_REVISION_HASH} PARENT_SCOPE)
-		set(${prefix}_WC_REVISION_NAME ${name} PARENT_SCOPE)
+      set(${prefix}_WC_REVISION_HASH ${${prefix}_WC_REVISION_HASH} PARENT_SCOPE)
+      set(${prefix}_WC_REVISION_NAME ${name} PARENT_SCOPE)
+    endif()
 	endif()
 endfunction()
