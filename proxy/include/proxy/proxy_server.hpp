@@ -2284,7 +2284,7 @@ R"x*x*x(<html>
 					// 件请求处理, 否则返回 403.
 					if (!m_option.autoindex_)
 					{
-						auto path = target_path(req.target());
+						auto path = make_target_path(req.target());
 
 						if (!fs::is_directory(path, ec))
 						{
@@ -3321,7 +3321,7 @@ R"x*x*x(<html>
 
 				std::string target = req.target();
 				boost::smatch what;
-				http_context http_ctx{ {}, req, target, target_path(req.target()) };
+				http_context http_ctx{ {}, req, target, make_target_path(req.target()) };
 
 				#define BEGIN_HTTP_ROUTE() if (false) {}
 				#define ON_HTTP_ROUTE(exp, func) \
@@ -3384,7 +3384,7 @@ R"x*x*x(<html>
 #endif // WIN32
 		};
 
-		inline std::string target_path(const std::string& target)
+		inline std::string make_target_path(const std::string& target)
 		{
 			std::string unescape_target;
 			unescape(target, unescape_target);
@@ -3594,7 +3594,7 @@ R"x*x*x(<html>
 			boost::system::error_code ec;
 			auto& request = hctx.request_;
 
-			auto target = target_path(hctx.command_[0]);
+			auto target = make_target_path(hctx.command_[0]);
 
 			fs::directory_iterator end;
 			fs::directory_iterator it(target, ec);
