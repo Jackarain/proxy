@@ -481,9 +481,16 @@ R"x*x*x(<html>
 
 		struct http_context
 		{
+			// 在 http 请求时, 保存正则表达式命中时匹配的结果列表.
 			std::vector<std::string> command_;
+
+			// 保存 http 客户端的请求信息.
 			string_request& request_;
+
+			// 保存 http 客户端请求的原始目标.
 			std::string target_;
+
+			// 保存 http 客户端请求目标的具体路径, 即: doc 目录 + target_ 组成的路径.
 			std::string target_path_;
 		};
 
