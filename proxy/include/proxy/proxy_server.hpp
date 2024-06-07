@@ -3756,6 +3756,48 @@ R"x*x*x(<html>
 			boost::system::error_code ec;
 			auto& request = hctx.request_;
 
+			// 查找目录下是否存在 index.html 或 index.htm 文件, 如果存在则返回该文件.
+			// 否则返回目录下的文件列表.
+			auto index_html = fs::path(hctx.target_path_) / "index.html";
+			fs::exists(index_html, ec) ? index_html = index_html :
+				index_html = fs::path(hctx.target_path_) / "index.htm";
+
+			if (fs::exists(index_html, ec))
+			{
+				std::ifstream file(index_html.string(), std::ios::binary);
+				if (file)
+				{
+					std::string content(
+						(std::istreambuf_iterator<char>(file)),
+						std::istreambuf_iterator<char>());
+
+					string_response res{ http::status::ok, request.version() };
+					res.set(http::field::server, version_string);
+					res.set(http::field::date, server_date_string());
+					auto ext = to_lower(index_html.extension().string());
+					if (global_mimes.count(ext))
+						res.set(http::field::content_type, global_mimes[ext]);
+					else
+						res.set(http::field::content_type, "text/plain");
+					res.keep_alive(request.keep_alive());
+					res.body() = content;
+					res.prepare_payload();
+
+					http::serializer<false, string_body, http::fields> sr(res);
+					co_await http::async_write(
+						m_local_socket,
+						sr,
+						net_awaitable[ec]);
+					if (ec)
+						XLOG_WARN << "connection id: "
+						<< m_connection_id
+						<< ", http dir write index err: "
+						<< ec.message();
+
+					co_return;
+				}
+			}
+
 			auto path_list = format_path_list(hctx.target_path_, ec);
 			if (ec)
 			{
