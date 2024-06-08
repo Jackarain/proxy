@@ -59,9 +59,9 @@ option(ENABLE_REUSEPORT				"Build with REUSEPORT support" OFF)
 option(ENABLE_SYSTEM_ZLIB			"Build with system zlib support" OFF)
 option(ENABLE_SYSTEM_OPENSSL		"Build with system openssl support" OFF)
 
+option(ENABLE_USE_OPENSSL			"Build with openssl support" ON)
+option(ENABLE_USE_BORINGSSL			"Build with boringssl support" OFF)
 option(ENABLE_USE_WOLFSSL			"Build with wolfssl support" OFF)
-option(ENABLE_USE_OPENSSL			"Build with openssl support" OFF)
-option(ENABLE_USE_BORINGSSL			"Build with boringssl support" ON)
 
 option(ENABLE_MOLD					"Build using mold" OFF)
 option(ENABLE_LLD					"Build using lld" OFF)
