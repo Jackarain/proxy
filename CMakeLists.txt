@@ -60,7 +60,8 @@ option(ENABLE_SYSTEM_ZLIB			"Build with system zlib support" OFF)
 option(ENABLE_SYSTEM_OPENSSL		"Build with system openssl support" OFF)
 
 option(ENABLE_USE_WOLFSSL			"Build with wolfssl support" OFF)
-option(ENABLE_USE_OPENSSL			"Build with openssl support" ON)
+option(ENABLE_USE_OPENSSL			"Build with openssl support" OFF)
+option(ENABLE_USE_BORINGSSL			"Build with boringssl support" ON)
 
 option(ENABLE_MOLD					"Build using mold" OFF)
 option(ENABLE_LLD					"Build using lld" OFF)
@@ -330,6 +331,26 @@ if (ENABLE_USE_WOLFSSL)
 	link_libraries(${WOLFSSL_LIBRARIES})
 
 	message(STATUS "Using wolfssl...")
+endif()
+
+
+################################################################################
+
+if (ENABLE_USE_BORINGSSL)
+	set(OPENSSL_FOUND TRUE)
+	add_subdirectory(third_party/boringssl)
+
+	# BORINGSSL_INCLUDE_DIRS 用于 boringssl 的头文件包含.
+	set(BORINGSSL_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boringssl/include)
+
+	# BORINGSSL_LIBRARIES 用于 boringssl 的库文件包含.
+	set(BORINGSSL_LIBRARIES crypto ssl)
+
+	# 包含 boringssl 的头文件和库文件.
+	include_directories(${BORINGSSL_INCLUDE_DIRS})
+	link_libraries(${BORINGSSL_LIBRARIES})
+
+	message(STATUS "Using boringssl...")
 endif()
 
 ################################################################################
