@@ -889,11 +889,21 @@ private:
 #endif // WIN32 && LOGGER_DBG_VIEW
 #endif // LOGGER_DBG_VIEW_
 
-const inline int _logger_debug_id__ = 0;
-const inline int _logger_info_id__  = 1;
-const inline int _logger_warn_id__  = 2;
-const inline int _logger_error_id__ = 3;
-const inline int _logger_file_id__  = 4;
+enum logger_level__ {
+	_logger_debug_id__,
+	_logger_info_id__,
+	_logger_warn_id__,
+	_logger_error_id__,
+	_logger_file_id__
+};
+
+const inline std::string _LOGGER_STR__[] = {
+	" DEBUG ",
+	" INFO  ",
+	" WARN  ",
+	" ERROR ",
+	" FILE  "
+};
 
 const inline std::string _LOGGER_DEBUG_STR__ = " DEBUG ";
 const inline std::string _LOGGER_INFO_STR__  = " INFO  ";
@@ -902,7 +912,7 @@ const inline std::string _LOGGER_ERR_STR__   = " ERROR ";
 const inline std::string _LOGGER_FILE_STR__  = " FILE  ";
 
 inline void logger_output_console__([[maybe_unused]] bool disable_cout,
-	[[maybe_unused]] const int& level,
+	[[maybe_unused]] const logger_level__& level,
 	[[maybe_unused]] const std::string& prefix,
 	[[maybe_unused]] const std::string& message) noexcept
 {
@@ -919,18 +929,26 @@ inline void logger_output_console__([[maybe_unused]] bool disable_cout,
 		HANDLE handle_stdout = GetStdHandle(STD_OUTPUT_HANDLE);
 		CONSOLE_SCREEN_BUFFER_INFO csbi;
 		GetConsoleScreenBufferInfo(handle_stdout, &csbi);
-		if (level == _logger_info_id__)
+
+		switch (level)
+		{
+		case _logger_info_id__:
 			SetConsoleTextAttribute(handle_stdout,
 				FOREGROUND_GREEN);
-		else if (level == _logger_debug_id__)
+			break;
+		case _logger_debug_id__:
 			SetConsoleTextAttribute(handle_stdout,
 				FOREGROUND_GREEN | FOREGROUND_INTENSITY);
-		else if (level == _logger_warn_id__)
+			break;
+		case _logger_warn_id__:
 			SetConsoleTextAttribute(handle_stdout,
 				FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_INTENSITY);
-		else if (level == _logger_error_id__)
+			break;
+		case _logger_error_id__:
 			SetConsoleTextAttribute(handle_stdout,
 				FOREGROUND_RED | FOREGROUND_INTENSITY);
+			break;
+		}
 
 		WriteConsoleW(handle_stdout,
 			title.data(), (DWORD)title.size(), nullptr, nullptr);
@@ -951,18 +969,31 @@ inline void logger_output_console__([[maybe_unused]] bool disable_cout,
 	if (!disable_cout)
 	{
 		std::string out;
-		if (level == _logger_info_id__)
+
+		switch (level)
+		{
+		case _logger_info_id__:
 			std::format_to(std::back_inserter(out),
 				"\033[32m{}\033[0m{}", prefix, message);
-		else if (level == _logger_debug_id__)
+			break;
+		case _logger_debug_id__:
 			std::format_to(std::back_inserter(out),
 				"\033[1;32m{}\033[0m{}", prefix, message);
-		else if (level == _logger_warn_id__)
+			break;
+		case _logger_warn_id__:
 			std::format_to(std::back_inserter(out),
 				"\033[1;33m{}\033[0m{}", prefix, message);
-		else if (level == _logger_error_id__)
+			break;
+		case _logger_error_id__:
 			std::format_to(std::back_inserter(out),
 				"\033[1;31m{}\033[0m{}", prefix, message);
+			break;
+		case _logger_file_id__:
+			// std::format_to(std::back_inserter(out),
+			//	"\033[1;34m{}\033[0m{}", prefix, message);
+			break;
+		}
+
 		std::cout << out;
 		std::cout.flush();
 	}
@@ -999,24 +1030,9 @@ inline void logger_output_android__(
 }
 #endif // __ANDROID__
 
-inline const std::string& logger_level_string__(const int& level) noexcept
+inline const std::string& logger_level_string__(const logger_level__& level) noexcept
 {
-	switch (level)
-	{
-	case _logger_debug_id__:
-		return _LOGGER_DEBUG_STR__;
-	case _logger_info_id__:
-		return _LOGGER_INFO_STR__;
-	case _logger_warn_id__:
-		return _LOGGER_WARN_STR__;
-	case _logger_error_id__:
-		return _LOGGER_ERR_STR__;
-	case _logger_file_id__:
-		return _LOGGER_FILE_STR__;
-	}
-
-	BOOST_ASSERT(false && "invalid logging level!");
-	return _LOGGER_DEBUG_STR__;
+	return _LOGGER_STR__[level];
 }
 
 struct logger_tag
@@ -1052,7 +1068,7 @@ namespace access
 	inline detail::tag_invoke_t tag_invoke{};
 }
 
-inline void logger_writer__(int64_t time, const int& level,
+inline void logger_writer__(int64_t time, const logger_level__& level,
 	const std::string& message,
 	[[maybe_unused]] bool disable_cout = false) noexcept
 {
@@ -1101,7 +1117,7 @@ namespace logger_aux__ {
 	{
 		struct internal_message
 		{
-			int level_;
+			logger_level__ level_;
 			int64_t time_;
 			std::string message_;
 			bool disable_cout_;
@@ -1169,7 +1185,7 @@ namespace logger_aux__ {
 			}
 		}
 
-		void post_log(const int& level,
+		void post_log(const logger_level__& level,
 			std::string&& message, bool disable_cout = false)
 		{
 			[[maybe_unused]] static auto runthread =
@@ -1284,7 +1300,7 @@ class logger___
 	logger___(const logger___&) = delete;
 	logger___& operator=(const logger___&) = delete;
 public:
-	logger___(const int& level,
+	logger___(const logger_level__& level,
 		bool async = false, bool disable_cout = false)
 		: level_(level)
 		, async_(async)
@@ -1745,7 +1761,7 @@ public:
 	}
 
 	std::string out_;
-	const int& level_;
+	const logger_level__& level_;
 	bool async_;
 	bool disable_cout_;
 };
