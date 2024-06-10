@@ -139,6 +139,32 @@ namespace proxy {
 	using io_util::read;
 	using io_util::write;
 
+	//////////////////////////////////////////////////////////////////////////
+
+	enum class pem_type
+	{
+		none,		// none.
+		cert,		// certificate file.
+		key,  		// certificate key file.
+		pwd,		// certificate password file.
+		dhparam		// dh param file.
+	};
+
+	struct pem_file
+	{
+		fs::path filepath_;
+		pem_type type_ { pem_type::none };
+	};
+
+	struct certificate_file
+	{
+		pem_file cert_;
+		pem_file key_;
+		pem_file pwd_;
+		pem_file dhparam_;
+
+		std::optional<net::ssl::context> ssl_context_;
+	};
 
 	//////////////////////////////////////////////////////////////////////////
 
@@ -4393,9 +4419,199 @@ R"x*x*x(<html>
 
 		virtual ~proxy_server() = default;
 
+		pem_file pem_file_type(const std::string& filepath)
+		{
+			pem_file result{ filepath, pem_type::none };
+
+			std::ifstream file(filepath);
+			if (!file.is_open())
+				return result;
+
+			if (fs::path(filepath).filename() == "password.txt")
+			{
+				result.type_ = pem_type::pwd;
+				return result;
+			}
+
+			proxy::pem_type type = pem_type::none;
+			std::string line;
+
+			while (std::getline(file, line))
+			{
+				if (line.find("-----BEGIN CERTIFICATE-----") != std::string::npos)
+				{
+					type = pem_type::cert;
+					break;
+				}
+				if (line.find("-----BEGIN DH PARAMETERS-----") != std::string::npos)
+				{
+					type = pem_type::dhparam;
+					break;
+				}
+				if (line.find("-----BEGIN RSA PRIVATE KEY-----") != std::string::npos)
+				{
+					type = pem_type::key;
+					break;
+				}
+				if (line.find("-----BEGIN EC PRIVATE KEY-----") != std::string::npos)
+				{
+					type = pem_type::key;
+					break;
+				}
+				if (line.find("-----BEGIN ENCRYPTED PRIVATE KEY-----") != std::string::npos)
+				{
+					type = pem_type::key;
+					break;
+				}
+				if (line.find("-----BEGIN DSA PRIVATE KEY-----") != std::string::npos)
+				{
+					type = pem_type::key;
+					break;
+				}
+			}
+			result.type_ = type;
+
+			return result;
+		}
+
+
+		inline void find_cert(const fs::path& directory)
+		{
+			if (!fs::exists(directory) || !fs::is_directory(directory))
+			{
+				XLOG_WARN << "Path is not a directory or doesn't exist: " << directory;
+				return;
+			}
+
+			certificate_file file;
+
+			for (const auto& entry : fs::directory_iterator(directory))
+			{
+				if (entry.is_directory())
+				{
+					find_cert(entry.path());
+					continue;
+				}
+
+				if (entry.is_regular_file())
+				{
+					// 读取文件, 并判断文件类型.
+					auto type = pem_file_type(entry.path().string());
+					switch (type.type_)
+					{
+						case pem_type::cert:
+							file.cert_ = type;
+							break;
+						case pem_type::key:
+							file.key_ = type;
+							break;
+						case pem_type::dhparam:
+							file.dhparam_ = type;
+							break;
+						case pem_type::pwd:
+							file.pwd_ = type;
+							break;
+						default:
+							break;
+					}
+				}
+			}
+
+			// 如果找到了证书文件, 创建一个证书文件对象.
+			if (file.cert_.type_ != pem_type::none &&
+				file.key_.type_ != pem_type::none)
+			{
+				// 创建 ssl context 对象.
+				file.ssl_context_.emplace(net::ssl::context::sslv23);
+
+				auto& ssl_ctx = file.ssl_context_.value();
+
+				// 设置 ssl context 选项.
+				ssl_ctx.set_options(
+					net::ssl::context::default_workarounds
+					| net::ssl::context::no_sslv2
+					| net::ssl::context::no_sslv3
+					| net::ssl::context::no_tlsv1
+					| net::ssl::context::no_tlsv1_1
+					| net::ssl::context::single_dh_use
+				);
+
+				// 如果设置了 ssl_prefer_server_ciphers_ 则设置 SSL_OP_CIPHER_SERVER_PREFERENCE.
+				if (m_option.ssl_prefer_server_ciphers_)
+					ssl_ctx.set_options(SSL_OP_CIPHER_SERVER_PREFERENCE);
+
+				// 默认的 ssl ciphers.
+				const std::string ssl_ciphers = "HIGH:!aNULL:!MD5:!3DES";
+				if (m_option.ssl_ciphers_.empty())
+					m_option.ssl_ciphers_ = ssl_ciphers;
+
+				// 设置 ssl ciphers.
+				SSL_CTX_set_cipher_list(ssl_ctx.native_handle(),
+					m_option.ssl_ciphers_.c_str());
+
+				// 设置证书文件.
+				boost::system::error_code ec;
+				ssl_ctx.use_certificate_chain_file(file.cert_.filepath_.string(), ec);
+				if (ec)
+				{
+					XLOG_WARN << "use_certificate_chain_file: "
+						<< file.cert_.filepath_
+						<< ", error: "
+						<< ec.message();
+					return;
+				}
+
+				// 设置私钥文件.
+				ssl_ctx.use_private_key_file(
+					file.key_.filepath_.string(),
+					net::ssl::context::pem, ec);
+				if (ec)
+				{
+					XLOG_WARN << "use_private_key_file: "
+						<< file.key_.filepath_
+						<< ", error: "
+						<< ec.message();
+					return;
+				}
+
+				// 设置 dhparam 文件, 如果存在的话.
+				if (file.dhparam_.type_ != pem_type::none && fs::exists(file.dhparam_.filepath_))
+				{
+					ssl_ctx.use_tmp_dh_file(file.dhparam_.filepath_.string(), ec);
+					if (ec)
+					{
+						XLOG_WARN << "use_tmp_dh_file: "
+							<< file.dhparam_.filepath_
+							<< ", error: "
+							<< ec.message();
+						return;
+					}
+				}
+
+				// 设置 password 文件, 如果存在的话.
+				if (file.pwd_.type_ != pem_type::none && fs::exists(file.pwd_.filepath_))
+				{
+					auto pwd = file.pwd_.filepath_;
+
+					ssl_ctx.set_password_callback(
+						[pwd] ([[maybe_unused]] auto... args) {
+							std::string password;
+							fileop::read(pwd, password);
+							return password;
+						}
+					);
+				}
+
+				// 保存到 m_certificates 中.
+				m_certificates.emplace_back(std::move(file));
+			}
+		}
+
 		inline void init_ssl_context()
 		{
-			m_ssl_srv_context.set_options(
+			net::ssl::context ssl_ctx(net::ssl::context::sslv23);
+
+			ssl_ctx.set_options(
 				net::ssl::context::default_workarounds
 				| net::ssl::context::no_sslv2
 				| net::ssl::context::no_sslv3
@@ -4405,13 +4621,13 @@ R"x*x*x(<html>
 			);
 
 			if (m_option.ssl_prefer_server_ciphers_)
-				m_ssl_srv_context.set_options(SSL_OP_CIPHER_SERVER_PREFERENCE);
+				ssl_ctx.set_options(SSL_OP_CIPHER_SERVER_PREFERENCE);
 
 			const std::string ssl_ciphers = "HIGH:!aNULL:!MD5:!3DES";
 			if (m_option.ssl_ciphers_.empty())
 				m_option.ssl_ciphers_ = ssl_ciphers;
 
-			SSL_CTX_set_cipher_list(m_ssl_srv_context.native_handle(),
+			SSL_CTX_set_cipher_list(ssl_ctx.native_handle(),
 				m_option.ssl_ciphers_.c_str());
 
 			if (!m_option.ssl_cert_path_.empty())
@@ -4420,7 +4636,7 @@ R"x*x*x(<html>
 				auto pwd = dir / "ssl_crt.pwd";
 
 				if (fs::exists(pwd))
-					m_ssl_srv_context.set_password_callback(
+					ssl_ctx.set_password_callback(
 						[&pwd]([[maybe_unused]] auto... args) {
 							std::string password;
 							fileop::read(pwd, password);
@@ -4433,18 +4649,18 @@ R"x*x*x(<html>
 				auto dh = dir / "ssl_dh.pem";
 
 				if (fs::exists(cert))
-					m_ssl_srv_context.use_certificate_chain_file(cert.string());
+					ssl_ctx.use_certificate_chain_file(cert.string());
 
 				if (fs::exists(key))
-					m_ssl_srv_context.use_private_key_file(
+					ssl_ctx.use_private_key_file(
 						key.string(), boost::asio::ssl::context::pem);
 
 				if (fs::exists(dh))
-					m_ssl_srv_context.use_tmp_dh_file(dh.string());
+					ssl_ctx.use_tmp_dh_file(dh.string());
 			}
 			else
 			{
-				m_ssl_srv_context.set_password_callback(
+				ssl_ctx.set_password_callback(
 					[&]([[maybe_unused]] auto... args) {
 						const auto& pwd = m_option.ssl_certificate_passwd_;
 						if (!fs::exists(pwd))
@@ -4458,22 +4674,24 @@ R"x*x*x(<html>
 
 				boost::system::error_code ec;
 
-				m_ssl_srv_context.use_certificate_chain_file(
+				ssl_ctx.use_certificate_chain_file(
 					m_option.ssl_certificate_, ec);
 
-				m_ssl_srv_context.use_private_key_file(
+				ssl_ctx.use_private_key_file(
 					m_option.ssl_certificate_key_,
 					net::ssl::context::pem, ec);
 
 				if (fs::exists(m_option.ssl_dhparam_)) {
-					m_ssl_srv_context.use_tmp_dh_file(
+					ssl_ctx.use_tmp_dh_file(
 						m_option.ssl_dhparam_, ec);
 				}
 				else {
-					m_ssl_srv_context.use_tmp_dh(
+					ssl_ctx.use_tmp_dh(
 						net::buffer(default_dh_param()), ec);
 				}
 			}
+
+			m_ssl_srv_context = std::move(ssl_ctx);
 		}
 
 	public:
@@ -4860,6 +5078,9 @@ R"x*x*x(<html>
 
 		// 当前服务端作为 ssl 服务时的 ssl context.
 		net::ssl::context m_ssl_srv_context{ net::ssl::context::sslv23 };
+
+		// m_certificates 保存当前服务端的证书信息.
+		std::vector<certificate_file> m_certificates;
 
 		// 当前服务是否中止标志.
 		bool m_abort{ false };
