@@ -991,8 +991,11 @@ R"x*x*x(<html>
 				}
 			};
 
-			// 设置 scramble key.
-			scramble_setup(socket);
+			if (!noise)
+			{
+				// 为 socket 设置 scramble key.
+				scramble_setup(socket);
+			}
 
 			// 检查协议.
 			auto fd = socket.native_handle();
