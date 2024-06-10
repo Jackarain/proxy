@@ -61,7 +61,7 @@ std::string ssl_cert_key;
 std::string ssl_cert_pwd;
 std::string ssl_ciphers;
 std::string ssl_dhparam;
-std::string ssl_sni;
+std::string proxy_ssl_name;
 
 bool transparent = false;
 bool autoindex = false;
@@ -128,7 +128,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.ssl_certificate_key_ = ssl_cert_key;
 	opt.ssl_certificate_passwd_ = ssl_cert_pwd;
 	opt.ssl_dhparam_ = ssl_dhparam;
-	opt.ssl_sni_ = ssl_sni;
+	opt.proxy_ssl_name_ = proxy_ssl_name;
 
 	opt.disable_http_ = disable_http;
 	opt.disable_socks_ = disable_socks;
@@ -284,11 +284,13 @@ int main(int argc, char** argv)
 
 		("ssl_certificate_dir", po::value<std::string>(&ssl_cert_dir)->value_name("path"), "Directory containing SSL certificates, auto-locates 'ssl_crt.pem/ssl_crt.pwd/ssl_key.pem/ssl_dh.pem'.")
 
+		("ssl_sni", po::value<std::string>(&proxy_ssl_name)->value_name("sni"), "Specifies SNI for multiple SSL certificates on one IP (Deprecated, using proxy_ssl_name instead).")
+		("proxy_ssl_name", po::value<std::string>(&proxy_ssl_name)->value_name("sni"), "Specifies SNI for multiple SSL certificates on one IP.")
+
 		("ssl_certificate", po::value<std::string>(&ssl_cert)->value_name("path"), "Path to SSL certificate file.")
 		("ssl_certificate_key", po::value<std::string>(&ssl_cert_key)->value_name("path"), "Path to SSL certificate secret key file.")
 		("ssl_certificate_passwd", po::value<std::string>(&ssl_cert_pwd)->value_name("path/string"), "SSL certificate key passphrase.")
 		("ssl_dhparam", po::value<std::string>(&ssl_dhparam)->value_name("path"), "Specifies a file with DH parameters for DHE ciphers.")
-		("ssl_sni", po::value<std::string>(&ssl_sni)->value_name("sni"), "Specifies SNI for multiple SSL certificates on one IP.")
 
 		("ssl_ciphers", po::value<std::string>(&ssl_ciphers)->value_name("ssl_ciphers"), "Specify enabled SSL ciphers")
 		("ssl_prefer_server_ciphers", po::value<bool>(&ssl_prefer_server_ciphers)->default_value(false, "false")->value_name(""), "Prefer server ciphers over client ciphers for SSLv3 and TLS protocols.")

@@ -429,8 +429,8 @@ R"x*x*x(<html>
 		// 来生成此文件, 以增强密钥交换安全性.
 		std::string ssl_dhparam_;
 
-		// 用于多域名证书下指定具体域名.
-		std::string ssl_sni_;
+		// 用于上游代理服务器具有多域名证书下指定具体域名, 即通过此指定 SNI 参数.
+		std::string proxy_ssl_name_;
 
 		// 指定允许的加密算法.
 		std::string ssl_ciphers_;
@@ -3055,8 +3055,8 @@ R"x*x*x(<html>
 						}
 					}
 
-					std::string sni = m_option.ssl_sni_.empty()
-						? proxy_host : m_option.ssl_sni_;
+					std::string sni = m_option.proxy_ssl_name_.empty()
+						? proxy_host : m_option.proxy_ssl_name_;
 
 					// Set SNI Hostname.
 					if (!SSL_set_tlsext_host_name(
