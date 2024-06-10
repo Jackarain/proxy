@@ -844,6 +844,14 @@ R"x*x*x(<html>
 		{
 			boost::system::error_code error;
 
+			// 工作流程:
+			// 1. 生成一段随机长度的随机数据, 最大长度由配置文件中的参数 noise_length 指定, 用于发送给对方.
+			// 2. 根据这些随机数据计算发送数据的 key, 这个 key 将会用于后续的代理时数据的加密.
+			// 3. 发送随机数据.
+			// 4. 对方在接收到随机数据后, 同样会发送噪声随机数据(包含随机数长度本身, 在前16字节中的最后一位,
+			//    组成一个 16 位的整数表示长度).
+			// 5. 计算接收随机数据的 key 用于后续的接收到的数据的解密.
+
 			// 生成要发送的噪声数据.
 			int noise_length = m_option.noise_length_;
 
@@ -1028,8 +1036,11 @@ R"x*x*x(<html>
 				}
 			};
 
-			// 解密 peek 数据, 用于检测协议.
-			scramble_peek(socket, detect);
+			if (!noise)
+			{
+				// peek 方式解密混淆的数据, 用于检测混淆的数据的代理协议.
+				scramble_peek(socket, detect);
+			}
 
 			// 保存第一个字节用于协议类型甄别.
 			const uint8_t proto_byte = detect[0];
@@ -1134,7 +1145,7 @@ R"x*x*x(<html>
 			}
 			else if (noise && m_option.scramble_)
 			{
-				// 进入噪声过滤协议, 同时返回一段噪声给客户端.
+				// 进入噪声握手协议, 即: 返回一段噪声给客户端, 并等待客户端返回噪声.
 				XLOG_DBG << "connection id: "
 					<< m_connection_id
 					<< ", noise protocol";
@@ -1143,7 +1154,7 @@ R"x*x*x(<html>
 					net_tcp_socket(socket), m_inin_key, m_inout_key))
 					co_return;
 
-				// 在完成 noise 握手后, 重新检测协议.
+				// 在完成 noise 握手后, 重新检测被混淆之前的代理协议.
 				co_await proto_detect(false);
 			}
 			else
