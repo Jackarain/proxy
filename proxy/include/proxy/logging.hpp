@@ -177,7 +177,7 @@ namespace std {
 //
 // For example:
 //
-// namespace util {
+// namespace xlogger {
 //   bool tag_invoke(logger_tag,
 //     int64_t time, const int& level, const std::string& message)
 //   {
@@ -188,7 +188,7 @@ namespace std {
 //
 
 
-namespace util {
+namespace xlogger {
 
 	namespace fs = std::filesystem;
 
@@ -1038,6 +1038,9 @@ inline const std::string& logger_level_string__(const logger_level__& level) noe
 struct logger_tag
 {};
 
+struct logger_abort_tag
+{};
+
 namespace access
 {
 	namespace detail
@@ -1062,6 +1065,13 @@ namespace access
 					level,
 					message);
 			}
+
+			template <typename Tag>
+			bool operator()(Tag tag) noexcept
+			{
+				return tag_invoke(
+					std::forward<Tag>(tag));
+			}
 		};
 	}
 
@@ -1073,8 +1083,8 @@ inline void logger_writer__(int64_t time, const logger_level__& level,
 	[[maybe_unused]] bool disable_cout = false) noexcept
 {
 	LOGGER_LOCKS_();
-	static auto& logger = util::logger_aux__::writer_single<
-		util::auto_logger_file__>();
+	static auto& logger = xlogger::logger_aux__::writer_single<
+		xlogger::auto_logger_file__>();
 	char ts[64] = { 0 };
 	[[maybe_unused]] auto ptm = logger_aux__::time_to_string(ts, time);
 	std::string prefix = ts + logger_level_string__(level);
@@ -1083,6 +1093,8 @@ inline void logger_writer__(int64_t time, const logger_level__& level,
 
 	// User log hook.
 	if (access::tag_invoke(logger_tag(), time, level, message))
+		return;
+	if (access::tag_invoke(logger_abort_tag()))
 		return;
 
 #ifndef DISABLE_WRITE_LOGGING
@@ -1248,13 +1260,13 @@ inline void signal_handler(int)
 
 inline void init_logging(const std::string& path = "")
 {
-	logger_aux__::writer_single<util::auto_logger_file__>(path);
+	logger_aux__::writer_single<xlogger::auto_logger_file__>(path);
 }
 
 inline std::string log_path()
 {
 	auto_logger_file__& file =
-		logger_aux__::writer_single<util::auto_logger_file__>();
+		logger_aux__::writer_single<xlogger::auto_logger_file__>();
 	return file.log_path();
 }
 
@@ -1280,7 +1292,7 @@ inline void toggle_logging(bool logging)
 inline void toggle_write_logging(bool disable)
 {
 	auto_logger_file__& file =
-		logger_aux__::writer_single<util::auto_logger_file__>();
+		logger_aux__::writer_single<xlogger::auto_logger_file__>();
 	file.logging(disable);
 }
 
@@ -1775,7 +1787,7 @@ public:
 		return *this;
 	}
 };
-} // namespace util
+} // namespace xlogger
 
 #undef XLOG_DBG
 #undef XLOG_INFO
@@ -1804,39 +1816,39 @@ public:
 #if (defined(DEBUG) || defined(_DEBUG) || \
 	defined(ENABLE_LOGGER)) && !defined(DISABLE_LOGGER)
 
-#define XLOG_DBG util::logger___(util::_logger_debug_id__)
-#define XLOG_INFO util::logger___(util::_logger_info_id__)
-#define XLOG_WARN util::logger___(util::_logger_warn_id__)
-#define XLOG_ERR util::logger___(util::_logger_error_id__)
-#define XLOG_FILE util::logger___(util::_logger_file_id__, false, true)
+#define XLOG_DBG xlogger::logger___(xlogger::_logger_debug_id__)
+#define XLOG_INFO xlogger::logger___(xlogger::_logger_info_id__)
+#define XLOG_WARN xlogger::logger___(xlogger::_logger_warn_id__)
+#define XLOG_ERR xlogger::logger___(xlogger::_logger_error_id__)
+#define XLOG_FILE xlogger::logger___(xlogger::_logger_file_id__, false, true)
 
-#define XLOG_FMT(...) util::logger___( \
-		util::_logger_debug_id__).format_to(__VA_ARGS__)
-#define XLOG_IFMT(...) util::logger___( \
-		util::_logger_info_id__).format_to(__VA_ARGS__)
-#define XLOG_WFMT(...) util::logger___( \
-		util::_logger_warn_id__).format_to(__VA_ARGS__)
-#define XLOG_EFMT(...) util::logger___( \
-		util::_logger_error_id__).format_to(__VA_ARGS__)
-#define XLOG_FFMT(...) util::logger___( \
-		util::_logger_file_id__, false, true).format_to(__VA_ARGS__)
+#define XLOG_FMT(...) xlogger::logger___( \
+		xlogger::_logger_debug_id__).format_to(__VA_ARGS__)
+#define XLOG_IFMT(...) xlogger::logger___( \
+		xlogger::_logger_info_id__).format_to(__VA_ARGS__)
+#define XLOG_WFMT(...) xlogger::logger___( \
+		xlogger::_logger_warn_id__).format_to(__VA_ARGS__)
+#define XLOG_EFMT(...) xlogger::logger___( \
+		xlogger::_logger_error_id__).format_to(__VA_ARGS__)
+#define XLOG_FFMT(...) xlogger::logger___( \
+		xlogger::_logger_file_id__, false, true).format_to(__VA_ARGS__)
 
-#define AXLOG_DBG util::logger___(util::_logger_debug_id__, true)
-#define AXLOG_INFO util::logger___(util::_logger_info_id__, true)
-#define AXLOG_WARN util::logger___(util::_logger_warn_id__, true)
-#define AXLOG_ERR util::logger___(util::_logger_error_id__, true)
-#define AXLOG_FILE util::logger___(util::_logger_file_id__, true, true)
+#define AXLOG_DBG xlogger::logger___(xlogger::_logger_debug_id__, true)
+#define AXLOG_INFO xlogger::logger___(xlogger::_logger_info_id__, true)
+#define AXLOG_WARN xlogger::logger___(xlogger::_logger_warn_id__, true)
+#define AXLOG_ERR xlogger::logger___(xlogger::_logger_error_id__, true)
+#define AXLOG_FILE xlogger::logger___(xlogger::_logger_file_id__, true, true)
 
-#define AXLOG_FMT(...) util::logger___( \
-		util::_logger_debug_id__, true).format_to(__VA_ARGS__)
-#define AXLOG_IFMT(...) util::logger___( \
-		util::_logger_info_id__, true).format_to(__VA_ARGS__)
-#define AXLOG_WFMT(...) util::logger___( \
-		util::_logger_warn_id__, true).format_to(__VA_ARGS__)
-#define AXLOG_EFMT(...) util::logger___( \
-		util::_logger_error_id__, true).format_to(__VA_ARGS__)
-#define AXLOG_FFMT(...) util::logger___( \
-		util::_logger_file_id__, true, true).format_to(__VA_ARGS__)
+#define AXLOG_FMT(...) xlogger::logger___( \
+		xlogger::_logger_debug_id__, true).format_to(__VA_ARGS__)
+#define AXLOG_IFMT(...) xlogger::logger___( \
+		xlogger::_logger_info_id__, true).format_to(__VA_ARGS__)
+#define AXLOG_WFMT(...) xlogger::logger___( \
+		xlogger::_logger_warn_id__, true).format_to(__VA_ARGS__)
+#define AXLOG_EFMT(...) xlogger::logger___( \
+		xlogger::_logger_error_id__, true).format_to(__VA_ARGS__)
+#define AXLOG_FFMT(...) xlogger::logger___( \
+		xlogger::_logger_file_id__, true, true).format_to(__VA_ARGS__)
 
 #define AXVLOG_DBG AXLOG_DBG \
 	<< "(" << __FILE__ << ":" << __LINE__ << "): "
@@ -1879,45 +1891,45 @@ public:
 
 
 #define INIT_ASYNC_LOGGING() [[maybe_unused]] \
-		util::auto_init_async_logger ____init_logger____
+		xlogger::auto_init_async_logger ____init_logger____
 
 #else
 
-#define XLOG_DBG util::empty_logger___()
-#define XLOG_INFO util::empty_logger___()
-#define XLOG_WARN util::empty_logger___()
-#define XLOG_ERR util::empty_logger___()
-#define XLOG_FILE util::empty_logger___()
+#define XLOG_DBG xlogger::empty_logger___()
+#define XLOG_INFO xlogger::empty_logger___()
+#define XLOG_WARN xlogger::empty_logger___()
+#define XLOG_ERR xlogger::empty_logger___()
+#define XLOG_FILE xlogger::empty_logger___()
 
-#define XLOG_FMT(...) util::empty_logger___()
-#define XLOG_IFMT(...) util::empty_logger___()
-#define XLOG_WFMT(...) util::empty_logger___()
-#define XLOG_EFMT(...) util::empty_logger___()
-#define XLOG_FFMT(...) util::empty_logger___()
+#define XLOG_FMT(...) xlogger::empty_logger___()
+#define XLOG_IFMT(...) xlogger::empty_logger___()
+#define XLOG_WFMT(...) xlogger::empty_logger___()
+#define XLOG_EFMT(...) xlogger::empty_logger___()
+#define XLOG_FFMT(...) xlogger::empty_logger___()
 
-#define VXLOG_DBG(...) util::empty_logger___()
-#define VXLOG_INFO(...) util::empty_logger___()
-#define VXLOG_WARN(...) util::empty_logger___()
-#define VXLOG_ERR(...) util::empty_logger___()
-#define VXLOG_FILE(...) util::empty_logger___()
+#define VXLOG_DBG(...) xlogger::empty_logger___()
+#define VXLOG_INFO(...) xlogger::empty_logger___()
+#define VXLOG_WARN(...) xlogger::empty_logger___()
+#define VXLOG_ERR(...) xlogger::empty_logger___()
+#define VXLOG_FILE(...) xlogger::empty_logger___()
 
-#define VXLOG_FMT(...) util::empty_logger___()
-#define VXLOG_IFMT(...) util::empty_logger___()
-#define VXLOG_WFMT(...) util::empty_logger___()
-#define VXLOG_EFMT(...) util::empty_logger___()
-#define VXLOG_FFMT(...) util::empty_logger___()
+#define VXLOG_FMT(...) xlogger::empty_logger___()
+#define VXLOG_IFMT(...) xlogger::empty_logger___()
+#define VXLOG_WFMT(...) xlogger::empty_logger___()
+#define VXLOG_EFMT(...) xlogger::empty_logger___()
+#define VXLOG_FFMT(...) xlogger::empty_logger___()
 
-#define AXLOG_DBG util::empty_logger___()
-#define AXLOG_INFO util::empty_logger___()
-#define AXLOG_WARN util::empty_logger___()
-#define AXLOG_ERR util::empty_logger___()
-#define AXLOG_FILE util::empty_logger___()
+#define AXLOG_DBG xlogger::empty_logger___()
+#define AXLOG_INFO xlogger::empty_logger___()
+#define AXLOG_WARN xlogger::empty_logger___()
+#define AXLOG_ERR xlogger::empty_logger___()
+#define AXLOG_FILE xlogger::empty_logger___()
 
-#define AXLOG_FMT(...) util::empty_logger___()
-#define AXLOG_IFMT(...) util::empty_logger___()
-#define AXLOG_WFMT(...) util::empty_logger___()
-#define AXLOG_EFMT(...) util::empty_logger___()
-#define AXLOG_FFMT(...) util::empty_logger___()
+#define AXLOG_FMT(...) xlogger::empty_logger___()
+#define AXLOG_IFMT(...) xlogger::empty_logger___()
+#define AXLOG_WFMT(...) xlogger::empty_logger___()
+#define AXLOG_EFMT(...) xlogger::empty_logger___()
+#define AXLOG_FFMT(...) xlogger::empty_logger___()
 
 #define AXVLOG_DBG XLOG_DBG
 #define AXVLOG_INFO XLOG_INFO
