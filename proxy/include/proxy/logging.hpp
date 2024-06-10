@@ -186,6 +186,14 @@ namespace std {
 //   }
 // }
 //
+// namespace xlogger {
+//  bool tag_invoke(logger_abort_tag)
+//  {
+//    // return true to abort and stopped logging.
+//    return abort_flag;
+//  }
+// }
+//
 
 
 namespace xlogger {
