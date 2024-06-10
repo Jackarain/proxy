@@ -348,10 +348,10 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 		po::notify(vm);
 
 		if (disable_logs)
-			util::toggle_write_logging(true);
+			xlogger::toggle_write_logging(true);
 	}
 
-	init_logging(log_dir);
+	xlogger::init_logging(log_dir);
 
 	print_args(argc, argv, vm);
 
@@ -374,7 +374,7 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 		[&](const boost::system::error_code&, int sig) mutable
 			{
 				terminator_signal.remove(sig);
-				ioc.stop();
+				server->close();
 			});
 
 	net::co_spawn(ioc,
