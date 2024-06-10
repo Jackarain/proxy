@@ -4796,8 +4796,9 @@ R"x*x*x(<html>
 					socket.lowest_layer(), net_awaitable[error]);
 				if (error)
 				{
-					XLOG_ERR << "start_proxy_listen"
-						", async_accept: " << error.message();
+					if (!m_abort)
+						XLOG_ERR << "start_proxy_listen"
+							", async_accept: " << error.message();
 					co_return;
 				}
 
