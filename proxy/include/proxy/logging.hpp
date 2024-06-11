@@ -1803,11 +1803,11 @@ public:
 #undef XLOG_ERR
 #undef XLOG_FILE
 
-#undef XLOG_FMT
-#undef XLOG_IFMT
-#undef XLOG_WFMT
-#undef XLOG_EFMT
-#undef XLOG_FFMT
+#undef XLOG_FDBG
+#undef XLOG_FINFO
+#undef XLOG_FWARN
+#undef XLOG_FERR
+#undef XLOG_FFILE
 
 #undef AXLOG_DBG
 #undef AXLOG_INFO
@@ -1815,11 +1815,11 @@ public:
 #undef AXLOG_ERR
 #undef AXLOG_FILE
 
-#undef AXLOG_FMT
-#undef AXLOG_IFMT
-#undef AXLOG_WFMT
-#undef AXLOG_EFMT
-#undef AXLOG_FFMT
+#undef AXLOG_FDBG
+#undef AXLOG_FINFO
+#undef AXLOG_FWARN
+#undef AXLOG_FERR
+#undef AXLOG_FFILE
 
 #if (defined(DEBUG) || defined(_DEBUG) || \
 	defined(ENABLE_LOGGER)) && !defined(DISABLE_LOGGER)
@@ -1830,15 +1830,15 @@ public:
 #define XLOG_ERR xlogger::logger___(xlogger::_logger_error_id__)
 #define XLOG_FILE xlogger::logger___(xlogger::_logger_file_id__, false, true)
 
-#define XLOG_FMT(...) xlogger::logger___( \
+#define XLOG_FDBG(...) xlogger::logger___( \
 		xlogger::_logger_debug_id__).format_to(__VA_ARGS__)
-#define XLOG_IFMT(...) xlogger::logger___( \
+#define XLOG_FINFO(...) xlogger::logger___( \
 		xlogger::_logger_info_id__).format_to(__VA_ARGS__)
-#define XLOG_WFMT(...) xlogger::logger___( \
+#define XLOG_FWARN(...) xlogger::logger___( \
 		xlogger::_logger_warn_id__).format_to(__VA_ARGS__)
-#define XLOG_EFMT(...) xlogger::logger___( \
+#define XLOG_FERR(...) xlogger::logger___( \
 		xlogger::_logger_error_id__).format_to(__VA_ARGS__)
-#define XLOG_FFMT(...) xlogger::logger___( \
+#define XLOG_FFILE(...) xlogger::logger___( \
 		xlogger::_logger_file_id__, false, true).format_to(__VA_ARGS__)
 
 #define AXLOG_DBG xlogger::logger___(xlogger::_logger_debug_id__, true)
@@ -1847,15 +1847,15 @@ public:
 #define AXLOG_ERR xlogger::logger___(xlogger::_logger_error_id__, true)
 #define AXLOG_FILE xlogger::logger___(xlogger::_logger_file_id__, true, true)
 
-#define AXLOG_FMT(...) xlogger::logger___( \
+#define AXLOG_FDBG(...) xlogger::logger___( \
 		xlogger::_logger_debug_id__, true).format_to(__VA_ARGS__)
-#define AXLOG_IFMT(...) xlogger::logger___( \
+#define AXLOG_FINFO(...) xlogger::logger___( \
 		xlogger::_logger_info_id__, true).format_to(__VA_ARGS__)
-#define AXLOG_WFMT(...) xlogger::logger___( \
+#define AXLOG_FWARN(...) xlogger::logger___( \
 		xlogger::_logger_warn_id__, true).format_to(__VA_ARGS__)
-#define AXLOG_EFMT(...) xlogger::logger___( \
+#define AXLOG_FERR(...) xlogger::logger___( \
 		xlogger::_logger_error_id__, true).format_to(__VA_ARGS__)
-#define AXLOG_FFMT(...) xlogger::logger___( \
+#define AXLOG_FFILE(...) xlogger::logger___( \
 		xlogger::_logger_file_id__, true, true).format_to(__VA_ARGS__)
 
 #define AXVLOG_DBG AXLOG_DBG \
@@ -1886,15 +1886,15 @@ public:
 #define VXLOG_ERR XLOG_ERR << "(" << __FILE__ << ":" << __LINE__ << "): "
 #define VXLOG_FILE XLOG_FILE << "(" << __FILE__ << ":" << __LINE__ << "): "
 
-#define VXLOG_FMT(...) (XLOG_DBG << "(" \
+#define VXLOG_FDBG(...) (XLOG_DBG << "(" \
 		<< __FILE__ << ":" << __LINE__ << "): ").format_to(__VA_ARGS__)
-#define VXLOG_IFMT(...) (XLOG_INFO << "(" \
+#define VXLOG_FINFO(...) (XLOG_INFO << "(" \
 		<< __FILE__ << ":" << __LINE__ << "): ").format_to(__VA_ARGS__)
-#define VXLOG_WFMT(...) (XLOG_WARN << "(" \
+#define VXLOG_FWARN(...) (XLOG_WARN << "(" \
 		<< __FILE__ << ":" << __LINE__ << "): ").format_to(__VA_ARGS__)
-#define VXLOG_EFMT(...) (XLOG_ERR << "(" \
+#define VXLOG_FERR(...) (XLOG_ERR << "(" \
 		<< __FILE__ << ":" << __LINE__ << "): ").format_to(__VA_ARGS__)
-#define VXLOG_FFMT(...) (XLOG_FILE << "(" \
+#define VXLOG_FFILE(...) (XLOG_FILE << "(" \
 		<< __FILE__ << ":" << __LINE__ << "): ").format_to(__VA_ARGS__)
 
 
@@ -1909,11 +1909,11 @@ public:
 #define XLOG_ERR xlogger::empty_logger___()
 #define XLOG_FILE xlogger::empty_logger___()
 
-#define XLOG_FMT(...) xlogger::empty_logger___()
-#define XLOG_IFMT(...) xlogger::empty_logger___()
-#define XLOG_WFMT(...) xlogger::empty_logger___()
-#define XLOG_EFMT(...) xlogger::empty_logger___()
-#define XLOG_FFMT(...) xlogger::empty_logger___()
+#define XLOG_FDBG(...) xlogger::empty_logger___()
+#define XLOG_FINFO(...) xlogger::empty_logger___()
+#define XLOG_FWARN(...) xlogger::empty_logger___()
+#define XLOG_FERR(...) xlogger::empty_logger___()
+#define XLOG_FFILE(...) xlogger::empty_logger___()
 
 #define VXLOG_DBG(...) xlogger::empty_logger___()
 #define VXLOG_INFO(...) xlogger::empty_logger___()
@@ -1921,11 +1921,11 @@ public:
 #define VXLOG_ERR(...) xlogger::empty_logger___()
 #define VXLOG_FILE(...) xlogger::empty_logger___()
 
-#define VXLOG_FMT(...) xlogger::empty_logger___()
-#define VXLOG_IFMT(...) xlogger::empty_logger___()
-#define VXLOG_WFMT(...) xlogger::empty_logger___()
-#define VXLOG_EFMT(...) xlogger::empty_logger___()
-#define VXLOG_FFMT(...) xlogger::empty_logger___()
+#define VXLOG_FDBG(...) xlogger::empty_logger___()
+#define VXLOG_FINFO(...) xlogger::empty_logger___()
+#define VXLOG_FWARN(...) xlogger::empty_logger___()
+#define VXLOG_FERR(...) xlogger::empty_logger___()
+#define VXLOG_FFILE(...) xlogger::empty_logger___()
 
 #define AXLOG_DBG xlogger::empty_logger___()
 #define AXLOG_INFO xlogger::empty_logger___()
@@ -1933,11 +1933,11 @@ public:
 #define AXLOG_ERR xlogger::empty_logger___()
 #define AXLOG_FILE xlogger::empty_logger___()
 
-#define AXLOG_FMT(...) xlogger::empty_logger___()
-#define AXLOG_IFMT(...) xlogger::empty_logger___()
-#define AXLOG_WFMT(...) xlogger::empty_logger___()
-#define AXLOG_EFMT(...) xlogger::empty_logger___()
-#define AXLOG_FFMT(...) xlogger::empty_logger___()
+#define AXLOG_FDBG(...) xlogger::empty_logger___()
+#define AXLOG_FINFO(...) xlogger::empty_logger___()
+#define AXLOG_FWARN(...) xlogger::empty_logger___()
+#define AXLOG_FERR(...) xlogger::empty_logger___()
+#define AXLOG_FFILE(...) xlogger::empty_logger___()
 
 #define AXVLOG_DBG XLOG_DBG
 #define AXVLOG_INFO XLOG_INFO
@@ -1945,11 +1945,11 @@ public:
 #define AXVLOG_ERR XLOG_ERR
 #define AXVLOG_FILE XLOG_FILE
 
-#define AXVLOG_FMT XLOG_FMT
-#define AXVLOG_IFMT XLOG_IFMT
-#define AXVLOG_WFMT XLOG_WFMT
-#define AXVLOG_EFMT XLOG_EFMT
-#define AXVLOG_FFMT XLOG_FFMT
+#define AXVLOG_FMT XLOG_FDBG
+#define AXVLOG_IFMT XLOG_FINFO
+#define AXVLOG_WFMT XLOG_FWARN
+#define AXVLOG_EFMT XLOG_FERR
+#define AXVLOG_FFMT XLOG_FFILE
 
 #define INIT_ASYNC_LOGGING() void
 

@@ -828,7 +828,7 @@ R"x*x*x(<html>
 				uint32_t mark = m_option.so_mark_.value();
 
 				if (::setsockopt(sockfd, SOL_SOCKET, SO_MARK, &mark, sizeof(uint32_t)) < 0)
-					XLOG_WFMT("connection id: {}, setsockopt({}, SO_MARK: {}",
+					XLOG_FWARN("connection id: {}, setsockopt({}, SO_MARK: {}",
 						m_connection_id, sockfd, strerror(errno));
 			}
 #endif
@@ -2160,7 +2160,7 @@ R"x*x*x(<html>
 						ec);
 				if (ec)
 				{
-					XLOG_WFMT("connection id: {},"
+					XLOG_FWARN("connection id: {},"
 						" connect to target {}:{} error: {}",
 						m_connection_id,
 						dst_endpoint.address().to_string(),
@@ -2172,7 +2172,7 @@ R"x*x*x(<html>
 			else
 			{
 				error_code = SOCKS4_REQUEST_REJECTED_OR_FAILED;
-				XLOG_WFMT("connection id: {},"
+				XLOG_FWARN("connection id: {},"
 					" unsupported command for socks4",
 					m_connection_id);
 			}
@@ -2417,7 +2417,7 @@ R"x*x*x(<html>
 						port ? port : 80, ec, true);
 					if (ec)
 					{
-						XLOG_WFMT("connection id: {},"
+						XLOG_FWARN("connection id: {},"
 							" connect to target {}:{} error: {}",
 							m_connection_id,
 							host,
@@ -2571,7 +2571,7 @@ R"x*x*x(<html>
 				static_cast<uint16_t>(std::atol(port.c_str())), ec, true);
 			if (ec)
 			{
-				XLOG_WFMT("connection id: {},"
+				XLOG_FWARN("connection id: {},"
 					" connect to target {}:{} error: {}",
 					m_connection_id,
 					host,
@@ -2590,7 +2590,7 @@ R"x*x*x(<html>
 				net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_WFMT("connection id: {},"
+				XLOG_FWARN("connection id: {},"
 					" async write response {}:{} error: {}",
 					m_connection_id,
 					host,
@@ -2886,7 +2886,7 @@ R"x*x*x(<html>
 
 				if (ec)
 				{
-					XLOG_WFMT("connection id: {},"
+					XLOG_FWARN("connection id: {},"
 						" resolver to next proxy {}:{} error: {}",
 						m_connection_id,
 						std::string(m_bridge_proxy->host()),
@@ -2956,7 +2956,7 @@ R"x*x*x(<html>
 
 			if (ec)
 			{
-				XLOG_WFMT("connection id: {},"
+				XLOG_FWARN("connection id: {},"
 					" connect to next proxy {}:{} error: {}",
 					m_connection_id,
 					std::string(m_bridge_proxy->host()),
@@ -2996,7 +2996,7 @@ R"x*x*x(<html>
 						m_option.ssl_cert_path_, ec);
 					if (ec)
 					{
-						XLOG_WFMT("connection id: {}, "
+						XLOG_FWARN("connection id: {}, "
 							"load cert path: {}, "
 							"error: {}",
 							m_connection_id,
@@ -3035,7 +3035,7 @@ R"x*x*x(<html>
 						ec);
 					if (ec)
 					{
-						XLOG_WFMT("connection id: {},"
+						XLOG_FWARN("connection id: {},"
 							" add_certificate_authority error: {}",
 							m_connection_id,
 							ec.message());
@@ -3048,7 +3048,7 @@ R"x*x*x(<html>
 						net::ssl::rfc2818_verification(proxy_host), ec);
 					if (ec)
 					{
-						XLOG_WFMT("connection id: {},"
+						XLOG_FWARN("connection id: {},"
 							" set_verify_callback error: {}",
 							m_connection_id,
 							ec.message());
@@ -3088,7 +3088,7 @@ R"x*x*x(<html>
 					if (!SSL_set_tlsext_host_name(
 						ssl_socket.native_handle(), sni.c_str()))
 					{
-						XLOG_WFMT("connection id: {},"
+						XLOG_FWARN("connection id: {},"
 						" SSL_set_tlsext_host_name error: {}",
 							m_connection_id,
 							::ERR_get_error());
@@ -3104,13 +3104,13 @@ R"x*x*x(<html>
 						net_awaitable[ec]);
 					if (ec)
 					{
-						XLOG_WFMT("connection id: {},"
+						XLOG_FWARN("connection id: {},"
 							" ssl client protocol handshake error: {}",
 							m_connection_id,
 							ec.message());
 					}
 
-					XLOG_FMT("connection id: {}, ssl handshake: {}",
+					XLOG_FDBG("connection id: {}, ssl handshake: {}",
 						m_connection_id,
 						proxy_host);
 
@@ -3191,7 +3191,7 @@ R"x*x*x(<html>
 
 			if (ec)
 			{
-				XLOG_WFMT("connection id: {}"
+				XLOG_FWARN("connection id: {}"
 					", {} connect to next host {}:{} error: {}",
 					m_connection_id,
 					std::string(scheme),
@@ -3320,7 +3320,7 @@ R"x*x*x(<html>
 
 				if (ec)
 				{
-					XLOG_WFMT("connection id: {}, connect to target {}:{} error: {}",
+					XLOG_FWARN("connection id: {}, connect to target {}:{} error: {}",
 						m_connection_id,
 						target_host,
 						target_port,
@@ -4894,7 +4894,7 @@ R"x*x*x(<html>
 
 			if (::getsockopt(sockfd, protocol, SO_ORIGINAL_DST, (char*)&addr, &addrlen) < 0)
 			{
-				XLOG_WFMT("connection id: {}, getsockopt: {}, SO_ORIGINAL_DST: {}",
+				XLOG_FWARN("connection id: {}, getsockopt: {}, SO_ORIGINAL_DST: {}",
 					connection_id, (int)sockfd, strerror(errno));
 				co_return false;
 			}
