@@ -112,5 +112,5 @@ jobs:
       - name: Archive artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: proxy_server-win_x64
+          name: proxy_server-msvc_x64
           path: build/bin/release/proxy_server.exe
