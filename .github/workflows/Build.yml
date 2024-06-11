@@ -4,12 +4,13 @@ on: [push]
 
 jobs:
   Docker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
       - name: Build proxy
         run: |
+          apt search mingw-w64
           docker build . -t proxy:v1
           docker create --name ps proxy:v1
           mkdir -p build/docker
