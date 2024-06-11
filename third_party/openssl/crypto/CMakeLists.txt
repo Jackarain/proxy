@@ -198,7 +198,7 @@ if(NOT MSVC AND NOT APPLE)
 endif()
 
 if(MINGW)
-	target_link_libraries(crypto PUBLIC ws2_32)
+#	target_link_libraries(crypto PUBLIC ws2_32)
 endif()
 
 find_package(Threads)
