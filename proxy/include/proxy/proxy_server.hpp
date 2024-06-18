@@ -2292,7 +2292,7 @@ R"x*x*x(<html>
 			while (!m_abort)
 			{
 				parser.emplace();
-				parser->body_limit(1024 * 512); // 512k
+				parser->body_limit(1024 * 1024 * 10);
 				if (!first)
 					m_local_buffer.consume(m_local_buffer.size());
 
@@ -2465,11 +2465,13 @@ R"x*x*x(<html>
 				}
 
 				m_local_buffer.consume(m_local_buffer.size());
-				string_response resp;
 				beast::flat_buffer buf;
 
+				http::response_parser<http::string_body> parser;
+				parser.body_limit(1024 * 1024 * 10);
+
 				auto bytes = co_await http::async_read(
-					m_remote_socket, buf, resp, net_awaitable[ec]);
+					m_remote_socket, buf, parser, net_awaitable[ec]);
 				if (ec)
 				{
 					XLOG_WARN << "connection id: "
@@ -2480,7 +2482,7 @@ R"x*x*x(<html>
 				}
 
 				co_await http::async_write(
-					m_local_socket, resp, net_awaitable[ec]);
+					m_local_socket, parser.release(), net_awaitable[ec]);
 				if (ec)
 				{
 					XLOG_WARN << "connection id: "
