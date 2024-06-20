@@ -215,16 +215,16 @@ namespace xlogger {
 
 #ifdef LOGGING_ENABLE_COMPRESS_LOGS
 
-namespace logging_compress__ {
+namespace xlogging_compress__ {
 
 	struct closefile_deleter {
-		void operator()(FILE* fp) const {
+		inline void operator()(FILE* fp) const {
 			fclose(fp);
 		}
 	};
 
 	struct closegz_deleter {
-		void operator()(gzFile gz) const {
+		inline void operator()(gzFile gz) const {
 			gzclose(gz);
 		}
 	};
@@ -289,7 +289,7 @@ inline bool global_logging___ = true;
 
 namespace logger_aux__ {
 
-	constexpr long long epoch___ = 0x19DB1DED53E8000LL;
+	inline constexpr long long epoch___ = 0x19DB1DED53E8000LL;
 
 	inline int64_t gettime()
 	{
@@ -354,21 +354,21 @@ namespace logger_aux__ {
 
 			LocalTime(std::time_t t) : time_(t) {}
 
-			bool run() {
+			inline bool run() {
 				using namespace internal;
 				return handle(localtime_r(&time_, &tm_));
 			}
 
-			bool handle(std::tm* tm) { return tm != nullptr; }
+			inline bool handle(std::tm* tm) { return tm != nullptr; }
 
-			bool handle(internal::Null<>) {
+			inline bool handle(internal::Null<>) {
 				using namespace internal;
 				return fallback(localtime_s(&tm_, &time_));
 			}
 
-			bool fallback(int res) { return res == 0; }
+			inline bool fallback(int res) { return res == 0; }
 
-			bool fallback(internal::Null<>) {
+			inline bool fallback(internal::Null<>) {
 				using namespace internal;
 				std::tm* tm = std::localtime(&time_);
 				if (tm) tm_ = *tm;
@@ -747,7 +747,7 @@ public:
 
 	typedef std::shared_ptr<std::ofstream> ofstream_ptr;
 
-	void open(const char* path)
+	inline void open(const char* path)
 	{
 		m_log_path = path;
 
@@ -760,17 +760,17 @@ public:
 				m_log_path.parent_path(), ignore_ec);
 	}
 
-	std::string log_path() const
+	inline std::string log_path() const
 	{
 		return m_log_path.string();
 	}
 
-	void logging(bool disable) noexcept
+	inline void logging(bool disable) noexcept
 	{
 		m_disable_write = disable;
 	}
 
-	void write([[maybe_unused]] int64_t time,
+	inline void write([[maybe_unused]] int64_t time,
 		const char* str, std::streamsize size)
 	{
 		if (m_disable_write)
@@ -832,11 +832,11 @@ public:
 			std::thread th([fn]()
 				{
 					std::error_code ignore_ec;
-					std::mutex& m = logging_compress__::compress_lock();
+					std::mutex& m = xlogging_compress__::compress_lock();
 					std::lock_guard lock(m);
-					if (!logging_compress__::do_compress_gz(fn))
+					if (!xlogging_compress__::do_compress_gz(fn))
 					{
-						auto file = fn + logging_compress__::LOGGING_GZ_SUFFIX;
+						auto file = fn + xlogging_compress__::LOGGING_GZ_SUFFIX;
 						fs::remove(file, ignore_ec);
 						if (ignore_ec)
 							std::cerr
@@ -1166,31 +1166,31 @@ namespace logger_aux__ {
 		~async_logger___()
 		{
 			m_abort = true;
-			if (m_bg_thread.joinable())
-				m_bg_thread.join();
+			if (m_internal_thread.joinable())
+				m_internal_thread.join();
 		}
 
 	public:
 #if defined(_WIN32) || defined(WIN32)
-		LPTOP_LEVEL_EXCEPTION_FILTER oldUnhandledExceptionFilter()
+		inline LPTOP_LEVEL_EXCEPTION_FILTER oldUnhandledExceptionFilter()
 		{
 			return m_unexpected_exception_handler;
 		}
 #endif
 
-		void stop()
+		inline void stop()
 		{
 			m_abort = true;
 		}
 
-		void internal_work()
+		inline void internal_work()
 		{
 			while (!m_abort || !m_messages.empty())
 			{
-				std::unique_lock lock(m_bg_mutex);
+				std::unique_lock lock(m_internal_mutex);
 
 				if (m_messages.empty())
-					m_bg_cv.wait_for(lock, 128ms);
+					m_internal_cv.wait_for(lock, 128ms);
 
 				while (!m_messages.empty())
 				{
@@ -1205,17 +1205,17 @@ namespace logger_aux__ {
 			}
 		}
 
-		void post_log(const logger_level__& level,
+		inline void post_log(const logger_level__& level,
 			std::string&& message, bool disable_cout = false)
 		{
 			[[maybe_unused]] static auto runthread =
-				&(m_bg_thread = std::thread([this]()
+				&(m_internal_thread = std::thread([this]()
 					{
 						internal_work();
 					}));
 
 			auto time = logger_aux__::gettime();
-			std::unique_lock lock(m_bg_mutex);
+			std::unique_lock lock(m_internal_mutex);
 
 			m_messages.emplace_back(
 				internal_message
@@ -1228,13 +1228,13 @@ namespace logger_aux__ {
 			);
 			lock.unlock();
 
-			m_bg_cv.notify_one();
+			m_internal_cv.notify_one();
 		}
 
 	private:
-		std::thread m_bg_thread;
-		std::mutex m_bg_mutex;
-		std::condition_variable m_bg_cv;
+		std::thread m_internal_thread;
+		std::mutex m_internal_mutex;
+		std::condition_variable m_internal_cv;
 		std::deque<internal_message> m_messages;
 		std::atomic_bool m_abort{ false };
 #if defined(_WIN32) || defined(WIN32)
@@ -1287,14 +1287,14 @@ inline void shutdown_logging()
 	}
 }
 
-inline void toggle_logging()
+inline void turnoff_logging() noexcept
 {
-	global_logging___ = !global_logging___;
+	global_logging___ = false;
 }
 
-inline void toggle_logging(bool logging)
+inline void turnon_logging() noexcept
 {
-	global_logging___ = logging;
+	global_logging___ = true;
 }
 
 inline void toggle_write_logging(bool disable)
@@ -1797,39 +1797,26 @@ public:
 };
 } // namespace xlogger
 
-#undef XLOG_DBG
-#undef XLOG_INFO
-#undef XLOG_WARN
-#undef XLOG_ERR
-#undef XLOG_FILE
-
-#undef XLOG_FDBG
-#undef XLOG_FINFO
-#undef XLOG_FWARN
-#undef XLOG_FERR
-#undef XLOG_FFILE
-
-#undef AXLOG_DBG
-#undef AXLOG_INFO
-#undef AXLOG_WARN
-#undef AXLOG_ERR
-#undef AXLOG_FILE
-
-#undef AXLOG_FDBG
-#undef AXLOG_FINFO
-#undef AXLOG_FWARN
-#undef AXLOG_FERR
-#undef AXLOG_FFILE
-
 #if (defined(DEBUG) || defined(_DEBUG) || \
 	defined(ENABLE_LOGGER)) && !defined(DISABLE_LOGGER)
 
+// API for logging.
+inline void init_logging(const std::string& path = "");
+inline std::string log_path();
+inline std::string log_path();
+inline void shutdown_logging();
+inline void turnoff_logging() noexcept;
+inline void turnon_logging() noexcept;
+inline void toggle_write_logging(bool disable);
+
+// API for logging.
 #define XLOG_DBG xlogger::logger___(xlogger::_logger_debug_id__)
 #define XLOG_INFO xlogger::logger___(xlogger::_logger_info_id__)
 #define XLOG_WARN xlogger::logger___(xlogger::_logger_warn_id__)
 #define XLOG_ERR xlogger::logger___(xlogger::_logger_error_id__)
 #define XLOG_FILE xlogger::logger___(xlogger::_logger_file_id__, false, true)
 
+// API for logging.
 #define XLOG_FDBG(...) xlogger::logger___( \
 		xlogger::_logger_debug_id__).format_to(__VA_ARGS__)
 #define XLOG_FINFO(...) xlogger::logger___( \
