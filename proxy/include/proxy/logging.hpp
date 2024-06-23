@@ -208,9 +208,13 @@ namespace xlogger {
 #	define LOG_APPNAME "application"
 #endif
 
-#ifndef LOG_MAXFILE_SIZE
-#	define LOG_MAXFILE_SIZE (-1)
-#endif // LOG_MAXFILE_SIZE
+#ifndef DEFAULT_LOG_MAXFILE_SIZE
+#	define DEFAULT_LOG_MAXFILE_SIZE (-1)
+#endif // DEFAULT_LOG_MAXFILE_SIZE
+
+
+inline bool global_logging___ = true;
+inline int64_t global_logfile_size___ = DEFAULT_LOG_MAXFILE_SIZE;
 
 
 #ifdef LOGGING_ENABLE_COMPRESS_LOGS
@@ -285,7 +289,6 @@ namespace xlogging_compress__ {
 
 #endif
 
-inline bool global_logging___ = true;
 
 namespace logger_aux__ {
 
@@ -730,6 +733,11 @@ public:
 		if (!log_path.empty())
 			m_log_path = log_path;
 
+		if (global_logfile_size___ > 0 && global_logfile_size___ < 10 * 1024 * 1024) {
+			// log file size must be greater than 10 MiB.
+			global_logfile_size___ = DEFAULT_LOG_MAXFILE_SIZE;
+		}
+
 		m_log_path = m_log_path / (LOG_APPNAME + std::string(".log"));
 
 		if (!global_logging___)
@@ -780,11 +788,11 @@ public:
 		auto hours = time / 1000 / 3600;
 		auto last_hours = m_last_time / 1000 / 3600;
 
-		if (static_cast<int>(m_log_size) > LOG_MAXFILE_SIZE &&
-			LOG_MAXFILE_SIZE > 0)
+		if (m_log_size > global_logfile_size___ &&
+			global_logfile_size___ > 0)
 			condition = true;
 
-		if (last_hours != hours && LOG_MAXFILE_SIZE < 0)
+		if (last_hours != hours && global_logfile_size___ < 0)
 			condition = true;
 
 		while (condition) {
@@ -801,7 +809,7 @@ public:
 			auto logpath = fs::path(m_log_path.parent_path());
 			fs::path filename;
 
-			if constexpr (LOG_MAXFILE_SIZE <= 0) {
+			if (global_logfile_size___ <= 0) {
 				auto logfile = std::format("{:04d}{:02d}{:02d}-{:02d}.log",
 					ptm->tm_year + 1900,
 					ptm->tm_mon + 1,
@@ -862,7 +870,7 @@ public:
 		}
 
 		if (m_ofstream->is_open()) {
-			m_log_size += size;
+			m_log_size += static_cast<int64_t>(size);
 			m_ofstream->write(str, size);
 			m_ofstream->flush();
 		}
@@ -872,7 +880,7 @@ private:
 	fs::path m_log_path{"./logs"};
 	ofstream_ptr m_ofstream;
 	int64_t m_last_time{ -1 };
-	std::size_t m_log_size{ 0 };
+	int64_t m_log_size{ 0 };
 	bool m_disable_write{ false };
 };
 
@@ -1302,6 +1310,16 @@ inline void toggle_write_logging(bool disable)
 	auto_logger_file__& file =
 		logger_aux__::writer_single<xlogger::auto_logger_file__>();
 	file.logging(disable);
+}
+
+inline void set_logfile_maxsize(int64_t size) noexcept
+{
+	// log file size must be greater than 10 MiB.
+	if (size > 0 && size < 10 * 1024 * 1024)
+		return;
+
+	// set log file size.
+	global_logfile_size___ = size;
 }
 
 struct auto_init_async_logger
@@ -1808,6 +1826,7 @@ inline void shutdown_logging();
 inline void turnoff_logging() noexcept;
 inline void turnon_logging() noexcept;
 inline void toggle_write_logging(bool disable);
+inline void set_logfile_maxsize(int64_t size) noexcept;
 
 // API for logging.
 #define XLOG_DBG xlogger::logger___(xlogger::_logger_debug_id__)
