@@ -144,6 +144,7 @@ namespace proxy {
 	enum class pem_type
 	{
 		none,		// none.
+		domain,		// domain file.
 		cert,		// certificate file.
 		key,  		// certificate key file.
 		pwd,		// certificate password file.
@@ -162,6 +163,8 @@ namespace proxy {
 		pem_file key_;
 		pem_file pwd_;
 		pem_file dhparam_;
+
+		std::string domain_;
 
 		std::optional<net::ssl::context> ssl_context_;
 	};
@@ -435,25 +438,18 @@ R"x*x*x(<html>
 		// udp 超时时间, 用于指定 udp 连接的超时时间, 单位为秒.
 		int udp_timeout_{ udp_session_expired_time };
 
-		// 作为服务器时, 指定ssl证书目录, 使用固定文件名(ssl_crt.pem,
-		// ssl_dh.pem, ssl_key.pem, ssl_dh.pem, ssl_crt.pwd)
-		// , 这样就不用指定下面: ssl_certificate_、ssl_certificate_key_
-		// 以及 ssl_dhparam_、ssl_certificate_passwd_ 这4个参数.
+		// 作为服务器时, 指定ssl证书目录, 自动搜索子目录, 每一个目录保存一个域
+		// 名对应的所有证书文件, 如果证书是加密的, 则需要指定 password.txt 用
+		// 于存储加密的密码.
+		// 另外每个目录应该指定当前域名, 对应相应的证书文件, 域名存储在 domain.txt
+		// 文件当中, 如果目录下没有 domain.txt 文件, 则表示这将用于默认证书, 当
+		// 匹配不到证书时则使用默认证书.
 		std::string ssl_cert_path_;
 
-		// 作为服务器时, 指定ssl证书pem文件.
-		std::string ssl_certificate_;
-
-		// 作为服务器时, 指定ssl证书密钥文件.
-		std::string ssl_certificate_key_;
-
-		// 作为服务器时, 指定ssl证书解密密钥/或密钥文件.
-		std::string ssl_certificate_passwd_;
-
-		// 作为服务器时, 指定ssl dh参数文件, 可用命令:
-		// openssl dhparam -out dh4096.pem 4096
-		// 来生成此文件, 以增强密钥交换安全性.
-		std::string ssl_dhparam_;
+		// 作为客户端时, 指定ssl证书目录(通常是保存 ca 证书的目录), 如果不指定则
+		// 默认使用 https://curl.se/docs/caextract.html 中的 ca 证书文件作
+		// 为默认的 ca 证书.
+		std::string ssl_cacert_path_;
 
 		// 用于上游代理服务器具有多域名证书下指定具体域名, 即通过此指定 SNI 参数.
 		std::string proxy_ssl_name_;
@@ -2992,17 +2988,17 @@ R"x*x*x(<html>
 			if (m_option.proxy_pass_use_ssl_)
 			{
 				// 设置 ssl cert 证书目录.
-				if (fs::exists(m_option.ssl_cert_path_))
+				if (fs::exists(m_option.ssl_cacert_path_))
 				{
 					m_ssl_cli_context.add_verify_path(
-						m_option.ssl_cert_path_, ec);
+						m_option.ssl_cacert_path_, ec);
 					if (ec)
 					{
 						XLOG_FWARN("connection id: {}, "
 							"load cert path: {}, "
 							"error: {}",
 							m_connection_id,
-							m_option.ssl_cert_path_,
+							m_option.ssl_cacert_path_,
 							ec.message());
 
 						co_return false;
@@ -4435,6 +4431,12 @@ R"x*x*x(<html>
 				return result;
 			}
 
+			if (fs::path(filepath).filename() == "domain.txt")
+			{
+				result.type_ = pem_type::domain;
+				return result;
+			}
+
 			proxy::pem_type type = pem_type::none;
 			std::string line;
 
@@ -4512,6 +4514,10 @@ R"x*x*x(<html>
 							break;
 						case pem_type::pwd:
 							file.pwd_ = type;
+							break;
+						case pem_type::domain:
+							fileop::read(entry.path(), file.domain_);
+							strutil::trim(file.domain_);
 							break;
 						default:
 							break;
@@ -4611,89 +4617,44 @@ R"x*x*x(<html>
 
 		inline void init_ssl_context()
 		{
-			net::ssl::context ssl_ctx(net::ssl::context::sslv23);
+			find_cert(m_option.ssl_cert_path_);
 
-			ssl_ctx.set_options(
-				net::ssl::context::default_workarounds
-				| net::ssl::context::no_sslv2
-				| net::ssl::context::no_sslv3
-				| net::ssl::context::no_tlsv1
-				| net::ssl::context::no_tlsv1_1
-				| net::ssl::context::single_dh_use
-			);
+    		SSL_CTX_set_tlsext_servername_callback(
+				m_ssl_srv_context.native_handle(), proxy_server::ssl_sni_callback);
+    		SSL_CTX_set_tlsext_servername_arg(m_ssl_srv_context.native_handle(), this);
+		}
 
-			if (m_option.ssl_prefer_server_ciphers_)
-				ssl_ctx.set_options(SSL_OP_CIPHER_SERVER_PREFERENCE);
+		static int ssl_sni_callback(SSL *ssl, int *ad, void *arg)
+		{
+			proxy_server* pthis = (proxy_server*)arg;
+			return pthis->sni_callback(ssl, ad);
+		}
 
-			const std::string ssl_ciphers = "HIGH:!aNULL:!MD5:!3DES";
-			if (m_option.ssl_ciphers_.empty())
-				m_option.ssl_ciphers_ = ssl_ciphers;
-
-			SSL_CTX_set_cipher_list(ssl_ctx.native_handle(),
-				m_option.ssl_ciphers_.c_str());
-
-			if (!m_option.ssl_cert_path_.empty())
+		int sni_callback(SSL *ssl, int *ad)
+		{
+			const char *servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
+			if (servername)
 			{
-				auto dir = fs::path(m_option.ssl_cert_path_);
-				auto pwd = dir / "ssl_crt.pwd";
+				certificate_file* default_ctx = nullptr;
 
-				if (fs::exists(pwd))
-					ssl_ctx.set_password_callback(
-						[&pwd]([[maybe_unused]] auto... args) {
-							std::string password;
-							fileop::read(pwd, password);
-							return password;
-						}
-				);
-
-				auto cert = dir / "ssl_crt.pem";
-				auto key = dir / "ssl_key.pem";
-				auto dh = dir / "ssl_dh.pem";
-
-				if (fs::exists(cert))
-					ssl_ctx.use_certificate_chain_file(cert.string());
-
-				if (fs::exists(key))
-					ssl_ctx.use_private_key_file(
-						key.string(), boost::asio::ssl::context::pem);
-
-				if (fs::exists(dh))
-					ssl_ctx.use_tmp_dh_file(dh.string());
-			}
-			else
-			{
-				ssl_ctx.set_password_callback(
-					[&]([[maybe_unused]] auto... args) {
-						const auto& pwd = m_option.ssl_certificate_passwd_;
-						if (!fs::exists(pwd))
-							return pwd;
-
-						std::string password;
-						fileop::read(pwd, password);
-
-						return password;
-					});
-
-				boost::system::error_code ec;
-
-				ssl_ctx.use_certificate_chain_file(
-					m_option.ssl_certificate_, ec);
-
-				ssl_ctx.use_private_key_file(
-					m_option.ssl_certificate_key_,
-					net::ssl::context::pem, ec);
-
-				if (fs::exists(m_option.ssl_dhparam_)) {
-					ssl_ctx.use_tmp_dh_file(
-						m_option.ssl_dhparam_, ec);
+				for (auto& ctx : m_certificates)
+				{
+					if (ctx.domain_ == servername && ctx.ssl_context_.has_value())
+					{
+						SSL_set_SSL_CTX(ssl, ctx.ssl_context_->native_handle());
+						return SSL_TLSEXT_ERR_OK;
+					}
+					if (ctx.domain_.empty())
+						default_ctx = &ctx;
 				}
-				else {
-					ssl_ctx.use_tmp_dh(
-						net::buffer(default_dh_param()), ec);
+
+				if (default_ctx)
+				{
+					SSL_set_SSL_CTX(ssl, default_ctx->ssl_context_->native_handle());
+					return SSL_TLSEXT_ERR_OK;
 				}
 			}
-
-			m_ssl_srv_context = std::move(ssl_ctx);
+			return SSL_TLSEXT_ERR_OK;
 		}
 
 	public:
@@ -5080,7 +5041,7 @@ R"x*x*x(<html>
 		std::unordered_map<size_t, proxy_session_weak_ptr> m_clients;
 
 		// 当前服务端作为 ssl 服务时的 ssl context.
-		net::ssl::context m_ssl_srv_context{ net::ssl::context::sslv23 };
+		net::ssl::context m_ssl_srv_context{ net::ssl::context::tls_server };
 
 		// m_certificates 保存当前服务端的证书信息.
 		std::vector<certificate_file> m_certificates;
