@@ -104,11 +104,8 @@ docker build . -t proxy:v1
 | auth_users | 认证信息列表，客户端必须满足其中一对用户/密码才能握手通过，默认用户密码是 `jack:1111`，若需要设置为无需要认证代理模式，必须置 `auth_users` 参数为 "" |
 | proxy_pass | 当前服务作为中间级联服务时，`proxy_pass` 指定上游代理服务地址，格式为 `url` 格式，如果有认证信息并必须包含认证信息，如: `https://jack:1111@example.com:1080/` |
 | proxy_pass_ssl | 向 `proxy_pass` 指定的上游代理服务连接时，是否通过 `ssl` 安全传输，注意必须在上游代理服务启用 `ssl` 相关证书域名密钥等信息. |
-| ssl_certificate_dir | `ssl` 证书密钥等存放目录，`proxy_server` 会自动查找这个目录下的 `ssl_crt.pem`/`ssl_crt.pwd`/`ssl_key.pem`/`ssl_dh.pem` 这几个固定文件名作为 `ssl` 服务配置，这样 `ssl` 配置就只需要指定这一个参数 |
-| ssl_certificate | 指定证书文件路径 |
-| ssl_certificate_key | 指定证书密钥文件路径 |
-| ssl_certificate_passwd | 指定证书密钥文件加密密码(如果证书密钥文件有加密)，可以是密码文件也可以直接是密码字符串 |
-| ssl_dhparam | 指定 `DH` 参数文件路径(默认可以没有) |
+| ssl_certificate_dir | `ssl` 证书密钥等存放目录，`proxy_server` 会自动查找这个目录下的子目录, 每个目录必须为一个域名相关的证书文件 (如果证书密钥文件加密, 则需要配置 password.txt 用于指定密码, 如果是运行在多个域名下面, 则需要指定 domain.txt 用于指定当前证书文件所对应的域名, 若没有指定 domain.txt 则视为默认证书配置) |
+| ssl_cacert_dir | 指定 CA 证书文件目录用于客户端 `ssl` 连接使用, 若不指定则默认使用内置的 cacert 文件 (来自 `https://curl.se/docs/caextract.html`) |
 | ssl_sni | 指定 SNI 用于客户端 `ssl` 连接使用(此选项除非你知道在做什么，否则不需要关心) |
 | ssl_ciphers | `ssl` 协议允许的加密算法列表(此选项除非你知道在做什么，否则不需要关心) |
 | ssl_prefer_server_ciphers | 优先使用 server 端加密算法(此选项除非你知道在做什么，否则不需要关心) |
