@@ -4480,6 +4480,11 @@ R"x*x*x(<html>
 					type = pem_type::key;
 					break;
 				}
+				if (line.find("-----BEGIN PRIVATE KEY-----") != std::string::npos)
+				{
+					type = pem_type::key;
+					break;
+				}
 			}
 			result.type_ = type;
 
