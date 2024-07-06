@@ -3905,13 +3905,9 @@ R"x*x*x(<html>
 
 			auto get_target_path = [&]() -> fs::path
 			{
-				std::string url = "http://";
-				if (is_crytpo_stream())
-					url = "https://";
-				url += request[http::field::host];
+				std::string url = "http://example.com";
 				url += hctx.target_path_;
-				auto expect_url = urls::parse_uri(url);
-				return expect_url->path();
+				return urls::parse_uri(url)->path();
 			};
 
 			const fs::path path = get_target_path();
