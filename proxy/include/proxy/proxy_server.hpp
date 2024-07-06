@@ -4627,6 +4627,15 @@ R"x*x*x(<html>
 		{
 			find_cert(m_option.ssl_cert_path_);
 
+			for (const auto& ctx : m_certificates)
+			{
+				XLOG_DBG << "domain: '" << ctx.domain_
+					<< "', cert: '" << ctx.cert_.filepath_
+					<< "', key: '" << ctx.key_.filepath_
+					<< "', dhparam: '" << ctx.dhparam_.filepath_
+					<< "', pwd: '" << ctx.pwd_.filepath_ << "'";
+			}
+
     		SSL_CTX_set_tlsext_servername_callback(
 				m_ssl_srv_context.native_handle(), proxy_server::ssl_sni_callback);
     		SSL_CTX_set_tlsext_servername_arg(m_ssl_srv_context.native_handle(), this);
