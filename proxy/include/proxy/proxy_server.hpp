@@ -3902,7 +3902,19 @@ R"x*x*x(<html>
 			boost::system::error_code ec;
 
 			auto& request = hctx.request_;
-			const fs::path path = hctx.target_path_;
+
+			auto get_target_path = [&]() -> fs::path
+			{
+				std::string url = "http://";
+				if (is_crytpo_stream())
+					url = "https://";
+				url += request[http::field::host];
+				url += hctx.target_path_;
+				auto expect_url = urls::parse_uri(url);
+				return expect_url->path();
+			};
+
+			const fs::path path = get_target_path();
 
 			if (!fs::exists(path, ec))
 			{
