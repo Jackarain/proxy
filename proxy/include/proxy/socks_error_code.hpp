@@ -74,6 +74,9 @@ namespace proxy {
 			/// unassigned.
 			socks_unassigned,
 
+			/// socks invalid userid
+			socks_invalid_userid,
+
 			/// unknown error.
 			socks_unknown_error,
 
@@ -140,6 +143,8 @@ namespace proxy {
 				return "SOCKS Address type not supported";
 			case errc::socks_unassigned:
 				return "SOCKS unassigned";
+			case errc::socks_invalid_userid:
+				return "SOCKS invalid userid";
 			case errc::socks_unknown_error:
 				return "SOCKS unknown error";
 			case errc::socks_no_identd:
