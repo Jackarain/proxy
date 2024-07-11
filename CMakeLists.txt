@@ -314,7 +314,7 @@ if (ENABLE_USE_WOLFSSL)
 	# gcc 编译时 wolfssl 会有一些 stringop-overflow 警告, 这里忽略掉.
 	if (NOT MSVC AND NOT APPLE)
 		if (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
-			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-stringop-overflow")
+			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-stringop-overflow -Wno-stringop-overread -Wno-maybe-uninitialized")
 		endif()
 	endif()
 
