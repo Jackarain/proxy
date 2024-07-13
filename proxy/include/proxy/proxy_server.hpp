@@ -3973,6 +3973,10 @@ R"x*x*x(<html>
 				std::ios_base::binary |
 				std::ios_base::in);
 
+			std::string user_agent;
+			if (request.count(http::field::user_agent))
+				user_agent = std::string(request[http::field::user_agent]);
+
 			XLOG_DBG << "connection id: "
 				<< m_connection_id
 				<< ", http file: "
@@ -3981,6 +3985,9 @@ R"x*x*x(<html>
 				<< content_length
 				<< (request.count("Range") ?
 					", range: " + std::string(request["Range"])
+					: std::string())
+				<< (!user_agent.empty() ?
+					", user_agent: " + user_agent
 					: std::string());
 
 			http::status st = http::status::ok;
