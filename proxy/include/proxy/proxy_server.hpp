@@ -3977,6 +3977,10 @@ R"x*x*x(<html>
 			if (request.count(http::field::user_agent))
 				user_agent = std::string(request[http::field::user_agent]);
 
+			std::string referer;
+			if (request.count(http::field::referer))
+				referer = std::string(request[http::field::referer]);
+
 			XLOG_DBG << "connection id: "
 				<< m_connection_id
 				<< ", http file: "
@@ -3988,6 +3992,9 @@ R"x*x*x(<html>
 					: std::string())
 				<< (!user_agent.empty() ?
 					", user_agent: " + user_agent
+					: std::string())
+				<< (!referer.empty() ?
+					", referer: " + referer
 					: std::string());
 
 			http::status st = http::status::ok;
