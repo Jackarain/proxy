@@ -70,7 +70,7 @@ namespace util {
 
 		~proxy_socket() = default;
 
-		proxy_socket& operator=(proxy_socket&& other)
+		proxy_socket& operator=(proxy_socket&& other) noexcept
 		{
 			next_layer_ = std::move(other.next_layer_);
 
@@ -78,7 +78,7 @@ namespace util {
 			unscramble_ = std::move(other.unscramble_);
 		}
 
-		proxy_socket(proxy_socket&& other)
+		proxy_socket(proxy_socket&& other) noexcept
 			: next_layer_(std::move(other.next_layer_))
 			, scramble_(std::move(other.scramble_))
 			, unscramble_(std::move(other.unscramble_))

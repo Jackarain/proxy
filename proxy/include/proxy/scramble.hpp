@@ -134,7 +134,7 @@ namespace proxy {
 		scramble_stream() = default;
 		~scramble_stream() = default;
 
-		scramble_stream(scramble_stream&& other)
+		scramble_stream(scramble_stream&& other) noexcept
 			: m_key(std::move(other.m_key))
 			, m_pos(other.m_pos)
 		{
@@ -142,7 +142,7 @@ namespace proxy {
 			other.m_key.clear();
 		}
 
-		scramble_stream& operator=(scramble_stream&& other)
+		scramble_stream& operator=(scramble_stream&& other) noexcept
 		{
 			m_key = std::move(other.m_key);
 			m_pos = other.m_pos;
