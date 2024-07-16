@@ -353,9 +353,9 @@ namespace logger_aux__ {
 	{
 		struct LocalTime {
 			std::time_t time_;
-			std::tm tm_;
+			std::tm tm_{0};
 
-			LocalTime(std::time_t t) : time_(t) {}
+			explicit LocalTime(std::time_t t) : time_(t) {}
 
 			inline bool run() {
 				using namespace internal;
