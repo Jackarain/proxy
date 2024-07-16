@@ -2379,7 +2379,7 @@ R"x*x*x(<html>
 					// 件请求处理, 否则返回 403.
 					if (!m_option.autoindex_)
 					{
-						auto path = make_target_path(req.target());
+						auto path = make_real_target_path(req.target());
 
 						if (!fs::is_directory(path, ec))
 						{
@@ -3418,7 +3418,7 @@ R"x*x*x(<html>
 
 				std::string target = req.target();
 				boost::smatch what;
-				http_context http_ctx{ {}, req, target, make_target_path(req.target()) };
+				http_context http_ctx{ {}, req, target, make_real_target_path(req.target()) };
 
 				#define BEGIN_HTTP_ROUTE() if (false) {}
 				#define ON_HTTP_ROUTE(exp, func) \
@@ -3481,20 +3481,18 @@ R"x*x*x(<html>
 #endif // WIN32
 		};
 
-		inline std::string make_target_path(const std::string& target)
+		inline std::wstring make_target_path(const std::string& target)
 		{
-			auto get_target_path = [&]() -> std::string
-			{
-				std::string url = "http://example.com";
-				url += target;
-				return urls::parse_uri(url)->path();
-			};
+			std::string url = "http://example.com";
+			url += target;
+			return boost::nowide::widen(urls::parse_uri(url)->path());
+		}
 
+		inline std::string make_real_target_path(const std::string& target)
+		{
+			auto target_path = make_target_path(target);
 			auto doc_path = boost::nowide::widen(m_option.doc_directory_);
-			auto path = path_cat(doc_path, boost::nowide::widen(
-				get_target_path())).string();
-
-			return path;
+			return path_cat(doc_path, target_path).string();
 		}
 
 		inline std::tuple<std::string, fs::path> file_last_wirte_time(const fs::path& file)
@@ -3696,7 +3694,7 @@ R"x*x*x(<html>
 			boost::system::error_code ec;
 			auto& request = hctx.request_;
 
-			auto target = make_target_path(hctx.command_[0]);
+			auto target = make_real_target_path(hctx.command_[0]);
 
 			fs::directory_iterator end;
 			fs::directory_iterator it(target, ec);
@@ -3865,7 +3863,7 @@ R"x*x*x(<html>
 				co_return;
 			}
 
-			auto target_path = boost::nowide::widen(hctx.target_);
+			auto target_path = make_target_path(hctx.target_);
 			std::wstring head = fmt::format(head_fmt,
 				target_path,
 				target_path);
