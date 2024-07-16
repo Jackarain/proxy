@@ -3905,9 +3905,13 @@ R"x*x*x(<html>
 
 			auto get_target_path = [&]() -> fs::path
 			{
+#ifdef WIN32
+				return hctx.target_path_;
+#else
 				std::string url = "http://example.com";
 				url += hctx.target_path_;
 				return urls::parse_uri(url)->path();
+#endif // WIN32
 			};
 
 			const fs::path path = get_target_path();
