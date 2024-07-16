@@ -4644,6 +4644,9 @@ R"x*x*x(<html>
 
 		inline void init_ssl_context()
 		{
+			if (m_option.ssl_cert_path_.empty())
+				return;
+
 			find_cert(m_option.ssl_cert_path_);
 
 			for (const auto& ctx : m_certificates)
