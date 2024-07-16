@@ -257,15 +257,15 @@ int main(int argc, char** argv)
 
 		("server_listen", po::value<std::string>(&server_listen)->default_value("[::0]:1080")->value_name("ip:port"), "Specify server listening address and port.")
 
-		("reuse_port", po::value<bool>(&reuse_port)->default_value(false), "Enable TCP SO_REUSEPORT option (available since Linux 3.9).")
-		("happyeyeballs", po::value<bool>(&happyeyeballs)->default_value(true), "Enable Happy Eyeballs algorithm for TCP connections.")
+		("reuse_port", po::value<bool>(&reuse_port)->default_value(false, "false"), "Enable TCP SO_REUSEPORT option (available since Linux 3.9).")
+		("happyeyeballs", po::value<bool>(&happyeyeballs)->default_value(true, "true"), "Enable Happy Eyeballs algorithm for TCP connections.")
 
-		("v6only", po::value<bool>(&connect_v6only)->default_value(false), "Enable IPv6 only mode for TCP connections.")
-		("v4only", po::value<bool>(&connect_v4only)->default_value(false), "Enable IPv4 only mode for TCP connections.")
+		("v6only", po::value<bool>(&connect_v6only)->default_value(false, "false"), "Enable IPv6 only mode for TCP connections.")
+		("v4only", po::value<bool>(&connect_v4only)->default_value(false, "false"), "Enable IPv4 only mode for TCP connections.")
 
 		("local_ip", po::value<std::string>(&local_ip), "Specify local IP for client TCP connection to server.")
 
-		("transparent", po::value<bool>(&transparent)->default_value(false), "Enable transparent proxy mode(only linux).")
+		("transparent", po::value<bool>(&transparent)->default_value(false, "false"), "Enable transparent proxy mode(only linux).")
 		("so_mark", po::value<int64_t>(&linux_so_mark)->default_value(-1), "Set SO_MARK for linux transparent proxy mode.")
 
 		("udp_timeout", po::value<int>(&udp_timeout)->default_value(60), "Set UDP timeout for UDP connections.")
@@ -289,18 +289,18 @@ int main(int argc, char** argv)
 
 		("ipip_db", po::value<std::string>(&ipip_db)->value_name("")->default_value("17monipdb.datx"), "Specify ipip database filename.")
 		("http_doc", po::value<std::string>(&doc_dir)->value_name("doc"), "Specify document root directory for HTTP server.")
-		("htpasswd", po::value<bool>(&htpasswd)->value_name("")->default_value(false), "Enable WWW-Authenticate for HTTP server.")
+		("htpasswd", po::value<bool>(&htpasswd)->value_name("")->default_value(false, "false"), "Enable WWW-Authenticate for HTTP server.")
 
-		("autoindex", po::value<bool>(&autoindex)->default_value(false), "Enable directory listing.")
+		("autoindex", po::value<bool>(&autoindex)->default_value(false, "false"), "Enable directory listing.")
 		("logs_path", po::value<std::string>(&log_dir)->value_name(""), "Specify directory for log files.")
 
 		("disable_logs", po::value<bool>(&disable_logs)->value_name(""), "Disable logging.")
-		("disable_http", po::value<bool>(&disable_http)->value_name("")->default_value(false), "Disable HTTP protocol.")
-		("disable_socks", po::value<bool>(&disable_socks)->value_name("")->default_value(false), "Disable SOCKS proxy protocol.")
-		("disable_udp", po::value<bool>(&disable_udp)->value_name("")->default_value(false), "Disable UDP protocol.")
-		("disable_insecure", po::value<bool>(&disable_insecure)->value_name("")->default_value(false), "Disable insecure protocol.")
+		("disable_http", po::value<bool>(&disable_http)->value_name("")->default_value(false, "false"), "Disable HTTP protocol.")
+		("disable_socks", po::value<bool>(&disable_socks)->value_name("")->default_value(false, "false"), "Disable SOCKS proxy protocol.")
+		("disable_udp", po::value<bool>(&disable_udp)->value_name("")->default_value(false, "false"), "Disable UDP protocol.")
+		("disable_insecure", po::value<bool>(&disable_insecure)->value_name("")->default_value(false, "false"), "Disable insecure protocol.")
 
-		("scramble", po::value<bool>(&scramble)->value_name("")->default_value(false), "Noise-based data security.")
+		("scramble", po::value<bool>(&scramble)->value_name("")->default_value(false, "false"), "Noise-based data security.")
 		("noise_length", po::value<uint16_t>(&noise_length)->value_name("length")->default_value(0x0fff), "Length of the noise data.")
 	;
 
