@@ -3483,11 +3483,16 @@ R"x*x*x(<html>
 
 		inline std::string make_target_path(const std::string& target)
 		{
-			std::string unescape_target;
-			unescape(target, unescape_target);
+			auto get_target_path = [&]() -> std::string
+			{
+				std::string url = "http://example.com";
+				url += target;
+				return urls::parse_uri(url)->path();
+			};
 
 			auto doc_path = boost::nowide::widen(m_option.doc_directory_);
-			auto path = path_cat(doc_path, boost::nowide::widen(unescape_target)).string();
+			auto path = path_cat(doc_path, boost::nowide::widen(
+				get_target_path())).string();
 
 			return path;
 		}
@@ -3901,20 +3906,8 @@ R"x*x*x(<html>
 		{
 			boost::system::error_code ec;
 
-			auto& request = hctx.request_;
-
-			auto get_target_path = [&]() -> fs::path
-			{
-#ifdef WIN32
-				return hctx.target_path_;
-#else
-				std::string url = "http://example.com";
-				url += hctx.target_path_;
-				return urls::parse_uri(url)->path();
-#endif // WIN32
-			};
-
-			const fs::path path = get_target_path();
+			const auto& request = hctx.request_;
+			const fs::path& path = hctx.target_path_;
 
 			if (!fs::exists(path, ec))
 			{
