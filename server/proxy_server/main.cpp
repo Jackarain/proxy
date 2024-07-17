@@ -136,8 +136,30 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.udp_timeout_ = udp_timeout;
 
 	opt.ipip_db_ = ipip_db;
-	opt.deny_regions_ = deny_region;
-	opt.allow_regions_ = allow_region;
+	if (!deny_region.empty())
+	{
+		std::vector<std::string> regions;
+
+		for (const auto& region : deny_region)
+		{
+			auto ret = strutil::split(region, "|");
+			regions.insert(regions.end(), ret.begin(), ret.end());
+		}
+		deny_region = regions;
+	}
+	opt.deny_regions_.insert(deny_region.begin(), deny_region.end());
+	if (!allow_region.empty())
+	{
+		std::vector<std::string> regions;
+
+		for (const auto& region : allow_region)
+		{
+			auto ret = strutil::split(region, "|");
+			regions.insert(regions.end(), ret.begin(), ret.end());
+		}
+		allow_region = regions;
+	}
+	opt.allow_regions_.insert(allow_region.begin(), allow_region.end());
 
 	opt.reuse_port_ = reuse_port;
 	opt.happyeyeballs_ = happyeyeballs;

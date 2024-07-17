@@ -28,6 +28,7 @@
 #include <type_traits>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/co_spawn.hpp>
@@ -376,8 +377,8 @@ R"x*x*x(<html>
 		// deny_regions_ = { "美国", "日本" };
 		// allow_regions/deny_regions 为空时, 表示不限制地区.
 		// 必须在设置了 ipip 数据库文件后才能生效.
-		std::vector<std::string> allow_regions_;
-		std::vector<std::string> deny_regions_;
+		std::unordered_set<std::string> allow_regions_;
+		std::unordered_set<std::string> deny_regions_;
 
 		// ipip 数据库文件, 用于指定 ipip 数据库文件, 用于地区限制.
 		// ipip 数据库文件可以从: https://www.ipip.net 下载.
