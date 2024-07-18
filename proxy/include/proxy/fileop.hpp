@@ -11,36 +11,50 @@
 
 #include <cstdint>
 #include <fstream>
-#include <filesystem>
 #include <span>
 #include <streambuf>
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <filesystem>
+
+#if __has_include(<boost/filesystem.hpp>)
+#  define HAS_BOOST_FILESYSTEM
+#  include <boost/filesystem.hpp>
+#endif
 
 
 //////////////////////////////////////////////////////////////////////////
 
 namespace fileop {
 
-	namespace fs = std::filesystem;
-
 	template<typename T>
 	concept ByteType = std::same_as<T, uint8_t> || std::same_as<T, char>;
 
+	template<typename P>
+	concept PathType = std::same_as<std::decay_t<P>, std::filesystem::path>
+#ifdef HAS_BOOST_FILESYSTEM
+		|| std::same_as<std::decay_t<P>, boost::filesystem::path>;
+#endif
+
 	namespace details {
 
-		inline void create_parent_directories(const fs::path& p)
+		// 创建目录, 包含创建子目录.
+		// 如果目录存在或被成功创建则返回 true, 否则返回 false.
+		template<typename P>
+		inline bool create_parent_directories(const P& p)
 		{
-			std::error_code ec;
+			try
+			{
+				if (exists(p))
+					return true;
 
-			if (fs::exists(p, ec))
-				return;
+				create_directories(p.parent_path());
+			}
+			catch (const std::exception&)
+			{}
 
-			if (ec)
-				return;
-
-			fs::create_directories(p.parent_path(), ec);
+			return false;
 		}
 
 		template<ByteType T>
@@ -70,6 +84,19 @@ namespace fileop {
 		{
 			std::streamsize bytes = val.size();
 			return buf.sgetn((char*)(val.data()), bytes);
+		}
+
+		template<PathType P>
+		std::streamsize filesize(const P& path)
+		{
+			try
+			{
+				return file_size(path);
+			}
+			catch (const std::exception&)
+			{}
+
+			return -1;
 		}
 	}
 
@@ -101,21 +128,20 @@ namespace fileop {
 		return details::read(*file.rdbuf(), val);
 	}
 
-
-	template<ByteType T>
-	std::streamsize read(const fs::path& file, std::span<T> val)
+	template<PathType P, ByteType T>
+	std::streamsize read(const P& file, std::span<T> val)
 	{
-		std::fstream f(file, std::ios_base::binary | std::ios_base::in);
+		std::fstream f(file.string(), std::ios_base::binary | std::ios_base::in);
 		return details::read(*f.rdbuf(), val);
 	}
 
-	inline std::streamsize
-	read(const fs::path& file, std::string& val)
+	template<PathType P>
+	std::streamsize read(const P& file, std::string& val)
 	{
-		std::fstream f(file, std::ios_base::binary | std::ios_base::in);
+		std::fstream f(file.string(), std::ios_base::binary | std::ios_base::in);
 		std::error_code ec;
-		auto fsize = fs::file_size(file, ec);
-		if (ec)
+		auto fsize = details::filesize(file);
+		if (fsize < 0)
 			return -1;
 		val.resize(fsize);
 		return details::read<char>(*f.rdbuf(), val);
@@ -150,12 +176,12 @@ namespace fileop {
 	}
 
 
-	template<ByteType T>
-	std::streamsize write(const fs::path& file, std::span<T> val)
+	template<PathType P, ByteType T>
+	std::streamsize write(const P& file, std::span<T> val)
 	{
 		details::create_parent_directories(file);
 
-		std::fstream f(file,
+		std::fstream f(file.string(),
 			std::ios_base::binary |
 			std::ios_base::out |
 			std::ios_base::trunc);
@@ -163,12 +189,12 @@ namespace fileop {
 		return details::write(*f.rdbuf(), val);
 	}
 
-	inline std::streamsize
-	write(const fs::path& file, std::string_view val)
+	template<PathType P>
+	std::streamsize write(const P& file, std::string_view val)
 	{
 		details::create_parent_directories(file);
 
-		std::fstream f(file,
+		std::fstream f(file.string(),
 			std::ios_base::binary |
 			std::ios_base::out |
 			std::ios_base::trunc);
