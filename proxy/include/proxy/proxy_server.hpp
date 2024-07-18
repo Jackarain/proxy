@@ -3482,6 +3482,22 @@ R"x*x*x(<html>
 #endif // WIN32
 		};
 
+		template<typename Path>
+		inline std::string make_unc_path(const Path& path)
+		{
+			auto ret = path.string();
+
+#ifdef WIN32
+			if (ret.size() > MAX_PATH)
+			{
+				boost::replace_all(ret, "/", "\\");
+				return "\\\\?\\" + ret;
+			}
+#endif
+
+			return ret;
+		}
+
 		inline std::wstring make_target_path(const std::string& target)
 		{
 			std::string url = "http://example.com";
@@ -3493,13 +3509,9 @@ R"x*x*x(<html>
 		{
 			auto target_path = make_target_path(target);
 			auto doc_path = boost::nowide::widen(m_option.doc_directory_);
+
 #ifdef WIN32
-			auto ret = path_cat(doc_path, target_path).string();
-			if (ret.size() > MAX_PATH)
-			{
-				boost::replace_all(ret, "/", "\\");
-				return "\\\\?\\" + ret;
-			}
+			auto ret = make_unc_path(path_cat(doc_path, target_path));
 #else
 			auto ret = path_cat(doc_path, target_path).string();
 #endif
@@ -3541,9 +3553,7 @@ R"x*x*x(<html>
 		#ifdef WIN32
 				if (file.string().size() > MAX_PATH)
 				{
-					auto str = file.string();
-					boost::replace_all(str, "/", "\\");
-					unc_path = "\\\\?\\" + str;
+					unc_path = make_unc_path(file);
 					ftime = fs::last_write_time(unc_path, ec);
 				}
 		#endif
