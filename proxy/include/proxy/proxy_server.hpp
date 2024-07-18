@@ -3555,7 +3555,7 @@ R"x*x*x(<html>
 		}
 
 		inline std::vector<std::wstring>
-		format_path_list(const std::string& path, boost::system::error_code ec)
+		format_path_list(const std::string& path, boost::system::error_code& ec)
 		{
 			fs::directory_iterator end;
 			fs::directory_iterator it(path, ec);
