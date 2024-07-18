@@ -3574,7 +3574,7 @@ R"x*x*x(<html>
 
 				std::wstring rpath;
 
-				if (fs::is_directory(item, ec))
+				if (fs::is_directory(unc_path.empty() ? item : unc_path, ec))
 				{
 					auto leaf = boost::nowide::narrow(item.filename().wstring());
 					leaf = leaf + "/";
@@ -3738,7 +3738,7 @@ R"x*x*x(<html>
 				auto [ftime, unc_path] = file_last_wirte_time(item);
 				obj["last_write_time"] = ftime;
 
-				if (fs::is_directory(item, ec))
+				if (fs::is_directory(unc_path.empty() ? item : unc_path, ec))
 				{
 					auto leaf = boost::nowide::narrow(item.filename().wstring());
 					obj["filename"] = leaf;
