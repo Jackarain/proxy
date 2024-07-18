@@ -3493,7 +3493,18 @@ R"x*x*x(<html>
 		{
 			auto target_path = make_target_path(target);
 			auto doc_path = boost::nowide::widen(m_option.doc_directory_);
-			return path_cat(doc_path, target_path).string();
+#ifdef WIN32
+			auto ret = path_cat(doc_path, target_path).string();
+			if (ret.size() > MAX_PATH)
+			{
+				boost::replace_all(ret, "/", "\\");
+				return "\\\\?\\" + ret;
+			}
+#else
+			auto ret = path_cat(doc_path, target_path).string();
+#endif
+
+			return ret;
 		}
 
 		inline std::tuple<std::string, fs::path> file_last_wirte_time(const fs::path& file)
