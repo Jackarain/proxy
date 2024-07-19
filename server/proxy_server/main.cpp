@@ -20,15 +20,21 @@
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
-#include <filesystem>
-namespace fs = std::filesystem;
-
 #include "proxy/proxy_server.hpp"
 #include "proxy/socks_client.hpp"
 #include "proxy/logging.hpp"
 
 #include "proxy/use_awaitable.hpp"
 #include "proxy/ipip.hpp"
+
+#ifdef USE_SNMALLOC
+# define NO_BOOTSTRAP_ALLOCATOR
+# ifndef NDEBUG
+#  define NDEBUG
+# endif
+# include "src/snmalloc/override/new.cc"
+#endif // USE_SNMALLOC
+
 
 #include "main.hpp"
 
