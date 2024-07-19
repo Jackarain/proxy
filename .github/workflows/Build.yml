@@ -99,6 +99,29 @@ jobs:
           name: proxy_server-linux_mimalloc
           path: build/bin/proxy_server
 
+  SnMalloc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update OS and Compilers
+        run: |
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          sudo apt install -y cmake gcc-12 g++-12 ninja-build
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 10
+
+      - name: Build proxy
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF -DENABLE_SNMALLOC_STATIC=ON -G Ninja
+          cmake --build build --config Release
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: proxy_server-linux_snmalloc
+          path: build/bin/proxy_server
+
   Windows:
     runs-on: windows-latest
     steps:
