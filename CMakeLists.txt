@@ -71,6 +71,7 @@ option(ENABLE_STATIC_LINK_TO_GCC	"Build static link to gcc" ON)
 option(ENABLE_TCMALLOC_STATIC		"Build with Tcmalloc support" OFF)
 option(ENABLE_JEMALLOC_STATIC		"Build with Jemalloc support" OFF)
 option(ENABLE_MIMALLOC_STATIC		"Build with mimalloc support" OFF)
+option(ENABLE_SNMALLOC_STATIC		"Build with snmalloc support" OFF)
 
 option(ENABLE_BUILD_EXAMPLES		"Build proxy examples" OFF)
 option(ENABLE_LINKE_TO_LIBATOMIC	"Link to libatomic.so - some platform requires it" OFF)
@@ -108,6 +109,18 @@ if (ENABLE_MIMALLOC_STATIC)
 	else()
 		message(FATAL_ERROR "mimalloc only support linux!!!")
 	endif()
+endif()
+
+################################################################################
+
+if (ENABLE_SNMALLOC_STATIC)
+	set(SNMALLOC_HEADER_ONLY_LIBRARY ON)
+
+	add_definitions(-DUSE_SNMALLOC)
+	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/snmalloc EXCLUDE_FROM_ALL)
+
+	link_libraries(snmalloc)
+	include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/snmalloc)
 endif()
 
 ################################################################################
