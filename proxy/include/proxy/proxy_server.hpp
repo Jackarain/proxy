@@ -3581,7 +3581,15 @@ R"x*x*x(<html>
 			fs::directory_iterator end;
 			fs::directory_iterator it(path, ec);
 			if (ec)
+			{
+				XLOG_DBG << "connection id: "
+					<< m_connection_id
+					<< ", format_path_list read dir: "
+					<< path
+					<< ", error: "
+					<< ec.message();
 				return {};
+			}
 
 			std::vector<std::wstring> path_list;
 			std::vector<std::wstring> file_list;
