@@ -3802,6 +3802,7 @@ R"x*x*x(<html>
 			string_response res{ http::status::ok, request.version() };
 			res.set(http::field::server, version_string);
 			res.set(http::field::date, server_date_string());
+			res.set(http::field::content_type, "application/json");
 			res.keep_alive(request.keep_alive());
 			res.body() = body;
 			res.prepare_payload();
