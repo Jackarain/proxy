@@ -324,6 +324,9 @@ if (ENABLE_USE_WOLFSSL)
 	# 必须定义 BOOST_ASIO_USE_WOLFSSL 以便 asio 使用 wolfssl.
 	add_definitions(-DBOOST_ASIO_USE_WOLFSSL)
 
+	# 打开 TLSX 以允许 alpn 设置.
+	set(WOLFSSL_TLSX ON)
+
 	# gcc 编译时 wolfssl 会有一些 stringop-overflow 警告, 这里忽略掉.
 	if (NOT MSVC AND NOT APPLE)
 		if (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
