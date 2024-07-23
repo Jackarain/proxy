@@ -540,6 +540,7 @@ R"x*x*x(<html>
 		virtual void start() = 0;
 		virtual void close() = 0;
 		virtual void set_tproxy_remote(const net::ip::tcp::endpoint&) = 0;
+		virtual size_t connection_id() = 0;
 	};
 
 
@@ -806,6 +807,11 @@ R"x*x*x(<html>
 			const net::ip::tcp::endpoint& tproxy_remote) override
 		{
 			m_tproxy_remote = tproxy_remote;
+		}
+
+		virtual size_t connection_id() override
+		{
+			return m_connection_id;
 		}
 
 	private:
@@ -1116,10 +1122,6 @@ R"x*x*x(<html>
 			}
 			else if (detect[0] == 0x16) // http/socks proxy with ssl crypto protocol.
 			{
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
-					<< ", ssl protocol";
-
 				auto& srv_ssl_context = server->ssl_context();
 
 				// instantiate socks stream with ssl context.
@@ -1129,6 +1131,15 @@ R"x*x*x(<html>
 				// get origin ssl stream type.
 				ssl_stream& ssl_socket =
 					boost::variant2::get<ssl_stream>(ssl_socks_stream);
+
+				// set this to SSL* ex data.
+				auto ex_index = SSL_get_ex_new_index(0, nullptr, nullptr, nullptr, nullptr);
+				SSL_set_ex_data(ssl_socket.native_handle(), ex_index, (void*)this);
+
+				XLOG_DBG << "connection id: "
+					<< m_connection_id
+					<< ", ssl protocol, ex index: "
+					<< ex_index;
 
 				// do async ssl handshake.
 				co_await ssl_socket.async_handshake(
@@ -4531,20 +4542,60 @@ R"x*x*x(<html>
 			return result;
 		}
 
-		static void alpn_select_callback(SSL* ssl, const unsigned char** out, unsigned char* outlen,
+		static int alpn_select_callback(SSL* ssl, const unsigned char** out, unsigned char* outlen,
 			const unsigned char* in, unsigned int inlen, void* arg)
 		{
 			proxy_server* self = (proxy_server*)arg;
-			self->alpn_callback(ssl, out, outlen, in, inlen);
+			return self->alpn_callback(ssl, out, outlen, in, inlen);
 		}
 
-		void alpn_callback(SSL* ssl, const unsigned char** out, unsigned char* outlen,
+		int alpn_callback(SSL* ssl, const unsigned char** out, unsigned char* outlen,
 			const unsigned char* in, unsigned int inlen)
 		{
-			// Example of protocol selection
+			static int ex_index = 1;
+			proxy_session* self = (proxy_session*)SSL_get_ex_data(ssl, ex_index);
+			if (!self)
+			{
+				for (int i = 1; i <= (ex_index << 1); i++)
+				{
+					self = (proxy_session*)SSL_get_ex_data(ssl, ex_index + i);
+					if (self)
+						break;
+					self = (proxy_session*)SSL_get_ex_data(ssl, ex_index - i);
+					if (self)
+						break;
+				}
+			}
+
+			ex_index++;
+
+			auto connection_id = self->connection_id();
+
+			const unsigned char* client_proto = in;
+			unsigned int client_proto_len = 0;
+
+			std::string protocols;
+
+			while (inlen > 0)
+			{
+				client_proto_len = *client_proto;
+				client_proto++; // Skip the length byte
+
+				if (!protocols.empty())
+					protocols += ", ";
+				protocols += std::string((const char*)client_proto, client_proto_len);
+
+				inlen -= client_proto_len + 1;
+				client_proto += client_proto_len;
+			}
+
+			XLOG_DBG << "connection id: " << connection_id << ", Client ALPN: " << protocols;
+
 			const unsigned char* alpn = (const unsigned char*)"\x08http/1.1";
 			*out = alpn + 1; // Skip the length byte
 			*outlen = alpn[0];
+
+			return 0;
 		}
 
 		inline void find_cert(const fs::path& directory)
@@ -4680,7 +4731,7 @@ R"x*x*x(<html>
 
 				// 设置 ssl context 的 ALPN 协议.
 				SSL_CTX_set_alpn_select_cb(ssl_ctx.native_handle(),
-					(SSL_CTX_alpn_select_cb_func)proxy_server::alpn_select_callback, (void*)this);
+					proxy_server::alpn_select_callback, (void*)this);
 
 				// 保存到 m_certificates 中.
 				m_certificates.emplace_back(std::move(file));
