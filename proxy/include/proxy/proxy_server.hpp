@@ -4531,6 +4531,21 @@ R"x*x*x(<html>
 			return result;
 		}
 
+		static void alpn_select_callback(SSL* ssl, const unsigned char** out, unsigned char* outlen,
+			const unsigned char* in, unsigned int inlen, void* arg)
+		{
+			proxy_server* self = (proxy_server*)arg;
+			self->alpn_callback(ssl, out, outlen, in, inlen);
+		}
+
+		void alpn_callback(SSL* ssl, const unsigned char** out, unsigned char* outlen,
+			const unsigned char* in, unsigned int inlen)
+		{
+			// Example of protocol selection
+			const unsigned char* alpn = (const unsigned char*)"\x08http/1.1";
+			*out = alpn + 1; // Skip the length byte
+			*outlen = alpn[0];
+		}
 
 		inline void find_cert(const fs::path& directory)
 		{
@@ -4663,6 +4678,10 @@ R"x*x*x(<html>
 					);
 				}
 
+				// 设置 ssl context 的 ALPN 协议.
+				SSL_CTX_set_alpn_select_cb(ssl_ctx.native_handle(),
+					(SSL_CTX_alpn_select_cb_func)proxy_server::alpn_select_callback, (void*)this);
+
 				// 保存到 m_certificates 中.
 				m_certificates.emplace_back(std::move(file));
 			}
@@ -4691,8 +4710,8 @@ R"x*x*x(<html>
 
 		static int ssl_sni_callback(SSL *ssl, int *ad, void *arg)
 		{
-			proxy_server* pthis = (proxy_server*)arg;
-			return pthis->sni_callback(ssl, ad);
+			proxy_server* self = (proxy_server*)arg;
+			return self->sni_callback(ssl, ad);
 		}
 
 		int sni_callback(SSL *ssl, int *ad)
