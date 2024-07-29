@@ -27,6 +27,11 @@ namespace po = boost::program_options;
 #include "proxy/use_awaitable.hpp"
 #include "proxy/ipip.hpp"
 
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable: 4005)
+#endif // _MSC_VER
+
 #ifdef USE_SNMALLOC
 # define NO_BOOTSTRAP_ALLOCATOR
 # ifndef NDEBUG
@@ -35,6 +40,9 @@ namespace po = boost::program_options;
 # include "src/snmalloc/override/new.cc"
 #endif // USE_SNMALLOC
 
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
 
 #include "main.hpp"
 
