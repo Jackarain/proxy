@@ -41,7 +41,7 @@ jobs:
     name: ${{ matrix.name }}
     steps:
       - name: "Checkout"
-        uses: actions/checkout@master
+        uses: actions/checkout@main
         with: { path: "b2" }
 
       - name: "Snapshot"
@@ -72,13 +72,13 @@ jobs:
           rm -rf "${{github.workspace}}/b2-${version}"
 
       - name: "Upload"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@main
         with:
-          name: archives-${{github.run_id}}
+          name: B2-${{matrix.name}}
           path: "${{github.workspace}}/b2-*"
 
       - name: "Publish"
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@master
         if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
         with:
           files: "${{github.workspace}}/b2-*"

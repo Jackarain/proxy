@@ -172,6 +172,8 @@ provides access to the so-called backend.
 
 For instance::
 
+    typedef bmp_tag tag_t;
+
     typedef get_reader_backend< const std::string
                               , tag_t
                               >::type backend_t;
@@ -245,7 +247,7 @@ The following example shows this feature::
              , gray16_image_t
              , rgb8_image_t
              , rgba8_image_t
-             > my_img_types > runtime_image;
+             > runtime_image;
 
     read_image( filename
               , runtime_image
@@ -323,7 +325,7 @@ Writing an any_image<...> is supported. See the following example::
              , gray16_image_t
              , rgb8_image_t
              , rgba8_image_t
-             > my_img_types > runtime_image;
+             > runtime_image;
 
     // fill any_image
 

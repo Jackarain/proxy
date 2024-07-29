@@ -26,7 +26,6 @@ target_link_libraries(boost_container
     Boost::config
     Boost::intrusive
     Boost::move
-    Boost::static_assert
 )
 
 target_compile_definitions(boost_container

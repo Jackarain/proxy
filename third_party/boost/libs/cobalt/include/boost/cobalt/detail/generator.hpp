@@ -15,6 +15,8 @@
 #include <boost/cobalt/detail/this_thread.hpp>
 #include <boost/cobalt/unique_handle.hpp>
 #include <boost/cobalt/detail/wrapper.hpp>
+#include <boost/cobalt/op.hpp>
+#include <boost/cobalt/noop.hpp>
 
 #include <boost/asio/bind_allocator.hpp>
 #include <boost/core/exchange.hpp>
@@ -92,19 +94,21 @@ struct generator_receiver : generator_receiver_base<Yield, Push>
 
   bool ready() { return exception || result || done; }
 
+  generator_receiver(noop<Yield> n) : result(std::move(n.value)), done(true) {}
+
   generator_receiver() = default;
   generator_receiver(generator_receiver && lhs)
   : generator_receiver_base<Yield, Push>{std::move(lhs.pushed_value)},
-    exception(std::move(lhs.exception)), done(lhs.done),
+    exception(std::move(lhs.exception)),
     result(std::move(lhs.result)),
-    result_buffer(std::move(lhs.result_buffer)),
+    result_buffer(std::move(lhs.result_buffer)), done(lhs.done),
     awaited_from(std::move(lhs.awaited_from)), yield_from{std::move(lhs.yield_from)},
     lazy(lhs.lazy), reference(lhs.reference), cancel_signal(lhs.cancel_signal)
 
   {
     if (!lhs.done && !lhs.exception)
     {
-      reference = this;
+      *reference = this;
       lhs.exception = moved_from_exception();
     }
     lhs.done = true;
@@ -112,18 +116,47 @@ struct generator_receiver : generator_receiver_base<Yield, Push>
 
   ~generator_receiver()
   {
-    if (!done && reference == this)
-      reference = nullptr;
+    if (!done && *reference == this)
+      *reference = nullptr;
   }
 
   generator_receiver(generator_receiver * &reference, asio::cancellation_signal & cancel_signal)
-  : reference(reference), cancel_signal(cancel_signal)
+  : reference(&reference), cancel_signal(&cancel_signal)
   {
     reference = this;
   }
 
-  generator_receiver  * &reference;
-  asio::cancellation_signal & cancel_signal;
+
+  generator_receiver& operator=(generator_receiver && lhs) noexcept
+  {
+    if (*reference == this)
+    {
+      *reference = nullptr;
+    }
+
+    generator_receiver_base<Yield, Push>::operator=(std::move(lhs));
+    exception = std::move(lhs.exception);
+    done = lhs.done;
+    result = std::move(lhs.result);
+    result_buffer = std::move(lhs.result_buffer);
+    awaited_from = std::move(lhs.awaited_from);
+    yield_from = std::move(lhs.yield_from);
+    lazy = lhs.lazy;
+    reference = lhs.reference;
+    cancel_signal = lhs.cancel_signal;
+
+    if (!lhs.done && !lhs.exception)
+    {
+      *reference = this;
+      lhs.exception = moved_from_exception();
+    }
+    lhs.done = true;
+
+    return *this;
+  }
+
+  generator_receiver  **reference;
+  asio::cancellation_signal * cancel_signal;
 
   using yield_awaitable = generator_yield_awaitable<Yield, Push>;
 
@@ -185,7 +218,7 @@ struct generator_receiver : generator_receiver_base<Yield, Push>
 
       if constexpr (requires (Promise p) {p.get_cancellation_slot();})
         if ((cl = h.promise().get_cancellation_slot()).is_connected())
-          cl.emplace<forward_cancellation>(self->cancel_signal);
+          cl.emplace<forward_cancellation>(*self->cancel_signal);
 
       self->awaited_from.reset(h.address());
 
@@ -315,13 +348,15 @@ struct generator_promise
       promise_throw_if_cancelled_base,
       enable_awaitables<generator_promise<Yield, Push>>,
       enable_await_allocator<generator_promise<Yield, Push>>,
-      enable_await_executor< generator_promise<Yield, Push>>
+      enable_await_executor< generator_promise<Yield, Push>>,
+      enable_await_deferred
 {
   using promise_cancellation_base<asio::cancellation_slot, asio::enable_total_cancellation>::await_transform;
   using promise_throw_if_cancelled_base::await_transform;
   using enable_awaitables<generator_promise<Yield, Push>>::await_transform;
   using enable_await_allocator<generator_promise<Yield, Push>>::await_transform;
   using enable_await_executor<generator_promise<Yield, Push>>::await_transform;
+  using enable_await_deferred::await_transform;
 
   [[nodiscard]] generator<Yield, Push> get_return_object()
   {
@@ -345,7 +380,7 @@ struct generator_promise
     this->reset_cancellation_source(signal.slot());
   }
 
-  std::suspend_never initial_suspend() {return {};}
+  std::suspend_never initial_suspend() noexcept {return {};}
 
   struct final_awaitable
   {

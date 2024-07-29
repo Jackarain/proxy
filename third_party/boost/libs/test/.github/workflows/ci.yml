@@ -27,6 +27,7 @@ env:
   GIT_FETCH_JOBS: 8
   NET_RETRY_COUNT: 5
   DEFAULT_BUILD_VARIANT: release
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
 jobs:
   posix:
@@ -252,10 +253,13 @@ jobs:
 
           - toolset: clang
             cxxstd: "11,14"
-            os: macos-11
+            os: macos-12
           - toolset: clang
             cxxstd: "20"
-            os: macos-12
+            os: macos-13
+          - toolset: clang
+            cxxstd: "20"
+            os: macos-14
 
     runs-on: ${{matrix.os}}
     container: ${{matrix.container}}

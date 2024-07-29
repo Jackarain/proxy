@@ -6,7 +6,7 @@ https://www.boost.org/LICENSE_1_0.txt
 
 [#latch]
 # <boost/compat/latch.hpp>
-:idprefix: latch_
+:idprefix: ref_latch_
 
 ## Description
 

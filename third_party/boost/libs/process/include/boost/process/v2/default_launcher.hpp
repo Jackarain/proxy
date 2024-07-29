@@ -59,8 +59,5 @@ typedef posix::default_launcher default_process_launcher;
 
 BOOST_PROCESS_V2_END_NAMESPACE
 
-#if defined(BOOST_PROCESS_V2_HEADER_ONLY)
-#include <boost/process/v2/impl/default_launcher.ipp>
-#endif
 
 #endif //BOOST_PROCESS_V2_DEFAULT_LAUNCHER_HPP

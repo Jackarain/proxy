@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_IMPL_IPV4_ADDRESS_IPP
-#define BOOST_URL_IMPL_IPV4_ADDRESS_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/ipv4_address.hpp>
@@ -166,4 +164,3 @@ parse_ipv4_address(
 } // urls
 } // boost
 
-#endif

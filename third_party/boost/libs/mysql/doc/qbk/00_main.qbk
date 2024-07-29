@@ -46,6 +46,7 @@
 [def __SocketStream__ [reflink2 SocketStream ['SocketStream]]]
 [def __StaticRow__ [reflink2 StaticRow ['StaticRow]]]
 [def __Stream__ [reflink2 Stream ['Stream]]]
+[def __WritableField__ [reflink2 WritableFieldTuple ['WritableField]]]
 [def __WritableFieldTuple__ [reflink2 WritableFieldTuple ['WritableFieldTuple]]]
 
 
@@ -123,7 +124,21 @@ BEGIN
 END
 ```]
 
-[import ../../example/snippets.cpp]
+[import ../../test/integration/include/test_integration/snippets/describe.hpp]
+[import ../../test/integration/test/snippets/overview.cpp]
+[import ../../test/integration/test/snippets/dynamic.cpp]
+[import ../../test/integration/test/snippets/static.cpp]
+[import ../../test/integration/test/snippets/prepared_statements.cpp]
+[import ../../test/integration/test/snippets/multi_resultset.cpp]
+[import ../../test/integration/test/snippets/multi_function.cpp]
+[import ../../test/integration/test/snippets/metadata.cpp]
+[import ../../test/integration/test/snippets/charsets.cpp]
+[import ../../test/integration/test/snippets/time_types.cpp]
+[import ../../test/integration/test/snippets/any_connection.cpp]
+[import ../../test/integration/test/snippets/connection_pool.cpp]
+[import ../../test/integration/test/snippets/sql_formatting.cpp]
+[import ../../test/integration/test/snippets/sql_formatting_custom.cpp]
+[import ../../test/integration/test/snippets/pipeline.cpp]
 
 [include 01_intro.qbk]
 [include 02_integrating.qbk]
@@ -148,6 +163,7 @@ END
 [include 21_connection_pool.qbk]
 [include 22_sql_formatting.qbk]
 [include 23_sql_formatting_advanced.qbk]
+[include 24_pipeline.qbk]
 [include 24_examples.qbk]
 [include 25_tests.qbk]
 

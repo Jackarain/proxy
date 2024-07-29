@@ -8,6 +8,11 @@ https://www.boost.org/LICENSE_1_0.txt
 # Revision History
 :idprefix:
 
+## Changes in Boost 1.86
+
+* Support `result<T> & fv`, where `fv` returns `void`.
+* Support `result<void> &= fv;`, where `fv` returns `void`.
+
 ## Changes in Boost 1.85
 
 * {cpp}03 is no longer supported; a {cpp}11 compiler is required. (This includes GCC 4.8 or later, and MSVC 14.0 (VS 2015) or later.)

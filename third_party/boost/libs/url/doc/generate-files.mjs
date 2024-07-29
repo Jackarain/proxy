@@ -175,9 +175,9 @@ if (isBoostDir(cwdParentParent)) {
     execSync(`rm -rf ${selfDir}`)
 
     // Copy contents of cwd to boost/libs/self
-    const selfDirParent = path.join(boostDir, 'libs')
-    console.log(`Copying ${cwd} to ${selfDirParent}`)
-    execSync(`cp -r ${cwd} ${selfDirParent}`)
+    // const selfDirParent = path.join(boostDir, 'libs')
+    console.log(`Copying ${cwd} to ${selfDir}`)
+    execSync(`cp -r ${cwd} ${selfDir}`)
 }
 
 /*

@@ -52,7 +52,7 @@ struct as_user_launcher : default_launcher
                      Args && args,
                      Inits && ... inits ) -> basic_process<typename ExecutionContext::executor_type>
   {
-      return (*this)(context.get_executor(), executable, std::forward<Args>(args), std::forward<Inits>(inits)...);
+      return (*this)(context.get_executor(), ec, executable, std::forward<Args>(args), std::forward<Inits>(inits)...);
   }
 
   template<typename Executor, typename Args, typename ... Inits>

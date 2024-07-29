@@ -196,6 +196,9 @@ namespace example
      * \param i A function parameter
      * \param j Another
      * \return The answer
+     * \throw std::runtime_error Some error description
+     * \throw std::bad_alloc Memory allocation error
+     * \throw ~ Free form description of exception throwing
      * \pre i > j
      *
      * This is a test function.

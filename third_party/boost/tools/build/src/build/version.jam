@@ -9,8 +9,8 @@ import numbers ;
 
 # Mirror engine JAM_VERSION
 .major = 5 ;
-.minor = 1 ;
-.patch = 0 ;
+.minor = 2 ;
+.patch = 1 ;
 
 
 rule build ( )

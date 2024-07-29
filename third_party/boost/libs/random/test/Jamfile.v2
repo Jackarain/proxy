@@ -9,7 +9,12 @@
 import testing ;
 import ../../config/checks/config : requires ;
 
-project /boost/random/test : requirements <toolset>msvc:<define>_SCL_SECURE_NO_WARNINGS ;
+project /boost/random/test : requirements
+
+    <library>/boost/random//boost_random
+
+    <toolset>msvc:<define>_SCL_SECURE_NO_WARNINGS
+;
 
 run test_const_mod.cpp /boost//unit_test_framework ;
 run test_generate_canonical.cpp /boost//unit_test_framework ;

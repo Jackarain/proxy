@@ -159,14 +159,14 @@ upside down:
 
 .. code-block:: cpp
 
-  #include <boost\gil\extension\io\jpeg_dynamic_io.hpp>
+  #include <boost\gil\extension\io\jpeg.hpp>
 
   template <typename Image>    // Could be rgb8_image_t or any_image<...>
   void save_180rot(const std::string& file_name)
   {
     Image img;
-    jpeg_read_image(file_name, img);
-    jpeg_write_view(file_name, rotated180_view(view(img)));
+    read_image(file_name, img, jpeg_tag());
+    write_view(file_name, rotated180_view(view(img)), jpeg_tag());
   }
 
 It can be instantiated with either a compile-time or a runtime image

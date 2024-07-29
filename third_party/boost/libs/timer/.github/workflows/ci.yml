@@ -59,6 +59,11 @@ jobs:
             container: ubuntu:23.04
             os: ubuntu-latest
             install: g++-13
+          - toolset: gcc-14
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: g++-14
           - toolset: clang
             compiler: clang++-3.9
             cxxstd: "11,14"
@@ -143,14 +148,20 @@ jobs:
             os: ubuntu-latest
             install: clang-17
           - toolset: clang
-            cxxstd: "11,14,17,2a"
-            os: macos-11
+            compiler: clang++-18
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-18
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-12
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-13
+          - toolset: clang
+            cxxstd: "11,14,17,20,2b"
+            os: macos-14
 
     runs-on: ${{matrix.os}}
     container: ${{matrix.container}}
@@ -235,7 +246,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd
@@ -269,13 +280,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-20.04, ubuntu-22.04, macos-11, macos-12, macos-13 ]
+        os: [ ubuntu-20.04, ubuntu-22.04, macos-12, macos-13, macos-14 ]
         shared: [ OFF, ON ]
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -313,13 +324,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-20.04, ubuntu-22.04, macos-11, macos-12, macos-13 ]
+        os: [ ubuntu-20.04, ubuntu-22.04, macos-12, macos-13, macos-11 ]
         shared: [ OFF, ON ]
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -373,13 +384,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-20.04, ubuntu-22.04, macos-11, macos-12, macos-13 ]
+        os: [ ubuntu-20.04, ubuntu-22.04, macos-12, macos-13, macos-14 ]
         shared: [ OFF, ON ]
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -431,7 +442,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd
@@ -479,7 +490,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd
@@ -547,7 +558,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd

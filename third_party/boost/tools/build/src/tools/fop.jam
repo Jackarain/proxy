@@ -17,6 +17,18 @@ generators.register-standard fop.render.ps : FO : PS ;
 #
 rule init ( fop-command ? : java-home ? : java ? )
 {
+    if ! $(.initialized)
+    {
+        .initialized = true ;
+    }
+    else
+    {
+        if ! ( $(1) || $(2) || $(3) )
+        {
+            return ;
+        }
+    }
+
     local has-command = $(.has-command) ;
 
     if $(fop-command)

@@ -14,7 +14,7 @@
 #define VECTOR_VECTOR_RESIZE_HPP
 
 #include <vector>
-
+#include <type_traits>
 #include <boost/range.hpp>
 
 namespace boost { namespace numeric { namespace odeint {
@@ -22,7 +22,7 @@ namespace boost { namespace numeric { namespace odeint {
 template<>
 struct is_resizeable< std::vector< std::vector< double > > >
 {
-    typedef boost::true_type type;
+    typedef std::true_type type;
     const static bool value = type::value;
 };
 
@@ -65,7 +65,7 @@ struct state_wrapper< std::vector< std::vector< double > > >
 {
     typedef std::vector< std::vector< double > > state_type;
     typedef state_wrapper< state_type > state_wrapper_type;
-    typedef boost::true_type is_resizeable;
+    typedef std::true_type is_resizeable;
 
     state_type m_v;
 

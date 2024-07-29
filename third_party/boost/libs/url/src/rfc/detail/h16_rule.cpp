@@ -7,9 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_RFC_DETAIL_IMPL_H16_RULE_HPP
-#define BOOST_URL_RFC_DETAIL_IMPL_H16_RULE_HPP
-
 #include <boost/url/detail/config.hpp>
 #include "h16_rule.hpp"
 #include <boost/url/grammar/charset.hpp>
@@ -84,4 +81,3 @@ parse(
 } // urls
 } // boost
 
-#endif

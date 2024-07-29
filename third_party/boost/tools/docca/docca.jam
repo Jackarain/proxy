@@ -10,9 +10,12 @@
 
 
 import "class" : new ;
+import common ;
 import doxygen ;
+import feature ;
 import param ;
 import path ;
+import print ;
 import project ;
 import property-set ;
 import quickbook ;
@@ -20,11 +23,18 @@ import saxonhe ;
 import sequence ;
 import toolset ;
 import type ;
+import virtual-target ;
+
+import python ;
 
 
 .here  = [ path.make [ modules.binding $(__name__) ] ] ;
 .here = $(.here:D) ;
 
+
+feature.feature "docca:param" : : free ;
+feature.feature "docca:config" : : free dependency ;
+feature.feature "docca:template" : : free dependency ;
 
 rule reference ( target : sources * : requirements * : default-build *
     : usage-requirements * )
@@ -67,7 +77,7 @@ rule reference ( target : sources * : requirements * : default-build *
     # Adopt as a target index.xml which was created as a side-effect
     make-explicit $(target-dir)/index.xml $(project)
         : $(target-dir)/stamp
-        : @docca.null-action
+        : @docca.touch-action
         ;
 
     #--------------------------------------------------------------------------
@@ -127,6 +137,8 @@ rule reference ( target : sources * : requirements * : default-build *
     make-explicit $(target-dir)/xml-pages $(project)
         : $(target-dir)/xml-pages.xml
         : @docca.null-action
+        :
+        : <implicit-dependency>$(target-dir)/xml-pages.xml
         ;
 
     make-explicit $(target-dir)/stage1/results $(project)
@@ -158,6 +170,105 @@ rule reference ( target : sources * : requirements * : default-build *
         ;
 }
 
+
+rule pyreference ( target : sources * : requirements * : default-build *
+    : usage-requirements * )
+{
+    param.handle-named-params
+        sources requirements default-build usage-requirements ;
+
+    local project = [ project.current ] ;
+    local target-dir = $(target:S=) ;
+    target-dir = $(target-dir:B=_$(target-dir:B)-dir) ;
+
+    # Generate doxygen configuration file from sources
+    sources = [ sequence.transform fix-source $(project) : $(sources) ] ;
+    doxyfile $(target-dir)/sources.dox
+        : $(sources)
+        : $(requirements)
+          <doxygen:param>GENERATE_HTML=NO
+          <doxygen:param>GENERATE_XML=YES
+          <doxygen:param>XML_OUTPUT=$(target-dir)
+        : $(default-build)
+        ;
+    $(project).mark-target-as-explicit $(target-dir)/sources.dox ;
+
+    #--------------------------------------------------------------------------
+    #
+    # Invoke Doxygen to process the header files and produce the XML
+    # containing the description of the C++ declarations and extracted
+    # Javadoc comments.
+    doxygen-xml-multifile $(target-dir)/stamp
+        : $(target-dir)/sources.dox
+        : $(requirements)
+        : $(default-build)
+        ;
+    $(project).mark-target-as-explicit $(target-dir)/stamp ;
+
+    # Adopt as a target index.xml which was created as a side-effect
+    make-explicit $(target-dir)/index.xml $(project)
+        : $(target-dir)/stamp
+        : @docca.touch-action
+        ;
+
+    # Construct a config file from parameters provided by the build system
+    make $(target-dir)/docca-config.json
+        :
+        : @docca.make-docca-config
+        : $(requirements)
+        : $(default-build)
+        ;
+
+    generate $(target)
+        : $(target-dir)/index.xml
+        : <generating-rule>@docca.make-qbk2
+          $(requirements)
+          <docca:config>$(target-dir)/docca-config.json
+        : $(default-build)
+        : $(usage-requirements)
+        ;
+}
+
+
+rule make-qbk2 ( project name : property-set : source )
+{
+    local template = [ $(property-set).get <docca:template> ] ;
+    if $(template[2])
+    {
+        local paths ;
+        for local tmpl in $(templates)
+        {
+            paths += [ $(tmpl).path ] ;
+        }
+        import errors ;
+        errors.user-error "Several templates specified for docca:" $(paths) ;
+    }
+    if ! $(template)
+    {
+        template =
+            [ virtual-target.from-file quickbook.jinja2
+            : $(.here)/include/docca
+            : $(project)
+            ] ;
+    }
+
+    local configs = [ $(property-set).get <docca:config> ] ;
+    local action-name = docca.generate-reference ;
+    local relevant = [ toolset.relevant $(action-name) ] ;
+    local action = [
+          new action $(source) $(template) $(configs)
+        : $(action-name)
+        : [ $(property-set).relevant $(relevant) ]
+        ] ;
+    local target = [
+          new file-target $(name) exact
+        : [ type.type $(name) ]
+        : $(project)
+        : $(action)
+        ] ;
+    local path = [ path.root $(name) [ $(target).path ] ] ;
+    return [ property-set.create <include>$(path:D) ] $(target) ;
+}
 
 rule make-qbk ( project name : property-set : sources * )
 {
@@ -226,6 +337,51 @@ local rule fix-source ( project path )
 }
 
 
-rule null-action
+.TOUCH = [ common.file-touch-command ] ;
+actions touch-action
 {
+    $(.TOUCH) "$(<)"
 }
+
+rule null-action ( target : srcs * : props * )
+{
+    NOUPDATE $(target) ;
+}
+
+rule generate-reference ( target : sources + : properties * )
+{
+    RUNNER on $(target) = [ path.native $(.here)/docca.py ] ;
+}
+actions generate-reference
+{
+    "$(PYTHON)" "$(RUNNER)" -i"$(>[1])" -o"$(<)" -c"$(>[3-])" -T"$(>[2])" -I"$(INCLUDE)"
+}
+
+rule make-docca-config ( target : sources * : properties * )
+{
+    local text = "{" ;
+
+    # Translate <docca:param> into command line flags.
+    local sep = "" ;
+    for local param in [ feature.get-values <docca:param> : $(properties) ]
+    {
+        local namevalue = [ MATCH "([^=]*)=(.*)" : $(param) ] ;
+        local name = $(namevalue[1]) ;
+        local value = $(namevalue[2]) ;
+        if ! $(value) in true false null
+        {
+            value = "\"$(value)\"" ;
+        }
+        text += "$(sep) \"$(name)\": $(value)" ;
+        sep = "," ;
+    }
+
+    text += "}" ;
+
+    print.output $(target) plain ;
+    print.text $(text) : true ;
+}
+
+toolset.flags docca.generate-reference FLAGS <flags> ;
+toolset.flags docca.generate-reference INCLUDE <include> ;
+toolset.flags docca.generate-reference PYTHON <python.interpreter> ;

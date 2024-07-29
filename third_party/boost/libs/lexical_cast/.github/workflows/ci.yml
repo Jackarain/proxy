@@ -37,6 +37,9 @@ jobs:
             compiler: clang++-14
             cxxstd: "03,11,14,17,2a"
             os: ubuntu-22.04
+          - toolset: clang
+            cxxstd: "11,14,17,20"
+            os: macos-13
 
     runs-on: ${{matrix.os}}
 

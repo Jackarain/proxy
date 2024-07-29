@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_RFC_DETAIL_IMPL_USERINFO_RULE_IPP
-#define BOOST_URL_RFC_DETAIL_IMPL_USERINFO_RULE_IPP
 
 #include <boost/url/detail/config.hpp>
 #include "userinfo_rule.hpp"
@@ -72,4 +70,3 @@ parse(
 } // urls
 } // boost
 
-#endif

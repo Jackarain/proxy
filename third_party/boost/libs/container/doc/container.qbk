@@ -6,7 +6,7 @@
  /]
 
 [library Boost.Container
-    [quickbook 1.5]
+    [quickbook 1.7]
     [authors [Gaztanaga, Ion]]
     [copyright 2009-2018 Ion Gaztanaga]
     [id container]
@@ -485,13 +485,13 @@ To avoid unbounded memory waste, Boost.Container's `devector` uses a different s
   
 * If elements are inserted near one extreme and the free space on that extreme is exhausted, all existing elements
   are relocated (moved) to the center of the internal memory buffer. This makes room in the exhausted extreme
-  to insert more elements whihout allocating a new buffer.
+  to insert more elements without allocating a new buffer.
 
 * Potentially, the maximum number of possible relocations (movements) reusing the memory buffer are Olog(N),
   but that would lead non-amortized constant-time insertion at the extremes. In consequence, the number of
   relocations must be limited ('relocation limit') and a reallocation (allocation of a new memory buffer) will be
   performed if the load-factor of the container defined as (size()/length_of_buffer) surpasses the relocation limit (see
-  Lars Greger Nordland Hagen's [href http://larshagencpp.github.io/blog/2016/05/22/devector"Double-ended vector - is it useful?"]
+  Lars Greger Nordland Hagen's [@http://larshagencpp.github.io/blog/2016/05/22/devector "Double-ended vector - is it useful?"]
   article for more details.
 
 * This approach offers a reasonable balance between a reasonable memory overhead and performance.
@@ -505,14 +505,14 @@ However, this strategy has also some downsides:
         the number of insertions to perform before a reallocation is performed. Depending on which extreme a insertion
         takes place, a reallocation might occur or not (maybe there is free capacity at that extreme)
 
-   * Instead of removing the `capacity()` member or renaming it to "minimum_capacity()", the definition has been changed
+   * Instead of removing the `capacity()` member or renaming it to "`minimum_capacity()`", the definition has been changed
      to tell the *minimum* number of elements that can be inserted without reallocating. This allows the typical pattern
      where:
         * If `reserve(n)` is called, `capacity() >= n`
         * If `capacity() == n` it is guaranteed that if `size() <= n` no reallocation will occur.
 
    * However the usual container invariant where `size() <= capacity()` does not hold. `size()` can be bigger than
-    `capacity()` because elements can be always inserted at a extreme with free capacity without reallocation.
+    `capacity()` because elements can be always inserted at an extreme with free capacity without reallocation.
 
 
 [endsect]
@@ -662,9 +662,9 @@ implementations could achieve O(1) range splice when the range size was known to
 
 [: `void splice(iterator position, list& x, iterator first, iterator last, size_type n);`
 
-   [*Effects]: Inserts elements in the range [first, last) before position and removes the elements from x.
+   [*Effects]: Inserts elements in the range `[first, last)` before position and removes the elements from x.
 
-   [*Requires]: [first, last) is a valid range in x. The result is undefined if position is an iterator in the range [first, last). Invalidates only the iterators and references to the spliced elements. n == distance(first, last).
+   [*Requires]: `[first, last)` is a valid range in x. The result is undefined if position is an iterator in the range `[first, last)`. Invalidates only the iterators and references to the spliced elements. `n == distance(first, last)`.
 
    [*Throws]: Nothing.
 
@@ -1363,7 +1363,7 @@ use [*Boost.Container]? There are several reasons for that:
 
 [endsect]
 
-[include auto_index_helpers.qbk]
+[import ../../../tools/auto_index/include/auto_index_helpers.qbk]
 
 [section:index Indexes]
 
@@ -1408,6 +1408,22 @@ use [*Boost.Container]? There are several reasons for that:
 [endsect]
 
 [section:release_notes Release Notes]
+
+[section:release_notes_boost_1_86_00 Boost 1.86 Release]
+
+* Fixed bugs/issues:
+   * [@https://github.com/boostorg/container/issues/280 GitHub #280: ['"Several containers don't support non-movable types when move assigning"]].
+   * [@https://github.com/boostorg/container/issues/279 GitHub #279: ['"small_vector cannot go back to use stack space"]].
+   * [@https://github.com/boostorg/container/issues/277 GitHub #277: ['"Remove dep on boost::static_assert"]].
+   * [@https://github.com/boostorg/container/issues/275 GitHub #275: ['"Compilation fails if custom key comparison is used"]].
+   * [@https://github.com/boostorg/container/issues/273 GitHub #273: ['"flat_map/vector crashes on appends (memory corruption)"]].
+   * [@https://github.com/boostorg/container/issues/269 GitHub #269: ['"flat_multimap::emplace not sorting elements under GCC"]].
+   * [@https://github.com/boostorg/container/issues/266 GitHub #266: ['"small_vector<T> is misaligned on the stack in 32 bits"]].
+   * [@https://github.com/boostorg/container/issues/259 GitHub #259: ['"Global variables"]].
+   * [@https://github.com/boostorg/container/issues/245 GitHub #245: ['"flat_tree::insert ordered range doesn't assert sorting"]].
+   * [@https://github.com/boostorg/container/issues/241 GitHub #241: ['"flat_map should support same interface as std::map"]].
+
+[endsect]
 
 [section:release_notes_boost_1_85_00 Boost 1.85 Release]
 

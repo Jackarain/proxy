@@ -257,6 +257,17 @@ namespace boost {
   template<class K, class T, class H, class P, class A, class Predicate>
     typename unordered_multimap<K, T, H, P, A>::size_type
       xref:#unordered_multimap_erase_if[erase_if](unordered_multimap<K, T, H, P, A>& c, Predicate pred);
+
+  // Pmr aliases (C++17 and up)
+  namespace unordered::pmr {
+    template<class Key,
+             class T,
+             class Hash = boost::hash<Key>,
+             class Pred = std::equal_to<Key>>
+    using unordered_multimap =
+      boost::unordered_multimap<Key, T, Hash, Pred,
+        std::pmr::polymorphic_allocator<std::pair<const Key, T>>>;
+  }
 }
 -----
 

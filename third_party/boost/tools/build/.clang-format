@@ -2,7 +2,7 @@
 BasedOnStyle: WebKit
 IndentWidth: 4
 TabWidth: 4
-UseTab: Never
+UseTab: Always
 ---
 Language: Cpp
 AccessModifierOffset: 0

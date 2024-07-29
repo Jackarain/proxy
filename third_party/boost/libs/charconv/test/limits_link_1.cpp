@@ -3,6 +3,7 @@
 // https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/charconv/limits.hpp>
+#include <boost/charconv/detail/bit_layouts.hpp>
 
 void test_odr_use( int const* );
 
@@ -28,7 +29,9 @@ void f1()
 
     test<float>();
     test<double>();
+    #ifndef BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE
     test<long double>();
+    #endif
 
 #ifdef BOOST_CHARCONV_HAS_INT128
 

@@ -7,18 +7,17 @@
 
 //  See <http://www.boost.org/libs/crc/> for the library's home page.
 
-#include <boost/core/lightweight_test.hpp>
-#include <boost/crc.hpp>   // for boost::crc_basic,crc_optimal,augmented_crc,crc
+#include <boost/crc.hpp>                      // for boost::crc_basic,crc_optimal,augmented_crc,crc
+#include <boost/core/bit.hpp>                 // for boost::core::byteswap, boost::core::endian
+#include <boost/core/detail/minstd_rand.hpp>  // for boost::detail::minstd_rand
+#include <boost/core/lightweight_test.hpp>    // for BOOST_TEST_EQ, et al
+#include <boost/cstdint.hpp>                  // for boost::uint16_t, uint32_t, uintmax_t
+#include <boost/integer.hpp>                  // for boost::uint_t
 
-#include <boost/cstdint.hpp>         // for boost::uint16_t, uint32_t, uintmax_t
-#include <boost/predef/other/endian.h>
-#include <boost/integer.hpp>                                // for boost::uint_t
-#include <boost/typeof/typeof.hpp>                             // for BOOST_AUTO
-#include <boost/random/linear_congruential.hpp>        // for boost::minstd_rand
-
-#include <algorithm>  // for std::generate_n, for_each
-#include <climits>    // for CHAR_BIT
-#include <cstddef>    // for std::size_t
+#include <algorithm>    // for std::generate_n, for_each
+#include <climits>      // for CHAR_BIT
+#include <cstddef>      // for std::size_t
+#include <type_traits>  // for std::integral_constant
 
 // Sanity check
 #if CHAR_BIT != 8
@@ -30,6 +29,7 @@
 #define CONTROL_SUB_BYTE_MISMATCHED_REFLECTION_TEST  1
 #endif
 
+#define BOOST_AUTO(var, exp) auto var = exp
 
 // Common definitions  -------------------------------------------------------//
 
@@ -48,42 +48,21 @@ boost::uint16_t const  std_crc_16_result = 0xBB3Du;
 boost::uint32_t const  std_crc_32_result = 0xCBF43926ul;
 
 // Conversion functions between native- and big-endian representations
-#if BOOST_ENDIAN_BIG_BYTE
-boost::uint32_t  native_to_big( boost::uint32_t x )  { return x; }
-boost::uint32_t  big_to_native( boost::uint32_t x )  { return x; }
-#else
-union endian_convert
+
+inline boost::uint32_t native_to_big_impl( boost::uint32_t x, std::true_type )
 {
-    boost::uint32_t  w;
-    unsigned char    p[ 4 ];
-};
-
-boost::uint32_t  native_to_big( boost::uint32_t x )
-{
-    endian_convert  e;
-
-    e.p[ 0 ] = x >> 24;
-    e.p[ 1 ] = x >> 16;
-    e.p[ 2 ] = x >> 8;
-    e.p[ 3 ] = x;
-    return e.w;
-}
-
-boost::uint32_t  big_to_native( boost::uint32_t x )
-{
-    endian_convert  e;
-
-    e.w = x;
-    x = e.p[ 0 ];
-    x <<= 8;
-    x |= e.p[ 1 ];
-    x <<= 8;
-    x |= e.p[ 2 ];
-    x <<= 8;
-    x |= e.p[ 3 ];
     return x;
 }
-#endif
+
+inline boost::uint32_t native_to_big_impl( boost::uint32_t x, std::false_type )
+{
+    return boost::core::byteswap( x );
+}
+
+inline boost::uint32_t native_to_big( boost::uint32_t x )
+{
+    return native_to_big_impl( x, std::integral_constant<bool, boost::core::endian::native == boost::core::endian::big>() );
+}
 
 // Define CRC parameters inside traits classes.  Probably will use this in a
 // future version of the CRC libray!
@@ -91,7 +70,7 @@ template < std::size_t Bits >
 class my_crc_rt_traits
 {
 public:
-    typedef boost::integral_constant<std::size_t, Bits>            register_length_c;
+    typedef std::integral_constant<std::size_t, Bits>            register_length_c;
     typedef typename boost::uint_t<Bits>::fast  register_type;
     typedef boost::crc_basic<Bits>              computer_type;
 
@@ -117,15 +96,15 @@ public:
     typedef boost::crc_optimal<Bits, DivisorPolynominal, InitialRemainder,
      FinalXorMask, ReflectInputBytes, ReflectOutputRemainder>  computer_type;
 
-    typedef boost::integral_constant<std::size_t, Bits>  register_length_c;
-    typedef boost::integral_constant<register_type, DivisorPolynominal>
+    typedef std::integral_constant<std::size_t, Bits>  register_length_c;
+    typedef std::integral_constant<register_type, DivisorPolynominal>
       divisor_polynominal_c;
-    typedef boost::integral_constant<register_type, InitialRemainder>
+    typedef std::integral_constant<register_type, InitialRemainder>
       initial_remainder_c;
-    typedef boost::integral_constant<bool, ReflectInputBytes>  reflect_input_byte_c;
-    typedef boost::integral_constant<bool, ReflectOutputRemainder>
+    typedef std::integral_constant<bool, ReflectInputBytes>  reflect_input_byte_c;
+    typedef std::integral_constant<bool, ReflectOutputRemainder>
       reflect_output_remainder_c;
-    typedef boost::integral_constant<register_type, FinalXorMask>
+    typedef std::integral_constant<register_type, FinalXorMask>
       final_xor_mask_c;
 
     operator rt_adaptor_type() const
@@ -157,17 +136,17 @@ public:
 
     typedef typename rt_traits_type::register_type  register_type;
 
-    typedef boost::integral_constant<std::size_t, Bits>  register_length_c;
-    typedef boost::integral_constant<register_type, DivisorPolynominal>
+    typedef std::integral_constant<std::size_t, Bits>  register_length_c;
+    typedef std::integral_constant<register_type, DivisorPolynominal>
       divisor_polynominal_c;
-    typedef boost::integral_constant<register_type, InitialRemainder>
+    typedef std::integral_constant<register_type, InitialRemainder>
       initial_remainder_c;
-    typedef boost::integral_constant<bool, ReflectInputBytes>  reflect_input_byte_c;
-    typedef boost::integral_constant<bool, ReflectOutputRemainder>
+    typedef std::integral_constant<bool, ReflectInputBytes>  reflect_input_byte_c;
+    typedef std::integral_constant<bool, ReflectOutputRemainder>
       reflect_output_remainder_c;
-    typedef boost::integral_constant<register_type, FinalXorMask>
+    typedef std::integral_constant<register_type, FinalXorMask>
       final_xor_mask_c;
-    typedef boost::integral_constant<register_type, StandardTestDataResult>
+    typedef std::integral_constant<register_type, StandardTestDataResult>
       standard_test_data_CRC_c;
 
     typedef typename ct_traits_type::computer_type  computer_ct_type;
@@ -325,7 +304,7 @@ void operator()(CRCPolicy)
     boost::uint32_t    ran_data[ 256 ];
     std::size_t const  ran_length = sizeof(ran_data) / sizeof(ran_data[0]);
 
-    std::generate_n( ran_data, ran_length, boost::minstd_rand() );
+    std::generate_n( ran_data, ran_length, boost::detail::minstd_rand() );
 
     // Create computers and compute the checksum of the data
     BOOST_AUTO( optimal_tester, CRCPolicy::make_crc_optimal() );
@@ -386,7 +365,7 @@ void augmented_crc_test()
     uint32_t &    run_crc = run_data[ data_length ];
     size_t const  data_size = sizeof( run_data ) - sizeof( run_crc );
 
-    std::generate_n( run_data, data_length, boost::minstd_rand() );
+    std::generate_n( run_data, data_length, boost::detail::minstd_rand() );
     run_crc = 0u;
 
     // The augmented-CRC routine needs to push an appropriate number of zero

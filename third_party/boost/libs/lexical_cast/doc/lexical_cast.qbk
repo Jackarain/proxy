@@ -235,6 +235,11 @@ limitation of compiler options that you use.
 
 [section Changes]
 
+* [*boost 1.86.0 :]
+
+    * Fixed conversion of `std::basic_string_view` and `boost::basic_string_view`
+      containing one or more `\0` characters. Issue was introduced in 1.85.0.
+
 * [*boost 1.85.0 :]
 
     * Significant rewrite of the internal logic to separate optimized and C++ Standard Library IO-based streams:

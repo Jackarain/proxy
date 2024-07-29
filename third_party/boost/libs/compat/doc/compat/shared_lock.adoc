@@ -6,7 +6,7 @@ https://www.boost.org/LICENSE_1_0.txt
 
 [#shared_lock]
 # <boost/compat/shared_lock.hpp>
-:idprefix: shared_lock_
+:idprefix: ref_shared_lock_
 
 ## Description
 
@@ -129,7 +129,7 @@ shared_lock( mutex_type& m, std::adopt_lock_t );
 [horizontal]
 Preconditions:;; `m` must be held by a previous call to `m.lock_shared()` or a
 successful call to `m.try_lock_shared()`.
-PostConditions:;; `mutex() == std::addressof(m)` and `owns_lock() == true`.
+Postconditions:;; `mutex() == std::addressof(m)` and `owns_lock() == true`.
 
 ### Copy Constructor
 

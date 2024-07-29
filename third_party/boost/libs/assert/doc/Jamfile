@@ -5,12 +5,8 @@
 # http://www.boost.org/LICENSE_1_0.txt)
 
 import asciidoctor ;
-# import boostbook ;
 
 html assert.html : index.adoc ;
-
-# docbook assert.docbook : index.adoc ;
-# boostbook assert.html : assert.docbook : <format>onehtml ;
 
 install html_ : assert.html : <location>html ;
 

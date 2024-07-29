@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_DETAIL_IMPL_PARAMS_ITER_IMPL_IPP
-#define BOOST_URL_DETAIL_IMPL_PARAMS_ITER_IMPL_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/detail/params_iter_impl.hpp>
@@ -243,4 +241,3 @@ key() const noexcept
 } // url
 } // boost
 
-#endif

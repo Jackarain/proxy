@@ -8,6 +8,9 @@
 /*!
 \page changelog Changelog
 
+- 1.86.0
+    - Make ICU implementation of `to_title` threadsafe
+    - Add allocator support to `utf_to_utf`
 - 1.85.0
     - Breaking changes
         - `collator` does no longer derive from `std::collator` avoiding possible type confusion

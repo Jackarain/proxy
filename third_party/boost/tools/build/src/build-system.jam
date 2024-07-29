@@ -642,7 +642,7 @@ local rule should-clean-project ( project )
             {
                 default-toolset = vmsdecc ;
             }
-            else if [ os.name ] = MACOSX
+            else if [ os.name ] = MACOSX || [ os.name ] = FREEBSD || [ os.name ] = OPENBSD
             {
                 default-toolset = clang ;
             }

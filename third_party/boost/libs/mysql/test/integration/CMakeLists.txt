@@ -5,12 +5,6 @@
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 #
 
-# This is only processed when we're the main project and
-# BOOST_MYSQL_INTEGRATION_TESTS is on
-
-cmake_minimum_required(VERSION 3.12...3.22) # string JOIN
-find_package(Boost ${BOOST_MYSQL_VERSION} REQUIRED COMPONENTS context)
-
 add_executable(
     boost_mysql_integrationtests
 
@@ -35,26 +29,37 @@ add_executable(
     test/reconnect.cpp
     test/any_connection.cpp
     test/character_set_tracking.cpp
+    test/pipeline.cpp
     test/connection_pool.cpp
     test/db_specific.cpp
     test/database_types.cpp
+
+    # Snippets
+    test/snippets/overview.cpp
+    test/snippets/dynamic.cpp
+    test/snippets/static.cpp
+    test/snippets/prepared_statements.cpp
+    test/snippets/multi_resultset.cpp
+    test/snippets/multi_function.cpp
+    test/snippets/metadata.cpp
+    test/snippets/charsets.cpp
+    test/snippets/time_types.cpp
+    test/snippets/any_connection.cpp
+    test/snippets/connection_pool.cpp
+    test/snippets/sql_formatting.cpp
+    test/snippets/sql_formatting_custom.cpp
+    test/snippets/pipeline.cpp
 )
 target_include_directories(
     boost_mysql_integrationtests
     PRIVATE
-    "include"
+    include
 )
 target_link_libraries(
     boost_mysql_integrationtests
     PRIVATE
     boost_mysql_testing
-    Boost::mysql
     Boost::context
-)
-target_compile_definitions(
-    boost_mysql_integrationtests
-    PRIVATE
-    BOOST_ALLOW_DEPRECATED # Integration tests still exercise the old execution interface
 )
 boost_mysql_common_target_settings(boost_mysql_integrationtests)
 if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.16)
@@ -66,36 +71,17 @@ if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.16)
 endif()
 
 # Compose the test filter
-if (NOT "$ENV{BOOST_MYSQL_NO_UNIX_SOCKET_TESTS}" STREQUAL "")
-    list(APPEND TEST_EXCLUSIONS "!@unix")
-endif()
 set (DB_SYSTEM $ENV{BOOST_MYSQL_TEST_DB})
 if ("${DB_SYSTEM}" STREQUAL "")
     set(DB_SYSTEM "mysql8")
 endif()
-list(APPEND TEST_EXCLUSIONS "!@skip_${DB_SYSTEM}")
-string(JOIN ":" TEST_FILTER ${TEST_EXCLUSIONS})
+set(TEST_FILTER "!@skip_${DB_SYSTEM}")
 
-if ("${TEST_FILTER}" STREQUAL "")
-    add_test(
-        NAME boost_mysql_integrationtests
-        COMMAND boost_mysql_integrationtests
-    )
-else()
-    add_test(
-        NAME boost_mysql_integrationtests
-        COMMAND boost_mysql_integrationtests "-t" ${TEST_FILTER}
-    )
+if (NOT "$ENV{BOOST_MYSQL_NO_UNIX_SOCKET_TESTS}" STREQUAL "")
+    set(TEST_FILTER "${TEST_FILTER}:!@unix")
 endif()
 
-# If we are using memcheck, then run a subset of the integration tests
-# under valgrind. Coroutine tests don't work well under Valgrind, and
-# SSL tests are too slow. We do some other exclusions to reduce runtime
-if (BOOST_MYSQL_VALGRIND_TESTS)
-    string(JOIN ":" TEST_FILTER ${TEST_EXCLUSIONS} "!@ssl" "!@async_coroutine")
-    add_memcheck_test(
-        NAME boost_mysql_integrationtests_memcheck
-        TARGET boost_mysql_integrationtests
-        ARGUMENTS "-t" ${TEST_FILTER}
-    )
-endif()
+add_test(
+    NAME boost_mysql_integrationtests
+    COMMAND boost_mysql_integrationtests "-t" ${TEST_FILTER}
+)

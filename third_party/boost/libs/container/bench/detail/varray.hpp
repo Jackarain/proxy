@@ -33,7 +33,8 @@
 #include <boost/container/detail/type_traits.hpp>
 #include <boost/move/adl_move_swap.hpp> //adl_move_swap
 
-#include <boost/move/detail/force_ptr.hpp> //adl_move_swap
+#include <boost/move/detail/launder.hpp> //
+#include <boost/move/detail/force_ptr.hpp>
 
 
 #include "varray_util.hpp"
@@ -1071,10 +1072,10 @@ public:
 
             typename aligned_storage
                <sizeof(value_type), alignment_of<value_type>::value>::type temp_storage;
-            value_type * val_p = static_cast<value_type*>(static_cast<void*>(&temp_storage));
+            value_type * val_p = move_detail::force_ptr<value_type*>(&temp_storage);
             sv::construct(dti(), val_p, ::boost::forward<Args>(args)...);                  // may throw
             sv::scoped_destructor<value_type> d(val_p);
-            sv::assign(position, ::boost::move(*val_p));                            // may throw
+            sv::assign(position, ::boost::move(*move_detail::launder(val_p)));                            // may throw
         }
 
         return position;
@@ -1114,10 +1115,10 @@ public:
          sv::move_backward(position, this->end() - 2, this->end() - 1);/*may throw*/\
          typename aligned_storage\
             <sizeof(value_type), alignment_of<value_type>::value>::type temp_storage;\
-         value_type * val_p = static_cast<value_type*>(static_cast<void*>(&temp_storage));\
+         value_type * val_p = move_detail::force_ptr<value_type*>(&temp_storage);\
          sv::construct(dti(), val_p BOOST_MOVE_I##N BOOST_MOVE_FWD##N ); /*may throw*/\
          sv::scoped_destructor<value_type> d(val_p);\
-         sv::assign(position, ::boost::move(*val_p));/*may throw*/\
+         sv::assign(position, ::boost::move(*move_detail::launder(val_p)));/*may throw*/\
       }\
       return position;\
    }\
@@ -1582,7 +1583,7 @@ private:
         storage_type;
 
         storage_type temp_storage;
-        value_type * temp_ptr = static_cast<value_type*>(static_cast<void*>(&temp_storage));
+        value_type * temp_ptr = move_detail::force_ptr<value_type*>(&temp_storage);
 
         ::memcpy(temp_ptr, this->data(), sizeof(Value) * this->size());
         ::memcpy(this->data(), other.data(), sizeof(Value) * other.size());
@@ -1626,7 +1627,7 @@ private:
                 sizeof(value_type),
                 alignment_of<value_type>::value
             >::type temp_storage;
-            value_type * temp_ptr = static_cast<value_type*>(static_cast<void*>(&temp_storage));
+            value_type * temp_ptr = move_detail::force_ptr<value_type*>(&temp_storage);
             ::memcpy(temp_ptr, (addressof)(*first_sm), sizeof(value_type));
             ::memcpy((addressof)(*first_sm), (addressof)(*first_la), sizeof(value_type));
             ::memcpy((addressof)(*first_la), temp_ptr, sizeof(value_type));

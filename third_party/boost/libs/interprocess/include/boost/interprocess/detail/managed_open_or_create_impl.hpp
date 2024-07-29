@@ -28,6 +28,7 @@
 #include <boost/interprocess/detail/type_traits.hpp>
 #include <boost/interprocess/detail/atomic.hpp>
 #include <boost/interprocess/detail/interprocess_tester.hpp>
+#include <boost/interprocess/anonymous_shared_memory.hpp>
 #include <boost/interprocess/creation_tags.hpp>
 #include <boost/interprocess/detail/mpl.hpp>
 #include <boost/interprocess/permissions.hpp>
@@ -202,6 +203,15 @@ class managed_open_or_create_impl
          , mode
          , addr
          , perm
+         , construct_func);
+   }
+
+   template <class ConstructFunc>
+   managed_open_or_create_impl(std::size_t size, void *addr, const ConstructFunc &construct_func)
+   {
+      priv_map_anonymous
+         ( size
+         , addr
          , construct_func);
    }
 
@@ -507,6 +517,37 @@ class managed_open_or_create_impl
 
       if(StoreDevice){
          this->DevHolder::get_device() = boost::move(dev);
+      }
+   }
+
+   template <class ConstructFunc> inline
+   void priv_map_anonymous
+      (std::size_t size,
+       void *addr,
+       ConstructFunc construct_func)
+   {
+      mapped_region region = anonymous_shared_memory(size, addr);
+
+      boost::uint32_t *patomic_word = 0;  //avoid gcc warning
+      patomic_word = static_cast<boost::uint32_t*>(region.get_address());
+      boost::uint32_t previous = atomic_cas32(patomic_word, InitializingSegment, UninitializedSegment);
+
+      if(previous == UninitializedSegment){
+         BOOST_TRY{
+            construct_func( static_cast<char*>(region.get_address()) + ManagedOpenOrCreateUserOffset
+                           , size - ManagedOpenOrCreateUserOffset, true);
+            //All ok, just move resources to the external mapped region
+            m_mapped_region.swap(region);
+         }
+         BOOST_CATCH(...){
+            atomic_write32(patomic_word, CorruptedSegment);
+            BOOST_RETHROW
+         } BOOST_CATCH_END
+         atomic_write32(patomic_word, InitializedSegment);
+      }
+      else{
+         atomic_write32(patomic_word, CorruptedSegment);
+         throw interprocess_exception(error_info(corrupted_error));
       }
    }
 

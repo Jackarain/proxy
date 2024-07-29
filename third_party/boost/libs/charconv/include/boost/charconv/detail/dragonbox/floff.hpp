@@ -1763,10 +1763,22 @@ BOOST_CHARCONV_SAFEBUFFERS to_chars_result floff(const double x, int precision, 
 
             const auto initial_digits = static_cast<std::uint32_t>(prod >> 32);
 
-            buffer -= (initial_digits < 10 ? 1 : 0);
+            buffer -= (initial_digits < 10 && buffer != first ? 1 : 0);
             remaining_digits -= (2 - (initial_digits < 10 ? 1 : 0));
-            print_2_digits(initial_digits, buffer);
-            buffer += 2;
+
+            // Avoid the situation where we have a leading 0 that we don't need
+            // Typically used to account for inserting a decimal, but we know
+            // we won't need that in the 0 precision case
+            if (precision == 0 && initial_digits < 10)
+            {
+                print_1_digit(initial_digits, buffer);
+                ++buffer;
+            }
+            else
+            {
+                print_2_digits(initial_digits, buffer);
+                buffer += 2;
+            }
 
             if (remaining_digits > remaining_digits_in_the_current_subsegment) 
             {
@@ -2411,7 +2423,7 @@ BOOST_CHARCONV_SAFEBUFFERS to_chars_result floff(const double x, int precision, 
                                         uint_with_known_number_of_digits<2>{next_digits}, [&] {
                                             return static_cast<std::uint32_t>(prod) >=
                                                         (additional_static_data_holder::
-                                                            fractional_part_rounding_thresholds32[digits_in_the_second_segment - 1] & 0x7fffffff)
+                                                            fractional_part_rounding_thresholds32[digits_in_the_second_segment - 3] & UINT32_C(0x7fffffff))
                                                     || has_further_digits<1, 0, ExtendedCache>(significand, exp2_base, k, uconst1, uconst0);
                                         })) 
                                 {
@@ -3795,7 +3807,7 @@ BOOST_CHARCONV_SAFEBUFFERS to_chars_result floff(const double x, int precision, 
 
 fill_remaining_digits_with_0s:
     // This is probably not needed for the general format, but currently I am not 100% sure.
-    // (When fixed format is eventually choosed, we do not remove trailing zeros in the integer part.
+    // (When fixed format is eventually chosen, we do not remove trailing zeros in the integer part.
     // I am not sure if those trailing zeros are guaranteed to be already printed or not.)
     std::memset(buffer, '0', static_cast<std::size_t>(remaining_digits));
     buffer += remaining_digits;

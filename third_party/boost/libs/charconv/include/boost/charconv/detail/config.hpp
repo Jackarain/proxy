@@ -27,11 +27,6 @@
 #  define BOOST_CHARCONV_UINT128_MAX (2 * static_cast<boost::uint128_type>(BOOST_CHARCONV_INT128_MAX) + 1)
 #endif
 
-#if defined(BOOST_HAS_FLOAT128) && !defined(__STRICT_ANSI__) && !defined(BOOST_CHARCONV_NO_QUADMATH)
-#  define BOOST_CHARCONV_HAS_FLOAT128
-#  include <quadmath.h>
-#endif
-
 #ifndef BOOST_NO_CXX14_CONSTEXPR
 #  define BOOST_CHARCONV_CXX14_CONSTEXPR BOOST_CXX14_CONSTEXPR
 #  define BOOST_CHARCONV_CXX14_CONSTEXPR_NO_INLINE BOOST_CXX14_CONSTEXPR
@@ -78,14 +73,6 @@
 #  else
 #    define BOOST_CHARCONV_HAS_MSVC_32BIT_INTRINSICS
 #  endif
-#elif (defined(__x86_64__) || defined(__i386__))
-#  include <x86intrin.h>
-#  define BOOST_CHARCONV_HAS_X86_INTRINSICS
-#elif defined(__ARM_NEON__)
-#  include <arm_neon.h>
-#  define BOOST_CHARCONV_HAS_ARM_INTRINSICS
-#else
-#  define BOOST_CHARCONV_HAS_NO_INTRINSICS
 #endif
 
 static_assert((BOOST_CHARCONV_ENDIAN_BIG_BYTE || BOOST_CHARCONV_ENDIAN_LITTLE_BYTE) &&

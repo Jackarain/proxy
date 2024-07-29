@@ -16,6 +16,7 @@ auto start(boost::asio::awaitable<void> op) -> int;
 #endif // BOOST_ASIO_HAS_CO_AWAIT
 
 boost::redis::config make_test_config();
+std::string get_server_hostname();
 
 void
 run(

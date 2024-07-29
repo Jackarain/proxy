@@ -42,6 +42,7 @@ import print ;
 import property-set ;
 import regex ;
 import sequence ;
+import command-db ;
 
 
 .debug-loading = [ MATCH ^(--debug-loading)$ : [ modules.peek : ARGV ] ] ;
@@ -712,11 +713,12 @@ rule initialize (
 
     # load-parent can end up loading this module again. Make sure this is not
     # duplicated.
+    local attributes ;
     if ! $($(module-name).attributes)
     {
         $(module-name).attributes = [ new project-attributes $(location)
             $(module-name) ] ;
-        local attributes = $($(module-name).attributes) ;
+        attributes = $($(module-name).attributes) ;
 
         if $(location)
         {
@@ -791,6 +793,12 @@ rule initialize (
     }
 
     .current-project = [ target $(module-name) ] ;
+
+    if $(jamroot) && [ $(attributes).get build-dir ]
+    {
+        command-db.set-output-dir
+            [ path.native [ $(attributes).get build-dir ] ] ;
+    }
 }
 
 
@@ -1312,6 +1320,7 @@ module project-rules
     {
         import path ;
         import project ;
+        import command-db ;
 
         local caller = [ CALLER_MODULE ] ;
         local attributes = [ project.attributes $(caller) ] ;
@@ -1381,6 +1390,12 @@ module project-rules
                         top-level 'project' invocations ;
                 }
             }
+        }
+
+        if $(explicit-build-dir)
+        {
+            command-db.set-output-dir
+                [ path.native [ $(attributes).get build-dir ] ] ;
         }
     }
 

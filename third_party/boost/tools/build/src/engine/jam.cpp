@@ -118,6 +118,7 @@
 #include "compile.h"
 #include "constants.h"
 #include "debugger.h"
+#include "events.h"
 #include "filesys.h"
 #include "function.h"
 #include "hcache.h"
@@ -137,6 +138,7 @@
 #include "variable.h"
 #include "execcmd.h"
 #include "mod_sysinfo.h"
+#include "mod_command_db.h"
 
 #include <errno.h>
 #include <string.h>
@@ -156,6 +158,8 @@
 # define WIN32_LEAN_AND_MEAN
 # include <windows.h>
 #endif
+
+#include "ext_bfgroup_lyra.h"
 
 struct globs globs =
 {
@@ -337,6 +341,12 @@ int guarded_main( int argc, char * * argv )
         out_printf( "B2 %s (%s, jobs=%i)\n\n", VERSION, OSMINOR, globs.jobs );
         return EXITOK;
     }
+
+	// Process options.
+	lyra::cli cli;
+	b2::command_db::declare_args(cli);
+	cli |= lyra::arg([](const std::string&){}, "").cardinality(0,0);
+	auto cli_parse_result = cli.parse({arg_c, arg_v});
 
     /* Pick up interesting options. */
     if ( ( s = getoptval( optv, 'n', 0 ) ) )
@@ -613,6 +623,7 @@ int guarded_main( int argc, char * * argv )
 
         PROFILE_EXIT( MAIN );
     }
+	b2::trigger_event_exit_main(status ? EXITBAD : EXITOK);
 
     return status ? EXITBAD : EXITOK;
 }

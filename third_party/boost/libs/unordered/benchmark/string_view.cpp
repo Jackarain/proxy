@@ -1,5 +1,5 @@
 // Copyright 2021 Peter Dimov.
-// Copyright 2023 Joaquin M Lopez Munoz.
+// Copyright 2023-2024 Joaquin M Lopez Munoz.
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
@@ -26,6 +26,7 @@
 #include <iostream>
 #include <iomanip>
 #include <chrono>
+#include <type_traits>
 
 using namespace std::chrono_literals;
 
@@ -342,7 +343,7 @@ template<> struct fnv1a_hash_impl<64>
 
 struct fnv1a_hash: fnv1a_hash_impl< std::numeric_limits<std::size_t>::digits >
 {
-    using is_avalanching = void;
+    using is_avalanching = std::true_type;
 };
 
 template<class K, class V> using std_unordered_map_fnv1a =

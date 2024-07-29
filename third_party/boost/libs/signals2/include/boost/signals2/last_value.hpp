@@ -12,6 +12,7 @@
 #define BOOST_SIGNALS2_LAST_VALUE_HPP
 
 #include <boost/core/no_exceptions_support.hpp>
+#include <boost/move/utility_core.hpp>
 #include <boost/optional.hpp>
 #include <boost/signals2/expired_slot.hpp>
 #include <boost/throw_exception.hpp>
@@ -45,7 +46,7 @@ namespace boost {
         {
           BOOST_TRY
           {
-            value = *first;
+            value = boost::move_if_not_lvalue_reference<T>(*first);
           }
           BOOST_CATCH(const expired_slot &) {}
           BOOST_CATCH_END

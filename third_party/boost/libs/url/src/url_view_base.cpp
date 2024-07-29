@@ -8,8 +8,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_IMPL_URL_VIEW_BASE_IPP
-#define BOOST_URL_IMPL_URL_VIEW_BASE_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/url_view_base.hpp>
@@ -731,4 +729,3 @@ compare(const url_view_base& other) const noexcept
 } // urls
 } // boost
 
-#endif

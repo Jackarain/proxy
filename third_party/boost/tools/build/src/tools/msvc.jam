@@ -23,6 +23,7 @@ https://docs.microsoft.com/en-us/cpp/[Microsoft Visual C++] command-line
 tools on Microsoft Windows. The supported products and versions of
 command line tools are listed below:
 
+* Visual Studio 2022-14.3
 * Visual Studio 2019-14.2
 * Visual Studio 2017—14.1
 * Visual Studio 2015—14.0
@@ -228,6 +229,7 @@ import project ;
 import property ;
 import property-set ;
 import rc ;
+import regex ;
 import sequence ;
 import set ;
 import testing ;
@@ -403,6 +405,12 @@ rule configure ( version ? : options * )
                 import errors ;
                 errors.error "MSVC toolset configuration: options should be"
                     "empty when '$(version)' is specified." ;
+            }
+
+            # Auto-register any version we can detect.
+            for local i in $(.known-versions)
+            {
+                try-auto-detect-version $(i) ;
             }
 
             # Configure (i.e. mark as used) all registered versions.
@@ -602,20 +610,12 @@ rule configure-version-specific ( toolset : version : conditions )
         toolset.flags $(toolset).link LINKFLAGS $(conditions)/$(.cpu-arch-arm)   : "/MACHINE:ARM" ;
         toolset.flags $(toolset).link LINKFLAGS $(conditions)/$(.cpu-arch-arm64) : "/MACHINE:ARM64" ;
 
-        if [ version.version-less [ SPLIT_BY_CHARACTERS [ MATCH "^([0123456789.]+)" : $(version) ] : . ] : 11 ]
-        {
-            # Make sure that manifest will be generated even if there is no
-            # dependencies to put there.
-            toolset.flags $(toolset).link LINKFLAGS $(conditions) : /MANIFEST ;
-        }
-        else
-        {
-            toolset.flags $(toolset).link LINKFLAGS $(conditions)/<embed-manifest-via>mt : /MANIFEST ;
-            toolset.flags $(toolset).link LINKFLAGS $(conditions)/<embed-manifest-via>linker/<embed-manifest>off : /MANIFEST ;
-            toolset.flags $(toolset).link LINKFLAGS $(conditions)/<embed-manifest-via>linker/<embed-manifest>on : "/MANIFEST:EMBED" ;
-
-            local conditionx = [ feature.split $(conditions) ] ;
+        local conditionx = [ feature.split $(conditions) ] ;
+        if ! [ version.version-less [ SPLIT_BY_CHARACTERS [ MATCH "^([0123456789.]+)" : $(version) ] : . ] : 11 ] {
             toolset.add-defaults $(conditionx:J=,)\:<embed-manifest-via>linker ;
+        }
+        else {
+            toolset.add-requirements $(conditionx:J=,)\:<embed-manifest-via>mt ;
         }
     }
 
@@ -690,6 +690,19 @@ rule compile.c ( targets + : sources * : properties * )
     set-setup-command $(targets) : $(properties) ;
     get-rspline $(targets) : -TC CFLAGS  ;
     compile-c-c++ $(<) : $(>) ;
+
+    local cc = [ on $(targets[1]) return $(.CC:E="") ] ;
+    cc = [ regex.escape "$(cc:J= )" : "|()[]\\+.*^$\" " : "\\" ] ;
+    local eol = [ on $(targets[1]) return $(.CC.FILTER) ] ;
+    if $(eol)
+    {
+        eol = ".*" [ regex.escape "$(eol:J= )" : "|()[]\\+.*^$\" " : "\\" ] ;
+    }
+    else
+    {
+        eol = "[^\n]*" "" ;
+    }
+    COMMAND_DATABASE on $(targets) = "($(cc)$(eol[1]))$(eol[2])" ;
 }
 
 
@@ -758,6 +771,19 @@ rule compile-c-c++ ( targets + : sources * )
     LOCATE on $(<[1]:S=.pdb) = [ on $(<[1]) return $(LOCATE) ] ;
     local pch-header = [ on $(<[1]) return $(PCH_HEADER) ] ;
     PCH_HEADER_AS_SPELLED on $(<[1]) = $(pch-header:G=) ;
+
+    local cc = [ on $(targets[1]) return $(.CC:E="") ] ;
+    cc = [ regex.escape "$(cc:J= )" : "|()[]\\+.*^$\" " : "\\" ] ;
+    local eol = [ on $(targets[1]) return $(.CC.FILTER) ] ;
+    if $(eol)
+    {
+        eol = ".*" [ regex.escape "$(eol:J= )" : "|()[]\\+.*^$\" " : "\\" ] ;
+    }
+    else
+    {
+        eol = "[^\n]*" "" ;
+    }
+    COMMAND_DATABASE on $(targets) = "($(cc)$(eol[1]))$(eol[2])" ;
 }
 
 rule preprocess-c-c++ ( targets + : sources * )
@@ -1048,47 +1074,37 @@ class msvc-pch-generator : pch-generator
 #
 ################################################################################
 
-# Detects versions listed as '.known-versions' by checking registry information,
+# Try to find and register a specified version by checking registry information,
 # environment variables & default paths. Supports both native Windows and
 # Cygwin.
 #
-local rule auto-detect-toolset-versions ( )
+local rule try-auto-detect-version ( version )
 {
-    if [ os.name ] in NT CYGWIN
+    if [ os.name ] in NT CYGWIN && $(.version-$(version)-reg)
     {
         # Get installation paths from the registry.
-        for local i in $(.known-versions)
+        local vc-path ;
+        for local x in "" "Wow6432Node\\"
         {
-            if $(.version-$(i)-reg)
-            {
-                local vc-path ;
-                for local x in "" "Wow6432Node\\"
-                {
-                    vc-path += [ W32_GETREG
-                        "HKEY_LOCAL_MACHINE\\SOFTWARE\\"$(x)"\\Microsoft\\"$(.version-$(i)-reg)
-                        : "ProductDir" ] ;
-                }
+            vc-path += [ W32_GETREG
+                        "HKEY_LOCAL_MACHINE\\SOFTWARE\\"$(x)"\\Microsoft\\"$(.version-$(version)-reg)
+                : "ProductDir" ] ;
+        }
 
-                if $(vc-path)
-                {
-                    vc-path = [ path.join [ path.make-NT $(vc-path[1]) ] "bin" ] ;
-                    register-configuration $(i) : [ path.native $(vc-path[1]) ] ;
-                }
-            }
-            else
-            {
-                register-configuration $(i) : [ default-path $(i) ] ;
-            }
+        if $(vc-path)
+        {
+            vc-path = [ path.join [ path.make-NT $(vc-path[1]) ] "bin" ] ;
+            register-configuration $(version) : [ path.native $(vc-path[1]) ] ;
+            return true ;
         }
     }
 
     # Check environment and default installation paths.
-    for local i in $(.known-versions)
+    local path = [ default-path $(version) ] ;
+    if $(path)
     {
-        if ! $(i) in [ $(.versions).all ]
-        {
-            register-configuration $(i) : [ default-path $(i) ] ;
-        }
+        register-configuration $(version) : $(path) ;
+        return true ;
     }
 }
 
@@ -1137,7 +1153,7 @@ local rule generate-setup-cmd ( version : command : parent : options * : cpu : g
         }
         else
         {
-            if [ MATCH "(14.3)" : $(version) ]
+            if [ MATCH "(14.[34])" : $(version) ]
             {
                 if $(.debug-configuration)
                 {
@@ -1256,6 +1272,13 @@ local rule configure-really ( version ? : options * )
 {
     local command = [ feature.get-values <command> : $(options) ] ;
 
+    # We don't try and register any more versions than what we already know
+    # about when ask to discover any available versions.
+    if ! $(version) && ! $(command) && [ $(.versions).used ]
+    {
+        return ;
+    }
+
     if ! $(version) && ! $(command)
     {
         # We were given neither a command, nor a version.
@@ -1263,19 +1286,19 @@ local rule configure-really ( version ? : options * )
         # FIXME: consider whether an explicitly specified setup script
         # should disable this logic.  We already won't get here if
         # there is a user specified command.
-        version = [ $(.versions).all ] ;
-        for local known in $(.known-versions)
+        for version in $(.known-versions)
         {
-            if $(known) in $(version)
+            if [ try-auto-detect-version $(version) ]
             {
-                version = $(known) ;
                 break ;
             }
         }
-        # version might still have multiple elements if no versions
-        # were auto-detected, but an unknown version was configured
-        # manually.
-        version = $(version[1]) ;
+    }
+    else if $(version)
+    {
+        # Version alias -> real version number.
+        version = [ resolve-possible-msvc-version-alias $(version) ] ;
+        try-auto-detect-version $(version) ;
     }
 
     # Handle a user-provided command, and deduce the version if necessary.
@@ -1316,7 +1339,7 @@ local rule configure-really ( version ? : options * )
             # version from the path.
             # FIXME: We currently detect both Microsoft Visual Studio 9.0 and
             # 9.0express as 9.0 here.
-            if [ MATCH "(MSVC\\\\14.3)" : $(command) ]
+            if [ MATCH "(MSVC\\\\14.[34])" : $(command) ]
             {
                 version = 14.3 ;
             }
@@ -1372,8 +1395,6 @@ local rule configure-really ( version ? : options * )
         }
     }
 
-    # Version alias -> real version number.
-    version = [ resolve-possible-msvc-version-alias $(version) ] ;
 
     # Check whether the selected configuration is already in use.
     if $(version) in [ $(.versions).used ]
@@ -2012,6 +2033,10 @@ local rule register-toolset-really ( )
         toolset.flags msvc LINKFLAGS <user-interface>native : "/subsystem:native" ;
         toolset.flags msvc LINKFLAGS <user-interface>auto : "/subsystem:posix" ;
 
+        toolset.flags msvc.link LINKFLAGS <embed-manifest-via>mt : /MANIFEST ;
+        toolset.flags msvc.link LINKFLAGS <embed-manifest-via>linker/<embed-manifest>off : /MANIFEST ;
+        toolset.flags msvc.link LINKFLAGS <embed-manifest-via>linker/<embed-manifest>on : "/MANIFEST:EMBED" ;
+
         toolset.flags msvc.link LINKFLAGS <linkflags> ;
         toolset.flags msvc.link LINKPATH <library-path> ;
 
@@ -2226,9 +2251,6 @@ for local arch in [ MATCH "^\\.cpus-on-(.*)" : [ VARNAMES $(__name__) ] ]
     "Microsoft Visual Studio/2022/*/VC/Tools/MSVC/*/bin/Host*/*"
     ;
 .version-14.3-env = VS170COMNTOOLS ProgramFiles ProgramFiles(x86) ;
-
-# Auto-detect all the available msvc installations on the system.
-auto-detect-toolset-versions ;
 
 
 # And finally trigger the actual Boost Build toolset registration.

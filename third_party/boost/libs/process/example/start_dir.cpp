@@ -8,7 +8,7 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/process.hpp>
-#include <boost/process/filesystem.hpp>
+#include <boost/process/v1/filesystem.hpp>
 
 namespace bp = boost::process;
 
@@ -19,9 +19,9 @@ int main()
         bp::start_dir="../foo"
     );
 
-    boost::process::filesystem::path exe = "test.exe";
+    boost::process::v1::filesystem::path exe = "test.exe";
     bp::system(
-        boost::process::filesystem::absolute(exe),
+        boost::process::v1::filesystem::absolute(exe),
         bp::start_dir="../foo"
     );
 }

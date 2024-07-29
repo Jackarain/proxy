@@ -3,6 +3,29 @@
 All notable changes to [Boost.GIL](https://github.com/boostorg/gil/) project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.86.0] - 2024-08-14
+
+### Added
+
+- Added `tell()` and `error()` functions to `istream_device` and `ostream_device` classes ([PR #747](https://github.com/boostorg/gil/pull/747)).
+
+## Changed
+
+- Don't ignore custom color converter in `color_converted_view` function ([PR #726](https://github.com/boostorg/gil/pull/726)).
+- Added workaround for conflict with `min()` and `max()` macros on WinAPI ([PR #745](https://github.com/boostorg/gil/pull/745)).
+- The use of `boost::filesystem` in GIL is now configurable in CMake via option `BOOST_GIL_USE_BOOST_FILESYSTEM` ([PR #743](https://github.com/boostorg/gil/pull/743)).
+
+### Fixed
+
+- Fixed convolution in `convolve_2d` ([PR #723](https://github.com/boostorg/gil/pull/723))
+- Normalize Gaussian 2D kernel to avoid darkening ([PR #725](https://github.com/boostorg/gil/pull/725))
+- Wrong buffer size in path string conversion functionss for `std::wstring` is fixed, avoiding buffer
+  overflows when using I/O-related functions with `std::wstring` paths ([PR #746](https://github.com/boostorg/gil/pull/764)).
+
+### Acknowledgements
+
+Christoph Gringmuth, Christopher Kormanyos, nicolacandussi, Dirk Stolle, Olzhas Zhumabek
+
 ## [1.80.0] - 2022-08-10
 
 NOTICE: We are planning BREAKING switch to C++17 as minimum required C++ language version in one or two releases after Boost 1.80 ([Discussion #676](https://github.com/boostorg/gil/discussions/676))

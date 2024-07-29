@@ -12,26 +12,60 @@ add_library(Boost::numeric_odeint ALIAS boost_numeric_odeint)
 
 target_include_directories(boost_numeric_odeint INTERFACE include)
 
-target_link_libraries(boost_numeric_odeint
-  INTERFACE
-    Boost::assert
-    Boost::compute
-    Boost::config
-    Boost::core
-    Boost::fusion
-    Boost::iterator
-    Boost::math
-    Boost::mpi
-    Boost::mpl
-    Boost::multi_array
-    Boost::numeric_ublas
-    Boost::preprocessor
-    Boost::range
-    Boost::throw_exception
-    Boost::type_traits
-    Boost::units
-    Boost::utility
-)
+if(BOOST_NUMERIC_ODEINT_NO_ADAPTORS)
+
+  target_link_libraries(boost_numeric_odeint
+    INTERFACE
+      Boost::assert
+      Boost::config
+      Boost::core
+      Boost::fusion
+      Boost::iterator
+      Boost::math
+      Boost::mpl
+      Boost::multi_array
+      Boost::numeric_ublas
+      Boost::preprocessor
+      Boost::range
+      Boost::static_assert
+      Boost::throw_exception
+      Boost::type_traits
+      Boost::units
+      Boost::utility
+  )
+
+else()
+
+  target_link_libraries(boost_numeric_odeint
+    INTERFACE
+      Boost::assert
+      Boost::compute
+      Boost::config
+      Boost::core
+      Boost::fusion
+      Boost::iterator
+      Boost::math
+      Boost::mpl
+      Boost::multi_array
+      Boost::numeric_ublas
+      Boost::preprocessor
+      Boost::range
+      Boost::static_assert
+      Boost::throw_exception
+      Boost::type_traits
+      Boost::units
+      Boost::utility
+  )
+
+  # From CMake 3.30 linking against MPI when it does not exist gives errors
+  if(BOOST_ENABLE_MPI)
+    target_link_libraries(boost_numeric_odeint
+      INTERFACE
+        Boost::mpi
+    )
+  endif()
+
+endif()
 
 if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
 

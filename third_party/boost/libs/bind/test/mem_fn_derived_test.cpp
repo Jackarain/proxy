@@ -19,17 +19,7 @@
 
 #include <boost/mem_fn.hpp>
 #include <boost/shared_ptr.hpp>
-
-#if defined(BOOST_MSVC) && (BOOST_MSVC < 1300)
-#pragma warning(push, 3)
-#endif
-
 #include <iostream>
-
-#if defined(BOOST_MSVC) && (BOOST_MSVC < 1300)
-#pragma warning(pop)
-#endif
-
 
 struct B
 {

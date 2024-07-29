@@ -34,10 +34,10 @@ jobs:
     runs-on: "windows-latest"
     steps:
       - name: "Checkout"
-        uses: actions/checkout@master
+        uses: actions/checkout@main
         with: { path: "b2" }
       - name: "Checkout"
-        uses: actions/checkout@master
+        uses: actions/checkout@main
         with: { repository: "bfgroup/b2-pkg", path: "b2-pkg" }
       - name: "Install"
         run: |
@@ -52,12 +52,12 @@ jobs:
           cd "${{github.workspace}}/b2-pkg"
           b2 --debug-configuration --b2root="${{github.workspace}}/b2" -j1 -d+2 windows-wix
       - name: "Upload"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@main
         with:
           name: installer
-          path: "${{github.workspace}}\\b2-pkg\\stage\\*.msi*"
+          path: "./b2-pkg/stage/*.msi*"
       - name: "Publish"
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@master
         if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
         with:
-          files: "${{github.workspace}}\\b2-pkg\\stage\\*.msi*"
+          files: "./b2-pkg/stage/*.msi*"

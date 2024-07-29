@@ -209,9 +209,9 @@ rule init ( version ? : command * : options * )
             }
 
             toolset.flags clang-win.compile .CC $(cond) : $(compiler) --target=$(clang-arch)-pc-windows-msvc ;
-            toolset.flags clang-win.link .LD $(cond) : $(compiler) --target=$(clang-arch)-pc-windows-msvc ;
+            toolset.flags clang-win.link .LD $(cond) : $(compiler) --target=$(clang-arch)-pc-windows-msvc -fuse-ld=lld ;
             toolset.flags clang-win.link LINKOPT $(cond) : /link ;
-            toolset.flags clang-win.link LINKFLAGS $(cond) : "/incremental:no" "/manifest" "/machine:$(linker-arch)" ;
+            toolset.flags clang-win.link LINKFLAGS $(cond) : "/incremental:no" "/machine:$(linker-arch)" ;
             if $(arch) = x86
             {
                 toolset.flags clang-win.compile .ASM $(cond) : $(assembler) -nologo -c -Zp4 -Cp -Cx ;
@@ -228,6 +228,18 @@ rule init ( version ? : command * : options * )
             toolset.flags clang-win.compile .RC $(cond) : $(resource-compiler) ;
             toolset.flags clang-win.compile .IDL $(cond) : $(idl-compiler) ;
         }
+    }
+
+    local conditions = [ feature.split $(condition) ] ;
+    if ! [ version.version-less [ SPLIT_BY_CHARACTERS $(version) : . ] : 15 ] {
+        toolset.add-defaults $(conditions:J=,)\:<embed-manifest-via>linker ;
+    }
+    else {
+        # Clang seems to not care about adding WinSDK to PATH.
+        # Both MSVC link and LLVM lld-link (until v15) will fail to embed manifest.
+        # LINK : fatal error LNK1158: cannot run 'rc.exe'
+        # lld-link: error: unable to find mt.exe in PATH: no such file or directory
+        toolset.add-requirements $(conditions:J=,)\:<embed-manifest-via>mt ;
     }
 
     toolset.flags clang-win.link LIBRARY_OPTION <toolset>clang-win : "" : unchecked ;

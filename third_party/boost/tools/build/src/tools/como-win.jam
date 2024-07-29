@@ -15,6 +15,7 @@ import como ;
 import feature ;
 import generators ;
 import toolset : flags ;
+import regex ;
 
 feature.extend-subfeature toolset como : platform : win ;
 
@@ -100,9 +101,25 @@ actions link bind LIBRARIES
     $(CONFIG_COMMAND) --no_version --no_prelink_verbose $(LINKFLAGS) -o "$(<[1]:S=)" @"@($(<[1]:W).rsp:E=$(nl)"$(>)")" "$(LIBRARIES)" "$(FINDLIBS:S=.lib)"
 }
 
+rule compile.c ( targets * : sources * : properties * )
+{
+    local config_command = [ regex.escape
+        [ on $(targets[1]) return $(CONFIG_COMMAND:E="") ]
+        : "()[]\\+.*^$\"" : "\\" ] ;
+    COMMAND_DATABASE on $(targets) = "($(config_command)[^\n]*)" ;
+}
+
 actions compile.c
 {
     $(CONFIG_COMMAND) -c --c99 -e5 --no_version --display_error_number --diag_suppress=9,21,161,748,940,962 -U$(UNDEFS) -D$(DEFINES) $(WARN) $(CFLAGS) -I"$(HDRS)" -I"$(STDHDRS)" -I"$(SYSHDRS)" -o "$(<:D=)" "$(>)"
+}
+
+rule compile.c++ ( targets * : sources * : properties * )
+{
+    local config_command = [ regex.escape
+        [ on $(targets[1]) return $(CONFIG_COMMAND:E="") ]
+        : "()[]\\+.*^$\"" : "\\" ] ;
+    COMMAND_DATABASE on $(targets) = "($(config_command)[^\n]*)" ;
 }
 
 actions compile.c++

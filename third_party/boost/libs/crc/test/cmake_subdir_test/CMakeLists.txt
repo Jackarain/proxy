@@ -8,31 +8,6 @@ project(cmake_subdir_test LANGUAGES CXX)
 
 add_subdirectory(../.. boostorg/crc)
 
-# `boostdep --brief crc`
-
-set(deps
-
-# Primary dependencies
-
-array
-config
-integer
-type_traits
-
-# Secondary dependencies
-
-assert
-core
-static_assert
-throw_exception
-)
-
-foreach(dep IN LISTS deps)
-
-  add_subdirectory(../../../${dep} boostorg/${dep})
-
-endforeach()
-
 add_executable(quick ../quick.cpp)
 target_link_libraries(quick Boost::crc)
 

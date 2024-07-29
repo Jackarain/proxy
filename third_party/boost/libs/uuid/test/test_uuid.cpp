@@ -9,12 +9,29 @@
 
 //  libs/uuid/test/test_uuid.cpp  -------------------------------//
 
-#include <iostream>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <boost/detail/lightweight_test.hpp>
-#include <boost/functional/hash.hpp>
+#include <boost/container_hash/hash.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include <boost/current_function.hpp>
+#include <boost/config.hpp>
+#include <iostream>
+#include <type_traits>
+
+// is_trivially_copyable not present in GCC 4.x
+
+#if defined( BOOST_LIBSTDCXX_VERSION ) && BOOST_LIBSTDCXX_VERSION < 50000
+
+template<class T> struct is_trivially_copyable: std::integral_constant<bool,
+    __has_trivial_copy(T) && __has_trivial_assign(T) && __has_trivial_destructor(T)> {};
+
+#else
+
+using std::is_trivially_copyable;
+
+#endif
+
+//
 
 void test_uuid_equal_array(char const * file, int line, char const * function,
                            boost::uuids::uuid const& lhs, const unsigned char (&rhs)[16])
@@ -38,7 +55,7 @@ void test_uuid_equal_array(char const * file, int line, char const * function,
 
 #define BOOST_TEST_UUID(lhs, rhs) ( test_uuid_equal_array(__FILE__, __LINE__, BOOST_CURRENT_FUNCTION, lhs, rhs) )
 
-int main(int, char*[])
+int main()
 {
     using namespace boost::uuids;
 
@@ -119,9 +136,9 @@ int main(int, char*[])
             , { 0x30, boost::uuids::uuid::version_name_based_md5 }
             , { 0x40, boost::uuids::uuid::version_random_number_based }
             , { 0x50, boost::uuids::uuid::version_name_based_sha1 }
-            , { 0x60, boost::uuids::uuid::version_unknown }
-            , { 0x70, boost::uuids::uuid::version_unknown }
-            , { 0x80, boost::uuids::uuid::version_unknown }
+            , { 0x60, boost::uuids::uuid::version_time_based_v6 }
+            , { 0x70, boost::uuids::uuid::version_time_based_v7 }
+            , { 0x80, boost::uuids::uuid::version_custom_v8 }
             , { 0x90, boost::uuids::uuid::version_unknown }
             , { 0xa0, boost::uuids::uuid::version_unknown }
             , { 0xb0, boost::uuids::uuid::version_unknown }
@@ -153,35 +170,105 @@ int main(int, char*[])
         BOOST_TEST_UUID(u2, values2);
     }
 
-    { // test comparsion
+    { // test comparison
         uuid u1 = {{0}};
         uuid u2 = {{1,0}};
         uuid u3 = {{255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255}};
         uuid u4 = {{0,1,0}};
         uuid u5 = {{0,255,0}};
+        uuid u6 = {{0, 0, 0, 0, 0, 0, 0, 0, 1}};
+        uuid u7 = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 1}};
 
-        BOOST_TEST_EQ(u1, u1);
+        BOOST_TEST_EQ( u1, u1 );
+        BOOST_TEST_EQ( u2, u2 );
+        BOOST_TEST_EQ( u3, u3 );
+        BOOST_TEST_EQ( u4, u4 );
+        BOOST_TEST_EQ( u5, u5 );
+        BOOST_TEST_EQ( u6, u6 );
+        BOOST_TEST_EQ( u7, u7 );
 
-        BOOST_TEST_NE(u1, u2);
+        BOOST_TEST_NE( u1, u2 );
+        BOOST_TEST_NE( u6, u7 );
 
-        BOOST_TEST(u1 < u2);
-        BOOST_TEST(u2 < u3);
-        BOOST_TEST(u1 < u4);
-        BOOST_TEST(u1 < u5);
-        BOOST_TEST(u4 < u5);
-        BOOST_TEST(u4 < u2);
-        BOOST_TEST(u5 < u2);
+        BOOST_TEST_LT( u1, u2 );
+        BOOST_TEST_LT( u2, u3 );
+        BOOST_TEST_LT( u1, u4);
+        BOOST_TEST_LT( u1, u5 );
+        BOOST_TEST_LT( u4, u5 );
+        BOOST_TEST_LT( u4, u2 );
+        BOOST_TEST_LT( u5, u2 );
 
-        BOOST_TEST(u1 <= u1);
-        BOOST_TEST(u1 <= u2);
-        BOOST_TEST(u2 <= u3);
+        BOOST_TEST_LT( u1, u6 );
+        BOOST_TEST_LT( u1, u7 );
+        BOOST_TEST_LT( u7, u6 );
+        BOOST_TEST_LT( u6, u4 );
+        BOOST_TEST_LT( u7, u4 );
 
-        BOOST_TEST(u2 >= u1);
-        BOOST_TEST(u3 >= u1);
+        BOOST_TEST_LE( u1, u1 );
+        BOOST_TEST_LE( u1, u2 );
+        BOOST_TEST_LE( u2, u3 );
 
-        BOOST_TEST(u3 >= u3);
-        BOOST_TEST(u2 >= u1);
-        BOOST_TEST(u3 >= u1);
+        BOOST_TEST_LE( u1, u6 );
+        BOOST_TEST_LE( u1, u7 );
+        BOOST_TEST_LE( u6, u6 );
+        BOOST_TEST_LE( u7, u6 );
+        BOOST_TEST_LE( u6, u4 );
+        BOOST_TEST_LE( u7, u4 );
+
+        BOOST_TEST_GE( u1, u1 );
+        BOOST_TEST_GE( u2, u2 );
+        BOOST_TEST_GE( u3, u3 );
+
+        BOOST_TEST_GE( u3, u2 );
+        BOOST_TEST_GE( u2, u1 );
+        BOOST_TEST_GE( u3, u1 );
+
+        BOOST_TEST_GE( u6, u1 );
+        BOOST_TEST_GE( u7, u1 );
+        BOOST_TEST_GE( u6, u6 );
+        BOOST_TEST_GE( u6, u7 );
+        BOOST_TEST_GE( u4, u6 );
+        BOOST_TEST_GE( u4, u7 );
+
+#if defined(BOOST_UUID_HAS_THREE_WAY_COMPARISON)
+
+        constexpr auto eq = std::strong_ordering::equal;
+        constexpr auto lt = std::strong_ordering::less;
+        constexpr auto gt = std::strong_ordering::greater;
+
+        BOOST_TEST( ( u1 <=> u1 ) == eq );
+        BOOST_TEST( ( u2 <=> u2 ) == eq );
+        BOOST_TEST( ( u3 <=> u3 ) == eq );
+        BOOST_TEST( ( u4 <=> u4 ) == eq );
+        BOOST_TEST( ( u5 <=> u5 ) == eq );
+        BOOST_TEST( ( u6 <=> u6 ) == eq );
+        BOOST_TEST( ( u7 <=> u7 ) == eq );
+
+        BOOST_TEST( ( u1 <=> u2 ) == lt );
+        BOOST_TEST( ( u2 <=> u3 ) == lt );
+        BOOST_TEST( ( u1 <=> u4 ) == lt );
+        BOOST_TEST( ( u1 <=> u5 ) == lt );
+        BOOST_TEST( ( u4 <=> u5 ) == lt );
+        BOOST_TEST( ( u4 <=> u2 ) == lt );
+        BOOST_TEST( ( u5 <=> u2 ) == lt );
+
+        BOOST_TEST( ( u1 <=> u6 ) == lt );
+        BOOST_TEST( ( u1 <=> u7 ) == lt );
+        BOOST_TEST( ( u7 <=> u6 ) == lt );
+        BOOST_TEST( ( u6 <=> u4 ) == lt );
+        BOOST_TEST( ( u7 <=> u4 ) == lt );
+
+        BOOST_TEST( ( u2 <=> u1 ) == gt );
+        BOOST_TEST( ( u3 <=> u1 ) == gt );
+        BOOST_TEST( ( u3 <=> u2 ) == gt );
+
+        BOOST_TEST( ( u6 <=> u1 ) == gt );
+        BOOST_TEST( ( u7 <=> u1 ) == gt );
+        BOOST_TEST( ( u6 <=> u7 ) == gt );
+        BOOST_TEST( ( u4 <=> u6 ) == gt );
+        BOOST_TEST( ( u4 <=> u7 ) == gt );
+
+#endif
     }
 
     { // ticket 10510
@@ -237,8 +324,22 @@ int main(int, char*[])
         BOOST_TEST_NE(uuid_hasher(u2), uuid_hasher(u3));
     }
 
-    { // test is_pod
-        BOOST_TEST_EQ(boost::is_pod<uuid>::value, true);
+    { // test type properties
+
+        // BOOST_TEST_EQ(std::is_pod<uuid>::value, true);
+        BOOST_TEST_EQ(::is_trivially_copyable<uuid>::value, true);
+        BOOST_TEST_EQ(std::is_standard_layout<uuid>::value, true);
+    }
+
+    {
+        // test default constructor
+
+        uuid u1;
+        uuid u2 = {};
+
+        BOOST_TEST( u1.is_nil() );
+        BOOST_TEST( u2.is_nil() );
+        BOOST_TEST_EQ( u1, u2 );
     }
 
     return boost::report_errors();

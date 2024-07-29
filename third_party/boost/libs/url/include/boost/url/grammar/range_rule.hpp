@@ -205,7 +205,7 @@ public:
     */
     range(range const&) noexcept;
 
-    /** Constructor
+    /** Assignment
 
         After the move, this references the
         same underlying character buffer. Ownership

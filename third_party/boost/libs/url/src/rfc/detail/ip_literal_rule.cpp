@@ -8,8 +8,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_IMPL_IP_LITERAL_RULE_IPP
-#define BOOST_URL_IMPL_IP_LITERAL_RULE_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/rfc/ipv6_address_rule.hpp>
@@ -97,4 +95,3 @@ parse(
 } // urls
 } // boost
 
-#endif

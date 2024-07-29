@@ -243,8 +243,17 @@ rule init ( version ? :  command * : options * )
 
 _ = " " ;
 
+rule set_command_db ( targets + )
+{
+    local config_command = [ regex.escape
+        [ on $(targets[1]) return $(CONFIG_COMMAND:E="") ]
+        : "()[]\\+.*^$\"" : "\\" ] ;
+    COMMAND_DATABASE on $(targets) = "(\"$(config_command)\"[^\n]*)" ;
+}
+
 rule compile.c++ ( targets * : sources * : properties * )
 {
+    set_command_db $(targets) ;
     DEPENDS $(<) : [ on $(<) return $(PCH_FILE) ] ;
 }
 
@@ -255,12 +264,23 @@ actions compile.c++ bind PCH_FILE
 
 rule compile.c ( targets * : sources * : properties * )
 {
+    set_command_db $(targets) ;
     DEPENDS $(<) : [ on $(<) return $(PCH_FILE) ] ;
 }
 
 actions compile.c bind PCH_FILE
 {
     LD_LIBRARY_PATH="$(RUN_PATH)" "$(CONFIG_COMMAND)" -c -xc $(OPTIONS) $(USER_OPTIONS) -D$(DEFINES) -I"$(INCLUDES)" -use-pch"$(PCH_FILE)" -c -o "$(<)" "$(>)"
+}
+
+rule compile.c++.pch ( targets * : sources * : properties * )
+{
+    set_command_db $(targets) ;
+}
+
+rule compile.c.pch ( targets * : sources * : properties * )
+{
+    set_command_db $(targets) ;
 }
 
 #

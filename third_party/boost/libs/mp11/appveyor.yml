@@ -23,7 +23,15 @@ environment:
 
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       TOOLSET: msvc-14.1
-      CXXSTD: 14,17,latest
+      CXXSTD: 14
+
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      TOOLSET: msvc-14.1
+      CXXSTD: 17
+
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      TOOLSET: msvc-14.1
+      CXXSTD: latest
 
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       CMAKE: 1
@@ -31,24 +39,19 @@ environment:
 
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       CMAKE_SUBDIR: 1
+
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       CMAKE_INSTALL: 1
 
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      CMAKE: 1
-      CONFIG: MinSizeRel
-
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       CMAKE_SUBDIR: 1
+
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       CMAKE_INSTALL: 1
 
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      CMAKE: 1
-      CONFIG: MinSizeRel
-
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       CMAKE_SUBDIR: 1
+
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       CMAKE_INSTALL: 1
 

@@ -738,27 +738,43 @@ rule get-dir ( name : property-set : package-name : flags * )
     # is based on the value of <target-os> property.
     if $(name) = prefix
     {
-        result = [ get-install-prefix $(property-set) : $(package-name)
+        return [ get-install-prefix $(property-set) : $(package-name)
             : $(flags) ] ;
     }
     else
     {
         # First, try getting the path for requested directory from properties.
         result = [ $(property-set).get <install-$(name)> ] ;
-        local info = [ get-dir-info $(name) : $(package-name) ] ;
-        # Otherwise, use the default path. In both cases, it could be a
-        # relative path.
-        result ?= $(info[1]) ;
+        result ?= [ option.get $(name) ] ;
         if $(result)
         {
-            result = [ path.make $(result) ] ;
+            result = [ path.root [ path.make $(result) ] [ path.pwd ] ] ;
+        }
+
+        local info = [ get-dir-info $(name) : $(package-name) ] ;
+
+        local base-relative ;
+        if ! $(result)
+        {
+            # Otherwise, use the default path. In both cases, it could be a
+            # relative path.
+            result = $(info[1]) ;
+            result ?= "" ;
+            base-relative = true ;
         }
 
         # If there is a base directory, we may need to modify result further.
         if $(info[2])
         {
+            if $(base-relative) && ( relative in $(flags) )
+            {
+                return $(result) ;
+            }
+
             local base = [ get-dir $(info[2]) : $(property-set)
-                : $(package-name) : $(flags) ] ;
+                : $(package-name) ] ;
+            result = [ path.root $(result) $(base) ] ;
+
             if relative in $(flags)
             {
                 local rel = [ path.relative $(result) $(base) : no-error ] ;
@@ -766,10 +782,23 @@ rule get-dir ( name : property-set : package-name : flags * )
                 {
                     result = $(rel) ;
                 }
+                return $(result) ;
             }
-            else
+        }
+    }
+
+    if staged in $(flags)
+    {
+        local prefix = [ get-install-prefix $(property-set)
+            : $(package-name) ] ;
+        local stage = [ get-install-prefix $(property-set) : $(package-name)
+            : staged ] ;
+        if $(prefix) != $(stage)
+        {
+            local rel = [ path.relative $(result) $(prefix) : no-error ] ;
+            if not-a-child != $(rel)
             {
-                result = [ path.root $(result) $(base) ] ;
+                result = [ path.root $(rel) $(prefix) ] ;
             }
         }
     }
@@ -817,7 +846,7 @@ local rule get-install-prefix ( property-set : package-name : flags * )
             prefix = /usr/local ;
         }
     }
-    return [ path.make $(prefix) ] ;
+    return [ path.root [ path.make $(prefix) ] [ path.pwd ] ] ;
 }
 
 

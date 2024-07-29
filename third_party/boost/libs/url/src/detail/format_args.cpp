@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_DETAIL_IMPL_FORMAT_ARGS_IPP
-#define BOOST_URL_DETAIL_IMPL_FORMAT_ARGS_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/encode.hpp>
@@ -648,4 +646,3 @@ grammar::lut_chars const& cs) const
 } // urls
 } // boost
 
-#endif

@@ -523,21 +523,23 @@ void operators_overload_test()
 }
 
 
-#if !defined(BOOST_NO_CXX11_CHAR16_T) && !defined(BOOST_NO_CXX11_UNICODE_LITERALS)
 void test_char16_conversions()
 {
+// There's no std::ctype<char16_t> in Xcode_15.0.1
+#if !defined(BOOST_NO_CXX11_CHAR16_T) && !defined(BOOST_NO_CXX11_UNICODE_LITERALS) && !defined(__APPLE__)
     BOOST_TEST(u"100" == lexical_cast<std::u16string>(u"100"));
     BOOST_TEST(u"1" == lexical_cast<std::u16string>(u'1'));
-}
 #endif
+}
 
-#if !defined(BOOST_NO_CXX11_CHAR16_T) && !defined(BOOST_NO_CXX11_UNICODE_LITERALS)
 void test_char32_conversions()
 {
+// There's no std::ctype<char32_t> in Xcode_15.0.1
+#if !defined(BOOST_NO_CXX11_CHAR32_T) && !defined(BOOST_NO_CXX11_UNICODE_LITERALS) && !defined(__APPLE__)
     BOOST_TEST(U"100" == lexical_cast<std::u32string>(U"100"));
     BOOST_TEST(U"1" == lexical_cast<std::u32string>(U'1'));
-}
 #endif
+}
 
 void test_getting_pointer_to_function()
 {
@@ -585,12 +587,8 @@ int main()
 
     test_char_types_conversions();
     operators_overload_test();
-#if !defined(BOOST_NO_CXX11_CHAR16_T) && !defined(BOOST_NO_CXX11_UNICODE_LITERALS)
     test_char16_conversions();
-#endif
-#if !defined(BOOST_NO_CXX11_CHAR32_T) && !defined(BOOST_NO_CXX11_UNICODE_LITERALS)
     test_char32_conversions();
-#endif
     test_getting_pointer_to_function();
 
     return boost::report_errors();

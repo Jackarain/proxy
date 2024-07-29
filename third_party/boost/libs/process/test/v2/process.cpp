@@ -129,9 +129,10 @@ BOOST_AUTO_TEST_CASE(terminate)
   bpv::process proc(ctx, pth, {"sleep", "10"});
   proc.suspend();
   proc.resume();
-  proc.terminate();
-  proc.wait();
-  BOOST_CHECK_NE(proc.exit_code(), 0);
+  boost::system::error_code ec;
+  proc.terminate(ec);
+  proc.wait(ec);
+  BOOST_WARN_NE(proc.exit_code(), 0);
 }
 
 BOOST_AUTO_TEST_CASE(request_exit)
@@ -369,7 +370,7 @@ BOOST_AUTO_TEST_CASE(popen)
     // default CWD
     bpv::popen proc(/*bpv::default_process_launcher(), */ctx, pth, {"echo"});
 
-    BOOST_CHECK_EQUAL(asio::write(proc, asio::buffer("FOOBAR", 6)), 6);
+    BOOST_CHECK_EQUAL(asio::write(proc, asio::buffer("FOOBAR", 6)), 6u);
 
     proc.get_stdin().close();
 

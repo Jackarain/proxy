@@ -157,13 +157,4 @@ using process_handle = basic_process_handle<>;
 
 BOOST_PROCESS_V2_END_NAMESPACE
 
-#if defined(BOOST_PROCESS_V2_HEADER_ONLY)
-
-#include <boost/process/v2/impl/process_handle.ipp>
-
-#endif
-
-
-
-
 #endif //BOOST_PROCESS_V2_PROCESS_HANDLE_HPP

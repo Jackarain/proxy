@@ -4,25 +4,9 @@
 # accompanying file LICENSE_1_0.txt or copy at
 # https://www.boost.org/LICENSE_1_0.txt)
 
-lib bcrypt ;
-
-project libs/uuid/test
+project
     : requirements
-
-      # boost.jam defines BOOST_ALL_NO_LIB, this makes library management
-      # near-impossible with the platform selection logic in the random_provider
-      <target-os>windows:<define>BOOST_UUID_FORCE_AUTO_LINK
-      <target-os>windows,<toolset>gcc:<library>bcrypt
-
-      # boost::lexical_cast needs this for a warning-free build (CHAR_MAX)
-      <toolset>clang:<cxxflags>-Wno-c99-extensions
-
-      # boost::random needs this setting for a warning free build:
-      <toolset>msvc:<define>_SCL_SECURE_NO_WARNINGS
-
-      # link static for easier debugging
-      <link>static
-
+      <warnings>pedantic
 ;
 
 import os ;
@@ -35,11 +19,15 @@ import testing ;
 # compile successfully, proving the header does not depend
 # on any other headers to be included first - adapted from
 # logic in the winapi test bjam script
-rule test_all
+
+path-constant HERE : . ;
+
+rule test_headers
 {
     local all_rules = ;
     local file ;
-    local headers_path = [ path.make ../include/boost/uuid ] ;
+    local headers_path = [ path.make $(HERE)/../include/boost/uuid ] ;
+
     for file in [ path.glob-tree $(headers_path) : *.hpp : uuid ]
     {
         local rel_file = [ path.relative-to $(headers_path) $(file) ] ;
@@ -51,178 +39,146 @@ rule test_all
         all_rules += [ compile compile/decl_header.cpp : <define>"BOOST_UUID_TEST_HEADER=$(rel_file)" <dependency>$(file) : $(decl_test_name) ] ;
     }
 
-    local tests_path = [ path.make compile-fail ] ;
-    for file in [ path.glob-tree $(tests_path) : *.cpp ]
-    {
-        local rel_file = [ path.relative-to $(tests_path) $(file) ] ;
-        local test_name = [ regex.replace [ regex.replace $(rel_file) "/" "-" ] ".cpp" "" ] ;
-        local decl_test_name = cf-$(test_name) ;
-        # ECHO $(rel_file) ;
-        all_rules += [ compile-fail $(file) : : $(decl_test_name) ] ;
-    }
-
-    # make sure compile time options work in isolation
-    all_rules += [ compile compile/decl_header.cpp :
-        <define>"BOOST_UUID_TEST_HEADER=uuid.hpp"
-        <define>"BOOST_UUID_NO_TYPE_TRAITS"
-        <dependency>../include/boost/uuid/uuid.hpp :
-            compile_uuid_no_type_traits ] ;
-    all_rules += [ compile compile/decl_header.cpp :
-        <define>"BOOST_UUID_TEST_HEADER=uuid.hpp"
-        <define>"BOOST_UUID_NO_SIMD"
-        <dependency>../include/boost/uuid/uuid.hpp :
-            compile_uuid_no_simd ] ;
-
     # ECHO All rules: $(all_rules) ;
     return $(all_rules) ;
 }
 
-# disabled in UBSAN builds due to issues in Boost.Serialization
-if ! [ os.environ UBSAN_OPTIONS ]
-{
-test-suite uuid-serialization :
-    # test serializing uuids
-    [ run test_serialization.cpp ../../serialization/build//boost_serialization ]
+alias test_headers : [ test_headers ] ;
 
-    # TODO - This test fails to like with boost_wserialization
-    # [ run test_wserialization.cpp
-    #     ../../serialization/build//boost_serialization
-    #     ../../serialization/build//boost_wserialization
-    #     : : : <dependency>../../config/test/all//BOOST_NO_STD_WSTREAMBUF
-    # ]
-    ;
-}
+# test inclucing all .hpp files in 2 translations units
+# to look for issues when using multiple translation units
+# eg. missing inline on a global functionstate is not missing
 
-test-suite uuid :
-    [ test_all ]
+run test_include1.cpp test_include2.cpp ;
 
-    # test inclucing all .hpp files in 2 translations units
-    # to look for issues when using multiple translation units
-    # eg. missing inline on a global functionstate is not missing
-    [ run test_include1.cpp test_include2.cpp ]
+# main tests
 
-    # main test
-    [ run test_uuid.cpp ]
-    [ run test_uuid_no_simd.cpp ]
+run test_uuid.cpp
+   : : : <define>BOOST_UUID_REPORT_IMPLEMENTATION ;
+run test_uuid.cpp : : : <define>BOOST_UUID_NO_SIMD <define>BOOST_UUID_REPORT_IMPLEMENTATION : test_uuid_no_simd ;
+run test_uuid_2.cpp ;
+run test_uuid_3.cpp ;
 
-    # test uuid_io.hpp
-    [ run test_io.cpp ]
+# test type properties
 
-    # test generators
-    [ run test_nil_generator.cpp ]
-    [ run test_name_generator.cpp ]
-    [ run test_name_generator.cpp : : : <define>BOOST_UUID_COMPAT_PRE_1_71_MD5 : test_name_generator_pre_1_71_compat ]
-    [ run test_string_generator.cpp ]
-    [ run test_random_generator.cpp ]
+run test_alignment.cpp ;
+run test_alignment_2.cpp ;
+run test_attribute_packed.cpp ;
+run test_pragma_pack.cpp ;
+run test_data.cpp ;
 
-    # test tagging an object
-    [ run test_tagging.cpp ]
+# test comparison
 
-    # test use cases
-    [ run test_uuid_class.cpp ]
-    [ run test_uuid_in_map.cpp ]
+run test_comparison.cpp
+   : : : <define>BOOST_UUID_REPORT_IMPLEMENTATION ;
+run test_comparison.cpp : : : <define>BOOST_UUID_NO_SIMD <define>BOOST_UUID_REPORT_IMPLEMENTATION : test_comparison_no_simd ;
 
-    # test hash functions
-    [ run test_hash.cpp ]
-    [ run test_md5.cpp ]
-    [ run test_md5.cpp : : : <define>BOOST_UUID_COMPAT_PRE_1_71_MD5 : test_md5_pre_1_71_compat ]
-    [ run test_sha1.cpp ]
+# test uuid_io.hpp
 
-    # test MSVC 12 (VS2013) optimizer bug with SIMD operations.
-    # See https://svn.boost.org/trac/boost/ticket/8509#comment:3
-    # Only happens in Release x64 builds.
-    [ run test_msvc_simd_bug981648_main.cpp
-          test_msvc_simd_bug981648_foo.cpp
-          : : : <build>no <toolset>msvc-12.0:<build>yes <variant>release <debug-symbols>on : test_msvc_simd_bug981648 ]
+run test_io.cpp ;
+run test_io_2.cpp ;
+run test_to_chars.cpp ;
+run test_to_chars_2.cpp ;
 
-    # a small benchmark test for random generation
-    [ run test_bench_random.cpp ../../timer/build//boost_timer : : : <toolset>clang-cloudabi:<build>no ]
+# test uuid_clock
 
-    [ run test_entropy_error.cpp ]
-    
-    # tests for the header-only random provider
-    # there are a number of variations to test all compile-time branches
-    # and to make sure we test all the error handling code paths
-    [ run test_detail_random_provider.cpp 
-      : : :
-        <define>_WIN32_WINNT=0x0600                                     # will force bcrypt over wincrypt (on windows)
-      : test_detail_random_provider_happy ]
-    
-    [ run test_detail_random_provider.cpp
-      : : :
-        <define>BOOST_UUID_RANDOM_PROVIDER_NO_LIB                       # disable any auto-linking
-        <define>BOOST_UUID_TEST_RANDOM_MOCK                             # mock default provider to force error path testing
-        <define>_WIN32_WINNT=0x0600                                     # will force bcrypt over wincrypt (on windows)
-      :
-        test_detail_random_provider_sad ]
+run test_uuid_clock.cpp ;
 
-    # CI builds in appveyor normally select the bcrypt provider, so
-    # force wincrypt to be selected and test both happy and sad paths:
-    [ lib mock_random
-      : mock_random.cpp
-      : <link>shared
-        <build>no                                                       # do not build on any target-os
-        <target-os>windows:<build>yes ]                                 # except for windows
+# test generators
 
-    [ run test_detail_random_provider.cpp 
-      : : :
-        <define>_WIN32_WINNT=0x0501                                     # will force wincrypt over bcrypt
-        <build>no                                                       # do not build on any target-os
-        <target-os>windows:<build>yes                                   # except for windows
-      : test_detail_random_provider_happy_wincrypt ]
+run test_nil_generator.cpp ;
+run test_string_generator.cpp ;
+run test_random_generator.cpp ;
 
-    [ run test_detail_random_provider.cpp
-        mock_random
-      : : :
-        <define>_WIN32_WINNT=0x0501                                     # will force wincrypt over bcrypt
-        <define>BOOST_UUID_RANDOM_PROVIDER_NO_LIB                       # disable any auto-linking
-        <define>BOOST_UUID_TEST_RANDOM_MOCK                             # mock wincrypt to force error path testing
-        <build>no                                                       # do not build on any target-os
-        <target-os>windows:<build>yes                                   # except for windows
-      : test_detail_random_provider_sad_wincrypt ]
+run test_name_generator.cpp ;
+run test_namespaces.cpp ;
+run test_name_generator_md5.cpp ;
+run test_name_generator_sha1.cpp ;
 
-    # CI builds in travis will eventually select getrandom/getentropy when they move
-    # to a version of ubuntu with glibc-2.25 on it, so when that happens keep 
-    # testing the posix provider:
-    [ run test_detail_random_provider.cpp
-      : : :
-        <define>BOOST_UUID_RANDOM_PROVIDER_FORCE_POSIX                  # will force POSIX over getrandom/getentropy
-        <target-os>windows:<build>no                                    # do not bother running on windows
-        <toolset>clang-cloudabi:<build>no                               # no need to build under cloudabi
-      : test_detail_random_provider_happy_posix ]
+lib atomic ;
 
-    [ run test_detail_random_provider.cpp
-      : : :
-        <define>BOOST_UUID_RANDOM_PROVIDER_FORCE_POSIX                  # will force POSIX over getrandom/getentropy
-        <define>BOOST_UUID_TEST_RANDOM_MOCK                             # redirect code to use mock system calls
-        <target-os>windows:<build>no                                    # do not bother running on windows
-        <toolset>clang-cloudabi:<build>no                               # no need to build under cloudabi
-      : test_detail_random_provider_sad_posix ]
+run test_time_generator.cpp
+  : : : <toolset>gcc:<library>atomic <toolset>clang-linux:<library>atomic
+        <toolset>gcc-4.8,<address-model>32:<build>no ;
 
-    # Force running tests for getentropy despite it's not going to be used on Linux. getentropy
-    # may be used on systems other than Linux, which are not part of the CI testers pool.
-    [ run test_detail_random_provider.cpp
-      : : :
-        <define>BOOST_UUID_RANDOM_PROVIDER_DISABLE_GETRANDOM            # will force getentropy over getrandom
-        <build>no
-        <target-os>linux:<build>yes                                     # build only on linux (or any other systems that support getentropy)
-      : test_detail_random_provider_happy_getentropy ]
+run test_time_generator_v1.cpp
+  : : : <toolset>gcc:<library>atomic <toolset>clang-linux:<library>atomic
+        <toolset>gcc-4.8,<address-model>32:<build>no ;
 
-    [ run test_detail_random_provider.cpp
-      : : :
-        <define>BOOST_UUID_RANDOM_PROVIDER_DISABLE_GETRANDOM            # will force getentropy over getrandom
-        <define>BOOST_UUID_TEST_RANDOM_MOCK                             # redirect code to use mock system calls
-        <build>no
-        <target-os>linux:<build>yes                                     # build only on linux (or any other systems that support getentropy)
-      : test_detail_random_provider_sad_getentropy ]
+run test_time_generator_v1_2.cpp
+  : : : <toolset>gcc:<library>atomic <toolset>clang-linux:<library>atomic
+        <toolset>gcc-4.8,<address-model>32:<build>no ;
 
-    [ run test_detail_random_provider.cpp
-      : : :
-        <define>BOOST_UUID_RANDOM_PROVIDER_GETRANDOM_DISABLE_LIBC_WRAPPER   # will disable getrandom libc wrapper
-        <build>no
-        <target-os>linux:<build>yes                                         # build only on linux
-      : test_detail_random_provider_happy_getrandom_syscall ]
+run test_time_generator_v1_3.cpp
+  : : : <toolset>gcc:<library>atomic <toolset>clang-linux:<library>atomic
+        <toolset>gcc-4.8,<address-model>32:<build>no ;
 
-    ;
+run test_time_generator_v6.cpp
+  : : : <toolset>gcc:<library>atomic <toolset>clang-linux:<library>atomic
+        <toolset>gcc-4.8,<address-model>32:<build>no ;
+
+run test_time_generator_v6_2.cpp
+  : : : <toolset>gcc:<library>atomic <toolset>clang-linux:<library>atomic
+        <toolset>gcc-4.8,<address-model>32:<build>no ;
+
+run test_time_generator_v6_3.cpp
+  : : : <toolset>gcc:<library>atomic <toolset>clang-linux:<library>atomic
+        <toolset>gcc-4.8,<address-model>32:<build>no ;
+
+run test_time_generator_v7.cpp ;
+run test_time_generator_v7_2.cpp ;
+run test_time_generator_v7_3.cpp ;
+
+# test serializing uuids
+
+run test_serialization.cpp /boost//serialization : : : <undefined-sanitizer>norecover:<link>static ;
+# run test_wserialization.cpp /boost//serialization /boost//wserialization ;
+
+# test tagging an object
+
+run test_tagging.cpp ;
+
+# test use cases
+
+run test_uuid_class.cpp ;
+run test_uuid_in_map.cpp ;
+
+# test hashing support
+
+run test_hash.cpp ;
+run test_hash_value.cpp ;
+
+run test_std_unordered.cpp ;
+run test_boost_unordered.cpp
+  : : : <toolset>gcc-4.7:<build>no ;
+
+# test detail components
+
+run test_detail_md5.cpp ;
+run test_detail_sha1.cpp ;
+run test_detail_endian.cpp ;
+run test_detail_chacha20.cpp ;
+
+# compile-fail tests
+
+compile-fail compile-fail/random_provider_no_copy_ctor.cpp ;
+compile-fail compile-fail/random_provider_no_copy_assign.cpp ;
+
+# test MSVC 12 (VS2013) optimizer bug with SIMD operations.
+# See https://svn.boost.org/trac/boost/ticket/8509#comment:3
+# Only happens in Release x64 builds.
+
+run test_msvc_simd_bug981648_main.cpp test_msvc_simd_bug981648_foo.cpp : : : <variant>release <debug-symbols>on : test_msvc_simd_bug981648 ;
+
+# a small benchmark test for random generation
+
+run test_bench_random.cpp /boost//timer : : : <toolset>clang-cloudabi:<build>no ;
+
+# tests for the header-only random provider
+
+run test_entropy_error.cpp ;
+run test_detail_random_provider.cpp ;
+
+# 'quick' test for CI
 
 run quick.cpp ;

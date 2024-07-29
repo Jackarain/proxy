@@ -1,6 +1,77 @@
 [[b2.history]]
 = History
 
+== Version 5.2.1
+
+This patch reverts the change to define `_HAS_EXCEPTIONS=0` for Dinkumware
+std library. It has the undesired effect of changing the ABI. It's better for
+user code to handle the conbination of turning off exceptions while treating
+warnings as errors, and getting warnings/errors from the std library by having
+the users silence the warning themselves.
+
+This patch also fixes the case of asking to initialize any msvc toolset
+versions (`using msvc ;`) when there are already versions initialized. Instead
+of erroring to say that a version is already in use, it considers the set
+of already initialized msvc toolsets as satisfying the request to generally
+initialize msvc.
+
+== Version 5.2.0
+
+Many fixes in this release from regular contributors Nikita and Dmitry. There
+are a couple of new features.. First the ability to have `dll-path` in searched
+libraries. Which makes it possible to better support system/external libraries.
+The second new feature is the addition of generating `compile_commands.json`
+for IDE and tool integration. That has a been a wish item for a long time.
+
+* *New*: Add support for generating `compile_commands.json` command database
+  for some IDE integration.
+  -- _René Ferdinand Rivera Morell_
+* *New*: Addition of a module (`db`) for structured data management. Has a
+  `property-db` class that can write out as JSON data.
+  -- _René Ferdinand Rivera Morell_
+* *New*: Allow adding dll-path to usage requirements of searched libraries.
+  Which makes it possible to adjust search paths for dynamic libs on the
+  platform.
+  -- _Dmitry Arkhipov_
+* Fix incorrect recursive loading of modules when doing recursive importing of
+  modules. The recursive loading would cause stack overflows.
+  -- _René Ferdinand Rivera Morell_
+* Default to building with Clang on FreeBSD and OpenBSD.
+  -- _Nikita Kniazev_
+* Fix Solaris/SunOS detection in engine for `OS=SUNOS` and `OS=SOLARIS`.
+  -- _Nikita Kniazev_
+* Allow some tools to be default initialized with `using` multiple times. The
+  tools are `asciidoctor`, `fop`, `gettext`, `pkg-config`, `python`, `sass`,
+  and `saxonhe`.
+  -- _Dmitry Arkhipov_
+* Fix using relevant features in ac module that would cause incorrect configure
+  checks.
+  -- _Dmitry Arkhipov_
+* Fix application of -m31, -m32, -m64 for address model on certain hardware and
+  avoid adding them when not supported, generally.
+  -- _Nikita Kniazev_
+* Fix incorrectly attaching manifest when not targeting Windows for engine
+  bootstrap build.
+  -- _Nikita Kniazev_
+* Fix `embed-manifest-via=linker` for clang-win toolset.
+  -- _Nikita Kniazev_
+* Fix incorrect `unknown` OS name, to use correct `none`. Which is needed for
+  correct emscripten toolset building.
+  -- _Nikita Kniazev_
+* Fix: For msvc toolset, register only the versions that have been asked to
+  init.
+  -- _Nikita Kniazev_
+* Fix: Suppress spurious `1 file(s) copied.` message after every test.
+  -- _Nikita Kniazev_
+* Fix: Improve handling of install directories.
+  -- _Dmitry Arkhipov_
+* Fix: For msvc toolset, recognize Visual Studio 2022 v17.10.0, which uses
+  toolchain version 14.40.33807.
+  -- _Dmitry Andric_
+* Fix: For msvc toolset, exception-handling=off should define
+  `_HAS_EXCEPTIONS=0` for Dinkumware/MSSTL.
+  -- _Nikita Kniazev_
+
 == Version 5.1.0
 
 This is mostly a bugfix release to account for issues impacting Boost Libraries.

@@ -23,6 +23,14 @@ namespace detail {
 
 class format_args;
 
+/* Stores the URL component patterns extracted by `urls::format`.
+
+   This class temporarily stores the URL format patterns
+   for each URL component.
+
+   `pattern::apply` sets all components of an `url_base`
+    by applying `args` to each pattern.
+ */
 struct pattern
 {
     core::string_view scheme;

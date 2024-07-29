@@ -663,9 +663,9 @@ private:
 
         std::size_t element_size = sizeof( Pixel );
 
-        std::size_t ret = std::max( width
-                                  , (( scanline_size_in_bytes + element_size - 1 ) / element_size )
-                                  );
+        std::size_t ret = (std::max)( width
+                                    , (( scanline_size_in_bytes + element_size - 1 ) / element_size )
+                                    );
 
         return ret;
     }

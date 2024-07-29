@@ -184,11 +184,12 @@ rule init ( version ? : command * : options * : requirement * )
         bin ?= [ common.get-absolute-tool-path $(command[-1]) ] ;
         root ?= $(bin:D) ;
     }
+    local machine ;
     local target-os ;
     #   Autodetect the version and flavor if not given.
     if $(command)
     {
-        local machine = [ MATCH "^([^ ]+)" :
+        machine = [ MATCH "^([^ ]+)" :
             [ SHELL "$(command-string) -dumpmachine" ] ] ;
         if ! $(version) { # ?= operator does not short-circuit
         version ?= [ get-short-version $(command-string) ] ;
@@ -203,6 +204,8 @@ rule init ( version ? : command * : options * : requirement * )
             case *mingw*  : target-os ?= windows ;
             case *cygwin* : target-os ?= cygwin ;
             case *linux*  : target-os ?= linux ;
+            case *aix*    : target-os ?= aix ;
+            case *hpux*   : target-os ?= hpux ;
             # TODO: finish this list.
         }
     }
@@ -276,6 +279,20 @@ rule init ( version ? : command * : options * : requirement * )
     toolset.flags gcc VERSION $(condition) : [ regex.split $(version) "[.]" ] ;
 
     init-cxxstd-flags $(condition) : $(version) ;
+
+    if ! $(target-os) in aix hpux
+    {
+        if [ MATCH "^(i.86|x86|powerpc|ppc|sparc)" : $(machine:L) ]
+        {
+            compile-link-flags $(condition)/<architecture>/<address-model>32 : -m32 ;
+            compile-link-flags $(condition)/<architecture>/<address-model>64 : -m64 ;
+        }
+        if [ MATCH "^(s390)" : $(machine:L) ]
+        {
+            compile-link-flags $(condition)/<architecture>/<address-model>32 : -m31 ;
+            compile-link-flags $(condition)/<architecture>/<address-model>64 : -m64 ;
+        }
+    }
 }
 
 if [ os.name ] = NT
@@ -369,6 +386,8 @@ local rule compile-link-flags ( * )
     compile-link-flags <target-os>hpux/<address-model>64 : -mlp64 ;
 
     local generic-os = [ set.difference $(all-os) : aix hpux ] ;
+    compile-link-flags <target-os>$(generic-os)/<architecture>s390x/<address-model>32 : -m31 ;
+    compile-link-flags <target-os>$(generic-os)/<architecture>s390x/<address-model>64 : -m64 ;
     local arch = power sparc x86 ;
     compile-link-flags <target-os>$(generic-os)/<architecture>$(arch)/<address-model>32 : -m32 ;
     compile-link-flags <target-os>$(generic-os)/<architecture>$(arch)/<address-model>64 : -m64 ;
@@ -459,6 +478,14 @@ generators.register-c-compiler gcc.compile.mm  : OBJECTIVE_CPP : OBJ : <toolset>
 generators.register [ new fortran-compiling-generator
     gcc.compile.fortran : FORTRAN FORTRAN90 : OBJ : <toolset>gcc ] ;
 
+rule set_command_db ( targets + )
+{
+    local config_command = [ regex.escape
+        [ on $(targets[1]) return $(CONFIG_COMMAND:E="") ]
+        : "()[]\\+.*^$\"" : "\\" ] ;
+    COMMAND_DATABASE on $(targets) = "(\"$(config_command)\"[^\n]*)" ;
+}
+
 rule compile.c++.preprocess ( targets * : sources * : properties * )
 {
     # Some extensions are compiled as C++ by default. For others, we need to
@@ -467,6 +494,7 @@ rule compile.c++.preprocess ( targets * : sources * : properties * )
     {
         LANG on $(<) = "-x c++" ;
     }
+    gcc.set_command_db $(targets) ;
     DEPENDS $(<) : [ on $(<) return $(PCH_FILE) ] ;
 }
 
@@ -479,6 +507,7 @@ rule compile.c.preprocess ( targets * : sources * : properties * )
     #{
         LANG on $(<) = "-x c" ;
     #}
+    gcc.set_command_db $(targets) ;
     DEPENDS $(<) : [ on $(<) return $(PCH_FILE) ] ;
 }
 
@@ -490,6 +519,7 @@ rule compile.c++ ( targets * : sources * : properties * )
     {
         LANG on $(<) = "-x c++" ;
     }
+    gcc.set_command_db $(targets) ;
     DEPENDS $(<) : [ on $(<) return $(PCH_FILE) ] ;
 }
 
@@ -502,11 +532,13 @@ rule compile.c ( targets * : sources * : properties * )
     #{
         LANG on $(<) = "-x c" ;
     #}
+    gcc.set_command_db $(targets) ;
     DEPENDS $(<) : [ on $(<) return $(PCH_FILE) ] ;
 }
 
 rule compile.fortran ( targets * : sources * : properties * )
 {
+    gcc.set_command_db $(targets) ;
 }
 
 actions compile.c++ bind PCH_FILE
@@ -536,6 +568,7 @@ actions compile.fortran
 
 rule compile.asm ( targets * : sources * : properties * )
 {
+    gcc.set_command_db $(targets) ;
     LANG on $(<) = "-x assembler-with-cpp" ;
 }
 

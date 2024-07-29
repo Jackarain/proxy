@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_IMPL_IPV6_ADDRESS_IPP
-#define BOOST_URL_IMPL_IPV6_ADDRESS_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/ipv6_address.hpp>
@@ -251,4 +249,3 @@ parse_ipv6_address(
 } // urls
 } // boost
 
-#endif

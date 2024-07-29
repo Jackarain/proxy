@@ -12,6 +12,7 @@ import gcc ;
 import common ;
 import errors ;
 import generators ;
+import regex ;
 
 feature.extend-subfeature toolset intel : platform : vxworks ;
 
@@ -137,9 +138,27 @@ flags intel-vxworks.compile.c++ OPTIONS <warnings>extra : -w3 ;
 flags intel-vxworks.compile.c++ OPTIONS <warnings>pedantic : -w3 -Wcheck ;
 flags intel-vxworks.compile.c++ OPTIONS <warnings-as-errors>on : -Werror-all ;
 
+rule set_command_db ( targets + )
+{
+    local config_command = [ regex.escape
+        [ on $(targets[1]) return $(CONFIG_COMMAND:E="") ]
+        : "()[]\\+.*^$\"" : "\\" ] ;
+    COMMAND_DATABASE on $(targets) = "(\"$(config_command)\"[^\n]*)" ;
+}
+
+rule compile.c ( targets * : sources * : properties * )
+{
+    set_command_db $(targets) ;
+}
+
 actions compile.c
 {
     "$(CONFIG_COMMAND)" -xc $(OPTIONS) -D$(DEFINES) -I"$(INCLUDES)" -c -o "$(<)" "$(>)"
+}
+
+rule compile.c++ ( targets * : sources * : properties * )
+{
+    set_command_db $(targets) ;
 }
 
 actions compile.c++

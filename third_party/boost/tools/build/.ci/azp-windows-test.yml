@@ -1,17 +1,29 @@
+parameters:
+- name: b2_opts
+  type: string
+  default: ''
+- name: prep_cmd
+  type: string
+  default: ''
+
 steps:
+- powershell: |
+    Set-PSDebug -Trace 1
+    ${{ parameters.prep_cmd }}
+  displayName: Prep
 - powershell: |
     Set-PSDebug -Trace 1
     cd src/engine
     $env:HOME = $env:HOMEDRIVE + $env:HOMEPATH
-    $env:path += ';' + $env:CXX_PATH
+    $env:path = 'C:\Windows\system32;C:\Windows;' + $env:CXX_PATH
+    echo "Path:" $env:path
     cmd /c build.bat $env:TOOLSET
-    ./b2.exe -v
     cd ../..
   displayName: Build
 - powershell: |
     Set-PSDebug -Trace 1
     $env:HOME = $env:HOMEDRIVE + $env:HOMEPATH
-    $env:path += ';' + $env:CXX_PATH
+    $env:path = 'C:\Windows\system32;C:\Windows;' + $env:CXX_PATH
     cd test
     echo "using" $env:TEST_TOOLSET ":" ":" $env:CXX ";" > ${env:HOME}/user-config.jam
     py -X utf8 test_all.py $env:TEST_TOOLSET
@@ -20,21 +32,20 @@ steps:
 - powershell: |
     Set-PSDebug -Trace 1
     $env:HOME = $env:HOMEDRIVE + $env:HOMEPATH
-    $env:path += ';' + $env:CXX_PATH
+    $env:path = 'C:\Windows\system32;C:\Windows;' + $env:CXX_PATH
     echo "using" $env:TEST_TOOLSET ":" ":" $env:CXX ";" > ${env:HOME}/user-config.jam
-    ./src/engine/b2.exe --debug-configuration b2 warnings-as-errors=on variant=debug,release toolset=$env:TEST_TOOLSET
+    ./src/engine/b2.exe --debug-configuration b2 warnings-as-errors=on variant=debug,release toolset=$env:TEST_TOOLSET ${{ parameters.b2_opts }}
   displayName: "No Warnings"
 - powershell: |
     Set-PSDebug -Trace 1
     $env:HOME = $env:HOMEDRIVE + $env:HOMEPATH
-    $env:path += ';' + $env:CXX_PATH
+    $env:path = 'C:\Windows\system32;C:\Windows;' + $env:CXX_PATH
     echo "using" $env:TEST_TOOLSET ":" ":" $env:CXX ";" > ${env:HOME}/user-config.jam
     ./bootstrap.bat $env:TOOLSET
-    ./b2.exe --debug-configuration --prefix=${env:HOME}/temp/.b2 install toolset=$env:TEST_TOOLSET
+    ./b2.exe --debug-configuration --prefix=${env:HOME}/temp/.b2 install toolset=$env:TEST_TOOLSET ${{ parameters.b2_opts }}
     Remove-Item ./b2.exe
     $env:path += $env:HOME + '/temp/.b2' + ';' + $env:PATH
     cd $env:HOME
     echo $null >> build.jam
-    b2 -v
-    b2 -n --debug-configuration
+    b2 -n --debug-configuration toolset=$env:TEST_TOOLSET ${{ parameters.b2_opts }}
   displayName: Bootstrap

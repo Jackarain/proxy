@@ -136,20 +136,25 @@ inline auto generate_gaussian_kernel(std::size_t side_length, double sigma)
         throw std::invalid_argument("kernel dimensions should be odd and equal");
 
     const double denominator = 2 * boost::gil::detail::pi * sigma * sigma;
-    auto middle = side_length / 2;
+    auto const middle = side_length / 2;
     std::vector<T, Allocator> values(side_length * side_length);
+    T sum{0};
     for (std::size_t y = 0; y < side_length; ++y)
     {
         for (std::size_t x = 0; x < side_length; ++x)
         {
-            const auto delta_x = middle > x ? middle - x : x - middle;
-            const auto delta_y = middle > y ? middle - y : y - middle;
-            const double power = (delta_x * delta_x +  delta_y * delta_y) / (2 * sigma * sigma);
+            const auto delta_x = x - middle;
+            const auto delta_y = y - middle;
+            const auto power = static_cast<double>(delta_x * delta_x + delta_y * delta_y) / (2 * sigma * sigma);
             const double nominator = std::exp(-power);
-            const float value = static_cast<float>(nominator / denominator);
+            const auto value = static_cast<T>(nominator / denominator);
             values[y * side_length + x] = value;
+            sum += value;
         }
     }
+
+    // normalize so that Gaussian kernel sums up to 1.
+    std::transform(values.begin(), values.end(), values.begin(), [&sum](const auto & v) { return v/sum; });
 
     return detail::kernel_2d<T, Allocator>(values.begin(), values.size(), middle, middle);
 }

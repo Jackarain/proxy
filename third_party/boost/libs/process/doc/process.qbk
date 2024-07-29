@@ -11,14 +11,8 @@
     ]
 ]
 
-[note [link process.v2 Process V2] is available as  experimental]
+[note Process v1 will be deprecated in the future. Use v2 for new projects.]
 
-[include introduction.qbk]
-[include concepts.qbk]
-[include tutorial.qbk]
-[include design.qbk]
-[include extend.qbk]
-[include faq.qbk]
-[xinclude autodoc.xml]
-[include acknowledgements.qbk]
+[include v1.qbk]
 [include v2.qbk]
+[include acknowledgements.qbk]

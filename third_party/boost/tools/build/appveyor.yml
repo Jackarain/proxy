@@ -10,6 +10,7 @@ branches:
     - /release/
     - /feature\/.*/
     - /backport-.*/
+    - /version\/.*/
 
 skip_commits:
   files:
@@ -22,6 +23,16 @@ skip_commits:
 
 environment:
   matrix:
+  - job_name: 'Visual Studio 2022, Test'
+    job_group: 'Test'
+    TOOLSET: vc143
+    TEST_TOOLSET: msvc-14.3
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+  - job_name: 'Visual Studio 2019, Test'
+    job_group: 'Test'
+    TOOLSET: vc142
+    TEST_TOOLSET: msvc-14.2
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
   - job_name: 'Visual Studio 2017, Test'
     job_group: 'Test'
     TOOLSET: vc141
@@ -32,17 +43,23 @@ environment:
     TOOLSET: vc14
     TEST_TOOLSET: msvc-14.0
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+  - job_name: 'Clang 18 (VS2022), Test'
+    job_group: 'Test'
+    TOOLSET: clang-win
+    TEST_TOOLSET: clang-win
+    B2_DONT_EMBED_MANIFEST: true  # lld-link: error: unable to find mt.exe in PATH: no such file or directory
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
   - job_name: 'Clang 9 (VS2015), Test'
     job_group: 'Test'
     TOOLSET: clang-win
     TEST_TOOLSET: clang-win
     B2_DONT_EMBED_MANIFEST: true  # lld-link: error: unable to find mt.exe in PATH: no such file or directory
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-  - job_name: 'Cygwin 3.1.7 x64, Test'
+  - job_name: 'Cygwin 3.4.6 x64, Test'
     job_group: 'TestCygwin'
     TOOLSET: gcc
     TEST_TOOLSET: gcc
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
     B2_CXX_PATH: C:/cygwin64/bin
 
 build_script:

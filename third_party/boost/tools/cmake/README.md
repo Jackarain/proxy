@@ -390,7 +390,7 @@ not provide the `Boost::boost` and `Boost::headers` targets, on which many
 existing `CMakeLists.txt` files rely.)
 
 Instead, the individual Boost libraries needed to be referenced as in
-```
+```cmake
 find_package(boost_filesystem 1.81 REQUIRED)
 ```
 
@@ -404,14 +404,14 @@ Assuming that your project already has a copy of Boost in a subdirectory,
 either deployed as a Git submodule or extracted manually by the user as a
 prerequisite, using it is relatively straightforward:
 
-```
+```cmake
 add_subdirectory(deps/boost)
 ```
 
 However, as-is, this will configure all Boost libraries and build them by
 default regardless of whether they are used. It's better to use
 
-```
+```cmake
 add_subdirectory(deps/boost EXCLUDE_FROM_ALL)
 ```
 
@@ -420,7 +420,7 @@ and it's even better to set `BOOST_INCLUDE_LIBRARIES` before the
 `add_subdirectory` call to a list of the Boost libraries that need to be
 configured:
 
-```
+```cmake
 set(BOOST_INCLUDE_LIBRARIES filesystem regex)
 add_subdirectory(deps/boost EXCLUDE_FROM_ALL)
 ```
@@ -436,7 +436,7 @@ added (again via `add_subdirectory`.)
 
 As an example, this is how one would use Boost.Timer in this manner:
 
-```
+```cmake
 set(libs
 
   timer
@@ -493,7 +493,7 @@ pros and cons of this approach.
 
 That said, here's how one would use Boost with `FetchContent`:
 
-```
+```cmake
 include(FetchContent)
 
 FetchContent_Declare(
@@ -512,15 +512,28 @@ Boost libraries are configured and built, even if not used by the project.
 To configure only some Boost libraries, set `BOOST_INCLUDE_LIBRARIES`
 before the `FetchContent_MakeAvailable` call:
 
-```
+```cmake
 set(BOOST_INCLUDE_LIBRARIES timer filesystem regex)
 FetchContent_MakeAvailable(Boost)
 ```
 
-To perform the `add_subdirectory` call with the `EXCLUDE_FROM_ALL` option,
-replace `FetchContent_MakeAvailable(Boost)` with this:
+To perform the `add_subdirectory` call with the `EXCLUDE_FROM_ALL` option, if you
+are using CMake 3.28 or newer, you can simply pass `EXCLUDE_FROM_ALL` to
+`FetchContent_Declare`:
 
+```cmake
+FetchContent_Declare(
+  Boost
+  URL https://github.com/boostorg/boost/releases/download/boost-1.84.0/boost-1.84.0.tar.xz
+  URL_MD5 893b5203b862eb9bbd08553e24ff146a
+  DOWNLOAD_EXTRACT_TIMESTAMP ON
+  EXCLUDE_FROM_ALL
+)
 ```
+
+For earlier versions of CMake, you can replace `FetchContent_MakeAvailable(Boost)` with this:
+
+```cmake
 FetchContent_GetProperties(Boost)
 
 if(NOT Boost_POPULATED)

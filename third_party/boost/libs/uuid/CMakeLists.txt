@@ -3,7 +3,7 @@
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
-cmake_minimum_required(VERSION 3.5...3.20)
+cmake_minimum_required(VERSION 3.8...3.20)
 
 project(boost_uuid VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
 
@@ -16,19 +16,17 @@ target_link_libraries(boost_uuid
   INTERFACE
     Boost::assert
     Boost::config
-    Boost::container_hash
-    Boost::core
-    Boost::io
-    Boost::move
-    Boost::numeric_conversion
-    Boost::predef
-    Boost::random
-    Boost::static_assert
     Boost::throw_exception
-    Boost::tti
     Boost::type_traits
-    Boost::winapi
 )
+
+target_compile_features(boost_uuid INTERFACE cxx_std_11)
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+
+  target_link_libraries(boost_uuid INTERFACE atomic)
+
+endif()
 
 if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
 

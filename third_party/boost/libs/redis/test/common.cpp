@@ -29,7 +29,7 @@ run(
    conn->async_run(cfg, {l}, run_callback{conn, op, ec});
 }
 
-std::string safe_getenv(const char* name, const char* default_value)
+static std::string safe_getenv(const char* name, const char* default_value)
 {
     // MSVC doesn't like getenv
 #ifdef BOOST_MSVC
@@ -43,10 +43,15 @@ std::string safe_getenv(const char* name, const char* default_value)
     return res ? res : default_value;
 }
 
+std::string get_server_hostname()
+{
+   return safe_getenv("BOOST_REDIS_TEST_SERVER", "localhost");
+}
+
 boost::redis::config make_test_config()
 {
    boost::redis::config cfg;
-   cfg.addr.host = safe_getenv("BOOST_REDIS_TEST_SERVER", "localhost");
+   cfg.addr.host = get_server_hostname();
    return cfg;
 }
 

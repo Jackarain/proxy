@@ -145,9 +145,7 @@ file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
             <paramtype>signal &amp;&amp;</paramtype>
           </parameter>
           <description><para>Move constructor.</para></description>
-          <postconditions><para>The signal <computeroutput>other</computeroutput>
-            is in a "moved-from" state where it may only be destroyed, swapped, or move assigned.
-            Any other operation on a "moved-from" signal is invalid.</para></postconditions>
+          <postconditions><para><computeroutput>other.<methodname>null</methodname>()</computeroutput></para></postconditions>
 
           <throws><para>Will not throw.</para></throws>
         </constructor>
@@ -157,9 +155,7 @@ file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
             <paramtype>signal &amp;&amp;</paramtype>
           </parameter>
           <description><para>Move assignment.</para></description>
-          <postconditions><para>The signal <computeroutput>rhs</computeroutput>
-            is in a "moved-from" state where it may only be destroyed, swapped, or move assigned.
-            Any other operation on a "moved-from" signal is invalid.</para></postconditions>
+          <postconditions><para><computeroutput>rhs.<methodname>null</methodname>()</computeroutput></para></postconditions>
 
           <throws><para>Will not throw.</para></throws>
         </copy-assignment>
@@ -429,6 +425,41 @@ file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
             <computeroutput>other</computeroutput>.</para></effects>
 
             <throws><para>Will not throw.</para></throws>
+          </method>
+        </method-group>
+    
+        <method-group name="misc">
+          <method name="null" cv="const">
+            <type>bool</type>
+            <returns><para><computeroutput>false</computeroutput> for a normal signal,
+                <computeroutput>true</computeroutput> after a signal
+                has been moved from.  Null signals are nonfunctional husks left
+                behind after a signal is moved.  They may not be invoked or have
+                slots connected to them.</para>
+            </returns>
+
+            <throws><para>Will not throw.</para></throws>
+
+            <notes>
+                <para>A null signal may be destroyed, swapped, or move assigned.  Also,
+                    the following methods may be called on a null signal:
+                </para>
+                <variablelist>
+                    <varlistentry><term><methodname>disconnect</methodname> and <methodname>disconnect_all_slots</methodname></term>
+                        <listitem>no effect</listitem>
+                    </varlistentry>
+                    <varlistentry><term><methodname>empty</methodname></term>
+                        <listitem>returns <computeroutput>true</computeroutput></listitem>
+                    </varlistentry>
+                    <varlistentry><term><methodname>null</methodname></term>
+                        <listitem>returns <computeroutput>true</computeroutput></listitem>
+                    </varlistentry>
+                    <varlistentry><term><methodname>num_slots</methodname></term>
+                        <listitem>returns <computeroutput>0</computeroutput></listitem>
+                    </varlistentry>
+                </variablelist>
+                <para>Any other operation on a null signal is invalid.</para>
+            </notes>
           </method>
         </method-group>
 

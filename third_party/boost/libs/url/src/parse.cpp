@@ -8,8 +8,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_IMPL_PARSE_IPP
-#define BOOST_URL_IMPL_PARSE_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/parse.hpp>
@@ -65,4 +63,3 @@ parse_uri_reference(
 } // urls
 } // boost
 
-#endif

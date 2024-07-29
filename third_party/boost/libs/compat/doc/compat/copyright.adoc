@@ -8,6 +8,6 @@ https://www.boost.org/LICENSE_1_0.txt
 # Copyright and License
 :idprefix:
 
-This documentation is copyright 2023 Peter Dimov and contributors and is
-distributed under the
+This documentation is copyright 2023, 2024 Peter Dimov and
+contributors and is distributed under the
 http://www.boost.org/LICENSE_1_0.txt[Boost Software License, Version 1.0].

@@ -27,6 +27,12 @@ target_link_libraries(boost_interprocess
     Boost::winapi
 )
 
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(boost_interprocess INTERFACE rt)
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    target_link_libraries(boost_interprocess INTERFACE ole32 oleaut32 psapi advapi32)
+endif()
+
 if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
 
   add_subdirectory(test)

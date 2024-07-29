@@ -1,0 +1,115 @@
+# Copyright 2024 Andrey Semashev
+#
+# Distributed under the Boost Software License, Version 1.0.
+# https://www.boost.org/LICENSE_1_0.txt
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - develop
+      - feature/**
+
+concurrency:
+  group: ${{format('{0}:{1}', github.repository, github.ref)}}
+  cancel-in-progress: true
+
+env:
+  GIT_FETCH_JOBS: 8
+  NET_RETRY_COUNT: 5
+
+jobs:
+  posix:
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            install:
+              - curl
+              - xsltproc
+              - docbook-xsl
+              - docbook-xml
+              - doxygen
+              - python-is-python3
+              - python3-lxml
+
+    timeout-minutes: 15
+    runs-on: ${{matrix.os}}
+    container: ${{matrix.container}}
+
+    steps:
+      - name: Setup environment
+        run: |
+            if [ -f "/etc/debian_version" ]
+            then
+                echo "DEBIAN_FRONTEND=noninteractive" >> $GITHUB_ENV
+                export DEBIAN_FRONTEND=noninteractive
+            fi
+            git config --global pack.threads 0
+
+      - name: Install packages
+        if: matrix.install
+        run: |
+            sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
+            sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT install -y ${{join(matrix.install, ' ')}}
+
+      - name: Setup Boost
+        run: |
+            echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+            GIT_MODULE=${GITHUB_REPOSITORY#*/}
+            echo GIT_MODULE: $GIT_MODULE
+            echo "GIT_MODULE=$GIT_MODULE" >> $GITHUB_ENV
+            echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+            echo GITHUB_REF: $GITHUB_REF
+            REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+            REF=${REF#refs/heads/}
+            echo REF: $REF
+            BOOST_BRANCH=develop && [ "$REF" = "master" ] && BOOST_BRANCH=master || true
+            echo BOOST_BRANCH: $BOOST_BRANCH
+            BUILD_JOBS=$((nproc || sysctl -n hw.ncpu) 2> /dev/null)
+            echo "BUILD_JOBS=$BUILD_JOBS" >> $GITHUB_ENV
+            mkdir -p snapshot
+            cd snapshot
+            echo "Downloading module snapshot: https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+            curl -L --retry "$NET_RETRY_COUNT" -o "${GIT_MODULE}-${GITHUB_SHA}.tar.gz" "https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+            tar -xf "${GIT_MODULE}-${GITHUB_SHA}.tar.gz"
+            if [ ! -d "${GIT_MODULE}-${GITHUB_SHA}" ]
+            then
+                echo "Module snapshot does not contain the module directory ${GIT_MODULE}-${GITHUB_SHA}:"
+                ls -la
+                exit 1
+            fi
+            rm -f "${GIT_MODULE}-${GITHUB_SHA}.tar.gz"
+            cd ..
+            git clone -b "$BOOST_BRANCH" --depth 1 "https://github.com/boostorg/boost.git" "boost-root"
+            cd boost-root
+            mkdir -p tools
+            rm -rf "tools/$GIT_MODULE"
+            mv -f "../snapshot/${GIT_MODULE}-${GITHUB_SHA}" "tools/$GIT_MODULE"
+            rm -rf "../snapshot"
+            git submodule update --init --recursive --jobs $GIT_FETCH_JOBS libs/config libs/headers tools/boost_install tools/build
+            ./bootstrap.sh
+            echo "B2=$PWD/b2" >> $GITHUB_ENV
+
+      - name: Run base tests
+        run: |
+            cd "boost-root/tools/$GIT_MODULE/test"
+            "$B2" -j $BUILD_JOBS
+
+      - name: Run Doxygen tests
+        run: |
+            cd "boost-root/tools/$GIT_MODULE/test/doxygen"
+            "$B2" -j $BUILD_JOBS
+
+      - name: Run more tests
+        run: |
+            cd "boost-root/tools/$GIT_MODULE/test/more"
+            python run-tests.py

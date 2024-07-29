@@ -13,6 +13,7 @@ import gcc ;
 import common ;
 import errors ;
 import generators ;
+import regex ;
 
 feature.extend-subfeature toolset intel : platform : darwin ;
 
@@ -159,9 +160,25 @@ flags intel-darwin.compile.c++ OPTIONS <warnings>extra : -w3 ;
 flags intel-darwin.compile.c++ OPTIONS <warnings>pedantic : -w3 -Wcheck ;
 flags intel-darwin.compile.c++ OPTIONS <warnings-as-errors>on : -Werror-all ;
 
+rule compile.c ( targets * : sources * : properties * )
+{
+    local config_command = [ regex.escape
+        [ on $(targets[1]) return $(CONFIG_COMMAND:E="") ]
+        : "()[]\\+.*^$\"" : "\\" ] ;
+    COMMAND_DATABASE on $(targets) = "(\"$(config_command)\"[^\n]*)" ;
+}
+
 actions compile.c
 {
     "$(CONFIG_COMMAND)" -xc $(OPTIONS) -D$(DEFINES) -I"$(INCLUDES)" -c -o "$(<)" "$(>)"
+}
+
+rule compile.c++ ( targets * : sources * : properties * )
+{
+    local config_command = [ regex.escape
+        [ on $(targets[1]) return $(CONFIG_COMMAND:E="") ]
+        : "()[]\\+.*^$\"" : "\\" ] ;
+    COMMAND_DATABASE on $(targets) = "(\"$(config_command)\"[^\n]*)" ;
 }
 
 actions compile.c++

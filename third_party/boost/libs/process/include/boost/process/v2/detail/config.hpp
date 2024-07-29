@@ -79,7 +79,18 @@
 #include <boost/filesystem/operations.hpp>
 #endif
 
+
+#if !defined(BOOST_PROCESS_VERSION)
+#define  BOOST_PROCESS_VERSION 1
+#endif
+
+
+#if BOOST_PROCESS_VERSION == 2
 #define BOOST_PROCESS_V2_BEGIN_NAMESPACE namespace boost { namespace process { namespace v2 {
+#else
+#define BOOST_PROCESS_V2_BEGIN_NAMESPACE namespace boost { namespace process { inline namespace v2 {
+#endif
+
 #define BOOST_PROCESS_V2_END_NAMESPACE  } } }
 #define BOOST_PROCESS_V2_NAMESPACE boost::process::v2
 
@@ -143,18 +154,14 @@ namespace filesystem = boost::filesystem;
 
 BOOST_PROCESS_V2_END_NAMESPACE
 
-#ifndef BOOST_PROCESS_V2_HEADER_ONLY
-# ifndef BOOST_PROCESS_V2_SEPARATE_COMPILATION
-#   define BOOST_PROCESS_V2_HEADER_ONLY 1
-# endif
-#endif
-
-#if BOOST_PROCESS_V2_DOXYGEN
-# define BOOST_PROCESS_V2_DECL
-#elif defined(BOOST_PROCESS_V2_HEADER_ONLY)
-# define BOOST_PROCESS_V2_DECL inline
+#if defined(BOOST_ALL_DYN_LINK) || defined(BOOST_PROCESS_DYN_LINK)
+#if defined(BOOST_PROCESS_SOURCE)
+#define BOOST_PROCESS_V2_DECL BOOST_SYMBOL_EXPORT
 #else
-# define BOOST_PROCESS_V2_DECL
+#define BOOST_PROCESS_V2_DECL BOOST_SYMBOL_IMPORT
+#endif
+#else
+#define BOOST_PROCESS_V2_DECL
 #endif
 
 #if defined(BOOST_PROCESS_V2_POSIX)
@@ -176,5 +183,12 @@ BOOST_PROCESS_V2_END_NAMESPACE
 #else
 #define BOOST_PROCESS_V2_HAS_PROCESS_HANDLE 1
 #endif
+
+#if BOOST_PROCESS_VERSION == 2
+#define BOOST_PROCESS_V2_INLINE inline
+#else
+#define BOOST_PROCESS_V2_INLINE
+#endif
+
 
 #endif //BOOST_PROCESS_V2_DETAIL_CONFIG_HPP

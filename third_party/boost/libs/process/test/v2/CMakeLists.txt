@@ -22,8 +22,6 @@ boost_process_v2_standalone_test(pid)
 boost_process_v2_standalone_test(environment)
 boost_process_v2_standalone_test(shell)
 
-add_library(boost_process_v2_header_test header_1.cpp header_2.cpp)
-target_link_libraries(boost_process_v2_header_test PUBLIC Boost::process)
 add_executable(boost_process_v2_test_target target.cpp)
 target_link_libraries(boost_process_v2_test_target PUBLIC Boost::process Boost::system)
 

@@ -8,8 +8,8 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/process.hpp>
-#include <boost/process/posix.hpp>
-#include <boost/process/extend.hpp>
+#include <boost/process/v1/posix.hpp>
+#include <boost/process/v1/extend.hpp>
 #include <iostream>
 #include <fstream>
 #include <unistd.h>

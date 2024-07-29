@@ -29,7 +29,6 @@ BOOST_AUTO_TEST_CASE(test_pid)
 BOOST_AUTO_TEST_CASE(child_pid)
 {
     namespace bp2 = boost::process::v2;
-
     using boost::unit_test::framework::master_test_suite;
     const auto pth = bp2::filesystem::absolute(master_test_suite().argv[1]);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -48,7 +47,7 @@ BOOST_AUTO_TEST_CASE(child_pid)
     if (ec)
       BOOST_CHECK(ec == boost::system::errc::permission_denied);
     else
-      proc.wait();
+      proc.wait(ec);
 
     auto c3 = bp2::child_pids(bp2::current_pid());
     BOOST_CHECK(std::find(c3.begin(), c3.end(), proc.id()) == c3.end());

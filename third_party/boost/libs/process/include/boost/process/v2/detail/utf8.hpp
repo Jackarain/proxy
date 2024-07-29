@@ -85,11 +85,5 @@ std::basic_string<CharOut, Traits, Allocator> conv_string(
 
 BOOST_PROCESS_V2_END_NAMESPACE
 
-#if defined(BOOST_PROCESS_V2_HEADER_ONLY)
-
-#include <boost/process/v2/detail/impl/utf8.ipp>
-
-#endif
-
 
 #endif //BOOST_PROCESS_V2_DETAIL_UTF8_HPP

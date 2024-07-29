@@ -182,6 +182,11 @@ class ac-library : basic-target
         self.target = $(target) ;
     }
 
+    rule add-usage-requirements ( properties * )
+    {
+        self.extra-ureqs += $(properties) ;
+    }
+
     rule check-not-configured ( )
     {
         if $(self.include-path) || $(self.library-path) || $(self.library-name) || $(self.target)
@@ -194,7 +199,8 @@ class ac-library : basic-target
     {
         if $(self.target)
         {
-            return [ $(self.target).generate $(property-set) ] ;
+            local result = [ $(self.target).generate $(property-set) ] ;
+            return [ $(result[1]).add-raw $(self.extra-ureqs) ] $(result[2-]) ;
         }
         else
         {
@@ -226,7 +232,9 @@ class ac-library : basic-target
                 library-path ?= [ os.environ $(name:U)_LIBPATH ] ;
             }
 
-            local relevant = [ property.select [ configure.get-relevant-features ] <link> :
+            local relevant = [ configure.get-relevant-features
+                [ $(property-set).raw ] ] ;
+            relevant = [ property.select $(relevant) <link> :
                 [ $(property-set).raw ] ] ;
             local min = [ property.as-path [ SORT [ feature.minimize $(relevant) ] ] ] ;
 
@@ -250,7 +258,8 @@ class ac-library : basic-target
                     local library = [ ac.construct-library $(lookup[2]) :
                         [ $(property-set).refine [ property-set.create $(lookup[3]) ] ] : $(library-path) ] ;
                     configure.log-library-search-result $(name) : "yes (cached)" $(min) ;
-                    return [ $(library[1]).add-raw <include>$(includes) ] $(library[2-]) ;
+                    return [ $(library[1]).add-raw <include>$(includes)
+                        $(self.extra-ureqs) ] $(library[2-]) ;
                 }
             }
             else
@@ -267,7 +276,8 @@ class ac-library : basic-target
                     library = [ ac.construct-library $(library[1]) :
                         [ $(property-set).refine [ property-set.create $(library[2]) ] ]  : $(library-path) ] ;
                     configure.log-library-search-result $(name) : "yes" $(min) ;
-                    return [ $(library[1]).add-raw <include>$(includes) ] $(library[2-]) ;
+                    return [ $(library[1]).add-raw <include>$(includes)
+                        $(self.extra-ureqs) ] $(library[2-]) ;
                 }
                 else
                 {
@@ -321,6 +331,5 @@ rule check-library ( target : true-properties * : false-properties * )
         $(true-properties) : $(false-properties) ] ;
     return <conditional>@$(instance).check
         [ property.evaluate-conditional-relevance
-            $(true-properties) $(false-properties)
-          : [ configure.get-relevant-features ] <link> ] ;
+            $(true-properties) $(false-properties) : <link> ] ;
 }

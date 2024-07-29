@@ -70,6 +70,7 @@ criteria for inclusion is that the utility component be:
 [include null_deleter.qbk]
 [include fclose_deleter.qbk]
 [include nvp.qbk]
+[include pointer_in_range.qbk]
 [include pointer_traits.qbk]
 [include quick_exit.qbk]
 [include ref.qbk]

@@ -148,7 +148,7 @@ struct basic_process_handle_signal
     {
         if (pid_ <= 0)
             return;
-        if (::kill(pid_, SIGTERM) == -1)
+        if (::kill(pid_, SIGINT) == -1)
             ec = get_last_error();
     }
 
@@ -194,7 +194,7 @@ struct basic_process_handle_signal
     {
         if (pid_ <= 0)
             return;
-        if (::kill(pid_, SIGCONT) == -1)
+        if (::kill(pid_, SIGSTOP) == -1)
             ec = get_last_error();
     }
 
@@ -212,7 +212,7 @@ struct basic_process_handle_signal
     {
         if (pid_ <= 0)
             return;
-        if (::kill(pid_, SIGTERM) == -1)
+        if (::kill(pid_, SIGCONT) == -1)
             ec = get_last_error();
     }
 
@@ -222,6 +222,8 @@ struct basic_process_handle_signal
             return;
         if (::kill(pid_, SIGKILL) == -1)
             ec = get_last_error();
+        else
+            wait(exit_status, ec);
     }
 
     void terminate(native_exit_code_type &exit_status)
@@ -246,10 +248,8 @@ struct basic_process_handle_signal
         if (res == 0)
             return true;
         else
-        {
             exit_code = code;
-            return false;
-        }
+        return false;
     }
 
     bool running(native_exit_code_type &exit_code)

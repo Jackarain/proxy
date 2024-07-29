@@ -58,7 +58,7 @@ jobs:
         with:
           compilers: |
             gcc >=4.8
-            clang >=3.8
+            clang >=3.8 <18
             msvc >=14.20
             apple-clang *
             mingw *
@@ -266,21 +266,39 @@ jobs:
 
       - name: Codecov
         if: matrix.coverage
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
           set -x
-
-          # Generate report
-          gcov_tool="gcov"
-          if command -v "gcov-${{ steps.setup-cpp.outputs.version-major }}.${{ steps.setup-cpp.outputs.version-minor }}" &> /dev/null; then
-              gcov_tool="gcov-${{ steps.setup-cpp.outputs.version-major }}.${{ steps.setup-cpp.outputs.version-minor }}"
-          elif command -v "gcov-${{ steps.setup-cpp.outputs.version-major }}" &> /dev/null; then
-              gcov_tool="gcov-${{ steps.setup-cpp.outputs.version-major }}"
+          
+          if [ -z "$CODECOV_TOKEN" ]; then
+              echo "CODECOV_TOKEN is not set. Skipping coverage report."
+              exit 0
           fi
-          lcov -c -q -o "../boost-root/build_cmake/coverage.info" -d "../boost-root/build_cmake" --include "$(pwd)/../boost-root/libs/${{steps.patch.outputs.module}}/*" --gcov-tool "$gcov_tool"
-
-          # Upload to codecov
-          bash <(curl -s https://codecov.io/bash) -f "../boost-root/build_cmake/coverage.info"
-
+          
+          # Find gcov
+          gcov_tool="gcov"
+          for version in "${{steps.setup-cpp.outputs.version-major}}.${{steps.setup-cpp.outputs.version-minor}}" "${{steps.setup-cpp.outputs.version-major}}"; do
+            if command -v "gcov-$version" &> /dev/null; then
+              gcov_tool="gcov-$version"
+              break
+            fi
+          done
+          
+          for dir in "../boost-root/build_cmake" "./build_cmake_root" "../boost-root/bin.v2"; do
+              # Generate reports
+              echo "Generate report: $dir"
+              # lcov -c -q -o "$dir/coverage.info" -d "$dir" --include "$(pwd)/../boost-root/libs/${{steps.patch.outputs.module}}/*" --gcov-tool "$gcov_tool"
+              lcov --rc lcov_branch_coverage=0 --gcov-tool "$gcov_tool" --directory "$dir" --capture --output-file "$dir/all.info"
+              lcov --rc lcov_branch_coverage=0 --list "$dir/all.info"
+              lcov --rc lcov_branch_coverage=0 --extract "$dir/all.info" '*/libs/url/*' --output-file "$dir/coverage.info" '*/boost/url*' '*/boost/url.hpp*'
+              lcov --rc lcov_branch_coverage=0 --list "$dir/coverage.info"
+          
+              # Upload to codecov 
+              echo "Upload to codecov: $dir"
+              bash <(curl -s https://codecov.io/bash) -f "$dir/coverage.info"
+          done
+          
           # Summary
           echo "# Coverage" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

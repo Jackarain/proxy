@@ -32,17 +32,15 @@ class recursive_flat_map
 {
    public:
    recursive_flat_map(const recursive_flat_map &c)
-      : id_(c.id_), map_(c.map_)
+      : map_(c.map_)
    {}
 
    recursive_flat_map & operator =(const recursive_flat_map &c)
    {
-      id_ = c.id_;
       map_= c.map_;
       return *this;
    }
 
-   int id_;
    flat_map<recursive_flat_map, recursive_flat_map> map_;
    flat_map<recursive_flat_map, recursive_flat_map>::iterator it_;
    flat_map<recursive_flat_map, recursive_flat_map>::const_iterator cit_;
@@ -50,7 +48,7 @@ class recursive_flat_map
    flat_map<recursive_flat_map, recursive_flat_map>::const_reverse_iterator crit_;
 
    friend bool operator< (const recursive_flat_map &a, const recursive_flat_map &b)
-   {  return a.id_ < b.id_;   }
+   {  return a.map_ < b.map_;   }
 };
 
 
@@ -58,16 +56,14 @@ class recursive_flat_multimap
 {
 public:
    recursive_flat_multimap(const recursive_flat_multimap &c)
-      : id_(c.id_), map_(c.map_)
+      : map_(c.map_)
    {}
 
    recursive_flat_multimap & operator =(const recursive_flat_multimap &c)
    {
-      id_ = c.id_;
       map_= c.map_;
       return *this;
    }
-   int id_;
    flat_multimap<recursive_flat_multimap, recursive_flat_multimap> map_;
    flat_multimap<recursive_flat_multimap, recursive_flat_multimap>::iterator it_;
    flat_multimap<recursive_flat_multimap, recursive_flat_multimap>::const_iterator cit_;
@@ -75,7 +71,7 @@ public:
    flat_multimap<recursive_flat_multimap, recursive_flat_multimap>::const_reverse_iterator crit_;
 
    friend bool operator< (const recursive_flat_multimap &a, const recursive_flat_multimap &b)
-   {  return a.id_ < b.id_;   }
+   {  return a.map_ < b.map_;   }
 };
 
 template<class C>
@@ -564,6 +560,15 @@ bool test_heterogeneous_lookups()
    if(cmmap1.equal_range(find_me).second->second != 'e')
       return false;
 
+   //erase
+   if (map1.erase(find_me) != 1)
+      return false;
+   if (map1.erase(find_me) != 0)
+      return false;
+   if (mmap1.erase(find_me) != 2)
+      return false;
+   if (mmap1.erase(find_me) != 0)
+      return false;
    return true;
 }
 

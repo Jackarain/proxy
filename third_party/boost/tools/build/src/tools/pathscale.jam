@@ -11,6 +11,7 @@ import type ;
 import os ;
 import common ;
 import fortran ;
+import regex ;
 
 feature.extend toolset : pathscale ;
 toolset.inherit pathscale : unix ;
@@ -99,6 +100,22 @@ flags pathscale.compile INCLUDES <include> ;
 
 flags pathscale.compile.fortran USER_OPTIONS <fflags> ;
 flags pathscale.compile.fortran90 USER_OPTIONS <fflags> ;
+
+rule compile.c ( targets * : sources * : properties * )
+{
+    local config_command = [ regex.escape
+        [ on $(targets[1]) return $(CONFIG_C_COMMAND:E="") ]
+        : "()[]\\+.*^$\"" : "\\" ] ;
+    COMMAND_DATABASE on $(targets) = "(\"$(config_command)\"[^\n]*)" ;
+}
+
+rule compile.c++ ( targets * : sources * : properties * )
+{
+    local config_command = [ regex.escape
+        [ on $(targets[1]) return $(CONFIG_COMMAND:E="") ]
+        : "()[]\\+.*^$\"" : "\\" ] ;
+    COMMAND_DATABASE on $(targets) = "(\"$(config_command)\"[^\n]*)" ;
+}
 
 actions compile.c
 {

@@ -460,6 +460,133 @@ void test_utf_to_utf()
 #endif
 }
 
+/// Allocator that reports when it has been used in a static variable
+int globalUsedId = 0;
+template<typename T>
+struct CustomAllocator {
+    using value_type = T;
+    using pointer = T*;
+    using const_pointer = const T*;
+    using reference = T&;
+    using const_reference = const T&;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    using propagate_on_container_move_assignment = std::true_type;
+    using is_always_equal = std::false_type;
+
+    template<typename U>
+    struct rebind {
+        typedef CustomAllocator<U> other;
+    };
+
+    CustomAllocator(const int id = 1) : id(id) {}
+    template<typename U>
+    CustomAllocator(const CustomAllocator<U>& other) : id(other.id)
+    {}
+
+    T* allocate(size_t n)
+    {
+        // Only count allocations of (w)chars, not e.g. internal proxy instances
+        BOOST_LOCALE_START_CONST_CONDITION
+        if(std::is_same<T, char>::value || std::is_same<T, wchar_t>::value)
+            usedId += id;
+        BOOST_LOCALE_END_CONST_CONDITION
+        return base.allocate(n);
+    }
+
+    void deallocate(T* p, size_t n) { return base.deallocate(p, n); }
+
+    static int& usedId;
+    int id;
+
+private:
+    std::allocator<T> base;
+};
+template<class T, class U>
+bool operator==(const CustomAllocator<T>&, const CustomAllocator<U>&)
+{
+    return true;
+}
+
+template<class T, class U>
+bool operator!=(const CustomAllocator<T>&, const CustomAllocator<U>&)
+{
+    return false;
+}
+
+namespace detail {
+// Note that using a static class variable does not work due to possible rebinds
+int allocUsedId = 0;
+} // namespace detail
+template<typename T>
+int& CustomAllocator<T>::usedId = detail::allocUsedId;
+
+void test_utf_to_utf_allocator_support()
+{
+    using Alloc = CustomAllocator<wchar_t>;
+    using AllocIn = CustomAllocator<char>;
+    using boost::locale::conv::utf_to_utf;
+    const auto method = boost::locale::conv::default_method;
+    const std::string input(65, '0'); // Long enough to avoid SBO
+    const AllocIn inputAllocator(17);
+    const std::basic_string<char, std::char_traits<char>, AllocIn> inputWithAlloc(input.begin(),
+                                                                                  input.end(),
+                                                                                  inputAllocator);
+    const std::basic_string<wchar_t, std::char_traits<wchar_t>, Alloc> output(input.begin(), input.end());
+    const char* sBegin = input.data();
+    const char* sEnd = sBegin + input.size();
+
+    // Allocator via template param
+    Alloc::usedId = 0;
+    TEST_EQ((utf_to_utf<wchar_t, char, Alloc>(sBegin, sEnd)), output);
+    TEST_EQ(Alloc::usedId, 1);
+    Alloc::usedId = 0;
+    TEST_EQ((utf_to_utf<wchar_t, char, Alloc>(sBegin, method)), output);
+    TEST_EQ(Alloc::usedId, 1);
+    Alloc::usedId = 0;
+    TEST_EQ((utf_to_utf<wchar_t, char, Alloc>(inputWithAlloc)), output);
+    TEST_EQ(Alloc::usedId, 1);
+    Alloc::usedId = 0;
+    TEST_EQ((utf_to_utf<wchar_t, char, Alloc>(inputWithAlloc, method)), output);
+    TEST_EQ(Alloc::usedId, 1);
+
+    // Pass allocator explicitly
+    Alloc::usedId = 0;
+    TEST_EQ(utf_to_utf<wchar_t>(sBegin, sEnd, method, Alloc(2)), output);
+    TEST_EQ(Alloc::usedId, 2);
+    Alloc::usedId = 0;
+    TEST_EQ(utf_to_utf<wchar_t>(sBegin, method, Alloc(3)), output);
+    TEST_EQ(Alloc::usedId, 3);
+    Alloc::usedId = 0;
+    TEST_EQ(utf_to_utf<wchar_t>(inputWithAlloc, method, Alloc(4)), output);
+    TEST_EQ(Alloc::usedId, 4);
+    // Same with using the default method
+    Alloc::usedId = 0;
+    TEST_EQ(utf_to_utf<wchar_t>(sBegin, sEnd, Alloc(2)), output);
+    TEST_EQ(Alloc::usedId, 2);
+    Alloc::usedId = 0;
+    TEST_EQ(utf_to_utf<wchar_t>(sBegin, Alloc(3)), output);
+    TEST_EQ(Alloc::usedId, 3);
+    Alloc::usedId = 0;
+    TEST_EQ(utf_to_utf<wchar_t>(inputWithAlloc, Alloc(4)), output);
+    TEST_EQ(Alloc::usedId, 4);
+
+    // Use allocator from input
+    Alloc::usedId = 0;
+    TEST_EQ(utf_to_utf<wchar_t>(inputWithAlloc), output);
+    TEST_EQ(Alloc::usedId, inputAllocator.id);
+    Alloc::usedId = 0;
+    TEST_EQ(utf_to_utf<wchar_t>(inputWithAlloc, method), output);
+    TEST_EQ(Alloc::usedId, inputAllocator.id);
+
+    // Unchanged allocator for string overloads to check for ambiguous overloads
+    AllocIn::usedId = 0;
+    TEST_EQ(utf_to_utf<char>(inputWithAlloc, method, AllocIn(4)), inputWithAlloc);
+    TEST_EQ(AllocIn::usedId, 4);
+    TEST_EQ(utf_to_utf<char>(inputWithAlloc), inputWithAlloc);
+    TEST_EQ(AllocIn::usedId, 4 + inputAllocator.id);
+}
+
 /// Test all overloads of to_utf/from_utf templated by Char
 template<typename Char>
 void test_latin1_conversions_for()
@@ -647,6 +774,7 @@ void test_main(int /*argc*/, char** /*argv*/)
 
     test_latin1_conversions();
     test_utf_to_utf();
+    test_utf_to_utf_allocator_support();
 
     std::cout << "Testing charset to/from UTF conversion functions\n";
     std::cout << "  char" << std::endl;

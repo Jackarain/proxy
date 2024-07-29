@@ -600,24 +600,28 @@ It is possible to use scope guard classes to implement scope exit actions that a
 a function object wrapper such as `std::function` together with the scope guard to schedule the function call. For example:
 
     using cleanup_func_t = std::function< void() >;
+    cleanup_func_t cleanup_func;
     // Create an inactive scope guard first, since the cleanup function is not set yet
-    boost::scope::scope_exit< cleanup_func_t > cleanup(cleanup_func_t(), false);
+    boost::scope::scope_exit< cleanup_func_t& > cleanup(cleanup_func, false);
 
-    // Later in the program, initialize the scope guard with the function selected at run time
+    // Later in the program, initialize the cleanup function with the function selected at run time
     if (cond)
     {
-        cleanup = boost::scope::scope_exit< cleanup_func_t >([]
+        cleanup_func = []
         {
             std::cout << "cond is true" << std::endl;
-        });
+        };
     }
     else
     {
-        cleanup = boost::scope::scope_exit< cleanup_func_t >([]
+        cleanup_func = []
         {
             std::cout << "cond is false" << std::endl;
-        });
+        };
     }
+
+    // Activate the scope guard once the cleanup function is initialized
+    cleanup.set_active(true);
 
 It is also possible to do this with `BOOST_SCOPE_DEFER`, although it eliminates one of the advantages provided by this macro, namely not
 having to invent a variable name. Also note that the function wrapper must be valid at all times once the scope guard is constructed.

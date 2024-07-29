@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_IMPL_ENCONDING_OPTS_IPP
-#define BOOST_URL_IMPL_ENCONDING_OPTS_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/encoding_opts.hpp>
@@ -29,4 +27,3 @@ encoding_opts(
 } // urls
 } // boost
 
-#endif

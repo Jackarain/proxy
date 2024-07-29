@@ -6,7 +6,7 @@
  /]
 
 [library Boost.Interprocess
-    [quickbook 1.5]
+    [quickbook 1.7]
     [authors [Gaztanaga, Ion]]
     [copyright 2005-2015 Ion Gaztanaga]
     [id interprocess]
@@ -5802,7 +5802,7 @@ implementation. Here is the declaration of the unique pointer class:
 *  D is the deleter that will erase the object type of the object pointed by
    the unique_ptr when the unique pointer
    is destroyed (and if still has the ownership of the object). If the deleter defines
-   an internal `pointer` typedef, `unique_ptr`]
+   an internal `pointer` typedef, `unique_ptr`
    will use an internal pointer of the same type. So if `D::pointer` is `offset_ptr<T>`
    the unique pointer will store a relative pointer instead of a raw one. This
    allows placing `unique_ptr` in shared
@@ -6390,7 +6390,7 @@ that boost::interprocess::rbtree_best_fit class offers:
       the offset `sizeof(my_algorithm)` that [*my_algorithm] can't use at all. This extra
       bytes will be used to store additional data that should not be overwritten.
       So, [*my_algorithm] will be placed at address XXX of the memory segment, and will
-      manage the [*[XXX + sizeof(my_algorithm) + extra_hdr_bytes, XXX + size)] range of
+      manage the [*(XXX + sizeof(my_algorithm) + extra_hdr_bytes, XXX + size)] range of
       the segment.
 
 *  The [*get_min_size()] function should return the minimum space the algorithm
@@ -6416,7 +6416,7 @@ that boost::interprocess::rbtree_best_fit class offers:
 *  The [*grow()] function will expand the managed memory by [*my_algorithm] in [*extra_size]
    bytes. So [*size()] function should return the updated size,
    and the new managed memory range will be (if the address where the algorithm is
-   constructed is XXX): [*[XXX + sizeof(my_algorithm) + extra_hdr_bytes, XXX + old_size + extra_size)].
+   constructed is XXX): [*(XXX + sizeof(my_algorithm) + extra_hdr_bytes, XXX + old_size + extra_size)].
    This function should offer the same synchronization as `allocate()`.
 
 That's it. Now we can create new managed shared memory that uses our new algorithm:
@@ -6822,6 +6822,17 @@ thank them:
 
 [section:release_notes Release Notes]
 
+[section:release_notes_boost_1_86_00 Boost 1.86 Release]
+
+*  Fixed bugs:
+   * [@https://github.com/boostorg/interprocess/pull/191   GitHub #191 (['"vectorstream: support file sizes larger than INT_MAX "])].
+   * [@https://github.com/boostorg/interprocess/pull/198   GitHub #198 (['"Minor fixes for documentation of offset_ptr"])].
+   * [@https://github.com/boostorg/interprocess/pull/202   GitHub #202 (['"Allow to map message_queue in anonymous memory"])].
+   * [@https://github.com/boostorg/interprocess/pull/207   GitHub #207 (['"cmake: link system libraries"])].
+   * [@https://github.com/boostorg/interprocess/pull/214   GitHub #214 (['"Doc: Fix github links"])].
+
+[endsect]
+
 [section:release_notes_boost_1_85_00 Boost 1.85 Release]
 
 *  Remove broken `unordered_map_index` class.
@@ -6886,9 +6897,9 @@ thank them:
         can be defined by the user before including Boost.Interprocess headers to tune the default values.
 
 *  Fixed bugs:
-   * [@https://github.com/boostorg/interprocess/pull/65     GitHub #65 (['"Robustness of the interprocess mutex"])].
+   * [@https://github.com/boostorg/interprocess/issues/65   GitHub #65 (['"Robustness of the interprocess mutex"])].
    * [@https://github.com/boostorg/interprocess/pull/67     GitHub #67 (['"Changed to use posix robust mutex"])].
-   * [@https://github.com/boostorg/interprocess/pull/103    GitHub #103 (['"Use interprocess headers without exception handling"])].
+   * [@https://github.com/boostorg/interprocess/issues/103  GitHub #103 (['"Use interprocess headers without exception handling"])].
    * [@https://github.com/boostorg/interprocess/issues/128  GitHub #128 (['"Infinite loop in managed_open_or_create_impl.hpp"])].
    * [@https://github.com/boostorg/interprocess/issues/130  GitHub #130 (['"infinite loop in managed_open_or_create_impl.hpp if filesize is 0"])].
    * [@https://github.com/boostorg/interprocess/issues/142  GitHub #142 (['"File lock documentation about advisory locking is inaccurate on Windows"])].
@@ -6972,8 +6983,8 @@ thank them:
 [section:release_notes_boost_1_71_00 Boost 1.71 Release]
 
 *  Fixed bugs:
-   * [@https://github.com/boostorg/interprocess/pull/85 GitHub #85 (['"warning: Implicit conversion loses integer precision"])].
-   * [@https://github.com/boostorg/interprocess/pull/86 GitHub #86 (['"warning: Possible misuse of comma operator"])].
+   * [@https://github.com/boostorg/interprocess/issues/85 GitHub #85 (['"warning: Implicit conversion loses integer precision"])].
+   * [@https://github.com/boostorg/interprocess/issues/86 GitHub #86 (['"warning: Possible misuse of comma operator"])].
 
 [endsect]
 
@@ -7015,7 +7026,7 @@ thank them:
 
 [section:release_notes_boost_1_66_00 Boost 1.66 Release]
 *  Fixed bugs:
-   * [@https://github.com/boostorg/interprocess/pull/41 GitHub Pull #41 (['"Data race in boost::interprocess::rbtree_best_fit"])].
+   * [@https://github.com/boostorg/interprocess/issues/41 GitHub Issue #41 (['"Data race in boost::interprocess::rbtree_best_fit"])].
 
 [endsect]
 
@@ -7105,8 +7116,8 @@ thank them:
    * [@https://svn.boost.org/trac/boost/ticket/9284 Trac #9284 (['"WaitForSingleObject(mutex) must handle WAIT_ABANDONED"])].
    * [@https://svn.boost.org/trac/boost/ticket/9285 Trac #9285 (['"CreateMutex returns NULL if fails"])].
    * [@https://svn.boost.org/trac/boost/ticket/9288 Trac #9288 (['"timed_wait does not check if it has expired"])].
-   * [@https://svn.boost.org/trac/boost/ticket/9408 Trac #9408 (['"Android does not support XSI_SHARED_MEMORY_OBJECTS"]]).
-   * [@https://svn.boost.org/trac/boost/ticket/9729 Trac #9729 (['"crash on managed_external_buffer object construction"]]).
+   * [@https://svn.boost.org/trac/boost/ticket/9408 Trac #9408 (['"Android does not support XSI_SHARED_MEMORY_OBJECTS"])].
+   * [@https://svn.boost.org/trac/boost/ticket/9729 Trac #9729 (['"crash on managed_external_buffer object construction"])].
    * [@https://svn.boost.org/trac/boost/ticket/9767 Trac #9767 (['"bootstamp generation causes error in case of corrupt Windows Event Log"])].
    * [@https://svn.boost.org/trac/boost/ticket/9835 Trac #9835 (['"Boost Interprocess fails to compile with Android NDK GCC 4.8, -Werror=unused-variable"])].
    * [@https://svn.boost.org/trac/boost/ticket/9911 Trac #9911 (['"get_tmp_base_dir(...) failure"])].
@@ -7114,8 +7125,8 @@ thank them:
    * [@https://svn.boost.org/trac/boost/ticket/10011 Trac #10011 (['"segment_manager::find( unique_instance_t* ) fails to compile"])].
    * [@https://svn.boost.org/trac/boost/ticket/10021 Trac #10021 (['"Interprocess and BOOST_USE_WINDOWS_H"])].
    * [@https://svn.boost.org/trac/boost/ticket/10230 Trac #10230 (['"No Sleep in interprocess::winapi"])].
-   * [@https://github.com/boostorg/interprocess/pull/2 GitHub Pull #2] (['"Provide support for the Cray C++ compiler. The Cray compiler defines __GNUC__"]]).
-   * [@https://github.com/boostorg/interprocess/pull/3 GitHub Pull #3] (['"Fix/mingw interprocess_exception throw in file_wrapper::priv_open_or_create"]]).
+   * [@https://github.com/boostorg/interprocess/pull/2 GitHub Pull #2 (['"Provide support for the Cray C++ compiler. The Cray compiler defines __GNUC__"])].
+   * [@https://github.com/boostorg/interprocess/pull/3 GitHub Pull #3 (['"Fix/mingw interprocess_exception throw in file_wrapper::priv_open_or_create"])].
 
 *  [*ABI breaking]: [@https://svn.boost.org/trac/boost/ticket/9221 #9221] showed
    that `BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX` option of message queue,
@@ -7141,14 +7152,14 @@ thank them:
 [section:release_notes_boost_1_55_00 Boost 1.55 Release]
 
 *  Fixed bugs:
-   * [@https://svn.boost.org/trac/boost/ticket/7156 #7156] (['"interprocess buffer streams leak memory on construction"]]).
-   * [@https://svn.boost.org/trac/boost/ticket/7164 #7164] (['"Two potential bugs with b::int::vector of b::i::weak_ptr"]]).
-   * [@https://svn.boost.org/trac/boost/ticket/7860 #7860] (['"smart_ptr's yield_k and spinlock utilities can improve spinlock-based sychronization primitives"]]).
-   * [@https://svn.boost.org/trac/boost/ticket/8277 #8277] (['"docs for named_mutex erroneously refer to interprocess_mutex"]]).
-   * [@https://svn.boost.org/trac/boost/ticket/8976 #8976] (['"shared_ptr fails to compile if used with a scoped_allocator"]]).
-   * [@https://svn.boost.org/trac/boost/ticket/9008 #9008] (['"conditions variables fast enough only when opening a multiprocess browser"]]).
-   * [@https://svn.boost.org/trac/boost/ticket/9065 #9065] (['"atomic_cas32 inline assembly wrong on ppc32"]]).
-   * [@https://svn.boost.org/trac/boost/ticket/9073 #9073] (['"Conflict names 'realloc'"]]).
+   * [@https://svn.boost.org/trac/boost/ticket/7156 #7156 (['"interprocess buffer streams leak memory on construction"])].
+   * [@https://svn.boost.org/trac/boost/ticket/7164 #7164 (['"Two potential bugs with b::int::vector of b::i::weak_ptr"])].
+   * [@https://svn.boost.org/trac/boost/ticket/7860 #7860 (['"smart_ptr's yield_k and spinlock utilities can improve spinlock-based sychronization primitives"])].
+   * [@https://svn.boost.org/trac/boost/ticket/8277 #8277 (['"docs for named_mutex erroneously refer to interprocess_mutex"])].
+   * [@https://svn.boost.org/trac/boost/ticket/8976 #8976 (['"shared_ptr fails to compile if used with a scoped_allocator"])].
+   * [@https://svn.boost.org/trac/boost/ticket/9008 #9008 (['"conditions variables fast enough only when opening a multiprocess browser"])].
+   * [@https://svn.boost.org/trac/boost/ticket/9065 #9065 (['"atomic_cas32 inline assembly wrong on ppc32"])].
+   * [@https://svn.boost.org/trac/boost/ticket/9073 #9073 (['"Conflict names 'realloc'"])].
 
 [endsect]
 
@@ -7701,7 +7712,7 @@ But the work to implement PF_UNIX-like sockets and doors would be huge
 
 [section:index Indexes]
 
-[include auto_index_helpers.qbk]
+[import ../../../tools/auto_index/include/auto_index_helpers.qbk]
 
 [named_index class_name Class Index]
 [named_index typedef_name Typedef Index]

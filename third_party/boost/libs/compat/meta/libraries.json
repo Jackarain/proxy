@@ -2,7 +2,8 @@
     "key": "compat",
     "name": "Compat",
     "authors": [
-        "Peter Dimov"
+        "Peter Dimov",
+        "Christian Mazakas"
     ],
     "maintainers": [
         "Peter Dimov <pdimov -at- gmail.com>"

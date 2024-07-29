@@ -1,0 +1,64 @@
+#
+# Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+#
+# Distributed under the Boost Software License, Version 1.0. (See accompanying
+# file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+#
+
+name: coverage
+
+on:
+  push:
+    branches: [develop, master]
+    tags: ['*']
+  pull_request:
+  workflow_dispatch:
+
+env:
+  GCOV_REPORT_DIR: /tmp/gcov-reports
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/anarthal-containers/build-gcc14:c3f5316cc19bf3c0f7a83e31dec58139581f5764
+      volumes:
+        - /var/run/mysqld:/var/run/mysqld
+    services:
+      mysql:
+        image: ghcr.io/anarthal-containers/mysql8:c3f5316cc19bf3c0f7a83e31dec58139581f5764
+        ports:
+          - 3306:3306
+        volumes:
+          - /var/run/mysqld:/var/run/mysqld
+    steps:
+      - name: Fetch code
+        uses: actions/checkout@v4
+      
+      - name: Build code
+        run: |
+          python tools/ci/main.py \
+            --source-dir=$(pwd) \
+            b2 \
+            --server-host=mysql \
+            --toolset=gcc \
+            --cxxstd=20 \
+            --variant=debug \
+            --coverage=1
+      
+      - name: Generate coverage reports
+        shell: bash
+        run: |
+          SOURCE_DIR=$(pwd)
+          cd ~/boost-root
+          gcov-14 -r -p $(find bin.v2/ -name '*.gcda') > /dev/null
+          mkdir $GCOV_REPORT_DIR
+          cp boost#mysql#*.gcov $GCOV_REPORT_DIR
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          plugins: "" # Don't run gcov again, codecov doesn't know about the filtering we perform
+          directory: ${{ env.GCOV_REPORT_DIR }}

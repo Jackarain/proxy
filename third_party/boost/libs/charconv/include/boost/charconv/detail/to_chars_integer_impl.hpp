@@ -89,8 +89,7 @@ BOOST_CHARCONV_CONSTEXPR to_chars_result to_chars_integer_impl(char* first, char
 
     char buffer[10] {};
     int converted_value_digits {};
-    const std::ptrdiff_t user_buffer_size = last - first;
-    BOOST_ATTRIBUTE_UNUSED bool is_negative = false;
+    bool is_negative = false;
 
     if (first > last)
     {
@@ -114,6 +113,8 @@ BOOST_CHARCONV_CONSTEXPR to_chars_result to_chars_integer_impl(char* first, char
     {
         unsigned_value = static_cast<Unsigned_Integer>(value);
     }
+
+    const std::ptrdiff_t user_buffer_size = last - first - static_cast<std::ptrdiff_t>(is_negative);
 
     // If the type is less than 32 bits we can use this without change
     // If the type is greater than 32 bits we use a binary search tree to figure out how many digits
@@ -314,8 +315,6 @@ BOOST_CHARCONV_CONSTEXPR to_chars_result to_chars_128integer_impl(char* first, c
 template <typename Integer, typename Unsigned_Integer>
 BOOST_CHARCONV_CONSTEXPR to_chars_result to_chars_integer_impl(char* first, char* last, Integer value, int base) noexcept
 {
-    const std::ptrdiff_t output_length = last - first;
-
     if (!((first <= last) && (base >= 2 && base <= 36)))
     {
         return {last, std::errc::invalid_argument};
@@ -346,6 +345,8 @@ BOOST_CHARCONV_CONSTEXPR to_chars_result to_chars_integer_impl(char* first, char
     {
         unsigned_value = static_cast<Unsigned_Integer>(value);
     }
+
+    const std::ptrdiff_t output_length = last - first;
 
     constexpr Unsigned_Integer zero = 48U; // Char for '0'
     constexpr auto buffer_size = sizeof(Unsigned_Integer) * CHAR_BIT;

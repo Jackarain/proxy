@@ -73,7 +73,9 @@ class BOOST_URL_DECL
     friend class segments_ref;
     friend class segments_encoded_ref;
     friend class params_encoded_ref;
+#ifndef BOOST_URL_DOCS
     friend struct detail::pattern;
+#endif
 
     struct op_t
     {

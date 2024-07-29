@@ -10,7 +10,7 @@ function(boost_locale_add_example name)
   endif()
   set(name ${PROJECT_NAME}-expl_${name})
 
-  add_executable(${name} ${ARG_SRC})
+  add_executable(${name} EXCLUDE_FROM_ALL ${ARG_SRC})
   add_dependencies(tests ${name})
   target_link_libraries(${name} PRIVATE
     Boost::locale

@@ -5,7 +5,7 @@
 #include <boost/charconv/detail/config.hpp>
 #include <ostream>
 
-#ifdef BOOST_CHARCONV_HAS_FLOAT128
+#ifdef BOOST_CHARCONV_HAS_QUADMATH
 
 std::ostream& operator<<( std::ostream& os, __float128 v )
 {
@@ -14,6 +14,14 @@ std::ostream& operator<<( std::ostream& os, __float128 v )
     os << buffer;
     return os;
 }
+
+#ifdef BOOST_CHARCONV_HAS_STDFLOAT128
+std::ostream& operator<<( std::ostream& os, std::float128_t v )
+{
+    os << static_cast<__float128>(v);
+    return os;
+}
+#endif
 
 #include <boost/charconv.hpp>
 #include <boost/core/lightweight_test.hpp>
@@ -26,9 +34,10 @@ std::ostream& operator<<( std::ostream& os, __float128 v )
 constexpr std::size_t N = 1024;
 static std::mt19937_64 rng(42);
 
+template <typename T>
 void test_non_finite()
 {
-    constexpr std::array<__float128, 4> values = {{INFINITY, -INFINITY, NAN, -NAN}};
+    constexpr std::array<T, 4> values = {{INFINITY, -INFINITY, NAN, -NAN}};
 
     for (const auto val : values)
     {
@@ -53,6 +62,7 @@ void test_non_finite()
     BOOST_TEST(!std::memcmp(neg_nan_buffer, "-nan(ind)", 9));
 }
 
+template <typename T>
 void test_min_buffer_size()
 {
     // No guarantees are made for fixed, especially in this domain
@@ -64,13 +74,8 @@ void test_min_buffer_size()
     {
         for (std::size_t i = 0; i < N; ++i)
         {
-            char buffer[boost::charconv::limits<__float128>::max_chars10];
-            const auto value = static_cast<__float128>(rng());
-
-            if (isinfq(value) || isnanq(value))
-            {
-                continue;
-            }
+            char buffer[boost::charconv::limits<T>::max_chars10];
+            const auto value = static_cast<T>(rng());
 
             auto r = boost::charconv::to_chars(buffer, buffer + sizeof(buffer), value, format);
             if (!BOOST_TEST(r))
@@ -83,8 +88,13 @@ void test_min_buffer_size()
 
 int main()
 {
-    test_non_finite();
-    test_min_buffer_size();
+    test_non_finite<__float128>();
+    test_min_buffer_size<__float128>();
+
+    #ifdef BOOST_CHARCONV_HAS_STDFLOAT128
+    test_non_finite<std::float128_t>();
+    test_min_buffer_size<std::float128_t>();
+    #endif
 
     return boost::report_errors();
 }

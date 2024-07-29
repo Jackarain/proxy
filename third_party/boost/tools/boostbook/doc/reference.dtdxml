@@ -11,7 +11,7 @@
      created-on="Wed Feb 18 23:39:45 2009"
 >
 <attpurpose name="id">A global identifier for this element</attpurpose>
-<attpurpose name="last-revision">Set to $Date: 2003/04/13 14:46:07 $ to keep "last revised" information in sync with CVS changes</attpurpose>
+<attpurpose name="last-revision">Set to $Date$ to keep "last revised" information in sync with CVS changes</attpurpose>
 <attpurpose name="xml:base">Implementation detail used by XIncludes</attpurpose>
 <attpurpose name="name">The name of the element being declared to referenced</attpurpose>
 <attpurpose name="filename">The name of the file associated with this element</attpurpose>
@@ -1815,12 +1815,18 @@
          content-type="element">
 <content-model-expanded>
   <or-group occurrence="*">
+    <element-name name="constructor"/>
+    <element-name name="copy-assignment"/>
+    <element-name name="destructor"/>
     <element-name name="method"/>
     <element-name name="overloaded-method"/>
   </or-group>
 </content-model-expanded>
 <content-model>
   <or-group occurrence="*">
+    <element-name name="constructor"/>
+    <element-name name="copy-assignment"/>
+    <element-name name="destructor"/>
     <element-name name="method"/>
     <element-name name="overloaded-method"/>
   </or-group>

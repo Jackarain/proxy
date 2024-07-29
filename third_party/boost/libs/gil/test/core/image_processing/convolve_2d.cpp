@@ -100,9 +100,102 @@ gil::detail::convolve_2d(src_view, kernel, view(img_gray_out));
 BOOST_TEST(gil::equal_pixels(exp_out_view, view(img_gray_out)));
 }
 
+void test_convolve_2d_with_sobel_x_filter()
+{
+  const gil::uint8_t img[] =
+      {
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 255, 255, 255, 255, 0, 0, 0, 0,
+          0, 0, 255, 255, 255, 255, 0, 0, 0, 0,
+          0, 0, 255, 255, 255, 255, 0, 0, 0, 0,
+          0, 0, 255, 255, 255, 255, 0, 0, 0, 0,
+          0, 0, 255, 255, 255, 255, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+      };
+
+  const gil::int16_t exp_output[] =
+      {
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 255, 255, 0, 0, -255, -255, 0, 0, 0,
+          0, 765, 765, 0, 0, -765, -765, 0, 0, 0,
+          0, 1020, 1020, 0, 0, -1020, -1020, 0, 0, 0,
+          0, 1020, 1020, 0, 0, -1020, -1020, 0, 0, 0,
+          0, 1020, 1020, 0, 0, -1020, -1020, 0, 0, 0,
+          0, 765, 765, 0, 0, -765, -765, 0, 0, 0,
+          0, 255, 255, 0, 0, -255, -255, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+      };
+
+  gil::gray16s_image_t img_gray_out(10, 13);
+  const auto src_view =
+      gil::interleaved_view(10, 13, reinterpret_cast<const gil::gray8_pixel_t*>(img), 10);
+  const auto exp_out_view =
+      gil::interleaved_view(10, 13, reinterpret_cast<const gil::gray16s_pixel_t*>(exp_output), 20);
+  gil::detail::convolve_2d(src_view, gil::generate_dx_sobel(1), view(img_gray_out));
+
+  BOOST_TEST(gil::equal_pixels(exp_out_view, view(img_gray_out)));
+}
+
+void test_convolve_2d_with_sobel_y_filter()
+{
+  const gil::uint8_t img[] =
+      {
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 255, 255, 255, 255, 0, 0, 0, 0,
+          0, 0, 255, 255, 255, 255, 0, 0, 0, 0,
+          0, 0, 255, 255, 255, 255, 0, 0, 0, 0,
+          0, 0, 255, 255, 255, 255, 0, 0, 0, 0,
+          0, 0, 255, 255, 255, 255, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+      };
+
+  const gil::int16_t exp_output[] =
+      {
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 255, 765, 1020, 1020, 765, 255, 0, 0, 0,
+        0, 255, 765, 1020, 1020, 765, 255, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, -255, -765,  -1020, -1020, -765, -255, 0, 0, 0,
+        0, -255, -765,  -1020, -1020, -765, -255, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+      };
+
+  gil::gray16s_image_t img_gray_out(10, 13);
+  const auto src_view =
+      gil::interleaved_view(10, 13, reinterpret_cast<const gil::gray8_pixel_t*>(img), 10);
+  const auto exp_out_view =
+      gil::interleaved_view(10, 13, reinterpret_cast<const gil::gray16s_pixel_t*>(exp_output), 20);
+  gil::detail::convolve_2d(src_view, gil::generate_dy_sobel(1), view(img_gray_out));
+  BOOST_TEST(gil::equal_pixels(exp_out_view, view(img_gray_out)));
+}
+
 int main()
 {
     test_convolve_2d_with_normalized_mean_filter();
     test_convolve_2d_with_image_using_float32_t();
+    test_convolve_2d_with_sobel_x_filter();
+    test_convolve_2d_with_sobel_y_filter();
     return ::boost::report_errors();
 }

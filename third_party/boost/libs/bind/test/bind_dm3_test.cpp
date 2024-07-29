@@ -17,7 +17,7 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#if defined(BOOST_GCC) && BOOST_GCC >= 130000 && BOOST_GCC < 140000
+#if defined(BOOST_GCC) && BOOST_GCC >= 130000 && BOOST_GCC < 150000
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=113256
 # pragma GCC diagnostic ignored "-Wdangling-reference"
 #endif

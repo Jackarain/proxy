@@ -9,5 +9,6 @@ run crc_test.cpp
 run crc_test2.cpp ;
 
 run pr15_test.cpp ;
+compile issue25_test.cpp ;
 
 run quick.cpp ;

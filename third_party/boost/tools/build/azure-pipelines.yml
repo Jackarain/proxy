@@ -35,6 +35,7 @@ variables:
 - { name: linux_latest_os, value: 'focal' }
 - { name: windows_latest_vm, value: 'windows-2022' }
 - { name: clang_latest, value: '17' }
+- { name: clang_latest_libstdcxx, value: 9 }
 - { name: gcc_latest, value: '13' }
 - { name: vc_latest, value: 'vc143' }
 - { name: vs_latest, value: '2022' }
@@ -91,23 +92,28 @@ stages:
   - job: 'Linux_Latest'
     strategy:
       matrix:
-        GCC ${{variables.gcc_latest}}: {TOOLSET: "gcc-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
-        Clang ${{variables.clang_latest}}: {TOOLSET: "clang-${{variables.clang_latest}}", PACKAGES: "clang-${{variables.clang_latest}}", LLVM_OS: "${{variables.linux_latest_os}}", LLVM_VER: "${{variables.clang_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
+        GCC ${{variables.gcc_latest}}: {TOOLSET: "gcc-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}-multilib", VM_IMAGE: "${{variables.linux_latest_vm}}"}
+        Clang ${{variables.clang_latest}}: {TOOLSET: "clang-${{variables.clang_latest}}", PACKAGES: "clang-${{variables.clang_latest}} libstdc++-${{variables.clang_latest_libstdcxx}}-dev-i386-cross", LLVM_OS: "${{variables.linux_latest_os}}", LLVM_VER: "${{variables.clang_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
     pool:
       vmImage: $(VM_IMAGE)
     steps:
     - template: .ci/azp-linux-test.yml
+      parameters:
+        b2_opts: address-model=32,64
 
   - job: 'Windows_Latest'
     strategy:
       matrix:
-        VS ${{variables.vs_latest}}: {TOOLSET: "${{variables.vc_latest}}", TEST_TOOLSET: msvc, VM_IMAGE: "${{variables.windows_latest_vm}}"}
-        Clang ${{variables.clang_latest}} (VS${{variables.vs_latest}}): {TOOLSET: clang-win, TEST_TOOLSET: clang-win, VM_IMAGE: "${{variables.windows_latest_vm}}"}
+        VS ${{variables.vs_latest}}: {TOOLSET: "${{variables.vc_latest}}", TEST_TOOLSET: msvc, VM_IMAGE: "${{variables.windows_latest_vm}}", PREP_CMD: "echo noop"}
+        Clang (VS${{variables.vs_latest}}): {TOOLSET: clang-win, TEST_TOOLSET: clang-win, VM_IMAGE: "${{variables.windows_latest_vm}}", PREP_CMD: "choco upgrade llvm"}
     pool:
       vmImage: $(VM_IMAGE)
     continueOnError: 'true'
     steps:
     - template: .ci/azp-windows-test.yml
+      parameters:
+        b2_opts: address-model=32,64
+        prep_cmd: $(PREP_CMD)
 
   - job: 'macOS'
     strategy:
@@ -240,7 +246,7 @@ stages:
         GCC 5: {CXX: g++-5, TOOLSET: gcc-5, PACKAGES: g++-5, CONTAINER: "ubuntu_1804"}
         GCC 4.9: {CXX: g++-4.9, TOOLSET: gcc-4.9, PACKAGES: g++-4.9, CONTAINER: "ubuntu_1604"}
         GCC 4.8: {CXX: g++-4.8, TOOLSET: gcc-4.8, PACKAGES: g++-4.8, CONTAINER: "ubuntu_1804"}
-        GCC 4.7: {CXX: g++-4.7, TOOLSET: gcc-4.7, PACKAGES: g++-4.7, CONTAINER: "ubuntu_1604"}
+        # GCC 4.7: {CXX: g++-4.7, TOOLSET: gcc-4.7, PACKAGES: g++-4.7, CONTAINER: "ubuntu_1604"}
         Clang 9: {CXX: clang++-9, TOOLSET: clang-9, PACKAGES: clang-9, LLVM_VER: 9, LLVM_OS: 'bionic', CONTAINER: "ubuntu_1804"}
         Clang 8: {CXX: clang++-8, TOOLSET: clang-8, PACKAGES: clang-8, LLVM_VER: 8, LLVM_OS: 'bionic', CONTAINER: "ubuntu_1804"}
         Clang 7: {CXX: clang++-7, TOOLSET: clang-7, PACKAGES: clang-7, LLVM_VER: 7, LLVM_OS: 'bionic', CONTAINER: "ubuntu_1804"}
@@ -393,6 +399,8 @@ stages:
     displayName: 'Release Linux'
     strategy:
       matrix:
+        1.85.0 .. GCC ${{variables.gcc_latest}}: {BOOST_VERSION: 1.85.0, BOOST_VERSION_U: 1_85_0, TOOLSET: gcc, CXX: "g++-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
+        1.84.0 .. GCC ${{variables.gcc_latest}}: {BOOST_VERSION: 1.84.0, BOOST_VERSION_U: 1_84_0, TOOLSET: gcc, CXX: "g++-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
         1.83.0 .. GCC ${{variables.gcc_latest}}: {BOOST_VERSION: 1.83.0, BOOST_VERSION_U: 1_83_0, TOOLSET: gcc, CXX: "g++-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
         1.82.0 .. GCC ${{variables.gcc_latest}}: {BOOST_VERSION: 1.82.0, BOOST_VERSION_U: 1_82_0, TOOLSET: gcc, CXX: "g++-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
         1.81.0 .. GCC ${{variables.gcc_latest}}: {BOOST_VERSION: 1.81.0, BOOST_VERSION_U: 1_81_0, TOOLSET: gcc, CXX: "g++-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
@@ -442,6 +450,8 @@ stages:
       vmImage: "${{variables.macos_latest_vm}}"
     strategy:
       matrix:
+        1.85.0 .. Xcode ${{variables.xc_latest}}: {BOOST_VERSION: 1.85.0, BOOST_VERSION_U: 1_85_0, TOOLSET: clang, CXX: clang++, XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app"}
+        1.84.0 .. Xcode ${{variables.xc_latest}}: {BOOST_VERSION: 1.84.0, BOOST_VERSION_U: 1_84_0, TOOLSET: clang, CXX: clang++, XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app"}
         1.83.0 .. Xcode ${{variables.xc_latest}}: {BOOST_VERSION: 1.83.0, BOOST_VERSION_U: 1_83_0, TOOLSET: clang, CXX: clang++, XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app"}
         1.82.0 .. Xcode ${{variables.xc_latest}}: {BOOST_VERSION: 1.82.0, BOOST_VERSION_U: 1_82_0, TOOLSET: clang, CXX: clang++, XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app"}
         1.81.0 .. Xcode ${{variables.xc_latest}}: {BOOST_VERSION: 1.81.0, BOOST_VERSION_U: 1_81_0, TOOLSET: clang, CXX: clang++, XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app"}
@@ -490,6 +500,8 @@ stages:
       vmImage: "${{variables.windows_latest_vm}}"
     strategy:
       matrix:
+        1.85.0 .. VS ${{variables.vs_latest}}: {BOOST_VERSION: 1.85.0, BOOST_VERSION_U: 1_85_0, TOOLSET: "${{variables.vc_latest}}"}
+        1.84.0 .. VS ${{variables.vs_latest}}: {BOOST_VERSION: 1.84.0, BOOST_VERSION_U: 1_84_0, TOOLSET: "${{variables.vc_latest}}"}
         1.83.0 .. VS ${{variables.vs_latest}}: {BOOST_VERSION: 1.83.0, BOOST_VERSION_U: 1_83_0, TOOLSET: "${{variables.vc_latest}}"}
         1.82.0 .. VS ${{variables.vs_latest}}: {BOOST_VERSION: 1.82.0, BOOST_VERSION_U: 1_82_0, TOOLSET: "${{variables.vc_latest}}"}
         1.81.0 .. VS ${{variables.vs_latest}}: {BOOST_VERSION: 1.81.0, BOOST_VERSION_U: 1_81_0, TOOLSET: "${{variables.vc_latest}}"}

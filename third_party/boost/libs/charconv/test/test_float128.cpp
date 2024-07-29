@@ -4,7 +4,7 @@
 
 #include <boost/charconv/detail/config.hpp>
 
-#if defined(BOOST_CHARCONV_HAS_FLOAT128) && defined(BOOST_HAS_INT128)
+#if defined(BOOST_CHARCONV_HAS_QUADMATH) && defined(BOOST_HAS_INT128)
 
 #include <ostream>
 

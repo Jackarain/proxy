@@ -14,7 +14,6 @@
 #include <boost/container/uses_allocator.hpp>
 #include <boost/container/detail/mpl.hpp>
 #include <boost/move/core.hpp>
-#include <boost/move/detail/force_ptr.hpp>
 
 template<class T, unsigned int Id, bool HasTrueTypes = false>
 class propagation_test_allocator
@@ -69,11 +68,18 @@ class propagation_test_allocator
    std::size_t max_size() const
    {  return std::size_t(-1);  }
 
-   T* allocate(std::size_t n)
-   {  return boost::move_detail::force_ptr<T*>(::new char[n*sizeof(T)]);  }
+   value_type* allocate(std::size_t count)
+   {  return static_cast<value_type*>(::operator new(count * sizeof(value_type))); }
 
-   void deallocate(T*p, std::size_t)
-   {  delete []static_cast<char*>(static_cast<void*>(p));  }
+   void deallocate(value_type *ptr, std::size_t n)
+   {
+      (void)n;
+      # if __cpp_sized_deallocation
+      ::operator delete((void*)ptr, n * sizeof(value_type));
+      #else
+      ::operator delete((void*)ptr);
+      # endif
+   }
 
    bool m_move_contructed;
    bool m_move_assigned;

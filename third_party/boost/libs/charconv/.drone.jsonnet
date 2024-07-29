@@ -28,6 +28,7 @@ local linux_pipeline(name, image, environment, packages = "", sources = [], arch
         {
             name: "everything",
             image: image,
+            privileged: true,
             environment: environment,
             commands:
             [
@@ -198,6 +199,20 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
     ),
 
     linux_pipeline(
+        "Linux 16.04 Clang 3.6",
+        "cppalliance/droneubuntu1604:1",
+        { TOOLSET: 'clang', COMPILER: 'clang++-3.6', CXXSTD: '03,11' },
+        "clang-3.6",
+    ),
+
+    linux_pipeline(
+        "Linux 16.04 Clang 3.7",
+        "cppalliance/droneubuntu1604:1",
+        { TOOLSET: 'clang', COMPILER: 'clang++-3.7', CXXSTD: '03,11' },
+        "clang-3.7",
+    ),
+
+    linux_pipeline(
         "Linux 16.04 Clang 3.8",
         "cppalliance/droneubuntu1604:1",
         { TOOLSET: 'clang', COMPILER: 'clang++-3.8', CXXSTD: '03,11,14' },
@@ -301,6 +316,22 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
         { TOOLSET: 'clang', COMPILER: 'clang++-15', CXXSTD: '03,11,14,17,20,2b' },
         "clang-15",
         ["deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main"],
+    ),
+
+    linux_pipeline(
+        "Linux 22.04 Clang 16",
+        "cppalliance/droneubuntu2204:1",
+        { TOOLSET: 'clang', COMPILER: 'clang++-16', CXXSTD: '03,11,14,17,20,2b' },
+        "clang-16",
+        ["deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main"],
+    ),
+
+    linux_pipeline(
+        "Linux 23.10 Clang 17",
+        "cppalliance/droneubuntu2310:1",
+        { TOOLSET: 'clang', COMPILER: 'clang++-17', CXXSTD: '03,11,14,17,20,2b' },
+        "clang-17",
+        ["deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main"],
     ),
 
     macos_pipeline(

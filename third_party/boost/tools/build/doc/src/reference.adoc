@@ -775,6 +775,7 @@ include::../../src/engine/mod_regex.h[tag=reference]
 include::../../src/engine/mod_set.h[tag=reference]
 include::../../src/engine/mod_string.h[tag=reference]
 include::../../src/engine/mod_version.h[tag=reference]
+include::../../src/engine/mod_db.h[tag=reference]
 
 include::path.adoc[]
 

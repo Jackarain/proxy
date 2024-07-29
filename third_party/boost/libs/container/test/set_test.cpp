@@ -26,6 +26,7 @@ using namespace boost::container;
 class recursive_set
 {
 public:
+
    recursive_set()
    {}
 
@@ -34,9 +35,8 @@ public:
    {}
 
    recursive_set & operator=(const recursive_set &x)
-   {  id_ = x.id_;  set_ = x.set_; return *this; }
+   {  set_ = x.set_; return *this; }
 
-   int id_;
    set<recursive_set> set_;
    set<recursive_set>::iterator it_;
    set<recursive_set>::const_iterator cit_;
@@ -44,7 +44,7 @@ public:
    set<recursive_set>::const_reverse_iterator crit_;
 
    friend bool operator< (const recursive_set &a, const recursive_set &b)
-   {  return a.id_ < b.id_;   }
+   {  return a.set_ < b.set_;   }
 };
 
 //Test recursive structures
@@ -59,9 +59,8 @@ class recursive_multiset
    {}
 
    recursive_multiset & operator=(const recursive_multiset &x)
-   {  id_ = x.id_;  multiset_ = x.multiset_; return *this;  }
+   {  multiset_ = x.multiset_; return *this;  }
 
-   int id_;
    multiset<recursive_multiset> multiset_;
    multiset<recursive_multiset>::iterator it_;
    multiset<recursive_multiset>::const_iterator cit_;
@@ -69,7 +68,7 @@ class recursive_multiset
    multiset<recursive_multiset>::const_reverse_iterator crit_;
 
    friend bool operator< (const recursive_multiset &a, const recursive_multiset &b)
-   {  return a.id_ < b.id_;   }
+   {  return a.multiset_ < b.multiset_;   }
 };
 
 template<class C>
@@ -540,6 +539,15 @@ int main ()
          < GetAllocatorSet<new_allocator<void>, red_black_tree>::apply<test::movable_and_copyable_int>::set_type
          , MyStdSet
          , GetAllocatorSet<new_allocator<void>, red_black_tree>::apply<test::movable_and_copyable_int>::multiset_type
+         , MyStdMultiSet>()) {
+         std::cout << "Error in set_test<new_allocator<void>, red_black_tree>" << std::endl;
+         return 1;
+      }
+
+      if (0 != test::set_test
+         < GetAllocatorSet<new_allocator<void>, red_black_tree>::apply<test::moveconstruct_int>::set_type
+         , MyStdSet
+         , GetAllocatorSet<new_allocator<void>, red_black_tree>::apply<test::moveconstruct_int>::multiset_type
          , MyStdMultiSet>()) {
          std::cout << "Error in set_test<new_allocator<void>, red_black_tree>" << std::endl;
          return 1;

@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_DETAIL_IMPL_URL_IMPL_IPP
-#define BOOST_URL_DETAIL_IMPL_URL_IMPL_IPP
 
 #include <boost/url/detail/config.hpp>
 #include "path.hpp"
@@ -530,4 +528,3 @@ nparam() const noexcept
 } // urls
 } // boost
 
-#endif

@@ -11,10 +11,11 @@
 #define BOOST_JSON_ARRAY_HPP
 
 #include <boost/json/detail/config.hpp>
+#include <boost/json/detail/array.hpp>
 #include <boost/json/kind.hpp>
 #include <boost/json/pilfer.hpp>
 #include <boost/json/storage_ptr.hpp>
-#include <boost/json/detail/array.hpp>
+#include <boost/system/result.hpp>
 #include <cstdlib>
 #include <initializer_list>
 #include <iterator>
@@ -117,16 +118,8 @@ class array
     array(detail::unchecked_array&& ua);
 
 public:
-    /** Associated [Allocator](https://en.cppreference.com/w/cpp/named_req/Allocator)
-
-        This type is `boost::container::pmr::polymorphic_allocator<value>`.
-     */
-#ifdef BOOST_JSON_DOCS
-    using allocator_type = __see_below__;
-#else
-    // VFALCO doc toolchain renders this incorrectly
+    /// Associated [Allocator](https://en.cppreference.com/w/cpp/named_req/Allocator)
     using allocator_type = container::pmr::polymorphic_allocator<value>;
-#endif
 
     /// The type used to represent unsigned integers
     using size_type = std::size_t;
@@ -589,6 +582,30 @@ public:
 
     /** Access an element, with bounds checking.
 
+        Returns `boost::system::result` containing a reference to the element
+        specified at location `pos`, if `pos` is within the range of the
+        container. Otherwise the result contains an `error_code`.
+
+        @par Exception Safety
+        No-throw guarantee.
+
+        @param pos A zero-based index.
+
+        @par Complexity
+        Constant.
+    */
+    /** @{ */
+    BOOST_JSON_DECL
+    system::result<value&>
+    try_at(std::size_t pos) noexcept;
+
+    BOOST_JSON_DECL
+    system::result<value const&>
+    try_at(std::size_t pos) const noexcept;
+    /** @} */
+
+    /** Access an element, with bounds checking.
+
         Returns a reference to the element specified at
         location `pos`, with bounds checking. If `pos` is
         not within the range of the container, an exception
@@ -599,21 +616,30 @@ public:
 
         @param pos A zero-based index.
 
+        @param loc `source_location` to use in thrown exception; the source
+            location of the call site by default.
+
         @throw `boost::system::system_error` `pos >= size()`.
     */
-    /* @{ */
+    /** @{ */
     inline
     value&
-    at(std::size_t pos) &;
+    at(
+        std::size_t pos,
+        source_location const& loc = BOOST_CURRENT_LOCATION) &;
 
     inline
     value&&
-    at(std::size_t pos) &&;
+    at(
+        std::size_t pos,
+        source_location const& loc = BOOST_CURRENT_LOCATION) &&;
 
-    inline
+    BOOST_JSON_DECL
     value const&
-    at(std::size_t pos) const&;
-    /* @} */
+    at(
+        std::size_t pos,
+        source_location const& loc = BOOST_CURRENT_LOCATION) const&;
+    /** @} */
 
     /** Access an element.
 
@@ -628,7 +654,7 @@ public:
 
         @param pos A zero-based index
     */
-    /* @{ */
+    /** @{ */
     inline
     value&
     operator[](std::size_t pos) & noexcept;
@@ -640,7 +666,7 @@ public:
     inline
     value const&
     operator[](std::size_t pos) const& noexcept;
-    /* @} */
+    /** @} */
 
     /** Access the first element.
 
@@ -652,7 +678,7 @@ public:
         @par Complexity
         Constant.
     */
-    /* @{ */
+    /** @{ */
     inline
     value&
     front() & noexcept;
@@ -664,7 +690,7 @@ public:
     inline
     value const&
     front() const& noexcept;
-    /* @} */
+    /** @} */
 
     /** Access the last element.
 
@@ -676,7 +702,7 @@ public:
         @par Complexity
         Constant.
     */
-    /* @{ */
+    /** @{ */
     inline
     value&
     back() & noexcept;
@@ -688,7 +714,7 @@ public:
     inline
     value const&
     back() const& noexcept;
-    /* @} */
+    /** @} */
 
     /** Access the underlying array directly.
 

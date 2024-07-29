@@ -40,6 +40,16 @@
   </tr>
 </table>
 
+<h2>1.86.0</h2>
+<ul>
+  <li><code>is_empty</code> operation is now better protected against concurrent filesystem modifications.</li>
+  <li>On POSIX systems, <code>is_empty</code> now indicates error if invoked on a file other than a regular file or a directory.</li>
+  <li>On Windows, fixed <code>file_size</code> and <code>is_empty</code> operating on symlinks rather than the files the symlinks refer to. (<a href="https://github.com/boostorg/filesystem/issues/313">#313</a>)</li>
+  <li><code>directory_entry::refresh</code> no longer throws an exception if the file referenced by the entry doesn't exist. This makes <code>directory_entry::status</code> and <code>directory_entry::symlink_status</code>, as well as methods based on them, behave similarly to the equivalent standalone operations. The fact that the file does not exist is still indicated via the <code>error_code</code> returned by the corresponding <code>directory_entry::refresh</code> overload, or can be seen by testing if the file type returned by <code>directory_entry::status</code> or <code>directory_entry::symlink_status</code> calls is <code>file_type::file_not_found</code>. (<a href="https://github.com/boostorg/filesystem/issues/314">#314</a>)</li>
+  <li>Fixed <code>weakly_canonical</code> testing path elements for existence relative to the current path instead of the base path specified in the call, if the input path was a relative path.</li>
+  <li>On Windows, fixed <code>weakly_canonical</code> producing incorrect result path when the input path started with "..". (<a href="https://github.com/boostorg/filesystem/issues/311">#311</a>)</li>
+</ul>
+
 <h2>1.85.0</h2>
 <ul>
   <li><code>path::generic_path</code> and <code>path::generic_string</code> methods now remove duplicate directory separators in the returned paths.</li>

@@ -136,11 +136,11 @@ bool tuple_compare(Tuple const& t1, Tuple const& t2)
 template <typename Tuple>
 struct tuple_limit
 {
-    static constexpr Tuple min()
+    static constexpr Tuple (min)()
     {
         return min_impl(boost::mp11::make_index_sequence<std::tuple_size<Tuple>::value>{});
     }
-    static constexpr Tuple max()
+    static constexpr Tuple (max)()
     {
         return max_impl(boost::mp11::make_index_sequence<std::tuple_size<Tuple>::value>{});
     }
@@ -150,14 +150,14 @@ private:
     static constexpr Tuple min_impl(boost::mp11::index_sequence<I...>)
     {
         return std::make_tuple(
-            std::numeric_limits<typename std::tuple_element<I, Tuple>::type>::min()...);
+            (std::numeric_limits<typename std::tuple_element<I, Tuple>::type>::min)()...);
     }
 
     template <std::size_t... I>
     static constexpr Tuple max_impl(boost::mp11::index_sequence<I...>)
     {
         return std::make_tuple(
-            std::numeric_limits<typename std::tuple_element<I, Tuple>::type>::max()...);
+            (std::numeric_limits<typename std::tuple_element<I, Tuple>::type>::max)()...);
     }
 };
 
@@ -638,9 +638,9 @@ void fill_histogram(
     bool applymask                      = false,
     std::vector<std::vector<bool>> mask = {},
     typename histogram<T...>::key_type lower =
-        detail::tuple_limit<typename histogram<T...>::key_type>::min(),
+        (detail::tuple_limit<typename histogram<T...>::key_type>::min)(),
     typename histogram<T...>::key_type upper =
-        detail::tuple_limit<typename histogram<T...>::key_type>::max(),
+        (detail::tuple_limit<typename histogram<T...>::key_type>::max)(),
     bool setlimits = false)
 {
     if (!accumulate)

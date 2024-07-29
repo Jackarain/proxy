@@ -69,6 +69,8 @@ Specifies additional command line options that will be passed to the linker.
 #   optimization is needed.
 #
 
+import regex ;
+
 import feature generators common ;
 import toolset : flags ;
 
@@ -182,6 +184,12 @@ actions link.dll bind LIBRARIES
 # Note: Relaxed ANSI mode (-std) is used for compilation because in strict ANSI
 # C89 mode (-std1) the compiler doesn't accept C++ comments in C files. As -std
 # is the default, no special flag is needed.
+
+rule compile.c ( targets * : sources * : properties * )
+{
+    COMMAND_DATABASE on $(targets) = "(cc [^\n]*)" ;
+}
+
 actions compile.c
 {
     $(.root:E=)cc -c $(OPTIONS) -D$(DEFINES) -I"$(INCLUDES)" -o "$(<)" "$(>)"
@@ -193,7 +201,7 @@ actions compile.c
 # Note: We deliberately don't suppress any warnings on the compiler command
 # line, the user can always do this in a customized toolset later on.
 
-rule compile.c++
+rule compile.c++ ( targets * : sources * : properties * )
 {
     # We preprocess the TEMPLATE_DEPTH command line option here because we found
     # no way to do it correctly in the actual action code. There we either get
@@ -202,6 +210,10 @@ rule compile.c++
     # "-pending_instantiations ".
     local template-depth = [ on $(1) return $(TEMPLATE_DEPTH) ] ;
     TEMPLATE_DEPTH on $(1) = "-pending_instantiations "$(template-depth) ;
+    local config_command = [ regex.escape
+        [ on $(targets[1]) return $(CONFIG_COMMAND:E="") ]
+        : "()[]\\+.*^$\"" : "\\" ] ;
+    COMMAND_DATABASE on $(targets) = "($(config_command)[^\n]*)" ;
 }
 
 actions compile.c++

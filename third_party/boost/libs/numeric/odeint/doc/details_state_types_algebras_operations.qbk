@@ -81,8 +81,8 @@ First, the state has to be tagged as resizeable by specializing the struct
 [table
   [[Name] [Expression] [Type] [Semantics]]
   [[Resizability] [`is_resizeable<State>::type`]
-    [`boost::true_type` or `boost::false_type`] 
-    [Determines resizeability of the state type, returns `boost::true_type` if
+    [`std::true_type` or `std::false_type`] 
+    [Determines resizeability of the state type, returns `std::true_type` if
     the state is resizeable.]]
   [[Resizability] [`is_resizeable<State>::value`]
     [`bool`] 
@@ -242,7 +242,7 @@ sized objects:
 template<>
 struct is_resizeable< gsl_vector* >
 {
-    typedef boost::true_type type;
+    typedef std::true_type type;
     const static bool value = type::value;
 };
 

@@ -1,0 +1,18 @@
+CompileFlags:
+  CompilationDatabase: .build
+Diagnostics:
+  ClangTidy:
+    Add:
+      - modernize-*
+      - bugprone-*
+      - performance-*
+    Remove:
+      - modernize-use-trailing-return-type
+  MissingIncludes: Strict
+InlayHints:
+  BlockEnd: Yes
+  Designators: Yes
+  Enabled: Yes
+  ParameterNames: No
+  DeducedTypes: No
+  TypeNameLimit: 24

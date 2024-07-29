@@ -49,8 +49,7 @@ jobs:
             install: g++-10
           - toolset: gcc-11
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
-            install: g++-11
+            os: ubuntu-22.04
           - toolset: gcc-12
             cxxstd: "11,14,17,20,2b"
             os: ubuntu-22.04
@@ -60,6 +59,11 @@ jobs:
             os: ubuntu-latest
             container: ubuntu:23.04
             install: g++-13
+          - toolset: gcc-14
+            cxxstd: "11,14,17,20,2b"
+            os: ubuntu-latest
+            container: ubuntu:24.04
+            install: g++-14
           - toolset: clang
             compiler: clang++-3.9
             cxxstd: "11,14"
@@ -141,14 +145,20 @@ jobs:
             os: ubuntu-latest
             install: clang-17
           - toolset: clang
-            cxxstd: "11,14,17,2a"
-            os: macos-11
+            compiler: clang++-18
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-18
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-12
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-13
+          - toolset: clang
+            cxxstd: "11,14,17,20,2b"
+            os: macos-14
 
     runs-on: ${{matrix.os}}
     container: ${{matrix.container}}
@@ -270,9 +280,9 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
           - os: macos-12
           - os: macos-13
+          - os: macos-14
 
     runs-on: ${{matrix.os}}
 
@@ -318,9 +328,9 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
           - os: macos-12
           - os: macos-13
+          - os: macos-14
 
     runs-on: ${{matrix.os}}
 
@@ -376,9 +386,9 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
           - os: macos-12
           - os: macos-13
+          - os: macos-14
 
     runs-on: ${{matrix.os}}
 

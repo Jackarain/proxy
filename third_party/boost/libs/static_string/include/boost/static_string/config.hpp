@@ -14,6 +14,17 @@
 // Are we dependent on Boost?
 // #define BOOST_STATIC_STRING_STANDALONE
 
+#include <cstdint>
+
+// detect 32/64 bit
+#if UINTPTR_MAX == UINT64_MAX
+#define BOOST_STATIC_STRING_ARCH 64
+#elif UINTPTR_MAX == UINT32_MAX
+#define BOOST_STATIC_STRING_ARCH 32
+#else
+#error Unknown or unsupported architecture, please open an issue
+#endif
+
 // Can we have deduction guides?
 #if __cpp_deduction_guides >= 201703L
 #define BOOST_STATIC_STRING_USE_DEDUCT
@@ -226,6 +237,24 @@ defined(__clang__) && \
 #if defined(__GNUC__) && (__GNUC__== 5) && \
 defined(BOOST_STATIC_STRING_CPP14)
 #define BOOST_STATIC_STRING_GCC5_BAD_CONSTEXPR
+#endif
+
+#ifndef BOOST_STATIC_STRING_STANDALONE
+#if ! defined(BOOST_NO_CWCHAR) && ! defined(BOOST_NO_SWPRINTF)
+#define BOOST_STATIC_STRING_HAS_WCHAR
+#endif
+#else
+#ifndef __has_include
+// If we don't have __has_include in standalone,
+// we will assume that <cwchar> exists.
+#define BOOST_STATIC_STRING_HAS_WCHAR
+#elif __has_include(<cwchar>)
+#define BOOST_STATIC_STRING_HAS_WCHAR
+#endif
+#endif
+
+#ifdef BOOST_STATIC_STRING_HAS_WCHAR
+#include <cwchar>
 #endif
 
 // Define the basic string_view type used by the library

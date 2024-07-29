@@ -12,7 +12,8 @@ http://www.boost.org/LICENSE_1_0.txt
 
 ## Changes in 1.84.0
 
-* {cpp}03 is no longer supported.
+* {cpp}03 is no longer supported; a {cpp}11 compiler is required.
+  (This includes GCC 4.6 or later, and MSVC 12.0 (VS 2013) or later.)
 
 ## Changes in 1.75.0
 

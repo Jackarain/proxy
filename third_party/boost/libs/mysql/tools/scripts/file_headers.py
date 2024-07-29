@@ -32,7 +32,8 @@ BASE_FOLDERS = [
 ]
 BASE_FILES = [
     'CMakeLists.txt',
-    '.drone.star'
+    '.drone.star',
+    '.codecov.yml'
 ]
 HTML_GEN_PATH = path.join(REPO_BASE, 'doc', 'html')
 
@@ -61,8 +62,8 @@ SRC_HPP_TEMPLATE = '''
 MYSQL_ERROR_HEADER = path.join(REPO_BASE, 'private', 'mysqld_error.h')
 MARIADB_ERROR_HEADER = path.join(REPO_BASE, 'private', 'mariadb_error.h')
 
-def find_first_blank(lines):
-    return [i for i, line in enumerate(lines) if line == ''][0]
+def find_first_blank(lines: List[str]) -> int:
+    return next((i for i, line in enumerate(lines) if line.replace('\n', '') == ''), len(lines))
 
 def read_file(fpath):
     with open(fpath, 'rt') as f:
@@ -106,7 +107,7 @@ class NormalProcessor(BaseProcessor):
         self.name = name
         
     def process(self, lines: List[str], _: str) -> List[str]:
-        first_blank = find_first_blank(line.replace('\n', '') for line in lines)
+        first_blank = find_first_blank(lines)
         lines = self.header + lines[first_blank:]
         return lines
         
@@ -153,10 +154,11 @@ class MysqlHppProcessor(HppProcessor):
 
     def process(self, _: List[str], fpath: str) -> List[str]:
         base = Path(REPO_BASE)
+        exclusions = ('src.hpp', 'pfr.hpp')
         includes = [
             fname.relative_to(base.joinpath('include'))
             for fname in sorted(base.joinpath('include', 'boost', 'mysql').glob('*.hpp'))
-            if fname.name != 'src.hpp'
+            if fname.name not in exclusions
         ]
         return gen_header('//', include_guard=self._gen_include_guard(fpath)) + \
             ['\n'] + \
@@ -227,21 +229,26 @@ FILE_PROCESSORS : List[Tuple[str, BaseProcessor]] = [
     ('.tar.gz', IgnoreProcessor()),
     ('.json', IgnoreProcessor()),
     ('.txt', IgnoreProcessor()),
+    ('.pyc', IgnoreProcessor()),
 ]
 
 def process_file(fpath: str):
-    for ext, processor in FILE_PROCESSORS:
-        if fpath.endswith(ext):
-            if VERBOSE:
-                print('Processing file {} with processor {}'.format(fpath, processor.name))
-            if not processor.skip:
-                lines = read_file(fpath)
-                output_lines = processor.process(lines, fpath)
-                if output_lines != lines:
-                    write_file(fpath, output_lines)
-            break
-    else:
-        raise ValueError('Could not find a suitable processor for file: ' + fpath)
+    try:
+        for ext, processor in FILE_PROCESSORS:
+            if fpath.endswith(ext):
+                if VERBOSE:
+                    print('Processing file {} with processor {}'.format(fpath, processor.name))
+                if not processor.skip:
+                    lines = read_file(fpath)
+                    output_lines = processor.process(lines, fpath)
+                    if output_lines != lines:
+                        write_file(fpath, output_lines)
+                break
+        else:
+            raise ValueError('Could not find a suitable processor for file: ' + fpath)
+    except Exception:
+        print(f'Found error processing {fpath}')
+        raise
     
 def process_all_files():
     for base_folder in BASE_FOLDERS:

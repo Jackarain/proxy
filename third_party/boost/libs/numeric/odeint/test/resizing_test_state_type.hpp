@@ -23,7 +23,7 @@
 #include <boost/numeric/odeint/util/same_size.hpp>
 
 #include <array>
-
+#include <type_traits>
 
 
 // Mario: velocity verlet tests need arrays of size 2
@@ -39,7 +39,7 @@ namespace odeint {
     template<>
     struct is_resizeable< test_array_type >
     {
-        typedef boost::true_type type;
+        typedef std::true_type type;
         const static bool value = type::value;
     };
 

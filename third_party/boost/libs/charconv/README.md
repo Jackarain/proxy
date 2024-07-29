@@ -29,40 +29,6 @@ This sets up a complete boost development and allows the tests to be run. To ins
 sudo ./b2 install cxxstd=11
 ````
 
-## vcpkg
-
-````
-git clone https://github.com/boostorg/charconv
-cd charconv
-vcpkg install charconv --overlay-ports=ports/charconv 
-````
-
-This will install charconv and all the required boost packages if they do not already exist.
-
-## Conan
-
-````
-git clone https://github.com/boostorg/charconv
-conan create charconv/conan --build missing
-````
-
-This will build a boost_charconv package using your default profile and put it
-in the local Conan cache along with all direct and transitive dependencies.
-Since Charconv only depends on a few header-only Boost libraries, you can
-save some time by requesting header-only Boost:
-
-```
-conan create charconv/conan -o 'boost*:header_only=True' --build missing
-````
-
-Following one of those approaches you can use the package as usual. For
-example, using a `conanfile.txt`:
-
-```
-[requires]
-boost_charconv/1.0.0
-````
-
 # Synopsis
 
 Charconv is a collection of parsing functions that are locale-independent, non-allocating, and non-throwing.

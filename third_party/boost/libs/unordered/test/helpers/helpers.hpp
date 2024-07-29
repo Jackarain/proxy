@@ -51,6 +51,11 @@ namespace test {
       static_cast<typename std::iterator_traits<Iterator>::difference_type>(x));
     return it;
   }
+
+  template <typename Container>
+  using is_map =
+    std::integral_constant<bool, !std::is_same<typename Container::key_type,
+                                  typename Container::value_type>::value>;
 }
 
 #endif

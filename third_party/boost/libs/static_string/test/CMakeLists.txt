@@ -7,6 +7,12 @@
 # Official repository: https://github.com/boostorg/static_string
 #
 
+# Custom target used by the boost super-project
+if(NOT TARGET tests)
+        add_custom_target(tests)
+        set_property(TARGET tests PROPERTY FOLDER _deps)
+endif()
+
 set(BOOST_STATIC_STRING_TESTS_FILES
         CMakeLists.txt
         Jamfile
@@ -23,3 +29,4 @@ add_executable(boost_static_string_tests ${BOOST_STATIC_STRING_TESTS_FILES})
 # See: BOOST_STATIC_STRING_UNIT_TEST_LIBRARIES
 target_link_libraries(boost_static_string_tests PRIVATE Boost::static_string)
 add_test(NAME boost_static_string_tests COMMAND boost_static_string_tests)
+add_dependencies(tests boost_static_string_tests)

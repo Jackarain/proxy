@@ -96,6 +96,13 @@ rule init ( command * )
         # Register generators
         generators.register [ new sass-generator sass.convert : SASS : CSS ] ;
     }
+    else
+    {
+        if ! $(command)
+        {
+            return ;
+        }
+    }
 
     # Setting up command
     if ! $(command)

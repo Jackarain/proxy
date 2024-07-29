@@ -8,8 +8,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_IMPL_URL_BASE_IPP
-#define BOOST_URL_IMPL_URL_BASE_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/url_base.hpp>
@@ -391,7 +389,6 @@ set_encoded_userinfo(
     pct_string_view s)
 {
     op_t op(*this, &detail::ref(s));
-    encoding_opts opt;
     auto const pos = s.find_first_of(':');
     if(pos != core::string_view::npos)
     {
@@ -401,12 +398,10 @@ set_encoded_userinfo(
         auto const n0 =
             detail::re_encoded_size_unsafe(
                 s0,
-                detail::user_chars,
-                opt);
+                detail::user_chars);
         auto const n1 =
             detail::re_encoded_size_unsafe(s1,
-                detail::password_chars,
-                opt);
+                detail::password_chars);
         auto dest =
             set_userinfo_impl(n0 + n1 + 1, op);
         impl_.decoded_[id_user] =
@@ -414,16 +409,14 @@ set_encoded_userinfo(
                 dest,
                 dest + n0,
                 s0,
-                detail::user_chars,
-                opt);
+                detail::user_chars);
         *dest++ = ':';
         impl_.decoded_[id_pass] =
             detail::re_encode_unsafe(
                 dest,
                 dest + n1,
                 s1,
-                detail::password_chars,
-                opt);
+                detail::password_chars);
         impl_.split(id_user, 2 + n0);
     }
     else
@@ -431,15 +424,14 @@ set_encoded_userinfo(
         // user
         auto const n =
             detail::re_encoded_size_unsafe(
-                s, detail::user_chars, opt);
+                s, detail::user_chars);
         auto dest = set_userinfo_impl(n, op);
         impl_.decoded_[id_user] =
             detail::re_encode_unsafe(
                 dest,
                 dest + n,
                 s,
-                detail::user_chars,
-                opt);
+                detail::user_chars);
         impl_.split(id_user, 2 + n);
         impl_.decoded_[id_pass] = 0;
     }
@@ -489,18 +481,16 @@ set_encoded_user(
     pct_string_view s)
 {
     op_t op(*this, &detail::ref(s));
-    encoding_opts opt;
     auto const n =
         detail::re_encoded_size_unsafe(
-            s, detail::user_chars, opt);
+            s, detail::user_chars);
     auto dest = set_user_impl(n, op);
     impl_.decoded_[id_user] =
         detail::re_encode_unsafe(
             dest,
             dest + n,
             s,
-            detail::user_chars,
-            opt);
+            detail::user_chars);
     BOOST_ASSERT(
         impl_.decoded_[id_user] ==
             s.decoded_size());
@@ -534,20 +524,17 @@ set_encoded_password(
     pct_string_view s)
 {
     op_t op(*this, &detail::ref(s));
-    encoding_opts opt;
     auto const n =
         detail::re_encoded_size_unsafe(
             s,
-            detail::password_chars,
-            opt);
+            detail::password_chars);
     auto dest = set_password_impl(n, op);
     impl_.decoded_[id_pass] =
         detail::re_encode_unsafe(
             dest,
             dest + n,
             s,
-            detail::password_chars,
-            opt);
+            detail::password_chars);
     BOOST_ASSERT(
         impl_.decoded_[id_pass] ==
             s.decoded_size());
@@ -694,17 +681,15 @@ set_encoded_host(
 
     // reg-name
     op_t op(*this, &detail::ref(s));
-    encoding_opts opt;
     auto const n = detail::re_encoded_size_unsafe(
-        s, detail::host_chars, opt);
+        s, detail::host_chars);
     auto dest = set_host_impl(n, op);
     impl_.decoded_[id_host] =
         detail::re_encode_unsafe(
             dest,
             impl_.get(id_path).data(),
             s,
-            detail::host_chars,
-            opt);
+            detail::host_chars);
     BOOST_ASSERT(impl_.decoded_[id_host] ==
         s.decoded_size());
     impl_.host_type_ =
@@ -784,17 +769,15 @@ set_encoded_host_address(
 
     // reg-name
     op_t op(*this, &detail::ref(s));
-    encoding_opts opt;
     auto const n = detail::re_encoded_size_unsafe(
-        s, detail::host_chars, opt);
+        s, detail::host_chars);
     auto dest = set_host_impl(n, op);
     impl_.decoded_[id_host] =
         detail::re_encode_unsafe(
             dest,
             impl_.get(id_path).data(),
             s,
-            detail::host_chars,
-            opt);
+            detail::host_chars);
     BOOST_ASSERT(impl_.decoded_[id_host] ==
         s.decoded_size());
     impl_.host_type_ =
@@ -918,17 +901,15 @@ set_encoded_host_name(
         allowed = allowed - '.';
 
     op_t op(*this, &detail::ref(s));
-    encoding_opts opt;
     auto const n = detail::re_encoded_size_unsafe(
-        s, allowed, opt);
+        s, allowed);
     auto dest = set_host_impl(n, op);
     impl_.decoded_[id_host] =
         detail::re_encode_unsafe(
             dest,
             dest + n,
             s,
-            allowed,
-            opt);
+            allowed);
     BOOST_ASSERT(
         impl_.decoded_[id_host] ==
             s.decoded_size());
@@ -1212,7 +1193,6 @@ set_encoded_path(
     pct_string_view s)
 {
     op_t op(*this, &detail::ref(s));
-    encoding_opts opt;
 
 //------------------------------------------------
 //
@@ -1222,7 +1202,7 @@ set_encoded_path(
 // - colons in first segment might need to be re-encoded
 // - the path might need to receive a prefix
     auto const n = detail::re_encoded_size_unsafe(
-        s, detail::path_chars, opt);
+        s, detail::path_chars);
     std::size_t n_reencode_colons = 0;
     core::string_view first_seg;
     if (!has_scheme() &&
@@ -1280,15 +1260,13 @@ set_encoded_path(
             dest,
             impl_.get(id_query).data(),
             first_seg,
-            detail::segment_chars - ':',
-            opt);
+            detail::segment_chars - ':');
     impl_.decoded_[id_path] +=
         detail::re_encode_unsafe(
             dest,
             impl_.get(id_query).data(),
             s.substr(first_seg.size()),
-            detail::path_chars,
-            opt);
+            detail::path_chars);
     BOOST_ASSERT(dest == impl_.get(id_query).data());
     BOOST_ASSERT(
         impl_.decoded_[id_path] ==
@@ -1360,7 +1338,6 @@ set_encoded_query(
     pct_string_view s)
 {
     op_t op(*this);
-    encoding_opts opt;
     std::size_t n = 0;      // encoded size
     std::size_t nparam = 1; // param count
     auto const end = s.end();
@@ -1402,8 +1379,7 @@ set_encoded_query(
             dest,
             dest + n,
             s,
-            detail::query_chars,
-            opt);
+            detail::query_chars);
     BOOST_ASSERT(
         impl_.decoded_[id_query] ==
             s.decoded_size());
@@ -1507,12 +1483,10 @@ set_encoded_fragment(
     pct_string_view s)
 {
     op_t op(*this, &detail::ref(s));
-    encoding_opts opt;
     auto const n =
         detail::re_encoded_size_unsafe(
             s,
-            detail::fragment_chars,
-            opt);
+            detail::fragment_chars);
     auto dest = resize_impl(
         id_frag, n + 1, op);
     *dest++ = '#';
@@ -1521,8 +1495,7 @@ set_encoded_fragment(
             dest,
             dest + n,
             s,
-            detail::fragment_chars,
-            opt);
+            detail::fragment_chars);
     BOOST_ASSERT(
         impl_.decoded_[id_frag] ==
             s.decoded_size());
@@ -2843,4 +2816,3 @@ to_lower_impl(int id) noexcept
 } // urls
 } // boost
 
-#endif

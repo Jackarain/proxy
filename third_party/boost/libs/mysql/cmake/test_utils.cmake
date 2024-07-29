@@ -39,67 +39,17 @@ function(boost_mysql_common_target_settings TARGET_NAME)
         )
         target_compile_options(${TARGET_NAME} PUBLIC /bigobj) # Prevent failures on Windows
     else()
+        # gcc-13 doesn't understand view types
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13.0)
+            target_compile_options(${TARGET_NAME} PUBLIC -Wno-dangling-reference -Wno-array-bounds)
+        endif()
         target_compile_options(${TARGET_NAME} PUBLIC -Wall -Wextra)
     endif()
 
     set_target_properties(${TARGET_NAME} PROPERTIES CXX_EXTENSIONS OFF) # disable extensions
 
-    # Valgrind
-    if(BOOST_MYSQL_VALGRIND_TESTS)
-        target_include_directories(${TARGET_NAME} PUBLIC ${VALGRIND_INCLUDE_DIR})
-        target_compile_definitions(${TARGET_NAME} PUBLIC BOOST_MYSQL_VALGRIND_TESTS)
-    endif()
-
-    # Coverage
-    if(BOOST_MYSQL_COVERAGE)
-        target_compile_options(${TARGET_NAME} PUBLIC --coverage)
-        target_link_options(${TARGET_NAME} PUBLIC --coverage)
-    endif()
+    # Follow the Boost convention: don't build test targets by default,
+    # and only when explicitly requested by building target tests
+    set_target_properties(${TARGET_NAME} PROPERTIES EXCLUDE_FROM_ALL ON)
+    add_dependencies(tests ${TARGET_NAME})
 endfunction()
-
-# Valgrind stuff
-if(BOOST_MYSQL_VALGRIND_TESTS)
-    # Locate executable
-    find_program(VALGRIND_EXECUTABLE valgrind)
-
-    if(NOT VALGRIND_EXECUTABLE)
-        message(FATAL_ERROR "Cannot locate valgrind executable")
-    endif()
-
-    # Locate includes
-    find_path(VALGRIND_INCLUDE_DIR "valgrind/memcheck.h")
-
-    if(NOT VALGRIND_INCLUDE_DIR)
-        message(FATAL_ERROR "Cannot locate valgrind include files")
-    endif()
-
-    # Path to suppressions. Don't move inside any function
-    set(_SUPPRESSIONS_FILE "${CMAKE_CURRENT_LIST_DIR}/../tools/valgrind_suppressions.txt")
-
-    # Helper to define tests
-    function(add_memcheck_test)
-        set(options "")
-        set(oneValueArgs NAME TARGET)
-        set(multiValueArgs ARGUMENTS)
-        cmake_parse_arguments(
-            AddMemcheckTest
-            "${options}"
-            "${oneValueArgs}"
-            "${multiValueArgs}"
-            ${ARGN}
-        )
-
-        add_test(
-            NAME ${AddMemcheckTest_NAME}
-            COMMAND
-            ${VALGRIND_EXECUTABLE}
-            --leak-check=full
-            --error-limit=yes
-            --suppressions=${_SUPPRESSIONS_FILE}
-            --error-exitcode=1
-            --gen-suppressions=all
-            $<TARGET_FILE:${AddMemcheckTest_TARGET}>
-            ${AddMemcheckTest_ARGUMENTS}
-        )
-    endfunction()
-endif()

@@ -19,18 +19,23 @@ jobs:
         include:
           - toolset: gcc-4.8
             cxxstd: "03,11"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: g++-4.8
+          - toolset: gcc-4.9
+            cxxstd: "03,11"
+            container: ubuntu:16.04
+            os: ubuntu-latest
+            install: g++-4.9
           - toolset: gcc-5
             cxxstd: "03,11,14,1z"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: g++-5
           - toolset: gcc-6
             cxxstd: "03,11,14,1z"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: g++-6
           - toolset: gcc-7
             cxxstd: "03,11,14,17"
@@ -148,6 +153,9 @@ jobs:
           - toolset: clang
             cxxstd: "03,11,14,17,20,2b"
             os: macos-13
+          - toolset: clang
+            cxxstd: "03,11,14,17,20,2b"
+            os: macos-14
 
     runs-on: ${{matrix.os}}
     container: ${{matrix.container}}
@@ -189,7 +197,7 @@ jobs:
           cd boost-root
           cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
           git submodule update --init tools/boostdep
-          python3 tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+          python3 tools/boostdep/depinst/depinst.py $LIBRARY
           ./bootstrap.sh
           ./b2 -d0 headers
 

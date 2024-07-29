@@ -52,7 +52,10 @@ int main()
 {
     test<float>();
     test<double>();
+
+    #ifndef BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE
     test<long double>();
+    #endif
 
     return boost::report_errors();
 }

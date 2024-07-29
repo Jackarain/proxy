@@ -37,7 +37,7 @@ if(CMAKE_SOURCE_DIR STREQUAL Boost_SOURCE_DIR)
     "List of libraries with incompatible CMakeLists.txt files")
 
   option(BOOST_ENABLE_MPI
-    "Build and enable installation of Boost.MPI and its dependents (requires MPI, CMake 3.9)")
+    "Build and enable installation of Boost.MPI and its dependents (requires MPI, CMake 3.10)")
 
   option(BOOST_ENABLE_PYTHON
     "Build and enable installation of Boost.Python and its dependents (requires Python, CMake 3.14)")
@@ -222,6 +222,23 @@ function(__boost_scan_dependencies lib var)
 
 endfunction()
 
+macro(__boost_add_header_only lib)
+
+  if(TARGET "boost_${lib}" AND TARGET "Boost::${lib}")
+
+    get_target_property(__boost_lib_type "boost_${lib}" TYPE)
+
+    if(__boost_lib_type STREQUAL "INTERFACE_LIBRARY")
+
+      list(APPEND __boost_header_only "Boost::${lib}")
+
+    endif()
+
+    set(__boost_lib_type)
+  endif()
+
+endmacro()
+
 #
 
 file(GLOB __boost_libraries RELATIVE "${BOOST_SUPERPROJECT_SOURCE_DIR}/libs" "${BOOST_SUPERPROJECT_SOURCE_DIR}/libs/*/CMakeLists.txt" "${BOOST_SUPERPROJECT_SOURCE_DIR}/libs/numeric/*/CMakeLists.txt")
@@ -283,6 +300,8 @@ endif()
 set(__boost_mpi_libs mpi graph_parallel property_map_parallel)
 set(__boost_python_libs python parameter_python)
 
+set(__boost_header_only "")
+
 foreach(__boost_lib_cml IN LISTS __boost_libraries)
 
   get_filename_component(__boost_lib "${__boost_lib_cml}" DIRECTORY)
@@ -309,6 +328,7 @@ foreach(__boost_lib_cml IN LISTS __boost_libraries)
     add_subdirectory(libs/${__boost_lib})
 
     __boost_auto_install(${__boost_lib})
+    __boost_add_header_only(${__boost_lib})
 
   elseif(__boost_lib IN_LIST __boost_include_libraries OR __boost_lib STREQUAL "headers")
 
@@ -327,6 +347,7 @@ foreach(__boost_lib_cml IN LISTS __boost_libraries)
     add_subdirectory(libs/${__boost_lib})
 
     __boost_auto_install(${__boost_lib})
+    __boost_add_header_only(${__boost_lib})
 
     set(BUILD_TESTING ${__boost_build_testing})
     set(CMAKE_FOLDER ${__boost_cmake_folder})
@@ -344,7 +365,7 @@ foreach(__boost_lib_cml IN LISTS __boost_libraries)
     set(__boost_cmake_folder ${CMAKE_FOLDER})
 
     if("${CMAKE_FOLDER}" STREQUAL "")
-      set(CMAKE_FOLDER "Dependencies")
+      set(CMAKE_FOLDER "Test Dependencies")
     endif()
 
     boost_message(DEBUG "Adding Boost library ${__boost_lib} with EXCLUDE_FROM_ALL")
@@ -357,6 +378,41 @@ foreach(__boost_lib_cml IN LISTS __boost_libraries)
   endif()
 
 endforeach()
+
+# Compatibility targets
+
+if(BOOST_ENABLE_COMPATIBILITY_TARGETS)
+
+  # Boost::headers
+
+  list(REMOVE_ITEM __boost_header_only Boost::headers)
+  target_link_libraries(boost_headers INTERFACE ${__boost_header_only})
+
+  # Boost::boost
+
+  add_library(boost_comptarget_boost INTERFACE)
+  add_library(Boost::boost ALIAS boost_comptarget_boost)
+  target_link_libraries(boost_comptarget_boost INTERFACE Boost::headers)
+
+  # Boost::diagnostic_definitions
+
+  add_library(boost_comptarget_diagnostic_definitions INTERFACE)
+  add_library(Boost::diagnostic_definitions ALIAS boost_comptarget_diagnostic_definitions)
+  target_compile_definitions(boost_comptarget_diagnostic_definitions INTERFACE BOOST_LIB_DIAGNOSTIC)
+
+  # Boost::disable_autolinking
+
+  add_library(boost_comptarget_disable_autolinking INTERFACE)
+  add_library(Boost::disable_autolinking ALIAS boost_comptarget_disable_autolinking)
+  target_compile_definitions(boost_comptarget_disable_autolinking INTERFACE BOOST_ALL_NO_LIB)
+
+  # Boost::dynamic_linking
+
+  add_library(boost_comptarget_dynamic_linking INTERFACE)
+  add_library(Boost::dynamic_linking ALIAS boost_comptarget_dynamic_linking)
+  target_compile_definitions(boost_comptarget_dynamic_linking INTERFACE BOOST_ALL_DYN_LINK)
+
+endif()
 
 # Install BoostConfig.cmake
 

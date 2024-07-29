@@ -11,6 +11,18 @@ import os ;
 
 rule init ( saxonhe_jar ? : java_exe ? )
 {
+    if ! $(.initialized)
+    {
+        .initialized = true ;
+    }
+    else
+    {
+        if ! ( $(1) || $(2) )
+        {
+            return ;
+        }
+    }
+
     .java_exe = [ common.get-invocation-command saxonhe : java : $(java_exe) :  ] ;
     if $(saxonhe_jar)
     {

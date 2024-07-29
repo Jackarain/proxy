@@ -76,6 +76,11 @@ common_cmake () {
 
 if [ "$DRONE_JOB_BUILDTYPE" == "boost" ]; then
 
+if [[ $(uname) == "Linux" && ( "$COMMENT" == tsan || "$COMMENT" == asan ) ]]; then
+    echo 0 | sudo tee /proc/sys/kernel/randomize_va_space
+    sudo sysctl vm.mmap_rnd_bits=28
+fi
+
 echo '==================================> INSTALL'
 
 common_install
@@ -100,10 +105,6 @@ cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=Release
 cd build
 sudo make install
 cd ../..
-if [ ! -f saxonhe.zip ]; then wget -O saxonhe.zip https://sourceforge.net/projects/saxon/files/Saxon-HE/9.9/SaxonHE9-9-1-4J.zip/download && echo "not-cached" ; else echo "cached" ; fi
-unzip -o saxonhe.zip
-sudo rm /usr/share/java/Saxon-HE.jar
-sudo cp saxon9he.jar /usr/share/java/Saxon-HE.jar
 cd ..
 BOOST_BRANCH=develop && [ "$TRAVIS_BRANCH" == "master" ] && BOOST_BRANCH=master || true
 git clone -b $BOOST_BRANCH https://github.com/boostorg/boost.git boost-root --depth 1
@@ -121,7 +122,7 @@ python tools/boostdep/depinst/depinst.py ../tools/quickbook
 
 echo '==================================> SCRIPT'
 
-echo "using doxygen ; using boostbook ; using saxonhe ;" > tools/build/src/user-config.jam
+echo "using doxygen ; using boostbook ; using python : : python3 ;" > tools/build/src/user-config.jam
 ./b2 -j3 libs/$SELF/doc//boostrelease
 
 elif [ "$DRONE_JOB_BUILDTYPE" == "codecov" ]; then
@@ -173,6 +174,9 @@ mkdir __build_static
 cd __build_static
 cmake -DBoost_VERBOSE=1 ${CMAKE_BUILD_TESTING} -DCMAKE_INSTALL_PREFIX=iprefix \
     -DBOOST_INCLUDE_LIBRARIES=$SELF ${CMAKE_OPTIONS} ..
+if [ -n "${CMAKE_BUILD_TESTING}" ]; then
+    cmake --build . --target tests
+fi
 cmake --build . --target install
 ctest --output-on-failure --no-tests=$CMAKE_NO_TESTS -R boost_$SELF
 cd ..
@@ -183,6 +187,9 @@ mkdir __build_shared
 cd __build_shared
 cmake -DBoost_VERBOSE=1 ${CMAKE_BUILD_TESTING} -DCMAKE_INSTALL_PREFIX=iprefix \
     -DBOOST_INCLUDE_LIBRARIES=$SELF -DBUILD_SHARED_LIBS=ON ${CMAKE_OPTIONS} ..
+if [ -n "${CMAKE_BUILD_TESTING}" ]; then
+    cmake --build . --target tests
+fi
 cmake --build . --target install
 ctest --output-on-failure --no-tests=$CMAKE_NO_TESTS -R boost_$SELF
 

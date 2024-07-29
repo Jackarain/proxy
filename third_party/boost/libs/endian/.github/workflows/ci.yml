@@ -17,22 +17,34 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - toolset: gcc-4.7
+            cxxstd: "11"
+            container: ubuntu:16.04
+            os: ubuntu-latest
+            install: g++-4.7-multilib
+            address-model: 32,64
           - toolset: gcc-4.8
             cxxstd: "11"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: g++-4.8-multilib
+            address-model: 32,64
+          - toolset: gcc-4.9
+            cxxstd: "11"
+            container: ubuntu:16.04
+            os: ubuntu-latest
+            install: g++-4.9-multilib
             address-model: 32,64
           - toolset: gcc-5
             cxxstd: "11,14,1z"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: g++-5-multilib
             address-model: 32,64
           - toolset: gcc-6
             cxxstd: "11,14,1z"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: g++-6-multilib
             address-model: 32,64
           - toolset: gcc-7
@@ -64,6 +76,12 @@ jobs:
             cxxstd: "11,14,17,20,2b"
             os: ubuntu-22.04
             install: g++-12-multilib
+            address-model: 32,64
+          - toolset: gcc-13
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:23.04
+            os: ubuntu-latest
+            install: g++-13-multilib
             address-model: 32,64
           - toolset: clang
             compiler: clang++-3.9
@@ -121,18 +139,33 @@ jobs:
           - toolset: clang
             compiler: clang++-13
             cxxstd: "11,14,17,20,2b"
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: clang-13
           - toolset: clang
             compiler: clang++-14
             cxxstd: "11,14,17,20,2b"
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: clang-14
           - toolset: clang
             compiler: clang++-15
             cxxstd: "11,14,17,20,2b"
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: clang-15
+          - toolset: clang
+            compiler: clang++-16
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:23.04
+            os: ubuntu-latest
+            install: clang-16
+          - toolset: clang
+            compiler: clang++-17
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:23.10
+            os: ubuntu-latest
+            install: clang-17
           - toolset: clang
             cxxstd: "11,14,17,2a"
             os: macos-11
@@ -142,6 +175,9 @@ jobs:
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-13
+          - toolset: clang
+            cxxstd: "11,14,17,20,2b"
+            os: macos-14
 
     runs-on: ${{matrix.os}}
     container: ${{matrix.container}}
@@ -157,7 +193,7 @@ jobs:
         if: matrix.container
         run: |
           apt-get update
-          apt-get -y install sudo python git g++
+          apt-get -y install sudo python3 git g++
 
       - name: Install packages
         if: matrix.install
@@ -183,7 +219,7 @@ jobs:
           cd boost-root
           cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
           git submodule update --init tools/boostdep
-          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+          python3 tools/boostdep/depinst/depinst.py $LIBRARY
           ./bootstrap.sh
           ./b2 -d0 headers
 
@@ -227,7 +263,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd
@@ -271,7 +307,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -319,7 +355,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -377,7 +413,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -430,7 +466,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd
@@ -479,7 +515,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd
@@ -546,7 +582,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd

@@ -23,7 +23,7 @@ endif ()
 # Options
 if (NOT BOOST_SUPERPROJECT_VERSION)
     option(BOOST_STATIC_STRING_INSTALL "Install boost::static_string files" ${BOOST_STATIC_STRING_IS_ROOT})
-    option(BOOST_STATIC_STRING_BUILD_TESTS "Build boost::static_string tests" ${BUILD_TESTING})
+    option(BOOST_STATIC_STRING_BUILD_TESTS "Build boost::static_string tests" OFF)
 else ()
     set(BOOST_STATIC_STRING_BUILD_TESTS ${BUILD_TESTING})
 endif ()
@@ -112,7 +112,7 @@ if (BOOST_STATIC_STRING_INSTALL AND NOT BOOST_SUPERPROJECT_VERSION)
 endif ()
 
 
-if (BOOST_STATIC_STRING_BUILD_TESTS)
+if (BUILD_TESTING OR BOOST_STATIC_STRING_BUILD_TESTS)
     add_subdirectory(test)
 endif ()
 

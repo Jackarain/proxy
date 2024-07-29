@@ -18,6 +18,10 @@ TODO (known issues):
 
 CHANGELOG
 
+Boost V1.86:
+  - Fixed #197: Improper signed overflow handling (UB and a missing division check)
+  - Replaced usage of vsprintf() with the more secure vsnprintf()
+
 Boost V1.85:
   - Fixed #200: Emitted pragmas lack terminating newline
   - Fixed #202: YYMARKER not updated when fill called on BOOST_WAVE_BSIZE boundary

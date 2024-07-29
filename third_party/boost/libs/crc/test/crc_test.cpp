@@ -18,7 +18,7 @@
 #include <boost/config.hpp>                      // for BOOST_MSVC, etc.
 #include <boost/cstdint.hpp>                     // for boost::uint16_t, etc.
 #include <boost/integer.hpp>                     // for boost::uint_t
-#include <boost/random/linear_congruential.hpp>  // for boost::minstd_rand
+#include <boost/core/detail/minstd_rand.hpp>     // for boost::detail::minstd_rand
 #include <boost/core/lightweight_test.hpp>
 #include <boost/timer/timer.hpp>                 // for boost::timer
 
@@ -195,7 +195,7 @@ PRIVATE_TESTER_NAME::error_test
     uint32_t           ran_data[ 256 ];
     std::size_t const  ran_length = sizeof(ran_data) / sizeof(ran_data[0]);
 
-    std::generate_n( ran_data, ran_length, boost::minstd_rand() );
+    std::generate_n( ran_data, ran_length, boost::detail::minstd_rand() );
 
     // Create computers and compute the checksum of the data
     optimal_crc_type  fast_tester;
@@ -434,7 +434,7 @@ timing_test
     boost::int32_t     ran_data[ 256 ];
     std::size_t const  ran_length = sizeof(ran_data) / sizeof(ran_data[0]);
 
-    std::generate_n( ran_data, ran_length, boost::minstd_rand() );
+    std::generate_n( ran_data, ran_length, boost::detail::minstd_rand() );
 
     // Use the first runs as a check.  This gives a chance for first-
     // time static initialization to not interfere in the timings.
@@ -521,7 +521,7 @@ augmented_tests
     size_t const  ran_length = sizeof(ran_data) / sizeof(ran_data[0]);
     size_t const  data_length = ran_length - 1;
 
-    std::generate_n( ran_data, data_length, boost::minstd_rand() );
+    std::generate_n( ran_data, data_length, boost::detail::minstd_rand() );
 
     // When creating a CRC for an augmented message, use
     // zeros in the appended CRC spot for the first run.

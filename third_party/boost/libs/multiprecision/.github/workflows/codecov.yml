@@ -40,9 +40,23 @@ jobs:
       matrix:
         include:
           - { name: Collect coverage 1, coverage: yes,
-              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'github_ci_block_1' }
+              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'arithmetic_tests' }
           - { name: Collect coverage 2, coverage: yes,
-              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'github_ci_block_2' }
+              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'cpp_int_tests' }
+          - { name: Collect coverage 3, coverage: yes,
+              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'functions_and_limits' }
+          - { name: Collect coverage 4, coverage: yes,
+              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'conversions' }
+          - { name: Collect coverage 5, coverage: yes,
+              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'performance' }
+          - { name: Collect coverage 6, coverage: yes,
+              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'misc' }
+          - { name: Collect coverage 7, coverage: yes,
+              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'compile_fail' }
+          - { name: Collect coverage 8, coverage: yes,
+              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'examples' }
+          - { name: Collect coverage 9, coverage: yes,
+              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'concepts' }
 
     #timeout-minutes: 120
     runs-on: ${{matrix.os}}
@@ -186,3 +200,15 @@ jobs:
       - name: Upload coverage
         if: matrix.coverage
         run: ci/codecov.sh "upload"
+        env:
+          BOOST_CI_CODECOV_IO_UPLOAD: skip
+
+      - name: Upload coverage
+        if: matrix.coverage
+        uses: codecov/codecov-action@v4
+        with:
+          disable_search: true
+          file: coverage.info
+          name: Github Actions
+          token: ${{secrets.CODECOV_TOKEN}}
+          verbose: true

@@ -9,8 +9,8 @@
 #define BOOST_DETAIL_COBALT_MAIN_HPP
 
 #include <boost/cobalt/main.hpp>
+#include <boost/cobalt/op.hpp>
 #include <boost/cobalt/this_coro.hpp>
-
 
 #include <boost/config.hpp>
 
@@ -41,7 +41,8 @@ struct main_promise : signal_helper,
                       promise_throw_if_cancelled_base,
                       enable_awaitables<main_promise>,
                       enable_await_allocator<main_promise>,
-                      enable_await_executor<main_promise>
+                      enable_await_executor<main_promise>,
+                      enable_await_deferred
 {
     main_promise(int, char **) : promise_cancellation_base<asio::cancellation_slot, asio::enable_total_cancellation>(
             signal_helper::signal.slot(), asio::enable_total_cancellation())
@@ -51,6 +52,8 @@ struct main_promise : signal_helper,
 
 #if !defined(BOOST_COBALT_NO_PMR)
     inline static pmr::memory_resource * my_resource = pmr::get_default_resource();
+
+#if defined(__cpp_sized_deallocation)
     void * operator new(const std::size_t size)
     {
         return my_resource->allocate(size);
@@ -60,13 +63,36 @@ struct main_promise : signal_helper,
     {
         return my_resource->deallocate(raw, size);
     }
+#else
+  void * operator new(const std::size_t size)
+  {
+      // embed the size at the end
+      constexpr auto sz = (std::max)(alignof(std::max_align_t), sizeof(std::size_t));
+      auto data = my_resource->allocate(size + sz);
+
+      return static_cast<char*>(data) + sz;
+  }
+
+  void operator delete(void * data)
+  {
+      constexpr auto sz = (std::max)(alignof(std::max_align_t), sizeof(std::size_t));
+      const auto size = *reinterpret_cast<std::size_t*>(static_cast<char*>(data) - sz);
+
+      return my_resource->deallocate(data, size);
+  }
 #endif
-    std::suspend_always initial_suspend() {return {};}
+
+
+
+#endif
+    std::suspend_always initial_suspend() noexcept {return {};}
 
     BOOST_COBALT_DECL
     auto final_suspend() noexcept -> std::suspend_never;
 
+#if !defined(BOOST_NO_EXCEPTIONS)
     void unhandled_exception() { throw ; }
+#endif
     void return_value(int res = 0)
     {
         if (result)
@@ -113,8 +139,9 @@ struct main_promise : signal_helper,
     using enable_awaitables<main_promise>::await_transform;
     using enable_await_allocator<main_promise>::await_transform;
     using enable_await_executor<main_promise>::await_transform;
+  using enable_await_deferred::await_transform;
 
-  private:
+ private:
     int * result;
     std::optional<asio::executor_work_guard<executor_type>> exec;
     std::optional<executor_type> exec_;

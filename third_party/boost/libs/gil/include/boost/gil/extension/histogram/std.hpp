@@ -59,7 +59,7 @@ void fill_histogram(SrcView const& srcview, std::vector<T>& histogram, bool accu
 
     if (!accumulate)
         histogram.clear();
-    histogram.resize(std::numeric_limits<channel_t>::max() + 1);
+    histogram.resize((std::numeric_limits<channel_t>::max)() + 1);
 
     for_each_pixel(color_converted_view<pixel_t>(srcview), [&](pixel_t const& p) {
         ++histogram[static_cast<std::size_t>(p)];
@@ -81,7 +81,7 @@ void fill_histogram(SrcView const& srcview, std::array<T, N>& histogram, bool ac
     using channel_t = typename channel_type<SrcView>::type;
     using pixel_t   = pixel<channel_t, gray_layout_t>;
 
-    const size_t pixel_max = std::numeric_limits<channel_t>::max();
+    const size_t pixel_max = (std::numeric_limits<channel_t>::max)();
     const float scale      = (histogram.size() - 1.0f) / pixel_max;
 
     if (!accumulate)

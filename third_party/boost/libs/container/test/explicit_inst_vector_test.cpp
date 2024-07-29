@@ -22,7 +22,6 @@ volatile ::boost::container::vector<empty> dummy;
 #include <boost/container/allocator.hpp>
 #include "movable_int.hpp"
 #include "dummy_test_allocator.hpp"
-#include <boost/move/detail/force_ptr.hpp>
 
 class CustomAllocator
 {
@@ -34,10 +33,17 @@ class CustomAllocator
 	typedef short difference_type;
 
 	pointer allocate(size_type count)
-   {  return boost::move_detail::force_ptr<pointer>(new char[sizeof(value_type)*count]); }
+   {  return static_cast<value_type*>(::operator new(count * sizeof(value_type))); }
 
-	void deallocate(pointer ptr, size_type )
-   {  delete [](char*)ptr; }
+	void deallocate(pointer ptr, size_type n)
+   {
+      (void)n;
+      # if __cpp_sized_deallocation
+      ::operator delete((void*)ptr, n * sizeof(value_type));
+      #else
+      ::operator delete((void*)ptr);
+      # endif
+   }
 
    friend bool operator==(CustomAllocator const&, CustomAllocator const&) BOOST_NOEXCEPT
    {  return true;   }

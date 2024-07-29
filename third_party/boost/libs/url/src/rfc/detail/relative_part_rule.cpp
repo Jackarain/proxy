@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_RFC_DETAIL_IMPL_RELATIVE_PART_RULE_IPP
-#define BOOST_URL_RFC_DETAIL_IMPL_RELATIVE_PART_RULE_IPP
 
 #include <boost/url/detail/config.hpp>
 #include "relative_part_rule.hpp"
@@ -126,4 +124,3 @@ parse(
 } // urls
 } // boost
 
-#endif

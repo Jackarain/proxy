@@ -98,7 +98,7 @@ public:
 
     write_snapshots( void ) : m_count( 0 ) { }
 
-    void operator()( const state_type &x , double t )
+    void operator()( const state_type &x , double )
     {
         map< size_t , string >::const_iterator it = m_snapshots.find( m_count );
         if( it != m_snapshots.end() )
@@ -126,7 +126,7 @@ private:
 };
 
 
-int main( int argc , char **argv )
+int main()
 {
     size_t size1 = 128 , size2 = 128;
     state_type x( size1 , size2 , 0.0 );

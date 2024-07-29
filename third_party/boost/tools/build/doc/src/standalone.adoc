@@ -66,4 +66,6 @@ include::code_ref.adoc[]
 
 include::history.adoc[]
 
+include::appendix.adoc[]
+
 :leveloffset: -1

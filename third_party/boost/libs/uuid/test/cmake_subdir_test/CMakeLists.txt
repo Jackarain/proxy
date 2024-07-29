@@ -16,46 +16,12 @@ set(deps
 
 assert
 config
-container_hash
-core
-io
-move
-numeric/conversion
-predef
-random
-static_assert
 throw_exception
-tti
 type_traits
-winapi
 
 # Secondary dependencies
 
-describe
-mp11
-conversion
-mpl
-preprocessor
-array
-dynamic_bitset
-integer
-range
-system
-utility
-function_types
-smart_ptr
-detail
-concept_check
-iterator
-optional
-regex
-tuple
-variant2
-fusion
-functional
-typeof
-function
-bind
+static_assert
 )
 
 foreach(dep IN LISTS deps)
@@ -64,10 +30,10 @@ foreach(dep IN LISTS deps)
 
 endforeach()
 
-add_executable(quick ../quick.cpp)
-target_link_libraries(quick Boost::uuid)
+add_executable(main main.cpp)
+target_link_libraries(main Boost::uuid)
 
 enable_testing()
-add_test(quick quick)
+add_test(main main)
 
 add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>)

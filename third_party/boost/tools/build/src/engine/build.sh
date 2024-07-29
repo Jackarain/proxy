@@ -251,7 +251,7 @@ check_toolset ()
     if test_toolset sunpro && test_compiler /opt/SUNWspro/bin/CC -std=c++11 ; then B2_TOOLSET=sunpro ; return ${TRUE} ; fi
     # Generic (cxx)
     if test_toolset cxx && test_compiler cxx ; then B2_TOOLSET=cxx ; return ${TRUE} ; fi
-    if test_toolset cxx && test_compiler cpp ; then B2_TOOLSET=cxx ; return ${TRUE} ; fi
+    if test_toolset cxx && test_compiler c++ ; then B2_TOOLSET=cxx ; return ${TRUE} ; fi
     if test_toolset cxx && test_compiler CC ; then B2_TOOLSET=cxx ; return ${TRUE} ; fi
 
     # Nothing found.
@@ -448,6 +448,7 @@ constants.cpp \
 cwd.cpp \
 debug.cpp \
 debugger.cpp \
+events.cpp \
 execcmd.cpp \
 execnt.cpp \
 execunix.cpp \
@@ -487,6 +488,8 @@ timestamp.cpp \
 value.cpp \
 variable.cpp \
 w32_getreg.cpp \
+mod_command_db.cpp \
+mod_db.cpp \
 mod_jam_builtin.cpp \
 mod_jam_class.cpp \
 mod_jam_errors.cpp \
@@ -506,9 +509,16 @@ mod_version.cpp \
     if test_true ${B2_DEBUG_OPT} ; then B2_CXXFLAGS="${B2_CXXFLAGS_DEBUG}"
     else B2_CXXFLAGS="${B2_CXXFLAGS_RELEASE} -DNDEBUG"
     fi
-    if [ -z "$B2_DONT_EMBED_MANIFEST" ] && [ -x "$(command -v windres)" ] ; then
-        B2_CXXFLAGS="${B2_CXXFLAGS} -Wl,res.o"
-        ( B2_VERBOSE_OPT=${TRUE} echo_run windres --input res.rc --output res.o )
+    if [ -z "$B2_DONT_EMBED_MANIFEST" ] ; then
+        case "$(${B2_CXX} ${B2_CXXFLAGS} -dumpmachine 2>/dev/null)" in
+            *-windows*|*-mingw*|*-msys*|*-cygnus*|*-cygwin*)
+                WINDRES="$(${B2_CXX} ${B2_CXXFLAGS} -print-prog-name=windres 2>/dev/null)"
+            ;;
+        esac
+        if [ -n "${WINDRES}" ] ; then
+            B2_CXXFLAGS="${B2_CXXFLAGS} -Wl,res.o"
+            ( B2_VERBOSE_OPT=${TRUE} echo_run ${WINDRES} --input res.rc --output res.o )
+        fi
     fi
     ( B2_VERBOSE_OPT=${TRUE} echo_run ${B2_CXX} ${B2_CXXFLAGS} ${B2_SOURCES} -o b2 )
 }

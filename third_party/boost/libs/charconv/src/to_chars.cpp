@@ -4,6 +4,7 @@
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
+#include "float128_impl.hpp"
 #include "to_chars_float_impl.hpp"
 #include <boost/charconv/to_chars.hpp>
 #include <boost/charconv/chars_format.hpp>
@@ -601,7 +602,7 @@ boost::charconv::to_chars_result boost::charconv::to_chars(char* first, char* la
     return boost::charconv::detail::to_chars_float_impl(first, last, static_cast<double>(value), fmt, precision);
 }
 
-#elif (BOOST_CHARCONV_LDBL_BITS == 80 || BOOST_CHARCONV_LDBL_BITS == 128)
+#elif !defined(BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE)
 
 boost::charconv::to_chars_result boost::charconv::to_chars(char* first, char* last, long double value,
                                                            boost::charconv::chars_format fmt) noexcept
@@ -620,47 +621,9 @@ boost::charconv::to_chars_result boost::charconv::to_chars(char* first, char* la
     return boost::charconv::detail::to_chars_float_impl(first, last, value, fmt, precision);
 }
 
-#else
-
-boost::charconv::to_chars_result boost::charconv::to_chars( char* first, char* last, long double value,
-                                                            boost::charconv::chars_format fmt, int precision) noexcept
-{
-    if (std::isnan(value))
-    {
-        bool is_negative = false;
-        if (std::signbit(value))
-        {
-            is_negative = true;
-            *first++ = '-';
-        }
-
-        if (issignaling(value))
-        {
-            std::memcpy(first, "nan(snan)", 9);
-            return { first + 9 + static_cast<int>(is_negative), std::errc() };
-        }
-        else
-        {
-            if (is_negative)
-            {
-                std::memcpy(first, "nan(ind)", 8);
-                return { first + 9, std::errc() };
-            }
-            else
-            {
-                std::memcpy(first, "nan", 3);
-                return { first + 3, std::errc() };
-            }
-        }
-    }
-
-    // Fallback to printf
-    return boost::charconv::detail::to_chars_printf_impl(first, last, value, fmt, precision);
-}
-
 #endif
 
-#ifdef BOOST_CHARCONV_HAS_FLOAT128
+#ifdef BOOST_CHARCONV_HAS_QUADMATH
 
 boost::charconv::to_chars_result boost::charconv::to_chars(char* first, char* last, __float128 value, boost::charconv::chars_format fmt) noexcept
 {
@@ -684,7 +647,7 @@ boost::charconv::to_chars_result boost::charconv::to_chars(char* first, char* la
 boost::charconv::to_chars_result boost::charconv::to_chars(char* first, char* last, std::float16_t value,
                                                            boost::charconv::chars_format fmt) noexcept
 {
-    return boost::charconv::detail::to_chars_float_impl(first, last, static_cast<float>(value), fmt, -1);
+    return boost::charconv::detail::to_chars_16_bit_float_impl(first, last, value, fmt, -1);
 }
 
 boost::charconv::to_chars_result boost::charconv::to_chars(char* first, char* last, std::float16_t value,
@@ -693,8 +656,10 @@ boost::charconv::to_chars_result boost::charconv::to_chars(char* first, char* la
     if (precision < 0)
     {
         precision = 6;
+        return boost::charconv::detail::to_chars_16_bit_float_impl(first, last, value, fmt, precision);
     }
 
+    // If the precision is specified it is better to use our exisiting methods for float
     return boost::charconv::detail::to_chars_float_impl(first, last, static_cast<float>(value), fmt, precision);
 }
 #endif
@@ -747,7 +712,7 @@ boost::charconv::to_chars_result boost::charconv::to_chars(char* first, char* la
 }
 #endif
 
-#if defined(BOOST_CHARCONV_HAS_STDFLOAT128) && defined(BOOST_CHARCONV_HAS_FLOAT128)
+#if defined(BOOST_CHARCONV_HAS_STDFLOAT128) && defined(BOOST_CHARCONV_HAS_QUADMATH)
 
 boost::charconv::to_chars_result boost::charconv::to_chars(char* first, char* last, std::float128_t value,
                                                            boost::charconv::chars_format fmt) noexcept
@@ -772,7 +737,7 @@ boost::charconv::to_chars_result boost::charconv::to_chars(char* first, char* la
 boost::charconv::to_chars_result boost::charconv::to_chars(char* first, char* last, std::bfloat16_t value,
                                                            boost::charconv::chars_format fmt) noexcept
 {
-    return boost::charconv::detail::to_chars_float_impl(first, last, static_cast<float>(value), fmt, -1);
+    return boost::charconv::detail::to_chars_16_bit_float_impl(first, last, value, fmt, -1);
 }
 
 boost::charconv::to_chars_result boost::charconv::to_chars(char* first, char* last, std::bfloat16_t value,
@@ -781,8 +746,10 @@ boost::charconv::to_chars_result boost::charconv::to_chars(char* first, char* la
     if (precision < 0)
     {
         precision = 6;
+        return boost::charconv::detail::to_chars_16_bit_float_impl(first, last, value, fmt, precision);
     }
 
+    // If the precision is specified it is better to use our exisiting methods for float
     return boost::charconv::detail::to_chars_float_impl(first, last, static_cast<float>(value), fmt, precision);
 }
 #endif

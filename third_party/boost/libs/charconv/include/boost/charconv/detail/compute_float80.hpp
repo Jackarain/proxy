@@ -37,19 +37,6 @@ static constexpr long double powers_of_ten_ld[] = {
     1e49L, 1e50L, 1e51L, 1e52L, 1e53L, 1e54L, 1e55L
 };
 
-#ifdef BOOST_CHARCONV_HAS_FLOAT128
-static constexpr __float128 powers_of_tenq[] = {
-    1e0Q,  1e1Q,  1e2Q,  1e3Q,  1e4Q,  1e5Q,  1e6Q,
-    1e7Q,  1e8Q,  1e9Q,  1e10Q, 1e11Q, 1e12Q, 1e13Q,
-    1e14Q, 1e15Q, 1e16Q, 1e17Q, 1e18Q, 1e19Q, 1e20Q,
-    1e21Q, 1e22Q, 1e23Q, 1e24Q, 1e25Q, 1e26Q, 1e27Q,
-    1e28Q, 1e29Q, 1e30Q, 1e31Q, 1e32Q, 1e33Q, 1e34Q,
-    1e35Q, 1e36Q, 1e37Q, 1e38Q, 1e39Q, 1e40Q, 1e41Q,
-    1e42Q, 1e43Q, 1e44Q, 1e45Q, 1e46Q, 1e47Q, 1e48Q,
-    1e49Q, 1e50Q, 1e51Q, 1e52Q, 1e53Q, 1e54Q, 1e55Q
-};
-#endif
-
 template <typename ResultType, typename Unsigned_Integer, typename ArrayPtr>
 inline ResultType fast_path(std::int64_t q, Unsigned_Integer w, bool negative, ArrayPtr table) noexcept
 {
@@ -77,42 +64,6 @@ inline ResultType fast_path(std::int64_t q, Unsigned_Integer w, bool negative, A
 
     return ld;
 }
-
-#ifdef BOOST_CHARCONV_HAS_FLOAT128
-template <typename Unsigned_Integer>
-inline __float128 compute_float128(std::int64_t q, Unsigned_Integer w, bool negative, std::errc& success) noexcept
-{
-    // GLIBC uses 2^-16444 but MPFR uses 2^-16445 as the smallest subnormal value for 80 bit
-    // 39 is the max number of digits in an uint128_t
-    static constexpr auto smallest_power = -4951 - 39;
-    static constexpr auto largest_power = 4932;
-
-    if (-55 <= q && q <= 48 && w <= static_cast<Unsigned_Integer>(1) << 113)
-    {
-        success = std::errc();
-        return fast_path<__float128>(q, w, negative, powers_of_tenq);
-    }
-
-    if (w == 0)
-    {
-        success = std::errc();
-        return negative ? -0.0Q : 0.0Q;
-    }
-    else if (q > largest_power)
-    {
-        success = std::errc::result_out_of_range;
-        return negative ? -HUGE_VALQ : HUGE_VALQ;
-    }
-    else if (q < smallest_power)
-    {
-        success = std::errc::result_out_of_range;
-        return negative ? -0.0Q : 0.0Q;
-    }
-
-    success = std::errc::not_supported;
-    return 0;
-}
-#endif
 
 template <typename ResultType, typename Unsigned_Integer>
 inline ResultType compute_float80(std::int64_t q, Unsigned_Integer w, bool negative, std::errc& success) noexcept

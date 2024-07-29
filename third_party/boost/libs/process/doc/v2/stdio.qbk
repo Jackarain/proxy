@@ -12,7 +12,7 @@ automatically connected and the other side will get assigned to the child proces
 
 ```
     asio::io_context ctx;
-    asio::readable_pipe rp;
+    asio::readable_pipe rp{ctx};
 
     process proc(ctx, "/usr/bin/g++", {"--version"}, process_stdio{{ /* in to default */}, rp, { /* err to default */ }});
     std::string output;

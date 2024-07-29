@@ -29,7 +29,7 @@ jobs:
       CMAKE_BUILD_PARALLEL_LEVEL: 4
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup Boost
       run: python3 tools/ci.py setup-boost --source-dir=$(pwd)
@@ -106,7 +106,7 @@ jobs:
       OPENSSL_ROOT: "C:\\Program Files\\OpenSSL"
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup user-config.jam
       run: cp tools/user-config.jam "${HOMEDRIVE}${HOMEPATH}/"
@@ -134,7 +134,6 @@ jobs:
           - toolset: gcc-11
             install: g++-11
             os: ubuntu-latest
-            container: ubuntu:22.04
             cxxstd: '17'
             build-type: 'Debug'
             ldflags: ''
@@ -142,7 +141,6 @@ jobs:
           - toolset: gcc-11
             install: g++-11
             os: ubuntu-latest
-            container: ubuntu:22.04
             cxxstd: '20'
             build-type: 'Release'
             ldflags: ''
@@ -150,7 +148,6 @@ jobs:
           - toolset: clang-11
             install: clang-11
             os: ubuntu-latest
-            container: ubuntu:22.04
             cxxstd: '17'
             build-type: 'Debug'
             ldflags: ''
@@ -158,7 +155,6 @@ jobs:
           - toolset: clang-11
             install: clang-11
             os: ubuntu-latest
-            container: ubuntu:22.04
             cxxstd: '20'
             build-type: 'Debug'
             ldflags: ''
@@ -166,7 +162,6 @@ jobs:
           - toolset: clang-13
             install: clang-13
             os: ubuntu-latest
-            container: ubuntu:22.04
             cxxstd: '17'
             build-type: 'Release'
             ldflags: ''
@@ -174,7 +169,6 @@ jobs:
           - toolset: clang-13
             install: clang-13
             os: ubuntu-latest
-            container: ubuntu:22.04
             cxxstd: '20'
             build-type: 'Release'
             ldflags: ''
@@ -182,7 +176,6 @@ jobs:
           - toolset: clang-14
             install: 'clang-14 libc++-14-dev libc++abi-14-dev'
             os: ubuntu-latest
-            container: ubuntu:22.04
             cxxstd: '17'
             build-type: 'Debug'
             cxxflags: '-stdlib=libc++'
@@ -191,83 +184,83 @@ jobs:
           - toolset: clang-14
             install: 'clang-14 libc++-14-dev libc++abi-14-dev'
             os: ubuntu-latest
-            container: ubuntu:22.04
             cxxstd: '20'
             build-type: 'Release'
             cxxflags: '-stdlib=libc++'
             ldflags: '-lc++'
 
     runs-on: ${{ matrix.os }}
-    container: ${{matrix.container}}
     env:
       CXXFLAGS: ${{matrix.cxxflags}} -Wall -Wextra
       LDFLAGS:  ${{matrix.ldflags}}
       CMAKE_BUILD_PARALLEL_LEVEL: 4
-      BOOST_REDIS_TEST_SERVER: redis
-
-    services:
-      redis:
-        image: redis
-
+    
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
-
-    - name: Setup container environment
-      if: matrix.container
+      uses: actions/checkout@v4
+    
+    - name: Set up the required containers
       run: |
-        apt-get update
-        apt-get -y install sudo python3 git g++ libssl-dev protobuf-compiler redis-server
-
+        docker compose -f tools/docker-compose.yml up -d --wait || (docker compose logs; exit 1)
+      
     - name: Install dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get -y install cmake protobuf-compiler redis-server python3 ${{ matrix.install }}
+        docker exec builder apt-get update
+        docker exec builder apt-get -y --no-install-recommends install \
+          git \
+          g++ \
+          libssl-dev \
+          make \
+          ca-certificates \
+          cmake \
+          protobuf-compiler \
+          python3 \
+          ${{ matrix.install }}
 
     - name: Setup Boost
-      run: ./tools/ci.py setup-boost --source-dir=$(pwd)
+      run: docker exec builder /boost-redis/tools/ci.py setup-boost --source-dir=/boost-redis
 
     - name: Build a Boost distribution using B2
       run: |
-        ./tools/ci.py build-b2-distro \
+        docker exec builder /boost-redis/tools/ci.py build-b2-distro \
           --toolset ${{ matrix.toolset }}
 
     - name: Build a Boost distribution using CMake
       run: |
-        ./tools/ci.py build-cmake-distro \
+        docker exec builder /boost-redis/tools/ci.py build-cmake-distro \
           --build-type ${{ matrix.build-type }} \
           --cxxstd ${{ matrix.cxxstd }} \
           --toolset ${{ matrix.toolset }}
 
     - name: Build the project tests
       run: |
-        ./tools/ci.py build-cmake-standalone-tests \
+        docker exec builder /boost-redis/tools/ci.py build-cmake-standalone-tests \
           --build-type ${{ matrix.build-type }} \
           --cxxstd ${{ matrix.cxxstd }} \
           --toolset ${{ matrix.toolset }}
   
     - name: Run the project tests
       run: |
-        ./tools/ci.py run-cmake-standalone-tests \
+        docker exec builder /boost-redis/tools/ci.py run-cmake-standalone-tests \
           --build-type ${{ matrix.build-type }}
 
     - name: Run add_subdirectory tests
       run: |
-        ./tools/ci.py run-cmake-add-subdirectory-tests \
+        docker exec builder /boost-redis/tools/ci.py run-cmake-add-subdirectory-tests \
           --build-type ${{ matrix.build-type }} \
           --cxxstd ${{ matrix.cxxstd }} \
           --toolset ${{ matrix.toolset }}
 
     - name: Run find_package tests with the built cmake distribution
       run: |
-        ./tools/ci.py run-cmake-find-package-tests \
+        docker exec builder /boost-redis/tools/ci.py run-cmake-find-package-tests \
           --build-type ${{ matrix.build-type }} \
           --cxxstd ${{ matrix.cxxstd }} \
           --toolset ${{ matrix.toolset }}
 
     - name: Run find_package tests with the built b2 distribution
       run: |
-        ./tools/ci.py run-cmake-b2-find-package-tests \
+        docker exec builder /boost-redis/tools/ci.py run-cmake-b2-find-package-tests \
           --build-type ${{ matrix.build-type }} \
           --cxxstd ${{ matrix.cxxstd }} \
           --toolset ${{ matrix.toolset }}
@@ -296,7 +289,7 @@ jobs:
     container: ${{matrix.container}}
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup container environment
       if: matrix.container

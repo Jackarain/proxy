@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_GRAMMAR_IMPL_CI_STRING_IPP
-#define BOOST_URL_GRAMMAR_IMPL_CI_STRING_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/grammar/ci_string.hpp>
@@ -152,4 +150,3 @@ ci_digest(
 } // urls
 } // boost
 
-#endif

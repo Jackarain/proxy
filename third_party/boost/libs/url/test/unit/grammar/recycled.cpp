@@ -20,13 +20,9 @@ namespace grammar {
 struct recycled_test
 {
     void
-    testPtr()
-    {
-    }
-
-    void
     run()
     {
+        // basic
         {
             recycled_ptr<std::string> sp;
             sp->reserve(1000);
@@ -35,6 +31,21 @@ struct recycled_test
         {
             recycled_ptr<std::string> sp;
             BOOST_TEST(sp->capacity() >= 1000);
+        }
+
+        // shared
+        {
+            recycled_ptr<std::string> sp;
+            auto sp2 = sp;
+            sp->reserve(1000);
+            BOOST_TEST(sp->capacity() >= 1000);
+            BOOST_TEST(sp2->capacity() >= 1000);
+        }
+        {
+            recycled_ptr<std::string> sp;
+            recycled_ptr<std::string> sp2(sp);
+            BOOST_TEST(sp->capacity() >= 1000);
+            BOOST_TEST(sp2->capacity() >= 1000);
         }
 
         // coverage

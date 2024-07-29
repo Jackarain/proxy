@@ -11,6 +11,7 @@ on:
 env:
   LIBRARY: gil
   UBSAN_OPTIONS: print_stacktrace=1
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
 jobs:
   posix:
@@ -20,46 +21,52 @@ jobs:
         include:
           - toolset: gcc-6
             cxxstd: "14,1z"
-            os: ubuntu-18.04
+            os: ubuntu-latest
+            container: ubuntu:18.04
             install: g++-6
           - toolset: gcc-7
             cxxstd: "14,17"
-            os: ubuntu-18.04
-          - toolset: gcc
-            compiler: g++-8
+            install: g++-7
+            os: ubuntu-20.04
+          - toolset: gcc-8
             cxxstd: "14"
-            os: ubuntu-18.04
+            os: ubuntu-20.04
             install: g++-8
           - toolset: gcc-9
             cxxstd: "14,17"
-            os: ubuntu-18.04
+            os: ubuntu-20.04
+            install: g++-9
           - toolset: gcc-10
             cxxstd: "14,17"
-            os: ubuntu-18.04
+            os: ubuntu-20.04
+            install: g++-10
           - toolset: clang
             compiler: clang++-3.9
             cxxstd: "14"
-            os: ubuntu-18.04
+            os: ubuntu-latest
+            container: ubuntu:18.04
             install: clang-3.9
           - toolset: clang
             compiler: clang++-4.0
             cxxstd: "14"
-            os: ubuntu-18.04
+            os: ubuntu-latest
+            container: ubuntu:18.04
             install: clang-4.0
           - toolset: clang
             compiler: clang++-5.0
             cxxstd: "14,1z"
-            os: ubuntu-18.04
+            os: ubuntu-latest
+            container: ubuntu:18.04
             install: clang-5.0
           - toolset: clang
             compiler: clang++-6.0
             cxxstd: "14,17"
-            os: ubuntu-18.04
+            os: ubuntu-20.04
             install: clang-6.0
           - toolset: clang
             compiler: clang++-7
             cxxstd: "14,17"
-            os: ubuntu-18.04
+            os: ubuntu-20.04
             install: clang-7
           - toolset: clang
             compiler: clang++-8
@@ -77,16 +84,23 @@ jobs:
             os: ubuntu-20.04
           - toolset: clang
             cxxstd: "14,17"
-            os: macos-10.15
+            os: macos-12
 
     runs-on: ${{matrix.os}}
+    container: ${{matrix.container}}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+
+      - name: Setup container environment
+        if: matrix.container
+        run: |
+          apt-get -y update
+          apt-get -y install sudo python3 git g++
 
       - name: Install packages
         if: matrix.install
-        run: sudo apt install ${{matrix.install}}
+        run: sudo apt-get -y install ${{matrix.install}}
 
       - name: Setup Boost
         run: |
@@ -97,7 +111,7 @@ jobs:
           cd boost-root
           cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
           git submodule update --init tools/boostdep
-          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+          python3 tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
           ./bootstrap.sh
           ./b2 -d0 headers
 
@@ -140,7 +154,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd

@@ -2555,7 +2555,6 @@ BOOST_FORCEINLINE BOOST_CHARCONV_SAFEBUFFERS auto to_decimal(Float x, Policies..
     const auto br = dragonbox_float_bits<Float, FloatTraits>(x);
     const auto exponent_bits = br.extract_exponent_bits();
     const auto s = br.remove_exponent_bits(exponent_bits);
-    BOOST_CHARCONV_ASSERT(br.is_finite());
 
     return to_decimal<Float, FloatTraits>(s, exponent_bits, policies...);
 }

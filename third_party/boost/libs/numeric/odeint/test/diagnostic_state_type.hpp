@@ -19,6 +19,8 @@
 #define LIBS_NUMERIC_ODEINT_TEST_DIAGNOSTIC_STATE_TYPE_HPP_DEFINED
 
 #include <array>
+#include <type_traits>
+
 #include <boost/numeric/odeint/util/is_resizeable.hpp>
 #include <boost/numeric/odeint/util/same_size.hpp>
 #include <boost/numeric/odeint/util/resize.hpp>
@@ -84,7 +86,7 @@ namespace odeint {
     template< size_t N >
     struct is_resizeable< diagnostic_type< N > >
     {
-        typedef boost::true_type type;
+        typedef std::true_type type;
         const static bool value = type::value;
     };
 

@@ -70,8 +70,8 @@ auto histogram_equalization(histogram<SrcKeyType> const& src_hist, histogram<Dst
     using value_t = typename histogram<SrcKeyType>::value_type;
     dst_hist.clear();
     double sum          = src_hist.sum();
-    SrcKeyType min_key  = std::numeric_limits<DstKeyType>::min();
-    SrcKeyType max_key  = std::numeric_limits<DstKeyType>::max();
+    SrcKeyType min_key  = (std::numeric_limits<DstKeyType>::min)();
+    SrcKeyType max_key  = (std::numeric_limits<DstKeyType>::max)();
     auto cumltv_srchist = cumulative_histogram(src_hist);
     std::map<SrcKeyType, DstKeyType> color_map;
     std::for_each(cumltv_srchist.begin(), cumltv_srchist.end(), [&](value_t const& v) {
@@ -120,8 +120,8 @@ void histogram_equalization(
     std::size_t const channels = num_channels<SrcView>::value;
     coord_t const width        = src_view.width();
     coord_t const height       = src_view.height();
-    std::size_t pixel_max      = std::numeric_limits<dst_channel_t>::max();
-    std::size_t pixel_min      = std::numeric_limits<dst_channel_t>::min();
+    std::size_t pixel_max      = (std::numeric_limits<dst_channel_t>::max)();
+    std::size_t pixel_min      = (std::numeric_limits<dst_channel_t>::min)();
 
     for (std::size_t i = 0; i < channels; i++)
     {

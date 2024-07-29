@@ -82,6 +82,14 @@ struct static_url_test
         {
             {
                 core::string_view s = "/path/to/file.txt";
+                static_url<20> u0(s);
+                static_url<20> u1(u0);
+                BOOST_TEST_EQ(u0.buffer(), u1.buffer());
+                BOOST_TEST_NE(u0.buffer().data(), s.data());
+                BOOST_TEST_NE(u1.buffer().data(), s.data());
+            }
+            {
+                core::string_view s = "/path/to/file.txt";
                 static_url<24> u0(s);
                 static_url<20> u1(u0);
                 BOOST_TEST_EQ(u0.buffer(), u1.buffer());
@@ -150,6 +158,24 @@ struct static_url_test
     }
 
     void
+    testUrlBase()
+    {
+        {
+            static_url<64> u("http://example.com");
+            BOOST_TEST_EQ(u.buffer(), "http://example.com");
+            u.reserve(32);
+            BOOST_TEST_EQ(u.capacity(), 65);
+        }
+        {
+            static_url<64> u("http://example.com");
+            BOOST_TEST_EQ(u.buffer(), "http://example.com");
+            u.clear();
+            BOOST_TEST_EQ(u.buffer(), "");
+            BOOST_TEST_EQ(u.capacity(), 65);
+        }
+    }
+
+    void
     testOstream()
     {
         {
@@ -191,6 +217,7 @@ struct static_url_test
     run()
     {
         testSpecial();
+        testUrlBase();
         testOstream();
         testJavadocs();
     }

@@ -71,13 +71,11 @@ int test_main(int, char*[])
         u = gen(std::string("fedcba98-7654-3210-fedc-ba9876543210"));
         BOOST_CHECK_EQUAL(u, u_decreasing);
 
-#ifndef BOOST_NO_STD_WSTRING
         u = gen(L"fedcba98-7654-3210-fedc-ba9876543210");
         BOOST_CHECK_EQUAL(u, u_decreasing);
 
         u = gen(std::wstring(L"01234567-89ab-cdef-0123-456789abcdef"));
         BOOST_CHECK_EQUAL(u, u_increasing);
-#endif //BOOST_NO_STD_WSTRING
     }
 
     { // test name_generator

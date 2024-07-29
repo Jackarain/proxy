@@ -11,6 +11,10 @@
 #include <boost/cobalt/detail/handler.hpp>
 #include <boost/cobalt/detail/sbo_resource.hpp>
 #include <boost/cobalt/result.hpp>
+#include <boost/core/no_exceptions_support.hpp>
+
+#include <boost/asio/deferred.hpp>
+
 
 namespace boost::cobalt
 {
@@ -54,7 +58,7 @@ struct op
 #endif
     ) noexcept
     {
-      try
+      BOOST_TRY
       {
         completed_immediately = detail::completed_immediately_t::initiating;
 
@@ -67,11 +71,12 @@ struct op
           completed_immediately = detail::completed_immediately_t::no;
         return completed_immediately != detail::completed_immediately_t::yes;
       }
-      catch(...)
+      BOOST_CATCH(...)
       {
         init_ep = std::current_exception();
         return false;
       }
+      BOOST_CATCH_END
     }
 
     auto await_resume(const boost::source_location & loc = BOOST_CURRENT_LOCATION)
@@ -94,9 +99,6 @@ struct op
         std::rethrow_exception(init_ep);
       return interpret_as_result(*std::move(result));
     }
-
-
-
   };
 
   awaitable operator co_await() &&
@@ -162,6 +164,27 @@ struct use_op_t
 
 constexpr use_op_t use_op{};
 
+struct enable_await_deferred
+{
+  template<typename ... Args, typename Initiation, typename ... InitArgs>
+  auto await_transform(asio::deferred_async_operation<void(Args...), Initiation, InitArgs...> op_)
+  {
+    struct deferred_op : op<Args...>
+    {
+      asio::deferred_async_operation<void(Args...), Initiation, InitArgs...> op_;
+      deferred_op(asio::deferred_async_operation<void(Args...), Initiation, InitArgs...> op_)
+          : op_(std::move(op_)) {}
+
+      void initiate(cobalt::completion_handler<Args...> complete) override
+      {
+        std::move(op_)(std::move(complete));
+      }
+    };
+
+    return deferred_op{std::move(op_)};
+  }
+};
+
 }
 
 namespace boost::asio
@@ -205,5 +228,8 @@ struct async_result<boost::cobalt::use_op_t, void(Args...)>
         std::forward<InitArgs>(args)...);
   }
 };
+
+
+
 }
 #endif //BOOST_COBALT_OP_HPP

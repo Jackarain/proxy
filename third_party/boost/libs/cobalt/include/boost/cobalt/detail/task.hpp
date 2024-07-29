@@ -12,6 +12,8 @@
 #include <boost/cobalt/detail/forward_cancellation.hpp>
 #include <boost/cobalt/detail/wrapper.hpp>
 #include <boost/cobalt/detail/this_thread.hpp>
+#include <boost/cobalt/noop.hpp>
+#include <boost/cobalt/op.hpp>
 
 #include <boost/asio/bind_allocator.hpp>
 #include <boost/asio/cancellation_signal.hpp>
@@ -59,6 +61,9 @@ struct task_value_holder
     result.emplace(ret);
     static_cast<task_receiver<T>*>(this)->set_done();
   }
+
+  constexpr task_value_holder() noexcept = default;
+  constexpr task_value_holder(noop<T> n) noexcept(std::is_nothrow_move_constructible_v<T>) : result(std::move(n.value)) {}
 };
 
 template<>
@@ -72,6 +77,9 @@ struct task_value_holder<void>
   }
 
   inline void return_void();
+
+  constexpr task_value_holder() noexcept = default;
+  constexpr task_value_holder(noop<void> n) noexcept {}
 };
 
 
@@ -114,6 +122,7 @@ struct task_receiver : task_value_holder<T>
       promise->signal.emit(ct);
   }
 
+  task_receiver(noop<T> n) : task_value_holder<T>(std::move(n)), done(true) {}
   task_receiver() = default;
   task_receiver(task_receiver && lhs)
       : task_value_holder<T>(std::move(lhs)),
@@ -280,6 +289,7 @@ struct task_promise
       enable_awaitables<task_promise<Return>>,
       enable_await_allocator<task_promise<Return>>,
       enable_await_executor<task_promise<Return>>,
+      enable_await_deferred,
       task_promise_result<Return>
 {
   using promise_cancellation_base<asio::cancellation_slot, asio::enable_total_cancellation>::await_transform;
@@ -287,6 +297,7 @@ struct task_promise
   using enable_awaitables<task_promise<Return>>::await_transform;
   using enable_await_allocator<task_promise<Return>>::await_transform;
   using enable_await_executor<task_promise<Return>>::await_transform;
+  using enable_await_deferred::await_transform;
 
   [[nodiscard]] task<Return> get_return_object()
   {
@@ -328,7 +339,7 @@ struct task_promise
     }
   };
 
-  auto initial_suspend()
+  auto initial_suspend() noexcept
   {
 
     return initial_awaitable{this};

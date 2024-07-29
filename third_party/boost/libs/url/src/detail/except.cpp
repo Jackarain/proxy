@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_DETAIL_IMPL_EXCEPT_IPP
-#define BOOST_URL_DETAIL_IMPL_EXCEPT_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/detail/except.hpp>
@@ -56,4 +54,3 @@ throw_length_error(
 } // url
 } // boost
 
-#endif

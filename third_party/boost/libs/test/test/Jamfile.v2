@@ -18,7 +18,7 @@ project boost/test-tests
     : requirements
     ;
 
-import ../../predef/check/predef
+import ../../predef/tools/check/predef
     : check require
     : predef-check predef-require ;
 

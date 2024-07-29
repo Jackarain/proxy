@@ -161,8 +161,7 @@ int set_test ()
    {  //Set(beg, end, compare)
       IntType aux_vect[50];
       for(int i = 0; i < 50; ++i){
-         IntType move_me(i/2);
-         aux_vect[i] = boost::move(move_me);
+         aux_vect[i] = i/2;
       }
       int aux_vect2[50];
       for(int i = 0; i < 50; ++i){
@@ -170,8 +169,7 @@ int set_test ()
       }
       IntType aux_vect3[50];
       for(int i = 0; i < 50; ++i){
-         IntType move_me(i/2);
-         aux_vect3[i] = boost::move(move_me);
+         aux_vect3[i] = i/2;
       }
       ::boost::movelib::unique_ptr<MyBoostSet> const pboostset2 = ::boost::movelib::make_unique<MyBoostSet>
          (boost::make_move_iterator(&aux_vect[0]), boost::make_move_iterator(&aux_vect[0]+50), typename MyBoostSet::key_compare());
@@ -185,8 +183,7 @@ int set_test ()
    {  //Set(beg, end, alloc)
       IntType aux_vect[50];
       for(int i = 0; i < 50; ++i){
-         IntType move_me(i/2);
-         aux_vect[i] = boost::move(move_me);
+         aux_vect[i] = i/2;
       }
       int aux_vect2[50];
       for(int i = 0; i < 50; ++i){
@@ -194,8 +191,7 @@ int set_test ()
       }
       IntType aux_vect3[50];
       for(int i = 0; i < 50; ++i){
-         IntType move_me(i/2);
-         aux_vect3[i] = boost::move(move_me);
+         aux_vect3[i] = i/2;
       }
       ::boost::movelib::unique_ptr<MyBoostSet> const pboostset2 = ::boost::movelib::make_unique<MyBoostSet>
          (boost::make_move_iterator(&aux_vect[0]), boost::make_move_iterator(&aux_vect[0]+50), typename MyBoostSet::allocator_type());
@@ -209,8 +205,7 @@ int set_test ()
    {
       IntType aux_vect[50];
       for(int i = 0; i < 50; ++i){
-         IntType move_me(i/2);
-         aux_vect[i] = boost::move(move_me);
+         aux_vect[i] = i/2;
       }
       int aux_vect2[50];
       for(int i = 0; i < 50; ++i){
@@ -218,8 +213,7 @@ int set_test ()
       }
       IntType aux_vect3[50];
       for(int i = 0; i < 50; ++i){
-         IntType move_me(i/2);
-         aux_vect3[i] = boost::move(move_me);
+         aux_vect3[i] = i/2;
       }
 
       ::boost::movelib::unique_ptr<MyBoostSet> const pboostset2 = ::boost::movelib::make_unique<MyBoostSet>
@@ -249,8 +243,7 @@ int set_test ()
 
       //ordered range insertion
       for(int i = 0; i < 50; ++i){
-         IntType move_me(i);
-         aux_vect[i] = boost::move(move_me);
+         aux_vect[i] = i;
       }
 
       for(int i = 0; i < 50; ++i){
@@ -258,8 +251,7 @@ int set_test ()
       }
 
       for(int i = 0; i < 50; ++i){
-         IntType move_me(i);
-         aux_vect3[i] = boost::move(move_me);
+         aux_vect3[i] = i;
       }
 
       //some comparison operators
@@ -410,8 +402,7 @@ int set_test ()
    {
       IntType aux_vect[50];
       for(int i = 0; i < 50; ++i){
-         IntType move_me(-1);
-         aux_vect[i] = boost::move(move_me);
+         aux_vect[i] = -1;
       }
       int aux_vect2[50];
       for(int i = 0; i < 50; ++i){
@@ -419,8 +410,7 @@ int set_test ()
       }
       IntType aux_vect3[50];
       for(int i = 0; i < 50; ++i){
-         IntType move_me(-1);
-         aux_vect3[i] = boost::move(move_me);
+         aux_vect3[i] = -1;
       }
 
       boostset.insert(boost::make_move_iterator(&aux_vect[0]), boost::make_move_iterator(&aux_vect[0] + 50));
@@ -455,8 +445,7 @@ int set_test ()
    {
       IntType aux_vect[50];
       for(int i = 0; i < 50; ++i){
-         IntType move_me(-1);
-         aux_vect[i] = boost::move(move_me);
+         aux_vect[i] = -1;
       }
       int aux_vect2[50];
       for(int i = 0; i < 50; ++i){
@@ -464,20 +453,17 @@ int set_test ()
       }
       IntType aux_vect3[50];
       for(int i = 0; i < 50; ++i){
-         IntType move_me(-1);
-         aux_vect3[i] = boost::move(move_me);
+         aux_vect3[i] = -1;
       }
 
       IntType aux_vect4[50];
       for(int i = 0; i < 50; ++i){
-         IntType move_me(-1);
-         aux_vect4[i] = boost::move(move_me);
+         aux_vect4[i] = -1;
       }
 
       IntType aux_vect5[50];
       for(int i = 0; i < 50; ++i){
-         IntType move_me(-1);
-         aux_vect5[i] = boost::move(move_me);
+         aux_vect5[i] = -1;
       }
 
       boostset.insert(boost::make_move_iterator(&aux_vect[0]), boost::make_move_iterator(&aux_vect[0] + 50));

@@ -8,8 +8,6 @@
 // Official repository: https://github.com/CPPAlliance/url
 //
 
-#ifndef BOOST_URL_IMPL_PARSE_QUERY_IPP
-#define BOOST_URL_IMPL_PARSE_QUERY_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/parse_query.hpp>
@@ -43,4 +41,3 @@ parse_query(core::string_view s) noexcept
 } // urls
 } // boost
 
-#endif

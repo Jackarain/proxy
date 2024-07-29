@@ -23,6 +23,7 @@
 #define BOOST_TEST_MODULE odeint_is_resizeable
 
 #include <vector>
+#include <type_traits>
 #include <cmath>
 
 #include <boost/test/unit_test.hpp>
@@ -44,14 +45,14 @@ template< typename T > struct my_seq2 {};
 
 namespace boost { namespace fusion { namespace traits {
     
-    template< typename T > struct is_sequence< my_seq1< T > > : boost::true_type {};
-    template< typename T > struct is_sequence< my_seq2< T > > : boost::true_type {};
+    template< typename T > struct is_sequence< my_seq1< T > > : std::true_type {};
+    template< typename T > struct is_sequence< my_seq2< T > > : std::true_type {};
 } } } // boost::fusion::traits
 
 namespace boost { namespace numeric { namespace odeint {
     
     template< typename T >
-    struct is_resizeable< my_seq2< T > > : boost::true_type {};
+    struct is_resizeable< my_seq2< T > > : std::true_type {};
     
 } } } // boost::numeric::odeint
 

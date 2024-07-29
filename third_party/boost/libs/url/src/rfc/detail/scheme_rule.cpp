@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_IMPL_SCHEME_RULE_IPP
-#define BOOST_URL_IMPL_SCHEME_RULE_IPP
 
 #include <boost/url/detail/config.hpp>
 #include "scheme_rule.hpp"
@@ -63,4 +61,3 @@ parse(
 } // urls
 } // boost
 
-#endif

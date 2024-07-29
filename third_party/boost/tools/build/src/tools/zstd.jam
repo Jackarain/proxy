@@ -60,6 +60,7 @@ rule init (
     local library-path = [ feature.get-values <search> : $(options) ] ;
     local include-path = [ feature.get-values <include> : $(options) ] ;
     local library-name = [ feature.get-values <name> : $(options) ] ;
+    local dll-paths = [ property.select <dll-path> : $(options) ] ;
 
     condition = [ property-set.create $(requirements) ] ;
     condition = [ property-set.create [ $(condition).base ] ] ;
@@ -94,6 +95,7 @@ rule init (
             $(include-path) : $(library-path) : $(library-name) ] ;
         $(mt).set-header $(header) ;
         $(mt).set-default-names $(names) ;
+        $(mt).add-usage-requirements $(dll-paths) ;
         targets.main-target-alternative $(mt) ;
     }
     .configured.$(condition) = true ;

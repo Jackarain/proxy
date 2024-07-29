@@ -37,6 +37,7 @@
 #include <boost/mysql/field_view.hpp>
 #include <boost/mysql/format_sql.hpp>
 #include <boost/mysql/handshake_params.hpp>
+#include <boost/mysql/is_fatal_error.hpp>
 #include <boost/mysql/mariadb_collations.hpp>
 #include <boost/mysql/mariadb_server_errc.hpp>
 #include <boost/mysql/metadata.hpp>
@@ -44,6 +45,7 @@
 #include <boost/mysql/metadata_mode.hpp>
 #include <boost/mysql/mysql_collations.hpp>
 #include <boost/mysql/mysql_server_errc.hpp>
+#include <boost/mysql/pipeline.hpp>
 #include <boost/mysql/pool_params.hpp>
 #include <boost/mysql/results.hpp>
 #include <boost/mysql/resultset.hpp>
@@ -61,6 +63,7 @@
 #include <boost/mysql/tcp_ssl.hpp>
 #include <boost/mysql/throw_on_error.hpp>
 #include <boost/mysql/time.hpp>
+#include <boost/mysql/underlying_row.hpp>
 #include <boost/mysql/unix.hpp>
 #include <boost/mysql/unix_ssl.hpp>
 

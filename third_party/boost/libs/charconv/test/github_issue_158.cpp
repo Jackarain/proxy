@@ -93,6 +93,7 @@ void test_values_with_negative_exp()
     BOOST_TEST_CSTR_EQ(buffer, "0.00000000000000000000099999999999999990753745222790");
 }
 
+#ifndef BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE
 void test_long_double_with_negative_exp()
 {
     char buffer[256];
@@ -126,6 +127,7 @@ void test_long_double_with_negative_exp()
     // BOOST_TEST_CSTR_EQ(buffer, "0.00000000000000000999999999999999999997135886174218");
     BOOST_TEST_CSTR_EQ(buffer, "0.00000000000000001000000000000000000000000000000000");
 }
+#endif
 
 void test_values_with_positive_exp()
 {
@@ -407,6 +409,7 @@ void test_zero()
     BOOST_TEST_CSTR_EQ(buffer, "0");
 }
 
+#ifndef BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE
 void test_long_double_with_positive_exp()
 {
     char buffer[256];
@@ -438,6 +441,7 @@ void test_long_double_with_positive_exp()
     BOOST_TEST(res);
     BOOST_TEST_CSTR_EQ(buffer, "100000000000000000.00000000000000000000000000000000000000000000000000");
 }
+#endif
 
 template <typename T>
 void test_spot_value(T value, int precision, const char* result, boost::charconv::chars_format fmt = boost::charconv::chars_format::fixed)

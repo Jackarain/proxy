@@ -55,6 +55,13 @@ template<class T1, class T2> struct X
 
 template<class T1, class T2> struct Y;
 
+class W
+{
+public:
+
+    virtual void f() = 0;
+};
+
 enum E1
 {
     e1
@@ -122,6 +129,7 @@ int main()
     TEST(A);
     TEST(B);
     TEST(C);
+    TEST(W);
 
     TEST(E1);
 
@@ -143,6 +151,9 @@ int main()
     TEST(C&);
     TEST(C const&);
 
+    TEST(W const);
+    TEST(W&);
+
 #if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
 
     TEST(B&&);
@@ -155,6 +166,8 @@ int main()
 
     TEST(C*);
     TEST(C const* volatile*);
+
+    TEST(W volatile*);
 
     TEST(void*);
     TEST(void const* volatile*);
@@ -307,6 +320,8 @@ int main()
 
     TEST(std::pair<C, C>);
 
+    TEST(std::pair<W, W>);
+
     TEST(std::pair<void, void>);
     TEST(std::pair<std::pair<void, void>, void>);
 
@@ -336,9 +351,11 @@ int main()
     TEST(X<A const&, B&> volatile&);
 
     TEST(X<C, C>);
+    TEST(X<W, W>);
 
     TEST(Y<A, B>);
     TEST(Y<C, C>);
+    TEST(Y<W, W>);
 
     TEST(X<std::pair<void, void>, void>);
 

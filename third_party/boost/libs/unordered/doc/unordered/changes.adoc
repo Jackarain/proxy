@@ -6,6 +6,13 @@
 :github-pr-url: https://github.com/boostorg/unordered/pull
 :cpp: C++
 
+== Release 1.86.0
+
+* Added container `pmr` aliases when header `<memory_resource>` is available. The alias `boost::unordered::pmr::[container]` refers to `boost::unordered::[container]` with a `std::pmr::polymorphic_allocator` allocator type.
+* Equipped open-addressing and concurrent containers to internally calculate and provide statistical metrics affected by the quality of the hash function. This functionality is enabled by the global macro `BOOST_UNORDERED_ENABLE_STATS`.
+* Avalanching hash functions must now be marked via an `is_avalanching` typedef with an embedded `value` constant set to `true` (typically, defining `is_avalanching` as `std::true_type`). `using is_avalanching = void` is deprecated but allowed for backwards compatibility.
+* Added Visual Studio Natvis framework custom visualizations for containers and iterators. This works for all containers with an allocator using raw pointers. In this release, containers and iterators are not supported if their allocator uses fancy pointers. This may be addressed in later releases.
+
 == Release 1.85.0
 
 * Optimized `emplace()` for a `value_type` or `init_type` (if applicable) argument to bypass creating an intermediate object. The argument is already the same type as the would-be intermediate object.

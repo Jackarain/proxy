@@ -6,7 +6,7 @@
 `boost::unordered_node_map` — A node-based, open-addressing unordered associative container that associates unique keys with another value.
 
 `boost::unordered_node_map` uses an open-addressing layout like `boost::unordered_flat_map`, but,
-being node-based, it provides pointer/iterator stability and node handling functionalities.
+being node-based, it provides pointer stability and node handling functionalities.
 Its performance lies between those of `boost::unordered_map` and `boost::unordered_flat_map`.
 
 As a result of its using open addressing, the interface of `boost::unordered_node_map` deviates in
@@ -56,6 +56,8 @@ namespace boost {
 
     using node_type            = _implementation-defined_;
     using insert_return_type   = _implementation-defined_;
+
+    using stats                = xref:stats_stats_type[__stats-type__]; // if statistics are xref:unordered_node_map_boost_unordered_enable_stats[enabled]
 
     // construct/copy/destroy
     xref:#unordered_node_map_default_constructor[unordered_node_map]();
@@ -217,6 +219,10 @@ namespace boost {
     size_type xref:#unordered_node_map_max_load[max_load]() const noexcept;
     void xref:#unordered_node_map_rehash[rehash](size_type n);
     void xref:#unordered_node_map_reserve[reserve](size_type n);
+
+    // statistics (if xref:unordered_node_map_boost_unordered_enable_stats[enabled])
+    stats xref:#unordered_node_map_get_stats[get_stats]() const;
+    void xref:#unordered_node_map_reset_stats[reset_stats]() noexcept;
   };
 
   // Deduction Guides
@@ -288,6 +294,17 @@ namespace boost {
   template<class K, class T, class H, class P, class A, class Predicate>
     typename unordered_node_map<K, T, H, P, A>::size_type
        xref:#unordered_node_map_erase_if[erase_if](unordered_node_map<K, T, H, P, A>& c, Predicate pred);
+
+  // Pmr aliases (C++17 and up)
+  namespace unordered::pmr {
+    template<class Key,
+             class T,
+             class Hash = boost::hash<Key>,
+             class Pred = std::equal_to<Key>>
+    using unordered_node_map =
+      boost::unordered_node_map<Key, T, Hash, Pred,
+        std::pmr::polymorphic_allocator<std::pair<const Key, T>>>;
+  }
 }
 -----
 
@@ -331,6 +348,15 @@ allow for higher loads.
 If `xref:hash_traits_hash_is_avalanching[hash_is_avalanching]<Hash>::value` is `true`, the hash function
 is used as-is; otherwise, a bit-mixing post-processing stage is added to increase the quality of hashing
 at the expense of extra computational cost.
+
+---
+
+=== Configuration Macros
+
+==== `BOOST_UNORDERED_ENABLE_STATS`
+
+Globally define this macro to enable xref:#stats[statistics calculation] for the container. Note
+that this option decreases the overall performance of many operations.
 
 ---
 
@@ -461,6 +487,8 @@ unordered_node_map(unordered_node_map&& other);
 
 The move constructor. The internal bucket array of `other` is transferred directly to the new container.
 The hash function, predicate and allocator are moved-constructed from `other`.
+If statistics are xref:unordered_node_map_boost_unordered_enable_stats[enabled],
+transfers the internal statistical information from `other` and calls `other.reset_stats()`.
 
 ---
 
@@ -503,6 +531,9 @@ unordered_node_map(unordered_node_map&& other, Allocator const& a);
 If `a == other.get_allocator()`, the element nodes of `other` are transferred directly to the new container;
 otherwise, elements are moved-constructed from those of `other`. The hash function and predicate are moved-constructed
 from `other`, and the allocator is copy-constructed from `a`.
+If statistics are xref:unordered_node_map_boost_unordered_enable_stats[enabled],
+transfers the internal statistical information from `other` iff `a == other.get_allocator()`,
+and always calls `other.reset_stats()`.
 
 ---
 
@@ -657,6 +688,9 @@ The move assignment operator. Destroys previously existing elements, swaps the h
 and move-assigns the allocator from `other` if `Alloc::propagate_on_container_move_assignment` exists and `Alloc::propagate_on_container_move_assignment::value` is `true`.
 If at this point the allocator is equal to `other.get_allocator()`, the internal bucket array of `other` is transferred directly to the new container;
 otherwise, inserts move-constructed copies of the elements of `other`.
+If statistics are xref:unordered_node_map_boost_unordered_enable_stats[enabled],
+transfers the internal statistical information from `other` iff the final allocator is equal to `other.get_allocator()`,
+and always calls `other.reset_stats()`.
 
 ---
 
@@ -1439,6 +1473,32 @@ Invalidates iterators and changes the order of elements.
 
 [horizontal]
 Throws:;; The function has no effect if an exception is thrown, unless it is thrown by the container's hash function or comparison function.
+
+---
+
+=== Statistics
+
+==== get_stats
+```c++
+stats get_stats() const;
+```
+
+[horizontal]
+Returns:;; A statistical description of the insertion and lookup operations performed by the container so far.
+Notes:;; Only available if xref:stats[statistics calculation] is xref:unordered_node_map_boost_unordered_enable_stats[enabled].
+
+---
+
+==== reset_stats
+```c++
+void reset_stats() noexcept;
+```
+
+[horizontal]
+Effects:;; Sets to zero the internal statistics kept by the container.
+Notes:;; Only available if xref:stats[statistics calculation] is xref:unordered_node_map_boost_unordered_enable_stats[enabled].
+
+---
 
 === Deduction Guides
 A deduction guide will not participate in overload resolution if any of the following are true:

@@ -3881,7 +3881,6 @@ class recursive_devector
    recursive_devector & operator=(const recursive_devector &x)
    {  this->devector_ = x.devector_;   return *this; }
 
-   int id_;
    devector<recursive_devector> devector_;
    devector<recursive_devector>::iterator it_;
    devector<recursive_devector>::const_iterator cit_;
@@ -3903,7 +3902,7 @@ struct GetAllocatorCont
    template<class ValueType>
    struct apply
    {
-      typedef vector< ValueType
+      typedef devector< ValueType
                     , typename allocator_traits<VoidAllocator>
                         ::template portable_rebind_alloc<ValueType>::type
                     > type;
@@ -3962,14 +3961,19 @@ int test_cont_variants()
    typedef typename GetAllocatorCont<VoidAllocator>::template apply<test::movable_int>::type MyMoveCont;
    typedef typename GetAllocatorCont<VoidAllocator>::template apply<test::movable_and_copyable_int>::type MyCopyMoveCont;
    typedef typename GetAllocatorCont<VoidAllocator>::template apply<test::copyable_int>::type MyCopyCont;
+   typedef typename GetAllocatorCont<VoidAllocator>::template apply<test::moveconstruct_int>::type MyMoveConstructCont;
 
-   if(test::vector_test<MyCont>())
+   if (test::vector_test<MyCont>())
       return 1;
-   if(test::vector_test<MyMoveCont>())
+   if (test::vector_test<MyMoveCont>())
       return 1;
-   if(test::vector_test<MyCopyMoveCont>())
+   if (test::vector_test<MyCopyMoveCont>())
       return 1;
-   if(test::vector_test<MyCopyCont>())
+   if (test::vector_test<MyCopyCont>())
+      return 1;
+   if (test::vector_test<MyCopyCont>())
+      return 1;
+   if (test::vector_test<MyMoveConstructCont>())
       return 1;
    return 0;
 }
@@ -4029,10 +4033,14 @@ int main()
    ////////////////////////////////////
    {
       typedef boost::container::devector<int> cont_int;
-      cont_int a; a.push_back(0); a.push_back(1); a.push_back(2);
-      boost::intrusive::test::test_iterator_random< cont_int >(a);
-      if (boost::report_errors() != 0) {
-         return 1;
+      for (std::size_t i = 10; i <= 10000; i *= 10) {
+         cont_int a;
+         for (int j = 0; j < (int)i; ++j)
+            a.push_back((int)j);
+         boost::intrusive::test::test_iterator_random< cont_int >(a);
+         if (boost::report_errors() != 0) {
+            return 1;
+         }
       }
    }
 

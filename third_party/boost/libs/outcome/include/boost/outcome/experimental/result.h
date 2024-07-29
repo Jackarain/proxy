@@ -33,6 +33,8 @@ DEALINGS IN THE SOFTWARE.
 
 #include <stdint.h>  // for intptr_t
 
+#include "../outcome_gdb.h"
+
 #ifdef __cplusplus
 extern "C"
 {

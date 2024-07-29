@@ -5,9 +5,9 @@
  / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
  /]
 [library Boost.Move
-    [quickbook 1.5]
+    [quickbook 1.7]
     [authors [Gaztanaga, Ion]]
-    [copyright 2008-2014 Ion Gaztanaga]
+    [copyright 2008-2024 Ion Gaztanaga]
     [id move]
     [dirname move]
     [purpose Move semantics]
@@ -463,7 +463,7 @@ provided with this library. With regular iterator classes,
 
    while (first != last) *result++ = *first++;
 
-causes a range [first,last) to be copied into a range starting with result. The same code with
+causes a range `[first,last)` to be copied into a range starting with result. The same code with
 result being a move insert iterator will move insert corresponding elements into the container.
 This device allows all of the copying algorithms in the library to work in the move insert mode
 instead of the regular overwrite mode. This library offers 3 move insert iterators and their
@@ -801,6 +801,13 @@ Special thanks to:
 [endsect]
 
 [section:release_notes Release Notes]
+
+[section:release_notes_boost_1_85 Boost 1.85 Release]
+
+*  Fixed bugs:
+   *  [@https://github.com/boostorg/move/issues/51 Git Issue #51: ['"Compiler deprecation warnings with VS2019 Version 16.10 and boost/move headers"]].
+
+[endsect]
 
 [section:release_notes_boost_1_81 Boost 1.81 Release]
 

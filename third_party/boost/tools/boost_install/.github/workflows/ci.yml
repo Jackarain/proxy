@@ -21,6 +21,7 @@ jobs:
 
           - lib: filesystem
             bopts: install
+            copts: -DCMAKE_CXX_STANDARD=11
             os: macos-latest
 
           # --layout=versioned
@@ -31,6 +32,7 @@ jobs:
 
           - lib: filesystem
             bopts: --layout=versioned install
+            copts: -DCMAKE_CXX_STANDARD=11
             os: macos-latest
 
           # --layout=tagged
@@ -41,6 +43,7 @@ jobs:
 
           - lib: filesystem
             bopts: --layout=tagged install
+            copts: -DCMAKE_CXX_STANDARD=11
             os: macos-latest
 
           # build with clang++, use with g++
@@ -163,7 +166,7 @@ jobs:
 
           - lib: filesystem
             bopts: stage
-            copts: -DUSE_STAGED_BOOST=ON
+            copts: -DUSE_STAGED_BOOST=ON -DCMAKE_CXX_STANDARD=11
             os: macos-latest
 
           - lib: filesystem
@@ -351,7 +354,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -546,7 +549,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd

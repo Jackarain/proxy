@@ -494,7 +494,7 @@ int main()
 
         for( int i = 0; i < 256; ++i )
         {
-            str[ i ] = static_cast< unsigned char >( i );
+            str[ i ] = static_cast<char>( static_cast< unsigned char >( i ) );
         }
 
         boost::core::string_view sv( str, 256 );
@@ -503,22 +503,22 @@ int main()
 
         std::string str2( sv.data(), sv.size() );
 
-        for( int i = 0; i < 256; ++i )
+        for( std::size_t i = 0; i < 256; ++i )
         {
             std::string str3( str2 );
 
-            str3[ i ] = ~str3[ i ];
+            str3[ i ] = static_cast<char>( ~str3[ i ] );
 
             BOOST_TEST_EQ( sv.find_last_not_of( str3 ), i );
         }
 
         std::reverse( str, str + 256 );
 
-        for( int i = 0; i < 256; ++i )
+        for( std::size_t i = 0; i < 256; ++i )
         {
             std::string str3( str2 );
 
-            str3[ i ] = ~str3[ i ];
+            str3[ i ] = static_cast<char>( ~str3[ i ] );
 
             BOOST_TEST_EQ( sv.find_last_not_of( str3 ), 255 - i );
         }
@@ -538,22 +538,22 @@ int main()
 
         std::wstring str2( sv.data(), sv.size() );
 
-        for( int i = 0; i < 256; ++i )
+        for( std::size_t i = 0; i < 256; ++i )
         {
             std::wstring str3( str2 );
 
-            str3[ i ] = ~str3[ i ];
+            str3[ i ] = static_cast<wchar_t>( ~str3[ i ] );
 
             BOOST_TEST_EQ( sv.find_first_not_of( str3 ), i );
         }
 
         std::reverse( str, str + 256 );
 
-        for( int i = 0; i < 256; ++i )
+        for( std::size_t i = 0; i < 256; ++i )
         {
             std::wstring str3( str2 );
 
-            str3[ i ] = ~str3[ i ];
+            str3[ i ] = static_cast<wchar_t>( ~str3[ i ] );
 
             BOOST_TEST_EQ( sv.find_first_not_of( str3 ), 255 - i );
         }

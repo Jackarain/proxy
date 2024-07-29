@@ -168,10 +168,13 @@ void fixed_test()
     std::mt19937_64 gen(42);
     std::uniform_real_distribution<T> dist(1, upper_bound);
 
-    for (std::size_t i = 0; i < 100'000; ++i)
+    for (std::size_t i = 0; i < 1000; ++i)
     {
-        test_spot(dist(gen), boost::charconv::chars_format::fixed);
-    }    
+        for (int prec = 0; prec < 100; ++prec)
+        {
+            test_spot(dist(gen), boost::charconv::chars_format::fixed, prec);
+        }
+    }
 }
 
 // Clang 16 (most recent at time of writing) only has integral from_chars implemented
@@ -212,7 +215,10 @@ int main()
     // General format
     random_test<float>();
     random_test<double>();
+    #ifndef BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE
     random_test<long double>();
+    #endif
+
     test_spot<double>(0.0);
     test_spot<double>(-0.0);
 
@@ -224,7 +230,9 @@ int main()
     // Scientific
     random_test<float>(boost::charconv::chars_format::scientific);
     random_test<double>(boost::charconv::chars_format::scientific);
+    #ifndef BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE
     random_test<long double>(boost::charconv::chars_format::scientific);
+    #endif
     test_spot<double>(0.0, boost::charconv::chars_format::scientific);
     test_spot<double>(-0.0, boost::charconv::chars_format::scientific);
 
@@ -237,12 +245,18 @@ int main()
     // Hex
     random_test<float>(boost::charconv::chars_format::hex);
     random_test<double>(boost::charconv::chars_format::hex);
+    #ifndef BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE
     random_test<long double>(boost::charconv::chars_format::hex);
+    #endif
 
     #if !defined(_LIBCPP_VERSION)
+
     random_test<float>(boost::charconv::chars_format::hex, -1e5F, 1e5F);
     random_test<double>(boost::charconv::chars_format::hex, -1e5, 1e5);
+    #ifndef BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE
     random_test<long double>(boost::charconv::chars_format::hex, -1e5L, 1e5L);
+    #endif
+
     #endif
 
     test_spot<double>(-9.52743282403084637e+306, boost::charconv::chars_format::hex);
@@ -257,17 +271,22 @@ int main()
     fixed_test<double>();
     test_spot<double>(0.0, boost::charconv::chars_format::fixed);
     test_spot<double>(-0.0, boost::charconv::chars_format::fixed);
+    test_spot<double>(0.0, boost::charconv::chars_format::fixed, 10);
+    test_spot<double>(-0.0, boost::charconv::chars_format::fixed, 10);
     
     // Various non-finite values
     non_finite_test<float>();
     non_finite_test<double>();
-    non_finite_test<long double>();
     non_finite_test<float>(boost::charconv::chars_format::scientific);
     non_finite_test<double>(boost::charconv::chars_format::scientific);
-    non_finite_test<long double>(boost::charconv::chars_format::scientific);
     non_finite_test<float>(boost::charconv::chars_format::hex);
     non_finite_test<double>(boost::charconv::chars_format::hex);
+
+    #ifndef BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE
+    non_finite_test<long double>();
+    non_finite_test<long double>(boost::charconv::chars_format::scientific);
     non_finite_test<long double>(boost::charconv::chars_format::hex);
+    #endif
 
     #if (defined(__GNUC__) && __GNUC__ >= 11) || (defined(_MSC_VER) && _MSC_VER >= 1924)
     // Selected additional values
@@ -288,7 +307,10 @@ int main()
     // Reported in issue #93
     test_spot<float>(3.3F);
     test_spot<double>(3.3);
+
+    #ifndef BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE
     test_spot<long double>(3.3L);
+    #endif
 
     return boost::report_errors();
 }

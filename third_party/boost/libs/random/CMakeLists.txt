@@ -1,4 +1,5 @@
 # Copyright 2020, 2021 Peter Dimov
+# Copyright 2024 Matt Borland
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
@@ -30,6 +31,8 @@ target_link_libraries(boost_random
     Boost::type_traits
     Boost::utility
 )
+
+target_compile_features(boost_random PUBLIC cxx_std_11)
 
 target_compile_definitions(boost_random
   PUBLIC BOOST_RANDOM_NO_LIB

@@ -13,6 +13,7 @@
 #include <boost/signals2.hpp>
 #define BOOST_TEST_MODULE regression_test
 #include <boost/test/included/unit_test.hpp>
+#include <memory>
 
 typedef boost::signals2::signal<void ()> sig0_type;
 
@@ -115,10 +116,18 @@ void disconnect_by_function_test()
   sig.disconnect(foo);  // compile failure in boost 1.83
 }
 
+// returning a move-only type from optional_last_value produced compile error
+void return_move_only_test()
+{
+  boost::signals2::signal<std::unique_ptr<int>()> sig;
+  sig(); //  error: overload resolution selected deleted operator '='
+}
+
 BOOST_AUTO_TEST_CASE(test_main)
 {
   slot_connect_test();
   scoped_connection_test();
   reference_return_test();
   disconnect_by_function_test();
+  return_move_only_test();
 }

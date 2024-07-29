@@ -1,3 +1,36 @@
+Version 355:
+
+* awaitable examples are simplified
+* server-flex-awaitable example demonstrates an explicit, graceful shutdown
+* Add fuzzing targets
+* Fix overloads that are ambiguous when using default completion tokens
+* Fix misplaced static_assert in `http::basic_fields` move-assignment operator
+* Fix narrowing conversion in `read_size_hint_db()`
+
+--------------------------------------------------------------------------------
+
+Version 354:
+
+* `ssl_stream` and `flat_stream` are deprecated (Use `net::ssl::stream` instead)
+* `net::ssl::stream` is canonical in examples and snippets
+* `ssl_stream` does not use `flat_stream`
+* Add `SSL/TLS Shutdown Procedure` section to documentation
+* Add HTTP status code 418 ("I'm a teapot")
+* `websocket::stream::read_size_hint()` does not exceed read_message_max
+* Fix underflow of `bytes_transferred` in websocket partial write operations
+* Fix error handling of SSL/TLS shutdown operations in examples
+* Fix handling of expired timers in `basic_stream::ops::transfer_op`
+* Fix ambiguity in `test::basic_stream` constructor overloads
+* Fix partial parsing of the final chunk in `http::parser`
+* Fix dereferenced null pointer warning in `test::immediate_executor`
+* Fix warnings in tests
+* Fix OpenSSL builds in GHA CI and Drone CI
+* Fix `test::immediate_executor` type traits 
+* Refactor Jamfiles to limit the scope of definitions
+* Expand CI matrix
+
+--------------------------------------------------------------------------------
+
 Version 353:
 
 * Fix unreachable code warning in `buffers_cat.hpp`

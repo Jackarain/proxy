@@ -428,7 +428,7 @@ rule find-builds-raw ( project : ps : what : * )
     }
 }
 
-rule get-relevant-features ( properties * )
+rule get-relevant-properties ( properties * )
 {
     local ps-full = [ property-set.create $(properties) ] ;
     local ps-base = [ property-set.create [ $(ps-full).base ] ] ;
@@ -439,9 +439,15 @@ rule get-relevant-features ( properties * )
     return [ $(ps-relevant).raw ] ;
 }
 
+rule get-relevant-features ( properties * )
+{
+    local props = [ get-relevant-properties $(properties) ] ;
+    return $(props:G) ;
+}
+
 rule builds ( metatarget-reference : properties * : what ? : retry ? )
 {
-    local relevant = [ get-relevant-features $(properties) ] ;
+    local relevant = [ get-relevant-properties $(properties) ] ;
     local ps = [ property-set.create $(relevant) ] ;
     local t = [ targets.current ] ;
     local p = [ $(t).project ] ;
@@ -459,7 +465,7 @@ rule builds ( metatarget-reference : properties * : what ? : retry ? )
 
 rule find-builds ( what : properties * : * )
 {
-    local relevant = [ get-relevant-features $(properties) ] ;
+    local relevant = [ get-relevant-properties $(properties) ] ;
     local ps = [ property-set.create $(relevant) ] ;
     local t = [ targets.current ] ;
     local p = [ $(t).project ] ;

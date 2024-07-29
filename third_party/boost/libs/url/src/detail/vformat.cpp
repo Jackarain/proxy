@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_DETAIL_VFORMAT_IPP
-#define BOOST_URL_DETAIL_VFORMAT_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/detail/vformat.hpp>
@@ -33,4 +31,3 @@ vformat_to(
 } // urls
 } // boost
 
-#endif

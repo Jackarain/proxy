@@ -426,14 +426,14 @@ int main()
 
         for( int i = 0; i < 256; ++i )
         {
-            str[ i ] = static_cast< unsigned char >( i );
+            str[ i ] = static_cast<char>( static_cast< unsigned char >( i ) );
         }
 
         boost::core::string_view sv( str, 256 );
 
         for( int i = 0; i < 256; ++i )
         {
-            std::string needle( 12, static_cast< unsigned char >( i ) );
+            std::string needle( 12, static_cast<char>( static_cast< unsigned char >( i ) ) );
             BOOST_TEST_EQ( sv.find_first_of( needle ), i );
         }
 
@@ -441,7 +441,7 @@ int main()
 
         for( int i = 0; i < 256; ++i )
         {
-            std::string needle( 12, static_cast< unsigned char >( i ) );
+            std::string needle( 12, static_cast<char>( static_cast< unsigned char >( i ) ) );
             BOOST_TEST_EQ( sv.find_first_of( needle ), 255 - i );
         }
     }

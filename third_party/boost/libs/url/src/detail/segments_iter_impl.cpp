@@ -8,8 +8,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_DETAIL_IMPL_SEGMENTS_ITER_IMPL_IPP
-#define BOOST_URL_DETAIL_IMPL_SEGMENTS_ITER_IMPL_IPP
 
 #include <boost/url/detail/config.hpp>
 #include "path.hpp"
@@ -172,4 +170,3 @@ decrement() noexcept
 } // url
 } // boost
 
-#endif

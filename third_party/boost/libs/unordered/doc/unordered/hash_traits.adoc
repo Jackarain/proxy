@@ -32,9 +32,14 @@ large changes in the returned hash code &#8212;ideally, flipping one bit in the 
 the input value results in each bit of the hash code flipping with probability 50%. Approaching
 this property is critical for the proper behavior of open-addressing hash containers.
 
-`hash_is_avalanching<Hash>::value` is `true` if `Hash::is_avalanching` is a valid type,
-and `false` otherwise.
-Users can then declare a hash function `Hash` as avalanching either by embedding an `is_avalanching` typedef
+`hash_is_avalanching<Hash>::value` is:
+
+ * `false` if `Hash::is_avalanching` is not present,
+ * `Hash::is_avalanching::value` if this is present and convertible at compile time to a `bool`,
+ * `true` if `Hash::is_avalanching` is `void` (this usage is deprecated),
+ * ill-formed otherwise.
+ 
+Users can then declare a hash function `Hash` as avalanching either by embedding an appropriate `is_avalanching` typedef
 into the definition of `Hash`, or directly by specializing `hash_is_avalanching<Hash>` to a class with
 an embedded compile-time constant `value` set to `true`.
 

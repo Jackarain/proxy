@@ -128,8 +128,15 @@ jobs:
           - toolset: gcc-13
             cxxstd: "11,14,17,20,2b"
             os: ubuntu-latest
-            container: ubuntu:23.04
+            container: ubuntu:24.04
             install: g++-13-multilib
+            address-model: 32,64
+          # Linux, gcc-14
+          - toolset: gcc-14
+            cxxstd: "11,14,17,20,2b"
+            os: ubuntu-latest
+            container: ubuntu:24.04
+            install: g++-14-multilib
             address-model: 32,64
           # Linux, gcc-12 UBSAN
           - name: UBSAN
@@ -285,16 +292,23 @@ jobs:
           - toolset: clang
             compiler: clang++-16
             cxxstd: "03,11,14,17,20,2b"
-            container: ubuntu:23.04
+            container: ubuntu:24.04
             os: ubuntu-latest
             install: clang-16
           # Linux, clang-17
           - toolset: clang
             compiler: clang++-17
             cxxstd: "03,11,14,17,20,2b"
-            container: ubuntu:23.10
+            container: ubuntu:24.04
             os: ubuntu-latest
             install: clang-17
+          # Linux, clang-18
+          - toolset: clang
+            compiler: clang++-18
+            cxxstd: "03,11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-18
           # Linux, clang-15 libc++
           - toolset: clang
             compiler: clang++-15
@@ -304,10 +318,17 @@ jobs:
               - clang-15
               - libc++-15-dev
               - libc++abi-15-dev
-            sources:
-              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main"
-            source_keys:
-              - "https://apt.llvm.org/llvm-snapshot.gpg.key"
+            cxxflags: -stdlib=libc++
+            linkflags: -stdlib=libc++
+          # Linux, clang-18 libc++
+          - toolset: clang
+            compiler: clang++-18
+            cxxstd: "11,14,17,20,2b"
+            os: ubuntu-24.04
+            install:
+              - clang-18
+              - libc++-18-dev
+              - libc++abi-18-dev
             cxxflags: -stdlib=libc++
             linkflags: -stdlib=libc++
           # Linux, clang-14 libc++, ubsan
@@ -323,21 +344,34 @@ jobs:
               - clang-14
               - libc++-14-dev
               - libc++abi-14-dev
+          # Linux, clang-18 libc++, ubsan
+          - name: UBSAN
+            toolset: clang
+            compiler: clang++-18
+            cxxstd: "11,14,17,20"
+            cxxflags: -stdlib=libc++
+            linkflags: -stdlib=libc++
+            ubsan: 1
+            os: ubuntu-24.04
+            install:
+              - clang-18
+              - libc++-18-dev
+              - libc++abi-18-dev
           #------------------
           # MacOS, clang
           #------------------
-          # Macos 11, clang
-          - toolset: clang
-            cxxstd: "03,11,14,17,2a"
-            os: macos-11
           # Macos 12, clang
           - toolset: clang
-            cxxstd: "03,11,14,17,20,2b"
+            cxxstd: "11,14,17,20,2b"
             os: macos-12
           # Macos 13, clang
           - toolset: clang
-            cxxstd: "03,11,14,17,20,2b"
+            cxxstd: "11,14,17,20,2b"
             os: macos-13
+          # Macos 17, clang
+          - toolset: clang
+            cxxstd: "11,14,17,20,2b"
+            os: macos-14
 
     timeout-minutes: 180
     runs-on: ${{matrix.os}}
@@ -357,7 +391,6 @@ jobs:
                 if [ -f "/etc/debian_version" ]
                 then
                     apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
-                    apt-get -o Acquire::Retries=$NET_RETRY_COUNT dist-upgrade -y
                     if [ "$(apt-cache search "^python-is-python3$" | wc -l)" -ne 0 ]
                     then
                         PYTHON_PACKAGE="python-is-python3"
@@ -368,7 +401,6 @@ jobs:
                 fi
             fi
             git config --global pack.threads 0
-      - uses: actions/checkout@v3
 
       - name: Install packages
         if: matrix.install
@@ -425,8 +457,8 @@ jobs:
                 done
             fi
             sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
-            sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT dist-upgrade -y
             sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT install -y ${{join(matrix.install, ' ')}}
+
       - name: Setup GCC Toolchain
         if: matrix.gcc_toolchain
         run: |
@@ -438,6 +470,7 @@ jobs:
             ln -s /usr/bin "$GCC_TOOLCHAIN_ROOT/bin"
             mkdir -p "$GCC_TOOLCHAIN_ROOT/lib/gcc/$MULTIARCH_TRIPLET"
             ln -s "/usr/lib/gcc/$MULTIARCH_TRIPLET/${{matrix.gcc_toolchain}}" "$GCC_TOOLCHAIN_ROOT/lib/gcc/$MULTIARCH_TRIPLET/${{matrix.gcc_toolchain}}"
+
       - name: Setup Boost
         run: |
             echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
@@ -483,11 +516,25 @@ jobs:
             then
                 DEPINST_ARGS+=("--git_args" "--jobs $GIT_FETCH_JOBS")
             fi
+            mkdir -p snapshot
+            cd snapshot
+            echo "Downloading library snapshot: https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+            curl -L --retry "$NET_RETRY_COUNT" -o "${LIBRARY}-${GITHUB_SHA}.tar.gz" "https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+            tar -xf "${LIBRARY}-${GITHUB_SHA}.tar.gz"
+            if [ ! -d "${LIBRARY}-${GITHUB_SHA}" ]
+            then
+                echo "Library snapshot does not contain the library directory ${LIBRARY}-${GITHUB_SHA}:"
+                ls -la
+                exit 1
+            fi
+            rm -f "${LIBRARY}-${GITHUB_SHA}.tar.gz"
             cd ..
             git clone -b "$BOOST_BRANCH" --depth 1 "https://github.com/boostorg/boost.git" "boost-root"
             cd boost-root
-            mkdir -p libs/$LIBRARY
-            cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
+            mkdir -p libs
+            rm -rf "libs/$LIBRARY"
+            mv -f "../snapshot/${LIBRARY}-${GITHUB_SHA}" "libs/$LIBRARY"
+            rm -rf "../snapshot"
             git submodule update --init tools/boostdep
             DEPINST_ARGS+=("$LIBRARY")
             python tools/boostdep/depinst/depinst.py "${DEPINST_ARGS[@]}"
@@ -502,10 +549,11 @@ jobs:
                 fi
                 echo " ;" >> ~/user-config.jam
             fi
+
       - name: Run tests
         if: matrix.cmake_tests == ''
         run: |
-            cd ../boost-root
+            cd boost-root
             B2_ARGS=("-j" "$BUILD_JOBS" "toolset=${{matrix.toolset}}" "cxxstd=${{matrix.cxxstd}}")
             if [ -n "${{matrix.build_variant}}" ]
             then
@@ -536,6 +584,7 @@ jobs:
             fi
             B2_ARGS+=("libs/$LIBRARY/test")
             ./b2 "${B2_ARGS[@]}"
+
   windows:
     strategy:
       fail-fast: false
@@ -562,11 +611,10 @@ jobs:
             addrmd: 64
             os: windows-2019
 
+    timeout-minutes: 180
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
-
       - name: Setup Boost
         shell: cmd
         run: |
@@ -580,16 +628,32 @@ jobs:
             set BOOST_BRANCH=develop
             for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
             echo BOOST_BRANCH: %BOOST_BRANCH%
+            mkdir snapshot
+            cd snapshot
+            echo Downloading library snapshot: https://github.com/%GITHUB_REPOSITORY%/archive/%GITHUB_SHA%.zip
+            curl -L --retry %NET_RETRY_COUNT% -o "%LIBRARY%-%GITHUB_SHA%.zip" "https://github.com/%GITHUB_REPOSITORY%/archive/%GITHUB_SHA%.zip"
+            tar -xf "%LIBRARY%-%GITHUB_SHA%.zip"
+            if not exist "%LIBRARY%-%GITHUB_SHA%\" (
+                echo Library snapshot does not contain the library directory %LIBRARY%-%GITHUB_SHA%:
+                dir
+                exit /b 1
+            )
+            del /f "%LIBRARY%-%GITHUB_SHA%.zip"
             cd ..
             git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
             cd boost-root
-            xcopy /s /e /q %GITHUB_WORKSPACE% libs\%LIBRARY%\
+            if not exist "libs\" mkdir libs
+            if exist "libs\%LIBRARY%\" rmdir /s /q "libs\%LIBRARY%"
+            move /Y "..\snapshot\%LIBRARY%-%GITHUB_SHA%" "libs\%LIBRARY%"
+            rmdir /s /q "..\snapshot"
             git submodule update --init tools/boostdep
             python tools/boostdep/depinst/depinst.py --git_args "--jobs %GIT_FETCH_JOBS%" %LIBRARY%
             cmd /c bootstrap
             b2 -d0 headers
+
       - name: Run tests
         shell: cmd
         run: |
-            cd ../boost-root
+            cd boost-root
             b2 -j %NUMBER_OF_PROCESSORS% libs/%LIBRARY%/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} address-model=${{matrix.addrmd}} variant=debug,release embed-manifest-via=linker
+

@@ -19,24 +19,16 @@
  * boost.process header files.
  */
 
-#include <boost/process/args.hpp>
-#include <boost/process/async.hpp>
-#include <boost/process/async_system.hpp>
-#include <boost/process/group.hpp>
-#include <boost/process/child.hpp>
-#include <boost/process/cmd.hpp>
-#include <boost/process/env.hpp>
-#include <boost/process/environment.hpp>
-#include <boost/process/error.hpp>
-#include <boost/process/exe.hpp>
-#include <boost/process/group.hpp>
-#include <boost/process/handles.hpp>
-#include <boost/process/io.hpp>
-#include <boost/process/pipe.hpp>
-#include <boost/process/shell.hpp>
-#include <boost/process/search_path.hpp>
-#include <boost/process/spawn.hpp>
-#include <boost/process/system.hpp>
-#include <boost/process/start_dir.hpp>
+#if !defined(BOOST_PROCESS_VERSION)
+#define BOOST_PROCESS_VERSION 1
+#endif
+
+#if BOOST_PROCESS_VERSION == 1
+#include <boost/process/v1.hpp>
+#elif BOOST_PROCESS_VERSION == 2
+#include <boost/process/v2.hpp>
+#else
+#error "Unknown boost process version"
+#endif
 
 #endif

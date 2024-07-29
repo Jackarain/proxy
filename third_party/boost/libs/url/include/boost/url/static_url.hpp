@@ -92,7 +92,7 @@ class BOOST_URL_DECL
 
     @par Invariants
     @code
-    this->capacity() == Capacity
+    this->capacity() == Capacity + 1
     @endcode
 
     @tparam Capacity The maximum capacity

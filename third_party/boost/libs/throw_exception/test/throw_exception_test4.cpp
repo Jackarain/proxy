@@ -24,8 +24,9 @@ class my_exception3: public std::exception, public virtual boost::exception
 
 char const* translate_function( char const * fn, char const * cfn )
 {
-    // translate "" and "main" to BOOST_CURRENT_FUNCTION
-    return fn[0] == 0 || std::strcmp( fn, "main" ) == 0? cfn: fn;
+    // fn comes from BOOST_CURRENT_LOCATION, which is not necessarily the same as BOOST_CURRENT_FUNCTION
+    // so translate the known problematic cases to BOOST_CURRENT_FUNCTION to make the test pass
+    return fn[0] == 0 || std::strcmp( fn, "main" ) == 0 || std::strcmp( fn, "int __cdecl main(void)" ) == 0? cfn: fn;
 }
 
 static char const* adjust_filename( char const* file )
@@ -61,7 +62,7 @@ int main()
             int const * line = boost::get_error_info<boost::throw_line>( x );
 
             BOOST_TEST( line != 0 );
-            BOOST_TEST_EQ( *line, 49 );
+            BOOST_TEST_EQ( *line, 50 );
         }
 
         {
@@ -89,7 +90,7 @@ int main()
             int const * line = boost::get_error_info<boost::throw_line>( x );
 
             BOOST_TEST( line != 0 );
-            BOOST_TEST_EQ( *line, 77 );
+            BOOST_TEST_EQ( *line, 78 );
         }
 
         {
@@ -117,7 +118,7 @@ int main()
             int const * line = boost::get_error_info<boost::throw_line>( x );
 
             BOOST_TEST( line != 0 );
-            BOOST_TEST_EQ( *line, 105 );
+            BOOST_TEST_EQ( *line, 106 );
         }
 
         {

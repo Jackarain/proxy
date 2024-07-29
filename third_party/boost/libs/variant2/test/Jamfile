@@ -16,8 +16,6 @@ project
 
   : requirements
 
-    [ requires cxx11_variadic_templates cxx11_template_aliases cxx11_decltype cxx11_constexpr ]
-
     <toolset>msvc:<warnings-as-errors>on
     <toolset>gcc:<warnings-as-errors>on
     <toolset>clang:<warnings-as-errors>on

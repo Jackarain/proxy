@@ -61,6 +61,11 @@ recycled_add_impl(
 {
     auto& a = all_reports_;
 
+    // LCOV_EXCL_START
+    /*
+     * We can't guarantee coverage
+     * exercise of this path.
+     */
     std::size_t new_count = ++a.count;
     std::size_t old_count_max = a.count_max;
     while (
@@ -83,6 +88,7 @@ recycled_add_impl(
         !a.alloc_max.compare_exchange_weak(
             old_alloc_max, n))
     {}
+    // LCOV_EXCL_STOP
 }
 
 void

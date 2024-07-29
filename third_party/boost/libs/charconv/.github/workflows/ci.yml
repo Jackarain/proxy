@@ -21,6 +21,7 @@ env:
   GIT_FETCH_JOBS: 8
   NET_RETRY_COUNT: 5
   DEFAULT_BUILD_VARIANT: debug,release
+  B2_CI_VERSION: 1
 
 jobs:
   posix:
@@ -111,6 +112,14 @@ jobs:
             os: ubuntu-22.04
             install:
               - g++-12-multilib
+          - toolset: gcc-13
+            cxxstd: "03,11,14,17,20,23"
+            address_model: 32,64
+            os: ubuntu-24.04
+            install:
+              - g++-13-multilib
+            cxxflags:
+              - "-fexcess-precision=fast"
 
           # Linux, clang
           - toolset: clang
@@ -231,6 +240,26 @@ jobs:
               - "https://apt.llvm.org/llvm-snapshot.gpg.key"
             cxxflags: -stdlib=libc++
             linkflags: -stdlib=libc++
+          - toolset: clang
+            compiler: clang++-16
+            cxxstd: "03,11,14,17,20,2b"
+            os: ubuntu-22.04
+            install:
+              - clang-16
+            sources:
+              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main"
+            source_keys:
+              - "https://apt.llvm.org/llvm-snapshot.gpg.key"
+          - toolset: clang
+            compiler: clang++-17
+            cxxstd: "03,11,14,17,20,2b"
+            os: ubuntu-22.04
+            install:
+              - clang-17
+            sources:
+              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main"
+            source_keys:
+              - "https://apt.llvm.org/llvm-snapshot.gpg.key"
           - name: UBSAN
             toolset: clang
             compiler: clang++-14
@@ -245,11 +274,14 @@ jobs:
               - libc++abi-14-dev
 
           - toolset: clang
-            cxxstd: "03,11,14,17,2a"
-            os: macos-11
-          - toolset: clang
             cxxstd: "03,11,14,17,20,2b"
             os: macos-12
+          - toolset: clang
+            cxxstd: "03,11,14,17,20,2b"
+            os: macos-13
+          - toolset: clang
+            cxxstd: "03,11,14,17,20,2b"
+            os: macos-14
 
     timeout-minutes: 60
     runs-on: ${{matrix.os}}
@@ -518,8 +550,9 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
           - os: macos-12
+          - os: macos-13
+          - os: macos-14
 
     runs-on: ${{matrix.os}}
 
@@ -566,8 +599,9 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
           - os: macos-12
+          - os: macos-13
+          - os: macos-14
 
     runs-on: ${{matrix.os}}
 
@@ -624,8 +658,9 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
           - os: macos-12
+          - os: macos-13
+          - os: macos-14
 
     runs-on: ${{matrix.os}}
 
@@ -672,3 +707,51 @@ jobs:
         run: |
           cd ../boost-root/__build__
           ctest --output-on-failure --no-tests=error
+
+  MSYS2:
+    defaults:
+      run:
+        shell: msys2 {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { sys: MINGW32, compiler: gcc, cxxstd: '03,11,17,20', cxxflags: "-fexcess-precision=fast" }
+          - { sys: MINGW64, compiler: gcc, cxxstd: '03,11,17,20', cxxflags: "-fexcess-precision=fast" }
+
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup MSYS2 environment
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{matrix.sys}}
+          update: true
+          install: git python
+          pacboy: gcc:p cmake:p ninja:p
+
+      - name: Fetch Boost.CI
+        uses: actions/checkout@v3
+        with:
+          repository: boostorg/boost-ci
+          ref: master
+          path: boost-ci-cloned
+      - name: Get CI scripts folder
+        run: |
+          # Copy ci folder if not testing Boost.CI
+          [[ "$GITHUB_REPOSITORY" =~ "boost-ci" ]] || cp -r boost-ci-cloned/ci .
+          rm -rf boost-ci-cloned
+
+      - name: Setup Boost
+        env:
+          B2_COMPILER: ${{matrix.compiler}}
+          B2_CXXSTD: ${{matrix.cxxstd}}
+          B2_SANITIZE: ${{matrix.sanitize}}
+          B2_STDLIB: ${{matrix.stdlib}}
+          B2_CXXFLAGS: ${{matrix.cxxflags}}
+        run: ci/github/install.sh
+
+      - name: Run tests
+        run: ci/build.sh

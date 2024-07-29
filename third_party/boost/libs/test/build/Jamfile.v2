@@ -6,7 +6,7 @@
 
 import os ;
 
-import ../../predef/check/predef
+import ../../predef/tools/check/predef
     : check
     : predef-check ;
 

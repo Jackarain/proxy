@@ -32,10 +32,9 @@
 #include <memory>
 #include <stdexcept>
 
+#include "test_common/ci_server.hpp"
 #include "test_common/create_diagnostics.hpp"
 #include "test_common/printing.hpp"
-#include "test_integration/common.hpp"
-#include "test_integration/get_endpoint.hpp"
 #include "test_integration/run_stackful_coro.hpp"
 
 using namespace boost::mysql;
@@ -68,9 +67,9 @@ pool_params create_pool_params(std::size_t max_size = 151)
 {
     pool_params res;
     res.server_address.emplace_host_and_port(get_hostname());
-    res.username = default_user;
-    res.password = default_passwd;
-    res.database = default_db;
+    res.username = integ_user;
+    res.password = integ_passwd;
+    res.database = integ_db;
     res.ssl = ssl_mode::disable;
     res.max_size = max_size;
     return res;
@@ -569,7 +568,7 @@ BOOST_FIXTURE_TEST_CASE(custom_ctor_params, fixture)
         auto params = create_pool_params();
         params.ssl = ssl_mode::require;
         params.ssl_ctx.emplace(asio::ssl::context::sslv23_client);
-        params.initial_read_buffer_size = 16u;
+        params.initial_buffer_size = 16u;
 
         connection_pool pool(yield.get_executor(), std::move(params));
         pool_guard grd(&pool);

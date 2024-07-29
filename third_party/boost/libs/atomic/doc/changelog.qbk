@@ -7,6 +7,10 @@
 
 [section:changelog Changelog]
 
+[heading Boost 1.86]
+
+* Use [@https://man.openbsd.org/OpenBSD-6.2/futex.2 `futex(2)`] system call on OpenBSD since recent OpenBSD versions have removed support for `syscall(2)`.
+
 [heading Boost 1.85]
 
 * Added support for `pause` instruction on RISC-V. ([github_pr 65])

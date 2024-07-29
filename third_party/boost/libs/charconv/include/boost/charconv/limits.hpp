@@ -72,7 +72,7 @@ template<typename T> struct limits
         std::numeric_limits<T>::max_digits10 + 3 + 2 + detail::exp_digits( std::numeric_limits<T>::max_exponent10 ); // as above
 };
 
-#ifdef BOOST_CHARCONV_HAS_FLOAT128
+#if defined(BOOST_CHARCONV_HAS_QUADMATH)
 
 template <> struct limits<__float128>
 {

@@ -120,7 +120,7 @@ toolset.inherit-flags emscripten : clang-linux : :
     FINDLIBS-SA-PFX
   ;
 
-toolset.add-defaults <toolset>emscripten:<target-os>unknown ;
+toolset.add-defaults <toolset>emscripten:<target-os>none ;
 # dynamic linking is experemental and buggy
 toolset.add-defaults <toolset>emscripten:<link>static ;
 

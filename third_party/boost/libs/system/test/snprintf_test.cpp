@@ -6,6 +6,12 @@
 # pragma GCC diagnostic ignored "-Wformat-truncation"
 #endif
 
+#if defined(__clang__) && defined(__has_warning)
+# if __has_warning( "-Wformat-truncation" )
+#  pragma clang diagnostic ignored "-Wformat-truncation"
+# endif
+#endif
+
 #include <boost/system/detail/snprintf.hpp>
 #include <boost/core/lightweight_test.hpp>
 

@@ -165,12 +165,13 @@ lexer<IteratorT, PositionT>::report_error(scanner_t const *s, int errcode,
     BOOST_ASSERT(0 != s);
     BOOST_ASSERT(0 != msg);
 
-    using namespace std;    // some system have vsprintf in namespace std
+    using namespace std;    // some systems have vsnprintf in namespace std
     
-    char buffer[200];           // should be large enough
+    constexpr std::size_t bufsize = 200;           // should be large enough
+    char buffer[bufsize];
     va_list params;
     va_start(params, msg);
-    vsprintf(buffer, msg, params);
+    vsnprintf(buffer, bufsize, msg, params);
     va_end(params);
     
     BOOST_WAVE_LEXER_THROW_VAR(boost::wave::cpplexer::lexing_exception, 

@@ -211,12 +211,12 @@ namespace ipcdetail {
 }  //namespace ipcdetail {
 #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
-//!A smart pointer that stores the offset between between the pointer and the
-//!the object it points. This allows offset allows special properties, since
+//!A smart pointer that stores the offset between the pointer and the
+//!object it points to. This allows special properties, since
 //!the pointer is independent from the address of the pointee, if the
 //!pointer and the pointee are still separated by the same offset. This feature
 //!converts offset_ptr in a smart pointer that can be placed in shared memory and
-//!memory mapped files mapped in different addresses in every process.
+//!memory mapped files mapped at different addresses in every process.
 //!
 //! \tparam PointedType The type of the pointee.
 //! \tparam DifferenceType A signed integer type that can represent the arithmetic operations on the pointer

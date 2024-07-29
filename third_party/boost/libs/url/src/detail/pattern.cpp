@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_DETAIL_IMPL_PATTERN_IPP
-#define BOOST_URL_DETAIL_IMPL_PATTERN_IPP
 
 #include <boost/url/detail/config.hpp>
 #include "pattern.hpp"
@@ -947,4 +945,3 @@ parse_pattern(
 } // urls
 } // boost
 
-#endif

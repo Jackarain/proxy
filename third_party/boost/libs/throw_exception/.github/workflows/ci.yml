@@ -19,23 +19,23 @@ jobs:
         include:
           - toolset: gcc-4.8
             cxxstd: "03,11"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: g++-4.8
           - toolset: gcc-5
             cxxstd: "03,11,14,1z"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: g++-5
           - toolset: gcc-6
             cxxstd: "03,11,14,1z"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: g++-6
           - toolset: gcc-7
             cxxstd: "03,11,14,17"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
           - toolset: gcc-8
             cxxstd: "03,11,14,17,2a"
             os: ubuntu-20.04
@@ -56,26 +56,31 @@ jobs:
             install: g++-12
           - toolset: gcc-13
             cxxstd: "03,11,14,17,20,2b"
-            os: ubuntu-latest
             container: ubuntu:23.04
+            os: ubuntu-latest
             install: g++-13
+          - toolset: gcc-14
+            cxxstd: "03,11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: g++-14
           - toolset: clang
             compiler: clang++-3.9
             cxxstd: "03,11,14"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: clang-3.9
           - toolset: clang
             compiler: clang++-4.0
             cxxstd: "03,11,14"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: clang-4.0
           - toolset: clang
             compiler: clang++-5.0
             cxxstd: "03,11,14,1z"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: clang-5.0
           - toolset: clang
             compiler: clang++-6.0
@@ -133,24 +138,30 @@ jobs:
           - toolset: clang
             compiler: clang++-16
             cxxstd: "03,11,14,17,20,2b"
-            os: ubuntu-latest
             container: ubuntu:23.04
+            os: ubuntu-latest
             install: clang-16
           - toolset: clang
             compiler: clang++-17
             cxxstd: "03,11,14,17,20,2b"
-            os: ubuntu-latest
             container: ubuntu:23.10
+            os: ubuntu-latest
             install: clang-17
           - toolset: clang
-            cxxstd: "03,11,14,17,2a"
-            os: macos-11
+            compiler: clang++-18
+            cxxstd: "03,11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-18
           - toolset: clang
             cxxstd: "03,11,14,17,20,2b"
             os: macos-12
           - toolset: clang
             cxxstd: "03,11,14,17,20,2b"
             os: macos-13
+          - toolset: clang
+            cxxstd: "03,11,14,17,20,2b"
+            os: macos-14
 
     runs-on: ${{matrix.os}}
     container: ${{matrix.container}}
@@ -224,7 +235,7 @@ jobs:
             addrmd: 32,64
             os: windows-2022
           - toolset: clang-win
-            cxxstd: "14,17,latest"
+            cxxstd: "14,17,20,latest"
             addrmd: 32,64
             os: windows-2022
           - toolset: gcc
@@ -235,7 +246,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd
@@ -272,14 +283,14 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
           - os: macos-12
           - os: macos-13
+          - os: macos-14
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -320,14 +331,14 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
           - os: macos-12
           - os: macos-13
+          - os: macos-14
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -378,14 +389,14 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
           - os: macos-12
           - os: macos-13
+          - os: macos-14
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -438,7 +449,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd
@@ -487,7 +498,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd
@@ -554,7 +565,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd

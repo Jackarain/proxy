@@ -57,7 +57,7 @@ struct key_char_traits
     return to_lower(c1) < to_lower(c2);
   }
 
-  BOOST_CONSTEXPR static
+  BOOST_CXX14_CONSTEXPR static
   int compare(const char_type* s1, const char_type* s2, size_t n) BOOST_NOEXCEPT
   {
     auto itrs = std::mismatch(s1, s1 + n, s2, &eq);
@@ -69,17 +69,17 @@ struct key_char_traits
     return (c1 < c2 ) ? -1 : 1;
   }
 
-  BOOST_CONSTEXPR static size_t length(const char* s)    BOOST_NOEXCEPT  { return std::strlen(s); }
-  BOOST_CONSTEXPR static size_t length(const wchar_t* s) BOOST_NOEXCEPT  { return std::wcslen(s); }
+  static size_t length(const char* s)    BOOST_NOEXCEPT  { return std::strlen(s); }
+  static size_t length(const wchar_t* s) BOOST_NOEXCEPT  { return std::wcslen(s); }
 
-  BOOST_CONSTEXPR static
+  BOOST_CXX14_CONSTEXPR static
   const char_type* find(const char_type* s, size_t n, const char_type& a) BOOST_NOEXCEPT
   {
     const char_type u = to_lower(a);
     return std::find_if(s, s + n, [u](char_type c){return to_lower(c) == u;});
   }
 
-  BOOST_CONSTEXPR static
+  BOOST_CXX14_CONSTEXPR static
   char_type* move(char_type* s1, const char_type* s2, size_t n) BOOST_NOEXCEPT
   {
     if (s1 < s2)
@@ -94,7 +94,7 @@ struct key_char_traits
     return std::copy(s2, s2 + n, s1);
   }
 
-  BOOST_CONSTEXPR static
+  BOOST_CXX14_CONSTEXPR static
   char_type* assign(char_type* s, size_t n, char_type a) BOOST_NOEXCEPT
   {
     std::fill(s, s + n, a);

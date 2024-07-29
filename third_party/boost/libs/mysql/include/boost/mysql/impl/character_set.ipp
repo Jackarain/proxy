@@ -12,11 +12,13 @@
 
 #include <boost/mysql/character_set.hpp>
 
+#include <boost/assert.hpp>
+
 namespace boost {
 namespace mysql {
 namespace detail {
 
-inline bool in_range(unsigned char byte, unsigned char lower, unsigned char upper) noexcept
+inline bool in_range(unsigned char byte, unsigned char lower, unsigned char upper)
 {
     return byte >= lower && byte <= upper;
 }
@@ -25,7 +27,7 @@ inline bool in_range(unsigned char byte, unsigned char lower, unsigned char uppe
 }  // namespace mysql
 }  // namespace boost
 
-std::size_t boost::mysql::detail::next_char_utf8mb4(span<const unsigned char> input) noexcept
+std::size_t boost::mysql::detail::next_char_utf8mb4(span<const unsigned char> input)
 {
     // s[0]    s[1]    s[2]    s[3]    comment
     // 00-7F                           ascii
@@ -42,11 +44,9 @@ std::size_t boost::mysql::detail::next_char_utf8mb4(span<const unsigned char> in
     BOOST_ASSERT(!input.empty());
 
     auto first_char = input.front();
-    if (first_char < 0x80)
-    {
-        return 1;
-    }
-    else if (first_char < 0xc2)
+    BOOST_ASSERT(first_char >= 0x80);  // ascii range covered by call_next_char
+
+    if (first_char < 0xc2)
     {
         return 0;
     }

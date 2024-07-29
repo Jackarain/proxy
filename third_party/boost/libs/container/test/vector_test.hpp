@@ -269,6 +269,8 @@ bool vector_copyable_only(MyBoostVector &boostvector, MyStdVector &stdvector, bo
    return true;
 }
 
+
+
 template<class MyBoostVector>
 int vector_move_assignable_only(boost::container::dtl::false_type)
 {
@@ -345,9 +347,7 @@ int vector_move_assignable_only(boost::container::dtl::true_type)
          //Initialize values
          IntType aux_vect[50];
          for(int i = 0; i < 50; ++i){
-            IntType new_int(-1);
-            BOOST_CONTAINER_STATIC_ASSERT((boost::container::test::is_copyable<boost::container::test::movable_int>::value == false));
-            aux_vect[i] = boost::move(new_int);
+            aux_vect[i] = -1;
          }
          int aux_vect2[50];
          for(int i = 0; i < 50; ++i){
@@ -374,8 +374,7 @@ int vector_move_assignable_only(boost::container::dtl::true_type)
 
          IntType aux_vect[50];
          for(int i = 0; i < 50; ++i){
-            IntType new_int(-i);
-            aux_vect[i] = boost::move(new_int);
+            aux_vect[i] = -i;
          }
          int aux_vect2[50];
          for(int i = 0; i < 50; ++i){
@@ -391,8 +390,7 @@ int vector_move_assignable_only(boost::container::dtl::true_type)
          if(!test::CheckEqualContainers(boostvector, stdvector)) return 1;
 
          for(int i = 0; i < 50; ++i){
-            IntType new_int(-i);
-            aux_vect[i] = boost::move(new_int);
+            aux_vect[i] = -i;
          }
 
          for(int i = 0; i < 50; ++i){
@@ -512,6 +510,30 @@ int vector_move_assignable_only(boost::container::dtl::true_type)
 }
 
 template<class MyBoostVector>
+int vector_test_fully_propagable(dtl::true_ /* fully_propagable */)
+{
+   typedef std::vector<int>                     MyStdVector;
+   {
+      //operator=(Vector &&)
+      ::boost::movelib::unique_ptr<MyStdVector> const stdvectorp =
+         ::boost::movelib::make_unique<MyStdVector>(100u);
+      ::boost::movelib::unique_ptr<MyBoostVector> const boostvectorp =
+         ::boost::movelib::make_unique<MyBoostVector>(100u);
+      ::boost::movelib::unique_ptr<MyBoostVector> const boostvectorp2 =
+         ::boost::movelib::make_unique<MyBoostVector>();
+      *boostvectorp2 = ::boost::move(*boostvectorp);
+      if (!test::CheckEqualContainers(*boostvectorp2, *stdvectorp)) return 1;
+   }
+   return 0;
+}
+
+template<class MyBoostVector>
+int vector_test_fully_propagable(dtl::false_ /* fully_propagable */)
+{
+   return 0;
+}
+
+template<class MyBoostVector>
 int vector_test()
 {
    typedef std::vector<int>                     MyStdVector;
@@ -551,7 +573,10 @@ int vector_test()
       if(!test::CheckEqualContainers(*boostvectorp2, *stdvectorp)) return 1;
    }
 
-   if (0 != vector_move_assignable_only< MyBoostVector>(dtl::bool_<boost::container::test::is_copyable<IntType>::value>()))
+   if (0 != vector_test_fully_propagable<MyBoostVector>
+         ( dtl::bool_< !allocator_traits<typename MyBoostVector::allocator_type>::is_partially_propagable::value >() ))   return 1;
+
+   if (0 != vector_move_assignable_only< MyBoostVector>(dtl::bool_<boost::container::test::is_move_assignable<IntType>::value>()))
       return 1;
 
    std::cout << std::endl << "Test OK!" << std::endl;

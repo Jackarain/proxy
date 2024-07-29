@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_IMPL_AUTHORITY_VIEW_IPP
-#define BOOST_URL_IMPL_AUTHORITY_VIEW_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/authority_view.hpp>
@@ -202,12 +200,6 @@ encoded_host_address() const noexcept
     std::size_t n;
     switch(u_.host_type_)
     {
-    default:
-    case urls::host_type::none:
-        BOOST_ASSERT(s.empty());
-        n = 0;
-        break;
-
     case urls::host_type::name:
     case urls::host_type::ipv4:
         n = u_.decoded_[id_host];
@@ -226,6 +218,22 @@ encoded_host_address() const noexcept
         n = u_.decoded_[id_host] - 2;
         break;
     }
+    // LCOV_EXCL_START
+    default:
+    case urls::host_type::none:
+        /*
+         * This condition is for correctness
+         * only.
+         * This should never happen, because
+         * the `host_rule` will set the host
+         * type to `name` when it's empty.
+         * This is correct because `reg-name`
+         * accepts empty strings.
+         */
+        BOOST_ASSERT(s.empty());
+        n = 0;
+        break;
+    // LCOV_EXCL_STOP
     }
     return make_pct_string_view_unsafe(
         s.data(), s.size(), n);
@@ -405,4 +413,3 @@ compare(const authority_view& other) const noexcept
 } // urls
 } // boost
 
-#endif

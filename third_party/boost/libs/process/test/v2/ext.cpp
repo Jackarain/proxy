@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE(cmd_exe)
     bp2::basic_cstring_ref<typename bp2::shell::char_type> ref(cm.argv()[0]);
     BOOST_CHECK_EQUAL(bp2::detail::conv_string<char>(ref.data(), ref.size()), pth);
 
-    BOOST_REQUIRE_EQUAL(cm.argc(), args.size() + 1);
+    BOOST_REQUIRE_EQUAL(cm.argc(), args.size() + 1u);
     for (auto i = 0u; i < args.size(); i++)
     {
       ref = cm.argv()[i + 1];

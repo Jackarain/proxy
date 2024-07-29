@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_IMPL_STRING_VIEW_BASE_IPP
-#define BOOST_URL_IMPL_STRING_VIEW_BASE_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/grammar/string_view_base.hpp>
@@ -30,5 +28,4 @@ operator<<(
 } // urls
 } // boost
 
-#endif
 

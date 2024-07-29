@@ -9,7 +9,7 @@
 
 // Purpose to test serializing uuids with wide stream archives
 
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include <sstream>
 #include <iostream>
 
@@ -58,7 +58,7 @@ void test_archive()
     BOOST_TEST_EQ(u1, u2);
 }
 
-int test_main( int /* argc */, char* /* argv */[] )
+int main()
 {
     using namespace std;
     using namespace boost::archive;

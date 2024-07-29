@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_IMPL_SCHEME_IPP
-#define BOOST_URL_IMPL_SCHEME_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/scheme.hpp>
@@ -130,4 +128,3 @@ default_port(scheme s) noexcept
 } // urls
 } // boost
 
-#endif

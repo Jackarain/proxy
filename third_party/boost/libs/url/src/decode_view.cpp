@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_IMPL_DECODE_VIEW_IPP
-#define BOOST_URL_IMPL_DECODE_VIEW_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/decode_view.hpp>
@@ -232,4 +230,3 @@ rfind( char ch ) const noexcept
 } // urls
 } // boost
 
-#endif

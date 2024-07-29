@@ -30,7 +30,7 @@ struct stuart_landau
     stuart_landau( double eta = 1.0 , double alpha = 1.0 )
     : m_eta( eta ) , m_alpha( alpha ) { }
 
-    void operator()( const state_type &x , state_type &dxdt , double t ) const
+    void operator()( const state_type &x , state_type &dxdt , double ) const
     {
         const complex< double > I( 0.0 , 1.0 );
         dxdt = ( 1.0 + m_eta * I ) * x - ( 1.0 + m_alpha * I ) * norm( x ) * x;
@@ -71,7 +71,7 @@ struct streaming_observer
 
 
 
-int main( int argc , char **argv )
+int main()
 {
     //[ stuart_landau_integration
     state_type x = complex< double >( 1.0 , 0.0 );

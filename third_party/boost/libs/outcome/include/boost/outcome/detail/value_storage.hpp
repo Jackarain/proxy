@@ -63,15 +63,11 @@ namespace detail
   // Void does nothing
   template <> struct move_assign_to_empty<void, false, false>
   {
-    move_assign_to_empty(void *, void *) noexcept
-    { /* nothing to assign */
-    }
+    move_assign_to_empty(void *, void *) noexcept { /* nothing to assign */ }
   };
   template <> struct move_assign_to_empty<const void, false, false>
   {
-    move_assign_to_empty(const void *, const void *) noexcept
-    { /* nothing to assign */
-    }
+    move_assign_to_empty(const void *, const void *) noexcept { /* nothing to assign */ }
   };
   // Helpers for copy assigning to empty storage
   template <class T, bool isCopyConstructible = std::is_copy_constructible<T>::value,
@@ -98,15 +94,11 @@ namespace detail
   // Void does nothing
   template <> struct copy_assign_to_empty<void, false, false>
   {
-    copy_assign_to_empty(void *, void *) noexcept
-    { /* nothing to assign */
-    }
+    copy_assign_to_empty(void *, void *) noexcept { /* nothing to assign */ }
   };
   template <> struct copy_assign_to_empty<const void, false, false>
   {
-    copy_assign_to_empty(const void *, const void *) noexcept
-    { /* nothing to assign */
-    }
+    copy_assign_to_empty(const void *, const void *) noexcept { /* nothing to assign */ }
   };
 
   template <class T, bool nothrow> struct strong_swap_impl
@@ -237,9 +229,10 @@ namespace detail
 #ifdef _MSC_VER
   __declspec(noreturn)
 #elif defined(__GNUC__) || defined(__clang__)
-        __attribute__((noreturn))
+  __attribute__((noreturn))
 #endif
-  void make_ub(T && /*unused*/)
+  void
+  make_ub(T && /*unused*/)
   {
     BOOST_OUTCOME_ASSERT(false);  // NOLINT
 #if defined(__GNUC__) || defined(__clang__)
@@ -1292,11 +1285,11 @@ namespace detail
       // value/value
       if(_status.have_value() && o._status.have_value())
       {
-        struct _
+        struct some_type
         {
           status_bitfield_type &a, &b;
           bool all_good{false};
-          ~_()
+          ~some_type()
           {
             if(!this->all_good)
             {
@@ -1305,19 +1298,19 @@ namespace detail
               this->b.set_have_lost_consistency(true);
             }
           }
-        } _{_status, o._status};
-        strong_swap(_.all_good, _value, o._value);
+        } some_type_value{_status, o._status};
+        strong_swap(some_type_value.all_good, _value, o._value);
         swap(_status, o._status);
         return;
       }
       // error/error
       if(_status.have_error() && o._status.have_error())
       {
-        struct _
+        struct some_type
         {
           status_bitfield_type &a, &b;
           bool all_good{false};
-          ~_()
+          ~some_type()
           {
             if(!this->all_good)
             {
@@ -1326,8 +1319,8 @@ namespace detail
               this->b.set_have_lost_consistency(true);
             }
           }
-        } _{_status, o._status};
-        strong_swap(_.all_good, _error, o._error);
+        } some_type_value{_status, o._status};
+        strong_swap(some_type_value.all_good, _error, o._error);
         swap(_status, o._status);
         return;
       }
@@ -1377,13 +1370,13 @@ namespace detail
         return;
       }
       // It can now only be value/error, or error/value
-      struct _
+      struct some_type
       {
         status_bitfield_type &a, &b;
         _value_type_ *value, *o_value;
         _error_type_ *error, *o_error;
         bool all_good{true};
-        ~_()
+        ~some_type()
         {
           if(!this->all_good)
           {
@@ -1392,21 +1385,21 @@ namespace detail
             this->b.set_have_lost_consistency(true);
           }
         }
-      } _{_status, o._status, BOOST_OUTCOME_ADDRESS_OF(_value), BOOST_OUTCOME_ADDRESS_OF(o._value), BOOST_OUTCOME_ADDRESS_OF(_error), BOOST_OUTCOME_ADDRESS_OF(o._error)};
+      } some_type_value{_status, o._status, BOOST_OUTCOME_ADDRESS_OF(_value), BOOST_OUTCOME_ADDRESS_OF(o._value), BOOST_OUTCOME_ADDRESS_OF(_error), BOOST_OUTCOME_ADDRESS_OF(o._error)};
       if(_status.have_value() && o._status.have_error())
       {
-        strong_placement(_.all_good, _.o_value, _.value, [&_] {    //
-          strong_placement(_.all_good, _.error, _.o_error, [&_] {  //
-            swap(_.a, _.b);                                        //
+        strong_placement(some_type_value.all_good, some_type_value.o_value, some_type_value.value, [&some_type_value] {    //
+          strong_placement(some_type_value.all_good, some_type_value.error, some_type_value.o_error, [&some_type_value] {  //
+            swap(some_type_value.a, some_type_value.b);                                                                    //
           });
         });
         return;
       }
       if(_status.have_error() && o._status.have_value())
       {
-        strong_placement(_.all_good, _.o_error, _.error, [&_] {    //
-          strong_placement(_.all_good, _.value, _.o_value, [&_] {  //
-            swap(_.a, _.b);                                        //
+        strong_placement(some_type_value.all_good, some_type_value.o_error, some_type_value.error, [&some_type_value] {    //
+          strong_placement(some_type_value.all_good, some_type_value.value, some_type_value.o_value, [&some_type_value] {  //
+            swap(some_type_value.a, some_type_value.b);                                                                    //
           });
         });
         return;
@@ -1477,12 +1470,12 @@ namespace detail
     constexpr
 #endif
     value_storage_nontrivial_move_assignment &
-    operator=(value_storage_nontrivial_move_assignment &&o) noexcept(
-    std::is_nothrow_move_assignable<value_type>::value &&
-    std::is_nothrow_move_assignable<error_type>::value && noexcept(move_assign_to_empty<value_type>(
-    static_cast<value_type *>(nullptr),
-    static_cast<value_type *>(nullptr))) && noexcept(move_assign_to_empty<error_type>(static_cast<error_type *>(nullptr),
-                                                                                      static_cast<error_type *>(nullptr))))  // NOLINT
+    operator=(value_storage_nontrivial_move_assignment &&o) noexcept(std::is_nothrow_move_assignable<value_type>::value &&
+                                                                     std::is_nothrow_move_assignable<error_type>::value &&
+                                                                     noexcept(move_assign_to_empty<value_type>(static_cast<value_type *>(nullptr),
+                                                                                                               static_cast<value_type *>(nullptr))) &&
+                                                                     noexcept(move_assign_to_empty<error_type>(static_cast<error_type *>(nullptr),
+                                                                                                               static_cast<error_type *>(nullptr))))  // NOLINT
     {
       using _value_type_ = typename Base::_value_type_;
       using _error_type_ = typename Base::_error_type_;
@@ -1581,10 +1574,9 @@ namespace detail
 #endif
     value_storage_nontrivial_copy_assignment &
     operator=(const value_storage_nontrivial_copy_assignment &o) noexcept(
-    std::is_nothrow_copy_assignable<value_type>::value &&
-    std::is_nothrow_copy_assignable<error_type>::value && noexcept(copy_assign_to_empty<value_type>(
-    static_cast<value_type *>(nullptr), static_cast<value_type *>(nullptr))) && noexcept(copy_assign_to_empty<error_type>(static_cast<error_type *>(nullptr),
-                                                                                                                          static_cast<error_type *>(nullptr))))
+    std::is_nothrow_copy_assignable<value_type>::value && std::is_nothrow_copy_assignable<error_type>::value &&
+    noexcept(copy_assign_to_empty<value_type>(static_cast<value_type *>(nullptr), static_cast<value_type *>(nullptr))) &&
+    noexcept(copy_assign_to_empty<error_type>(static_cast<error_type *>(nullptr), static_cast<error_type *>(nullptr))))
     {
       using _value_type_ = typename Base::_value_type_;
       using _error_type_ = typename Base::_error_type_;

@@ -1,6 +1,6 @@
 # Copyright 2020-2021 Peter Dimov
 # Copyright 2021 Andrey Semashev
-# Copyright 2021 Alexander Grund
+# Copyright 2021-2024 Alexander Grund
 # Copyright 2022 James E. King III
 #
 # Distributed under the Boost Software License, Version 1.0.
@@ -126,13 +126,16 @@ jobs:
               compiler: clang-12,  cxxstd: '11,14,17,20', os: ubuntu-20.04, stdlib: libc++, install: 'clang-12 libc++-12-dev libc++abi-12-dev' }
 
           # OSX, clang
+          - { compiler: clang,     cxxstd: '11,14,17,20',    os: macos-12 }
           - { name: MacOS w/ clang and sanitizers,
-              compiler: clang,     cxxstd: '11,14,17,2a', os: macos-11, ubsan: yes }
+              compiler: clang,     cxxstd: '11,14,17,20,2b', os: macos-13, ubsan: yes }
+          # TODO: Iconv issue
+          #- { compiler: clang,     cxxstd: '11,14,17,20,2b', os: macos-14 }
 
     timeout-minutes: 120
     runs-on: ${{matrix.os}}
     container: ${{matrix.container}}
-    env: {B2_USE_CCACHE: 1}
+    env: {B2_USE_CCACHE: 1, ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true}
 
     steps:
       - name: Setup environment
@@ -187,21 +190,19 @@ jobs:
         run: |
             SOURCE_KEYS=(${{join(matrix.source_keys, ' ')}})
             SOURCES=(${{join(matrix.sources, ' ')}})
-            # Add this by default
+            # Add these by default
+            SOURCE_KEYS+=(
+                'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x1E9377A2BA9EF27F'
+                'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x40976EAF437D05B5'
+                'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x3B4FE6ACC0B21F32'
+            )
             SOURCES+=(ppa:ubuntu-toolchain-r/test)
-            for key in "${SOURCE_KEYS[@]}"; do
-                for i in {1..$NET_RETRY_COUNT}; do
-                    keyfilename=$(basename -s .key $key)
-                    curl -sSL --retry ${NET_RETRY_COUNT:-5} "$key" | sudo gpg --dearmor > /etc/apt/trusted.gpg.d/${keyfilename} && break || sleep 10
-                done
-            done
+
+            ci/add-apt-keys.sh "${SOURCE_KEYS[@]}"
             # Initial update before adding sources required to get e.g. keys
             sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
-            for source in "${SOURCES[@]}"; do
-                for i in {1..$NET_RETRY_COUNT}; do
-                    sudo add-apt-repository $source && break || sleep 10
-                done
-            done
+            ci/add-apt-repositories.sh "${SOURCES[@]}"
+
             sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
             if [[ -z "${{matrix.install}}" ]]; then
                 pkgs="${{matrix.compiler}}"

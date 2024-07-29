@@ -8,6 +8,8 @@
 import os ;
 import path ;
 import feature ;
+import ac ;
+import indirect ;
 import ../config/checks/config : requires ;
 
 project /boost/mysql/test ;
@@ -16,66 +18,26 @@ project /boost/mysql/test ;
 feature.feature boost.mysql.separate-compilation : on off : propagated composite ;
 
 # Support builds with BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT
-feature.feature boost.mysql.use-ts-executor : on off : propagated composite ;
+feature.feature boost.mysql.use-ts-executor : off on : propagated composite ;
 
-# System libraries
-if [ os.name ] = NT
+# Configure openssl if it hasn't been done yet
+using openssl ;
+
+# Provide a way to fail the build if OpenSSL is not found - used by CIs
+rule do_fail_impl ( a * )
 {
-    local OPENSSL_ROOT_ENV = [ os.environ OPENSSL_ROOT ] ;
-    local OPENSSL_ROOT = "" ;
-    if $(OPENSSL_ROOT_ENV)
-    {
-        OPENSSL_ROOT = $(OPENSSL_ROOT_ENV) ;
-    }
-    else 
-    {
-        OPENSSL_ROOT = "C:/OpenSSL" ;
-    }
-    local openssl_requirements =
-        <include>$(OPENSSL_ROOT)/include
-        <library-path>$(OPENSSL_ROOT)/lib
-    ; 
-
-    if [ path.exists $(OPENSSL_ROOT)/lib/libssl.lib ]
-    {
-        echo "OpenSSL > 1.1.0. Including libssl" ;
-        lib ssl : : <target-os>windows <name>libssl : : $(openssl_requirements) ;
-    }
-    else if [ path.exists $(OPENSSL_ROOT)/lib/ssleay32.lib ] 
-    {
-        echo "OpenSSL < 1.1.0. Including ssleay32" ;
-        lib ssl : : <target-os>windows <name>ssleay32 : : $(openssl_requirements) ;
-    }
-    else
-    {
-        lib ssl : : <link>shared : : $(openssl_requirements) ;
-    }
-
-    if [ path.exists $(OPENSSL_ROOT)/lib/libcrypto.lib ]
-    {
-        echo "OpenSSL > 1.1.0. Including libcrypto" ;
-        lib crypto : : <target-os>windows <name>libcrypto : : $(openssl_requirements) ;
-    }
-    else if [ path.exists $(OPENSSL_ROOT)/lib/libeay32.lib ]
-    {
-        echo "OpenSSL < 1.1.0. Including libeay32" ;
-        lib crypto : : <target-os>windows <name>libeay32 : : $(openssl_requirements) ;
-    }
-    else
-    {
-        lib crypto : : <link>shared : : $(openssl_requirements) ;
-    }
+    exit "OpenSSL could not be found. Don't build target fail_if_no_openssl to skip this check" ;
 }
-else
-{
-    local OPENSSL_ROOT = [ os.environ OPENSSL_ROOT ] ;
-    local openssl_requirements =
-        <include>$(OPENSSL_ROOT)/include
-        <library-path>$(OPENSSL_ROOT)/lib
-    ; 
-    lib ssl : : <link>shared : : $(openssl_requirements) ;
-    lib crypto : : <link>shared : : $(openssl_requirements) ;
-}
+
+local do_fail = [ indirect.make do_fail_impl ] ;
+
+alias fail_if_no_openssl
+    : requirements
+        [ ac.check-library /openssl//ssl    : : <conditional>@$(do_fail) ]
+        [ ac.check-library /openssl//crypto : : <conditional>@$(do_fail) ]
+;
+
+explicit fail_if_no_openssl ;
 
 # Requirements to use across targets
 local requirements = 
@@ -94,22 +56,26 @@ local requirements =
         <toolset>msvc:<define>_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING
         <toolset>msvc:<define>_SILENCE_CXX17_ADAPTOR_TYPEDEFS_DEPRECATION_WARNING
         <toolset>msvc:<define>_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING
-        # GCC13 doesn't understand view types and issues array bound warnings that don't make sense.
-        <toolset>gcc-13:<cxxflags>"-Wno-dangling-reference -Wno-array-bounds"
-        <toolset>gcc:<cxxflags>-Wno-implicit-fallthrough # Required by Asio SSL components
+        # gcc-13+ doesn't understand view types and issues array bound warnings that don't make sense.
+        # -Wno-implicit-fallthrough is required by Asio SSL components
+        <toolset>gcc:<cxxflags>"-Wno-dangling-reference -Wno-array-bounds -Wno-implicit-fallthrough"
+        # gcc-13+ complains about TSAN not supporting std::atomic_thread_fence,
+        # used by Asio old net-ts type-erased executors.
+        <toolset>gcc,<thread-sanitizer>norecover:<cxxflags>-Wno-tsan
         <target-os>linux:<define>_XOPEN_SOURCE=600
         <target-os>linux:<define>_GNU_SOURCE=1
         <target-os>windows:<define>_WIN32_WINNT=0x0601
-        <define>BOOST_ASIO_SEPARATE_COMPILATION
         <include>../include
         <boost.mysql.use-ts-executor>on:<define>BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT
+        # Disable assertions when doing coverage, as they distort coverage data
+        <coverage>on:<define>BOOST_DISABLE_ASSERTS
     ;
 
 alias boost_mysql
     :
-        ssl
-        crypto
         /boost/charconv//boost_charconv
+        /openssl//ssl/<link>shared
+        /openssl//crypto/<link>shared
     : requirements
         [ requires
             cxx11_defaulted_moves
@@ -125,6 +91,8 @@ alias boost_mysql
             cxx11_template_aliases
             cxx11_variadic_templates
         ]
+        [ ac.check-library /openssl//ssl    : <library>/openssl//ssl/<link>shared : <build>no ]
+        [ ac.check-library /openssl//crypto : <library>/openssl//crypto/<link>shared : <build>no ]
         $(requirements)
     : usage-requirements
         $(requirements)
@@ -137,20 +105,30 @@ lib boost_mysql_compiled
     : requirements
         <boost.mysql.separate-compilation>on:<source>common/src/boost_mysql.cpp
         <boost.mysql.separate-compilation>on:<define>BOOST_MYSQL_SEPARATE_COMPILATION
+        <define>BOOST_ASIO_SEPARATE_COMPILATION
         <link>static
     : usage-requirements
         <boost.mysql.separate-compilation>on:<define>BOOST_MYSQL_SEPARATE_COMPILATION
+        <define>BOOST_ASIO_SEPARATE_COMPILATION
     ;
 
 alias common_test_sources
     :
         common/src/entry_point.cpp
         common/src/tracker_executor.cpp
+        common/src/printing.cpp
     ;
 
 # Boost.Context causes failures with warnings-as-errors
 # under libc++, because it builds objects that raise a -stdlib=libc++ unused warning
-alias boost_context_lib : /boost/context//boost_context/<warnings-as-errors>off ;
+alias boost_context_lib
+    :
+        /boost/context//boost_context/<warnings-as-errors>off
+    : usage-requirements
+        # gcc-14+ seem to enable CET by default, which causes warnings with Boost.Context.
+        # Disable CET until https://github.com/boostorg/context/issues/263 gets fixed
+        <toolset>gcc-14:<cxxflags>-fcf-protection=none
+    ;
 
 alias boost_mysql_test
     :
@@ -162,6 +140,13 @@ alias boost_mysql_test
         <include>common/include
     : usage-requirements
         <include>common/include
+    ;
+
+# Mark a test as runnable using Valgrind. Some tests use
+# an intermediate Python runner, so just setting testing.launcher globally is incorrect
+alias launch_with_valgrind
+    : usage-requirements
+        <valgrind>on:<testing.launcher>"valgrind --leak-check=full --error-limit=yes --error-exitcode=1 --gen-suppressions=all"
     ;
 
 build-project unit ;

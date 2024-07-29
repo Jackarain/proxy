@@ -37,6 +37,11 @@ struct is_move_assignable
    static const bool value = true;
 };
 
+template<class T>
+struct is_move_constructible
+{
+   static const bool value = true;
+};
 
 
 /////////////////////////
@@ -593,6 +598,13 @@ struct life_count< non_copymovable_int >
    static bool check(unsigned c)
    {  return c == non_copymovable_int::count;   }
 };
+
+template<>
+struct is_move_constructible<non_copymovable_int>
+{
+   static const bool value = false;
+};
+
 
 }  //namespace test {
 }  //namespace container {

@@ -255,6 +255,8 @@ struct basic_process_handle_fd_or_signal
             return;
         if (::kill(pid_, SIGKILL) == -1)
             ec = get_last_error();
+        else
+            wait(exit_status, ec);
     }
 
     void terminate(native_exit_code_type &exit_status)
@@ -281,10 +283,9 @@ struct basic_process_handle_fd_or_signal
         if (process_is_running(res))
             return true;
         else
-        {
             exit_code = code;
-            return false;
-        }
+
+        return false;
     }
 
     bool running(native_exit_code_type &exit_code)

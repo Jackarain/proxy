@@ -272,6 +272,18 @@ if (WIN32)
             set_source_files_properties("${CMAKE_CURRENT_BINARY_DIR}/src/windows/simple_event_log.h" PROPERTIES GENERATED TRUE)
             set_source_files_properties("${CMAKE_CURRENT_BINARY_DIR}/src/windows/simple_event_log.rc" PROPERTIES GENERATED TRUE)
 
+            if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+                # Workaround for a windres.exe issue on MinGW-w64: by default, it uses popen to pipe preprocessed
+                # output from the preprocessor, but popen is buggy on non-English Windows systems and causes
+                # compilation errors such as:
+                #
+                # windres.exe: can't open file `page:': Invalid argument
+                #
+                # This option forces windres.exe to use a temporary file instead.
+                # https://github.com/boostorg/log/pull/231
+                list(APPEND CMAKE_RC_FLAGS "--use-temp-file")
+            endif()
+
             list(APPEND boost_log_sources
                 "${CMAKE_CURRENT_BINARY_DIR}/src/windows/simple_event_log.h"
                 "${CMAKE_CURRENT_BINARY_DIR}/src/windows/simple_event_log.rc"

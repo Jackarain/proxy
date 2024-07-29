@@ -8,8 +8,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_IMPL_PARSE_PATH_IPP
-#define BOOST_URL_IMPL_PARSE_PATH_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/parse_path.hpp>
@@ -60,4 +58,3 @@ parse_path(core::string_view s) noexcept
 } // urls
 } // boost
 
-#endif

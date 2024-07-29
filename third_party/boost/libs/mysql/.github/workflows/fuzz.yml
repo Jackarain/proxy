@@ -9,16 +9,27 @@ name: fuzz
 
 on:
   push:
+    branches: [develop, master]
+    tags: ['*']
   pull_request:
+  workflow_dispatch:
   schedule:
     - cron: "25 00 * * *"
-  workflow_dispatch:
 
 jobs:
   fuzz:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/anarthal-containers/build-clang18
+      image: ghcr.io/anarthal-containers/build-clang18:c3f5316cc19bf3c0f7a83e31dec58139581f5764
+      volumes:
+        - /var/run/mysqld:/var/run/mysqld
+    services:
+      mysql:
+        image: ghcr.io/anarthal-containers/mysql8:c3f5316cc19bf3c0f7a83e31dec58139581f5764
+        ports:
+          - 3306:3306
+        volumes:
+          - /var/run/mysqld:/var/run/mysqld
     steps:
       - name: Fetch code
         uses: actions/checkout@v4
@@ -33,9 +44,10 @@ jobs:
       # Note: this will take care of using the corpus and updating it
       - name: Build and run the fuzzer
         run: |
-          python tools/ci.py \
-            --build-kind=fuzz \
-            --source-dir=$(pwd)
+          python tools/ci/main.py \
+            --source-dir=$(pwd) \
+            fuzz \
+            --server-host=mysql
 
       - name: Archive any crashes as an artifact
         uses: actions/upload-artifact@v4

@@ -16,6 +16,8 @@
 #include <string>
 #include <random>
 #include <iomanip>
+#include <sstream>
+#include <boost/core/detail/splitmix64.hpp>
 
 // These numbers diverge from what the formatting is using printf
 // See: https://godbolt.org/z/zd34KcWMW
@@ -122,10 +124,19 @@ void failing_ci_values()
 }
 
 template <typename T>
-void spot_check(T v, const std::string& str, boost::charconv::chars_format fmt = boost::charconv::chars_format::general)
+void spot_check(T v, const std::string& str, boost::charconv::chars_format fmt)
 {
     char buffer[256] {};
     const auto r = boost::charconv::to_chars(buffer, buffer + sizeof(buffer), v, fmt);
+    BOOST_TEST(r.ec == std::errc());
+    BOOST_TEST_CSTR_EQ(buffer, str.c_str());
+}
+
+template <typename T>
+void spot_check(T v, const std::string& str, boost::charconv::chars_format fmt, int precision)
+{
+    char buffer[256] {};
+    const auto r = boost::charconv::to_chars(buffer, buffer + sizeof(buffer), v, fmt, precision);
     BOOST_TEST(r.ec == std::errc());
     BOOST_TEST_CSTR_EQ(buffer, str.c_str());
 }
@@ -190,6 +201,30 @@ std::string format(int prec)
     return format;
 }
 
+template <typename T>
+void test_to_chars_hex_16(T v)
+{
+    if (!std::isnormal(v))
+    {
+        return;
+    }
+
+    char buffer[256];
+    // Stringstream will write with leading 0x whereas we will not
+    auto ptr = buffer;
+    *ptr++ = '0';
+    *ptr++ = 'x';
+
+    auto r = boost::charconv::to_chars(ptr, ptr + sizeof(buffer) - 2, v, boost::charconv::chars_format::hex);
+    BOOST_TEST(r);
+    *r.ptr = '\0';
+
+    std::stringstream o_val;
+    o_val << std::hexfloat << v;
+
+    BOOST_TEST_CSTR_EQ(buffer, o_val.str().c_str());
+}
+
 int main()
 {
     printf_divergence<double>();
@@ -200,9 +235,11 @@ int main()
     non_finite_values<double>(boost::charconv::chars_format::scientific, 2);
     non_finite_values<double>(boost::charconv::chars_format::hex);
     non_finite_values<double>(boost::charconv::chars_format::hex, 2);
+    non_finite_values<double>(boost::charconv::chars_format::fixed);
+    non_finite_values<double>(boost::charconv::chars_format::fixed, 2);
 
     // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=57484
-    #if !(defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 9 && defined(__i686__))
+    #if !(defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 9 && defined(__i686__)) && !defined(BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE)
     non_finite_values<long double>();
     #endif
 
@@ -212,22 +249,22 @@ int main()
     failing_ci_values<double>();
 
     // Values from ryu tests
-    spot_check(1.0, "1");
-    spot_check(1.2, "1.2");
-    spot_check(1.23, "1.23");
-    spot_check(1.234, "1.234");
-    spot_check(1.2345, "1.2345");
-    spot_check(1.23456, "1.23456");
-    spot_check(1.234567, "1.234567");
-    spot_check(1.2345678, "1.2345678");
-    spot_check(1.23456789, "1.23456789");
-    spot_check(1.234567890, "1.23456789");
-    spot_check(1.2345678901, "1.2345678901");
-    spot_check(1.23456789012, "1.23456789012");
-    spot_check(1.234567890123, "1.234567890123");
-    spot_check(1.2345678901234, "1.2345678901234");
-    spot_check(1.23456789012345, "1.23456789012345");
-    spot_check(1.234567890123456, "1.234567890123456");
+    spot_check(1.0, "1", boost::charconv::chars_format::general);
+    spot_check(1.2, "1.2", boost::charconv::chars_format::general);
+    spot_check(1.23, "1.23", boost::charconv::chars_format::general);
+    spot_check(1.234, "1.234", boost::charconv::chars_format::general);
+    spot_check(1.2345, "1.2345", boost::charconv::chars_format::general);
+    spot_check(1.23456, "1.23456", boost::charconv::chars_format::general);
+    spot_check(1.234567, "1.234567", boost::charconv::chars_format::general);
+    spot_check(1.2345678, "1.2345678", boost::charconv::chars_format::general);
+    spot_check(1.23456789, "1.23456789", boost::charconv::chars_format::general);
+    spot_check(1.234567890, "1.23456789", boost::charconv::chars_format::general);
+    spot_check(1.2345678901, "1.2345678901", boost::charconv::chars_format::general);
+    spot_check(1.23456789012, "1.23456789012", boost::charconv::chars_format::general);
+    spot_check(1.234567890123, "1.234567890123", boost::charconv::chars_format::general);
+    spot_check(1.2345678901234, "1.2345678901234", boost::charconv::chars_format::general);
+    spot_check(1.23456789012345, "1.23456789012345", boost::charconv::chars_format::general);
+    spot_check(1.234567890123456, "1.234567890123456", boost::charconv::chars_format::general);
 
     spot_check(1.0, "1e+00", boost::charconv::chars_format::scientific);
     spot_check(1.2, "1.2e+00", boost::charconv::chars_format::scientific);
@@ -1005,6 +1042,60 @@ int main()
     spot_check(1.7e-02, "1.7e-02", boost::charconv::chars_format::scientific);
     spot_check(1.7e-01, "1.7e-01", boost::charconv::chars_format::scientific);
     spot_check(1.7e-00, "1.7e+00", boost::charconv::chars_format::scientific);
+
+    spot_check(0.0, "0", boost::charconv::chars_format::fixed);
+    spot_check(-0.0, "-0", boost::charconv::chars_format::fixed);
+    spot_check(0.0, "0.0000000000", boost::charconv::chars_format::fixed, 10);
+    spot_check(-0.0, "-0.0000000000", boost::charconv::chars_format::fixed, 10);
+
+    #ifdef BOOST_CHARCONV_HAS_FLOAT16
+    {
+        constexpr int N = 1024;
+        boost::detail::splitmix64 rng(42);
+
+        std::float16_t const small_q = std::pow(1.0F16, -16.0F16);
+        constexpr std::uint64_t divisor = UINT64_MAX / 16;
+
+        for( int i = 0; i < N; ++i )
+        {
+            std::float16_t w0 = static_cast<std::float16_t>( rng() / divisor );
+            test_to_chars_hex_16(w0);
+
+            std::float16_t w1 = static_cast<std::float16_t>( rng() / divisor ) * small_q;
+            test_to_chars_hex_16(w1);
+
+            std::float16_t w2 = (std::numeric_limits<std::float16_t>::max)() / static_cast<std::float16_t>( rng() / divisor );
+            test_to_chars_hex_16(w2);
+
+            std::float16_t w3 = (std::numeric_limits<std::float16_t>::min)() * static_cast<std::float16_t>( rng() / divisor );
+            test_to_chars_hex_16(w3);
+        }
+    }
+    #endif
+
+    #ifdef BOOST_CHARCONV_HAS_BRAINFLOAT16
+    {
+        constexpr int N = 1024;
+        boost::detail::splitmix64 rng(42);
+
+        std::bfloat16_t const small_q = std::pow(1.0BF16, -16.0BF16);
+
+        for( int i = 0; i < N; ++i )
+        {
+            std::bfloat16_t w0 = static_cast<std::bfloat16_t>( rng() );
+            test_to_chars_hex_16(w0);
+
+            std::bfloat16_t w1 = static_cast<std::bfloat16_t>( rng() ) * small_q;
+            test_to_chars_hex_16(w1);
+
+            std::bfloat16_t w2 = (std::numeric_limits<std::bfloat16_t>::max)() / static_cast<std::bfloat16_t>( rng() );
+            test_to_chars_hex_16(w2);
+
+            std::bfloat16_t w3 = (std::numeric_limits<std::bfloat16_t>::min)() * static_cast<std::bfloat16_t>( rng() );
+            test_to_chars_hex_16(w3);
+        }
+    }
+    #endif
 
     return boost::report_errors();
 }

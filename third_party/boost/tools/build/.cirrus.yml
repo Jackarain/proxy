@@ -20,7 +20,7 @@ freebsd_task:
     - { name: 'FreeBSD, Clang 13', env: { TOOLSET: clang, TEST_TOOLSET: clang, CXX: 'clang++13', PACKAGE: 'devel/llvm13' }, freebsd_instance: { image_family: 'freebsd-14-0' } }
     - { name: 'FreeBSD, Clang 12', env: { TOOLSET: clang, TEST_TOOLSET: clang, CXX: 'clang++12', PACKAGE: 'devel/llvm12' }, freebsd_instance: { image_family: 'freebsd-14-0' } }
     - { name: 'FreeBSD, Clang 11', env: { TOOLSET: clang, TEST_TOOLSET: clang, CXX: 'clang++11', PACKAGE: 'devel/llvm11' }, freebsd_instance: { image_family: 'freebsd-14-0' } }
-    - { name: 'FreeBSD, Clang 10', env: { TOOLSET: clang, TEST_TOOLSET: clang, CXX: 'clang++10', PACKAGE: 'devel/llvm10' }, freebsd_instance: { image_family: 'freebsd-14-0' } }
+    # - { name: 'FreeBSD, Clang 10', env: { TOOLSET: clang, TEST_TOOLSET: clang, CXX: 'clang++10', PACKAGE: 'devel/llvm10' }, freebsd_instance: { image_family: 'freebsd-14-0' } }
   # To install with ports we need to initialize the package manager. To avoid
   # confirmation prompts we need to set an env var.
   install_script: [

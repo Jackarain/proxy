@@ -300,7 +300,7 @@ class TestCmd:
             list.reverse()
             for dir in list:
                 self.writable(dir, 1)
-                shutil.rmtree(dir, ignore_errors=1)
+                shutil.rmtree(dir, ignore_errors=True)
 
         self._dirlist = []
         self.workdir = None
@@ -533,8 +533,8 @@ class TestCmd:
         else:
             if path != None:
                 if path == '':
-                    path = tempfile.mktemp()
-                if path != None:
+                    path = tempfile.mkdtemp(prefix="b2")
+                elif path != None:
                     os.mkdir(path)
                 self._dirlist.append(path)
                 global _Cleanup

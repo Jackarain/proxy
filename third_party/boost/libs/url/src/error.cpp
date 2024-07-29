@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_IMPL_ERROR_IPP
-#define BOOST_URL_IMPL_ERROR_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/error.hpp>
@@ -94,4 +92,3 @@ error_cat_type error_cat;
 } // urls
 } // boost
 
-#endif

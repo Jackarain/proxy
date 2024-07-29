@@ -821,3 +821,50 @@ When loading a `*.jam` file as the _path_ it is equivalent to calling:
 In this case it means that the file will be loaded as part of the referenced
 project and hence any bare targets or information it declares will be part of
 the project.
+
+[[b2.tasks.commanddb]]
+== Command Database, and IDE Integration
+
+Many IDE programs accept the use of a
+https://clang.llvm.org/docs/JSONCompilationDatabase.html[`compile_commands.json`]
+file to learn what and how your project builds. B2 supports generating such
+files for any build you make. B2 supports this through a generic facility to
+extract commands from the actions it executes. There are two options that
+control this. The `--command-database=_format_` option indicates to generate the
+file for the given _format_. It has a couple of effects when specified:
+
+* It tells B2 to start observing and extracting commands from actions (as
+  specified by the toolset).
+* It disables execution of actions. I.e. equivalent to adding the `-n` option.
+* It enables building all default and specified targets. I.e. the equivalent to
+  adding the `-a` option.
+* It disables all action execution output. I.e. as if specifying `-d0` option.
+* At the end of the main build it writes out the results of what it observed
+  to the database file.
+
+Currently on `json` is supported as a format that follows the
+https://clang.llvm.org/docs/JSONCompilationDatabase.html[Clang JSON Compilation
+Database Format Specification].
+
+The `--command-database-out=_file_` option controls the name, and optionally
+location, of the generated file. By default the _file_ is
+`compile_commands.json` to follow the ecosystem convention. And it is generated,
+by default, in one of the following locations:
+
+* Relative to the `build-dir` of the root project, if it's specified by the
+  project. With the default _file_ name or as given.
+* At the absolute _file_ path if it is rooted.
+* At the _current working directory_.
+
+The following fields are populated in the generated database:
+
+* `directory` - This will always be the current directory as B2 makes all paths
+  relative to that (or absolute).
+* `file` - The first source of each action recorded.
+* `command` - The quoted, full, command as extracted by the toolset.
+* `output` - The first target file of each action recorded. As B2 can build
+  multiple variants at once this is required to differentiate between multiple
+  compilations of the same source file.
+
+NOTE: Only one command database file is generated per `b2` invocation. And each
+time it is generated it overwrites any previous such file.

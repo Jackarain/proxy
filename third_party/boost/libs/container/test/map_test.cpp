@@ -35,9 +35,8 @@ class recursive_map
    {}
 
    recursive_map & operator=(const recursive_map &x)
-   {  id_ = x.id_;  map_ = x.map_; return *this;  }
+   {  map_ = x.map_; return *this;  }
 
-   int id_;
    map<recursive_map, recursive_map> map_;
    map<recursive_map, recursive_map>::iterator it_;
    map<recursive_map, recursive_map>::const_iterator cit_;
@@ -45,7 +44,7 @@ class recursive_map
    map<recursive_map, recursive_map>::const_reverse_iterator crit_;
 
    friend bool operator< (const recursive_map &a, const recursive_map &b)
-   {  return a.id_ < b.id_;   }
+   {  return a.map_ < b.map_;   }
 };
 
 class recursive_multimap
@@ -59,9 +58,8 @@ class recursive_multimap
    {}
 
    recursive_multimap & operator=(const recursive_multimap &x)
-   {  id_ = x.id_;  multimap_ = x.multimap_; return *this;  }
+   {  multimap_ = x.multimap_; return *this;  }
 
-   int id_;
    multimap<recursive_multimap, recursive_multimap> multimap_;
    multimap<recursive_multimap, recursive_multimap>::iterator it_;
    multimap<recursive_multimap, recursive_multimap>::const_iterator cit_;
@@ -69,7 +67,7 @@ class recursive_multimap
    multimap<recursive_multimap, recursive_multimap>::const_reverse_iterator crit_;
 
    friend bool operator< (const recursive_multimap &a, const recursive_multimap &b)
-   {  return a.id_ < b.id_;   }
+   {  return a.multimap_ < b.multimap_;   }
 };
 
 template<class C>
@@ -363,6 +361,15 @@ bool test_heterogeneous_lookups()
    if(cmmap1.equal_range(find_me).second->second != 'e')
       return false;
 
+   //erase
+   if (map1.erase(find_me) != 1)
+      return false;
+   if (map1.erase(find_me) != 0)
+      return false;
+   if (mmap1.erase(find_me) != 2)
+      return false;
+   if (mmap1.erase(find_me) != 0)
+      return false;
    return true;
 }
 
@@ -553,6 +560,15 @@ int main ()
          < GetAllocatorMap<new_allocator<void>, red_black_tree>::apply<test::movable_and_copyable_int>::map_type
          , MyStdMap
          , GetAllocatorMap<new_allocator<void>, red_black_tree>::apply<test::movable_and_copyable_int>::multimap_type
+         , MyStdMultiMap>()) {
+         std::cout << "Error in map_test<new_allocator<void>, red_black_tree>" << std::endl;
+         return 1;
+      }
+
+      if (0 != test::map_test
+         < GetAllocatorMap<new_allocator<void>, red_black_tree>::apply<test::moveconstruct_int>::map_type
+         , MyStdMap
+         , GetAllocatorMap<new_allocator<void>, red_black_tree>::apply<test::moveconstruct_int>::multimap_type
          , MyStdMultiMap>()) {
          std::cout << "Error in map_test<new_allocator<void>, red_black_tree>" << std::endl;
          return 1;

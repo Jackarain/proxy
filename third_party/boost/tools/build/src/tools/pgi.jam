@@ -13,6 +13,7 @@ import fortran ;
 import type ;
 import common ;
 import gcc ;
+import regex ;
 
 feature.extend toolset : pgi ;
 toolset.inherit pgi : unix ;
@@ -80,6 +81,22 @@ flags pgi.compile DEFINES <define> ;
 flags pgi.compile INCLUDES <include> ;
 
 flags pgi.compile.fortran OPTIONS <fflags> ;
+
+rule compile.c ( targets * : sources * : properties * )
+{
+    local config_command = [ regex.escape
+        [ on $(targets[1]) return $(CONFIG_C_COMMAND:E="") ]
+        : "()[]\\+.*^$\"" : "\\" ] ;
+    COMMAND_DATABASE on $(targets) = "(\"$(config_command)\"[^\n]*)" ;
+}
+
+rule compile.c++ ( targets * : sources * : properties * )
+{
+    local config_command = [ regex.escape
+        [ on $(targets[1]) return $(CONFIG_COMMAND:E="") ]
+        : "()[]\\+.*^$\"" : "\\" ] ;
+    COMMAND_DATABASE on $(targets) = "(\"$(config_command)\"[^\n]*)" ;
+}
 
 actions compile.c
 {

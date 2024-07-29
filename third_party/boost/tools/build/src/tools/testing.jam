@@ -641,6 +641,7 @@ else
     .CP            = cp ;
     .NULLIN        = "<" "/dev/null" ;
 }
+.NULL_OUT = [ modules.peek common : NULL_OUT ] ;
 
 
 .VERBOSE_TEST = 0 ;
@@ -661,7 +662,7 @@ actions capture-output bind INPUT_FILES output-file
     $(.RUN_OUTPUT_NL) >> "$(output-file)"
     echo EXIT STATUS: $(.STATUS) >> "$(output-file)"
     if $(.STATUS_0)
-        $(.CP) "$(output-file)" "$(<)"
+        $(.CP) "$(output-file)" "$(<)" $(.NULL_OUT)
     $(.ENDIF)
     $(.SHELL_SET)verbose=$(.VERBOSE_TEST)
     if $(.STATUS_NOT_0)

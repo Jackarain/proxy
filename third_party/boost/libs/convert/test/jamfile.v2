@@ -13,7 +13,7 @@ project convert_test
         <toolset>icpc:<cxxflags>"-std=c++11"
         <toolset>clang:<cxxflags>"-std=c++11"
         <toolset>gcc:<warnings>all
-        <toolset>gcc:<cxxflags>"-O3 -std=c++0x -Wno-unused-variable -Wno-unused-local-typedefs -Wno-long-long -Wno-nonnull"
+        <toolset>gcc:<cxxflags>"-O3 -std=c++0x -Wno-unused-variable -Wno-long-long"
         <toolset>msvc:<warnings>all
         <toolset>msvc:<cxxflags>"/wd4996 /wd4512 /wd4610 /wd4510 /wd4127 /wd4701 /wd4127 /wd4305 /wd4244 /wd4714 /wd4189"
         <toolset>msvc:<asynch-exceptions>on
@@ -48,5 +48,5 @@ run charconv_converter.cpp
     : /boost/test//included_unit_test_framework
     :  
     : [ requires cxx17_hdr_charconv cxx17_structured_bindings cxx17_if_constexpr ]
-      <toolset>gcc:<cxxflags>"-O3 -std=c++17 -Wno-unused-variable -Wno-unused-local-typedefs -Wno-long-long -Wno-nonnull"
+      <toolset>gcc:<cxxflags>"-O3 -std=c++17 -Wno-unused-variable -Wno-long-long"
     : convert_test_charconv_converter ;

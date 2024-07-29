@@ -24,8 +24,7 @@ def test_dir(dir_name):
         if os.name == 'nt' and len(tmpdir) > 256:
             tmp = {}
             # cl.exe and link.exe still does not support long paths
-            # clang-cl does support long path, but it uses link.exe by default
-            if t.toolset.startswith('msvc') or t.toolset.startswith('clang-win'):
+            if t.toolset.startswith('msvc'):
                 do_compile_test = False
         # on windows gcc doesn't support long path, ld doesn't support neither unicode nor long path
         if os.environ.get('MSYSTEM') in ['UCRT64', 'MINGW64', 'MINGW32'] and t.toolset in ['gcc', 'clang']:

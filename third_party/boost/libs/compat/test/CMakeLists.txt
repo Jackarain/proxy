@@ -8,6 +8,7 @@ if(HAVE_BOOST_TEST)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-boost_test_jamfile(FILE Jamfile LINK_LIBRARIES Boost::compat Boost::core Threads::Threads)
+
+boost_test_jamfile(FILE Jamfile LINK_LIBRARIES Boost::compat Boost::core Boost::mp11 Threads::Threads)
 
 endif()

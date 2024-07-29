@@ -152,17 +152,17 @@ remove_dot_segments(
 
 void
 pop_last_segment(
-    core::string_view& s,
-    core::string_view& c,
+    core::string_view& str,
+    core::string_view& seg,
     std::size_t& level,
-    bool r) noexcept;
+    bool remove_unmatched) noexcept;
 
 char
 path_pop_back( core::string_view& s );
 
 void
 normalized_path_digest(
-    core::string_view s,
+    core::string_view str,
     bool remove_unmatched,
     fnv_1a& hasher) noexcept;
 

@@ -17,7 +17,7 @@ from collections import defaultdict
 # Globals
 
 def usage_and_exit():
-    print __doc__
+    print(__doc__)
     sys.exit(2)
 
 def main(argv):
@@ -45,9 +45,9 @@ def main(argv):
         boostbook_xsl = etree.XSLT(
             etree.parse(os.path.join(boostbook_directory, "docbook.xsl"), parser)
         )
-    except lxml.etree.XMLSyntaxError, error:
-        print "Error parsing boostbook xsl:"
-        print error
+    except (lxml.etree.XMLSyntaxError, error):
+        print("Error parsing boostbook xsl:")
+        print(error)
         sys.exit(1)
 
     for root, dirs, files in os.walk(os.path.join(script_directory, 'tests')):
@@ -69,7 +69,7 @@ def main(argv):
                             doc_text = run_boostbook(parser, boostbook_xsl, src_path)
                     except:
                         # TODO: Need better error reporting here:
-                        print "Error running boostbook for " + src_path
+                        print("Error running boostbook for " + src_path)
                         success = False
                         continue
 
@@ -93,13 +93,13 @@ def main(argv):
 def run_boostbook(parser, boostbook_xsl, file):
     doc = boostbook_xsl(etree.parse(file, parser))
     normalize_boostbook_ids(doc)
-    return etree.tostring(doc)
+    return etree.tostring(doc).decode("utf-8")
 
 def run_boostbook_consistent_ids(parser, boostbook_xsl, file):
     doc = boostbook_xsl(etree.parse(file, parser), **{
         'generate.consistent.ids': '1'
     })
-    return etree.tostring(doc)
+    return etree.tostring(doc).decode("utf-8")
 
 def normalize_boostbook_ids(doc):
     ids = {}
@@ -109,7 +109,7 @@ def normalize_boostbook_ids(doc):
         id = node.get('id')
 
         if(id in ids):
-            print 'Duplicate id: ' + id
+            print('Duplicate id: ' + id)
 
         match = re.match("(.+_id|id)([-mp]?[\d_]+)((?:-bb)?)", id)
         if(match):
@@ -131,7 +131,7 @@ def compare_xml(file, doc_text, gold_text):
     # So instead just do a text diff.
 
     if (doc_text != gold_text):
-        print "Error: " + file
+        print("Error: " + file)
         print
         sys.stdout.writelines(
             difflib.unified_diff(

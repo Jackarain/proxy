@@ -298,6 +298,7 @@ std::string shm_name_sanitize(std::string const& exe_name)
     case '\\':
     case '-':
     case '_':
+    case '+':
       return true;
 
     default:

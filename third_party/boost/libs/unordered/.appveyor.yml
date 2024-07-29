@@ -31,47 +31,83 @@ environment:
     B2_VARIANT: debug,release
 
   matrix:
-    - FLAVOR: Visual Studio 2015
+    - FLAVOR: VS2015 (32 bit)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       B2_TOOLSET: msvc-14.0
+      B2_ADDRESS_MODEL: 32
 
-    - FLAVOR: Visual Studio 2017, C++14
+    - FLAVOR: VS2015 (64 bit)
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      B2_TOOLSET: msvc-14.0
+      B2_ADDRESS_MODEL: 64
+
+    - FLAVOR: VS2017 (32 bit, C++14, Debug)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       B2_CXXSTD: 14
       B2_TOOLSET: msvc-14.1
+      B2_ADDRESS_MODEL: 32
+      B2_VARIANT: debug
 
-    - FLAVOR: Visual Studio 2017, C++17
+    - FLAVOR: VS2017 (32 bit, C++17, Release)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       B2_CXXSTD: 17
       B2_TOOLSET: msvc-14.1
+      B2_ADDRESS_MODEL: 32
+      B2_VARIANT: release
 
-    - FLAVOR: Visual Studio 2017, C++latest
+    - FLAVOR: VS2017 (32 bit, C++latest, Debug)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       B2_CXXSTD: latest
       B2_TOOLSET: msvc-14.1
+      B2_ADDRESS_MODEL: 32
+      B2_VARIANT: debug
 
-    - FLAVOR: cygwin (32-bit, C++11)
+    - FLAVOR: VS2017 (64 bit, C++14, Release)
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      B2_CXXSTD: 14
+      B2_TOOLSET: msvc-14.1
+      B2_ADDRESS_MODEL: 64
+      B2_VARIANT: release
+
+    - FLAVOR: VS2017 (64 bit, C++17, Debug)
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      B2_CXXSTD: 17
+      B2_TOOLSET: msvc-14.1
+      B2_ADDRESS_MODEL: 64
+      B2_VARIANT: debug
+
+    - FLAVOR: VS2017 (64 bit, C++latest, Release)
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      B2_CXXSTD: latest
+      B2_TOOLSET: msvc-14.1
+      B2_ADDRESS_MODEL: 64
+      B2_VARIANT: release
+
+    - FLAVOR: Cygwin (32 bit, C++11, Release)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       ADDPATH: C:\cygwin\bin;
       B2_ADDRESS_MODEL: 32
       B2_CXXSTD: 11
       B2_TOOLSET: gcc
+      B2_VARIANT: release
 
-    - FLAVOR: cygwin (32-bit, C++14)
+    - FLAVOR: Cygwin (32 bit, C++14, Debug)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       ADDPATH: C:\cygwin\bin;
       B2_ADDRESS_MODEL: 32
       B2_CXXSTD: 14
       B2_TOOLSET: gcc
+      B2_VARIANT: debug
 
-    - FLAVOR: cygwin (32-bit, C++1z)
+    - FLAVOR: Cygwin (32 bit, C++1z, Release)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       ADDPATH: C:\cygwin\bin;
       B2_ADDRESS_MODEL: 32
       B2_CXXSTD: 1z
       B2_TOOLSET: gcc
+      B2_VARIANT: release
 
-    - FLAVOR: cygwin (64-bit, latest, C++11)
+    - FLAVOR: Cygwin (64 bit, C++11, Release)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
       ADDPATH: C:\cygwin64\bin;
       B2_ADDRESS_MODEL: 64
@@ -80,74 +116,83 @@ environment:
       B2_FLAGS: "include=libs/unordered/test/unordered include=libs/unordered/test/exception"
       B2_VARIANT: release
 
-    - FLAVOR: cygwin (64-bit, latest, C++14)
+    - FLAVOR: Cygwin (64 bit, C++14, Debug)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
       ADDPATH: C:\cygwin64\bin;
       B2_ADDRESS_MODEL: 64
       B2_CXXSTD: 14
       B2_TOOLSET: gcc
       B2_FLAGS: "include=libs/unordered/test/unordered include=libs/unordered/test/exception"
-      B2_VARIANT: release
+      B2_VARIANT: debug
 
-    - FLAVOR: cygwin (64-bit, latest, C++1z)
+    - FLAVOR: Cygwin (64 bit, C++17, Release)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
       ADDPATH: C:\cygwin64\bin;
       B2_ADDRESS_MODEL: 64
-      B2_CXXSTD: 1z
+      B2_CXXSTD: 17
       B2_TOOLSET: gcc
       B2_FLAGS: "include=libs/unordered/test/unordered include=libs/unordered/test/exception"
       B2_VARIANT: release
 
-    - FLAVOR: mingw-w64, 32 bit, C++11
+    - FLAVOR: Cygwin (64 bit, C++2a, Debug)
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+      ADDPATH: C:\cygwin64\bin;
+      B2_ADDRESS_MODEL: 64
+      B2_CXXSTD: 2a
+      B2_TOOLSET: gcc
+      B2_FLAGS: "include=libs/unordered/test/unordered include=libs/unordered/test/exception"
+      B2_VARIANT: debug
+
+    - FLAVOR: MinGW-w64 (32 bit, C++11)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       ADDPATH: C:\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin;
       B2_CXXSTD: 11
       B2_TOOLSET: gcc
       B2_ADDRESS_MODEL: 32
 
-    - FLAVOR: mingw-w64, 32 bit, C++14
+    - FLAVOR: MinGW-w64 (32 bit, C++14)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       ADDPATH: C:\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin;
       B2_CXXSTD: 14
       B2_TOOLSET: gcc
       B2_ADDRESS_MODEL: 32
 
-    - FLAVOR: mingw-w64, 32 bit, C++17
+    - FLAVOR: MinGW-w64 (32 bit, C++17)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       ADDPATH: C:\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin;
       B2_CXXSTD: 17
       B2_TOOLSET: gcc
       B2_ADDRESS_MODEL: 32
 
-    - FLAVOR: mingw-w64, 32 bit, C++2a
+    - FLAVOR: MinGW-w64 (32 bit, C++2a)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       ADDPATH: C:\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin;
       B2_CXXSTD: 2a
       B2_TOOLSET: gcc
       B2_ADDRESS_MODEL: 32
 
-    - FLAVOR: mingw-w64, 64 bit, C++11
+    - FLAVOR: MinGW-w64 (64 bit, C++11)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       ADDPATH: C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin;
       B2_CXXSTD: 11
       B2_TOOLSET: gcc
       B2_ADDRESS_MODEL: 64
 
-    - FLAVOR: mingw-w64, 64 bit, C++14
+    - FLAVOR: MinGW-w64 (64 bit, C++14)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       ADDPATH: C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin;
       B2_CXXSTD: 14
       B2_TOOLSET: gcc
       B2_ADDRESS_MODEL: 64
 
-    - FLAVOR: mingw-w64, 64 bit, C++17
+    - FLAVOR: MinGW-w64 (64 bit, C++17)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       ADDPATH: C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin;
       B2_CXXSTD: 17
       B2_TOOLSET: gcc
       B2_ADDRESS_MODEL: 64
 
-    - FLAVOR: mingw-w64, 64 bit, C++2a
+    - FLAVOR: MinGW-w64 (64 bit, C++2a)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       ADDPATH: C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin;
       B2_CXXSTD: 2a

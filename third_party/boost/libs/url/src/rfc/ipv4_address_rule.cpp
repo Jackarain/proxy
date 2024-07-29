@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_RFC_IMPL_IPV4_ADDRESS_RULE_IPP
-#define BOOST_URL_RFC_IMPL_IPV4_ADDRESS_RULE_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/rfc/ipv4_address_rule.hpp>
@@ -48,4 +46,3 @@ parse(
 } // urls
 } // boost
 
-#endif

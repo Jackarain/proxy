@@ -1888,12 +1888,4 @@ struct hash<BOOST_PROCESS_V2_NAMESPACE::environment::key_value_pair>
 }
 
 
-
-#if defined(BOOST_PROCESS_V2_HEADER_ONLY)
-
-#include <boost/process/v2/impl/environment.ipp>
-#include <boost/process/v2/detail/impl/environment.ipp>
-
-#endif
-
 #endif //BOOST_PROCESS_V2_ENVIRONMENT_HPP

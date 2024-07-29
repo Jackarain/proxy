@@ -113,7 +113,7 @@ struct exec_op {
    asio::coroutine coro{};
 
    template <class Self>
-   void operator()(Self& self , system::error_code ec = {}, std::size_t = 0)
+   void operator()(Self& self , system::error_code = {}, std::size_t = 0)
    {
       BOOST_ASIO_CORO_REENTER (coro)
       {

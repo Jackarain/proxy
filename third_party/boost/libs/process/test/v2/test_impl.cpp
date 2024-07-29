@@ -6,5 +6,3 @@
 #define BOOST_TEST_IGNORE_SIGCHLD
 #define BOOST_TEST_MODULE process_v2_test
 #include <boost/test/included/unit_test.hpp>
-
-#include <boost/process/v2/src.hpp>

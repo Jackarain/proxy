@@ -300,14 +300,12 @@
     #define OSMINOR "OS=SINIX"
     #define OS_SINIX
 #endif
-#ifdef sun
-    #if defined(__svr4__) || defined(__SVR4)
-        #define OSMINOR "OS=SOLARIS"
-        #define OS_SOLARIS
-    #else
-        #define OSMINOR "OS=SUNOS"
-        #define OS_SUNOS
-    #endif
+#if defined(__svr4__) || defined(__SVR4)
+    #define OSMINOR "OS=SOLARIS"
+    #define OS_SOLARIS
+#elif defined(__sun__) || defined(__sun) || defined(sun)
+    #define OSMINOR "OS=SUNOS"
+    #define OS_SUNOS
 #endif
 #ifdef ultrix
     #define OSMINOR "OS=ULTRIX"
@@ -505,6 +503,8 @@ struct globs
 };
 
 extern struct globs globs;
+
+extern int anyhow;
 
 #define DEBUG_MAKE     ( globs.debug[ 1 ] )   /* show actions when executed */
 #define DEBUG_MAKEQ    ( globs.debug[ 2 ] )   /* show even quiet actions */

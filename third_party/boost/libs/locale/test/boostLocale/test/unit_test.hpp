@@ -164,8 +164,8 @@ void stream_char(std::ostream& s, const Char c)
           << static_cast<unsigned>(c);
 }
 
-template<typename Char>
-std::string to_string(const std::basic_string<Char>& s)
+template<typename Char, class Alloc>
+std::string to_string(const std::basic_string<Char, std::char_traits<Char>, Alloc>& s)
 {
     std::stringstream ss;
     for(const Char c : s)

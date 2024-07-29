@@ -715,4 +715,55 @@ namespace traits
 
 BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE_END
 
+#ifndef BOOST_OUTCOME_SYSTEM_ERROR2_DISABLE_INLINE_GDB_PRETTY_PRINTERS
+#if defined(__ELF__)
+__asm__(
+".pushsection \".debug_gdb_scripts\", \"MS\",@progbits,1\n"
+".byte 4 /* Python Text */\n"
+".ascii \"gdb.inlined-script\\n\"\n"
+".ascii \"import gdb.printing\\n\"\n"
+".ascii \"import gdb\\n\"\n"
+".ascii \"import os\\n\"\n"
+
+".ascii \"def synthesise_gdb_value_from_string(s):\\n\"\n"
+".ascii \"    '''For when you want to return a synthetic string from children()'''\\n\"\n"
+".ascii \"    return gdb.Value(s + '\\0').cast(gdb.lookup_type('char').pointer())\\n\"\n"
+
+".ascii \"class StatusCodePrinter(object):\\n\"\n"
+".ascii \"    '''Print a system_error2::status_code<T>'''\\n\"\n"
+
+".ascii \"    def __init__(self, val):\\n\"\n"
+".ascii \"        self.val = val\\n\"\n"
+
+".ascii \"    def children(self):\\n\"\n"
+".ascii \"        s = str(self.val['_domain'])\\n\"\n"
+".ascii \"        if 'posix_code_domain' in s or 'generic_code_domain' in s:\\n\"\n"
+".ascii \"            yield ('msg', synthesise_gdb_value_from_string(str(self.val['_value']) + ' (' + os.strerror(int(self.val['_value'])) + ')'))\\n\"\n"
+".ascii \"        yield ('domain', self.val['_domain'])\\n\"\n"
+".ascii \"        yield ('value', self.val['_value'])\\n\"\n"
+
+".ascii \"    def display_hint(self):\\n\"\n"
+".ascii \"        return None\\n\"\n"
+
+".ascii \"    def to_string(self):\\n\"\n"
+".ascii \"        s = str(self.val['_domain'])\\n\"\n"
+".ascii \"        if 'posix_code_domain' in s or 'generic_code_domain' in s:\\n\"\n"
+".ascii \"            return str(self.val['_value']) + ' (' + os.strerror(int(self.val['_value'])) + ')'\\n\"\n"
+".ascii \"        else:\\n\"\n"
+".ascii \"            return self.val['_value']\\n\"\n"
+
+".ascii \"def build_pretty_printer():\\n\"\n"
+".ascii \"    pp = gdb.printing.RegexpCollectionPrettyPrinter('system_error2')\\n\"\n"
+".ascii \"    pp.add_printer('system_error2::status_code', '^(boost::)?system_error2::status_code<.*>$', StatusCodePrinter)\\n\"\n"
+".ascii \"    return pp\\n\"\n"
+
+".ascii \"def register_printers(obj = None):\\n\"\n"
+".ascii \"    gdb.printing.register_pretty_printer(obj, build_pretty_printer(), replace = True)\\n\"\n"
+
+".ascii \"register_printers(gdb.current_objfile())\\n\"\n"
+".byte 0\n"
+".popsection\n");
+#endif
+#endif
+
 #endif

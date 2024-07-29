@@ -188,7 +188,6 @@ int main()
 {
     test_non_finite<float>();
     test_non_finite<double>();
-    test_non_finite<long double>();
     #ifdef BOOST_CHARCONV_HAS_FLOAT16
     test_non_finite<std::float16_t>();
     #endif
@@ -204,7 +203,6 @@ int main()
 
     test_non_finite_fixed_precision<float>();
     test_non_finite_fixed_precision<double>();
-    test_non_finite_fixed_precision<long double>();
     #ifdef BOOST_CHARCONV_HAS_FLOAT16
     test_non_finite_fixed_precision<std::float16_t>();
     #endif
@@ -220,7 +218,6 @@ int main()
 
     test_min_buffer_size<float>();
     test_min_buffer_size<double>();
-    test_min_buffer_size<long double>();
     #ifdef BOOST_CHARCONV_HAS_FLOAT32
     test_min_buffer_size<std::float32_t>();
     #endif
@@ -230,6 +227,12 @@ int main()
 
     #if BOOST_CHARCONV_LDBL_BITS > 64
     test_failed_values();
+    #endif
+
+    #ifndef BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE
+    test_non_finite<long double>();
+    test_non_finite_fixed_precision<long double>();
+    test_min_buffer_size<long double>();
     #endif
 
     return boost::report_errors();

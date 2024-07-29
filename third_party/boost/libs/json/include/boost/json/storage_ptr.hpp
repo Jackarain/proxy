@@ -74,8 +74,8 @@ namespace json {
 
     @see
         @ref make_shared_resource,
-       [`boost::container::pmr::polymorphic_allocator`](https://www.boost.org/doc/libs/release/doc/html/boost/container/pmr/polymorphic_allocator.html).
-       [`boost::container::pmr::memory_resource`](https://www.boost.org/doc/libs/release/doc/html/boost/container/pmr/memory_resource.html).
+        @ref boost::container::pmr::polymorphic_allocator,
+        @ref boost::container::pmr::memory_resource.
 
 */
 class storage_ptr

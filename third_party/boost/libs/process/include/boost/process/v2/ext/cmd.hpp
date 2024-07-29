@@ -61,11 +61,5 @@ BOOST_PROCESS_V2_DECL shell cmd(basic_process_handle<Executor> & handle)
 
 BOOST_PROCESS_V2_END_NAMESPACE
 
-#if defined(BOOST_PROCESS_V2_HEADER_ONLY)
-
-#include <boost/process/v2/ext/impl/cmd.ipp>
-
-#endif
-
 
 #endif // BOOST_PROCESS_V2_CMD_HPP

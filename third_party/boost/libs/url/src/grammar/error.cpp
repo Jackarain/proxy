@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_GRAMMAR_IMPL_ERROR_IPP
-#define BOOST_URL_GRAMMAR_IMPL_ERROR_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/grammar/error.hpp>
@@ -119,4 +117,3 @@ condition_cat_type condition_cat;
 } // urls
 } // boost
 
-#endif

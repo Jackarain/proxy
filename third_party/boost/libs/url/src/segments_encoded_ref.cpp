@@ -8,8 +8,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_IMPL_SEGMENTS_ENCODED_REF_IPP
-#define BOOST_URL_IMPL_SEGMENTS_ENCODED_REF_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/segments_encoded_ref.hpp>
@@ -172,4 +170,3 @@ replace(
 } // urls
 } // boost
 
-#endif

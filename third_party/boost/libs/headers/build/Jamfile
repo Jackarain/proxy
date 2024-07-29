@@ -9,20 +9,10 @@ import set ;
 import ../../../tools/boost_install/boost-install ;
 import ../../../tools/boost_install/boost-install-dirs ;
 
-# install-header-subdir
+# header-subdir
 
 local header-subdir = [ boost-install-dirs.header-subdir ] ;
-
-local install-header-subdir ;
-
-if $(header-subdir)
-{
-    install-header-subdir = $(header-subdir)/boost ;
-}
-else
-{
-    install-header-subdir = boost ;
-}
+header-subdir ?= "" ;
 
 # install-headers
 
@@ -34,21 +24,21 @@ local skip-headers ;
 
 for local lib in $(modular-headers)
 {
-    local header-root = $(BOOST_ROOT)/libs/$(lib)/include/boost ;
+    local header-root = $(BOOST_ROOT)/libs/$(lib)/include ;
+    local header-boost = $(header-root)/boost ;
 
     local headers =
-        [ path.glob-tree $(header-root) : *.hpp *.ipp *.h *.inc ]
-        [ path.glob-tree $(header-root)/compatibility/cpp_c_headers : c* ] ;
+        [ path.glob-tree $(header-boost) : *.hpp *.ipp *.h *.inc ]
+        [ path.glob-tree $(header-boost)/compatibility/cpp_c_headers : c* ] ;
 
-    skip-headers += [ sequence.transform path.relative-to [ path.make $(header-root) ] : $(headers) ] ;
+    skip-headers += [ sequence.transform path.relative-to [ path.make $(header-boost) ] : $(headers) ] ;
 
-    package.install install-$(lib)-headers Boost
-        : <install-header-subdir>$(install-header-subdir)
+    install install-$(lib)-headers
+        : $(headers)
+        : <location>(includedir)/$(header-subdir)
           <install-source-root>$(header-root)
           <install-no-version-symlinks>on
-        : # No binaries
-        : # No libraries
-        : $(headers)
+        : <install-package>Boost
     ;
 
     explicit install-$(lib)-headers ;
@@ -56,7 +46,7 @@ for local lib in $(modular-headers)
 
 # then, the non-modular headers in boost/, minus the modular ones
 
-local header-root = [ path.make $(BOOST_ROOT)/boost ] ;
+local header-root = [ path.make $(BOOST_ROOT) ] ;
 
 local headers =
     [ path.glob-tree $(BOOST_ROOT)/boost : *.hpp *.ipp *.h *.inc ]
@@ -64,13 +54,12 @@ local headers =
 
 headers = [ set.difference $(headers) : $(header-root)/$(skip-headers) ] ;
 
-package.install install-boost-headers Boost
-    : <install-header-subdir>$(install-header-subdir)
+install install-boost-headers
+    : $(headers)
+    : <location>(includedir)/$(header-subdir)
       <install-source-root>$(header-root)
       <install-no-version-symlinks>on
-    : # No binaries
-    : # No libraries
-    : $(headers)
+    : <install-package>Boost
 ;
 
 explicit install-boost-headers ;

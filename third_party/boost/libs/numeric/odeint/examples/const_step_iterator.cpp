@@ -41,7 +41,7 @@ const double b = 8.0 / 3.0;
 struct lorenz
 {
     template< class State , class Deriv >
-    void operator()( const State &x , Deriv &dxdt , double t ) const
+    void operator()( const State &x , Deriv &dxdt , double ) const
     {
         dxdt[0] = sigma * ( x[1] - x[0] );
         dxdt[1] = R * x[0] - x[1] - x[0] * x[2];
@@ -51,7 +51,7 @@ struct lorenz
 
 
 
-int main( int argc , char **argv )
+int main()
 {
     typedef std::array< double , 3 > state_type;
 

@@ -9,16 +9,17 @@
 
 //  libs/uuid/test/test_name_generator.cpp  -------------------------------//
 
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/name_generator.hpp>
 #include <boost/uuid/name_generator_md5.hpp>
+#include <boost/uuid/name_generator_sha1.hpp>
 #include <boost/uuid/string_generator.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include <boost/config.hpp>
 #include <boost/predef/library/c/cloudabi.h>
 
-int main(int, char*[])
+int main()
 {
     using namespace boost::uuids;
 
@@ -34,18 +35,7 @@ int main(int, char*[])
 
     uuid correct_sha1  = {{0x21, 0xf7, 0xf8, 0xde, 0x80, 0x51, 0x5b, 0x89, 0x86, 0x80, 0x01, 0x95, 0xef, 0x79, 0x8b, 0x6a}};
     uuid wcorrect_sha1 = {{0xc3, 0x15, 0x27, 0x0b, 0xa4, 0x66, 0x58, 0x72, 0xac, 0xa4, 0x96, 0x26, 0xce, 0xc0, 0xf4, 0xbe}};
-#if !defined(BOOST_UUID_COMPAT_PRE_1_71_MD5)
-    // this value is stable across all endian systems
     uuid correct_md5   = {{0x06, 0x20, 0x5c, 0xec, 0x25, 0x5b, 0x30, 0x0e, 0xa8, 0xbc, 0xa8, 0x60, 0x5a, 0xb8, 0x24, 0x4e}};
-#else
-    // code before 1.71 had different results depending on the endianness
-# if BOOST_ENDIAN_LITTLE_BYTE
-    uuid correct_md5   = {{0xec, 0x5c, 0x20, 0x06, 0x0e, 0x00, 0x3b, 0x25, 0xa0, 0xa8, 0xbc, 0xe8, 0x4e, 0x24, 0xb8, 0x5a}};
-# else
-    uuid correct_md5   = {{0x06, 0x20, 0x5c, 0xec, 0x25, 0x5b, 0x30, 0x0e, 0xa8, 0xbc, 0xa8, 0x60, 0x5a, 0xb8, 0x24, 0x4e}};
-# endif
-#endif
-
 
     name_generator_sha1 gen(ns::dns());
 
@@ -68,11 +58,9 @@ int main(int, char*[])
     BOOST_TEST_EQ(u, wcorrect_sha1);
     BOOST_TEST_EQ(u.variant(), boost::uuids::uuid::variant_rfc_4122);
 
-#ifndef BOOST_NO_STD_WSTRING
     u = gen(std::wstring(L"www.widgets.com"));
     BOOST_TEST_EQ(u, wcorrect_sha1);
     BOOST_TEST_EQ(u.variant(), boost::uuids::uuid::variant_rfc_4122);
-#endif
 
     char name[] = "www.widgets.com";
     u = gen(name, 15);

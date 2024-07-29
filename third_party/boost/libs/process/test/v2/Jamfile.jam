@@ -43,18 +43,10 @@ exe target : target.cpp :
                   <target-os>windows:<source>Ntdll
     ;
 
-
-lib header_test : header_1.cpp header_2.cpp :
-        <define>BOOST_PROCESS_V2_HEADER_ONLY=1 ;
-
-lib test_impl : test_impl.cpp filesystem :
+lib test_impl : test_impl.cpp filesystem /boost//process :
         <define>BOOST_PROCESS_V2_SEPARATE_COMPILATION=1
         <define>BOOST_TEST_IGNORE_SIGCHLD=1
         <link>static
-        <target-os>windows:<source>shell32
-        <target-os>windows:<source>user32
-        <target-os>windows:<source>Ntdll
-        <target-os>windows:<source>Advapi32
         ;
 
 test-suite standalone :

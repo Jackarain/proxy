@@ -50,6 +50,8 @@ namespace boost {
     using size_type            = std::size_t;
     using difference_type      = std::ptrdiff_t;
 
+    using stats                = xref:stats_stats_type[__stats-type__]; // if statistics are xref:concurrent_flat_map_boost_unordered_enable_stats[enabled]
+
     // constants
     static constexpr size_type xref:#concurrent_flat_map_constants[bulk_visit_size] = _implementation-defined_;
 
@@ -228,6 +230,10 @@ namespace boost {
     size_type xref:#concurrent_flat_map_max_load[max_load]() const noexcept;
     void xref:#concurrent_flat_map_rehash[rehash](size_type n);
     void xref:#concurrent_flat_map_reserve[reserve](size_type n);
+
+    // statistics (if xref:concurrent_flat_map_boost_unordered_enable_stats[enabled])
+    stats xref:#concurrent_flat_map_get_stats[get_stats]() const;
+    void xref:#concurrent_flat_map_reset_stats[reset_stats]() noexcept;
   };
 
   // Deduction Guides
@@ -299,6 +305,17 @@ namespace boost {
   template<class K, class T, class H, class P, class A, class Predicate>
     typename concurrent_flat_map<K, T, H, P, A>::size_type
        xref:#concurrent_flat_map_erase_if_2[erase_if](concurrent_flat_map<K, T, H, P, A>& c, Predicate pred);
+
+  // Pmr aliases (C++17 and up)
+  namespace unordered::pmr {
+    template<class Key,
+             class T,
+             class Hash = boost::hash<Key>,
+             class Pred = std::equal_to<Key>>
+    using concurrent_flat_map =
+      boost::concurrent_flat_map<Key, T, Hash, Pred,
+        std::pmr::polymorphic_allocator<std::pair<const Key, T>>>;
+  }
 }
 -----
 
@@ -396,6 +413,15 @@ a function visiting elements of `m`) are detected and signalled through `BOOST_A
 When run-time speed is a concern, the feature can be disabled by globally defining
 this macro.
 
+---
+
+==== `BOOST_UNORDERED_ENABLE_STATS`
+
+Globally define this macro to enable xref:#stats[statistics calculation] for the table. Note
+that this option decreases the overall performance of many operations.
+
+---
+
 === Constants
 
 ```cpp
@@ -477,6 +503,8 @@ concurrent_flat_map(concurrent_flat_map&& other);
 
 The move constructor. The internal bucket array of `other` is transferred directly to the new table.
 The hash function, predicate and allocator are moved-constructed from `other`.
+If statistics are xref:concurrent_flat_map_boost_unordered_enable_stats[enabled],
+transfers the internal statistical information from `other` and calls `other.reset_stats()`.
 
 [horizontal]
 Concurrency:;; Blocking on `other`.
@@ -525,6 +553,9 @@ concurrent_flat_map(concurrent_flat_map&& other, Allocator const& a);
 If `a == other.get_allocator()`, the elements of `other` are transferred directly to the new table;
 otherwise, elements are moved-constructed from those of `other`. The hash function and predicate are moved-constructed
 from `other`, and the allocator is copy-constructed from `a`.
+If statistics are xref:concurrent_flat_map_boost_unordered_enable_stats[enabled],
+transfers the internal statistical information from `other` iff `a == other.get_allocator()`,
+and always calls `other.reset_stats()`.
 
 [horizontal]
 Concurrency:;; Blocking on `other`.
@@ -540,6 +571,8 @@ concurrent_flat_map(unordered_flat_map<Key, T, Hash, Pred, Allocator>&& other);
 Move construction from a xref:#unordered_flat_map[`unordered_flat_map`].
 The internal bucket array of `other` is transferred directly to the new container.
 The hash function, predicate and allocator are moved-constructed from `other`.
+If statistics are xref:concurrent_flat_map_boost_unordered_enable_stats[enabled],
+transfers the internal statistical information from `other` and calls `other.reset_stats()`.
 
 [horizontal]
 Complexity:;; O(`bucket_count()`) 
@@ -698,6 +731,9 @@ The move assignment operator. Destroys previously existing elements, swaps the h
 and move-assigns the allocator from `other` if `Alloc::propagate_on_container_move_assignment` exists and `Alloc::propagate_on_container_move_assignment::value` is `true`.
 If at this point the allocator is equal to `other.get_allocator()`, the internal bucket array of `other` is transferred directly to `*this`;
 otherwise, inserts move-constructed copies of the elements of `other`.
+If statistics are xref:concurrent_flat_map_boost_unordered_enable_stats[enabled],
+transfers the internal statistical information from `other` iff the final allocator is equal to `other.get_allocator()`,
+and always calls `other.reset_stats()`.
 
 [horizontal]
 Concurrency:;; Blocking on `*this` and `other`.
@@ -1466,6 +1502,30 @@ Invalidates pointers and references to elements, and changes the order of elemen
 [horizontal]
 Throws:;; The function has no effect if an exception is thrown, unless it is thrown by the table's hash function or comparison function.
 Concurrency:;; Blocking on `*this`.
+
+---
+
+=== Statistics
+
+==== get_stats
+```c++
+stats get_stats() const;
+```
+
+[horizontal]
+Returns:;; A statistical description of the insertion and lookup operations performed by the table so far.
+Notes:;; Only available if xref:stats[statistics calculation] is xref:concurrent_flat_map_boost_unordered_enable_stats[enabled].
+
+---
+
+==== reset_stats
+```c++
+void reset_stats() noexcept;
+```
+
+[horizontal]
+Effects:;; Sets to zero the internal statistics kept by the table.
+Notes:;; Only available if xref:stats[statistics calculation] is xref:concurrent_flat_map_boost_unordered_enable_stats[enabled].
 
 ---
 

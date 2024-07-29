@@ -123,7 +123,7 @@ test_glob_archive([archive1], "[ GLOB_ARCHIVE $archive1 : b.* ]",
                   ["$archive1(b$obj)"])
 
 ## glob wildcards:2
-test_glob_archive([archive1], '[ GLOB_ARCHIVE $archive1 : "\\b?match[\.]*" ]',
+test_glob_archive([archive1], '[ GLOB_ARCHIVE $archive1 : "\\b?match[.]*" ]',
                   ["$archive1(b_match$obj)"])
 
 ## glob wildcards:3

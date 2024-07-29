@@ -339,8 +339,13 @@ void test_move()
   signal_type sig2(dummy_combiner(2));
   BOOST_CHECK(sig2() == 2);
 
+  BOOST_CHECK(sig2.null() == false);
   sig1 = std::move(sig2);
   BOOST_CHECK(sig1() == 2);
+  BOOST_CHECK(sig2.null() == true);
+  BOOST_CHECK(sig2.empty() == true);
+  BOOST_CHECK(sig2.num_slots() == 0);
+  sig2.disconnect_all_slots();
 
   signal_type sig3(std::move(sig1));
   BOOST_CHECK(sig3() == 2);

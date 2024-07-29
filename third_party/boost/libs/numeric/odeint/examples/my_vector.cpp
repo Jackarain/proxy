@@ -75,7 +75,7 @@ namespace boost { namespace numeric { namespace odeint {
 template<size_t N>
 struct is_resizeable< my_vector<N> >
 {
-    typedef boost::true_type type;
+    typedef std::true_type type;
     static const bool value = type::value;
 };
 

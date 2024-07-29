@@ -33,7 +33,7 @@ typedef boost::numeric::ublas::matrix< double > matrix_type;
 
 struct vdp_stiff
 {
-    void operator()( const vector_type &x , vector_type &dxdt , double t )
+    void operator()( const vector_type &x , vector_type &dxdt , double )
     {
         dxdt[0] = x[1];
         dxdt[1] = -x[0] - mu * x[1] * (x[0]*x[0]-1.0);
@@ -42,7 +42,7 @@ struct vdp_stiff
 
 struct vdp_stiff_jacobi
 {
-    void operator()( const vector_type &x , matrix_type &J , const double &t , vector_type &dfdt )
+    void operator()( const vector_type &x , matrix_type &J , const double & , vector_type &dfdt )
     {
         J(0, 0) = 0.0;
         J(0, 1) = 1.0;
@@ -55,7 +55,7 @@ struct vdp_stiff_jacobi
 };
 
 
-int main( int argc , char **argv )
+int main()
 {
     //[ integrate_stiff_system
     vector_type x( 2 );

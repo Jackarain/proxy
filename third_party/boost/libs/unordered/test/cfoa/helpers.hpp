@@ -8,6 +8,8 @@
 #define BOOST_UNORDERED_TEST_CFOA_HELPERS_HPP
 
 #include "../helpers/generators.hpp"
+#include "../helpers/helpers.hpp"
+#include "../helpers/pmr.hpp"
 #include "../helpers/test.hpp"
 #include "common_helpers.hpp"
 

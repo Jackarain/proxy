@@ -46,6 +46,7 @@ run rvalues_test.cpp ;
 compile function_typeof_test.cpp
    : <cxxstd>03:<build>no <cxxstd>98:<build>no <cxxstd>0x:<build>no ;
 run result_arg_types_test.cpp ;
+run result_arg_n_types_test.cpp ;
 
 lib throw_bad_function_call : throw_bad_function_call.cpp : <link>shared:<define>THROW_BAD_FUNCTION_CALL_DYN_LINK=1 ;
 

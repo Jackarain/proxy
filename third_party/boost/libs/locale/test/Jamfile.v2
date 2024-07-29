@@ -6,7 +6,7 @@
 # https://www.boost.org/LICENSE_1_0.txt
 
 import config : requires ;
-import ../../predef/check/predef : check : predef-check ;
+import ../../predef/tools/check/predef : check : predef-check ;
 
 project : requirements
     <library>/boost/locale//boost_locale

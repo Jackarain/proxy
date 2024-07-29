@@ -48,7 +48,8 @@ test-suite conversion
 
     # Make sure that LexicalCast works the same way as some of the C++ Standard Libraries
     [ run float_types_test.cpp : : : <define>BOOST_LEXICAL_CAST_DETAIL_TEST_ON_OLD
-        <toolset>msvc:<build>no  # could have outdated behavior in some border cases
+        <toolset>msvc:<build>no         # could have outdated behavior in some border cases
+        <target-os>darwin:<build>no     # may have outdated behavior in some border cases
         : float_types_non_opt
     ]
 

@@ -49,7 +49,7 @@ jobs:
             layout: system
             python: OFF
             mpi: OFF
-            exclude: process
+            exclude: "process;geometry"
           - os: ubuntu-latest
             include: assert
             testing: ON
@@ -168,7 +168,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -194,7 +194,7 @@ jobs:
         run: |
           cd ../boost-root
           mkdir __build__ && cd __build__
-          cmake -DCMAKE_INSTALL_PREFIX=~/.local -DBoost_VERBOSE=${{matrix.verbose}} -DBUILD_TESTING=${{matrix.testing}} -DBOOST_INCLUDE_LIBRARIES=${{matrix.include}} -DBOOST_EXCLUDE_LIBRARIES=${{matrix.exclude}} -DBUILD_SHARED_LIBS=${{matrix.shared}} -DBOOST_INSTALL_LAYOUT=${{matrix.layout}} -DBOOST_ENABLE_MPI=${{matrix.mpi}} -DBOOST_ENABLE_PYTHON=${{matrix.python}} ..
+          cmake -DCMAKE_INSTALL_PREFIX=~/.local -DBoost_VERBOSE=${{matrix.verbose}} -DBUILD_TESTING=${{matrix.testing}} -DBOOST_INCLUDE_LIBRARIES="${{matrix.include}}" -DBOOST_EXCLUDE_LIBRARIES="${{matrix.exclude}}" -DBUILD_SHARED_LIBS=${{matrix.shared}} -DBOOST_INSTALL_LAYOUT=${{matrix.layout}} -DBOOST_ENABLE_MPI=${{matrix.mpi}} -DBOOST_ENABLE_PYTHON=${{matrix.python}} ..
 
       - name: Build Boost
         run: |
@@ -296,7 +296,7 @@ jobs:
         shell: cmd
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         run: |
@@ -367,7 +367,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         run: |
@@ -400,7 +400,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Test BoostFetch
         run: |
@@ -414,13 +414,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-20.04, ubuntu-22.04, macos-11, macos-12, macos-13 ]
+        os: [ ubuntu-20.04, ubuntu-22.04, macos-12, macos-13, macos-14 ]
         shared: [ ON, OFF ]
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -474,6 +474,22 @@ jobs:
           cmake --build . --target install
           cmake --install .
 
+      - name: Test add_subdirectory compatibility targets
+        run: |
+          cd ../boost-root/tools/cmake/test/add_subdir_compat
+          mkdir __build__ && cd __build__
+          cmake -DBoost_VERBOSE=ON -DBUILD_SHARED_LIBS=${{matrix.shared}} ..
+          cmake --build .
+          ctest --output-on-failure --no-tests=error
+
+      - name: Test add_subdirectory(EXCLUDE_FROM_ALL) compatibility targets
+        run: |
+          cd ../boost-root/tools/cmake/test/add_subdir_exc_compat
+          mkdir __build__ && cd __build__
+          cmake -DBoost_VERBOSE=ON -DBUILD_SHARED_LIBS=${{matrix.shared}} ..
+          cmake --build .
+          ctest --output-on-failure --no-tests=error
+
   posix-target-check:
     strategy:
       fail-fast: false
@@ -485,20 +501,20 @@ jobs:
           - os: ubuntu-22.04
             include: timer
             shared: ON
-          - os: macos-11
-            include: timer
-            shared: ON
           - os: macos-12
             include: timer
             shared: ON
           - os: macos-13
             include: timer
             shared: ON
+          - os: macos-14
+            include: timer
+            shared: ON
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -535,13 +551,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-20.04, ubuntu-22.04, macos-11, macos-12, macos-13 ]
+        os: [ ubuntu-20.04, ubuntu-22.04, macos-12, macos-13, macos-14 ]
         shared: [ ON, OFF ]
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -573,3 +589,83 @@ jobs:
         run: |
           cd ../boost-root/__build__
           cmake --build . --target check-quick
+
+  posix-install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, macos-latest ]
+        include_libraries: [ timer ]
+        layout: [ system, versioned ]
+        verbose: [ ON ]
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Boost
+        run: |
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          git submodule update --init --jobs 3
+          rm -rf tools/cmake/*
+          cp -r $GITHUB_WORKSPACE/* tools/cmake
+
+      - name: Configure (Static)
+        run: |
+          cd ../boost-root
+          mkdir __build_static__ && cd __build_static__
+          cmake -DCMAKE_INSTALL_PREFIX=~/.local -DBoost_VERBOSE=${{matrix.verbose}} -DBOOST_INCLUDE_LIBRARIES="${{matrix.include_libraries}}" -DBOOST_EXCLUDE_LIBRARIES="${{matrix.exclude_libraries}}" -DBUILD_SHARED_LIBS=OFF -DBOOST_INSTALL_LAYOUT=${{matrix.layout}} ..
+
+      - name: Build (Static)
+        run: |
+          cd ../boost-root/__build_static__
+          cmake --build .
+
+      - name: Install (Static)
+        run: |
+          cd ../boost-root/__build_static__
+          cmake --build . --target install
+
+      - name: Configure (Shared)
+        run: |
+          cd ../boost-root
+          mkdir __build_shared__ && cd __build_shared__
+          cmake -DCMAKE_INSTALL_PREFIX=~/.local -DBoost_VERBOSE=${{matrix.verbose}} -DBOOST_INCLUDE_LIBRARIES="${{matrix.include_libraries}}" -DBOOST_EXCLUDE_LIBRARIES="${{matrix.exclude_libraries}}" -DBUILD_SHARED_LIBS=ON -DBOOST_INSTALL_LAYOUT=${{matrix.layout}} ..
+
+      - name: Build (Shared)
+        run: |
+          cd ../boost-root/__build_shared__
+          cmake --build .
+
+      - name: Install (Shared)
+        run: |
+          cd ../boost-root/__build_shared__
+          cmake --build . --target install
+
+      - name: Test (Static)
+        run: |
+          cd ../boost-root/tools/cmake/test/${{matrix.include_libraries}}
+          mkdir __build_static__ && cd __build_static__
+          cmake -DCMAKE_INSTALL_PREFIX=~/.local -DBoost_VERBOSE=${{matrix.verbose}} -DBoost_USE_STATIC_LIBS=ON ..
+          cmake --build .
+          export LD_LIBRARY_PATH=$HOME/.local/lib:$LD_LIBRARY_PATH
+          cmake --build . --target check
+
+      - name: Test (Shared)
+        run: |
+          cd ../boost-root/tools/cmake/test/${{matrix.include_libraries}}
+          mkdir __build_shared__ && cd __build_shared__
+          cmake -DCMAKE_INSTALL_PREFIX=~/.local -DBoost_VERBOSE=${{matrix.verbose}} -DBoost_USE_STATIC_LIBS=OFF ..
+          cmake --build .
+          export LD_LIBRARY_PATH=$HOME/.local/lib:$LD_LIBRARY_PATH
+          cmake --build . --target check

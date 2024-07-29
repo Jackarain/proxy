@@ -626,8 +626,7 @@ B2 recognizes the following command line options.
 `-d0`::
   Suppress all informational messages.
 `-d N`::
-  Enable cumulative debugging levels from 1 to n. Values are:
-  +
+  Enable cumulative debugging levels from 1 to n. Values are: +
   1.  Show the actions taken for building targets, as they are executed
   (the default).
   2.  Show "quiet" actions and display all action text, as they are
@@ -653,6 +652,11 @@ B2 recognizes the following command line options.
 `-s var=value`::
   Set the variable `var` to `value` in the global scope of the jam language
   interpreter, overriding variables imported from the environment.
+`--command-database=_format_`::
+  Output a compile commands database as _format_. Currently _format_ can be:
+  `json`. (See xref:tasks#b2.tasks.commanddb[Command Database] for details.)
+`--command-database-out=_file_`::
+  Specify the _file_ path to output the commands database to.
 
 [[bbv2.overview.invocation.properties]]
 === Properties

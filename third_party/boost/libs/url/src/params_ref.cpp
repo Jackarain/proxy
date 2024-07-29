@@ -8,8 +8,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_IMPL_PARAMS_REF_IPP
-#define BOOST_URL_IMPL_PARAMS_REF_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/decode_view.hpp>
@@ -238,73 +236,6 @@ erase(
         opt_);
 }
 
-//------------------------------------------------
-//
-// (implementation)
-//
-//------------------------------------------------
-
-detail::params_iter_impl
-params_ref::
-find_impl(
-    detail::params_iter_impl it,
-    core::string_view key,
-    ignore_case_param ic) const noexcept
-{
-    detail::params_iter_impl end_(u_->impl_, 0);
-    if(! ic)
-    {
-        for(;;)
-        {
-            if(it.equal(end_))
-                return it;
-            if(*it.key() == key)
-                return it;
-            it.increment();
-        }
-    }
-    for(;;)
-    {
-        if(it.equal(end_))
-            return it;
-        if( grammar::ci_is_equal(
-                *it.key(), key))
-            return it;
-        it.increment();
-    }
-}
-
-detail::params_iter_impl
-params_ref::
-find_last_impl(
-    detail::params_iter_impl it,
-    core::string_view key,
-    ignore_case_param ic) const noexcept
-{
-    detail::params_iter_impl begin_(u_->impl_);
-    if(! ic)
-    {
-        for(;;)
-        {
-            if(it.equal(begin_))
-                return { u_->impl_, 0 };
-            it.decrement();
-            if(*it.key() == key)
-                return it;
-        }
-    }
-    for(;;)
-    {
-        if(it.equal(begin_))
-            return { u_->impl_, 0 };
-        it.decrement();
-        if(grammar::ci_is_equal(
-                *it.key(), key))
-            return it;
-    }
-}
-
 } // urls
 } // boost
 
-#endif

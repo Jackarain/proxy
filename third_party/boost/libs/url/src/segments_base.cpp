@@ -8,8 +8,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_IMPL_SEGMENTS_BASE_IPP
-#define BOOST_URL_IMPL_SEGMENTS_BASE_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/segments_base.hpp>
@@ -117,4 +115,3 @@ operator<<(
 } // urls
 } // boost
 
-#endif

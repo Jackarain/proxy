@@ -41,6 +41,7 @@
 
 #include "command.h"
 #include "compile.h"
+#include "events.h"
 #include "execcmd.h"
 #include "headers.h"
 #include "lists.h"
@@ -596,6 +597,9 @@ static void make1c( state const * const pState )
         {
             exec_flags |= EXEC_CMD_QUIET;
         }
+
+        // Signal that we are about to execute a command.
+        b2::trigger_event_pre_exec_cmd(pState->t);
 
         /* Execute the actual build command or fake it if no-op. */
         if ( globs.noexec || cmd->noop )

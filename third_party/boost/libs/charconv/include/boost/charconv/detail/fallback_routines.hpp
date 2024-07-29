@@ -21,13 +21,6 @@ namespace boost {
 namespace charconv {
 namespace detail {
 
-#ifdef BOOST_CHARCONV_HAS_FLOAT128
-inline int print_val(char* first, std::size_t size, char* format, __float128 value) noexcept
-{
-    return quadmath_snprintf(first, size, format, value);
-}
-#endif
-
 template <typename T>
 inline int print_val(char* first, std::size_t size, char* format, T value) noexcept
 {
@@ -73,19 +66,11 @@ to_chars_result to_chars_printf_impl(char* first, char* last, T value, chars_for
     }
 
     // Add the type identifier
-    #ifdef BOOST_CHARCONV_HAS_FLOAT128
-    BOOST_CHARCONV_IF_CONSTEXPR (std::is_same<T, __float128>::value || std::is_same<T, long double>::value)
-    {
-        format[pos] = std::is_same<T, __float128>::value ? 'Q' : 'L';
-        ++pos;
-    }
-    #else
     BOOST_CHARCONV_IF_CONSTEXPR (std::is_same<T, long double>::value)
     {
         format[pos] = 'L';
         ++pos;
     }
-    #endif
 
     // Add the format character
     switch (fmt)
@@ -205,18 +190,7 @@ from_chars_result from_chars_strtod_impl(const char* first, const char* last, T&
             r = {last, std::errc::result_out_of_range};
         }
     }
-    #ifdef BOOST_CHARCONV_HAS_FLOAT128
-    else
-    {
-        return_value = strtoflt128(buffer, &str_end);
-
-        if (return_value == HUGE_VALQ)
-        {
-            r = {last, std::errc::result_out_of_range};
-        }
-    }
-    #endif
-
+    
     // Since this is a fallback routine we are safe to check for 0
     if (return_value == 0 && str_end == last)
     {

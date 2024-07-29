@@ -33,7 +33,7 @@ jobs:
       matrix:
         include:
           - toolset: gcc-5
-            cxxstd: "11,14,1z"
+            cxxstd: "03,11,14,1z"
             address_model: 32,64
             os: ubuntu-latest
             container: ubuntu:16.04
@@ -233,10 +233,13 @@ jobs:
 
           - toolset: clang
             cxxstd: "11,14,17,2a"
-            os: macos-11
+            os: macos-12
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
-            os: macos-12
+            os: macos-13
+          - toolset: clang
+            cxxstd: "11,14,17,20,2b"
+            os: macos-14
 
     timeout-minutes: 360
     runs-on: ${{matrix.os}}
@@ -503,8 +506,9 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
           - os: macos-12
+          - os: macos-13
+          - os: macos-14
 
     runs-on: ${{matrix.os}}
 

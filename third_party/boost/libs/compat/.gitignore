@@ -1,0 +1,5 @@
+/__build__
+/toolchain.cmake
+/compile_commands.json
+/.cache
+/.vscode

@@ -8,8 +8,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_IMPL_URL_IPP
-#define BOOST_URL_IMPL_URL_IPP
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/url.hpp>
@@ -170,4 +168,3 @@ swap(url& other) noexcept
 } // urls
 } // boost
 
-#endif

@@ -1,3 +1,8 @@
+parameters:
+- name: b2_opts
+  type: string
+  default: ''
+
 steps:
 - bash: |
     set -e
@@ -26,16 +31,16 @@ steps:
   displayName: Test
 - bash: |
     set -e
-    ./src/engine/b2 b2 warnings-as-errors=on variant=debug,release address-model=32,64 toolset=${TOOLSET}
+    ./src/engine/b2 b2 warnings-as-errors=on variant=debug,release ${TOOLSET:+toolset=$TOOLSET} ${{ parameters.b2_opts }}
   displayName: "No Warnings"
 - bash: |
     set -e
     ./bootstrap.sh ${TOOLSET}
-    ./b2 --prefix=$HOME/temp/.b2 install toolset=${TOOLSET}
+    ./b2 --prefix=$HOME/temp/.b2 install ${TOOLSET:+toolset=$TOOLSET} ${{ parameters.b2_opts }}
     rm ./b2
     export PATH=$HOME/temp/.b2/bin:$PATH
     cd $HOME
     touch build.jam
     b2 -v
-    b2 -n --debug-configuration toolset=${TOOLSET}
+    b2 -n --debug-configuration ${TOOLSET:+toolset=$TOOLSET} ${{ parameters.b2_opts }}
   displayName: Bootstrap

@@ -47,9 +47,9 @@ if (NOT BOOST_COBALT_IS_ROOT)
     target_link_libraries(boost_cobalt
             PUBLIC
             Boost::asio
+            Boost::callable_traits
             Boost::circular_buffer
             Boost::config
-            Boost::container
             Boost::core
             Boost::intrusive
             Boost::leaf
@@ -99,7 +99,7 @@ else()
 
     file(GLOB_RECURSE ADOC_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.adoc)
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/doc/index.html
-                       COMMAND asciidoctor ${CMAKE_CURRENT_SOURCE_DIR}/doc/index.adoc --require asciidoctor-diagram --require asciidoctor-multipage -b multipage_html5  -o ${CMAKE_CURRENT_BINARY_DIR}/doc/index.html
+                       COMMAND asciidoctor ${CMAKE_CURRENT_SOURCE_DIR}/doc/index.adoc --require asciidoctor-diagram --require asciidoctor-multipage -b multipage_html5 -a generate-diagram -o ${CMAKE_CURRENT_BINARY_DIR}/doc/index.html
                        DEPENDS ${ADOC_FILES})
 
     add_custom_target(boost_cobalt_doc DEPENDS  ${CMAKE_CURRENT_BINARY_DIR}/doc/index.html)
@@ -137,7 +137,6 @@ else()
         if (BOOST_COBALT_USE_BOOST_CONTAINER)
             find_package(Boost REQUIRED container)
         endif()
-        include_directories(include)
     endif()
 
     add_library(boost_cobalt

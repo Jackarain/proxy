@@ -440,6 +440,7 @@ void test_issue_37()
         overflow_spot_value("1.0e+9999", HUGE_VAL);
         overflow_spot_value("-1.0e+9999", -HUGE_VAL);
     }
+    #ifndef BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE
     else
     {
         overflow_spot_value("1e99999", HUGE_VALL);
@@ -447,6 +448,7 @@ void test_issue_37()
         overflow_spot_value("1.0e+99999", HUGE_VALL);
         overflow_spot_value("-1.0e+99999", -HUGE_VALL);
     }
+    #endif
 
     overflow_spot_value("1e-99999", static_cast<T>(0.0L));
     overflow_spot_value("-1.0e-99999", static_cast<T>(-0.0L));
@@ -510,6 +512,21 @@ void test_issue_48(const T val, const char* str, const std::ptrdiff_t expected_p
     }
 }
 
+// Values that are valid floats but should fail interchange to 16-bit types
+template <typename T>
+void test_16bit_overflow(const char* str)
+{
+    const char* last = str + std::strlen(str);
+    T from_val;
+    const auto r = boost::charconv::from_chars(str, last, from_val);
+    BOOST_TEST(r.ec == std::errc::result_out_of_range);
+
+    // Validation
+    float float_val;
+    const auto r2 = boost::charconv::from_chars(str, last, float_val);
+    BOOST_TEST(r2);
+}
+
 int main()
 {
     simple_integer_test<float>();
@@ -530,20 +547,22 @@ int main()
     odd_strings_test<float>();
     odd_strings_test<double>();
 
+    #ifndef BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE
     simple_integer_test<long double>();
     simple_hex_integer_test<long double>();
     simple_scientific_test<long double>();
     simple_hex_scientific_test<long double>();
+    zero_test<long double>();
+    test_issue_37<long double>();
+    #endif
 
     zero_test<float>();
     zero_test<double>();
-    zero_test<long double>();
 
     boost_json_test<double>();
 
     test_issue_37<float>();
     test_issue_37<double>();
-    test_issue_37<long double>();
 
     test_issue_45<double>(static_cast<double>(-4109895455460520.5), "-4109895455460520.513430", 19);
     test_issue_45<double>(1.035695536657502e-308, "1.0356955366575023e-3087", 23);
@@ -1846,40 +1865,29 @@ int main()
         spot_check_nan<float>("-nan", fmt);
         spot_check_nan<double>("nan", fmt);
         spot_check_nan<double>("-nan", fmt);
-        spot_check_nan<long double>("nan", fmt);
-        spot_check_nan<long double>("-nan", fmt);
 
         spot_check_inf<float>("inf", fmt);
         spot_check_inf<float>("-inf", fmt);
         spot_check_inf<double>("inf", fmt);
         spot_check_inf<double>("-inf", fmt);
-        spot_check_inf<long double>("inf", fmt);
-        spot_check_inf<long double>("-inf", fmt);
 
         spot_check_nan<float>("NAN", fmt);
         spot_check_nan<float>("-NAN", fmt);
         spot_check_nan<double>("NAN", fmt);
         spot_check_nan<double>("-NAN", fmt);
-        spot_check_nan<long double>("NAN", fmt);
-        spot_check_nan<long double>("-NAN", fmt);
 
         spot_check_inf<float>("INF", fmt);
         spot_check_inf<float>("-INF", fmt);
         spot_check_inf<double>("INF", fmt);
         spot_check_inf<double>("-INF", fmt);
-        spot_check_inf<long double>("INF", fmt);
-        spot_check_inf<long double>("-INF", fmt);
 
         spot_check_nan<float>("nan(snan)", fmt);
         spot_check_nan<float>("-nan(snan)", fmt);
         spot_check_nan<double>("nan(snan)", fmt);
         spot_check_nan<double>("-nan(snan)", fmt);
-        spot_check_nan<long double>("nan(snan)", fmt);
-        spot_check_nan<long double>("-nan(snan)", fmt);
 
         spot_check_nan<float>("-nan(ind)", fmt);
         spot_check_nan<double>("-nan(ind)", fmt);
-        spot_check_nan<long double>("-nan(ind)", fmt);
 
         spot_check_invalid_argument<float>("na7", fmt);
         spot_check_invalid_argument<float>("na", fmt);
@@ -1889,9 +1897,36 @@ int main()
         spot_check_invalid_argument<float>("  1.23", fmt);
         spot_check_invalid_argument<double>(" 1.23", fmt);
         spot_check_invalid_argument<double>("  1.23", fmt);
+
+        #ifndef BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE
+        spot_check_nan<long double>("nan", fmt);
+        spot_check_nan<long double>("-nan", fmt);
+        spot_check_inf<long double>("inf", fmt);
+        spot_check_inf<long double>("-inf", fmt);
+        spot_check_nan<long double>("NAN", fmt);
+        spot_check_nan<long double>("-NAN", fmt);
+        spot_check_inf<long double>("INF", fmt);
+        spot_check_inf<long double>("-INF", fmt);
+        spot_check_nan<long double>("nan(snan)", fmt);
+        spot_check_nan<long double>("-nan(snan)", fmt);
+        spot_check_nan<long double>("-nan(ind)", fmt);
         spot_check_invalid_argument<long double>(" 1.23", fmt);
         spot_check_invalid_argument<long double>("  1.23", fmt);
+        #endif
     }
+
+    #ifdef BOOST_CHARCONV_HAS_FLOAT16
+    test_16bit_overflow<std::float16_t>("3.40282e+38");  // float max
+    test_16bit_overflow<std::float16_t>("-3.40282e+38"); // float lowest
+    spot_check_nan<std::float16_t>("nan");
+    spot_check_inf<std::float16_t>("INF");
+    #endif
+    #ifdef BOOST_CHARCONV_HAS_BRAINFLOAT16
+    test_16bit_overflow<std::bfloat16_t>("3.40282e+38");  // float max
+    test_16bit_overflow<std::bfloat16_t>("-3.40282e+38"); // float lowest
+    spot_check_nan<std::bfloat16_t>("nan");
+    spot_check_inf<std::bfloat16_t>("INF");
+    #endif
 
     return boost::report_errors();
 }

@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_DETAIL_IMPL_ANY_SEGMENTS_ITER_IPP
-#define BOOST_URL_DETAIL_IMPL_ANY_SEGMENTS_ITER_IPP
 
 #include <boost/url/detail/config.hpp>
 #include "../rfc/detail/charsets.hpp"
@@ -152,14 +150,11 @@ measure(
 {
     if(at_end_)
         return false;
-    encoding_opts opt;
-    opt.space_as_plus = false;
     n += detail::re_encoded_size_unsafe(
         s,
         encode_colons ?
             nocolon_pchars :
-            pchars,
-        opt);
+            pchars);
     at_end_ = true;
     return true;
 }
@@ -170,16 +165,13 @@ copy(
     char*& dest,
     char const* end) noexcept
 {
-    encoding_opts opt;
-    opt.space_as_plus = false;
     detail::re_encode_unsafe(
         dest,
         end,
         s,
         encode_colons ?
             nocolon_pchars :
-            pchars,
-        opt);
+            pchars);
 }
 
 //------------------------------------------------
@@ -195,14 +187,11 @@ measure_impl(
     core::string_view s,
     bool encode_colons) noexcept
 {
-    encoding_opts opt;
-    opt.space_as_plus = false;
     n += detail::re_encoded_size_unsafe(
         s,
         encode_colons ?
             nocolon_pchars :
-            pchars,
-        opt);
+            pchars);
 }
 
 void
@@ -213,20 +202,16 @@ copy_impl(
     core::string_view s,
     bool encode_colons) noexcept
 {
-    encoding_opts opt;
-    opt.space_as_plus = false;
     detail::re_encode_unsafe(
         dest,
         end,
         s,
         encode_colons ?
             nocolon_pchars :
-            pchars,
-        opt);
+            pchars);
 }
 
 } // detail
 } // urls
 } // boost
 
-#endif

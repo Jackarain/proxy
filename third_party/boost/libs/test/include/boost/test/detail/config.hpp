@@ -136,7 +136,7 @@ class type_info;
 #define BOOST_PP_VARIADICS 1
 #endif
 
-#if BOOST_CLANG
+#ifdef BOOST_CLANG
 #define BOOST_PP_VARIADICS 1
 #endif
 
@@ -151,7 +151,8 @@ class type_info;
 #endif /* ifndef BOOST_PP_VARIADICS */
 
 // some versions of VC exibit a manifest error with this BOOST_UNREACHABLE_RETURN
-#if BOOST_WORKAROUND(BOOST_MSVC, < 1910)
+// gcc <= 4.6 fails with unused variable even when the return is never reached 
+#if BOOST_WORKAROUND(BOOST_MSVC, < 1910) || (defined(BOOST_GCC) && BOOST_GCC < 40700)
 # define BOOST_TEST_UNREACHABLE_RETURN(x) return x
 #else
 # define BOOST_TEST_UNREACHABLE_RETURN(x) BOOST_UNREACHABLE_RETURN(x)

@@ -22,6 +22,15 @@ local warnings-as-errors-off =
     "-<toolset>gcc:<warnings-as-errors>on"
     "-<toolset>clang:<warnings-as-errors>on" ;
 
+local pedantic-errors = <warnings>pedantic
+    <toolset>gcc:<cxxflags>"-Wconversion"
+    <toolset>gcc:<cxxflags>"-Wsign-conversion"
+    <toolset>clang:<cxxflags>"-Wconversion"
+    <toolset>clang:<cxxflags>"-Wsign-conversion"
+    <toolset>msvc:<warnings-as-errors>on
+    <toolset>gcc:<warnings-as-errors>on
+    <toolset>clang:<warnings-as-errors>on ;
+
 # quick test (for CI)
 run quick.cpp ;
 
@@ -34,7 +43,8 @@ compile addressof_constexpr_test.cpp ;
 compile-fail addressof_fail_rvalue.cpp
   : $(warnings-as-errors-off) ;
 
-run checked_delete_test.cpp ;
+run checked_delete_test.cpp
+  : : : $(pedantic-errors) ;
 compile-fail checked_delete_fail.cpp
   : $(warnings-as-errors-off) ;
 compile-fail checked_delete_fail2.cpp
@@ -100,13 +110,6 @@ run sp_typeinfo_test.cpp : : : <rtti>off : sp_typeinfo_test_no_rtti ;
 run visit_each_test.cpp ;
 
 run get_pointer_test.cpp ;
-
-local pedantic-errors = <warnings>pedantic
-    <toolset>gcc:<cxxflags>"-Wconversion"
-    <toolset>clang:<cxxflags>"-Wconversion"
-    <toolset>msvc:<warnings-as-errors>on
-    <toolset>gcc:<warnings-as-errors>on
-    <toolset>clang:<warnings-as-errors>on ;
 
 run lightweight_test_test.cpp
   : : : $(pedantic-errors) ;
@@ -334,33 +337,51 @@ run type_name_test.cpp ;
 
 run snprintf_test.cpp ;
 
-run sv_types_test.cpp ;
-run sv_construct_test.cpp ;
-run sv_iteration_test.cpp ;
-run sv_element_access_test.cpp ;
-run sv_modifiers_test.cpp ;
-run sv_copy_test.cpp ;
-run sv_substr_test.cpp ;
-run sv_compare_test.cpp ;
-run sv_starts_with_test.cpp ;
-run sv_ends_with_test.cpp ;
-run sv_find_test.cpp ;
-run sv_rfind_test.cpp ;
+run sv_types_test.cpp
+  : : : $(pedantic-errors) ;
+run sv_construct_test.cpp
+  : : : $(pedantic-errors) ;
+run sv_iteration_test.cpp
+  : : : $(pedantic-errors) ;
+run sv_element_access_test.cpp
+  : : : $(pedantic-errors) ;
+run sv_modifiers_test.cpp
+  : : : $(pedantic-errors) ;
+run sv_copy_test.cpp
+  : : : $(pedantic-errors) ;
+run sv_substr_test.cpp
+  : : : $(pedantic-errors) ;
+run sv_compare_test.cpp
+  : : : $(pedantic-errors) ;
+run sv_starts_with_test.cpp
+  : : : $(pedantic-errors) ;
+run sv_ends_with_test.cpp
+  : : : $(pedantic-errors) ;
+run sv_find_test.cpp
+  : : : $(pedantic-errors) ;
+run sv_rfind_test.cpp
+  : : : $(pedantic-errors) ;
 run sv_find_first_of_test.cpp
-  : : : <toolset>gcc-4.4:<cxxflags>-Wno-type-limits ;
+  : : : $(pedantic-errors) <toolset>gcc-4.4:<cxxflags>-Wno-type-limits ;
 run sv_find_last_of_test.cpp
-  : : : <toolset>gcc-4.4:<cxxflags>-Wno-type-limits ;
+  : : : $(pedantic-errors) <toolset>gcc-4.4:<cxxflags>-Wno-type-limits ;
 run sv_find_first_not_of_test.cpp
-  : : : <toolset>gcc-4.4:<cxxflags>-Wno-type-limits ;
+  : : : $(pedantic-errors) <toolset>gcc-4.4:<cxxflags>-Wno-type-limits ;
 run sv_find_last_not_of_test.cpp
-  : : : <toolset>gcc-4.4:<cxxflags>-Wno-type-limits ;
-run sv_contains_test.cpp ;
-run sv_eq_test.cpp ;
-run sv_lt_test.cpp ;
-run sv_stream_insert_test.cpp ;
-run sv_conversion_test.cpp ;
+  : : : $(pedantic-errors) <toolset>gcc-4.4:<cxxflags>-Wno-type-limits ;
+run sv_contains_test.cpp
+  : : : $(pedantic-errors) ;
+run sv_eq_test.cpp
+  : : : $(pedantic-errors) ;
+run sv_lt_test.cpp
+  : : : $(pedantic-errors) ;
+run sv_stream_insert_test.cpp
+  : : : $(pedantic-errors) ;
+run sv_conversion_test.cpp
+  : : : $(pedantic-errors) ;
 run sv_conversion_test2.cpp : ;
-run sv_common_reference_test.cpp ;
+run sv_common_reference_test.cpp
+  : : : $(pedantic-errors) ;
 compile sv_common_reference_test2.cpp ;
 compile sv_windows_h_test.cpp ;
 compile-fail sv_nullptr_fail.cpp
@@ -415,6 +436,12 @@ run sp_thread_yield_test.cpp ;
 run sp_thread_sleep_test.cpp ;
 run yield_prim_windows_h_test.cpp ;
 run yield_prim_pthread_cancel_test.cpp : ;
+
+run pointer_in_range_test.cpp ;
+compile pointer_in_range_constexpr_test.cpp ;
+
+run minstd_rand_test.cpp
+  : : : $(pedantic-errors) ;
 
 use-project /boost/core/swap : ./swap ;
 build-project ./swap ;

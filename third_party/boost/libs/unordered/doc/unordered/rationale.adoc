@@ -102,7 +102,7 @@ and *high* and *low* are the upper and lower halves of an extended word, respect
 In 64-bit architectures, _C_ is the integer part of 2^64^&#8725;https://en.wikipedia.org/wiki/Golden_ratio[_&phi;_],
 whereas in 32 bits _C_ = 0xE817FB2Du has been obtained from https://arxiv.org/abs/2001.05304[Steele and Vigna (2021)^].
 
-When using a hash function directly suitable for open addressing, post-mixing can be opted out by via a dedicated <<hash_traits_hash_is_avalanching,`hash_is_avalanching`>>trait.
+When using a hash function directly suitable for open addressing, post-mixing can be opted out of via a dedicated <<hash_traits_hash_is_avalanching,`hash_is_avalanching`>>trait.
 `boost::hash` specializations for string types are marked as avalanching.
 
 === Platform Interoperability

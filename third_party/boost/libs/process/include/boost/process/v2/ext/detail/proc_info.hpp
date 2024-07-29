@@ -115,11 +115,5 @@ BOOST_PROCESS_V2_DECL HANDLE open_process_with_debug_privilege(boost::process::v
 
 BOOST_PROCESS_V2_END_NAMESPACE
 
-#if defined(BOOST_PROCESS_V2_HEADER_ONLY)
-
-#include <boost/process/v2/ext/detail/impl/proc_info.ipp>
-
-#endif
-
 #endif // BOOST_PROCESS_V2_DETAIL_PROC_INFO_HPP
 

@@ -68,6 +68,18 @@ static inline bool str_view_equal(const char * str_a,
 		|| ((str_a != nullptr) && (str_b != nullptr) && (size_a == size_b)
 			&& (std::memcmp(str_a, str_b, size_a) == 0));
 }
+static inline int str_view_cmp(const char * str_a,
+	std::size_t size_a,
+	const char * str_b,
+	std::size_t size_b)
+{
+	if (str_a == str_b) return 0;
+	if (str_a == nullptr) return -1;
+	if (str_b == nullptr) return 1;
+	int result = std::memcmp(str_a, str_b, size_a < size_b ? size_a : size_b);
+	if (result == 0) return size_a < size_b ? -1 : 1;
+	return result;
+}
 
 namespace b2 {
 
@@ -108,6 +120,10 @@ struct value_str : value_base
 		return str_view_equal(
 			value, size, o.as_string().str, o.as_string().size);
 	}
+	virtual int compare_to(const value & o) const override
+	{
+		return str_view_cmp(value, size, o.as_string().str, o.as_string().size);
+	}
 	virtual str_view as_string() const override { return { value, size }; }
 	virtual value * to_string() override { return this; }
 
@@ -130,6 +146,12 @@ struct value_number : value_base
 	virtual bool equal_to(const value & o) const override
 	{
 		return as_number() == o.as_number();
+	}
+	virtual int compare_to(const value & o) const override
+	{
+		if (as_number() == o.as_number()) return 0;
+		if (as_number() < o.as_number()) return -1;
+		return 1;
 	}
 	virtual double as_number() const override { return value; }
 	virtual value * to_string() override
@@ -155,6 +177,12 @@ struct value_object : value_base
 	{
 		return as_object() == o.as_object();
 	}
+	virtual int compare_to(const value & o) const override
+	{
+		if (as_object() == o.as_object()) return 0;
+		if (as_object() < o.as_object()) return -1;
+		return 1;
+	}
 	virtual object * as_object() const override { return value.get(); }
 	virtual value * to_string() override
 	{
@@ -175,6 +203,11 @@ struct value_str_view : value_base
 	virtual bool equal_to(const value & o) const override
 	{
 		return str_view_equal(
+			value, size, o.as_string().str, o.as_string().size);
+	}
+	virtual int compare_to(const value & o) const override
+	{
+		return str_view_cmp(
 			value, size, o.as_string().str, o.as_string().size);
 	}
 	virtual str_view as_string() const override { return { value, size }; }

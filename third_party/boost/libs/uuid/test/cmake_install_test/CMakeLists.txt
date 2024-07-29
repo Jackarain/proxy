@@ -8,10 +8,10 @@ project(cmake_install_test LANGUAGES CXX)
 
 find_package(boost_uuid REQUIRED)
 
-add_executable(quick ../quick.cpp)
-target_link_libraries(quick Boost::uuid)
+add_executable(main main.cpp)
+target_link_libraries(main Boost::uuid)
 
 enable_testing()
-add_test(quick quick)
+add_test(main main)
 
 add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>)

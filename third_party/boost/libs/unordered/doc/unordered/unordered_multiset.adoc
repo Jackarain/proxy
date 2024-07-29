@@ -248,6 +248,16 @@ namespace boost {
   template<class K, class H, class P, class A, class Predicate>
     typename unordered_multiset<K, H, P, A>::size_type
       xref:#unordered_multiset_erase_if[erase_if](unordered_multiset<K, H, P, A>& c, Predicate pred);
+      
+  // Pmr aliases (C++17 and up)
+  namespace unordered::pmr {
+    template<class Key,
+             class Hash = boost::hash<Key>,
+             class Pred = std::equal_to<Key>>
+    using unordered_multiset =
+      boost::unordered_multiset<Key, Hash, Pred,
+        std::pmr::polymorphic_allocator<Key>>;
+  }
 }
 -----
 

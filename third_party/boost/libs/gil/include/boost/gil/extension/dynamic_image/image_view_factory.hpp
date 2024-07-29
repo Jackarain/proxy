@@ -314,20 +314,12 @@ auto nth_channel_view(any_image_view<Views...> const& src, int n)
 
 namespace detail {
 
-template <typename View, typename DstP, typename CC>
-struct get_ccv_type : color_converted_view_type<View, DstP, CC> {};
-
 template <typename Views, typename DstP, typename CC>
 struct views_get_ccv_type
 {
 private:
-    // FIXME: Remove class name injection with detail:: qualification
-    // Required as workaround for MP11 issue that treats unqualified metafunction
-    // in the class definition of the same name as the specialization (Peter Dimov):
-    //    invalid template argument for template parameter 'F', expected a class template
-    template <typename T>
-    using ccvt = detail::get_ccv_type<T, DstP, CC>;
-
+   template <typename T>
+    using ccvt = typename color_converted_view_type<T, DstP, CC>::type;
 public:
     using type = mp11::mp_transform<ccvt, Views>;
 };
@@ -340,7 +332,7 @@ template <typename ...Views, typename DstP, typename CC>
 struct color_converted_view_type<any_image_view<Views...>,DstP,CC>
 {
     //using type = any_image_view<typename detail::views_get_ccv_type<Views, DstP, CC>::type>;
-    using type = detail::views_get_ccv_type<any_image_view<Views...>, DstP, CC>;
+    using type = typename detail::views_get_ccv_type<any_image_view<Views...>, DstP, CC>::type;
 };
 
 /// \ingroup ImageViewTransformationsColorConvert
@@ -348,11 +340,11 @@ struct color_converted_view_type<any_image_view<Views...>,DstP,CC>
 /// \tparam Views Models Boost.MP11-compatible list of models of ImageViewConcept
 template <typename DstP, typename ...Views, typename CC>
 inline
-auto color_converted_view(any_image_view<Views...> const& src, CC)
+auto color_converted_view(any_image_view<Views...> const& src, CC cc)
     -> typename color_converted_view_type<any_image_view<Views...>, DstP, CC>::type
 {
     using cc_view_t = typename color_converted_view_type<any_image_view<Views...>, DstP, CC>::type;
-    return variant2::visit(detail::color_converted_view_fn<DstP, cc_view_t>(), src);
+    return variant2::visit(detail::color_converted_view_fn<DstP, cc_view_t, CC>(cc), src);
 }
 
 /// \ingroup ImageViewTransformationsColorConvert
@@ -360,7 +352,7 @@ auto color_converted_view(any_image_view<Views...> const& src, CC)
 template <typename ...Views, typename DstP>
 struct color_converted_view_type<any_image_view<Views...>,DstP>
 {
-    using type = detail::views_get_ccv_type<any_image_view<Views...>, DstP, default_color_converter>;
+    using type = typename detail::views_get_ccv_type<any_image_view<Views...>, DstP, default_color_converter>::type;
 };
 
 /// \ingroup ImageViewTransformationsColorConvert

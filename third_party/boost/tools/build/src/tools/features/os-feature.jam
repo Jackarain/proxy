@@ -8,7 +8,7 @@ import modules ;
 import os ;
 
 .os-names =
-    unknown
+    none
     aix android appletv bsd cygwin darwin freebsd haiku hpux iphone linux
     netbsd openbsd osf qnx qnxnto sgi solaris unix unixware windows vms vxworks
     freertos

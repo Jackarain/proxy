@@ -56,18 +56,30 @@ docca.reference reference.qbk
       #<doxygen:param>STRIP_FROM_INC_PATH=$(EXAMPLE_DIR)/include/docca
     ;
 
-#-------------------------------------------------------------------------------
-#
-# Produce the reference.qbk file by running
-# the reference xml through the transform.
-#
-#make reference.qbk
-#    :
-#        reference.xml
-#        transform.xsl
-#    :
-#        saxonhe.saxonhe
-#    ;
+# Produce the reference.qbk from C++ sources (Python implementation)
+docca.pyreference reference2.qbk
+    : [ glob-tree-ex include/docca : *.hpp ]
+    : <doxygen:param>ABBREVIATE_BRIEF=
+      <doxygen:param>INLINE_INHERITED_MEMB=YES
+      <doxygen:param>JAVADOC_AUTOBRIEF=YES
+      <doxygen:param>MULTILINE_CPP_IS_BRIEF=YES
+      <doxygen:param>DISTRIBUTE_GROUP_DOC=YES
+      <doxygen:param>EXTRACT_ALL=YES
+      <doxygen:param>EXTRACT_PRIVATE=YES
+      <doxygen:param>EXTRACT_STATIC=YES
+      <doxygen:param>EXTRACT_LOCAL_CLASSES=NO
+      <doxygen:param>MACRO_EXPANSION=YES
+      <doxygen:param>EXPAND_ONLY_PREDEF=YES
+      <doxygen:param>PREDEFINED="\\
+        DOXYGEN \\
+        GENERATING_DOCS \\
+        _MSC_VER"
+      <doxygen:param>STRIP_FROM_PATH=include/
+
+      <docca:config>config.json
+    ;
+
+explicit reference.qbk reference2.qbk ;
 
 #-------------------------------------------------------------------------------
 #
@@ -84,11 +96,9 @@ install images
 explicit images ;
 
 xml json_doc
-    :
-        main.qbk
-    :
-        <use>reference.qbk
-        <dependency>images
+    : main.qbk
+    : <dependency>reference.qbk
+      <dependency>images
     ;
 
 explicit json_doc ;

@@ -295,8 +295,14 @@ jobs:
               - libc++abi-15-dev
 
           - toolset: clang
-            cxxstd: "11,14,17,2a"
-            os: macos-11
+            cxxstd: "11,14,17,20,2b"
+            os: macos-12
+          - toolset: clang
+            cxxstd: "11,14,17,20,2b"
+            os: macos-13
+          - toolset: clang
+            cxxstd: "11,14,17,20,2b"
+            os: macos-14
 
     timeout-minutes: 15
     runs-on: ${{matrix.os}}

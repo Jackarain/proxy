@@ -40,7 +40,8 @@
 #define BOOST_LCAST_NO_WCHAR_T
 #endif
 
-#if defined(BOOST_HAS_INT128) && !defined(BOOST_LEXICAL_CAST_TEST_NO_128_INTS)
+// There's no typeinfo for unsigned __int128 in Xcode_15.0.1
+#if defined(BOOST_HAS_INT128) && !defined(BOOST_LEXICAL_CAST_TEST_NO_128_INTS) && !defined(__APPLE__)
 # define BOOST_LCAST_TEST_128 1
 #endif
 

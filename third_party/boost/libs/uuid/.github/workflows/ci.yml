@@ -19,20 +19,26 @@ jobs:
         include:
           - toolset: gcc-4.8
             cxxstd: "11"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: g++-4.8-multilib
+            address-model: 32,64
+          - toolset: gcc-4.9
+            cxxstd: "11"
+            container: ubuntu:16.04
+            os: ubuntu-latest
+            install: g++-4.9-multilib
             address-model: 32,64
           - toolset: gcc-5
             cxxstd: "11,14,1z"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: g++-5-multilib
             address-model: 32,64
           - toolset: gcc-6
             cxxstd: "11,14,1z"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: g++-6-multilib
             address-model: 32,64
           - toolset: gcc-7
@@ -67,6 +73,28 @@ jobs:
             address-model: 32,64
           - toolset: gcc-13
             cxxstd: "11,14,17,20,2b"
+            container: ubuntu:23.04
+            os: ubuntu-latest
+            install: g++-13-multilib
+            address-model: 32,64
+          - toolset: gcc-14
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: g++-14-multilib
+            address-model: 32,64
+          - toolset: gcc-13
+            cxxstd: "11,14,17,20,2b"
+            instruction-set: nehalem
+            cpu-requirements: [ sse4_1, sse4_2 ]
+            os: ubuntu-latest
+            container: ubuntu:23.04
+            install: g++-13-multilib
+            address-model: 32,64
+          - toolset: gcc-13
+            cxxstd: "11,14,17,20,2b"
+            instruction-set: skylake-avx512
+            cpu-requirements: [ avx512f, avx512cd, avx512vl, avx512dq, avx512bw, bmi1, bmi2 ]
             os: ubuntu-latest
             container: ubuntu:23.04
             install: g++-13-multilib
@@ -74,89 +102,124 @@ jobs:
           - toolset: clang
             compiler: clang++-3.9
             cxxstd: "11,14"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: clang-3.9
           - toolset: clang
             compiler: clang++-4.0
             cxxstd: "11,14"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: clang-4.0
           - toolset: clang
             compiler: clang++-5.0
             cxxstd: "11,14,1z"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: clang-5.0
           - toolset: clang
             compiler: clang++-6.0
             cxxstd: "11,14,17"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-6.0
           - toolset: clang
             compiler: clang++-7
             cxxstd: "11,14,17"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-7
           - toolset: clang
             compiler: clang++-8
             cxxstd: "11,14,17"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-8
           - toolset: clang
             compiler: clang++-9
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-9
           - toolset: clang
             compiler: clang++-10
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
+            install: clang-10
           - toolset: clang
             compiler: clang++-11
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
+            install: clang-11
           - toolset: clang
             compiler: clang++-12
             cxxstd: "11,14,17,20"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
+            install: clang-12
           - toolset: clang
             compiler: clang++-13
-            cxxstd: "11,14,17,20"
-            os: ubuntu-22.04
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: clang-13
           - toolset: clang
             compiler: clang++-14
-            cxxstd: "11,14,17,20"
-            os: ubuntu-22.04
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: clang-14
           - toolset: clang
             compiler: clang++-15
-            cxxstd: "11,14,17,20"
-            os: ubuntu-22.04
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: clang-15
           - toolset: clang
             compiler: clang++-16
             cxxstd: "11,14,17,20,2b"
-            os: ubuntu-latest
             container: ubuntu:23.04
+            os: ubuntu-latest
             install: clang-16
           - toolset: clang
             compiler: clang++-17
             cxxstd: "11,14,17,20,2b"
-            os: ubuntu-latest
             container: ubuntu:23.10
+            os: ubuntu-latest
             install: clang-17
           - toolset: clang
-            cxxstd: "11,14,17,2a"
-            os: macos-11
+            compiler: clang++-18
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-18
+          - toolset: clang
+            compiler: clang++-17
+            cxxstd: "11,14,17,20,2b"
+            instruction-set: nehalem
+            cpu-requirements: [ sse4_1, sse4_2 ]
+            container: ubuntu:23.10
+            os: ubuntu-latest
+            install: clang-17
+          - toolset: clang
+            compiler: clang++-17
+            cxxstd: "11,14,17,20,2b"
+            instruction-set: skylake-avx512
+            cpu-requirements: [ avx512f, avx512cd, avx512vl, avx512dq, avx512bw, bmi1, bmi2 ]
+            container: ubuntu:23.10
+            os: ubuntu-latest
+            install: clang-17
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-12
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-13
+          - toolset: clang
+            cxxstd: "11,14,17,20,2b"
+            os: macos-14
 
     runs-on: ${{matrix.os}}
     container: ${{matrix.container}}
@@ -166,6 +229,10 @@ jobs:
         shell: bash
 
     steps:
+      - name: Enable Node 16
+        run: |
+          echo "ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true" >> $GITHUB_ENV
+
       - uses: actions/checkout@v3
 
       - name: Setup container environment
@@ -178,7 +245,7 @@ jobs:
         if: matrix.install
         run: |
           sudo apt-get update
-          sudo apt-get -y install ${{matrix.install}}
+          sudo apt-get -y install ${{join(matrix.install, ' ')}}
 
       - name: Setup Boost
         run: |
@@ -198,7 +265,7 @@ jobs:
           cd boost-root
           cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
           git submodule update --init tools/boostdep
-          python3 tools/boostdep/depinst/depinst.py -I examples --git_args "--jobs 3" $LIBRARY
+          python3 tools/boostdep/depinst/depinst.py -I examples $LIBRARY
           ./bootstrap.sh
           ./b2 -d0 headers
 
@@ -210,8 +277,23 @@ jobs:
       - name: Run tests
         run: |
           cd ../boost-root
-          export ADDRMD=${{matrix.address-model}}
-          ./b2 -j3 libs/$LIBRARY/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} ${ADDRMD:+address-model=$ADDRMD} variant=debug,release
+          ADDRMD=${{matrix.address-model}}
+          INSTRUCTION_SET=${{matrix.instruction-set}}
+          if [ -n "${{matrix.cpu-requirements}}" ]
+          then
+            cpu_flags="$(lscpu | grep -F "Flags:" | sed "s/^Flags:\\s*//")";
+            for requirement in ${{join(matrix.cpu-requirements, ' ')}}
+            do
+              re="(^|[^[:alnum:]_])$requirement([^[:alnum:]_]|\$)"
+              if ! [[ "$cpu_flags" =~ $re ]]
+              then
+                echo "CPU lacks required feature: $requirement"
+                echo "Skipping testing"
+                exit 0
+              fi
+            done
+          fi
+          ./b2 -j2 libs/$LIBRARY/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} ${ADDRMD:+address-model=$ADDRMD} ${INSTRUCTION_SET:+instruction-set=$INSTRUCTION_SET} variant=debug,release
 
   windows:
     strategy:
@@ -242,7 +324,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd
@@ -270,7 +352,7 @@ jobs:
         shell: cmd
         run: |
           cd ../boost-root
-          b2 -j3 libs/%LIBRARY%/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} address-model=${{matrix.addrmd}} variant=debug,release embed-manifest-via=linker
+          b2 -j2 libs/%LIBRARY%/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} address-model=${{matrix.addrmd}} variant=debug,release embed-manifest-via=linker
 
   posix-cmake-subdir:
     strategy:
@@ -279,14 +361,14 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
           - os: macos-12
           - os: macos-13
+          - os: macos-14
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -327,14 +409,14 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
           - os: macos-12
           - os: macos-13
+          - os: macos-14
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -385,14 +467,14 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
           - os: macos-12
           - os: macos-13
+          - os: macos-14
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -445,7 +527,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd
@@ -494,7 +576,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd
@@ -561,7 +643,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd

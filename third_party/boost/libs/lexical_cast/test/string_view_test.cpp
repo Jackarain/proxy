@@ -19,18 +19,30 @@
 
 #include <boost/core/lightweight_test.hpp>
 
-using namespace boost;
 
+template <class StringView>
+void test_string_view_conversion() {
+    using boost::lexical_cast;
+
+    StringView sw = "1";
+    BOOST_TEST_EQ(lexical_cast<std::string>(sw), "1");
+    BOOST_TEST_EQ(lexical_cast<int>(sw), 1);
+
+    sw = StringView("a\0b", 3);
+    BOOST_TEST_EQ(lexical_cast<std::string>(sw), std::string("a\0b", 3));
+
+    sw = StringView("a\0b", 4);
+    BOOST_TEST_EQ(lexical_cast<std::string>(sw), std::string("a\0b", 4));
+
+    sw = StringView("\0a\0", 3);
+    BOOST_TEST_EQ(lexical_cast<std::string>(sw), std::string("\0a\0", 3));
+}
 
 int main() {
-    boost::string_view bsw = "1";
-    BOOST_TEST_EQ(lexical_cast<std::string>(bsw), "1");
-    BOOST_TEST_EQ(lexical_cast<int>(bsw), 1);
+    test_string_view_conversion<boost::string_view>();
 
 #ifndef BOOST_NO_CXX17_HDR_STRING_VIEW
-    std::string_view ssw = "42";
-    BOOST_TEST_EQ(lexical_cast<std::string>(ssw), "42");
-    BOOST_TEST_EQ(lexical_cast<int>(ssw), 42);
+    test_string_view_conversion<std::string_view>();
 #endif
 
     return boost::report_errors();

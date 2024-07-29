@@ -6,8 +6,7 @@
 #
 
 # Note: examples count as integration tests. This is only processed
-# when we're the main project and BOOST_MYSQL_INTEGRATION_TESTS is on
-find_package(Boost ${BOOST_MYSQL_VERSION} REQUIRED COMPONENTS context json url)
+# when BOOST_MYSQL_INTEGRATION_TESTS is on
 
 # Get the MySQL hostname to use for examples
 if(DEFINED ENV{BOOST_MYSQL_SERVER_HOST})
@@ -20,7 +19,6 @@ add_library(boost_mysql_examples_common INTERFACE)
 target_link_libraries(
     boost_mysql_examples_common
     INTERFACE
-    Boost::disable_autolinking
     boost_mysql_compiled
 )
 
@@ -47,18 +45,10 @@ endfunction()
 function(add_example EXAMPLE_NAME EXAMPLE_PATH)
     add_example_target(${EXAMPLE_NAME} ${EXAMPLE_PATH})
 
-    if(BOOST_MYSQL_VALGRIND_TESTS)
-        add_memcheck_test(
-            NAME "${EXAMPLE_NAME}_memcheck"
-            TARGET ${EXAMPLE_NAME}
-            ARGUMENTS ${ARGN}
-        )
-    else()
-        add_test(
-            NAME ${EXAMPLE_NAME}
-            COMMAND ${EXAMPLE_NAME} ${ARGN}
-        )
-    endif()
+    add_test(
+        NAME ${EXAMPLE_NAME}
+        COMMAND ${EXAMPLE_NAME} ${ARGN}
+    )
 endfunction()
 
 # Coroutines needs Boost.Context and shouldn't be memchecked
@@ -80,7 +70,6 @@ endfunction()
 # Regular examples are the ones that require no extra linking libs and can be run
 # with example_user example_password
 set(REGULAR_EXAMPLES
-    snippets
     tutorial
     async_callbacks
     async_coroutinescpp20
@@ -88,6 +77,7 @@ set(REGULAR_EXAMPLES
     metadata
     ssl
     timeouts
+    pipeline
 )
 
 foreach(FILE_NAME ${REGULAR_EXAMPLES})
@@ -167,6 +157,7 @@ target_link_libraries(
     Boost::context
     Boost::json
     Boost::url
+    Boost::beast
 )
 boost_mysql_common_target_settings(boost_mysql_example_connection_pool)
 run_python_example(boost_mysql_example_connection_pool run_connection_pool.py)

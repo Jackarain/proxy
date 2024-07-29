@@ -34,7 +34,6 @@
 
 #include <boost/move/utility_core.hpp>
 #include <boost/move/adl_move_swap.hpp>
-#include <boost/move/detail/force_ptr.hpp>
 #include <boost/assert.hpp>
 
 #include <memory>
@@ -61,10 +60,17 @@ class simple_allocator
    {}
 
    T* allocate(std::size_t n)
-   { return move_detail::force_ptr<T*>(::new char[sizeof(T)*n]);  }
+   { return (T*) ::operator new(sizeof(T) * n);  }
 
-   void deallocate(T*p, std::size_t)
-   { delete[] ((char*)p);}
+   void deallocate(T *ptr, std::size_t n) BOOST_NOEXCEPT_OR_NOTHROW
+   {
+      (void)n;
+      # if __cpp_sized_deallocation
+      ::operator delete((void*)ptr, n * sizeof(T));
+      #else
+      ::operator delete((void*)ptr);
+      # endif
+   }
 
    friend bool operator==(const simple_allocator &, const simple_allocator &)
    {  return true;  }
@@ -176,10 +182,17 @@ class propagation_test_allocator
    {  unique_id_ = id;  }
 
    T* allocate(std::size_t n)
-   {  return move_detail::force_ptr<T*>(::new char[sizeof(T)*n]);  }
+   {  return static_cast<T*>(::operator new(n * sizeof(T)));  }
 
-   void deallocate(T*p, std::size_t)
-   { delete[] ((char*)p);}
+   void deallocate(T *ptr, std::size_t n) BOOST_NOEXCEPT_OR_NOTHROW
+   {
+      (void)n;
+      # if __cpp_sized_deallocation
+      ::operator delete((void*)ptr, n * sizeof(T));
+      #else
+      ::operator delete((void*)ptr);
+      # endif
+   }
 
    friend bool operator==(const propagation_test_allocator &a, const propagation_test_allocator &b)
    {  return EqualIfEqualIds ? a.id_ == b.id_ : true;  }

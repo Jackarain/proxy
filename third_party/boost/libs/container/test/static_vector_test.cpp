@@ -630,7 +630,7 @@ bool default_init_test()//Test for default initialization
    typedef static_vector<unsigned char, Capacity> di_vector_t;
 
    {
-      typename dtl::aligned_storage<sizeof(di_vector_t)>::type as;
+      dtl::aligned_storage<sizeof(di_vector_t)>::type as;
       di_vector_t *pv = ::new(as.data)di_vector_t(Capacity);
 
       //Use volatile pointer to make compiler's job harder, as we are riding on UB

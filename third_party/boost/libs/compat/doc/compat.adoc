@@ -17,8 +17,7 @@ https://www.boost.org/LICENSE_1_0.txt
 
 include::compat/overview.adoc[]
 include::compat/changelog.adoc[]
-include::compat/latch.adoc[]
-include::compat/shared_lock.adoc[]
+include::compat/reference.adoc[]
 include::compat/copyright.adoc[]
 
 :leveloffset: -1

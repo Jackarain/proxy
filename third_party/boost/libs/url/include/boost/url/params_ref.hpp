@@ -916,18 +916,6 @@ public:
     //--------------------------------------------
 
 private:
-    detail::params_iter_impl
-    find_impl(
-        detail::params_iter_impl,
-        core::string_view,
-        ignore_case_param) const noexcept;
-
-    detail::params_iter_impl
-    find_last_impl(
-        detail::params_iter_impl,
-        core::string_view,
-        ignore_case_param) const noexcept;
-
     template<class FwdIt>
     void
     assign(FwdIt first, FwdIt last,

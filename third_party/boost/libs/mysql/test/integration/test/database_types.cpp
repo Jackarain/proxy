@@ -46,10 +46,10 @@
 #include <unordered_map>
 #include <vector>
 
+#include "test_common/ci_server.hpp"
 #include "test_common/create_basic.hpp"
 #include "test_common/printing.hpp"
 #include "test_integration/metadata_validator.hpp"
-#include "test_integration/safe_getenv.hpp"
 #include "test_integration/tcp_network_fixture.hpp"
 
 using namespace boost::mysql::test;
@@ -76,8 +76,6 @@ using boost::describe::operators::operator==;
 #endif
 
 // Helpers
-bool is_mariadb() { return safe_getenv("BOOST_MYSQL_TEST_DB", "mysql8") == "mariadb"; }
-
 using flagsvec = std::vector<meta_validator::flag_getter>;
 
 const flagsvec flags_unsigned{&metadata::is_unsigned};
@@ -180,15 +178,12 @@ struct table_base
         }
     }
 
-    std::string select_sql() const
-    {
-        return format_sql(opts, "SELECT * FROM {} ORDER BY id", identifier(name));
-    }
+    std::string select_sql() const { return format_sql(opts, "SELECT * FROM {:i} ORDER BY id", name); }
 
     std::string insert_sql_stmt() const
     {
         format_context ctx(opts);
-        format_sql_to(ctx, "INSERT INTO {} VALUES (", identifier(name));
+        format_sql_to(ctx, "INSERT INTO {:i} VALUES (", name);
         for (std::size_t i = 0; i < metas.size(); ++i)
         {
             if (i == 0)
@@ -203,7 +198,7 @@ struct table_base
     std::string insert_sql() const
     {
         format_context ctx(opts);
-        format_sql_to(ctx, "INSERT INTO {} VALUES ", identifier(name));
+        format_sql_to(ctx, "INSERT INTO {:i} VALUES ", name);
 
         bool is_first_row = true;
         for (const auto& r : rws)
@@ -232,7 +227,7 @@ struct table_base
         return std::move(ctx).get().value();
     }
 
-    std::string delete_sql() const { return format_sql(opts, "DELETE FROM {}", identifier(name)); }
+    std::string delete_sql() const { return format_sql(opts, "DELETE FROM {:i}", name); }
 };
 
 template <class T>

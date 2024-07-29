@@ -9,15 +9,18 @@
 
 //  libs/uuid/test/test_random_generator.cpp  -------------------------------//
 
-#include <boost/core/ignore_unused.hpp>
-#include <boost/detail/lightweight_test.hpp>
-#include <boost/predef/library/c/cloudabi.h>
-#include <boost/random.hpp>
-#include <boost/uuid/entropy_error.hpp>
 #include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/entropy_error.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/uuid.hpp>
+#include <boost/core/ignore_unused.hpp>
+#include <boost/core/lightweight_test.hpp>
+#include <boost/predef/library/c/cloudabi.h>
+#include <boost/random/additive_combine.hpp>
+#include <boost/random/linear_congruential.hpp>
+#include <boost/random/taus88.hpp>
 #include <boost/move/utility_core.hpp>
+#include <random>
 
 template <typename RandomUuidGenerator>
 void check_random_generator(RandomUuidGenerator& uuid_gen)
@@ -65,7 +68,7 @@ void test_examples()
     }
 }
 
-int main(int, char*[])
+int main()
 {
     using namespace boost::uuids;
 
@@ -88,6 +91,11 @@ int main(int, char*[])
         check_random_generator(uuid_gen2);
     }
 
+    {
+        basic_random_generator<std::minstd_rand> uuid_gen2;
+        check_random_generator(uuid_gen2);
+    }
+
     // pass by reference
     {
         boost::ecuyer1988 ecuyer1988_gen;
@@ -95,10 +103,22 @@ int main(int, char*[])
         check_random_generator(uuid_gen3);
     }
 
+    {
+        std::ranlux24 ranlux24_gen;
+        basic_random_generator<std::ranlux24> uuid_gen3(ranlux24_gen);
+        check_random_generator(uuid_gen3);
+    }
+
     // pass by pointer
     {
-        boost::lagged_fibonacci607 lagged_fibonacci607_gen;
-        basic_random_generator<boost::lagged_fibonacci607> uuid_gen4(&lagged_fibonacci607_gen);
+        boost::taus88 taus88_gen;
+        basic_random_generator<boost::taus88> uuid_gen4(&taus88_gen);
+        check_random_generator(uuid_gen4);
+    }
+
+    {
+        std::ranlux48 ranlux48_gen;
+        basic_random_generator<std::ranlux48> uuid_gen4(&ranlux48_gen);
         check_random_generator(uuid_gen4);
     }
 

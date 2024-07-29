@@ -30,11 +30,18 @@ toolset.inherit-generators clang-linux
     <toolset>clang <toolset-clang:platform>linux : gcc
   : gcc.mingw.link gcc.mingw.link.dll gcc.cygwin.link gcc.cygwin.link.dll ;
 
+local all-os = [ feature.values <target-os> ] ;
+local all-arch = [ feature.values <architecture> ] ;
+
 toolset.inherit-rules clang-linux : gcc ;
 toolset.inherit-flags clang-linux : gcc
   : <inlining>full
     <lto>on/<lto-mode>full
     <lto>on/<lto-mode>fat
+    <target-os>$(all-os)/<address-model>32
+    <target-os>$(all-os)/<address-model>64
+    <target-os>$(all-os)/<architecture>$(all-arch)/<address-model>32
+    <target-os>$(all-os)/<architecture>$(all-arch)/<address-model>64
   : INCLUDE-GCH
   ;
 
@@ -126,6 +133,12 @@ rule get-short-version ( command-string : single-digit-since ? )
     return $(version[1]) ;
 }
 
+local rule compile-link-flags ( * )
+{
+    toolset.flags clang-linux.compile OPTIONS $(1) : $(2) ;
+    toolset.flags clang-linux.link OPTIONS $(1) : $(2) ;
+}
+
 ###############################################################################
 # Flags
 
@@ -134,6 +147,9 @@ toolset.flags clang-linux.compile INCLUDE-PCH : -include-pch ;
 # note: clang silently ignores some of these inlining options
 # For clang, 'on' and 'full' are identical.
 toolset.flags clang-linux.compile OPTIONS <inlining>full : -Wno-inline ;
+
+compile-link-flags <address-model>32 : -m32 ;
+compile-link-flags <address-model>64 : -m64 ;
 
 # LTO
 toolset.flags clang-linux.compile OPTIONS <lto>on/<lto-mode>thin : -flto=thin ;

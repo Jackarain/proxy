@@ -42,7 +42,10 @@ int main()
 {
     test<float>();
     test<double>();
+
+    #ifndef BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE
     test<long double>();
+    #endif
 
     #ifdef BOOST_CHARCONV_HAS_FLOAT128
     test<__float128>();

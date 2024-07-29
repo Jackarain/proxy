@@ -47,6 +47,11 @@ CO_TEST_CASE(generator_int)
 
   BOOST_CHECK(i == 11);
 
+  g = gen();
+  BOOST_CHECK(g);
+  while (g)
+    co_await g;
+
   co_return ;
 }
 
@@ -291,11 +296,14 @@ cobalt::generator<int, int> detached_push()
   co_return i;
 }
 
+cobalt::generator<int> np() {return cobalt::noop(42);}
+
 CO_TEST_CASE(detached_push_)
 {
   auto g = detached_push();
 
   co_await g(1);
+  co_await np();
 }
 
 BOOST_AUTO_TEST_SUITE_END();

@@ -107,10 +107,10 @@ jobs:
           - { compiler: 'clang-15', cxxstd: '17,20,2b', os: 'ubuntu-22.04', stdlib: libc++, install: 'clang-15 libc++-15-dev libc++abi-15-dev' }
 
           # OSX, clang
-          - { compiler: clang, cxxstd: '11,14,17,2a',    os: 'macos-11' }
           - { compiler: clang, cxxstd: '11,14,17,2a',    os: 'macos-12', sanitize: yes, ccache_key: "san1" }
           - { compiler: clang, cxxstd: '11,14,17,2a',    os: 'macos-12', thread-sanitize: yes, targets: 'libs/unordered/test//cfoa_tests', ccache_key: "tsan" }
           - { compiler: clang, cxxstd: '11,14,17,20,2b', os: 'macos-13' }
+          - { compiler: clang, cxxstd: '11,14,17,20,2b', os: 'macos-14' }
 
     timeout-minutes: 360
     # posix (gcc-12 w/ sanitizers is taking longer than 210 minutes
@@ -244,6 +244,8 @@ jobs:
       - name: Upload coverage
         if: matrix.coverage
         run: ci/codecov.sh "upload"
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Run coverity
         if: matrix.coverity && github.event_name == 'push' && (github.ref_name == 'develop' || github.ref_name == 'master')

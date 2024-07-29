@@ -10,6 +10,7 @@
 
 #include <boost/container/list.hpp>
 #include <boost/container/adaptive_pool.hpp>
+#include <boost/container/node_allocator.hpp>
 
 #include "dummy_test_allocator.hpp"
 #include <memory>
@@ -47,7 +48,6 @@ template class iterator_from_iiterator
 class recursive_list
 {
 public:
-   int id_;
    list<recursive_list> list_;
    list<recursive_list>::iterator it_;
    list<recursive_list>::const_iterator cit_;
@@ -78,9 +78,9 @@ struct GetAllocatorCont
    struct apply
    {
       typedef list< ValueType
-                  , typename allocator_traits<VoidAllocator>
+                    , typename allocator_traits<VoidAllocator>
                         ::template portable_rebind_alloc<ValueType>::type
-                  > type;
+                    > type;
    };
 };
 
@@ -91,9 +91,11 @@ int test_cont_variants()
    typedef typename GetAllocatorCont<VoidAllocator>::template apply<test::movable_int>::type MyMoveCont;
    typedef typename GetAllocatorCont<VoidAllocator>::template apply<test::movable_and_copyable_int>::type MyCopyMoveCont;
    typedef typename GetAllocatorCont<VoidAllocator>::template apply<test::copyable_int>::type MyCopyCont;
+   typedef typename GetAllocatorCont<VoidAllocator>::template apply<test::moveconstruct_int>::type MyMoveConstructCont;
 
    if(test::list_test<MyCont, true>())
       return 1;
+
    if(test::list_test<MyMoveCont, true>())
       return 1;
    if(test::list_test<MyCopyMoveCont, true>())
@@ -101,6 +103,8 @@ int test_cont_variants()
    if(test::list_test<MyCopyMoveCont, true>())
       return 1;
    if(test::list_test<MyCopyCont, true>())
+      return 1;
+   if (test::list_test<MyMoveConstructCont, true>())
       return 1;
 
    return 0;
@@ -171,20 +175,27 @@ int main ()
    ////////////////////////////////////
    //    Testing allocator implementations
    ////////////////////////////////////
-   //       int variants
-   if (test::list_test<list<int, std::allocator<int> >, true>())
+   if (test_cont_variants< new_allocator<void> >()) {
+      std::cerr << "test_cont_variants< std::allocator<void> > failed" << std::endl;
       return 1;
-   if (test::list_test<list<int>, true>())
+   }
+
+   if (test_cont_variants< std::allocator<void> >()) {
+      std::cerr << "test_cont_variants< std::allocator<void> > failed" << std::endl;
       return 1;
+   }
    if (test::list_test<list<int, adaptive_pool<int> >, true>())
       return 1;
-   if (test::list_test<list<test::movable_int>, true>())
-      return 1;
-   if (test::list_test<list<test::movable_and_copyable_int>, true>())
-      return 1;
-   if (test::list_test<list<test::copyable_int>, true>())
-      return 1;
 
+   if (test::list_test<list<int, node_allocator<int> >, false>())
+      return 1;
+/*
+   //       boost::container::allocator
+   if (test_cont_variants< allocator<void> >()) {
+      std::cerr << "test_cont_variants< allocator<void> > failed" << std::endl;
+      return 1;
+   }
+*/
    ////////////////////////////////////
    //    Emplace testing
    ////////////////////////////////////

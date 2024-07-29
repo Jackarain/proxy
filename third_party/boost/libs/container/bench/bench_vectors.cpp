@@ -293,7 +293,7 @@ void test_vectors()
       #endif
       std::size_t numele [] = { 100000 };
    #elif defined SIMPLE_IT
-      std::size_t numit [] = { 100 };
+      std::size_t numit [] = { 10 };
       std::size_t numele [] = { 100000 };
    #else
       #ifdef NDEBUG

@@ -29,7 +29,7 @@ The `State Wrapper` concept describes the way odeint creates temporary state obj
 
 [table
   [[Name] [Expression] [Type] [Semantics]]
-  [[Get resizeability] [`is_resizeable< State >`] [`boost::false_type` or `boost::true_type`] [Returns `boost::true_type` if the `State` is resizeable, `boost::false_type` otherwise.]]
+  [[Get resizeability] [`is_resizeable< State >`] [`std::false_type` or `std::true_type`] [Returns `std::true_type` if the `State` is resizeable, `std::false_type` otherwise.]]
   [[Create `WrappedState` type] [`state_wrapper< State >`] [`WrappedState`] [Creates the type for a `WrappedState` for the state type `State`]]
   [[Constructor] [`WrappedState()`] [`WrappedState`] [Constructs a state wrapper with an empty state]]
   [[Copy Constructor] [`WrappedState( w )`] [`WrappedState`] [Constructs a state wrapper with a state of the same size as the state in `w`]]

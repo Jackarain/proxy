@@ -143,6 +143,12 @@ class message_queue_t
 
    #endif //defined(BOOST_INTERPROCESS_WCHAR_NAMED_RESOURCES) || defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
 
+   //!Creates a process shared message queue in anonymous memory. For this message queue,
+   //!the maximum number of messages will be "max_num_msg" and the maximum message size
+   //!will be "max_msg_size". Throws on error.
+   message_queue_t(size_type max_num_msg,
+                 size_type max_msg_size);
+
    //!Destroys *this and indicates that the calling process is finished using
    //!the resource. All opened message queues are still
    //!valid after destruction. The destructor function will deallocate
@@ -803,6 +809,15 @@ inline message_queue_t<VoidPointer>::message_queue_t(open_only_t, const wchar_t 
 {}
 
 #endif //defined(BOOST_INTERPROCESS_WCHAR_NAMED_RESOURCES) || defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
+
+template <class VoidPointer>
+inline message_queue_t<VoidPointer>::message_queue_t(size_type max_num_msg,
+                                    size_type max_msg_size)
+   :  m_shmem(get_mem_size(max_msg_size, max_num_msg),
+            static_cast<void*>(0),
+            //Prepare initialization functor
+            ipcdetail::msg_queue_initialization_func_t<VoidPointer> (max_num_msg, max_msg_size))
+{}
 
 template<class VoidPointer>
 inline void message_queue_t<VoidPointer>::send

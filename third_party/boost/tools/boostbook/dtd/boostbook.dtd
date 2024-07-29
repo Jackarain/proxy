@@ -240,7 +240,7 @@
 <!ELEMENT postconditions ANY>
 <!ATTLIST postconditions %boost.common.attrib;>
 
-<!ELEMENT method-group (method|overloaded-method)*>
+<!ELEMENT method-group (constructor|copy-assignment|destructor|method|overloaded-method)*>
 <!ATTLIST method-group
     name  CDATA  #REQUIRED
     %boost.common.attrib;>

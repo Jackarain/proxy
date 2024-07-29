@@ -104,6 +104,18 @@ py3-version = ;
 rule init ( version ? : cmd-or-prefix ? : includes * : libraries ?
     : condition * : extension-suffix ? )
 {
+    if ! $(.initialized)
+    {
+        .initialized = true ;
+    }
+    else
+    {
+        if ! ( $(1) || $(2) || $(3) || $(4) || $(5) || $(6) )
+        {
+            return ;
+        }
+    }
+
     project.push-current $(.project) ;
 
     debug-message Configuring python... ;

@@ -130,7 +130,8 @@ int main(int, char* [])
     // specific so we're just going to do minimal checking...
     double dbl = 1234567.890123f;
 
-#if (__cplusplus >= 201103L) || (BOOST_VERSION_NUMBER_MAJOR(BOOST_COMP_MSVC) >= 12)
+#if !defined(__MINGW32__) && ((__cplusplus >= 201103L) || (BOOST_VERSION_NUMBER_MAJOR(BOOST_COMP_MSVC) >= 12))
+    // mingw32 does not have support for hexfloat but does set __cplusplus to a C++11 value
     // msvc-12.0 and later have support for hexfloat but do not set __cplusplus to a C++11 value
     BOOST_TEST(boost::starts_with((boost::format("%A") % dbl).str(), "0X"));
     BOOST_TEST(boost::starts_with((boost::format("%a") % dbl).str(), "0x"));
@@ -204,9 +205,14 @@ int main(int, char* [])
     BOOST_TEST_EQ((boost::format("%2.2s %-4.4s % 8.8s")
         % mystr % mystr % mystr).str(), "ab abcd  abcdefg");
 
-    // coverage, operator =
+    // coverage, operator =, copy constructor
     format fmt("%1%%2%%3%");
-    fmt = fmt;
+    format fmt2;
+    fmt2 = fmt;
+    format fmt3(fmt);
+    BOOST_TEST_EQ((fmt % 'a' % 'b' % 'c').str(), "abc");
+    BOOST_TEST_EQ((fmt2 % 'b' % 'c' % 'd').str(), "bcd");
+    BOOST_TEST_EQ((fmt3 % 'c' % 'd' % 'e').str(), "cde");
 
     return boost::report_errors();
 }

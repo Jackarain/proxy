@@ -82,7 +82,7 @@ static boost::detail::splitmix64 rng;
 # pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 
-template<class T> void test_roundtrip( T value, int base )
+template<class T> void test_roundtrip_integers(T value, int base )
 {
     char buffer[ 256 ];
 
@@ -110,7 +110,7 @@ template<class T> void test_roundtrip_int8( int base )
 {
     for( int i = -256; i <= 255; ++i )
     {
-        test_roundtrip( static_cast<T>( i ), base );
+        test_roundtrip_integers(static_cast<T>( i ), base);
     }
 }
 
@@ -118,7 +118,7 @@ template<class T> void test_roundtrip_uint8( int base )
 {
     for( int i = 0; i <= 256; ++i )
     {
-        test_roundtrip( static_cast<T>( i ), base );
+        test_roundtrip_integers(static_cast<T>( i ), base);
     }
 }
 
@@ -129,7 +129,7 @@ template<class T> void test_roundtrip_int16( int base )
     for( int i = 0; i < N; ++i )
     {
         std::int16_t w = static_cast<std::int16_t>( rng() );
-        test_roundtrip( static_cast<T>( w ), base );
+        test_roundtrip_integers(static_cast<T>( w ), base);
     }
 }
 
@@ -140,7 +140,7 @@ template<class T> void test_roundtrip_uint16( int base )
     for( int i = 0; i < N; ++i )
     {
         std::uint16_t w = static_cast<std::uint16_t>( rng() );
-        test_roundtrip( static_cast<T>( w ), base );
+        test_roundtrip_integers(static_cast<T>( w ), base);
     }
 }
 
@@ -151,7 +151,7 @@ template<class T> void test_roundtrip_int32( int base )
     for( int i = 0; i < N; ++i )
     {
         std::int32_t w = static_cast<std::int32_t>( rng() );
-        test_roundtrip( static_cast<T>( w ), base );
+        test_roundtrip_integers(static_cast<T>( w ), base);
     }
 }
 
@@ -162,7 +162,7 @@ template<class T> void test_roundtrip_uint32( int base )
     for( int i = 0; i < N; ++i )
     {
         std::uint32_t w = static_cast<std::uint32_t>( rng() );
-        test_roundtrip( static_cast<T>( w ), base );
+        test_roundtrip_integers(static_cast<T>( w ), base);
     }
 }
 
@@ -173,7 +173,7 @@ template<class T> void test_roundtrip_int64( int base )
     for( int i = 0; i < N; ++i )
     {
         std::int64_t w = static_cast<std::int64_t>( rng() );
-        test_roundtrip( static_cast<T>( w ), base );
+        test_roundtrip_integers(static_cast<T>( w ), base);
     }
 }
 
@@ -184,7 +184,7 @@ template<class T> void test_roundtrip_uint64( int base )
     for( int i = 0; i < N; ++i )
     {
         std::uint64_t w = static_cast<std::uint64_t>( rng() );
-        test_roundtrip( static_cast<T>( w ), base );
+        test_roundtrip_integers(static_cast<T>( w ), base);
     }
 }
 
@@ -200,7 +200,7 @@ template<class T> void test_roundtrip_int128( int base )
     for( int i = 0; i < N; ++i )
     {
         boost::int128_type w = static_cast<boost::int128_type>( concatenate(rng(), rng()) );
-        test_roundtrip( static_cast<T>( w ), base );
+        test_roundtrip_integers(static_cast<T>( w ), base);
     }
 }
 
@@ -209,7 +209,7 @@ template<class T> void test_roundtrip_uint128( int base )
     for( int i = 0; i < N; ++i )
     {
         boost::uint128_type w = static_cast<boost::uint128_type>( concatenate(rng(), rng()) );
-        test_roundtrip( static_cast<T>( w ), base );
+        test_roundtrip_integers(static_cast<T>( w ), base);
     }
 }
 
@@ -219,36 +219,36 @@ template<class T> void test_roundtrip_uint128( int base )
 
 template<class T> void test_roundtrip_bv( int base )
 {
-    test_roundtrip( std::numeric_limits<T>::min(), base );
-    test_roundtrip( std::numeric_limits<T>::max(), base );
+    test_roundtrip_integers(std::numeric_limits<T>::min(), base);
+    test_roundtrip_integers(std::numeric_limits<T>::max(), base);
 }
 
 #ifdef BOOST_CHARCONV_HAS_INT128
 template <> void test_roundtrip_bv<boost::int128_type>(int base)
 {
-    test_roundtrip( BOOST_CHARCONV_INT128_MIN, base );
-    test_roundtrip( BOOST_CHARCONV_INT128_MAX, base );
+    test_roundtrip_integers(BOOST_CHARCONV_INT128_MIN, base);
+    test_roundtrip_integers(BOOST_CHARCONV_INT128_MAX, base);
 }
 
 template <> void test_roundtrip_bv<boost::uint128_type>(int base)
 {
-    test_roundtrip( 0, base );
-    test_roundtrip( BOOST_CHARCONV_UINT128_MAX, base );
+    test_roundtrip_integers(0, base);
+    test_roundtrip_integers(BOOST_CHARCONV_UINT128_MAX, base);
 }
 #endif
 
 // floating point types, random values
 
-template<class T> void test_roundtrip( T value )
+template<class T> void test_roundtrip( T value, boost::charconv::chars_format fmt = boost::charconv::chars_format::general )
 {
     char buffer[ 256 ];
 
-    auto r = boost::charconv::to_chars( buffer, buffer + sizeof( buffer ), value );
+    auto r = boost::charconv::to_chars( buffer, buffer + sizeof( buffer ), value, fmt );
 
     BOOST_TEST( r.ec == std::errc() );
 
     T v2 = 0;
-    auto r2 = boost::charconv::from_chars( buffer, r.ptr, v2 );
+    auto r2 = boost::charconv::from_chars( buffer, r.ptr, v2, fmt );
 
     if( BOOST_TEST( r2.ec == std::errc() ) && BOOST_TEST_EQ( v2, value ) && BOOST_TEST( r2.ptr == r.ptr) )
     {
@@ -347,16 +347,17 @@ template<typename FPType> int64_t Distance(FPType y, FPType x)
     return ToOrdinal(y) - ToOrdinal(x);
 }
 
-template <> void test_roundtrip<long double>(long double value)
+#ifndef BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE
+template <> void test_roundtrip<long double>(long double value, boost::charconv::chars_format fmt)
 {
     char buffer[ 256 ];
 
-    auto r = boost::charconv::to_chars( buffer, buffer + sizeof( buffer ), value );
+    auto r = boost::charconv::to_chars( buffer, buffer + sizeof( buffer ), value, fmt );
 
     BOOST_TEST( r.ec == std::errc() );
 
     long double v2 = 0;
-    auto r2 = boost::charconv::from_chars( buffer, r.ptr, v2 );
+    auto r2 = boost::charconv::from_chars( buffer, r.ptr, v2, fmt );
 
     if( BOOST_TEST( r2.ec == std::errc() ) && BOOST_TEST( std::abs(Distance(v2, value)) < INT64_C(1) ) )
     {
@@ -381,6 +382,7 @@ template <> void test_roundtrip<long double>(long double value)
         // LCOV_EXCL_STOP
     }
 }
+#endif
 
 // floating point types, boundary values
 
@@ -523,15 +525,19 @@ int main()
         {
             float w0 = static_cast<float>( rng() ); // 0 .. 2^64
             test_roundtrip( w0 );
+            test_roundtrip( w0, boost::charconv::chars_format::fixed );
 
             float w1 = static_cast<float>( rng() ) * static_cast<float>( q ); // 0.0 .. 1.0
             test_roundtrip( w1 );
+            test_roundtrip( w1, boost::charconv::chars_format::fixed );
 
             float w2 = FLT_MAX / static_cast<float>( rng() ); // large values
             test_roundtrip( w2 );
+            test_roundtrip( w2, boost::charconv::chars_format::fixed );
 
             float w3 = FLT_MIN * static_cast<float>( rng() ); // small values
             test_roundtrip( w3 );
+            test_roundtrip( w3, boost::charconv::chars_format::fixed );
         }
 
         test_roundtrip_bv<float>();
@@ -565,9 +571,11 @@ int main()
         {
             double w0 = static_cast<double>( rng() ) * 1.0; // 0 .. 2^64
             test_roundtrip( w0 );
+            test_roundtrip( w0, boost::charconv::chars_format::fixed );
 
             double w1 = static_cast<double>( rng() ) * q; // 0.0 .. 1.0
             test_roundtrip( w1 );
+            test_roundtrip( w1, boost::charconv::chars_format::fixed );
 
             double w2 = DBL_MAX / static_cast<double>( rng() ); // large values
             test_roundtrip( w2 );
@@ -601,7 +609,7 @@ int main()
     #endif
 
     // long double
-    #if !(BOOST_CHARCONV_LDBL_BITS == 128)
+    #if !(BOOST_CHARCONV_LDBL_BITS == 128) && !defined(BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE)
 
     {
         long double const ql = std::pow( 1.0L, -64 );

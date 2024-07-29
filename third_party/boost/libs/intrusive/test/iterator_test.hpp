@@ -264,6 +264,7 @@ void test_iterator_random_functions(C const &c, I const b, I const e)
          BOOST_TEST(i == it - b);
          BOOST_TEST(b[i] == *it);
          BOOST_TEST(&b[i] == &*it);
+         BOOST_TEST(&b[0] == &it[-i]);
          BOOST_TEST((b + i) == it);
          BOOST_TEST((i + b) == it);
          BOOST_TEST(b == (it - i));

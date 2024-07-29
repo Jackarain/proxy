@@ -7,8 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-#ifndef BOOST_URL_DETAIL_IMPL_IPVFUTURE_RULE_IPP
-#define BOOST_URL_DETAIL_IMPL_IPVFUTURE_RULE_IPP
 
 #include <boost/url/detail/config.hpp>
 #include "ipvfuture_rule.hpp"
@@ -72,4 +70,3 @@ parse(
 } // urls
 } // boost
 
-#endif

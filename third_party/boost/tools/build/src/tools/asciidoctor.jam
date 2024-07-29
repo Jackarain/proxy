@@ -130,6 +130,13 @@ rule init ( command * )
         # TODO: Design and implement a mechanism to resolve generator conflicts.
         generators.override asciidoctor.convert : boostbook.docbook-to-onehtml ;
     }
+    else
+    {
+        if ! $(command)
+        {
+            return ;
+        }
+    }
 
     # The command.. Default is bare asciidoctor.
     command ?= asciidoctor ;

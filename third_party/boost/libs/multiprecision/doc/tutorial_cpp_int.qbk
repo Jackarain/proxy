@@ -107,6 +107,8 @@ result from treating the unsigned type as a 2's complement signed type.]]
 that would result from performing the operation on a 2's complement integer type.]]
 ]
 
+[note When an exception is thrown as a result of using a checked type, then the value of the target operand after the exception is caught is unspecified.]
+
 Things you should know when using this type:
 
 * Default constructed `cpp_int_backend`s have the value zero.

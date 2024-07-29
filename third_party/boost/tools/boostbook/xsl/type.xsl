@@ -85,7 +85,14 @@ Unknown type element "<xsl:value-of select="local-name(.)"/>" in type.display.na
     </xsl:if>
     <xsl:call-template name="monospaced">
       <xsl:with-param name="text">
-        <xsl:value-of select="@name"/>
+        <xsl:choose>
+          <xsl:when test="not(string(@name)='' or starts-with(string(@name), '@'))">
+            <xsl:value-of select="@name"/>
+          </xsl:when>
+          <xsl:otherwise>
+            <emphasis>[unnamed]</emphasis>
+          </xsl:otherwise>
+        </xsl:choose>
         <xsl:apply-templates select="specialization"/>
       </xsl:with-param>
     </xsl:call-template>
@@ -1417,6 +1424,9 @@ Unknown type element "<xsl:value-of select="local-name(.)"/>" in type.display.na
       <xsl:with-param name="indentation" select="$indentation"/>
     </xsl:call-template>
 
+    <!-- Doxygen generates unnamed enums with a name starting with '@' -->
+    <xsl:variable name="has-name" select="not(string(@name)='' or starts-with(string(@name), '@'))"/>
+
     <xsl:choose>
       <!-- When there is a detailed description, we only put the
            declaration in the synopsis and will put detailed documentation
@@ -1434,7 +1444,16 @@ Unknown type element "<xsl:value-of select="local-name(.)"/>" in type.display.na
               <xsl:with-param name="node" select="."/>
             </xsl:call-template>
           </xsl:with-param>
-          <xsl:with-param name="text" select="string(@name)"/>
+          <xsl:with-param name="text">
+            <xsl:choose>
+              <xsl:when test="$has-name">
+                <xsl:value-of select="@name"/>
+              </xsl:when>
+              <xsl:otherwise>
+                <emphasis>[unnamed]</emphasis>
+              </xsl:otherwise>
+            </xsl:choose>
+          </xsl:with-param>
           <xsl:with-param name="higlhight" select="false()"/>
         </xsl:call-template>
       </xsl:when>
@@ -1462,7 +1481,9 @@ Unknown type element "<xsl:value-of select="local-name(.)"/>" in type.display.na
           <xsl:with-param name="keyword" select="'enum'"/>
         </xsl:call-template>
 
-        <xsl:text> </xsl:text>
+        <xsl:if test="$has-name">
+          <xsl:text> </xsl:text>
+        </xsl:if>
 
         <xsl:call-template name="anchor">
           <xsl:with-param name="to">
@@ -1470,7 +1491,11 @@ Unknown type element "<xsl:value-of select="local-name(.)"/>" in type.display.na
               <xsl:with-param name="node" select="."/>
             </xsl:call-template>
           </xsl:with-param>
-          <xsl:with-param name="text" select="@name"/>
+          <xsl:with-param name="text">
+            <xsl:if test="$has-name">
+              <xsl:value-of select="@name"/>
+            </xsl:if>
+          </xsl:with-param>
           <xsl:with-param name="higlhight" select="false()"/>
         </xsl:call-template>
 
@@ -1502,6 +1527,7 @@ Unknown type element "<xsl:value-of select="local-name(.)"/>" in type.display.na
         <xsl:with-param name="refname">
           <xsl:call-template name="fully-qualified-name">
             <xsl:with-param name="node" select="."/>
+            <xsl:with-param name="replace-unnamed" select="true()"/>
           </xsl:call-template>
         </xsl:with-param>
         <xsl:with-param name="purpose" select="purpose/*|purpose/text()"/>
@@ -1550,7 +1576,13 @@ Unknown type element "<xsl:value-of select="local-name(.)"/>" in type.display.na
     </xsl:call-template>
 
     <!-- Header -->
-    <xsl:variable name="header" select="concat(' ', @name, ' { ')"/>
+    <xsl:variable name="header">
+      <!-- Doxygen generates unnamed enums with a name starting with '@' -->
+      <xsl:if test="not(string(@name)='' or starts-with(string(@name), '@'))">
+        <xsl:value-of select="concat(' ', @name)"/>
+      </xsl:if>
+      <xsl:text> { </xsl:text>
+    </xsl:variable>
     <xsl:call-template name="highlight-text">
       <xsl:with-param name="text" select="$header"/>
     </xsl:call-template>
@@ -1643,7 +1675,23 @@ Unknown type element "<xsl:value-of select="local-name(.)"/>" in type.display.na
           </xsl:call-template>
         </xsl:when>
         <xsl:otherwise>
-          <xsl:value-of select="$value/attribute::name"/>
+          <xsl:choose>
+            <xsl:when test="$value/attribute::id">
+              <xsl:call-template name="anchor">
+                <xsl:with-param name="to">
+                  <xsl:call-template name="generate.id">
+                    <xsl:with-param name="node" select="$value"/>
+                  </xsl:call-template>
+                </xsl:with-param>
+                <xsl:with-param name="text">
+                  <xsl:value-of select="$value/attribute::name"/>
+                </xsl:with-param>
+              </xsl:call-template>
+            </xsl:when>
+            <xsl:otherwise>
+              <xsl:value-of select="$value/attribute::name"/>
+            </xsl:otherwise>
+          </xsl:choose>
         </xsl:otherwise>
       </xsl:choose>
 

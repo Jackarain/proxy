@@ -6,60 +6,9 @@ import modules ;
 import boostcpp ;
 import package ;
 import path ;
+import stage ;
 
-# includedir
-
-rule includedir
-{
-    if ! $(.includedir)
-    {
-        local paths = [ package.paths Boost ] ;
-        .includedir = [ $(paths).includedir ] ;
-    }
-
-    return $(.includedir) ;
-}
-
-# bindir
-
-rule bindir
-{
-    if ! $(.bindir)
-    {
-        local paths = [ package.paths Boost ] ;
-        .bindir = [ $(paths).bindir ] ;
-    }
-
-    return $(.bindir) ;
-}
-
-# libdir
-
-rule libdir
-{
-    if ! $(.libdir)
-    {
-        local paths = [ package.paths Boost ] ;
-        .libdir = [ $(paths).libdir ] ;
-    }
-
-    return $(.libdir) ;
-}
-
-# cmakedir
-
-rule cmakedir
-{
-    if ! $(.cmakedir)
-    {
-        package.add-path-option cmakedir : cmake : libdir ;
-
-        local paths = [ package.paths Boost ] ;
-        .cmakedir = [ $(paths).get cmakedir ] ;
-    }
-
-    return $(.cmakedir) ;
-}
+stage.add-install-dir cmakedir : cmake : libdir ;
 
 # header-subdir
 

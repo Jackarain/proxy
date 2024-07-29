@@ -59,6 +59,13 @@ int& h( int& )
     return x;
 }
 
+static int fv_called;
+
+void fv()
+{
+    ++fv_called;
+}
+
 int main()
 {
     {
@@ -108,6 +115,26 @@ int main()
         r &= h;
 
         BOOST_TEST( r.has_error() );
+    }
+
+    {
+        result<void> r;
+        fv_called = 0;
+
+        r &= fv;
+
+        BOOST_TEST( r.has_value() );
+        BOOST_TEST_EQ( fv_called, 1 );
+    }
+
+    {
+        result<void, E> r( in_place_error );
+        fv_called = 0;
+
+        r &= fv;
+
+        BOOST_TEST( r.has_error() );
+        BOOST_TEST_EQ( fv_called, 0 );
     }
 
     return boost::report_errors();

@@ -14,6 +14,7 @@ import feature ;
 import generators ;
 import os ;
 import property ;
+import regex ;
 import set ;
 import toolset ;
 import type ;
@@ -140,6 +141,11 @@ rule compile.c++
     }
 
     check-target-platform $(1) ;
+
+    local config_command = [ regex.escape
+        [ on $(targets[1]) return $(CONFIG_COMMAND:E="") ]
+        : "()[]\\+.*^$\"" : "\\" ] ;
+    COMMAND_DATABASE on $(targets) = "(\"$(config_command)\"[^\n]*)" ;
 }
 
 actions compile.c++
@@ -150,6 +156,11 @@ actions compile.c++
 rule compile.c
 {
     check-target-platform $(1) ;
+
+    local config_command = [ regex.escape
+        [ on $(targets[1]) return $(CONFIG_COMMAND:E="") ]
+        : "()[]\\+.*^$\"" : "\\" ] ;
+    COMMAND_DATABASE on $(targets) = "(\"$(config_command)\"[^\n]*)" ;
 }
 
 actions compile.c
