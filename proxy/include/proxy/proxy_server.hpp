@@ -3696,7 +3696,7 @@ R"x*x*x(<html>
 				sha1.process_bytes(bufs.data(), file.gcount());
 
 			unsigned int hash[5];
-			sha1.get_digest(hash);
+			sha1.get_digest(*((boost::uuids::detail::sha1::digest_type*)&hash));
 
 			std::stringstream ss;
 			for (int i = 0; i < 5; ++i)
