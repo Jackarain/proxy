@@ -3695,12 +3695,12 @@ R"x*x*x(<html>
 			while (file.read(bufs.data(), buf_size) || file.gcount())
 				sha1.process_bytes(bufs.data(), file.gcount());
 
-			unsigned int hash[5];
-			sha1.get_digest(*((boost::uuids::detail::sha1::digest_type*)&hash));
+			boost::uuids::detail::sha1::digest_type hash;
+			sha1.get_digest(hash);
 
 			std::stringstream ss;
-			for (int i = 0; i < 5; ++i)
-				ss << std::hex << std::setfill('0') << std::setw(8) << hash[i];
+			for (auto const& c : hash)
+				ss << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(c);
 
 			return ss.str();
 		}
