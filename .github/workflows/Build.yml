@@ -78,7 +78,7 @@ jobs:
 
       - name: Build proxy
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS="-static" -G Ninja
+          CC=clang CXX=clang++ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS="-static" -G Ninja
           cmake --build build --config Release
 
       - name: Archive artifacts
