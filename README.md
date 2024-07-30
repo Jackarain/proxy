@@ -130,12 +130,14 @@ docker build . -t proxy:v1
 `proxy server` 不仅是一个 `proxy` 服务器，同时还可以做为一个真实的静态文件 `http` 服务，且支持 `http range`，所以也可以作为 `http` 视频文件服务器，播放器播放 `http` 视频文件时通过 `http` 的 `bytes range` 协议进行 `seek`（快进快退），使用方法如下
 
 ``` bash
-./proxy_server --autoindex true --http_doc /user/doc --server_listen 0.0.0.0:8080
+./proxy_server --autoindex true --http_doc /user/doc --server_listen 0.0.0.0:1080
 ```
 
-然后使用浏览器打开地址 `http://localhost:8080/` 运行效果（浏览器打开）：
+然后使用浏览器打开地址 `http://localhost:1080/` 运行效果（浏览器打开）：
 
-![image](https://user-images.githubusercontent.com/378220/211153949-74a84038-f899-4e48-99c7-bd6af6bef82d.png)
+![image](https://github.com/user-attachments/assets/ef8bb911-29d2-4fa0-a195-1325d1d85e5e)
+![image](https://github.com/user-attachments/assets/6c3910b0-521a-46ed-a814-61cc75166e49)
+
 
 ## 其它相关
 
