@@ -66,6 +66,27 @@ jobs:
           name: proxy_server-linux_glibc_x64
           path: build/bin/proxy_server
 
+  Alpine-linux:
+    runs-on: ubuntu-latest
+    container:
+      image: alpine:3.20.1
+    steps:
+      - name: Install packages
+        run: apk add bash git nasm yasm pkgconfig build-base clang cmake ninja linux-headers
+
+      - uses: actions/checkout@v4
+
+      - name: Build proxy
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS="-static" -G Ninja
+          cmake --build build --config Release
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: proxy_server-alpine_musl_x64
+          path: build/bin/proxy_server
+
   MiMalloc:
     runs-on: ubuntu-latest
     steps:
