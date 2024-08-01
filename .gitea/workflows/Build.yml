@@ -1,0 +1,14 @@
+name: Build
+
+on: [push]
+
+jobs:
+  Ubuntu-latest:
+    runs-on: [self-hosted]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build proxy
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF -DENABLE_SNMALLOC_STATIC=ON -G Ninja
+          cmake --build build --config Release
+
