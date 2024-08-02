@@ -429,6 +429,7 @@ set_property(TARGET boost_random PROPERTY FOLDER "third_party")
 set_property(TARGET boost_system PROPERTY FOLDER "third_party")
 set_property(TARGET boost_thread PROPERTY FOLDER "third_party")
 set_property(TARGET boost_variant2 PROPERTY FOLDER "third_party")
+set_property(TARGET boost_unordered PROPERTY FOLDER "third_party")
 
 ################################################################################
 # 使用 Threads
