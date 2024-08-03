@@ -728,7 +728,7 @@ class auto_logger_file__
 	auto_logger_file__& operator=(const auto_logger_file__&) = delete;
 
 public:
-	auto_logger_file__(std::string log_path = "")
+	explicit auto_logger_file__(std::string log_path = "")
 	{
 		if (!log_path.empty())
 			m_log_path = log_path;
@@ -1819,14 +1819,16 @@ public:
 	defined(ENABLE_LOGGER)) && !defined(DISABLE_LOGGER)
 
 // API for logging.
-inline void init_logging(const std::string& path = "");
-inline std::string log_path();
-inline std::string log_path();
-inline void shutdown_logging();
-inline void turnoff_logging() noexcept;
-inline void turnon_logging() noexcept;
-inline void toggle_write_logging(bool disable);
-inline void set_logfile_maxsize(int64_t size) noexcept;
+namespace xlogger {
+	inline void init_logging(const std::string& path/* = ""*/);
+	inline std::string log_path();
+	inline std::string log_path();
+	inline void shutdown_logging();
+	inline void turnoff_logging() noexcept;
+	inline void turnon_logging() noexcept;
+	inline void toggle_write_logging(bool disable);
+	inline void set_logfile_maxsize(int64_t size) noexcept;
+}
 
 // API for logging.
 #define XLOG_DBG xlogger::logger___(xlogger::_logger_debug_id__)
