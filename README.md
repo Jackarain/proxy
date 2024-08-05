@@ -138,6 +138,7 @@ docker build . -t proxy:v1
 ![image](https://github.com/user-attachments/assets/ef8bb911-29d2-4fa0-a195-1325d1d85e5e)
 ![image](https://github.com/user-attachments/assets/6c3910b0-521a-46ed-a814-61cc75166e49)
 
+本人的 [blog](https://www.jackarain.org) 就是直接运行在 `proxy_server` 上的静态页面(由 `jekyll` 生成)，它同时也是我的代理服务。
 
 ## 其它相关
 
