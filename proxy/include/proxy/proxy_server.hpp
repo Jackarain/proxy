@@ -110,7 +110,6 @@ namespace proxy {
 
 	using namespace net::experimental::awaitable_operators;
 	using namespace util;
-	using namespace strutil;
 
 	using tcp = net::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 	using udp = net::ip::udp;               // from <boost/asio/ip/udp.hpp>
@@ -619,10 +618,10 @@ R"x*x*x(<html>
 			http_ranges results;
 
 			// 获取其中所有 range 字符串.
-			auto ranges = split(range, ",");
+			auto ranges = strutil::split(range, ",");
 			for (const auto& str : ranges)
 			{
-				auto r = split(std::string(str), "-");
+				auto r = strutil::split(std::string(str), "-");
 
 				// range 只有一个数值.
 				if (r.size() == 1)
@@ -3646,7 +3645,7 @@ R"x*x*x(<html>
 					if (ec)
 						sz = 0;
 					filesize = boost::nowide::widen(
-						add_suffix(sz));
+						strutil::add_suffix(sz));
 					auto show_path = rpath;
 					if (show_path.size() > 50) {
 						show_path = show_path.substr(0, 47);
@@ -3852,7 +3851,7 @@ R"x*x*x(<html>
 					string_response res{ http::status::ok, request.version() };
 					res.set(http::field::server, version_string);
 					res.set(http::field::date, server_date_string());
-					auto ext = to_lower(index_html.extension().string());
+					auto ext = strutil::to_lower(index_html.extension().string());
 					if (global_mimes.count(ext))
 						res.set(http::field::content_type, global_mimes[ext]);
 					else
@@ -4087,7 +4086,7 @@ R"x*x*x(<html>
 			res.set(http::field::server, version_string);
 			res.set(http::field::date, server_date_string());
 
-			auto ext = to_lower(fs::path(path).extension().string());
+			auto ext = strutil::to_lower(fs::path(path).extension().string());
 
 			if (global_mimes.count(ext))
 				res.set(http::field::content_type, global_mimes[ext]);
