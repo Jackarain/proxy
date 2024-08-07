@@ -13,8 +13,19 @@
 using byte = unsigned char;
 using uint = unsigned int;
 
-#define B2IL(b) (((b)[0] & 0xFF) | (((b)[1] << 8) & 0xFF00) | (((b)[2] << 16) & 0xFF0000) | (((b)[3] << 24) & 0xFF000000))
-#define B2IU(b) (((b)[3] & 0xFF) | (((b)[2] << 8) & 0xFF00) | (((b)[1] << 16) & 0xFF0000) | (((b)[0] << 24) & 0xFF000000))
+constexpr int32_t B2IL(const uint8_t* b) {
+    return (static_cast<int32_t>(b[0] & 0xFF)) |
+           (static_cast<int32_t>(b[1] & 0xFF) << 8) |
+           (static_cast<int32_t>(b[2] & 0xFF) << 16) |
+           (static_cast<int32_t>(b[3] & 0xFF) << 24);
+}
+
+constexpr uint32_t B2IU(const uint8_t* b) {
+    return (static_cast<uint32_t>(b[3] & 0xFF)) |
+           (static_cast<uint32_t>(b[2] & 0xFF) << 8) |
+           (static_cast<uint32_t>(b[1] & 0xFF) << 16) |
+           (static_cast<uint32_t>(b[0] & 0xFF) << 24);
+}
 
 namespace proxy {
 
@@ -35,7 +46,7 @@ namespace proxy {
 		m_data.assign(std::istreambuf_iterator<char>(file),
 			std::istreambuf_iterator<char>());
 
-		uint length = B2IU(m_data.data());
+		uint length = B2IU((const uint8_t*)m_data.data());
 
 		m_index.resize(length * sizeof(byte));
 		memcpy(m_index.data(), m_data.data() + 4, length);
@@ -65,7 +76,7 @@ namespace proxy {
 		auto ips = ip.to_v4().to_bytes();
 
 		uint ip_prefix_value = ips[0] * 256 + ips[1];
-		uint ip2long_value = B2IU(ips);
+		uint ip2long_value = B2IU((const uint8_t*)&ips[0]);
 
 		uint start = m_flag[ip_prefix_value];
 
@@ -75,7 +86,7 @@ namespace proxy {
 
 		for (start = start * 9 + 262144; start < max_comp_len; start += 9)
 		{
-			if (B2IU(m_index.data() + start) >= ip2long_value)
+			if (B2IU((const uint8_t*)m_index.data() + start) >= ip2long_value)
 			{
 				index_m_offset = B2IL(m_index.data() + start + 4) & 0x00FFFFFF;
 				index_length = (m_index[start + 7] << 8) + m_index[start + 8];
