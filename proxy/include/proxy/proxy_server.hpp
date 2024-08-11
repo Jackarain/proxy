@@ -2414,11 +2414,11 @@ R"x*x*x(<html>
 					co_return true;
 				}
 
-				auto authority_pos = target_view.find_first_of("//") + 2;
+				const auto authority_pos = target_view.find_first_of("//") + 2;
 
 				std::string host;
 
-				auto scheme_id = urls::string_to_scheme(target_view.substr(0, authority_pos - 3));
+				const auto scheme_id = urls::string_to_scheme(target_view.substr(0, authority_pos - 3));
 				uint16_t port = urls::default_port(scheme_id);
 
 				auto host_pos = authority_pos;
@@ -2473,7 +2473,7 @@ R"x*x*x(<html>
 				}
 
 				// 处理代理请求头.
-				auto path_pos = target_view.find_first_of("/", authority_pos);
+				const auto path_pos = target_view.find_first_of("/", authority_pos);
 				if (path_pos == std::string_view::npos)
 					req.target("/");
 				else
