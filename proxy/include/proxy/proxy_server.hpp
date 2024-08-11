@@ -80,6 +80,8 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
+#include <boost/algorithm/string.hpp>
+
 #include <fmt/xchar.h>
 #include <fmt/format.h>
 
@@ -2329,13 +2331,21 @@ R"x*x*x(<html>
 					<< (pa.empty() ? std::string()
 						: ", proxy_authorization: " + pa);
 
-				auto expect_url = urls::parse_uri(target_view);
+				// 判定是否为 GET url 代理模式.
+				bool get_url_proxy = false;
+				if (boost::istarts_with(target_view, "https://") ||
+					boost::istarts_with(target_view, "http://"))
+				{
+					get_url_proxy = true;
+				}
 
 				// http 代理认证, 如果请求的 rarget 不是 http url 或认证
 				// 失败, 则按正常 web 请求处理.
 				auto auth = http_authorization(pa);
-				if (auth != PROXY_AUTH_SUCCESS || expect_url.has_error())
+				if (auth != PROXY_AUTH_SUCCESS || !get_url_proxy)
 				{
+					auto expect_url = urls::parse_absolute_uri(target_view);
+
 					if (!expect_url.has_error())
 					{
 						XLOG_WARN << "connection id: "
@@ -2404,16 +2414,48 @@ R"x*x*x(<html>
 					co_return true;
 				}
 
-				auto& url = expect_url.value();
+				auto authority_pos = target_view.find_first_of("//") + 2;
+
+				std::string host;
+
+				auto scheme_id = urls::string_to_scheme(target_view.substr(0, authority_pos - 3));
+				uint16_t port = urls::default_port(scheme_id);
+
+				auto host_pos = authority_pos;
+				auto host_end = std::string::npos;
+
+				auto port_start = std::string::npos;
+
+				for (auto pos = authority_pos; pos < target_view.size(); pos++)
+				{
+					const auto& c = target_view[pos];
+					if (c == '@')
+					{
+						host_pos = pos + 1;
+
+						host_end = std::string::npos;
+						port_start = std::string::npos;
+					}
+					else if (c == ':')
+					{
+						host_end = pos;
+						port_start = pos + 1;
+					}
+					else if (c == '/' || (pos + 1 == target_view.size()))
+					{
+						if (host_end == std::string::npos)
+							host_end = pos;
+						host = target_view.substr(host_pos, host_end - host_pos);
+
+						if (port_start != std::string::npos)
+							port = (uint16_t)std::atoi(target_view.substr(port_start, pos - port_start).c_str());
+
+						break;
+					}
+				}
 
 				if (!m_remote_socket.is_open())
 				{
-					auto host = url.host();
-					auto port = url.port_number();
-
-					if (port == 0)
-						port = urls::default_port(url.scheme_id());
-
 					// 连接到目标主机.
 					co_await start_connect_host(host,
 						port ? port : 80, ec, true);
@@ -2431,22 +2473,13 @@ R"x*x*x(<html>
 				}
 
 				// 处理代理请求头.
-				std::string query;
-				if (url.query() != "")
-				{
-					auto q = std::string(url.query());
-					if (q[0] == '?')
-						query = std::string(url.query());
-					else
-						query = "?" + std::string(url.query());
-				}
-
-				if (std::string(url.path()) == "")
-					req.target("/" + query);
+				auto path_pos = target_view.find_first_of("/", authority_pos);
+				if (path_pos == std::string_view::npos)
+					req.target("/");
 				else
-					req.target(std::string(url.path()) + query);
+					req.target(std::string(target_view.substr(path_pos)));
 
-				req.set(http::field::host, url.host());
+				req.set(http::field::host, host);
 
 				if (req.find(http::field::connection) == req.end() &&
 					req.find(http::field::proxy_connection) != req.end())
