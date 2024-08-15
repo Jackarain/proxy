@@ -1157,6 +1157,255 @@ namespace strutil
 		return true;
 	}
 
+	inline size_t count_utf8_to_utf16(std::string_view s)
+	{
+		const size_t size = s.size();
+		auto data = s.data();
+		size_t result{ size };
+
+		for (size_t index = 0; index < size;)
+		{
+			if (data[index] >= 0)
+			{
+				// use fast inner loop to skip single byte code points (which are
+				// expected to be the most frequent)
+				while ((++index < size) && (data[index] >= 0))
+					;
+
+				if (index >= size) break;
+			}
+
+			// start special handling for multi-byte code points
+			const char c{ data[index++] };
+
+			if ((c & 0x40) == 0)
+			{
+				throw std::range_error("UTF-8 string character can never start with 10xxxxxx");
+			}
+			else if ((c & 0x20) == 0) // 2 byte character, 0x80 to 0x7FF
+			{
+				if (index == size)
+				{
+					throw std::range_error("UTF-8 string is missing bytes in character");
+				}
+
+				const char c2{ data[index++] };
+				if ((c2 & 0xC0) != 0x80)
+				{
+					throw std::range_error("UTF-8 continuation byte is missing leading bit mask");
+				}
+
+				// can't require surrogates for 7FF
+				--result;
+			}
+			else if ((c & 0x10) == 0) // 3 byte character, 0x800 to 0xFFFF
+			{
+				if (size - index < 2)
+				{
+					throw std::range_error("UTF-8 string is missing bytes in character");
+				}
+
+				const char c2{ data[index++] };
+				const char c3{ data[index++] };
+				if (((c2 | c3) & 0xC0) != 0x80)
+				{
+					throw std::range_error("UTF-8 continuation byte is missing leading bit mask");
+				}
+
+				result -= 2;
+			}
+			else if ((c & 0x8) == 0) // 4 byte character, 0x10000 to 0x10FFFF
+			{
+				if (size - index < 3)
+				{
+					throw std::range_error("UTF-8 string is missing bytes in character");
+				}
+
+				const char c2{ data[index++] };
+				const char c3{ data[index++] };
+				const char c4{ data[index++] };
+				if (((c2 | c3 | c4) & 0xC0) != 0x80)
+				{
+					throw std::range_error("UTF-8 continuation byte is missing leading bit mask");
+				}
+
+				const uint32_t codePoint =
+					((c & 7) << 18) | ((c2 & 0x3f) << 12) | ((c3 & 0x3f) << 6) | (c4 & 0x3f);
+				result -= (3 - (codePoint >= 0x10000));
+			}
+			else
+			{
+				throw std::range_error("UTF-8 string has invalid Unicode code point");
+			}
+		}
+
+		return result;
+	}
+
+	inline std::optional<std::wstring> utf8_utf16(std::string_view utf8)
+	{
+		auto src_size = utf8.size();
+		auto src_data = utf8.data();
+
+		std::wstring dest(count_utf8_to_utf16(utf8), L'\0');
+		std::wstring::value_type* const dest_data = &dest[0];
+		size_t dest_index = 0;
+
+		for (size_t index = 0; index < src_size; ++index)
+		{
+			char src = src_data[index];
+			switch (src & 0xF0)
+			{
+			case 0xF0: // 4 byte character, 0x10000 to 0x10FFFF
+			{
+				const char c2{ src_data[++index] };
+				const char c3{ src_data[++index] };
+				const char c4{ src_data[++index] };
+
+				uint32_t code_point =
+					((src & 7) << 18) | ((c2 & 0x3f) << 12) | ((c3 & 0x3f) << 6) | (c4 & 0x3f);
+				if (code_point >= 0x10000)
+				{
+					code_point -= 0x10000;
+					dest_data[dest_index++] = static_cast<std::wstring::value_type>((code_point >> 10) | 0xd800);
+					dest_data[dest_index++] =
+						static_cast<std::wstring::value_type>((code_point & 0x3FF) | 0xdc00);
+				}
+				else
+				{
+					dest_data[dest_index++] = static_cast<std::wstring::value_type>(code_point);
+				}
+			}
+			break;
+			case 0xE0: // 3 byte character, 0x800 to 0xFFFF
+			{
+				const char c2{ src_data[++index] };
+				const char c3{ src_data[++index] };
+				dest_data[dest_index++] = static_cast<std::wstring::value_type>(
+					((src & 0xf) << 12) | ((c2 & 0x3f) << 6) | (c3 & 0x3f));
+			}
+			break;
+			case 0xD0: // 2 byte character, 0x80 to 0x7FF
+			case 0xC0:
+			{
+				const char c2{ src_data[++index] };
+				dest_data[dest_index++] =
+					static_cast<std::wstring::value_type>(((src & 0x1f) << 6) | (c2 & 0x3f));
+			}
+			break;
+			default: // single byte character, 0x0 to 0x7F
+				// try to use a fast inner loop for following single byte characters,
+				// since they are quite probable
+				do
+				{
+					dest_data[dest_index++] = static_cast<std::wstring::value_type>(src_data[index++]);
+				} while (index < src_size && src_data[index] > 0);
+				// adjust index since it will be incremented by the for loop
+				--index;
+			}
+		}
+
+		return dest;
+	}
+
+	inline size_t count_utf16_to_utf8(std::wstring_view w)
+	{
+		const std::wstring::value_type* const src_data = &w[0];
+		const size_t src_size = w.size();
+		size_t dest_size(src_size);
+
+		for (size_t index = 0; index < src_size; ++index)
+		{
+			const std::wstring::value_type ch(src_data[index]);
+			if (ch <= 0x7FF)
+			{
+				if (ch > 0x7F) // 2 bytes needed (11 bits used)
+				{
+					++dest_size;
+				}
+			}
+			// Check for high surrogate.
+			else if (ch >= 0xd800 && ch <= 0xdbff) // 4 bytes needed (21 bits used)
+			{
+				++index;
+				if (index == src_size)
+				{
+					throw std::range_error("UTF-16 string is missing low surrogate");
+				}
+
+				const auto low_surrogate = src_data[index];
+				if (low_surrogate < 0xdc00 || low_surrogate > 0xdfff)
+				{
+					throw std::range_error("UTF-16 string has invalid low surrogate");
+				}
+
+				dest_size += 2;
+			}
+			else // 3 bytes needed (16 bits used)
+			{
+				dest_size += 2;
+			}
+		}
+
+		return dest_size;
+	}
+
+	inline std::optional<std::string> utf16_utf8(std::wstring_view utf16)
+	{
+		const size_t src_size = utf16.size();
+		const std::wstring::value_type* const src_data = &utf16[0];
+		std::string dest(count_utf16_to_utf8(utf16), '\0');
+		std::string::value_type* const dest_data = &dest[0];
+		size_t dest_index(0);
+
+		for (size_t index = 0; index < src_size; ++index)
+		{
+			const std::wstring::value_type src = src_data[index];
+			if (src <= 0x7FF)
+			{
+				if (src <= 0x7F) // single byte character
+				{
+					dest_data[dest_index++] = static_cast<char>(src);
+				}
+				else // 2 bytes needed (11 bits used)
+				{
+					dest_data[dest_index++] = static_cast<char>(char((src >> 6) | 0xC0));        // leading 5 bits
+					dest_data[dest_index++] = static_cast<char>(char((src & 0x3f) | 0x80)); // trailing 6 bits
+				}
+			}
+			// Check for high surrogate.
+			else if (src >= 0xd800 && src <= 0xdbff)
+			{
+				const auto high_surrogate = src;
+				const auto low_surrogate = src_data[++index];
+
+				// To get from surrogate pair to Unicode code point:
+				// - subtract 0xD800 from high surrogate, this forms top ten bits
+				// - subtract 0xDC00 from low surrogate, this forms low ten bits
+				// - add 0x10000
+				// Leaves a code point in U+10000 to U+10FFFF range.
+				uint32_t code_point = high_surrogate - 0xd800;
+				code_point <<= 10;
+				code_point |= low_surrogate - 0xdc00;
+				code_point += 0x10000;
+
+				// 4 bytes needed (21 bits used)
+				dest_data[dest_index++] = static_cast<char>((code_point >> 18) | 0xF0);               // leading 3 bits
+				dest_data[dest_index++] = static_cast<char>(((code_point >> 12) & 0x3f) | 0x80); // next 6 bits
+				dest_data[dest_index++] = static_cast<char>(((code_point >> 6) & 0x3f) | 0x80);  // next 6 bits
+				dest_data[dest_index++] = static_cast<char>((code_point & 0x3f) | 0x80);         // trailing 6 bits
+			}
+			else // 3 bytes needed (16 bits used)
+			{
+				dest_data[dest_index++] = static_cast<char>((src >> 12) | 0xE0);              // leading 4 bits
+				dest_data[dest_index++] = static_cast<char>(((src >> 6) & 0x3f) | 0x80); // middle 6 bits
+				dest_data[dest_index++] = static_cast<char>((src & 0x3f) | 0x80);        // trailing 6 bits
+			}
+		}
+
+		return dest;
+	}
+
 	inline std::optional<std::wstring> string_wide(std::string_view src)
 	{
 		const char* first = src.data();
