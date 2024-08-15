@@ -3539,7 +3539,10 @@ R"x*x*x(<html>
 		inline std::wstring make_target_path(const std::string& target)
 		{
 			std::string url = "http://example.com";
-			url += target;
+			if (target.starts_with("/"))
+				url += target;
+			else
+				url += "/" + target;
 			return boost::nowide::widen(urls::parse_uri(url)->path());
 		}
 
