@@ -128,6 +128,13 @@ jobs:
             container: ubuntu:23.04
             install:
               - g++-13-multilib
+          - toolset: gcc-14
+            cxxstd: "03,11,14,17,20,23"
+            address-model: 32,64
+            os: ubuntu-latest
+            container: ubuntu:24.04
+            install:
+              - g++-14-multilib
           - name: UBSAN
             toolset: gcc-12
             cxxstd: "03,11,14,17,20,23"
@@ -286,15 +293,23 @@ jobs:
           - toolset: clang
             compiler: clang++-17
             cxxstd: "03,11,14,17,20,2b"
-            os: ubuntu-22.04
+            os: ubuntu-latest
+            container: ubuntu:23.10
             install:
               - clang-17
               - libc++-17-dev
               - libc++abi-17-dev
-            sources:
-              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main"
-            source_keys:
-              - "https://apt.llvm.org/llvm-snapshot.gpg.key"
+            cxxflags: -stdlib=libc++
+            linkflags: -stdlib=libc++
+          - toolset: clang
+            compiler: clang++-18
+            cxxstd: "03,11,14,17,20,2b"
+            os: ubuntu-latest
+            container: ubuntu:24.04
+            install:
+              - clang-18
+              - libc++-18-dev
+              - libc++abi-18-dev
             cxxflags: -stdlib=libc++
             linkflags: -stdlib=libc++
           - name: UBSAN

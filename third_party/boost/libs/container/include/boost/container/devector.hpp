@@ -2735,10 +2735,7 @@ class devector
       size_type const cap = m_.capacity;
       //Test if enough free memory would be left
       if (free_cap >= n && (free_cap - n) >= cap/devector_min_free_fraction) {
-         //Make sure relocation is happening because there was no enough space
          size_type const old_size = this->size();
-         BOOST_ASSERT(should_move_back(p) ? (back_free_cap < n) : (front_free_cap < n));
-
          T* const raw_pos = const_cast<T*>(boost::movelib::to_raw_pointer(p));
          size_type const new_size = old_size + n;
          size_type const new_front_idx = (cap - new_size) / 2u;

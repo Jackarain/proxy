@@ -9,7 +9,7 @@
 #include <boost/process/v2/error.hpp>
 
 #if defined(BOOST_PROCESS_V2_WINDOWS)
-#include <Windows.h>
+#include <windows.h>
 #endif
 
 BOOST_PROCESS_V2_BEGIN_NAMESPACE

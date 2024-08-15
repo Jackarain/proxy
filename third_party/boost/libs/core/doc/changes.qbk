@@ -7,12 +7,24 @@
 
 [section Revision History]
 
+[section Changes in 1.86.0]
+
+* Added a [link core.pointer_in_range `boost/core/pointer_in_range.hpp`] header with a `pointer_in_range`
+  function template to check if a pointer is within a given range.
+* Fixed `type_name` for abstract classes. ([github_issue 172])
+* Fixed `boost/core/type_name.hpp` compilation error with MSVC with disabled native `wchar_t` type.
+  ([github_issue 173])
+* Added a workaround for an MSVC [@https://developercommunity.visualstudio.com/t/Compiler-bug:-Incorrect-C2247-and-C2248/10690025 bug]
+  causing `empty_value` compilation errors when it is used with a nested class. ([github_pr 175])
+
+[endsect]
+
 [section Changes in 1.85.0]
 
 * Added a new [link core.functor `boost/core/functor.hpp`] header with a `functor` class template
   for wrapping a raw function into a function object class.
 * Changed [link core.null_deleter `null_deleter`], [link core.fclose_deleter `fclose_deleter`]
-  and [link.checked_delete checked deleter] definitions so that they don't bring namespace `boost`
+  and [link core.checked_delete checked deleter] definitions so that they don't bring namespace `boost`
   into argument-dependent lookup in cases like this:
   ```
   std::unique_ptr< std::FILE, boost::fclose_deleter > p1, p2;

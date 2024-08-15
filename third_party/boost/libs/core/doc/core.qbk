@@ -20,6 +20,9 @@ or copy at http://boost.org/LICENSE_1_0.txt)
   ]
 ]
 
+[template github_issue[key]'''<ulink url="https://github.com/boostorg/core/issues/'''[key]'''">#'''[key]'''</ulink>''']
+[template github_pr[key]'''<ulink url="https://github.com/boostorg/core/pull/'''[key]'''">PR#'''[key]'''</ulink>''']
+
 [template simplesect[title]
 [block '''<simplesect><title>'''[title]'''</title>''']]
 

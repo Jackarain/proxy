@@ -226,6 +226,8 @@ run empty_value_test.cpp ;
 run empty_value_size_test.cpp ;
 run empty_value_final_test.cpp ;
 run empty_value_constexpr_test.cpp ;
+compile empty_value_nested_test.cpp ;
+compile-fail empty_value_compile_fail_casting.cpp ;
 
 run quick_exit_test.cpp ;
 run-fail quick_exit_fail.cpp ;

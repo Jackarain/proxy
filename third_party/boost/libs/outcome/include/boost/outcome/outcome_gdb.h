@@ -33,6 +33,10 @@ DEALINGS IN THE SOFTWARE.
 
 #ifndef BOOST_OUTCOME_DISABLE_INLINE_GDB_PRETTY_PRINTERS
 #if defined(__ELF__)
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Woverlength-strings"
+#endif
 __asm__(".pushsection \".debug_gdb_scripts\", \"MS\",@progbits,1\n"
         ".byte 4 /* Python Text */\n"
         ".ascii \"gdb.inlined-script\\n\"\n"
@@ -155,6 +159,9 @@ __asm__(".pushsection \".debug_gdb_scripts\", \"MS\",@progbits,1\n"
 
         ".byte 0\n"
         ".popsection\n");
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 #endif
 #endif
 

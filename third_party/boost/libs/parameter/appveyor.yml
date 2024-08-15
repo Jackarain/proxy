@@ -33,9 +33,6 @@ environment:
     - ARGS: toolset=gcc address-model=64 cxxstd=11,14,1z
       PATH: C:\cygwin64\bin;%PATH%
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-    - ARGS: toolset=gcc address-model=32 cxxstd=11 linkflags=-Wl,-allow-multiple-definition
-      PATH: C:\MinGW\bin;%PATH%
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
     - ARGS: toolset=gcc address-model=32 cxxstd=11,14
       PATH: C:\mingw-w64\i686-5.3.0-posix-dwarf-rt_v4-rev0\mingw32\bin;%PATH%
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015

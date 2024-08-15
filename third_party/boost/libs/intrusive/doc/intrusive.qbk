@@ -3902,6 +3902,13 @@ to be inserted in intrusive containers are allocated using `std::vector` or `std
 
 [section:release_notes Release Notes]
 
+[section:release_notes_boost_1_86_00 Boost 1.86 Release]
+
+* Fixed bugs:
+   * [@https://github.com/boostorg/intrusive/issues/86 GitHub #86: ['Invalid UTF-8 character in comment]]
+
+[endsect]
+
 [section:release_notes_boost_1_85_00 Boost 1.85 Release]
 
 * Fixed bugs:
