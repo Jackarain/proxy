@@ -1157,61 +1157,6 @@ namespace strutil
 		return true;
 	}
 
-	inline std::optional<std::u16string> utf8_utf16(std::u8string_view utf8)
-	{
-		const char8_t* first = &utf8[0];
-		const char8_t* last = first + utf8.size();
-
-		std::u16string result(utf8.size(), char16_t{ 0 });
-		char16_t* dest = &result[0];
-		char16_t* next = nullptr;
-
-		using codecvt_type = std::codecvt<char16_t, char8_t, std::mbstate_t>;
-
-		codecvt_type* cvt = new codecvt_type;
-
-		// manages reference to codecvt facet to free memory.
-		std::locale loc;
-		loc = std::locale(loc, cvt);
-
-		codecvt_type::state_type state{};
-
-		auto ret = cvt->in(
-			state, first, last, first, dest, dest + result.size(), next);
-		if (ret != codecvt_type::ok)
-			return {};
-
-		result.resize(static_cast<size_t>(next - dest));
-		return result;
-	}
-
-	inline std::optional<std::u8string> utf16_utf8(std::u16string_view utf16)
-	{
-		const char16_t* first = &utf16[0];
-		const char16_t* last = first + utf16.size();
-
-		std::u8string result((utf16.size() + 1) * 6, char{ 0 });
-		char8_t* dest = &result[0];
-		char8_t* next = nullptr;
-
-		using codecvt_type = std::codecvt<char16_t, char8_t, std::mbstate_t>;
-
-		codecvt_type* cvt = new codecvt_type;
-		// manages reference to codecvt facet to free memory.
-		std::locale loc;
-		loc = std::locale(loc, cvt);
-
-		codecvt_type::state_type state{};
-
-		auto ret = cvt->out(
-			state, first, last, first, dest, dest + result.size(), next);
-		if (ret != codecvt_type::ok)
-			return {};
-
-		result.resize(static_cast<size_t>(next - dest));
-		return result;
-	}
-
 	inline std::optional<std::wstring> string_wide(std::string_view src)
 	{
 		const char* first = src.data();
