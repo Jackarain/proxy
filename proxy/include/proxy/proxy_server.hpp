@@ -3543,7 +3543,12 @@ R"x*x*x(<html>
 				url += target;
 			else
 				url += "/" + target;
-			return boost::nowide::widen(urls::parse_uri(url)->path());
+
+			auto result = urls::parse_uri(url);
+			if (result.has_error())
+				return boost::nowide::widen(target);
+
+			return boost::nowide::widen(result->path());
 		}
 
 		inline std::string make_real_target_path(const std::string& target)
