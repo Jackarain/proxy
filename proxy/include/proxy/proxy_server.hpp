@@ -707,8 +707,9 @@ R"x*x*x(<html>
 
 			XLOG_DBG << "connection id: "
 				<< m_connection_id
-				<< ", destroyed, remaining: "
-				<< num;
+				<< ", terminated, "
+				<< num
+				<< " active connections remaining.";
 		}
 
 	public:
