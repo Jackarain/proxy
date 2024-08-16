@@ -4723,10 +4723,10 @@ R"x*x*x(<html>
 			for (const auto& ctx : m_certificates)
 			{
 				XLOG_DBG << "domain: '" << ctx.domain_
-					<< "', cert: '" << ctx.cert_.filepath_
-					<< "', key: '" << ctx.key_.filepath_
-					<< "', dhparam: '" << ctx.dhparam_.filepath_
-					<< "', pwd: '" << ctx.pwd_.filepath_ << "'";
+					<< "', cert: '" << ctx.cert_.filepath_.string()
+					<< "', key: '" << ctx.key_.filepath_.string()
+					<< "', dhparam: '" << ctx.dhparam_.filepath_.string()
+					<< "', pwd: '" << ctx.pwd_.filepath_.string() << "'";
 			}
 
     		SSL_CTX_set_tlsext_servername_callback(
