@@ -979,7 +979,7 @@ R"x*x*x(<html>
 		}
 
 		// 协议侦测协程.
-		inline net::awaitable<void> proto_detect(bool noise = true)
+		inline net::awaitable<void> proto_detect(bool first_handshake = true)
 		{
 			auto self = shared_from_this();
 			auto error = boost::system::error_code{};
@@ -1023,7 +1023,11 @@ R"x*x*x(<html>
 				}
 			};
 
-			if (!noise)
+			// first_handshake 在调用 proto_detect 时第1次为 true, 第2次调用 proto_detect
+			// 时 first_handshake 为 false, 此时就表示已经完成了 scramble 握手并协
+			// 商好了 scramble 加解密用的 key, 则此时应该为 socket 配置好加解密用的 key.
+
+			if (!first_handshake)
 			{
 				// 为 socket 设置 scramble key.
 				scramble_setup(socket);
@@ -1049,6 +1053,13 @@ R"x*x*x(<html>
 				co_return;
 			}
 
+			// detect 中的数据只有下面几种情况, 它是 http/socks4/5/ssl 协议固定的头
+			// 几个字节, 如若不是, 在启用 scramble 的情况下, 则是 scramble 协议头
+			// 此时应该进入 scramble 协商密钥, 协商密钥之后则重新进入 proto_detect
+			// 以检测在 scramble 加密后的真实协议头.
+			// 如果没启用 scramble, 接受到 http/socks4/5/ssl 协议固定的头之外的数据
+			// 则视为未知协议退出.
+
 			// scramble_peek 用于解密 peek 数据.
 			auto scramble_peek = [this](auto& sock, std::span<uint8_t> detect) mutable
 			{
@@ -1071,9 +1082,14 @@ R"x*x*x(<html>
 				}
 			};
 
-			if (!noise)
+			if (!first_handshake)
 			{
-				// peek 方式解密混淆的数据, 用于检测混淆的数据的代理协议.
+				// peek 方式解密混淆的数据, 用于检测加密混淆的数据的代理协议. 在双方启用
+				// scramble 的情况下, 上面 recv 接收到的数据则会为 scramble 加密后的
+				// 数据, 要像未启用 scramble 时那样探测协议, 就必须将上面 recv 中
+				// peek 得到的数据：detect 临时解密(因为 proxy_socket 的加密为流式加
+				// 密, 非临时解密则会对整个数据流产生错误解密), 从而得到具体的协议字节
+				// 用于后面探测逻辑.
 				scramble_peek(socket, detect);
 			}
 
@@ -1178,7 +1194,7 @@ R"x*x*x(<html>
 				// 开始启动代理协议.
 				co_await start_proxy();
 			}
-			else if (noise && m_option.scramble_)
+			else if (first_handshake && m_option.scramble_)
 			{
 				// 进入噪声握手协议, 即: 返回一段噪声给客户端, 并等待客户端返回噪声.
 				XLOG_DBG << "connection id: "
