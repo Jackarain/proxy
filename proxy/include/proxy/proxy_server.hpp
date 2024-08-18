@@ -4588,6 +4588,15 @@ R"x*x*x(<html>
 
 			certificate_file file;
 
+			// 域名在路径中，如：/etc/letsencrypt/live/www.jackarain.org/
+			boost::regex re(R"(([^\/|\\]+?\.[a-zA-Z]{2,})(?=\/?$))");
+			boost::smatch what;
+			if (boost::regex_search(directory.string(), what, re))
+			{
+				file.domain_ = std::string(what[1]);
+				strutil::trim(file.domain_);
+			}
+
 			for (const auto& entry : fs::directory_iterator(directory))
 			{
 				if (entry.is_directory())
