@@ -157,6 +157,7 @@ namespace proxy {
 	{
 		fs::path filepath_;
 		pem_type type_ { pem_type::none };
+		int chains_{ 0 };
 	};
 
 	struct certificate_file
@@ -4540,7 +4541,8 @@ R"x*x*x(<html>
 				if (line.find("-----BEGIN CERTIFICATE-----") != std::string::npos)
 				{
 					type = pem_type::cert;
-					break;
+					result.chains_++;
+					continue;
 				}
 				if (line.find("-----BEGIN DH PARAMETERS-----") != std::string::npos)
 				{
@@ -4612,7 +4614,8 @@ R"x*x*x(<html>
 					switch (type.type_)
 					{
 						case pem_type::cert:
-							file.cert_ = type;
+							if (type.chains_ > file.cert_.chains_)
+								file.cert_ = type;
 							break;
 						case pem_type::key:
 							file.key_ = type;
