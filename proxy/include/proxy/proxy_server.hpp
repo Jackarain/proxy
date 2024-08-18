@@ -981,14 +981,18 @@ R"x*x*x(<html>
 		// 协议侦测协程.
 		inline net::awaitable<void> proto_detect(bool first_handshake = true)
 		{
-			auto self = shared_from_this();
-			auto error = boost::system::error_code{};
+			// 如果 server 对象已经撤销, 说明服务已经关闭则直接退出这个 session 连接不再
+			// 进行任何处理.
 			auto server = m_proxy_server.lock();
 			if (!server)
 				co_return;
 
+			auto self = shared_from_this();
+
 			// 从 m_local_socket 中获取 tcp::socket 对象的引用.
 			auto& socket = boost::variant2::get<tcp_socket>(m_local_socket);
+
+			boost::system::error_code error;
 
 			// 等待 read 事件以确保下面 recv 偷看数据时能有数据.
 			co_await socket.async_wait(
