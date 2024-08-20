@@ -4729,7 +4729,7 @@ R"x*x*x(<html>
 					using net::detail::socket_option::boolean;
 					using reuse_port = boolean<SOL_SOCKET, SO_REUSEPORT>;
 
-					m_acceptor.set_option(reuse_port(true), ec);
+					acceptor.set_option(reuse_port(true), ec);
 					if (ec)
 					{
 						XLOG_WARN << "acceptor set_option with SO_REUSEPORT: "
@@ -4834,10 +4834,13 @@ R"x*x*x(<html>
 				using transparent6 = net::detail::socket_option::boolean<
 					IPPROTO_IPV6, IPV6_TRANSPARENT>;
 
-				boost::system::error_code error;
+				for (auto& acceptor : m_tcp_acceptors)
+				{
+					boost::system::error_code error;
 
-				m_acceptor.set_option(transparent(true), error);
-				m_acceptor.set_option(transparent6(true), error);
+					acceptor.set_option(transparent(true), error);
+					acceptor.set_option(transparent6(true), error);
+				}
 #  endif
 
 #else
