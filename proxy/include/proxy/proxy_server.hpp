@@ -4659,6 +4659,20 @@ R"x*x*x(<html>
 					return;
 				}
 
+				// 设置 password 文件, 如果存在的话.
+				if (file.pwd_.type_ != pem_type::none && fs::exists(file.pwd_.filepath_))
+				{
+					auto pwd = file.pwd_.filepath_;
+
+					ssl_ctx.set_password_callback(
+						[pwd]([[maybe_unused]] auto... args) {
+							std::string password;
+							fileop::read(pwd, password);
+							return password;
+						}
+					);
+				}
+
 				// 设置私钥文件.
 				ssl_ctx.use_private_key_file(
 					file.key_.filepath_.string(),
@@ -4684,20 +4698,6 @@ R"x*x*x(<html>
 							<< ec.message();
 						return;
 					}
-				}
-
-				// 设置 password 文件, 如果存在的话.
-				if (file.pwd_.type_ != pem_type::none && fs::exists(file.pwd_.filepath_))
-				{
-					auto pwd = file.pwd_.filepath_;
-
-					ssl_ctx.set_password_callback(
-						[pwd] ([[maybe_unused]] auto... args) {
-							std::string password;
-							fileop::read(pwd, password);
-							return password;
-						}
-					);
 				}
 
 				// 保存到 m_certificates 中.
