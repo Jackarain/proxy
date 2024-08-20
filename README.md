@@ -95,7 +95,7 @@ docker build . -t proxy:v1
 |  参    数      | 用法解释  |
 |  --------      | -----    |
 | config | 可配置一个参数配置文件，如 `server.conf`，配置文件内容以`key=value`的`ini`配置文件的方式保存，如 `server_listen=[::0]:1080`, 可参考 doc 目录下的配置文件示例 |
-| server_listen | 监听的地址以及端口，格式为 `addr:port`，支持 `ipv6-only`，支持同时监听在多个地址上 |
+| server_listen | 监听的地址以及端口，格式为 `addr:port`，支持 `v6only`(如: `addr:port-v6only`)，支持同时监听在多个地址上 |
 | reuse_port | 启用 `TCP SO_REUSEPORT` 选项，这个选项只在 `linux` 平台有效 |
 | happyeyeballs | 启用 `happyeyeballs` 连接算法，默认为启用 |
 | v4only | 仅使用 ipv4 向目标地址连接，默认为不启用 |
