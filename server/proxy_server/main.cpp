@@ -102,7 +102,8 @@ int udp_timeout;
 net::awaitable<void>
 start_proxy_server(net::io_context& ioc, server_ptr& server)
 {
-	std::vector<tcp::endpoint> listens;
+	proxy_server_option opt;
+	auto& listens = opt.listens_;
 
 	for (const auto& listen : server_listens)
 	{
@@ -116,12 +117,12 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 		}
 
 		listens.emplace_back(
-			net::ip::address::from_string(host),
-			(unsigned short)atoi(port.c_str())
+			tcp::endpoint{
+				net::ip::address::from_string(host),
+				(unsigned short)atoi(port.c_str())},
+			v6only
 		);
 	}
-
-	proxy_server_option opt;
 
 	for (const auto& user : auth_users)
 	{
@@ -193,7 +194,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.htpasswd_ = htpasswd;
 
 	server = proxy_server::make(
-		ioc.get_executor(), listens, opt);
+		ioc.get_executor(), opt);
 	server->start();
 
 	co_return;

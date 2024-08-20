@@ -27,12 +27,14 @@
 #include <thread>
 #include <type_traits>
 #include <vector>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/read_until.hpp>
+#include <boost/asio/ip/v6_only.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ip/udp.hpp>
 #include <boost/asio/ssl.hpp>
@@ -366,6 +368,11 @@ R"x*x*x(<html>
 	// proxy server 参数选项, 用于指定 proxy server 的各种参数.
 	struct proxy_server_option
 	{
+		// proxy server 侦听端口.
+		// 可同时侦听在多个 endpoint 上
+		// 其中 bool 表示是在 endpoint 是 v6 地址的情况下否是 v6only.
+		std::vector<std::tuple<tcp::endpoint, bool>> listens_;
+
 		// 授权信息.
 		// auth_users 的第1个元素为用户名, 第2个元素为密码.
 		// auth_users_ 为空时, 表示不需要认证.
@@ -4457,8 +4464,7 @@ R"x*x*x(<html>
 		proxy_server(const proxy_server&) = delete;
 		proxy_server& operator=(const proxy_server&) = delete;
 
-		proxy_server(net::any_io_executor executor,
-			const std::vector<tcp::endpoint>& endps, proxy_server_option opt)
+		proxy_server(net::any_io_executor executor, proxy_server_option opt)
 			: m_executor(executor)
 			, m_option(std::move(opt))
 		{
@@ -4473,17 +4479,15 @@ R"x*x*x(<html>
 					m_ipip.reset();
 			}
 
-			init_acceptor(endps);
+			init_acceptor();
 		}
 
 	public:
 		inline static std::shared_ptr<proxy_server>
-		make(net::any_io_executor executor,
-			const std::vector<tcp::endpoint>& endps,
-				proxy_server_option opt)
+		make(net::any_io_executor executor, proxy_server_option opt)
 		{
 			return std::shared_ptr<proxy_server>(new
-				proxy_server(executor, std::cref(endps), opt));
+				proxy_server(executor, opt));
 		}
 
 		virtual ~proxy_server() = default;
@@ -4701,9 +4705,11 @@ R"x*x*x(<html>
 			}
 		}
 
-		inline void init_acceptor(const std::vector<tcp::endpoint>& endps)
+		inline void init_acceptor()
 		{
-			for (auto& endp : endps)
+			auto& endps = m_option.listens_;
+
+			for (const auto& [endp, v6only] : endps)
 			{
 				tcp_acceptor acceptor(m_executor);
 				boost::system::error_code ec;
@@ -4736,6 +4742,16 @@ R"x*x*x(<html>
 							<< ec.message();
 					}
 #endif
+				}
+
+				if (v6only)
+				{
+					acceptor.set_option(net::ip::v6_only(true), ec);
+					if (ec)
+					{
+						XLOG_ERR << "TCP server accept "
+							<< "set v6_only failed: " << ec.message();
+					}
 				}
 
 				acceptor.bind(endp, ec);
