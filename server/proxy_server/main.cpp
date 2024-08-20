@@ -58,7 +58,7 @@ using server_ptr = std::shared_ptr<proxy_server>;
 
 //////////////////////////////////////////////////////////////////////////
 
-
+std::vector<std::string> server_listens;
 std::vector<std::string> auth_users;
 std::vector<std::string> deny_region;
 std::vector<std::string> allow_region;
@@ -68,7 +68,6 @@ std::string doc_dir;
 std::string log_dir;
 std::string local_ip;
 std::string proxy_pass;
-std::string server_listen;
 std::string ssl_cert_dir;
 std::string ssl_cacert_dir;
 std::string ssl_ciphers;
@@ -103,18 +102,24 @@ int udp_timeout;
 net::awaitable<void>
 start_proxy_server(net::io_context& ioc, server_ptr& server)
 {
-	std::string host, port;
-	bool v6only = false;
+	std::vector<tcp::endpoint> listens;
 
-	if (!parse_endpoint_string(server_listen, host, port, v6only))
+	for (const auto& listen : server_listens)
 	{
-		std::cerr << "Parse endpoint fail: " << server_listen << std::endl;
-		co_return;
-	}
+		std::string host, port;
+		bool v6only = false;
 
-	tcp::endpoint listen(
-		net::ip::address::from_string(host),
-			(unsigned short)atoi(port.c_str()));
+		if (!parse_endpoint_string(listen, host, port, v6only))
+		{
+			std::cerr << "Parse endpoint fail: " << listen << std::endl;
+			co_return;
+		}
+
+		listens.emplace_back(
+			net::ip::address::from_string(host),
+			(unsigned short)atoi(port.c_str())
+		);
+	}
 
 	proxy_server_option opt;
 
@@ -188,7 +193,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.htpasswd_ = htpasswd;
 
 	server = proxy_server::make(
-		ioc.get_executor(), listen, opt);
+		ioc.get_executor(), listens, opt);
 	server->start();
 
 	co_return;
@@ -291,7 +296,7 @@ int main(int argc, char** argv)
 		("help,h", "Help message.")
 		("config", po::value<std::string>(&config)->value_name("config.conf"), "Load configuration options from specified file.")
 
-		("server_listen", po::value<std::string>(&server_listen)->default_value("[::0]:1080")->value_name("ip:port"), "Specify server listening address and port.")
+		("server_listen", po::value<std::vector<std::string>>(&server_listens)->default_value({ "[::0]:1080" })->value_name("ip:port [ip:port ...]"), "Specify server listening address and port.")
 
 		("reuse_port", po::value<bool>(&reuse_port)->default_value(false, "false"), "Enable TCP SO_REUSEPORT option (available since Linux 3.9).")
 		("happyeyeballs", po::value<bool>(&happyeyeballs)->default_value(true, "true"), "Enable Happy Eyeballs algorithm for TCP connections.")
@@ -383,7 +388,8 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 
 	print_args(argc, argv, vm);
 
-	XLOG_DBG << "Start server: " << server_listen;
+	for (const auto& server_listen : server_listens)
+		XLOG_DBG << "Start server: " << server_listen;
 
 	net::io_context ioc(1);
 	net::signal_set terminator_signal(ioc);

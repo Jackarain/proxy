@@ -4458,9 +4458,8 @@ R"x*x*x(<html>
 		proxy_server& operator=(const proxy_server&) = delete;
 
 		proxy_server(net::any_io_executor executor,
-			const tcp::endpoint& endp, proxy_server_option opt)
+			const std::vector<tcp::endpoint>& endps, proxy_server_option opt)
 			: m_executor(executor)
-			, m_acceptor(executor)
 			, m_option(std::move(opt))
 		{
 			init_ssl_context();
@@ -4474,61 +4473,17 @@ R"x*x*x(<html>
 					m_ipip.reset();
 			}
 
-			m_acceptor.open(endp.protocol(), ec);
-			if (ec)
-			{
-				XLOG_WARN << "acceptor open: " << endp
-					<< ", error: " << ec.message();
-				throw std::runtime_error(ec.message());
-			}
-
-			m_acceptor.set_option(net::socket_base::reuse_address(true), ec);
-			if (ec)
-			{
-				XLOG_WARN << "acceptor set_option with reuse_address: "
-					<< ec.message();
-			}
-
-			if (m_option.reuse_port_)
-			{
-#ifdef ENABLE_REUSEPORT
-				using net::detail::socket_option::boolean;
-				using reuse_port = boolean<SOL_SOCKET, SO_REUSEPORT>;
-
-				m_acceptor.set_option(reuse_port(true), ec);
-				if (ec)
-				{
-					XLOG_WARN << "acceptor set_option with SO_REUSEPORT: "
-						<< ec.message();
-				}
-#endif
-			}
-
-			m_acceptor.bind(endp, ec);
-			if (ec)
-			{
-				XLOG_ERR << "acceptor bind: " << endp
-					<< ", error: " << ec.message();
-				throw std::runtime_error(ec.message());
-			}
-
-			m_acceptor.listen(net::socket_base::max_listen_connections, ec);
-			if (ec)
-			{
-				XLOG_ERR << "acceptor listen: " << endp
-					<< ", error: " << ec.message();
-				throw std::runtime_error(ec.message());
-			}
+			init_acceptor(endps);
 		}
 
 	public:
 		inline static std::shared_ptr<proxy_server>
 		make(net::any_io_executor executor,
-			const tcp::endpoint& endp,
+			const std::vector<tcp::endpoint>& endps,
 				proxy_server_option opt)
 		{
 			return std::shared_ptr<proxy_server>(new
-				proxy_server(executor, std::cref(endp), opt));
+				proxy_server(executor, std::cref(endps), opt));
 		}
 
 		virtual ~proxy_server() = default;
@@ -4746,6 +4701,63 @@ R"x*x*x(<html>
 			}
 		}
 
+		inline void init_acceptor(const std::vector<tcp::endpoint>& endps)
+		{
+			for (auto& endp : endps)
+			{
+				tcp_acceptor acceptor(m_executor);
+				boost::system::error_code ec;
+
+				acceptor.open(endp.protocol(), ec);
+				if (ec)
+				{
+					XLOG_WARN << "acceptor open: " << endp
+						<< ", error: " << ec.message();
+					throw std::runtime_error(ec.message());
+				}
+
+				acceptor.set_option(net::socket_base::reuse_address(true), ec);
+				if (ec)
+				{
+					XLOG_WARN << "acceptor set_option with reuse_address: "
+						<< ec.message();
+				}
+
+				if (m_option.reuse_port_)
+				{
+#ifdef ENABLE_REUSEPORT
+					using net::detail::socket_option::boolean;
+					using reuse_port = boolean<SOL_SOCKET, SO_REUSEPORT>;
+
+					m_acceptor.set_option(reuse_port(true), ec);
+					if (ec)
+					{
+						XLOG_WARN << "acceptor set_option with SO_REUSEPORT: "
+							<< ec.message();
+					}
+#endif
+				}
+
+				acceptor.bind(endp, ec);
+				if (ec)
+				{
+					XLOG_ERR << "acceptor bind: " << endp
+						<< ", error: " << ec.message();
+					throw std::runtime_error(ec.message());
+				}
+
+				acceptor.listen(net::socket_base::max_listen_connections, ec);
+				if (ec)
+				{
+					XLOG_ERR << "acceptor listen: " << endp
+						<< ", error: " << ec.message();
+					throw std::runtime_error(ec.message());
+				}
+
+				m_tcp_acceptors.emplace_back(std::move(acceptor));
+			}
+		}
+
 		inline void init_ssl_context()
 		{
 			if (m_option.ssl_cert_path_.empty())
@@ -4836,11 +4848,14 @@ R"x*x*x(<html>
 					get_local_address(), net::detached);
 			}
 
-			// 同时启动32个连接协程, 开始为 proxy client 提供服务.
-			for (int i = 0; i < 32; i++)
+			// 同时启动32个连接协程为每个 acceptor 用于为 proxy client 提供服务.
+			for (auto& acceptor : m_tcp_acceptors)
 			{
-				net::co_spawn(m_executor,
-					start_proxy_listen(), net::detached);
+				for (int i = 0; i < 32; i++)
+				{
+					net::co_spawn(m_executor,
+						start_proxy_listen(acceptor), net::detached);
+				}
 			}
 		}
 
@@ -4849,7 +4864,8 @@ R"x*x*x(<html>
 			boost::system::error_code ignore_ec;
 			m_abort = true;
 
-			m_acceptor.close(ignore_ec);
+			for (auto& acceptor : m_tcp_acceptors)
+				acceptor.close(ignore_ec);
 
 			for (auto& [id, c] : m_clients)
 			{
@@ -4885,7 +4901,7 @@ R"x*x*x(<html>
 		// start_proxy_listen 启动一个协程, 用于监听 proxy client 的连接.
 		// 当有新的连接到来时, 会创建一个 proxy_session 对象, 并启动 proxy_session
 		// 的对象.
-		inline net::awaitable<void> start_proxy_listen()
+		inline net::awaitable<void> start_proxy_listen(tcp_acceptor& acceptor)
 		{
 			boost::system::error_code error;
 			net::socket_base::keep_alive keep_alive_opt(true);
@@ -4898,7 +4914,7 @@ R"x*x*x(<html>
 			{
 				tcp_socket socket(m_executor);
 
-				co_await m_acceptor.async_accept(
+				co_await acceptor.async_accept(
 					socket.lowest_layer(), net_awaitable[error]);
 				if (error)
 				{
@@ -5165,8 +5181,8 @@ R"x*x*x(<html>
 		// m_executor 保存当前 io_context 的 executor.
 		net::any_io_executor m_executor;
 
-		// m_acceptor 用于侦听客户端 tcp 连接请求.
-		tcp_acceptor m_acceptor;
+		// m_tcp_acceptors 用于侦听客户端 tcp 连接请求.
+		std::vector<tcp_acceptor> m_tcp_acceptors;
 
 		// m_option 保存当前服务器各选项配置.
 		proxy_server_option m_option;
