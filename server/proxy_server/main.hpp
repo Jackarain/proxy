@@ -154,7 +154,8 @@ inline bool parse_endpoint_string(std::string_view str,
 #else
 		auto opt = std::string(it, address_string.end());
 #endif
-		if (opt == "ipv6only" || opt == "-ipv6only")
+		if (opt == "ipv6only" || opt == "-ipv6only" ||
+			opt == "v6only" || opt == "-v6only")
 			ipv6only = true;
 	}
 
