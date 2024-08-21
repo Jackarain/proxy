@@ -4511,7 +4511,10 @@ R"x*x*x(<html>
 				return result;
 			}
 
-			if (fs::path(filepath).filename() == "domain.txt")
+			if (fs::path(filepath).filename() == "domain.txt" ||
+				fs::path(filepath).filename() == "domain" ||
+				fs::path(filepath).filename() == "servername" ||
+				fs::path(filepath).filename() == "servername.txt")
 			{
 				result.type_ = pem_type::domain;
 				return result;
