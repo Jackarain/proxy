@@ -4500,7 +4500,12 @@ R"x*x*x(<html>
 			if (!file.is_open())
 				return result;
 
-			if (fs::path(filepath).filename() == "password.txt")
+			if (fs::path(filepath).filename() == "password.txt" ||
+				fs::path(filepath).filename() == "passwd.txt" ||
+				fs::path(filepath).filename() == "passwd" ||
+				fs::path(filepath).filename() == "password" ||
+				fs::path(filepath).filename() == "passphrase" ||
+				fs::path(filepath).filename() == "passphrase.txt")
 			{
 				result.type_ = pem_type::pwd;
 				return result;
