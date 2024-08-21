@@ -4492,7 +4492,7 @@ R"x*x*x(<html>
 
 		virtual ~proxy_server() = default;
 
-		pem_file pem_file_type(const std::string& filepath)
+		pem_file pem_file_type(const std::string& filepath) noexcept
 		{
 			pem_file result{ filepath, pem_type::none };
 
@@ -4567,7 +4567,7 @@ R"x*x*x(<html>
 			return result;
 		}
 
-		inline void find_cert(const fs::path& directory)
+		inline void find_cert(const fs::path& directory) noexcept
 		{
 			if (!fs::exists(directory) || !fs::is_directory(directory))
 			{
@@ -4713,7 +4713,7 @@ R"x*x*x(<html>
 			}
 		}
 
-		inline void init_acceptor()
+		inline void init_acceptor() noexcept
 		{
 			auto& endps = m_option.listens_;
 
@@ -4782,7 +4782,7 @@ R"x*x*x(<html>
 			}
 		}
 
-		inline void init_ssl_context()
+		inline void init_ssl_context() noexcept
 		{
 			if (m_option.ssl_cert_path_.empty())
 				return;
@@ -4809,7 +4809,7 @@ R"x*x*x(<html>
 			return self->sni_callback(ssl, ad);
 		}
 
-		int sni_callback(SSL *ssl, int *ad)
+		int sni_callback(SSL *ssl, int *ad) noexcept
 		{
 			const char *servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
 			if (servername)
@@ -4837,7 +4837,7 @@ R"x*x*x(<html>
 		}
 
 	public:
-		inline void start()
+		inline void start() noexcept
 		{
 			// 如果作为透明代理.
 			if (m_option.transparent_)
@@ -4886,7 +4886,7 @@ R"x*x*x(<html>
 			}
 		}
 
-		inline void close()
+		inline void close() noexcept
 		{
 			boost::system::error_code ignore_ec;
 			m_abort = true;
@@ -4928,7 +4928,7 @@ R"x*x*x(<html>
 		// start_proxy_listen 启动一个协程, 用于监听 proxy client 的连接.
 		// 当有新的连接到来时, 会创建一个 proxy_session 对象, 并启动 proxy_session
 		// 的对象.
-		inline net::awaitable<void> start_proxy_listen(tcp_acceptor& acceptor)
+		inline net::awaitable<void> start_proxy_listen(tcp_acceptor& acceptor) noexcept
 		{
 			boost::system::error_code error;
 			net::socket_base::keep_alive keep_alive_opt(true);
@@ -5028,7 +5028,8 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline net::awaitable<bool> start_transparent_proxy(tcp_socket& socket, size_t connection_id)
+		inline net::awaitable<bool>
+		start_transparent_proxy(tcp_socket& socket, size_t connection_id) noexcept
 		{
 #ifndef SO_ORIGINAL_DST
 #  define SO_ORIGINAL_DST 80
