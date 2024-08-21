@@ -4727,7 +4727,7 @@ R"x*x*x(<html>
 				{
 					XLOG_WARN << "acceptor open: " << endp
 						<< ", error: " << ec.message();
-					throw std::runtime_error(ec.message());
+					continue;
 				}
 
 				acceptor.set_option(net::socket_base::reuse_address(true), ec);
@@ -4759,6 +4759,7 @@ R"x*x*x(<html>
 					{
 						XLOG_ERR << "TCP server accept "
 							<< "set v6_only failed: " << ec.message();
+						continue;
 					}
 				}
 
@@ -4767,7 +4768,7 @@ R"x*x*x(<html>
 				{
 					XLOG_ERR << "acceptor bind: " << endp
 						<< ", error: " << ec.message();
-					throw std::runtime_error(ec.message());
+					continue;
 				}
 
 				acceptor.listen(net::socket_base::max_listen_connections, ec);
@@ -4775,7 +4776,7 @@ R"x*x*x(<html>
 				{
 					XLOG_ERR << "acceptor listen: " << endp
 						<< ", error: " << ec.message();
-					throw std::runtime_error(ec.message());
+					continue;
 				}
 
 				m_tcp_acceptors.emplace_back(std::move(acceptor));
