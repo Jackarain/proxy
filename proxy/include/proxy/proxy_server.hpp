@@ -4492,7 +4492,7 @@ R"x*x*x(<html>
 
 		virtual ~proxy_server() = default;
 
-		pem_file pem_file_type(const std::string& filepath) noexcept
+		pem_file determine_pem_type(const std::string& filepath) noexcept
 		{
 			pem_file result{ filepath, pem_type::none };
 
@@ -4523,6 +4523,9 @@ R"x*x*x(<html>
 			proxy::pem_type type = pem_type::none;
 			std::string line;
 
+			boost::regex re(R"(-----BEGIN\s.*\s?PRIVATE\sKEY-----)");
+			boost::smatch what;
+
 			while (std::getline(file, line))
 			{
 				if (line.find("-----BEGIN CERTIFICATE-----") != std::string::npos)
@@ -4531,32 +4534,12 @@ R"x*x*x(<html>
 					result.chains_++;
 					continue;
 				}
-				if (line.find("-----BEGIN DH PARAMETERS-----") != std::string::npos)
+				else if (line.find("-----BEGIN DH PARAMETERS-----") != std::string::npos)
 				{
 					type = pem_type::dhparam;
 					break;
 				}
-				if (line.find("-----BEGIN RSA PRIVATE KEY-----") != std::string::npos)
-				{
-					type = pem_type::key;
-					break;
-				}
-				if (line.find("-----BEGIN EC PRIVATE KEY-----") != std::string::npos)
-				{
-					type = pem_type::key;
-					break;
-				}
-				if (line.find("-----BEGIN ENCRYPTED PRIVATE KEY-----") != std::string::npos)
-				{
-					type = pem_type::key;
-					break;
-				}
-				if (line.find("-----BEGIN DSA PRIVATE KEY-----") != std::string::npos)
-				{
-					type = pem_type::key;
-					break;
-				}
-				if (line.find("-----BEGIN PRIVATE KEY-----") != std::string::npos)
+				else if (boost::regex_search(line, what, re))
 				{
 					type = pem_type::key;
 					break;
@@ -4597,7 +4580,7 @@ R"x*x*x(<html>
 				if (entry.is_regular_file())
 				{
 					// 读取文件, 并判断文件类型.
-					auto type = pem_file_type(entry.path().string());
+					auto type = determine_pem_type(entry.path().string());
 					switch (type.type_)
 					{
 						case pem_type::cert:
