@@ -122,7 +122,7 @@ docker build . -t proxy:v1
 | disable_logs | 是否禁止生成日志 |
 | disable_http | 是否禁止 `http` 协议 |
 | disable_socks | 是否禁止 `socks5`/`socks4` 协议 |
-| disable_insecure | 是否禁止非安全连接(即 `ssl` 连接) |
+| disable_insecure | 是否禁止非安全连接(即只允许 `ssl/tls` 连接) |
 | disable_udp | 是否禁止 udp 协议支持 |
 | scramble | 数据是否启用噪声加扰(即通过随机噪声数据混淆数据传输)，此选项需要在2端同时开启 |
 | noise_length | 在启用 `scramble` 的时候，随机发送的噪声数据最大长度，默认最大长度为4k |
