@@ -4897,10 +4897,8 @@ R"x*x*x(<html>
 
 			for (auto& [id, c] : m_clients)
 			{
-				auto client = c.lock();
-				if (!client)
-					continue;
-				client->close();
+				if (auto client = c.lock())
+					client->close();
 			}
 		}
 
