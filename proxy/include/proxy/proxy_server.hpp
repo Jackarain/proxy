@@ -3770,25 +3770,30 @@ R"x*x*x(<html>
 		}
 
 		template <typename CompletionToken>
-		inline auto async_file_hash(const fs::path& p, CompletionToken&& token)
+		inline auto async_hash_file(const fs::path& path, CompletionToken&& token)
 		{
+			auto self = shared_from_this();
+
 			return net::async_initiate<CompletionToken,
 				void (boost::system::error_code, std::string)>(
-					[this, p]
+					[this, self, path]
 					(auto&& handler) mutable
 					{
-						auto bound_handler = net::bind_executor(
-							net::get_associated_executor(handler),
-							std::move(handler)
-						);
-
 						std::thread(
-							[this, p, bound_handler = std::move(bound_handler)]() mutable
+							[this, self, path, handler = std::move(handler)]() mutable
 							{
 								boost::system::error_code ec;
-								auto hash = file_hash(p, ec);
 
-								bound_handler(ec, hash);
+								auto hash = file_hash(path, ec);
+
+								auto executor = net::get_associated_executor(handler);
+								net::post(executor, [this, self,
+									ec = std::move(ec),
+									hash = std::move(hash),
+									handler = std::move(handler)]() mutable
+									{
+										handler(ec, hash);
+									});
 							}
 						).detach();
 					}, token);
@@ -3862,7 +3867,7 @@ R"x*x*x(<html>
 					if (hash)
 					{
 						auto ret = co_await
-							async_file_hash(unc_path, net_awaitable[ec]);
+							async_hash_file(unc_path, net_awaitable[ec]);
 						if (ec)
 							ret = "";
 						obj["hash"] = ret;
