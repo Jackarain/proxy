@@ -336,7 +336,7 @@ int main(int argc, char** argv)
 		("autoindex", po::value<bool>(&autoindex)->default_value(false, "false"), "Enable directory listing.")
 		("logs_path", po::value<std::string>(&log_dir)->value_name(""), "Specify directory for log files.")
 
-		("disable_logs", po::value<bool>(&disable_logs)->value_name(""), "Disable logging.")
+		("disable_logs", po::value<bool>(&disable_logs)->value_name("")->default_value(false), "Disable logging.")
 		("disable_http", po::value<bool>(&disable_http)->value_name("")->default_value(false, "false"), "Disable HTTP protocol.")
 		("disable_socks", po::value<bool>(&disable_socks)->value_name("")->default_value(false, "false"), "Disable SOCKS proxy protocol.")
 		("disable_udp", po::value<bool>(&disable_udp)->value_name("")->default_value(false, "false"), "Disable UDP protocol.")
@@ -380,10 +380,10 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 		auto cfg = po::parse_config_file(config.c_str(), desc, false);
 		po::store(cfg, vm);
 		po::notify(vm);
-
-		if (disable_logs)
-			xlogger::toggle_write_logging(true);
 	}
+
+	if (disable_logs)
+		xlogger::toggle_write_logging(true);
 
 	xlogger::init_logging(log_dir);
 
