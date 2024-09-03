@@ -312,7 +312,7 @@ int main(int argc, char** argv)
 		("so_mark", po::value<int64_t>(&linux_so_mark)->default_value(-1), "Set SO_MARK for linux transparent proxy mode.")
 
 		("udp_timeout", po::value<int>(&udp_timeout)->default_value(60), "Set UDP timeout for UDP connections.")
-		("tcp_timeout", po::value<int>(&tcp_timeout)->default_value(60), "Set TCP timeout for TCP connections.")
+		("tcp_timeout", po::value<int>(&tcp_timeout)->default_value(-1), "Set TCP timeout for TCP connections.")
 
 		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->default_value(std::vector<std::string>{"jack:1111"}), "List of authorized users(default user: jack:1111) (e.g: user1:passwd1 user2:passwd2).")
 

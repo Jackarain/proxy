@@ -2862,7 +2862,9 @@ R"x*x*x(<html>
 
 			for (; !m_abort;)
 			{
-				stream_expires_after(from, std::chrono::seconds(m_option.tcp_timeout_));
+				if (m_option.tcp_timeout_ > 0)
+					stream_expires_after(from, std::chrono::seconds(m_option.tcp_timeout_));
+
 				auto bytes = co_await from.async_read_some(
 					net::buffer(data), net_awaitable[ec]);
 				if (ec || m_abort)
@@ -2875,7 +2877,9 @@ R"x*x*x(<html>
 					co_return;
 				}
 
-				stream_expires_after(to, std::chrono::seconds(m_option.tcp_timeout_));
+				if (m_option.tcp_timeout_ > 0)
+					stream_expires_after(to, std::chrono::seconds(m_option.tcp_timeout_));
+
 				co_await net::async_write(to,
 					net::buffer(data, bytes), net_awaitable[ec]);
 				if (ec || m_abort)
