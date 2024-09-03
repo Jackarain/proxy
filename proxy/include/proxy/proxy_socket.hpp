@@ -18,6 +18,8 @@
 
 #include "proxy/base_stream.hpp"
 #include "proxy/scramble.hpp"
+#include "proxy/tcp_stream.hpp"
+
 
 namespace util {
 
@@ -26,7 +28,7 @@ namespace util {
 	template <typename Stream>
 	class proxy_socket;
 
-	using tcp_socket = proxy_socket<tcp::socket>;
+	using tcp_socket = proxy_socket<tcp_stream>;
 	using tcp_acceptor = tcp::acceptor;
 
 	using ssl_stream = net::ssl::stream<tcp_socket>;
@@ -51,12 +53,12 @@ namespace util {
 		using executor_type = typename next_layer_type::executor_type;
 		using native_handle_type = typename next_layer_type::native_handle_type;
 		using endpoint_type = typename next_layer_type::endpoint_type;
-		using wait_type = typename next_layer_type::wait_type;
 		using protocol_type = typename next_layer_type::protocol_type;
 
 	public:
 
-		explicit proxy_socket(Stream&& s)
+		template <typename Arg>
+		explicit proxy_socket(Arg&& s)
 			: next_layer_(std::move(s))
 		{}
 
@@ -76,6 +78,8 @@ namespace util {
 
 			scramble_ = std::move(other.scramble_);
 			unscramble_ = std::move(other.unscramble_);
+
+			return *this;
 		}
 
 		proxy_socket(proxy_socket&& other) noexcept
