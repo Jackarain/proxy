@@ -2862,6 +2862,7 @@ R"x*x*x(<html>
 
 			for (; !m_abort;)
 			{
+				stream_expires_after(from, std::chrono::seconds(m_option.tcp_timeout_));
 				auto bytes = co_await from.async_read_some(
 					net::buffer(data), net_awaitable[ec]);
 				if (ec || m_abort)
@@ -2874,6 +2875,7 @@ R"x*x*x(<html>
 					co_return;
 				}
 
+				stream_expires_after(to, std::chrono::seconds(m_option.tcp_timeout_));
 				co_await net::async_write(to,
 					net::buffer(data, bytes), net_awaitable[ec]);
 				if (ec || m_abort)
@@ -4394,6 +4396,75 @@ R"x*x*x(<html>
 			}
 
 			co_return;
+		}
+
+		inline void stream_expires_never(proxy_stream_type& stream)
+		{
+			boost::variant2::visit([](auto& s) mutable
+			{
+				using ValueType = std::decay_t<decltype(s)>;
+				using NextLayerType = util::tcp_socket::next_layer_type;
+
+				if constexpr (std::same_as<NextLayerType, util::tcp_stream>)
+				{
+					if constexpr (std::same_as<util::tcp_socket, ValueType>)
+					{
+						auto& next_layer = s.next_layer();
+						next_layer.expires_never();
+					}
+					else if constexpr (std::same_as<util::ssl_stream, ValueType>)
+					{
+						auto& next_layer = s.next_layer().next_layer();
+						next_layer.expires_never();
+					}
+				}
+			}, stream);
+		}
+
+		inline void stream_expires_after(proxy_stream_type& stream, net::steady_timer::duration expiry_time)
+		{
+			boost::variant2::visit([expiry_time](auto& s) mutable
+			{
+				using ValueType = std::decay_t<decltype(s)>;
+				using NextLayerType = util::tcp_socket::next_layer_type;
+
+				if constexpr (std::same_as<NextLayerType, util::tcp_stream>)
+				{
+					if constexpr (std::same_as<util::tcp_socket, ValueType>)
+					{
+						auto& next_layer = s.next_layer();
+						next_layer.expires_after(expiry_time);
+					}
+					else if constexpr (std::same_as<util::ssl_stream, ValueType>)
+					{
+						auto& next_layer = s.next_layer().next_layer();
+						next_layer.expires_after(expiry_time);
+					}
+				}
+			}, stream);
+		}
+
+		inline void stream_expires_at(proxy_stream_type& stream, net::steady_timer::time_point expiry_time)
+		{
+			boost::variant2::visit([expiry_time](auto& s) mutable
+			{
+				using ValueType = std::decay_t<decltype(s)>;
+				using NextLayerType = util::tcp_socket::next_layer_type;
+
+				if constexpr (std::same_as<NextLayerType, util::tcp_stream>)
+				{
+					if constexpr (std::same_as<util::tcp_socket, ValueType>)
+					{
+						auto& next_layer = s.next_layer();
+						next_layer.expires_at(expiry_time);
+					}
+					else if constexpr (std::same_as<util::ssl_stream, ValueType>)
+					{
+						auto& next_layer = s.next_layer().next_layer();
+						next_layer.expires_at(expiry_time);
+					}
+				}
+			}, stream);
 		}
 
 	private:
