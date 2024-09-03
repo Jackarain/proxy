@@ -281,8 +281,11 @@ R"x*x*x(<html>
 
 	//////////////////////////////////////////////////////////////////////////
 
-	// udp_session_expired_time 用于指定 udp session 的过期时间, 单位为秒.
+	// udp_session_expired_time 用于指定 udp session 的默认过期时间, 单位为秒.
 	inline const int udp_session_expired_time = 60;
+
+	// tcp_session_expired_time 用于指定 tcp session 的默认过期时间, 单位为秒.
+	inline const int tcp_session_expired_time = 60;
 
 	// nosie_injection_max_len 用于指定噪声注入的最大长度, 单位为字节.
 	inline const uint16_t nosie_injection_max_len = 0x0fff;
@@ -447,6 +450,9 @@ R"x*x*x(<html>
 
 		// udp 超时时间, 用于指定 udp 连接的超时时间, 单位为秒.
 		int udp_timeout_{ udp_session_expired_time };
+
+		// tcp 超时时间, 用于指定 tcp 连接的超时时间, 单位为秒.
+		int tcp_timeout_{ tcp_session_expired_time };
 
 		// 作为服务器时, 指定ssl证书目录, 自动搜索子目录, 每一个目录保存一个域
 		// 名对应的所有证书文件, 如果证书是加密的, 则需要指定 password.txt 用
@@ -1840,13 +1846,10 @@ R"x*x*x(<html>
 			const char* rbuf = &read_buffer[96];
 			char* wbuf = &read_buffer[96];
 
-			// 保存 udp 超时时间.
-			auto udp_timeout = m_udp_timeout;
-
 			while (!m_abort)
 			{
 				// 重置 udp 超时时间.
-				m_udp_timeout = udp_timeout;
+				m_udp_timeout = m_option.udp_timeout_;
 
 				auto bytes = co_await m_udp_socket.async_receive_from(
 					net::buffer(wbuf, 4000),
