@@ -75,9 +75,9 @@ namespace util {
 		auto async_write_some(const ConstBufferSequence& buffers,
 				WriteHandler&& handler)
 		{
-			return boost::variant2::visit([&](auto& t) mutable
+			return boost::variant2::visit([&, handler = std::move(handler)](auto& t) mutable
 				{ return t.async_write_some(buffers,
-					std::forward<WriteHandler>(handler)); }, *this);
+						std::forward<WriteHandler>(handler)); }, *this);
 		}
 
 		tcp::endpoint remote_endpoint()
