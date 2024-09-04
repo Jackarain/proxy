@@ -4235,7 +4235,10 @@ R"x*x*x(<html>
 				co_return;
 			}
 
-			const auto buf_size = 5 * 1024 * 1024;
+			auto buf_size = 5 * 1024 * 1024;
+			if (m_option.tcp_rate_limit_ > 0 && m_option.tcp_rate_limit_ < buf_size)
+				buf_size = m_option.tcp_rate_limit_;
+
 			auto bufs = std::make_unique<char[]>(buf_size);
 			char* buf = bufs.get();
 			std::streamsize total = 0;
