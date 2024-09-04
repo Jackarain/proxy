@@ -4235,6 +4235,8 @@ R"x*x*x(<html>
 			char* buf = bufs.get();
 			std::streamsize total = 0;
 
+			stream_rate_limit(m_local_socket, m_option.tcp_rate_limit_);
+
 			do
 			{
 				auto bytes_transferred = fileop::read(file, std::span<char>(buf, buf_size));
@@ -4254,6 +4256,8 @@ R"x*x*x(<html>
 					res.body().size = bytes_transferred;
 					res.body().more = true;
 				}
+
+				stream_expires_after(m_local_socket, std::chrono::seconds(m_option.tcp_timeout_));
 
 				co_await http::async_write(
 					m_local_socket,
