@@ -119,7 +119,8 @@ docker build . -t proxy:v1
 | deny_region | 在启用 ip 数据库的情况下，指定拒绝连接的客户端地区 (如: 广东\|上海\|山东) |
 | udp_timeout | 在启用 udp 中转的情况下，超过指定时间即回收 udp socket 等相关资源，时间单位为秒 |
 | tcp_timeout | 设置 tcp 连接的读写超时，小于0表示没有超时设置，时间单位为秒 |
-| rate_limit | 设置 tcp 连接的I/O速率设置，单位为字节/秒，默认无限速 |
+| rate_limit | 设置 tcp 连接的 I/O 速率设置，单位为字节/秒，默认无限速 |
+| users_rate_limit | 设置指定认证用户的 tcp 连接的 I/O 速率设置，单位为字节/秒，默认无限速，参数格式如：`user1:102400 user2:204800` |
 | logs_path | 日志目录 |
 | disable_logs | 是否禁止生成日志 |
 | disable_http | 是否禁止 `http` 协议 |
