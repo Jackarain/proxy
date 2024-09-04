@@ -385,7 +385,7 @@ R"x*x*x(<html>
 		std::vector<auth_users> auth_users_;
 
 		// 指定用户限速设置.
-		// 其中表示：用户名对应的速率
+		// 其中表示：用户名对应的速率.
 		std::unordered_map<std::string, int> users_rate_limit_;
 
 		// allow_regions/deny_regions 用于指定允许/拒绝的地区, 例如:
@@ -2875,8 +2875,7 @@ R"x*x*x(<html>
 
 			for (; !m_abort;)
 			{
-				if (m_option.tcp_timeout_ > 0)
-					stream_expires_after(from, std::chrono::seconds(m_option.tcp_timeout_));
+				stream_expires_after(from, std::chrono::seconds(m_option.tcp_timeout_));
 
 				auto bytes = co_await from.async_read_some(
 					net::buffer(data), net_awaitable[ec]);
@@ -2890,8 +2889,7 @@ R"x*x*x(<html>
 					co_return;
 				}
 
-				if (m_option.tcp_timeout_ > 0)
-					stream_expires_after(to, std::chrono::seconds(m_option.tcp_timeout_));
+				stream_expires_after(to, std::chrono::seconds(m_option.tcp_timeout_));
 
 				co_await net::async_write(to,
 					net::buffer(data, bytes), net_awaitable[ec]);
@@ -4455,6 +4453,9 @@ R"x*x*x(<html>
 
 		inline void stream_expires_after(variant_stream_type& stream, net::steady_timer::duration expiry_time)
 		{
+			if (expiry_time.count() < 0)
+				return;
+
 			boost::variant2::visit([expiry_time](auto& s) mutable
 			{
 				using ValueType = std::decay_t<decltype(s)>;
