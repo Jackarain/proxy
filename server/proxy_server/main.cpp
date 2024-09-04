@@ -60,6 +60,7 @@ using server_ptr = std::shared_ptr<proxy_server>;
 
 std::vector<std::string> server_listens;
 std::vector<std::string> auth_users;
+std::vector<std::string> users_rate_limit;
 std::vector<std::string> deny_region;
 std::vector<std::string> allow_region;
 
@@ -136,6 +137,21 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 		else
 			opt.auth_users_.emplace_back(
 				user.substr(0, pos), user.substr(pos + 1));
+	}
+
+	for (const auto& user : users_rate_limit)
+	{
+		if (user.empty())
+			continue;
+
+		auto pos = user.find(':');
+		if (pos == std::string::npos)
+			continue;
+
+		auto name = user.substr(0, pos);
+		auto rate = std::atoi(user.substr(pos + 1).c_str());
+
+		opt.users_rate_limit_.insert_or_assign(name, rate);
 	}
 
 	opt.proxy_pass_ = proxy_pass;
@@ -315,9 +331,10 @@ int main(int argc, char** argv)
 
 		("udp_timeout", po::value<int>(&udp_timeout)->default_value(60), "Set UDP timeout for UDP connections.")
 		("tcp_timeout", po::value<int>(&tcp_timeout)->default_value(-1), "Set TCP timeout for TCP connections.")
-		("tcp_timeout", po::value<int>(&rate_limit)->default_value(-1), "Set TCP rate limit for connection.")
+		("rate_limit", po::value<int>(&rate_limit)->default_value(-1), "Set TCP rate limit for connection.")
 
 		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->default_value(std::vector<std::string>{"jack:1111"}), "List of authorized users(default user: jack:1111) (e.g: user1:passwd1 user2:passwd2).")
+		("users_rate_limit", po::value<std::vector<std::string>>(&users_rate_limit)->multitoken(), "List of users rate limit (e.g: user1:1000000 user2:800000).")
 
 		("allow_region", po::value<std::vector<std::string>>(&allow_region)->multitoken(), "Allow region (e.g: 北京|河南|武汉).")
 		("deny_region", po::value<std::vector<std::string>>(&deny_region)->multitoken(), "Deny region (e.g: 广东|上海|山东).")
