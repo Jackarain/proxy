@@ -155,12 +155,17 @@ namespace util {
 			impl_->expires_never();
 		}
 
-		void rate_limit(std::size_t bytes_per_second) noexcept
+		void rate_limit(int bytes_per_second) noexcept
 		{
 			auto& policy = impl_->rate_policy();
 
-			policy.read_limit(bytes_per_second);
-			policy.write_limit(bytes_per_second);
+			std::size_t rate = bytes_per_second;
+
+			if (bytes_per_second < 0)
+				rate = (std::numeric_limits<std::size_t>::max)();
+
+			policy.read_limit(rate);
+			policy.write_limit(rate);
 		}
 
 	private:

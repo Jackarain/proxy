@@ -454,6 +454,9 @@ R"x*x*x(<html>
 		// tcp 超时时间, 用于指定 tcp 连接的超时时间, 单位为秒.
 		int tcp_timeout_{ tcp_session_expired_time };
 
+		// tcp 连接速率控制, bytes/second.
+		int tcp_rate_limit_{ -1 };
+
 		// 作为服务器时, 指定ssl证书目录, 自动搜索子目录, 每一个目录保存一个域
 		// 名对应的所有证书文件, 如果证书是加密的, 则需要指定 password.txt 用
 		// 于存储加密的密码.
@@ -2860,6 +2863,9 @@ R"x*x*x(<html>
 			boost::system::error_code ec;
 			bytes_transferred = 0;
 
+			stream_rate_limit(from, m_option.tcp_rate_limit_);
+			stream_rate_limit(to, m_option.tcp_rate_limit_);
+
 			for (; !m_abort;)
 			{
 				if (m_option.tcp_timeout_ > 0)
@@ -4469,6 +4475,29 @@ R"x*x*x(<html>
 					}
 				}
 			}, stream);
+		}
+
+		inline void stream_rate_limit(variant_stream_type& stream, int rate)
+		{
+			boost::variant2::visit([rate](auto& s) mutable
+				{
+					using ValueType = std::decay_t<decltype(s)>;
+					using NextLayerType = util::proxy_tcp_socket::next_layer_type;
+
+					if constexpr (std::same_as<NextLayerType, util::tcp_socket>)
+					{
+						if constexpr (std::same_as<util::proxy_tcp_socket, ValueType>)
+						{
+							auto& next_layer = s.next_layer();
+							next_layer.rate_limit(rate);
+						}
+						else if constexpr (std::same_as<util::ssl_stream, ValueType>)
+						{
+							auto& next_layer = s.next_layer().next_layer();
+							next_layer.rate_limit(rate);
+						}
+					}
+				}, stream);
 		}
 
 	private:
