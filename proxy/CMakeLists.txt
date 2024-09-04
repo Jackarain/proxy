@@ -11,7 +11,7 @@ add_library(libproxy STATIC)
 target_sources(libproxy
 	PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/async_connect.hpp
-	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/base_stream.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/variant_stream.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/default_cert.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/fileop.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/strutil.hpp
@@ -24,8 +24,8 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/use_awaitable.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/http_proxy_client.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/xxhash.hpp
-	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/proxy_socket.hpp
-	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/tcp_stream.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/proxy_stream.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/tcp_socket.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/ipip.hpp
 
 	${CMAKE_CURRENT_SOURCE_DIR}/src/lib_asio_beast.cpp

@@ -29,23 +29,23 @@ namespace util {
 	//////////////////////////////////////////////////////////////////////////
 
 	template<typename... T>
-	class base_stream : public boost::variant2::variant<T...>
+	class variant_stream : public boost::variant2::variant<T...>
 	{
-		base_stream(const base_stream&) = delete;
-		base_stream& operator=(base_stream const&) = delete;
+		variant_stream(const variant_stream&) = delete;
+		variant_stream& operator=(variant_stream const&) = delete;
 
 	public:
 		template <typename S>
-		explicit base_stream(S device)
+		explicit variant_stream(S device)
 			: boost::variant2::variant<T...>(std::move(device))
 		{
 			static_assert(std::is_move_constructible<S>::value
 				, "must be move constructible");
 		}
-		~base_stream() = default;
+		~variant_stream() = default;
 
-		base_stream& operator=(base_stream&&) = default;
-		base_stream(base_stream&&) = default;
+		variant_stream& operator=(variant_stream&&) = default;
+		variant_stream(variant_stream&&) = default;
 
 		using executor_type = net::any_io_executor;
 		using lowest_layer_type = tcp::socket::lowest_layer_type;

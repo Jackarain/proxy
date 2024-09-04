@@ -91,7 +91,7 @@
 #include "proxy/use_awaitable.hpp"
 #include "proxy/async_connect.hpp"
 #include "proxy/logging.hpp"
-#include "proxy/base_stream.hpp"
+#include "proxy/variant_stream.hpp"
 #include "proxy/default_cert.hpp"
 #include "proxy/fileop.hpp"
 #include "proxy/strutil.hpp"
@@ -105,7 +105,7 @@
 #include "proxy/xxhash.hpp"
 #include "proxy/scramble.hpp"
 
-#include "proxy/proxy_socket.hpp"
+#include "proxy/proxy_stream.hpp"
 
 
 namespace proxy {
@@ -691,7 +691,7 @@ R"x*x*x(<html>
 	public:
 		proxy_session(
 			net::any_io_executor executor,
-			proxy_stream_type&& socket,
+			variant_stream_type&& socket,
 			size_t id,
 			std::weak_ptr<proxy_server_base> server,
 			bool tproxy = false
@@ -1003,7 +1003,7 @@ R"x*x*x(<html>
 			auto self = shared_from_this();
 
 			// 从 m_local_socket 中获取 tcp::socket 对象的引用.
-			auto& socket = boost::variant2::get<tcp_socket>(m_local_socket);
+			auto& socket = boost::variant2::get<proxy_tcp_socket>(m_local_socket);
 
 			boost::system::error_code error;
 
@@ -1028,7 +1028,7 @@ R"x*x*x(<html>
 					return;
 
 				using Stream = std::decay_t<decltype(sock)>;
-				using ProxySocket = util::proxy_socket<tcp::socket>;
+				using ProxySocket = util::proxy_stream<tcp::socket>;
 
 				if constexpr (std::same_as<Stream, tcp::socket>)
 					return;
@@ -1087,7 +1087,7 @@ R"x*x*x(<html>
 					return;
 
 				using Stream = std::decay_t<decltype(sock)>;
-				using ProxySocket = util::proxy_socket<tcp::socket>;
+				using ProxySocket = util::proxy_stream<tcp::socket>;
 
 				if constexpr (std::same_as<Stream, tcp::socket>)
 					return;
@@ -1104,7 +1104,7 @@ R"x*x*x(<html>
 				// peek 方式解密混淆的数据, 用于检测加密混淆的数据的代理协议. 在双方启用
 				// scramble 的情况下, 上面 recv 接收到的数据则会为 scramble 加密后的
 				// 数据, 要像未启用 scramble 时那样探测协议, 就必须将上面 recv 中
-				// peek 得到的数据：detect 临时解密(因为 proxy_socket 的加密为流式加
+				// peek 得到的数据：detect 临时解密(因为 proxy_stream 的加密为流式加
 				// 密, 非临时解密则会对整个数据流产生错误解密), 从而得到具体的协议字节
 				// 用于后面探测逻辑.
 				scramble_peek(socket, detect);
@@ -3091,7 +3091,7 @@ R"x*x*x(<html>
 				&proxy_host,
 				&remote_socket,
 				&ec]
-			() mutable -> net::awaitable<proxy_stream_type>
+			() mutable -> net::awaitable<variant_stream_type>
 			{
 				ec = {};
 
@@ -3196,7 +3196,7 @@ R"x*x*x(<html>
 					std::move(remote_socket));
 
 				auto& sock =
-					boost::variant2::get<tcp_socket>(sock_stream);
+					boost::variant2::get<proxy_tcp_socket>(sock_stream);
 
 				if (m_option.scramble_)
 				{
@@ -4402,16 +4402,16 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline void stream_expires_never(proxy_stream_type& stream)
+		inline void stream_expires_never(variant_stream_type& stream)
 		{
 			boost::variant2::visit([](auto& s) mutable
 			{
 				using ValueType = std::decay_t<decltype(s)>;
-				using NextLayerType = util::tcp_socket::next_layer_type;
+				using NextLayerType = util::proxy_tcp_socket::next_layer_type;
 
-				if constexpr (std::same_as<NextLayerType, util::tcp_stream>)
+				if constexpr (std::same_as<NextLayerType, util::tcp_socket>)
 				{
-					if constexpr (std::same_as<util::tcp_socket, ValueType>)
+					if constexpr (std::same_as<util::proxy_tcp_socket, ValueType>)
 					{
 						auto& next_layer = s.next_layer();
 						next_layer.expires_never();
@@ -4425,16 +4425,16 @@ R"x*x*x(<html>
 			}, stream);
 		}
 
-		inline void stream_expires_after(proxy_stream_type& stream, net::steady_timer::duration expiry_time)
+		inline void stream_expires_after(variant_stream_type& stream, net::steady_timer::duration expiry_time)
 		{
 			boost::variant2::visit([expiry_time](auto& s) mutable
 			{
 				using ValueType = std::decay_t<decltype(s)>;
-				using NextLayerType = util::tcp_socket::next_layer_type;
+				using NextLayerType = util::proxy_tcp_socket::next_layer_type;
 
-				if constexpr (std::same_as<NextLayerType, util::tcp_stream>)
+				if constexpr (std::same_as<NextLayerType, util::tcp_socket>)
 				{
-					if constexpr (std::same_as<util::tcp_socket, ValueType>)
+					if constexpr (std::same_as<util::proxy_tcp_socket, ValueType>)
 					{
 						auto& next_layer = s.next_layer();
 						next_layer.expires_after(expiry_time);
@@ -4448,16 +4448,16 @@ R"x*x*x(<html>
 			}, stream);
 		}
 
-		inline void stream_expires_at(proxy_stream_type& stream, net::steady_timer::time_point expiry_time)
+		inline void stream_expires_at(variant_stream_type& stream, net::steady_timer::time_point expiry_time)
 		{
 			boost::variant2::visit([expiry_time](auto& s) mutable
 			{
 				using ValueType = std::decay_t<decltype(s)>;
-				using NextLayerType = util::tcp_socket::next_layer_type;
+				using NextLayerType = util::proxy_tcp_socket::next_layer_type;
 
-				if constexpr (std::same_as<NextLayerType, util::tcp_stream>)
+				if constexpr (std::same_as<NextLayerType, util::tcp_socket>)
 				{
-					if constexpr (std::same_as<util::tcp_socket, ValueType>)
+					if constexpr (std::same_as<util::proxy_tcp_socket, ValueType>)
 					{
 						auto& next_layer = s.next_layer();
 						next_layer.expires_at(expiry_time);
@@ -4476,10 +4476,10 @@ R"x*x*x(<html>
 		net::any_io_executor m_executor;
 
 		// m_local_socket 本地 socket, 即客户端连接的 socket.
-		proxy_stream_type m_local_socket;
+		variant_stream_type m_local_socket;
 
 		// m_remote_socket 远程 socket, 即连接远程代理服务端或远程服务的 socket.
-		proxy_stream_type m_remote_socket;
+		variant_stream_type m_remote_socket;
 
 		// 用于 socsks5 代理中的 udp 通信.
 		udp::socket m_udp_socket;
@@ -5004,7 +5004,7 @@ R"x*x*x(<html>
 
 			while (!m_abort)
 			{
-				tcp_socket socket(m_executor);
+				proxy_tcp_socket socket(m_executor);
 
 				co_await acceptor.async_accept(
 					socket.lowest_layer(), net_awaitable[error]);
@@ -5094,7 +5094,7 @@ R"x*x*x(<html>
 		}
 
 		inline net::awaitable<bool>
-		start_transparent_proxy(tcp_socket& socket, size_t connection_id) noexcept
+		start_transparent_proxy(proxy_tcp_socket& socket, size_t connection_id) noexcept
 		{
 #ifndef SO_ORIGINAL_DST
 #  define SO_ORIGINAL_DST 80

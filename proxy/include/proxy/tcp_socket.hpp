@@ -22,10 +22,10 @@ namespace util {
 
 	namespace net = boost::asio;
 
-	class tcp_stream
+	class tcp_socket
 	{
-		tcp_stream(const tcp_stream&) = delete;
-		tcp_stream& operator=(tcp_stream const&) = delete;
+		tcp_socket(const tcp_socket&) = delete;
+		tcp_socket& operator=(tcp_socket const&) = delete;
 
 	public:
 		using next_layer_type = boost::beast::tcp_stream;
@@ -38,30 +38,30 @@ namespace util {
 		using native_handle_type = typename lowest_layer_type::native_handle_type;
 
 	public:
-		explicit tcp_stream(net::ip::tcp::socket&& s)
+		explicit tcp_socket(net::ip::tcp::socket&& s)
 			: impl_(std::make_unique<next_layer_type>(std::move(s)))
 		{}
 
-		explicit tcp_stream(executor_type exec)
+		explicit tcp_socket(executor_type exec)
 			: impl_(std::make_unique<next_layer_type>(exec))
 		{}
 
-		explicit tcp_stream(net::io_context& ioc)
+		explicit tcp_socket(net::io_context& ioc)
 			: impl_(std::make_unique<next_layer_type>(ioc))
 		{}
 
-		tcp_stream& operator=(tcp_stream&& other) noexcept
+		tcp_socket& operator=(tcp_socket&& other) noexcept
 		{
 			if (this != &other)
 				impl_ = std::move(other.impl_);
 			return *this;
 		}
 
-		tcp_stream(tcp_stream&& other) noexcept
+		tcp_socket(tcp_socket&& other) noexcept
 			: impl_(std::move(other.impl_))
 		{}
 
-		~tcp_stream() = default;
+		~tcp_socket() = default;
 
 	public:
 		executor_type get_executor() const noexcept

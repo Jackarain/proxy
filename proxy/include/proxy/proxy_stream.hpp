@@ -16,32 +16,44 @@
 #include <boost/asio/ssl/stream.hpp>
 #include <boost/asio/buffer.hpp>
 
-#include "proxy/base_stream.hpp"
+#include "proxy/variant_stream.hpp"
 #include "proxy/scramble.hpp"
-#include "proxy/tcp_stream.hpp"
+#include "proxy/tcp_socket.hpp"
 
 
 namespace util {
 
 	using tcp = net::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 
-	template <typename Stream>
-	class proxy_socket;
+	//////////////////////////////////////////////////////////////////////////
+	// socket 层次关系
+	// tcp_socket 是建立在 boost::beast::tcp_stream 之上的包装，它能提供超时和限速等功能.
+	// proxy_stream 则建立在 tcp_socket 之上，它能为 tcp_socket 传输的数据提供 scramble / unscramble
+	// 等功能.
+	// 而 stream 是建立在 proxy_tcp_socket 之上，它提供 ssl/tls 加解密 proxy_tcp_socket 层的数据的功能.
+	// 最终由 variant_stream_type 包含 proxy_tcp_socket/ssl_stream 两个的变体定义.
 
-	using tcp_socket = proxy_socket<tcp_stream>;
+	// proxy_tcp_socket (proxy_stream > tcp_socket)
+	// ssl_stream (stream > proxy_tcp_socket)
+	// variant_stream_type (proxy_tcp_socket | ssl_stream)
+
+	template <typename Stream>
+	class proxy_stream;
+
+	using proxy_tcp_socket = proxy_stream<tcp_socket>;
 	using tcp_acceptor = tcp::acceptor;
 
-	using ssl_stream = net::ssl::stream<tcp_socket>;
-	using proxy_stream_type = base_stream<tcp_socket, ssl_stream>;
+	using ssl_stream = net::ssl::stream<proxy_tcp_socket>;
+	using variant_stream_type = variant_stream<proxy_tcp_socket, ssl_stream>;
 
 	//////////////////////////////////////////////////////////////////////////
 
 
 	template <typename Stream>
-	class proxy_socket final
+	class proxy_stream final
 	{
-		proxy_socket(const proxy_socket&) = delete;
-		proxy_socket& operator=(proxy_socket const&) = delete;
+		proxy_stream(const proxy_stream&) = delete;
+		proxy_stream& operator=(proxy_stream const&) = delete;
 
 		class initiate_async_read_some;
 		class initiate_async_write_some;
@@ -58,21 +70,21 @@ namespace util {
 	public:
 
 		template <typename Arg>
-		explicit proxy_socket(Arg&& s)
+		explicit proxy_stream(Arg&& s)
 			: next_layer_(std::move(s))
 		{}
 
-		explicit proxy_socket(executor_type exec)
+		explicit proxy_stream(executor_type exec)
 			: next_layer_(exec)
 		{}
 
-		explicit proxy_socket(net::io_context& ioc)
+		explicit proxy_stream(net::io_context& ioc)
 			: next_layer_(ioc)
 		{}
 
-		~proxy_socket() = default;
+		~proxy_stream() = default;
 
-		proxy_socket& operator=(proxy_socket&& other) noexcept
+		proxy_stream& operator=(proxy_stream&& other) noexcept
 		{
 			next_layer_ = std::move(other.next_layer_);
 
@@ -82,7 +94,7 @@ namespace util {
 			return *this;
 		}
 
-		proxy_socket(proxy_socket&& other) noexcept
+		proxy_stream(proxy_stream&& other) noexcept
 			: next_layer_(std::move(other.next_layer_))
 			, scramble_(std::move(other.scramble_))
 			, unscramble_(std::move(other.unscramble_))
@@ -240,9 +252,9 @@ namespace util {
 		class initiate_async_read_some
 		{
 		public:
-			typedef typename proxy_socket::executor_type executor_type;
+			typedef typename proxy_stream::executor_type executor_type;
 
-			explicit initiate_async_read_some(proxy_socket* self)
+			explicit initiate_async_read_some(proxy_stream* self)
 				: self_(self)
 			{
 			}
@@ -278,15 +290,15 @@ namespace util {
 			}
 
 		private:
-			proxy_socket* self_;
+			proxy_stream* self_;
 		};
 
 		class initiate_async_write_some
 		{
 		public:
-			typedef typename proxy_socket::executor_type executor_type;
+			typedef typename proxy_stream::executor_type executor_type;
 
-			explicit initiate_async_write_some(proxy_socket* self)
+			explicit initiate_async_write_some(proxy_stream* self)
 				: self_(self)
 			{
 			}
@@ -317,7 +329,7 @@ namespace util {
 			}
 
 		private:
-			proxy_socket* self_;
+			proxy_stream* self_;
 		};
 
 	private:
@@ -330,50 +342,50 @@ namespace util {
 
 	//////////////////////////////////////////////////////////////////////////
 
-	inline proxy_stream_type init_proxy_stream(
-		proxy_stream_type& s)
+	inline variant_stream_type init_proxy_stream(
+		variant_stream_type& s)
 	{
-		return proxy_stream_type(tcp_socket(s.get_executor()));
+		return variant_stream_type(proxy_tcp_socket(s.get_executor()));
 	}
 
-	inline proxy_stream_type init_proxy_stream(
+	inline variant_stream_type init_proxy_stream(
 		net::any_io_executor executor)
 	{
-		return proxy_stream_type(tcp_socket(executor));
+		return variant_stream_type(proxy_tcp_socket(executor));
 	}
 
-	inline proxy_stream_type init_proxy_stream(
+	inline variant_stream_type init_proxy_stream(
 		net::io_context& ioc)
 	{
-		return proxy_stream_type(tcp_socket(ioc));
+		return variant_stream_type(proxy_tcp_socket(ioc));
 	}
 
 	template <typename Stream>
-	inline proxy_stream_type init_proxy_stream(
+	inline variant_stream_type init_proxy_stream(
 		Stream&& s)
 	{
 		using StreamType = std::decay_t<Stream>;
 
-		if constexpr (std::same_as<StreamType, tcp_socket>)
-			return proxy_stream_type(std::move(s));
+		if constexpr (std::same_as<StreamType, proxy_tcp_socket>)
+			return variant_stream_type(std::move(s));
 		else if constexpr (std::same_as<StreamType, ssl_stream>)
-			return proxy_stream_type(std::move(s));
+			return variant_stream_type(std::move(s));
 		else
-			return proxy_stream_type(tcp_socket(std::move(s)));
+			return variant_stream_type(proxy_tcp_socket(std::move(s)));
 	}
 
 	template <typename Stream>
-	inline proxy_stream_type init_proxy_stream(
+	inline variant_stream_type init_proxy_stream(
 		Stream&& s, net::ssl::context& sslctx)
 	{
 		if constexpr (std::same_as<std::decay_t<Stream>, tcp::socket>)
 		{
-			return proxy_stream_type(ssl_stream(
+			return variant_stream_type(ssl_stream(
 				std::forward<tcp::socket>(s), sslctx));
 		}
 		else {
-			return proxy_stream_type(ssl_stream(
-				tcp_socket(std::move(s)), sslctx));
+			return variant_stream_type(ssl_stream(
+				proxy_tcp_socket(std::move(s)), sslctx));
 		}
 	}
 
