@@ -21,14 +21,21 @@
 namespace util {
 
 	namespace net = boost::asio;
+	using tcp = net::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
+
 
 	class tcp_socket
 	{
 		tcp_socket(const tcp_socket&) = delete;
 		tcp_socket& operator=(tcp_socket const&) = delete;
 
+		using tcp_stream = boost::beast::basic_stream<
+			net::ip::tcp,
+			net::any_io_executor,
+			boost::beast::simple_rate_policy>;
+
 	public:
-		using next_layer_type = boost::beast::tcp_stream;
+		using next_layer_type = tcp_stream;
 		using executor_type = next_layer_type::executor_type;
 
 		using lowest_layer_type = typename next_layer_type::socket_type;
@@ -146,6 +153,14 @@ namespace util {
 		void expires_never()
 		{
 			impl_->expires_never();
+		}
+
+		void rate_limit(std::size_t bytes_per_second) noexcept
+		{
+			auto& policy = impl_->rate_policy();
+
+			policy.read_limit(bytes_per_second);
+			policy.write_limit(bytes_per_second);
 		}
 
 	private:
