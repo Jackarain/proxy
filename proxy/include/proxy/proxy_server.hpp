@@ -384,6 +384,10 @@ R"x*x*x(<html>
 		using auth_users = std::tuple<std::string, std::string>;
 		std::vector<auth_users> auth_users_;
 
+		// 指定用户限速设置.
+		// 其中表示：用户名对应的速率
+		std::unordered_map<std::string, int> users_rate_limit_;
+
 		// allow_regions/deny_regions 用于指定允许/拒绝的地区, 例如:
 		// allow_regions_ = { "中国", "香港", "台湾" };
 		// deny_regions_ = { "美国", "日本" };
@@ -2130,6 +2134,7 @@ R"x*x*x(<html>
 				if (user == userid)
 				{
 					verify_passed = true;
+					user_rate_limit_config(user);
 					break;
 				}
 			}
@@ -2307,6 +2312,7 @@ R"x*x*x(<html>
 				if (uname == user && passwd == pwd)
 				{
 					verify_passed = true;
+					user_rate_limit_config(user);
 					break;
 				}
 			}
@@ -2808,6 +2814,7 @@ R"x*x*x(<html>
 				if (uname == user && passwd == pwd)
 				{
 					verify_passed = true;
+					user_rate_limit_config(user);
 					break;
 				}
 			}
@@ -4410,6 +4417,17 @@ R"x*x*x(<html>
 			}
 
 			co_return;
+		}
+
+		inline void user_rate_limit_config(const std::string& user)
+		{
+			// 在这里使用用户指定的速率设置替换全局速率配置.
+			auto found = m_option.users_rate_limit_.find(user);
+			if (found != m_option.users_rate_limit_.end())
+			{
+				auto& rate = *found;
+				m_option.tcp_rate_limit_ = rate.second;
+			}
 		}
 
 		inline void stream_expires_never(variant_stream_type& stream)
