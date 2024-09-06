@@ -13,7 +13,7 @@ workflows:
 jobs:
   build-x86_64:
     machine:
-      image: ubuntu-2004:202101-01
+      image: default
       docker_layer_caching: true
     steps:
       - run:
@@ -34,7 +34,7 @@ jobs:
 
   build-arm64:
     machine:
-      image: ubuntu-2004:202101-01
+      image: default
     resource_class: arm.medium
     steps:
       - run:
