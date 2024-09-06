@@ -5,8 +5,8 @@
 // Email:  jack.wgm at gmail dot com
 //
 
-#ifndef INCLUDE__2023_10_18__BASE_STREAM_HPP
-#define INCLUDE__2023_10_18__BASE_STREAM_HPP
+#ifndef INCLUDE__2023_10_18__VARIANT_STREAM_HPP
+#define INCLUDE__2023_10_18__VARIANT_STREAM_HPP
 
 
 #include <type_traits>
@@ -115,4 +115,4 @@ namespace util {
 	};
 }
 
-#endif // INCLUDE__2023_10_18__BASE_STREAM_HPP
+#endif // INCLUDE__2023_10_18__VARIANT_STREAM_HPP
