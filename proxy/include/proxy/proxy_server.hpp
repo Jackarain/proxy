@@ -1035,7 +1035,7 @@ R"x*x*x(<html>
 					return;
 
 				using Stream = std::decay_t<decltype(sock)>;
-				using ProxySocket = util::proxy_stream<tcp::socket>;
+				using ProxySocket = util::proxy_tcp_socket;
 
 				if constexpr (std::same_as<Stream, tcp::socket>)
 					return;
@@ -1094,7 +1094,7 @@ R"x*x*x(<html>
 					return;
 
 				using Stream = std::decay_t<decltype(sock)>;
-				using ProxySocket = util::proxy_stream<tcp::socket>;
+				using ProxySocket = util::proxy_tcp_socket;
 
 				if constexpr (std::same_as<Stream, tcp::socket>)
 					return;
