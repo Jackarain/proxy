@@ -160,8 +160,6 @@ namespace proxy {
 				for (size_t i = 0; i < ulen; i++)
 					write<uint8_t>(username[i], auth);
 
-				auth += ulen;
-
 				// password length.
 				const auto plen = static_cast<uint8_t>(passwd.size());
 				write<uint8_t>(plen, auth);
@@ -169,7 +167,6 @@ namespace proxy {
 				// password.
 				for (size_t i = 0; i < plen; i++)
 					write<uint8_t>(passwd[i], auth);
-				auth += plen;
 
 				request.commit(bytes_to_write);
 
