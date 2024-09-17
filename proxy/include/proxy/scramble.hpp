@@ -52,6 +52,7 @@ namespace proxy {
 
 			if (i == 0 && !bfilter.empty())
 			{
+				// 如果生成的第1个随机字节在过滤列表中, 则重新生成.
 				while (bfilter.contains(c))
 					c = (static_cast<uint8_t>(dis(gen)) & 0xFE)| ((length >> i) & 1);
 			}

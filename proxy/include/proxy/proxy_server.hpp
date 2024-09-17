@@ -897,7 +897,7 @@ R"x*x*x(<html>
 			boost::system::error_code error;
 
 			// 工作流程:
-			// 1. 生成一段随机长度的随机数据, 最大长度由配置文件中的参数 noise_length 指定, 用于发送给对方.
+			// 1. 生成一段随机长度的随机数据(最大长度由配置文件中的参数 noise_length 指定), 用于发送给对方.
 			// 2. 根据这些随机数据计算发送数据的 key, 这个 key 将会用于后续的代理时数据的加密.
 			// 3. 发送随机数据.
 			// 4. 对方在接收到随机数据后, 同样会发送噪声随机数据(包含随机数长度本身, 在前16字节中的最后一位,
@@ -4564,9 +4564,9 @@ R"x*x*x(<html>
 		// m_local_buffer 本地缓冲区, 用于接收客户端的数据的 buffer.
 		net::streambuf m_local_buffer{};
 
-		// m_inin_key 用于解密接收到的数据的 key.
+		// m_inin_key 用于身份为服务端时, 解密接收到的数据的 key.
 		std::vector<uint8_t> m_inin_key;
-		// m_inout_key 用于加密发送的数据的 key.
+		// m_inout_key 用于身份为服务端时, 加密发送的数据的 key.
 		std::vector<uint8_t> m_inout_key;
 
 		// m_proxy_server 当前代理服务器对象的弱引用.
@@ -4578,10 +4578,10 @@ R"x*x*x(<html>
 		// m_bridge_proxy 作为中继桥接的时候, 下游代理服务器的地址.
 		std::unique_ptr<urls::url_view> m_bridge_proxy;
 
-		// m_outin_key 用于与下游代理服务器加密通信时, 解密接收到
+		// m_outin_key 用于身份为客户端时, 与下游代理服务器加密通信时, 解密接收到
 		// 下游代理服务器数据的 key.
 		std::vector<uint8_t> m_outin_key;
-		// m_outout_key 用于与下游代理服务器加密通信时, 加密给下
+		// m_outout_key 用于身份为客户端时, 与下游代理服务器加密通信时, 加密给下
 		// 游代理服务器发送的数据的 key.
 		std::vector<uint8_t> m_outout_key;
 
