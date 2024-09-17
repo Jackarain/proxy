@@ -999,7 +999,7 @@ R"x*x*x(<html>
 		}
 
 		// 协议侦测协程.
-		inline net::awaitable<void> proto_detect(bool first_handshake = true)
+		inline net::awaitable<void> proto_detect(bool handshake_before = true)
 		{
 			// 如果 server 对象已经撤销, 说明服务已经关闭则直接退出这个 session 连接不再
 			// 进行任何处理.
@@ -1047,11 +1047,11 @@ R"x*x*x(<html>
 				}
 			};
 
-			// first_handshake 在调用 proto_detect 时第1次为 true, 第2次调用 proto_detect
-			// 时 first_handshake 为 false, 此时就表示已经完成了 scramble 握手并协
+			// handshake_before 在调用 proto_detect 时第1次为 true, 第2次调用 proto_detect
+			// 时 handshake_before 为 false, 此时就表示已经完成了 scramble 握手并协
 			// 商好了 scramble 加解密用的 key, 则此时应该为 socket 配置好加解密用的 key.
 
-			if (!first_handshake)
+			if (!handshake_before)
 			{
 				// 为 socket 设置 scramble key.
 				scramble_setup(socket);
@@ -1106,7 +1106,7 @@ R"x*x*x(<html>
 				}
 			};
 
-			if (!first_handshake)
+			if (!handshake_before)
 			{
 				// peek 方式解密混淆的数据, 用于检测加密混淆的数据的代理协议. 在双方启用
 				// scramble 的情况下, 上面 recv 接收到的数据则会为 scramble 加密后的
@@ -1126,12 +1126,12 @@ R"x*x*x(<html>
 				bool noise_proto = false;
 
 				// 如果启用了 scramble, 则也认为是安全连接.
-				if (proto_byte != 0x05 &&
+				if ((proto_byte != 0x05 &&
 					proto_byte != 0x04 &&
 					proto_byte != 0x47 &&
 					proto_byte != 0x50 &&
-					proto_byte != 0x43 &&
-					m_option.scramble_)
+					proto_byte != 0x43) ||
+					!handshake_before)
 				{
 					noise_proto = true;
 				}
@@ -1218,7 +1218,7 @@ R"x*x*x(<html>
 				// 开始启动代理协议.
 				co_await start_proxy();
 			}
-			else if (first_handshake && m_option.scramble_)
+			else if (handshake_before && m_option.scramble_)
 			{
 				// 进入噪声握手协议, 即: 返回一段噪声给客户端, 并等待客户端返回噪声.
 				XLOG_DBG << "connection id: "
