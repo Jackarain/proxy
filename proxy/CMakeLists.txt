@@ -20,6 +20,7 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/socks_enums.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/socks_error_code.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/socks_io.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/scramble.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/proxy_server.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/use_awaitable.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/http_proxy_client.hpp
