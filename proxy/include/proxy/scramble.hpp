@@ -101,31 +101,6 @@ namespace proxy {
 	}
 
 	// 用于对数据进行混淆, 通过 key 与数据进行异或运算, 以达到混淆数据的目的.
-	inline std::vector<uint8_t> scramble_data(
-		const std::vector<uint8_t>& key, std::span<uint8_t> data)
-	{
-		BOOST_ASSERT(key.size() == 16 && "key must be set!");
-
-		if (data.empty())
-			return {};
-
-		std::vector<uint8_t> result(data.size(), 0);
-		std::vector<uint8_t> tmp = key;
-		size_t i = 0;
-
-		do {
-			result[i] = data[i] ^ tmp[i % tmp.size()];
-
-			// 每次处理完一个 key 长度的数据, 就重新计算一个新的 key.
-			if (++i % tmp.size() == 0)
-				tmp = compute_key(tmp);
-
-		} while (i < data.size());
-
-		return result;
-	}
-
-	// 用于对数据进行混淆, 通过 key 与数据进行异或运算, 以达到混淆数据的目的.
 	class scramble_stream
 	{
 		scramble_stream(const scramble_stream&) = delete;
@@ -178,7 +153,7 @@ namespace proxy {
 		}
 
 		// 将数据 data 加解密, 但不改变 scramble_stream 类的状态.
-		inline void peek_data(std::span<uint8_t> data) noexcept
+		inline void peek_data(std::span<uint8_t> data) const noexcept
 		{
 			BOOST_ASSERT(m_key.size() == 16 && "key must be set!");
 
