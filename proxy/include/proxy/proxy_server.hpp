@@ -291,7 +291,7 @@ R"x*x*x(<html>
 	inline const uint16_t nosie_injection_max_len = 0x0fff;
 
 	// global_known_proto 用于指定全局已知的协议, 用于噪声注入时避免生成已知的协议头.
-	inline std::set<uint8_t> global_known_proto =
+	inline const std::set<uint8_t> global_known_proto =
 		{
 			0x04, // socks4
 			0x05, // socks5
@@ -301,7 +301,7 @@ R"x*x*x(<html>
 			0x16, // ssl
 		};
 
-	inline std::map<std::string, std::string> global_mimes =
+	inline const std::map<std::string, std::string> global_mimes =
 	{
 		{ ".html", "text/html; charset=utf-8" },
 		{ ".htm", "text/html; charset=utf-8" },
