@@ -3948,7 +3948,7 @@ R"x*x*x(<html>
 					res.set(http::field::date, server_date_string());
 					auto ext = strutil::to_lower(index_html.extension().string());
 					if (global_mimes.count(ext))
-						res.set(http::field::content_type, global_mimes[ext]);
+						res.set(http::field::content_type, global_mimes.at(ext));
 					else
 						res.set(http::field::content_type, "text/plain");
 					res.keep_alive(request.keep_alive());
@@ -4184,7 +4184,7 @@ R"x*x*x(<html>
 			auto ext = strutil::to_lower(fs::path(path).extension().string());
 
 			if (global_mimes.count(ext))
-				res.set(http::field::content_type, global_mimes[ext]);
+				res.set(http::field::content_type, global_mimes.at(ext));
 			else
 				res.set(http::field::content_type, "text/plain");
 
