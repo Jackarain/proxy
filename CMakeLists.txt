@@ -128,6 +128,7 @@ endif()
 
 if (ENABLE_USE_SYSTEMD_LOG)
 	add_definitions(-DUSE_SYSTEMD_LOGGING)
+	link_libraries(systemd)
 endif()
 
 ################################################################################
