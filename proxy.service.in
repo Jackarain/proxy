@@ -3,9 +3,7 @@ Description=Proxy Server Core Daemon
 After=network.target
 
 [Service]
-ExecStartPre=/bin/mkdir -pv /var/log/proxy_server
-ExecStart=@CMAKE_INSTALL_PREFIX@/bin/proxy_server --config %i
-WorkingDirectory=/var/log/proxy_server
+ExecStart=@CMAKE_INSTALL_PREFIX@/bin/proxy_server --config /etc/proxy_server/%i.conf
 
 LimitNOFILE=900000
 Restart=always
