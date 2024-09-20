@@ -4672,7 +4672,7 @@ R"x*x*x(<html>
 					result.chains_++;
 					continue;
 				}
-				else if (line.find("-----BEGIN DH PARAMETERS-----") != std::string::npos)
+				else if (line.find("DH PARAMETERS-----") != std::string::npos)
 				{
 					type = pem_type::dhparam;
 					break;
