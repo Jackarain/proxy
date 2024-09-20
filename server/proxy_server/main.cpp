@@ -407,7 +407,7 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 	if (disable_logs || log_dir.empty())
 		xlogger::toggle_write_logging(false);
 	else
-	xlogger::init_logging(log_dir);
+		xlogger::init_logging(log_dir);
 
 	print_args(argc, argv, vm);
 
