@@ -4,13 +4,12 @@ After=network.target
 
 [Service]
 ExecStartPre=/bin/mkdir -pv /var/log/proxy_server
-ExecStart=@CMAKE_INSTALL_PREFIX@/bin/proxy_server
+ExecStart=@CMAKE_INSTALL_PREFIX@/bin/proxy_server --config %i
 WorkingDirectory=/var/log/proxy_server
 
 LimitNOFILE=900000
 Restart=always
 RestartSec=5
-MemoryMax=50G
 
 [Install]
 WantedBy=multi-user.target
