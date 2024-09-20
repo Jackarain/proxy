@@ -214,6 +214,8 @@ namespace xlogger {
 
 
 inline bool global_logging___ = true;
+inline bool global_console_logging___ = true;
+inline bool global_write_logging___ = true;
 inline int64_t global_logfile_size___ = DEFAULT_LOG_MAXFILE_SIZE;
 
 
@@ -773,17 +775,9 @@ public:
 		return m_log_path.string();
 	}
 
-	inline void logging(bool disable) noexcept
-	{
-		m_disable_write = disable;
-	}
-
 	inline void write([[maybe_unused]] int64_t time,
 		const char* str, std::streamsize size)
 	{
-		if (m_disable_write)
-			return;
-
 		bool condition = false;
 		auto hours = time / 1000 / 3600;
 		auto last_hours = m_last_time / 1000 / 3600;
@@ -881,7 +875,6 @@ private:
 	ofstream_ptr m_ofstream;
 	int64_t m_last_time{ -1 };
 	int64_t m_log_size{ 0 };
-	bool m_disable_write{ false };
 };
 
 #ifndef DISABLE_LOGGER_THREAD_SAFE
@@ -927,8 +920,7 @@ const inline std::string _LOGGER_WARN_STR__  = " WARN  ";
 const inline std::string _LOGGER_ERR_STR__   = " ERROR ";
 const inline std::string _LOGGER_FILE_STR__  = " FILE  ";
 
-inline void logger_output_console__([[maybe_unused]] bool disable_cout,
-	[[maybe_unused]] const logger_level__& level,
+inline void logger_output_console__([[maybe_unused]] const logger_level__& level,
 	[[maybe_unused]] const std::string& prefix,
 	[[maybe_unused]] const std::string& message) noexcept
 {
@@ -940,41 +932,38 @@ inline void logger_output_console__([[maybe_unused]] bool disable_cout,
 #endif
 
 #if !defined(DISABLE_LOGGER_TO_CONSOLE)
-	if (!disable_cout)
+	HANDLE handle_stdout = GetStdHandle(STD_OUTPUT_HANDLE);
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	GetConsoleScreenBufferInfo(handle_stdout, &csbi);
+
+	switch (level)
 	{
-		HANDLE handle_stdout = GetStdHandle(STD_OUTPUT_HANDLE);
-		CONSOLE_SCREEN_BUFFER_INFO csbi;
-		GetConsoleScreenBufferInfo(handle_stdout, &csbi);
-
-		switch (level)
-		{
-		case _logger_info_id__:
-			SetConsoleTextAttribute(handle_stdout,
-				FOREGROUND_GREEN);
-			break;
-		case _logger_debug_id__:
-			SetConsoleTextAttribute(handle_stdout,
-				FOREGROUND_GREEN | FOREGROUND_INTENSITY);
-			break;
-		case _logger_warn_id__:
-			SetConsoleTextAttribute(handle_stdout,
-				FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_INTENSITY);
-			break;
-		case _logger_error_id__:
-			SetConsoleTextAttribute(handle_stdout,
-				FOREGROUND_RED | FOREGROUND_INTENSITY);
-			break;
-		}
-
-		WriteConsoleW(handle_stdout,
-			title.data(), (DWORD)title.size(), nullptr, nullptr);
+	case _logger_info_id__:
 		SetConsoleTextAttribute(handle_stdout,
-			FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_BLUE);
-
-		WriteConsoleW(handle_stdout,
-			msg.data(), (DWORD)msg.size(), nullptr, nullptr);
-		SetConsoleTextAttribute(handle_stdout, csbi.wAttributes);
+			FOREGROUND_GREEN);
+		break;
+	case _logger_debug_id__:
+		SetConsoleTextAttribute(handle_stdout,
+			FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+		break;
+	case _logger_warn_id__:
+		SetConsoleTextAttribute(handle_stdout,
+			FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_INTENSITY);
+		break;
+	case _logger_error_id__:
+		SetConsoleTextAttribute(handle_stdout,
+			FOREGROUND_RED | FOREGROUND_INTENSITY);
+		break;
 	}
+
+	WriteConsoleW(handle_stdout,
+		title.data(), (DWORD)title.size(), nullptr, nullptr);
+	SetConsoleTextAttribute(handle_stdout,
+		FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_BLUE);
+
+	WriteConsoleW(handle_stdout,
+		msg.data(), (DWORD)msg.size(), nullptr, nullptr);
+	SetConsoleTextAttribute(handle_stdout, csbi.wAttributes);
 #endif
 
 #if !defined(DISABLE_LOGGER_TO_DBGVIEW)
@@ -982,37 +971,34 @@ inline void logger_output_console__([[maybe_unused]] bool disable_cout,
 #endif
 
 #elif !defined(DISABLE_LOGGER_TO_CONSOLE)
-	if (!disable_cout)
+	std::string out;
+
+	switch (level)
 	{
-		std::string out;
-
-		switch (level)
-		{
-		case _logger_info_id__:
-			std::format_to(std::back_inserter(out),
-				"\033[32m{}\033[0m{}", prefix, message);
-			break;
-		case _logger_debug_id__:
-			std::format_to(std::back_inserter(out),
-				"\033[1;32m{}\033[0m{}", prefix, message);
-			break;
-		case _logger_warn_id__:
-			std::format_to(std::back_inserter(out),
-				"\033[1;33m{}\033[0m{}", prefix, message);
-			break;
-		case _logger_error_id__:
-			std::format_to(std::back_inserter(out),
-				"\033[1;31m{}\033[0m{}", prefix, message);
-			break;
-		case _logger_file_id__:
-			// std::format_to(std::back_inserter(out),
-			//	"\033[1;34m{}\033[0m{}", prefix, message);
-			break;
-		}
-
-		std::cout << out;
-		std::cout.flush();
+	case _logger_info_id__:
+		std::format_to(std::back_inserter(out),
+			"\033[32m{}\033[0m{}", prefix, message);
+		break;
+	case _logger_debug_id__:
+		std::format_to(std::back_inserter(out),
+			"\033[1;32m{}\033[0m{}", prefix, message);
+		break;
+	case _logger_warn_id__:
+		std::format_to(std::back_inserter(out),
+			"\033[1;33m{}\033[0m{}", prefix, message);
+		break;
+	case _logger_error_id__:
+		std::format_to(std::back_inserter(out),
+			"\033[1;31m{}\033[0m{}", prefix, message);
+		break;
+	case _logger_file_id__:
+		// std::format_to(std::back_inserter(out),
+		//	"\033[1;34m{}\033[0m{}", prefix, message);
+		break;
 	}
+
+	std::cout << out;
+	std::cout.flush();
 #endif
 }
 
@@ -1114,7 +1100,8 @@ inline void logger_writer__(int64_t time, const logger_level__& level,
 		return;
 
 #ifndef DISABLE_WRITE_LOGGING
-	logger.write(time, whole.c_str(), whole.size());
+	if (global_write_logging___)
+		logger.write(time, whole.c_str(), whole.size());
 #endif // !DISABLE_WRITE_LOGGING
 
 	// Output to systemd.
@@ -1129,7 +1116,8 @@ inline void logger_writer__(int64_t time, const logger_level__& level,
 
 	// Output to console.
 #if !defined(USE_SYSTEMD_LOGGING) && !defined(__ANDROID__)
-	logger_output_console__(disable_cout, level, prefix, tmp);
+	if (global_console_logging___ && !disable_cout)
+		logger_output_console__(level, prefix, tmp);
 #endif
 }
 
@@ -1305,11 +1293,14 @@ inline void turnon_logging() noexcept
 	global_logging___ = true;
 }
 
-inline void toggle_write_logging(bool disable)
+inline void toggle_write_logging(bool enable)
 {
-	auto_logger_file__& file =
-		logger_aux__::writer_single<xlogger::auto_logger_file__>();
-	file.logging(disable);
+	global_write_logging___ = enable;
+}
+
+inline void toggle_console_logging(bool enable)
+{
+	global_console_logging___ = enable;
 }
 
 inline void set_logfile_maxsize(int64_t size) noexcept
@@ -1826,7 +1817,8 @@ namespace xlogger {
 	inline void shutdown_logging();
 	inline void turnoff_logging() noexcept;
 	inline void turnon_logging() noexcept;
-	inline void toggle_write_logging(bool disable);
+	inline void toggle_write_logging(bool enable);
+	inline void toggle_console_logging(bool enable);
 	inline void set_logfile_maxsize(int64_t size) noexcept;
 }
 

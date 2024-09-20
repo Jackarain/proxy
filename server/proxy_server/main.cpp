@@ -404,12 +404,10 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 		po::notify(vm);
 	}
 
-	if (disable_logs)
-		xlogger::toggle_write_logging(true);
-
+	if (disable_logs || log_dir.empty())
+		xlogger::toggle_write_logging(false);
+	else
 	xlogger::init_logging(log_dir);
-	if (log_dir.empty())
-		xlogger::toggle_write_logging(true);
 
 	print_args(argc, argv, vm);
 
