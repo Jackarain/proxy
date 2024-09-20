@@ -408,6 +408,8 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 		xlogger::toggle_write_logging(true);
 
 	xlogger::init_logging(log_dir);
+	if (log_dir.empty())
+		xlogger::toggle_write_logging(true);
 
 	print_args(argc, argv, vm);
 
