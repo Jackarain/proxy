@@ -58,6 +58,7 @@ option(ENABLE_REUSEPORT				"Build with REUSEPORT support" OFF)
 
 option(ENABLE_SYSTEM_ZLIB			"Build with system zlib support" OFF)
 option(ENABLE_SYSTEM_OPENSSL		"Build with system openssl support" OFF)
+option(ENABLE_USE_SYSTEMD_LOG		"Build with systemd log support" OFF)
 
 option(ENABLE_USE_OPENSSL			"Build with openssl support" ON)
 option(ENABLE_USE_BORINGSSL			"Build with boringssl support" OFF)
@@ -121,6 +122,12 @@ if (ENABLE_SNMALLOC_STATIC)
 
 	link_libraries(snmalloc)
 	include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/snmalloc)
+endif()
+
+################################################################################
+
+if (ENABLE_USE_SYSTEMD_LOG)
+	add_definitions(-DUSE_SYSTEMD_LOGGING)
 endif()
 
 ################################################################################
