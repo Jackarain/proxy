@@ -559,6 +559,6 @@ endif()
 ################################################################################
 # 安装 proxy_server 服务
 
-configure_file(proxy.service.in proxy.service)
+configure_file(proxy.service.in proxy-server@.service)
 install(TARGETS proxy_server RUNTIME DESTINATION bin)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/proxy.service DESTINATION /usr/lib/systemd/system/)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/proxy-server@.service DESTINATION /usr/lib/systemd/system/)
