@@ -102,7 +102,7 @@ docker build . -t proxy:v1
 | v6only | 仅使用 ipv6 向目标地址连接，默认为不启用 |
 | transparent | 启用透明代理，默认禁用，此选项仅 linux 平台有效 |
 | so_mark | 用于发起向 `proxy_pass` 连接时设置 so_mark 以方便实现代理流量的策略路由，仅在 transparent 启动时有效 |
-| local_ip | 作为中间级联服务时，用于向上游服务发起连接时所使用的本地网口 `ip` 地址 |
+| local_ip | 用于向上游服务或目标服务发起连接时使用指定的本地网口 `ip` 地址，通常用于机器上有多个 `ip` 时使用特定 `ip` 向外发起连接 |
 | auth_users | 认证信息列表，客户端必须满足其中一对用户/密码才能握手通过，默认用户密码是 `jack:1111`，若需要设置为无需要认证代理模式，必须置 `auth_users` 参数为 "" |
 | proxy_pass | 当前服务作为中间级联服务时，`proxy_pass` 指定上游代理服务地址，格式为 `url` 格式，如果有认证信息并必须包含认证信息，如: `https://jack:1111@example.com:1080/` |
 | proxy_pass_ssl | 向 `proxy_pass` 指定的上游代理服务连接时，是否通过 `ssl` 安全传输，注意必须在上游代理服务启用 `ssl` 相关证书域名密钥等信息. |
