@@ -746,7 +746,7 @@ public:
 			return;
 
 		std::error_code ignore_ec;
-		if (!fs::exists(m_log_path, ignore_ec))
+		if (!fs::exists(m_log_path, ignore_ec) && global_write_logging___)
 			fs::create_directories(
 				m_log_path.parent_path(), ignore_ec);
 	}
@@ -765,7 +765,7 @@ public:
 			return;
 
 		std::error_code ignore_ec;
-		if (!fs::exists(m_log_path, ignore_ec))
+		if (!fs::exists(m_log_path, ignore_ec) && global_write_logging___)
 			fs::create_directories(
 				m_log_path.parent_path(), ignore_ec);
 	}
