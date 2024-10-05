@@ -44,16 +44,13 @@ jobs:
           path: build/docker/
 
   Linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
       - name: Update OS and Compilers
         run: |
-          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-          sudo apt install -y cmake gcc-12 g++-12 ninja-build
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10
-          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 10
+          sudo apt install -y cmake ninja-build
 
       - name: Build proxy
         run: |
@@ -67,7 +64,7 @@ jobs:
           path: build/bin/proxy_server
 
   Alpine:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: alpine:3.20.1
     steps:
@@ -88,16 +85,13 @@ jobs:
           path: build/bin/proxy_server
 
   MiMalloc:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
       - name: Update OS and Compilers
         run: |
-          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-          sudo apt install -y cmake gcc-12 g++-12 ninja-build
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10
-          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 10
+          sudo apt install -y cmake ninja-build
 
       - name: Build mimalloc
         run: |
@@ -121,16 +115,13 @@ jobs:
           path: build/bin/proxy_server
 
   SnMalloc:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
       - name: Update OS and Compilers
         run: |
-          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-          sudo apt install -y cmake gcc-12 g++-12 ninja-build
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10
-          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 10
+          sudo apt install -y cmake ninja-build
 
       - name: Build proxy
         run: |
