@@ -1,6 +1,6 @@
 FROM alpine:edge as builder
 
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.jcut.edu.cn/g' /etc/apk/repositories
+RUN sed -i 's#https\?://dl-cdn.alpinelinux.org/alpine#https://mirror.nju.edu.cn/alpine#g' /etc/apk/repositories
 
 RUN apk add -u alpine-keys --allow-untrusted
 RUN apk update
