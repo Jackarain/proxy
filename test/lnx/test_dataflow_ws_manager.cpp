@@ -1,7 +1,3 @@
-// test_proxy_ws.cpp
-// ~~~~~~~~~~~~~~~~
-// A wrapper for testing data flow with threads
-
 #include <iostream>
 #include <dlfcn.h>
 #include <thread>

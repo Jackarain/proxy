@@ -1,11 +1,7 @@
-// test_proxy.cpp
-// ~~~~~~~~~~~~~~~~
-// A wrapper for testing data flow
-
 #include <iostream>
 #include <dlfcn.h>
 
-typedef void (*run_websocket_client_func)();
+typedef void (*run_data_flow_service_func)();
 
 int main() {
     // Load the shared library
@@ -16,15 +12,15 @@ int main() {
     }
 
     // Load the function
-    run_websocket_client_func run_websocket_client = (run_websocket_client_func)dlsym(handle, "run_websocket_client");
-    if (!run_websocket_client) {
-        std::cerr << "Failed to locate run_websocket_client in shared library: " << dlerror() << std::endl;
+    run_data_flow_service_func run_data_flow_service = (run_data_flow_service_func)dlsym(handle, "run_data_flow_service");
+    if (!run_data_flow_service) {
+        std::cerr << "Failed to locate run_data_flow_service in shared library: " << dlerror() << std::endl;
         dlclose(handle);
         return 1;
     }
 
     // Run the service
-    run_websocket_client();
+    run_data_flow_service();
 
     // Close the shared library
     dlclose(handle);
