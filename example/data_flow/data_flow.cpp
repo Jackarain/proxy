@@ -409,7 +409,7 @@ net::awaitable<void> websocket_test_server(net::io_context& ioc, const flow_conf
     }
 }
 
-extern "C" EXPORT_SYMBOL run_data_flow_service() {
+extern "C" EXPORT_SYMBOL void run_data_flow_service() {
     net::io_context ioc(1);
     flow_config config = load_flow_config();
     std::shared_ptr<proxy_server> flow;
@@ -417,14 +417,14 @@ extern "C" EXPORT_SYMBOL run_data_flow_service() {
     ioc.run();
 }
 
-extern "C" EXPORT_SYMBOL run_websocket_client() {
+extern "C" EXPORT_SYMBOL void run_websocket_client() {
     net::io_context ioc(1);
     flow_config config = load_flow_config();
     net::co_spawn(ioc, run_websocket_with_data_flow(ioc, config), net::detached);
     ioc.run();
 }
 
-extern "C" EXPORT_SYMBOL run_websocket_test_server() {
+extern "C" EXPORT_SYMBOL void run_websocket_test_server() {
     net::io_context ioc(1);
     flow_config config = load_flow_config();
     net::co_spawn(ioc, websocket_test_server(ioc, config), net::detached);
