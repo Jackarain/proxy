@@ -373,7 +373,11 @@ net::awaitable<void> websocket_test_server(net::io_context& ioc, const flow_conf
             if (path.empty()) path = "/";
 
             std::ostringstream req_oss;
-            req_oss << "GET " << scheme << "://" << target_host << ":" << target_port_str << path << " HTTP/1.1\r\n";
+            req_oss << "GET " << scheme << "://" << target_host;
+            if ((scheme == "http" && target_port_str != "80") || (scheme == "https" && target_port_str != "443")) {
+                req_oss << ":" << target_port_str;
+            }
+            req_oss << path << " HTTP/1.1\r\n";
             req_oss << "Host: " << target_host << "\r\n";
             req_oss << "User-Agent: TestWebSocketServer/1.0\r\n";
             req_oss << "Accept: */*\r\n";
