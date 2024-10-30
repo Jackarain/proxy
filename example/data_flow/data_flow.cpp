@@ -2,6 +2,12 @@
 // ~~~~~~~~~~~~~~~~~
 // A SOCKS data flow lib
 
+#ifdef _WIN32
+    #define EXPORT_SYMBOL __declspec(dllexport)
+#else
+    #define EXPORT_SYMBOL __attribute__((visibility("default")))
+#endif
+
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
@@ -367,7 +373,7 @@ net::awaitable<void> websocket_test_server(net::io_context& ioc, const flow_conf
             if (path.empty()) path = "/";
 
             std::ostringstream req_oss;
-            req_oss << "GET " << scheme << "://" << target_host << path << " HTTP/1.1\r\n";
+            req_oss << "GET " << scheme << "://" << target_host << ":" << target_port_str << path << " HTTP/1.1\r\n";
             req_oss << "Host: " << target_host << "\r\n";
             req_oss << "User-Agent: TestWebSocketServer/1.0\r\n";
             req_oss << "Accept: */*\r\n";
@@ -403,7 +409,7 @@ net::awaitable<void> websocket_test_server(net::io_context& ioc, const flow_conf
     }
 }
 
-extern "C" void __attribute__((visibility("default"))) run_data_flow_service() {
+extern "C" EXPORT_SYMBOL run_data_flow_service() {
     net::io_context ioc(1);
     flow_config config = load_flow_config();
     std::shared_ptr<proxy_server> flow;
@@ -411,14 +417,14 @@ extern "C" void __attribute__((visibility("default"))) run_data_flow_service() {
     ioc.run();
 }
 
-extern "C" void __attribute__((visibility("default"))) run_websocket_client() {
+extern "C" EXPORT_SYMBOL run_websocket_client() {
     net::io_context ioc(1);
     flow_config config = load_flow_config();
     net::co_spawn(ioc, run_websocket_with_data_flow(ioc, config), net::detached);
     ioc.run();
 }
 
-extern "C" void __attribute__((visibility("default"))) run_websocket_test_server() {
+extern "C" EXPORT_SYMBOL run_websocket_test_server() {
     net::io_context ioc(1);
     flow_config config = load_flow_config();
     net::co_spawn(ioc, websocket_test_server(ioc, config), net::detached);
