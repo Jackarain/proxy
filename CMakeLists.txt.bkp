@@ -3,7 +3,6 @@ cmake_policy(SET CMP0091 NEW) # for CMAKE_MSVC_RUNTIME_LIBRARY
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW) # cmake_policy(SET CMP0077 NEW)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 project(proxy LANGUAGES CXX)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 ################################################################################
 
@@ -75,7 +74,7 @@ option(ENABLE_JEMALLOC_STATIC		"Build with Jemalloc support" OFF)
 option(ENABLE_MIMALLOC_STATIC		"Build with mimalloc support" OFF)
 option(ENABLE_SNMALLOC_STATIC		"Build with snmalloc support" OFF)
 
-option(ENABLE_BUILD_EXAMPLES		"Build proxy examples" ON)
+option(ENABLE_BUILD_EXAMPLES		"Build proxy examples" OFF)
 option(ENABLE_LINKE_TO_LIBATOMIC	"Link to libatomic.so - some platform requires it" OFF)
 
 ################################################################################
@@ -289,7 +288,7 @@ endif(NOT MSVC)
 ################################################################################
 # 全局使用静态链接库
 
-set(BUILD_SHARED_LIBS ON)
+set(BUILD_SHARED_LIBS OFF)
 
 ################################################################################
 # 使用 system openssl
@@ -385,8 +384,8 @@ if (ENABLE_BUILD_TESTS)
 	set(USE_BOOST_TEST ON)
 endif()
 
-set(Boost_USE_STATIC_LIBS OFF)
-set(Boost_USE_STATIC_RUNTIME OFF)
+set(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_STATIC_RUNTIME ON)
 
 #独立编译asio时, 必须要在使用者项目定义, 否则会将
 #定义BOOST_ASIO_HEADER_ONLY, 使用者将会导致符号冲突.

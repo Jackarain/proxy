@@ -38,10 +38,10 @@ net::awaitable<void> start_proxy_server(net::io_context& ioc, server_ptr& server
 	proxy_server_option opt;
 
 	opt.auth_users_.emplace_back("jack", "1111");
+	opt.listens_.emplace_back(socks_listen, false);
 
 	auto executor = ioc.get_executor();
-	server = proxy_server::make(
-			executor, socks_listen, opt);
+	server = proxy_server::make(executor, opt); // Updated: Create the server with executor and options
 	server->start();
 
 	co_return;

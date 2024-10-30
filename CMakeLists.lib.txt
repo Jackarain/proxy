@@ -75,7 +75,7 @@ option(ENABLE_JEMALLOC_STATIC		"Build with Jemalloc support" OFF)
 option(ENABLE_MIMALLOC_STATIC		"Build with mimalloc support" OFF)
 option(ENABLE_SNMALLOC_STATIC		"Build with snmalloc support" OFF)
 
-option(ENABLE_BUILD_EXAMPLES		"Build proxy examples" ON)
+option(ENABLE_BUILD_EXAMPLES		"Build proxy examples" OFF)
 option(ENABLE_LINKE_TO_LIBATOMIC	"Link to libatomic.so - some platform requires it" OFF)
 
 ################################################################################
@@ -570,7 +570,7 @@ endif()
 
 configure_file(proxy.service.in proxy-server@.service)
 
-install(TARGETS proxy_server RUNTIME DESTINATION bin)
+install(TARGETS proxy_server LIBRARY DESTINATION lib)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/proxy-server@.service DESTINATION /usr/lib/systemd/system/)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/doc/server.conf.example DESTINATION /etc/proxy_server/)

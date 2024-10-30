@@ -1,0 +1,49 @@
+FROM ubuntu:22.04 as builder
+
+RUN apt-get update && apt-get install --fix-missing -y ca-certificates
+RUN sed -i "s@http://.*archive.ubuntu.com@https://mirrors.pku.edu.cn@g" /etc/apt/sources.list && sed -i "s@http://.*security.ubuntu.com@https://mirrors.pku.edu.cn@g" /etc/apt/sources.list
+RUN apt-get update && apt-get upgrade -y
+RUN apt-get install -y cmake gcc g++ ninja-build
+ADD . /proxy
+
+# Build the main project as a shared library
+RUN cd /proxy && mkdir -p build && cd build \
+    && cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -G Ninja \
+    && ninja
+
+# Optionally build the wolfSSL version (shared library)
+# RUN cd /proxy && mkdir -p wolfssl && cd wolfssl \
+    # && cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_USE_OPENSSL=OFF -DENABLE_USE_WOLFSSL=ON -DBUILD_SHARED_LIBS=ON -G Ninja \
+    # && ninja
+
+# FROM ubuntu:22.04
+# RUN apt-get update && apt-get upgrade -y
+# RUN apt-get install -y libstdc++ libgcc openssl
+RUN mkdir -p /root/lib
+RUN cp /proxy/build/lib/libproxy_server.so /root/lib/ & \
+    cp /proxy/build/proxy/libproxy.a /root/lib/ & \
+    cp /proxy/build/third_party/boost/libs/url/libboost_url.so.1.86.0 /root/lib & \
+    cp /proxy/build/third_party/boost/libs/program_options/libboost_program_options.so.1.86.0 /root/lib & \
+    cp /proxy/build/third_party/openssl/ssl/libssl.a /root/lib & \
+    cp /proxy/build/third_party/openssl/crypto/libcrypto.a /root/lib/ & \
+    cp -r /proxy/third_party /root/lib/ & \
+    cp -r /proxy/proxy /root
+
+RUN chmod +x /root/lib/third_party/boost/bootstrap.sh & chmod +x /root/lib/third_party/boost/tools/build/src/engine/build.sh
+RUN cd /root/lib/third_party/boost && ./bootstrap.sh && ./b2 && ./b2 headers
+
+# COPY --from=builder /proxy/build/lib/libproxy_server.so /root/lib/
+# COPY --from=builder /proxy/build/proxy/libproxy.a /root/lib/
+# COPY --from=builder /proxy/build/third_party/boost/libs/url/libboost_url.so.1.86.0 /root/lib/
+# COPY --from=builder /proxy/build/third_party/boost/libs/program_options/libboost_program_options.so.1.86.0 /root/lib/
+# COPY --from=builder /proxy/build/third_party/openssl/ssl/libssl.a /root/lib/
+# COPY --from=builder /proxy/build/third_party/openssl/crypto/libcrypto.a /root/lib/
+# COPY --from=builder /proxy/third_party/* /root/lib/
+# COPY --from=builder /proxy/wolfssl/lib/libproxy_server-wolfssl.so /usr/local/lib/
+
+# RUN apt-get update && apt-get install -y ca-certificates
+# COPY --from=builder /proxy/build/bin/proxy_server /usr/local/bin/
+# COPY --from=builder /proxy/wolfssl/bin/proxy_server /usr/local/bin/proxy_server-wolfssl
+
+# WORKDIR /root
+# ENTRYPOINT ["proxy_server"]
