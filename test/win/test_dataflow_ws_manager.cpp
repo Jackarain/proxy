@@ -2,8 +2,8 @@
 #include <windows.h>
 #include <thread>
 
-typedef void (*run_websocket_test_server_func)();
-typedef void (*run_websocket_client_func)();
+typedef void (__stdcall *run_websocket_test_server_func)();
+typedef void (__stdcall *run_websocket_client_func)();
 
 int main() {
     // Load the DLL

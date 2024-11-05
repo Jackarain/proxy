@@ -15,8 +15,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/core.hpp>
-#include <boost/asio/ssl.hpp>
-#include <boost/beast/ssl.hpp>
+#include <boost/asio/experimental/awaitable_operators.hpp>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -41,6 +40,8 @@ struct flow_config {
     std::string password = "default_pass";
     std::string manager_endpoint = "127.0.0.1:8080";
     std::string websocket_test_url = "example.com";
+    std::size_t buffer_size = 4096;
+    std::chrono::seconds reconnect_delay = std::chrono::seconds(2);
 };
 
 // HELPERS
@@ -64,6 +65,8 @@ flow_config load_flow_config(const std::string& config_file = "flow.conf") {
             else if (key == "password") config.password = value;
             else if (key == "manager_endpoint") config.manager_endpoint = value;
             else if (key == "websocket_test_url") config.websocket_test_url = value;
+            else if (key == "buffer_size") config.buffer_size = static_cast<std::size_t>(std::stoi(value));
+            else if (key == "reconnect_delay") config.reconnect_delay = std::chrono::seconds(std::stoi(value));
         }
     }
     return config;
@@ -140,6 +143,116 @@ net::awaitable<void> start_data_flow(net::io_context& ioc, std::shared_ptr<proxy
     co_return;
 }
 
+net::awaitable<void> forward_websocket_to_socks(
+    websocket::stream<tcp::socket>& ws, 
+    tcp::socket& sock, 
+    const flow_config& config) 
+{
+    boost::beast::flat_buffer buffer;
+    boost::system::error_code ec;
+
+    while (true) {
+        std::size_t bytes_read = co_await ws.async_read_some(buffer.prepare(config.buffer_size), net_awaitable[ec]);
+        if (ec) {
+            if (ec == boost::asio::error::eof || ec.message() == "end of stream") {
+                std::cout << "(forward_websocket_to_socks) EOF from WebSocket; signaling close.\n";
+                ec.clear();
+            } else {
+                std::cerr << "(forward_websocket_to_socks) WebSocket read error: " << ec.message() << "\n";
+            }
+            break;
+        }
+        buffer.commit(bytes_read);
+        std::cout << "(forward_websocket_to_socks) WebSocket -> SOCKS | Data size: " << bytes_read << "\n";
+
+        if (buffer.size() > 0) {
+            std::size_t bytes_written = co_await boost::asio::async_write(sock, buffer.data(), net_awaitable[ec]);
+            if (ec) {
+                std::cerr << "(forward_websocket_to_socks) SOCKS write error: " << ec.message() << "\n";
+                break;
+            }
+            buffer.consume(bytes_written);
+        }
+    }
+
+    if (sock.is_open()) {
+        sock.shutdown(tcp::socket::shutdown_both, ec);
+        if (ec) {
+            std::cerr << "(forward_websocket_to_socks) SOCKS shutdown error: " << ec.message() << "\n";
+        } else {
+            std::cout << "(forward_websocket_to_socks) SOCKS shutdown signaled.\n";
+        }
+        
+        sock.close(ec);
+        if (ec) {
+            std::cerr << "(forward_websocket_to_socks) Error closing SOCKS connection: " << ec.message() << "\n";
+        } else {
+            std::cout << "(forward_websocket_to_socks) SOCKS connection closed.\n";
+        }
+    }
+    
+    if (ws.is_open()) {
+        co_await ws.async_close(websocket::close_code::normal, net::use_awaitable);
+        std::cout << "(forward_socks_to_websocket) WebSocket closed gracefully.\n";
+    }
+    co_return;
+}
+
+net::awaitable<void> forward_socks_to_websocket(
+    tcp::socket& sock, 
+    websocket::stream<tcp::socket>& ws, 
+    const flow_config& config) 
+{
+    boost::beast::flat_buffer buffer;
+    boost::system::error_code ec;
+
+    while (true) {
+        std::size_t bytes_read = co_await sock.async_read_some(buffer.prepare(config.buffer_size), net_awaitable[ec]);
+        if (ec) {
+            if (ec == boost::asio::error::eof || ec.message() == "end of stream") {
+                std::cout << "(forward_socks_to_websocket) EOF from SOCKS; signaling close.\n";
+                ec.clear();
+            } else {
+                std::cerr << "(forward_socks_to_websocket) SOCKS read error: " << ec.message() << "\n";
+            }
+            break;
+        }
+        buffer.commit(bytes_read);
+        std::cout << "(forward_socks_to_websocket) SOCKS -> WebSocket | Data size: " << bytes_read << "\n";
+
+        if (buffer.size() > 0) {
+            std::size_t bytes_written = co_await ws.async_write(buffer.data(), net_awaitable[ec]);
+            if (ec) {
+                std::cerr << "(forward_socks_to_websocket) WebSocket write error: " << ec.message() << "\n";
+                break;
+            }
+            buffer.consume(bytes_written);
+        }
+    }
+    
+    if (ws.is_open()) {
+        co_await ws.async_close(websocket::close_code::normal, net::use_awaitable);
+        std::cout << "(forward_socks_to_websocket) WebSocket closed gracefully.\n";
+    }
+
+    if (sock.is_open()) {
+        sock.shutdown(tcp::socket::shutdown_both, ec);
+        if (ec) {
+            std::cerr << "(forward_socks_to_websocket) SOCKS shutdown error: " << ec.message() << "\n";
+        } else {
+            std::cout << "(forward_socks_to_websocket) SOCKS shutdown signaled.\n";
+        }
+        
+        sock.close(ec);
+        if (ec) {
+            std::cerr << "(forward_socks_to_websocket) Error closing SOCKS connection: " << ec.message() << "\n";
+        } else {
+            std::cout << "(forward_socks_to_websocket) SOCKS connection closed.\n";
+        }
+    }
+    co_return;
+}
+
 net::awaitable<void> handle_data_flow_request(
     net::io_context& ioc,
     websocket::stream<tcp::socket>& ws,
@@ -158,158 +271,161 @@ net::awaitable<void> handle_data_flow_request(
         co_return;
     }
 
-    while (true) {
-        // Read HTTP request from WebSocket
-        co_await ws.async_read(buffer, net_awaitable[ec]);
+    // Read HTTP request from WebSocket
+    co_await ws.async_read(buffer, net_awaitable[ec]);
+    if (ec) {
+        std::cerr << "(handle_data_flow_request) WebSocket read error: " << ec.message() << "\n";
+        co_return;
+    }
+    // Parse HTTP request
+    http::request_parser<http::dynamic_body> req_parser;
+    req_parser.eager(true);
+    req_parser.put(buffer.data(), ec);
+    buffer.consume(buffer.size());
+    if (ec) {
+        std::cerr << "(handle_data_flow_request) Error parsing request: " << ec.message() << "\n";
+        co_return;
+    }
+    auto req = req_parser.release();
+    std::cout << "(handle_data_flow_request) Raw request:\n" << req << "\n";
+
+    // Extract target info using parse_url
+    std::string scheme, target_host, target_port_str, path;
+    std::tie(scheme, target_host, target_port_str, path) = parse_url(std::string(req.target()));
+    unsigned short target_port = static_cast<unsigned short>(std::stoi(target_port_str));
+
+    // Perform SOCKS handshake with the target
+    proxy::socks_client_option opt;
+    opt.target_host = target_host;
+    opt.target_port = target_port;
+    opt.proxy_hostname = true;
+    opt.username = config.username;
+    opt.password = config.password;
+    co_await proxy::async_socks_handshake(sock, opt, net_awaitable[ec]);
+    if (ec) {
+        std::cerr << "(handle_data_flow_request) SOCKS handshake failed: " << ec.message() << "\n";
+        co_return;
+    }
+    std::cout << "(handle_data_flow_request) SOCKS handshake successful to " << target_host << ":" << target_port << "\n";
+
+    if (scheme == "https" || req.method() == http::verb::connect) {
+        // Send 200 OK response to the client to confirm tunnel setup
+        std::string connect_success_response = "HTTP/1.1 200 OK\r\n\r\n";
+        co_await ws.async_write(net::buffer(connect_success_response), net_awaitable[ec]);
         if (ec) {
-            std::cerr << "(handle_data_flow_request) WebSocket read error: " << ec.message() << "\n";
-            break;
+            std::cerr << "(handle_data_flow_request) WebSocket write error for CONNECT success: " << ec.message() << "\n";
+            co_return;
         }
-        // Parse HTTP request
-        http::request_parser<http::dynamic_body> req_parser;
-        req_parser.eager(true);
-        req_parser.put(buffer.data(), ec);
+        std::cout << "(handle_data_flow_request) Sent 200 OK response for CONNECT to client.\n";
+
+        auto websocket_to_socks = forward_websocket_to_socks(ws, sock, config);
+        auto socks_to_websocket = forward_socks_to_websocket(sock, ws, config);
+
+        // Wait for both coroutines to complete
+        co_await (boost::asio::experimental::awaitable_operators::operator&&(
+            std::move(websocket_to_socks),
+            std::move(socks_to_websocket)
+        ));
+
+    } else if (scheme == "http") {
+        std::cout << "(handle_data_flow_request) Sending request:\n" << req << "\n";
+        co_await http::async_write(sock, req, net_awaitable[ec]);
+
+        // Read the HTTP response from the target
+        boost::beast::flat_buffer response_buffer;
+        http::response<http::dynamic_body> response;
+        co_await http::async_read(sock, response_buffer, response, net_awaitable[ec]);
+        std::cout << "(handle_data_flow_request) Raw response:\n" << response << "\n";
         if (ec) {
-            std::cerr << "(handle_data_flow_request) Error parsing request: " << ec.message() << "\n";
-            break;
+            std::cerr << "(handle_data_flow_request) SOCKS read error: " << ec.message() << "\n";
+            co_return;
         }
-        auto req = req_parser.release();
-        std::cout << "(handle_data_flow_request) Raw request:\n" << req << "\n";
 
-        // Extract target info using parse_url
-        std::string scheme, target_host, target_port_str, path;
-        std::tie(scheme, target_host, target_port_str, path) = parse_url(std::string(req.target()));
-        unsigned short target_port = static_cast<unsigned short>(std::stoi(target_port_str));
+        std::ostringstream response_stream;
+        response_stream << response;
+        std::string response_str = response_stream.str();
+        std::cout << "(handle_data_flow_request) Serialized response size before WebSocket send: " << response_str.size() << "\n";
 
-        // Perform SOCKS handshake with the target
-        proxy::socks_client_option opt;
-        opt.target_host = target_host;
-        opt.target_port = target_port;
-        opt.proxy_hostname = true;
-        opt.username = config.username;
-        opt.password = config.password;
-        co_await proxy::async_socks_handshake(sock, opt, net_awaitable[ec]);
+        // Send the HTTP response over WebSocket
+        co_await ws.async_write(net::buffer(response_str), net_awaitable[ec]);
         if (ec) {
-            std::cerr << "(handle_data_flow_request) SOCKS handshake failed: " << ec.message() << "\n";
-            break;
+            std::cerr << "(handle_data_flow_request) WebSocket write error when forwarding response: " << ec.message() << "\n";
+            co_return;
         }
-        std::cout << "(handle_data_flow_request) SOCKS handshake successful to " << target_host << ":" << target_port << "\n";
-        
-        if (scheme == "http") {
-            // Write the HTTP request to the SOCKS proxy
-            std::cout << "(handle_data_flow_request) Sending request:\n" << req << "\n";
-            co_await http::async_write(sock, req, net_awaitable[ec]);
+        std::cout << "(handle_data_flow_request) Complete response forwarded to WebSocket.\n";
 
-            // Read the HTTP response from the target
-            boost::beast::flat_buffer response_buffer;
-            http::response<http::dynamic_body> response;
-            co_await http::async_read(sock, response_buffer, response, net_awaitable[ec]);
-            std::cout << "(handle_data_flow_request) Raw response:\n" << response << "\n";
-            if (ec) {
-                std::cerr << "(handle_data_flow_request) SOCKS read error: " << ec.message() << "\n";
-                break;
-            }
-
-            std::ostringstream response_stream;
-            response_stream << response;
-            std::string response_str = response_stream.str();
-            std::cout << "(handle_data_flow_request) Serialized response size before WebSocket send: " << response_str.size() << "\n";
-
-            // Send the HTTP response over WebSocket
-            co_await ws.async_write(net::buffer(response_str), net_awaitable[ec]);
-            if (ec) {
-                std::cerr << "(handle_data_flow_request) WebSocket write error when forwarding response: " << ec.message() << "\n";
-                break;
-            }
-            std::cout << "(handle_data_flow_request) Complete response forwarded to WebSocket.\n";
-
-            response_buffer.consume(response_buffer.size());
-            buffer.consume(buffer.size());
-        } else {
-            // Write the raw WebSocket request data to the SOCKS proxy
-            std::cout << "(handle_data_flow_request) Sending request as raw bytes, size: " << buffer.size() << "\n";
-            co_await async_write(sock, buffer.data(), net_awaitable[ec]);
-            if (ec) {
-                std::cerr << "(handle_data_flow_request) SOCKS write error: " << ec.message() << "\n";
-                break;
-            }
-
-            // Read raw binary response from SOCKS
-            boost::beast::flat_buffer response_buffer;
-            co_await net::async_read(sock, response_buffer, net::transfer_all(), net_awaitable[ec]);
-            if (ec) {
-                std::cerr << "(handle_data_flow_request) SOCKS read error: " << ec.message() << "\n";
-                break;
-            }
-            std::cout << "(handle_data_flow_request) Received response as raw bytes, size: " << response_buffer.size() << "\n";
-
-            // Send the raw binary response over WebSocket
-            co_await ws.async_write(response_buffer.data(), net_awaitable[ec]);
-            if (ec) {
-                std::cerr << "(handle_data_flow_request) WebSocket write error: " << ec.message() << "\n";
-                break;
-            }
-            std::cout << "(handle_data_flow_request) Complete response forwarded to WebSocket as bytes.\n";
-
-            response_buffer.consume(response_buffer.size());
-            buffer.consume(buffer.size());
-        }
+        response_buffer.consume(response_buffer.size());
+        buffer.consume(buffer.size());
+    } else {
+        std::cerr << "(handle_data_flow_request) Unsupported scheme: " << scheme << "\n";
+        co_return;
     }
 
     // Close the SOCKS connection
-    sock.close(ec);
-    if (ec) {
-        std::cerr << "(handle_data_flow_request) Error closing SOCKS connection: " << ec.message() << "\n";
+    if (sock.is_open()) {
+        sock.shutdown(boost::asio::socket_base::shutdown_both, ec);
+        if (ec) {
+            std::cerr << "(handle_data_flow_request) Socket shutdown error: " << ec.message() << "\n";
+        } else {
+            std::cout << "(handle_data_flow_request) Socket shutdown successful.\n";
+        }
+
+        sock.close(ec);
+        if (ec) {
+            std::cerr << "(handle_data_flow_request) Error closing SOCKS connection: " << ec.message() << "\n";
+        } else {
+            std::cout << "(handle_data_flow_request) SOCKS connection closed.\n";
+        }
     }
-    std::cout << "(handle_data_flow_request) SOCKS connection closed.\n";
 }
 
 // WebSocket client to forward requests and receive responses
 net::awaitable<void> run_websocket_with_data_flow(net::io_context& ioc, const flow_config& config) {
     std::shared_ptr<proxy_server> flow_service;
+    auto executor = co_await net::this_coro::executor;
+    tcp::resolver resolver(executor);
+    net::co_spawn(executor, start_data_flow(ioc, flow_service, config), net::detached);
 
-    try {
-        auto executor = co_await net::this_coro::executor;
-        
-        // Start the data flow service before establishing the WebSocket connection
-        net::co_spawn(executor, start_data_flow(ioc, flow_service, config), net::detached);
-        
-        tcp::resolver resolver(executor);
-        websocket::stream<tcp::socket> ws(executor);
+    while (true) {
+        try {
+            websocket::stream<tcp::socket> ws(executor);
 
-        // Resolve and connect to the manager endpoint
-        auto const results = co_await resolver.async_resolve(
-            config.manager_endpoint.substr(0, config.manager_endpoint.find(":")),
-            config.manager_endpoint.substr(config.manager_endpoint.find(":") + 1),
-            net::use_awaitable);
-        co_await net::async_connect(ws.next_layer(), results);
+            // Resolve and connect to the manager endpoint
+            auto const results = co_await resolver.async_resolve(
+                config.manager_endpoint.substr(0, config.manager_endpoint.find(":")),
+                config.manager_endpoint.substr(config.manager_endpoint.find(":") + 1),
+                net::use_awaitable);
+            co_await net::async_connect(ws.next_layer(), results);
 
-        // Set up authentication header
-        std::string auth_str = config.username + ":" + config.password;
-        std::string auth_header = "Basic " + strutil::base64_encode(auth_str);
-        ws.set_option(websocket::stream_base::decorator(
-            [auth_header](websocket::request_type& req) {
-                req.set(http::field::authorization, auth_header);
+            // Auth
+            std::string auth_str = config.username + ":" + config.password;
+            std::string auth_header = "Basic " + strutil::base64_encode(auth_str);
+            ws.set_option(websocket::stream_base::decorator(
+                [auth_header](websocket::request_type& req) {
+                    req.set(http::field::authorization, auth_header);
+                }
+            ));
+
+            // Perform WebSocket handshake
+            co_await ws.async_handshake(
+                config.manager_endpoint.substr(0, config.manager_endpoint.find(":")), "/", net::use_awaitable);
+            std::cout << "(run_websocket_with_data_flow) WebSocket connection established with manager at " << config.manager_endpoint << "\n";
+
+            // Start data flow request handler
+            ws.binary(true);
+            co_await handle_data_flow_request(ioc, ws, config);
+            if (ws.is_open()) {
+                co_await ws.async_close(websocket::close_code::normal, net::use_awaitable);
+                std::cout << "(run_websocket_with_data_flow) WebSocket connection closed.\n";
             }
-        ));
-
-        // Perform WebSocket handshake
-        co_await ws.async_handshake(
-            config.manager_endpoint.substr(0, config.manager_endpoint.find(":")), "/", net::use_awaitable);
-        std::cout << "(run_websocket_with_data_flow) WebSocket connection established with manager at " << config.manager_endpoint << "\n";
-        
-        // Start handling data flow requests
-        ws.binary(true);
-        co_await handle_data_flow_request(ioc, ws, config);
-
-    } catch (const boost::system::system_error& se) {
-        if (se.code() != websocket::error::closed) {
+        } catch (const boost::system::system_error& se) {
             std::cerr << "(run_websocket_with_data_flow) WebSocket error: " << se.what() << "\n";
-        } else {
-            std::cout << "(run_websocket_with_data_flow) WebSocket connection closed.\n";
+        } catch (const std::exception& e) {
+            std::cerr << "(run_websocket_with_data_flow) Reconnection attempt due to error: " << e.what() << "\n";
         }
-    } catch (const std::exception& e) {
-        std::cerr << "(run_websocket_with_data_flow) Error: " << e.what() << "\n";
+
+        // Delay before attempting to reconnect
+        co_await net::steady_timer(ioc, config.reconnect_delay).async_wait(net::use_awaitable);
     }
 
     // Close the data flow service when the WebSocket connection ends

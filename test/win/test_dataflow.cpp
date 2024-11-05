@@ -1,7 +1,7 @@
 #include <iostream>
 #include <windows.h>
 
-typedef void (*run_data_flow_service_func)();
+typedef void (__stdcall *run_data_flow_service_func)();
 
 int main() {
     // Load the DLL
