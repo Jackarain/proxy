@@ -289,14 +289,6 @@ R"x*x*x(<html>
 )x*x*x";
 
 
-	inline constexpr auto head_fmt =
-		R"(<html><head><meta charset="UTF-8"><title>Index of {}</title></head><body bgcolor="white"><h1>Index of {}</h1><hr><pre>)";
-	inline constexpr auto tail_fmt =
-		"</pre><hr></body></html>";
-	inline constexpr auto body_fmt =
-		"<a href=\"{}\">{}</a>{} {}       {}\r\n";
-
-
 	//////////////////////////////////////////////////////////////////////////
 
 	// udp_session_expired_time 用于指定 udp session 的默认过期时间, 单位为秒.
