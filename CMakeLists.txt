@@ -190,6 +190,8 @@ if (MSVC)
 		set(CMAKE_CXX_STANDARD_REQUIRED ON)
 		message(STATUS "Set default cxx standard: C++17")
 	endif()
+
+	add_compile_options(/utf-8)
 endif()
 
 ################################################################################
