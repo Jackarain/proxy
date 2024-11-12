@@ -591,7 +591,7 @@ R"x*x*x(<html>
 		{
 			pmr_alloc_t alloc;
 			// 在 http 请求时, 保存正则表达式命中时匹配的结果列表.
-			std::pmr::vector<std::pmr::string> command_;
+			std::pmr::vector<std::string_view> command_;
 
 			// 保存 http 客户端的请求信息.
 			string_request& request_;

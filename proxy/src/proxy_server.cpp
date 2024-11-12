@@ -1,7 +1,9 @@
 
+
 #include "proxy/proxy_server.hpp"
 
-#include <boost/json/src.hpp>
+#include <boost/hana.hpp>
+#include "ctre.hpp"
 
 namespace proxy
 {
@@ -371,7 +373,7 @@ namespace proxy
 		boost::system::error_code ec;
 		auto& request = hctx.request_;
 
-		auto target = make_real_target_path(hctx.command_[0]);
+		auto target = make_real_target_path(hctx.command_[1]);
 
 		std::array<std::byte, 4096> pre_alloc_buf;
 		std::pmr::monotonic_buffer_resource mbr(pre_alloc_buf.data(), pre_alloc_buf.size());
@@ -404,7 +406,7 @@ namespace proxy
 
 		bool hash = false;
 
-		urls::params_view qp(hctx.command_[1]);
+		urls::params_view qp(hctx.command_[3]);
 		if (qp.find("hash") != qp.end())
 		{
 			hash = true;
@@ -822,6 +824,32 @@ namespace proxy
 		co_return;
 	}
 
+	template <CTRE_REGEX_INPUT_TYPE exp, auto func>
+	struct route_op
+	{
+		boost::asio::awaitable<bool> operator()(auto* _proxy_session, auto target, auto& http_ctx, auto alloc) const
+		{
+			if (auto result = ctre::match<exp>( target ) )
+			{
+				boost::hana::for_each(std::make_index_sequence<result.count()>(), [&](auto element)
+				{
+					// 将 正则匹配到的 () 子串，给依次 push 到 http_ctx.command_ 这个容器里.
+					http_ctx.command_.push_back(result.template get<element>());
+				});
+				co_await (_proxy_session->*func)(http_ctx);
+				co_return true;
+			}
+			co_return false;
+		}
+	};
+
+	template <auto... RouteOPs>
+	boost::asio::awaitable<void> routes(proxy_session* _proxy_session, auto& target, auto& http_ctx, auto alloc)
+	{
+		// 依次等待 route_op 执行，因为是 || 所以如果一个成功了，剩下的就不等了.
+		( (co_await RouteOPs(_proxy_session, target, http_ctx, alloc)) || ...);
+	}
+
 	net::awaitable<void> proxy_session::normal_web_server(string_request& req, pmr_alloc_t alloc)
 	{
 		boost::system::error_code ec;
@@ -884,6 +912,7 @@ namespace proxy
 			}
 
 			std::pmr::string target{req.target(), alloc};
+			std::string_view target_pv{target};
 			boost::match_results<
 				std::pmr::string::const_iterator,
 				std::pmr::polymorphic_allocator<boost::sub_match<std::pmr::string::const_iterator>>
@@ -891,32 +920,17 @@ namespace proxy
 
 			http_context http_ctx{
 				alloc,
-				std::pmr::vector<std::pmr::string>{alloc},
+				std::pmr::vector<std::string_view>{alloc},
 				req,
 				req.target(),
 				make_real_target_path(req.target())
             };
 
-#define BEGIN_HTTP_ROUTE() if (false) {}
-
-#define ON_HTTP_ROUTE(exp, func)                                                                                       \
-	else if (boost::regex_match(target, what, boost::regex{exp}))                                                      \
-	{                                                                                                                  \
-		for (auto i = 1; i < static_cast<int>(what.size()); i++)                                                       \
-			http_ctx.command_.push_back(what[i]);                                                                      \
-		co_await func(http_ctx);                                                                                       \
-	}
-#define END_HTTP_ROUTE()                                                                                               \
-	else                                                                                                               \
-	{                                                                                                                  \
-		co_await default_http_route(req, fake_400_content, http::status::bad_request);                                 \
-	}
-
-			BEGIN_HTTP_ROUTE()
-                ON_HTTP_ROUTE(R"(^(.*)?\/$)", on_http_dir)
-                ON_HTTP_ROUTE(R"(^(.*)?(\/\?q=json.*)$)", on_http_json)
-                ON_HTTP_ROUTE(R"(^(?!.*\/$).*$)", on_http_get)
-			END_HTTP_ROUTE()
+			co_await routes<
+				route_op<R"regex((.*)/)regex", &proxy_session::on_http_dir>{},
+				route_op<R"regex((.*)\?q=json(&(.*))?)regex", &proxy_session::on_http_json>{},
+				route_op<R"regex(^(?!.*\/$).*$)regex", &proxy_session::on_http_get>{}
+			>(this, target_pv, http_ctx, alloc);
 
 			if (!keep_alive)
 			{

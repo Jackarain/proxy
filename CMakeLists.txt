@@ -486,6 +486,12 @@ add_subdirectory(third_party/fmt)
 set(FMT_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/fmt/include)
 set(FMT_LIBRARIES fmt)
 
+set(CTRE_BUILD_TESTS OFF)
+set(CTRE_BUILD_PACKAGE OFF)
+add_subdirectory(third_party/compile-time-regular-expressions)
+
+link_libraries(ctre)
+
 ################################################################################
 # 添加 proxy 项目
 
