@@ -11,6 +11,8 @@
 
 #include <limits>
 
+#include <boost/nowide/args.hpp>
+
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
@@ -307,6 +309,8 @@ namespace std
 
 int main(int argc, char** argv)
 {
+    boost::nowide::args a(argc,argv); // Fix arguments - make them UTF-8
+
 	platform_init();
 
 	std::string config;
