@@ -476,7 +476,7 @@ namespace proxy
 		boost::system::error_code ec;
 		auto& request = hctx.request_;
 
-		std::array<std::byte, 4096> pre_alloc_buf;
+		std::array<std::byte, 16384> pre_alloc_buf;
 		std::pmr::monotonic_buffer_resource mbr(pre_alloc_buf.data(), pre_alloc_buf.size());
 		std::pmr::polymorphic_allocator<char> alloc(&mbr);
 
@@ -552,26 +552,21 @@ namespace proxy
 		}
 
 		auto target_path = make_target_path(hctx.target_);
-		std::pmr::string head{alloc};
-
-		fmt::format_to(std::back_inserter(head), head_fmt, target_path, target_path);
-
-		std::pmr::string formated_body{alloc};
-		fmt::format_to(std::back_inserter(formated_body), body_fmt, "../", "../", "", "", "");
-
-		std::pmr::string body{ head , alloc };
-		body += formated_body;
+		std::pmr::string autoindex_page{alloc};
+		autoindex_page.reserve(4096);
+		fmt::format_to(std::back_inserter(autoindex_page), head_fmt, target_path, target_path);
+		fmt::format_to(std::back_inserter(autoindex_page), body_fmt, "../", "../", "", "", "");
 
 		for (const auto& s : path_list)
 		{
-			body += s;
+			autoindex_page += s;
 		}
 
-		body += tail_fmt;
+		autoindex_page += tail_fmt;
 
 		string_response res{
 			std::piecewise_construct,
-			std::make_tuple(body),
+			std::make_tuple(std::move(autoindex_page), alloc),
 			std::make_tuple(http::status::ok, request.version(), alloc)
 		};
 
