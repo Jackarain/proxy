@@ -31,6 +31,7 @@ target_sources(libproxy
 
 	${CMAKE_CURRENT_SOURCE_DIR}/src/lib_asio_beast.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/ipip.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_server.cpp
 )
 
 target_include_directories(libproxy
