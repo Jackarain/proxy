@@ -624,7 +624,8 @@ namespace proxy
 			}
 			url += request[http::field::host];
 			urls::url u(url);
-			std::pmr::string target{hctx.target_ + "/", hctx.alloc};
+			std::pmr::string target{hctx.target_ , hctx.alloc};
+			target += "/";
 			u.set_path(target);
 
 			co_await location_http_route(request, u.buffer());
@@ -892,7 +893,7 @@ namespace proxy
 				alloc,
 				std::pmr::vector<std::pmr::string>{alloc},
 				req,
-				{target, alloc},
+				req.target(),
 				make_real_target_path(req.target())
             };
 
