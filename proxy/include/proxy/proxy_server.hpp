@@ -3774,10 +3774,10 @@ R"x*x*x(<html>
 
 			boost::uuids::detail::sha1 sha1;
 			const auto buf_size = 1024 * 1024 * 4;
-			std::vector<char> bufs(buf_size, 0);
+			std::unique_ptr<char, decltype(&std::free)> bufs((char*)std::malloc(buf_size), &std::free);
 
-			while (file.read(bufs.data(), buf_size) || file.gcount())
-				sha1.process_bytes(bufs.data(), file.gcount());
+			while (file.read(bufs.get(), buf_size) || file.gcount())
+				sha1.process_bytes(bufs.get(), file.gcount());
 
 			boost::uuids::detail::sha1::digest_type hash;
 			sha1.get_digest(hash);
@@ -4239,7 +4239,7 @@ R"x*x*x(<html>
 			if (m_option.tcp_rate_limit_ > 0 && m_option.tcp_rate_limit_ < buf_size)
 				buf_size = m_option.tcp_rate_limit_;
 
-			auto bufs = std::make_unique<char[]>(buf_size);
+			std::unique_ptr<char, decltype(&std::free)> bufs((char*)std::malloc(buf_size), &std::free);
 			char* buf = bufs.get();
 			std::streamsize total = 0;
 
