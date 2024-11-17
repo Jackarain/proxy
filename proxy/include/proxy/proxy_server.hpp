@@ -148,7 +148,6 @@ namespace proxy {
 	enum class pem_type
 	{
 		none,		// none.
-		domain,		// domain file.
 		cert,		// certificate file.
 		key,  		// certificate key file.
 		pwd,		// certificate password file.
@@ -170,6 +169,8 @@ namespace proxy {
 		pem_file dhparam_;
 
 		std::string domain_;
+		std::vector<std::string> alt_names_;
+		boost::posix_time::ptime expire_date_;
 
 		std::optional<net::ssl::context> ssl_context_;
 	};
@@ -4649,15 +4650,6 @@ R"x*x*x(<html>
 				return result;
 			}
 
-			if (fs::path(filepath).filename() == "domain.txt" ||
-				fs::path(filepath).filename() == "domain" ||
-				fs::path(filepath).filename() == "servername" ||
-				fs::path(filepath).filename() == "servername.txt")
-			{
-				result.type_ = pem_type::domain;
-				return result;
-			}
-
 			proxy::pem_type type = pem_type::none;
 			std::string line;
 
@@ -4698,15 +4690,6 @@ R"x*x*x(<html>
 
 			certificate_file file;
 
-			// 域名在路径中，如：/etc/letsencrypt/live/www.jackarain.org/
-			boost::regex re(R"(([^\/|\\]+?\.[a-zA-Z]{2,})(?=\/?$))");
-			boost::smatch what;
-			if (boost::regex_search(directory.string(), what, re))
-			{
-				file.domain_ = std::string(what[1]);
-				strutil::trim(file.domain_);
-			}
-
 			for (const auto& entry : fs::directory_iterator(directory))
 			{
 				if (entry.is_directory())
@@ -4733,10 +4716,6 @@ R"x*x*x(<html>
 							break;
 						case pem_type::pwd:
 							file.pwd_ = type;
-							break;
-						case pem_type::domain:
-							fileop::read(entry.path(), file.domain_);
-							strutil::trim(file.domain_);
 							break;
 						default:
 							break;
@@ -4828,6 +4807,41 @@ R"x*x*x(<html>
 						return;
 					}
 				}
+
+				// 设置证书过期时间和域名.
+				X509* x509_cert = SSL_CTX_get0_certificate(ssl_ctx.native_handle());
+				const auto expire_date = X509_get_notAfter(x509_cert);
+
+#ifdef OPENSSL_IS_BORINGSSL
+				std::time_t expiration_time;
+				ASN1_TIME_to_time_t(expire_date, &expiration_time);
+				file.expire_date_ = boost::posix_time::from_time_t(expiration_time);
+#else
+				std::tm expire_date_tm;
+				ASN1_TIME_to_tm(expire_date, &expire_date_tm);
+				file.expire_date_ = boost::posix_time::ptime_from_tm(expire_date_tm);
+#endif
+				std::unique_ptr<GENERAL_NAMES, decltype(&GENERAL_NAMES_free)> general_names{
+					static_cast<GENERAL_NAMES*>(X509_get_ext_d2i(x509_cert, NID_subject_alt_name, 0, 0)),
+					&GENERAL_NAMES_free
+				};
+
+				for (int i = 0; i < sk_GENERAL_NAME_num(general_names.get()); i++)
+				{
+					GENERAL_NAME* gen = sk_GENERAL_NAME_value(general_names.get(), i);
+					if (gen->type == GEN_DNS)
+					{
+						const ASN1_IA5STRING* domain = gen->d.dNSName;
+						if (domain->type == V_ASN1_IA5STRING && domain->data && domain->length)
+						{
+							file.alt_names_.emplace_back((const char*)(domain->data), domain->length);
+						}
+					}
+				}
+
+				char cert_cname[256] = { 0 };
+				X509_NAME_get_text_by_NID(X509_get_subject_name(x509_cert), NID_commonName, cert_cname, sizeof cert_cname);
+				file.domain_ = cert_cname;
 
 				// 保存到 m_certificates 中.
 				m_certificates.emplace_back(std::move(file));
