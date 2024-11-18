@@ -477,6 +477,18 @@ void io_uring_service::run(long usec, op_queue<operation>& ops)
         {
           --local_ops;
         }
+        else if (cqe->flags & IORING_CQE_F_MORE)
+        {
+          // std::printf("got IORING_CQE_F_MORE\n");
+          io_queue* io_q = static_cast<io_queue*>(ptr);
+          io_q->set_result(cqe->res);
+        }
+        else if (cqe->flags & IORING_CQE_F_NOTIF)
+        {
+          // std::printf("got IORING_CQE_F_NOTIF\n");
+          io_queue* io_q = static_cast<io_queue*>(ptr);
+          ops.push(io_q);
+        }
         else
         {
           io_queue* io_q = static_cast<io_queue*>(ptr);
