@@ -5413,7 +5413,7 @@ R"x*x*x(<html>
 			}
 		}
 
-		bool region_filter(const std::vector<std::string>& local_info) const noexcept
+		inline bool region_filter(const std::vector<std::string>& local_info) const noexcept
 		{
 			auto& deny_region = m_option.deny_regions_;
 			auto& allow_region = m_option.allow_regions_;
