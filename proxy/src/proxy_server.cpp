@@ -715,7 +715,7 @@ namespace proxy
 			file.seekg(r.first, std::ios_base::beg);
 		}
 
-		buffer_response res{
+		custom_body_response res{
 			std::piecewise_construct,
 			std::make_tuple(),
 			std::make_tuple(st, request.version(), hctx.alloc)
@@ -760,7 +760,7 @@ namespace proxy
 		res.keep_alive(hctx.request_.keep_alive());
 		res.content_length(content_length);
 
-		response_serializer sr(res);
+		custom_body_response_serializer sr(res);
 
 		res.body().data = nullptr;
 		res.body().more = false;
@@ -791,25 +791,13 @@ namespace proxy
 			bytes_transferred = std::min<std::streamsize>(bytes_transferred, content_length - total);
 			if (bytes_transferred == 0 || total >= (std::streamsize)content_length)
 			{
-				res.body().data = nullptr;
-				res.body().more = false;
-			}
-			else
-			{
-				res.body().data = buf;
-				res.body().size = bytes_transferred;
-				res.body().more = true;
+				break;
 			}
 
 			stream_expires_after(m_local_socket, std::chrono::seconds(m_option.tcp_timeout_));
 
-			co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
+			co_await net::async_write(m_local_socket, net::buffer(buf, bytes_transferred), net::transfer_all(), net_awaitable[ec]);
 			total += bytes_transferred;
-			if (ec == http::error::need_buffer)
-			{
-				ec = {};
-				continue;
-			}
 			if (ec)
 			{
 				XLOG_WARN << "connection id: " << m_connection_id << ", http async_write: " << ec.message()
@@ -817,7 +805,8 @@ namespace proxy
 				co_return;
 			}
 		}
-		while (!sr.is_done());
+		while (!ec);
+
 
 		XLOG_DBG << "connection id: " << m_connection_id << ", http request: " << hctx.target_ << ", completed";
 

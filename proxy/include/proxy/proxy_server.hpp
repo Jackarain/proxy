@@ -138,24 +138,31 @@ namespace proxy {
 	namespace fs = boost::filesystem;
 
 	using pmr_alloc_t = std::pmr::polymorphic_allocator<char>;
+	using pmr_fields = http::basic_fields<pmr_alloc_t>;
 
 	using string_body = http::basic_string_body<char, std::char_traits<char>, pmr_alloc_t>;
+	using span_body = http::span_body<const char>;
 
 	// using string_body = http::string_body;
 	using dynamic_body = http::basic_dynamic_body<boost::beast::basic_multi_buffer<pmr_alloc_t>>;
 	using buffer_body = http::buffer_body;
 
-	using dynamic_request = http::request<dynamic_body, http::basic_fields<pmr_alloc_t>>;
-	using string_request = http::request<string_body, http::basic_fields<pmr_alloc_t>>;
+	using dynamic_request = http::request<dynamic_body, pmr_fields>;
+	using string_request = http::request<string_body, pmr_fields>;
 
-	using string_response = http::response<string_body, http::basic_fields<pmr_alloc_t>>;
-	using buffer_response = http::response<buffer_body, http::basic_fields<pmr_alloc_t>>;
+	using string_response = http::response<string_body, pmr_fields>;
+	using buffer_response = http::response<buffer_body, pmr_fields>;
+	using custom_body_response = http::response<http::empty_body, pmr_fields>;
+	using span_response = http::response<span_body, pmr_fields>;
 
 	using request_parser = http::request_parser<string_request::body_type, pmr_alloc_t>;
 	using response_parser = http::response_parser<string_response::body_type, pmr_alloc_t>;
 
-	using response_serializer = http::response_serializer<buffer_response::body_type, http::basic_fields<pmr_alloc_t>>;
-	using string_response_serializer = http::response_serializer<string_response::body_type, http::basic_fields<pmr_alloc_t>>;
+	using response_serializer = http::response_serializer<buffer_response::body_type, pmr_fields>;
+	using string_response_serializer = http::response_serializer<string_response::body_type, pmr_fields>;
+	using span_response_serializer = http::response_serializer<span_body, pmr_fields>;
+	using custom_body_response_serializer = http::response_serializer<http::empty_body, pmr_fields>;
+
 
 	using io_util::read;
 	using io_util::write;
