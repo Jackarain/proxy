@@ -597,7 +597,7 @@ R"x*x*x(<html>
 			string_request& request_;
 
 			// 保存 http 客户端请求的原始目标.
-			std::pmr::string target_;
+			std::string_view target_;
 
 			// 保存 http 客户端请求目标的具体路径, 即: doc 目录 + target_ 组成的路径.
 			std::string target_path_;
