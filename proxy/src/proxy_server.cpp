@@ -5,6 +5,14 @@
 
 namespace proxy
 {
+	inline constexpr auto head_fmt =
+		R"(<html><head><meta charset="UTF-8"><title>Index of {}</title></head><body bgcolor="white"><h1>Index of {}</h1><hr><div><table><tbody>)";
+	inline constexpr auto tail_fmt =
+		"</tbody></table></div><hr></body></html>";
+	inline constexpr auto body_fmt =
+		// "<a href=\"{}\">{}</a>{} {}       {}\r\n";
+		"<tr><td class=\"link\"><a href=\"{}\">{}</a></td><td class=\"size\">{}</td><td class=\"date\">{}</td></tr>\r\n";
+
 
 		inline std::string file_hash(const fs::path& p, boost::system::error_code& ec)
 		{
@@ -555,7 +563,7 @@ namespace proxy
 		std::pmr::string autoindex_page{alloc};
 		autoindex_page.reserve(4096);
 		fmt::format_to(std::back_inserter(autoindex_page), head_fmt, target_path, target_path);
-		fmt::format_to(std::back_inserter(autoindex_page), body_fmt, "../", "../", "", "", "");
+		fmt::format_to(std::back_inserter(autoindex_page), body_fmt, "../", "../", "", "");
 
 		for (const auto& s : path_list)
 		{
@@ -1463,12 +1471,9 @@ namespace proxy
 
 			if (fs::is_directory(unc_path.empty() ? item : unc_path, ec))
 			{
-				auto leaf = item.filename().string(); // boost::nowide::narrow(item.filename().wstring());
-				leaf = leaf + "/";
-				rpath = leaf; // boost::nowide::widen(leaf);
-				int width = 50 - static_cast<int>(rpath.size());
-				width = width < 0 ? 0 : width;
-				std::string space(width, ' ');
+				rpath = item.filename().string();
+				rpath += "/";
+
 				auto show_path = rpath;
 				if (show_path.size() > 50)
 				{
@@ -1476,17 +1481,13 @@ namespace proxy
 					show_path += "..&gt;";
 				}
 				std::pmr::string str(alloc);
-				fmt::format_to(std::back_inserter(str), body_fmt, rpath, show_path, space, time_string, "-");
+				fmt::format_to(std::back_inserter(str), body_fmt, rpath, show_path, time_string, "-");
 
 				path_list.push_back(std::move(str));
 			}
 			else
 			{
-				auto leaf = item.filename().string();
-				rpath = leaf; // boost::nowide::widen(leaf);
-				int width = 50 - (int)rpath.size();
-				width = width < 0 ? 0 : width;
-				std::string space(width, ' ');
+				rpath = item.filename().string();
 				std::string filesize;
 				if (unc_path.empty())
 				{
@@ -1505,8 +1506,7 @@ namespace proxy
 					show_path += "..&gt;";
 				}
 				std::pmr::string str(alloc);
-				fmt::format_to(std::back_inserter(str), body_fmt, rpath, show_path, space, time_string,
-							   filesize);
+				fmt::format_to(std::back_inserter(str), body_fmt, rpath, show_path, time_string, filesize);
 
 				file_list.push_back(std::move(str));
 			}
