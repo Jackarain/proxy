@@ -56,6 +56,7 @@ target_link_libraries(libproxy
 	Boost::uuid
 	Boost::asio
 	Boost::beast
+	Boost::hana
 
 	fmt
 	${OPENSSL_LIBRARIES}
