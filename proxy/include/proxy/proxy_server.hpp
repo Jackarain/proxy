@@ -67,6 +67,8 @@
 #include <boost/regex.hpp>
 
 #include <boost/nowide/convert.hpp>
+#include <boost/nowide/filesystem.hpp>
+#include <boost/nowide/fstream.hpp>
 
 #ifdef _MSC_VER
 # pragma warning(push)
@@ -123,7 +125,7 @@ namespace proxy {
 
 	namespace urls = boost::urls;			// form <boost/url.hpp>
 
-	namespace fs = std::filesystem;
+	namespace fs = boost::filesystem;
 
 	using string_body = http::string_body;
 	using dynamic_body = http::dynamic_body;
@@ -273,11 +275,11 @@ R"x*x*x(<html>
 
 
 	inline constexpr auto head_fmt =
-		LR"(<html><head><meta charset="UTF-8"><title>Index of {}</title></head><body bgcolor="white"><h1>Index of {}</h1><hr><pre>)";
+		R"(<html><head><meta charset="UTF-8"><title>Index of {}</title></head><body bgcolor="white"><h1>Index of {}</h1><hr><pre>)";
 	inline constexpr auto tail_fmt =
-		L"</pre><hr></body></html>";
+		"</pre><hr></body></html>";
 	inline constexpr auto body_fmt =
-		L"<a href=\"{}\">{}</a>{} {}       {}\r\n";
+		"<a href=\"{}\">{}</a>{} {}       {}\r\n";
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -3564,34 +3566,36 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline fs::path path_cat(
-			const std::wstring& doc, const std::wstring& target)
+		inline fs::path path_cat(std::string_view doc, std::string_view target)
 		{
 			size_t start_pos = 0;
 			for (auto& c : target)
 			{
-				if (!(c == L'/' || c == '\\'))
+				if (!(c == '/' || c == '\\'))
 					break;
 
 				start_pos++;
 			}
 
-			std::wstring_view sv;
-			std::wstring slash = L"/";
+			std::pmr::monotonic_buffer_resource mbr;
+			std::pmr::polymorphic_allocator<char> alloc(&mbr);
+
+			std::string_view sv;
+			std::pmr::string slash {"/" , alloc};
 
 			if (start_pos < target.size())
-				sv = std::wstring_view(target.c_str() + start_pos);
+				sv = target.substr(start_pos);
 #ifdef WIN32
-			slash = L"\\";
-			if (doc.back() == L'/' ||
-				doc.back() == L'\\')
-				slash = L"";
-			return fs::path(doc + slash + std::wstring(sv));
+			slash = "\\";
+			if (doc.back() == '/' ||
+				doc.back() == '\\')
+				slash = "";
+			auto filename = std::pmr::string(doc, alloc) + slash + std::pmr::string(sv, alloc);
+			return fs::path(std::string_view(filename));
 #else
-			if (doc.back() == L'/')
-				slash = L"";
-			return fs::path(
-				boost::nowide::narrow(doc + slash + std::wstring(sv)));
+			if (doc.back() == '/')
+				slash = "";
+			return fs::path(std::pmr::string(doc, alloc) + slash + std::pmr::string(sv, alloc));
 #endif // WIN32
 		};
 
@@ -3611,7 +3615,7 @@ R"x*x*x(<html>
 			return ret;
 		}
 
-		inline std::wstring make_target_path(const std::string& target)
+		inline std::string make_target_path(std::string_view target)
 		{
 			std::string url = "http://example.com";
 			if (target.starts_with("/"))
@@ -3621,15 +3625,15 @@ R"x*x*x(<html>
 
 			auto result = urls::parse_uri(url);
 			if (result.has_error())
-				return boost::nowide::widen(target);
+				return std::string(target);//boost::nowide::widen(target);
 
-			return boost::nowide::widen(result->path());
+			return result->path();//boost::nowide::widen(result->path());
 		}
 
 		inline std::string make_real_target_path(const std::string& target)
 		{
 			auto target_path = make_target_path(target);
-			auto doc_path = boost::nowide::widen(m_option.doc_directory_);
+			auto doc_path = m_option.doc_directory_;
 
 #ifdef WIN32
 			auto ret = make_unc_path(path_cat(doc_path, target_path));
@@ -3696,7 +3700,7 @@ R"x*x*x(<html>
 			return { time_string, unc_path };
 		}
 
-		inline std::vector<std::wstring>
+		inline std::vector<std::string>
 		format_path_list(const std::string& path, boost::system::error_code& ec)
 		{
 			fs::directory_iterator end;
@@ -3712,60 +3716,59 @@ R"x*x*x(<html>
 				return {};
 			}
 
-			std::vector<std::wstring> path_list;
-			std::vector<std::wstring> file_list;
+			std::vector<std::string> path_list;
+			std::vector<std::string> file_list;
 
 			for (; it != end && !m_abort; it++)
 			{
 				const auto& item = it->path();
 
-				auto [ftime, unc_path] = file_last_wirte_time(item);
-				std::wstring time_string = boost::nowide::widen(ftime);
+				auto [time_string, unc_path] = file_last_wirte_time(item);
+				// std::wstring time_string = boost::nowide::widen(ftime);
 
-				std::wstring rpath;
+				std::string rpath;
 
 				if (fs::is_directory(unc_path.empty() ? item : unc_path, ec))
 				{
-					auto leaf = boost::nowide::narrow(item.filename().wstring());
+					auto leaf = item.filename().string() ;//boost::nowide::narrow(item.filename().wstring());
 					leaf = leaf + "/";
-					rpath = boost::nowide::widen(leaf);
+					rpath = leaf;//boost::nowide::widen(leaf);
 					int width = 50 - static_cast<int>(rpath.size());
 					width = width < 0 ? 0 : width;
-					std::wstring space(width, L' ');
+					std::string space(width, ' ');
 					auto show_path = rpath;
 					if (show_path.size() > 50) {
 						show_path = show_path.substr(0, 47);
-						show_path += L"..&gt;";
+						show_path += "..&gt;";
 					}
 					auto str = fmt::format(body_fmt,
 						rpath,
 						show_path,
 						space,
 						time_string,
-						L"-");
+						"-");
 
 					path_list.push_back(str);
 				}
 				else
 				{
-					auto leaf =  boost::nowide::narrow(item.filename().wstring());
-					rpath = boost::nowide::widen(leaf);
+					auto leaf = item.filename().string();
+					rpath = leaf;//boost::nowide::widen(leaf);
 					int width = 50 - (int)rpath.size();
 					width = width < 0 ? 0 : width;
-					std::wstring space(width, L' ');
-					std::wstring filesize;
+					std::string space(width, ' ');
+					std::string filesize;
 					if (unc_path.empty())
 						unc_path = item;
 					auto sz = static_cast<float>(fs::file_size(
 						unc_path, ec));
 					if (ec)
 						sz = 0;
-					filesize = boost::nowide::widen(
-						strutil::add_suffix(sz));
+					filesize = strutil::add_suffix(sz);
 					auto show_path = rpath;
 					if (show_path.size() > 50) {
 						show_path = show_path.substr(0, 47);
-						show_path += L"..&gt;";
+						show_path += "..&gt;";
 					}
 					auto str = fmt::format(body_fmt,
 						rpath,
@@ -3790,7 +3793,7 @@ R"x*x*x(<html>
 		{
 			ec = {};
 
-			std::ifstream file(p.string(), std::ios::binary);
+			boost::nowide::ifstream file(p.string(), std::ios::binary);
 			if (!file)
 			{
 				ec = boost::system::error_code(errno,
@@ -3895,14 +3898,12 @@ R"x*x*x(<html>
 
 				if (fs::is_directory(unc_path.empty() ? item : unc_path, ec))
 				{
-					auto leaf = boost::nowide::narrow(item.filename().wstring());
-					obj["filename"] = leaf;
+					obj["filename"] = item.filename().string();
 					obj["is_dir"] = true;
 				}
 				else
 				{
-					auto leaf =  boost::nowide::narrow(item.filename().wstring());
-					obj["filename"] = leaf;
+					obj["filename"] = item.filename().string();
 					obj["is_dir"] = false;
 					if (unc_path.empty())
 						unc_path = item;
@@ -3962,7 +3963,7 @@ R"x*x*x(<html>
 
 			if (fs::exists(index_html, ec))
 			{
-				std::ifstream file(index_html.string(), std::ios::binary);
+				boost::nowide::ifstream file(index_html.string(), std::ios::binary);
 				if (file)
 				{
 					std::string content(
@@ -4021,16 +4022,16 @@ R"x*x*x(<html>
 			}
 
 			auto target_path = make_target_path(hctx.target_);
-			std::wstring head = fmt::format(head_fmt,
+			std::string head = fmt::format(head_fmt,
 				target_path,
 				target_path);
 
-			std::wstring body = fmt::format(body_fmt,
-				L"../",
-				L"../",
-				L"",
-				L"",
-				L"");
+			std::string body = fmt::format(body_fmt,
+				"../",
+				"../",
+				"",
+				"",
+				"");
 
 			for (auto& s : path_list)
 				body += s;
@@ -4040,7 +4041,7 @@ R"x*x*x(<html>
 			res.set(http::field::server, version_string);
 			res.set(http::field::date, server_date_string());
 			res.keep_alive(request.keep_alive());
-			res.body() = boost::nowide::narrow(body);
+			res.body() = body;
 			res.prepare_payload();
 
 			http::serializer<false, string_body, http::fields> sr(res);
@@ -4121,7 +4122,7 @@ R"x*x*x(<html>
 				co_return;
 			}
 
-			std::fstream file(path.string(),
+			boost::nowide::fstream file(path.string(),
 				std::ios_base::binary |
 				std::ios_base::in);
 
@@ -4637,6 +4638,8 @@ R"x*x*x(<html>
 
 			init_ssl_context();
 
+			boost::nowide::nowide_filesystem();
+
 			boost::system::error_code ec;
 
 			if (fs::exists(m_option.ipip_db_, ec))
@@ -4695,7 +4698,7 @@ R"x*x*x(<html>
 		{
 			pem_file result{ filepath, pem_type::none };
 
-			std::ifstream file(filepath);
+			boost::nowide::ifstream file(filepath);
 			if (!file.is_open())
 				return result;
 
