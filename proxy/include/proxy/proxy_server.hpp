@@ -644,62 +644,54 @@ R"x*x*x(<html>
 		using http_ranges = std::vector<std::pair<int64_t, int64_t>>;
 
 		// parser_http_ranges 用于解析 http range 请求头.
-		inline http_ranges parser_http_ranges(std::string range) const noexcept
+
+		http_ranges parser_http_ranges(std::string_view range_line) noexcept
 		{
-			// 去掉前后空白.
-			range = strutil::remove_spaces(range);
-
-			// range 必须以 bytes= 开头, 否则返回空数组.
-			if (!range.starts_with("bytes="))
-				return {};
-
-			// 去掉开头的 bytes= 字符串.
-			boost::ireplace_first(range, "bytes=", "");
-
 			http_ranges results;
 
-			// 获取其中所有 range 字符串.
-			auto ranges = strutil::split(range, ",");
-			for (const auto& str : ranges)
+			if (!range_line.empty())
 			{
-				auto r = strutil::split(std::string(str), "-");
+				// 去掉前后空白.
+				range_line = strutil::remove_spaces(range_line);
 
-				// range 只有一个数值.
-				if (r.size() == 1)
+				// range 必须以 bytes= 开头, 否则返回空数组.
+				if (auto regex_match_result = ctre::match<"bytes=([0-9,\\- ]+)">(range_line))
 				{
-					if (str.front() == '-') {
-						auto pos = std::atoll(r.front().data());
-						results.emplace_back(-1, pos);
-					} else {
-						auto pos = std::atoll(r.front().data());
-						results.emplace_back(pos, -1);
-					}
-				}
-				else if (r.size() == 2)
-				{
-					// range 有 start 和 end 的情况, 解析成整数到容器.
-					auto& start_str = r[0];
-					auto& end_str = r[1];
+					std::string_view range = regex_match_result.get<1>();
 
-					if (start_str.empty() && !end_str.empty())
+					std::array<std::byte, 64> pre_alloc_buf;
+					std::pmr::monotonic_buffer_resource mbr(pre_alloc_buf.data(), pre_alloc_buf.size());
+					std::pmr::polymorphic_allocator<char> alloc(&mbr);
+
+					std::pmr::vector<std::string_view> ranges{alloc};
+
+					// 获取其中所有 range 字符串.
+					strutil::split(range, ",", std::back_inserter(ranges));
+					for (const auto& str : ranges)
 					{
-						auto end = std::atoll(end_str.data());
-						results.emplace_back(-1, end);
-					}
-					else
-					{
-						auto start = std::atoll(start_str.data());
-						auto end = std::atoll(end_str.data());
-						if (end_str.empty())
-							end = -1;
+						if (auto range_match = ctre::match<"(-?[0-9 ]+)(-([0-9 ]*))?">(str))
+						{
+							auto first = range_match.get<1>().to_number<int64_t>();
 
-						results.emplace_back(start, end);
+							if (first < 0)
+							{
+								results.emplace_back(-1, -first);
+							}
+							else
+							{
+								if (range_match.get<3>().to_view().empty())
+								{
+									results.emplace_back(first, -1);
+								}
+								else
+								{
+									auto second = range_match.get<3>().to_number<long long>();
+
+									results.emplace_back(first, second);
+								}
+							}
+						}
 					}
-				}
-				else
-				{
-					// 在一个 range 项中不应该存在3个'-', 否则则是无效项.
-					return {};
 				}
 			}
 
