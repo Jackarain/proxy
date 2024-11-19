@@ -30,6 +30,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
+#include <memory_resource>
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/co_spawn.hpp>
@@ -127,20 +128,25 @@ namespace proxy {
 
 	namespace fs = boost::filesystem;
 
-	using string_body = http::string_body;
-	using dynamic_body = http::dynamic_body;
+	using pmr_alloc_t = std::pmr::polymorphic_allocator<char>;
+
+	using string_body = http::basic_string_body<char, std::char_traits<char>, pmr_alloc_t>;
+
+	// using string_body = http::string_body;
+	using dynamic_body = http::basic_dynamic_body<boost::beast::basic_multi_buffer<pmr_alloc_t>>;
 	using buffer_body = http::buffer_body;
 
-	using dynamic_request = http::request<dynamic_body>;
-	using string_request = http::request<string_body>;
+	using dynamic_request = http::request<dynamic_body, http::basic_fields<pmr_alloc_t>>;
+	using string_request = http::request<string_body, http::basic_fields<pmr_alloc_t>>;
 
-	using string_response = http::response<string_body>;
-	using buffer_response = http::response<buffer_body>;
+	using string_response = http::response<string_body, http::basic_fields<pmr_alloc_t>>;
+	using buffer_response = http::response<buffer_body, http::basic_fields<pmr_alloc_t>>;
 
-	using request_parser = http::request_parser<string_request::body_type>;
+	using request_parser = http::request_parser<string_request::body_type, pmr_alloc_t>;
+	using response_parser = http::response_parser<string_response::body_type, pmr_alloc_t>;
 
-	using response_serializer = http::response_serializer<buffer_body, http::fields>;
-	using string_response_serializer = http::response_serializer<string_body, http::fields>;
+	using response_serializer = http::response_serializer<buffer_response::body_type, http::basic_fields<pmr_alloc_t>>;
+	using string_response_serializer = http::response_serializer<string_response::body_type, http::basic_fields<pmr_alloc_t>>;
 
 	using io_util::read;
 	using io_util::write;
@@ -583,13 +589,13 @@ R"x*x*x(<html>
 		struct http_context
 		{
 			// 在 http 请求时, 保存正则表达式命中时匹配的结果列表.
-			std::vector<std::string> command_;
+			std::pmr::vector<std::pmr::string> command_;
 
 			// 保存 http 客户端的请求信息.
 			string_request& request_;
 
 			// 保存 http 客户端请求的原始目标.
-			std::string target_;
+			std::pmr::string target_;
 
 			// 保存 http 客户端请求目标的具体路径, 即: doc 目录 + target_ 组成的路径.
 			std::string target_path_;
@@ -2334,12 +2340,19 @@ R"x*x*x(<html>
 		{
 			boost::system::error_code ec;
 			bool keep_alive = false;
-			std::optional<request_parser> parser;
 			bool first = true;
 
 			while (!m_abort)
 			{
-				parser.emplace();
+				std::pmr::monotonic_buffer_resource bmr;
+				pmr_alloc_t alloc(&bmr);
+				std::optional<request_parser> parser;
+		        parser.emplace(
+					std::piecewise_construct,
+					std::make_tuple(alloc),
+					std::make_tuple(alloc)
+				);
+
 				parser->body_limit(1024 * 1024 * 10);
 				if (!first)
 					m_local_buffer.consume(m_local_buffer.size());
@@ -2362,9 +2375,9 @@ R"x*x*x(<html>
 				}
 
 				auto req = parser->release();
-				auto mth = std::string(req.method_string());
-				auto target_view = std::string(req.target());
-				auto pa = std::string(req[http::field::proxy_authorization]);
+				auto mth = std::pmr::string(req.method_string(), alloc);
+				auto target_view = std::pmr::string(req.target(), alloc);
+				auto pa = std::pmr::string(req[http::field::proxy_authorization], alloc);
 
 				keep_alive = req.keep_alive();
 
@@ -2372,7 +2385,7 @@ R"x*x*x(<html>
 					<< m_connection_id
 					<< ", method: " << mth
 					<< ", target: " << target_view
-					<< (pa.empty() ? std::string()
+					<< (pa.empty() ? std::pmr::string()
 						: ", proxy_authorization: " + pa);
 
 				// 判定是否为 GET url 代理模式.
@@ -2443,7 +2456,7 @@ R"x*x*x(<html>
 
 						if (!fs::is_directory(path, ec))
 						{
-							co_await normal_web_server(req, parser);
+							co_await normal_web_server(std::move(req));
 							co_return true;
 						}
 
@@ -2454,7 +2467,7 @@ R"x*x*x(<html>
 					}
 
 					// 按正常 http 目录请求来处理.
-					co_await normal_web_server(req, parser);
+					co_await normal_web_server(std::move(req));
 					co_return true;
 				}
 
@@ -2546,11 +2559,15 @@ R"x*x*x(<html>
 				m_local_buffer.consume(m_local_buffer.size());
 				beast::flat_buffer buf;
 
-				http::response_parser<http::string_body> parser;
-				parser.body_limit(1024 * 1024 * 10);
+				response_parser _parser{
+					std::piecewise_construct,
+					std::make_tuple(alloc),
+					std::make_tuple(alloc)
+				};
+				_parser.body_limit(1024 * 1024 * 10);
 
 				auto bytes = co_await http::async_read(
-					m_remote_socket, buf, parser, net_awaitable[ec]);
+					m_remote_socket, buf, _parser, net_awaitable[ec]);
 				if (ec)
 				{
 					XLOG_WARN << "connection id: "
@@ -2561,7 +2578,7 @@ R"x*x*x(<html>
 				}
 
 				co_await http::async_write(
-					m_local_socket, parser.release(), net_awaitable[ec]);
+					m_local_socket, _parser.release(), net_awaitable[ec]);
 				if (ec)
 				{
 					XLOG_WARN << "connection id: "
@@ -3457,7 +3474,7 @@ R"x*x*x(<html>
 		}
 
 		inline net::awaitable<void>
-		normal_web_server(http::request<http::string_body>& req, std::optional<request_parser>& parser)
+		normal_web_server(string_request req)
 		{
 			boost::system::error_code ec;
 
@@ -3466,6 +3483,9 @@ R"x*x*x(<html>
 
 			for (; !m_abort;)
 			{
+				std::pmr::monotonic_buffer_resource bmr;
+				pmr_alloc_t alloc(&bmr);
+				std::optional<request_parser> parser;
 				if (!has_read_header)
 				{
 					// normal_web_server 调用是从 http_proxy_get
@@ -3473,7 +3493,11 @@ R"x*x*x(<html>
 					// 要再次读取请求头, 即 has_read_header 为 true.
 					// 当 keepalive 时，需要读取请求头, 此时 has_read_header
 					// 为 false, 则在此读取和解析后续的 http 请求头.
-					parser.emplace();
+					parser.emplace(
+						std::piecewise_construct,
+						std::make_tuple(alloc),
+						std::make_tuple(alloc)
+					);
 					parser->body_limit(1024 * 512); // 512k
 					m_local_buffer.consume(m_local_buffer.size());
 
@@ -3532,9 +3556,9 @@ R"x*x*x(<html>
 					co_return;
 				}
 
-				std::string target = req.target();
-				boost::smatch what;
-				http_context http_ctx{ {}, req, target, make_real_target_path(req.target()) };
+				std::pmr::string target { req.target(), alloc };
+				boost::match_results<std::pmr::string::const_iterator> what;
+				http_context http_ctx{ std::pmr::vector<std::pmr::string>{alloc}, req, target, make_real_target_path(req.target()) };
 
 				#define BEGIN_HTTP_ROUTE() if (false) {}
 				#define ON_HTTP_ROUTE(exp, func) \
@@ -3621,7 +3645,10 @@ R"x*x*x(<html>
 			if (target.starts_with("/"))
 				url += target;
 			else
-				url += "/" + target;
+			{
+				url += "/";
+				url += target;
+			}
 
 			auto result = urls::parse_uri(url);
 			if (result.has_error())
@@ -3630,7 +3657,7 @@ R"x*x*x(<html>
 			return result->path();//boost::nowide::widen(result->path());
 		}
 
-		inline std::string make_real_target_path(const std::string& target)
+		inline std::string make_real_target_path(std::string_view target)
 		{
 			auto target_path = make_target_path(target);
 			auto doc_path = m_option.doc_directory_;
@@ -3866,7 +3893,7 @@ R"x*x*x(<html>
 				res.keep_alive(request.keep_alive());
 				res.prepare_payload();
 
-				http::serializer<false, string_body, http::fields> sr(res);
+				string_response_serializer sr(res);
 				co_await http::async_write(
 					m_local_socket,
 					sr,
@@ -3934,7 +3961,7 @@ R"x*x*x(<html>
 			res.body() = body;
 			res.prepare_payload();
 
-			http::serializer<false, string_body, http::fields> sr(res);
+			string_response_serializer sr(res);
 			co_await http::async_write(
 				m_local_socket,
 				sr,
@@ -3982,7 +4009,7 @@ R"x*x*x(<html>
 					res.body() = content;
 					res.prepare_payload();
 
-					http::serializer<false, string_body, http::fields> sr(res);
+					string_response_serializer sr(res);
 					co_await http::async_write(
 						m_local_socket,
 						sr,
@@ -4007,7 +4034,7 @@ R"x*x*x(<html>
 				res.keep_alive(request.keep_alive());
 				res.prepare_payload();
 
-				http::serializer<false, string_body, http::fields> sr(res);
+				string_response_serializer sr(res);
 				co_await http::async_write(
 					m_local_socket,
 					sr,
@@ -4044,7 +4071,7 @@ R"x*x*x(<html>
 			res.body() = body;
 			res.prepare_payload();
 
-			http::serializer<false, string_body, http::fields> sr(res);
+			string_response_serializer sr(res);
 			co_await http::async_write(
 				m_local_socket,
 				sr,
@@ -4098,7 +4125,7 @@ R"x*x*x(<html>
 					url = "https://";
 				url += request[http::field::host];
 				urls::url u(url);
-				std::string target = hctx.target_ + "/";
+				std::pmr::string target = hctx.target_ + "/";
 				u.set_path(target);
 
 				co_await location_http_route(request, u.buffer());
@@ -4351,7 +4378,7 @@ R"x*x*x(<html>
 			res.body() = response;
 			res.prepare_payload();
 
-			http::serializer<false, string_body, http::fields> sr(res);
+			string_response_serializer sr(res);
 			co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
 			if (ec)
 			{
@@ -4379,7 +4406,7 @@ R"x*x*x(<html>
 			res.body() = fake_302_content;
 			res.prepare_payload();
 
-			http::serializer<false, string_body, http::fields> sr(res);
+			string_response_serializer sr(res);
 			co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
 			if (ec)
 			{
@@ -4405,7 +4432,7 @@ R"x*x*x(<html>
 			res.body() = fake_403_content;
 			res.prepare_payload();
 
-			http::serializer<false, string_body, http::fields> sr(res);
+			http::serializer<false, string_body, http::basic_fields<pmr_alloc_t>> sr(res);
 			co_await http::async_write(
 				m_local_socket, sr, net_awaitable[ec]);
 			if (ec)
@@ -4433,7 +4460,7 @@ R"x*x*x(<html>
 			res.body() = fake_401_content;
 			res.prepare_payload();
 
-			http::serializer<false, string_body, http::fields> sr(res);
+			http::serializer<false, string_body, http::basic_fields<pmr_alloc_t>> sr(res);
 			co_await http::async_write(
 				m_local_socket, sr, net_awaitable[ec]);
 			if (ec)

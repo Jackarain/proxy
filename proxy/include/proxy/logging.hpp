@@ -1442,6 +1442,26 @@ public:
 #endif
 		return strcat_impl(v);
 	}
+
+	inline logger___& operator<<(const std::pmr::string& v)
+	{
+#ifdef LOGGING_ENABLE_AUTO_UTF8
+		if (!global_logging___)
+			return *this;
+		if (!logger_aux__::utf8_check_is_valid(v))
+		{
+			auto wres = logger_aux__::string_wide(v);
+			if (wres)
+			{
+				auto ret = logger_aux__::utf16_utf8(*wres);
+				if (ret)
+					return strcat_impl(*ret);
+			}
+		}
+#endif
+		return strcat_impl(v);
+	}
+
 	inline logger___& operator<<(const std::wstring& v)
 	{
 		if (!global_logging___)
