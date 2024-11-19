@@ -2,11 +2,30 @@
 
 #include "proxy/proxy_server.hpp"
 
+#include <boost/asio.hpp>
 #include <boost/hana.hpp>
 #include "ctre.hpp"
 
 namespace proxy
 {
+	static const char fake_404_content[] =
+R"x*x*x(<html><head><title>404 Not Found</title></head>
+<body>
+<center><h1>404 Not Found</h1></center>
+<hr>
+<center>nginx/1.20.2</center>
+</body>
+</html>)x*x*x";
+
+	static const char fake_502_content[] =
+R"xx(<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx/1.26.2</center>
+</body>
+</html>)xx";
+
 	inline constexpr auto head_fmt =
 		R"(<html><head><meta charset="UTF-8"><title>Index of {}</title></head><body bgcolor="white"><h1>Index of {}</h1><hr><div><table><tbody>)";
 	inline constexpr auto tail_fmt =
@@ -600,7 +619,7 @@ namespace proxy
 		boost::system::error_code ec;
 
 		const auto& request = hctx.request_;
-		const fs::path& path = hctx.target_path_;
+		fs::path path = std::string_view{hctx.target_path_};
 
 		if (!fs::exists(path, ec))
 		{
@@ -608,9 +627,19 @@ namespace proxy
 
 			std::pmr::string fake_page{hctx.alloc};
 
-			fmt::vformat_to(std::back_inserter(fake_page), fake_404_content_fmt, fmt::make_format_args(server_date_string(hctx.alloc)));
+			span_response res{
+				std::piecewise_construct,
+				std::make_tuple(boost::span<const char, boost::dynamic_extent>{fake_404_content, sizeof fake_404_content - 1}),
+				std::make_tuple(http::status::not_found, request.version(), hctx.alloc)
+			};
+			res.set(http::field::server, version_string);
+			res.set(http::field::date, server_date_string(hctx.alloc));
+			res.keep_alive(request.keep_alive());
+			res.prepare_payload();
 
-			co_await net::async_write(m_local_socket, net::buffer(fake_page), net::transfer_all(), net_awaitable[ec]);
+			span_response_serializer sr(res);
+
+			co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
 
 			co_return;
 		}
@@ -645,26 +674,35 @@ namespace proxy
 
 			co_return;
 		}
-
+#if defined (BOOST_ASIO_HAS_FILE)
+#	if defined(_WIN32)
+		net::stream_file file(co_await net::this_coro::executor);
+		file.assign(::CreateFileW(path.wstring().c_str(), GENERIC_READ, FILE_SHARE_READ, 0,
+          	OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED|FILE_FLAG_SEQUENTIAL_SCAN, 0), ec);
+#	else
+		net::stream_file file(co_await net::this_coro::executor, path.string(), net::stream_file::read_only);
+#	endif
+#else // BOOST_ASIO_HAS_FILE
 		boost::nowide::fstream file(path.string(), std::ios_base::binary | std::ios_base::in);
+#endif //BOOST_ASIO_HAS_FILE
 
-		std::string user_agent;
+		std::pmr::string user_agent { hctx.alloc };
 		if (request.count(http::field::user_agent))
 		{
-			user_agent = std::string(request[http::field::user_agent]);
+			user_agent = request[http::field::user_agent];
 		}
 
-		std::string referer;
+		std::pmr::string referer { hctx.alloc };
 		if (request.count(http::field::referer))
 		{
-			referer = std::string(request[http::field::referer]);
+			referer = request[http::field::referer];
 		}
 
 		XLOG_DBG << "connection id: " << m_connection_id << ", http file: " << hctx.target_
 				 << ", size: " << content_length
-				 << (request.count("Range") ? ", range: " + std::string(request["Range"]) : std::string())
-				 << (!user_agent.empty() ? ", user_agent: " + user_agent : std::string())
-				 << (!referer.empty() ? ", referer: " + referer : std::string());
+				 << (request.count("Range") ? ", range: " + std::pmr::string(request["Range"], hctx.alloc) : std::pmr::string(hctx.alloc))
+				 << (!user_agent.empty() ? ", user_agent: " + user_agent : std::pmr::string(hctx.alloc))
+				 << (!referer.empty() ? ", referer: " + referer : std::pmr::string(hctx.alloc));
 
 		http::status st = http::status::ok;
 		auto range = parser_http_ranges(request["Range"]);
@@ -709,10 +747,66 @@ namespace proxy
 				else
 				{
 					r.second = content_length - 1;
+
+					if (r.first == content_length)
+					{
+						std::pmr::string content_range{hctx.alloc};
+						fmt::format_to(std::back_inserter(content_range), "bytes */{}", r.second, r.second, content_length);
+
+						span_response res{
+							std::piecewise_construct,
+							std::make_tuple(boost::span<const char, boost::dynamic_extent>{fake_416_content, sizeof (fake_416_content) - 1}),
+							std::make_tuple(http::status::range_not_satisfiable, request.version(), hctx.alloc)
+						};
+
+						res.set(http::field::server, version_string);
+						res.set(http::field::date, server_date_string(hctx.alloc));
+						res.set(http::field::content_type, "text/html; charset=UTF-8");
+						res.set(http::field::content_range, content_range);
+
+						res.keep_alive(hctx.request_.keep_alive());
+						res.prepare_payload();
+
+						span_response_serializer sr(res);
+						co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
+						co_return;
+					}
 				}
 			}
-
+#if defined (BOOST_ASIO_HAS_FILE)
+			file.seek(r.first, net::stream_file::seek_set);
+#else
 			file.seekg(r.first, std::ios_base::beg);
+#endif
+		}
+
+		if (ec)
+		{
+			XLOG_WARN << "connection id: " << m_connection_id << ", open target: " << path << " failed: " << ec.message();
+			// FILE OPEN FAILED
+			// 返回 502
+			st = http::status::internal_server_error;
+
+			span_response res{
+				std::piecewise_construct,
+				std::make_tuple(boost::span<const char, boost::dynamic_extent>{fake_502_content, sizeof (fake_502_content) - 1}),
+				std::make_tuple(http::status::found, request.version(), hctx.alloc)
+			};
+
+			res.set(http::field::server, version_string);
+			res.set(http::field::date, server_date_string(hctx.alloc));
+			res.set(http::field::content_type, "text/html; charset=utf-8");
+			res.keep_alive(true);
+			res.prepare_payload();
+
+			span_response_serializer sr(res);
+			co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
+			if (ec)
+			{
+				XLOG_WARN << "connection id: " << m_connection_id << ", send 502 err: " << ec.message();
+			}
+
+			co_return;
 		}
 
 		custom_body_response res{
@@ -723,17 +817,11 @@ namespace proxy
 
 		res.set(http::field::server, version_string);
 		res.set(http::field::date, server_date_string(hctx.alloc));
-
 		auto ext = strutil::to_lower(fs::path(path).extension().string());
-
 		if (global_mimes.count(ext))
-		{
 			res.set(http::field::content_type, global_mimes.at(ext));
-		}
 		else
-		{
 			res.set(http::field::content_type, "text/plain");
-		}
 
 		if (st == http::status::ok)
 		{
@@ -762,9 +850,6 @@ namespace proxy
 
 		custom_body_response_serializer sr(res);
 
-		res.body().data = nullptr;
-		res.body().more = false;
-
 		co_await http::async_write_header(m_local_socket, sr, net_awaitable[ec]);
 		if (ec)
 		{
@@ -773,26 +858,30 @@ namespace proxy
 			co_return;
 		}
 
-		auto buf_size = 5 * 1024 * 1024;
+		auto buf_size = 64 * 1024;
 		if (m_option.tcp_rate_limit_ > 0 && m_option.tcp_rate_limit_ < buf_size)
 		{
 			buf_size = m_option.tcp_rate_limit_;
 		}
 
+		std::streamsize total = 0;
+		stream_rate_limit(m_local_socket, m_option.tcp_rate_limit_);
+#if defined (BOOST_ASIO_HAS_FILE)
+		total = co_await transfer(file, m_local_socket, content_length);
+#else
 		std::unique_ptr<char, decltype(&std::free)> bufs((char*)std::malloc(buf_size), &std::free);
 		char* buf = bufs.get();
-		std::streamsize total = 0;
-
-		stream_rate_limit(m_local_socket, m_option.tcp_rate_limit_);
 
 		do
 		{
-			auto bytes_transferred = fileop::read(file, std::span<char>(buf, buf_size));
-			bytes_transferred = std::min<std::streamsize>(bytes_transferred, content_length - total);
+			auto remain_to_read = std::min<std::streamsize>(buf_size, content_length - total);
+			auto bytes_transferred = fileop::read(file, std::span<char>(buf, remain_to_read));
 			if (bytes_transferred == 0 || total >= (std::streamsize)content_length)
 			{
 				break;
 			}
+
+			bytes_transferred = std::min<std::streamsize>(bytes_transferred, content_length - total);
 
 			stream_expires_after(m_local_socket, std::chrono::seconds(m_option.tcp_timeout_));
 
@@ -805,10 +894,17 @@ namespace proxy
 				co_return;
 			}
 		}
-		while (!ec);
+		while (total < content_length);
+#endif
+		if (ec)
+		{
+			m_local_socket.close(ec);
 
+			XLOG_WARN << "connection id: " << m_connection_id << ", http async_write: " << ec.message()
+				<< ", already write: " << total;
+		}
 
-		XLOG_DBG << "connection id: " << m_connection_id << ", http request: " << hctx.target_ << ", completed";
+		XLOG_DBG << "connection id: " << m_connection_id << ", http request: " << hctx.target_ << ", completed, size: " << total;
 
 		co_return;
 	}
@@ -1299,11 +1395,10 @@ namespace proxy
 			co_return false;
 		}
 
-		size_t l2r_transferred = 0;
-		size_t r2l_transferred = 0;
-
-		co_await (transfer(m_local_socket, m_remote_socket, l2r_transferred) &&
-				  transfer(m_remote_socket, m_local_socket, r2l_transferred));
+		auto [l2r_transferred, r2l_transferred] = co_await (
+				  transfer(m_local_socket, m_remote_socket) &&
+				  transfer(m_remote_socket, m_local_socket)
+		);
 
 		XLOG_DBG << "connection id: " << m_connection_id << ", transfer completed"
 				 << ", local to remote: " << l2r_transferred << ", remote to local: " << r2l_transferred;
