@@ -11,6 +11,8 @@
 
 #include <limits>
 
+#include <boost/nowide/args.hpp>
+
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
@@ -307,6 +309,8 @@ namespace std
 
 int main(int argc, char** argv)
 {
+    boost::nowide::args a(argc,argv); // Fix arguments - make them UTF-8
+
 	platform_init();
 
 	std::string config;
@@ -404,10 +408,19 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 		po::notify(vm);
 	}
 
-	if (disable_logs || log_dir.empty())
-		xlogger::toggle_write_logging(false);
+	if (disable_logs && log_dir.empty())
+	{
+		xlogger::turnoff_logging();
+	}
 	else
-		xlogger::init_logging(log_dir);
+	{
+		if (log_dir.empty())
+			xlogger::toggle_write_logging(false);
+		else
+			xlogger::init_logging(log_dir);
+		if (disable_logs)
+			xlogger::toggle_console_logging(false);
+	}
 
 	print_args(argc, argv, vm);
 

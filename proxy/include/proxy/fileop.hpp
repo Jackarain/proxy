@@ -23,6 +23,7 @@
 #  include <boost/filesystem.hpp>
 #endif
 
+#include <boost/nowide/fstream.hpp>
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -117,13 +118,13 @@ namespace fileop {
 
 
 	template<ByteType T>
-	std::streamsize read(const std::fstream& file, std::span<T> val)
+	std::streamsize read(const boost::nowide::fstream& file, std::span<T> val)
 	{
 		return details::read(*file.rdbuf(), val);
 	}
 
 	inline std::streamsize
-	read(const std::fstream& file, std::string& val)
+	read(const boost::nowide::fstream& file, std::string& val)
 	{
 		return details::read(*file.rdbuf(), val);
 	}
@@ -131,14 +132,14 @@ namespace fileop {
 	template<PathType P, ByteType T>
 	std::streamsize read(const P& file, std::span<T> val)
 	{
-		std::fstream f(file.string(), std::ios_base::binary | std::ios_base::in);
+		boost::nowide::fstream f(file.string(), std::ios_base::binary | std::ios_base::in);
 		return details::read(*f.rdbuf(), val);
 	}
 
 	template<PathType P>
 	std::streamsize read(const P& file, std::string& val)
 	{
-		std::fstream f(file.string(), std::ios_base::binary | std::ios_base::in);
+		boost::nowide::fstream f(file.string(), std::ios_base::binary | std::ios_base::in);
 		std::error_code ec;
 		auto fsize = details::filesize(file);
 		if (fsize < 0)
@@ -164,13 +165,13 @@ namespace fileop {
 
 
 	template<ByteType T>
-	std::streamsize write(std::fstream& file, std::span<T> val)
+	std::streamsize write(boost::nowide::fstream& file, std::span<T> val)
 	{
 		return details::write(*file.rdbuf(), val);
 	}
 
 	inline std::streamsize
-	write(std::fstream& file, std::string_view val)
+	write(boost::nowide::fstream& file, std::string_view val)
 	{
 		return details::write(*file.rdbuf(), val);
 	}
@@ -181,7 +182,7 @@ namespace fileop {
 	{
 		details::create_parent_directories(file);
 
-		std::fstream f(file.string(),
+		boost::nowide::fstream f(file.string(),
 			std::ios_base::binary |
 			std::ios_base::out |
 			std::ios_base::trunc);
@@ -194,7 +195,7 @@ namespace fileop {
 	{
 		details::create_parent_directories(file);
 
-		std::fstream f(file.string(),
+		boost::nowide::fstream f(file.string(),
 			std::ios_base::binary |
 			std::ios_base::out |
 			std::ios_base::trunc);
