@@ -4984,6 +4984,12 @@ R"x*x*x(<html>
 		{
 			walk_certificate(m_option.ssl_cert_path_, certificates);
 
+			// 按过期时间排序.
+			std::sort(certificates.begin(), certificates.end(),
+				[](const certificate_file& a, const certificate_file& b) {
+					return a.expire_date_ < b.expire_date_;
+				});
+
 			for (const auto& ctx : certificates)
 			{
 				XLOG_DBG << "domain: '" << ctx.domain_
@@ -5063,11 +5069,33 @@ R"x*x*x(<html>
 			auto self = shared_from_this();
 			boost::system::error_code ec;
 
+			// 定时检查证书是否过期, 按照过期时间排序, 从最小时间开始检查.
 			while (!m_abort)
 			{
-				// 每隔 7 天检查一次证书是否过期.
-				m_timer.expires_from_now(std::chrono::days(7));
+				auto now = boost::posix_time::second_clock::universal_time();
+				std::chrono::seconds duration(std::chrono::days(1));
 
+				auto& certificates = *m_certificates;
+
+				for (const auto& ctx : certificates)
+				{
+					if (now > ctx.expire_date_)
+					{
+						XLOG_WARN << "domain: '" << ctx.domain_
+							<< "', cert: '" << ctx.cert_.filepath_.string()
+							<< "', key: '" << ctx.key_.filepath_.string()
+							<< "', dhparam: '" << ctx.dhparam_.filepath_.string()
+							<< "', pwd: '" << ctx.pwd_.filepath_.string()
+							<< "', expired: '" << ctx.expire_date_ << "'";
+						continue;
+					}
+
+					duration = std::chrono::seconds((ctx.expire_date_ - now).total_seconds());
+					break;
+				}
+
+				// 每隔 duration 检查一次证书是否过期.
+				m_timer.expires_from_now(duration);
 				co_await m_timer.async_wait(net_awaitable[ec]);
 				if (ec)
 					break;
