@@ -148,7 +148,6 @@ namespace proxy {
 	enum class pem_type
 	{
 		none,		// none.
-		domain,		// domain file.
 		cert,		// certificate file.
 		key,  		// certificate key file.
 		pwd,		// certificate password file.
@@ -170,6 +169,8 @@ namespace proxy {
 		pem_file dhparam_;
 
 		std::string domain_;
+		std::vector<std::string> alt_names_;
+		boost::posix_time::ptime expire_date_;
 
 		std::optional<net::ssl::context> ssl_context_;
 	};
@@ -2866,40 +2867,65 @@ R"x*x*x(<html>
 		template<typename S1, typename S2>
 		net::awaitable<void> transfer(S1& from, S2& to, size_t& bytes_transferred)
 		{
-			std::vector<char> data(1024 * 1024, 0);
-			boost::system::error_code ec;
 			bytes_transferred = 0;
 
 			stream_rate_limit(from, m_option.tcp_rate_limit_);
 			stream_rate_limit(to, m_option.tcp_rate_limit_);
 
+			stream_expires_after(from, std::chrono::seconds(m_option.tcp_timeout_));
+
+			constexpr auto buf_size = 512 * 1024;
+
+			std::unique_ptr<char, decltype(&std::free)> buf0((char*)std::malloc(buf_size), &std::free);
+			std::unique_ptr<char, decltype(&std::free)> buf1((char*)std::malloc(buf_size), &std::free);
+
+			// 分别使用主从缓冲指针用于并发读写.
+			auto primary_buf = buf0.get();
+			auto secondary_buf = buf1.get();
+
+			// 首先邓读取第一个数据作为预备, 以用于后面的交替读写逻辑.
+			boost::system::error_code ec;
+			auto bytes = co_await from.async_read_some(net::buffer(primary_buf, buf_size), net_awaitable[ec]);
+			if (ec || m_abort)
+			{
+				if (bytes > 0)
+					co_await net::async_write(to,
+						net::buffer(primary_buf, bytes), net_awaitable[ec]);
+
+				to.shutdown(net::socket_base::shutdown_send, ec);
+				co_return;
+			}
+
 			for (; !m_abort;)
 			{
+				stream_expires_after(to, std::chrono::seconds(m_option.tcp_timeout_));
 				stream_expires_after(from, std::chrono::seconds(m_option.tcp_timeout_));
 
-				auto bytes = co_await from.async_read_some(
-					net::buffer(data), net_awaitable[ec]);
-				if (ec || m_abort)
-				{
-					if (bytes > 0)
-						co_await net::async_write(to,
-							net::buffer(data, bytes), net_awaitable[ec]);
+				// 并发读写.
+				auto [write_bytes, read_bytes] =
+					co_await(
+						net::async_write(to,
+							net::buffer(primary_buf, bytes), net_awaitable[ec])
+						&&
+						from.async_read_some(
+							net::buffer(secondary_buf, buf_size), net_awaitable[ec])
+					);
 
+				// 交换主从缓冲区.
+				std::swap(primary_buf, secondary_buf);
+
+				bytes = read_bytes;
+				bytes_transferred += bytes;
+
+				// 如果 async_write 失败, 则也无需要再读取数据, 如果
+				// async_read_some 失败, 则也无数据可用于写, 所以无论哪一种情况
+				// 都可以直接退出.
+				if (ec)
+				{
 					to.shutdown(net::socket_base::shutdown_send, ec);
-					co_return;
-				}
-
-				stream_expires_after(to, std::chrono::seconds(m_option.tcp_timeout_));
-
-				co_await net::async_write(to,
-					net::buffer(data, bytes), net_awaitable[ec]);
-				if (ec || m_abort)
-				{
 					from.shutdown(net::socket_base::shutdown_receive, ec);
 					co_return;
 				}
-
-				bytes_transferred += bytes;
 			}
 		}
 
@@ -3774,10 +3800,10 @@ R"x*x*x(<html>
 
 			boost::uuids::detail::sha1 sha1;
 			const auto buf_size = 1024 * 1024 * 4;
-			std::vector<char> bufs(buf_size, 0);
+			std::unique_ptr<char, decltype(&std::free)> bufs((char*)std::malloc(buf_size), &std::free);
 
-			while (file.read(bufs.data(), buf_size) || file.gcount())
-				sha1.process_bytes(bufs.data(), file.gcount());
+			while (file.read(bufs.get(), buf_size) || file.gcount())
+				sha1.process_bytes(bufs.get(), file.gcount());
 
 			boost::uuids::detail::sha1::digest_type hash;
 			sha1.get_digest(hash);
@@ -4239,7 +4265,7 @@ R"x*x*x(<html>
 			if (m_option.tcp_rate_limit_ > 0 && m_option.tcp_rate_limit_ < buf_size)
 				buf_size = m_option.tcp_rate_limit_;
 
-			auto bufs = std::make_unique<char[]>(buf_size);
+			std::unique_ptr<char, decltype(&std::free)> bufs((char*)std::malloc(buf_size), &std::free);
 			char* buf = bufs.get();
 			std::streamsize total = 0;
 
@@ -4605,7 +4631,10 @@ R"x*x*x(<html>
 		proxy_server(net::any_io_executor executor, proxy_server_option opt)
 			: m_executor(executor)
 			, m_option(std::move(opt))
+			, m_timer(executor)
 		{
+			m_certificates = &m_certificate_master;
+
 			init_ssl_context();
 
 			boost::system::error_code ec;
@@ -4630,7 +4659,39 @@ R"x*x*x(<html>
 
 		virtual ~proxy_server() = default;
 
-		pem_file determine_pem_type(const std::string& filepath) noexcept
+		inline bool rfc2818_verification_match_pattern(
+			const char* pattern, std::size_t pattern_length, const char* host)
+		{
+			const char* p = pattern;
+			const char* p_end = p + pattern_length;
+			const char* h = host;
+
+			while (p != p_end && *h)
+			{
+				if (*p == '*')
+				{
+					++p;
+					while (*h && *h != '.')
+					{
+						if (rfc2818_verification_match_pattern(p, p_end - p, h++))
+							return true;
+					}
+				}
+				else if (std::tolower(*p) == std::tolower(*h))
+				{
+					++p;
+					++h;
+				}
+				else
+				{
+					return false;
+				}
+			}
+
+			return p == p_end && !*h;
+		}
+
+		inline pem_file determine_pem_type(const std::string& filepath) noexcept
 		{
 			pem_file result{ filepath, pem_type::none };
 
@@ -4646,15 +4707,6 @@ R"x*x*x(<html>
 				fs::path(filepath).filename() == "passphrase.txt")
 			{
 				result.type_ = pem_type::pwd;
-				return result;
-			}
-
-			if (fs::path(filepath).filename() == "domain.txt" ||
-				fs::path(filepath).filename() == "domain" ||
-				fs::path(filepath).filename() == "servername" ||
-				fs::path(filepath).filename() == "servername.txt")
-			{
-				result.type_ = pem_type::domain;
 				return result;
 			}
 
@@ -4688,7 +4740,8 @@ R"x*x*x(<html>
 			return result;
 		}
 
-		inline void find_cert(const fs::path& directory) noexcept
+		inline void walk_certificate(
+			const fs::path& directory, std::vector<certificate_file>& certificates) noexcept
 		{
 			if (!fs::exists(directory) || !fs::is_directory(directory))
 			{
@@ -4698,20 +4751,11 @@ R"x*x*x(<html>
 
 			certificate_file file;
 
-			// 域名在路径中，如：/etc/letsencrypt/live/www.jackarain.org/
-			boost::regex re(R"(([^\/|\\]+?\.[a-zA-Z]{2,})(?=\/?$))");
-			boost::smatch what;
-			if (boost::regex_search(directory.string(), what, re))
-			{
-				file.domain_ = std::string(what[1]);
-				strutil::trim(file.domain_);
-			}
-
 			for (const auto& entry : fs::directory_iterator(directory))
 			{
 				if (entry.is_directory())
 				{
-					find_cert(entry.path());
+					walk_certificate(entry.path(), certificates);
 					continue;
 				}
 
@@ -4733,10 +4777,6 @@ R"x*x*x(<html>
 							break;
 						case pem_type::pwd:
 							file.pwd_ = type;
-							break;
-						case pem_type::domain:
-							fileop::read(entry.path(), file.domain_);
-							strutil::trim(file.domain_);
 							break;
 						default:
 							break;
@@ -4829,8 +4869,43 @@ R"x*x*x(<html>
 					}
 				}
 
-				// 保存到 m_certificates 中.
-				m_certificates.emplace_back(std::move(file));
+				// 设置证书过期时间和域名.
+				X509* x509_cert = SSL_CTX_get0_certificate(ssl_ctx.native_handle());
+				const auto expire_date = X509_get_notAfter(x509_cert);
+
+#ifdef OPENSSL_IS_BORINGSSL
+				std::time_t expiration_time;
+				ASN1_TIME_to_time_t(expire_date, &expiration_time);
+				file.expire_date_ = boost::posix_time::from_time_t(expiration_time);
+#else
+				std::tm expire_date_tm;
+				ASN1_TIME_to_tm(expire_date, &expire_date_tm);
+				file.expire_date_ = boost::posix_time::ptime_from_tm(expire_date_tm);
+#endif
+				std::unique_ptr<GENERAL_NAMES, decltype(&GENERAL_NAMES_free)> general_names{
+					static_cast<GENERAL_NAMES*>(X509_get_ext_d2i(x509_cert, NID_subject_alt_name, 0, 0)),
+					&GENERAL_NAMES_free
+				};
+
+				for (int i = 0; i < sk_GENERAL_NAME_num(general_names.get()); i++)
+				{
+					GENERAL_NAME* gen = sk_GENERAL_NAME_value(general_names.get(), i);
+					if (gen->type == GEN_DNS)
+					{
+						const ASN1_IA5STRING* domain = gen->d.dNSName;
+						if (domain->type == V_ASN1_IA5STRING && domain->data && domain->length)
+						{
+							file.alt_names_.emplace_back((const char*)(domain->data), domain->length);
+						}
+					}
+				}
+
+				char cert_cname[256] = { 0 };
+				X509_NAME_get_text_by_NID(X509_get_subject_name(x509_cert), NID_commonName, cert_cname, sizeof cert_cname);
+				file.domain_ = cert_cname;
+
+				// 保存到 certificates 中.
+				certificates.emplace_back(std::move(file));
 			}
 		}
 
@@ -4904,22 +4979,38 @@ R"x*x*x(<html>
 			}
 		}
 
-		inline void init_ssl_context() noexcept
+		inline void update_certificate(
+			const fs::path& directory, std::vector<certificate_file>& certificates) noexcept
 		{
-			if (m_option.ssl_cert_path_.empty())
-				return;
+			walk_certificate(m_option.ssl_cert_path_, certificates);
 
-			find_cert(m_option.ssl_cert_path_);
+			// 按过期时间排序.
+			std::sort(certificates.begin(), certificates.end(),
+				[](const certificate_file& a, const certificate_file& b) {
+					return a.expire_date_ < b.expire_date_;
+				});
 
-			for (const auto& ctx : m_certificates)
+			for (const auto& ctx : certificates)
 			{
 				XLOG_DBG << "domain: '" << ctx.domain_
-					<< "', cert: '" << ctx.cert_.filepath_.string()
+					<< "', expire: '" << ctx.expire_date_
+					<< ", cert: '" << ctx.cert_.filepath_.string()
 					<< "', key: '" << ctx.key_.filepath_.string()
 					<< "', dhparam: '" << ctx.dhparam_.filepath_.string()
 					<< "', pwd: '" << ctx.pwd_.filepath_.string() << "'";
 			}
+		}
 
+		inline void init_ssl_context() noexcept
+		{
+			// 如果没有设置证书文件, 则直接返回.
+			if (m_option.ssl_cert_path_.empty())
+				return;
+
+			// 读取并更新证书文件.
+			update_certificate(m_option.ssl_cert_path_, *m_certificates);
+
+			// 设置 SNI 回调函数.
     		SSL_CTX_set_tlsext_servername_callback(
 				m_ssl_srv_context.native_handle(), proxy_server::ssl_sni_callback);
     		SSL_CTX_set_tlsext_servername_arg(m_ssl_srv_context.native_handle(), this);
@@ -4931,19 +5022,34 @@ R"x*x*x(<html>
 			return self->sni_callback(ssl, ad);
 		}
 
-		int sni_callback(SSL *ssl, int *ad) noexcept
+		inline int sni_callback(SSL *ssl, int *ad) noexcept
 		{
 			const char *servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
 			if (servername)
 			{
 				certificate_file* default_ctx = nullptr;
+				auto& certificates = *m_certificates;
 
-				for (auto& ctx : m_certificates)
+				for (auto& ctx : certificates)
 				{
-					if (ctx.domain_ == servername && ctx.ssl_context_.has_value())
+					if (ctx.ssl_context_.has_value())
 					{
-						SSL_set_SSL_CTX(ssl, ctx.ssl_context_->native_handle());
-						return SSL_TLSEXT_ERR_OK;
+						if (rfc2818_verification_match_pattern(
+							ctx.domain_.c_str(), ctx.domain_.length(), servername))
+						{
+							SSL_set_SSL_CTX(ssl, ctx.ssl_context_->native_handle());
+							return SSL_TLSEXT_ERR_OK;
+						}
+
+						for (auto& alt_name : ctx.alt_names_)
+						{
+							if (rfc2818_verification_match_pattern(
+								alt_name.c_str(), alt_name.length(), servername))
+							{
+								SSL_set_SSL_CTX(ssl, ctx.ssl_context_->native_handle());
+								return SSL_TLSEXT_ERR_OK;
+							}
+						}
 					}
 					if (ctx.domain_.empty())
 						default_ctx = &ctx;
@@ -4956,6 +5062,60 @@ R"x*x*x(<html>
 				}
 			}
 			return SSL_TLSEXT_ERR_OK;
+		}
+
+		inline net::awaitable<void> certificate_check_timer()
+		{
+			auto self = shared_from_this();
+			boost::system::error_code ec;
+
+			// 定时检查证书是否过期, 按照过期时间排序, 从最小时间开始检查.
+			while (!m_abort)
+			{
+				auto now = boost::posix_time::second_clock::universal_time();
+				std::chrono::seconds duration(std::chrono::days(1));
+
+				auto& certificates = *m_certificates;
+
+				for (const auto& ctx : certificates)
+				{
+					if (now > ctx.expire_date_)
+					{
+						XLOG_WARN << "domain: '" << ctx.domain_
+							<< "', cert: '" << ctx.cert_.filepath_.string()
+							<< "', key: '" << ctx.key_.filepath_.string()
+							<< "', dhparam: '" << ctx.dhparam_.filepath_.string()
+							<< "', pwd: '" << ctx.pwd_.filepath_.string()
+							<< "', expired: '" << ctx.expire_date_ << "'";
+						continue;
+					}
+
+					duration = std::chrono::seconds((ctx.expire_date_ - now).total_seconds());
+					break;
+				}
+
+				// 每隔 duration 检查一次证书是否过期.
+				m_timer.expires_from_now(duration);
+				co_await m_timer.async_wait(net_awaitable[ec]);
+				if (ec)
+					break;
+
+				// 热更新证书, 交替更新证书容器 master/slave.
+				if (m_certificates == &m_certificate_master)
+				{
+					m_certificate_slave.clear();
+					update_certificate(m_option.ssl_cert_path_, m_certificate_slave);
+					m_certificates = &m_certificate_slave;
+				}
+				else
+				{
+					m_certificate_master.clear();
+					update_certificate(m_option.ssl_cert_path_, m_certificate_master);
+					m_certificates = &m_certificate_master;
+				}
+			}
+
+			co_return;
 		}
 
 	public:
@@ -5006,12 +5166,18 @@ R"x*x*x(<html>
 						start_proxy_listen(acceptor), net::detached);
 				}
 			}
+
+			// 启动 证书检查定时器.
+			net::co_spawn(m_executor,
+				certificate_check_timer(), net::detached);
 		}
 
 		inline void close() noexcept
 		{
 			boost::system::error_code ignore_ec;
 			m_abort = true;
+
+			m_timer.cancel(ignore_ec);
 
 			for (auto& acceptor : m_tcp_acceptors)
 				acceptor.close(ignore_ec);
@@ -5236,6 +5402,7 @@ R"x*x*x(<html>
 
 		inline net::awaitable<void> get_local_address() noexcept
 		{
+			auto self = shared_from_this();
 			boost::system::error_code ec;
 
 			auto hostname = net::ip::host_name(ec);
@@ -5274,7 +5441,7 @@ R"x*x*x(<html>
 			}
 		}
 
-		bool region_filter(const std::vector<std::string>& local_info) const noexcept
+		inline bool region_filter(const std::vector<std::string>& local_info) const noexcept
 		{
 			auto& deny_region = m_option.deny_regions_;
 			auto& allow_region = m_option.allow_regions_;
@@ -5351,7 +5518,11 @@ R"x*x*x(<html>
 		net::ssl::context m_ssl_srv_context{ net::ssl::context::tls_server };
 
 		// m_certificates 保存当前服务端的证书信息.
-		std::vector<certificate_file> m_certificates;
+		std::vector<certificate_file>* m_certificates{ nullptr };
+		std::vector<certificate_file> m_certificate_master;
+		std::vector<certificate_file> m_certificate_slave;
+
+		net::steady_timer m_timer;
 
 		// 当前服务是否中止标志.
 		bool m_abort{ false };
