@@ -21,6 +21,10 @@
 #include <sstream>
 #include <regex>
 #include <tuple>
+#include <map>
+#include <algorithm>
+#include <cctype>
+#include <string>
 #include "proxy/proxy_server.hpp"
 #include "proxy/socks_client.hpp"
 #include "proxy/strutil.hpp"
@@ -45,6 +49,43 @@ struct flow_config {
 };
 
 // HELPERS
+// Helper function to trim whitespace from a string
+std::string trim(const std::string& str) {
+    size_t first = str.find_first_not_of(" \t\n\r");
+    if (first == std::string::npos) return "";
+    size_t last = str.find_last_not_of(" \t\n\r");
+    return str.substr(first, last - first + 1);
+}
+
+// Load config from input params string
+flow_config parse_config_from_string(const std::string& config_data) {
+    flow_config config;
+    std::istringstream iss(config_data);
+    std::string line;
+
+    while (std::getline(iss, line)) {
+        line = trim(line);
+        if (line.empty() || line[0] == '#') continue;
+
+        std::istringstream line_stream(line);
+        std::string key, value;
+        if (std::getline(line_stream, key, '=') && std::getline(line_stream, value)) {
+            key = trim(key); // Trim key
+            value = trim(value); // Trim value
+            if (key == "host") config.host = value;
+            else if (key == "port") config.port = static_cast<unsigned short>(std::stoi(value));
+            else if (key == "username") config.username = value;
+            else if (key == "password") config.password = value;
+            else if (key == "manager_endpoint") config.manager_endpoint = value;
+            else if (key == "websocket_test_url") config.websocket_test_url = value;
+            else if (key == "buffer_size") config.buffer_size = static_cast<std::size_t>(std::stoi(value));
+            else if (key == "reconnect_delay") config.reconnect_delay = std::chrono::seconds(std::stoi(value));
+        }
+    }
+
+    return config;
+}
+
 // Load configuration from file or default
 flow_config load_flow_config(const std::string& config_file = "flow.conf") {
     flow_config config;
@@ -261,10 +302,24 @@ net::awaitable<void> handle_data_flow_request(
     auto executor = ioc.get_executor();
     tcp::socket sock(executor);
     boost::beast::flat_buffer buffer;
+    boost::system::error_code ec;
+
+    // Set control callback to handle pings
+    // ws.control_callback(
+    // [&](websocket::frame_type kind, boost::beast::string_view payload) {
+    //     if (kind == websocket::frame_type::ping) {
+    //         std::cout << "(handle_data_flow_request) Ping received, responding with pong.\n";
+    //         boost::system::error_code pong_ec;
+    //         ws.pong(websocket::ping_data(payload), pong_ec);
+    //         if (pong_ec) {
+    //             std::cerr << "(handle_data_flow_request) Error sending pong: " << pong_ec.message() << "\n";
+    //         }
+    //     }
+    // });
 
     // Connect to the SOCKS proxy server
     tcp::endpoint proxy_endpoint(net::ip::address::from_string(config.host), config.port);
-    boost::system::error_code ec;
+
     co_await sock.async_connect(proxy_endpoint, net_awaitable[ec]);
     if (ec) {
         std::cerr << "(handle_data_flow_request) Failed to connect to SOCKS proxy server: " << ec.message() << "\n";
@@ -540,6 +595,13 @@ extern "C" EXPORT_SYMBOL void run_data_flow_service() {
 extern "C" EXPORT_SYMBOL void run_websocket_client() {
     net::io_context ioc(1);
     flow_config config = load_flow_config();
+    net::co_spawn(ioc, run_websocket_with_data_flow(ioc, config), net::detached);
+    ioc.run();
+}
+
+extern "C" EXPORT_SYMBOL void run_websocket_client_with_params(const std::string& config_data) {
+    net::io_context ioc(1);
+    flow_config config = parse_config_from_string(config_data);
     net::co_spawn(ioc, run_websocket_with_data_flow(ioc, config), net::detached);
     ioc.run();
 }
