@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.5)
 cmake_policy(SET CMP0091 NEW) # for CMAKE_MSVC_RUNTIME_LIBRARY
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW) # cmake_policy(SET CMP0077 NEW)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -213,11 +213,11 @@ if (${COMPILER_HAS_COLOR})
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
 endif()
 
-if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-	if (COMPILER_HAS_FCOROUTINES)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines")
-	endif()
-endif()
+#if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+#	if (COMPILER_HAS_FCOROUTINES)
+#		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines")
+#	endif()
+#endif()
 
 #if (COMPILER_HAS_FCOROUTINES_TS)
 #    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines-ts")
