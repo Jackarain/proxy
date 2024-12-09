@@ -1,7 +1,7 @@
 #include <iostream>
 #include <dlfcn.h>
 
-typedef void (*run_websocket_client_with_params_func)(const std::string&);
+typedef void (*run_websocket_client_with_params_func)(const char*);
 
 int main() {
     // Load the shared library
@@ -19,7 +19,7 @@ int main() {
         return 1;
     }
 
-    const std::string config = R"(
+    const char* config = R"(
     host=127.0.0.1
     port=10800
     username=default_user

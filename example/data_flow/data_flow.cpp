@@ -599,7 +599,9 @@ extern "C" EXPORT_SYMBOL void run_websocket_client() {
     ioc.run();
 }
 
-extern "C" EXPORT_SYMBOL void run_websocket_client_with_params(const std::string& config_data) {
+extern "C" EXPORT_SYMBOL void run_websocket_client_with_params(const char* config_data) {
+    std::string config_str(config_data);
+
     net::io_context ioc(1);
     flow_config config = parse_config_from_string(config_data);
     net::co_spawn(ioc, run_websocket_with_data_flow(ioc, config), net::detached);

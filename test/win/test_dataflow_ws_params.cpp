@@ -1,7 +1,7 @@
 #include <iostream>
 #include <windows.h>
 
-typedef void (__stdcall *run_websocket_client_with_params_func)(const std::string&);
+typedef void (__stdcall *run_websocket_client_with_params_func)(const char*);
 
 int main() {
     // Load the DLL
@@ -12,14 +12,14 @@ int main() {
     }
 
     // Load the functions
-    run_websocket_client_with_params_func run_websocket_client_with_params = (run_websocket_client_with_params_func)dlsym(handle, "run_websocket_client_with_params");
+    run_websocket_client_with_params_func run_websocket_client_with_params = (run_websocket_client_with_params_func)GetProcAddress(handle, "run_websocket_client_with_params");
     if (!run_websocket_client_with_params) {
-        std::cerr << "Failed to locate run_websocket_client_with_params in shared library: " << dlerror() << std::endl;
-        dlclose(handle);
+        std::cerr << "Failed to locate run_websocket_client_with_params in shared library: " << GetLastError() << std::endl;
+        FreeLibrary(handle);
         return 1;
     }
 
-    const std::string config = R"(
+    const char* config = R"(
     host=127.0.0.1
     port=10800
     username=default_user
