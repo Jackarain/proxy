@@ -83,6 +83,35 @@ public:
             BOOST_TEST_EQ(u1.data(), u2.data());
         }
 
+        // issue #872
+        {
+            url base{"https://127.0.0.1"};
+            url_view ref = "/foo";
+
+            // url_view(url)
+            {
+                url_view base_view{base};
+                BOOST_TEST(base_view.has_scheme());
+                url dest;
+                auto res = resolve(base_view, ref, dest);
+                BOOST_TEST(res);
+                BOOST_TEST(dest.has_scheme());
+                BOOST_TEST_EQ(dest.buffer(), "https://127.0.0.1/foo");
+            }
+
+            // url_view::operator=(url)
+            {
+                url_view base_view;
+                base_view = base;
+                BOOST_TEST(base_view.has_scheme());
+                url dest;
+                auto res = resolve(base_view, ref, dest);
+                BOOST_TEST(res);
+                BOOST_TEST(dest.has_scheme());
+                BOOST_TEST_EQ(dest.buffer(), "https://127.0.0.1/foo");
+            }
+        }
+
         // url_view(core::string_view)
         {
             BOOST_TEST_NO_THROW(url_view(

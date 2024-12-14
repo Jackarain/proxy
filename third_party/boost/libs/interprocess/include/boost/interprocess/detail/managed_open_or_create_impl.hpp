@@ -307,14 +307,14 @@ class managed_open_or_create_impl
       spin_wait swait;
       unsigned tries = 0;
       while(1){
-         BOOST_TRY{
+         BOOST_INTERPROCESS_TRY{
             create_device<FileBased>(dev, id, size, perm, file_like_t());
             return true;
          }
-         BOOST_CATCH(interprocess_exception &ex){
+         BOOST_INTERPROCESS_CATCH(interprocess_exception &ex){
             #ifndef BOOST_NO_EXCEPTIONS
             if(ex.get_error_code() != already_exists_error){
-               BOOST_RETHROW
+               BOOST_INTERPROCESS_RETHROW
             }
             else if (++tries == MaxCreateOrOpenTries) {
                //File existing when trying to create, but non-existing when
@@ -323,25 +323,25 @@ class managed_open_or_create_impl
                throw interprocess_exception(error_info(corrupted_error));
             }
             else{
-               BOOST_TRY{
+               BOOST_INTERPROCESS_TRY{
                   DeviceAbstraction tmp(open_only, id, read_write);
                   dev.swap(tmp);
                   return false;
                }
-               BOOST_CATCH(interprocess_exception &e){
+               BOOST_INTERPROCESS_CATCH(interprocess_exception &e){
                   if(e.get_error_code() != not_found_error){
-                     BOOST_RETHROW
+                     BOOST_INTERPROCESS_RETHROW
                   }
                }
-               BOOST_CATCH(...){
-                  BOOST_RETHROW
-               } BOOST_CATCH_END
+               BOOST_INTERPROCESS_CATCH(...){
+                  BOOST_INTERPROCESS_RETHROW
+               } BOOST_INTERPROCESS_CATCH_END
             }
             #endif   //#ifndef BOOST_NO_EXCEPTIONS
          }
-         BOOST_CATCH(...){
-            BOOST_RETHROW
-         } BOOST_CATCH_END
+         BOOST_INTERPROCESS_CATCH(...){
+            BOOST_INTERPROCESS_RETHROW
+         } BOOST_INTERPROCESS_CATCH_END
          swait.yield();
       }
       return false;
@@ -352,7 +352,7 @@ class managed_open_or_create_impl
       (DeviceAbstraction &dev, mapped_region &final_region,
        std::size_t size, const void *addr, ConstructFunc construct_func)
    {
-      BOOST_TRY{
+      BOOST_INTERPROCESS_TRY{
          //If this throws, we are lost
          truncate_device<FileBased>(dev, static_cast<offset_t>(size), file_like_t());
 
@@ -363,16 +363,16 @@ class managed_open_or_create_impl
          boost::uint32_t previous = atomic_cas32(patomic_word, InitializingSegment, UninitializedSegment);
 
          if(previous == UninitializedSegment){
-            BOOST_TRY{
+            BOOST_INTERPROCESS_TRY{
                construct_func( static_cast<char*>(region.get_address()) + ManagedOpenOrCreateUserOffset
                               , size - ManagedOpenOrCreateUserOffset, true);
                //All ok, just move resources to the external mapped region
                final_region.swap(region);
             }
-            BOOST_CATCH(...){
+            BOOST_INTERPROCESS_CATCH(...){
                atomic_write32(patomic_word, CorruptedSegment);
-               BOOST_RETHROW
-            } BOOST_CATCH_END
+               BOOST_INTERPROCESS_RETHROW
+            } BOOST_INTERPROCESS_CATCH_END
             atomic_write32(patomic_word, InitializedSegment);
          }
          else{
@@ -380,16 +380,16 @@ class managed_open_or_create_impl
             throw interprocess_exception(error_info(corrupted_error));
          }
       }
-      BOOST_CATCH(...){
-         BOOST_TRY{
+      BOOST_INTERPROCESS_CATCH(...){
+         BOOST_INTERPROCESS_TRY{
             truncate_device<FileBased>(dev, 1u, file_like_t());
          }
-         BOOST_CATCH(...){
+         BOOST_INTERPROCESS_CATCH(...){
          }
-         BOOST_CATCH_END
-         BOOST_RETHROW
+         BOOST_INTERPROCESS_CATCH_END
+         BOOST_INTERPROCESS_RETHROW
       }
-      BOOST_CATCH_END
+      BOOST_INTERPROCESS_CATCH_END
    }
 
    template <class ConstructFunc>
@@ -533,16 +533,16 @@ class managed_open_or_create_impl
       boost::uint32_t previous = atomic_cas32(patomic_word, InitializingSegment, UninitializedSegment);
 
       if(previous == UninitializedSegment){
-         BOOST_TRY{
+         BOOST_INTERPROCESS_TRY{
             construct_func( static_cast<char*>(region.get_address()) + ManagedOpenOrCreateUserOffset
                            , size - ManagedOpenOrCreateUserOffset, true);
             //All ok, just move resources to the external mapped region
             m_mapped_region.swap(region);
          }
-         BOOST_CATCH(...){
+         BOOST_INTERPROCESS_CATCH(...){
             atomic_write32(patomic_word, CorruptedSegment);
-            BOOST_RETHROW
-         } BOOST_CATCH_END
+            BOOST_INTERPROCESS_RETHROW
+         } BOOST_INTERPROCESS_CATCH_END
          atomic_write32(patomic_word, InitializedSegment);
       }
       else{

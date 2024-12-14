@@ -26,10 +26,10 @@
 #error Boost.Log: This header content is only supported in multithreaded environment
 #endif
 
+#include <condition_variable>
 #include <boost/intrusive/options.hpp>
 #include <boost/intrusive/list.hpp>
 #include <boost/intrusive/list_hook.hpp>
-#include <boost/thread/condition_variable.hpp>
 #include <boost/log/core/record_view.hpp>
 #include <boost/log/detail/header.hpp>
 
@@ -58,7 +58,7 @@ private:
     struct thread_context :
         public thread_context_hook_t
     {
-        condition_variable cond;
+        std::condition_variable cond;
         bool result;
 
         thread_context() : result(true) {}

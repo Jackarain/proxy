@@ -15,6 +15,9 @@
 #ifndef BOOST_LOG_SINKS_ASYNC_FRONTEND_HPP_INCLUDED_
 #define BOOST_LOG_SINKS_ASYNC_FRONTEND_HPP_INCLUDED_
 
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 #include <exception> // std::terminate
 #include <boost/log/detail/config.hpp>
 
@@ -32,10 +35,6 @@
 #include <boost/smart_ptr/make_shared_object.hpp>
 #include <boost/preprocessor/control/if.hpp>
 #include <boost/preprocessor/comparison/equal.hpp>
-#include <boost/thread/locks.hpp>
-#include <boost/thread/recursive_mutex.hpp>
-#include <boost/thread/thread.hpp>
-#include <boost/thread/condition_variable.hpp>
 #include <boost/log/exceptions.hpp>
 #include <boost/log/detail/locking_ptr.hpp>
 #include <boost/log/detail/parameter_tools.hpp>
@@ -133,7 +132,7 @@ class asynchronous_sink :
 
 private:
     //! Backend synchronization mutex type
-    typedef boost::recursive_mutex backend_mutex_type;
+    typedef std::recursive_mutex backend_mutex_type;
     //! Frontend synchronization mutex type
     typedef typename base_type::mutex_type frontend_mutex_type;
 
@@ -191,11 +190,11 @@ private:
     {
     private:
         frontend_mutex_type& m_Mutex;
-        condition_variable_any& m_Cond;
+        std::condition_variable_any& m_Cond;
         boost::atomic< bool >& m_Flag;
 
     public:
-        explicit scoped_flag(frontend_mutex_type& mut, condition_variable_any& cond, boost::atomic< bool >& f) :
+        explicit scoped_flag(frontend_mutex_type& mut, std::condition_variable_any& cond, boost::atomic< bool >& f) :
             m_Mutex(mut), m_Cond(cond), m_Flag(f)
         {
         }
@@ -203,7 +202,7 @@ private:
         {
             try
             {
-                lock_guard< frontend_mutex_type > lock(m_Mutex);
+                std::lock_guard< frontend_mutex_type > lock(m_Mutex);
                 m_Flag.store(false, boost::memory_order_relaxed);
                 m_Cond.notify_all();
             }
@@ -242,9 +241,9 @@ private:
     const shared_ptr< sink_backend_type > m_pBackend;
 
     //! Dedicated record feeding thread
-    thread m_DedicatedFeedingThread;
+    std::thread m_DedicatedFeedingThread;
     //! Condition variable to implement blocking operations
-    condition_variable_any m_BlockCond;
+    std::condition_variable_any m_BlockCond;
 
     //! Currently active operation
     operation m_ActiveOperation;
@@ -318,15 +317,7 @@ public:
      */
     ~asynchronous_sink() BOOST_NOEXCEPT BOOST_OVERRIDE
     {
-        try
-        {
-            boost::this_thread::disable_interruption no_interrupts;
-            stop();
-        }
-        catch (...)
-        {
-            std::terminate();
-        }
+        stop();
     }
 
     /*!
@@ -344,7 +335,7 @@ public:
     {
         if (BOOST_UNLIKELY(m_FlushRequested.load(boost::memory_order_acquire)))
         {
-            unique_lock< frontend_mutex_type > lock(base_type::frontend_mutex());
+            std::unique_lock< frontend_mutex_type > lock(base_type::frontend_mutex());
             // Wait until flush is done
             while (m_FlushRequested.load(boost::memory_order_acquire))
                 m_BlockCond.wait(lock);
@@ -358,9 +349,7 @@ public:
     bool try_consume(record_view const& rec) BOOST_OVERRIDE
     {
         if (!m_FlushRequested.load(boost::memory_order_acquire))
-        {
             return queue_base_type::try_enqueue(rec);
-        }
         else
             return false;
     }
@@ -368,7 +357,7 @@ public:
     /*!
      * The method starts record feeding loop and effectively blocks until either of this happens:
      *
-     * \li the thread is interrupted due to either standard thread interruption or a call to \c stop
+     * \li the thread is interrupted due to a call to \c stop
      * \li an exception is thrown while processing a log record in the backend, and the exception is
      *     not terminated by the exception handler, if one is installed
      *
@@ -378,7 +367,7 @@ public:
     {
         // First check that no other thread is running
         {
-            unique_lock< frontend_mutex_type > lock(base_type::frontend_mutex());
+            std::unique_lock< frontend_mutex_type > lock(base_type::frontend_mutex());
             if (start_feeding_operation(lock, feeding_records))
                 return;
         }
@@ -426,9 +415,9 @@ public:
      */
     void stop()
     {
-        boost::thread feeding_thread;
+        std::thread feeding_thread;
         {
-            lock_guard< frontend_mutex_type > lock(base_type::frontend_mutex());
+            std::lock_guard< frontend_mutex_type > lock(base_type::frontend_mutex());
 
             m_StopRequested.store(true, boost::memory_order_release);
             queue_base_type::interrupt_dequeue();
@@ -449,7 +438,7 @@ public:
     {
         // First check that no other thread is running
         {
-            unique_lock< frontend_mutex_type > lock(base_type::frontend_mutex());
+            std::unique_lock< frontend_mutex_type > lock(base_type::frontend_mutex());
             if (start_feeding_operation(lock, feeding_records))
                 return;
         }
@@ -468,7 +457,7 @@ public:
     void flush() BOOST_OVERRIDE
     {
         {
-            unique_lock< frontend_mutex_type > lock(base_type::frontend_mutex());
+            std::unique_lock< frontend_mutex_type > lock(base_type::frontend_mutex());
             if (static_cast< unsigned int >(m_ActiveOperation & feeding_records) != 0u)
             {
                 // There is already a thread feeding records, let it do the job
@@ -497,11 +486,11 @@ private:
     //! The method spawns record feeding thread
     void start_feeding_thread()
     {
-        boost::thread(run_func(this)).swap(m_DedicatedFeedingThread);
+        std::thread(run_func(this)).swap(m_DedicatedFeedingThread);
     }
 
     //! Starts record feeding operation. The method blocks or throws if another feeding operation is in progress.
-    bool start_feeding_operation(unique_lock< frontend_mutex_type >& lock, operation op)
+    bool start_feeding_operation(std::unique_lock< frontend_mutex_type >& lock, operation op)
     {
         while (m_ActiveOperation != idle)
         {
@@ -527,7 +516,7 @@ private:
     {
         try
         {
-            lock_guard< frontend_mutex_type > lock(base_type::frontend_mutex());
+            std::lock_guard< frontend_mutex_type > lock(base_type::frontend_mutex());
             m_ActiveOperation = idle;
             m_StopRequested.store(false, boost::memory_order_relaxed);
             m_BlockCond.notify_all();

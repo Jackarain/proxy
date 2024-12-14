@@ -190,9 +190,7 @@ public:
 
         See `core::string_view::rbegin`
     */
-#ifdef __cpp_lib_array_constexpr
-    constexpr
-#endif
+    BOOST_URL_LIB_ARRAY_CONSTEXPR
     const_reverse_iterator rbegin() const noexcept
     {
         return s_.rbegin();
@@ -202,9 +200,7 @@ public:
 
         See `core::string_view::rend`
     */
-#ifdef __cpp_lib_array_constexpr
-    constexpr
-#endif
+    BOOST_URL_LIB_ARRAY_CONSTEXPR
     const_reverse_iterator rend() const noexcept
     {
         return s_.rend();
@@ -214,9 +210,7 @@ public:
 
         See `core::string_view::crbegin`
     */
-#ifdef __cpp_lib_array_constexpr
-    constexpr
-#endif
+    BOOST_URL_LIB_ARRAY_CONSTEXPR
     const_reverse_iterator crbegin() const noexcept
     {
         return s_.crbegin();
@@ -226,9 +220,7 @@ public:
 
         See `core::string_view::crend`
     */
-#ifdef __cpp_lib_array_constexpr
-    constexpr
-#endif
+    BOOST_URL_LIB_ARRAY_CONSTEXPR
     const_reverse_iterator crend() const noexcept
     {
         return s_.crend();
@@ -772,6 +764,12 @@ private:
                 string_view_base const volatile*>::value))>;
 public:
 
+    /// Compare two string views for equality
+    /**
+     * This function is only enabled if both arguments
+     * are convertible to `core::string_view` and at least
+     * one of the arguments is derived from `string_view_base`.
+     */
     template<class S0, class S1>
     BOOST_CXX14_CONSTEXPR friend auto operator==(
         S0 const& s0, S1 const& s1) noexcept ->
@@ -781,6 +779,12 @@ public:
         return urls::detail::to_sv(s0) == urls::detail::to_sv(s1);
     }
 
+    /// Compare two string views for inequality
+    /**
+     * This function is only enabled if both arguments
+     * are convertible to `core::string_view` and at least
+     * one of the arguments is derived from `string_view_base`.
+     */
     template<class S0, class S1>
     BOOST_CXX14_CONSTEXPR friend auto operator!=(
         S0 const& s0, S1 const& s1) noexcept ->
@@ -790,6 +794,12 @@ public:
         return urls::detail::to_sv(s0) != urls::detail::to_sv(s1);
     }
 
+    /// Compare two string views for less than
+    /**
+     * This function is only enabled if both arguments
+     * are convertible to `core::string_view` and at least
+     * one of the arguments is derived from `string_view_base`.
+     */
     template<class S0, class S1>
     BOOST_CXX14_CONSTEXPR friend auto operator<(
         S0 const& s0, S1 const& s1) noexcept ->
@@ -799,6 +809,12 @@ public:
         return urls::detail::to_sv(s0) < urls::detail::to_sv(s1);
     }
 
+    /// Compare two string views for less than or equal
+    /**
+     * This function is only enabled if both arguments
+     * are convertible to `core::string_view` and at least
+     * one of the arguments is derived from `string_view_base`.
+     */
     template<class S0, class S1>
     BOOST_CXX14_CONSTEXPR friend auto operator<=(
         S0 const& s0, S1 const& s1) noexcept ->
@@ -808,6 +824,12 @@ public:
         return urls::detail::to_sv(s0) <= urls::detail::to_sv(s1);
     }
 
+    /// Compare two string views for greater than
+    /**
+     * This function is only enabled if both arguments
+     * are convertible to `core::string_view` and at least
+     * one of the arguments is derived from `string_view_base`.
+     */
     template<class S0, class S1>
     BOOST_CXX14_CONSTEXPR friend auto operator>(
         S0 const& s0, S1 const& s1) noexcept ->
@@ -817,6 +839,12 @@ public:
         return urls::detail::to_sv(s0) > urls::detail::to_sv(s1);
     }
 
+    /// Compare two string views for greater than or equal
+    /**
+     * This function is only enabled if both arguments
+     * are convertible to `core::string_view` and at least
+     * one of the arguments is derived from `string_view_base`.
+     */
     template<class S0, class S1>
     BOOST_CXX14_CONSTEXPR friend auto operator>=(
         S0 const& s0, S1 const& s1) noexcept ->
@@ -839,6 +867,8 @@ public:
         return hash_value(s.s_);
     }
 
+    /** Format a string to an output stream
+     */
     BOOST_URL_DECL
     friend
     std::ostream&

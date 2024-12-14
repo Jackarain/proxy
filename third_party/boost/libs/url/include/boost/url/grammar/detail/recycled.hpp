@@ -15,7 +15,7 @@
 namespace boost {
 namespace urls {
 namespace grammar {
-namespace detail {
+namespace see_below {
 
 template<
     std::size_t Size,
@@ -94,7 +94,7 @@ inline void recycled_remove(
 
 #endif
 
-} // detail
+} // implementation_defined
 } // grammar
 } // urls
 } // boost

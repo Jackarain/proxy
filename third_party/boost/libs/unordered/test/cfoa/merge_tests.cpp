@@ -1,5 +1,5 @@
 // Copyright (C) 2023 Christian Mazakas
-// Copyright (C) 2023 Joaquin M Lopez Munoz
+// Copyright (C) 2023-2024 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -7,6 +7,8 @@
 
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
+#include <boost/unordered/concurrent_node_map.hpp>
+#include <boost/unordered/concurrent_node_set.hpp>
 
 test::seed_t initialize_seed{402031699};
 
@@ -23,18 +25,37 @@ using map2_type = boost::unordered::concurrent_flat_map<raii, raii,
   std::hash<raii>, std::equal_to<raii>,
   stateful_allocator<std::pair<raii const, raii> > >;
 
+using node_map_type = boost::unordered::concurrent_node_map<raii, raii,
+  hasher, key_equal, stateful_allocator<std::pair<raii const, raii> > >;
+using node_map2_type = boost::unordered::concurrent_node_map<raii, raii,
+  std::hash<raii>, std::equal_to<raii>,
+  stateful_allocator<std::pair<raii const, raii> > >;
+
 using set_type = boost::unordered::concurrent_flat_set<raii, hasher,
   key_equal, stateful_allocator<raii> >;
 using set2_type = boost::unordered::concurrent_flat_set<raii, std::hash<raii>,
+  std::equal_to<raii>, stateful_allocator<raii> >;
+
+using node_set_type = boost::unordered::concurrent_node_set<raii, hasher,
+  key_equal, stateful_allocator<raii> >;
+using node_set2_type = boost::unordered::concurrent_node_set<raii, std::hash<raii>,
   std::equal_to<raii>, stateful_allocator<raii> >;
 
 map_type* test_map;
 map2_type* test_map2;
 auto test_maps=std::make_pair(test_map,test_map2);
 
+node_map_type* test_node_map;
+node_map2_type* test_node_map2;
+auto test_node_maps=std::make_pair(test_node_map,test_node_map2);
+
 set_type* test_set;
 set2_type* test_set2;
 auto test_sets=std::make_pair(test_set,test_set2);
+
+node_set_type* test_node_set;
+node_set2_type* test_node_set2;
+auto test_node_sets=std::make_pair(test_node_set,test_node_set2);
 
 struct
 {
@@ -91,9 +112,16 @@ namespace {
       });
 
       BOOST_TEST_EQ(raii::copy_constructor, old_cc + expected_copies);
-      BOOST_TEST_EQ(
-        raii::move_constructor, 
-        value_type_cardinality * reference_cont.size());
+
+      if (is_container_node_based<X>::value) {
+        BOOST_TEST_EQ(raii::move_constructor, 0u);
+      }
+      else{
+        BOOST_TEST_EQ(
+          raii::move_constructor, 
+          value_type_cardinality * reference_cont.size());
+      }
+
       BOOST_TEST_EQ(+num_merged, reference_cont.size());
 
       test_fuzzy_matches_reference(x, reference_cont, rg);
@@ -210,10 +238,17 @@ namespace {
       t3.join();
 
       if (num_merges > 0) {
-        // num merges is 0 most commonly in the cast of the limited_range
-        // generator as both maps will contains keys from 0 to 99
-        BOOST_TEST_EQ(
-          +raii::move_constructor, value_type_cardinality * num_merges);
+
+        if (is_container_node_based<X>::value) {
+          BOOST_TEST_EQ(raii::move_constructor, 0u);
+        }
+        else{
+          // num merges is 0 most commonly in the cast of the limited_range
+          // generator as both maps will contains keys from 0 to 99
+          BOOST_TEST_EQ(
+            raii::move_constructor, value_type_cardinality * num_merges);
+        }
+
         BOOST_TEST_GE(call_count, 1u);
       }
 
@@ -229,14 +264,14 @@ namespace {
 // clang-format off
 UNORDERED_TEST(
   merge_tests,
-  ((test_maps)(test_sets))
+  ((test_maps)(test_node_maps)(test_sets)(test_node_sets))
   ((lvalue_merge)(rvalue_merge))
   ((value_type_generator_factory))
   ((default_generator)(sequential)(limited_range)))
 
 UNORDERED_TEST(
   insert_and_merge_tests,
-  ((test_maps)(test_sets))
+  ((test_maps)(test_node_maps)(test_sets)(test_node_sets))
   ((value_type_generator_factory))
   ((default_generator)(sequential)(limited_range)))
 // clang-format on

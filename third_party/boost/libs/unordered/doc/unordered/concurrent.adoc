@@ -3,7 +3,8 @@
 
 :idprefix: concurrent_
 
-Boost.Unordered provides `boost::concurrent_flat_set` and `boost::concurrent_flat_map`,
+Boost.Unordered provides `boost::concurrent_node_set`, `boost::concurrent_node_map`,
+`boost::concurrent_flat_set` and `boost::concurrent_flat_map`,
 hash tables that allow concurrent write/read access from
 different threads without having to implement any synchronzation mechanism on the user's side.
 
@@ -43,7 +44,7 @@ logical cores in the CPU).
 
 == Visitation-based API
 
-The first thing a new user of `boost::concurrent_flat_set` or `boost::concurrent_flat_map`
+The first thing a new user of Boost.Unordered concurrent containers
 will notice is that these classes _do not provide iterators_ (which makes them technically
 not https://en.cppreference.com/w/cpp/named_req/Container[Containers^]
 in the C++ standard sense). The reason for this is that iterators are inherently
@@ -62,7 +63,7 @@ thread issues an `m.erase(k)` operation between A and B. There are designs that
 can remedy this by making iterators lock the element they point to, but this
 approach lends itself to high contention and can easily produce deadlocks in a program.
 `operator[]` has similar concurrency issues, and is not provided by
-`boost::concurrent_flat_map` either. Instead, element access is done through
+`boost::concurrent_flat_map`/`boost::concurrent_node_map` either. Instead, element access is done through
 so-called _visitation functions_:
 
 [source,c++]
@@ -112,7 +113,7 @@ if (found) {
 }
 ----
 
-Visitation is prominent in the API provided by `boost::concurrent_flat_set` and `boost::concurrent_flat_map`, and
+Visitation is prominent in the API provided by concurrent containers, and
 many classical operations have visitation-enabled variations:
 
 [source,c++]
@@ -125,13 +126,32 @@ m.insert_or_visit(x, [](auto& y) {
 ----
 
 Note that in this last example the visitation function could actually _modify_
-the element: as a general rule, operations on a `boost::concurrent_flat_map` `m`
+the element: as a general rule, operations on a concurrent map `m`
 will grant visitation functions const/non-const access to  the element depending on whether
 `m` is const/non-const. Const access can be always be explicitly requested
 by using `cvisit` overloads (for instance, `insert_or_cvisit`) and may result
-in higher parallelization. For `boost::concurrent_flat_set`, on the other hand,
+in higher parallelization. For concurrent sets, on the other hand,
 visitation is always const access.
+
+Although expected to be used much less frequently, concurrent containers
+also provide insertion operations where an element can be visited right after
+element creation (in addition to the usual visitation when an equivalent
+element already exists):
+
+[source,c++]
+----
+  m.insert_and_cvisit(x,
+    [](const auto& y) { 
+      std::cout<< "(" << y.first << ", " << y.second <<") inserted\n"; 
+    },
+    [](const auto& y) { 
+      std::cout<< "(" << y.first << ", " << y.second << ") already exists\n"; 
+    });
+----
+
 Consult the references of
+xref:#concurrent_node_set[`boost::concurrent_node_set`],
+xref:#concurrent_flat_map[`boost::concurrent_node_map`],
 xref:#concurrent_flat_set[`boost::concurrent_flat_set`] and 
 xref:#concurrent_flat_map[`boost::concurrent_flat_map`]
 for the complete list of visitation-enabled operations.
@@ -245,7 +265,7 @@ may yield worse performance.
 
 == Blocking Operations
 
-``boost::concurrent_flat_set``s  and ``boost::concurrent_flat_map``s can be copied, assigned, cleared and merged just like any
+Concurrent containers can be copied, assigned, cleared and merged just like any other
 Boost.Unordered container. Unlike most other operations, these are _blocking_,
 that is, all other threads are prevented from accesing the tables involved while a copy, assignment,
 clear or merge operation is in progress. Blocking is taken care of automatically by the library
@@ -258,9 +278,25 @@ reserving space in advance of bulk insertions will generally speed up the proces
 == Interoperability with non-concurrent containers
 
 As open-addressing and concurrent containers are based on the same internal data structure,
-`boost::unordered_flat_set` and `boost::unordered_flat_map` can
-be efficiently move-constructed from `boost::concurrent_flat_set` and `boost::concurrent_flat_map`,
-respectively, and vice versa.
+they can be efficiently move-constructed from their non-concurrent counterpart, and vice versa.
+
+[caption=, title='Table {counter:table-counter}. Concurrent/non-concurrent interoperatibility']
+[cols="1,1", frame=all, grid=all]
+|===
+^|`boost::concurrent_node_set`
+^|`boost::unordered_node_set`
+
+^|`boost::concurrent_node_map`
+^|`boost::unordered_node_map`
+
+^|`boost::concurrent_flat_set`
+^|`boost::unordered_flat_set`
+
+^|`boost::concurrent_flat_map`
+^|`boost::unordered_flat_map`
+
+|===
+
 This interoperability comes handy in multistage scenarios where parts of the data processing happen
 in parallel whereas other steps are non-concurrent (or non-modifying). In the following example,
 we want to construct a histogram from a huge input vector of words:

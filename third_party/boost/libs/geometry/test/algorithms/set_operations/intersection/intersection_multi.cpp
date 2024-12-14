@@ -134,15 +134,9 @@ void test_areal()
     test_one<Polygon, MultiPolygon, MultiPolygon>("case_107_multi_inv_b",
         case_107_multi[1], case_107_multi[2],
         3, 13, 3.0);
-
-#if ! defined(BOOST_GEOMETRY_USE_RESCALING) || defined(BOOST_GEOMETRY_TEST_FAILURES)
-    {
-        // Rescaling misses one intersection
-        test_one<Polygon, MultiPolygon, MultiPolygon>("case_108_multi",
-            case_108_multi[0], case_108_multi[1],
-            7, -1, 7.5);
-    }
-#endif
+    test_one<Polygon, MultiPolygon, MultiPolygon>("case_108_multi",
+        case_108_multi[0], case_108_multi[1],
+        7, -1, 7.5);
 
     TEST_INTERSECTION(case_123_multi, 3, 13, 1.875);
     TEST_INTERSECTION(case_124_multi, 2, 13, 2.0625);
@@ -323,23 +317,15 @@ void test_areal()
     TEST_INTERSECTION(case_recursive_boxes_82, 5, -1, 8.5);
     TEST_INTERSECTION(case_recursive_boxes_83, 5, -1, 10.25);
     TEST_INTERSECTION(case_recursive_boxes_84, 1, -1, 0.5);
-#if ! defined(BOOST_GEOMETRY_USE_RESCALING) || defined(BOOST_GEOMETRY_TEST_FAILURES)
     TEST_INTERSECTION(case_recursive_boxes_85, 1, -1, 0.25);
-#endif
     TEST_INTERSECTION(case_recursive_boxes_86, 0, -1, 0.0);
     TEST_INTERSECTION(case_recursive_boxes_87, 0, -1, 0.0);
     TEST_INTERSECTION(case_recursive_boxes_88, 4, -1, 3.5);
 
-#if ! defined(BOOST_GEOMETRY_USE_RESCALING)
     TEST_INTERSECTION(case_precision_m1, 1, -1, 14.0);
     TEST_INTERSECTION(case_precision_m2, 2, -1, 15.25);
     TEST_INTERSECTION_REV(case_precision_m1, 1, -1, 14.0);
     TEST_INTERSECTION_REV(case_precision_m2, 2, -1, 15.25);
-#else
-    // Validity: false positives (very small triangles looking like a line)
-    TEST_INTERSECTION_IGNORE(case_precision_m1, 1, -1, 14.0);
-    TEST_INTERSECTION_IGNORE(case_precision_m2, 2, -1, 15.25);
-#endif
 
     test_one<Polygon, MultiPolygon, MultiPolygon>("ggl_list_20120915_h2_a",
         ggl_list_20120915_h2[0], ggl_list_20120915_h2[1],
@@ -363,29 +349,27 @@ void test_areal()
 
     TEST_INTERSECTION(ticket_12503, 2, 13, 17.375);
 
-#if ! defined(BOOST_GEOMETRY_USE_RESCALING) || defined(BOOST_GEOMETRY_TEST_FAILURES)
-    // Result is wrong with rescaling
     TEST_INTERSECTION(issue_630_a, 1, -1, 0.1770);
-#endif
 
     TEST_INTERSECTION(issue_630_b, 1, -1, expectation_limits(0.1713911, 0.1714));
 
-#if ! defined(BOOST_GEOMETRY_USE_RESCALING) || defined(BOOST_GEOMETRY_TEST_FAILURES)
-    // Result is missing with rescaling
     TEST_INTERSECTION(issue_630_c, 1, -1, 0.1770);
 
-    // Result is missing with rescaling
     TEST_INTERSECTION(issue_643, 1, -1, 3.4615);
-#endif
 
     TEST_INTERSECTION(issue_869_c, 3, -1, 3600);
 
     TEST_INTERSECTION(issue_888_34, 7, -1, 0.0256838);
     TEST_INTERSECTION(issue_888_37, 13, -1, 0.0567043);
 
+    TEST_INTERSECTION(issue_1222, 1, -1, 4.0);
+    TEST_INTERSECTION(issue_1288, 1, -1, 1.05);
+
     TEST_INTERSECTION(mysql_23023665_7, 2, 11, 9.80505786783);
     TEST_INTERSECTION(mysql_23023665_12, 2, 0, 11.812440191387557);
     TEST_INTERSECTION(mysql_regression_1_65_2017_08_31, 2, -1, 29.9022122);
+
+    TEST_INTERSECTION(issue_1299, 1, -1, 0.2964);
 }
 
 template <typename Polygon, typename MultiPolygon, typename Box>
@@ -501,16 +485,11 @@ int test_main(int, char* [])
 #endif
 
 #if defined(BOOST_GEOMETRY_TEST_FAILURES)
-    BoostGeometryWriteExpectedFailures(9, 1, 2, 1);
+    BoostGeometryWriteExpectedFailures(1, 2, 1);
 #endif
 
     return 0;
 }
-
-
-#if ! defined(BOOST_GEOMETRY_USE_RESCALING) || defined(BOOST_GEOMETRY_TEST_FAILURES)
-
-//failing with rescaling on
 
 // https://github.com/boostorg/geometry/issues/630
 
@@ -551,5 +530,3 @@ BOOST_AUTO_TEST_CASE(Test3)
     testIntersection("POLYGON((-0.3 -0.1475,-0.3 +0.1475,+0.3 +0.1475,+0.3 -0.1475,-0.3 -0.1475))",
                     "MULTIPOLYGON(((-0.9099999999999999 +0.4625,-0.1912799075873667 +1.181220092412633,+0.9707630752925609 +0.01917710953270602,+0.2520429828799277 -0.6995429828799273,-0.9099999999999999 +0.4625)))");
 }
-
-#endif

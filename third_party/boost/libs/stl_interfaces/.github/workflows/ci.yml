@@ -17,24 +17,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: "GCC_VERSION=6 ASAN=off Job 4"
-            buildtype: "boost"
-            packages: "g++-6 valgrind"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:14.04"
-            cxx: "gcc-6"
-            sources: ""
-            llvm_os: ""
-            llvm_ver: ""
-            gcc_version: "6"
-            asan: "off"
           - name: "GCC_VERSION=7 ASAN=off Job 5"
             buildtype: "boost"
             packages: "g++-7 valgrind"
             packages_to_remove: ""
             os: "ubuntu-20.04"
-            container: "ubuntu:16.04"
             cxx: "gcc-7"
             sources: ""
             llvm_os: ""
@@ -46,7 +33,6 @@ jobs:
             packages: "g++-8 valgrind"
             packages_to_remove: ""
             os: "ubuntu-20.04"
-            container: "ubuntu:16.04"
             cxx: "gcc-8"
             sources: ""
             llvm_os: ""
@@ -58,7 +44,6 @@ jobs:
             packages: "g++-9 valgrind"
             packages_to_remove: ""
             os: "ubuntu-20.04"
-            container: "ubuntu:16.04"
             cxx: "gcc-9"
             sources: ""
             llvm_os: ""
@@ -84,7 +69,7 @@ jobs:
             sudo python3 get-pip.py
             sudo /usr/local/bin/pip install cmake
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: linux
         shell: bash

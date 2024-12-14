@@ -13,7 +13,7 @@ file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
         <Intrinsic Name="boost_to_address" ReturnType="pointer" Expression="get()" />
 
         <!-- This is a simplified and inlined version of `offset_ptr::operator+=()` -->
-        <Intrinsic Name="boost_next" ReturnType="pointer" Expression="reinterpret_cast&lt;pointer&gt;( reinterpret_cast&lt;unsigned char*&gt;(ptr) + static_cast&lt;offset_type&gt;(offset * (difference_type)sizeof(element_type)) )">
+        <Intrinsic Name="boost_next" ReturnType="pointer" Expression="(pointer)( (unsigned char*)(ptr) + (offset_type)(offset * (difference_type)sizeof(element_type)) )">
             <Parameter Name="ptr" Type="pointer" />
             <Parameter Name="offset" Type="difference_type" />
         </Intrinsic>

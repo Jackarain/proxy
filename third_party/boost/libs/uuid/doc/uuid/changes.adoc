@@ -3,6 +3,10 @@
 
 :idprefix: changes_
 
+== Changes in Boost 1.87.0
+
+* Restored the ability to construct a `constexpr uuid` that was inadvertently lost in 1.86.
+
 == Changes in Boost 1.86.0 (**major update**)
 
 * {cpp}03 is no longer supported, a {cpp}11 compiler is required.

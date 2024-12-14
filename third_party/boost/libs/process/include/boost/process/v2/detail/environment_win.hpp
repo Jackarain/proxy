@@ -203,7 +203,15 @@ struct native_handle_deleter
 inline const char_type * dereference(native_iterator iterator) {return iterator;}
 BOOST_PROCESS_V2_DECL native_iterator next(native_iterator nh);
 BOOST_PROCESS_V2_DECL native_iterator find_end(native_handle_type nh);
-BOOST_PROCESS_V2_DECL bool is_executable(const filesystem::path & pth, error_code & ec);
+
+
+BOOST_PROCESS_V2_DECL bool is_exec_type(const wchar_t * pth);
+
+inline bool is_executable(const filesystem::path & pth, error_code & ec)
+{
+  return filesystem::is_regular_file(pth, ec) && is_exec_type(pth.c_str());
+}
+
 }
 
 }

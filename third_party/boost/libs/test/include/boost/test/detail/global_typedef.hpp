@@ -29,17 +29,21 @@ typedef unsigned long   counter_t;
 
 //____________________________________________________________________________//
 
-enum report_level  { INV_REPORT_LEVEL, CONFIRMATION_REPORT, SHORT_REPORT, DETAILED_REPORT, NO_REPORT };
+enum BOOST_SYMBOL_VISIBLE report_level  { INV_REPORT_LEVEL,
+                                          CONFIRMATION_REPORT,
+                                          SHORT_REPORT,
+                                          DETAILED_REPORT,
+                                          NO_REPORT };
 
 //____________________________________________________________________________//
 
 //! Indicates the output format for the loggers or the test tree printing
-enum output_format { OF_INVALID,
-                     OF_CLF,      ///< compiler log format
-                     OF_XML,      ///< XML format for report and log,
-                     OF_JUNIT,    ///< JUNIT format for report and log,
-                     OF_CUSTOM_LOGGER, ///< User specified logger.
-                     OF_DOT       ///< dot format for output content
+enum BOOST_SYMBOL_VISIBLE output_format { OF_INVALID,
+                                          OF_CLF,      ///< compiler log format
+                                          OF_XML,      ///< XML format for report and log,
+                                          OF_JUNIT,    ///< JUNIT format for report and log,
+                                          OF_CUSTOM_LOGGER, ///< User specified logger.
+                                          OF_DOT       ///< dot format for output content
 };
 
 //____________________________________________________________________________//

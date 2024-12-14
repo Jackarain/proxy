@@ -21,6 +21,22 @@ namespace boost {
 namespace urls {
 namespace grammar {
 
+namespace see_below
+{
+template<class T, class = void>
+struct is_charset : std::false_type {};
+
+template<class T>
+struct is_charset<T, void_t<
+    decltype(
+    std::declval<bool&>() =
+        std::declval<T const&>().operator()(
+            std::declval<char>())
+            ) > > : std::true_type
+{
+};
+}
+
 /** Alias for `std::true_type` if T satisfies <em>CharSet</em>.
 
     This metafunction determines if the
@@ -43,23 +59,8 @@ namespace grammar {
 
     @tparam T the type to check.
 */
-#ifdef BOOST_URL_DOCS
 template<class T>
-using is_charset = __see_below__;
-#else
-template<class T, class = void>
-struct is_charset : std::false_type {};
-
-template<class T>
-struct is_charset<T, void_t<
-    decltype(
-    std::declval<bool&>() =
-        std::declval<T const&>().operator()(
-            std::declval<char>())
-            ) > > : std::true_type
-{
-};
-#endif
+using is_charset = BOOST_URL_SEE_BELOW(see_below::is_charset<T>);
 
 //------------------------------------------------
 
@@ -142,7 +143,7 @@ find_if_not(
 //------------------------------------------------
 
 #ifndef BOOST_URL_DOCS
-namespace detail {
+namespace implementation_defined {
 
 template<class CharSet>
 struct charset_ref
@@ -175,8 +176,30 @@ struct charset_ref
     }
 };
 
-} // detail
+} // implementation_defined
 #endif
+
+/** Return a reference to a character set
+
+    This function returns a character set which
+    references the specified object. This is
+    used to reduce the number of bytes of
+    storage (`sizeof`) required by a combinator
+    when it stores a copy of the object.
+    <br>
+    Ownership of the object is not transferred;
+    the caller is responsible for ensuring the
+    lifetime of the object is extended until it
+    is no longer referenced. For best results,
+    `ref` should only be used with compile-time
+    constants.
+*/
+#ifdef BOOST_URL_DOCS
+template<class CharSet>
+constexpr
+__implementation_defined__
+ref(CharSet const& cs) noexcept;
+#else
 
 /** Return a reference to a character set
 
@@ -195,20 +218,17 @@ struct charset_ref
 */
 template<class CharSet>
 constexpr
-#ifdef BOOST_URL_DOCS
-__implementation_defined__
-#else
 typename std::enable_if<
     is_charset<CharSet>::value &&
     ! std::is_same<CharSet,
-        detail::charset_ref<CharSet> >::value,
-    detail::charset_ref<CharSet> >::type
-#endif
+        implementation_defined::charset_ref<CharSet> >::value,
+    implementation_defined::charset_ref<CharSet> >::type
 ref(CharSet const& cs) noexcept
 {
-    return detail::charset_ref<
+    return implementation_defined::charset_ref<
         CharSet>{cs};
 }
+#endif
 
 } // grammar
 } // urls

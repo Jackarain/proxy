@@ -230,32 +230,32 @@ of something that is not a URL):
 |URL|Notes
 
 // Row 1, Column 1
-|`pass:[https://www.boost.org/index.html]`
+|cpp:pass:[https://www.boost.org/index.html][]
 // Row 1, Column 2
-|Hierarchical URL with `https` protocol. Resource in the HTTP protocol.
+|Hierarchical URL with cpp:https[] protocol. Resource in the HTTP protocol.
 
 // Row 2, Column 1
-|`pass:[ftp://host.dom/etc/motd]`
+|cpp:pass:[ftp://host.dom/etc/motd][]
 // Row 2, Column 2
-|Hierarchical URL with `ftp` scheme. Resource in the FTP protocol.
+|Hierarchical URL with cpp:ftp[] scheme. Resource in the FTP protocol.
 
 // Row 3, Column 1
-|`urn:isbn:045145052`
+|cpp:urn:isbn:045145052[]
 // Row 3, Column 2
-|Opaque URL with `urn` scheme. Identifies `isbn` resource.
+|Opaque URL with cpp:urn[] scheme. Identifies cpp:isbn[] resource.
 
 // Row 4, Column 1
-|`mailto:person@example.com`
+|cpp:mailto:person@example.com[]
 // Row 4, Column 2
-|Opaque URL with `mailto` scheme. Identifies e-mail address.
+|Opaque URL with cpp:mailto[] scheme. Identifies e-mail address.
 
 // Row 5, Column 1
-|`index.html`
+|cpp:index.html[]
 // Row 5, Column 2
 |URL reference. Missing scheme and authority.
 
 // Row 6, Column 1
-|`www.boost.org`
+|cpp:www.boost.org[]
 // Row 6, Column 2
 |A Protocol-Relative Link (PRL). **Not**.
 
@@ -329,7 +329,7 @@ a slash.
 
 [NOTE]
 ====
-Although the specification allows the format `username:password`,
+Although the specification allows the format cpp:username:password[],
 the password component should be used with care.
 
 It is not recommended to transfer password data through URLs
@@ -344,13 +344,13 @@ unless this is an empty string indicating no password.
 This library provides the following containers, which
 are capable of storing any possible URL:
 
-* `url`: A modifiable container for a URL.
-* `url_view`: A non-owning reference to a valid URL.
-* `static_url`: A URL with fixed-capacity storage.
+* cpp:url[]: A modifiable container for a URL.
+* cpp:url_view[]: A non-owning reference to a valid URL.
+* cpp:static_url[]: A URL with fixed-capacity storage.
 
 These containers maintain a useful invariant: they
 always contain a valid URL. In addition, the library
-provides the `authority_view` container which holds
+provides the cpp:authority_view[] container which holds
 a non-modifiable reference to a valid __authority__.
 An authority by itself, is not a valid URL.
 

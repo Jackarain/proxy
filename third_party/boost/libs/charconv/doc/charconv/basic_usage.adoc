@@ -21,7 +21,7 @@ assert(v == 42);
 
 char buffer[64];
 int v = 123456;
-boost::charconv:to_chars_result r = boost::charconv::to_chars(buffer, buffer + sizeof(buffer), v);
+boost::charconv::to_chars_result r = boost::charconv::to_chars(buffer, buffer + sizeof(buffer), v);
 assert(r.ec == std::errc());
 assert(!strncmp(buffer, "123456", 6)); // Strncmp returns 0 on match
 

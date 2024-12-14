@@ -9,9 +9,6 @@
 #define BOOST_ALL_NO_LIB 1
 #endif // !defined(BOOST_ALL_NO_LIB)
 
-#if defined(BOOST_FILESYSTEM_DYN_LINK)
-#undef BOOST_FILESYSTEM_DYN_LINK
-#endif
 #define BOOST_TEST_IGNORE_SIGCHLD 1
 
 #if  true //defined(BOOST_POSIX_API)
@@ -34,6 +31,7 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/connect_pipe.hpp>
+#include <boost/asio/cancel_after.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/readable_pipe.hpp>
 #include <boost/asio/read.hpp>
@@ -55,9 +53,9 @@ BOOST_AUTO_TEST_CASE(exit_code_sync)
 {
     using boost::unit_test::framework::master_test_suite;
     const auto pth =  master_test_suite().argv[1];
-    
+
     boost::asio::io_context ctx;
-    
+
     BOOST_CHECK_EQUAL(bpv::process(ctx, pth, {"exit-code", "0"}).wait(), 0);
     BOOST_CHECK_EQUAL(bpv::execute(bpv::process(ctx, pth, {"exit-code", "1"})), 1);
     std::vector<std::string> args = {"exit-code", "2"};
@@ -85,7 +83,7 @@ BOOST_AUTO_TEST_CASE(exit_code_async)
 
     int called = 0;
     printf("Setting up processes\n");
-    
+
     bpv::process proc1(ctx, pth, {"exit-code", "0"});
     bpv::process proc3(ctx, pth, {"exit-code", "2"});
     bpv::process proc4(ctx, pth, {"exit-code", "42"});
@@ -200,7 +198,7 @@ BOOST_AUTO_TEST_CASE(print_args_out)
 {
   using boost::unit_test::framework::master_test_suite;
   const auto pth =  master_test_suite().argv[1];
-  
+
   asio::io_context ctx;
 
   asio::readable_pipe rp{ctx};
@@ -296,7 +294,7 @@ BOOST_AUTO_TEST_CASE(echo_file)
 {
   using boost::unit_test::framework::master_test_suite;
   const auto pth =  master_test_suite().argv[1];
-  
+
   asio::io_context ctx;
 
   asio::readable_pipe rp{ctx};
@@ -476,7 +474,7 @@ BOOST_AUTO_TEST_CASE(environment)
 
   sub_env.push_back("FOOBAR=FOO-BAR");
   BOOST_CHECK_EQUAL("FOO-BAR", read_env("FOOBAR", bpv::process_environment{sub_env}));
-  
+
   sub_env.push_back("XYZ=ZYX");
   auto itr = std::find_if(sub_env.begin(), sub_env.end(), [](const bpv::environment::key_value_pair & kv) {return kv.key() == bpv::environment::key("PATH");});
   path += static_cast<char>(bpv::environment::delimiter);
@@ -511,7 +509,7 @@ BOOST_AUTO_TEST_CASE(exit_code_as_error)
   bpv::process proc3(ctx, pth, {"sleep", "2000"});
 
   int called = 0;
-  
+
   proc3.terminate();
 
 
@@ -640,6 +638,30 @@ BOOST_AUTO_TEST_CASE(async_request_exit)
 
     tim.async_wait([&](bpv::error_code ec) { sig.emit(asio::cancellation_type::partial); });
     ctx.run();
+}
+
+BOOST_AUTO_TEST_CASE(async_cancel_wait)
+{
+  asio::io_context ctx;
+  using boost::unit_test::framework::master_test_suite;
+  const auto pth = bpv::filesystem::absolute(master_test_suite().argv[1]);
+
+  bpv::process proc(ctx, pth, {"sleep", "1000"});
+
+  asio::steady_timer tim{ctx, std::chrono::milliseconds(250)};
+  asio::cancellation_signal sig;
+
+  // check that the async_wait gets properly cancelled
+  proc.async_wait(asio::cancel_after(std::chrono::milliseconds(100),
+                         [&](boost::system::error_code ec, int)
+                         {
+                           BOOST_CHECK(ec == asio::error::operation_aborted);
+                           BOOST_CHECK(proc.running());
+                           if (proc.running())
+                             proc.terminate();
+                         }));
+
+  ctx.run();
 }
 
 

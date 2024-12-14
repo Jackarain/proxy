@@ -18,6 +18,22 @@ namespace boost {
 namespace urls {
 namespace grammar {
 
+namespace see_below
+{
+template<class T, class = void>
+struct is_rule : std::false_type {};
+
+template<class T>
+struct is_rule<T, void_t<decltype(
+    std::declval<system::result<typename T::value_type>&>() =
+        std::declval<T const&>().parse(
+            std::declval<char const*&>(),
+            std::declval<char const*>())
+    )>> : std::is_nothrow_copy_constructible<T>
+{
+};
+}
+
 /** Determine if T meets the requirements of Rule
 
     This is an alias for `std::true_type` if
@@ -43,23 +59,8 @@ namespace grammar {
     @see
         @ref parse.
 */
-#ifdef BOOST_URL_DOCS
 template<class T>
-using is_rule = __see_below__;
-#else
-template<class T, class = void>
-struct is_rule : std::false_type {};
-
-template<class T>
-struct is_rule<T, void_t<decltype(
-    std::declval<system::result<typename T::value_type>&>() =
-        std::declval<T const&>().parse(
-            std::declval<char const*&>(),
-            std::declval<char const*>())
-    )>> : std::is_nothrow_copy_constructible<T>
-{
-};
-#endif
+using is_rule = BOOST_URL_SEE_BELOW(see_below::is_rule<T>);
 
 } // grammar
 } // urls

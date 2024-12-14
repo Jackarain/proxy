@@ -24,6 +24,7 @@
 #include <cstring>
 
 #include "test_common/assert_buffer_equals.hpp"
+#include "test_common/buffer_concat.hpp"
 #include "test_common/printing.hpp"
 #include "test_unit/create_frame.hpp"
 #include "test_unit/mock_message.hpp"
@@ -89,7 +90,7 @@ BOOST_AUTO_TEST_CASE(read_cached)
     BOOST_TEST(!act.read_args().use_ssl);
 
     // Acknowledge the read request
-    auto bytes = concat_copy(create_frame(0, msg1), create_frame(1, msg2));
+    auto bytes = concat(create_frame(0, msg1), create_frame(1, msg2));
     transfer(act.read_args().buffer, bytes);
     act = algo.resume(error_code(), bytes.size());
 
@@ -374,37 +375,6 @@ BOOST_AUTO_TEST_CASE(write_max_buffer_size_exact)
     BOOST_TEST(act.type() == next_action_type::write);
     BOOST_TEST(act.write_args().buffer.size() == 64u);
     act = algo.resume(error_code(), 64);
-
-    // Done
-    BOOST_TEST(act.success());
-}
-
-BOOST_AUTO_TEST_CASE(write_max_buffer_size_exceeded)
-{
-    struct mock_algo
-    {
-        coroutine coro;
-        std::uint8_t seqnum{};
-        const std::array<std::uint8_t, 61> long_msg{};
-
-        next_action resume(connection_state_data& st, error_code ec)
-        {
-            BOOST_ASIO_CORO_REENTER(coro)
-            {
-                BOOST_TEST(ec == error_code());
-                BOOST_ASIO_CORO_YIELD return st.write(mock_message{long_msg}, seqnum);
-                BOOST_TEST(ec == client_errc::max_buffer_size_exceeded);
-            }
-            return next_action();
-        }
-    };
-
-    connection_state_data st(32, 64);
-    top_level_algo<mock_algo> algo(st);
-
-    // Initial run yields a write request that exceeds the max buffer size.
-    // We never get to see such request, it generates an immediate failure.
-    auto act = algo.resume(error_code(), 0);
 
     // Done
     BOOST_TEST(act.success());

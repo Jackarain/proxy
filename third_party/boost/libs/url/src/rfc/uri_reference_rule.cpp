@@ -20,7 +20,7 @@ namespace boost {
 namespace urls {
 
 auto
-uri_reference_rule_t::
+implementation_defined::uri_reference_rule_t::
 parse(
     char const*& it,
     char const* const end

@@ -190,7 +190,7 @@ class basic_vectorbuf
       // The initial write position is the beginning of the vector.
       if(m_mode & std::ios_base::out){
          //First get real size
-         off_type real_size = m_vect.size();
+         off_type real_size = static_cast<off_type>(m_vect.size());
          //Then maximize size for high watermarking
          m_vect.resize(m_vect.capacity());
          BOOST_ASSERT(m_vect.size() == m_vect.capacity());

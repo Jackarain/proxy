@@ -10,8 +10,8 @@
 
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
-#include <boost/interprocess/containers/vector.hpp>
-#include <boost/interprocess/containers/string.hpp>
+#include <boost/container/vector.hpp>
+#include <boost/container/string.hpp>
 #include <boost/interprocess/offset_ptr.hpp>
 #include <string>
 #include <algorithm>
@@ -29,10 +29,10 @@
 using namespace boost::interprocess;
 
 typedef test::dummy_test_allocator<char>           DummyCharAllocator;
-typedef basic_string<char, std::char_traits<char>, DummyCharAllocator> DummyString;
+typedef boost::container::basic_string<char, std::char_traits<char>, DummyCharAllocator> DummyString;
 typedef test::dummy_test_allocator<DummyString>    DummyStringAllocator;
 typedef test::dummy_test_allocator<wchar_t>              DummyWCharAllocator;
-typedef basic_string<wchar_t, std::char_traits<wchar_t>, DummyWCharAllocator> DummyWString;
+typedef boost::container::basic_string<wchar_t, std::char_traits<wchar_t>, DummyWCharAllocator> DummyWString;
 typedef test::dummy_test_allocator<DummyWString>         DummyWStringAllocator;
 
 struct StringEqual
@@ -62,11 +62,11 @@ int string_test()
    typedef std::allocator<CharType>  StdAllocatorChar;
    typedef std::basic_string<CharType, std::char_traits<CharType>, StdAllocatorChar> StdString;
    typedef std::allocator<StdString> StdStringAllocator;
-   typedef vector<StdString, StdStringAllocator> StdStringVector;
+   typedef boost::container::vector<StdString, StdStringAllocator> StdStringVector;
    typedef AllocatorType<CharType, managed_shared_memory::segment_manager> ShmemAllocatorChar;
-   typedef basic_string<CharType, std::char_traits<CharType>, ShmemAllocatorChar> ShmString;
+   typedef boost::container::basic_string<CharType, std::char_traits<CharType>, ShmemAllocatorChar> ShmString;
    typedef AllocatorType<ShmString, managed_shared_memory::segment_manager> ShmemStringAllocator;
-   typedef vector<ShmString, ShmemStringAllocator> ShmStringVector;
+   typedef boost::container::vector<ShmString, ShmemStringAllocator> ShmStringVector;
 
    const int MaxSize = 100;
 
@@ -264,7 +264,7 @@ bool test_expand_bwd()
    //Now test all back insertion possibilities
    typedef test::expand_bwd_test_allocator<char>
       allocator_type;
-   typedef basic_string<char, std::char_traits<char>, allocator_type>
+   typedef boost::container::basic_string<char, std::char_traits<char>, allocator_type>
       string_type;
    return  test::test_all_expand_bwd<string_type>();
 }
@@ -274,7 +274,7 @@ bool vector_of_strings_test()
    using namespace boost::interprocess;
    typedef allocator<char, managed_shared_memory::segment_manager> ShmCharAllocator;
    typedef allocator<int, managed_shared_memory::segment_manager> ShmIntAllocator;
-   typedef basic_string<char, std::char_traits<char>, ShmCharAllocator > ShmString;
+   typedef boost::container::basic_string<char, std::char_traits<char>, ShmCharAllocator > ShmString;
    typedef allocator<ShmString, managed_shared_memory::segment_manager> ShmStringAllocator;
 
    const char *memoryName = "test_memory";
@@ -285,8 +285,8 @@ bool vector_of_strings_test()
    ShmStringAllocator stringAllocator(shm.get_segment_manager());
    ShmIntAllocator intAllocator(shm.get_segment_manager());
 
-   vector<ShmString, ShmStringAllocator> vectorOfStrings(stringAllocator);
-   vector <int, ShmIntAllocator> vectorOfInts(intAllocator);
+   boost::container::vector<ShmString, ShmStringAllocator> vectorOfStrings(stringAllocator);
+   boost::container::vector <int, ShmIntAllocator> vectorOfInts(intAllocator);
 
    {
       ShmString z("aaaaaaaa", stringAllocator);

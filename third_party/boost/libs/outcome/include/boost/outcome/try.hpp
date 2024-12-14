@@ -31,6 +31,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef BOOST_OUTCOME_TRY_HPP
 #define BOOST_OUTCOME_TRY_HPP
 
+#include "detail/try.h"
 #include "success_failure.hpp"
 
 BOOST_OUTCOME_V2_NAMESPACE_BEGIN
@@ -175,58 +176,6 @@ BOOST_OUTCOME_V2_NAMESPACE_END
 #pragma GCC diagnostic ignored "-Wparentheses"
 #endif
 
-
-#define BOOST_OUTCOME_TRY_GLUE2(x, y) x##y
-#define BOOST_OUTCOME_TRY_GLUE(x, y) BOOST_OUTCOME_TRY_GLUE2(x, y)
-#define BOOST_OUTCOME_TRY_UNIQUE_NAME BOOST_OUTCOME_TRY_GLUE(_outcome_try_unique_name_temporary, __COUNTER__)
-
-#define BOOST_OUTCOME_TRY_RETURN_ARG_COUNT(_1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_, count, ...) count
-#define BOOST_OUTCOME_TRY_EXPAND_ARGS(args) BOOST_OUTCOME_TRY_RETURN_ARG_COUNT args
-#define BOOST_OUTCOME_TRY_COUNT_ARGS_MAX8(...) BOOST_OUTCOME_TRY_EXPAND_ARGS((__VA_ARGS__, 8, 7, 6, 5, 4, 3, 2, 1, 0))
-#define BOOST_OUTCOME_TRY_OVERLOAD_MACRO2(name, count) name##count
-#define BOOST_OUTCOME_TRY_OVERLOAD_MACRO1(name, count) BOOST_OUTCOME_TRY_OVERLOAD_MACRO2(name, count)
-#define BOOST_OUTCOME_TRY_OVERLOAD_MACRO(name, count) BOOST_OUTCOME_TRY_OVERLOAD_MACRO1(name, count)
-#define BOOST_OUTCOME_TRY_OVERLOAD_GLUE(x, y) x y
-#define BOOST_OUTCOME_TRY_CALL_OVERLOAD(name, ...)                                                                                                                   \
-  BOOST_OUTCOME_TRY_OVERLOAD_GLUE(BOOST_OUTCOME_TRY_OVERLOAD_MACRO(name, BOOST_OUTCOME_TRY_COUNT_ARGS_MAX8(__VA_ARGS__)), (__VA_ARGS__))
-
-#define _OUTCOME_TRY_RETURN_ARG_COUNT(_1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_, count, ...) count
-#define _OUTCOME_TRY_EXPAND_ARGS(args) _OUTCOME_TRY_RETURN_ARG_COUNT args
-#define _OUTCOME_TRY_COUNT_ARGS_MAX8(...) _OUTCOME_TRY_EXPAND_ARGS((__VA_ARGS__, 8, 7, 6, 5, 4, 3, 2, 1, 0))
-#define _OUTCOME_TRY_OVERLOAD_MACRO2(name, count) name##count
-#define _OUTCOME_TRY_OVERLOAD_MACRO1(name, count) _OUTCOME_TRY_OVERLOAD_MACRO2(name, count)
-#define _OUTCOME_TRY_OVERLOAD_MACRO(name, count) _OUTCOME_TRY_OVERLOAD_MACRO1(name, count)
-#define _OUTCOME_TRY_OVERLOAD_GLUE(x, y) x y
-#define _OUTCOME_TRY_CALL_OVERLOAD(name, ...)                                                                                                                  \
-  _OUTCOME_TRY_OVERLOAD_GLUE(_OUTCOME_TRY_OVERLOAD_MACRO(name, _OUTCOME_TRY_COUNT_ARGS_MAX8(__VA_ARGS__)), (__VA_ARGS__))
-
-#if !defined(BOOST_OUTCOME_TRY_LIKELY_IF) && defined(__has_cpp_attribute)
-#if __has_cpp_attribute(likely)
-#define BOOST_OUTCOME_TRY_LIKELY_IF(...) if(__VA_ARGS__) [[likely]]
-#endif
-#endif
-#ifndef BOOST_OUTCOME_TRY_LIKELY_IF
-#if defined(__clang__) || defined(__GNUC__)
-#define BOOST_OUTCOME_TRY_LIKELY_IF(...) if(__builtin_expect(!!(__VA_ARGS__), true))
-#else
-#define BOOST_OUTCOME_TRY_LIKELY_IF(...) if(__VA_ARGS__)
-#endif
-#endif
-
-#define BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE_UNPACK(...) __VA_ARGS__
-#define BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE_DEDUCE3(unique, ...) auto unique = (__VA_ARGS__)
-#define BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE_DEDUCE2(x) x
-#define BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE_DEDUCE(unique, x, ...) BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE_DEDUCE2(BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE_DEDUCE3(unique, __VA_ARGS__))
-#define BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE_SPECIFIED3(unique, x, y, ...) x unique = (__VA_ARGS__)
-#define BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE_SPECIFIED2(x) x
-#define BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE_SPECIFIED(unique, ...)                                                                                                    \
-  BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE_SPECIFIED2(BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE_SPECIFIED3(unique, __VA_ARGS__))
-#define BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE1(...) BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE_DEDUCE
-#define BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE2(...) BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE_SPECIFIED
-#define BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE(unique, spec, ...)                                                                                                        \
-  _OUTCOME_TRY_CALL_OVERLOAD(BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE, BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE_UNPACK spec)                                                           \
-  (unique, BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE_UNPACK spec, __VA_ARGS__)
-
 // Use if(!expr); else as some compilers assume else clauses are always unlikely
 #define BOOST_OUTCOME_TRYV2_SUCCESS_LIKELY(unique, retstmt, spec, ...)                                                                                               \
   BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE(unique, spec, __VA_ARGS__);                                                                                                     \
@@ -244,9 +193,6 @@ BOOST_OUTCOME_V2_NAMESPACE_END
     retstmt unique##_f;                                                                                                                                        \
   }
 
-#define BOOST_OUTCOME_TRY2_VAR_SECOND2(x, var) var
-#define BOOST_OUTCOME_TRY2_VAR_SECOND3(x, y, ...) x y
-#define BOOST_OUTCOME_TRY2_VAR(spec) _OUTCOME_TRY_CALL_OVERLOAD(BOOST_OUTCOME_TRY2_VAR_SECOND, BOOST_OUTCOME_TRYV2_UNIQUE_STORAGE_UNPACK spec, spec)
 #define BOOST_OUTCOME_TRY2_SUCCESS_LIKELY(unique, retstmt, var, ...)                                                                                                 \
   BOOST_OUTCOME_TRYV2_SUCCESS_LIKELY(unique, retstmt, var, __VA_ARGS__);                                                                                             \
   BOOST_OUTCOME_TRY2_VAR(var) = ::BOOST_OUTCOME_V2_NAMESPACE::try_operation_extract_value(static_cast<decltype(unique) &&>(unique))

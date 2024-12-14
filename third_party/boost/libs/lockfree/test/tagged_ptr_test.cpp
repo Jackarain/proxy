@@ -10,49 +10,49 @@
 
 #define BOOST_TEST_MAIN
 #ifdef BOOST_LOCKFREE_INCLUDE_TESTS
-#include <boost/test/included/unit_test.hpp>
+#    include <boost/test/included/unit_test.hpp>
 #else
-#include <boost/test/unit_test.hpp>
+#    include <boost/test/unit_test.hpp>
 #endif
 
 BOOST_AUTO_TEST_CASE( tagged_ptr_test )
 {
     using namespace boost::lockfree::detail;
-    int a(1), b(2);
+    int a( 1 ), b( 2 );
 
-    typedef tagged_ptr<int>::tag_t tag_t;
-    const tag_t max_tag = (std::numeric_limits<tag_t>::max)();
+    typedef tagged_ptr< int >::tag_t tag_t;
+    const tag_t                      max_tag = ( std::numeric_limits< tag_t >::max )();
 
     {
-        tagged_ptr<int> i (&a, 0);
-        tagged_ptr<int> j (&b, 1);
+        tagged_ptr< int > i( &a, 0 );
+        tagged_ptr< int > j( &b, 1 );
 
         i = j;
 
-        BOOST_REQUIRE_EQUAL(i.get_ptr(), &b);
-        BOOST_REQUIRE_EQUAL(i.get_tag(), 1);
+        BOOST_TEST_REQUIRE( i.get_ptr() == &b );
+        BOOST_TEST_REQUIRE( i.get_tag() == 1 );
     }
 
     {
-        tagged_ptr<int> i (&a, 0);
-        tagged_ptr<int> j (i);
+        tagged_ptr< int > i( &a, 0 );
+        tagged_ptr< int > j( i );
 
-        BOOST_REQUIRE_EQUAL(i.get_ptr(), j.get_ptr());
-        BOOST_REQUIRE_EQUAL(i.get_tag(), j.get_tag());
+        BOOST_TEST_REQUIRE( i.get_ptr() == j.get_ptr() );
+        BOOST_TEST_REQUIRE( i.get_tag() == j.get_tag() );
     }
 
     {
-        tagged_ptr<int> i (&a, 0);
-        BOOST_REQUIRE_EQUAL(i.get_tag() + 1, i.get_next_tag());
+        tagged_ptr< int > i( &a, 0 );
+        BOOST_TEST_REQUIRE( i.get_tag() + 1 == i.get_next_tag() );
     }
 
     {
-        tagged_ptr<int> j (&a, max_tag);
-        BOOST_REQUIRE_EQUAL(j.get_next_tag(), 0);
+        tagged_ptr< int > j( &a, max_tag );
+        BOOST_TEST_REQUIRE( j.get_next_tag() == 0 );
     }
 
     {
-        tagged_ptr<int> j (&a, max_tag - 1);
-        BOOST_REQUIRE_EQUAL(j.get_next_tag(), max_tag);
+        tagged_ptr< int > j( &a, max_tag - 1 );
+        BOOST_TEST_REQUIRE( j.get_next_tag() == max_tag );
     }
 }

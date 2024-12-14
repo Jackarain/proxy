@@ -79,7 +79,6 @@ project
         <library>/boost/log//boost_log
         <library>/boost/date_time//boost_date_time
         <library>/boost/filesystem//boost_filesystem
-        <library>/boost/thread//boost_thread
         <threading>multi
     ;
 

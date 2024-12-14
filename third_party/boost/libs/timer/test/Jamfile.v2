@@ -15,11 +15,15 @@ path-constant parent : .. ;  # so that inspect will start in boost-root/libs/tim
 project
     : requirements
       <library>/boost/timer//boost_timer
+      <library>/boost/core//boost_core
+      <library>/boost/detail//boost_detail
     ;
- 
-run ../example/auto_cpu_timer_example.cpp : : : <test-info>always_show_run_output ;
 
-run cpu_timer_info.cpp : : : <test-info>always_show_run_output ;
+run ../example/auto_cpu_timer_example.cpp
+  : : : <test-info>always_show_run_output ;
+
+run cpu_timer_info.cpp
+  : : : <test-info>always_show_run_output ;
 
 run cpu_timer_test.cpp
   : : : <test-info>always_show_run_output ;
@@ -28,9 +32,9 @@ run ../example/timex.cpp : echo "Hello, world" : : <test-info>always_show_run_ou
 
 compile original_timer_test.cpp ;
 
-run chrono_conflict_test.cpp /boost/chrono//boost_chrono : : : <link>static ;
+run chrono_conflict_test.cpp : : : <library>/boost/chrono//boost_chrono <link>static ;
 
 run progress_display_test.cpp ;
 
-run /boost/tools/inspect//inspect/<variant>release : $(parent) -text -brief : : <test-info>always_show_run_output : inspect ;
-explicit inspect ;
+# run /boost/tools/inspect//inspect/<variant>release : $(parent) -text -brief : : <test-info>always_show_run_output : inspect ;
+# explicit inspect ;

@@ -20,9 +20,10 @@
 
 #define BOOST_ENABLE_ASSERT_HANDLER
 
+#include "boost/config.hpp"
+#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) && !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
 #include "boost/bind/apply.hpp" // Included just to test proper interaction with boost::apply<> as reported by Daniel Wallin
-#include "boost/mpl/bool.hpp"
-#include "boost/mpl/bool_fwd.hpp"  // For mpl::true_ and mpl::false_
+#endif
 
 #include "boost/optional/optional.hpp"
 
@@ -849,6 +850,8 @@ struct VBase : virtual X
     VBase(int v) : X(v) {}
     // MSVC 8.0 doesn't generate this correctly...
     VBase(const VBase& other) : X(static_cast<const X&>(other)) {}
+
+    VBase& operator=(VBase const& rhs) { X::operator=(rhs); return *this; }
 };
 
 void test_with_class_type()
@@ -917,6 +920,7 @@ class CustomAddressOfClass
 public:
     CustomAddressOfClass() : n(0) {}
     CustomAddressOfClass(CustomAddressOfClass const& that) : n(that.n) {}
+    CustomAddressOfClass& operator=(CustomAddressOfClass const& rhs) { n = rhs.n; return *this; }
     explicit CustomAddressOfClass(int m) : n(m) {}
     int* operator& () { return &n; }
     bool operator== (CustomAddressOfClass const& that) const { return n == that.n; }

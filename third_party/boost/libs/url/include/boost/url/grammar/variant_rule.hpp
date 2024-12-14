@@ -73,12 +73,13 @@ constexpr
 __implementation_defined__
 variant_rule( Rules... rn ) noexcept;
 #else
+namespace implementation_defined {
 template<
     class R0, class... Rn>
 class variant_rule_t
 {
 public:
-    using value_type = variant<
+    using value_type = variant2::variant<
         typename R0::value_type,
         typename Rn::value_type...>;
 
@@ -88,18 +89,6 @@ public:
         char const* end) const ->
             system::result<value_type>;
 
-    template<
-        class R0_,
-        class... Rn_>
-    friend
-    constexpr
-    auto
-    variant_rule(
-        R0_ const& r0,
-        Rn_ const&... rn) noexcept ->
-            variant_rule_t<R0_, Rn_...>;
-
-private:
     constexpr
     variant_rule_t(
         R0 const& r0,
@@ -108,9 +97,60 @@ private:
     {
     }
 
+private:
+
     detail::tuple<R0, Rn...> rn_;
 };
+} // implementation_defined
 
+/** Match one of a set of rules
+
+    Each specified rule is tried in sequence.
+    When the first match occurs, the result
+    is stored and returned in the variant. If
+    no match occurs, an error is returned.
+
+    @par Value Type
+    @code
+    using value_type = variant< typename Rules::value_type... >;
+    @endcode
+
+    @par Example
+    Rules are used with the function @ref parse.
+    @code
+    // request-target = origin-form
+    //                / absolute-form
+    //                / authority-form
+    //                / asterisk-form
+
+    system::result< variant< url_view, url_view, authority_view, core::string_view > > rv = grammar::parse(
+        "/index.html?width=full",
+        variant_rule(
+            origin_form_rule,
+            absolute_uri_rule,
+            authority_rule,
+            delim_rule('*') ) );
+    @endcode
+
+    @par BNF
+    @code
+    variant     = rule1 / rule2 / rule3...
+    @endcode
+
+    @par Specification
+    @li <a href="https://datatracker.ietf.org/doc/html/rfc5234#section-3.2"
+        >3.2.  Alternatives (rfc5234)</a>
+    @li <a href="https://datatracker.ietf.org/doc/html/rfc7230#section-5.3"
+        >5.3.  Request Target (rfc7230)</a>
+
+    @see
+        @ref absolute_uri_rule,
+        @ref authority_rule,
+        @ref delim_rule,
+        @ref parse,
+        @ref origin_form_rule,
+        @ref url_view.
+*/
 template<
     class R0,
     class... Rn>
@@ -119,7 +159,7 @@ auto
 variant_rule(
     R0 const& r0,
     Rn const&... rn) noexcept ->
-        variant_rule_t<R0, Rn...>;
+        implementation_defined::variant_rule_t<R0, Rn...>;
 #endif
 
 } // grammar

@@ -22,6 +22,6 @@ npm ci
 echo "Building docs in custom dir..."
 PATH="$(pwd)/node_modules/.bin:${PATH}"
 export PATH
-npx antora --clean --fetch "$PLAYBOOK"
+npx antora --clean --fetch "$PLAYBOOK" --stacktrace --log-level all
 echo "Done"
 

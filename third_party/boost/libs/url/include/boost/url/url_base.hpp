@@ -244,6 +244,7 @@ public:
     url_base&
     set_scheme(core::string_view s);
 
+#ifndef BOOST_URL_DOCS
     /** Set the scheme
 
         This function sets the scheme to the specified
@@ -276,9 +277,40 @@ public:
             3.1. Scheme (rfc3986)</a>
     */
     url_base&
-#ifndef BOOST_URL_DOCS
     set_scheme_id(urls::scheme id);
 #else
+    /** Set the scheme
+
+        This function sets the scheme to the specified
+        known @ref urls::scheme id, which may not be
+        @ref scheme::unknown or else an exception is
+        thrown. If the id is @ref scheme::none, this
+        function behaves as if @ref remove_scheme
+        were called.
+
+        @par Example
+        @code
+        assert( url( "http://example.com/echo.cgi" ).set_scheme_id( scheme::wss ).buffer() == "wss://example.com/echo.cgi" );
+        @endcode
+
+        @par Complexity
+        Linear in `this->size()`.
+
+        @par Exception Safety
+        Strong guarantee.
+        Calls to allocate may throw.
+        Exceptions thrown on invalid input.
+
+        @throw system_error
+        The scheme is invalid.
+
+        @param id The scheme to set.
+
+        @par Specification
+        @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.1">
+            3.1. Scheme (rfc3986)</a>
+    */
+    url_base&
     set_scheme_id(scheme id);
 #endif
 
@@ -2221,6 +2253,7 @@ public:
         Linear.
 
         @param ps The params to set.
+        @param opts The options for encoding.
 
         @par BNF
         @code
@@ -2243,7 +2276,9 @@ public:
             @ref set_query.
     */
     url_base&
-    set_params( std::initializer_list<param_view> ps ) noexcept;
+    set_params(
+        std::initializer_list<param_view> ps,
+        encoding_opts opts = {}) noexcept;
 
     /** Set the query params
 
@@ -2750,6 +2785,97 @@ public:
     resolve(
         url_view_base const& ref);
 
+    /** Resolve a URL reference against a base URL
+
+        This function attempts to resolve a URL
+        reference `ref` against the base URL `base`
+        in a manner similar to that of a web browser
+        resolving an anchor tag.
+
+        The base URL must satisfy the <em>URI</em>
+        grammar. In other words, it must contain
+        a scheme.
+
+        Relative references are only usable when
+        in the context of a base absolute URI.
+        This process of resolving a relative
+        <em>reference</em> within the context of
+        a <em>base</em> URI is defined in detail
+        in rfc3986 (see below).
+
+        The resolution process works as if the
+        relative reference is appended to the base
+        URI and the result is normalized.
+
+        Given the input base URL, this function
+        resolves the relative reference
+        as if performing the following steps:
+
+        @li Ensure the base URI has at least a scheme
+        @li Normalizing the reference path
+        @li Merge base and reference paths
+        @li Normalize the merged path
+
+        This function places the result of the
+        resolution into `dest`, which can be
+        any of the url containers that inherit
+        from @ref url_base.
+
+        If an error occurs, the contents of
+        `dest` is unspecified and `ec` is set.
+
+        @note Abnormal hrefs where the number of ".."
+        segments exceeds the number of segments in
+        the base path are handled by including the
+        unmatched ".." segments in the result, as described
+        in <a href="https://www.rfc-editor.org/errata/eid4547"
+        >Errata 4547</a>.
+
+        @par Example
+        @code
+        url dest;
+        system::error_code ec;
+
+        resolve("/one/two/three", "four", dest, ec);
+        assert( dest.str() == "/one/two/four" );
+
+        resolve("http://example.com/", "/one", dest, ec);
+        assert( dest.str() == "http://example.com/one" );
+
+        resolve("http://example.com/one", "/two", dest, ec);
+        assert( dest.str() == "http://example.com/two" );
+
+        resolve("http://a/b/c/d;p?q", "g#s", dest, ec);
+        assert( dest.str() == "http://a/b/c/g#s" );
+        @endcode
+
+        @par BNF
+        @code
+        absolute-URI  = scheme ":" hier-part [ "?" query ]
+        @endcode
+
+        @par Exception Safety
+        Basic guarantee.
+        Calls to allocate may throw.
+
+        @return An empty @ref result upon success,
+        otherwise an error code if `!base.has_scheme()`.
+
+        @param base The base URL to resolve against.
+
+        @param ref The URL reference to resolve.
+
+        @param dest The container where the result
+        is written, upon success.
+
+        @par Specification
+        <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-5"
+            >5. Reference Resolution (rfc3986)</a>
+
+        @see
+            @ref url,
+            @ref url_view.
+    */
     friend
     system::result<void>
     resolve(
@@ -2795,11 +2921,6 @@ private:
         detail::params_iter_impl const&,
         detail::any_params_iter&&) ->
             detail::params_iter_impl;
-
-    system::result<void>
-    resolve_impl(
-        url_view_base const& base,
-        url_view_base const& ref);
 
     template<class CharSet>
     void normalize_octets_impl(int,

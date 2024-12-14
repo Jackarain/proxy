@@ -142,6 +142,7 @@ endif()
 if(WIN32 OR CYGWIN)
     target_compile_definitions(boost_filesystem PRIVATE
         BOOST_USE_WINDOWS_H
+        _WIN32_WINNT=0x0A00
         WIN32_LEAN_AND_MEAN
         NOMINMAX
     )

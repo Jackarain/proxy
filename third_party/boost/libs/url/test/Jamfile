@@ -21,29 +21,18 @@ project
     <toolset>gcc:<cxxflags>"-Wno-unused-but-set-variable"
     <toolset>gcc:<cxxflags>"-Wno-maybe-uninitialized"
     <toolset>clang:<cxxflags>"-Wno-unused-but-set-variable"
+    <toolset>clang:<cxxflags>"-Wno-unused-parameter"
     <toolset>gcc,<target-os>windows:<cxxflags>"-Wno-error=array-bounds"
+    <toolset>clang:<cxxflags>"-Wno-unknown-warning-option"
+    <toolset>clang-13:<cxxflags>"-Wno-unused-but-set-variable"
+    <toolset>clang-14:<cxxflags>"-Wno-unused-but-set-variable"
+    <toolset>clang-15:<cxxflags>"-Wno-unused-but-set-variable"
 
     # Different typeinfos confuse ubsan
     <undefined-sanitizer>norecover:<link>static
     <undefined-sanitizer>norecover:<visibility>global
     ;
 
-project
-  : default-build
-
-    <warnings>extra
-
-  : requirements
-
-    <toolset>gcc:<cxxflags>"-Wno-unused-but-set-variable"      # Warnings in dependencies
-    <toolset>clang:<cxxflags>"-Wno-unknown-warning-option"
-    <toolset>clang-13:<cxxflags>"-Wno-unused-but-set-variable" # Warnings in dependencies
-    <toolset>clang-14:<cxxflags>"-Wno-unused-but-set-variable" # Warnings in dependencies
-    <toolset>clang-15:<cxxflags>"-Wno-unused-but-set-variable" # Warnings in dependencies
-
-  ;
-
 build-project extra ;
 build-project limits ;
 build-project unit ;
-

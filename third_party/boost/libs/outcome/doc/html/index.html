@@ -66,8 +66,9 @@
   <dt><span class="section"><a href="./experimental/map.html">Approximate map between error code designs</a></span></dt>
   <dt><span class="section"><a href="./experimental/differences.html">Major differences</a></span></dt>
   <dt><span class="section"><a href="./experimental/status_result.html"><code>status_result</code> and <code>status_outcome</code></a></span></dt>
-  <dt><span class="section"><a href="./experimental/worked-example.html">Worked example: Custom domain</a></span></dt>
   <dt><span class="section"><a href="./experimental/outcome.html">Tying it all together</a></span></dt>
+  <dt><span class="section"><a href="./experimental/worked-example.html">Worked example: Custom domain (the short way)</a></span></dt>
+  <dt><span class="section"><a href="./experimental/worked-example-long.html">Worked example: Custom domain (the long way)</a></span></dt>
   <dt><span class="section"><a href="./experimental/c-api.html">Using Outcome from C code</a></span></dt>
         </dl></dd>
   <dt><span class="section"><a href="./reference.html">API reference</a></span></dt>
@@ -126,6 +127,8 @@ to not use exceptions to propagate failure reports across threads, tasks, fibers
 <li><p>there is an external requirement (such as a company-wide policy) that failure handling paths are explicitly indicated in the code.</p></li>
 
 <li><p>where interoperation with C code, without having to resort to C++ exception wrapper shims, is important.</p></li>
+
+<li><p>where your mostly C code base needs exception-like error handling, and the subset of Outcome&rsquo;s functionality available in C is sufficient for your needs.</p></li>
 </ul>
 
 <p>Outcome addresses failure handling through returning a special type from functions, which is able to store either a successfully computed value (or <code>void</code>), or the information about failure. Outcome also comes with a set of idioms for dealing with such types.</p>
@@ -141,7 +144,7 @@ supply Outcome-optimising <a href="./reference/types/awaitables/eager.html" clas
 and <a href="./reference/types/awaitables/generator.html" class="api-reference"><code>generator&lt;T, Executor = void&gt;</code></a>
  awaitables which work for any user type.</p>
 
-<h2 id="sample-usage">Sample usage</h2>
+<h2 id="sample-usage-c">Sample usage (C++)</h2>
 
 <p>The main workhorse in the Outcome library is <code>result&lt;T&gt;</code>: it represents either a successfully computed value of type <code>T</code>, or a <code>std::error_code</code>/<code>boost::system::error_code</code><sup class="footnote-ref" id="fnref:2"><a href="#fn:2">2</a></sup> representing the reason for failure. You use it in the function&rsquo;s return type:</p>
 
@@ -174,6 +177,43 @@ and <a href="./reference/types/awaitables/generator.html" class="api-reference">
 <p><code>BOOST_OUTCOME_TRY</code> is a control statement. If the returned <code>result&lt;T&gt;</code> object contains an error information, the enclosing function is immediately returned with <code>result&lt;U&gt;</code> containing the same failure information; otherwise an automatic object of type <code>T</code>
 is available in scope.</p>
 
+<h2 id="sample-usage-c-1">Sample usage (C)</h2>
+
+<p>Equivalent to the C++ API: <code>BOOST_OUTCOME_C_DECLARE_RESULT_SYSTEM(ident, T)</code> declares the C type, thereafter <code>BOOST_OUTCOME_C_RESULT_SYSTEM(ident)</code> refers to it. You use it in the function&rsquo;s return type:</p>
+
+<div class="code-snippet"><div class="highlight"><pre class="chroma"><code class="language-c++" data-lang="c++"><span class="n">BOOST_OUTCOME_C_DECLARE_RESULT_SYSTEM</span><span class="p">(</span><span class="n">result_string</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="p">)</span>
+
+<span class="n">BOOST_OUTCOME_C_RESULT_SYSTEM</span><span class="p">(</span><span class="n">result_string</span><span class="p">)</span> <span class="n">data_from_file</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">);</span>
+</code></pre></div><a href="https://github.com/boostorg/outcome/tree/master/doc/src/snippets/intro_c_example.cpp#L40" class="code-snippet-url" target="_blank">View this code on Github</a></div>
+
+
+<p>It is possible to inspect the state manually:</p>
+
+<div class="code-snippet"><div class="highlight"><pre class="chroma"><code class="language-c++" data-lang="c++">  <span class="n">BOOST_OUTCOME_C_RESULT_SYSTEM</span><span class="p">(</span><span class="n">result_string</span><span class="p">)</span> <span class="n">rslt</span> <span class="o">=</span> <span class="n">data_from_file</span><span class="p">(</span><span class="s">&#34;config.cfg&#34;</span><span class="p">);</span>
+  <span class="k">if</span><span class="p">(</span><span class="n">BOOST_OUTCOME_C_RESULT_HAS_VALUE</span><span class="p">(</span><span class="n">rslt</span><span class="p">))</span>
+    <span class="n">use_string</span><span class="p">(</span><span class="n">rslt</span><span class="p">.</span><span class="n">value</span><span class="p">);</span>  <span class="c1">// returns string
+</span><span class="c1"></span>  <span class="k">else</span>
+    <span class="nf">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&#34;%s</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">,</span> <span class="n">outcome_status_code_message</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rslt</span><span class="p">.</span><span class="n">error</span><span class="p">));</span>
+</code></pre></div><a href="https://github.com/boostorg/outcome/tree/master/doc/src/snippets/intro_c_example.cpp#L48" class="code-snippet-url" target="_blank">View this code on Github</a></div>
+
+
+<p>Or, if this function is called in another function that also returns <code>BOOST_OUTCOME_C_RESULT_SYSTEM(ident)</code>, you can use a dedicated control statement:</p>
+
+<div class="code-snippet"><div class="highlight"><pre class="chroma"><code class="language-c++" data-lang="c++"><span class="n">BOOST_OUTCOME_C_DECLARE_RESULT_SYSTEM</span><span class="p">(</span><span class="n">result_int</span><span class="p">,</span> <span class="kt">int</span><span class="p">)</span>
+
+<span class="n">BOOST_OUTCOME_C_RESULT_SYSTEM</span><span class="p">(</span><span class="n">result_int</span><span class="p">)</span> <span class="n">process</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">content</span><span class="p">);</span>
+
+<span class="n">BOOST_OUTCOME_C_RESULT_SYSTEM</span><span class="p">(</span><span class="n">result_int</span><span class="p">)</span> <span class="n">int_from_file</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">BOOST_OUTCOME_C_RESULT_SYSTEM_TRY</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">str</span><span class="p">,</span> <span class="n">result_int</span><span class="p">,</span> <span class="cm">/* cleanup on fail */</span><span class="p">,</span> <span class="n">data_from_file</span><span class="p">(</span><span class="n">path</span><span class="p">));</span>
+  <span class="c1">// if control gets here data_from_file() has succeeded
+</span><span class="c1"></span>  <span class="k">return</span> <span class="nf">process</span><span class="p">(</span><span class="n">str</span><span class="p">);</span>  <span class="c1">// decltype(str) == string
+</span><span class="c1"></span><span class="p">}</span>
+</code></pre></div><a href="https://github.com/boostorg/outcome/tree/master/doc/src/snippets/intro_c_example.cpp#L57" class="code-snippet-url" target="_blank">View this code on Github</a></div>
+
+
+<p>The C Result is guaranteed to be layout identical to its C++ equivalent. Convenience conversion functions are available, but you can reinterpret cast too.</p>
+
 <div class="notices note" style="background: url('images/note.png') top left no-repeat padding-box padding-box;">
 <div class="notices heading">note</div>
 <div class="notices message"><p>This library joined <a href="https://www.boost.org/doc/libs/develop/libs/outcome/doc/html/index.html">the Boost C++ libraries</a> in the 1.70 release (Spring 2019). <a href="https://github.com/boostorg/outcome">It can be grafted into much older Boost releases if desired</a>.</p>
@@ -193,7 +233,7 @@ is available in scope.</p>
 </div>
 
 
-        </div><p><small>Last revised: March 18, 2022 at 14:45:32 UTC</small></p>
+        </div><p><small>Last revised: July 16, 2024 at 21:33:35 &#43;0100</small></p>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="./history.html"><img src="./images/prev.png" alt="Prev"></a>

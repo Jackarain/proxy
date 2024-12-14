@@ -23,7 +23,6 @@
 #include <map>
 #include <unordered_map>
 #include <vector>
-#include <iostream>
 
 #ifndef BOOST_NO_CXX17_HDR_VARIANT
 # include <variant>
@@ -432,8 +431,9 @@ public:
             BOOST_TEST( res->d == 0.125 );
 
             jv.as_object()["x"] = 0;
-            BOOST_TEST_THROWS_WITH_LOCATION(
-                value_to<::value_to_test_ns::T6>( jv ));
+            res = try_value_to<::value_to_test_ns::T6>(
+                jv, ctx... );
+            BOOST_TEST( res );
         }
         {
             value jv = {{"n", 1}, {"d", 2}, {"s", "xyz"}, {"b", true}};
@@ -480,15 +480,15 @@ public:
             BOOST_TEST( std::nullopt == res->opt_s );
 
             jv.as_object()["x"] = 0;
-            BOOST_TEST_THROWS_WITH_LOCATION(
-                value_to<::value_to_test_ns::T8>( jv, ctx... ));
+            res = try_value_to<::value_to_test_ns::T8>(
+                jv, ctx... );
+            BOOST_TEST( res );
 #endif // BOOST_NO_CXX17_HDR_OPTIONAL
         }
 
-        BOOST_TEST_THROWS(
+        BOOST_TEST_THROWS_WITH_LOCATION(
             value_to<::value_to_test_ns::T10>(
-                value{{"n", 0}, {"t3", "t10"}}, ctx... ),
-            std::invalid_argument);
+                value{{"n", 0}, {"t3", "t10"}}, ctx... ));
 #endif // BOOST_DESCRIBE_CXX14
     }
 
@@ -564,6 +564,8 @@ public:
         BOOST_TEST(
             paths == (Paths{
                 "from/here", "to/there", "", "c:/" , "..", "../"}) );
+        BOOST_TEST_THROWS_WITH_LOCATION(
+            value_to<std::filesystem::path>( value(1), ctx... ));
 #endif // BOOST_NO_CXX17_HDR_FILESYSTEM
     }
 

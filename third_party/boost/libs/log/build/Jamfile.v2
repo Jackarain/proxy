@@ -132,6 +132,10 @@ project boost/log
     : usage-requirements
         <toolset>clang:<cxxflags>-Wno-bind-to-temporary-copy
         <toolset>clang:<cxxflags>-Wno-unused-function
+
+        <threading>single:<define>BOOST_LOG_NO_THREADS
+        <threading>multi:<library>/boost/atomic//boost_atomic
+        <threading>multi:<library>/boost/thread//boost_thread
     ;
 
 local BOOST_LOG_COMMON_SRC =

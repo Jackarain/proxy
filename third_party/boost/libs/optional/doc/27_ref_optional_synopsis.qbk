@@ -16,10 +16,10 @@
     namespace boost {
 
     class in_place_init_t { /* see below */ } ; ``[link reference_in_place_init __GO_TO__]``
-    const in_place_init_t in_place_init ( /* see below */ ) ;
+    inline constexpr in_place_init_t in_place_init ( /* see below */ ) ;
 
     class in_place_init_if_t { /*see below*/ } ; ``[link reference_in_place_init_if __GO_TO__]``
-    const in_place_init_if_t in_place_init_if ( /*see below*/ ) ;
+    inline constexpr in_place_init_if_t in_place_init_if ( /*see below*/ ) ;
 
     template <class T>
     class optional ; ``[link reference_operator_template __GO_TO__]``

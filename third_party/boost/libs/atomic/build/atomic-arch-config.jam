@@ -19,23 +19,23 @@ rule deduce-architecture ( properties * )
     }
     else
     {
-        if [ configure.builds /boost/architecture//x86 : $(properties) : "x86" ]
+        if [ configure.builds /boost/config/checks/architecture//x86 : $(properties) : "x86" ]
         {
             return x86 ;
         }
-        else if [ configure.builds /boost/architecture//arm : $(properties) : "arm" ]
+        else if [ configure.builds /boost/config/checks/architecture//arm : $(properties) : "arm" ]
         {
             return arm ;
         }
-        else if [ configure.builds /boost/architecture//mips1 : $(properties) : "mips1" ]
+        else if [ configure.builds /boost/config/checks/architecture//mips1 : $(properties) : "mips1" ]
         {
             return mips1 ;
         }
-        else if [ configure.builds /boost/architecture//power : $(properties) : "power" ]
+        else if [ configure.builds /boost/config/checks/architecture//power : $(properties) : "power" ]
         {
             return power ;
         }
-        else if [ configure.builds /boost/architecture//sparc : $(properties) : "sparc" ]
+        else if [ configure.builds /boost/config/checks/architecture//sparc : $(properties) : "sparc" ]
         {
             return sparc ;
         }
@@ -51,11 +51,11 @@ rule deduce-address-model ( properties * )
     }
     else
     {
-        if [ configure.builds /boost/architecture//32 : $(properties) : "32-bit" ]
+        if [ configure.builds /boost/config/checks/architecture//32 : $(properties) : "32-bit" ]
         {
             return 32 ;
         }
-        else if [ configure.builds /boost/architecture//64 : $(properties) : "64-bit" ]
+        else if [ configure.builds /boost/config/checks/architecture//64 : $(properties) : "64-bit" ]
         {
             return 64 ;
         }

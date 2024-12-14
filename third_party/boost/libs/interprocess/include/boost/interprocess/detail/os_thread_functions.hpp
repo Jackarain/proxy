@@ -220,17 +220,18 @@ inline OS_systemwide_thread_id_t get_invalid_systemwide_thread_id()
    return get_invalid_thread_id();
 }
 
-inline long double get_current_process_creation_time()
+inline unsigned long long get_current_process_creation_time()
 {
    winapi::interprocess_filetime CreationTime, ExitTime, KernelTime, UserTime;
 
    winapi::get_process_times
       ( winapi::get_current_process(), &CreationTime, &ExitTime, &KernelTime, &UserTime);
 
-   typedef long double ldouble_t;
-   const ldouble_t resolution = (100.0l/1000000000.0l);
-   return CreationTime.dwHighDateTime*(ldouble_t(1u<<31u)*2.0l*resolution) +
-              CreationTime.dwLowDateTime*resolution;
+   unsigned long long microsecs = CreationTime.dwHighDateTime;
+   microsecs <<= 32u;
+   microsecs |= CreationTime.dwLowDateTime;
+   microsecs /= 10u;
+   return microsecs;
 }
 
 inline unsigned int get_num_cores()
@@ -441,7 +442,7 @@ inline void thread_sleep_tick()
    rqt.tv_nsec = (long)get_system_tick_ns()/2;
 
    struct timespec rmn;
-   while (0 != ::nanosleep(&rqt, &rmn) && errno == EINTR) {
+   while (0 != BOOST_INTERPROCESS_EINTR_RETRY(int, -1, ::nanosleep(&rqt, &rmn)) && errno == EINTR) {
       rqt.tv_sec = rmn.tv_sec;
       rqt.tv_nsec = rmn.tv_nsec;
    }
@@ -450,11 +451,11 @@ inline void thread_sleep_tick()
 inline void thread_sleep_ms(unsigned int ms)
 {
    struct timespec rqt;
-   rqt.tv_sec = ms/1000u;
-   rqt.tv_nsec = (ms%1000u)*1000000u;
+   rqt.tv_sec = static_cast<time_t>(ms/1000u);
+   rqt.tv_nsec = static_cast<long int>((ms%1000u)*1000000u);
 
    struct timespec rmn;
-   while (0 != ::nanosleep(&rqt, &rmn) && errno == EINTR) {
+   while (0 != BOOST_INTERPROCESS_EINTR_RETRY(int, -1, ::nanosleep(&rqt, &rmn)) && errno == EINTR) {
       rqt.tv_sec  = rmn.tv_sec;
       rqt.tv_nsec = rmn.tv_nsec;
    }
@@ -476,8 +477,8 @@ inline OS_systemwide_thread_id_t get_invalid_systemwide_thread_id()
    return OS_systemwide_thread_id_t(get_invalid_process_id(), get_invalid_thread_id());
 }
 
-inline long double get_current_process_creation_time()
-{ return 0.0L; }
+inline unsigned long long get_current_process_creation_time()
+{ return 0u; }
 
 inline unsigned int get_num_cores()
 {

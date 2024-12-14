@@ -1,5 +1,5 @@
 // Copyright (C) 2023 Christian Mazakas
-// Copyright (C) 2023 Joaquin M Lopez Munoz
+// Copyright (C) 2023-2024 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -7,6 +7,8 @@
 
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
+#include <boost/unordered/concurrent_node_map.hpp>
+#include <boost/unordered/concurrent_node_set.hpp>
 
 test::seed_t initialize_seed{996130204};
 
@@ -62,7 +64,13 @@ using key_equal = stateful_key_equal;
 using map_type = boost::unordered::concurrent_flat_map<raii, raii, hasher,
   key_equal, stateful_allocator<std::pair<raii const, raii> > >;
 
+using node_map_type = boost::unordered::concurrent_node_map<raii, raii, hasher,
+  key_equal, stateful_allocator<std::pair<raii const, raii> > >;
+
 using set_type = boost::unordered::concurrent_flat_set<raii, hasher,
+  key_equal, stateful_allocator<raii> >;
+
+using node_set_type = boost::unordered::concurrent_node_set<raii, hasher,
   key_equal, stateful_allocator<raii> >;
 
 template <class T> struct is_nothrow_member_swappable
@@ -293,21 +301,28 @@ namespace {
   map_type* map;
   replace_allocator<map_type, pocs_allocator>* pocs_map;
 
+  node_map_type* node_map;
+  replace_allocator<node_map_type, pocs_allocator>* pocs_node_map;
+
   set_type* set;
   replace_allocator<set_type, pocs_allocator>* pocs_set;
+
+  node_set_type* node_set;
+  replace_allocator<node_set_type, pocs_allocator>* pocs_node_set;
 
 } // namespace
 
 // clang-format off
 UNORDERED_TEST(
   swap_tests,
-  ((map)(pocs_map)(set)(pocs_set))
+  ((map)(pocs_map)(node_map)(pocs_node_map)
+   (set)(pocs_set)(node_set)(pocs_node_set))
   ((member_fn_swap)(free_fn_swap))
   ((value_type_generator_factory))
   ((default_generator)(sequential)(limited_range)))
 
 UNORDERED_TEST(insert_and_swap,
-  ((map)(set))
+  ((map)(node_map)(set)(node_set))
   ((member_fn_swap)(free_fn_swap))
   ((value_type_generator_factory))
   ((default_generator)(sequential)(limited_range)))

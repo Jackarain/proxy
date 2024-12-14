@@ -15,14 +15,19 @@ lib advapi32 ;
 lib bcrypt ;
 lib user32 ;
 
-local here = [ modules.binding $(__name__) ] ;
+path-constant here : . ;
 
 project.push-current [ project.current ] ;
-project.load [ path.join [ path.make $(here:D) ] config/has-bcrypt ] ;
+project.load [ path.join [ path.make $(here) ] config/has-bcrypt ] ;
 project.pop-current ;
 
 project
     : requirements
+
+        <library>/boost/config//boost_config
+        <library>/boost/core//boost_core
+        <library>/boost/preprocessor//boost_preprocessor
+        <library>/boost/type_traits//boost_type_traits
 
         # Disable warnings about using 'insecure' standard C functions
         <toolset>msvc:<define>_SCL_SECURE_NO_WARNINGS
@@ -73,7 +78,7 @@ rule test_all
 {
     local all_rules ;
     local file ;
-    local headers_path = [ path.make $(BOOST_ROOT)/libs/winapi/include/boost/winapi ] ;
+    local headers_path = ../include/boost/winapi ;
     for file in [ path.glob-tree $(headers_path) : *.hpp : detail ]
     {
         local rel_file = [ path.relative-to [ path.parent $(headers_path) ] $(file) ] ;
@@ -91,7 +96,7 @@ rule test_all
         all_rules += [ compile compile/windows_h_post.cpp : <conditional>@filter-target-os <define>"BOOST_WINAPI_TEST_HEADER=$(rel_file)" <dependency>$(file) : $(post_winh_test_name) ] ;
     }
 
-    headers_path = [ path.make $(BOOST_ROOT)/libs/winapi/include/boost/detail ] ;
+    headers_path = ../include/boost/detail ;
     for file in [ path.glob $(headers_path) : *.hpp : detail ]
     {
         local rel_file = [ path.relative-to $(headers_path) $(file) ] ;

@@ -1,5 +1,5 @@
 // Copyright (C) 2023 Christian Mazakas
-// Copyright (C) 2023 Joaquin M Lopez Munoz
+// Copyright (C) 2023-2024 Joaquin M Lopez Munoz
 // Copyright (C) 2024 Braden Ganetsky
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -147,9 +147,15 @@ public:
   cfoa_ptr(std::nullptr_t) : p_(nullptr){};
   template <class U> using rebind = cfoa_ptr<U>;
 
+  operator bool() const { return !!p_; }
+
+  template <typename Q = T>
+  Q& operator*() const noexcept { return *p_; }
+
   T* operator->() const noexcept { return p_; }
 
-  static cfoa_ptr<T> pointer_to(element_type& r) { return {std::addressof(r)}; }
+  template<typename Q = T>
+  static cfoa_ptr<Q> pointer_to(Q& r) { return {std::addressof(r)}; }
 };
 
 template <class T> struct stateful_allocator
@@ -669,5 +675,18 @@ public:
 public:
   fancy_allocator& operator=(fancy_allocator const&) { return *this; }
 };
+
+namespace boost {
+  template <> struct pointer_traits<void_ptr>
+  {
+    template <class U> struct rebind_to
+    {
+      typedef ptr<U> type;
+    };
+
+    template<class U>
+    using rebind=typename rebind_to<U>::type;
+  };
+} // namespace boost
 
 #endif // BOOST_UNORDERED_TEST_CFOA_HELPERS_HPP

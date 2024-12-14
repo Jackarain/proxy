@@ -9,7 +9,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include <boost/interprocess/managed_shared_memory.hpp>
-#include <boost/interprocess/containers/vector.hpp>
+#include <boost/container/vector.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 #include "allocator_v1.hpp"
 #include "check_equal_containers.hpp"
@@ -28,7 +28,7 @@ int test_expand_bwd()
    //First raw ints
    typedef test::expand_bwd_test_allocator<int>
       int_allocator_type;
-   typedef vector<int, int_allocator_type>
+   typedef boost::container::vector<int, int_allocator_type>
       int_vector;
 
    if(!test::test_all_expand_bwd<int_vector>())
@@ -37,7 +37,7 @@ int test_expand_bwd()
    //Now user defined wrapped int
    typedef test::expand_bwd_test_allocator<test::int_holder>
       int_holder_allocator_type;
-   typedef vector<test::int_holder, int_holder_allocator_type>
+   typedef boost::container::vector<test::int_holder, int_holder_allocator_type>
       int_holder_vector;
 
    if(!test::test_all_expand_bwd<int_holder_vector>())
@@ -47,7 +47,7 @@ int test_expand_bwd()
    typedef test::expand_bwd_test_allocator<test::triple_int_holder>
       triple_int_holder_allocator_type;
 
-   typedef vector<test::triple_int_holder, triple_int_holder_allocator_type>
+   typedef boost::container::vector<test::triple_int_holder, triple_int_holder_allocator_type>
       triple_int_holder_vector;
 
    if(!test::test_all_expand_bwd<triple_int_holder_vector>())
@@ -59,19 +59,19 @@ int test_expand_bwd()
 int main()
 {
    typedef allocator<int, managed_shared_memory::segment_manager> ShmemAllocator;
-   typedef vector<int, ShmemAllocator> MyVector;
+   typedef boost::container::vector<int, ShmemAllocator> MyVector;
 
    typedef test::allocator_v1<int, managed_shared_memory::segment_manager> ShmemV1Allocator;
-   typedef vector<int, ShmemV1Allocator> MyV1Vector;
+   typedef boost::container::vector<int, ShmemV1Allocator> MyV1Vector;
 
    typedef allocator<test::movable_int, managed_shared_memory::segment_manager> ShmemMoveAllocator;
-   typedef vector<test::movable_int, ShmemMoveAllocator> MyMoveVector;
+   typedef boost::container::vector<test::movable_int, ShmemMoveAllocator> MyMoveVector;
 
    typedef allocator<test::movable_and_copyable_int, managed_shared_memory::segment_manager> ShmemCopyMoveAllocator;
-   typedef vector<test::movable_and_copyable_int, ShmemCopyMoveAllocator> MyCopyMoveVector;
+   typedef boost::container::vector<test::movable_and_copyable_int, ShmemCopyMoveAllocator> MyCopyMoveVector;
 
    typedef allocator<test::copyable_int, managed_shared_memory::segment_manager> ShmemCopyAllocator;
-   typedef vector<test::copyable_int, ShmemCopyAllocator> MyCopyVector;
+   typedef boost::container::vector<test::copyable_int, ShmemCopyAllocator> MyCopyVector;
 
    if(test::vector_test<managed_shared_memory, MyVector>())
       return 1;
@@ -93,7 +93,7 @@ int main()
 
    const test::EmplaceOptions Options = (test::EmplaceOptions)(test::EMPLACE_BACK | test::EMPLACE_BEFORE);
    if(!boost::interprocess::test::test_emplace
-      < vector<test::EmplaceInt>, Options>())
+      < boost::container::vector<test::EmplaceInt>, Options>())
       return 1;
 
    return 0;

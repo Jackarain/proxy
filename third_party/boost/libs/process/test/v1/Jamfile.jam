@@ -9,25 +9,23 @@
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 
-import os ;
-
-if [ os.name ] = NT
-{
-  lib ws2_32 ;
-  lib shell32 ;
-  lib Advapi32 ;
-  lib Ntdll ;
-}
+lib ws2_32 ;
+lib shell32 ;
+lib Advapi32 ;
+lib Ntdll ;
 
 project : requirements
+  <library>/boost/process//boost_process
   <define>BOOST_ASIO_NO_DEPRECATED
   <toolset>msvc:<define>_SCL_SECURE_NO_WARNINGS
   <toolset>msvc:<define>_CRT_SECURE_NO_DEPRECATE
   <toolset>msvc:<cxxflags>/bigobj
   <target-os>windows:<define>WIN32_LEAN_AND_MEAN
   <target-os>linux:<linkflags>-lpthread
+  <target-os>freebsd:<linkflags>-lpthread
   <os>NT,<toolset>cw:<library>ws2_32
   <os>NT,<toolset>gcc:<library>ws2_32
+  <library>/boost/test//included
 ;
 
 
@@ -35,16 +33,18 @@ project : requirements
 import testing ;
 
 
-alias program_options  : /boost//program_options : <link>static ;
-alias filesystem       : /boost//filesystem      ;
-alias iostreams        : /boost//iostreams       ;
-alias system           : /boost//system          ;
-alias thread           : /boost//thread          ;
-alias coroutine        : /boost//coroutine       : <link>static ;
+alias program_options  : usage-requirements <library>/boost/program_options//boost_program_options ;
+alias filesystem       : usage-requirements <library>/boost/filesystem//boost_filesystem ;
+alias iostreams        : usage-requirements <library>/boost/iostreams//boost_iostreams ;
+alias system           : usage-requirements <library>/boost/system//boost_system ;
+alias thread           : usage-requirements <library>/boost/thread//boost_thread ;
+alias scope_exit       : usage-requirements <library>/boost/scope_exit//boost_scope_exit ;
+alias lambda           : usage-requirements <library>/boost/lambda//boost_lambda ;
+alias chrono           : usage-requirements <library>/boost/chrono//boost_chrono ;
 
 lib multi_ref : multi_ref1.cpp multi_ref2.cpp system : <target-os>windows:<source>shell32 ;
 
-exe sparring_partner : sparring_partner.cpp program_options system filesystem iostreams :
+exe sparring_partner : sparring_partner.cpp program_options system filesystem iostreams lambda :
     <warnings>off <target-os>windows:<source>shell32 <target-os>windows:<source>Ntdll
     ;
 
@@ -100,15 +100,15 @@ test-suite with-valgrind :
     [ run env.cpp     program_options system filesystem       : [ test-options env ] : sparring_partner ]
     [ run group.cpp     system thread filesystem              : [ test-options group ] : sub_launch ]
     [ run group.cpp          system thread filesystem         : [ test-options group ] : sub_launch : <build>no <target-os>windows:<build>yes <define>BOOST_USE_WINDOWS_H=1 : group-windows-h ]
-    [ run group_wait.cpp     system thread filesystem         : [ test-options group_wait ] : sparring_partner : <target-os>darwin:<build>no <target-os>freebsd:<build>no ]
+    [ run group_wait.cpp system thread filesystem scope_exit  : [ test-options group_wait ] : sparring_partner : <target-os>darwin:<build>no <target-os>freebsd:<build>no ]
 	[ run limit_fd.cpp     program_options system filesystem  : [ test-options limit_fd ] : sparring_partner : <target-os>freebsd:<build>no ]
     [ run run_exe.cpp filesystem                              : : sparring_partner ]
     [ run run_exe_path.cpp filesystem                         : [ test-options run_exe_path ] : sparring_partner ]
     [ run search_path.cpp filesystem system                   : [ test-options search_path ] : : <target-os>windows:<source>shell32 ]
     [ run shell.cpp filesystem system                         : [ test-options shell ] : sparring_partner : <target-os>darwin:<build>no ]
     [ run shell_path.cpp  filesystem system                   : [ test-options shell_path ] ]
-    [ run system_test1.cpp filesystem system                  : [ test-options system_test1 ] : sparring_partner ]
-    [ run system_test2.cpp filesystem system                  : [ test-options system_test2 ] : sparring_partner ]
+    [ run system_test1.cpp filesystem system chrono           : [ test-options system_test1 ] : sparring_partner ]
+    [ run system_test2.cpp filesystem system chrono           : [ test-options system_test2 ] : sparring_partner ]
     [ run spawn.cpp filesystem system                         : [ test-options spawn ] : sparring_partner ]
     [ run start_dir.cpp   filesystem system                   : [ test-options start_dir ] : sparring_partner ]
     [ run terminate.cpp system filesystem                     : [ test-options terminate ] : sparring_partner : <target-os>freebsd:<build>no ]
@@ -123,13 +123,10 @@ test-suite with-valgrind :
    : <dependency>bare ;
 
 test-suite without-valgrind :
-    [ run async_system_future.cpp filesystem system coroutine           : [ test-options async_system_future ] : sparring_partner : <link>static <toolset>msvc:<cxxflags>/bigobj ]
-    [ run async_system_stackful.cpp filesystem system coroutine         : [ test-options async_system_stackful ] : sparring_partner : <link>static <toolset>msvc:<cxxflags>/bigobj ]
+    [ run async_system_future.cpp filesystem system                     : [ test-options async_system_future ] : sparring_partner : <link>static <toolset>msvc:<cxxflags>/bigobj ]
+#    [ run async_system_stackful.cpp filesystem system coroutine         : [ test-options async_system_stackful ] : sparring_partner : <link>static <toolset>msvc:<cxxflags>/bigobj ]
 #   [ run async_system_stackful_error.cpp filesystem system coroutine   : [ test-options async_system_stackful_error ] : sparring_partner : <link>static <toolset>msvc:<cxxflags>/bigobj ]
-    [ run async_system_stackful_except.cpp filesystem system coroutine  : [ test-options async_system_stackful_except ] : sparring_partner : <link>static <toolset>msvc:<cxxflags>/bigobj ]
-    [ run async_system_stackless.cpp filesystem system coroutine        : [ test-options async_system_stackless ] : sparring_partner : <link>static <toolset>msvc:<cxxflags>/bigobj ]
+#    [ run async_system_stackful_except.cpp filesystem system coroutine  : [ test-options async_system_stackful_except ] : sparring_partner : <link>static <toolset>msvc:<cxxflags>/bigobj ]
+    [ run async_system_stackless.cpp filesystem system                  : [ test-options async_system_stackless ] : sparring_partner : <link>static <toolset>msvc:<cxxflags>/bigobj ]
     [ run vfork.cpp     system filesystem                               : [ test-options vfork ] : sparring_partner : <build>no <target-os>linux:<build>yes ]
     ;
-
-
-alias v2-tests : v2//standalone v2//with_target ;

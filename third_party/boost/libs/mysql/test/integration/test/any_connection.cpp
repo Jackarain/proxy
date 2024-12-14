@@ -10,6 +10,7 @@
 #include <boost/mysql/common_server_errc.hpp>
 #include <boost/mysql/connect_params.hpp>
 #include <boost/mysql/error_code.hpp>
+#include <boost/mysql/error_with_diagnostics.hpp>
 #include <boost/mysql/execution_state.hpp>
 #include <boost/mysql/format_sql.hpp>
 #include <boost/mysql/results.hpp>
@@ -21,21 +22,28 @@
 
 #include <boost/mysql/impl/internal/variant_stream.hpp>
 
-#include <boost/asio/deferred.hpp>
-#include <boost/asio/io_context.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/ssl/context.hpp>
-#include <boost/asio/ssl/host_name_verification.hpp>
+#include <boost/asio/as_tuple.hpp>
+#include <boost/asio/awaitable.hpp>
+#include <boost/asio/cancel_after.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/error.hpp>
+#include <boost/asio/local/basic_endpoint.hpp>
+#include <boost/asio/redirect_error.hpp>
+#include <boost/test/data/test_case.hpp>
 
+#include <chrono>
 #include <string>
 
 #include "test_common/create_basic.hpp"
 #include "test_common/create_diagnostics.hpp"
-#include "test_common/netfun_maker.hpp"
 #include "test_common/network_result.hpp"
+#include "test_common/poll_until.hpp"
 #include "test_common/printing.hpp"
-#include "test_integration/common.hpp"
-#include "test_integration/server_ca.hpp"
+#include "test_integration/any_connection_fixture.hpp"
+#include "test_integration/connect_params_builder.hpp"
+#include "test_integration/run_coro.hpp"
+#include "test_integration/server_features.hpp"
+#include "test_integration/spotchecks_helpers.hpp"
 
 // Additional spotchecks for any_connection
 
@@ -46,191 +54,85 @@ using boost::test_tools::per_element;
 
 BOOST_AUTO_TEST_SUITE(test_any_connection)
 
-using netmaker_connect = netfun_maker_mem<void, any_connection, const connect_params&>;
-using netmaker_execute = netfun_maker_mem<void, any_connection, const string_view&, results&>;
-
-// Don't validate executor info, since our I/O objects don't use tracker executors
-const auto connect_fn = netmaker_connect::async_errinfo(&any_connection::async_connect, false);
-const auto execute_fn = netmaker_execute::async_errinfo(&any_connection::async_execute, false);
-
-// Passing no SSL context to the constructor and using SSL works.
-// ssl_mode::require works
-BOOST_AUTO_TEST_CASE(default_ssl_context)
-{
-    // Create the connection
-    boost::asio::io_context ctx;
-    any_connection conn(ctx);
-
-    // Call the function
-    connect_fn(conn, default_connect_params(ssl_mode::require)).validate_no_error();
-
-    // uses_ssl reports the right value
-    BOOST_TEST(conn.uses_ssl());
-}
-
-// Passing a custom SSL context works
-BOOST_AUTO_TEST_CASE(custom_ssl_context)
-{
-    // Set up a SSL context
-    asio::ssl::context ssl_ctx(asio::ssl::context::tlsv12_client);
-    ssl_ctx.set_verify_mode(boost::asio::ssl::verify_peer);
-    ssl_ctx.add_certificate_authority(boost::asio::buffer(CA_PEM));
-    ssl_ctx.set_verify_callback(boost::asio::ssl::host_name_verification("bad.host.name"));
-
-    // Create the connection
-    asio::io_context ctx;
-    any_connection_params ctor_params;
-    ctor_params.ssl_context = &ssl_ctx;
-    any_connection conn(ctx, ctor_params);
-
-    // Certificate validation fails
-    auto result = connect_fn(conn, default_connect_params(ssl_mode::require));
-    BOOST_TEST(result.err.message().find("certificate verify failed") != std::string::npos);
-}
-
-// Disabling SSL works with TCP connections
-BOOST_AUTO_TEST_CASE(tcp_ssl_mode_disable)
-{
-    // Create the connection
-    boost::asio::io_context ctx;
-    any_connection conn(ctx);
-
-    // Call the function
-    connect_fn(conn, default_connect_params(ssl_mode::disable)).validate_no_error();
-
-    // uses_ssl reports the right value
-    BOOST_TEST(!conn.uses_ssl());
-}
-
-// SSL mode enable woks with TCP connections
-BOOST_AUTO_TEST_CASE(tcp_ssl_mode_enable)
-{
-    // Create the connection
-    boost::asio::io_context ctx;
-    any_connection conn(ctx);
-
-    // Call the function
-    connect_fn(conn, default_connect_params(ssl_mode::enable)).validate_no_error();
-
-    // All our CIs support SSL
-    BOOST_TEST(conn.uses_ssl());
-}
-
-// UNIX connections never use SSL
-BOOST_TEST_DECORATOR(*boost::unit_test::label("unix"))
-BOOST_AUTO_TEST_CASE(unix_ssl)
-{
-    // Create the connection
-    boost::asio::io_context ctx;
-    any_connection conn(ctx);
-
-    // Connect params
-    auto params = default_connect_params(ssl_mode::require);
-    params.server_address.emplace_unix_path(default_unix_path);
-
-    // Call the function
-    connect_fn(conn, params).validate_no_error();
-
-    // SSL is not enabled even if we specified require, since there's
-    // no point in using SSL with UNIX sockets
-    BOOST_TEST(!conn.uses_ssl());
-}
-
-// Spotcheck: users can log-in using the caching_sha2_password auth plugin
-BOOST_TEST_DECORATOR(*boost::unit_test::label("skip_mysql5"))
-BOOST_TEST_DECORATOR(*boost::unit_test::label("skip_mariadb"))
-BOOST_AUTO_TEST_CASE(tcp_caching_sha2_password)
-{
-    // Create the connection
-    boost::asio::io_context ctx;
-    any_connection conn(ctx);
-
-    // Connect params
-    auto params = default_connect_params(ssl_mode::require);
-    params.username = "csha2p_user";
-    params.password = "csha2p_password";
-
-    // Call the function
-    connect_fn(conn, params).validate_no_error();
-    BOOST_TEST(conn.uses_ssl());
-}
-
-// Users can log-in using the caching_sha2_password auth plugin
-// even if they're using UNIX sockets.
-BOOST_TEST_DECORATOR(*boost::unit_test::label("unix"))
-BOOST_TEST_DECORATOR(*boost::unit_test::label("skip_mysql5"))
-BOOST_TEST_DECORATOR(*boost::unit_test::label("skip_mariadb"))
-BOOST_AUTO_TEST_CASE(unix_caching_sha2_password)
+// any_connection can be used with UNIX sockets
+#ifdef BOOST_ASIO_HAS_LOCAL_SOCKETS
+BOOST_TEST_DECORATOR(*run_if(&server_features::unix_sockets))
+BOOST_DATA_TEST_CASE(unix_sockets, network_functions_any::sync_and_async())
 {
     // Setup
-    boost::asio::io_context ctx;
-    any_connection conn(ctx);
-    any_connection root_conn(ctx);
+    netfn_fixture_any fix(sample);
 
-    // Clear the sha256 cache. This forces us send the password using plain text.
-    // TODO: we could create a dedicated user - this can make the test more reliable
-    auto root_params = default_connect_params();
+    // Connect
+    fix.connect(connect_params_builder().set_unix());
+    BOOST_TEST(!fix.conn.uses_ssl());
+
+    // We can prepare statements
+    auto stmt = fix.net.prepare_statement(fix.conn, "SELECT ?, ?").get();
+    BOOST_TEST(stmt.num_params() == 2u);
+
+    // We can execute queries
     results r;
-    root_params.username = "root";
-    root_params.password = "";
-    root_conn.connect(root_params);
-    root_conn.execute("FLUSH PRIVILEGES", r);
+    fix.net.execute_query(fix.conn, "SELECT 'abc'", r).validate_no_error();
+    BOOST_TEST(r.rows() == makerows(1, "abc"), per_element());
 
-    // Connect params
-    auto params = default_connect_params(ssl_mode::require);
-    params.server_address.emplace_unix_path(default_unix_path);
-    params.username = "csha2p_user";
-    params.password = "csha2p_password";
+    // We can execute statements
+    fix.net.execute_statement(fix.conn, stmt.bind(42, 100), r).validate_no_error();
+    BOOST_TEST(r.rows() == makerows(2, 42, 100), per_element());
 
-    // Call the function
-    connect_fn(conn, params).validate_no_error();
-    BOOST_TEST(!conn.uses_ssl());
+    // We can get errors
+    fix.net.execute_query(fix.conn, "SELECT * FROM bad_table", r)
+        .validate_error(
+            common_server_errc::er_no_such_table,
+            "Table 'boost_mysql_integtests.bad_table' doesn't exist"
+        );
+
+    // We can terminate the connection
+    fix.net.close(fix.conn).validate_no_error();
 }
-
-network_result<void> create_net_result()
+#else
+BOOST_DATA_TEST_CASE(unix_sockets_not_supported, network_functions_any::sync_and_async())
 {
-    return network_result<void>(
-        common_server_errc::er_aborting_connection,
-        create_server_diag("diagnostics not cleared")
-    );
+    // Setup
+    netfn_fixture_any fix(sample);
+
+    // Attempting to connect yields an error
+    fix.net.connect(fix.conn, connect_params_builder().set_unix().build())
+        .validate_error(asio::error::operation_not_supported);
 }
+#endif
 
 // Backslash escapes
-BOOST_AUTO_TEST_CASE(backslash_escapes)
+BOOST_FIXTURE_TEST_CASE(backslash_escapes, any_connection_fixture)
 {
-    // Create the connection
-    boost::asio::io_context ctx;
-    any_connection conn(ctx);
-
     // Backslash escapes enabled by default
     BOOST_TEST(conn.backslash_escapes());
 
     // Connect doesn't change the value
-    connect_fn(conn, default_connect_params(ssl_mode::disable)).validate_no_error();
+    conn.async_connect(connect_params_builder().disable_ssl().build(), as_netresult).validate_no_error();
     BOOST_TEST(conn.backslash_escapes());
     BOOST_TEST(conn.format_opts()->backslash_escapes);
 
     // Setting the SQL mode to NO_BACKSLASH_ESCAPES updates the value
     results r;
-    execute_fn(conn, "SET sql_mode = 'NO_BACKSLASH_ESCAPES'", r).validate_no_error();
+    conn.async_execute("SET sql_mode = 'NO_BACKSLASH_ESCAPES'", r, as_netresult).validate_no_error();
     BOOST_TEST(!conn.backslash_escapes());
     BOOST_TEST(!conn.format_opts()->backslash_escapes);
 
     // Executing a different statement doesn't change the value
-    execute_fn(conn, "SELECT 1", r).validate_no_error();
+    conn.async_execute("SELECT 1", r, as_netresult).validate_no_error();
     BOOST_TEST(!conn.backslash_escapes());
     BOOST_TEST(!conn.format_opts()->backslash_escapes);
 
     // Clearing the SQL mode updates the value
-    execute_fn(conn, "SET sql_mode = ''", r).validate_no_error();
+    conn.async_execute("SET sql_mode = ''", r, as_netresult).validate_no_error();
     BOOST_TEST(conn.backslash_escapes());
     BOOST_TEST(conn.format_opts()->backslash_escapes);
 
     // Reconnecting clears the value
-    execute_fn(conn, "SET sql_mode = 'NO_BACKSLASH_ESCAPES'", r).validate_no_error();
+    conn.async_execute("SET sql_mode = 'NO_BACKSLASH_ESCAPES'", r, as_netresult).validate_no_error();
     BOOST_TEST(!conn.backslash_escapes());
     BOOST_TEST(!conn.format_opts()->backslash_escapes);
-    connect_fn(conn, default_connect_params(ssl_mode::disable)).validate_no_error();
+    conn.async_connect(connect_params_builder().disable_ssl().build(), as_netresult).validate_no_error();
     BOOST_TEST(conn.backslash_escapes());
     BOOST_TEST(conn.format_opts()->backslash_escapes);
 }
@@ -239,94 +141,244 @@ BOOST_AUTO_TEST_CASE(backslash_escapes)
 BOOST_AUTO_TEST_CASE(max_buffer_size)
 {
     // Create the connection
-    boost::asio::io_context ctx;
     any_connection_params params;
     params.initial_buffer_size = 512u;
     params.max_buffer_size = 512u;
-    any_connection conn(ctx, params);
+    any_connection_fixture fix(params);
 
     // Connect
-    connect_fn(conn, default_connect_params(ssl_mode::disable)).validate_no_error();
+    fix.conn.async_connect(connect_params_builder().disable_ssl().build(), as_netresult).validate_no_error();
 
     // Reading and writing almost 512 bytes works
     results r;
-    auto q = format_sql(conn.format_opts().value(), "SELECT {}", std::string(450, 'a'));
-    execute_fn(conn, q, r).validate_no_error();
+    auto q = format_sql(fix.conn.format_opts().value(), "SELECT {}", std::string(450, 'a'));
+    fix.conn.async_execute(q, r, as_netresult).validate_no_error();
     BOOST_TEST(r.rows() == makerows(1, std::string(450, 'a')), per_element());
 
     // Trying to write more than 512 bytes fails
-    q = format_sql(conn.format_opts().value(), "SELECT LENGTH({})", std::string(512, 'a'));
-    execute_fn(conn, q, r).validate_error_exact(client_errc::max_buffer_size_exceeded);
+    q = format_sql(fix.conn.format_opts().value(), "SELECT LENGTH({})", std::string(512, 'a'));
+    fix.conn.async_execute(q, r, as_netresult).validate_error(client_errc::max_buffer_size_exceeded);
 
     // Trying to read more than 512 bytes fails
-    execute_fn(conn, "SELECT REPEAT('a', 512)", r)
-        .validate_error_exact(client_errc::max_buffer_size_exceeded);
+    fix.conn.async_execute("SELECT REPEAT('a', 512)", r, as_netresult)
+        .validate_error(client_errc::max_buffer_size_exceeded);
 }
 
-BOOST_AUTO_TEST_CASE(default_max_buffer_size_success)
+BOOST_FIXTURE_TEST_CASE(default_max_buffer_size_success, any_connection_fixture)
 {
-    // Create the connection
-    boost::asio::io_context ctx;
-    any_connection conn(ctx);
-
     // Connect
-    connect_fn(conn, default_connect_params(ssl_mode::disable)).validate_no_error();
+    conn.async_connect(connect_params_builder().disable_ssl().build(), as_netresult).validate_no_error();
 
     // Reading almost max_buffer_size works
     execution_state st;
-    conn.start_execution("SELECT 1, REPEAT('a', 0x3f00000)", st);
-    auto rws = conn.read_some_rows(st);
+    conn.async_start_execution("SELECT 1, REPEAT('a', 0x3f00000)", st, as_netresult).validate_no_error();
+    auto rws = conn.async_read_some_rows(st, as_netresult).get();
     BOOST_TEST(rws.at(0).at(1).as_string().size() == 0x3f00000u);
 }
 
-BOOST_AUTO_TEST_CASE(default_max_buffer_size_error)
+BOOST_FIXTURE_TEST_CASE(default_max_buffer_size_error, any_connection_fixture)
 {
-    // Create the connection
-    boost::asio::io_context ctx;
-    any_connection conn(ctx);
-
     // Connect
-    connect_fn(conn, default_connect_params(ssl_mode::disable)).validate_no_error();
+    conn.async_connect(connect_params_builder().disable_ssl().build(), as_netresult).validate_no_error();
 
     // Trying to read more than max_buffer_size bytes fails
     results r;
-    execute_fn(conn, "SELECT 1, REPEAT('a', 0x4000000)", r)
-        .validate_error_exact(client_errc::max_buffer_size_exceeded);
+    conn.async_execute("SELECT 1, REPEAT('a', 0x4000000)", r, as_netresult)
+        .validate_error(client_errc::max_buffer_size_exceeded);
 }
 
-BOOST_AUTO_TEST_CASE(naggle_disabled)
+BOOST_DATA_TEST_CASE(naggle_disabled, network_functions_any::sync_and_async())
 {
-    struct
-    {
-        string_view name;
-        netmaker_connect::signature fn;
-    } test_cases[] = {
-        {"sync",  netmaker_connect::sync_errc(&any_connection::connect)},
-        {"async", connect_fn                                           },
-    };
+    // Setup
+    netfn_fixture_any fix(sample);
 
-    for (const auto& tc : test_cases)
-    {
-        BOOST_TEST_CONTEXT(tc.name)
-        {
-            // Create the connection
-            boost::asio::io_context ctx;
-            any_connection conn(ctx);
+    // Connect
+    fix.net.connect(fix.conn, connect_params_builder().disable_ssl().build()).validate_no_error();
 
-            // Connect
-            tc.fn(conn, default_connect_params(ssl_mode::disable)).validate_no_error();
-
-            // Naggle's algorithm was disabled
-            asio::ip::tcp::no_delay opt;
-            static_cast<detail::engine_impl<detail::variant_stream>&>(
-                detail::access::get_impl(conn).get_engine()
-            )
-                .stream()
-                .tcp_socket()
-                .get_option(opt);
-            BOOST_TEST(opt.value() == true);
-        }
-    }
+    // Naggle's algorithm was disabled
+    asio::ip::tcp::no_delay opt;
+    static_cast<detail::engine_impl<detail::variant_stream>&>(detail::access::get_impl(fix.conn).get_engine())
+        .stream()
+        .socket()
+        .get_option(opt);
+    BOOST_TEST(opt.value() == true);
 }
+
+// Regression test: using a non-connected connection doesn't crash
+BOOST_FIXTURE_TEST_CASE(using_non_connected_connection, any_connection_fixture)
+{
+    conn.async_ping(as_netresult).validate_any_error();
+}
+
+// Spotcheck: we can use cancel_after and other tokens
+// that require initiations to have an associated executor
+BOOST_FIXTURE_TEST_CASE(cancel_after, any_connection_fixture)
+{
+    // The token to use
+    const auto token = asio::cancel_after(std::chrono::seconds(10), asio::deferred);
+
+    // Connect
+    conn.async_connect(connect_params_builder().build(), token)(as_netresult).validate_no_error();
+
+    // Execute
+    results result;
+    conn.async_execute("SELECT 'abc'", result, token)(as_netresult).validate_no_error();
+    BOOST_TEST(result.rows() == makerows(1, "abc"), per_element());
+
+    // Start execution
+    execution_state st;
+    conn.async_start_execution("SELECT 'abc'", st, token)(as_netresult).validate_no_error();
+    auto rws = conn.async_read_some_rows(st, token)(as_netresult).get();
+    BOOST_TEST(rws == makerows(1, "abc"), per_element());
+    conn.async_read_resultset_head(st, token)(as_netresult).validate_no_error();
+
+#ifdef BOOST_MYSQL_CXX14
+    // Start execution (static, for read_some_rows)
+    using tup_t = std::tuple<std::string>;
+    static_execution_state<tup_t> st2;
+    std::array<tup_t, 2> storage;
+    conn.async_start_execution("SELECT 'abc'", st2, token)(as_netresult).validate_no_error();
+    std::size_t sz = conn.async_read_some_rows(st2, boost::span<tup_t>(storage), token)(as_netresult).get();
+    BOOST_TEST(sz == 1u);
+#endif
+
+    // Prepare & close statement
+    auto stmt = conn.async_prepare_statement("SELECT ?", token)(as_netresult).get();
+    conn.async_close_statement(stmt, token)(as_netresult).validate_no_error();
+
+    // Reset connection & ping
+    conn.async_reset_connection(token)(as_netresult).validate_no_error();
+    conn.async_ping(token)(as_netresult).validate_no_error();
+
+    // Close
+    conn.async_close(token)(as_netresult).validate_no_error();
+}
+
+#ifdef BOOST_ASIO_HAS_CO_AWAIT
+
+// Spotcheck: we can co_await async functions in any_connection,
+// and this throws the right exception type
+BOOST_FIXTURE_TEST_CASE(default_token, any_connection_fixture)
+{
+    run_coro(ctx, [&]() -> asio::awaitable<void> {
+        // Connect
+        co_await conn.async_connect(connect_params_builder().build());
+
+        // Success case
+        results result;
+        co_await conn.async_execute("SELECT 'abc'", result);
+        BOOST_TEST(result.rows() == makerows(1, "abc"), per_element());
+
+        // Error case
+        BOOST_CHECK_EXCEPTION(
+            co_await conn.async_execute("SELECT * FROM bad_table", result),
+            error_with_diagnostics,
+            [](const error_with_diagnostics& err) {
+                BOOST_TEST(err.code() == common_server_errc::er_no_such_table);
+                BOOST_TEST(
+                    err.get_diagnostics() ==
+                    create_server_diag("Table 'boost_mysql_integtests.bad_table' doesn't exist")
+                );
+                return true;
+            }
+        );
+
+        // Returning a value works
+        auto stmt = co_await conn.async_prepare_statement("SELECT ?");
+        BOOST_TEST(stmt.valid());
+    });
+}
+
+// The pattern co_await conn.fn(..., cancel_after(10s)) works
+BOOST_FIXTURE_TEST_CASE(default_token_cancel_after, any_connection_fixture)
+{
+    run_coro(ctx, [&]() -> asio::awaitable<void> {
+        constexpr std::chrono::seconds timeout(10);
+
+        // Connect
+        co_await conn.async_connect(connect_params_builder().build(), asio::cancel_after(timeout));
+
+        // Returning a value works
+        auto stmt = co_await conn.async_prepare_statement("SELECT ?", asio::cancel_after(timeout));
+        BOOST_TEST(stmt.valid());
+
+        // Error case
+        results result;
+        BOOST_CHECK_EXCEPTION(
+            co_await conn.async_execute("SELECT * FROM bad_table", result, asio::cancel_after(timeout)),
+            error_with_diagnostics,
+            [](const error_with_diagnostics& err) {
+                BOOST_TEST(err.code() == common_server_errc::er_no_such_table);
+                BOOST_TEST(
+                    err.get_diagnostics() ==
+                    create_server_diag("Table 'boost_mysql_integtests.bad_table' doesn't exist")
+                );
+                return true;
+            }
+        );
+    });
+}
+
+// Using as_tuple as partial token works
+BOOST_FIXTURE_TEST_CASE(default_token_as_tuple, any_connection_fixture)
+{
+    run_coro(ctx, [&]() -> asio::awaitable<void> {
+        // connect
+        auto [ec] = co_await conn.async_connect(connect_params_builder().build(), asio::as_tuple);
+        BOOST_TEST_REQUIRE(ec == error_code());
+
+        // Returning a value works
+        auto [ec2, stmt] = co_await conn.async_prepare_statement("SELECT ?", asio::as_tuple);
+        BOOST_TEST_REQUIRE(ec2 == error_code());
+        BOOST_TEST(stmt.valid());
+
+        // Error case
+        results result;
+        auto [ec3] = co_await conn.async_execute("SELECT * FROM bad_table", result, asio::as_tuple);
+        BOOST_TEST(ec3 == common_server_errc::er_no_such_table);
+    });
+}
+
+// Using redirect_error as partial token works
+BOOST_FIXTURE_TEST_CASE(default_token_redirect_error, any_connection_fixture)
+{
+    run_coro(ctx, [&]() -> asio::awaitable<void> {
+        // connect
+        error_code ec;
+        co_await conn.async_connect(connect_params_builder().build(), asio::redirect_error(ec));
+        BOOST_TEST_REQUIRE(ec == error_code());
+
+        // Returning a value works
+        auto stmt = co_await conn.async_prepare_statement("SELECT ?", asio::redirect_error(ec));
+        BOOST_TEST_REQUIRE(ec == error_code());
+        BOOST_TEST(stmt.valid());
+
+        // Error case
+        results result;
+        co_await conn.async_execute("SELECT * FROM bad_table", result, asio::redirect_error(ec));
+        BOOST_TEST(ec == common_server_errc::er_no_such_table);
+    });
+}
+
+// Spotcheck: immediate completions dispatched to the immediate executor
+BOOST_FIXTURE_TEST_CASE(immediate_completions, any_connection_fixture)
+{
+    run_in_context(ctx, [this]() {
+        // Setup
+        connect();
+        results r;
+
+        // Prepare a statement
+        auto stmt = conn.async_prepare_statement("SELECT 1", as_netresult).get();
+
+        // Executing with the wrong number of params is an immediate error
+        conn.async_execute(stmt.bind(0), r, as_netresult)
+            .run()
+            .validate_immediate(true)
+            .validate_error(client_errc::wrong_num_params);
+    });
+}
+
+#endif
 
 BOOST_AUTO_TEST_SUITE_END()

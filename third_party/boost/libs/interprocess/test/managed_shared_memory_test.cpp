@@ -9,7 +9,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include <boost/interprocess/allocators/allocator.hpp>
-#include <boost/interprocess/containers/vector.hpp>
+#include <boost/container/vector.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <cstdio>
 #include <string>
@@ -55,7 +55,7 @@ int test_managed_shared_memory()
    typedef allocator<int, managed_shared_memory::segment_manager>
       allocator_int_t;
    //A vector that uses that allocator
-   typedef boost::interprocess::vector<int, allocator_int_t> MyVect;
+   typedef boost::container::vector<int, allocator_int_t> MyVect;
 
    {
       //Remove the shmem it is already created

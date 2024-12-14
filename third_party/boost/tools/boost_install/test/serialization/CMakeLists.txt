@@ -36,7 +36,7 @@ add_executable(wquick wquick.cpp)
 target_link_libraries(wquick Boost::wserialization)
 
 enable_testing()
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>)
+add_custom_target(check VERBATIM COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --no-tests=error -C $<CONFIG>)
 
 add_test(quick quick)
 add_test(wquick wquick)

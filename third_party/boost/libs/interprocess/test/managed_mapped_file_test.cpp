@@ -13,7 +13,7 @@
 #if defined(BOOST_INTERPROCESS_MAPPED_FILES)
 
 #include <boost/interprocess/allocators/allocator.hpp>
-#include <boost/interprocess/containers/vector.hpp>
+#include <boost/container/vector.hpp>
 #include <boost/interprocess/managed_mapped_file.hpp>
 #include <cstdio>
 #include <string>
@@ -63,7 +63,7 @@ int test_managed_mapped_file()
    typedef allocator<int, managed_mapped_file::segment_manager>
       allocator_int_t;
    //A vector that uses that allocator
-   typedef boost::interprocess::vector<int, allocator_int_t> MyVect;
+   typedef boost::container::vector<int, allocator_int_t> MyVect;
 
    {
       //Remove the file it is already created

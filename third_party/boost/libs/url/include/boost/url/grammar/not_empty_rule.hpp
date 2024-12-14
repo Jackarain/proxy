@@ -49,6 +49,7 @@ constexpr
 __implementation_defined__
 not_empty_rule( Rule r );
 #else
+namespace implementation_defined {
 template<class R>
 struct not_empty_rule_t
 {
@@ -61,15 +62,6 @@ struct not_empty_rule_t
         char const* end) const ->
             system::result<value_type>;
 
-    template<class R_>
-    friend
-    constexpr
-    auto
-    not_empty_rule(
-        R_ const& r) ->
-            not_empty_rule_t<R_>;
-
-private:
     constexpr
     not_empty_rule_t(
         R const& r) noexcept
@@ -77,15 +69,42 @@ private:
     {
     }
 
+private:
     R r_;
 };
+} // implementation_defined
 
+/** Match another rule, if the result is not empty
+
+    This adapts another rule such that
+    when an empty string is successfully
+    parsed, the result is an error.
+
+    @par Value Type
+    @code
+    using value_type = typename Rule::value_type;
+    @endcode
+
+    @par Example
+    Rules are used with the function @ref parse.
+    @code
+    system::result< decode_view > rv = parse( "Program%20Files",
+        not_empty_rule( pct_encoded_rule( unreserved_chars ) ) );
+    @endcode
+
+    @param r The rule to match
+
+    @see
+        @ref parse,
+        @ref pct_encoded_rule,
+        @ref unreserved_chars.
+*/
 template<class Rule>
 auto
 constexpr
 not_empty_rule(
     Rule const& r) ->
-        not_empty_rule_t<Rule>
+        implementation_defined::not_empty_rule_t<Rule>
 {
     // If you get a compile error here it
     // means that your rule does not meet

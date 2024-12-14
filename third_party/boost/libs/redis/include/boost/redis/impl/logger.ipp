@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2023 Marcelo Zimbres Silva (mzimbres@gmail.com)
+/* Copyright (c) 2018-2024 Marcelo Zimbres Silva (mzimbres@gmail.com)
  *
  * Distributed under the Boost Software License, Version 1.0. (See
  * accompanying file LICENSE.txt)
@@ -156,19 +156,19 @@ logger::on_hello(
 
 void
    logger::on_runner(
-      system::error_code const& run_all_ec,
-      system::error_code const& health_check_ec,
-      system::error_code const& hello_ec)
+      system::error_code const& hello,
+      system::error_code const& check_health,
+      system::error_code const& run)
 {
    if (level_ < level::info)
       return;
 
    write_prefix();
 
-   std::clog << "runner-op: "
-      << run_all_ec.message() << " (async_run_all), "
-      << health_check_ec.message() << " (async_health_check) " 
-      << hello_ec.message() << " (async_hello).";
+   std::clog << "hello: "
+      << hello.message() << " (async_hello), "
+      << check_health.message() << " (async_check_health) " 
+      << run.message() << " (async_run_lean).";
 
    std::clog << std::endl;
 }

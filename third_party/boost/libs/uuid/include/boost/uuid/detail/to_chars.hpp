@@ -47,7 +47,7 @@ template<class Ch> inline Ch* to_chars( uuid const& u, Ch* out ) noexcept
 
     for( std::size_t i = 0; i < 16; ++i )
     {
-        std::uint8_t ch = u.data[ i ];
+        std::uint8_t ch = u.data()[ i ];
 
         *out++ = p[ (ch >> 4) & 0x0F ];
         *out++ = p[ ch & 0x0F ];

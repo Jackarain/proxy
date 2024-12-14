@@ -5,6 +5,7 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 
+#include <mutex>
 #include <string>
 #include <ostream>
 #include <fstream>
@@ -13,7 +14,6 @@
 #include <boost/scope_exit.hpp>
 #include <boost/mpl/quote.hpp>
 #include <boost/parameter/keyword.hpp>
-#include <boost/thread/locks.hpp>
 #include <boost/move/utility_core.hpp>
 #include <boost/log/core.hpp>
 #include <boost/log/expressions.hpp>
@@ -65,7 +65,7 @@ public:
     // The method will require locking, so we have to define locking requirements for it.
     // We use the strictest_lock trait in order to choose the most restricting lock type.
     typedef typename logging::strictest_lock<
-        boost::lock_guard< threading_model >,
+        std::lock_guard< threading_model >,
         typename BaseT::open_record_lock,
         typename BaseT::add_attribute_lock,
         typename BaseT::remove_attribute_lock

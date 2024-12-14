@@ -43,7 +43,6 @@ project
         <library>/boost/date_time//boost_date_time
         <library>/boost/filesystem//boost_filesystem
         <library>/boost/locale//boost_locale
-        <library>/boost/thread//boost_thread
         <threading>multi
 
         # does not build on VxWorks due to lack of boost::locale support

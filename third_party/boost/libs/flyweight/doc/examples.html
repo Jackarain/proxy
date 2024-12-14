@@ -39,6 +39,7 @@ Tests
   <li><a href="#example6">Example 6: serialization</a></li>
   <li><a href="#example7">Example 7: performance comparison</a></li>
   <li><a href="#example8">Example 8: custom factory</a></li>
+  <li><a href="#example9">Example 9: parallel tokenization</a></li>
 </ul>
 
 <h2><a name="example1">Example 1: basic usage</a></h2>
@@ -257,6 +258,42 @@ The example shows how to write and use a custom factory class. This
 by Boost.Flyweight, so helping the user visualize factory usage patterns.
 </p>
 
+<h2><a name="example9">Example 9: parallel tokenization</a></h2>
+
+<p>
+See <a href="../example/parallel.cpp">source code</a>.
+</p>
+
+<p>
+The program loads a text file and tokenizes its contents into words (sequences of
+alphabetic characters) using several threads in parallel to perform the task.
+Words are stored as plain <code>std::string</code>s or using different
+<code>boost::flyweight</code> configurations.
+These are the results for
+<a href="http://mattmahoney.net/dc/enwik9.zip">http://mattmahoney.net/dc/enwik9.zip</a>
+(a chunk of the Wikipedia 1,000 million bytes in size) with Visual Studio 2022 on
+a Windows machine with an Intel Core i5-8265U CPU and 8 GB of RAM:
+</p>
+
+<blockquote><pre>
+         std::string, 1 thread(s): 141176630 words,   11.4551 s
+         std::string, 8 thread(s): 141176630 words,   2.75682 s
+   regular flyweight, 1 thread(s): 141176630 words,   19.2284 s
+   regular flyweight, 8 thread(s): 141176630 words,   36.0344 s
+concurrent flyweight, 1 thread(s): 141176630 words,   20.9516 s
+concurrent flyweight, 8 thread(s): 141176630 words,   7.84129 s
+</pre></blockquote>
+
+<p>
+<code>boost::flyweight&lt;std::string&gt;</code> performs worse
+in the parallelized scenario due to its class-wide locking upon flyweight
+creation.
+On the other hand, using
+<a href="tutorial/configuration.html#concurrent_factory"><code>concurrent_factory</code></a>
+with <code>no_locking</code> and <code>no_tracking</code> achieves
+a higher bandwidth under parallelization.
+</p>
+
 <hr>
 
 <div class="prev_link"><a href="performance.html"><img src="prev.gif" alt="performance" border="0"><br>
@@ -272,9 +309,9 @@ Tests
 
 <br>
 
-<p>Revised October 14th 2014</p>
+<p>Revised September 21th 2024</p>
 
-<p>&copy; Copyright 2006-2014 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
+<p>&copy; Copyright 2006-2024 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
 Distributed under the Boost Software 
 License, Version 1.0. (See accompanying file <a href="../../../LICENSE_1_0.txt">
 LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">

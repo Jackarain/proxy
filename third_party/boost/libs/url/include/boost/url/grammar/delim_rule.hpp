@@ -58,6 +58,8 @@ constexpr
 __implementation_defined__
 delim_rule( char ch ) noexcept;
 #else
+
+namespace implementation_defined {
 struct ch_delim_rule
 {
     using value_type = core::string_view;
@@ -77,12 +79,45 @@ struct ch_delim_rule
 private:
     char ch_;
 };
+} // implementation_defined
 
+/** Match a character literal
+
+    This matches the specified character.
+    The value is a reference to the character
+    in the underlying buffer, expressed as a
+    `core::string_view`. The function @ref squelch
+    may be used to turn this into `void` instead.
+    If there is no more input, the error code
+    @ref error::need_more is returned.
+
+    @par Value Type
+    @code
+    using value_type = core::string_view;
+    @endcode
+
+    @par Example
+    Rules are used with the function @ref parse.
+    @code
+    system::result< core::string_view > rv = parse( ".", delim_rule('.') );
+    @endcode
+
+    @par BNF
+    @code
+    char        = %00-FF
+    @endcode
+
+    @param ch The character to match
+
+    @see
+        @ref parse,
+        @ref squelch.
+*/
 constexpr
-ch_delim_rule
+implementation_defined::ch_delim_rule
 delim_rule( char ch ) noexcept
 {
-    return ch_delim_rule(ch);
+    return {ch};
 }
 #endif
 
@@ -123,6 +158,7 @@ constexpr
 __implementation_defined__
 delim_rule( CharSet const& cs ) noexcept;
 #else
+namespace implementation_defined {
 template<class CharSet>
 struct cs_delim_rule
 {
@@ -159,13 +195,43 @@ struct cs_delim_rule
 private:
     CharSet cs_;
 };
+} // implementation_defined
 
+/** Match a single character from a character set
+
+    This matches exactly one character which
+    belongs to the specified character set.
+    The value is a reference to the character
+    in the underlying buffer, expressed as a
+    `core::string_view`. The function @ref squelch
+    may be used to turn this into `void` instead.
+    If there is no more input, the error code
+    @ref error::need_more is returned.
+
+    @par Value Type
+    @code
+    using value_type = core::string_view;
+    @endcode
+
+    @par Example
+    Rules are used with the function @ref parse.
+    @code
+    system::result< core::string_view > rv = parse( "X", delim_rule( alpha_chars ) );
+    @endcode
+
+    @param cs The character set to use.
+
+    @see
+        @ref alpha_chars,
+        @ref parse,
+        @ref squelch.
+*/
 template<class CharSet>
 constexpr
 typename std::enable_if<
     ! std::is_convertible<
         CharSet, char>::value,
-    cs_delim_rule<CharSet>>::type
+    implementation_defined::cs_delim_rule<CharSet>>::type
 delim_rule(
     CharSet const& cs) noexcept
 {
@@ -177,7 +243,7 @@ delim_rule(
         is_charset<CharSet>::value,
         "CharSet requirements not met");
 
-    return cs_delim_rule<CharSet>(cs);
+    return implementation_defined::cs_delim_rule<CharSet>(cs);
 }
 #endif
 

@@ -7,9 +7,6 @@
 import testing ;
 import boost ;
 
-# boost.use-project ;
-use-project boost : $(BOOST_ROOT) ;
-
 # set your MTL4 directory here
 MTL4_INCLUDE = /home/mario/MTL4/usr/include ;
 

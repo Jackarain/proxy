@@ -13,11 +13,16 @@
 #ifndef BOOST_MPI_CONFIG_HPP
 #define BOOST_MPI_CONFIG_HPP
 
+#if !defined(MPICH_IGNORE_CXX_SEEK)
 /* Force MPICH not to define SEEK_SET, SEEK_CUR, and SEEK_END, which
    conflict with the versions in <stdio.h> and <cstdio>. */
-#define MPICH_IGNORE_CXX_SEEK 1
+# define MPICH_IGNORE_CXX_SEEK 1
+#endif
+
+#if !defined(OMPI_SKIP_MPICXX)
 /* We do not want to link in the OpenMPI CXX stuff */
-#define OMPI_SKIP_MPICXX
+# define OMPI_SKIP_MPICXX
+#endif
 
 #include <mpi.h>
 #include <boost/config.hpp>

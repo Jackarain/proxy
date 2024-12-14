@@ -5,11 +5,17 @@
 #include <boost/uuid/time_generator_v1.hpp>
 #include <boost/uuid/uuid_clock.hpp>
 #include <boost/core/lightweight_test.hpp>
+#include <boost/config.hpp>
 #include <atomic>
 #include <chrono>
 #include <thread>
 #include <set>
 #include <vector>
+
+#if defined(BOOST_LIBSTDCXX_VERSION) && BOOST_LIBSTDCXX_VERSION >= 130000
+// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=114865
+# pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#endif
 
 using namespace boost::uuids;
 

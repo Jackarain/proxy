@@ -749,7 +749,7 @@ boost::charconv::to_chars_result boost::charconv::to_chars(char* first, char* la
         return boost::charconv::detail::to_chars_16_bit_float_impl(first, last, value, fmt, precision);
     }
 
-    // If the precision is specified it is better to use our exisiting methods for float
+    // If the precision is specified it is better to use our existing methods for float
     return boost::charconv::detail::to_chars_float_impl(first, last, static_cast<float>(value), fmt, precision);
 }
 #endif

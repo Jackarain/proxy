@@ -135,7 +135,7 @@ foa_tests(SOURCES exception/merge_exception_tests.cpp)
 
 # CFOA tests
 
-cfoa_tests(SOURCES cfoa/insert_tests.cpp)
+cfoa_tests(SOURCES cfoa/insert_tests.cpp COMPILE_OPTIONS $<$<CXX_COMPILER_ID:MSVC>:/bigobj>)
 cfoa_tests(SOURCES cfoa/erase_tests.cpp)
 cfoa_tests(SOURCES cfoa/try_emplace_tests.cpp)
 cfoa_tests(SOURCES cfoa/emplace_tests.cpp)

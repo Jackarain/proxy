@@ -73,14 +73,6 @@ Instead of using ascii-APIs on windows, process V2 just assumes UTF-8 everywhere
 
 [endsect]
 
-[section:src Separate compilation]
-
-Boost.process v2 supports separate compilation similar to other boost libraries. 
-It can be achieved by defining `BOOST_PROCESS_V2_SEPARATE_COMPILATION` and including 
-`<process/v2/src.hpp>` in a single compile unit.
-
-[endsect]
-
 [section:limit_fd Fd safe by default]
 
 While not a problem on windows (since HANDLEs get manually enabled for inheritance),

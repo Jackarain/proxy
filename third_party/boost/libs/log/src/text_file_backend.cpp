@@ -58,8 +58,7 @@
 #include "unique_ptr.hpp"
 
 #if !defined(BOOST_LOG_NO_THREADS)
-#include <boost/thread/locks.hpp>
-#include <boost/thread/mutex.hpp>
+#include <mutex>
 #endif // !defined(BOOST_LOG_NO_THREADS)
 
 #include <boost/log/detail/header.hpp>
@@ -674,7 +673,7 @@ BOOST_LOG_ANONYMOUS_NAMESPACE {
 
 #if !defined(BOOST_LOG_NO_THREADS)
         //! Synchronization mutex
-        mutex m_Mutex;
+        std::mutex m_Mutex;
 #endif // !defined(BOOST_LOG_NO_THREADS)
 
         //! Total file size upper limit
@@ -765,7 +764,7 @@ BOOST_LOG_ANONYMOUS_NAMESPACE {
     private:
 #if !defined(BOOST_LOG_NO_THREADS)
         //! Synchronization mutex
-        mutex m_Mutex;
+        std::mutex m_Mutex;
 #endif // !defined(BOOST_LOG_NO_THREADS)
         //! The list of file collectors
         file_collectors m_Collectors;
@@ -864,7 +863,7 @@ BOOST_LOG_ANONYMOUS_NAMESPACE {
             filesystem::create_directories(m_StorageDir);
         }
 
-        BOOST_LOG_EXPR_IF_MT(lock_guard< mutex > lock(m_Mutex);)
+        BOOST_LOG_EXPR_IF_MT(std::lock_guard< std::mutex > lock(m_Mutex);)
 
         file_list::iterator it = m_Files.begin();
         const file_list::iterator end = m_Files.end();
@@ -982,7 +981,7 @@ BOOST_LOG_ANONYMOUS_NAMESPACE {
             filesystem::file_status status = filesystem::status(dir, ec);
             if (status.type() == filesystem::directory_file)
             {
-                BOOST_LOG_EXPR_IF_MT(lock_guard< mutex > lock(m_Mutex);)
+                BOOST_LOG_EXPR_IF_MT(std::lock_guard< std::mutex > lock(m_Mutex);)
 
                 file_list files;
                 filesystem::directory_iterator it(dir), end;
@@ -1031,7 +1030,7 @@ BOOST_LOG_ANONYMOUS_NAMESPACE {
     //! The function updates storage restrictions
     void file_collector::update(uintmax_t max_size, uintmax_t min_free_space, uintmax_t max_files)
     {
-        BOOST_LOG_EXPR_IF_MT(lock_guard< mutex > lock(m_Mutex);)
+        BOOST_LOG_EXPR_IF_MT(std::lock_guard< std::mutex > lock(m_Mutex);)
 
         m_MaxSize = (std::min)(m_MaxSize, max_size);
         m_MinFreeSpace = (std::max)(m_MinFreeSpace, min_free_space);
@@ -1043,7 +1042,7 @@ BOOST_LOG_ANONYMOUS_NAMESPACE {
     shared_ptr< file::collector > file_collector_repository::get_collector(
         filesystem::path const& target_dir, uintmax_t max_size, uintmax_t min_free_space, uintmax_t max_files)
     {
-        BOOST_LOG_EXPR_IF_MT(lock_guard< mutex > lock(m_Mutex);)
+        BOOST_LOG_EXPR_IF_MT(std::lock_guard< std::mutex > lock(m_Mutex);)
 
         file_collectors::iterator it = std::find_if(m_Collectors.begin(), m_Collectors.end(),
             [&target_dir](file_collector const& collector) { return collector.is_governed(target_dir); });
@@ -1071,7 +1070,7 @@ BOOST_LOG_ANONYMOUS_NAMESPACE {
     //! Removes the file collector from the list
     void file_collector_repository::remove_collector(file_collector* p)
     {
-        BOOST_LOG_EXPR_IF_MT(lock_guard< mutex > lock(m_Mutex);)
+        BOOST_LOG_EXPR_IF_MT(std::lock_guard< std::mutex > lock(m_Mutex);)
         m_Collectors.erase(m_Collectors.iterator_to(*p));
     }
 

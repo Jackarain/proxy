@@ -50,6 +50,7 @@ namespace urls {
 #ifdef BOOST_URL_DOCS
 constexpr __implementation_defined__ uri_reference_rule{};
 #else
+namespace implementation_defined {
 struct uri_reference_rule_t
 {
     using value_type = url_view;
@@ -62,8 +63,39 @@ struct uri_reference_rule_t
             ) const noexcept ->
     system::result<value_type>;
 };
+} // implementation_defined
 
-constexpr uri_reference_rule_t uri_reference_rule{};
+/** Rule for URI-reference
+
+    @par Value Type
+    @code
+    using value_type = url_view;
+    @endcode
+
+    @par Example
+    Rules are used with the function @ref grammar::parse.
+    @code
+    system::result< url_view > rv = grammar::parse( "ws://echo.example.com/?name=boost#demo", uri_reference_rule );
+    @endcode
+
+    @par BNF
+    @code
+    URI-reference = URI / relative-ref
+
+    URI           = scheme ":" hier-part [ "?" query ] [ "#" fragment ]
+    relative-ref  = relative-part [ "?" query ] [ "#" fragment ]
+    @endcode
+
+    @par Specification
+    @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3"
+        >3. Syntax Components (rfc3986)</a>
+
+    @see
+        @ref grammar::parse,
+        @ref parse_uri_reference,
+        @ref url_view.
+*/
+constexpr implementation_defined::uri_reference_rule_t uri_reference_rule{};
 #endif
 
 } // urls

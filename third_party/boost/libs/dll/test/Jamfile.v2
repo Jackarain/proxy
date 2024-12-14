@@ -7,11 +7,15 @@
 
 # For more information, see http://www.boost.org
 
+require-b2 5.0.1 ;
+
+import-search /boost/config/checks ;
+
 # bring in rules for testing
 import testing ;
 import path ;
 
-import ../../config/checks/config : requires ;
+import config : requires ;
 
 local RDYNAMIC = <target-os>freebsd:<linkflags>"-rdynamic" <target-os>solaris:<linkflags>"-Bdynamic" <target-os>aix:<linkflags>"-rdynamic"
     <target-os>qnxnto,<toolset>qcc:<linkflags>"-Bdynamic" <target-os>qnxnto,<toolset>gcc:<linkflags>"-rdynamic"
@@ -20,13 +24,14 @@ local RDYNAMIC = <target-os>freebsd:<linkflags>"-rdynamic" <target-os>solaris:<l
 
 
 # Static library that is not linked with any of the boost libs
-lib static_plugin : ../example/tutorial4/static_plugin.cpp : <link>static <define>BOOST_SYSTEM_NO_DEPRECATED $(RDYNAMIC) ;
-lib static_refcounting_plugin : ../example/tutorial8/refcounting_plugin.cpp : <link>static <define>BOOST_SYSTEM_NO_DEPRECATED <variant>release $(RDYNAMIC) ;
+lib static_plugin : ../example/tutorial4/static_plugin.cpp : <link>static <define>BOOST_SYSTEM_NO_DEPRECATED $(RDYNAMIC) <library>/boost/dll//boost_dll ;
+lib static_refcounting_plugin : ../example/tutorial8/refcounting_plugin.cpp : <link>static <define>BOOST_SYSTEM_NO_DEPRECATED <variant>release $(RDYNAMIC) <library>/boost/dll//boost_dll ;
 
 
 project
    : source-location .
    : requirements
+      <library>/boost/dll//boost_dll
       [ requires cxx11_rvalue_references ]
       [ requires cxx11_static_assert ]
    # linux

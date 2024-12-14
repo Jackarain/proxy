@@ -21,12 +21,9 @@
 
 #if !defined(BOOST_LOG_NO_THREADS)
 
-#include <boost/core/ref.hpp>
-#include <boost/bind/bind.hpp>
-#include <boost/thread/thread.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/locks.hpp>
-#include <boost/thread/barrier.hpp>
+#include <mutex>
+#include <thread>
+#include "test_barrier.hpp"
 
 namespace logging = boost::log;
 
@@ -36,8 +33,8 @@ enum config
     LOOP_COUNT = 100
 };
 
-boost::mutex m;
-typedef boost::lock_guard< boost::mutex > scoped_lock;
+std::mutex m;
+typedef std::lock_guard< std::mutex > scoped_lock;
 
 logging::once_block_flag flag = BOOST_LOG_ONCE_BLOCK_INIT;
 int var_to_init_once_flag = 0;
@@ -50,10 +47,10 @@ void initialize_variable()
 }
 
 
-void once_block_flag_thread(boost::barrier& barrier)
+void once_block_flag_thread(test_barrier& barrier)
 {
     int my_once_value = 0;
-    barrier.wait();
+    barrier.arrive_and_wait();
     for (unsigned int i = 0; i < LOOP_COUNT; ++i)
     {
         BOOST_LOG_ONCE_BLOCK_FLAG(flag)
@@ -74,21 +71,25 @@ void once_block_flag_thread(boost::barrier& barrier)
 // The test checks if the BOOST_LOG_ONCE_BLOCK_FLAG macro works
 BOOST_AUTO_TEST_CASE(once_block_flag)
 {
-    boost::thread_group group;
-    boost::barrier barrier(static_cast< unsigned int >(THREAD_COUNT));
+    std::thread threads[THREAD_COUNT];
+    test_barrier barrier(static_cast< unsigned int >(THREAD_COUNT));
 
     try
     {
         for (unsigned int i = 0; i < THREAD_COUNT; ++i)
-        {
-            group.create_thread(boost::bind(&once_block_flag_thread, boost::ref(barrier)));
-        }
-        group.join_all();
+            threads[i] = std::thread([&barrier]() { once_block_flag_thread(barrier); });
+
+        for (unsigned int i = 0; i < THREAD_COUNT; ++i)
+            threads[i].join();
     }
     catch (...)
     {
-        group.interrupt_all();
-        group.join_all();
+        barrier.wake_all();
+        for (unsigned int i = 0; i < THREAD_COUNT; ++i)
+        {
+            if (threads[i].joinable())
+                threads[i].join();
+        }
         throw;
     }
 
@@ -97,10 +98,10 @@ BOOST_AUTO_TEST_CASE(once_block_flag)
 
 int var_to_init_once = 0;
 
-void once_block_thread(boost::barrier& barrier)
+void once_block_thread(test_barrier& barrier)
 {
     int my_once_value = 0;
-    barrier.wait();
+    barrier.arrive_and_wait();
     for (unsigned int i = 0; i < LOOP_COUNT; ++i)
     {
         BOOST_LOG_ONCE_BLOCK()
@@ -123,21 +124,25 @@ void once_block_thread(boost::barrier& barrier)
 // The test checks if the BOOST_LOG_ONCE_BLOCK macro works
 BOOST_AUTO_TEST_CASE(once_block)
 {
-    boost::thread_group group;
-    boost::barrier barrier(static_cast< unsigned int >(THREAD_COUNT));
+    std::thread threads[THREAD_COUNT];
+    test_barrier barrier(static_cast< unsigned int >(THREAD_COUNT));
 
     try
     {
         for (unsigned int i = 0; i < THREAD_COUNT; ++i)
-        {
-            group.create_thread(boost::bind(&once_block_thread, boost::ref(barrier)));
-        }
-        group.join_all();
+            threads[i] = std::thread([&barrier]() { once_block_thread(barrier); });
+
+        for (unsigned int i = 0; i < THREAD_COUNT; ++i)
+            threads[i].join();
     }
-    catch(...)
+    catch (...)
     {
-        group.interrupt_all();
-        group.join_all();
+        barrier.wake_all();
+        for (unsigned int i = 0; i < THREAD_COUNT; ++i)
+        {
+            if (threads[i].joinable())
+                threads[i].join();
+        }
         throw;
     }
 
@@ -152,9 +157,9 @@ struct my_exception
 unsigned int pass_counter = 0;
 unsigned int exception_counter = 0;
 
-void once_block_with_exception_thread(boost::barrier& barrier)
+void once_block_with_exception_thread(test_barrier& barrier)
 {
-    barrier.wait();
+    barrier.arrive_and_wait();
     try
     {
         BOOST_LOG_ONCE_BLOCK()
@@ -177,21 +182,25 @@ void once_block_with_exception_thread(boost::barrier& barrier)
 // The test verifies that the once_block flag is not set if an exception is thrown from the once-block
 BOOST_AUTO_TEST_CASE(once_block_retried_on_exception)
 {
-    boost::thread_group group;
-    boost::barrier barrier(static_cast< unsigned int >(THREAD_COUNT));
+    std::thread threads[THREAD_COUNT];
+    test_barrier barrier(static_cast< unsigned int >(THREAD_COUNT));
 
     try
     {
         for (unsigned int i = 0; i < THREAD_COUNT; ++i)
-        {
-            group.create_thread(boost::bind(&once_block_with_exception_thread, boost::ref(barrier)));
-        }
-        group.join_all();
+            threads[i] = std::thread([&barrier]() { once_block_with_exception_thread(barrier); });
+
+        for (unsigned int i = 0; i < THREAD_COUNT; ++i)
+            threads[i].join();
     }
-    catch(...)
+    catch (...)
     {
-        group.interrupt_all();
-        group.join_all();
+        barrier.wake_all();
+        for (unsigned int i = 0; i < THREAD_COUNT; ++i)
+        {
+            if (threads[i].joinable())
+                threads[i].join();
+        }
         throw;
     }
 

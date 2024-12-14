@@ -1,11 +1,11 @@
 #
 # Copyright (c) 2019 Vinnie Falco (vinnie.falco@gmail.com)
-# Copyright (c) 2021 Dmitry Arkhipov (grisumbras@gmail.com)
+# Copyright (c) 2021 Dmitry Arkhipov (grisumbras@yandex.ru)
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 #
-# Official repository: https://github.com/cppalliance/json
+# Official repository: https://github.com/boostorg/docca
 #
 
 
@@ -13,6 +13,7 @@ import "class" : new ;
 import common ;
 import doxygen ;
 import feature ;
+import modules ;
 import param ;
 import path ;
 import print ;
@@ -25,7 +26,9 @@ import toolset ;
 import type ;
 import virtual-target ;
 
-import python ;
+local saved-project = [ modules.peek project : .current-project ] ;
+toolset.using python ;
+modules.poke project : .current-project : $(saved-project) ;
 
 
 .here  = [ path.make [ modules.binding $(__name__) ] ] ;
@@ -33,8 +36,9 @@ import python ;
 
 
 feature.feature "docca:param" : : free ;
-feature.feature "docca:config" : : free dependency ;
 feature.feature "docca:template" : : free dependency ;
+feature.feature "docca:config" : : free dependency ;
+feature.feature "docca:extension" : : free dependency ;
 
 rule reference ( target : sources * : requirements * : default-build *
     : usage-requirements * )
@@ -252,11 +256,14 @@ rule make-qbk2 ( project name : property-set : source )
             ] ;
     }
 
-    local configs = [ $(property-set).get <docca:config> ] ;
     local action-name = docca.generate-reference ;
     local relevant = [ toolset.relevant $(action-name) ] ;
     local action = [
-          new action $(source) $(template) $(configs)
+          new action
+            $(source)
+            $(template)
+            [ $(property-set).get <docca:config> ]
+            [ $(property-set).get <docca:extension> ]
         : $(action-name)
         : [ $(property-set).relevant $(relevant) ]
         ] ;
@@ -351,10 +358,11 @@ rule null-action ( target : srcs * : props * )
 rule generate-reference ( target : sources + : properties * )
 {
     RUNNER on $(target) = [ path.native $(.here)/docca.py ] ;
+
 }
-actions generate-reference
+actions generate-reference bind CONFIGS EXTENSIONS
 {
-    "$(PYTHON)" "$(RUNNER)" -i"$(>[1])" -o"$(<)" -c"$(>[3-])" -T"$(>[2])" -I"$(INCLUDE)"
+    "$(PYTHON:E=python)" "$(RUNNER)" -i"$(>[1])" -o"$(<)" -c"$(CONFIGS)" -E"$(EXTENSIONS)" -T"$(>[2])" -I"$(INCLUDE)"
 }
 
 rule make-docca-config ( target : sources * : properties * )
@@ -384,4 +392,6 @@ rule make-docca-config ( target : sources * : properties * )
 
 toolset.flags docca.generate-reference FLAGS <flags> ;
 toolset.flags docca.generate-reference INCLUDE <include> ;
+toolset.flags docca.generate-reference CONFIGS <docca:config> ;
+toolset.flags docca.generate-reference EXTENSIONS <docca:extension> ;
 toolset.flags docca.generate-reference PYTHON <python.interpreter> ;

@@ -8,19 +8,9 @@
 //  http://www.boost.org/LICENSE_1_0.txt
 //
 
-#include <boost/config.hpp>
-
-#if defined( BOOST_NO_CXX11_SMART_PTR )
-
-int main()
-{
-    return 0;
-}
-
-#else
-
 #include <boost/pointer_cast.hpp>
 #include <boost/core/lightweight_test.hpp>
+#include <boost/config.hpp>
 #include <memory>
 
 struct B1
@@ -243,5 +233,3 @@ int main()
 
     return boost::report_errors();
 }
-
-#endif

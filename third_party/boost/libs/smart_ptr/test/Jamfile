@@ -7,17 +7,26 @@
 #  accompanying file LICENSE_1_0.txt or copy at
 #  http://www.boost.org/LICENSE_1_0.txt)
 
+require-b2 5.0.1 ;
+import-search /boost/config/checks ;
+import config : requires ;
 import testing ;
-import ../../config/checks/config : requires ;
 
 project
     : requirements
+
+      <library>/boost/smart_ptr//boost_smart_ptr
+      <library>/boost/core//boost_core
+      <library>/boost/align//boost_align
+      <library>/boost/atomic//boost_atomic
+      <library>/boost/container_hash//boost_container_hash
+      <library>/boost/bind//boost_bind
+      <library>/boost/move//boost_move
+
       <toolset>gcc:<cxxflags>-Wno-non-virtual-dtor
       <toolset>gcc:<cxxflags>-Wno-deprecated-declarations
-      #<toolset>gcc:<cxxflags>-Wno-delete-non-virtual-dtor (not in 4.4/4.6)
+      <toolset>gcc:<cxxflags>-Wno-delete-non-virtual-dtor
     ;
-
-local cnhash = [ requires cxx11_decltype cxx11_noexcept ] <toolset>gcc-4.6:<build>no ;
 
 # quick test (for CI)
 run quick.cpp ;
@@ -60,11 +69,7 @@ run yield_k_test.cpp : : : <threading>multi : yield_k_test.mt ;
 run spinlock_test.cpp ;
 run spinlock_try_test.cpp ;
 run spinlock_try_test.cpp : : : <threading>multi : spinlock_try_test.mt ;
-run spinlock_pool_test.cpp
-  : : :
-  # msvc-8.0, 9.0 optimizer codegen bug for `x % 41`
-  <toolset>msvc-8.0,<variant>release:<build>no
-  <toolset>msvc-9.0,<variant>release:<build>no ;
+run spinlock_pool_test.cpp ;
 
 run make_shared_test.cpp ;
 run make_shared_move_emulation_test.cpp
@@ -89,17 +94,14 @@ run sp_recursive_assign2_test.cpp ;
 run sp_recursive_assign_rv_test.cpp ;
 run sp_recursive_assign2_rv_test.cpp ;
 
-compile-fail auto_ptr_lv_fail.cpp
-  : <toolset>gcc-4.4.7:<build>no <toolset>gcc-4.4:<build>no ;
+compile-fail auto_ptr_lv_fail.cpp ;
 
 run atomic_count_test2.cpp ;
 run sp_typeinfo_test.cpp ;
 compile make_shared_fp_test.cpp ;
-run sp_hash_test.cpp
-  : : : $(cnhash) ;
+run sp_hash_test.cpp ;
 run get_deleter_array_test.cpp ;
-run ip_hash_test.cpp
-  : : : $(cnhash) ;
+run ip_hash_test.cpp ;
 run owner_less_test.cpp ;
 run sp_unique_ptr_test.cpp ;
 run sp_array_test.cpp ;
@@ -173,33 +175,23 @@ compile-fail array_fail_dereference.cpp ;
 compile-fail array_fail_member_access.cpp ;
 compile-fail array_fail_array_access.cpp ;
 
-run make_shared_array_test.cpp
-  : : : <toolset>msvc-8.0:<build>no ;
+run make_shared_array_test.cpp ;
 run make_shared_arrays_test.cpp ;
-run make_shared_array_throws_test.cpp
-  : : : <toolset>msvc-8.0:<build>no ;
-run make_shared_array_esft_test.cpp
-  : : : <toolset>msvc-8.0:<build>no ;
-run make_shared_array_noinit_test.cpp
-  : : : <toolset>msvc-8.0:<build>no ;
-run make_shared_array_value_test.cpp
-  : : : <toolset>msvc-8.0:<build>no ;
+run make_shared_array_throws_test.cpp ;
+run make_shared_array_esft_test.cpp ;
+run make_shared_array_noinit_test.cpp ;
+run make_shared_array_value_test.cpp ;
 run allocate_shared_array_test.cpp ;
 run allocate_shared_arrays_test.cpp ;
-run allocate_shared_array_throws_test.cpp
-  : : : <toolset>msvc-8.0:<build>no ;
-run allocate_shared_array_esft_test.cpp
-  : : : <toolset>msvc-8.0:<build>no ;
-run allocate_shared_array_noinit_test.cpp
-  : : : <toolset>msvc-8.0:<build>no ;
-run allocate_shared_array_value_test.cpp
-  : : : <toolset>msvc-8.0:<build>no ;
+run allocate_shared_array_throws_test.cpp ;
+run allocate_shared_array_esft_test.cpp ;
+run allocate_shared_array_noinit_test.cpp ;
+run allocate_shared_array_value_test.cpp ;
 run allocate_shared_array_construct_test.cpp ;
 
 run make_unique_test.cpp ;
 run make_unique_args_test.cpp ;
-run make_unique_value_test.cpp
-  : : : <toolset>gcc-4.6:<cxxflags>-fno-deduce-init-list ;
+run make_unique_value_test.cpp ;
 run make_unique_noinit_test.cpp ;
 run make_unique_throws_test.cpp ;
 run make_unique_array_test.cpp ;
@@ -226,10 +218,8 @@ run weak_from_this_test2.cpp ;
 
 run sp_bml_unique_ptr_test.cpp ;
 
-run sp_hash_test2.cpp
-  : : : $(cnhash) ;
-run sp_hash_test3.cpp
-  : : : $(cnhash) ;
+run sp_hash_test2.cpp ;
+run sp_hash_test3.cpp ;
 
 run pointer_cast_test2.cpp ;
 
@@ -263,8 +253,7 @@ run shared_ptr_fn_test.cpp ;
 run get_deleter_test2.cpp ;
 run get_deleter_test3.cpp ;
 run get_deleter_array_test2.cpp ;
-run get_deleter_array_test3.cpp
-  : : : <toolset>msvc-8.0:<build>no ;
+run get_deleter_array_test3.cpp ;
 
 run sp_convertible_test2.cpp ;
 
@@ -286,15 +275,13 @@ run allocate_local_shared_test.cpp ;
 run allocate_local_shared_esft_test.cpp ;
 
 run make_local_shared_array_test.cpp ;
-run make_local_shared_arrays_test.cpp
-  : : : <toolset>gcc-4.6.3_0x:<cxxflags>-fno-deduce-init-list ;
+run make_local_shared_arrays_test.cpp ;
 run make_local_shared_array_throws_test.cpp ;
 run make_local_shared_array_esft_test.cpp ;
 run make_local_shared_array_noinit_test.cpp ;
 run make_local_shared_array_value_test.cpp ;
 run allocate_local_shared_array_test.cpp ;
-run allocate_local_shared_arrays_test.cpp
-  : : : <toolset>gcc-4.6.3_0x:<cxxflags>-fno-deduce-init-list ;
+run allocate_local_shared_arrays_test.cpp ;
 run allocate_local_shared_array_throws_test.cpp ;
 run allocate_local_shared_array_esft_test.cpp ;
 run allocate_local_shared_array_noinit_test.cpp ;
@@ -305,8 +292,7 @@ run local_sp_fn_test.cpp ;
 run lsp_convertible_test.cpp ;
 run lsp_convertible_test2.cpp ;
 
-run make_shared_array_tmp_test.cpp
-  : : : <toolset>msvc-8.0:<build>no ;
+run make_shared_array_tmp_test.cpp ;
 
 run lw_thread_test.cpp
   : : : <threading>multi ;
@@ -336,17 +322,17 @@ explicit abi_test_nt ;
 run abi_test_main.cpp abi_test_mt : : : <define>BOOST_DISABLE_THREADS : abi_test_nt_mt ;
 run abi_test_main.cpp abi_test_nt : : : : abi_test_mt_nt ;
 
-run abi_test_main.cpp abi_test_mt/<cxxstd>0x : : : <cxxstd>98 : abi_test_03_11 ;
-run abi_test_main.cpp abi_test_mt/<cxxstd>98 : : : <cxxstd>0x : abi_test_11_03 ;
+# run abi_test_main.cpp abi_test_mt/<cxxstd>0x : : : <cxxstd>98 : abi_test_03_11 ;
+# run abi_test_main.cpp abi_test_mt/<cxxstd>98 : : : <cxxstd>0x : abi_test_11_03 ;
 
 run weak_ptr_alias_test.cpp ;
 run weak_ptr_alias_move_test.cpp ;
 
 run sp_typeinfo_test.cpp : : : <rtti>off : sp_typeinfo_test_no_rtti ;
 
-run get_deleter_test.cpp  : : : <rtti>off <toolset>gcc-4.4.7,<cxxstd>0x:<build>no <toolset>gcc-4.4,<cxxstd>0x:<build>no : get_deleter_test_no_rtti ;
-run get_deleter_test2.cpp : : : <rtti>off <toolset>gcc-4.4.7,<cxxstd>0x:<build>no <toolset>gcc-4.4,<cxxstd>0x:<build>no : get_deleter_test2_no_rtti ;
-run get_deleter_test3.cpp : : : <rtti>off <toolset>gcc-4.4.7,<cxxstd>0x:<build>no <toolset>gcc-4.4,<cxxstd>0x:<build>no : get_deleter_test3_no_rtti ;
+run get_deleter_test.cpp  : : : <rtti>off : get_deleter_test_no_rtti ;
+run get_deleter_test2.cpp : : : <rtti>off : get_deleter_test2_no_rtti ;
+run get_deleter_test3.cpp : : : <rtti>off : get_deleter_test3_no_rtti ;
 
 run shared_from_test.cpp ;
 run weak_from_test.cpp ;
@@ -401,33 +387,29 @@ run owner_less_test2.cpp ;
 run ip_hash_test2.cpp ;
 run sp_hash_test4.cpp ;
 
-run lsp_hash_test.cpp
-  : : : $(cnhash)  ;
+run lsp_hash_test.cpp ;
 run lsp_hash_test2.cpp ;
 
-local MT = <threading>multi [ requires cxx11_decltype cxx11_noexcept ] <toolset>gcc-4.6:<build>no ;
-
 run atomic_count_mt_test.cpp
-  : : : $(MT) ;
+  : : : <threading>multi ;
 
 run spinlock_mt_test.cpp
-  : : : $(MT) ;
+  : : : <threading>multi ;
 
 run spinlock_pool_mt_test.cpp
-  : : : $(MT) ;
+  : : : <threading>multi ;
 
 run shared_ptr_mt_test.cpp
-  : : : $(MT) ;
+  : : : <threading>multi ;
 
 run weak_ptr_mt_test.cpp
-  : : : $(MT) ;
+  : : : <threading>multi ;
 
 compile sp_report_implementation.cpp ;
 
 run sp_owner_hash_value_test.cpp ;
 
-run wp_hash_test.cpp
-  : : : $(cnhash) ;
+run wp_hash_test.cpp ;
 run wp_hash_test2.cpp ;
 
 run wp_unordered_test.cpp ;
@@ -437,3 +419,8 @@ run sp_unordered_test.cpp ;
 
 run sp_unique_ptr_test2.cpp ;
 run sp_move_only_deleter.cpp ;
+
+run sp_is_bounded_array_test.cpp ;
+run sp_is_unbounded_array_test.cpp ;
+run sp_type_identity_test.cpp ;
+run sp_type_with_alignment_test.cpp ;

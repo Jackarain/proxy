@@ -28,9 +28,8 @@
 
 #include <cstddef>
 #include <queue>
-#include <boost/thread/locks.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/condition_variable.hpp>
+#include <mutex>
+#include <condition_variable>
 #include <boost/log/core/record_view.hpp>
 #include <boost/log/detail/header.hpp>
 
@@ -64,13 +63,13 @@ class bounded_fifo_queue :
 private:
     typedef OverflowStrategyT overflow_strategy;
     typedef std::queue< record_view > queue_type;
-    typedef boost::mutex mutex_type;
+    typedef std::mutex mutex_type;
 
 private:
     //! Synchronization primitive
     mutex_type m_mutex;
     //! Condition to block the consuming thread on
-    condition_variable m_cond;
+    std::condition_variable m_cond;
     //! Log record queue
     queue_type m_queue;
     //! Interruption flag
@@ -90,7 +89,7 @@ protected:
     //! Enqueues log record to the queue
     void enqueue(record_view const& rec)
     {
-        unique_lock< mutex_type > lock(m_mutex);
+        std::unique_lock< mutex_type > lock(m_mutex);
         std::size_t size = m_queue.size();
         for (; size >= MaxQueueSizeV; size = m_queue.size())
         {
@@ -106,7 +105,7 @@ protected:
     //! Attempts to enqueue log record to the queue
     bool try_enqueue(record_view const& rec)
     {
-        unique_lock< mutex_type > lock(m_mutex, try_to_lock);
+        std::unique_lock< mutex_type > lock(m_mutex, std::try_to_lock);
         if (lock.owns_lock())
         {
             const std::size_t size = m_queue.size();
@@ -133,7 +132,7 @@ protected:
     //! Attempts to dequeue log record from the queue, does not block if the queue is empty
     bool try_dequeue(record_view& rec)
     {
-        lock_guard< mutex_type > lock(m_mutex);
+        std::lock_guard< mutex_type > lock(m_mutex);
         const std::size_t size = m_queue.size();
         if (size > 0)
         {
@@ -149,7 +148,7 @@ protected:
     //! Dequeues log record from the queue, blocks if the queue is empty
     bool dequeue_ready(record_view& rec)
     {
-        unique_lock< mutex_type > lock(m_mutex);
+        std::unique_lock< mutex_type > lock(m_mutex);
 
         while (!m_interruption_requested)
         {
@@ -174,7 +173,7 @@ protected:
     //! Wakes a thread possibly blocked in the \c dequeue method
     void interrupt_dequeue()
     {
-        lock_guard< mutex_type > lock(m_mutex);
+        std::lock_guard< mutex_type > lock(m_mutex);
         m_interruption_requested = true;
         overflow_strategy::interrupt();
         m_cond.notify_one();

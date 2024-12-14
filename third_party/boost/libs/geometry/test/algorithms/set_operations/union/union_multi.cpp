@@ -370,7 +370,7 @@ void test_areal()
     TEST_UNION(case_recursive_boxes_79, 1, 2, -1, 14.75);
 
     // No hole should be generated (but rescaling generates one hole)
-    TEST_UNION(case_recursive_boxes_80, 2, BG_IF_RESCALED(bg_if_mp<ct>(0, 1), 0), -1, 1.5);
+    TEST_UNION(case_recursive_boxes_80, 2, 0, -1, 1.5);
 
     TEST_UNION(case_recursive_boxes_81, 5, 0, -1, 15.5);
     TEST_UNION(case_recursive_boxes_82, 2, 2, -1, 20.25);
@@ -396,10 +396,10 @@ void test_areal()
         // Generates either 4 or 3 output polygons
         // With rescaling the result is invalid.
         ut_settings settings;
-        settings.set_test_validity(BG_IF_RESCALED(false, true));
+        settings.set_test_validity(true);
         test_one<Polygon, MultiPolygon, MultiPolygon>("ticket_9081",
             ticket_9081[0], ticket_9081[1],
-            BG_IF_RESCALED(bg_if_mp<ct>(3, 4), 3), 0, -1, 0.2187385,
+            3, 0, -1, 0.2187385,
             settings);
     }
 
@@ -413,29 +413,19 @@ void test_areal()
         ticket_12118[0], ticket_12118[1],
         1, -1, 27, 2221.38713);
 
-#if ! defined(BOOST_GEOMETRY_USE_RESCALING) || defined(BOOST_GEOMETRY_TEST_FAILURES)
-    // No output if rescaling is done
     test_one<Polygon, MultiPolygon, MultiPolygon>("ticket_12125",
         ticket_12125[0], ticket_12125[1],
         1, 0, -1, 575.831180350007);
-#endif
 
     TEST_UNION(ticket_12503, 42, 1, -1, 945.625);
 
-#if ! defined(BOOST_GEOMETRY_USE_RESCALING) || defined(BOOST_GEOMETRY_TEST_FAILURES)
-    // Failure with rescaling
     TEST_UNION(issue_630_a, 1, 0, -1, 2.200326);
-#endif
 
     TEST_UNION(issue_630_b, 1, 0, -1, 1.675976);
 
-#if ! defined(BOOST_GEOMETRY_USE_RESCALING) || defined(BOOST_GEOMETRY_TEST_FAILURES)
-    // With rescaling the smaller rectangle is added on top of the outer polygon
     TEST_UNION(issue_630_c, 1, 0, -1, 1.670367);
 
-    // With rescaling the small polygon is added on top of the outer polygon
     TEST_UNION(issue_643, 1, 0, -1, 80.0);
-#endif
 
     // It returns 3 polygons, the first with an interior
     // This is correct (the difference, resulting in the same spatial coverage,
@@ -446,6 +436,9 @@ void test_areal()
     TEST_UNION(issue_888_37, 52, 3, -1, 0.4033294);
 
     TEST_UNION(issue_1109, 2, 0, -1, 3946.5);
+
+    TEST_UNION(issue_1222, 1, 0, -1, 40.0);
+    TEST_UNION(issue_1288, 1, 0, -1, 12.0);
 
     // One or two polygons, the ideal case is 1
     TEST_UNION(mail_2019_01_21_johan, count_set(1, 2), 0, -1, 0.00058896);
@@ -458,6 +451,8 @@ void test_areal()
         1, 9, -1, 1250.0);
 
     TEST_UNION(mysql_regression_1_65_2017_08_31, 3, 0, -1, 181.966397646608);
+
+    TEST_UNION(issue_1299, 1, 0, -1, 4.267);
 }
 
 // Test cases (generic)
@@ -498,7 +493,7 @@ int test_main(int, char* [])
 #endif
 
 #if defined(BOOST_GEOMETRY_TEST_FAILURES)
-    BoostGeometryWriteExpectedFailures(9, 0, 1, 0);
+    BoostGeometryWriteExpectedFailures(0, 1, 0);
 #endif
 
     return 0;

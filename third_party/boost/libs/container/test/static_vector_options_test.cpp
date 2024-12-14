@@ -131,9 +131,49 @@ void test_throw_on_overflow()
    #endif
 }
 
+template<class Unsigned, class VectorType>
+void test_stored_size_type_impl()
+{
+   #ifndef BOOST_NO_EXCEPTIONS
+   VectorType v;
+   typedef typename VectorType::size_type    size_type;
+   typedef typename VectorType::value_type   value_type;
+   size_type const max = Unsigned(-1);
+   v.resize(5);
+   v.resize(max);
+   BOOST_TEST_THROWS(v.resize(max+1),                    std::exception);
+   BOOST_TEST_THROWS(v.push_back(value_type(1)),         std::exception);
+   BOOST_TEST_THROWS(v.insert(v.begin(), value_type(1)), std::exception);
+   BOOST_TEST_THROWS(v.emplace(v.begin(), value_type(1)),std::exception);
+   BOOST_TEST_THROWS(v.reserve(max+1),                   std::exception);
+   BOOST_TEST_THROWS(VectorType v2(max+1),               std::exception);
+   #endif
+}
+
+template<class Unsigned>
+void test_stored_size_type()
+{
+   #if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
+   using options_t = static_vector_options_t< stored_size<Unsigned> >;
+   #else
+   typedef typename static_vector_options
+      < stored_size<Unsigned> >::type options_t;
+   #endif
+
+   typedef static_vector<unsigned char, Unsigned(-1)> normal_static_vector_t;
+
+   {
+      typedef static_vector<unsigned char, Unsigned(-1), options_t> static_vector_t;
+      BOOST_CONTAINER_STATIC_ASSERT(sizeof(normal_static_vector_t) > sizeof(static_vector_t));
+      test_stored_size_type_impl<Unsigned, static_vector_t>();
+   }
+}
+
 int main()
 {
    test_alignment();
    test_throw_on_overflow();
+   test_stored_size_type<unsigned char>();
+   test_stored_size_type<unsigned short>();
    return ::boost::report_errors();
 }

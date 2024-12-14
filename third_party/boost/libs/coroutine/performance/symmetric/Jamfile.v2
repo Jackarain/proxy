@@ -13,7 +13,7 @@ import modules ;
 import os ;
 import toolset ;
 
-project boost/coroutine/performance/symmetric
+project
     : requirements
       <library>/boost/chrono//boost_chrono
       <library>/boost/context//boost_context

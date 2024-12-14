@@ -38,7 +38,6 @@ if (BOOST_REDIS_MAIN_PROJECT)
     align
     context
     core
-    coroutine
     static_assert
     pool
     date_time

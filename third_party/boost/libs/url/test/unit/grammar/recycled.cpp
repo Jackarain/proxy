@@ -50,8 +50,8 @@ struct recycled_test
 
         // coverage
         {
-            detail::recycled_add_impl(1);
-            detail::recycled_remove_impl(1);
+            see_below::recycled_add_impl(1);
+            see_below::recycled_remove_impl(1);
         }
     }
 };

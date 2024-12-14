@@ -17,10 +17,10 @@
 #ifndef BOOST_LOG_DETAIL_ENQUEUED_RECORD_HPP_INCLUDED_
 #define BOOST_LOG_DETAIL_ENQUEUED_RECORD_HPP_INCLUDED_
 
+#include <chrono>
 #include <boost/move/core.hpp>
 #include <boost/move/utility_core.hpp>
 #include <boost/log/detail/config.hpp>
-#include <boost/log/detail/timestamp.hpp>
 #include <boost/log/core/record_view.hpp>
 #include <boost/log/detail/header.hpp>
 
@@ -60,7 +60,7 @@ public:
         }
     };
 
-    boost::log::aux::timestamp m_timestamp;
+    std::chrono::steady_clock::time_point m_timestamp;
     record_view m_record;
 
     enqueued_record(enqueued_record const& that) BOOST_NOEXCEPT : m_timestamp(that.m_timestamp), m_record(that.m_record)
@@ -72,7 +72,7 @@ public:
     {
     }
     explicit enqueued_record(record_view const& rec) :
-        m_timestamp(boost::log::aux::get_timestamp()),
+        m_timestamp(std::chrono::steady_clock::now()),
         m_record(rec)
     {
     }

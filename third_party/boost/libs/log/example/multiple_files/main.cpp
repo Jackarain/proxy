@@ -19,10 +19,10 @@
 // #define BOOST_LOG_DYN_LINK 1
 
 #include <stdexcept>
+#include <thread>
 #include <string>
 #include <iostream>
 #include <boost/smart_ptr/shared_ptr.hpp>
-#include <boost/thread/thread.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <boost/log/common.hpp>
@@ -53,7 +53,7 @@ BOOST_LOG_INLINE_GLOBAL_LOGGER_DEFAULT(my_logger, src::logger_mt)
 // This function is executed in a separate thread
 void thread_foo()
 {
-    BOOST_LOG_SCOPED_THREAD_TAG("ThreadID", boost::this_thread::get_id());
+    BOOST_LOG_SCOPED_THREAD_TAG("ThreadID", std::this_thread::get_id());
     for (unsigned int i = 0; i < LOG_RECORDS_TO_WRITE; ++i)
     {
         BOOST_LOG(my_logger::get()) << "Log record " << i;
@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
 
         // Set up how the file names will be generated
         sink->locked_backend()->set_file_name_composer(sinks::file::as_file_name_composer(
-            expr::stream << "logs/" << expr::attr< boost::thread::id >("ThreadID") << ".log"));
+            expr::stream << "logs/" << expr::attr< std::thread::id >("ThreadID") << ".log"));
 
         // Set the log record formatter
         sink->set_formatter
@@ -89,11 +89,12 @@ int main(int argc, char* argv[])
         logging::core::get()->add_global_attribute("RecordID", attrs::counter< unsigned int >());
 
         // Create threads and make some logs
-        boost::thread_group threads;
+        std::thread threads[THREAD_COUNT];
         for (unsigned int i = 0; i < THREAD_COUNT; ++i)
-            threads.create_thread(&thread_foo);
+            threads[i] = std::thread(&thread_foo);
 
-        threads.join_all();
+        for (unsigned int i = 0; i < THREAD_COUNT; ++i)
+            threads[i].join();
 
         return 0;
     }

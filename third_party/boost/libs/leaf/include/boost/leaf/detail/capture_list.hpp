@@ -1,12 +1,12 @@
-#ifndef BOOST_LEAF_DETAIL_CAPTURE_HPP_INCLUDED
-#define BOOST_LEAF_DETAIL_CAPTURE_HPP_INCLUDED
+#ifndef BOOST_LEAF_DETAIL_CAPTURE_LIST_HPP_INCLUDED
+#define BOOST_LEAF_DETAIL_CAPTURE_LIST_HPP_INCLUDED
 
-// Copyright 2018-2023 Emil Dotchevski and Reverge Studios, Inc.
-
+// Copyright 2018-2024 Emil Dotchevski and Reverge Studios, Inc.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/leaf/config.hpp>
+#include <boost/leaf/detail/print.hpp>
 
 #if BOOST_LEAF_CFG_CAPTURE
 
@@ -14,7 +14,9 @@
 
 namespace boost { namespace leaf {
 
-namespace leaf_detail
+class error_id;
+
+namespace detail
 {
     struct BOOST_LEAF_SYMBOL_VISIBLE tls_tag_id_factory_current_id;
 
@@ -31,7 +33,7 @@ namespace leaf_detail
 
             virtual void unload( int err_id ) = 0;
 #if BOOST_LEAF_CFG_DIAGNOSTICS
-            virtual void print( std::ostream &, int err_id_to_print ) const = 0;
+            virtual void print(std::ostream &, error_id const & to_print, char const * & prefix) const = 0;
 #endif
 
         protected:
@@ -85,7 +87,7 @@ namespace leaf_detail
         {
             capture_list moved(first_);
             first_ = nullptr;
-            tls::write_uint<leaf_detail::tls_tag_id_factory_current_id>(unsigned(err_id));
+            tls::write_uint<detail::tls_tag_id_factory_current_id>(unsigned(err_id));
             moved.for_each(
                 [err_id]( node & n )
                 {
@@ -94,23 +96,21 @@ namespace leaf_detail
         }
 
         template <class CharT, class Traits>
-        void print( std::basic_ostream<CharT, Traits> & os, char const * title, int const err_id_to_print ) const
+        void print(std::basic_ostream<CharT, Traits> & os, error_id const & to_print, char const * & prefix) const
         {
-            BOOST_LEAF_ASSERT(title != nullptr);
 #if BOOST_LEAF_CFG_DIAGNOSTICS
             if( first_ )
             {
-                os << title;
                 for_each(
-                    [&os, err_id_to_print]( node const & n )
+                    [&os, &to_print, &prefix]( node const & n )
                     {
-                        n.print(os, err_id_to_print);
+                        n.print(os, to_print, prefix);
                     } );
             }
 #else
             (void) os;
-            (void) title;
-            (void) err_id_to_print;
+            (void) prefix;
+            (void) to_print;
 #endif
         }
     };
@@ -121,4 +121,4 @@ namespace leaf_detail
 
 #endif
 
-#endif
+#endif // BOOST_LEAF_DETAIL_CAPTURE_LIST_HPP_INCLUDED

@@ -30,6 +30,7 @@ local linux_pipeline(name, image, environment, packages = "", sources = [], arch
             name: "everything",
             image: image,
             environment: environment,
+            privileged: true,
             commands:
             [
                 'set -e',
@@ -278,14 +279,14 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
 
     linux_pipeline(
         "Linux 23.04 GCC 13 32/64 (11,14)",
-        "cppalliance/droneubuntu2304:1",
+        "cppalliance/droneubuntu2404:1",
         { TOOLSET: 'gcc', COMPILER: 'g++-13', CXXSTD: '11,14', ADDRMD: '32,64' },
         "g++-13 g++-13-multilib",
     ),
 
     linux_pipeline(
         "Linux 23.04 GCC 13 32/64 (17,20,2b)",
-        "cppalliance/droneubuntu2304:1",
+        "cppalliance/droneubuntu2404:1",
         { TOOLSET: 'gcc', COMPILER: 'g++-13', CXXSTD: '17,20,2b', ADDRMD: '32,64' },
         "g++-13 g++-13-multilib",
     ),

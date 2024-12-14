@@ -1,4 +1,4 @@
-// Copyright 2023 Joaquin M Lopez Munoz
+// Copyright 2023-2024 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
@@ -32,15 +32,21 @@ namespace boost {
 
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
+#include <boost/unordered/concurrent_node_map.hpp>
+#include <boost/unordered/concurrent_node_set.hpp>
 #include <boost/core/lightweight_test.hpp>
 
 using test::default_generator;
 
 using map_type = boost::unordered::concurrent_flat_map<raii, raii>;
+using node_map_type = boost::unordered::concurrent_node_map<raii, raii>;
 using set_type = boost::unordered::concurrent_flat_set<raii>;
+using node_set_type = boost::unordered::concurrent_node_set<raii>;
 
 map_type* test_map;
+map_type* test_node_map;
 set_type* test_set;
+node_set_type* test_node_set;
 
 template<typename F>
 void detect_reentrancy(F f)
@@ -105,7 +111,7 @@ namespace {
 // clang-format off
 UNORDERED_TEST(
   reentrancy_tests,
-  ((test_map)(test_set))
+  ((test_map)(test_node_map)(test_set)(test_node_set))
   ((value_type_generator_factory))
   ((default_generator)))
 // clang-format on

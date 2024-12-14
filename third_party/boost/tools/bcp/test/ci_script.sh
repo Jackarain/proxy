@@ -8,7 +8,7 @@
 
 # boost-root:
 cd ../../..
-./b2 -j3 tools/bcp  || { echo './b2 -j3 tools/bcp failed' ; exit 1; }
+./b2 -j3 tools/bcp//dist  || { echo './b2 -j3 tools/bcp failed' ; exit 1; }
 rm -rf ../bcp-output
 mkdir ../bcp-output  || { echo 'mkdir failed' ; exit 1; }
 ./dist/bin/bcp program_options build ../bcp-output  || { echo './dist/bin/bcp program_options build ../bcp-output failed' ; exit 1; }
@@ -26,9 +26,9 @@ cd ../boost-root
 echo "using xsltproc ;" | tee -a $HOME/user-config.jam
 echo "using boostbook : /usr/share/xml/docbook/stylesheet/docbook-xsl : /usr/share/sgml/docbook/dtd/xml/4.2 ;" | tee -a $HOME/user-config.jam
 cd tools/inspect/build
-../../../b2 -j2 address-model=64 architecture=x86 toolset=gcc cxxflags="-std=gnu++14" release dist-bin || { echo 'building inspect failed' ; exit 1; }
-cd ../../bcp/doc 
-rm -rf html 
-../../../b2 -j2 address-model=64 architecture=x86 toolset=gcc cxxflags="-std=gnu++14" release || { echo 'building docs failed' ; exit 1; }
+../../../b2 -j2 address-model=64 architecture=x86 toolset=gcc cxxstd=14 release dist-bin || { echo 'building inspect failed' ; exit 1; }
+cd ../../bcp/doc
+rm -rf html
+../../../b2 -j2 address-model=64 architecture=x86 toolset=gcc cxxstd=14 release || { echo 'building docs failed' ; exit 1; }
 ../../../dist/bin/inspect -text || { echo 'inspect failed' ; exit 1; }
 

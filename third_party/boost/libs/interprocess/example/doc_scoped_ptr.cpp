@@ -53,31 +53,14 @@ int main ()
    //Remove shared memory on construction and destruction
    struct shm_remove
    {
-   //<-
-   #if 1
       shm_remove() { shared_memory_object::remove(test::get_process_id_name()); }
       ~shm_remove(){ shared_memory_object::remove(test::get_process_id_name()); }
-   #else
-   //->
-      shm_remove() { shared_memory_object::remove("MySharedMemory"); }
-      ~shm_remove(){ shared_memory_object::remove("MySharedMemory"); }
-   //<-
-   #endif
-   //->
    } remover;
    //<-
    (void)remover;
    //->
 
-   //<-
-   #if 1
    managed_shared_memory shmem(create_only, test::get_process_id_name(), 10000);
-   #else
-   //->
-   managed_shared_memory shmem(create_only, "MySharedMemory", 10000);
-   //<-
-   #endif
-   //->
 
    //In the first try, there will be no exceptions
    //in the second try we will throw an exception
@@ -92,7 +75,7 @@ int main ()
       //we destroy the object automatically
       my_deleter<my_class> d(shmem.get_segment_manager());
 
-      BOOST_TRY{
+      BOOST_INTERPROCESS_TRY{
          scoped_ptr<my_class, my_deleter<my_class> > s_ptr(my_object, d);
          //Let's emulate a exception capable operation
          //In the second try, throw an exception
@@ -104,7 +87,7 @@ int main ()
          //to avoid destruction
          s_ptr.release();
       }
-      BOOST_CATCH(const my_exception &){} BOOST_CATCH_END
+      BOOST_INTERPROCESS_CATCH(const my_exception &){} BOOST_INTERPROCESS_CATCH_END
       //Here, scoped_ptr is destroyed
       //so it we haven't thrown an exception
       //the object should be there, otherwise, destroyed

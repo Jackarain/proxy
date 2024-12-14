@@ -16,6 +16,8 @@ project
     <toolset>msvc:<warnings-as-errors>on
     <toolset>gcc:<warnings-as-errors>on
     <toolset>clang:<warnings-as-errors>on
+    <library>/boost/function//boost_function
+    <library>/boost/typeof//boost_typeof
   ;
 
 run function_test.cpp ;
@@ -24,7 +26,8 @@ run function_test.cpp : : : <rtti>off <toolset>gcc-4.4,<cxxstd>0x:<build>no : fu
 run function_n_test.cpp ;
 run allocator_test.cpp ;
 run stateless_test.cpp ;
-run lambda_test.cpp ;
+run lambda_test.cpp
+  : : : <library>/boost/lambda//boost_lambda ;
 compile-fail function_test_fail1.cpp ;
 compile-fail function_test_fail2.cpp ;
 compile function_30.cpp ;
@@ -42,9 +45,10 @@ run function_ref_portable.cpp ;
 run contains_test.cpp ;
 run contains2_test.cpp ;
 run nothrow_swap.cpp ;
-run rvalues_test.cpp ;
+run rvalues_test.cpp
+  : : : <library>/boost/move//boost_move ;
 compile function_typeof_test.cpp
-   : <cxxstd>03:<build>no <cxxstd>98:<build>no <cxxstd>0x:<build>no ;
+  : <cxxstd>03:<build>no <cxxstd>98:<build>no <cxxstd>0x:<build>no ;
 run result_arg_types_test.cpp ;
 run result_arg_n_types_test.cpp ;
 
@@ -89,3 +93,5 @@ run contains2_test.cpp : : : <rtti>off <toolset>gcc-4.4,<cxxstd>0x:<build>no : c
 
 run contains3_test.cpp ;
 run contains3_test.cpp : : : <rtti>off <toolset>gcc-4.4,<cxxstd>0x:<build>no : contains3_test_no_rtti ;
+
+compile issue_53.cpp ;

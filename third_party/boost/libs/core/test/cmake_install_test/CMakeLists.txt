@@ -14,4 +14,4 @@ target_link_libraries(quick Boost::core)
 enable_testing()
 add_test(quick quick)
 
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>)
+add_custom_target(check VERBATIM COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>)

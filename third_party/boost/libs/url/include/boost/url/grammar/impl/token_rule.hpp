@@ -18,7 +18,7 @@ namespace grammar {
 
 template<class CharSet>
 auto
-token_rule_t<CharSet>::
+implementation_defined::token_rule_t<CharSet>::
 parse(
     char const*& it,
     char const* end

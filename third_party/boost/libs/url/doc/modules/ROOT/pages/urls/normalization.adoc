@@ -47,7 +47,7 @@ The comparison operators implement Syntax-Based Normalization, which implements 
 include::example$unit/snippets.cpp[tag=snippet_normalizing_2,indent=0]
 ----
 
-In mutable URLs, the member function `normalize` can also be used to apply Syntax-Based Normalization to a URL.
+In mutable URLs, the member function cpp:normalize[] can also be used to apply Syntax-Based Normalization to a URL.
 A normalized URL is represented by a canonical string where any two strings that would compare equal end up with the same underlying representation.
 In other words, Simple String Comparison of two normalized URLs is equivalent to Syntax-Based Normalization.
 

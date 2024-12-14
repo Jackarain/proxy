@@ -10,6 +10,7 @@
 #include <boost/process/v2/detail/throw_error.hpp>
 
 #include <vector>
+#include <memory>
 
 BOOST_PROCESS_V2_BEGIN_NAMESPACE
 

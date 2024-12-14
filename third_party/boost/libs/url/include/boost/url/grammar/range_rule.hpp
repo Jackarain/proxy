@@ -19,12 +19,15 @@
 #include <cstddef>
 #include <iterator>
 #include <type_traits>
-
 #include <stddef.h> // ::max_align_t
 
 namespace boost {
 namespace urls {
 namespace grammar {
+namespace implementation_defined {
+template<class R0, class R1>
+struct range_rule_t;
+} // implementation_defined
 
 /** A forward range of parsed elements
 
@@ -96,7 +99,7 @@ class range
 
     template<
         class R0, class R1>
-    friend struct range_rule_t;
+    friend struct implementation_defined::range_rule_t;
 
     any_rule&
     get() noexcept
@@ -273,10 +276,12 @@ public:
 //------------------------------------------------
 
 #ifndef BOOST_URL_DOCS
+namespace implementation_defined {
 template<
     class R0,
     class R1 = void>
 struct range_rule_t;
+}
 #endif
 
 //------------------------------------------------
@@ -355,6 +360,7 @@ range_rule(
     std::size_t M =
         std::size_t(-1)) noexcept;
 #else
+namespace implementation_defined {
 template<class R>
 struct range_rule_t<R>
 {
@@ -366,7 +372,6 @@ struct range_rule_t<R>
         char const*& it,
         char const* end) const;
 
-private:
     constexpr
     range_rule_t(
         R const& next,
@@ -378,23 +383,80 @@ private:
     {
     }
 
-    template<class R_>
-    friend
-    constexpr
-    range_rule_t<R_>
-    range_rule(
-        R_ const& next,
-        std::size_t N,
-        std::size_t M) noexcept;
-
+private:
     R const next_;
     std::size_t N_;
     std::size_t M_;
 };
+} // implementation_defined
 
+/** Match a repeating number of elements
+
+    Elements are matched using the passed rule.
+    <br>
+    Normally when the rule returns an error,
+    the range ends and the input is rewound to
+    one past the last character that matched
+    successfully. However, if the rule returns
+    the special value @ref error::end_of_range, the
+    input is not rewound. This allows for rules
+    which consume input without producing
+    elements in the range. For example, to
+    relax the grammar for a comma-delimited
+    list by allowing extra commas in between
+    elements.
+
+    @par Value Type
+    @code
+    using value_type = range< typename Rule::value_type >;
+    @endcode
+
+    @par Example
+    Rules are used with the function @ref parse.
+    @code
+    // range    = 1*( ";" token )
+
+    system::result< range<core::string_view> > rv = parse( ";alpha;xray;charlie",
+        range_rule(
+            tuple_rule(
+                squelch( delim_rule( ';' ) ),
+                token_rule( alpha_chars ) ),
+            1 ) );
+    @endcode
+
+    @par BNF
+    @code
+    range        = <N>*<M>next
+    @endcode
+
+    @par Specification
+    @li <a href="https://datatracker.ietf.org/doc/html/rfc5234#section-3.6"
+        >3.6.  Variable Repetition (rfc5234)</a>
+
+    @param next The rule to use for matching
+    each element. The range extends until this
+    rule returns an error.
+
+    @param N The minimum number of elements for
+    the range to be valid. If omitted, this
+    defaults to zero.
+
+    @param M The maximum number of elements for
+    the range to be valid. If omitted, this
+    defaults to unlimited.
+
+    @see
+        @ref alpha_chars,
+        @ref delim_rule,
+        @ref error::end_of_range,
+        @ref parse,
+        @ref range,
+        @ref tuple_rule,
+        @ref squelch.
+*/
 template<class Rule>
 constexpr
-range_rule_t<Rule>
+implementation_defined::range_rule_t<Rule>
 range_rule(
     Rule const& next,
     std::size_t N = 0,
@@ -409,7 +471,7 @@ range_rule(
         is_rule<Rule>::value,
         "Rule requirements not met");
 
-    return range_rule_t<Rule>{
+    return implementation_defined::range_rule_t<Rule>{
         next, N, M};
 }
 #endif
@@ -500,6 +562,7 @@ range_rule(
     std::size_t M =
         std::size_t(-1)) noexcept;
 #else
+namespace implementation_defined {
 template<class R0, class R1>
 struct range_rule_t
 {
@@ -511,7 +574,6 @@ struct range_rule_t
         char const*& it,
         char const* end) const;
 
-private:
     constexpr
     range_rule_t(
         R0 const& first,
@@ -525,30 +587,86 @@ private:
     {
     }
 
-    template<
-        class R0_, class R1_>
-    friend
-    constexpr
-    auto
-    range_rule(
-        R0_ const& first,
-        R1_ const& next,
-        std::size_t N,
-        std::size_t M) noexcept ->
-#if 1
-            typename std::enable_if<
-                ! std::is_integral<R1_>::value,
-                range_rule_t<R0_, R1_>>::type;
-#else
-        range_rule_t<R0_, R1_>;
-#endif
-
+private:
     R0 const first_;
     R1 const next_;
     std::size_t N_;
     std::size_t M_;
 };
+} // implementation_defined
 
+/** Match a repeating number of elements
+
+    Two rules are used for match. The rule
+    `first` is used for matching the first
+    element, while the `next` rule is used
+    to match every subsequent element.
+    <br>
+    Normally when the rule returns an error,
+    the range ends and the input is rewound to
+    one past the last character that matched
+    successfully. However, if the rule returns
+    the special value @ref error::end_of_range, the
+    input is not rewound. This allows for rules
+    which consume input without producing
+    elements in the range. For example, to
+    relax the grammar for a comma-delimited
+    list by allowing extra commas in between
+    elements.
+
+    @par Value Type
+    @code
+    using value_type = range< typename Rule::value_type >;
+    @endcode
+
+    @par Example
+    Rules are used with the function @ref parse.
+    @code
+    // range    = [ token ] *( "," token )
+
+    system::result< range< core::string_view > > rv = parse( "whiskey,tango,foxtrot",
+        range_rule(
+            token_rule( alpha_chars ),          // first
+            tuple_rule(                      // next
+                squelch( delim_rule(',') ),
+                token_rule( alpha_chars ) ) ) );
+    @endcode
+
+    @par BNF
+    @code
+    range       = <1>*<1>first
+                / first <N-1>*<M-1>next
+    @endcode
+
+    @par Specification
+    @li <a href="https://datatracker.ietf.org/doc/html/rfc5234#section-3.6"
+        >3.6.  Variable Repetition (rfc5234)</a>
+
+    @param first The rule to use for matching
+    the first element. If this rule returns
+    an error, the range is empty.
+
+    @param next The rule to use for matching
+    each subsequent element. The range extends
+    until this rule returns an error.
+
+    @param N The minimum number of elements for
+    the range to be valid. If omitted, this
+    defaults to zero.
+
+    @param M The maximum number of elements for
+    the range to be valid. If omitted, this
+    defaults to unlimited.
+
+    @see
+        @ref alpha_chars,
+        @ref delim_rule,
+        @ref error::end_of_range,
+        @ref parse,
+        @ref range,
+        @ref tuple_rule,
+        @ref squelch.
+*/
 template<
     class Rule1, class Rule2>
 constexpr
@@ -562,7 +680,7 @@ range_rule(
 #if 1
     typename std::enable_if<
         ! std::is_integral<Rule2>::value,
-        range_rule_t<Rule1, Rule2>>::type
+        implementation_defined::range_rule_t<Rule1, Rule2>>::type
 #else
     range_rule_t<Rule1, Rule2>
 #endif
@@ -588,7 +706,7 @@ range_rule(
             typename Rule2::value_type>::value,
         "Rule requirements not met");
 
-    return range_rule_t<Rule1, Rule2>{
+    return implementation_defined::range_rule_t<Rule1, Rule2>{
         first, next, N, M};
 }
 #endif

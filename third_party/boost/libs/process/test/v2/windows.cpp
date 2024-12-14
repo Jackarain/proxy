@@ -9,10 +9,6 @@
 #define BOOST_ALL_NO_LIB 1
 #endif // !defined(BOOST_ALL_NO_LIB)
 
-#if defined(BOOST_FILESYSTEM_DYN_LINK)
-#undef BOOST_FILESYSTEM_DYN_LINK
-#endif
-
 // Test that header file is self-contained.
 #include <boost/process/v2/process.hpp>
 

@@ -240,8 +240,8 @@ void test_flat_map_move_only()
 {
   {
     optional<MoveOnly> om (makeMoveOnly(1)), om2 (makeMoveOnly(2));
-    verify_type<optional<int> >(boost::move(om).flat_map(get_val));
-    optional<int> oi = boost::move(om2).flat_map(get_val);
+    verify_type<optional<int> >(std::move(om).flat_map(get_val));
+    optional<int> oi = std::move(om2).flat_map(get_val);
     BOOST_TEST(bool(oi));
     BOOST_TEST_EQ(2, *oi);
   }

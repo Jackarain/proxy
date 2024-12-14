@@ -23,7 +23,7 @@ boostbook standalone
         <xsl:param>generate.section.toc.level=3
         <xsl:param>chunk.section.depth=2
         #<xsl:param>chunk.first.sections=1
-    
+
         <dependency>images
         <dependency>callouts
         <dependency>css

@@ -73,6 +73,26 @@ public:
 #ifdef BOOST_URL_DOCS
     using iterator = __see_below__;
 #else
+
+    /** A Bidirectional iterator to a path segment
+
+        Objects of this type allow iteration
+        through the segments in the path.
+        Any percent-escapes in returned strings
+        are decoded first.
+        The values returned are read-only;
+        changes to segments must be made
+        through the container instead, if the
+        container supports modification.
+
+        <br>
+
+        The strings produced when iterators are
+        dereferenced belong to the iterator and
+        become invalidated when that particular
+        iterator is incremented, decremented,
+        or destroyed.
+    */
     class iterator;
 #endif
 

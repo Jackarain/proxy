@@ -1,12 +1,3 @@
-#include <boost/config.hpp>
-
-#if defined(BOOST_MSVC)
-#pragma warning(disable: 4786)  // identifier truncated in debug info
-#pragma warning(disable: 4710)  // function not inlined
-#pragma warning(disable: 4711)  // function selected for automatic inline expansion
-#pragma warning(disable: 4514)  // unreferenced inline removed
-#endif
-
 //  weak_ptr_mt_test.cpp
 //
 //  Copyright (c) 2002 Peter Dimov and Multi Media Ltd.
@@ -19,14 +10,14 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/bind.hpp>
+#include <boost/config.hpp>
+
+#include <boost/smart_ptr/detail/lightweight_thread.hpp>
 
 #include <vector>
-
 #include <cstdio>
 #include <ctime>
 #include <cstdlib>
-
-#include <boost/detail/lightweight_thread.hpp>
 
 //
 

@@ -98,24 +98,24 @@ class run_pipeline_algo
             auto& processor = access::get_impl((*response_)[current_stage_index_]).get_processor();
             processor.reset(stage.stage_specific.enc, st.meta_mode);
             processor.sequence_number() = stage.seqnum;
-            read_response_algo_.execute = {&temp_diag_, &processor};
+            read_response_algo_.execute = {temp_diag_, &processor};
             break;
         }
         case pipeline_stage_kind::prepare_statement:
-            read_response_algo_.prepare_statement = {&temp_diag_, stage.seqnum};
+            read_response_algo_.prepare_statement = {temp_diag_, stage.seqnum};
             break;
         case pipeline_stage_kind::close_statement:
             // Close statement doesn't have a response
             read_response_algo_.nothing = nullptr;
             break;
         case pipeline_stage_kind::set_character_set:
-            read_response_algo_.set_character_set = {&temp_diag_, stage.stage_specific.charset, stage.seqnum};
+            read_response_algo_.set_character_set = {temp_diag_, stage.stage_specific.charset, stage.seqnum};
             break;
         case pipeline_stage_kind::reset_connection:
-            read_response_algo_.reset_connection = {&temp_diag_, stage.seqnum};
+            read_response_algo_.reset_connection = {temp_diag_, stage.seqnum};
             break;
-        case pipeline_stage_kind::ping: read_response_algo_.ping = {&temp_diag_, stage.seqnum}; break;
-        default: BOOST_ASSERT(false);
+        case pipeline_stage_kind::ping: read_response_algo_.ping = {temp_diag_, stage.seqnum}; break;
+        default: BOOST_ASSERT(false);  // LCOV_EXCL_LINE
         }
     }
 
@@ -177,13 +177,13 @@ class run_pipeline_algo
             return read_response_algo_.set_character_set.resume(st, ec);
         case pipeline_stage_kind::ping: return read_response_algo_.ping.resume(st, ec);
         case pipeline_stage_kind::close_statement: return next_action();  // has no response
-        default: BOOST_ASSERT(false); return next_action();
+        default: BOOST_ASSERT(false); return next_action();               // LCOV_EXCL_LINE
         }
     }
 
 public:
-    run_pipeline_algo(run_pipeline_algo_params params) noexcept
-        : diag_(params.diag),
+    run_pipeline_algo(diagnostics& diag, run_pipeline_algo_params params) noexcept
+        : diag_(&diag),
           request_buffer_(params.request_buffer),
           stages_(params.request_stages),
           response_(params.response)

@@ -28,7 +28,7 @@ file_mapping get_file_mapping()
 
 int main ()
 {
-   BOOST_TRY{
+   BOOST_INTERPROCESS_TRY{
       const std::size_t FileSize = 99999*2;
       {
          //Create file with given size
@@ -164,11 +164,11 @@ int main ()
          file_mapping ret(get_file_mapping());
       }
    }
-   BOOST_CATCH(std::exception &exc){
+   BOOST_INTERPROCESS_CATCH(std::exception &exc){
       file_mapping::remove(get_filename().c_str());
       std::cout << "Unhandled exception: " << exc.what() << std::endl;
-      BOOST_RETHROW
-   } BOOST_CATCH_END
+      BOOST_INTERPROCESS_RETHROW
+   } BOOST_INTERPROCESS_CATCH_END
    file_mapping::remove(get_filename().c_str());
    return 0;
 }

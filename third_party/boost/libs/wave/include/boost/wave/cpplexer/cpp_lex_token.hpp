@@ -23,7 +23,7 @@
 
 #include <boost/throw_exception.hpp>
 #include <boost/pool/singleton_pool.hpp>
-#include <boost/detail/atomic_count.hpp>
+#include <boost/smart_ptr/detail/atomic_count.hpp>
 #include <boost/optional.hpp>
 
 // this must occur after all of the includes and before any code appears

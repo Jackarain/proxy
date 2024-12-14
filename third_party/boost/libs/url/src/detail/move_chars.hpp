@@ -74,7 +74,6 @@ move_chars(
     std::size_t n,
     Args&... args) noexcept
 {
-    core::string_view buf(src, n);
     move_chars_impl(
         dest - src,
         core::string_view(src, n),

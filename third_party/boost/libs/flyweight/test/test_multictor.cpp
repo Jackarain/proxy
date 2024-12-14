@@ -1,6 +1,6 @@
 /* Boost.Flyweight test of flyweight forwarding and initializer_list ctors.
  *
- * Copyright 2006-2015 Joaquin M Lopez Munoz.
+ * Copyright 2006-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -11,8 +11,8 @@
 #include "test_multictor.hpp"
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
-#include <boost/detail/lightweight_test.hpp>
-#include <boost/detail/workaround.hpp>
+#include <boost/config/workaround.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include <boost/flyweight.hpp> 
 #include <boost/functional/hash.hpp>
 #include <boost/tuple/tuple.hpp>

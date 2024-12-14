@@ -18,22 +18,22 @@ A __CharSet__ is a unary predicate which is invocable with this equivalent signa
 bool( char ch ) const noexcept;
 ----
 
-The predicate returns `true` if `ch` is a member of the set, or `false` otherwise.
+The predicate returns cpp:true[] if cpp:ch[] is a member of the set, or cpp:false[] otherwise.
 
 == Related Identifiers
 
-`is_charset`,
-`find_if`,
-`find_if_not`.
+cpp:is_charset[],
+cpp:find_if[],
+cpp:find_if_not[].
 
 == Requirements
 
 In this table:
 
-* `T` is a type meeting the requirements of __CharSet__
-* `t` is a `const` value of type `T`
-* `c` is a value of type `char`
-* `first`, `last` are values of type `char const*`
+* cpp:T[] is a type meeting the requirements of __CharSet__
+* cpp:t[] is a cpp:const[] value of type cpp:T[]
+* cpp:c[] is a value of type cpp:char[]
+* cpp:first[], cpp:last[] are values of type cpp:char const*[]
 
 [cols="1,1,3"]
 |===
@@ -41,54 +41,54 @@ In this table:
 |Expression|Type|Semantics, Pre/Post-conditions
 
 // Row 1, Column 1
-|`t(c)`
+|cpp:t(c)[]
 // Row 1, Column 2
 |cpp:bool[]
 // Row 1, Column 3
-|This function returns `true` if `c` is a member of
-the character set, otherwise it returns `false`.
+|This function returns cpp:true[] if cpp:c[] is a member of
+the character set, otherwise it returns cpp:false[].
 
 // Row 2, Column 1
 |
-`t.find_if(first,last)`
+cpp:t.find_if(first,last)[]
 
 // Row 2, Column 2
-|`char const*`
+|cpp:char const*[]
 // Row 2, Column 3
-|This optional member function examines the valid range of characters in `// [first, last)` and returns
+|This optional member function examines the valid range of characters in cpp:// [first, last)[] and returns
 a pointer to the first occurrence of a character
-which is in the set, or returns `last` if no such
+which is in the set, or returns cpp:last[] if no such
 character.
 
-The implementation of `grammar::find_if`
+The implementation of cpp:grammar::find_if[]
 calls this function if provided by the character
 set, allowing optimized or otherwise performant
 implementations to be developed. If this member
 function is not provided, a default implementation
-is used which calls `operator()`.
+is used which calls cpp:operator()[].
 
 // Row 3, Column 1
-|`t.find_if_not(first,last)`
+|cpp:t.find_if_not(first,last)[]
 // Row 3, Column 2
-|`char const*`
+|cpp:char const*[]
 // Row 3, Column 3
 |This optional member function examines the valid
-range of characters in `[first, last)` and returns
+range of characters in cpp:[first, last)[] and returns
 a pointer to the first occurrence of a character
-which is not in the set, or returns `last` if no
+which is not in the set, or returns cpp:last[] if no
 such character.
 
-The implementation of `grammar::find_if_not`
+The implementation of cpp:grammar::find_if_not[]
 calls this function if provided by the character
 set, allowing optimized or otherwise performant
 implementations to be developed. If this member
 function is not provided, a default implementation
-is used which calls `operator()`.
+is used which calls cpp:operator()[].
 |===
 
 == Exemplar
 
-For best results, it is suggested that all constructors and member functions for character sets be marked `constexpr`.
+For best results, it is suggested that all constructors and member functions for character sets be marked cpp:constexpr[].
 
 // code_charset_1
 [source,cpp]
@@ -107,10 +107,10 @@ struct CharSet
 
 == Models
 
-* `grammar::alnum_chars`
-* `grammar::alpha_chars`
-* `grammar::digit_chars`
-* `grammar::hexdig_chars`
-* `grammar::lut_chars`
+* cpp:grammar::alnum_chars[]
+* cpp:grammar::alpha_chars[]
+* cpp:grammar::digit_chars[]
+* cpp:grammar::hexdig_chars[]
+* cpp:grammar::lut_chars[]
 
 

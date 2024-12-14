@@ -14,6 +14,7 @@
 #include <set>
 #include <map>
 #include <queue>
+#include <string>
 #include <boost/filesystem/path.hpp>
 
 namespace fs = boost::filesystem;

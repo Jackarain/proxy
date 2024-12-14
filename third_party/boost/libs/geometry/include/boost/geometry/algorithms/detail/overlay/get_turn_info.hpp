@@ -3,8 +3,9 @@
 // Copyright (c) 2007-2023 Barend Gehrels, Amsterdam, the Netherlands.
 // Copyright (c) 2017-2023 Adam Wulkiewicz, Lodz, Poland.
 
-// This file was modified by Oracle on 2015-2022.
-// Modifications copyright (c) 2015-2022 Oracle and/or its affiliates.
+// This file was modified by Oracle on 2015-2024.
+// Modifications copyright (c) 2015-2024 Oracle and/or its affiliates.
+// Contributed and/or modified by Vissarion Fysikopoulos, on behalf of Oracle
 // Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 
 // Use, modification and distribution is subject to the Boost Software License,
@@ -76,16 +77,9 @@ struct policy_verify_all
     static bool const use_handle_imperfect_touch = true;
 };
 
-
-#if defined(BOOST_GEOMETRY_USE_RESCALING)
-using verify_policy_aa = policy_verify_nothing;
-#else
 using verify_policy_aa = policy_verify_all;
-#endif
-
 using verify_policy_ll = policy_verify_nothing;
 using verify_policy_la = policy_verify_nothing;
-
 
 struct base_turn_handler
 {
@@ -138,8 +132,8 @@ struct base_turn_handler
         BOOST_GEOMETRY_ASSERT(index < info.count);
 
         geometry::convert(info.intersections[index], ti.point);
-        ti.operations[0].fraction = info.fractions[index].robust_ra;
-        ti.operations[1].fraction = info.fractions[index].robust_rb;
+        ti.operations[0].fraction = info.fractions[index].ra;
+        ti.operations[1].fraction = info.fractions[index].rb;
     }
 
     template <typename TurnInfo, typename IntersectionInfo, typename DirInfo>
@@ -170,8 +164,8 @@ struct base_turn_handler
             }
             else
             {
-                ti.operations[i].fraction = i == 0 ? info.fractions[index].robust_ra
-                                                   : info.fractions[index].robust_rb;
+                ti.operations[i].fraction = i == 0 ? info.fractions[index].ra
+                                                   : info.fractions[index].rb;
             }
         }
     }
@@ -179,7 +173,7 @@ struct base_turn_handler
     template <typename IntersectionInfo>
     static inline unsigned int non_opposite_to_index(IntersectionInfo const& info)
     {
-        return info.fractions[0].robust_rb < info.fractions[1].robust_rb
+        return info.fractions[0].rb < info.fractions[1].rb
             ? 1 : 0;
     }
 
@@ -349,10 +343,14 @@ struct touch_interior : public base_turn_handler
     template
     <
         typename IntersectionInfo,
-        typename UniqueSubRange
+        typename SideCalculator,
+        typename UniqueSubRange1,
+        typename UniqueSubRange2
     >
     static bool handle_as_touch(IntersectionInfo const& info,
-                                UniqueSubRange const& non_touching_range)
+                                SideCalculator const& side,
+                                UniqueSubRange1 const& non_touching_range,
+                                UniqueSubRange2 const& other_range)
     {
         if BOOST_GEOMETRY_CONSTEXPR (! VerifyPolicy::use_handle_as_touch)
         {
@@ -360,6 +358,20 @@ struct touch_interior : public base_turn_handler
         }
         else // else prevents unreachable code warning
         {
+            bool const has_k = ! non_touching_range.is_last_segment()
+                && ! other_range.is_last_segment();
+            if (has_k
+                && (same(side.pj_wrt_q1(), side.qj_wrt_p2())
+                 || same(side.pj_wrt_q2(), side.qj_wrt_p1())))
+            {
+                // At a touch, the touching points (pj and qj) should be collinear
+                // with both other segments.
+                // If that is not the case (both left or both right), it should not be handled as a touch,
+                // (though the intersection point might be close to the end),
+                // because segments might cross each other or touch the other in the middle.
+                return false;
+            }
+
             //
             //
             //                         ^  Q(i)                ^ P(i)
@@ -575,7 +587,7 @@ struct touch : public base_turn_handler
             // ||
             // |^----
             // >----->P
-            // *            * they touch here (P/Q are (nearly) on top)
+            // *            * they touch here (P/Q are (nearly) on top of each other)
             //
             // Q continues from where P comes.
             // P continues from where Q comes
@@ -591,6 +603,14 @@ struct touch : public base_turn_handler
             // |  ^------   set Q to Union
             // >----->P     qj is LEFT of P1 and pi is LEFT of Q2
             //              (the other way round is also possible)
+
+            // There are also cases like this:
+            //      P
+            //      ^
+            //      ||
+            //      ||
+            // P----^-----<Q
+            // This code is not for these cases because of the condition opposite(side.pi_wrt_q1(), side.qk_wrt_p2())
 
             auto has_distance = [&](auto const& r1, auto const& r2) -> bool
             {
@@ -680,6 +700,7 @@ struct touch : public base_turn_handler
             {
                 if (side_qk_p1 == 0 && side_pk_q1 == 0
                     && has_pk && has_qk
+                    && opposite(side.pi_wrt_q1(), side.qk_wrt_p2())
                     && handle_imperfect_touch(range_p, range_q, side_pk_q2, umbrella_strategy, ti))
                 {
                     // If q continues collinearly (opposite) with p, it should be blocked
@@ -1394,7 +1415,6 @@ struct get_turn_info
         typename UniqueSubRange2,
         typename TurnInfo,
         typename UmbrellaStrategy,
-        typename RobustPolicy,
         typename OutputIterator
     >
     static inline OutputIterator apply(
@@ -1402,18 +1422,16 @@ struct get_turn_info
                 UniqueSubRange2 const& range_q,
                 TurnInfo const& tp_model,
                 UmbrellaStrategy const& umbrella_strategy,
-                RobustPolicy const& robust_policy,
                 OutputIterator out)
     {
         typedef intersection_info
             <
                 UniqueSubRange1, UniqueSubRange2,
                 typename TurnInfo::point_type,
-                UmbrellaStrategy,
-                RobustPolicy
+                UmbrellaStrategy
             > inters_info;
 
-        inters_info inters(range_p, range_q, umbrella_strategy, robust_policy);
+        inters_info inters(range_p, range_q, umbrella_strategy);
 
         char const method = inters.d_info().how;
 
@@ -1461,7 +1479,7 @@ struct get_turn_info
             if ( inters.d_info().arrival[1] == 1 )
             {
                 // Q arrives
-                if (handler::handle_as_touch(inters.i_info(), range_p))
+                if (handler::handle_as_touch(inters.i_info(), inters.sides(), range_p, range_q))
                 {
                     handle_as_touch = true;
                 }
@@ -1475,7 +1493,7 @@ struct get_turn_info
             else
             {
                 // P arrives, swap p/q
-                if (handler::handle_as_touch(inters.i_info(), range_q))
+                if (handler::handle_as_touch(inters.i_info(), inters.swapped_sides(), range_q, range_p))
                 {
                     handle_as_touch = true;
                 }

@@ -34,9 +34,17 @@ set(__ignore__ ${CMAKE_C_COMPILER})
 option(BOOST_URL_BUILD_TESTS "Build boost::url tests even if BUILD_TESTING is OFF" OFF)
 option(BOOST_URL_BUILD_FUZZERS "Build boost::url fuzzers" OFF)
 option(BOOST_URL_BUILD_EXAMPLES "Build boost::url examples" ${BOOST_URL_IS_ROOT})
+option(BOOST_URL_MRDOCS_BUILD "Build the target for MrDocs: see mrdocs.yml" OFF)
 option(BOOST_URL_DISABLE_THREADS "Disable threads" OFF)
 option(BOOST_URL_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
-set(BOOST_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.." CACHE STRING "Boost source dir to use when running CMake from this directory")
+
+# Check if environment variable BOOST_SRC_DIR is set
+if (NOT DEFINED BOOST_SRC_DIR AND DEFINED ENV{BOOST_SRC_DIR})
+    set(DEFAULT_BOOST_SRC_DIR "$ENV{BOOST_SRC_DIR}")
+else ()
+    set(DEFAULT_BOOST_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../..")
+endif ()
+set(BOOST_SRC_DIR ${DEFAULT_BOOST_SRC_DIR} CACHE STRING "Boost source dir to use when running CMake from this directory")
 
 #-------------------------------------------------
 #
@@ -63,11 +71,13 @@ foreach (BOOST_URL_DEPENDENCY ${BOOST_URL_DEPENDENCIES})
     endif ()
 endforeach ()
 # Conditional dependencies
-if (BUILD_TESTING OR BOOST_URL_BUILD_TESTS)
-    set(BOOST_URL_UNIT_TEST_LIBRARIES container filesystem unordered)
-endif()
-if (BOOST_URL_BUILD_EXAMPLES)
-    set(BOOST_URL_EXAMPLE_LIBRARIES json regex beast)
+if (NOT BOOST_URL_MRDOCS_BUILD)
+    if (BUILD_TESTING OR BOOST_URL_BUILD_TESTS)
+        set(BOOST_URL_UNIT_TEST_LIBRARIES container filesystem unordered)
+    endif()
+    if (BOOST_URL_BUILD_EXAMPLES)
+        set(BOOST_URL_EXAMPLE_LIBRARIES json regex beast)
+    endif()
 endif()
 # Complete dependency list
 set(BOOST_INCLUDE_LIBRARIES ${BOOST_URL_INCLUDE_LIBRARIES} ${BOOST_URL_UNIT_TEST_LIBRARIES} ${BOOST_URL_EXAMPLE_LIBRARIES})
@@ -139,11 +149,22 @@ function(boost_url_setup_properties target)
     target_link_libraries(${target} PUBLIC ${BOOST_URL_DEPENDENCIES})
     target_compile_definitions(${target} PUBLIC $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,BOOST_URL_DYN_LINK=1,BOOST_URL_STATIC_LINK=1>)
     target_compile_definitions(${target} PRIVATE BOOST_URL_SOURCE)
-    target_compile_options(${target} PUBLIC $<$<CXX_COMPILER_ID:MSVC>:/EHsc>)
+    # issue #868
+    # target_compile_options(${target} PUBLIC $<$<CXX_COMPILER_ID:MSVC>:/EHsc>)
 endfunction()
+
+if (BOOST_URL_MRDOCS_BUILD)
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/mrdocs.cpp" "#include <boost/url.hpp>\n")
+    add_library(boost_url_mrdocs "${CMAKE_CURRENT_BINARY_DIR}/mrdocs.cpp")
+    boost_url_setup_properties(boost_url_mrdocs)
+    target_compile_definitions(boost_url_mrdocs PUBLIC BOOST_URL_MRDOCS BOOST_URL_NO_SSE2)
+    return()
+endif()
+
 add_library(boost_url ${BOOST_URL_HEADERS} ${BOOST_URL_SOURCES})
 add_library(Boost::url ALIAS boost_url)
 boost_url_setup_properties(boost_url)
+
 
 #-------------------------------------------------
 #
@@ -165,3 +186,5 @@ endif ()
 if (BOOST_URL_BUILD_EXAMPLES)
     add_subdirectory(example)
 endif ()
+
+

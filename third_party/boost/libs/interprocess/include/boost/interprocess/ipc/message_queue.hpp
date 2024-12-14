@@ -33,7 +33,6 @@
 #include <boost/interprocess/creation_tags.hpp>
 #include <boost/interprocess/exceptions.hpp>
 #include <boost/interprocess/permissions.hpp>
-#include <boost/core/no_exceptions_support.hpp>
 #include <boost/interprocess/detail/type_traits.hpp>
 #include <boost/intrusive/pointer_traits.hpp>
 #include <boost/move/detail/type_traits.hpp> //make_unsigned, alignment_of
@@ -685,12 +684,12 @@ class msg_queue_initialization_func_t
       if(created){
          mptr     = reinterpret_cast<char*>(address);
          //Construct the message queue header at the beginning
-         BOOST_TRY{
+         BOOST_INTERPROCESS_TRY{
             new (mptr) mq_hdr_t<VoidPointer>(m_maxmsg, m_maxmsgsize);
          }
-         BOOST_CATCH(...){
+         BOOST_INTERPROCESS_CATCH(...){
             return false;
-         } BOOST_CATCH_END
+         } BOOST_INTERPROCESS_CATCH_END
       }
       return true;
    }
@@ -863,7 +862,7 @@ inline bool message_queue_t<VoidPointer>::do_send(
    {
       //If the queue is full execute blocking logic
       if (p_hdr->is_full()) {
-         BOOST_TRY{
+         BOOST_INTERPROCESS_TRY{
             #ifdef BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX
             ++p_hdr->m_blocked_senders;
             #endif
@@ -903,12 +902,12 @@ inline bool message_queue_t<VoidPointer>::do_send(
             --p_hdr->m_blocked_senders;
             #endif
          }
-         BOOST_CATCH(...){
+         BOOST_INTERPROCESS_CATCH(...){
             #ifdef BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX
             --p_hdr->m_blocked_senders;
             #endif
-            BOOST_RETHROW;
-         } BOOST_CATCH_END
+            BOOST_INTERPROCESS_RETHROW;
+         } BOOST_INTERPROCESS_CATCH_END
       }
 
       #if defined(BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX)
@@ -991,7 +990,7 @@ inline bool
    {
       //If there are no messages execute blocking logic
       if (p_hdr->is_empty()) {
-         BOOST_TRY{
+         BOOST_INTERPROCESS_TRY{
             #if defined(BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX)
             ++p_hdr->m_blocked_receivers;
             #endif
@@ -1033,12 +1032,12 @@ inline bool
             --p_hdr->m_blocked_receivers;
             #endif
          }
-         BOOST_CATCH(...){
+         BOOST_INTERPROCESS_CATCH(...){
             #if defined(BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX)
             --p_hdr->m_blocked_receivers;
             #endif
-            BOOST_RETHROW;
-         } BOOST_CATCH_END
+            BOOST_INTERPROCESS_RETHROW;
+         } BOOST_INTERPROCESS_CATCH_END
       }
 
       #ifdef BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX

@@ -43,7 +43,8 @@ target_link_libraries(boost_charconv
     Boost::core
 )
 
-if(NOT BOOST_CHARCONV_QUADMATH_FOUND)
+# Check to see if the user specified BOOST_CHARCONV_NO_QUADMATH even with quadmath support being available
+if(NOT BOOST_CHARCONV_QUADMATH_FOUND OR BOOST_CHARCONV_NO_QUADMATH)
   message(STATUS "Boost.Charconv: quadmath support OFF")
   target_compile_definitions(boost_charconv PUBLIC BOOST_CHARCONV_NO_QUADMATH)
 else()

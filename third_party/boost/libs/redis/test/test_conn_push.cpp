@@ -9,7 +9,7 @@
 #include <boost/system/errc.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/co_spawn.hpp>
-#include <boost/asio/experimental/as_tuple.hpp>
+#include <boost/asio/as_tuple.hpp>
 #define BOOST_TEST_MODULE conn-push
 #include <boost/test/included/unit_test.hpp>
 #include <iostream>
@@ -21,7 +21,7 @@ namespace redis = boost::redis;
 using boost::redis::operation;
 using connection = boost::redis::connection;
 using error_code = boost::system::error_code;
-using net::experimental::as_tuple;
+using net::as_tuple;
 using boost::redis::request;
 using boost::redis::response;
 using boost::redis::ignore;
@@ -218,7 +218,7 @@ BOOST_AUTO_TEST_CASE(test_push_adapter)
 
    auto cfg = make_test_config();
    conn->async_run(cfg, {}, [](auto ec){
-      BOOST_CHECK_EQUAL(ec, boost::redis::error::incompatible_size);
+      BOOST_CHECK_EQUAL(ec, redis::error::incompatible_size);
    });
 
    ioc.run();

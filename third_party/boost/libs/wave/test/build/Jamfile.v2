@@ -8,7 +8,11 @@
 # Software License, Version 1.0. (See accompanying file 
 # LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+require-b2 5.0.1 ;
+import-search /boost/config/checks ;
 import config : requires ;
+import project ;
+import path ;
 
 #
 # These are the sources to compile for the testwave application
@@ -22,8 +26,22 @@ SOURCES_DYNAMIC = testwave_dll testwave_app_dll
 SOURCES = $(SOURCE_STATIC) $(SOURCES_DYNAMIC)
     ;
     
-path-constant TESTWAVE_DIR : $(BOOST_ROOT)/libs/wave/test/testwave/testfiles 
+path-constant TESTWAVE_DIR : ../testwave/testfiles 
     ;
+
+path-constant WAVE_INCLUDE_DIR : ../../include
+    ;
+
+path-constant SAMPLES_DIR : ../../samples
+    ;
+
+#
+# We need the Boost Config project for the boost/version.hpp header file.
+#
+local boost-config-attributes
+    = [ project.attributes [ project.is-registered-id /boost/config ] ] ;
+local BOOST_CONFIG_INCLUDE_DIR
+    = [ path.join [ $(boost-config-attributes).get location ] include ] ;
 
 #
 # This are the arguments for the testwave executable
@@ -32,7 +50,8 @@ TESTWAVE_ARGUMENTS =
         -d4                              # use -d4 for verbose results 
         --hooks=1                        # test hooks as well
         -S$(TESTWAVE_DIR) 
-        -S$(BOOST_ROOT) -I$(BOOST_ROOT)
+        -S$(WAVE_INCLUDE_DIR) -I$(WAVE_INCLUDE_DIR)
+        -S$(BOOST_CONFIG_INCLUDE_DIR) -I$(BOOST_CONFIG_INCLUDE_DIR)
     ;
 
 #
@@ -41,7 +60,7 @@ TESTWAVE_ARGUMENTS =
 TESTWAVE_FILES = test.cfg
     ;
 
-project wave/test
+project
     : requirements
       [ requires
         cxx11_constexpr
@@ -51,6 +70,7 @@ project wave/test
         cxx11_hdr_mutex
         cxx11_hdr_regex
       ]
+      <include>$(SAMPLES_DIR)
     ;
 
 for local source in $(SOURCES)
@@ -58,6 +78,10 @@ for local source in $(SOURCES)
     local requirements ;
     requirements += <toolset-msvc:version>7.1:<rtti>off ; # workaround for compiler bug
     requirements += <toolset-msvc:version>7.1_stlport4:<rtti>off ; 
+    requirements +=
+        <source>/boost/any//boost_any
+        <source>/boost/program_options//boost_program_options
+        ;
     obj $(source) : ../testwave/$(source).cpp : $(requirements) ;
 }
 
@@ -133,6 +157,7 @@ test-suite wave
                 /boost/filesystem//boost_filesystem
                 /boost/thread//boost_thread
                 /boost/system//boost_system
+                /boost/xpressive//boost_xpressive
             :
             # arguments
             :
@@ -211,6 +236,7 @@ test-suite wave
                 /boost/filesystem//boost_filesystem
                 /boost/thread//boost_thread
                 /boost/system//boost_system
+                /boost/xpressive//boost_xpressive
             :
             # arguments
             :

@@ -57,20 +57,23 @@ jobs:
           - { compiler: gcc-9,     cxxstd: '11,14,17',    os: 'ubuntu-22.04', install: 'g++-9' }
           - { compiler: gcc-10,    cxxstd: '11,14,17,20', os: 'ubuntu-22.04', install: 'g++-10' }
           - { compiler: gcc-11,    cxxstd: '11,14,17,20', os: 'ubuntu-22.04', install: 'g++-11' }
-          - { name: "gcc-12 w/ sanitizers (11)", sanitize: yes,
-              compiler: gcc-12,    cxxstd: '11',          os: 'ubuntu-22.04', ccache_key: "san1" }
-          - { name: "gcc-12 w/ sanitizers (14)", sanitize: yes,
-              compiler: gcc-12,    cxxstd: '14',          os: 'ubuntu-22.04', ccache_key: "san1" }
-          - { name: "gcc-12 w/ sanitizers (17)", sanitize: yes,
-              compiler: gcc-12,    cxxstd: '17',          os: 'ubuntu-22.04', ccache_key: "san2" }
-          - { name: "gcc-12 w/ sanitizers (20)", sanitize: yes,
-              compiler: gcc-12,    cxxstd: '20',          os: 'ubuntu-22.04', ccache_key: "san2" }
-          - { name: "gcc-12 w/ sanitizers (2b)", sanitize: yes,
-              compiler: gcc-12,    cxxstd: '2b',          os: 'ubuntu-22.04', ccache_key: "san2" }
+          - { compiler: gcc-12,    cxxstd: '11,14,17,20', os: 'ubuntu-22.04', install: 'g++-12' }
+          - { compiler: gcc-13,    cxxstd: '11,14,17,20', os: 'ubuntu-24.04', install: 'g++-13' }
+          - { compiler: gcc-14,    cxxstd: '11,14,17,20', os: 'ubuntu-24.04', install: 'g++-14' }
+          - { name: "gcc-14 w/ sanitizers (11)", sanitize: yes,
+              compiler: gcc-14,    cxxstd: '11',          os: 'ubuntu-24.04', install: 'g++-14', ccache_key: "san1" }
+          - { name: "gcc-14 w/ sanitizers (14)", sanitize: yes,
+              compiler: gcc-14,    cxxstd: '14',          os: 'ubuntu-24.04', install: 'g++-14', ccache_key: "san1" }
+          - { name: "gcc-14 w/ sanitizers (17)", sanitize: yes,
+              compiler: gcc-14,    cxxstd: '17',          os: 'ubuntu-24.04', install: 'g++-14', ccache_key: "san2" }
+          - { name: "gcc-14 w/ sanitizers (20)", sanitize: yes,
+              compiler: gcc-14,    cxxstd: '20',          os: 'ubuntu-24.04', install: 'g++-14', ccache_key: "san2" }
+          - { name: "gcc-14 w/ sanitizers (2b)", sanitize: yes,
+              compiler: gcc-14,    cxxstd: '2b',          os: 'ubuntu-24.04', install: 'g++-14', ccache_key: "san2" }
           - { name: Collect coverage, coverage: yes,
-              compiler: gcc-12,    cxxstd: '20',          os: 'ubuntu-22.04', install: 'g++-12-multilib', address-model: '32,64', ccache_key: "cov" }
+              compiler: gcc-14,    cxxstd: '20',          os: 'ubuntu-24.04', install: 'g++-14 g++-14-multilib', address-model: '32,64', ccache_key: "cov" }
 
-          - { name: "cfoa tsan (gcc-12)", cxxstd: '11,14,17,20,2b', os: 'ubuntu-22.04', compiler: gcc-12,
+          - { name: "cfoa tsan (gcc-14)", cxxstd: '11,14,17,20,2b', os: 'ubuntu-24.04', install: 'g++-14', compiler: gcc-14,
               targets: 'libs/unordered/test//cfoa_tests', thread-sanitize: yes, ccache_key: "tsan" }
 
           # Linux, clang, libc++
@@ -88,23 +91,30 @@ jobs:
               compiler: clang-12,   cxxstd: '2b',          os: 'ubuntu-20.04', stdlib: libc++, install: 'clang-12 libc++-12-dev libc++abi-12-dev', ccache_key: "san2" }
           - { compiler: 'clang-13', cxxstd: '11,14',       os: 'ubuntu-22.04', stdlib: libc++, install: 'clang-13 libc++-13-dev libc++abi-13-dev' }
           - { compiler: 'clang-13', cxxstd: '17,20,2b',    os: 'ubuntu-22.04', stdlib: libc++, install: 'clang-13 libc++-13-dev libc++abi-13-dev' }
+          - { compiler: 'clang-14', cxxstd: '11,14',       os: 'ubuntu-22.04', stdlib: libc++, install: 'clang-14 libc++-14-dev libc++abi-14-dev' }
+          - { compiler: 'clang-14', cxxstd: '17,20,2b',    os: 'ubuntu-22.04', stdlib: libc++, install: 'clang-14 libc++-14-dev libc++abi-14-dev' }
+          - { compiler: 'clang-15', cxxstd: '11,14',       os: 'ubuntu-22.04', stdlib: libc++, install: 'clang-15 libc++-15-dev libc++abi-15-dev' }
+          - { compiler: 'clang-15', cxxstd: '17,20,2b',    os: 'ubuntu-22.04', stdlib: libc++, install: 'clang-15 libc++-15-dev libc++abi-15-dev' }
+          - { compiler: 'clang-16', cxxstd: '11,14',       os: 'ubuntu-24.04', stdlib: libc++, install: 'clang-16 libc++-16-dev libc++abi-16-dev' }
+          - { compiler: 'clang-16', cxxstd: '17,20,2b',    os: 'ubuntu-24.04', stdlib: libc++, install: 'clang-16 libc++-16-dev libc++abi-16-dev' }
+          - { compiler: 'clang-17', cxxstd: '11,14',       os: 'ubuntu-24.04', stdlib: libc++, install: 'clang-17 libc++-17-dev libc++abi-17-dev' }
+          - { compiler: 'clang-17', cxxstd: '17,20,2b',    os: 'ubuntu-24.04', stdlib: libc++, install: 'clang-17 libc++-17-dev libc++abi-17-dev' }
+          - { compiler: 'clang-18', cxxstd: '11,14',       os: 'ubuntu-24.04', stdlib: libc++, install: 'clang-18 libc++-18-dev libc++abi-18-dev' }
+          - { compiler: 'clang-18', cxxstd: '17,20,2b',    os: 'ubuntu-24.04', stdlib: libc++, install: 'clang-18 libc++-18-dev libc++abi-18-dev' }
 
           # not using libc++ because of https://github.com/llvm/llvm-project/issues/52771
-          - { name: "clang-14 w/ sanitizers (11,14)", sanitize: yes,
-              compiler: clang-14,  cxxstd: '11,14', os: 'ubuntu-22.04', ccache_key: "san1" }
-          - { name: "clang-14 w/ sanitizers (17)", sanitize: yes,
-              compiler: clang-14,  cxxstd: '17',    os: 'ubuntu-22.04', ccache_key: "san2" }
-          - { name: "clang-14 w/ sanitizers (20)", sanitize: yes,
-              compiler: clang-14,  cxxstd: '20',   container: 'ubuntu:22.04',  os: 'ubuntu-latest', ccache_key: "san2" }
-          - { name: "clang-14 w/ sanitizers (2b)", sanitize: yes,
-              compiler: clang-14,  cxxstd: '2b',   container: 'ubuntu:22.04',  os: 'ubuntu-latest', ccache_key: "san2" }
+          - { name: "clang-18 w/ sanitizers (11,14)", sanitize: yes,
+              compiler: clang-18,  cxxstd: '11,14', os: 'ubuntu-24.04', ccache_key: "san1" }
+          - { name: "clang-18 w/ sanitizers (17)", sanitize: yes,
+              compiler: clang-18,  cxxstd: '17',    os: 'ubuntu-24.04', ccache_key: "san2" }
+          - { name: "clang-18 w/ sanitizers (20)", sanitize: yes,
+              compiler: clang-18,  cxxstd: '20',   container: 'ubuntu:24.04',  os: 'ubuntu-latest', ccache_key: "san2" }
+          - { name: "clang-18 w/ sanitizers (2b)", sanitize: yes,
+              compiler: clang-18,  cxxstd: '2b',   container: 'ubuntu:24.04',  os: 'ubuntu-latest', ccache_key: "san2" }
 
-          - { name: "cfoa tsan (clang-14)", cxxstd: '11,14,17,20,2b', os: 'ubuntu-22.04', compiler: clang-14,
+          - { name: "cfoa tsan (clang-18)", cxxstd: '11,14,17,20,2b', os: 'ubuntu-24.04', compiler: clang-18,
               targets: 'libs/unordered/test//cfoa_tests', thread-sanitize: yes,
-              stdlib: libc++, install: 'clang-14 libc++-14-dev libc++abi-14-dev', ccache_key: "tsan" }
-
-          - { compiler: 'clang-15', cxxstd: '11,14',    os: 'ubuntu-22.04', stdlib: libc++, install: 'clang-15 libc++-15-dev libc++abi-15-dev' }
-          - { compiler: 'clang-15', cxxstd: '17,20,2b', os: 'ubuntu-22.04', stdlib: libc++, install: 'clang-15 libc++-15-dev libc++abi-15-dev' }
+              stdlib: libc++, install: 'clang-18 libc++-18-dev libc++abi-18-dev', ccache_key: "tsan" }
 
           # OSX, clang
           - { compiler: clang, cxxstd: '11,14,17,2a',    os: 'macos-12', sanitize: yes, ccache_key: "san1" }
@@ -239,7 +249,12 @@ jobs:
 
       - name: Run tests
         if: '!matrix.coverity'
-        run: B2_TARGETS=${{matrix.targets}} ci/build.sh
+        run: |
+            if [[ ${B2_TSAN} == "yes" ]] && [[ $(uname) == "Linux" ]]; then
+                echo 0 | sudo tee /proc/sys/kernel/randomize_va_space
+                sudo sysctl vm.mmap_rnd_bits=28
+            fi
+            B2_TARGETS=${{matrix.targets}} ci/build.sh
 
       - name: Upload coverage
         if: matrix.coverage
@@ -326,8 +341,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { sys: MINGW32, compiler: gcc, cxxstd: '11,17,20' }
-          - { sys: MINGW64, compiler: gcc, cxxstd: '11,17,20' }
+          - { sys: MINGW32, compiler: gcc, cxxstd: '11,17,20', variant: 'release' }
+          - { sys: MINGW64, compiler: gcc, cxxstd: '11,17,20', variant: 'debug,release' }
 
     needs: [runner-selection]
     runs-on: ${{ fromJSON(needs.runner-selection.outputs.labelmatrix)['windows-latest'] }}
@@ -361,9 +376,12 @@ jobs:
           B2_CXXSTD: ${{matrix.cxxstd}}
           B2_SANITIZE: ${{matrix.sanitize}}
           B2_STDLIB: ${{matrix.stdlib}}
+          B2_VARIANT: ${{matrix.variant}}
         run: ci/github/install.sh
 
       - name: Run tests
+        env:
+          B2_VARIANT: ${{matrix.variant}}
         run: ci/build.sh
 
       # Run also the CMake tests to avoid having to setup another matrix for CMake on MSYS

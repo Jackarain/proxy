@@ -18,6 +18,11 @@ TODO (known issues):
 
 CHANGELOG
 
+Boost V1.87:
+  - Fixed #220: Seg fault under C++20 and empty stringify parameter (thanks jwnhy)
+  - Fixed #222: No line directive if first line of included file is blank (thanks Nick Nobles)
+  - Misc build fixes: CI server update, deprecated headers, modular build
+
 Boost V1.86:
   - Fixed #197: Improper signed overflow handling (UB and a missing division check)
   - Replaced usage of vsprintf() with the more secure vsnprintf()

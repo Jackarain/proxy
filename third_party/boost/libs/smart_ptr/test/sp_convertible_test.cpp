@@ -61,8 +61,6 @@ class D: public B
 
 int main()
 {
-#if !defined( BOOST_SP_NO_SP_CONVERTIBLE )
-
     using boost::detail::sp_convertible;
 
     TEST_CV_TRUE( X, X )
@@ -86,8 +84,6 @@ int main()
 
     TEST_CV_TRUE( X[3], void )
     TEST_CV_FALSE( void, X[3] )
-
-#endif
 
     return boost::report_errors();
 }

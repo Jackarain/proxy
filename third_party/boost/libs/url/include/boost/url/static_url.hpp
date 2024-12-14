@@ -406,6 +406,8 @@ public:
     static_url& set_query(core::string_view s) { url_base::set_query(s); return *this; }
     /// @copydoc url_base::set_encoded_query
     static_url& set_encoded_query(pct_string_view s) { url_base::set_encoded_query(s); return *this; }
+    /// @copydoc url_base::set_params
+    static_url& set_params(std::initializer_list<param_view> ps, encoding_opts opts = {}) { url_base::set_params(ps, opts); return *this; }
     /// @copydoc url_base::remove_query
     static_url& remove_query() noexcept { url_base::remove_query(); return *this; }
 

@@ -37,6 +37,7 @@ int test_simple_seq_fit()
    //Create shared memory
    shared_memory_object::remove(shMemName);
    my_managed_shared_memory segment(create_only, shMemName, Memsize);
+   shared_memory_object::remove(shMemName);
 
    //Now take the segment manager and launch memory test
    if(!test::test_all_allocation(*segment.get_segment_manager())){
@@ -58,7 +59,7 @@ int test_rbtree_best_fit()
    //Create shared memory
    shared_memory_object::remove(shMemName);
    my_managed_shared_memory segment(create_only, shMemName, Memsize);
-
+   shared_memory_object::remove(shMemName);
    //Now take the segment manager and launch memory test
    if(!test::test_all_allocation(*segment.get_segment_manager())){
       return 1;
@@ -82,7 +83,9 @@ int main ()
    if(test_rbtree_best_fit<4*void_ptr_align>()){
       return 1;
    }
+   if (test_rbtree_best_fit<8*void_ptr_align>()) {
+      return 1;
+   }
 
-   shared_memory_object::remove(shMemName);
    return 0;
 }

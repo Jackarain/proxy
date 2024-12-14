@@ -13,6 +13,7 @@
 
 #include <boost/json/serialize.hpp>
 #include <boost/json/value_from.hpp>
+#include <boost/json/value_to.hpp>
 #include <boost/describe.hpp>
 
 #include <climits>
@@ -72,7 +73,6 @@ private:
     BOOST_DESCRIBE_CLASS(Z, (X), (), (), (d))
 };
 
-
 BOOST_DEFINE_ENUM_CLASS(E, x, y, z)
 
 namespace boost {
@@ -87,14 +87,16 @@ class parse_into_test
 {
 public:
 
-    template<class T> void testParseInto( T const& t )
+    template<class T>
+    void testParseIntoValue( value const& jv )
     {
 #if defined(__GNUC__) && __GNUC__ < 5
 # pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #endif
-        T t1( t );
-        std::string json = serialize( value_from( t1 ) );
+        T t1 = value_to<T>(jv);
+        (void)t1; // older GCC thinks t1 can be unused
+        std::string json = serialize(jv);
 
         T t2{};
         system::error_code jec;
@@ -150,6 +152,12 @@ public:
     }
 
     template<class T>
+    void testParseInto( T const& t )
+    {
+        testParseIntoValue<T>( value_from(t) );
+    }
+
+    template<class T>
     void
     testParseIntoErrors( error e, value const& sample )
     {
@@ -158,9 +166,17 @@ public:
 # pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #endif
         system::error_code ec;
-        T t{};
+        T t1{};
         std::string json = serialize(sample);
-        parser_for<T> p( parse_options{}, &t );
+
+        parse_into<T>(t1, json, ec);
+        BOOST_TEST( ec.failed() );
+        BOOST_TEST( ec.has_location() );
+        BOOST_TEST( ec == e );
+
+        T t2{};
+        ec = {};
+        parser_for<T> p( parse_options{}, &t2 );
         for( auto& c: json )
         {
             std::size_t const n = p.write_some( true, &c, 1, ec );
@@ -287,6 +303,8 @@ public:
             error::not_array, {1, 2, 3} );
         testParseIntoErrors< std::array<int, 4> >(
             error::size_mismatch, {1, 2, 3} );
+        testParseIntoErrors< std::array<int, 4> >(
+            error::size_mismatch, {1, 2, 3, 4, 5, 6, 7, 8} );
 
         testParseInto< std::vector<std::array<int, 4>> >( {arr,arr,arr} );
 
@@ -354,6 +372,8 @@ public:
             error::size_mismatch, {1, 2} );
         testParseIntoErrors< std::tuple<std::vector<int>>  >(
             error::size_mismatch, {{1,2}, {3,4}} );
+        testParseIntoErrors<std::map<std::string, std::tuple<int, int>>>(
+            error::size_mismatch, { {"tup", array()} });
     }
 
     void testStruct()
@@ -369,10 +389,18 @@ public:
         testParseInto<Z>( { {1, 3.14f, "hello"}, true } );
 
         testParseIntoErrors<X>( error::not_object, 1 );
-        testParseIntoErrors<X>(
-            error::unknown_name,
-            { {"a", 1}, {"b", 3.14f}, {"c", "hello"}, {"d", 0} } );
         testParseIntoErrors<X>( error::size_mismatch, { {"a", 1} } );
+
+        object jo{ {"a", 1}, {"b", 3.14f}, {"c", "hello"} };
+        jo["e1"] = array{1, ULONG_MAX, "three", array{}, true, .5, nullptr};
+        jo["e2"] = object{ {"one", 1}, {"two", 2}, {"three", object{}} };
+        jo["e3"] = "third extra element";
+        jo["e4"] = 100;
+        jo["e5"] = ULONG_MAX;
+        jo["e6"] = 12.4;
+        jo["e7"] = false;
+        jo["e8"] = nullptr;
+        testParseIntoValue<X>(jo);
 #endif
     }
 
@@ -384,6 +412,7 @@ public:
         testParseInto<E>( E::z );
 
         testParseIntoErrors< E >( error::not_string, (int)(E::y) );
+        testParseIntoErrors< E >( error::unknown_name, "zoom" );
 #endif // BOOST_DESCRIBE_CXX14
     }
 
@@ -430,6 +459,9 @@ public:
 #ifndef BOOST_NO_CXX17_HDR_OPTIONAL
         testParseInto< std::optional<int> >( std::nullopt );
         testParseInto< std::optional<int> >( 1 );
+        testParseInto< std::optional<std::uint64_t> >( ULONG_MAX );
+        testParseInto< std::optional<bool> >( true );
+        testParseInto< std::optional<double> >( 33.77 );
 
         testParseInto< std::optional<std::vector<std::nullptr_t>> >(
             std::nullopt );
@@ -440,6 +472,9 @@ public:
 
         testParseInto< std::optional<std::vector<std::string>> >(
            std::vector<std::string>{"1", "2", "3"} );
+
+        testParseInto< std::optional< std::map<std::string, int> > >(
+           std::map<std::string, int>{ {"1", 1}, {"2", 2}, {"3", 3} } );
 
         testParseInto< std::vector< std::optional<int> > >(
             {1, 2, 3, std::nullopt, 5, std::nullopt, std::nullopt, 8});

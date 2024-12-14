@@ -1,6 +1,6 @@
 /* Boost.Flyweight basic test template.
  *
- * Copyright 2006-2023 Joaquin M Lopez Munoz.
+ * Copyright 2006-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -16,7 +16,7 @@
 #endif
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include <boost/flyweight/key_value.hpp>
 #include <boost/mpl/apply.hpp>
 #include <boost/utility/value_init.hpp>
@@ -298,6 +298,9 @@ void test_basic_template(BOOST_EXPLICIT_TEMPLATE_TYPE(FlyweightSpecifier))
     throwing_flyweight fw=throwing_flyweight(throwing_value());
     (void)fw;
   }catch(const throwing_value_exception&){}
+  throwing_flyweight fw=throwing_flyweight(
+    throwing_value(false /* doesn't throw */));
+  (void)fw.get();
 #endif
 
 }

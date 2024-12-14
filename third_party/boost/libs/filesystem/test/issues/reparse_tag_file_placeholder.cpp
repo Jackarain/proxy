@@ -27,7 +27,7 @@
 // Test correct boost::filesystem::status when reparse point ReparseTag set to IO_REPARSE_TAG_FILE_PLACEHOLDER
 // https://docs.microsoft.com/en-us/windows/compatibility/placeholder-files?redirectedfrom=MSDN
 
-#if !defined(__MINGW32__) || defined(__MINGW64__)
+// from ntifs.h, which can only be used by drivers
 typedef struct _REPARSE_DATA_BUFFER
 {
     ULONG ReparseTag;
@@ -58,7 +58,6 @@ typedef struct _REPARSE_DATA_BUFFER
         } GenericReparseBuffer;
     };
 } REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
-#endif
 
 #ifndef IO_REPARSE_TAG_FILE_PLACEHOLDER
 #define IO_REPARSE_TAG_FILE_PLACEHOLDER (0x80000015L)

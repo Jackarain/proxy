@@ -5,4 +5,6 @@
 #define BOOST_UNORDERED_CFOA_TESTS
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
+#include <boost/unordered/concurrent_node_map.hpp>
+#include <boost/unordered/concurrent_node_set.hpp>
 #include "../unordered/pmr_allocator_tests.cpp"

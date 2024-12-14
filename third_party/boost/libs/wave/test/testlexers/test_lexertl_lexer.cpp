@@ -24,7 +24,7 @@
 
 //  include the lexertl lexer related stuff
 #include <boost/wave/cpplexer/cpp_lex_token.hpp>                      // token type
-#include <libs/wave/samples/list_includes/lexertl/lexertl_lexer.hpp>  // lexer type
+#include <list_includes/lexertl/lexertl_lexer.hpp>  // lexer type
 
 typedef boost::wave::cpplexer::lex_token<> token_type;
 typedef boost::wave::cpplexer::lexertl::lex_iterator<token_type> lexer_type;

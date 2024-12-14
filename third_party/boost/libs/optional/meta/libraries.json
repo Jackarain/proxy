@@ -13,5 +13,5 @@
         "Fernando Cacciola <fernando_cacciola -at- ciudad.com.ar>",
         "Andrzej Krzemienski <akrzemi1 -at- gmail.com>"
     ],
-    "cxxstd": "03"
+    "cxxstd": "11"
 }

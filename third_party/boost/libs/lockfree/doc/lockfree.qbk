@@ -270,10 +270,7 @@ problem is the blocking emulation of lock-free atomics, which in the current imp
 
 [section Supported Platforms & Compilers]
 
-_lockfree_ has been tested on the following platforms:
-
-* g++ 4.4, 4.5 and 4.6, linux, x86 & x86_64
-* clang++ 3.0, linux, x86 & x86_64
+_lockfree_ requires a c++14 compliant compiler
 
 [endsect]
 

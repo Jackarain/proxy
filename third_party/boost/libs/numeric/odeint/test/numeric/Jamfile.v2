@@ -8,13 +8,11 @@
 
 import testing ;
 
-use-project boost : $(BOOST_ROOT) ;
-
 project
     : requirements
       <library>/boost/test//boost_unit_test_framework
+      <library>/boost/format//boost_format
       <define>BOOST_ALL_NO_LIB=1
-      <include>../../include
       <link>static
       <toolset>clang:<cxxflags>-Wno-unused-variable
 

@@ -8,7 +8,6 @@
 
 import testing ;
 
-use-project boost : $(BOOST_ROOT) ;
 VEXCL_INCLUDE = /home/karsten/boost/testing/vexcl ;
 OPENCL_INCLUDE = /usr/local/cuda/include ;
 #OPENCL_INCLUDE = /usr/include ;
@@ -20,7 +19,7 @@ project
       <include>$(VEXCL_INCLUDE)
       <include>$(OPENCL_INCLUDE)
       <cxxflags>-std=c++0x
-      <library>/boost//system/
+      <library>/boost/system//boost_system
     ;
 
 lib OpenCL : : <name>OpenCL <link>shared ;

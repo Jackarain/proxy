@@ -36,13 +36,74 @@ function findExecutable(executableName) {
         }
         return undefined
     }
-    try {
-        const whichCommand = (process.platform === 'win32') ? 'where' : 'which';
-        const cmd = `${whichCommand} ${executableName}`
-        return execSync(cmd, {encoding: 'utf-8'}).trim()
-    } catch (error) {
-        return undefined
+
+    const isWin = process.platform === 'win32';
+    const pathDirs = process.env.PATH.split(isWin ? ';' : ':');
+    const extensions = isWin ? ['.exe', '.bat', '.cmd'] : [''];
+
+    function isExecutable(filePath) {
+        try {
+            if (!isWin) {
+                fs.accessSync(filePath, fs.constants.X_OK);
+            }
+            return true;
+        } catch (error) {
+            return false;
+        }
     }
+
+    // Try to find the exact executable first
+    for (const dir of pathDirs) {
+        for (const ext of extensions) {
+            const fullPath = path.join(dir, executableName + ext);
+            if (fs.existsSync(fullPath) && isExecutable(fullPath)) {
+                return fullPath;
+            }
+        }
+    }
+
+    function escapeRegExp(string) {
+        // Escape special characters for use in regex
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    // If the exact executable is not found, search for versioned executables
+    const versionedExecutables = [];
+    const escapedExecutableName = escapeRegExp(executableName);
+    const versionRegex = new RegExp(`${escapedExecutableName}-(\\d+)$`);
+
+    for (const dir of pathDirs) {
+        try {
+            const files = fs.readdirSync(dir);
+            for (const file of files) {
+                if (!extensions.some(ext => file.endsWith(ext))) {
+                    continue
+                }
+                const fullPath = path.join(dir, file);
+                if (!isExecutable(fullPath)) {
+                    continue
+                }
+                const ext = path.extname(file);
+                const basename = path.basename(file, ext);
+                const match = basename.match(versionRegex);
+                if (match) {
+                    versionedExecutables.push({
+                        path: fullPath,
+                        version: parseInt(match[1], 10)
+                    });
+                }
+            }
+        } catch (error) {
+            // Ignore errors from reading directories
+        }
+    }
+
+    if (versionedExecutables.length > 0) {
+        versionedExecutables.sort((a, b) => b.version - a.version);
+        return versionedExecutables[0].path;
+    }
+
+    return undefined;
 }
 
 function mkTmpDir() {
@@ -100,26 +161,33 @@ if (cxxCompiler && process.platform === "win32") {
     // Replace "\" with "/" in CXX_COMPILER
     cxxCompiler = cxxCompiler.replace(/\\/g, '/')
 }
+if (cxxCompiler === undefined) {
+    console.error('Could not find a C++ compiler. Please set the CXX_COMPILER environment variable.')
+    process.exit(1)
+}
+process.env.CMAKE_CXX_COMPILER = cxxCompiler
+process.env.CXX = cxxCompiler
+
 const cxxCompilerName = path.basename(cxxCompiler).replace(/\.exe$/, '')
 let cCompiler = findExecutable(['clang', 'gcc', 'cl']) || process.env.C_COMPILER || process.env.CC
 if (cCompiler && process.platform === "win32") {
     // Replace "\" with "/" in CXX_COMPILER
     cCompiler = cCompiler.replace(/\\/g, '/')
 }
+if (cCompiler === undefined) {
+    console.error('Could not find a C compiler. Please set the C_COMPILER environment variable.')
+    process.exit(1)
+}
 const cCompilerName = path.basename(cCompiler).replace(/\.exe$/, '')
+process.env.CMAKE_C_COMPILER = cCompiler
+process.env.CC = cCompiler
 
 console.log(`C++ compiler: ${cxxCompilerName} (${cxxCompiler})`)
 console.log(`C compiler: ${cCompilerName} (${cCompiler})`)
 
 /*
-    Extract CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES
- */
-
-
-/*
     Download Boost
  */
-
 function isBoostDir(dir) {
     if (!fs.existsSync(dir)) {
         return false
@@ -185,11 +253,11 @@ if (isBoostDir(cwdParentParent)) {
 
     Install MrDocs with:
         - Linux:
-            wget https://github.com/cppalliance/mrdocs/releases/download/develop-release/MrDocs-1.0.0-Linux.tar.gz
-            sudo tar -xzf MrDocs-1.0.0-Linux.tar.gz -C /usr/local --strip-components=1
+            wget https://github.com/cppalliance/mrdocs/releases/download/develop-release/MrDocs-0.0.1-Linux.tar.gz
+            sudo tar -xzf MrDocs-0.0.1-Linux.tar.gz -C /usr/local --strip-components=1
         - Windows (Powershell):
-            Invoke-WebRequest -Uri 'https://github.com/cppalliance/mrdocs/releases/download/develop-release/MrDocs-1.0.0-win64.7z' -OutFile 'MrDocs-1.0.0-win64.7z'
-            7z x -o"C:\Users\$env:USERNAME\Applications" 'MrDocs-1.0.0-win64.7z'
+            Invoke-WebRequest -Uri 'https://github.com/cppalliance/mrdocs/releases/download/develop-release/MrDocs-0.0.1-win64.7z' -OutFile 'MrDocs-0.0.1-win64.7z'
+            7z x -o"C:\Users\$env:USERNAME\Applications" 'MrDocs-0.0.1-win64.7z'
             ( Adapt the destination path as needed )
 
  */
@@ -207,11 +275,21 @@ if (!mrDocsExec) {
     })
     const releasesInfo = JSON.parse(releasesResponse.getBody('utf-8'))
     console.log(`Found ${releasesInfo.length} MrDocs releases`)
-    const latestRelease = releasesInfo[0]
-    console.log(`Latest release: ${latestRelease['tag_name']}`)
-    const latestAssets = latestRelease['assets'].map(asset => asset['browser_download_url'])
-    console.log(`Latest assets: ${latestAssets}`)
-    const downloadUrl = process.platform === "win32" ? latestAssets.find(asset => asset.endsWith('win64.7z')) : latestAssets.find(asset => asset.endsWith('Linux.tar.gz'))
+    let downloadUrl = undefined
+    for (const latestRelease of releasesInfo) {
+        console.log(`Latest release: ${latestRelease['tag_name']}`)
+        const latestAssets = latestRelease['assets'].map(asset => asset['browser_download_url'])
+        console.log(`Latest assets: ${latestAssets}`)
+        downloadUrl = process.platform === "win32" ? latestAssets.find(asset => asset.endsWith('win64.7z')) : latestAssets.find(asset => asset.endsWith('Linux.tar.gz'))
+        if (downloadUrl) {
+            break
+        }
+        console.warn(`Could not find MrDocs binaries in ${latestRelease['tag_name']} release for ${process.platform}`)
+    }
+    if (!downloadUrl) {
+        console.error(`Could not find MrDocs binaries for ${process.platform}`)
+        process.exit(1)
+    }
     const downloadFilename = path.basename(downloadUrl)
     console.log(`Downloading ${downloadUrl} to ${path.join(tempDir, downloadFilename)}...`)
     downloadAndDecompress(
@@ -246,7 +324,9 @@ let mrDocsExitCode = 0
 try {
     const mrDocsOutput = execSync(mrDocsCmd)
     console.log(mrDocsOutput.toString())
+    console.log(`Generated documentation at ${mrDocsOutputDir}`)
 } catch (error) {
+    console.error('Failed to run MrDocs')
     console.error(error.stdout.toString())
     mrDocsExitCode = error.status
 }
@@ -254,5 +334,7 @@ if (tempDir) {
     console.log(`Deleting temporary directory ${tempDir}`)
     execSync(`rm -rf ${tempDir}`)
 }
-console.log(`Generated documentation at ${mrDocsOutputDir}`)
+if (mrDocsExitCode !== 0) {
+    console.log(`Exiting with code ${mrDocsExitCode}`)
+}
 process.exit(mrDocsExitCode)

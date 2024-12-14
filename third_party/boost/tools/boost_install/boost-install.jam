@@ -4,7 +4,6 @@
 
 import make ;
 import modules ;
-import boostcpp ;
 import property-set ;
 import "class" : new ;
 import project ;
@@ -562,6 +561,8 @@ rule generate-cmake-variant- ( target : sources * : properties * )
 
 local rule tag ( name : type ? : property-set )
 {
+    import boostcpp ;
+
     .debug tag $(name) ;
 
     local link = [ $(property-set).get <link> ] ;
@@ -1022,15 +1023,15 @@ local rule install-cmake-config- ( install-or-stage : version : name : requireme
         local reqs = <version>$(version) <flags>library-type=$(library-type) <flags>name=$(name) ;
 
         r += [ make $(install-or-stage)/$(name)-config.cmake : $(name) : @boost-install%make-cmake-config : $(reqs) $(requirements) ] ;
-        r += [ install $(install-or-stage)-$(name)-config.cmake : $(install-or-stage)/$(name)-config.cmake : <location>$(loc) $(requirements) ] ;
+        r += [ install $(install-or-stage)-$(name)-config.cmake : $(install-or-stage)/$(name)-config.cmake : <location>$(loc) $(requirements) : <install-package>Boost ] ;
 
         r += [ make $(install-or-stage)/$(name)-config-version.cmake : $(name) : @boost-install%make-cmake-config-version : $(reqs) $(requirements) ] ;
-        r += [ install $(install-or-stage)-$(name)-config-version.cmake : $(install-or-stage)/$(name)-config-version.cmake : <location>$(loc) $(requirements) ] ;
+        r += [ install $(install-or-stage)-$(name)-config-version.cmake : $(install-or-stage)/$(name)-config-version.cmake : <location>$(loc) $(requirements) : <install-package>Boost ] ;
 
         if $(library-type) != INTERFACE
         {
             r += [ generate $(install-or-stage)/$(name)-variant.cmake : $(name) : <generating-rule>@boost-install%generate-cmake-variant $(reqs) ] ;
-            r += [ install $(install-or-stage)-$(name)-config-variant.cmake : $(install-or-stage)/$(name)-variant.cmake : <location>$(loc) $(requirements) ] ;
+            r += [ install $(install-or-stage)-$(name)-config-variant.cmake : $(install-or-stage)/$(name)-variant.cmake : <location>$(loc) $(requirements) : <install-package>Boost ] ;
         }
     }
     else
@@ -1059,7 +1060,7 @@ rule install-or-stage-cmake-config ( name * : install-or-stage )
         if $(install-or-stage) = stage
         {
             local libdir = [ boost-install-dirs.stage-libdir ] ;
-            local includedir = [ path.make [ modules.peek boostcpp : BOOST_ROOT ] ] ;
+            local includedir = [ boost-install-dirs.stage-includedir ] ;
             reqs = <install-libdir>$(libdir) <install-includedir>$(includedir) ;
         }
         else
@@ -1082,19 +1083,19 @@ rule install-or-stage-cmake-config ( name * : install-or-stage )
         local boost-install-dir = [ modules.binding $(__name__) ] ;
         boost-install-dir = $(boost-install-dir:D) ;
 
-        install $(install-or-stage)-detect-toolset : $(boost-install-dir)/BoostDetectToolset.cmake : <location>(cmakedir) <name>BoostDetectToolset-$(BOOST_VERSION).cmake $(reqs) ;
+        install $(install-or-stage)-detect-toolset : $(boost-install-dir)/BoostDetectToolset.cmake : <location>(cmakedir) <name>BoostDetectToolset-$(BOOST_VERSION).cmake $(reqs) : <install-package>Boost ;
         $(p).mark-target-as-explicit $(install-or-stage)-detect-toolset ;
 
         # Target install/stage-boost-config
 
-        install $(install-or-stage)-boost-config : $(boost-install-dir)/BoostConfig.cmake : <location>(cmakedir)/Boost-$(BOOST_VERSION) $(reqs) ;
+        install $(install-or-stage)-boost-config : $(boost-install-dir)/BoostConfig.cmake : <location>(cmakedir)/Boost-$(BOOST_VERSION) $(reqs) : <install-package>Boost ;
         $(p).mark-target-as-explicit $(install-or-stage)-boost-config ;
 
         # Target install/stage-boost-config-version
 
         project.load [ path.make $(boost-install-dir) ] ;
 
-        install $(install-or-stage)-boost-config-version : /boost/tools/boost_install//BoostConfigVersion.cmake : <location>(cmakedir)/Boost-$(BOOST_VERSION) $(reqs) ;
+        install $(install-or-stage)-boost-config-version : /boost/boost_install//BoostConfigVersion.cmake : <location>(cmakedir)/Boost-$(BOOST_VERSION) $(reqs) : <install-package>Boost ;
         $(p).mark-target-as-explicit $(install-or-stage)-boost-config-version ;
 
         # Target install/stage-cmake-config
@@ -1175,10 +1176,21 @@ rule generate-dependencies ( project name ? : property-set : sources * )
     local excluded-projects = $(project) [ $(project).find /boost ] ;
     for local p in [ get-dependency-projects $(sources) ] [ $(project).find /boost/headers ]
     {
+        local location = [ $(p).location ] ;
+        local stage-target ;
         if ! ( $(p) in $(excluded-projects) )
         {
-            stage-targets += [ $(p).find $(stage-or-install) : no-error ] ;
+            stage-target = [ $(p).find $(stage-or-install) : no-error ] ;
         }
+        if ! $(stage-target) && $(location:P)
+        {
+            local parent = [ $(project).find $(location:P) : no-error ] ;
+            if ! ( $(parent) in $(excluded-projects) )
+            {
+                stage-target = [ $(parent).find $(stage-or-install) : no-error ] ;
+            }
+        }
+        stage-targets += $(stage-target) ;
     }
     local props = [ $(property-set).propagated ] ;
     local result ;
@@ -1196,6 +1208,8 @@ rule generate-dependencies ( project name ? : property-set : sources * )
 
 rule install-subdir ( properties * )
 {
+    import boostcpp ;
+
     local ps = [ property-set.create $(properties) ] ;
 
     local r = [ boostcpp.tag boost : STATIC_LIB : $(ps) ] ;
@@ -1236,61 +1250,68 @@ rule boost-install ( libraries * )
 
     libraries = $(l2) ;
 
+    local p = [ project.current ] ;
+    local location = [ $(p).location ] ;
+
     # Target install
 
-    local p = [ project.current ] ;
+    if ! [ $(p).has-alternative-for-target install ]
+    {
+        install install-libraries-static : $(libraries) : <location>(libdir) <install-dependencies>on <install-type>STATIC_LIB : <install-package>Boost ;
+        $(p).mark-target-as-explicit install-libraries-static ;
 
-    install install-libraries-static : $(libraries) : <location>(libdir) <install-dependencies>on <install-type>STATIC_LIB ;
-    $(p).mark-target-as-explicit install-libraries-static ;
+        alias install-libraries-shared : install-libraries-shared- ;
+        alias install-libraries-shared : install-libraries-shared-cygwin : <target-os>cygwin ;
+        $(p).mark-target-as-explicit install-libraries-shared ;
 
-    alias install-libraries-shared : install-libraries-shared- ;
-    alias install-libraries-shared : install-libraries-shared-cygwin : <target-os>cygwin ;
-    $(p).mark-target-as-explicit install-libraries-shared ;
+        install install-libraries-shared- : $(libraries) : <location>(libdir) <install-type>SHARED_LIB <install-type>PDB <install-dependencies>on <install-no-version-symlinks>on : <install-package>Boost ;
+        $(p).mark-target-as-explicit install-libraries-shared- ;
 
-    install install-libraries-shared- : $(libraries) : <location>(libdir) <install-type>SHARED_LIB <install-type>PDB <install-dependencies>on <install-no-version-symlinks>on ;
-    $(p).mark-target-as-explicit install-libraries-shared- ;
+        install install-libraries-shared-cygwin : $(libraries) : <location>(bindir) <install-type>SHARED_LIB <install-type>PDB <install-dependencies>on <install-no-version-symlinks>on : <install-package>Boost ;
+        $(p).mark-target-as-explicit install-libraries-shared-cygwin ;
 
-    install install-libraries-shared-cygwin : $(libraries) : <location>(bindir) <install-type>SHARED_LIB <install-type>PDB <install-dependencies>on <install-no-version-symlinks>on ;
-    $(p).mark-target-as-explicit install-libraries-shared-cygwin ;
+        install install-unprefixed-static : $(unprefixed) : <install-type>STATIC_LIB <conditional>@boost-install%install-subdir : <install-package>Boost ;
+        $(p).mark-target-as-explicit install-unprefixed-static ;
 
-    install install-unprefixed-static : $(unprefixed) : <install-type>STATIC_LIB <conditional>@boost-install%install-subdir ;
-    $(p).mark-target-as-explicit install-unprefixed-static ;
+        install install-unprefixed-shared : $(unprefixed) : <install-type>SHARED_LIB <install-no-version-symlinks>on <conditional>@boost-install%install-subdir : <install-package>Boost ;
+        $(p).mark-target-as-explicit install-unprefixed-shared ;
 
-    install install-unprefixed-shared : $(unprefixed) : <install-type>SHARED_LIB <install-no-version-symlinks>on <conditional>@boost-install%install-subdir ;
-    $(p).mark-target-as-explicit install-unprefixed-shared ;
+        install-cmake-config $(libraries) ;
 
-    install-cmake-config $(libraries) ;
+        generate install-dependencies : $(libraries) : <generating-rule>@boost-install%generate-dependencies <name>install : <install-package>Boost ;
+        $(p).mark-target-as-explicit install-dependencies ;
 
-    generate install-dependencies : $(libraries) : <generating-rule>@boost-install%generate-dependencies <name>install ;
-    $(p).mark-target-as-explicit install-dependencies ;
-
-    alias install : install-libraries-static install-libraries-shared install-unprefixed-static install-unprefixed-shared install-cmake-config install-dependencies ;
-    $(p).mark-target-as-explicit install ;
+        alias install : install-libraries-static install-libraries-shared install-unprefixed-static install-unprefixed-shared install-cmake-config install-dependencies ;
+        $(p).mark-target-as-explicit install ;
+    }
 
     # Target stage
 
-    local stage-libdir = [ boost-install-dirs.stage-libdir ] ;
-    local reqs = <install-libdir>$(stage-libdir) ;
+    if ! [ $(p).has-alternative-for-target stage ]
+    {
+        local stage-libdir = [ boost-install-dirs.stage-libdir ] ;
+        local reqs = <install-libdir>$(stage-libdir) ;
 
-    stage-cmake-config $(libraries) ;
+        stage-cmake-config $(libraries) ;
 
-    install stage-libraries-static : $(libraries) : <location>(libdir) $(reqs) <install-dependencies>on <install-type>STATIC_LIB ;
-    $(p).mark-target-as-explicit stage-libraries-static ;
+        install stage-libraries-static : $(libraries) : <location>(libdir) $(reqs) <install-dependencies>on <install-type>STATIC_LIB : <install-package>Boost ;
+        $(p).mark-target-as-explicit stage-libraries-static ;
 
-    install stage-libraries-shared : $(libraries) : <location>(libdir) $(reqs) <install-dependencies>on <install-type>SHARED_LIB <install-type>PDB <install-no-version-symlinks>on ;
-    $(p).mark-target-as-explicit stage-libraries-shared ;
+        install stage-libraries-shared : $(libraries) : <location>(libdir) $(reqs) <install-dependencies>on <install-type>SHARED_LIB <install-type>PDB <install-no-version-symlinks>on : <install-package>Boost ;
+        $(p).mark-target-as-explicit stage-libraries-shared ;
 
-    install stage-unprefixed-static : $(unprefixed) : <install-type>STATIC_LIB $(reqs) <conditional>@boost-install%install-subdir ;
-    $(p).mark-target-as-explicit stage-unprefixed-static ;
+        install stage-unprefixed-static : $(unprefixed) : <install-type>STATIC_LIB $(reqs) <conditional>@boost-install%install-subdir : <install-package>Boost ;
+        $(p).mark-target-as-explicit stage-unprefixed-static ;
 
-    install stage-unprefixed-shared : $(unprefixed) : <install-type>SHARED_LIB $(reqs) <install-type>PDB <install-no-version-symlinks>on <conditional>@boost-install%install-subdir ;
-    $(p).mark-target-as-explicit stage-unprefixed-shared ;
+        install stage-unprefixed-shared : $(unprefixed) : <install-type>SHARED_LIB $(reqs) <install-type>PDB <install-no-version-symlinks>on <conditional>@boost-install%install-subdir : <install-package>Boost ;
+        $(p).mark-target-as-explicit stage-unprefixed-shared ;
 
-    generate stage-dependencies : $(libraries) : <generating-rule>@boost-install%generate-dependencies <name>stage ;
-    $(p).mark-target-as-explicit stage-dependencies ;
+        generate stage-dependencies : $(libraries) : <generating-rule>@boost-install%generate-dependencies <name>stage : <install-package>Boost ;
+        $(p).mark-target-as-explicit stage-dependencies ;
 
-    alias stage : stage-libraries-static stage-libraries-shared stage-unprefixed-static stage-unprefixed-shared stage-cmake-config stage-dependencies ;
-    $(p).mark-target-as-explicit stage ;
+        alias stage : stage-libraries-static stage-libraries-shared stage-unprefixed-static stage-unprefixed-shared stage-cmake-config stage-dependencies ;
+        $(p).mark-target-as-explicit stage ;
+    }
 }
 
 # If --{parent} is explicitly specified on the command line, then we need to

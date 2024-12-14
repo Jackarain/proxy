@@ -129,7 +129,8 @@ xref:#rationale_open_addresing_containers[corresponding section].
 
 == Concurrent Containers
 
-`boost::concurrent_flat_set` and `boost::concurrent_flat_map` use the basic
+`boost::concurrent_flat_set`/`boost::concurrent_node_set` and
+`boost::concurrent_flat_map`/`boost::concurrent_node_map` use the basic
 xref:#structures_open_addressing_containers[open-addressing layout] described above
 augmented with synchronization mechanisms.
 

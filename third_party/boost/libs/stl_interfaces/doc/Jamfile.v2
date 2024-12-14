@@ -39,7 +39,7 @@ rule run_doxygen ( files * : name : expand ? )
 
 }
 
-run_doxygen [ glob $(here)/../../../boost/stl_interfaces/*.hpp ] : "Headers" ;
+run_doxygen [ glob $(here)/../include/boost/stl_interfaces/*.hpp ] : "Headers" ;
 
 install images_standalone : [ glob *.png ] : <location>html/stl_interfaces/img ;
 explicit images_standalone ;

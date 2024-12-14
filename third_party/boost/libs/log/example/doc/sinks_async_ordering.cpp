@@ -5,13 +5,13 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 
+#include <chrono>
 #include <string>
 #include <fstream>
 #include <iostream>
 #include <functional>
 #include <boost/smart_ptr/shared_ptr.hpp>
 #include <boost/core/null_deleter.hpp>
-#include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/log/core.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/sinks/async_frontend.hpp>
@@ -62,7 +62,7 @@ boost::shared_ptr< sink_t > init_logging()
         backend,                                                                 /*< pointer to the pre-initialized backend >*/
         keywords::order = logging::make_attr_ordering< unsigned int >(           /*< log record ordering predicate >*/
             "LineID", std::less< unsigned int >()),
-        keywords::ordering_window = boost::posix_time::seconds(1)                /*< latency of log record processing >*/
+        keywords::ordering_window = std::chrono::seconds(1)                      /*< latency of log record processing >*/
     ));
     core->add_sink(sink);
 

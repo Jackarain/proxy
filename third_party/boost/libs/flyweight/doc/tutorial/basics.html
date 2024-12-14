@@ -219,17 +219,17 @@ for an illustration of use of Boost.Flyweight serialization capabilities.
 
 <p>
 For <code>flyweight&lt;T&gt;</code> to be instantiable, <code>T</code> must
-be <a href="https://boost.org/sgi/stl/Assignable.html"><code>Assignable</code></a>,
-<a href="https://boost.org/sgi/stl/EqualityComparable.html"><code>Equality
-Comparable</code></a> and must interoperate with
-<a href="../../../functional/hash/index.html">Boost.Hash</a>.
+be <a href="https://en.cppreference.com/w/cpp/named_req/MoveConstructible"><code>MoveConstructible</code></a>,
+<a href="https://en.cppreference.com/w/cpp/named_req/EqualityComparable"><code>EqualityComparable</code></a>
+and must interoperate with
+<a href="../../../container_hash/index.html">Boost.ContainerHash</a>.
 The first requirement is probably met without any extra effort by the user,
 not so the other two, except for the most common basic types of C++
 and the standard library. Equality and hashing of <code>T</code> are used
 internally by <code>flyweight&lt;T&gt;</code> internal factory to maintain the
 common repository of unique <code>T</code> values referred to by the flyweight
 objects. Consult the Boost.Hash documentation
-<a href="../../../../doc/html/hash/custom.html">section</a> on extending
+<a href="../../../container_hash/doc/html/hash.html#user">section</a> on extending
 that library for custom data types.
 </p>
 
@@ -257,9 +257,9 @@ Key-value flyweights
 
 <br>
 
-<p>Revised March 17th 2023</p>
+<p>Revised September 28th 2024</p>
 
-<p>&copy; Copyright 2006-2023 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
+<p>&copy; Copyright 2006-2024 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
 Distributed under the Boost Software 
 License, Version 1.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">
 LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">

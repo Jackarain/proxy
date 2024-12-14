@@ -15,3 +15,8 @@ boostbook boostbook : boostbook.xml :
     <dependency>reference
     ;
 
+###############################################################################
+alias boostdoc ;
+explicit boostdoc ;
+alias boostrelease : boostbook ;
+explicit boostrelease ;

@@ -15,6 +15,9 @@
 #include <iostream>
 #include <cstring>
 #include "doc_anonymous_condition_shared_data.hpp"
+//<-
+#include "../test/get_process_id_name.hpp"
+//->
 
 using namespace boost::interprocess;
 
@@ -23,11 +26,11 @@ int main ()
    //Create a shared memory object.
    shared_memory_object shm
       (open_only                    //only create
-      ,"MySharedMemory"              //name
+      , test::get_process_id_name() //name
       ,read_write                   //read-write mode
       );
 
-   BOOST_TRY{
+   BOOST_INTERPROCESS_TRY{
       //Map the whole shared memory in this process
       mapped_region region
          (shm                       //What to map
@@ -60,10 +63,10 @@ int main ()
       }
       while(!end_loop);
    }
-   BOOST_CATCH(interprocess_exception &ex){
+   BOOST_INTERPROCESS_CATCH(interprocess_exception &ex){
       std::cout << ex.what() << std::endl;
       return 1;
-   } BOOST_CATCH_END
+   } BOOST_INTERPROCESS_CATCH_END
 
    return 0;
 }

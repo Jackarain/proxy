@@ -30,7 +30,7 @@ basic_cstring_ref<char_type, value_char_traits<char>> get(
     auto res = ::getenv(key.c_str());
     if (res == nullptr)
     {
-        BOOST_PROCESS_V2_ASSIGN_EC(ec, ENOENT, system_category())
+        BOOST_PROCESS_V2_ASSIGN_EC(ec, ENOENT, system_category());
         return {};
     }
     return res;
@@ -41,13 +41,13 @@ void set(basic_cstring_ref<char_type,   key_char_traits<char_type>>   key,
                 error_code & ec)
 {
     if (::setenv(key.c_str(), value.c_str(), true))
-        BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec)
+        BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec);
 }
 
 void unset(basic_cstring_ref<char_type, key_char_traits<char_type>> key, error_code & ec)
 {
     if (::unsetenv(key.c_str()))
-        BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec)
+        BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec);
 }
 
 
@@ -65,9 +65,10 @@ native_iterator find_end(native_handle_type nh)
         nh++;
     return nh;
 }
-bool is_executable(const filesystem::path & p, error_code & ec)
+
+bool has_x_access(const char * pth)
 {
-    return filesystem::is_regular_file(p, ec) && (::access(p.c_str(), X_OK) == 0);
+  return (::access(pth, X_OK) == 0);
 }
 
 }

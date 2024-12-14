@@ -25,13 +25,13 @@ inline void handle_error(error_code & ec)
     switch (err)
     {
     case ERROR_INSUFFICIENT_BUFFER:
-        BOOST_PROCESS_V2_ASSIGN_EC(ec, error::insufficient_buffer, error::utf8_category)
+        BOOST_PROCESS_V2_ASSIGN_EC(ec, error::insufficient_buffer, error::utf8_category);
         break;
     case ERROR_NO_UNICODE_TRANSLATION:
-        BOOST_PROCESS_V2_ASSIGN_EC(ec, error::invalid_character, error::utf8_category)
+        BOOST_PROCESS_V2_ASSIGN_EC(ec, error::invalid_character, error::utf8_category);
         break;
     default:
-        BOOST_PROCESS_V2_ASSIGN_EC(ec, err, system_category())
+        BOOST_PROCESS_V2_ASSIGN_EC(ec, err, system_category());
     }
 }
 
@@ -240,7 +240,7 @@ std::size_t convert_to_utf8(const wchar_t * in, std::size_t size,
         if (*from  > max_wchar) {
             from_next = from;
             to_next = to;
-            BOOST_PROCESS_V2_ASSIGN_EC(ec, error::invalid_character, error::get_utf8_category())
+            BOOST_PROCESS_V2_ASSIGN_EC(ec, error::invalid_character, error::get_utf8_category());
             return 0u;
         }
 
@@ -268,7 +268,7 @@ std::size_t convert_to_utf8(const wchar_t * in, std::size_t size,
         if (to == to_end && i != cont_octet_count) {
             from_next = from;
             to_next = to - (i + 1);
-            BOOST_PROCESS_V2_ASSIGN_EC(ec, error::insufficient_buffer, error::get_utf8_category())
+            BOOST_PROCESS_V2_ASSIGN_EC(ec, error::insufficient_buffer, error::get_utf8_category());
             return 0u;
         }
         ++from;
@@ -278,7 +278,7 @@ std::size_t convert_to_utf8(const wchar_t * in, std::size_t size,
 
     // Were we done or did we run out of destination space
     if (from != from_end)
-        BOOST_PROCESS_V2_ASSIGN_EC(ec, error::insufficient_buffer, error::get_utf8_category())
+        BOOST_PROCESS_V2_ASSIGN_EC(ec, error::insufficient_buffer, error::get_utf8_category());
 
     return to_next - out;
 }
@@ -313,7 +313,7 @@ std::size_t convert_to_wide(const  char   * in, std::size_t size,
         if (invalid_leading_octet(*from)) {
             from_next = from;
             to_next = to;
-            BOOST_PROCESS_V2_ASSIGN_EC(ec, error::invalid_character, error::get_utf8_category())
+            BOOST_PROCESS_V2_ASSIGN_EC(ec, error::invalid_character, error::get_utf8_category());
             return 0u;
         }
 
@@ -337,7 +337,7 @@ std::size_t convert_to_wide(const  char   * in, std::size_t size,
             if (invalid_continuing_octet(*from)) {
                 from_next = from;
                 to_next = to;
-                BOOST_PROCESS_V2_ASSIGN_EC(ec, error::invalid_character, error::get_utf8_category())
+                BOOST_PROCESS_V2_ASSIGN_EC(ec, error::invalid_character, error::get_utf8_category());
                 return 0u;
             }
 
@@ -354,7 +354,7 @@ std::size_t convert_to_wide(const  char   * in, std::size_t size,
             // rewind "from" to before the current character translation
             from_next = from - (i + 1);
             to_next = to;
-            BOOST_PROCESS_V2_ASSIGN_EC(ec, error::insufficient_buffer, error::get_utf8_category())
+            BOOST_PROCESS_V2_ASSIGN_EC(ec, error::insufficient_buffer, error::get_utf8_category());
             return 0u;
         }
         *to++ = ucs_result;
@@ -363,7 +363,7 @@ std::size_t convert_to_wide(const  char   * in, std::size_t size,
     to_next = to;
 
     if (from != from_end)
-        BOOST_PROCESS_V2_ASSIGN_EC(ec, error::insufficient_buffer, error::get_utf8_category())
+        BOOST_PROCESS_V2_ASSIGN_EC(ec, error::insufficient_buffer, error::get_utf8_category());
 
     return to_next - out;
 }

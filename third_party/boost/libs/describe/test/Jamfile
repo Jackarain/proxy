@@ -7,6 +7,11 @@ import testing ;
 local WERROR = <toolset>msvc:<warnings-as-errors>on <toolset>clang:<warnings-as-errors>on <toolset>gcc:<warnings-as-errors>on ;
 
 project : requirements
+  <library>/boost/describe//boost_describe
+  <library>/boost/container_hash//boost_container_hash
+  <library>/boost/core//boost_core
+  <library>/boost/variant2//boost_variant2
+
   <warnings>extra
   $(WERROR)
   <toolset>clang:<cxxflags>"-Wno-unused-private-field" ;
@@ -87,8 +92,8 @@ explicit describe_cxx14 ;
 
 local CXX14 = [ check-target-builds describe_cxx14 describe_cxx14 : : <build>no ] "<toolset>msvc-14.0:<cxxflags>-wd4100" ;
 
-local JSON = <library>/boost//json/<warnings>off "<toolset>msvc-14.2:<cxxflags>-wd5104" ;
-local SERIALIZATION = <library>/boost//serialization/<warnings>off -$(WERROR) ;
+local JSON = <library>/boost/json//boost_json/<warnings>off "<toolset>msvc-14.2:<cxxflags>-wd5104" <undefined-sanitizer>norecover:<link>static ;
+local SERIALIZATION = <library>/boost/serialization//boost_serialization/<warnings>off -$(WERROR) <undefined-sanitizer>norecover:<link>static ;
 
 run ../example/printing_enums_ct.cpp : : : $(CXX14) ;
 run ../example/printing_enums_rt.cpp : : : $(CXX14) ;
@@ -98,9 +103,10 @@ run ../example/print_function.cpp : : : $(CXX14) ;
 run ../example/to_json.cpp : : : $(CXX14) $(JSON) ;
 run ../example/from_json.cpp : : : $(CXX14) $(JSON) ;
 run ../example/serialization.cpp : : : $(CXX14) $(SERIALIZATION) ;
-run ../example/json_rpc.cpp : : : $(CXX14) $(JSON) ;
+run ../example/json_rpc.cpp : : : $(CXX14) $(JSON) <library>/boost/utility//boost_utility
+  "<toolset>gcc-14,<cxxstd>14:<build>no" ; # mysterious segmentation fault
 run ../example/hash_value.cpp : : : $(CXX14) ;
 run ../example/equality.cpp : : : $(CXX14) ;
-link ../example/console.cpp : $(CXX14) $(JSON) ;
+link ../example/console.cpp : $(CXX14) $(JSON) <library>/boost/utility//boost_utility ;
 run ../example/struct_to_tuple.cpp : : : $(CXX14) ;
 run ../example/pm_to_string.cpp : : : $(CXX14) ;

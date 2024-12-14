@@ -41,7 +41,7 @@ BOOST_FORCEINLINE format_named_scope_actor<
 >
 format_named_scope(attribute_keyword< DescriptorT, ActorT > const& keyword, BOOST_PP_ENUM_BINARY_PARAMS(BOOST_PP_ITERATION(), ArgT, const& arg))
 {
-    BOOST_STATIC_ASSERT_MSG((is_same< typename DescriptorT::value_type, attributes::named_scope::value_type >::value),\
+    static_assert(is_same< typename DescriptorT::value_type, attributes::named_scope::value_type >::value,
         "Boost.Log: Named scope formatter only accepts attribute values of type attributes::named_scope::value_type.");
 
     typedef typename boost::log::aux::deduce_char_type<
@@ -68,7 +68,7 @@ BOOST_FORCEINLINE format_named_scope_actor<
 >
 format_named_scope(attribute_actor< T, FallbackPolicyT, TagT, ActorT > const& placeholder, BOOST_PP_ENUM_BINARY_PARAMS(BOOST_PP_ITERATION(), ArgT, const& arg))
 {
-    BOOST_STATIC_ASSERT_MSG((is_same< T, attributes::named_scope::value_type >::value),\
+    static_assert(is_same< T, attributes::named_scope::value_type >::value,
         "Boost.Log: Named scope formatter only accepts attribute values of type attributes::named_scope::value_type.");
 
     typedef typename boost::log::aux::deduce_char_type<

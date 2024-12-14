@@ -40,6 +40,15 @@
   </tr>
 </table>
 
+<h2>1.87.0</h2>
+<ul>
+  <li>As was announced in 1.84.0, Windows versions prior to 10 are no longer supported.</li>
+  <li>On Windows, <code>canonical</code> is now based on the <code>GetFinalPathNameByHandleW</code> WinAPI function. As a side effect, drive letters are converted to upper case, which makes the resulting paths more interoperable. (<a href="https://github.com/boostorg/filesystem/issues/325">#325</a>)</li>
+  <li><b>v4:</b> <code>canonical</code> no longer produces a trailing directory separator in the resulting path, if the input path has one.</li>
+  <li>If a <code>path</code> constructor or member function is called with an argument of a user-defined type that is convertible to <code>path</code> and one or more <a href="reference.html#Source"><code>Source</code></a> types, the conversion to <code>path</code> is now chosen by default. This may resolve argument conversion ambiguities in some cases, but may also result in a less optimal conversion path. If a different conversion path is desired, users are recommended to use explicit type casts. (<a href="https://github.com/boostorg/filesystem/issues/326">#326</a>)</li>
+  <li>Added a workaround for <code>dirfd</code> being a macro on FreeBSD 9 and older. (<a href="https://github.com/boostorg/filesystem/issues/328">#328</a>)</li>
+</ul>
+
 <h2>1.86.0</h2>
 <ul>
   <li><code>is_empty</code> operation is now better protected against concurrent filesystem modifications.</li>

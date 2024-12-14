@@ -4,8 +4,20 @@
 # accompanying file LICENSE_1_0.txt or copy at
 # https://www.boost.org/LICENSE_1_0.txt)
 
+local WERROR =
+
+    <toolset>msvc:<warnings-as-errors>on
+    <toolset>gcc:<warnings-as-errors>on
+    <toolset>clang:<warnings-as-errors>on
+;
+
 project
     : requirements
+      $(WERROR)
+      <library>/boost/uuid//boost_uuid
+      <library>/boost/core//boost_core
+
+     : default-build
       <warnings>pedantic
 ;
 
@@ -54,8 +66,8 @@ run test_include1.cpp test_include2.cpp ;
 # main tests
 
 run test_uuid.cpp
-   : : : <define>BOOST_UUID_REPORT_IMPLEMENTATION ;
-run test_uuid.cpp : : : <define>BOOST_UUID_NO_SIMD <define>BOOST_UUID_REPORT_IMPLEMENTATION : test_uuid_no_simd ;
+  : : : <library>/boost/container_hash//boost_container_hash <define>BOOST_UUID_REPORT_IMPLEMENTATION ;
+run test_uuid.cpp : : : <library>/boost/container_hash//boost_container_hash <define>BOOST_UUID_NO_SIMD <define>BOOST_UUID_REPORT_IMPLEMENTATION : test_uuid_no_simd ;
 run test_uuid_2.cpp ;
 run test_uuid_3.cpp ;
 
@@ -63,19 +75,21 @@ run test_uuid_3.cpp ;
 
 run test_alignment.cpp ;
 run test_alignment_2.cpp ;
-run test_attribute_packed.cpp ;
+run test_attribute_packed.cpp
+  : : : -$(WERROR) ;
 run test_pragma_pack.cpp ;
 run test_data.cpp ;
 
 # test comparison
 
 run test_comparison.cpp
-   : : : <define>BOOST_UUID_REPORT_IMPLEMENTATION ;
+  : : : <define>BOOST_UUID_REPORT_IMPLEMENTATION ;
 run test_comparison.cpp : : : <define>BOOST_UUID_NO_SIMD <define>BOOST_UUID_REPORT_IMPLEMENTATION : test_comparison_no_simd ;
 
 # test uuid_io.hpp
 
-run test_io.cpp ;
+run test_io.cpp
+  : : : <library>/boost/lexical_cast//boost_lexical_cast <library>/boost/predef//boost_predef -$(WERROR) ;
 run test_io_2.cpp ;
 run test_to_chars.cpp ;
 run test_to_chars_2.cpp ;
@@ -88,9 +102,11 @@ run test_uuid_clock.cpp ;
 
 run test_nil_generator.cpp ;
 run test_string_generator.cpp ;
-run test_random_generator.cpp ;
+run test_random_generator.cpp
+  : : : <library>/boost/random//boost_random <library>/boost/predef//boost_predef ;
 
-run test_name_generator.cpp ;
+run test_name_generator.cpp
+  : : : <library>/boost/predef//boost_predef ;
 run test_namespaces.cpp ;
 run test_name_generator_md5.cpp ;
 run test_name_generator_sha1.cpp ;
@@ -110,7 +126,8 @@ run test_time_generator_v1_2.cpp
         <toolset>gcc-4.8,<address-model>32:<build>no ;
 
 run test_time_generator_v1_3.cpp
-  : : : <toolset>gcc:<library>atomic <toolset>clang-linux:<library>atomic
+  : : : <threading>multi
+        <toolset>gcc:<library>atomic <toolset>clang-linux:<library>atomic
         <toolset>gcc-4.8,<address-model>32:<build>no ;
 
 run test_time_generator_v6.cpp
@@ -122,7 +139,8 @@ run test_time_generator_v6_2.cpp
         <toolset>gcc-4.8,<address-model>32:<build>no ;
 
 run test_time_generator_v6_3.cpp
-  : : : <toolset>gcc:<library>atomic <toolset>clang-linux:<library>atomic
+  : : : <threading>multi
+        <toolset>gcc:<library>atomic <toolset>clang-linux:<library>atomic
         <toolset>gcc-4.8,<address-model>32:<build>no ;
 
 run test_time_generator_v7.cpp ;
@@ -131,8 +149,10 @@ run test_time_generator_v7_3.cpp ;
 
 # test serializing uuids
 
-run test_serialization.cpp /boost//serialization : : : <undefined-sanitizer>norecover:<link>static ;
-# run test_wserialization.cpp /boost//serialization /boost//wserialization ;
+run test_serialization.cpp
+  : : : <library>/boost/serialization//boost_serialization <undefined-sanitizer>norecover:<link>static -$(WERROR) ;
+
+# run test_wserialization.cpp /boost/serialization//boost_serialization /boost/serialization//boost_wserialization ;
 
 # test tagging an object
 
@@ -145,12 +165,13 @@ run test_uuid_in_map.cpp ;
 
 # test hashing support
 
-run test_hash.cpp ;
+run test_hash.cpp
+   : : : <library>/boost/container_hash//boost_container_hash ;
 run test_hash_value.cpp ;
 
 run test_std_unordered.cpp ;
 run test_boost_unordered.cpp
-  : : : <toolset>gcc-4.7:<build>no ;
+  : : : <toolset>gcc-4.7:<build>no <library>/boost/unordered//boost_unordered ;
 
 # test detail components
 
@@ -161,8 +182,8 @@ run test_detail_chacha20.cpp ;
 
 # compile-fail tests
 
-compile-fail compile-fail/random_provider_no_copy_ctor.cpp ;
-compile-fail compile-fail/random_provider_no_copy_assign.cpp ;
+compile-fail compile-fail/random_provider_no_copy_ctor.cpp : -$(WERROR) ;
+compile-fail compile-fail/random_provider_no_copy_assign.cpp : -$(WERROR) ;
 
 # test MSVC 12 (VS2013) optimizer bug with SIMD operations.
 # See https://svn.boost.org/trac/boost/ticket/8509#comment:3
@@ -172,12 +193,17 @@ run test_msvc_simd_bug981648_main.cpp test_msvc_simd_bug981648_foo.cpp : : : <va
 
 # a small benchmark test for random generation
 
-run test_bench_random.cpp /boost//timer : : : <toolset>clang-cloudabi:<build>no ;
+run test_bench_random.cpp /boost/timer//boost_timer : : : <toolset>clang-cloudabi:<build>no ;
 
 # tests for the header-only random provider
 
 run test_entropy_error.cpp ;
-run test_detail_random_provider.cpp ;
+run test_detail_random_provider.cpp
+  : : : <library>/boost/array//boost_array ;
+
+# constexpr tests
+
+compile test_uuid_cx.cpp ;
 
 # 'quick' test for CI
 

@@ -9,8 +9,8 @@
 //////////////////////////////////////////////////////////////////////////////
 #define BOOST_CONTAINER_ADAPTIVE_NODE_POOL_CHECK_INVARIANTS
 #include <boost/interprocess/managed_shared_memory.hpp>
-#include <boost/interprocess/containers/list.hpp>
-#include <boost/interprocess/containers/vector.hpp>
+#include <boost/container/list.hpp>
+#include <boost/container/vector.hpp>
 #include <boost/interprocess/allocators/adaptive_pool.hpp>
 #include "print_container.hpp"
 #include "dummy_test_allocator.hpp"
@@ -43,12 +43,12 @@ template class ipcdetail::adaptive_pool_v1<void, managed_shared_memory::segment_
 }}}
 
 //Alias list types
-typedef list<int, shmem_node_allocator_t>    MyShmList;
-typedef list<int, shmem_node_allocator_v1_t> MyShmListV1;
+typedef boost::container::list<int, shmem_node_allocator_t>    MyShmList;
+typedef boost::container::list<int, shmem_node_allocator_v1_t> MyShmListV1;
 
 //Alias vector types
-typedef vector<int, shmem_node_allocator_t>    MyShmVector;
-typedef vector<int, shmem_node_allocator_v1_t> MyShmVectorV1;
+typedef boost::container::vector<int, shmem_node_allocator_t>    MyShmVector;
+typedef boost::container::vector<int, shmem_node_allocator_v1_t> MyShmVectorV1;
 
 int main ()
 {

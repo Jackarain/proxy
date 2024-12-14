@@ -93,7 +93,7 @@ synopsis</a>
 <span class=special>&gt;</span>
 <span class=keyword>bool</span> <span class=keyword>operator</span> <span class=identifier><b><i>OP</i></b></span><span class=special>(</span>
   <span class=keyword>const</span> <span class=identifier>flyweight</span><span class=special>&lt;</span><span class=identifier>T1</span><span class=special>,</span><span class=identifier>Arg11</span><span class=special>,...,</span><span class=identifier>Arg15</span><span class=special>&gt;&amp;</span> <span class=identifier>x</span><span class=special>,</span>
-  <span class=keyword>const</span> <span class=identifier>flyweight</span><span class=special>&lt;</span><span class=identifier>T2</span><span class=special>,</span><span class=identifier>Arg21</span><span class=special>,...,</span><span class=identifier>Arg25</span><span class=special>&gt;&amp;</span> <span class=identifier>y</span><span class=special>);</span>
+  <span class=keyword>const</span> <span class=identifier>flyweight</span><span class=special>&lt;</span><span class=identifier>T2</span><span class=special>,</span><span class=identifier>Arg21</span><span class=special>,...,</span><span class=identifier>Arg25</span><span class=special>&gt;&amp;</span> <span class=identifier>y</span><span class=special>)</span> <span class=keyword>noexcept</span><span class=special>(</span><b>see below</b><span class=special>)</span><span class=special>;</span>
 
 <span class=keyword>template</span><span class=special>&lt;</span>
   <span class=keyword>typename</span> <span class=identifier>T1</span><span class=special>,</span><span class=keyword>typename</span> <span class=identifier>Arg11</span><span class=special>,...,</span><span class=keyword>typename</span> <span class=identifier>Arg15</span><span class=special>,</span>
@@ -111,7 +111,7 @@ synopsis</a>
 
 <span class=keyword>template</span><span class=special>&lt;</span><span class=keyword>typename</span> <span class=identifier>T</span><span class=special>,</span><span class=keyword>typename</span> <span class=identifier>Arg1</span><span class=special>,...,</span><span class=keyword>typename</span> <span class=identifier>Arg5</span><span class=special>&gt;</span>
 <span class=keyword>inline</span> <span class=keyword>void</span> <span class=identifier>swap</span><span class=special>(</span>
-  <span class=identifier>flyweight</span><span class=special>&lt;</span><span class=identifier>T</span><span class=special>,</span><span class=identifier>Arg1</span><span class=special>,...,</span><span class=identifier>Arg5</span><span class=special>&gt;&amp;</span> <span class=identifier>x</span><span class=special>,</span><span class=identifier>flyweight</span><span class=special>&lt;</span><span class=identifier>T</span><span class=special>,</span><span class=identifier>Arg1</span><span class=special>,...,</span><span class=identifier>Arg5</span><span class=special>&gt;&amp;</span> <span class=identifier>y</span><span class=special>);</span>
+  <span class=identifier>flyweight</span><span class=special>&lt;</span><span class=identifier>T</span><span class=special>,</span><span class=identifier>Arg1</span><span class=special>,...,</span><span class=identifier>Arg5</span><span class=special>&gt;&amp;</span> <span class=identifier>x</span><span class=special>,</span><span class=identifier>flyweight</span><span class=special>&lt;</span><span class=identifier>T</span><span class=special>,</span><span class=identifier>Arg1</span><span class=special>,...,</span><span class=identifier>Arg5</span><span class=special>&gt;&amp;</span> <span class=identifier>y</span><span class=special>)</span> <span class=keyword>noexcept</span><span class=special>;</span>
 
 <span class=keyword>template</span><span class=special>&lt;</span>
   <span class=keyword>typename</span> <span class=identifier>ElemType</span><span class=special>,</span><span class=keyword>typename</span> <span class=identifier>Traits</span><span class=special>,</span> 
@@ -149,7 +149,7 @@ synopsis</a>
 <span class=keyword>namespace</span> <span class=identifier>flyweights</span><span class=special>{</span>
 
 <span class=keyword>template</span><span class=special>&lt;</span><span class=keyword>typename</span> <span class=identifier>T</span><span class=special>,</span><span class=keyword>typename</span> <span class=identifier>Arg1</span><span class=special>,...,</span><span class=keyword>typename</span> <span class=identifier>Arg5</span><span class=special>&gt;</span>
-<span class=keyword>inline</span> <span class=identifier>std</span><span class=special>::</span><span class=identifier>size_t</span> <span class=identifier>hash_value</span><span class=special>(</span><span class=keyword>const</span> <span class=identifier>flyweight</span><span class=special>&lt;</span><span class=identifier>T</span><span class=special>,</span><span class=identifier>Arg1</span><span class=special>,...,</span><span class=identifier>Arg5</span><span class=special>&gt;&amp;</span> <span class=identifier>x</span><span class=special>);</span>
+<span class=keyword>inline</span> <span class=identifier>std</span><span class=special>::</span><span class=identifier>size_t</span> <span class=identifier>hash_value</span><span class=special>(</span><span class=keyword>const</span> <span class=identifier>flyweight</span><span class=special>&lt;</span><span class=identifier>T</span><span class=special>,</span><span class=identifier>Arg1</span><span class=special>,...,</span><span class=identifier>Arg5</span><span class=special>&gt;&amp;</span> <span class=identifier>x</span><span class=special>)</span> <span class=keyword>noexcept</span><span class=special>;</span>
 
 <span class=special>}</span> <span class=comment>// namespace boost::flyweights</span>
 <span class=special>}</span> <span class=comment>// namespace boost</span>
@@ -276,11 +276,11 @@ objects constructed from equivalent keys.
   <span class=keyword>template</span><span class=special>&lt;</span><span class=keyword>typename</span> <span class=identifier>V</span><span class=special>&gt;</span>
   <span class=identifier>flyweight</span><span class=special>(</span><span class=identifier>std</span><span class=special>::</span><span class=identifier>initializer_list</span><span class=special>&lt;</span><span class=identifier>V</span><span class=special>&gt;</span> <span class=identifier>list</span><span class=special>);</span>
 
-  <span class=identifier>flyweight</span><span class=special>(</span><span class=keyword>const</span> <span class=identifier>flyweight</span><span class=special>&amp;</span> <span class=identifier>x</span><span class=special>);</span>
-  <span class=identifier>flyweight</span><span class=special>(</span><span class=identifier>flyweight</span><span class=special>&amp;</span> <span class=identifier>x</span><span class=special>);</span>
-  <span class=identifier>flyweight</span><span class=special>(</span><span class=keyword>const</span> <span class=identifier>flyweight</span><span class=special>&amp;&amp;</span> <span class=identifier>x</span><span class=special>);</span>
-  <span class=identifier>flyweight</span><span class=special>(</span><span class=identifier>flyweight</span><span class=special>&amp;&amp;</span> <span class=identifier>x</span><span class=special>);</span>
-
+  <span class=identifier>flyweight</span><span class=special>(</span><span class=keyword>const</span> <span class=identifier>flyweight</span><span class=special>&amp;</span> <span class=identifier>x</span><span class=special>)</span> <span class=keyword>noexcept</span><span class=special>;</span>
+  <span class=identifier>flyweight</span><span class=special>(</span><span class=identifier>flyweight</span><span class=special>&amp;</span> <span class=identifier>x</span><span class=special>)</span> <span class=keyword>noexcept</span><span class=special>;</span>
+  <span class=identifier>flyweight</span><span class=special>(</span><span class=keyword>const</span> <span class=identifier>flyweight</span><span class=special>&amp;&amp;</span> <span class=identifier>x</span><span class=special>)</span> <span class=keyword>noexcept</span><span class=special>;</span>
+  <span class=identifier>flyweight</span><span class=special>(</span><span class=identifier>flyweight</span><span class=special>&amp;&amp;</span> <span class=identifier>x</span><span class=special>)</span> <span class=keyword>noexcept</span><span class=special>;</span>
+ 
   <span class=keyword>explicit</span> <span class=identifier>flyweight</span><span class=special>(</span><span class=keyword>const</span> <span class=identifier>value_type</span><span class=special>&amp;</span> <span class=identifier>x</span><span class=special>);</span>
   <span class=keyword>explicit</span> <span class=identifier>flyweight</span><span class=special>(</span><span class=identifier>value_type</span><span class=special>&amp;</span> <span class=identifier>x</span><span class=special>);</span>
   <span class=keyword>explicit</span> <span class=identifier>flyweight</span><span class=special>(</span><span class=keyword>const</span> <span class=identifier>value_type</span><span class=special>&amp;&amp;</span> <span class=identifier>x</span><span class=special>);</span>
@@ -289,22 +289,22 @@ objects constructed from equivalent keys.
   <span class=keyword>template</span><span class=special>&lt;</span><span class=keyword>typename</span> <span class=identifier>V</span><span class=special>&gt;</span>
   <span class=identifier>flyweight</span><span class=special>&amp;</span> <span class=keyword>operator</span><span class=special>=(</span><span class=identifier>std</span><span class=special>::</span><span class=identifier>initializer_list</span><span class=special>&lt;</span><span class=identifier>V</span><span class=special>&gt;</span> <span class=identifier>list</span><span class=special>);</span>
 
-  <span class=identifier>flyweight</span><span class=special>&amp;</span> <span class=keyword>operator</span><span class=special>=(</span><span class=keyword>const</span> <span class=identifier>flyweight</span><span class=special>&amp;</span> <span class=identifier>x</span><span class=special>);</span>  
+  <span class=identifier>flyweight</span><span class=special>&amp;</span> <span class=keyword>operator</span><span class=special>=(</span><span class=keyword>const</span> <span class=identifier>flyweight</span><span class=special>&amp;</span> <span class=identifier>x</span><span class=special>)</span> <span class=keyword>noexcept</span><span class=special>;</span>  
 
   <span class=identifier>flyweight</span><span class=special>&amp;</span> <span class=keyword>operator</span><span class=special>=(</span><span class=keyword>const</span> <span class=identifier>value_type</span><span class=special>&amp;</span> <span class=identifier>x</span><span class=special>);</span>
   <span class=identifier>flyweight</span><span class=special>&amp;</span> <span class=keyword>operator</span><span class=special>=(</span><span class=identifier>value_type</span><span class=special>&amp;&amp;</span> <span class=identifier>x</span><span class=special>);</span>
 
   <span class=comment>// convertibility to underlying type:</span>
 
-  <span class=keyword>const</span> <span class=identifier>key_type</span><span class=special>&amp;</span>   <span class=identifier>get_key</span><span class=special>()</span><span class=keyword>const</span><span class=special>;</span>
-  <span class=keyword>const</span> <span class=identifier>value_type</span><span class=special>&amp;</span> <span class=identifier>get</span><span class=special>()</span><span class=keyword>const</span><span class=special>;</span>
-  <span class=keyword>const</span> <span class=identifier>value_type</span><span class=special>&amp;</span> <span class=keyword>operator</span><span class=special>*()</span><span class=keyword>const</span><span class=special>;</span>
-  <span class=keyword>operator</span> <span class=keyword>const</span>    <span class=identifier>value_type</span><span class=special>&amp;()</span><span class=keyword>const</span><span class=special>;</span>  
-  <span class=keyword>const</span> <span class=identifier>value_type</span><span class=special>*</span> <span class=keyword>operator</span><span class=special>-&gt;()</span><span class=keyword>const</span><span class=special>;</span>
+  <span class=keyword>const</span> <span class=identifier>key_type</span><span class=special>&amp;</span>   <span class=identifier>get_key</span><span class=special>()</span> <span class=keyword>const</span> <span class=keyword>noexcept</span><span class=special>(</span><b>see below</b><span class=special>)</span><span class=special>;</span>
+  <span class=keyword>const</span> <span class=identifier>value_type</span><span class=special>&amp;</span> <span class=identifier>get</span><span class=special>()</span> <span class=keyword>const</span> <span class=keyword>noexcept</span><span class=special>;</span>
+  <span class=keyword>const</span> <span class=identifier>value_type</span><span class=special>&amp;</span> <span class=keyword>operator</span><span class=special>*()</span> <span class=keyword>const</span> <span class=keyword>noexcept</span><span class=special>;</span>
+  <span class=keyword>operator</span> <span class=keyword>const</span>    <span class=identifier>value_type</span><span class=special>&amp;()</span> <span class=keyword>const</span> <span class=keyword>noexcept</span><span class=special>;</span>  
+  <span class=keyword>const</span> <span class=identifier>value_type</span><span class=special>*</span> <span class=keyword>operator</span><span class=special>-&gt;()</span> <span class=keyword>const</span> <span class=keyword>noexcept</span><span class=special>;</span>
 
   <span class=comment>// modifiers:</span>
 
-  <span class=keyword>void</span> <span class=identifier>swap</span><span class=special>(</span><span class=identifier>flyweight</span><span class=special>&amp;</span> <span class=identifier>x</span><span class=special>);</span>
+  <span class=keyword>void</span> <span class=identifier>swap</span><span class=special>(</span><span class=identifier>flyweight</span><span class=special>&amp;</span> <span class=identifier>x</span><span class=special>)</span> <span class=keyword>noexcept</span><span class=special>;</span>
 <span class=special>};</span>
 </pre></blockquote>
 
@@ -324,7 +324,7 @@ of <code>flyweight</code> is a <i>key-value</i> flyweight.
 <code>value_type</code> is the type of the values flyweight objects give access to,
 while value lookup is based on associated <code>key_type</code> values.
 <code>key_value</code> must be
-<a href="https://boost.org/sgi/stl/Assignable.html"><code>Assignable</code></a>
+<a href="https://en.cppreference.com/w/cpp/named_req/MoveConstructible"><code>MoveConstructible</code></a>
 and <code>value_type</code> must be constructible from <code>key_type</code>;
 additionally, <code>key_value</code> must
 conform to any extra requirements imposed by the type of factory used.
@@ -427,15 +427,14 @@ of this member function template is not available unless
 <code>std::initializer_list&lt;V'&gt;</code>.
 </blockquote>
 
-<code>flyweight(const flyweight&amp; x);<br>
-flyweight(flyweight&amp; x);<br>
-flyweight(const flyweight&amp;&amp; x);<br>
-flyweight(flyweight&amp;&amp; x);</code>
+<code>flyweight(const flyweight&amp; x) noexcept;<br>
+flyweight(flyweight&amp; x) noexcept;<br>
+flyweight(const flyweight&amp;&amp; x) noexcept;<br>
+flyweight(flyweight&amp;&amp; x) noexcept;</code>
 
 <blockquote>
 <b>Effects:</b> Constructs a <code>flyweight</code> object associated to
 the same value as <code>x</code>.<br>
-<b>Exception safety:</b> <code>nothrow</code>.
 </blockquote>
 
 <code>explicit flyweight(const value_type&amp; x);<br>
@@ -444,10 +443,9 @@ explicit flyweight(const value_type&amp;&amp; x);<br>
 explicit flyweight(value_type&amp;&amp; x);</code>
 
 <blockquote>
-<b>Requires:</b> If <code>flyweight</code> is key-value,
-<code>value_type</code> is
-<a href="https://boost.org/sgi/stl/Assignable.html"><code>Assignable</code></a>
-and the
+<b>Requires:</b>
+<code>value_type</code> is constructible from the type of the argument.
+If <code>flyweight</code> is key-value, the
 <a href="key_value.html#key_extractor"><code>Key Extractor</code></a>
 <code>KeyFromValue</code> must have been supplied as part of the
 <code>key_value&lt;&gt;</code> construct.<br>
@@ -470,13 +468,12 @@ of this member function template is not available unless
 <code>std::initializer_list&lt;V'&gt;</code>.
 </blockquote>
 
-<code>flyweight&amp; operator=(const flyweight&amp; x);</code>
+<code>flyweight&amp; operator=(const flyweight&amp; x) noexcept;</code>
 
 <blockquote>
 <b>Effects:</b> Associates the <code>flyweight</code> object with the same value
 as <code>x</code>.<br>
 <b>Returns:</b> <code>*this</code>.<br>
-<b>Exception safety:</b> <code>nothrow</code>.
 </blockquote>
 
 <code>flyweight&amp; operator=(const value_type&amp; x);<br>
@@ -490,43 +487,41 @@ flyweight&amp; operator=(value_type&amp;&amp; x);</code>
 
 <h4><a name="convertibility">Convertibility to the underlying types</a></h4>
 
-<code>const key_type&amp; get_key()const;</code>
+<code>const key_type&amp; get_key() const noexcept(<b>see below</b>);</code>
 
 <blockquote>
 <b>Returns:</b> A copy of the key used to construct the
 <code>value_type</code> associated to the <code>flyweight</code>
 object.<br>
-<b>Exception safety:</b> If <code>flyweight</code> is not key-value or
-if <code>KeyFromValue</code> was not provided, <code>nothrow</code>.
+<b>Note:</b> <code>noexcept</code> if <code>flyweight</code> is not key-value or else
+<code>KeyFromValue</code> was not provided or else
+<code>noexcept(std::declval&lt;KeyFromValue&gt;()(std::declval&lt;const value_type&amp;&gt;()))</code>.
 </blockquote>
 
-<code>const value_type&amp; get()const;<br>
-    const value_type&amp; operator*()const;<br>
-	operator const value_type&amp;()const;</code>
+<code>const value_type&amp; get() const noexcept;<br>
+    const value_type&amp; operator*() const noexcept;<br>
+	operator const value_type&amp;() const noexcept;</code>
 
 <blockquote>
 <b>Returns:</b> The value associated to the <code>flyweight</code>
 object.<br>
-<b>Exception safety:</b> <code>nothrow</code>.
 </blockquote>
 
-<code>const value_type* operator-&gt;()const</code>
+<code>const value_type* operator-&gt;() const noexcept;</code>
 
 <blockquote>
 <b>Returns:</b> The address of the value associated to the <code>flyweight</code>
 object.<br>
-<b>Exception safety:</b> <code>nothrow</code>.
 </blockquote>
 
 <h4><a name="modifiers">Modifiers</a></h4>
 
-<code>void swap(flyweight&amp; x);</code>
+<code>void swap(flyweight&amp; x) noexcept;</code>
 
 <blockquote>
 <b>Effects:</b> Swaps the associations to <code>value_type</code>s each
 flyweight object has. No swapping of <code>key_type</code> or
 <code>value_type</code> objects is done.<br>
-<b>Exception safety:</b> <code>nothrow</code>.
 </blockquote>
 
 <h4><a name="comparison">Comparison operators</a></h4>
@@ -537,15 +532,14 @@ flyweight object has. No swapping of <code>key_type</code> or
 &gt;<br>
 bool operator ==(<br>
 &nbsp;&nbsp;const flyweight&lt;T1,Arg11,...,Arg15&gt;&amp; x,<br>
-&nbsp;&nbsp;const flyweight&lt;T2,Arg21,...,Arg25&gt;&amp; y);</code>
+&nbsp;&nbsp;const flyweight&lt;T2,Arg21,...,Arg25&gt;&amp; y) noexcept(<b>see below</b>);</code>
 
 <blockquote>
 <b>Returns:</b> If <code>x</code> and <code>y</code> are of the same type, returns
 <code>true</code> if and only if they are associated to the same value; if
 <code>x</code> and <code>y</code> have different types, returns
 <code>x.get()==y.get()</code>.<br>
-<b>Exception safety:</b> If <code>x</code> and <code>y</code> are of the same type,
-<code>nothrow</code>.
+<b>Note:</b> <code>noexcept</code> if <code>x</code> and <code>y</code> are of the same type.
 </blockquote>
 
 <code>template&lt;<br>
@@ -600,19 +594,20 @@ bool operator &lt;(const T1&amp; x,const flyweight&lt;T2,Arg21,...,Arg25&gt;&amp
 <b>Returns:</b> <code>x&lt;y.get()</code>.
 </blockquote>
 
-
 <code>template&lt;<br>
 &nbsp;&nbsp;typename T1,typename Arg11,...,typename Arg15,<br>
 &nbsp;&nbsp;typename T2,typename Arg21,...,typename Arg25<br>
 &gt;<br>
 bool operator <b><i>OP</i></b>(<br>
 &nbsp;&nbsp;const flyweight&lt;T1,Arg11,...,Arg15&gt;&amp; x,<br>
-&nbsp;&nbsp;const flyweight&lt;T2,Arg21,...,Arg25&gt;&amp; y);<br>
+&nbsp;&nbsp;const flyweight&lt;T2,Arg21,...,Arg25&gt;&amp; y) noexcept(<b>see below</b>);<br>
+<br>
 template&lt;<br>
 &nbsp;&nbsp;typename T1,typename Arg11,...,typename Arg15,<br>
 &nbsp;&nbsp;typename T2<br>
 &gt;<br>
 bool operator <b><i>OP</i></b>(const flyweight&lt;T1,Arg11,...,Arg15&gt;&amp; x,const T2&amp; y);</br>
+<br>
 template&lt;<br>
 &nbsp;&nbsp;typename T1,<br>
 &nbsp;&nbsp;typename T2,typename Arg21,...,typename Arg25<br>
@@ -632,13 +627,15 @@ bool operator <b><i>OP</i></b>(const T1&amp; x,const flyweight&lt;T2,Arg21,...,A
 <code>!(x&lt;&nbsp;y)</code> (<code><b><i>OP</i></b></code> is <code>>=</code>),<br>
 <code>!(y&lt;&nbsp;x)</code> (<code><b><i>OP</i></b></code> is <code>&lt;=</code>).
 </blockquote>
+<b>Note:</b> <code>noexcept</code> is <code><b><i>OP</i></b></code> is <code>!=</code>
+and <code>x</code> and <code>y</code> are of the same type.
 </blockquote>
 
 <h4><a name="specialized">Specialized algorithms</a></h4>
 
 <code>template&lt;typename T,typename Arg1,...,typename Arg5&gt;<br>
 inline void swap(<br>
-&nbsp;&nbsp;flyweight&lt;T,Arg1,...,Arg5&gt;&amp; x,flyweight&lt;T,Arg1,...,Arg5&gt;&amp; y);</code>
+&nbsp;&nbsp;flyweight&lt;T,Arg1,...,Arg5&gt;&amp; x,flyweight&lt;T,Arg1,...,Arg5&gt;&amp; y) noexcept;</code>
 
 <blockquote>
 <b>Effects:</b> <code>x.swap(y)</code>.
@@ -668,7 +665,7 @@ inline std::basic_istream&lt;ElemType,Traits&gt;&amp; operator&gt;&gt;(<br>
 <blockquote>
 <b>Requires:</b> If <code>flyweight</code> is key-value,
 <code>value_type</code> is
-<a href="https://boost.org/sgi/stl/Assignable.html"><code>Assignable</code></a>
+<a href="https://en.cppreference.com/w/cpp/named_req/CopyConstructible"><code>CopyConstructible</code></a>
 and the
 <a href="key_value.html#key_extractor"><code>Key Extractor</code></a>
 <code>KeyFromValue</code> must have been supplied as part of the
@@ -682,7 +679,7 @@ and assigns it to <code>x</code>.<br>
 
 <p>
 Support is provided for hashing <code>flyweight</code>s both with <code>std::hash</code> and
-<a href="../../../../doc/html/hash.html"><code>boost::hash</code></a>. In either case, the calculation
+<a href="../../../container_hash/index.html"><code>boost::hash</code></a>. In either case, the calculation
 does not involve hashing the associated <code>value_type</code> objects themselves; so, it is
 immaterial whether <code>value_type</code> is hashable or not.
 The results given by <code>std::hash</code> and <code>boost::hash</code> for the same
@@ -698,16 +695,15 @@ struct hash&lt;boost::flyweight&lt;T,Arg1,...,Arg5&gt; &gt;;<br>
 
 <blockquote>
 This template specialization meets the requirements of class template <code>std::hash</code> in <b>[unord.hash]</b>.
-No exception is thrown when invoking instances of this specialization.
+Its function call operator is <code>noexcept</code>.
 </blockquote>
 
 <code>template&lt;typename T,typename Arg1,...,typename Arg5&gt;<br>
-inline std::size_t hash_value(const flyweight&lt;T,Arg1,...,Arg5&gt;&amp; x);</code>
+inline std::size_t hash_value(const flyweight&lt;T,Arg1,...,Arg5&gt;&amp; x) noexcept;</code>
 
 <blockquote>
 <b>Returns:</b> A hash value for <code>x</code> to be used by
-<a href="../../../../doc/html/hash/custom.html">Boost.Hash</a>.<br>
-<b>Exception safety:</b> <code>nothrow</code>.
+<a href="../../../container_hash/doc/html/hash.html#user">Boost.ContainerHash</a>.<br>
 </blockquote>
 
 <h4><a name="config_macros">Configuration macros</a></h4>
@@ -795,9 +791,9 @@ Key-value flyweights
 
 <br>
 
-<p>Revised March 17th 2023</p>
+<p>Revised September 28th 2024</p>
 
-<p>&copy; Copyright 2006-2023 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
+<p>&copy; Copyright 2006-2024 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
 Distributed under the Boost Software 
 License, Version 1.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">
 LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">

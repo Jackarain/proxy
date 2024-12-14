@@ -10,6 +10,10 @@ local clang-flags = $(gcc-flags) -Wno-c99-extensions ;
 
 project hash-tests
     : requirements
+        <library>/boost/container_hash//boost_container_hash
+        <library>/boost/core//boost_core
+        <library>/boost/type_traits//boost_type_traits
+
         <warnings>pedantic
         <toolset>intel:<warnings>on
         <toolset>gcc:<cxxflags>$(gcc-flags)
@@ -72,14 +76,13 @@ run quick.cpp ;
 
 run hash_number_test2.cpp ;
 run hash_integral_test.cpp ;
-run hash_string_test2.cpp ;
+run hash_string_test2.cpp
+  /boost/utility//boost_utility ;
 
 # for gcc-4.8
-local fs-path-req = "-<toolset>gcc:<cxxflags>-Wshadow" "-<toolset>gcc:<cxxflags>-Wconversion" <toolset>gcc-4.7:<build>no ;
+local fs-path-req = <library>/boost/filesystem//boost_filesystem/<warnings>off "-<toolset>gcc:<cxxflags>-Wshadow" "-<toolset>gcc:<cxxflags>-Wconversion" <toolset>gcc-4.7:<build>no <undefined-sanitizer>norecover:<link>static ;
 
-run hash_fs_path_test.cpp /boost//filesystem/<warnings>off : : : $(fs-path-req)
-  <toolset>msvc-14.0,<cxxstd>latest:<build>no
-  <undefined-sanitizer>norecover:<link>static ;
+run hash_fs_path_test.cpp : : : $(fs-path-req) <toolset>msvc-14.0,<cxxstd>latest:<build>no ;
 
 run is_range_test2.cpp : : : $(fs-path-req) ;
 
@@ -116,8 +119,10 @@ run is_described_class_test3.cpp
 run described_class_test.cpp
   : : : <warnings>extra ;
 
-run hash_is_avalanching_test.cpp ;
-run hash_is_avalanching_test2.cpp ;
+run hash_is_avalanching_test.cpp
+  /boost/unordered//boost_unordered ;
+run hash_is_avalanching_test2.cpp
+  /boost/unordered//boost_unordered ;
 
 run hash_integral_test2.cpp ;
 

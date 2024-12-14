@@ -19,7 +19,7 @@
 #include <boost/chrono.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include <boost/asio/deadline_timer.hpp>
+#include <boost/asio/steady_timer.hpp>
 
 #include <boost/process/v1/error.hpp>
 #include <boost/process/v1/io.hpp>

@@ -38,10 +38,10 @@ BOOST_PROCESS_V2_DECL void terminate_(void * handle, error_code & ec, native_exi
 BOOST_PROCESS_V2_DECL void request_exit_(pid_type pid_, error_code & ec);
 BOOST_PROCESS_V2_DECL void check_running_(void* handle, error_code & ec, native_exit_code_type & exit_status);
 
-template<typename Executor = BOOST_PROCESS_V2_ASIO_NAMESPACE::any_io_executor>
+template<typename Executor = net::any_io_executor>
 struct basic_process_handle_win
 {
-    typedef BOOST_PROCESS_V2_ASIO_NAMESPACE::windows::basic_object_handle<Executor> handle_type;
+    typedef net::windows::basic_object_handle<Executor> handle_type;
     typedef typename handle_type::native_handle_type native_handle_type;
 
     typedef Executor executor_type;
@@ -61,7 +61,7 @@ struct basic_process_handle_win
     basic_process_handle_win(ExecutionContext &context,
                          typename std::enable_if<
                                  std::is_convertible<ExecutionContext &,
-                                         BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context &>::value
+                                         net::execution_context &>::value
                          >::type = 0)
             : pid_(0), handle_(context)
     {
@@ -266,15 +266,6 @@ struct basic_process_handle_win
         return handle_.is_open();
     }
 
-    template<BOOST_PROCESS_V2_COMPLETION_TOKEN_FOR(void(error_code, native_exit_code_type))
-    WaitHandler BOOST_PROCESS_V2_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_PROCESS_V2_INITFN_AUTO_RESULT_TYPE(WaitHandler, void (error_code, native_exit_code_type))
-    async_wait(WaitHandler &&handler BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
-    {
-        return BOOST_PROCESS_V2_ASIO_NAMESPACE::async_compose<WaitHandler, void(error_code, native_exit_code_type)>(
-                async_wait_op_{handle_}, handler, handle_
-        );
-    }
     template<typename>
     friend struct basic_process_handle_win;
   private:
@@ -288,6 +279,17 @@ struct basic_process_handle_win
         template<typename Self>
         void operator()(Self &&self)
         {
+
+            self.reset_cancellation_state(asio::enable_total_cancellation());
+            auto sl = self.get_cancellation_state().slot();
+            auto & h = handle;
+            if (sl.is_connected())
+                sl.assign(
+                    [&h](asio::cancellation_type ct)
+                    {
+                      boost::system::error_code ec;
+                      h.cancel(ec);
+                    });
             handle.async_wait(std::move(self));
         }
 
@@ -295,11 +297,25 @@ struct basic_process_handle_win
         void operator()(Self &&self, error_code ec)
         {
             native_exit_code_type exit_code{};
+            if (ec == asio::error::operation_aborted && !self.get_cancellation_state().cancelled())
+              return handle.async_wait(std::move(self));
+
             if (!ec)
                 detail::get_exit_code_(handle.native_handle(), exit_code, ec);
             std::move(self).complete(ec, exit_code);
         }
     };
+ public:
+    template<BOOST_PROCESS_V2_COMPLETION_TOKEN_FOR(void(error_code, native_exit_code_type))
+             WaitHandler = net::default_completion_token_t<executor_type>>
+    auto async_wait(WaitHandler &&handler = net::default_completion_token_t<executor_type>())
+        -> decltype(net::async_compose<WaitHandler, void(error_code, native_exit_code_type)>(
+                    async_wait_op_{handle_}, handler, handle_))
+    {
+        return net::async_compose<WaitHandler, void(error_code, native_exit_code_type)>(
+                async_wait_op_{handle_}, handler, handle_
+        );
+    }
 };
 
 extern template struct basic_process_handle_win<>;

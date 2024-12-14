@@ -1,5 +1,4 @@
-// Copyright 2018-2023 Emil Dotchevski and Reverge Studios, Inc.
-
+// Copyright 2018-2024 Emil Dotchevski and Reverge Studios, Inc.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -7,7 +6,7 @@
 #   include "leaf.hpp"
 #else
 #   include <boost/leaf/context.hpp>
-#   include <boost/leaf/handle_errors.hpp>
+#   include <boost/leaf/diagnostics.hpp>
 #   include <boost/leaf/result.hpp>
 #endif
 
@@ -34,10 +33,10 @@ int main()
     auto handlers = std::make_tuple(
         []( info<1> x )
         {
-            BOOST_TEST(x.value==1);
+            BOOST_TEST_EQ(x.value, 1);
             return 1;
         },
-        []( leaf::verbose_diagnostic_info const & info )
+        []( leaf::diagnostic_details const & info )
         {
             std::cout << info;
             return 2;

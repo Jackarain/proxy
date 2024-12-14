@@ -80,4 +80,6 @@ boost_test(TYPE run SOURCES test_detail_random_provider.cpp LINK_LIBRARIES Boost
 
 boost_test(TYPE run SOURCES test_serialization.cpp LINK_LIBRARIES Boost::serialization)
 
+boost_test(TYPE compile SOURCES test_uuid_cx.cpp)
+
 boost_test(TYPE run SOURCES quick.cpp)

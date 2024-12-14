@@ -6,11 +6,13 @@
 
 import sequence ;
 
-project boost/container
+project
     : source-location ../src
+    : common-requirements <library>$(boost_dependencies)
     : usage-requirements  # pass these requirement to dependents (i.e. users)
       <link>shared:<define>BOOST_CONTAINER_DYN_LINK=1
       <link>static:<define>BOOST_CONTAINER_STATIC_LINK=1
+      <define>BOOST_CONTAINER_NO_LIB=1
     ;
 
 lib boost_container
@@ -18,5 +20,3 @@ lib boost_container
    : <link>shared:<define>BOOST_CONTAINER_DYN_LINK=1
      <link>static:<define>BOOST_CONTAINER_STATIC_LINK=1
    ;
-
-boost-install boost_container ;

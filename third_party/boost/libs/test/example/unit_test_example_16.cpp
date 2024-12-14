@@ -20,6 +20,10 @@ bool init_unit_test()
 #if (!defined(BOOST_TEST_DYN_LINK) || (!defined(BOOST_CLANG) || (BOOST_CLANG != 1) || (__clang_major__ >= 8))) && !defined(__APPLE__)
   log_level logLevel = runtime_config::get<log_level>(runtime_config::btrt_log_level);
   std::cout << "Current log level: " << static_cast<int>(logLevel) << std::endl;
+  output_format logFormat = runtime_config::get<output_format>(runtime_config::btrt_log_format);
+  std::cout << "Current log format: " << static_cast<int>(logFormat) << std::endl;
+  report_level reportLevel = runtime_config::get<report_level>(runtime_config::btrt_report_level);
+  std::cout << "Current report level: " << static_cast<int>(reportLevel) << std::endl;
 #endif
   return true;
 }

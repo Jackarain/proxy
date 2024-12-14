@@ -27,7 +27,11 @@ def main(ctx):
             'x86-msvc latest'
         ],
         # Standards
-        '>=11', cache_dir='cache') + [
+        '>=11',
+        # Asan is delegated to GHA
+        asan=False,
+        docs=False,
+        cache_dir='cache') + [
                linux_cxx("GCC 12 (no-mutex)", "g++-12", packages="g++-12", buildscript="drone", buildtype="boost",
                          image="cppalliance/droneubuntu2204:1",
                          environment={'B2_TOOLSET': 'gcc-12', 'B2_DEFINES': 'BOOST_URL_DISABLE_THREADS=1',

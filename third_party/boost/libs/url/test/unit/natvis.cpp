@@ -80,9 +80,11 @@ struct natvis_test
         {
             auto const& c1 = boost::system::generic_category();
             auto const& c2 = boost::system::system_category();
-            auto const& c3 = system::error_code(std::error_code()).category();
+            system::error_code e3{std::error_code()};
+            auto const& c3 = e3.category();
             auto const& c4 = my_category();
-            auto const& c5 = system::error_code(error::not_a_base).category();
+            system::error_code e5(error::not_a_base);
+            auto const& c5 = e5.category();
             ignore_unused(c1, c2, c3, c4, c5);
         }
 

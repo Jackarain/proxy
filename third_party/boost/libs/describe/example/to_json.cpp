@@ -5,12 +5,15 @@
 #include <boost/describe.hpp>
 #include <boost/mp11.hpp>
 #include <boost/json.hpp>
+#include <boost/version.hpp>
 #include <type_traits>
 #include <vector>
 #include <map>
 
 namespace app
 {
+
+#if BOOST_VERSION < 108100
 
 template<class T,
     class D1 = boost::describe::describe_members<T,
@@ -28,6 +31,8 @@ template<class T,
 
     });
 }
+
+#endif
 
 struct A
 {

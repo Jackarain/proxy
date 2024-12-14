@@ -9,12 +9,9 @@
 //
 
 #include <boost/shared_ptr.hpp>
-#include <boost/smart_ptr/detail/sp_nullptr_t.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <cstddef>
 #include <memory>
-
-#if !defined( BOOST_NO_CXX11_NULLPTR )
 
 struct X
 {
@@ -38,7 +35,7 @@ private:
 
 int X::instances = 0;
 
-void f( boost::detail::sp_nullptr_t )
+void f( std::nullptr_t )
 {
 }
 
@@ -130,12 +127,3 @@ int main()
 
     return boost::report_errors();
 }
-
-#else
-
-int main()
-{
-    return 0;
-}
-
-#endif

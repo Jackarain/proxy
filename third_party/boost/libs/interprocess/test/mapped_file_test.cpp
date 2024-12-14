@@ -12,7 +12,7 @@
 #if defined(BOOST_INTERPROCESS_MAPPED_FILES)
 
 #include <boost/interprocess/allocators/allocator.hpp>
-#include <boost/interprocess/containers/vector.hpp>
+#include <boost/container/vector.hpp>
 #include <boost/interprocess/detail/file_wrapper.hpp>
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/detail/managed_open_or_create_impl.hpp>

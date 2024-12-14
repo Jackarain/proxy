@@ -7,7 +7,9 @@
 # accompanying file LICENSE_1_0.txt or copy at
 # http://www.boost.org/LICENSE_1_0.txt)
 
+project : requirements <library>/boost/random//boost_random ;
+
 run die.cpp ;
 run weighted_die.cpp ;
-run password.cpp /boost//random ;
-run intersections.cpp /boost//random ;
+run password.cpp /boost/random//boost_random ;
+run intersections.cpp /boost/math//boost_math_tr1 /boost/random//boost_random ;

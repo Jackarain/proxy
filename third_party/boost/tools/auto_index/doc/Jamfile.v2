@@ -15,11 +15,6 @@ boostbook standalone
     :
         auto_index
     :
-        # Path for links to Boost:
-        <xsl:param>boost.root=../../../..
-        # Path for libraries index:
-        <xsl:param>boost.libraries=$(boost-root)/libs/libraries.htm
-        
         # Some general style settings:
         <xsl:param>table.footnote.number.format=1
         <xsl:param>footnote.number.format=1
@@ -83,6 +78,3 @@ boostbook standalone
     ;
 
 install pdf-install : standalone : <install-type>PDF <location>. <name>auto_index.pdf ;
-
-
-

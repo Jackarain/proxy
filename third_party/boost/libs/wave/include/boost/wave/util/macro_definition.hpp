@@ -14,7 +14,7 @@
 #include <vector>
 #include <list>
 
-#include <boost/detail/atomic_count.hpp>
+#include <boost/smart_ptr/detail/atomic_count.hpp>
 #include <boost/intrusive_ptr.hpp>
 
 #include <boost/wave/wave_config.hpp>

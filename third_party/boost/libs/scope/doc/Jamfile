@@ -56,7 +56,7 @@ local doxygen_params =
 
 local top_level_includes =
     [ glob
-        ../../../boost/scope/*.hpp
+        ../include/boost/scope/*.hpp
     ] ;
 
 

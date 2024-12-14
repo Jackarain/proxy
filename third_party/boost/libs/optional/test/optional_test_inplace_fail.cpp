@@ -31,10 +31,10 @@ struct Guard
   std::string str;
   Guard() : num() {}
   Guard(double num_, std::string str_) : num(num_), str(str_) {}
-  
+
   friend bool operator==(const Guard& lhs, const Guard& rhs) { return lhs.num == rhs.num && lhs.str == rhs.str; }
   friend bool operator!=(const Guard& lhs, const Guard& rhs) { return !(lhs == rhs); }
-  
+
 private:
   Guard(const Guard&);
   Guard& operator=(const Guard&);

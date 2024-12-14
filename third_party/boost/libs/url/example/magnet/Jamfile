@@ -7,8 +7,6 @@
 # Official repository: https://github.com/boostorg/url
 #
 
-project : requirements  ;
-
 project
     : requirements
       <library>/boost/url//boost_url

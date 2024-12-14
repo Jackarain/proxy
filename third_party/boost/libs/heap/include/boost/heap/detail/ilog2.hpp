@@ -11,38 +11,37 @@
 
 #include <string> // std::size_t
 
-namespace boost {
-namespace heap {
+namespace boost { namespace heap {
 namespace detail {
 
-template <typename IntType>
+template < typename IntType >
 struct log2
 {
-    IntType operator()(IntType value)
+    IntType operator()( IntType value )
     {
         IntType l = 0;
-        while( (value >> l) > 1 )
+        while ( ( value >> l ) > 1 )
             ++l;
         return l;
     }
 };
 
 #ifdef __GNUC__
-template<>
-struct log2<unsigned int>
+template <>
+struct log2< unsigned int >
 {
-    unsigned int operator()(unsigned int value)
+    unsigned int operator()( unsigned int value )
     {
-        return sizeof(unsigned int)*8 - __builtin_clz(value - 1);
+        return sizeof( unsigned int ) * 8 - __builtin_clz( value - 1 );
     }
 };
 
-template<>
-struct log2<unsigned long>
+template <>
+struct log2< unsigned long >
 {
-    unsigned long operator()(unsigned long value)
+    unsigned long operator()( unsigned long value )
     {
-        return sizeof(unsigned long)*8 - __builtin_clzl(value - 1);
+        return sizeof( unsigned long ) * 8 - __builtin_clzl( value - 1 );
     }
 };
 
@@ -51,14 +50,13 @@ struct log2<unsigned long>
 } /* namespace detail */
 
 
-template <typename IntType>
-IntType log2(IntType value)
+template < typename IntType >
+IntType log2( IntType value )
 {
-    detail::log2<IntType> fn;
-    return fn(value);
+    detail::log2< IntType > fn;
+    return fn( value );
 }
 
-} /* namespace heap */
-} /* namespace boost */
+}}     // namespace boost::heap
 
 #endif /* BOOST_HEAP_DETAIL_ILOG2_HPP */

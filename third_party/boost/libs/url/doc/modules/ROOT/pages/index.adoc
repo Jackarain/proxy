@@ -51,7 +51,7 @@ These are different from URLs, come from Unicode strings instead of low-ASCII st
 
 The library requires a compiler supporting at least C++11.
 
-Aliases for standard types, such as `error_code` or `string_view`, use their Boost equivalents.
+For standard types, such as cpp:std::error_code[] or cpp:std::string_view[], the library uses their Boost equivalents cpp:boost::system::error_code[] and cpp:boost::core::string_view[].
 
 Boost.URL works great on embedded devices.
 It can be used in a way that avoids all dynamic memory allocations.

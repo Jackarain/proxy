@@ -8,6 +8,7 @@
 #ifndef BOOST_MYSQL_DETAIL_FORMAT_SQL_HPP
 #define BOOST_MYSQL_DETAIL_FORMAT_SQL_HPP
 
+#include <boost/mysql/constant_string_view.hpp>
 #include <boost/mysql/field_view.hpp>
 #include <boost/mysql/string_view.hpp>
 
@@ -16,10 +17,6 @@
 #include <iterator>
 #include <type_traits>
 #include <utility>
-
-#ifdef BOOST_MYSQL_HAS_CONCEPTS
-#include <concepts>
-#endif
 
 namespace boost {
 namespace mysql {
@@ -30,6 +27,7 @@ struct formatter;
 
 class format_context_base;
 class formattable_ref;
+class format_arg;
 
 namespace detail {
 
@@ -107,13 +105,6 @@ concept formattable =
     // This covers passing formattable_ref as a format argument
     is_formattable_ref<T>::value;
 
-template <class FormatFn, class Range>
-concept format_fn_for_range = requires(const FormatFn& format_fn, Range&& range, format_context_base& ctx) {
-    { std::begin(range) != std::end(range) } -> std::convertible_to<bool>;
-    format_fn(*std::begin(range), ctx);
-    std::end(range);
-};
-
 #define BOOST_MYSQL_FORMATTABLE ::boost::mysql::detail::formattable
 
 #else
@@ -156,6 +147,9 @@ struct formattable_ref_impl
 // Create a type-erased formattable_ref_impl from a formattable value
 template <class T>
 formattable_ref_impl make_formattable_ref(T&& v);
+
+BOOST_MYSQL_DECL
+void vformat_sql_to(format_context_base& ctx, constant_string_view format_str, span<const format_arg> args);
 
 }  // namespace detail
 }  // namespace mysql

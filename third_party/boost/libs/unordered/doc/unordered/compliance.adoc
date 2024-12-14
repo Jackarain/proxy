@@ -89,7 +89,8 @@ The main differences with C++ unordered associative containers are:
 == Concurrent Containers
 
 There is currently no specification in the C++ standard for this or any other type of concurrent
-data structure. The APIs of `boost::concurrent_flat_set` and `boost::concurrent_flat_map`
+data structure. The APIs of `boost::concurrent_flat_set`/`boost::concurrent_node_set` and
+`boost::concurrent_flat_map`/`boost::concurrent_node_map`
 are modelled after `std::unordered_flat_set` and `std::unordered_flat_map`, respectively,
 with the crucial difference that iterators are not provided
 due to their inherent problems in concurrent scenarios (high contention, prone to deadlocking):
@@ -105,7 +106,7 @@ In a non-concurrent unordered container, iterators serve two main purposes:
 * Access to an element previously located via lookup. 
 * Container traversal.
 
-In place of iterators, `boost::concurrent_flat_set` and `boost::concurrent_flat_map` use _internal visitation_
+In place of iterators, Boost.Unordered concurrent containers use _internal visitation_
 facilities as a thread-safe substitute. Classical operations returning an iterator to an
 element already existing in the container, like for instance:
 
@@ -141,7 +142,8 @@ respectively, here visitation is granted mutable or const access depending on
 the constness of the member function used (there are also `*cvisit` overloads for
 explicit const visitation); In the case of `boost::concurrent_flat_set`, visitation is always const.
 
-One notable operation not provided by `boost::concurrent_flat_map` is `operator[]`/`at`, which can be
+One notable operation not provided by `boost::concurrent_flat_map`/`boost::concurrent_node_map`
+is `operator[]`/`at`, which can be
 replaced, if in a more convoluted manner, by
 xref:#concurrent_flat_map_try_emplace_or_cvisit[`try_emplace_or_visit`].
 

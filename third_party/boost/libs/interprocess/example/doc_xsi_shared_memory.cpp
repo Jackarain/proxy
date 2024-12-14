@@ -23,14 +23,14 @@ using namespace boost::interprocess;
 
 void remove_old_shared_memory(const xsi_key &key)
 {
-   BOOST_TRY{
+   BOOST_INTERPROCESS_TRY{
       xsi_shared_memory xsi(open_only, key);
       xsi_shared_memory::remove(xsi.get_shmid());
    }
-   BOOST_CATCH(interprocess_exception &e){
+   BOOST_INTERPROCESS_CATCH(interprocess_exception &e){
       if(e.get_error_code() != not_found_error)
-         BOOST_RETHROW
-   } BOOST_CATCH_END
+         BOOST_INTERPROCESS_RETHROW
+   } BOOST_INTERPROCESS_CATCH_END
 }
 
 int main(int argc, char *argv[])

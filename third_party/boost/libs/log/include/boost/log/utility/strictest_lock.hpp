@@ -73,6 +73,37 @@ struct thread_access_mode_of< no_lock< MutexT > > : boost::integral_constant< lo
 
 #if !defined(BOOST_LOG_NO_THREADS)
 
+#if !defined(BOOST_MSSTL_VERSION) || (BOOST_MSSTL_VERSION != 140)
+template< typename MutexT >
+struct thread_access_mode_of< std::lock_guard< MutexT > > : boost::integral_constant< lock_access_mode, exclusive_access >
+{
+};
+#else // !defined(BOOST_MSSTL_VERSION) || (BOOST_MSSTL_VERSION != 140)
+template< typename... MutexesT >
+struct thread_access_mode_of< std::lock_guard< MutexesT... > > : boost::integral_constant< lock_access_mode, exclusive_access >
+{
+};
+#endif // !defined(BOOST_MSSTL_VERSION) || (BOOST_MSSTL_VERSION != 140)
+
+template< typename MutexT >
+struct thread_access_mode_of< std::unique_lock< MutexT > > : boost::integral_constant< lock_access_mode, exclusive_access >
+{
+};
+
+#if !defined(BOOST_NO_CXX14_HDR_SHARED_MUTEX)
+template< typename MutexT >
+struct thread_access_mode_of< std::shared_lock< MutexT > > : boost::integral_constant< lock_access_mode, shared_access >
+{
+};
+#endif // !defined(BOOST_NO_CXX14_HDR_SHARED_MUTEX)
+
+#if defined(__cpp_lib_scoped_lock) && (__cpp_lib_scoped_lock >= 201703l)
+template< typename... MutexesT >
+struct thread_access_mode_of< std::scoped_lock< MutexesT... > > : boost::integral_constant< lock_access_mode, exclusive_access >
+{
+};
+#endif
+
 template< typename MutexT >
 struct thread_access_mode_of< lock_guard< MutexT > > : boost::integral_constant< lock_access_mode, exclusive_access >
 {

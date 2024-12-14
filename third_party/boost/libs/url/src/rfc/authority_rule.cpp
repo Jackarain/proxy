@@ -22,7 +22,7 @@ namespace boost {
 namespace urls {
 
 auto
-authority_rule_t::
+implementation_defined::authority_rule_t::
 parse(
     char const*& it,
     char const* const end

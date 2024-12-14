@@ -18,9 +18,21 @@ asciidoc:
 nav:
   - modules/ROOT/nav.adoc
 ext:
-  collector:
-    run:
-      command: node doc/generate-files.mjs
-    scan:
-      dir: doc/build/generated-files
+  cpp-reference:
+    config: doc/mrdocs.yml
+  cpp-tagfiles:
+    files:
+      - file: ./doc/tagfiles/boost-url-doxygen.tag.xml
+        base_url: 'xref:reference:'
+      - file: ./doc/tagfiles/boost-system-doxygen.tag.xml
+        base_url: https://www.boost.org/doc/libs/master/libs/system/doc/html/
+      - file: ./doc/tagfiles/boost-core-doxygen.tag.xml
+        base_url: https://www.boost.org/doc/libs/master/libs/core/doc/html/
+      - file: ./doc/tagfiles/boost-filesystem-doxygen.tag.xml
+        base_url: https://www.boost.org/doc/libs/master/libs/filesystem/doc/
+    using-namespaces:
+      - boost::urls
+      - boost::urls::grammar
+      - boost::system
+      - boost::core
 

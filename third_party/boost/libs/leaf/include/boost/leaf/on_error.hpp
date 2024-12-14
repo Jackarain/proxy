@@ -1,8 +1,7 @@
 #ifndef BOOST_LEAF_ON_ERROR_HPP_INCLUDED
 #define BOOST_LEAF_ON_ERROR_HPP_INCLUDED
 
-// Copyright 2018-2023 Emil Dotchevski and Reverge Studios, Inc.
-
+// Copyright 2018-2024 Emil Dotchevski and Reverge Studios, Inc.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -24,13 +23,13 @@ public:
 #if !defined(BOOST_LEAF_NO_EXCEPTIONS) && BOOST_LEAF_STD_UNCAUGHT_EXCEPTIONS
         uncaught_exceptions_(std::uncaught_exceptions()),
 #endif
-        err_id_(leaf_detail::current_id())
+        err_id_(detail::current_id())
     {
     }
 
     int check_id() const noexcept
     {
-        int err_id = leaf_detail::current_id();
+        int err_id = detail::current_id();
         if( err_id != err_id_ )
             return err_id;
         else
@@ -41,7 +40,7 @@ public:
 #   else
             if( std::uncaught_exception() )
 #   endif
-                return leaf_detail::new_id();
+                return detail::new_id();
 #endif
             return 0;
         }
@@ -49,43 +48,43 @@ public:
 
     int get_id() const noexcept
     {
-        int err_id = leaf_detail::current_id();
+        int err_id = detail::current_id();
         if( err_id != err_id_ )
             return err_id;
         else
-            return leaf_detail::new_id();
+            return detail::new_id();
     }
 
     error_id check() const noexcept
     {
-        return leaf_detail::make_error_id(check_id());
+        return detail::make_error_id(check_id());
     }
 
     error_id assigned_error_id() const noexcept
     {
-        return leaf_detail::make_error_id(get_id());
+        return detail::make_error_id(get_id());
     }
 };
 
-////////////////////////////////////////////
+////////////////////////////////////////
 
-namespace leaf_detail
+namespace detail
 {
-    template <int I, class Tuple>
+    template <int I, class Tup>
     struct tuple_for_each_preload
     {
-        BOOST_LEAF_CONSTEXPR static void trigger( Tuple & tup, int err_id ) noexcept
+        BOOST_LEAF_CONSTEXPR static void trigger( Tup & tup, int err_id ) noexcept
         {
-            BOOST_LEAF_ASSERT((err_id&3)==1);
-            tuple_for_each_preload<I-1,Tuple>::trigger(tup,err_id);
+            BOOST_LEAF_ASSERT((err_id&3) == 1);
+            tuple_for_each_preload<I-1,Tup>::trigger(tup,err_id);
             std::get<I-1>(tup).trigger(err_id);
         }
     };
 
-    template <class Tuple>
-    struct tuple_for_each_preload<0, Tuple>
+    template <class Tup>
+    struct tuple_for_each_preload<0, Tup>
     {
-        BOOST_LEAF_CONSTEXPR static void trigger( Tuple const &, int ) noexcept { }
+        BOOST_LEAF_CONSTEXPR static void trigger( Tup const &, int ) noexcept { }
     };
 
     template <class E>
@@ -222,12 +221,12 @@ namespace leaf_detail
 
 template <class... Item>
 BOOST_LEAF_ATTRIBUTE_NODISCARD BOOST_LEAF_CONSTEXPR inline
-leaf_detail::preloaded<typename leaf_detail::deduce_item_type<Item>::type...>
+detail::preloaded<typename detail::deduce_item_type<Item>::type...>
 on_error( Item && ... i )
 {
-    return leaf_detail::preloaded<typename leaf_detail::deduce_item_type<Item>::type...>(std::forward<Item>(i)...);
+    return detail::preloaded<typename detail::deduce_item_type<Item>::type...>(std::forward<Item>(i)...);
 }
 
 } }
 
-#endif
+#endif // BOOST_LEAF_ON_ERROR_HPP_INCLUDED

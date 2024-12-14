@@ -1,8 +1,7 @@
 #ifndef BOOST_LEAF_COMMON_HPP_INCLUDED
 #define BOOST_LEAF_COMMON_HPP_INCLUDED
 
-// Copyright 2018-2023 Emil Dotchevski and Reverge Studios, Inc.
-
+// Copyright 2018-2024 Emil Dotchevski and Reverge Studios, Inc.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -11,6 +10,7 @@
 
 #include <iosfwd>
 #include <cerrno>
+#include <cstring>
 
 #if BOOST_LEAF_CFG_STD_STRING
 #   include <string>
@@ -42,7 +42,7 @@ struct BOOST_LEAF_SYMBOL_VISIBLE e_file_name
 
 struct BOOST_LEAF_SYMBOL_VISIBLE e_file_name
 {
-    constexpr static char const * const value = "<unavailable>";
+    char const * value = "<unavailable>";
     BOOST_LEAF_CONSTEXPR explicit e_file_name( char const * ) { }
 };
 
@@ -57,7 +57,7 @@ struct BOOST_LEAF_SYMBOL_VISIBLE e_errno
     template <class CharT, class Traits>
     friend std::ostream & operator<<(std::basic_ostream<CharT, Traits> & os, e_errno const & err)
     {
-        return os << type<e_errno>() << ": " << err.value << ", \"" << std::strerror(err.value) << '"';
+        return os << err.value << ", \"" << std::strerror(err.value) << '"';
     }
 };
 
@@ -101,7 +101,7 @@ namespace windows
                     *--z = 0;
                 if( z[-1] == '\r' )
                     *--z = 0;
-                return os << type<e_LastError>() << ": " << err.value << ", \"" << (LPCSTR)mb.p << '"';
+                return os << err.value << ", \"" << (LPCSTR)mb.p << '"';
             }
             return os;
         }
@@ -111,4 +111,4 @@ namespace windows
 
 } }
 
-#endif
+#endif // BOOST_LEAF_COMMON_HPP_INCLUDED

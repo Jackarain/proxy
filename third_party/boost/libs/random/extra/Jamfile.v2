@@ -7,4 +7,6 @@
 # accompanying file LICENSE_1_0.txt or copy at
 # http://www.boost.org/LICENSE_1_0.txt)
 
-run test_haertel.cpp ;
+project : requirements <library>/boost/random//boost_random ;
+
+run test_haertel.cpp /boost/format//boost_format /boost/test//included ;

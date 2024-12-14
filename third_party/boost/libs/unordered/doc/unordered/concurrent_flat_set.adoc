@@ -98,25 +98,35 @@ namespace boost {
 
 
     // visitation
+    template<class F> size_t xref:#concurrent_flat_set_cvisit[visit](const key_type& k, F f);
     template<class F> size_t xref:#concurrent_flat_set_cvisit[visit](const key_type& k, F f) const;
     template<class F> size_t xref:#concurrent_flat_set_cvisit[cvisit](const key_type& k, F f) const;
+    template<class K, class F> size_t xref:#concurrent_flat_set_cvisit[visit](const K& k, F f);
     template<class K, class F> size_t xref:#concurrent_flat_set_cvisit[visit](const K& k, F f) const;
     template<class K, class F> size_t xref:#concurrent_flat_set_cvisit[cvisit](const K& k, F f) const;
 
+    template<class FwdIterator, class F>
+      size_t xref:concurrent_flat_set_bulk_visit[visit](FwdIterator first, FwdIterator last, F f);
     template<class FwdIterator, class F>
       size_t xref:concurrent_flat_set_bulk_visit[visit](FwdIterator first, FwdIterator last, F f) const;
     template<class FwdIterator, class F>
       size_t xref:concurrent_flat_set_bulk_visit[cvisit](FwdIterator first, FwdIterator last, F f) const;
 
+    template<class F> size_t xref:#concurrent_flat_set_cvisit_all[visit_all](F f);
     template<class F> size_t xref:#concurrent_flat_set_cvisit_all[visit_all](F f) const;
     template<class F> size_t xref:#concurrent_flat_set_cvisit_all[cvisit_all](F f) const;
+    template<class ExecutionPolicy, class F>
+      void xref:#concurrent_flat_set_parallel_cvisit_all[visit_all](ExecutionPolicy&& policy, F f);
     template<class ExecutionPolicy, class F>
       void xref:#concurrent_flat_set_parallel_cvisit_all[visit_all](ExecutionPolicy&& policy, F f) const;
     template<class ExecutionPolicy, class F>
       void xref:#concurrent_flat_set_parallel_cvisit_all[cvisit_all](ExecutionPolicy&& policy, F f) const;
 
+    template<class F> bool xref:#concurrent_flat_set_cvisit_while[visit_while](F f);
     template<class F> bool xref:#concurrent_flat_set_cvisit_while[visit_while](F f) const;
     template<class F> bool xref:#concurrent_flat_set_cvisit_while[cvisit_while](F f) const;
+    template<class ExecutionPolicy, class F>
+      bool xref:#concurrent_flat_set_parallel_cvisit_while[visit_while](ExecutionPolicy&& policy, F f);
     template<class ExecutionPolicy, class F>
       bool xref:#concurrent_flat_set_parallel_cvisit_while[visit_while](ExecutionPolicy&& policy, F f) const;
     template<class ExecutionPolicy, class F>
@@ -149,6 +159,25 @@ namespace boost {
       size_type xref:#concurrent_flat_set_insert_iterator_range_or_visit[insert_or_cvisit](InputIterator first, InputIterator last, F f);
     template<class F> size_type xref:#concurrent_flat_set_insert_initializer_list_or_visit[insert_or_visit](std::initializer_list<value_type> il, F f);
     template<class F> size_type xref:#concurrent_flat_set_insert_initializer_list_or_visit[insert_or_cvisit](std::initializer_list<value_type> il, F f);
+
+    template<class... Args, class F1, class F2>
+      bool xref:#concurrent_flat_set_emplace_and_cvisit[emplace_and_visit](Args&&... args, F1&& f1, F2&& f2);
+    template<class... Args, class F1, class F2>
+      bool xref:#concurrent_flat_set_emplace_and_cvisit[emplace_and_cvisit](Args&&... args, F1&& f1, F2&& f2);
+    template<class F1, class F2> bool xref:#concurrent_flat_set_copy_insert_and_cvisit[insert_and_visit](const value_type& obj, F1 f1, F2 f2);
+    template<class F1, class F2> bool xref:#concurrent_flat_set_copy_insert_and_cvisit[insert_and_cvisit](const value_type& obj, F1 f1, F2 f2);
+    template<class F1, class F2> bool xref:#concurrent_flat_set_move_insert_and_cvisit[insert_and_visit](value_type&& obj, F1 f1, F2 f2);
+    template<class F1, class F2> bool xref:#concurrent_flat_set_move_insert_and_cvisit[insert_and_cvisit](value_type&& obj, F1 f1, F2 f2);
+    template<class K, class F1, class F2> bool xref:#concurrent_flat_set_transparent_insert_and_cvisit[insert_and_visit](K&& k, F1 f1, F2 f2);
+    template<class K, class F1, class F2> bool xref:#concurrent_flat_set_transparent_insert_and_cvisit[insert_and_cvisit](K&& k, F1 f1, F2 f2);
+    template<class InputIterator,class F1, class F2>
+      size_type xref:#concurrent_flat_set_insert_iterator_range_and_visit[insert_and_visit](InputIterator first, InputIterator last, F1 f1, F2 f2);
+    template<class InputIterator,class F1, class F2>
+      size_type xref:#concurrent_flat_set_insert_iterator_range_and_visit[insert_and_cvisit](InputIterator first, InputIterator last, F1 f1, F2 f2);
+    template<class F1, class F2>
+      size_type xref:#concurrent_flat_set_insert_initializer_list_and_visit[insert_and_visit](std::initializer_list<value_type> il, F1 f1, F2 f2);
+    template<class F1, class F2>
+      size_type xref:#concurrent_flat_set_insert_initializer_list_and_visit[insert_and_cvisit](std::initializer_list<value_type> il, F1 f1, F2 f2);
 
     size_type xref:#concurrent_flat_set_erase[erase](const key_type& k);
     template<class K> size_type xref:#concurrent_flat_set_erase[erase](const K& k);
@@ -340,9 +369,14 @@ prior blocking operations on `x` synchronize with *op*. So, blocking operations 
 An operation is said to be _blocking on rehashing of_ ``__x__`` if it blocks on `x`
 only when an internal rehashing is issued.
 
-Access or modification of an element of a `boost::concurrent_flat_set` passed by reference to a
-user-provided visitation function do not introduce data races when the visitation function
-is executed internally by the `boost::concurrent_flat_set`.
+When executed internally by a `boost::concurrent_flat_set`, the following operations by a
+user-provided visitation function on the element passed do not introduce data races:
+
+* Read access to the element.
+* Non-mutable modification of the element.
+* Mutable modification of the element:
+  ** Within a container function accepting two visitation functions, always for the first function.
+  ** Within a non-const container function whose name does not contain `cvisit`, for the last (or only) visitation function.
 
 Any `boost::concurrent_flat_set operation` that inserts or modifies an element `e`
 synchronizes with the internal invocation of a visitation function on `e`.
@@ -708,8 +742,10 @@ Concurrency:;; Blocking on `*this`.
 ==== [c]visit
 
 ```c++
+template<class F> size_t visit(const key_type& k, F f);
 template<class F> size_t visit(const key_type& k, F f) const;
 template<class F> size_t cvisit(const key_type& k, F f) const;
+template<class K, class F> size_t visit(const K& k, F f);
 template<class K, class F> size_t visit(const K& k, F f) const;
 template<class K, class F> size_t cvisit(const K& k, F f) const;
 ```
@@ -725,6 +761,8 @@ Notes:;; The `template<class K, class F>` overloads only participate in overload
 ==== Bulk visit
 
 ```c++
+template<class FwdIterator, class F>
+  size_t visit(FwdIterator first, FwdIterator last, F f);
 template<class FwdIterator, class F>
   size_t visit(FwdIterator first, FwdIterator last, F f) const;
 template<class FwdIterator, class F>
@@ -758,6 +796,7 @@ Returns:;; The number of elements visited.
 ==== [c]visit_all
 
 ```c++
+template<class F> size_t visit_all(F f);
 template<class F> size_t visit_all(F f) const;
 template<class F> size_t cvisit_all(F f) const;
 ```
@@ -772,6 +811,7 @@ Returns:;; The number of elements visited.
 ==== Parallel [c]visit_all
 
 ```c++
+template<class ExecutionPolicy, class F> void visit_all(ExecutionPolicy&& policy, F f);
 template<class ExecutionPolicy, class F> void visit_all(ExecutionPolicy&& policy, F f) const;
 template<class ExecutionPolicy, class F> void cvisit_all(ExecutionPolicy&& policy, F f) const;
 ```
@@ -792,6 +832,7 @@ Unsequenced execution policies are not allowed.
 ==== [c]visit_while
 
 ```c++
+template<class F> bool visit_while(F f);
 template<class F> bool visit_while(F f) const;
 template<class F> bool cvisit_while(F f) const;
 ```
@@ -807,6 +848,7 @@ Returns:;; `false` iff `f` ever returns `false`.
 ==== Parallel [c]visit_while
 
 ```c++
+template<class ExecutionPolicy, class F> bool visit_while(ExecutionPolicy&& policy, F f);
 template<class ExecutionPolicy, class F> bool visit_while(ExecutionPolicy&& policy, F f) const;
 template<class ExecutionPolicy, class F> bool cvisit_while(ExecutionPolicy&& policy, F f) const;
 ```
@@ -1064,7 +1106,123 @@ template<class F> size_type insert_or_cvisit(std::initializer_list<value_type> i
 Equivalent to
 [listing,subs="+macros,+quotes"]
 -----
-  this->xref:#concurrent_flat_set_insert_iterator_range_or_visit[insert_or[c\]visit](il.begin(), il.end(), f);
+  this->xref:#concurrent_flat_set_insert_iterator_range_or_visit[insert_or_[c\]visit](il.begin(), il.end(), std::ref(f));
+-----
+
+[horizontal]
+Returns:;; The number of elements inserted. 
+
+---
+
+==== emplace_and_[c]visit
+```c++
+template<class... Args, class F1, class F2>
+  bool emplace_and_visit(Args&&... args, F1&& f1, F2&& f2);
+template<class... Args, class F1, class F2>
+  bool emplace_and_cvisit(Args&&... args, F1&& f1, F2&& f2);
+```
+
+Inserts an object, constructed with the arguments `args`, in the table if there is no element in the table with an equivalent key,
+and then invokes `f1` with a const reference to the newly created element.
+Otherwise, invokes `f2` with a const reference to the equivalent element.
+
+[horizontal]
+Requires:;; `value_type` is constructible from `args`.
+Returns:;; `true` if an insert took place.
+Concurrency:;; Blocking on rehashing of `*this`.
+Notes:;; Invalidates pointers and references to elements if a rehashing is issued. +
++
+The interface is exposition only, as C++ does not allow to declare parameters `f1` and `f2` after a variadic parameter pack.
+
+---
+
+==== Copy insert_and_[c]visit
+```c++
+template<class F1, class F2> bool insert_and_visit(const value_type& obj, F1 f1, F2 f2);
+template<class F1, class F2> bool insert_and_cvisit(const value_type& obj, F1 f1, F2 f2);
+```
+
+Inserts `obj` in the table if and only if there is no element in the table with an equivalent key,
+and then invokes `f1` with a const reference to the newly created element.
+Otherwise, invokes `f2` with a const reference to the equivalent element.
+
+[horizontal]
+Requires:;; `value_type` is https://en.cppreference.com/w/cpp/named_req/CopyInsertable[CopyInsertable^].
+Returns:;; `true` if an insert took place. +
+Concurrency:;; Blocking on rehashing of `*this`.
+Notes:;; Invalidates pointers and references to elements if a rehashing is issued.
+
+---
+
+==== Move insert_and_[c]visit
+```c++
+template<class F1, class F2> bool insert_and_visit(value_type&& obj, F1 f1, F2 f2);
+template<class F1, class F2> bool insert_and_cvisit(value_type&& obj, F1 f1, F2 f2);
+```
+
+Inserts `obj` in the table if and only if there is no element in the table with an equivalent key,
+and then invokes `f1` with a const reference to the newly created element.
+Otherwise, invokes `f2` with a const reference to the equivalent element.
+
+[horizontal]
+Requires:;; `value_type` is https://en.cppreference.com/w/cpp/named_req/MoveInsertable[MoveInsertable^].
+Returns:;; `true` if an insert took place. +
+Concurrency:;; Blocking on rehashing of `*this`.
+Notes:;; Invalidates pointers and references to elements if a rehashing is issued.
+
+---
+
+==== Transparent insert_and_[c]visit
+```c++
+template<class K, class F1, class F2> bool insert_and_visit(K&& k, F1 f1, F2 f2);
+template<class K, class F1, class F2> bool insert_and_cvisit(K&& k, F1 f1, F2 f2);
+```
+
+Inserts an element constructed from `std::forward<K>(k)` in the container if and only if there is no element in the container with an equivalent key,
+and then invokes `f1` with a const reference to the newly created element.
+Otherwise, invokes `f2` with a const reference to the equivalent element.
+
+[horizontal]
+Requires:;; `value_type` is https://en.cppreference.com/w/cpp/named_req/EmplaceConstructible[EmplaceConstructible^] from `k`.
+Returns:;; `true` if an insert took place. 
+Concurrency:;; Blocking on rehashing of `*this`.
+Notes:;; Invalidates pointers and references to elements if a rehashing is issued. +
++
+These overloads only participate in overload resolution if `Hash::is_transparent` and `Pred::is_transparent` are valid member typedefs. The library assumes that `Hash` is callable with both `K` and `Key` and that `Pred` is transparent. This enables heterogeneous lookup which avoids the cost of instantiating an instance of the `Key` type.
+
+---
+
+==== Insert Iterator Range and Visit
+```c++
+template<class InputIterator,class F1, class F2>
+    size_type insert_and_visit(InputIterator first, InputIterator last, F1 f1, F2 f2);
+template<class InputIterator,class F1, class F2>
+    size_type insert_and_cvisit(InputIterator first, InputIterator last, F1 f1, F2 f2);
+```
+
+Equivalent to
+[listing,subs="+macros,+quotes"]
+-----
+  while(first != last) this->xref:#concurrent_flat_set_emplace_and_cvisit[emplace_and_[c\]visit](*first++, f1, f2);
+-----
+
+[horizontal]
+Returns:;; The number of elements inserted. 
+
+---
+
+==== Insert Initializer List and Visit
+```c++
+template<class F1, class F2>
+  size_type insert_and_visit(std::initializer_list<value_type> il, F1 f1, F2 f2);
+template<class F1, class F2>
+  size_type insert_and_cvisit(std::initializer_list<value_type> il, F1 f1, F2 f2);
+```
+
+Equivalent to
+[listing,subs="+macros,+quotes"]
+-----
+  this->xref:#concurrent_flat_set_insert_iterator_range_and_visit[insert_and_[c\]visit](il.begin(), il.end(), std::ref(f1), std::ref(f2));
 -----
 
 [horizontal]

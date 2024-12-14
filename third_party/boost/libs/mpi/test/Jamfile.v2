@@ -3,14 +3,20 @@
 # (C) Copyright 2005, 2006 Trustees of Indiana University
 # (C) Copyright 2005 Douglas Gregor
 #
-# Distributed under the Boost Software License, Version 1.0. (See accompanying 
+# Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt.)
 #
 # Authors: Douglas Gregor
 #          Andrew Lumsdaine
 
-project : requirements <library>/boost//mpi ;
 import mpi : mpi-test ;
+
+project : requirements
+    <library>/boost/test//included
+    <library>/boost/mpi//boost_mpi
+    <library>/boost/mpi//boost_mpi_python
+    <mpi.run-flags>--oversubscribe
+    ;
 
 if [ mpi.configured ]
 {

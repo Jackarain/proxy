@@ -233,7 +233,7 @@ __SPACE__
 arguments `std::forward<Args>(args)...`.
 * [*Postconditions:] `*this` is initialized.
 * [*Throws:] Any exception thrown by the selected constructor of `T`.
-* [*Notes: ] `T` need not be __MOVE_CONSTRUCTIBLE__. On compilers that do not support variadic templates or rvalue references, this constuctor is available in limited functionality. For details [link optional_emplace_workaround see here].
+* [*Notes: ] `T` need not be __MOVE_CONSTRUCTIBLE__.
 
 * [*Example:]
 ``
@@ -257,7 +257,7 @@ __SPACE__
 * [*Effect:] If `condition` is `true`, initializes the contained value as if direct-non-list-initializing an object of type `T` with the arguments `std::forward<Args>(args)...`.
 * [*Postconditions:] `bool(*this) == condition`.
 * [*Throws:] Any exception thrown by the selected constructor of `T`.
-* [*Notes: ] `T` need not be __MOVE_CONSTRUCTIBLE__. On compilers that do not support variadic templates or rvalue references, this constuctor is available in limited functionality. For details [link optional_emplace_workaround see here].
+* [*Notes: ] `T` need not be __MOVE_CONSTRUCTIBLE__.
 
 * [*Example:]
 ``
@@ -281,7 +281,7 @@ factory.
 * [*Postconditions: ] `*this` is [_initialized] and its value is ['directly given]
 from the factory `f` (i.e., the value [_is not copied]).
 * [*Throws:] Whatever the `T` constructor called by the factory throws.
-* [*Notes:] See [link boost_optional.tutorial.in_place_factories In-Place Factories]
+* [*Notes:] See [link boost_optional.design.in_place_factories In-Place Factories]
 * [*Exception Safety:] Exceptions can only be thrown during the call to
 the `T` constructor used by the factory; in that case, this constructor has
 no effect.
@@ -502,7 +502,7 @@ __SPACE__
 * [*Postconditions: ] `*this` is [_initialized].
 * [*Throws:] Whatever the selected `T`'s  constructor throws.
 * [*Exception Safety:] If an exception is thrown during the initialization of `T`, `*this` is ['uninitialized].
-* [*Notes:] `T` need not be __MOVE_CONSTRUCTIBLE__ or `MoveAssignable`. On compilers that do not support variadic templates or rvalue references, this function is available in limited functionality. For details [link optional_emplace_workaround see here].
+* [*Notes:] `T` need not be __MOVE_CONSTRUCTIBLE__ or `MoveAssignable`. 
 * [*Example:]
 ``
 T v;
@@ -524,7 +524,7 @@ factory.
 * [*Postconditions: ] `*this` is [_initialized] and its value is ['directly given]
 from the factory `f` (i.e., the value [_is not copied]).
 * [*Throws:] Whatever the `T` constructor called by the factory throws.
-* [*Notes:] See [link boost_optional.tutorial.in_place_factories In-Place Factories]
+* [*Notes:] See [link boost_optional.design.in_place_factories In-Place Factories]
 * [*Exception Safety:] Exceptions can only be thrown during the call to
 the `T` constructor used by the factory; in that case, the `optional` object
 will be reset to be ['uninitialized].
@@ -963,7 +963,7 @@ __SPACE__
 
 * [*Postconditions:] `bool(*this) == bool(rhs)`.
 
-* [*Notes:] This behaviour is called ['rebinding semantics]. See [link boost_optional.tutorial.optional_references.rebinding_semantics_for_assignment_of_optional_references here] for details.
+* [*Notes:] This behaviour is called ['rebinding semantics]. See [link boost_optional.design.optional_references.rebinding_semantics_for_assignment_of_optional_references here] for details.
 
 * [*Example:]
 ``
@@ -1428,9 +1428,9 @@ struct hash<boost::optional<T&> > ;
 ``
 
 The specialization `hash<optional<T>>` is enabled if and only if
-`hash<remove_­const_­t<T>>` is enabled. When enabled, for an object `o`
-of type `optional<T>`, if `o.has_­value() == true`, then `hash<optional<T>>()(o)`
- evaluates to the same value as `hash<remove_­const_­t<T>>()(*o)`; otherwise it
+`hash<remove_const_t<T>>` is enabled. When enabled, for an object `o`
+of type `optional<T>`, if `o.has_value() == true`, then `hash<optional<T>>()(o)`
+ evaluates to the same value as `hash<remove_const_t<T>>()(*o)`; otherwise it
 evaluates to an unspecified value.
 The member functions are not guaranteed to be `noexcept`.
 

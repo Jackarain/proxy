@@ -26,32 +26,15 @@ int main(int argc, char *argv[])
       //Remove shared memory on construction and destruction
       struct shm_remove
       {
-      //<-
-      #if 1
          shm_remove() { shared_memory_object::remove(test::get_process_id_name()); }
          ~shm_remove(){ shared_memory_object::remove(test::get_process_id_name()); }
-      #else
-      //->
-         shm_remove() { shared_memory_object::remove("MySharedMemory"); }
-         ~shm_remove(){ shared_memory_object::remove("MySharedMemory"); }
-      //<-
-      #endif
-      //->
       } remover;
       //<-
       (void)remover;
       //->
 
       //Create a shared memory object.
-      //<-
-      #if 1
       shared_memory_object shm (create_only, test::get_process_id_name(), read_write);
-      #else
-      //->
-      shared_memory_object shm (create_only, "MySharedMemory", read_write);
-      //<-
-      #endif
-      //->
 
       //Set size
       shm.truncate(1000);
@@ -72,15 +55,7 @@ int main(int argc, char *argv[])
    }
    else{
       //Open already created shared memory object.
-      //<-
-      #if 1
       shared_memory_object shm (open_only, argv[2], read_only);
-      #else
-      //->
-      shared_memory_object shm (open_only, "MySharedMemory", read_only);
-      //<-
-      #endif
-      //->
 
       //Map the whole shared memory in this process
       mapped_region region(shm, read_only);

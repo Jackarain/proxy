@@ -48,7 +48,7 @@ maybe_octet(
 } // detail
 
 auto
-ipv6_address_rule_t::
+implementation_defined::ipv6_address_rule_t::
 parse(
     char const*& it,
     char const* const end

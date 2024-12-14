@@ -59,6 +59,11 @@ jobs:
             os: ubuntu-latest
             container: ubuntu:23.04
             install: g++-13
+          - toolset: gcc-14
+            cxxstd: "11,14,17,20,2b"
+            os: ubuntu-latest
+            container: ubuntu:24.04
+            install: g++-14
           - toolset: clang
             compiler: clang++-12
             cxxstd: "11,14,17,2a"
@@ -81,18 +86,30 @@ jobs:
           - toolset: clang
             compiler: clang++-16
             cxxstd: "11,14,17,20,2b"
-            os: ubuntu-latest
             container: ubuntu:23.04
+            os: ubuntu-latest
             install: clang-16
           - toolset: clang
+            compiler: clang++-17
             cxxstd: "11,14,17,20,2b"
-            os: macos-11
+            container: ubuntu:23.10
+            os: ubuntu-latest
+            install: clang-17
           - toolset: clang
+            compiler: clang++-18
             cxxstd: "11,14,17,20,2b"
-            os: macos-12
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-18
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-13
+          - toolset: clang
+            cxxstd: "11,14,17,20,2b"
+            os: macos-14
+          - toolset: clang
+            cxxstd: "11,14,17,20,2b"
+            os: macos-15
 
     runs-on: ${{matrix.os}}
     container: ${{matrix.container}}
@@ -102,6 +119,10 @@ jobs:
         shell: bash
 
     steps:
+      - name: Enable Node 16
+        run: |
+          echo "ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true" >> $GITHUB_ENV
+
       - uses: actions/checkout@v3
 
       - name: Setup container environment
@@ -177,7 +198,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd
@@ -211,36 +232,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-20.04
-            shared: OFF
-          - os: ubuntu-20.04
-            shared: ON
-          - os: ubuntu-22.04
-            shared: OFF
-          - os: ubuntu-22.04
-            shared: ON
-          - os: macos-11
-            shared: OFF
-          - os: macos-11
-            shared: ON
-          - os: macos-12
-            shared: OFF
-          - os: macos-12
-            shared: ON
-          - os: macos-13
-            shared: OFF
-          - os: macos-13
-            shared: ON
+        os: [ ubuntu-latest, macos-latest ]
+        shared: [ OFF, ON ]
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
-        run: sudo apt install ${{matrix.install}}
+        run: sudo apt-get -y install ${{matrix.install}}
 
       - name: Setup Boost
         run: |
@@ -262,44 +264,224 @@ jobs:
           git submodule update --init tools/boostdep
           python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
 
-      - name: Use Boost.Iostreams with CMake add_subdirectory
+      - name: Use library with add_subdirectory
         run: |
-          cd ../boost-root/libs/iostreams/test/cmake_subdir_test
+          cd ../boost-root/libs/$LIBRARY/test/cmake_subdir_test
           mkdir __build__ && cd __build__
           cmake -DBUILD_SHARED_LIBS=${{matrix.shared}} ..
           cmake --build .
-          cmake --build . --target check
+          ctest --output-on-failure --no-tests=error
 
   posix-cmake-install:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-20.04
-            shared: OFF
-          - os: ubuntu-20.04
-            shared: ON
-          - os: ubuntu-22.04
-            shared: OFF
-          - os: ubuntu-22.04
-            shared: ON
-          - os: macos-11
-            shared: OFF
-          - os: macos-11
-            shared: ON
-          - os: macos-12
-            shared: OFF
-          - os: macos-12
-            shared: ON
-          - os: macos-13
-            shared: OFF
-          - os: macos-13
-            shared: ON
+        os: [ ubuntu-latest, macos-latest ]
+        shared: [ OFF, ON ]
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
+      - name: Install packages
+        if: matrix.install
+        run: sudo apt-get -y install ${{matrix.install}}
+
+      - name: Setup Boost
+        run: |
+          echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+          LIBRARY=${GITHUB_REPOSITORY#*/}
+          echo LIBRARY: $LIBRARY
+          echo "LIBRARY=$LIBRARY" >> $GITHUB_ENV
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+
+      - name: Configure
+        run: |
+          cd ../boost-root
+          mkdir __build__ && cd __build__
+          cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DCMAKE_INSTALL_PREFIX=~/.local -DBUILD_SHARED_LIBS=${{matrix.shared}} -DBoost_VERBOSE=ON ..
+
+      - name: Install
+        run: |
+          cd ../boost-root/__build__
+          cmake --build . --target install
+
+      - name: Use the installed library
+        run: |
+          cd ../boost-root/libs/$LIBRARY/test/cmake_install_test && mkdir __build__ && cd __build__
+          cmake -DCMAKE_PREFIX_PATH=~/.local -DBoost_VERBOSE=ON ..
+          cmake --build .
+          ctest --output-on-failure --no-tests=error
+
+  windows-cmake-subdir:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-latest ]
+        shared: [ OFF, ON ]
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Boost
+        shell: cmd
+        run: |
+          echo GITHUB_REPOSITORY: %GITHUB_REPOSITORY%
+          for /f %%i in ("%GITHUB_REPOSITORY%") do set LIBRARY=%%~nxi
+          echo LIBRARY: %LIBRARY%
+          echo LIBRARY=%LIBRARY%>>%GITHUB_ENV%
+          echo GITHUB_BASE_REF: %GITHUB_BASE_REF%
+          echo GITHUB_REF: %GITHUB_REF%
+          if "%GITHUB_BASE_REF%" == "" set GITHUB_BASE_REF=%GITHUB_REF%
+          set BOOST_BRANCH=develop
+          for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
+          echo BOOST_BRANCH: %BOOST_BRANCH%
+          cd ..
+          git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          xcopy /s /e /q %GITHUB_WORKSPACE% libs\%LIBRARY%\
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" %LIBRARY%
+
+      - name: Use library with add_subdirectory (Debug)
+        shell: cmd
+        run: |
+          cd ../boost-root/libs/%LIBRARY%/test/cmake_subdir_test
+          mkdir __build__ && cd __build__
+          cmake -DBUILD_SHARED_LIBS=${{matrix.shared}} ..
+          cmake --build . --config Debug
+          ctest --output-on-failure --no-tests=error -C Debug
+
+      - name: Use library with add_subdirectory (Release)
+        shell: cmd
+        run: |
+          cd ../boost-root/libs/%LIBRARY%/test/cmake_subdir_test/__build__
+          cmake --build . --config Release
+          ctest --output-on-failure --no-tests=error -C Release
+
+  windows-cmake-install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-latest ]
+        shared: [ OFF, ON ]
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Boost
+        shell: cmd
+        run: |
+          echo GITHUB_REPOSITORY: %GITHUB_REPOSITORY%
+          for /f %%i in ("%GITHUB_REPOSITORY%") do set LIBRARY=%%~nxi
+          echo LIBRARY: %LIBRARY%
+          echo LIBRARY=%LIBRARY%>>%GITHUB_ENV%
+          echo GITHUB_BASE_REF: %GITHUB_BASE_REF%
+          echo GITHUB_REF: %GITHUB_REF%
+          if "%GITHUB_BASE_REF%" == "" set GITHUB_BASE_REF=%GITHUB_REF%
+          set BOOST_BRANCH=develop
+          for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
+          echo BOOST_BRANCH: %BOOST_BRANCH%
+          cd ..
+          git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          xcopy /s /e /q %GITHUB_WORKSPACE% libs\%LIBRARY%\
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" %LIBRARY%
+
+      - name: Configure
+        shell: cmd
+        run: |
+          cd ../boost-root
+          mkdir __build__ && cd __build__
+          cmake -DBOOST_INCLUDE_LIBRARIES=%LIBRARY% -DCMAKE_INSTALL_PREFIX=C:/cmake-prefix -DBUILD_SHARED_LIBS=${{matrix.shared}} ..
+
+      - name: Install (Debug)
+        shell: cmd
+        run: |
+          cd ../boost-root/__build__
+          cmake --build . --target install --config Debug
+
+      - name: Install (Release)
+        shell: cmd
+        run: |
+          cd ../boost-root/__build__
+          cmake --build . --target install --config Release
+
+      - name: Use the installed library (Debug)
+        shell: cmd
+        run: |
+          cd ../boost-root/libs/%LIBRARY%/test/cmake_install_test && mkdir __build__ && cd __build__
+          cmake -DCMAKE_INSTALL_PREFIX=C:/cmake-prefix ..
+          cmake --build . --config Debug
+          PATH C:\cmake-prefix\bin;%PATH%
+          ctest --output-on-failure --no-tests=error -C Debug
+
+      - name: Use the installed library (Release)
+        shell: cmd
+        run: |
+          cd ../boost-root/libs/%LIBRARY%/test/cmake_install_test/__build__
+          cmake --build . --config Release
+          PATH C:\cmake-prefix\bin;%PATH%
+          ctest --output-on-failure --no-tests=error -C Release
+
+  posix-b2-install:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+
+          - os: ubuntu-latest
+            bopts: install
+
+          - os: ubuntu-latest
+            bopts: install
+            copts: -DBoost_USE_STATIC_LIBS=ON
+
+          - os: ubuntu-latest
+            bopts: stage
+            copts: -DUSE_STAGED_BOOST=ON
+
+          - os: ubuntu-latest
+            bopts: stage
+            copts: -DUSE_STAGED_BOOST=ON -DBoost_USE_STATIC_LIBS=ON
+
+          - os: macos-latest
+            bopts: install
+
+          - os: macos-latest
+            bopts: install
+            copts: -DBoost_USE_STATIC_LIBS=ON
+
+          - os: macos-latest
+            bopts: stage
+            copts: -DUSE_STAGED_BOOST=ON
+
+          - os: macos-latest
+            bopts: stage
+            copts: -DUSE_STAGED_BOOST=ON -DBoost_USE_STATIC_LIBS=ON
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -323,23 +505,76 @@ jobs:
           cd boost-root
           cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
           git submodule update --init tools/boostdep
-          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+          python3 tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+          ./bootstrap.sh
+          ./b2 -d0 headers
 
-      - name: Build Boost.Iostreams with CMake
+      - name: Run tests
         run: |
           cd ../boost-root
+          ./b2 -d0 -j3 --prefix=$HOME/.local --with-headers ${{matrix.bopts}}
+          ./b2 -j3 --prefix=$HOME/.local --with-iostreams ${{matrix.bopts}}
+          cd libs/iostreams/test/b2_install_test
           mkdir __build__ && cd __build__
-          cmake -DBOOST_INCLUDE_LIBRARIES=iostreams -DCMAKE_INSTALL_PREFIX=~/.local -DBUILD_SHARED_LIBS=${{matrix.shared}} ..
-          cmake --build .
-
-      - name: Install Boost.Iostreams with CMake
-        run: |
-          cd ../boost-root/__build__
-          cmake --build . --target install
-
-      - name: Use the installed Boost.Iostreams with CMake
-        run: |
-          cd ../boost-root/libs/iostreams/test/cmake_install_test && mkdir __build__ && cd __build__
-          cmake -DCMAKE_INSTALL_PREFIX=~/.local ..
-          cmake --build .
+          cmake -DCMAKE_PREFIX_PATH=~/.local -DBoost_VERBOSE=ON ${{matrix.copts}} ..
+          VERBOSE=1 cmake --build .
+          export LD_LIBRARY_PATH=$HOME/.local/lib:$GITHUB_WORKSPACE/../boost-root/stage/lib:$LD_LIBRARY_PATH
           cmake --build . --target check
+
+  windows-b2-install:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+
+          - os: windows-latest
+            bopts: install
+
+          - os: windows-latest
+            bopts: stage
+            copts: -DUSE_STAGED_BOOST=ON
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Boost
+        shell: cmd
+        run: |
+          echo GITHUB_REPOSITORY: %GITHUB_REPOSITORY%
+          for /f %%i in ("%GITHUB_REPOSITORY%") do set LIBRARY=%%~nxi
+          echo LIBRARY: %LIBRARY%
+          echo LIBRARY=%LIBRARY%>>%GITHUB_ENV%
+          echo GITHUB_BASE_REF: %GITHUB_BASE_REF%
+          echo GITHUB_REF: %GITHUB_REF%
+          if "%GITHUB_BASE_REF%" == "" set GITHUB_BASE_REF=%GITHUB_REF%
+          set BOOST_BRANCH=develop
+          for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
+          echo BOOST_BRANCH: %BOOST_BRANCH%
+          cd ..
+          git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          xcopy /s /e /q %GITHUB_WORKSPACE% libs\%LIBRARY%\
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" %LIBRARY%
+          cmd /c bootstrap
+          b2 -d0 headers
+
+      - name: Run tests
+        shell: cmd
+        run: |
+          echo on
+          cd ../boost-root
+          set ZLIB_SOURCE=%CD%\libs\iostreams\test\zlib-1.2.11
+          set BZIP2_SOURCE=%CD%\libs\iostreams\test\bzip2-1.0.8
+          b2 -d0 -j3 --prefix=%GITHUB_WORKSPACE%\..\.local --with-headers ${{matrix.bopts}}
+          b2 -j3 --prefix=%GITHUB_WORKSPACE%\..\.local --with-iostreams ${{matrix.bopts}}
+          cd libs\iostreams\test\b2_install_test
+          mkdir __build__ && cd __build__
+          cmake -DCMAKE_INSTALL_PREFIX=%GITHUB_WORKSPACE%\..\.local -DBoost_VERBOSE=ON ${{matrix.copts}} ..
+          PATH %PATH%;%GITHUB_WORKSPACE%\..\.local\lib;%GITHUB_WORKSPACE%\..\boost-root\stage\lib
+          cmake --build . --config Debug && cmake --build . --config Debug --target check
+          cmake --build . --config Release && cmake --build . --config Release --target check
+          cmake --build . --config MinSizeRel && cmake --build . --config MinSizeRel --target check
+          cmake --build . --config RelWithDebInfo && cmake --build . --config RelWithDebInfo --target check

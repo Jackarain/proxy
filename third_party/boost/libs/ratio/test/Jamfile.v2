@@ -12,6 +12,10 @@ import testing ;
 project
     : requirements
         <warnings>pedantic
+        <library>/boost/ratio//boost_ratio
+        <library>/boost/core//boost_core
+        <library>/boost/integer//boost_integer
+        <library>/boost/mpl//boost_mpl
     ;
 
 # test-suite "ratio_ratio"

@@ -34,7 +34,7 @@ public:
 // only provided for backward compatibility
 
 using random_generator_mt19937 = basic_random_generator<std::mt19937>;
-using random_generator_pure = basic_random_generator<std::random_device> random_generator_pure;
+using random_generator_pure = basic_random_generator<std::random_device>;
 
 }} // namespace boost::uuids
 ----

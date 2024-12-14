@@ -1,5 +1,5 @@
 ////
-Copyright 2019-2023 Peter Dimov
+Copyright 2019-2024 Peter Dimov
 
 Distributed under the Boost Software License, Version 1.0.
 
@@ -9,6 +9,10 @@ http://www.boost.org/LICENSE_1_0.txt
 
 [#changelog]
 # Revision History
+
+## Changes in 1.87.0
+
+* Added `mp_lambda` (contributed by Joaquin M Lopez Munoz)
 
 ## Changes in 1.85.0
 

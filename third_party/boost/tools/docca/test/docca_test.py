@@ -15,6 +15,8 @@ import jinja2
 import jinja2.ext
 import os
 import pytest
+import re
+import types
 
 from docca_test_helpers import (
     MockXmlElem,
@@ -999,12 +1001,22 @@ def test_variable():
                                 { 'tag': 'type', 'items': ['std::string'] },
                             ],
                         },
+                        {
+                            'tag': 'memberdef',
+                            'id': 'idv2',
+                            'kind': 'variable',
+                            'items': [
+                                { 'tag': 'name', 'items': ['v2'] },
+                                { 'tag': 'type', 'items': ['std::string(*'] },
+                                { 'tag': 'argsstring', 'items': [')(int)'] },
+                            ],
+                        },
                     ],
                 },
             ]
         }))
     ns.resolve_references()
-    assert len(ns.members) == 1
+    assert len(ns.members) == 2
     for m in ns.members.values():
         m.resolve_references()
     assert isinstance(ns.members['v1'], docca.Variable)
@@ -1018,6 +1030,19 @@ def test_variable():
     assert not ns.members['v1'].is_const
     assert not ns.members['v1'].is_inline
     assert ns.members['v1'].access == 'public'
+
+    assert isinstance(ns.members['v2'], docca.Variable)
+    assert ns.members['v2'].id == 'idv2'
+    assert ns.members['v2'].name == 'v2'
+    assert ns.members['v2'].value.text == ''
+    assert ns.members['v2'].type.text == 'std::string'
+    assert ns.members['v2'].args.text == '(int)'
+    assert not ns.members['v2'].is_static
+    assert not ns.members['v2'].is_constexpr
+    assert not ns.members['v2'].is_volatile
+    assert not ns.members['v2'].is_const
+    assert not ns.members['v2'].is_inline
+    assert ns.members['v2'].access == 'public'
 
     ns = docca.Namespace(
         make_elem({
@@ -1649,6 +1674,13 @@ def test_function():
                         { 'tag': 'array', 'items': ['[1]'] },
                     ],
                 },
+                {
+                    'tag': 'param',
+                    'items': [
+                        { 'tag': 'type', 'items': ['int(*'] },
+                        { 'tag': 'argsstring', 'items': [')(long)'] },
+                    ],
+                },
             ]
         }),
         make_elem({}),
@@ -1656,6 +1688,120 @@ def test_function():
     func.resolve_references()
     assert func.parameters[0].type.text == 'int'
     assert func.parameters[0].array.text == '[1]'
+    assert func.parameters[1].type.text == 'int'
+    assert func.parameters[1].args.text == '(long)'
+
+    index = {}
+    ns = docca.Namespace(
+        make_elem({
+            'tag': 'compound',
+            'id': 'ns',
+            'items': [
+                { 'tag': 'compoundname', 'items': ['Namespace'] },
+                {
+                    'tag': 'sectiondef',
+                    'items': [
+                        {
+                            'tag': 'memberdef',
+                            'id': 'f1',
+                            'kind': 'function',
+                            'items': [
+                                { 'tag': 'name', 'items': ['func1'] },
+                                { 'tag': 'argsstring', 'items': ['()'] },
+                                { 'tag': 'type', 'items': ['void'] },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        }),
+        index);
+    c = docca.Class(
+        make_elem({
+            'tag': 'compound',
+            'id': 'cl',
+            'items': [
+                { 'tag': 'compoundname', 'items': ['Class'] },
+                {
+                    'tag': 'sectiondef',
+                    'kind': 'related',
+                    'items': [
+                        {
+                            'tag': 'memberdef',
+                            'id': 'f1',
+                            'kind': 'function',
+                            'items': [
+                                { 'tag': 'name', 'items': ['func1'] },
+                                { 'tag': 'argsstring', 'items': ['()'] },
+                                { 'tag': 'type', 'items': ['void'] },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        }),
+        index);
+    for e in index.values():
+        e.resolve_references()
+    assert len(c.members) == 1
+    assert len(ns.members) == 0
+    assert list(c.members.values())[0].scope == c
+
+    index = {}
+    c = docca.Class(
+        make_elem({
+            'tag': 'compound',
+            'id': 'cl',
+            'items': [
+                { 'tag': 'compoundname', 'items': ['Class'] },
+                {
+                    'tag': 'sectiondef',
+                    'kind': 'related',
+                    'items': [
+                        {
+                            'tag': 'memberdef',
+                            'id': 'f1',
+                            'kind': 'function',
+                            'items': [
+                                { 'tag': 'name', 'items': ['func1'] },
+                                { 'tag': 'argsstring', 'items': ['()'] },
+                                { 'tag': 'type', 'items': ['void'] },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        }),
+        index);
+    ns = docca.Namespace(
+        make_elem({
+            'tag': 'compound',
+            'id': 'ns',
+            'items': [
+                { 'tag': 'compoundname', 'items': ['Namespace'] },
+                {
+                    'tag': 'sectiondef',
+                    'items': [
+                        {
+                            'tag': 'memberdef',
+                            'id': 'f1',
+                            'kind': 'function',
+                            'items': [
+                                { 'tag': 'name', 'items': ['func1'] },
+                                { 'tag': 'argsstring', 'items': ['()'] },
+                                { 'tag': 'type', 'items': ['void'] },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        }),
+        index);
+    for e in index.values():
+        e.resolve_references()
+    assert len(c.members) == 1
+    assert len(ns.members) == 0
+    assert list(c.members.values())[0].scope == c
 
 def test_overload_set():
     index = dict()
@@ -1725,7 +1871,8 @@ def test_overload_set():
                     ],
                 }
             ]
-        }))
+        }),
+        index)
     for entity in index.values():
         entity.resolve_references()
     assert len(ns.members) == 1
@@ -1771,7 +1918,8 @@ def test_overload_set():
                     ],
                 }
             ]
-        }))
+        }),
+        index)
     for entity in index.values():
         entity.resolve_references()
     assert len(ns.members) == 2
@@ -1819,7 +1967,8 @@ def test_overload_set():
                     ],
                 }
             ]
-        }))
+        }),
+        index)
     for entity in index.values():
         entity.resolve_references()
     oset = list(ns.members.values())[0]
@@ -1831,6 +1980,84 @@ def test_overload_set():
     assert oset[0].overload_set == oset
     assert oset[0].is_sole_overload
 
+    index = dict()
+    ns = docca.Namespace(
+        make_elem({
+            'tag': 'compound',
+            'id': 'ns',
+            'items': [
+                { 'tag': 'compoundname', 'items': ['ns'] },
+                {
+                    'tag': 'sectiondef',
+                    'items': [
+                        {
+                            'tag': 'memberdef',
+                            'kind': 'function',
+                            'id': 'f1',
+                            'items': [
+                                { 'tag': 'name', 'items': ['func1'] },
+                                { 'tag': 'argsstring', 'items': [''] },
+                                { 'tag': 'type', 'items': ['void'] },
+                                {
+                                    'tag': 'briefdescription',
+                                    'items': ['brief1'],
+                                },
+                            ],
+                        },
+                        {
+                            'tag': 'memberdef',
+                            'kind': 'function',
+                            'id': 'f2',
+                            'items': [
+                                { 'tag': 'name', 'items': ['func1'] },
+                                { 'tag': 'argsstring', 'items': [''] },
+                                { 'tag': 'type', 'items': ['int'] },
+                                {
+                                    'tag': 'briefdescription',
+                                    'items': ['brief2'],
+                                },
+                            ],
+                        },
+                        {
+                            'tag': 'memberdef',
+                            'kind': 'function',
+                            'id': 'f3',
+                            'items': [
+                                { 'tag': 'name', 'items': ['func1'] },
+                                { 'tag': 'argsstring', 'items': [''] },
+                                { 'tag': 'type', 'items': ['int'] },
+                                {
+                                    'tag': 'briefdescription',
+                                    'items': ['brief1'],
+                                },
+                            ],
+                        },
+                    ],
+                }
+            ]
+        }),
+        index)
+    for entity in index.values():
+        entity.resolve_references()
+    oset = list(ns.members.values())[0]
+    assert len(oset) == 3
+    assert collect_paragraphs(oset[0].brief) == 'brief1'
+    assert oset[0].return_type.text == 'void'
+
+    assert collect_paragraphs(oset[1].brief) == 'brief1'
+    assert oset[1].return_type.text == 'int'
+
+    assert collect_paragraphs(oset[2].brief) == 'brief2'
+
+    funcs = sorted(list(oset))
+    assert collect_paragraphs(funcs[0].brief) == 'brief1'
+    assert funcs[0].return_type.text == 'void'
+
+    assert collect_paragraphs(funcs[1].brief) == 'brief1'
+    assert funcs[1].return_type.text == 'int'
+
+    assert collect_paragraphs(funcs[2].brief) == 'brief2'
+
 def test_parse_args():
     args = docca.parse_args([''])
     assert args.input is None
@@ -1839,6 +2066,7 @@ def test_parse_args():
     assert args.directory is None
     assert len(args.config) == 0
     assert len(args.include) == 0
+    assert len(args.extension) == 0
 
     with pytest.raises(SystemExit) as e:
         docca.parse_args(['', '-G', 'some string'])
@@ -1851,6 +2079,7 @@ def test_parse_args():
         assert args.directory is None
         assert len(args.config) == 0
         assert len(args.include) == 0
+        assert len(args.extension) == 0
 
         with pytest.raises(SystemExit) as e:
             docca.parse_args(
@@ -1864,6 +2093,7 @@ def test_parse_args():
         assert args.directory is None
         assert len(args.config) == 0
         assert len(args.include) == 0
+        assert len(args.extension) == 0
 
         with pytest.raises(SystemExit) as e:
             docca.parse_args(
@@ -1877,6 +2107,7 @@ def test_parse_args():
         assert args.directory is None
         assert len(args.config) == 0
         assert len(args.include) == 0
+        assert len(args.extension) == 0
 
         with pytest.raises(SystemExit) as e:
             docca.parse_args(
@@ -1890,6 +2121,7 @@ def test_parse_args():
         assert args.directory == 'some/directory'
         assert len(args.config) == 0
         assert len(args.include) == 0
+        assert len(args.extension) == 0
 
         with pytest.raises(SystemExit) as e:
             docca.parse_args(
@@ -1908,6 +2140,7 @@ def test_parse_args():
             assert args.directory is None
             assert args.config == configs
             assert len(args.include) == 0
+            assert len(args.extension) == 0
 
     for flag in ('-I', '--include'):
         includes = []
@@ -1922,10 +2155,27 @@ def test_parse_args():
             assert args.directory is None
             assert len(args.config)  == 0
             assert args.include == includes
+            assert len(args.extension) == 0
+
+    for flag in ('-E', '--extension'):
+        exts = []
+        flags = []
+        for n in range(5):
+            exts.append( 'm' + str(n) )
+            flags.extend([ flag, exts[-1] ])
+            args = docca.parse_args([''] + flags)
+            assert args.input is None
+            assert args.output is None
+            assert args.template is None
+            assert args.directory is None
+            assert len(args.config) == 0
+            assert len(args.include) == 0
+            assert args.extension == exts
 
     args = docca.parse_args([
         '', '-iinput1', '-ooutput2', '-Ttemplate3', '-cconf4', '-cconf5',
-        '-Iinclude6', '-Iinclude7', '-Iinclude8', '-Ddir9'
+        '-Iinclude6', '-Iinclude7', '-Iinclude8', '-Ddir9', '-Eext10',
+        '-Eext11',
     ])
     assert args.input == 'input1'
     assert args.output == 'output2'
@@ -1933,6 +2183,7 @@ def test_parse_args():
     assert args.directory == 'dir9'
     assert args.config == ['conf4', 'conf5']
     assert args.include == ['include6', 'include7', 'include8']
+    assert args.extension == ['ext10', 'ext11']
 
 def test_open_input(tmpdir):
     stdin = io.StringIO()
@@ -2113,6 +2364,61 @@ def test_construct_environment():
     assert env.globals['Section'] == docca.Section
     assert env.globals['ParameterList'] == docca.ParameterList
     assert env.globals['Config'] == conf
+    assert env.globals['re'] == re
+
+def test_load_extensions():
+    exts = docca.load_extensions([])
+    assert len(exts) == 0
+
+    here = os.path.dirname(__file__)
+    exts = docca.load_extensions([ os.path.join(here, 'exts/1.py') ])
+    assert len(exts) == 1
+
+    assert exts[0].__file__ == os.path.join(here, 'exts/1.py')
+    assert exts[0].__name__ == 'docca._ext0'
+
+    exts = docca.load_extensions([
+        os.path.join(here, 'exts/2.py'), os.path.join(here, 'exts/3.py') ])
+    assert len(exts) == 2
+    assert exts[0].__file__ == os.path.join(here, 'exts/2.py')
+    assert exts[0].__name__ == 'docca._ext0'
+    assert exts[1].__file__ == os.path.join(here, 'exts/3.py')
+    assert exts[1].__name__ == 'docca._ext1'
+
+def test_install_extensions():
+    env = docca.construct_environment(dict(), jinja2.DictLoader({}))
+
+    default_globals = env.globals.copy()
+    default_tests = env.tests.copy()
+    default_filters = env.filters.copy()
+    default_extensions = env.extensions.copy()
+
+    env = docca.install_extensions(env, [])
+    assert env.globals == default_globals
+    assert env.filters == default_filters
+    assert env.tests == default_tests
+    assert env.extensions == default_extensions
+
+    class mod1:
+        @staticmethod
+        def install_docca_extension(env):
+            env.globals['foo'] = 'bar'
+    env = docca.construct_environment(dict(), jinja2.DictLoader({}))
+    env = docca.install_extensions(env, [mod1])
+    assert env.globals['foo'] == 'bar'
+
+    d = lambda x: False
+
+    class mod2:
+        @staticmethod
+        def install_docca_extension(env):
+            env.globals['a'] = 'b'
+            env.tests['c'] = d
+    env = docca.construct_environment(dict(), jinja2.DictLoader({}))
+    env = docca.install_extensions(env, [mod1, mod2])
+    assert env.globals['foo'] == 'bar'
+    assert env.globals['a'] == 'b'
+    assert env.tests['c'] == d
 
 def test_render():
     file = io.StringIO()

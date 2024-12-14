@@ -18,8 +18,8 @@
 #include <new>
 #include <memory>
 #include <map>
-#include <boost/ref.hpp>
 #include <boost/type_index.hpp>
+#include <boost/core/ref.hpp>
 #include <boost/smart_ptr/shared_ptr.hpp>
 #include <boost/smart_ptr/make_shared_object.hpp>
 #include <boost/log/detail/config.hpp>
@@ -63,7 +63,7 @@ private:
         {
             this->m_pVisitor = (void*)boost::addressof(m_Visitor);
             typedef void (*trampoline_t)(void*, T const&);
-            BOOST_STATIC_ASSERT_MSG(sizeof(trampoline_t) == sizeof(void*), "Boost.Log: Unsupported platform, the size of a function pointer differs from the size of a pointer");
+            static_assert(sizeof(trampoline_t) == sizeof(void*), "Boost.Log: Unsupported platform, the size of a function pointer differs from the size of a pointer");
             union
             {
                 void* as_pvoid;

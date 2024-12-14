@@ -1,5 +1,3 @@
-#include <boost/config.hpp>
-
 //  shared_ptr_alias_move_test.cpp
 //
 //  Copyright (c) 2007 Peter Dimov
@@ -8,12 +6,10 @@
 // accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-
-#include <boost/core/lightweight_test.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/core/lightweight_test.hpp>
+#include <boost/config.hpp>
 #include <utility>
-
-#if !defined( BOOST_NO_CXX11_RVALUE_REFERENCES )
 
 class incomplete;
 
@@ -244,12 +240,3 @@ int main()
 
     return boost::report_errors();
 }
-
-#else // defined( BOOST_NO_CXX11_RVALUE_REFERENCES )
-
-int main()
-{
-    return 0;
-}
-
-#endif

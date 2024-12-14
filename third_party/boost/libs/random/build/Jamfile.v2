@@ -7,9 +7,11 @@
 # accompanying file LICENSE_1_0.txt or copy at
 # http://www.boost.org/LICENSE_1_0.txt)
 
-import ../../config/checks/config : requires ;
+import-search /boost/config/checks ;
+import config : requires ;
 
-project boost/random ;
+project
+    : common-requirements <library>$(boost_dependencies) ;
 
 local SOURCES = random_device.cpp ;
 
@@ -29,7 +31,6 @@ lib boost_random
 
   # usage-requirements
   : <link>shared:<define>BOOST_RANDOM_DYN_LINK=1
+    <define>BOOST_RANDOM_NO_LIB=1
 
 ;
-
-boost-install boost_random ;

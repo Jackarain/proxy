@@ -140,10 +140,7 @@ struct limit_handles_ : handler_base_ext
                     auto itr = std::find(all_handles.begin(), all_handles .end(), handle);
                     ::boost::winapi::DWORD_ flags = 0u;
                     if (itr != all_handles.end())
-                        *itr = ::boost::winapi::INVALID_HANDLE_VALUE_;
-                    else if ((::boost::winapi::GetHandleInformation(*itr, &flags) != 0)
-                            &&((flags & ::boost::winapi::HANDLE_FLAG_INHERIT_) == 0)) //it is NOT inherited anyhow, so ignore too
-                        *itr = ::boost::winapi::INVALID_HANDLE_VALUE_;
+                        *itr = ::boost::winapi::INVALID_HANDLE_VALUE_; // the handle is used mark it as invalid, so it doesn't get reset
                 });
 
         auto part_itr = std::partition(all_handles.begin(), all_handles.end(),

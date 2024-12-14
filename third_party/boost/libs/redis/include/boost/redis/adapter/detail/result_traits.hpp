@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2023 Marcelo Zimbres Silva (mzimbres@gmail.com)
+/* Copyright (c) 2018-2024 Marcelo Zimbres Silva (mzimbres@gmail.com)
  *
  * Distributed under the Boost Software License, Version 1.0. (See
  * accompanying file LICENSE.txt)
@@ -102,8 +102,12 @@ private:
                std::variant>,
          std::tuple_size<Tuple>::value>;
 
+   // Tuple element we are currently on.
    std::size_t i_ = 0;
+
+   // Nested aggregate element counter.
    std::size_t aggregate_size_ = 0;
+
    adapters_array_type adapters_;
    result<Tuple>* res_ = nullptr;
 
@@ -117,36 +121,35 @@ public:
    }
 
    template <class String>
-   void count(resp3::basic_node<String> const& nd)
+   void count(resp3::basic_node<String> const& elem)
    {
-      if (nd.depth == 1) {
-         if (is_aggregate(nd.data_type))
-            aggregate_size_ = element_multiplicity(nd.data_type) * nd.aggregate_size;
-         else
-            ++i_;
-
-         return;
+      if (elem.depth == 1 && is_aggregate(elem.data_type)) {
+         aggregate_size_ = element_multiplicity(elem.data_type) * elem.aggregate_size;
       }
 
-      if (--aggregate_size_ == 0)
-         ++i_;
+      if (aggregate_size_ == 0) {
+         i_ += 1;
+      } else {
+         aggregate_size_ -= 1;
+      }
    }
 
    template <class String>
-   void operator()(resp3::basic_node<String> const& nd, system::error_code& ec)
+   void operator()(resp3::basic_node<String> const& elem, system::error_code& ec)
    {
       using std::visit;
 
-      if (nd.depth == 0) {
-         auto const real_aggr_size = nd.aggregate_size * element_multiplicity(nd.data_type);
+      if (elem.depth == 0) {
+         auto const multiplicity = element_multiplicity(elem.data_type);
+         auto const real_aggr_size = elem.aggregate_size * multiplicity;
          if (real_aggr_size != std::tuple_size<Tuple>::value)
             ec = redis::error::incompatible_size;
 
          return;
       }
 
-      visit([&](auto& arg){arg(nd, ec);}, adapters_[i_]);
-      count(nd);
+      visit([&](auto& arg){arg(elem, ec);}, adapters_[i_]);
+      count(elem);
    }
 };
 

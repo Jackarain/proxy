@@ -109,7 +109,7 @@ int map_move_assignable_only(boost::container::dtl::true_type)
    MyBoostMap& boostmap2 = *pboostmap2;
    MyStdMap& stdmap2 = *pstdmap2;
 
-   /* fix assignable */
+   // fix assignable
    {
       IntType i0(0);
       IntType i1(1);
@@ -377,8 +377,6 @@ int map_test_step(MyBoostMap &, MyStdMap &, MyBoostMultiMap &, MyStdMultiMap &)
 
       if(!CheckEqualContainers(boostmap2, stdmap2)) return 1;
       if(!CheckEqualContainers(boostmultimap2, stdmultimap2)) return 1;
-
-
 
       //ordered range insertion
       //This is really nasty, but we have no other simple choice

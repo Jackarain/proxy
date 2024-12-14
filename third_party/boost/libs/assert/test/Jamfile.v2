@@ -9,6 +9,8 @@
 import testing ;
 
 project : requirements
+  <library>/boost/core//boost_core
+
   <warnings>extra
   <toolset>msvc:<warnings-as-errors>on
   <toolset>clang:<warnings-as-errors>on

@@ -1,5 +1,5 @@
 // Copyright (C) 2023 Christian Mazakas
-// Copyright (C) 2023 Joaquin M Lopez Munoz
+// Copyright (C) 2023-2024 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -7,6 +7,8 @@
 
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
+#include <boost/unordered/concurrent_node_map.hpp>
+#include <boost/unordered/concurrent_node_set.hpp>
 
 #include <boost/core/ignore_unused.hpp>
 
@@ -439,11 +441,17 @@ namespace {
   }
 
   boost::unordered::concurrent_flat_map<raii, raii>* map;
+  boost::unordered::concurrent_node_map<raii, raii>* node_map;
   boost::unordered::concurrent_flat_set<raii>* set;
+  boost::unordered::concurrent_node_set<raii>* node_set;
   boost::unordered::concurrent_flat_map<raii, raii, transp_hash,
     transp_key_equal>* transparent_map;
+  boost::unordered::concurrent_node_map<raii, raii, transp_hash,
+    transp_key_equal>* transparent_node_map;
   boost::unordered::concurrent_flat_set<raii, transp_hash,
     transp_key_equal>* transparent_set;
+  boost::unordered::concurrent_node_set<raii, transp_hash,
+    transp_key_equal>* transparent_node_set;
 
 } // namespace
 
@@ -454,14 +462,14 @@ using test::sequential;
 // clang-format off
 UNORDERED_TEST(
   erase,
-  ((map)(set))
+  ((map)(node_map)(set)(node_set))
   ((value_type_generator_factory)(init_type_generator_factory))
   ((lvalue_eraser)(lvalue_eraser_if)(erase_if)(free_fn_erase_if)(erase_if_exec_policy))
   ((default_generator)(sequential)(limited_range)))
 
 UNORDERED_TEST(
   erase,
-  ((transparent_map)(transparent_set))
+  ((transparent_map)(transparent_node_map)(transparent_set)(transparent_node_set))
   ((value_type_generator_factory)(init_type_generator_factory))
   ((transp_lvalue_eraser)(transp_lvalue_eraser_if)(erase_if_exec_policy))
   ((default_generator)(sequential)(limited_range)))

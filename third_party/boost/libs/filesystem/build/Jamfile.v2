@@ -9,11 +9,12 @@
 
 import project ;
 import configure ;
+import-search /boost/config/checks ;
 import config : requires ;
 
-lib bcrypt ;
-lib advapi32 ;
-lib coredll ;
+searched-lib bcrypt ;
+searched-lib advapi32 ;
+searched-lib coredll ;
 explicit bcrypt advapi32 coredll ;
 
 # The rule checks if a config macro is defined in the command line or build properties
@@ -136,8 +137,13 @@ local cxx_requirements = [ requires
     cxx11_override
 ] ;
 
-project boost/filesystem
+project
+    : common-requirements <library>$(boost_dependencies)
     : requirements
+      <library>/boost/core//boost_core
+      <library>/boost/predef//boost_predef
+      <library>/boost/scope//boost_scope
+      <target-os>windows:<library>/boost/winapi//boost_winapi
       <host-os>hpux,<toolset>gcc:<define>_INCLUDE_STDC__SOURCE_199901
       [ check-target-builds ../config//has_attribute_init_priority "has init_priority attribute" : <define>BOOST_FILESYSTEM_HAS_INIT_PRIORITY ]
       [ check-target-builds ../config//has_stat_st_mtim "has stat::st_blksize" : <define>BOOST_FILESYSTEM_HAS_STAT_ST_BLKSIZE ]
@@ -161,9 +167,11 @@ project boost/filesystem
       <target-os>windows:<define>_CRT_SECURE_NO_WARNINGS
       <target-os>windows:<define>_CRT_SECURE_NO_DEPRECATE
       <target-os>windows:<define>BOOST_USE_WINDOWS_H
+      <target-os>windows:<define>_WIN32_WINNT=0x0A00
       <target-os>windows:<define>WIN32_LEAN_AND_MEAN
       <target-os>windows:<define>NOMINMAX
       <target-os>cygwin:<define>BOOST_USE_WINDOWS_H
+      <target-os>cygwin:<define>_WIN32_WINNT=0x0A00
       <target-os>cygwin:<define>WIN32_LEAN_AND_MEAN
       <target-os>cygwin:<define>NOMINMAX
 
@@ -175,6 +183,7 @@ project boost/filesystem
     : usage-requirements # pass these requirement to dependents (i.e. users)
       <link>shared:<define>BOOST_FILESYSTEM_DYN_LINK=1
       <link>static:<define>BOOST_FILESYSTEM_STATIC_LINK=1
+      <define>BOOST_FILESYSTEM_NO_LIB=1
     ;
 
 SOURCES =
@@ -214,5 +223,3 @@ lib boost_filesystem
     : usage-requirements
       $(cxx_requirements)
     ;
-
-boost-install boost_filesystem ;

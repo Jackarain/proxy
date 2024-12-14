@@ -1,5 +1,4 @@
-// Copyright 2018-2023 Emil Dotchevski and Reverge Studios, Inc.
-
+// Copyright 2018-2024 Emil Dotchevski and Reverge Studios, Inc.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -25,10 +24,10 @@ std::vector<int> generate_ids()
     ids.reserve(ids_per_thread);
     for(int i=0; i!=ids_per_thread-1; ++i)
     {
-        int id = leaf::leaf_detail::new_id();
+        int id = leaf::detail::new_id();
         BOOST_TEST_NE(id&1, 0);
-        int last = leaf::leaf_detail::current_id();
-        BOOST_TEST_EQ(last, leaf::leaf_detail::current_id());
+        int last = leaf::detail::current_id();
+        BOOST_TEST_EQ(last, leaf::detail::current_id());
         BOOST_TEST_NE(last&1, 0);
         BOOST_TEST_EQ(last, id);
         ids.push_back(id);
@@ -45,10 +44,10 @@ int main()
         BOOST_TEST_EQ(e1.value(), 0);
         BOOST_TEST(!e2);
         BOOST_TEST_EQ(e2.value(), 0);
-        BOOST_TEST(e1==e2);
-        BOOST_TEST(!(e1!=e2));
-        BOOST_TEST(!(e1<e2));
-        BOOST_TEST(!(e2<e1));
+        BOOST_TEST(e1 == e2);
+        BOOST_TEST(!(e1 != e2));
+        BOOST_TEST(!(e1 < e2));
+        BOOST_TEST(!(e2 < e1));
     }
     {
         leaf::error_id e1;
@@ -56,47 +55,47 @@ int main()
         BOOST_TEST(!e1);
         BOOST_TEST_EQ(e1.value(), 0);
         BOOST_TEST(e2);
-        BOOST_TEST_EQ(e2.value(), 1);
-        BOOST_TEST(!(e1==e2));
-        BOOST_TEST(e1!=e2);
-        BOOST_TEST(e1<e2);
-        BOOST_TEST(!(e2<e1));
+        BOOST_TEST_EQ(e2.value(), 5);
+        BOOST_TEST(!(e1 == e2));
+        BOOST_TEST(e1 != e2);
+        BOOST_TEST(e1 < e2);
+        BOOST_TEST(!(e2 < e1));
     }
     {
         leaf::error_id e1 = leaf::new_error();
         leaf::error_id e2 = leaf::new_error();
         BOOST_TEST(e1);
-        BOOST_TEST_EQ(e1.value(), 5);
+        BOOST_TEST_EQ(e1.value(), 9);
         BOOST_TEST(e2);
-        BOOST_TEST_EQ(e2.value(), 9);
-        BOOST_TEST(!(e1==e2));
-        BOOST_TEST(e1!=e2);
-        BOOST_TEST(e1<e2);
-        BOOST_TEST(!(e2<e1));
+        BOOST_TEST_EQ(e2.value(), 13);
+        BOOST_TEST(!(e1 == e2));
+        BOOST_TEST(e1 != e2);
+        BOOST_TEST(e1 < e2);
+        BOOST_TEST(!(e2 < e1));
     }
     {
         leaf::error_id e1 = leaf::new_error();
         leaf::error_id e2 = e1;
         BOOST_TEST(e1);
-        BOOST_TEST_EQ(e1.value(), 13);
+        BOOST_TEST_EQ(e1.value(), 17);
         BOOST_TEST(e2);
-        BOOST_TEST_EQ(e2.value(), 13);
-        BOOST_TEST(e1==e2);
-        BOOST_TEST(!(e1!=e2));
-        BOOST_TEST(!(e1<e2));
-        BOOST_TEST(!(e2<e1));
+        BOOST_TEST_EQ(e2.value(), 17);
+        BOOST_TEST(e1 == e2);
+        BOOST_TEST(!(e1 != e2));
+        BOOST_TEST(!(e1 < e2));
+        BOOST_TEST(!(e2 < e1));
     }
     {
         leaf::error_id e1 = leaf::new_error();
         leaf::error_id e2; e2 = e1;
         BOOST_TEST(e1);
-        BOOST_TEST_EQ(e1.value(), 17);
+        BOOST_TEST_EQ(e1.value(), 21);
         BOOST_TEST(e2);
-        BOOST_TEST_EQ(e2.value(), 17);
-        BOOST_TEST(e1==e2);
-        BOOST_TEST(!(e1!=e2));
-        BOOST_TEST(!(e1<e2));
-        BOOST_TEST(!(e2<e1));
+        BOOST_TEST_EQ(e2.value(), 21);
+        BOOST_TEST(e1 == e2);
+        BOOST_TEST(!(e1 != e2));
+        BOOST_TEST(!(e1 < e2));
+        BOOST_TEST(!(e2 < e1));
     }
 #ifdef BOOST_LEAF_NO_THREADS
     std::vector<int> all_ids = generate_ids();
@@ -121,7 +120,7 @@ int main()
 #endif
     std::sort(all_ids.begin(), all_ids.end());
     auto u = std::unique(all_ids.begin(), all_ids.end());
-    BOOST_TEST(u==all_ids.end());
+    BOOST_TEST(u == all_ids.end());
 
     return boost::report_errors();
 }

@@ -14,6 +14,11 @@ DRONE_BUILD_DIR=$(pwd)
 BOOST_BRANCH=develop
 if [ "$DRONE_BRANCH" = "master" ]; then BOOST_BRANCH=master; fi
 
+if [[ $(uname) == "Linux" && ( "$TSAN" == 1 || "$ASAN" == 1 ) ]]; then
+    echo 0 | sudo tee /proc/sys/kernel/randomize_va_space
+    sudo sysctl vm.mmap_rnd_bits=28
+fi
+
 cd ..
 git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
 cd boost-root

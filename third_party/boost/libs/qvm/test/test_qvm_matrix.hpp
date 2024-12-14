@@ -1,10 +1,9 @@
-// Copyright 2008-2022 Emil Dotchevski and Reverge Studios, Inc.
+#ifndef BOOST_QVM_TEST_QVM_MATRIX_HPP_INCLUDED
+#define BOOST_QVM_TEST_QVM_MATRIX_HPP_INCLUDED
 
+// Copyright 2008-2024 Emil Dotchevski and Reverge Studios, Inc.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-
-#ifndef BOOST_QVM_9C471450B3A611DEAF56C1F155D89593
-#define BOOST_QVM_9C471450B3A611DEAF56C1F155D89593
 
 #if defined(BOOST_QVM_TEST_SINGLE_HEADER) && !defined(BOOST_QVM_TEST_SINGLE_HEADER)
 #   define BOOST_QVM_TEST_REF_WRITE_ELEMENT

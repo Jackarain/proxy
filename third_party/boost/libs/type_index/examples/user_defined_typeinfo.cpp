@@ -14,7 +14,7 @@
 */
 
 // BOOST_TYPE_INDEX_USER_TYPEINDEX must be defined *BEFORE* first inclusion of <boost/type_index.hpp>
-#define BOOST_TYPE_INDEX_USER_TYPEINDEX <boost/../libs/type_index/examples/user_defined_typeinfo.hpp>
+#define BOOST_TYPE_INDEX_USER_TYPEINDEX <user_defined_typeinfo.hpp>
 #include <boost/type_index.hpp>
 //] [/type_index_my_type_index_worldwide_macro]
 

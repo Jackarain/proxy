@@ -17,9 +17,9 @@ A string token cannot be copied, moved, or assigned, and must be destroyed when 
 
 In this table:
 
-* `T` is a type meeting the requirements of __StringToken__
-* `t` is an rvalue reference of type T
-* `n` is a value of type cpp:std::size_t[]
+* cpp:T[] is a type meeting the requirements of __StringToken__
+* cpp:t[] is an rvalue reference of type T
+* cpp:n[] is a value of type cpp:std::size_t[]
 
 [cols="1,1,3"]
 |===
@@ -31,15 +31,15 @@ In this table:
 cpp:std::derived_from<T,string_token::arg>[]
 
 // Row 1, Column 2
-|`true`
+|cpp:true[]
 
 // Row 1, Column 3
 |All string tokens must be publicly and
 unambiguously derived from
-`string_token::arg`.
+cpp:string_token::arg[].
 
 // Row 2, Column 1
-|`T::result_type`
+|cpp:T::result_type[]
 
 // Row 2, Column 2
 |
@@ -48,26 +48,26 @@ unambiguously derived from
 which accept a string token.
 
 // Row 3, Column 1
-|`t.prepare(n);`
+|cpp:t.prepare(n);[]
 
 // Row 3, Column 2
-|`char*`
+|cpp:char*[]
 
 // Row 3, Column 3
 |This function overrides the virtual function in the base.
 It must return a pointer to a character buffer of at least
-size `n`, otherwise throw an exception.
+size cpp:n[], otherwise throw an exception.
 
 // Row 4, Column 1
-|`t.result();`
+|cpp:t.result();[]
 
 // Row 4, Column 3
-|`T::result_type`
+|cpp:T::result_type[]
 
 // Row 4, Column 5
 |This function is invoked by the algorithm to receive the result
 from the string token.
-It is only invoked if `prepare` returned successfuly and the
+It is only invoked if cpp:prepare[] returned successfuly and the
 string token was not destroyed.
 
 |===
@@ -76,8 +76,8 @@ string token was not destroyed.
 
 When an algorithm accepts a string token, it must meet these requirements:
 
-* `prepare` is called only once or not at all,
-* `result` is only called after `prepare` returns successfully, and
+* cpp:prepare[] is called only once or not at all,
+* cpp:result[] is only called after cpp:prepare[] returns successfully, and
 * The string token is destroyed when the algorithm completes or if an exception is thrown.
 
 String tokens cannot be reused.
@@ -112,7 +112,7 @@ void algorithm_impl( string_token::arg& token )
 {
     std::size_t n = 0;
 
-    // calculate space needed in `n`
+    // calculate space needed in cpp:n[]
 
     // acquire a destination buffer
     char* dest = token.prepare( n );
@@ -141,9 +141,9 @@ algorithm( StringToken&& token = {} ) ->
 
 Models
 
-* `string_token::return_string`
-* `string_token::assign_to`
-* `string_token::preserve_size`
-* `string_token::return_string`
+* cpp:string_token::return_string[]
+* cpp:string_token::assign_to[]
+* cpp:string_token::preserve_size[]
+* cpp:string_token::return_string[]
 
 

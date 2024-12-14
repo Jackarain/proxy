@@ -129,7 +129,7 @@ copy(url_view_base const& u)
     }
     reserve_impl(
         u.size(), op);
-    impl_ = u.impl_;
+    impl_ = *u.pi_;
     impl_.cs_ = s_;
     impl_.from_ = {from::url};
     std::memcpy(s_,
@@ -1413,9 +1413,11 @@ encoded_params() noexcept
 
 url_base&
 url_base::
-set_params( std::initializer_list<param_view> ps ) noexcept
+set_params(
+    std::initializer_list<param_view> ps,
+    encoding_opts opts) noexcept
 {
-    params().assign(ps);
+    params(opts).assign(ps);
     return *this;
 }
 

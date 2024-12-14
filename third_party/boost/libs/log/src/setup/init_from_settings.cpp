@@ -866,7 +866,7 @@ template< typename CharT >
 BOOST_LOG_SETUP_API void register_sink_factory(const char* sink_name, shared_ptr< sink_factory< CharT > > const& factory)
 {
     sinks_repository< CharT >& repo = sinks_repository< CharT >::get();
-    BOOST_LOG_EXPR_IF_MT(lock_guard< log::aux::light_rw_mutex > lock(repo.m_Mutex);)
+    BOOST_LOG_EXPR_IF_MT(log::aux::exclusive_lock_guard< log::aux::light_rw_mutex > lock(repo.m_Mutex);)
     repo.m_Factories[sink_name] = factory;
 }
 

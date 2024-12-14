@@ -1,5 +1,5 @@
 # Copyright 2016, 2017 Peter Dimov
-# Copyright 2018-2019 Andrey Semashev
+# Copyright 2018-2024 Andrey Semashev
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
 
@@ -100,7 +100,7 @@ environment:
       B2_ARGS: instruction-set=native
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
     - TEST_CMAKE: 1
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
 
 install:
   - set GIT_FETCH_JOBS=8
@@ -134,10 +134,12 @@ for:
     test_script:
       - mkdir __build_static__
       - cd __build_static__
-      - cmake ../libs/atomic/test/test_cmake
-      - cmake --build . --target boost_atomic_cmake_self_test -j %NUMBER_OF_PROCESSORS%
+      - cmake -DBOOST_INCLUDE_LIBRARIES=atomic -DBUILD_TESTING=ON ..
+      - cmake --build . --config Release --target tests -j %NUMBER_OF_PROCESSORS%
+      - ctest -C Release --output-on-failure --no-tests=error -j %NUMBER_OF_PROCESSORS%
       - cd ..
       - mkdir __build_shared__
       - cd __build_shared__
-      - cmake -DBUILD_SHARED_LIBS=On ../libs/atomic/test/test_cmake
-      - cmake --build . --target boost_atomic_cmake_self_test -j %NUMBER_OF_PROCESSORS%
+      - cmake -DBOOST_INCLUDE_LIBRARIES=atomic -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=ON ..
+      - cmake --build . --config Release --target tests -j %NUMBER_OF_PROCESSORS%
+      - ctest -C Release --output-on-failure --no-tests=error -j %NUMBER_OF_PROCESSORS%

@@ -10,13 +10,13 @@
 
 #include <boost/interprocess/detail/workaround.hpp>
 //[doc_managed_heap_memory
-#include <boost/interprocess/containers/list.hpp>
+#include <boost/container/list.hpp>
 #include <boost/interprocess/managed_heap_memory.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <cstddef>
 
 using namespace boost::interprocess;
-typedef list<int, allocator<int, managed_heap_memory::segment_manager> >
+typedef boost::container::list<int, allocator<int, managed_heap_memory::segment_manager> >
    MyList;
 
 int main ()
@@ -31,14 +31,14 @@ int main ()
    managed_heap_memory::handle_t list_handle = heap_memory.get_handle_from_address(mylist);
 
    //Fill list until there is no more memory in the buffer
-   BOOST_TRY{
+   BOOST_INTERPROCESS_TRY{
       while(1) {
          mylist->insert(mylist->begin(), 0);
       }
    }
-   BOOST_CATCH(const bad_alloc &){
+   BOOST_INTERPROCESS_CATCH(const bad_alloc &){
       //memory is full
-   } BOOST_CATCH_END
+   } BOOST_INTERPROCESS_CATCH_END
    //Let's obtain the size of the list
    MyList::size_type old_size = mylist->size();
    //<-
@@ -55,14 +55,14 @@ int main ()
                (heap_memory.get_address_from_handle(list_handle));
 
    //Fill list until there is no more memory in the buffer
-   BOOST_TRY{
+   BOOST_INTERPROCESS_TRY{
       while(1) {
          mylist->insert(mylist->begin(), 0);
       }
    }
-   BOOST_CATCH(const bad_alloc &){
+   BOOST_INTERPROCESS_CATCH(const bad_alloc &){
       //memory is full
-   } BOOST_CATCH_END
+   } BOOST_INTERPROCESS_CATCH_END
 
    //Let's obtain the new size of the list
    MyList::size_type new_size = mylist->size();

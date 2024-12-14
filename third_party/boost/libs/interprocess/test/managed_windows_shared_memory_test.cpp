@@ -13,7 +13,7 @@
 #ifdef BOOST_INTERPROCESS_WINDOWS
 
 #include <boost/interprocess/allocators/allocator.hpp>
-#include <boost/interprocess/containers/vector.hpp>
+#include <boost/container/vector.hpp>
 #include <boost/interprocess/managed_windows_shared_memory.hpp>
 #include <cstdio>
 #include <string>
@@ -30,7 +30,7 @@ int main ()
    typedef allocator<int, managed_windows_shared_memory::segment_manager>
       allocator_int_t;
    //A vector that uses that allocator
-   typedef boost::interprocess::vector<int, allocator_int_t> MyVect;
+   typedef boost::container::vector<int, allocator_int_t> MyVect;
 
    {
       const int max              = 100;
@@ -63,13 +63,13 @@ int main ()
    {
       bool throws_ok = false;
       //Check memory is gone
-      BOOST_TRY{
+      BOOST_INTERPROCESS_TRY{
          managed_windows_shared_memory w_tmp(open_only, MemName);
       }
-      BOOST_CATCH(interprocess_exception &e) {
+      BOOST_INTERPROCESS_CATCH(interprocess_exception &e) {
          throws_ok = e.get_error_code() == not_found_error;
       }
-      BOOST_CATCH_END
+      BOOST_INTERPROCESS_CATCH_END
       if (!throws_ok)
          return 1;
    }

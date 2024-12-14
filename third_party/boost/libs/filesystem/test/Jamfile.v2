@@ -85,7 +85,7 @@ run operations_test.cpp : : : <link>shared <define>BOOST_FILESYSTEM_VERSION=4 <t
 run operations_test.cpp : : : <link>static <define>BOOST_FILESYSTEM_VERSION=4 : operations_test_static ;
 run operations_test.cpp : : : <link>shared <define>BOOST_FILESYSTEM_VERSION=3 : operations_test_v3 ;
 run operations_unit_test.cpp : $(HERE) : : <link>shared <define>BOOST_FILESYSTEM_VERSION=4 <test-info>always_show_run_output ;
-run copy_test.cpp : : : <define>BOOST_FILESYSTEM_VERSION=4 ;
+run copy_test.cpp : : : <define>BOOST_FILESYSTEM_VERSION=4 <library>/boost/exception//boost_exception ;
 compile-fail cf_path_nullptr_test.cpp ;
 compile path_iter_ctor_overload_test.cpp ;
 compile path_operator_ambiguity.cpp : <toolset>gcc:<warnings-as-errors>on ;
@@ -98,7 +98,7 @@ run path_unit_test.cpp : : : <link>shared $(VIS) <define>BOOST_FILESYSTEM_VERSIO
 run relative_test.cpp : : : <define>BOOST_FILESYSTEM_VERSION=4 ;
 run ../example/simple_ls.cpp : : : <define>BOOST_FILESYSTEM_VERSION=4 ;
 run ../example/file_status.cpp : : : <define>BOOST_FILESYSTEM_VERSION=4 ;
-run foreach_test.cpp : : : <define>BOOST_FILESYSTEM_VERSION=4 ;
+run foreach_test.cpp : : : <define>BOOST_FILESYSTEM_VERSION=4 <library>/boost/foreach//boost_foreach ;
 
 # `quick` target (for CI)
 run quick.cpp : : : <define>BOOST_FILESYSTEM_VERSION=4 ;

@@ -24,16 +24,16 @@ namespace boost { namespace interprocess { namespace test {
 template <class NamedResource>
 inline void create_then_open_then_open_or_create()
 {
-   BOOST_TRY{
+   BOOST_INTERPROCESS_TRY{
       //Create it and open it twice
       NamedResource nresource1(create_only);
       NamedResource nresource2(open_only);
       NamedResource nresource3(open_or_create);
    }
-   BOOST_CATCH(...){
+   BOOST_INTERPROCESS_CATCH(...){
       //This shouldn't throw so show the error
       BOOST_INTERPROCESS_CHECK( false );
-   } BOOST_CATCH_END
+   } BOOST_INTERPROCESS_CATCH_END
 }
 
 template <class NamedResource>
@@ -41,25 +41,25 @@ inline void open_or_create_then_create()
 {
    //Create it with open_or_create and try to create it twice
    NamedResource nresource1(open_or_create);
-   BOOST_TRY{
+   BOOST_INTERPROCESS_TRY{
       NamedResource nresource2(create_only);
    }
-   BOOST_CATCH(interprocess_exception &err){
+   BOOST_INTERPROCESS_CATCH(interprocess_exception &err){
       BOOST_INTERPROCESS_CHECK(err.get_error_code() == already_exists_error);
-   } BOOST_CATCH_END
+   } BOOST_INTERPROCESS_CATCH_END
 }
 
 template <class NamedResource>
 inline void dont_create_and_open()
 {
    //Try to open it without creating
-   BOOST_TRY{
+   BOOST_INTERPROCESS_TRY{
       NamedResource nresource1(open_only);
    }
-   BOOST_CATCH(interprocess_exception &err){
+   BOOST_INTERPROCESS_CATCH(interprocess_exception &err){
       BOOST_INTERPROCESS_CHECK(err.get_error_code() == not_found_error);
       return;
-   } BOOST_CATCH_END
+   } BOOST_INTERPROCESS_CATCH_END
    //The mutex should not exist
    BOOST_INTERPROCESS_CHECK(false);
 }

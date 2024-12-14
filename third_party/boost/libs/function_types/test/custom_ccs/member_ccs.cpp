@@ -6,6 +6,20 @@
 
 //------------------------------------------------------------------------------
 
+#if !defined(_M_IX86)
+
+#include <boost/config/pragma_message.hpp>
+BOOST_PRAGMA_MESSAGE("Test skipped because _M_IX86 is not defined")
+
+#elif defined(__clang__)
+
+// Clang-cl 32 bit supports __stdcall, but BOOST_FT_CC_STDCALL isn't defined so the test errors out
+
+#include <boost/config/pragma_message.hpp>
+BOOST_PRAGMA_MESSAGE("Test skipped because _M_IX86 is defined, but __clang__ is also defined")
+
+#else
+
 #define BOOST_FT_AUTODETECT_CALLING_CONVENTIONS
 
 #include <boost/mpl/assert.hpp>
@@ -48,3 +62,4 @@ BOOST_MPL_ASSERT((
   >
 ));
 
+#endif

@@ -29,7 +29,7 @@ int main ()
    std::string process_id = test::get_process_id_name();
    std::string process_id2(process_id);
    process_id2 += "_2";
-   BOOST_TRY{
+   BOOST_INTERPROCESS_TRY{
       const std::size_t FileSize = 99999*4;
       {
          //Remove shared memory
@@ -200,19 +200,19 @@ int main ()
          mapped_region region (mapping, read_only);
          shared_memory_object mapping2(create_only, process_id2.c_str(), read_write);
          mapping2.truncate(FileSize);
-         BOOST_TRY{
+         BOOST_INTERPROCESS_TRY{
             mapped_region region2 (mapping2, read_only, 0, FileSize, region.get_address());
          }
-         BOOST_CATCH(interprocess_exception &e){
+         BOOST_INTERPROCESS_CATCH(interprocess_exception &e){
             shared_memory_object::remove(process_id2.c_str());
             if(e.get_error_code() != busy_error){
                throw e;
             }
          }
-         BOOST_CATCH(std::exception &){
+         BOOST_INTERPROCESS_CATCH(std::exception &){
             shared_memory_object::remove(process_id2.c_str());
-            BOOST_RETHROW
-         } BOOST_CATCH_END
+            BOOST_INTERPROCESS_RETHROW
+         } BOOST_INTERPROCESS_CATCH_END
          shared_memory_object::remove(process_id2.c_str());
       }
       {
@@ -246,12 +246,12 @@ int main ()
          shared_memory_object ret(get_shared_memory_mapping());
       }
    }
-   BOOST_CATCH(std::exception &exc){
+   BOOST_INTERPROCESS_CATCH(std::exception &exc){
       shared_memory_object::remove(process_id.c_str());
       shared_memory_object::remove(process_id2.c_str());
       std::cout << "Unhandled exception: " << exc.what() << std::endl;
       return 1;
-   } BOOST_CATCH_END
+   } BOOST_INTERPROCESS_CATCH_END
    shared_memory_object::remove(process_id.c_str());
    return 0;
 }

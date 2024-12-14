@@ -17,10 +17,9 @@
 // linux has close_range since 5.19
 
 
-#if defined(__NetBSD__) || defined(__FreeBSD__) || defined(__OpenBSD__)
+#if defined(__FreeBSD__)
 
 // https://www.freebsd.org/cgi/man.cgi?query=close_range&apropos=0&sektion=0&manpath=FreeBSD+13.1-RELEASE+and+Ports&arch=default&format=html
-// https://man.netbsd.org/closefrom.3
 // __FreeBSD__
 // 
 // gives us
@@ -45,7 +44,8 @@ int fdwalk(int (*func)(void *, int), void *cd);
 
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,11,0) // kernel has close_range
+// kernel has close_range
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,9,0) && !defined(BOOST_PROCESS_V2_POSIX_FORCE_DISABLE_CLOSE_RANGE)
 
 // version is included by stdlib.h #include <gnu/libc-version.h>
 #if (__GLIBC__ >= 2 && __GLIBC_MINOR__ >= 34) // glibc is compiled with close_range support

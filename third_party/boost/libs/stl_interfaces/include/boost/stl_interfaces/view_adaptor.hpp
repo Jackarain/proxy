@@ -111,7 +111,7 @@ namespace boost { namespace stl_interfaces {
                         std::get<I>(((T &&) this_).bound_args_)...);
             }
 
-            Func f_;
+            [[no_unique_address]] Func f_;
             std::tuple<CapturedArgs...> bound_args_;
         };
 
@@ -261,7 +261,7 @@ namespace boost { namespace stl_interfaces {
         }
 
     private:
-        F f_;
+        [[no_unique_address]] F f_;
     };
     //]
 
@@ -322,7 +322,7 @@ namespace boost { namespace stl_interfaces {
         }
 
     private:
-        F f_;
+        [[no_unique_address]] F f_;
     };
     //]
 

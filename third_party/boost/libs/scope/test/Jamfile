@@ -4,14 +4,18 @@
 # (See accompanying file LICENSE_1_0.txt or copy at
 # https://www.boost.org/LICENSE_1_0.txt)
 
+require-b2 5.0.1 ;
+
 import testing ;
 import path ;
 import regex ;
 import os ;
-import ../../config/checks/config : requires ;
+import-search /boost/config/checks ;
+import config : requires ;
 
 project
     : requirements
+        <library>/boost/scope//boost_scope
         <include>common
 
         <c++-template-depth>1024
@@ -43,6 +47,8 @@ project
         <target-os>windows:<define>_CRT_SECURE_NO_DEPRECATE
     ;
 
+path-constant SCOPE_INCLUDE_DIR : ../include ;
+
 # this rule enumerates through all the sources and invokes
 # the run rule for each source, the result is a list of all
 # the run rules, which we can pass on to the test_suite rule:
@@ -53,7 +59,7 @@ rule test_all
 
     if ! [ os.environ BOOST_SCOPE_TEST_WITHOUT_SELF_CONTAINED_HEADER_TESTS ]
     {
-        local headers_path = [ path.make $(BOOST_ROOT)/libs/scope/include/boost/scope ] ;
+        local headers_path = [ path.make $(SCOPE_INCLUDE_DIR)/boost/scope ] ;
         for file in [ path.glob-tree $(headers_path) : *.hpp : detail ]
         {
             local rel_file = [ path.relative-to $(headers_path) $(file) ] ;

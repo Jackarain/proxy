@@ -5,13 +5,15 @@
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 #
 
+require-b2 5.0.1 ;
+import-search /boost/config/checks ;
+import config : requires ;
 import testing ;
 import feature ;
 
-import ../../config/checks/config : requires ;
-
 project
     : requirements
+        <library>/boost/conversion//boost_conversion
         [ requires cxx11_decltype ]
         # default to all warnings on:
         <warnings>all

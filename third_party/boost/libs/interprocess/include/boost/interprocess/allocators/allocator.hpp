@@ -32,7 +32,7 @@
 #include <boost/interprocess/containers/version_type.hpp>
 #include <boost/interprocess/exceptions.hpp>
 #include <boost/assert.hpp>
-#include <boost/utility/addressof.hpp>
+#include <boost/container/detail/addressof.hpp>
 #include <boost/interprocess/detail/type_traits.hpp>
 #include <boost/container/detail/placement_new.hpp>
 
@@ -249,12 +249,12 @@ class allocator
    //!Returns address of mutable object.
    //!Never throws
    pointer address(reference value) const
-   {  return pointer(boost::addressof(value));  }
+   {  return pointer(boost::container::dtl::addressof(value));  }
 
    //!Returns address of non mutable object.
    //!Never throws
    const_pointer address(const_reference value) const
-   {  return const_pointer(boost::addressof(value));  }
+   {  return const_pointer(boost::container::dtl::addressof(value));  }
 };
 
 //!Equality test for same type

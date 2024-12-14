@@ -23,7 +23,7 @@ using namespace boost::interprocess;
 
 int main ()
 {
-   BOOST_TRY{
+   BOOST_INTERPROCESS_TRY{
       const char *names[2] = { test::get_process_id_name(), 0 };
       for(unsigned int i_name = 0; i_name < sizeof(names)/sizeof(names[0]); ++i_name)
       {
@@ -116,11 +116,11 @@ int main ()
          }
       }
    }
-   BOOST_CATCH(std::exception &exc){
+   BOOST_INTERPROCESS_CATCH(std::exception &exc){
       //shared_memory_object::remove(test::get_process_id_name());
       std::cout << "Unhandled exception: " << exc.what() << std::endl;
       return 1;
-   } BOOST_CATCH_END
+   } BOOST_INTERPROCESS_CATCH_END
 
    return 0;
 }

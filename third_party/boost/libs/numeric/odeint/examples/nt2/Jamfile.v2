@@ -7,8 +7,6 @@
 #                     http://www.boost.org/LICENSE_1_0.txt
 #==============================================================================
 
-use-project boost : $(BOOST_ROOT) ;
-
 import os ;
 
 # This must be built using an NT2 installation.

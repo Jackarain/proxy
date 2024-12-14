@@ -62,8 +62,9 @@ target_link_libraries(boost_mpi
 
 if(BOOST_ENABLE_MPI)
 
-  find_package(MPI REQUIRED COMPONENTS C)
-  target_link_libraries(boost_mpi PUBLIC MPI::MPI_C)
+  set(MPI_CXX_SKIP_MPICXX ON)
+  find_package(MPI REQUIRED COMPONENTS CXX)
+  target_link_libraries(boost_mpi PUBLIC MPI::MPI_CXX)
 
 endif()
 

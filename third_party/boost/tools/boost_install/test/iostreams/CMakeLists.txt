@@ -35,7 +35,7 @@ add_executable(test_bzip2 test_bzip2.cpp)
 target_link_libraries(test_bzip2 Boost::iostreams)
 
 enable_testing()
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>)
+add_custom_target(check VERBATIM COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --no-tests=error -C $<CONFIG>)
 
 add_test(NAME test_gzip COMMAND test_gzip WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 add_test(NAME test_bzip2 COMMAND test_bzip2 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

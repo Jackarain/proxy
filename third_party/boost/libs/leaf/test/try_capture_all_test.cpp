@@ -1,5 +1,4 @@
-// Copyright 2018-2023 Emil Dotchevski and Reverge Studios, Inc.
-
+// Copyright 2018-2024 Emil Dotchevski and Reverge Studios, Inc.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -68,6 +67,27 @@ namespace
 
 int main()
 {
+#ifndef BOOST_LEAF_NO_EXCEPTIONS
+    {
+        leaf::result<void> r = leaf::try_capture_all([]() { throw std::runtime_error("x"); });
+        BOOST_TEST(!r);
+        int r1 = leaf::try_handle_all(
+            [&]() -> leaf::result<int>
+            {
+                BOOST_LEAF_CHECK(r);
+                return 0;
+            },
+            [](std::runtime_error const &)
+            {
+                return 1;
+            },
+            []
+            {
+                return 2;
+            } );
+        BOOST_TEST_EQ(r1, 1);
+    }
+#endif
     {
         leaf::result<void> r = leaf::try_capture_all(
             []() -> leaf::result<void>

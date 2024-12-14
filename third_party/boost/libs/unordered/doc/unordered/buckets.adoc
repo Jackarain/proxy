@@ -126,7 +126,7 @@ h|*Method* h|*Description*
 
 |`float max_load_factor(float z)`
 |Changes the container's maximum load factor, using `z` as a hint. +
-**Open-addressing containers:** this function does nothing: users are not allowed to change the maximum load factor.
+**Open-addressing and concurrent containers:** this function does nothing: users are not allowed to change the maximum load factor.
 
 |`void rehash(size_type n)`
 |Changes the number of buckets so that there at least `n` buckets, and so that the load factor is less than the maximum load factor.

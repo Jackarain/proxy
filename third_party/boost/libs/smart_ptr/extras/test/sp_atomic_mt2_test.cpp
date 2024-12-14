@@ -13,8 +13,8 @@
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/locks.hpp>
 
-#include <boost/detail/lightweight_mutex.hpp>
-#include <boost/detail/lightweight_thread.hpp>
+#include <boost/smart_ptr/detail/lightweight_mutex.hpp>
+#include <boost/smart_ptr/detail/lightweight_thread.hpp>
 
 #include <vector>
 #include <numeric>

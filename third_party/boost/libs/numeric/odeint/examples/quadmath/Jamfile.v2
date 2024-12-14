@@ -13,4 +13,4 @@ project
     
 lib quadmath : : <name>quadmath <link>shared ;
 
-exe black_hole : black_hole.cpp quadmath : <cxxflags>-std=c++0x ;
+exe black_hole : black_hole.cpp quadmath : <cxxstd>14 ;

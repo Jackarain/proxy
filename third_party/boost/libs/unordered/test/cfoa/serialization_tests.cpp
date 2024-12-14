@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Joaquin M Lopez Munoz
+// Copyright (C) 2023-2024 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -12,6 +12,8 @@
 #include <boost/serialization/nvp.hpp>
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
+#include <boost/unordered/concurrent_node_map.hpp>
+#include <boost/unordered/concurrent_node_set.hpp>
 
 namespace {
 
@@ -70,11 +72,15 @@ namespace {
 
   boost::concurrent_flat_map<
     test::object, test::object, test::hash, test::equal_to>* test_flat_map;
+  boost::concurrent_node_map<
+    test::object, test::object, test::hash, test::equal_to>* test_node_map;
   boost::concurrent_flat_set<
     test::object, test::hash, test::equal_to>* test_flat_set;
+  boost::concurrent_node_set<
+    test::object, test::hash, test::equal_to>* test_node_set;
 
   UNORDERED_TEST(serialization_tests,
-    ((test_flat_map)(test_flat_set))
+    ((test_flat_map)(test_node_map)(test_flat_set)(test_node_set))
     ((text_archive)(xml_archive))
     ((default_generator)))
 }

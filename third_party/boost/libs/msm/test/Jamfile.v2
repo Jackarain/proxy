@@ -6,15 +6,19 @@
 # Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
 # http://www.boost.org/LICENSE_1_0.txt)
 
+require-b2 5.2 ;
+
 # bring in rules for testing
 import testing ;
 import os ;
-import ../../config/checks/config : requires ;
+import-search /boost/config/checks ;
+import config : requires ;
 
-project msm
+project
     :
     requirements
-        <include>.
+       <library>/boost/msm//boost_msm
+       <include>.
        <toolset>gcc:<cxxflags>"-ftemplate-depth-300 -g0"
        <toolset>darwin:<cxxflags>"-ftemplate-depth-300 -g0"
        <toolset>intel:<cxxflags>"-g0"
@@ -58,7 +62,7 @@ test-suite msm-unit-tests
     [ run Back11Anonymous.cpp  : :
         : [ requires cxx11_variadic_templates ] ]
     [ run Back11BigWithFunctors.cpp  : :
-        : [ requires cxx11_variadic_templates ] ]    
+        : [ requires cxx11_variadic_templates ] ]
     [ run Back11CompositeMachine.cpp  : :
         : [ requires cxx11_variadic_templates ] ]
     [ run Back11Entries.cpp  : :
@@ -76,6 +80,8 @@ test-suite msm-unit-tests
     [ run Back11TestDeferIn2Regions.cpp  : :
         : [ requires cxx11_variadic_templates ] ]
     [ run Back11ManyDeferTransitions.cpp  : :
+        : [ requires cxx11_variadic_templates ] ]
+    [ run Back11TransitionSkipping.cpp  : :
         : [ requires cxx11_variadic_templates ] ]
     [ run Back11SimpleWithPuml.cpp  : :
         : [ requires cxx20_hdr_version cxx20_hdr_barrier cxx20_hdr_compare cxx20_hdr_format cxx20_hdr_ranges cxx20_hdr_numbers  ] ]

@@ -9,9 +9,6 @@
 import boost ;
 import os ;
 
-boost.use-project ;
-
-
 # change these lines to fit you configuration
 local HOME = [ os.environ HOME ] ;
 local VEXCL_INCLUDE = [ os.environ VEXCL_ROOT ] ;
@@ -22,11 +19,10 @@ OPENCL_INCLUDE = /usr/local/cuda/include ;
 lib opencl : : <name>OpenCL ;
 
 project : requirements
-        <implicit-dependency>/boost//headers
         <include>$(VEXCL_INCLUDE)
         <include>$(OPENCL_INCLUDE)
         <toolset>gcc:<cxxflags>-std=c++0x
-        <library>/boost//system/
+        <library>/boost/system//boost_system
         ;
 
 exe lorenz_ensemble : lorenz_ensemble.cpp opencl ;

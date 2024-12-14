@@ -16,8 +16,8 @@
 #include <boost/interprocess/smart_ptr/enable_shared_from_this.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
-#include <boost/interprocess/containers/string.hpp>
-#include <boost/interprocess/containers/vector.hpp>
+#include <boost/container/string.hpp>
+#include <boost/container/vector.hpp>
 #include <boost/interprocess/smart_ptr/deleter.hpp>
 #include <boost/interprocess/smart_ptr/scoped_ptr.hpp>
 #include <boost/core/lightweight_test.hpp>
@@ -101,7 +101,7 @@ int string_shared_ptr_vector_insertion_test()
    typedef allocator<char, segment_mngr_t> char_allocator_t;
 
    //A shared memory string class
-   typedef basic_string<char, std::char_traits<char>, char_allocator_t> string_t;
+   typedef boost::container::basic_string<char, std::char_traits<char>, char_allocator_t> string_t;
 
    //A shared memory string allocator
    typedef allocator<string_t, segment_mngr_t> string_allocator_t;
@@ -122,11 +122,11 @@ int string_shared_ptr_vector_insertion_test()
    typedef allocator<string_weak_ptr_t, segment_mngr_t > string_weak_ptr_allocator_t;
 
    //A vector of shared pointers to strings (all in shared memory) and its instantiation
-   typedef vector<string_shared_ptr_t, string_shared_ptr_allocator_t>
+   typedef boost::container::vector<string_shared_ptr_t, string_shared_ptr_allocator_t>
       string_shared_ptr_vector_t;
 
    //A vector of weak pointers to strings (all in shared memory) and its instantiation
-   typedef vector<string_weak_ptr_t, string_weak_ptr_allocator_t>
+   typedef boost::container::vector<string_weak_ptr_t, string_weak_ptr_allocator_t>
       string_weak_ptr_vector_t;
 
    std::string process_name;
@@ -230,14 +230,14 @@ int string_shared_ptr_vector_insertion_test()
             }
             bool success = false;
             //Now this should throw
-            BOOST_TRY{
+            BOOST_INTERPROCESS_TRY{
                string_shared_ptr_t dummy(*beg);
                //We should never reach here
                return 1;
             }
-            BOOST_CATCH(const boost::interprocess::bad_weak_ptr &){
+            BOOST_INTERPROCESS_CATCH(const boost::interprocess::bad_weak_ptr &){
                success = true;
-            } BOOST_CATCH_END
+            } BOOST_INTERPROCESS_CATCH_END
             if(!success){
                return 1;
             }
@@ -466,12 +466,12 @@ int basic_shared_ptr_test()
          BOOST_TEST(wp1.expired());
          BOOST_TEST(wp1.use_count() == 0);
 
-         BOOST_TRY{
+         BOOST_INTERPROCESS_TRY{
             x_shared_ptr sp1(wp1);
             BOOST_ERROR("shared_ptr<X, A, D> sp1(wp1) failed to throw");
          }
-         BOOST_CATCH(boost::interprocess::bad_weak_ptr const &)
-         {} BOOST_CATCH_END
+         BOOST_INTERPROCESS_CATCH(boost::interprocess::bad_weak_ptr const &)
+         {} BOOST_INTERPROCESS_CATCH_END
 
          test_is_zero(wp1.lock());
 

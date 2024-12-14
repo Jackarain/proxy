@@ -18,7 +18,7 @@
 namespace boost {
 namespace mysql {
 
-/// (EXPERIMENTAL) The type of an address identifying a MySQL server.
+/// The type of an address identifying a MySQL server.
 enum class address_type
 {
     /// An Internet hostname and a TCP port.
@@ -29,14 +29,9 @@ enum class address_type
 };
 
 /**
- * \brief (EXPERIMENTAL) A host and port identifying how to connect to a MySQL server.
+ * \brief A host and port identifying how to connect to a MySQL server.
  * \details
  * This is an owning type with value semantics.
- * \see any_address
- *
- * \par Experimental
- * This part of the API is experimental, and may change in successive
- * releases without previous notice.
  */
 struct host_and_port
 {
@@ -53,12 +48,11 @@ struct host_and_port
 };
 
 /**
- * \brief (EXPERIMENTAL) Contains a UNIX-socket domain path.
+ * \brief Contains a UNIX-socket domain path.
  * \details
  * This type is defined in all systems, regardless of their UNIX socket support.
  * \n
  * This is an owning type with value semantics.
- * \see any_address
  */
 struct unix_path
 {
@@ -70,7 +64,7 @@ struct unix_path
 };
 
 /**
- * \brief (EXPERIMENTAL) A server address, identifying how to physically connect to a MySQL server.
+ * \brief A server address, identifying how to physically connect to a MySQL server.
  * \details
  * A variant-like type that can represent the network address of a MySQL server,
  * regardless of the transport type being used. It can contain either a host

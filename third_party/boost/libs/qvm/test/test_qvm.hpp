@@ -1,10 +1,9 @@
-// Copyright 2008-2022 Emil Dotchevski and Reverge Studios, Inc.
+#ifndef BOOST_QVM_TEST_QVM_HPP_INCLUDED
+#define BOOST_QVM_TEST_QVM_HPP_INCLUDED
 
+// Copyright 2008-2024 Emil Dotchevski and Reverge Studios, Inc.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-
-#ifndef BOOST_QVM_06E5D36EB6C211DEA317E19C55D89593
-#define BOOST_QVM_06E5D36EB6C211DEA317E19C55D89593
 
 #include <boost/test/tools/floating_point_comparison.hpp>
 #include <boost/core/lightweight_test.hpp>

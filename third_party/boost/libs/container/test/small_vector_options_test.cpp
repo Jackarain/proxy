@@ -8,6 +8,7 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 #include <boost/container/small_vector.hpp>
+#include <boost/container/allocator.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <boost/assert.hpp>
 using namespace boost::container;
@@ -100,11 +101,58 @@ void test_growth_factor_100()
    BOOST_TEST(new_capacity == 2*old_capacity);
 }
 
+template<class Unsigned, class VectorType>
+void test_stored_size_type_impl()
+{
+   #ifndef BOOST_NO_EXCEPTIONS
+   VectorType v;
+   typedef typename VectorType::size_type    size_type;
+   typedef typename VectorType::value_type   value_type;
+   size_type const max = Unsigned(-1);
+   v.resize(5);
+   v.resize(max);
+   BOOST_TEST_THROWS(v.resize(max+1),                    std::exception);
+   BOOST_TEST_THROWS(v.push_back(value_type(1)),         std::exception);
+   BOOST_TEST_THROWS(v.insert(v.begin(), value_type(1)), std::exception);
+   BOOST_TEST_THROWS(v.emplace(v.begin(), value_type(1)),std::exception);
+   BOOST_TEST_THROWS(v.reserve(max+1),                   std::exception);
+   BOOST_TEST_THROWS(VectorType v2(max+1),               std::exception);
+   #endif
+}
+
+template<class Unsigned>
+void test_stored_size_type()
+{
+   #if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
+   using options_t = small_vector_options_t< stored_size<Unsigned> >;
+   #else
+   typedef typename small_vector_options
+      < stored_size<Unsigned> >::type options_t;
+   #endif
+
+   typedef small_vector<unsigned char, Unsigned(-1)> normal_small_vector_t;
+
+   //Test first with a typical allocator
+   {
+      typedef small_vector<unsigned char, Unsigned(-1), new_allocator<unsigned char>, options_t> small_vector_t;
+      test_stored_size_type_impl<Unsigned, small_vector_t>();
+      BOOST_CONTAINER_STATIC_ASSERT(sizeof(normal_small_vector_t) > sizeof(small_vector_t));
+   }
+   //Test with a V2 allocator
+   {
+      typedef small_vector<unsigned char, Unsigned(-1), allocator<unsigned char>, options_t> small_vector_t;
+      test_stored_size_type_impl<Unsigned, small_vector_t>();
+      BOOST_CONTAINER_STATIC_ASSERT(sizeof(normal_small_vector_t) > sizeof(small_vector_t));
+   }
+}
+
 int main()
 {
    test_alignment();
    test_growth_factor_50();
    test_growth_factor_60();
    test_growth_factor_100();
+   test_stored_size_type<unsigned char>();
+   test_stored_size_type<unsigned short>();
    return ::boost::report_errors();
 }

@@ -1,23 +1,3 @@
-#include <boost/config.hpp>
-
-#if defined(BOOST_MSVC)
-
-#pragma warning(disable: 4786)  // identifier truncated in debug info
-#pragma warning(disable: 4710)  // function not inlined
-#pragma warning(disable: 4711)  // function selected for automatic inline expansion
-#pragma warning(disable: 4514)  // unreferenced inline removed
-#pragma warning(disable: 4355)  // 'this' : used in base member initializer list
-
-#if (BOOST_MSVC >= 1310)
-#pragma warning(disable: 4675)  // resolved overload found with Koenig lookup
-#endif
-
-#endif
-
-#if defined(__GNUC__) && __GNUC__ > 4
-# pragma GCC diagnostic ignored "-Wdelete-non-virtual-dtor"
-#endif
-
 //
 //  shared_ptr_test.cpp
 //
@@ -28,10 +8,15 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#include <boost/core/lightweight_test.hpp>
+#if defined(__GNUC__) && __GNUC__ > 4
+# pragma GCC diagnostic ignored "-Wdelete-non-virtual-dtor"
+#endif
 
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
+#include <boost/config.hpp>
+
+#include <boost/core/lightweight_test.hpp>
 
 #include <map>
 #include <vector>
@@ -152,13 +137,9 @@ void pointer_constructor()
 {
     pc0_test(static_cast<int*>(0));
 
-#if !defined(BOOST_MSVC) || (BOOST_MSVC > 1300)
-
     pc0_test(static_cast<int const*>(0));
     pc0_test(static_cast<int volatile*>(0));
     pc0_test(static_cast<int const volatile*>(0));
-
-#endif
 
     {
         boost::shared_ptr<int const> pi(static_cast<int*>(0));
@@ -1998,10 +1979,6 @@ void test()
         BOOST_TEST(px? false: true);
         BOOST_TEST(!px);
 
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-        using boost::get_pointer;
-#endif
-
         BOOST_TEST(get_pointer(px) == px.get());
     }
 
@@ -2011,10 +1988,6 @@ void test()
         BOOST_TEST(px? false: true);
         BOOST_TEST(!px);
 
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-        using boost::get_pointer;
-#endif
-
         BOOST_TEST(get_pointer(px) == px.get());
     }
 
@@ -2023,10 +1996,6 @@ void test()
         BOOST_TEST(px.get() == 0);
         BOOST_TEST(px? false: true);
         BOOST_TEST(!px);
-
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-        using boost::get_pointer;
-#endif
 
         BOOST_TEST(get_pointer(px) == px.get());
     }
@@ -2040,10 +2009,6 @@ void test()
         BOOST_TEST(&*px == px.get());
         BOOST_TEST(px.operator ->() == px.get());
 
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-        using boost::get_pointer;
-#endif
-
         BOOST_TEST(get_pointer(px) == px.get());
     }
 
@@ -2055,10 +2020,6 @@ void test()
         BOOST_TEST(!!px);
         BOOST_TEST(&*px == px.get());
         BOOST_TEST(px.operator ->() == px.get());
-
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-        using boost::get_pointer;
-#endif
 
         BOOST_TEST(get_pointer(px) == px.get());
     }

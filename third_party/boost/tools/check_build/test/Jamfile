@@ -3,6 +3,9 @@
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or http://www.boost.org/LICENSE_1_0.txt)
 
+# WARNING: This project *only* works in the context of a full Boost structure
+# with an up to date super-project.
+
 import modules ;
 import sequence ;
 import set ;
@@ -26,18 +29,24 @@ local rule .info ( messages * )
     }
 }
 
+path-constant boost-root : ../../.. ;
+
 local all-libraries = [ MATCH .*libs/(.*)/build/.* :
-    [ glob ../../../libs/*/build/Jamfile.v2 ]
-    [ glob ../../../libs/*/build/Jamfile ] ] ;
+    [ glob $(boost-root)/libs/*/build/Jamfile.v2 ]
+    [ glob $(boost-root)/libs/*/build/Jamfile ] ] ;
 
 all-libraries = [ sequence.unique $(all-libraries) ] ;
+
+local all-libraries-modular
+    = [ MATCH .*libs/(.*)/build.jam : [ glob $(boost-root)/libs/*/build.jam ] ] ;
 
 # The function_types library has a Jamfile, but it's used for maintenance
 # purposes, there's no library to build and install.
 
-all-libraries = [ set.difference $(all-libraries) : function_types ] ;
+all-libraries = [ set.difference $(all-libraries) : function_types headers ] ;
 
-#ECHO all-libraries: $(all-libraries) ;
+# ECHO "all-libraries:" $(all-libraries) ;
+# ECHO "all-libraries-modular:" $(all-libraries-modular) ;
 
 rule alias-sources-impl ( project name : property-set : sources * )
 {
@@ -70,12 +79,16 @@ rule alias-sources-impl ( project name : property-set : sources * )
     return $(result) ;
 }
 
-path-constant ROOT : ../../.. ;
-
 for local lib in $(all-libraries)
 {
-    local path = [ NORMALIZE_PATH /$(ROOT)/libs/$(lib)/build ] ;
-    generate library-$(lib) : $(path)//stage : <generating-rule>@alias-sources-impl ;
+    if $(lib) in $(all-libraries-modular)
+    {
+        generate library-$(lib) : /boost/$(lib)//stage : <generating-rule>@alias-sources-impl ;
+    }
+    else
+    {
+        generate library-$(lib) : /boost/$(lib)/build//stage : <generating-rule>@alias-sources-impl ;
+    }
 }
 
 for local lib in $(all-libraries)

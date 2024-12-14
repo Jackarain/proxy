@@ -35,7 +35,7 @@ parse_variant(
     std::integral_constant<
         std::size_t, I> const&,
     std::false_type const&) ->
-        system::result<variant<
+        system::result<variant2::variant<
             typename R0::value_type,
             typename Rn::value_type...>>
 {
@@ -57,7 +57,7 @@ parse_variant(
     std::integral_constant<
         std::size_t, I> const&,
     std::true_type const&) ->
-        system::result<variant<
+        system::result<variant2::variant<
             typename R0::value_type,
             typename Rn::value_type...>>
 {
@@ -65,7 +65,7 @@ parse_variant(
     auto rv = parse(
         it, end, get<I>(rn));
     if( rv )
-        return variant<
+        return variant2::variant<
             typename R0::value_type,
             typename Rn::value_type...>{
                 variant2::in_place_index_t<I>{}, *rv};
@@ -83,7 +83,7 @@ parse_variant(
 
 template<class R0, class... Rn>
 auto
-variant_rule_t<R0, Rn...>::
+implementation_defined::variant_rule_t<R0, Rn...>::
 parse(
     char const*& it,
     char const* end) const ->
@@ -104,7 +104,7 @@ constexpr
 variant_rule(
     R0 const& r0,
     Rn const&... rn) noexcept ->
-        variant_rule_t<R0, Rn...>
+        implementation_defined::variant_rule_t<R0, Rn...>
 {
     return { r0, rn... };
 }

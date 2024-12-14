@@ -6,6 +6,6 @@ include(BoostTestJamfile OPTIONAL RESULT_VARIABLE HAVE_BOOST_TEST)
 
 if(HAVE_BOOST_TEST)
 
-boost_test_jamfile(FILE Jamfile.v2 LINK_LIBRARIES Boost::function Boost::core Boost::lambda)
+boost_test_jamfile(FILE Jamfile.v2 LINK_LIBRARIES Boost::function Boost::core Boost::lambda Boost::move)
 
 endif()

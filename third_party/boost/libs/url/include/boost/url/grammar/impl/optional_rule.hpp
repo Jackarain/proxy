@@ -18,7 +18,7 @@ namespace grammar {
 
 template<class R>
 auto
-optional_rule_t<R>::
+implementation_defined::optional_rule_t<R>::
 parse(
     char const*& it,
     char const* end) const ->

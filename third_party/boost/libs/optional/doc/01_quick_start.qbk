@@ -10,16 +10,24 @@
 ]
 
 
-[section Quick Start]
+[section Quick Overview]
 
 [section Optional return values]
 
-Let's write and use a converter function that converts a `std::string` to an `int`. It is possible that for a given string (e.g. `"cat"`) there exists no value of type `int` capable of representing the conversion result. We do not consider such situation an error. We expect that the converter can be used only to check if the conversion is possible. A natural signature for this function can be:
+Let's write and use a converter function that converts a `std::string` to an `int`.
+It is possible that for a given string (e.g. `"cat"`) there exists no value of type
+`int` capable of representing the conversion result. We do not consider such
+situation an error. We expect that the converter can be used only to check if
+the conversion is possible. A natural signature for this function can be:
 
     #include <boost/optional.hpp>
     boost::optional<int> convert(const std::string& text);
 
-All necessary functionality can be included with one header `<boost/optional.hpp>`. The above function signature means that the function can either return a value of type `int` or a flag indicating that no value of `int` is available. This does not indicate an error. It is like one additional value of `int`. This is how we can use our function:
+All necessary functionality can be included with one header `<boost/optional.hpp>`.
+The above function signature means that the function can either return a value
+of type `int` or a flag indicating that no value of `int` is available.
+This does not indicate an error. It is like one additional value of `int`.
+This is how we can use our function:
 
     const std::string& text = /*... */;
     boost::optional<int> oi = convert(text); // move-construct
@@ -116,27 +124,8 @@ Suppose we want to implement a ['lazy load] optimization. This is because we do 
 
 `optional`'s default constructor creates an uninitialized optional. No call to `Resource`'s default constructor is attempted. `Resource` doesn't have to be __STD_DEFAULT_CONSTRUCTIBLE__. In function `getResource` we first check if `resource_` is initialized. This time we do not use the contextual conversion to `bool`, but a comparison with `boost::none`. These two ways are equivalent. Function `emplace` initializes the optional in-place by perfect-forwarding the arguments to the constructor of `Resource`. No copy- or move-construction is involved here. `Resource` doesn't even have to be `MoveConstructible`.
 
-[note Function `emplace` is only available on compilers that support rvalue references and variadic templates. If your compiler does not support these features and you still need to avoid any move-constructions, use [link boost_optional.tutorial.in_place_factories In-Place Factories].]
+[note Function `emplace` is only available on compilers that support rvalue references and variadic templates. If your compiler does not support these features and you still need to avoid any move-constructions, use [link boost_optional.design.in_place_factories In-Place Factories].]
 
-[endsect]
-
-[section Bypassing unnecessary default construction]
-
-Suppose we have class `Date`, which does not have a default constructor: there is no good candidate for a default date. We have a function that returns two dates in form of a `boost::tuple`:
-
-    boost::tuple<Date, Date> getPeriod();
-
-In other place we want to use the result of `getPeriod`, but want the two dates to be named: `begin` and `end`. We want to implement something like 'multiple return values':
-
-    Date begin, end; // Error: no default ctor!
-    boost::tie(begin, end) = getPeriod();
-
-The second line works already, this is the capability of __BOOST_TUPLE__ library, but the first line won't work. We could set some invented initial dates, but it is confusing and may be an unacceptable cost, given that these values will be overwritten in the next line anyway. This is where `optional` can help:
-
-    boost::optional<Date> begin, end;
-    boost::tie(begin, end) = getPeriod();
-
-It works because inside `boost::tie` a move-assignment from `T` is invoked on `optional<T>`, which internally calls a move-constructor of `T`.
 [endsect]
 
 [section Storage in containers]
@@ -155,6 +144,52 @@ In this case the state of being uninitialized is treated as a yet another value 
 which is compared less than any value of `T`.
 `optional<T>` can also be stored as a key in `std::unordered_map` and `std::unordered_set`
 as it provides specializations for `std::hash`.
+[endsect]
+
+[section Monadic interface]
+
+The monadic interface of `optional` allows the application of functions
+to optional values without resorting to the usage of explicit `if`-statements.
+
+Function `map` takes a function mapping type `T` onto type `U` and maps an `optional<T>`
+onto an `optional<U>` using the provided function.
+
+    int length(const string& s){ return s.size(); };
+
+    optional<string> null{}, thin{""}, word{"word"};
+    assert (null.map(length) == none);
+    assert (thin.map(length) == 0);
+    assert (word.map(length) == 4);
+
+Function `flat_map` is similar, but it requires the function to return an
+`optional<V>` for some type `V`. This `optional<V>` becomes the return type of
+`flat_map`.
+
+    optional<char> first_char(const string& s) {
+      if (s.empty()) return none;
+      else           return s[0];
+    };
+
+    optional<string> null{}, thin{""}, word{"word"};
+    assert (null.flat_map(first_char) == none);
+    assert (thin.flat_map(first_char) == none);
+    assert (word.flat_map(first_char) == 'w');
+
+These functions can be combined in one expression reflecting a chain of computations:
+
+    auto get_contents(path p) -> optional<string>;
+    auto trim(string) -> string;
+    auto length(string) -> int;
+
+    auto trimmed_size_of(optional<path> p) -> int
+    {
+      return p.flat_map(get_contents)
+              .map(trim)
+              .map(length)
+              .value_or(0);
+    }
+
+
 [endsect]
 
 [endsect]

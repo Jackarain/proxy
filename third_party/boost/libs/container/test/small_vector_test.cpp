@@ -1,3 +1,4 @@
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // (C) Copyright Ion Gaztanaga 2004-2013. Distributed under the Boost
@@ -297,10 +298,10 @@ bool test_swap()
          v.push_back(int(i));
       }
       vec w;
-      const std::size_t v_size = v.size();
-      const std::size_t w_size = w.size();
+      vec v_copy = v;
+      vec w_copy = w;
       v.swap(w);
-      if(v.size() != w_size || w.size() != v_size)
+      if (w != v_copy || v != w_copy)
          return false;
    }
    {  //v smaller than static capacity, w empty
@@ -309,10 +310,10 @@ bool test_swap()
          v.push_back(int(i));
       }
       vec w;
-      const std::size_t v_size = v.size();
-      const std::size_t w_size = w.size();
+      vec v_copy = v;
+      vec w_copy = w;
       v.swap(w);
-      if(v.size() != w_size || w.size() != v_size)
+      if (w != v_copy || v != w_copy)
          return false;
    }
    {  //v bigger than static capacity, w enough capacity for static
@@ -324,10 +325,10 @@ bool test_swap()
       for (std::size_t i = 0, max = w.capacity() / 2; i != max; ++i) {
          w.push_back(int(i));
       }
-      const std::size_t v_size = v.size();
-      const std::size_t w_size = w.size();
+      vec v_copy = v;
+      vec w_copy = w;
       v.swap(w);
-      if (v.size() != w_size || w.size() != v_size)
+      if (w != v_copy || v != w_copy)
          return false;
    }
    {  //v & w smaller than static capacity
@@ -339,10 +340,10 @@ bool test_swap()
       for(std::size_t i = 0, max = w.capacity()/2; i != max; ++i){
          w.push_back(int(i));
       }
-      const std::size_t v_size = v.size();
-      const std::size_t w_size = w.size();
+      vec v_copy = v;
+      vec w_copy = w;
       v.swap(w);
-      if(v.size() != w_size || w.size() != v_size)
+      if (w != v_copy || v != w_copy)
          return false;
    }
    {  //v & w bigger than static capacity
@@ -354,10 +355,10 @@ bool test_swap()
       for(std::size_t i = 0, max = w.capacity()*2; i != max; ++i){
          w.push_back(int(i));
       }
-      const std::size_t v_size = v.size();
-      const std::size_t w_size = w.size();
+      vec v_copy = v;
+      vec w_copy = w;
       v.swap(w);
-      if(v.size() != w_size || w.size() != v_size)
+      if (w != v_copy || v != w_copy)
          return false;
    }
 

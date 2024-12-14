@@ -17,7 +17,7 @@ namespace urls {
 namespace grammar {
 
 auto
-ch_delim_rule::
+implementation_defined::ch_delim_rule::
 parse(
     char const*& it,
     char const* end) const noexcept ->

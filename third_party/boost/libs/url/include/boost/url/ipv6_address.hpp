@@ -325,7 +325,18 @@ public:
     ipv6_address
     loopback() noexcept;
 
-    // hidden friend
+    /** Format the address to an output stream
+
+        This hidden friend function writes the
+        address to an output stream using
+        standard notation.
+
+        @return The output stream, for chaining.
+
+        @param os The output stream to write to.
+
+        @param addr The address to write.
+    */
     friend
     std::ostream&
     operator<<(

@@ -764,7 +764,7 @@ struct value
     value& operator=( const Source& source )
     {
         value_ = BOOST_PROCESS_V2_NAMESPACE::detail::conv_string<char_type, traits_type>(
-            source.data(), source.size);
+            source.data(), source.size());
         return *this;
     }
 

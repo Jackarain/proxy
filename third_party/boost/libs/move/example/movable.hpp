@@ -13,8 +13,17 @@
 
 //[movable_definition 
 //header file "movable.hpp"
+
+//This devinition should only include a single, minimal move header
 #include <boost/move/core.hpp>
-#include <boost/move/traits.hpp>
+
+//Forward declaration of 
+namespace boost{
+
+template<class T>
+struct has_nothrow_move;
+
+}  //namespace boost{
 
 //A movable class
 class movable

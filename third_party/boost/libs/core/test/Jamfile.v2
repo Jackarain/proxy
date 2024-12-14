@@ -6,11 +6,15 @@
 #  See accompanying file LICENSE_1_0.txt or copy at
 #  http://www.boost.org/LICENSE_1_0.txt
 
+require-b2 5.0.1 ;
+import-search /boost/config/checks ;
+import config : requires ;
 import modules ;
 import testing ;
 
 project : requirements
-
+  <library>/boost/core//boost_core
+  <library>/boost/type_traits//boost_type_traits
   <warnings>extra
   <toolset>msvc:<warnings-as-errors>on
   <toolset>clang:<warnings-as-errors>on
@@ -197,7 +201,7 @@ run underlying_type.cpp ;
 compile-fail null_deleter_compile_fail_adl.cpp
   : $(warnings-as-errors-off) ;
 
-run fclose_deleter_test.cpp : : : <target-os>windows:<define>_CRT_SECURE_NO_WARNINGS <target-os>windows:<define>_CRT_SECURE_NO_DEPRECATE ;
+run fclose_deleter_test.cpp /boost/move//boost_move /boost/smart_ptr//boost_smart_ptr : : : <target-os>windows:<define>_CRT_SECURE_NO_WARNINGS <target-os>windows:<define>_CRT_SECURE_NO_DEPRECATE ;
 compile-fail fclose_deleter_compile_fail_adl.cpp
   : <target-os>windows:<define>_CRT_SECURE_NO_WARNINGS <target-os>windows:<define>_CRT_SECURE_NO_DEPRECATE $(warnings-as-errors-off) ;
 
@@ -381,7 +385,7 @@ run sv_stream_insert_test.cpp
   : : : $(pedantic-errors) ;
 run sv_conversion_test.cpp
   : : : $(pedantic-errors) ;
-run sv_conversion_test2.cpp : ;
+run sv_conversion_test2.cpp /boost/utility//boost_utility : ;
 run sv_common_reference_test.cpp
   : : : $(pedantic-errors) ;
 compile sv_common_reference_test2.cpp ;
@@ -419,11 +423,9 @@ run memory_resource_test.cpp ;
 run data_test.cpp ;
 run size_test.cpp ;
 
-import ../../config/checks/config : requires ;
+local CPP11 = [ requires cxx11_variadic_templates cxx11_template_aliases cxx11_decltype cxx11_constexpr cxx11_noexcept cxx11_ref_qualifiers ] ;
 
-local CPP11 = [ requires cxx11_variadic_templates cxx11_template_aliases cxx11_decltype cxx11_constexpr cxx11_noexcept ] ;
-
-local with-serialization = <library>/boost//serialization/<warnings>off $(warnings-as-errors-off) <undefined-sanitizer>norecover:<link>static $(CPP11) ;
+local with-serialization = <library>/boost/serialization//boost_serialization/<warnings>off $(warnings-as-errors-off) <undefined-sanitizer>norecover:<link>static $(CPP11) ;
 
 run serialization_nvp_test.cpp : : : $(with-serialization) <undefined-sanitizer>norecover:<build>no ;
 run serialization_split_free_test.cpp : : : $(with-serialization) ;

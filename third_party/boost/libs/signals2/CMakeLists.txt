@@ -20,10 +20,10 @@ target_link_libraries(boost_signals2
     Boost::core
     Boost::function
     Boost::iterator
+    Boost::move
     Boost::mpl
     Boost::optional
     Boost::parameter
-    Boost::predef
     Boost::preprocessor
     Boost::smart_ptr
     Boost::throw_exception

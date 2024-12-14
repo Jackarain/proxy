@@ -12,7 +12,7 @@
 set(TEST_FILES Jamfile test_suite.cpp)
 
 # Test target
-add_executable(boost_url_extra ${TEST_FILES} ${SUITE_FILES})
+add_executable(boost_url_extra EXCLUDE_FROM_ALL ${TEST_FILES} ${SUITE_FILES})
 target_include_directories(boost_url_extra PRIVATE . ../../extra)
 target_link_libraries(boost_url_extra PRIVATE Boost::url)
 

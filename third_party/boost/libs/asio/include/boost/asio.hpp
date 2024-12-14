@@ -71,6 +71,7 @@
 #include <boost/asio/completion_condition.hpp>
 #include <boost/asio/compose.hpp>
 #include <boost/asio/composed.hpp>
+#include <boost/asio/config.hpp>
 #include <boost/asio/connect.hpp>
 #include <boost/asio/connect_pipe.hpp>
 #include <boost/asio/consign.hpp>
@@ -81,6 +82,7 @@
 #include <boost/asio/default_completion_token.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/dispatch.hpp>
+#include <boost/asio/disposition.hpp>
 #include <boost/asio/error.hpp>
 #include <boost/asio/execution.hpp>
 #include <boost/asio/execution/allocator.hpp>
@@ -109,8 +111,6 @@
 #include <boost/asio/immediate.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/io_context_strand.hpp>
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/io_service_strand.hpp>
 #include <boost/asio/ip/address.hpp>
 #include <boost/asio/ip/address_v4.hpp>
 #include <boost/asio/ip/address_v4_iterator.hpp>

@@ -9,7 +9,7 @@ Distributed under the Boost Software License, Version 1.0.
 #include <boost/core/lightweight_test.hpp>
 #include <boost/smart_ptr/make_shared.hpp>
 #include <boost/smart_ptr/weak_ptr.hpp>
-#include <boost/type_traits/alignment_of.hpp>
+#include <type_traits>
 
 class type {
 public:
@@ -49,7 +49,7 @@ int main()
         BOOST_TEST(result.get() != 0);
         BOOST_TEST(result.use_count() == 1);
         BOOST_TEST(boost::alignment::is_aligned(result.get(),
-            boost::alignment_of<int>::value));
+            std::alignment_of<int>::value));
         BOOST_TEST(result[0] == 0);
         BOOST_TEST(result[1] == 0);
         BOOST_TEST(result[2] == 0);
@@ -60,7 +60,7 @@ int main()
         BOOST_TEST(result.get() != 0);
         BOOST_TEST(result.use_count() == 1);
         BOOST_TEST(boost::alignment::is_aligned(result.get(),
-            boost::alignment_of<int>::value));
+            std::alignment_of<int>::value));
         BOOST_TEST(result[0] == 0);
         BOOST_TEST(result[1] == 0);
         BOOST_TEST(result[2] == 0);
@@ -71,7 +71,7 @@ int main()
         BOOST_TEST(result.get() != 0);
         BOOST_TEST(result.use_count() == 1);
         BOOST_TEST(boost::alignment::is_aligned(result.get(),
-            boost::alignment_of<int>::value));
+            std::alignment_of<int>::value));
         BOOST_TEST(result[0][0] == 0);
         BOOST_TEST(result[0][1] == 0);
         BOOST_TEST(result[1][0] == 0);
@@ -83,7 +83,7 @@ int main()
         BOOST_TEST(result.get() != 0);
         BOOST_TEST(result.use_count() == 1);
         BOOST_TEST(boost::alignment::is_aligned(result.get(),
-            boost::alignment_of<int>::value));
+            std::alignment_of<int>::value));
         BOOST_TEST(result[0][0] == 0);
         BOOST_TEST(result[0][1] == 0);
         BOOST_TEST(result[1][0] == 0);
@@ -95,7 +95,7 @@ int main()
         BOOST_TEST(result.get() != 0);
         BOOST_TEST(result.use_count() == 1);
         BOOST_TEST(boost::alignment::is_aligned(result.get(),
-            boost::alignment_of<int>::value));
+            std::alignment_of<int>::value));
         BOOST_TEST(result[0] == 0);
         BOOST_TEST(result[1] == 0);
         BOOST_TEST(result[2] == 0);
@@ -106,7 +106,7 @@ int main()
         BOOST_TEST(result.get() != 0);
         BOOST_TEST(result.use_count() == 1);
         BOOST_TEST(boost::alignment::is_aligned(result.get(),
-            boost::alignment_of<int>::value));
+            std::alignment_of<int>::value));
         BOOST_TEST(result[0] == 0);
         BOOST_TEST(result[1] == 0);
         BOOST_TEST(result[2] == 0);
@@ -117,7 +117,7 @@ int main()
         BOOST_TEST(result.get() != 0);
         BOOST_TEST(result.use_count() == 1);
         BOOST_TEST(boost::alignment::is_aligned(result.get(),
-            boost::alignment_of<int>::value));
+            std::alignment_of<int>::value));
         BOOST_TEST(result[0][0] == 0);
         BOOST_TEST(result[0][1] == 0);
         BOOST_TEST(result[1][0] == 0);
@@ -129,7 +129,7 @@ int main()
         BOOST_TEST(result.get() != 0);
         BOOST_TEST(result.use_count() == 1);
         BOOST_TEST(boost::alignment::is_aligned(result.get(),
-            boost::alignment_of<int>::value));
+            std::alignment_of<int>::value));
         BOOST_TEST(result[0][0] == 0);
         BOOST_TEST(result[0][1] == 0);
         BOOST_TEST(result[1][0] == 0);
@@ -141,7 +141,7 @@ int main()
         BOOST_TEST(result.get() != 0);
         BOOST_TEST(result.use_count() == 1);
         BOOST_TEST(boost::alignment::is_aligned(result.get(),
-            boost::alignment_of<type>::value));
+            std::alignment_of<type>::value));
         BOOST_TEST(type::instances == 3);
         boost::weak_ptr<type[]> w1 = result;
         result.reset();
@@ -153,7 +153,7 @@ int main()
         BOOST_TEST(result.get() != 0);
         BOOST_TEST(result.use_count() == 1);
         BOOST_TEST(boost::alignment::is_aligned(result.get(),
-            boost::alignment_of<type>::value));
+            std::alignment_of<type>::value));
         BOOST_TEST(type::instances == 3);
         boost::weak_ptr<type[3]> w1 = result;
         result.reset();
@@ -165,7 +165,7 @@ int main()
         BOOST_TEST(result.get() != 0);
         BOOST_TEST(result.use_count() == 1);
         BOOST_TEST(boost::alignment::is_aligned(result.get(),
-            boost::alignment_of<type>::value));
+            std::alignment_of<type>::value));
         BOOST_TEST(type::instances == 4);
         result.reset();
         BOOST_TEST(type::instances == 0);
@@ -176,7 +176,7 @@ int main()
         BOOST_TEST(result.get() != 0);
         BOOST_TEST(result.use_count() == 1);
         BOOST_TEST(boost::alignment::is_aligned(result.get(),
-            boost::alignment_of<type>::value));
+            std::alignment_of<type>::value));
         BOOST_TEST(type::instances == 4);
         result.reset();
         BOOST_TEST(type::instances == 0);
@@ -187,7 +187,7 @@ int main()
         BOOST_TEST(result.get() != 0);
         BOOST_TEST(result.use_count() == 1);
         BOOST_TEST(boost::alignment::is_aligned(result.get(),
-            boost::alignment_of<type>::value));
+            std::alignment_of<type>::value));
         BOOST_TEST(type::instances == 3);
         result.reset();
         BOOST_TEST(type::instances == 0);
@@ -198,7 +198,7 @@ int main()
         BOOST_TEST(result.get() != 0);
         BOOST_TEST(result.use_count() == 1);
         BOOST_TEST(boost::alignment::is_aligned(result.get(),
-            boost::alignment_of<type>::value));
+            std::alignment_of<type>::value));
         BOOST_TEST(type::instances == 3);
         result.reset();
         BOOST_TEST(type::instances == 0);
@@ -209,7 +209,7 @@ int main()
         BOOST_TEST(result.get() != 0);
         BOOST_TEST(result.use_count() == 1);
         BOOST_TEST(boost::alignment::is_aligned(result.get(),
-            boost::alignment_of<type>::value));
+            std::alignment_of<type>::value));
         BOOST_TEST(type::instances == 4);
         result.reset();
         BOOST_TEST(type::instances == 0);
@@ -220,7 +220,7 @@ int main()
         BOOST_TEST(result.get() != 0);
         BOOST_TEST(result.use_count() == 1);
         BOOST_TEST(boost::alignment::is_aligned(result.get(),
-            boost::alignment_of<type>::value));
+            std::alignment_of<type>::value));
         BOOST_TEST(type::instances == 4);
         result.reset();
         BOOST_TEST(type::instances == 0);

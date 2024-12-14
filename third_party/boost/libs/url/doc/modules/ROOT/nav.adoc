@@ -14,10 +14,6 @@
 ** xref:grammar/combinators.adoc[]
 ** xref:grammar/range.adoc[]
 ** xref:grammar/rfc3986.adoc[]
-* Concepts
-** xref:concepts/CharSet.adoc[]
-** xref:concepts/Rule.adoc[]
-** xref:concepts/StringToken.adoc[]
 * Examples
 ** xref:examples/qrcode.adoc[]
 ** xref:examples/finicky.adoc[]
@@ -26,5 +22,10 @@
 ** xref:examples/file-router.adoc[]
 ** xref:examples/router.adoc[]
 ** xref:examples/sanitize.adoc[]
-* xref:reference:boost/urls.adoc[Reference]
-* xref:HelpCard.adoc[]
+* Reference
+** xref:reference.adoc[Index]
+** Concepts
+*** xref:concepts/CharSet.adoc[]
+*** xref:concepts/Rule.adoc[]
+*** xref:concepts/StringToken.adoc[]
+** xref:HelpCard.adoc[]

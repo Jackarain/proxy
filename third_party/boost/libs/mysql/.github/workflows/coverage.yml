@@ -14,24 +14,25 @@ on:
   pull_request:
   workflow_dispatch:
 
-env:
-  GCOV_REPORT_DIR: /tmp/gcov-reports
-
 jobs:
   coverage:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/anarthal-containers/build-gcc14:c3f5316cc19bf3c0f7a83e31dec58139581f5764
+      image: ghcr.io/anarthal-containers/build-gcc14:61b5b771ffefa8c04c43ddc9e023152461a8295f
       volumes:
         - /var/run/mysqld:/var/run/mysqld
     services:
       mysql:
-        image: ghcr.io/anarthal-containers/mysql8:c3f5316cc19bf3c0f7a83e31dec58139581f5764
+        image: ghcr.io/anarthal-containers/ci-db:mysql-8.4.1-61b5b771ffefa8c04c43ddc9e023152461a8295f
         ports:
           - 3306:3306
         volumes:
           - /var/run/mysqld:/var/run/mysqld
     steps:
+      - name: Install coverage packages
+        run: |
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends lcov
+
       - name: Fetch code
         uses: actions/checkout@v4
       
@@ -44,21 +45,35 @@ jobs:
             --toolset=gcc \
             --cxxstd=20 \
             --variant=debug \
+            --disable-local-sockets=off,on \
             --coverage=1
       
       - name: Generate coverage reports
         shell: bash
         run: |
-          SOURCE_DIR=$(pwd)
-          cd ~/boost-root
-          gcov-14 -r -p $(find bin.v2/ -name '*.gcda') > /dev/null
-          mkdir $GCOV_REPORT_DIR
-          cp boost#mysql#*.gcov $GCOV_REPORT_DIR
+          cd ~/boost-root/bin.v2
+          lcov \
+            --rc branch_coverage=0 \
+            --rc geninfo_unexecuted_blocks=1 \
+            --ignore-errors mismatch \
+            --gcov-tool gcov-14 \
+            --directory . \
+            --capture \
+            --output-file all.info
+          lcov \
+            --rc branch_coverage=0 \
+            --output-file coverage.info \
+            --extract all.info '*/boost/mysql*'
+          sed "s|^SF:$HOME/boost-root/|SF:include/|g" coverage.info > $GITHUB_WORKSPACE/coverage.info
       
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
         with:
           verbose: true
+          fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
-          plugins: "" # Don't run gcov again, codecov doesn't know about the filtering we perform
-          directory: ${{ env.GCOV_REPORT_DIR }}
+          plugins: noop # Don't run gcov again, codecov doesn't know about the filtering we perform
+          file: coverage.info
+          disable_search: true # Don't upload unwanted files
+          disable_file_fixes: true # Default fixes make reports unusable
+

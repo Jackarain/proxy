@@ -802,6 +802,16 @@ Special thanks to:
 
 [section:release_notes Release Notes]
 
+[section:release_notes_boost_1_87 Boost 1.87 Release]
+
+*  Fixed bugs:
+   *  [@https://github.com/boostorg/move/issues/56 Git Issue #56: ['"Forward declarations of std types cause compilation errors on some platforms"]].
+   *  [@https://github.com/boostorg/move/issues/57 Git Issue #57: ['"<boost/move/adl_move_swap.hpp> fails to compile under libc++-19"]].
+
+[endsect]
+
+Forward declarations of std types cause compilation errors on some platforms #292
+
 [section:release_notes_boost_1_85 Boost 1.85 Release]
 
 *  Fixed bugs:

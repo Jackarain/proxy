@@ -1,12 +1,3 @@
-#include <boost/config.hpp>
-
-#if defined(BOOST_MSVC)
-#pragma warning(disable: 4786)  // identifier truncated in debug info
-#pragma warning(disable: 4710)  // function not inlined
-#pragma warning(disable: 4711)  // function selected for automatic inline expansion
-#pragma warning(disable: 4514)  // unreferenced inline removed
-#endif
-
 //
 //  shared_ptr_timing_test.cpp - use to evaluate the impact of thread safety
 //

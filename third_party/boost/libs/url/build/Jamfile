@@ -8,8 +8,27 @@
 # Official repository: https://github.com/vinniefalco/url
 #
 
-project boost/url
+import-search /boost/config/checks ;
+import config : requires ;
+
+constant c11-requires :
+    [ requires
+    cxx11_constexpr
+    cxx11_decltype
+    cxx11_hdr_tuple
+    cxx11_template_aliases
+    cxx11_variadic_templates
+    ]
+    ;
+
+constant boost_dependencies_private :
+    /boost/throw_exception//boost_throw_exception
+    ;
+
+project
+    : common-requirements <library>$(boost_dependencies)
     : requirements
+      <library>$(boost_dependencies_private)
       $(c11-requires)
       <define>BOOST_URL_SOURCE
       <toolset>msvc-14.0:<build>no
@@ -19,6 +38,8 @@ project boost/url
     : common-requirements
       <link>shared:<define>BOOST_URL_DYN_LINK=1
       <link>static:<define>BOOST_URL_STATIC_LINK=1
+    : usage-requirements
+        <define>BOOST_URL_NO_LIB=1
     : source-location ../src
     ;
 
@@ -31,5 +52,3 @@ explicit url_sources ;
 lib boost_url
    : url_sources
    ;
-
-boost-install boost_url ;

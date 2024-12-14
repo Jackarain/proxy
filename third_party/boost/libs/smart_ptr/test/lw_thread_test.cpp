@@ -4,9 +4,9 @@
 // Copyright 2018 Peter Dimov
 // Distributed under the Boost Software License, Version 1.0.
 
-#include <boost/detail/lightweight_thread.hpp>
-#include <boost/core/lightweight_test.hpp>
+#include <boost/smart_ptr/detail/lightweight_thread.hpp>
 #include <boost/smart_ptr/detail/atomic_count.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 boost::detail::atomic_count count( 0 );
 

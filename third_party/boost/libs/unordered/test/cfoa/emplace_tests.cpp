@@ -1,5 +1,5 @@
 // Copyright (C) 2023 Christian Mazakas
-// Copyright (C) 2023 Joaquin M Lopez Munoz
+// Copyright (C) 2023-2024 Joaquin M Lopez Munoz
 // Copyright (C) 2024 Braden Ganetsky
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -9,6 +9,8 @@
 
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
+#include <boost/unordered/concurrent_node_map.hpp>
+#include <boost/unordered/concurrent_node_set.hpp>
 
 #include <boost/core/ignore_unused.hpp>
 
@@ -51,6 +53,34 @@ namespace {
     return x.emplace_or_cvisit(v.first.x_, v.second.x_, f);
   }
 
+  template <typename Container, typename Value, typename F1, typename F2>
+  bool member_emplace_and_visit(Container& x, Value& v, F1 f1, F2 f2)
+  {
+    return x.emplace_and_visit(v.x_, f1, f2);
+  }
+
+  template <
+    typename Container, typename Key, typename Value, typename F1, typename F2>
+  bool member_emplace_and_visit(
+    Container& x, std::pair<Key, Value>& v, F1 f1, F2 f2)
+  {
+    return x.emplace_and_visit(v.first.x_, v.second.x_, f1, f2);
+  }
+
+  template <typename Container, typename Value, typename F1, typename F2>
+  bool member_emplace_and_cvisit(Container& x, Value& v, F1 f1, F2 f2)
+  {
+    return x.emplace_and_cvisit(v.x_, f1, f2);
+  }
+
+  template <
+    typename Container, typename Key, typename Value, typename F1, typename F2>
+  bool member_emplace_and_cvisit(
+    Container& x, std::pair<Key, Value>& v, F1 f1, F2 f2)
+  {
+    return x.emplace_and_cvisit(v.first.x_, v.second.x_, f1, f2);
+  }
+
   struct lvalue_emplacer_type
   {
     template <class T, class X> void call_impl(std::vector<T>& values, X& x)
@@ -80,11 +110,8 @@ namespace {
     }
     template <class T, class X> void operator()(std::vector<T>& values, X& x)
     {
-      static constexpr auto value_type_cardinality =
-        value_cardinality<typename X::value_type>::value;
-
       call_impl(values, x);
-      BOOST_TEST_GE(raii::move_constructor, value_type_cardinality * x.size());
+      BOOST_TEST_GE(raii::move_constructor, x.size());
     }
   } lvalue_emplacer;
 
@@ -134,6 +161,55 @@ namespace {
     }
   } lvalue_emplace_or_cvisit;
 
+  struct lvalue_emplace_and_cvisit_type
+  {
+    template <class T, class X> void operator()(std::vector<T>& values, X& x)
+    {
+      static constexpr auto value_type_cardinality = 
+        value_cardinality<typename X::value_type>::value;
+
+      // concurrent_flat_set visit is always const access
+      using arg_type = typename std::conditional<
+        std::is_same<typename X::key_type, typename X::value_type>::value,
+        typename X::value_type const,
+        typename X::value_type
+      >::type;
+
+      std::atomic<std::uint64_t> num_inserts{0}, num_inserts_internal{0};
+      std::atomic<std::uint64_t> num_invokes{0};
+      thread_runner(values,
+        [&x, &num_inserts, &num_inserts_internal, &num_invokes](boost::span<T> s) {
+        for (auto& r : s) {
+          bool b = member_emplace_and_cvisit(
+            x, r,
+            [&num_inserts_internal](arg_type& v) {
+              (void)v;
+              ++num_inserts_internal;
+            },
+            [&num_invokes](typename X::value_type const& v) {
+              (void)v;
+              ++num_invokes;
+            });
+
+          if (b) {
+            ++num_inserts;
+          }
+        }
+      });
+
+      BOOST_TEST_EQ(num_inserts, num_inserts_internal);
+      BOOST_TEST_EQ(num_inserts, x.size());
+      BOOST_TEST_EQ(num_invokes, values.size() - x.size());
+
+      BOOST_TEST_EQ(
+        raii::default_constructor, value_type_cardinality * values.size());
+      BOOST_TEST_EQ(raii::copy_constructor, 0u);
+      BOOST_TEST_GE(raii::move_constructor, value_type_cardinality * x.size());
+      BOOST_TEST_EQ(raii::move_assignment, 0u);
+      BOOST_TEST_EQ(raii::copy_assignment, 0u);
+    }
+  } lvalue_emplace_and_cvisit;
+
   struct lvalue_emplace_or_visit_type
   {
     template <class T, class X> void operator()(std::vector<T>& values, X& x)
@@ -177,6 +253,55 @@ namespace {
     }
   } lvalue_emplace_or_visit;
 
+  struct lvalue_emplace_and_visit_type
+  {
+    template <class T, class X> void operator()(std::vector<T>& values, X& x)
+    {
+      static constexpr auto value_type_cardinality = 
+        value_cardinality<typename X::value_type>::value;
+
+      // concurrent_flat_set visit is always const access
+      using arg_type = typename std::conditional<
+        std::is_same<typename X::key_type, typename X::value_type>::value,
+        typename X::value_type const,
+        typename X::value_type
+      >::type;
+
+      std::atomic<std::uint64_t> num_inserts{0}, num_inserts_internal{0};
+      std::atomic<std::uint64_t> num_invokes{0};
+      thread_runner(values,
+        [&x, &num_inserts, &num_inserts_internal, &num_invokes](boost::span<T> s) {
+        for (auto& r : s) {
+          bool b = member_emplace_and_visit(
+            x, r,
+            [&num_inserts_internal](arg_type& v) {
+              (void)v;
+              ++num_inserts_internal;
+            },
+            [&num_invokes](arg_type& v) {
+              (void)v;
+              ++num_invokes;
+            });
+
+          if (b) {
+            ++num_inserts;
+          }
+        }
+      });
+
+      BOOST_TEST_EQ(num_inserts, num_inserts_internal);
+      BOOST_TEST_EQ(num_inserts, x.size());
+      BOOST_TEST_EQ(num_invokes, values.size() - x.size());
+
+      BOOST_TEST_EQ(
+        raii::default_constructor, value_type_cardinality * values.size());
+      BOOST_TEST_EQ(raii::copy_constructor, 0u);
+      BOOST_TEST_GE(raii::move_constructor, value_type_cardinality * x.size());
+      BOOST_TEST_EQ(raii::move_assignment, 0u);
+      BOOST_TEST_EQ(raii::copy_assignment, 0u);
+    }
+  } lvalue_emplace_and_visit;
+
   struct copy_emplacer_type
   {
     template <class T, class X> void operator()(std::vector<T>& values, X& x)
@@ -197,7 +322,12 @@ namespace {
       BOOST_TEST_EQ(raii::default_constructor, 0u);
 
       BOOST_TEST_EQ(raii::copy_constructor, value_type_cardinality * x.size());
-      BOOST_TEST_GT(raii::move_constructor, 0u);
+      if (is_container_node_based<X>::value) {
+        BOOST_TEST_EQ(raii::move_constructor, 0u);
+      }
+      else {
+        BOOST_TEST_GT(raii::move_constructor, 0u);
+      }
 
       BOOST_TEST_EQ(raii::copy_assignment, 0u);
       BOOST_TEST_EQ(raii::move_assignment, 0u);
@@ -208,8 +338,8 @@ namespace {
   {
     template <class T, class X> void operator()(std::vector<T>& values, X& x)
     {
-      static constexpr auto value_type_cardinality =
-        value_cardinality<typename X::value_type>::value;
+      static constexpr auto input_type_nonconst_cardinality = 
+        value_nonconst_cardinality<T>::value;
 
       std::atomic<std::uint64_t> num_inserts{0};
       thread_runner(values, [&x, &num_inserts](boost::span<T> s) {
@@ -235,10 +365,18 @@ namespace {
       } else {
         BOOST_TEST_EQ(raii::copy_constructor, 0u);
       }
+
+      if (is_container_node_based<X>::value) {
+        BOOST_TEST_EQ(
+          raii::move_constructor, input_type_nonconst_cardinality * x.size());
+      }
+      else {
+        BOOST_TEST_GT(
+          raii::move_constructor, input_type_nonconst_cardinality * x.size());
+      }
 #if defined(BOOST_MSVC)
 #pragma warning(pop) // C4127
 #endif
-      BOOST_TEST_GT(raii::move_constructor, value_type_cardinality * x.size());
 
       BOOST_TEST_EQ(raii::copy_assignment, 0u);
       BOOST_TEST_EQ(raii::move_assignment, 0u);
@@ -280,7 +418,9 @@ namespace {
   }
 
   boost::unordered::concurrent_flat_map<raii, raii>* map;
+  boost::unordered::concurrent_node_map<raii, raii>* node_map;
   boost::unordered::concurrent_flat_set<raii>* set;
+  boost::unordered::concurrent_node_set<raii>* node_set;
 
 } // namespace
 
@@ -292,10 +432,17 @@ using test::sequential;
 
 UNORDERED_TEST(
   emplace,
-  ((map)(set))
+  ((map)(node_map)(set)(node_set))
   ((value_type_generator_factory)(init_type_generator_factory))
   ((lvalue_emplacer)(norehash_lvalue_emplacer)
    (lvalue_emplace_or_cvisit)(lvalue_emplace_or_visit)(copy_emplacer)(move_emplacer))
+  ((default_generator)(sequential)(limited_range)))
+
+UNORDERED_TEST(
+  emplace,
+  ((map)(node_map)(set)(node_set))
+  ((value_type_generator_factory)(init_type_generator_factory))
+  ((lvalue_emplace_and_cvisit)(lvalue_emplace_and_visit))
   ((default_generator)(sequential)(limited_range)))
 
 // clang-format on
@@ -455,6 +602,8 @@ namespace {
 
   boost::unordered::concurrent_flat_map<counted_key_type, counted_value_type>*
     test_counted_flat_map = {};
+  boost::unordered::concurrent_node_map<counted_key_type, counted_value_type>*
+    test_counted_node_map = {};
 
 } // namespace
 
@@ -462,7 +611,7 @@ namespace {
 
 UNORDERED_TEST(
   emplace_map_key_value,
-  ((test_counted_flat_map))
+  ((test_counted_flat_map)(test_counted_node_map))
   ((copy)(move))
   ((counted_key_checker)(converting_key_checker))
   ((counted_value_checker)(converting_value_checker))

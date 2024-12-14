@@ -37,7 +37,7 @@
 #include <boost/bimap/bimap.hpp>
 #include <boost/bimap/support/lambda.hpp>
 
-#include <libs/bimap/test/test_bimap.hpp>
+#include "test_bimap.hpp"
 
 struct  left_tag {};
 struct right_tag {};

@@ -13,16 +13,23 @@
 #pragma once
 
 #include <boost/pfr/detail/config.hpp>
+
 #include <boost/pfr/detail/core.hpp>
-#include <boost/pfr/detail/sequence_tuple.hpp>
-#include <boost/pfr/detail/make_integer_sequence.hpp>
-#include <boost/pfr/detail/fields_count.hpp>
-#include <boost/pfr/detail/stdarray.hpp>
 #include <boost/pfr/detail/fake_object.hpp>
+#include <boost/pfr/detail/fields_count.hpp>
+#include <boost/pfr/detail/for_each_field.hpp>
+#include <boost/pfr/detail/make_integer_sequence.hpp>
+#include <boost/pfr/detail/sequence_tuple.hpp>
+#include <boost/pfr/detail/stdarray.hpp>
+
+#ifdef BOOST_PFR_HAS_STD_MODULE
+import std;
+#else
 #include <type_traits>
 #include <string_view>
 #include <array>
 #include <memory> // for std::addressof
+#endif
 
 namespace boost { namespace pfr { namespace detail {
 
@@ -99,7 +106,7 @@ consteval auto name_of_field_impl() noexcept {
     static_assert(!sv.empty(),
         "====================> Boost.PFR: Field reflection parser configured in a wrong way. "
         "Please define the BOOST_PFR_FUNCTION_SIGNATURE to a compiler specific macro, "
-        "that outputs the whole function signature including non-type template parameters."  
+        "that outputs the whole function signature including non-type template parameters."
     );
 
     constexpr auto skip = detail::make_core_name_skip BOOST_PFR_CORE_NAME_PARSING;
@@ -234,6 +241,22 @@ constexpr auto tie_as_names_tuple() noexcept {
     );
 
     return detail::tie_as_names_tuple_impl<T>(detail::make_index_sequence<detail::fields_count<T>()>{});
+}
+
+template <class T, class F>
+constexpr void for_each_field_with_name(T&& value, F&& func) {
+    return boost::pfr::detail::for_each_field(
+        std::forward<T>(value),
+        [f = std::forward<F>(func)](auto&& field, auto index) mutable {
+            using IndexType = decltype(index);
+            using FieldType = decltype(field);
+            constexpr auto name = boost::pfr::detail::get_name<std::remove_reference_t<T>, IndexType::value>();
+            if constexpr (std::is_invocable_v<F, std::string_view, FieldType, IndexType>) {
+                f(name, std::forward<FieldType>(field), index);
+            } else {
+                f(name, std::forward<FieldType>(field));
+            }
+        });
 }
 
 }}} // namespace boost::pfr::detail

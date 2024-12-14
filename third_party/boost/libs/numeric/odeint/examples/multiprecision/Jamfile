@@ -6,11 +6,12 @@
 
 
 project
-    : requirements 
+    : requirements
       <define>BOOST_ALL_NO_LIB=1
-    : 
+      <library>/boost/multiprecision//boost_multiprecision
+    :
     ;
-    
+
 
 exe lorenz_mp : lorenz_mp.cpp ;
 exe cmp_precision : cmp_precision.cpp ;

@@ -4,7 +4,8 @@
 #  https://www.boost.org/LICENSE_1_0.txt
 
 import testing ;
-import ../../config/checks/config : requires ;
+import-search /boost/config/checks ;
+import config : requires ;
 
 project
   : default-build
@@ -20,6 +21,9 @@ project
     <toolset>msvc:<warnings-as-errors>on
     <toolset>gcc:<warnings-as-errors>on
     <toolset>clang:<warnings-as-errors>on
+
+    <library>/boost/core//boost_core
+    <library>/boost/mp11//boost_mp11
 
     # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=81601
     # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=91146
@@ -108,3 +112,6 @@ run function_ref_mfn_test.cpp ;
 run function_ref_fn_noexcept_test.cpp ;
 run function_ref_mfn_noexcept_test.cpp ;
 run function_ref_obj_noexcept_test.cpp ;
+
+run to_array_lvalue_test.cpp ;
+run to_array_rvalue_test.cpp ;

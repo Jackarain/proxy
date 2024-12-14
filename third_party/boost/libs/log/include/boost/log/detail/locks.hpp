@@ -17,6 +17,37 @@
 #define BOOST_LOG_DETAIL_LOCKS_HPP_INCLUDED_
 
 #include <boost/log/detail/config.hpp>
+
+#ifndef BOOST_LOG_NO_THREADS
+
+#include <boost/move/detail/std_ns_begin.hpp>
+BOOST_MOVE_STD_NS_BEG
+
+// Forward declaration of the standard locks. Specified to avoid including <mutex> and <shared_mutex>.
+#if !defined(BOOST_MSSTL_VERSION) || (BOOST_MSSTL_VERSION != 140)
+template< typename >
+class lock_guard;
+#else
+// MSVC 14.0 has a non-confogrming lock_guard
+template< typename... >
+class lock_guard;
+#endif
+template< typename >
+class unique_lock;
+#if !defined(BOOST_NO_CXX14_HDR_SHARED_MUTEX)
+template< typename >
+class shared_lock;
+#endif
+#if defined(__cpp_lib_scoped_lock) && (__cpp_lib_scoped_lock >= 201703l)
+template< typename... >
+class scoped_lock;
+#endif
+
+BOOST_MOVE_STD_NS_END
+#include <boost/move/detail/std_ns_end.hpp>
+
+#endif // BOOST_LOG_NO_THREADS
+
 #include <boost/log/detail/header.hpp>
 
 #ifdef BOOST_HAS_PRAGMA_ONCE

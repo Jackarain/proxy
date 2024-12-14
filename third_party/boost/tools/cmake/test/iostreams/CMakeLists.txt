@@ -18,4 +18,4 @@ target_link_libraries(test_fd Boost::iostreams Boost::core)
 enable_testing()
 add_test(NAME test_fd COMMAND test_fd WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>)
+add_custom_target(check VERBATIM COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --no-tests=error -C $<CONFIG>)

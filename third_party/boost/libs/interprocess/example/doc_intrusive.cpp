@@ -77,32 +77,15 @@ int main()
    //Remove shared memory on construction and destruction
    struct shm_remove
    {
-   //<-
-   #if 1
       shm_remove() { shared_memory_object::remove(test::get_process_id_name()); }
       ~shm_remove(){ shared_memory_object::remove(test::get_process_id_name()); }
-   #else
-   //->
-      shm_remove() { shared_memory_object::remove("MySharedMemory"); }
-      ~shm_remove(){ shared_memory_object::remove("MySharedMemory"); }
-   //<-
-   #endif
-   //->
    } remover;
    //<-
    (void)remover;
    //->
 
    //Create shared memory
-   //<-
-   #if 1
    managed_shared_memory shmem(create_only, test::get_process_id_name(), 10000);
-   #else
-   //->
-   managed_shared_memory shmem(create_only, "MySharedMemory", 10000);
-   //<-
-   #endif
-   //->
 
    //Create the unique reference counted object in shared memory
    N::reference_counted_class *ref_counted =

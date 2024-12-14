@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE(async_wait, *boost::unit_test::timeout(10))
 
     boost::asio::io_context io_context;
 
-    boost::asio::deadline_timer timeout{io_context, boost::posix_time::seconds(3)};
+    boost::asio::steady_timer timeout{io_context, std::chrono::seconds(3)};
     timeout.async_wait([&](boost::system::error_code ec){if (!ec) io_context.stop();});
 
 
@@ -148,12 +148,17 @@ BOOST_AUTO_TEST_CASE(async_nowait, *boost::unit_test::timeout(10))
     boost::asio::io_context io_context;
     bp::child c(
             master_test_suite().argv[1],
-            "test", "--exit-code", "221",
+            "test", "--exit-code", "121",
             ec,
             bp::on_exit=[](int exit_code, std::error_code) mutable {},
             io_context
     );
     BOOST_REQUIRE(!ec);
-    io_context.run_for(std::chrono::milliseconds(100));
-    BOOST_CHECK_EQUAL(221, c.exit_code());
+    while (c.running())
+    {
+      io_context.run_for(std::chrono::milliseconds(10));
+      io_context.restart();
+    }
+
+    BOOST_CHECK_EQUAL(121, c.exit_code());
 }

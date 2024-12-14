@@ -240,7 +240,7 @@ template<class NamedCondition, class NamedMutex>
 int test_named_condition()
 {
    int ret = 0;
-   BOOST_TRY{
+   BOOST_INTERPROCESS_TRY{
       //Remove previous mutexes and conditions
       NamedMutex::remove(test::add_to_process_id_name("test_mutex0"));
       NamedCondition::remove(test::add_to_process_id_name("test_cond0"));
@@ -261,10 +261,10 @@ int test_named_condition()
       test::do_test_condition<test::named_condition_test_wrapper<NamedCondition>
                              ,test::named_mutex_test_wrapper<NamedMutex> >();
    }
-   BOOST_CATCH(std::exception &ex){
+   BOOST_INTERPROCESS_CATCH(std::exception &ex){
       std::cout << ex.what() << std::endl;
       ret = 1;
-   } BOOST_CATCH_END
+   } BOOST_INTERPROCESS_CATCH_END
    NamedMutex::remove(test::add_to_process_id_name("test_mutex0"));
    NamedCondition::remove(test::add_to_process_id_name("test_cond0"));
    NamedCondition::remove(test::add_to_process_id_name("test_cond1"));

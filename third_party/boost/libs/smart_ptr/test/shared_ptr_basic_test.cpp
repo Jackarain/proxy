@@ -1,23 +1,3 @@
-#include <boost/config.hpp>
-
-#if defined(BOOST_MSVC)
-
-#pragma warning(disable: 4786)  // identifier truncated in debug info
-#pragma warning(disable: 4710)  // function not inlined
-#pragma warning(disable: 4711)  // function selected for automatic inline expansion
-#pragma warning(disable: 4514)  // unreferenced inline removed
-#pragma warning(disable: 4355)  // 'this' : used in base member initializer list
-
-#if (BOOST_MSVC >= 1310)
-#pragma warning(disable: 4675)  // resolved overload found with Koenig lookup
-#endif
-
-#endif
-
-#if defined(__GNUC__) && __GNUC__ > 4
-# pragma GCC diagnostic ignored "-Wdelete-non-virtual-dtor"
-#endif
-
 //
 //  shared_ptr_basic_test.cpp
 //
@@ -28,10 +8,15 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#include <boost/core/lightweight_test.hpp>
+#if defined(__GNUC__) && __GNUC__ > 4
+# pragma GCC diagnostic ignored "-Wdelete-non-virtual-dtor"
+#endif
 
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
+#include <boost/config.hpp>
+
+#include <boost/core/lightweight_test.hpp>
 
 int cnt = 0;
 

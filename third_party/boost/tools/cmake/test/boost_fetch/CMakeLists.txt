@@ -9,7 +9,7 @@ project(boost_fetch_test LANGUAGES CXX)
 include("${CMAKE_CURRENT_SOURCE_DIR}/../../include/BoostFetch.cmake")
 
 include(CTest)
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>)
+add_custom_target(check VERBATIM COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --no-tests=error -C $<CONFIG>)
 
 set(BUILD_TESTING OFF) # hide cache variable
 

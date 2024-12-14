@@ -62,8 +62,8 @@ int get_val(MoveOnly m)
 void test_map_move_only()
 {
   optional<MoveOnly> om (makeMoveOnly(7)), om2 (makeMoveOnly(8));
-  verify_type<optional<int> >(boost::move(om).map(get_val));
-  optional<int> oi = boost::move(om2).map(get_val);
+  verify_type<optional<int> >(std::move(om).map(get_val));
+  optional<int> oi = std::move(om2).map(get_val);
   BOOST_TEST(bool(oi));
   BOOST_TEST_EQ(8, *oi);
 
@@ -72,7 +72,7 @@ void test_map_move_only()
   BOOST_TEST_EQ(4, *oj);
 
   optional<MoveOnly> o_;
-  optional<int> oi_ = boost::move(o_).map(get_val);
+  optional<int> oi_ = std::move(o_).map(get_val);
   BOOST_TEST(!oi_);
 }
 

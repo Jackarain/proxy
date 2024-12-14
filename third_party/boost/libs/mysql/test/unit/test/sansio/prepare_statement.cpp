@@ -13,13 +13,9 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <cstdint>
-#include <vector>
-
 #include "test_unit/algo_test.hpp"
 #include "test_unit/create_coldef_frame.hpp"
 #include "test_unit/create_err.hpp"
-#include "test_unit/create_frame.hpp"
 #include "test_unit/create_meta.hpp"
 #include "test_unit/create_prepare_statement_response.hpp"
 #include "test_unit/create_query_frame.hpp"
@@ -34,7 +30,7 @@ BOOST_AUTO_TEST_SUITE(test_prepare_statement)
 //
 struct read_response_fixture : algo_fixture_base
 {
-    detail::read_prepare_statement_response_algo algo{&diag, 19};
+    detail::read_prepare_statement_response_algo algo{diag, 19};
 
     // Clearing diagnostics is not this algorithm's responsibility
     read_response_fixture() : algo_fixture_base(diagnostics()) {}
@@ -160,9 +156,10 @@ BOOST_AUTO_TEST_CASE(read_response_error_packet)
 //
 struct prepare_fixture : algo_fixture_base
 {
-    detail::prepare_statement_algo algo{
-        {&diag, "SELECT 1"}
-    };
+    detail::prepare_statement_algo algo{diag, {"SELECT 1"}};
+
+    prepare_fixture() = default;
+    prepare_fixture(std::size_t max_bufsize) : algo_fixture_base(max_bufsize) {}
 
     statement result() const { return algo.result(st); }
 };
@@ -186,16 +183,6 @@ BOOST_AUTO_TEST_CASE(prepare_success)
     BOOST_TEST(stmt.num_params() == 2u);
 }
 
-BOOST_AUTO_TEST_CASE(prepare_network_error)
-{
-    // This covers errors in the request and the response
-    algo_test()
-        .expect_write(create_prepare_statement_frame(0, "SELECT 1"))
-        .expect_read(prepare_stmt_response_builder().seqnum(1).id(29).num_columns(0).num_params(1).build())
-        .expect_read(create_coldef_frame(2, meta_builder().name("abc").build_coldef()))
-        .check_network_errors<prepare_fixture>();
-}
-
 // Spotcheck: an error while reading the response is propagated correctly
 BOOST_AUTO_TEST_CASE(prepare_error_packet)
 {
@@ -211,6 +198,25 @@ BOOST_AUTO_TEST_CASE(prepare_error_packet)
                          .message("my_message")
                          .build_frame())
         .check(fix, common_server_errc::er_bad_db_error, create_server_diag("my_message"));
+}
+
+BOOST_AUTO_TEST_CASE(prepare_network_error)
+{
+    // This covers errors in the request and the response
+    algo_test()
+        .expect_write(create_prepare_statement_frame(0, "SELECT 1"))
+        .expect_read(prepare_stmt_response_builder().seqnum(1).id(29).num_columns(0).num_params(1).build())
+        .expect_read(create_coldef_frame(2, meta_builder().name("abc").build_coldef()))
+        .check_network_errors<prepare_fixture>();
+}
+
+BOOST_AUTO_TEST_CASE(prepare_error_max_buffer_size)
+{
+    // Setup
+    prepare_fixture fix(10u);
+
+    // Run the algo
+    algo_test().check(fix, client_errc::max_buffer_size_exceeded);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

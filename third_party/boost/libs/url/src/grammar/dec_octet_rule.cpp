@@ -17,7 +17,7 @@
 namespace boost {
 namespace urls {
 namespace grammar {
-
+namespace implementation_defined {
 auto
 dec_octet_rule_t::
 parse(
@@ -84,7 +84,7 @@ parse(
     return static_cast<
         value_type>(v);
 }
-
+} // implementation_defined
 } // grammar
 } // urls
 } // boost

@@ -2,12 +2,13 @@
 
 # (C) Copyright 2008 CodeRage, LLC (turkanis at coderage dot com)
 # (C) Copyright 2004-2007 Jonathan Turkanis
-# Distributed under the Boost Software License, Version 1.0. (See accompanying 
+# Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt.)
 
 # See http://www.boost.org/libs/iostreams for documentation.
 
-project /boost/iostreams : source-location ../src ;
+project : source-location ../src
+    : common-requirements <library>$(boost_dependencies) ;
 
 # The biggest trick in this Jamfile is to link to zlib and bzip2 when
 # needed. To configure that, a number of variables are used, which must
@@ -23,28 +24,23 @@ import path ;
 import ac ;
 local debug = [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ] ;
 
-local libraries-to-install = boost_iostreams ;
-
-for local v in NO_COMPRESSION 
-               NO_ZLIB
-               NO_BZIP2
+for local v in NO_COMPRESSION
                NO_LZMA
                NO_ZSTD
 {
     $(v) = [ modules.peek : $(v) ] ;
 }
 
-if $(NO_COMPRESSION) != 1 && $(NO_ZLIB) != 1
+if $(has_zlib)
 {
     using zlib : : <build-name>boost_zlib <tag>@tag ;
     zlib-requirements =
         [ ac.check-library /zlib//zlib : <library>/zlib//zlib
           <source>zlib.cpp <source>gzip.cpp ] ;
 
-    if [ os.environ ZLIB_SOURCE ]
+    if $(install_zlib)
     {
         alias boost_zlib : /zlib//zlib ;
-        libraries-to-install += boost_zlib ;
     }
 }
 else
@@ -55,17 +51,16 @@ else
     }
 }
 
-if $(NO_COMPRESSION) != 1 && $(NO_BZIP2) != 1
+if $(has_bzip2)
 {
     using bzip2 : : <build-name>boost_bzip2 <tag>@tag ;
     bzip2-requirements =
         [ ac.check-library /bzip2//bzip2 : <library>/bzip2//bzip2
           <source>bzip2.cpp ] ;
 
-    if [ os.environ BZIP2_SOURCE ]
+    if $(install_bzip2)
     {
         alias boost_bzip2 : /bzip2//bzip2 ;
-        libraries-to-install += boost_bzip2 ;
     }
 }
 else
@@ -114,9 +109,9 @@ else
 
 local sources = file_descriptor.cpp mapped_file.cpp ;
 
-lib boost_iostreams 
-    : $(sources) 
-    : <link>shared:<define>BOOST_IOSTREAMS_DYN_LINK=1 
+lib boost_iostreams
+    : $(sources)
+    : <link>shared:<define>BOOST_IOSTREAMS_DYN_LINK=1
       <define>BOOST_IOSTREAMS_USE_DEPRECATED
       $(zlib-requirements)
       $(bzip2-requirements)
@@ -124,6 +119,5 @@ lib boost_iostreams
       $(zstd-requirements)
     :
     : <link>shared:<define>BOOST_IOSTREAMS_DYN_LINK=1
+        <define>BOOST_IOSTREAMS_NO_LIB=1
     ;
-
-boost-install $(libraries-to-install) ;

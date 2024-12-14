@@ -1,7 +1,7 @@
 #  Boost.CRC library documentation Jamfile
 #  (Copied from the documentation Jamfile for Boost.Move)
 #
-#  Copyright Daryle Walker 2011. 
+#  Copyright Daryle Walker 2011.
 #  Distributed under the Boost Software License, Version 1.0.
 #  (See the accompanying file LICENSE_1_0.txt or a copy at
 #   http://www.boost.org/LICENSE_1_0.txt)
@@ -14,7 +14,7 @@ import quickbook ;
 
 doxygen autodoc
    :
-      [ glob ../../../boost/crc.hpp ]
+      [ glob ../include/boost/crc.hpp ]
    :
    <doxygen:param>HIDE_UNDOC_MEMBERS=YES
    <doxygen:param>HIDE_UNDOC_MEMBERS=YES
@@ -47,4 +47,3 @@ alias boostdoc
 explicit boostdoc ;
 alias boostrelease ;
 explicit boostrelease ;
-   

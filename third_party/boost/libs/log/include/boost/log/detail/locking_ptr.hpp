@@ -17,9 +17,9 @@
 #define BOOST_LOG_DETAIL_LOCKING_PTR_HPP_INCLUDED_
 
 #include <cstddef>
+#include <mutex> // try_to_lock_t
 #include <boost/move/core.hpp>
 #include <boost/smart_ptr/shared_ptr.hpp>
-#include <boost/thread/lock_options.hpp>
 #include <boost/core/explicit_operator_bool.hpp>
 #include <boost/log/detail/config.hpp>
 #include <boost/log/detail/header.hpp>
@@ -66,7 +66,7 @@ public:
         m_pLock->lock();
     }
     //! Constructor
-    locking_ptr(shared_ptr< element_type > const& p, lockable_type& l, try_to_lock_t const&) : m_pElement(p), m_pLock(&l)
+    locking_ptr(shared_ptr< element_type > const& p, lockable_type& l, std::try_to_lock_t) : m_pElement(p), m_pLock(&l)
     {
         if (!m_pLock->try_lock())
         {

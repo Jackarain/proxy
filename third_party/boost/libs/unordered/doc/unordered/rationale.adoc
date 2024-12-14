@@ -121,7 +121,8 @@ for Visual Studio on an x64-mode Intel CPU with SSE2 and for GCC on an IBM s390x
 == Concurrent Containers
 
 The same data structure used by Boost.Unordered open-addressing containers has been chosen
-also as the foundation of `boost::concurrent_flat_set` and `boost::concurrent_flat_map`:
+also as the foundation of `boost::concurrent_flat_set`/`boost::concurrent_node_set` and
+`boost::concurrent_flat_map`/`boost::concurrent_node_map`:
 
 * Open-addressing is faster than closed-addressing alternatives, both in non-concurrent and
 concurrent scenarios.
@@ -130,7 +131,7 @@ with minimal locking. In particular, the metadata array can be used for implemen
 lookup that are lock-free up to the last step of actual element comparison.
 * Layout compatibility with Boost.Unordered flat containers allows for 
 xref:#concurrent_interoperability_with_non_concurrent_containers[fast transfer]
-of all elements between `boost::concurrent_flat_map` and `boost::unordered_flat_map`,
+of all elements between a concurrent container and its non-concurrent counterpart,
 and vice versa.
 
 === Hash Function and Platform Interoperability

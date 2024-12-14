@@ -18,9 +18,9 @@
 #include <boost/thread/locks.hpp>
 #endif
 
-#include <boost/detail/lightweight_mutex.hpp>
-#include <boost/detail/lightweight_test.hpp>
-#include <boost/detail/lightweight_thread.hpp>
+#include <boost/smart_ptr/detail/lightweight_mutex.hpp>
+#include <boost/smart_ptr/detail/lightweight_thread.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 #include <cstdio>
 #include <ctime>

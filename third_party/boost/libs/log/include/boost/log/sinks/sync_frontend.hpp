@@ -15,6 +15,7 @@
 #ifndef BOOST_LOG_SINKS_SYNC_FRONTEND_HPP_INCLUDED_
 #define BOOST_LOG_SINKS_SYNC_FRONTEND_HPP_INCLUDED_
 
+#include <mutex>
 #include <boost/log/detail/config.hpp>
 
 #ifdef BOOST_HAS_PRAGMA_ONCE
@@ -29,7 +30,6 @@
 #include <boost/smart_ptr/make_shared_object.hpp>
 #include <boost/preprocessor/control/if.hpp>
 #include <boost/preprocessor/comparison/equal.hpp>
-#include <boost/thread/recursive_mutex.hpp>
 #include <boost/log/detail/locking_ptr.hpp>
 #include <boost/log/detail/parameter_tools.hpp>
 #include <boost/log/core/record_view.hpp>
@@ -75,7 +75,7 @@ class synchronous_sink :
 
 private:
     //! Synchronization mutex type
-    typedef boost::recursive_mutex backend_mutex_type;
+    typedef std::recursive_mutex backend_mutex_type;
 
 public:
     //! Sink implementation type

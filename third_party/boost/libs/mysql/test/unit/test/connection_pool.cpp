@@ -6,6 +6,7 @@
 //
 
 #include <boost/mysql/connection_pool.hpp>
+#include <boost/mysql/error_code.hpp>
 #include <boost/mysql/pool_params.hpp>
 
 #include <boost/mysql/detail/access.hpp>
@@ -15,6 +16,8 @@
 #include <boost/mysql/impl/internal/connection_pool/connection_pool_impl.hpp>
 #include <boost/mysql/impl/internal/connection_pool/sansio_connection_node.hpp>
 
+#include <boost/asio/awaitable.hpp>
+#include <boost/asio/cancel_after.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/test/tools/old/interface.hpp>
 #include <boost/test/unit_test.hpp>
@@ -23,6 +26,7 @@
 #include <memory>
 
 #include "test_common/printing.hpp"
+#include "test_common/tracker_executor.hpp"
 #include "test_unit/printing.hpp"
 
 using namespace boost::mysql;
@@ -36,10 +40,9 @@ BOOST_AUTO_TEST_SUITE(test_pooled_connection)
 struct pooled_connection_fixture
 {
     asio::io_context ctx;
-    std::shared_ptr<detail::pool_impl> pool{std::make_shared<detail::pool_impl>(
-        pool_executor_params{ctx.get_executor(), ctx.get_executor()},
-        pool_params{}
-    )};
+    std::shared_ptr<detail::pool_impl> pool{
+        std::make_shared<detail::pool_impl>(ctx.get_executor(), pool_params{})
+    };
 
     std::unique_ptr<detail::connection_node> create_node()
     {
@@ -198,20 +201,6 @@ struct pool_fixture
     connection_pool pool{ctx, pool_params{}};
 };
 
-BOOST_AUTO_TEST_CASE(ctor_from_pool_executor_params)
-{
-    // Construct
-    asio::io_context ctx1, ctx2;
-    connection_pool pool(pool_executor_params{ctx1.get_executor(), ctx2.get_executor()}, pool_params{});
-
-    // Executors are correct
-    BOOST_TEST((pool.get_executor() == ctx1.get_executor()));
-    BOOST_TEST((detail::access::get_impl(pool)->connection_ex() == ctx2.get_executor()));
-
-    // The pool is valid
-    BOOST_TEST(pool.valid());
-}
-
 BOOST_AUTO_TEST_CASE(ctor_from_executor)
 {
     // Construct
@@ -238,6 +227,18 @@ BOOST_AUTO_TEST_CASE(ctor_from_execution_context)
 
     // The pool is valid
     BOOST_TEST(pool.valid());
+}
+
+BOOST_AUTO_TEST_CASE(get_executor_thread_safe)
+{
+    // Construct
+    asio::io_context ctx;
+    pool_params params;
+    params.thread_safe = true;
+    connection_pool pool(ctx, std::move(params));
+
+    // get_executor() should return ctx's executor, not any internally created strand
+    BOOST_TEST((pool.get_executor() == ctx.get_executor()));
 }
 
 BOOST_FIXTURE_TEST_CASE(move_ctor_valid, pool_fixture)
@@ -301,6 +302,59 @@ BOOST_FIXTURE_TEST_CASE(move_assign_invalid_invalid, pool_fixture)
     pool = std::move(pool2);
     BOOST_TEST(!pool.valid());
     BOOST_TEST(!pool2.valid());
+}
+
+// Regression check: deferred works even in C++11
+void deferred_spotcheck()
+{
+    asio::io_context ctx;
+    connection_pool pool(ctx, pool_params());
+    diagnostics diag;
+
+    (void)pool.async_run(asio::deferred);
+    (void)pool.async_get_connection(diag, asio::deferred);
+    (void)pool.async_get_connection(asio::deferred);
+}
+
+// Spotcheck: all pool functions support default completion tokens
+#ifdef BOOST_ASIO_HAS_CO_AWAIT
+asio::awaitable<void> spotcheck_default_tokens()
+{
+    asio::io_context ctx;
+    connection_pool pool(ctx, pool_params());
+    diagnostics diag;
+
+    co_await pool.async_run();
+    co_await pool.async_get_connection(diag);
+    co_await pool.async_get_connection();
+}
+#endif
+
+// Spotcheck: connection_pool ops support partial tokens,
+// and they get passed the correct default token
+template <class T, class... SigArgs, class... Rest>
+void check_op(asio::deferred_async_operation<void(T, SigArgs...), Rest...>)
+{
+    static_assert(std::is_same<T, std::exception_ptr>::value, "");
+}
+
+// run has a different signature
+template <class T, class... Rest>
+void check_run_op(asio::deferred_async_operation<void(T), Rest...>)
+{
+    static_assert(std::is_same<T, error_code>::value, "");
+}
+
+void spotcheck_partial_tokens()
+{
+    asio::io_context ctx;
+    connection_pool pool(ctx, pool_params());
+    diagnostics diag;
+    auto tok = asio::cancel_after(std::chrono::seconds(10));
+
+    check_op(pool.async_run(tok));
+    check_op(pool.async_get_connection(diag, tok));
+    check_op(pool.async_get_connection(tok));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

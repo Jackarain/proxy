@@ -11,10 +11,10 @@ import testing ;
 
 project
     : requirements
-      $(c11-requires)
       <source>../../extra/test_main.cpp
       <include>.
       <include>../../extra
+      <library>/boost/assert//boost_assert
     ;
 
 

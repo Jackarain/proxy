@@ -9,6 +9,15 @@
 
 [section:changelog Changelog]
 
+[heading 2.30, Boost 1.87]
+
+* Replaced __boost_thread__ synchronization primitives with equivalents from the C++ standard library. This may improve multithreaded performance, but also has user-facing consequences:
+  * __boost_thread__ thread interruption is no longer supported. Boost.Log no longer has special treatment for the `thread_interrupted` exception that is used by __boost_thread__ to implement thread interruption. This exception will be handled like any other exception.
+    In particular, user-specified exception handlers may now be invoked with the `thread_interrupted` pending exception.
+  * For timed waiting operations, timeouts are now using std::chrono time units. This means that the `ordering_window` named parameter that is supported by the [class_sinks_bounded_ordering_queue] and [class_sinks_unbounded_ordering_queue] classes now expects an `std::chrono::duration` value instead of `boost::posix_time::time_duration` from __boost_date_time__.
+  * In case of errors indicated by thread synchronization primitives, `std::system_error` exception is thrown instead of __boost_thread__ exception types.
+* Added support for C++ standard library lock types to [class_log_strictest_lock].
+
 [heading 2.29, Boost 1.86]
 
 * Added a workaround for `windres.exe` issue, when it is used in CMake to compile event log resource files on MinGW-w64. ([pull_request 231])

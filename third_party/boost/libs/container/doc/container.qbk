@@ -1,5 +1,5 @@
 [/
- / Copyright (c) 2009-2020 Ion Gaztañaga
+ / Copyright (c) 2009-2020 Ion GaztaÃ±aga
  /
  / Distributed under the Boost Software License, Version 1.0. (See accompanying
  / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -743,10 +743,10 @@ the last template parameter and defined using the utility class
    [classref boost::container::growth_factor_100 growth_factor_100].
 
 *  [classref boost::container::stored_size stored_size]: the type that will be used to store size-related
-   parameters inside of the vector. Sometimes, when the maximum capacity to be used is much less than the
-   theoretical maximum that a vector can hold, it's interesting to use smaller unsigned integer types to represent
-   `size()` and `capacity()` inside vector, so that the size of an empty vector is minimized and cache 
-   performance might be improved. See [classref boost::container::stored_size stored_size] for more details.
+   parameters inside the vector. Sometimes, when the maximum vector capacity to be used is much less than
+   `std::size_t` capacity, it may be beneficial to use a smaller unsigned integer type to represent
+   `size()` and `capacity()` values inside the vector, so that the size of an empty vector object is minimized and cache 
+   performance is possibly improved. See [classref boost::container::stored_size stored_size] for more details.
 
 See the following example to see how [classref boost::container::vector_options vector_options] can be
 used to customize `vector`:
@@ -767,8 +767,14 @@ the last template parameter and defined using the utility class
 
 *  [classref boost::container::throw_on_overflow throw_on_overflow]: A boolean that specifies if the
    container should throw an exception when the compile-time capacity is not enough to hold the requesteed number
-   of objects. When "false", if the capacit is overflowed, the implementation calls to BOOST_ASSERT and if that assertion
+   of objects. When "false", if the capacit is overflowed, the implementation calls to `BOOST_ASSERT` and if that assertion
    does not throw or abort, undefined behavior is triggered.
+
+*  [classref boost::container::stored_size stored_size]: the type that will be used to store size-related
+   parameters inside the vector. Sometimes, when the static size to be used is much less than `std::size_t` capacity,
+   it may be beneficial to use a smaller unsigned integer type to represent the `size()` value inside `static_vector`,
+   so that the object size of an empty vector is minimized and cache 
+   performance is possibly improved. See [classref boost::container::stored_size stored_size] for more details.
 
 See the following example to see how [classref boost::container::static_vector_options static_vector_options] can be
 used to customize `static_vector`:
@@ -796,6 +802,12 @@ the last template parameter and defined using the utility class
    predefined policies are available: [classref boost::container::growth_factor_50 growth_factor_50],
    [classref boost::container::growth_factor_60 growth_factor_60] and
    [classref boost::container::growth_factor_50 growth_factor_100].
+
+*  [classref boost::container::stored_size stored_size]: the type that will be used to store size-related
+   parameters inside the vector. Sometimes, when the maximum vector capacity to be used is much less than
+   `std::size_t` capacity, it may be beneficial to use a smaller unsigned integer type to represent
+   `size()` and `capacity()` values inside the vector, so that the size of an empty vector object is minimized and cache 
+   performance is possibly improved. See [classref boost::container::stored_size stored_size] for more details.
 
 See the following example to see how [classref boost::container::small_vector_options small_vector_options] can be
 used to customize `small_vector`:
@@ -846,10 +858,10 @@ the last template parameter and defined using the utility class
    [classref boost::container::growth_factor_100 growth_factor_100].
 
 *  [classref boost::container::stored_size stored_size]: the type that will be used to store size-related
-   parameters inside of the devector. Sometimes, when the maximum capacity to be used is much less than the
-   theoretical maximum that a devector can hold, it's interesting to use smaller unsigned integer types to represent
-   `size()` and `capacity()` inside devector, so that the size of an empty devector is minimized and cache 
-   performance might be improved. See [classref boost::container::stored_size stored_size] for more details.
+   parameters inside of the devector. Sometimes, when the maximum devector capacity to be used is much less than
+   `std::size_t` capacity, it may be beneficial to use a smaller unsigned integer type to represent
+   `size()` and `capacity()` values inside the devector, so that the size of an empty devector object is minimized and cache 
+   performance is possibly improved. See [classref boost::container::stored_size stored_size] for more details.
 
 *  [classref boost::container::relocate_on_66 relocate_on_XX]: load factor limit that will determine if
    new memory should be allocated or elements should relocated inside existing memory, when the free space
@@ -1409,20 +1421,34 @@ use [*Boost.Container]? There are several reasons for that:
 
 [section:release_notes Release Notes]
 
+[section:release_notes_boost_1_87_00 Boost 1.87 Release]
+
+* Added [classref boost::container::stored_size stored_size] option to
+  [classref boost::container::static_vector static_vector] and
+  [classref boost::container::small_vector small_vector].
+
+* Fixed bugs/issues:
+   * [@https://github.com/boostorg/container/issues/261 GitHub #261: ['"End iterators are not dereferencable"]].
+   * [@https://github.com/boostorg/container/issues/288 GitHub #288: ['"Compile error when using flat_map::extract_sequence with small_vector"]].
+   * [@https://github.com/boostorg/container/issues/295 GitHub #295: ['"Bug in small_vector::swap"]].
+   * [@https://github.com/boostorg/container/issues/296 GitHub #296: ['"flat_{set,map} does illegal things when confronted with duplicate values in initialization"]].
+
+[endsect]
+
 [section:release_notes_boost_1_86_00 Boost 1.86 Release]
 
 * Fixed bugs/issues:
-   * [@https://github.com/boostorg/container/issues/285 GitHub #285: ['"devector<>::push_front asserts after clear()"]].
-   * [@https://github.com/boostorg/container/issues/280 GitHub #280: ['"Several containers don't support non-movable types when move assigning"]].
-   * [@https://github.com/boostorg/container/issues/279 GitHub #279: ['"small_vector cannot go back to use stack space"]].
-   * [@https://github.com/boostorg/container/issues/277 GitHub #277: ['"Remove dep on boost::static_assert"]].
-   * [@https://github.com/boostorg/container/issues/275 GitHub #275: ['"Compilation fails if custom key comparison is used"]].
-   * [@https://github.com/boostorg/container/issues/273 GitHub #273: ['"flat_map/vector crashes on appends (memory corruption)"]].
-   * [@https://github.com/boostorg/container/issues/269 GitHub #269: ['"flat_multimap::emplace not sorting elements under GCC"]].
-   * [@https://github.com/boostorg/container/issues/266 GitHub #266: ['"small_vector<T> is misaligned on the stack in 32 bits"]].
-   * [@https://github.com/boostorg/container/issues/259 GitHub #259: ['"Global variables"]].
-   * [@https://github.com/boostorg/container/issues/245 GitHub #245: ['"flat_tree::insert ordered range doesn't assert sorting"]].
    * [@https://github.com/boostorg/container/issues/241 GitHub #241: ['"flat_map should support same interface as std::map"]].
+   * [@https://github.com/boostorg/container/issues/245 GitHub #245: ['"flat_tree::insert ordered range doesn't assert sorting"]].
+   * [@https://github.com/boostorg/container/issues/259 GitHub #259: ['"Global variables"]].
+   * [@https://github.com/boostorg/container/issues/266 GitHub #266: ['"small_vector<T> is misaligned on the stack in 32 bits"]].
+   * [@https://github.com/boostorg/container/issues/269 GitHub #269: ['"flat_multimap::emplace not sorting elements under GCC"]].
+   * [@https://github.com/boostorg/container/issues/273 GitHub #273: ['"flat_map/vector crashes on appends (memory corruption)"]].
+   * [@https://github.com/boostorg/container/issues/275 GitHub #275: ['"Compilation fails if custom key comparison is used"]].
+   * [@https://github.com/boostorg/container/issues/277 GitHub #277: ['"Remove dep on boost::static_assert"]].
+   * [@https://github.com/boostorg/container/issues/279 GitHub #279: ['"small_vector cannot go back to use stack space"]].
+   * [@https://github.com/boostorg/container/issues/280 GitHub #280: ['"Several containers don't support non-movable types when move assigning"]].
+   * [@https://github.com/boostorg/container/issues/285 GitHub #285: ['"devector<>::push_front asserts after clear()"]].
 
 [endsect]
 

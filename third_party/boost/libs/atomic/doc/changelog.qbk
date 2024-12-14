@@ -7,6 +7,10 @@
 
 [section:changelog Changelog]
 
+[heading Boost 1.87]
+
+* Fixed initialization of atomic wait state list on memory reallocation. ([github_issue 72])
+
 [heading Boost 1.86]
 
 * Use [@https://man.openbsd.org/OpenBSD-6.2/futex.2 `futex(2)`] system call on OpenBSD since recent OpenBSD versions have removed support for `syscall(2)`.

@@ -10,26 +10,26 @@
 
 #include <boost/config.hpp>
 #include <boost/config/workaround.hpp>
-
-#define HAVE_CONSTEXPR_INIT
-
-#if defined( BOOST_NO_CXX11_CONSTEXPR )
-# undef HAVE_CONSTEXPR_INIT
-#endif
+#include <boost/config/pragma_message.hpp>
+#include <boost/config/helper_macros.hpp>
 
 #if BOOST_WORKAROUND( BOOST_MSVC, < 1930 )
-# undef HAVE_CONSTEXPR_INIT
-#endif
 
-#if defined(__clang__) && defined( BOOST_NO_CXX14_CONSTEXPR )
-# undef HAVE_CONSTEXPR_INIT
-#endif
+// MSVC does not implement static initialization for constexpr constructors
+BOOST_PRAGMA_MESSAGE("Skipping test due to BOOST_MSVC < 1930")
+int main() {}
 
-#if !defined( HAVE_CONSTEXPR_INIT )
+#elif defined(__clang__) && defined( BOOST_NO_CXX14_CONSTEXPR )
 
-int main()
-{
-}
+// Clang only implements static initialization for constexpr in C++14 mode
+BOOST_PRAGMA_MESSAGE("Skipping test due to __clang__ and BOOST_NO_CXX14_CONSTEXPR")
+int main() {}
+
+#elif defined( _LIBCPP_VERSION ) && ( _LIBCPP_VERSION < 6000 )
+
+// in libc++, atomic_flag has a non-constexpr constructor from bool
+BOOST_PRAGMA_MESSAGE("Skipping test due to _LIBCPP_VERSION " BOOST_STRINGIZE(_LIBCPP_VERSION))
+int main() {}
 
 #else
 
@@ -52,17 +52,13 @@ static Z z;
 static boost::shared_ptr<X> p1;
 static boost::weak_ptr<X> p2;
 
-#if !defined( BOOST_NO_CXX11_NULLPTR )
-  static boost::shared_ptr<X> p3( nullptr );
-#endif
+static boost::shared_ptr<X> p3( nullptr );
 
 Z::Z()
 {
     p1.reset( new X );
     p2 = p1;
-#if !defined( BOOST_NO_CXX11_NULLPTR )
     p3.reset( new X );
-#endif
 }
 
 int main()
@@ -73,14 +69,10 @@ int main()
     BOOST_TEST_EQ( p2.use_count(), 1 );
     BOOST_TEST_EQ( p2.lock(), p1 );
 
-#if !defined( BOOST_NO_CXX11_NULLPTR )
-
     BOOST_TEST( p3.get() != 0 );
     BOOST_TEST_EQ( p3.use_count(), 1 );
-
-#endif
 
     return boost::report_errors();
 }
 
-#endif // #if defined( BOOST_NO_CXX11_CONSEXPR )
+#endif

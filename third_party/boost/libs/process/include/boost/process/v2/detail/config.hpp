@@ -7,12 +7,7 @@
 
 #if defined(BOOST_PROCESS_V2_STANDALONE)
 
-#define BOOST_PROCESS_V2_ASIO_NAMESPACE asio
 #define BOOST_PROCESS_V2_COMPLETION_TOKEN_FOR(Sig) ASIO_COMPLETION_TOKEN_FOR(Sig)
-#define BOOST_PROCESS_V2_DEFAULT_COMPLETION_TOKEN_TYPE(Executor) ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(Executor)
-#define BOOST_PROCESS_V2_INITFN_AUTO_RESULT_TYPE(Token, Signature) ASIO_INITFN_AUTO_RESULT_TYPE(Token, Signature)
-#define BOOST_PROCESS_V2_DEFAULT_COMPLETION_TOKEN(Executor) ASIO_DEFAULT_COMPLETION_TOKEN(Executor)
-#define BOOST_PROCESS_V2_INITFN_DEDUCED_RESULT_TYPE(x,y,z) ASIO_INITFN_DEDUCED_RESULT_TYPE(x,y,z)
 
 #include <asio/detail/config.hpp>
 #include <system_error>
@@ -24,10 +19,6 @@
 #if defined(ASIO_WINDOWS)
 #define BOOST_PROCESS_V2_WINDOWS 1
 
-// Windows: suppress definition of "min" and "max" macros.
-#if !defined(NOMINMAX)
-# define NOMINMAX 1
-#endif
 #endif
 
 #if defined(ASIO_HAS_UNISTD_H)
@@ -38,14 +29,14 @@
 #define BOOST_PROCESS_V2_END_NAMESPACE   }
 #define BOOST_PROCESS_V2_NAMESPACE process_v2
 
+namespace asio {}
+BOOST_PROCESS_V2_BEGIN_NAMESPACE
+namespace net = ::asio;
+BOOST_PROCESS_V2_END_NAMESPACE
+
 #else
 
-#define BOOST_PROCESS_V2_ASIO_NAMESPACE boost::asio
 #define BOOST_PROCESS_V2_COMPLETION_TOKEN_FOR(Sig) BOOST_ASIO_COMPLETION_TOKEN_FOR(Sig)
-#define BOOST_PROCESS_V2_DEFAULT_COMPLETION_TOKEN_TYPE(Executor) BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(Executor)
-#define BOOST_PROCESS_V2_INITFN_AUTO_RESULT_TYPE(Token, Signature) BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(Token, Signature)
-#define BOOST_PROCESS_V2_DEFAULT_COMPLETION_TOKEN(Executor) BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(Executor)
-#define BOOST_PROCESS_V2_INITFN_DEDUCED_RESULT_TYPE(x,y,z) BOOST_ASIO_INITFN_DEDUCED_RESULT_TYPE(x,y,z)
 
 #include <boost/config.hpp>
 #include <boost/io/quoted.hpp>
@@ -57,10 +48,6 @@
 #if defined(BOOST_WINDOWS_API)
 #define BOOST_PROCESS_V2_WINDOWS 1
 
-// Windows: suppress definition of "min" and "max" macros.
-#if !defined(NOMINMAX)
-# define NOMINMAX 1
-#endif
 
 #endif
 
@@ -94,6 +81,11 @@
 #define BOOST_PROCESS_V2_END_NAMESPACE  } } }
 #define BOOST_PROCESS_V2_NAMESPACE boost::process::v2
 
+namespace boost { namespace asio {} }
+BOOST_PROCESS_V2_BEGIN_NAMESPACE
+namespace net = ::boost::asio;
+BOOST_PROCESS_V2_END_NAMESPACE
+
 #endif
 
 BOOST_PROCESS_V2_BEGIN_NAMESPACE
@@ -107,9 +99,6 @@ using std::system_error ;
 namespace filesystem = std::filesystem;
 using std::quoted;
 using std::optional;
-
-#define BOOST_PROCESS_V2_RETURN_EC(ev)                                                                  \
-  return ::BOOST_PROCESS_V2_NAMESPACE::error_code(ev, ::BOOST_PROCESS_V2_NAMESPACE::system_category()); \
 
 #define BOOST_PROCESS_V2_ASSIGN_EC(ec, ...) ec.assign(__VA_ARGS__);
 #define BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec)                         \
@@ -131,23 +120,21 @@ namespace filesystem = std::filesystem;
 namespace filesystem = boost::filesystem;
 #endif
 
-#define BOOST_PROCESS_V2_RETURN_EC(ev)                                                                     \
-{                                                                                                          \
-  static constexpr auto loc##__LINE__((BOOST_CURRENT_LOCATION));                                           \
-  return ::BOOST_PROCESS_V2_NAMESPACE::error_code(ev, ::BOOST_PROCESS_V2_NAMESPACE::system_category(), &loc##__LINE__);   \
-}
-
 #define BOOST_PROCESS_V2_ASSIGN_EC(ec, ...)                       \
+do                                                                \
 {                                                                 \
   static constexpr auto loc##__LINE__((BOOST_CURRENT_LOCATION));  \
   ec.assign(__VA_ARGS__,  &loc##__LINE__);                        \
-}
+}                                                                 \
+while (false)
 
 #define BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec)                                         \
+do                                                                                     \
 {                                                                                      \
   static constexpr auto loc##__LINE__((BOOST_CURRENT_LOCATION));                       \
   ec.assign(::BOOST_PROCESS_V2_NAMESPACE::detail::get_last_error(), &loc##__LINE__);   \
-}
+}                                                                                      \
+while (false)
 
 
 #endif

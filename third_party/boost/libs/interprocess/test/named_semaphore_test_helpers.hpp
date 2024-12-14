@@ -124,7 +124,7 @@ template<class NamedSemaphore>
 int test_named_semaphore()
 {
    int ret = 0;
-   BOOST_TRY{
+   BOOST_INTERPROCESS_TRY{
       test::test_named_creation< test::named_sync_creation_test_wrapper<lock_test_wrapper<NamedSemaphore> > >();
       #if defined(BOOST_INTERPROCESS_WCHAR_NAMED_RESOURCES)
       test::test_named_creation< test::named_sync_creation_test_wrapper_w<lock_test_wrapper<NamedSemaphore> > >();
@@ -135,10 +135,10 @@ int test_named_semaphore()
       test::test_all_recursive_lock<test::named_sync_wrapper<recursive_test_wrapper<NamedSemaphore> > >();
       test_named_semaphore_specific<NamedSemaphore>();
    }
-   BOOST_CATCH(std::exception &ex){
+   BOOST_INTERPROCESS_CATCH(std::exception &ex){
       std::cout << ex.what() << std::endl;
       ret = 1;
-   } BOOST_CATCH_END
+   } BOOST_INTERPROCESS_CATCH_END
    NamedSemaphore::remove(test::get_process_id_name());
    return ret;
 }

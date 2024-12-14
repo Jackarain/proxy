@@ -23,13 +23,13 @@ void
 vformat_to(
     url_base& u,
     core::string_view fmt,
-    detail::format_args args);
+    format_args args);
 
 inline
 url
 vformat(
     core::string_view fmt,
-    detail::format_args args)
+    format_args args)
 {
     url u;
     vformat_to(u, fmt, args);

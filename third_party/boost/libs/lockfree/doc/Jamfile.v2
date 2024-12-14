@@ -2,12 +2,20 @@
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+using quickbook ;
+using boostbook ;
+using doxygen ;
+using xsltproc ;
+
+import set ;
 import doxygen ;
-import quickbook ;
+import xsltproc ;
+import notfile ;
+import path ;
 
 doxygen autodoc
     :
-        [ glob ../../../boost/lockfree/*.hpp ]
+        [ glob ../include/boost/lockfree/*.hpp ]
     :
         #<doxygen:param>EXTRACT_ALL=YES
         <doxygen:param>"PREDEFINED=\"BOOST_DOXYGEN_INVOKED\" \\

@@ -69,7 +69,12 @@ BOOST_PROCESS_V2_DECL native_iterator next(native_handle_type nh);
 BOOST_PROCESS_V2_DECL native_iterator find_end(native_handle_type nh);
 inline const char_type * dereference(native_iterator iterator) {return *iterator;}
 
-BOOST_PROCESS_V2_DECL bool is_executable(const filesystem::path & pth, error_code & ec);
+BOOST_PROCESS_V2_DECL bool has_x_access(const char * pth);
+
+inline bool is_executable(const filesystem::path & pth, error_code & ec)
+{
+  return filesystem::is_regular_file(pth, ec) && has_x_access(pth.c_str());
+}
 
 }
 

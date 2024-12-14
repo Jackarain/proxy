@@ -26,7 +26,7 @@ int main()
 #ifdef BOOST_OPTIONAL_CONFIG_NO_PROPER_ASSIGN_FROM_CONST_INT
   test_converting_assignment<const int, const int>();
 #else
-  BOOST_STATIC_ASSERT_MSG(false, "EXPECTED TEST COMPILE-TIME FAILURE");
+  static_assert(false, "EXPECTED TEST COMPILE-TIME FAILURE");
 #endif
   return boost::report_errors();
 }

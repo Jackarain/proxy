@@ -13,7 +13,7 @@ boost_url_setup_properties(boost_url_small_limits)
 target_compile_definitions(boost_url_small_limits PUBLIC BOOST_URL_MAX_SIZE=16 BOOST_URL_NO_LIB=1)
 
 # Test target
-add_executable(boost_url_limits limits.cpp Jamfile ${SUITE_FILES})
+add_executable(boost_url_limits EXCLUDE_FROM_ALL limits.cpp Jamfile ${SUITE_FILES})
 target_include_directories(boost_url_limits PRIVATE ../../include ../../extra ../../..)
 target_link_libraries(boost_url_limits PRIVATE boost_url_small_limits)
 if (DEFINED BOOST_URL_TEST_FLAGS AND NOT BOOST_URL_TEST_FLAGS STREQUAL "")

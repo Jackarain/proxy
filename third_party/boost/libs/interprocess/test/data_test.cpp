@@ -10,8 +10,8 @@
 
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
-#include <boost/interprocess/containers/vector.hpp>
-#include <boost/interprocess/containers/list.hpp>
+#include <boost/container/vector.hpp>
+#include <boost/container/list.hpp>
 #include <functional>
 #include <string>
 #include "print_container.hpp"
@@ -26,7 +26,7 @@ int main ()
    test::get_process_id_name(process_name);
    const char *const shMemName = process_name.c_str();
 
-   BOOST_TRY{
+   BOOST_INTERPROCESS_TRY{
    shared_memory_object::remove(shMemName);
 
    //Create shared memory
@@ -43,7 +43,7 @@ int main ()
 
    const char *allocName = "testAllocation";
 
-   typedef boost::interprocess::vector<int, shmem_allocator_int_t > MyVect;
+   typedef boost::container::vector<int, shmem_allocator_int_t > MyVect;
 
    //----   ALLOC, NAMED_ALLOC, NAMED_NEW TEST   ----//
    {
@@ -85,10 +85,10 @@ int main ()
          return 1;
    }
    }
-   BOOST_CATCH(...){
+   BOOST_INTERPROCESS_CATCH(...){
       shared_memory_object::remove(shMemName);
-      BOOST_RETHROW
-   } BOOST_CATCH_END
+      BOOST_INTERPROCESS_RETHROW
+   } BOOST_INTERPROCESS_CATCH_END
    shared_memory_object::remove(shMemName);
    return 0;
 }

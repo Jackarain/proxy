@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2023 Marcelo Zimbres Silva (mzimbres@gmail.com)
+/* Copyright (c) 2018-2024 Marcelo Zimbres Silva (mzimbres@gmail.com)
  *
  * Distributed under the Boost Software License, Version 1.0. (See
  * accompanying file LICENSE.txt)
@@ -64,7 +64,7 @@ public:
     *
     *  @param l Log level.
     */
-   logger(level l = level::disabled)
+   logger(level l = level::debug)
    : level_{l}
    {}
 
@@ -143,15 +143,15 @@ public:
    /** @brief Called when the runner operation completes.
     *  @ingroup high-level-api
     *
-    *  @param run_all_ec Error code returned by the run_all operation.
-    *  @param health_check_ec Error code returned by the health checker operation.
     *  @param hello_ec Error code returned by the health checker operation.
+    *  @param health_check_ec Error code returned by the health checker operation.
+    *  @param run_all_ec Error code returned by the run_all operation.
     */
    void
       on_runner(
-         system::error_code const& run_all_ec,
-         system::error_code const& health_check_ec,
-         system::error_code const& hello_ec);
+         system::error_code const& hello,
+         system::error_code const& health_check,
+         system::error_code const& run);
 
    void
       on_check_health(

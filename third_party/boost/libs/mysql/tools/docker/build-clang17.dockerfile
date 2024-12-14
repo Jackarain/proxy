@@ -5,13 +5,14 @@
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 #
 
-FROM ubuntu:23.10
+FROM ubuntu:24.04
 
 RUN \
     apt-get update && \
     apt-get --no-install-recommends -y install \
         ca-certificates \
         clang-17 \
+        llvm-17 \
         libclang-rt-17-dev \
         libc++-17-dev \
         libc++abi-17-dev \

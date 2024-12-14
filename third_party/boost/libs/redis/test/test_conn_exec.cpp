@@ -152,6 +152,9 @@ BOOST_AUTO_TEST_CASE(correct_database)
    auto const pos = value.find("db=");
    auto const index_str = value.substr(pos + 3, 1);
    auto const index = std::stoi(index_str);
+
+   // This check might fail if more than one client is connected to
+   // redis when the CLIENT LIST command is run. 
    BOOST_CHECK_EQUAL(cfg.database_index.value(), index);
 }
 

@@ -5,17 +5,15 @@
 
 # bring in rules for testing
 
-
+require-b2 5.0.1 ;
+import-search /boost/config/checks ;
 import testing ;
-import ../../config/checks/config : requires ;
-
-use-project boost : $(BOOST_ROOT) ;
+import config : requires ;
 
 project
     : requirements
       <library>/boost/test//boost_unit_test_framework
       <define>BOOST_ALL_NO_LIB=1
-      <include>../../include
       <link>static
       <toolset>clang:<cxxflags>-Wno-unused-variable
 

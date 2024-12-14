@@ -78,6 +78,7 @@ namespace boost {
     explicit xref:#unordered_node_map_allocator_constructor[unordered_node_map](const Allocator& a);
     xref:#unordered_node_map_copy_constructor_with_allocator[unordered_node_map](const unordered_node_map& other, const Allocator& a);
     xref:#unordered_node_map_move_constructor_with_allocator[unordered_node_map](unordered_node_map&& other, const Allocator& a);
+    xref:#unordered_node_map_move_constructor_from_concurrent_node_map[unordered_node_map](concurrent_node_map<Key, T, Hash, Pred, Allocator>&& other);
     xref:#unordered_node_map_initializer_list_constructor[unordered_node_map](std::initializer_list<value_type> il,
                        size_type n = _implementation-defined_
                        const hasher& hf = hasher(),
@@ -534,6 +535,24 @@ from `other`, and the allocator is copy-constructed from `a`.
 If statistics are xref:unordered_node_map_boost_unordered_enable_stats[enabled],
 transfers the internal statistical information from `other` iff `a == other.get_allocator()`,
 and always calls `other.reset_stats()`.
+
+---
+
+==== Move Constructor from concurrent_node_map
+
+```c++
+unordered_node_map(concurrent_node_map<Key, T, Hash, Pred, Allocator>&& other);
+```
+
+Move construction from a xref:#concurrent_node_map[`concurrent_node_map`].
+The internal bucket array of `other` is transferred directly to the new container.
+The hash function, predicate and allocator are moved-constructed from `other`.
+If statistics are xref:unordered_node_map_boost_unordered_enable_stats[enabled],
+transfers the internal statistical information from `other` and calls `other.reset_stats()`.
+
+[horizontal]
+Complexity:;; Constant time.
+Concurrency:;; Blocking on `other`.
 
 ---
 
@@ -1219,8 +1238,8 @@ Throws:;; Nothing.
 
 ==== Extract by Key
 ```c++
-node_type erase(const key_type& k);
-template<class K> node_type erase(K&& k);
+node_type extract(const key_type& k);
+template<class K> node_type extract(K&& k);
 ```
 
 Extracts the element with key equivalent to `k`, if it exists.
@@ -1228,7 +1247,7 @@ Extracts the element with key equivalent to `k`, if it exists.
 [horizontal]
 Returns:;; A `node_type` object holding the extracted element, or empty if no element was extracted.
 Throws:;; Only throws an exception if it is thrown by `hasher` or `key_equal`.
-Notes:;; The `template<class K>` overload only participates in overload resolution if `Hash::is_transparent` and `Pred::is_transparent` are valid member typedefs and neither `iterator` nor `const_iterator` are implicitly convertible from `K`. The library assumes that `Hash` is callable with both `K` and `Key` and that `Pred` is transparent. This enables heterogeneous lookup which avoids the cost of instantiating an instance of the `Key` type.
+Notes:;; The `template<class K>` overload only participates in overload resolution if `Hash::is_transparent` and `Pred::is_transparent` are valid member typedefs. The library assumes that `Hash` is callable with both `K` and `Key` and that `Pred` is transparent. This enables heterogeneous lookup which avoids the cost of instantiating an instance of the `Key` type.
 
 ---
 

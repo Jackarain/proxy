@@ -36,7 +36,7 @@ add_executable(test_utf test_utf.cpp)
 target_link_libraries(test_utf Boost::unit_test_framework)
 
 enable_testing()
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>)
+add_custom_target(check VERBATIM COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --no-tests=error -C $<CONFIG>)
 
 add_test(test_mon test_mon)
 add_test(test_utf test_utf)

@@ -7,6 +7,10 @@ cmake_minimum_required(VERSION 3.5...3.16)
 
 project(boost_heap VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
 
+option(BOOST_HEAP_BUILD_TESTS "Build boost::heap tests" OFF)
+option(BOOST_HEAP_USE_FILE_SET "Use FILE_SET for boost::heap" OFF)
+
+
 add_library(boost_heap INTERFACE)
 add_library(Boost::heap ALIAS boost_heap)
 
@@ -28,9 +32,29 @@ target_link_libraries(boost_heap
     Boost::type_traits
 )
 
-if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
+if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.23 AND BOOST_HEAP_USE_FILE_SET)
+    set(Headers
+        include/boost/heap/detail/ilog2.hpp
+        include/boost/heap/detail/heap_comparison.hpp
+        include/boost/heap/detail/mutable_heap.hpp
+        include/boost/heap/detail/ordered_adaptor_iterator.hpp
+        include/boost/heap/detail/stable_heap.hpp
+        include/boost/heap/detail/tree_iterator.hpp
+        include/boost/heap/detail/heap_node.hpp
+        include/boost/heap/heap_concepts.hpp
+        include/boost/heap/heap_merge.hpp
+        include/boost/heap/policies.hpp
+        include/boost/heap/binomial_heap.hpp
+        include/boost/heap/d_ary_heap.hpp
+        include/boost/heap/fibonacci_heap.hpp
+        include/boost/heap/pairing_heap.hpp
+        include/boost/heap/priority_queue.hpp
+        include/boost/heap/skew_heap.hpp
+    )
 
-  add_subdirectory(test)
-
+    target_sources(boost_heap PUBLIC FILE_SET HEADERS FILES ${Headers} )
 endif()
 
+if( BOOST_HEAP_BUILD_TESTS OR BUILD_TESTING )
+    add_subdirectory(test)
+endif()

@@ -441,6 +441,12 @@ void test_additive_operators_with_type_and_test()
 #pragma warning(pop)
 #endif
 
+#if defined(BOOST_MSVC)
+#pragma warning(push)
+// cast truncates constant value
+#pragma warning(disable: 4310)
+#endif
+
 template< template< typename > class Wrapper, typename T, typename D, typename AddType >
 void test_additive_operators_with_type(T value, D delta)
 {
@@ -697,6 +703,10 @@ void test_additive_operators_with_type(T value, D delta)
     // Modify and test operations
     test_additive_operators_with_type_and_test< Wrapper, T, D, AddType >();
 }
+
+#if defined(BOOST_MSVC)
+#pragma warning(pop)
+#endif
 
 template< template< typename > class Wrapper, typename T, typename D >
 void test_additive_operators(T value, D delta)
@@ -1169,7 +1179,15 @@ void do_test_integral_api(boost::false_type)
 {
     test_base_operators< Wrapper, T >(42, 43, 44);
     test_additive_operators< Wrapper, T, T >(42, 17);
+#if defined(BOOST_MSVC)
+#pragma warning(push)
+// cast truncates constant value
+#pragma warning(disable: 4310)
+#endif
     test_bit_operators< Wrapper, T >((T)0x5f5f5f5f5f5f5f5fULL, (T)0xf5f5f5f5f5f5f5f5ULL);
+#if defined(BOOST_MSVC)
+#pragma warning(pop)
+#endif
 
     /* test for unsigned overflow/underflow */
     test_additive_operators< Wrapper, T, T >((T)-1, 1);
@@ -1185,7 +1203,7 @@ void do_test_integral_api(boost::true_type)
     do_test_integral_api< Wrapper, T >(boost::false_type());
 
     test_additive_wrap< Wrapper, T >(0u);
-    BOOST_CONSTEXPR_OR_CONST T all_ones = ~(T)0u;
+    BOOST_CONSTEXPR_OR_CONST T all_ones = (T)-1;
     test_additive_wrap< Wrapper, T >(all_ones);
     BOOST_CONSTEXPR_OR_CONST T max_signed_twos_compl = all_ones >> 1;
     test_additive_wrap< Wrapper, T >(all_ones ^ max_signed_twos_compl);

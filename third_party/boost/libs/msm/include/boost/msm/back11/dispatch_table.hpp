@@ -21,7 +21,11 @@
 #include <boost/mpl/pop_front.hpp>
 #include <boost/mpl/for_each.hpp>
 #include <boost/mpl/advance.hpp>
+
 #include <boost/fusion/container/vector.hpp>
+#include <boost/fusion/container/map.hpp>
+#include <boost/fusion/include/push_back.hpp>
+#include <boost/fusion/include/make_vector.hpp>
 
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/type_traits/is_same.hpp>
@@ -199,20 +203,18 @@ struct dispatch_table
     {
         typedef typename
         boost::fusion::result_of::as_map<
-                typename boost::fusion::result_of::insert<
-                    Map,
-                    typename ::boost::fusion::result_of::end<Map>::type,
-                    typename ::boost::fusion::result_of::make_pair<
-                        typename transition_source_type<T>::type,
-                        typename ::boost::mpl::push_back<
-                            typename ::boost::fusion::result_of::value_at_key<
-                                Map,
-                                typename transition_source_type<T>::type
-                            >::type,
-                            typename change_frow_event<T>::type
-                        >::type
-                     >::type
-                 >::type
+            typename boost::fusion::result_of::make_vector<
+                typename ::boost::fusion::result_of::make_pair<
+                    typename transition_source_type<T>::type,
+                    typename ::boost::mpl::push_back<
+                        typename ::boost::fusion::result_of::value_at_key<
+                            Map,
+                            typename transition_source_type<T>::type
+                        >::type,
+                        typename change_frow_event<T>::type
+                    >::type
+                >::type
+            >::type
         >::type type;
     };
 
@@ -440,25 +442,15 @@ struct dispatch_table
                         ::boost::fusion::map<>,
                         ::boost::mpl::if_<
                             // if we already have a row on this source state
-                            ::boost::mpl::has_key< ::boost::mpl::placeholders::_1,
+                            ::boost::fusion::result_of::has_key< ::boost::mpl::placeholders::_1,
                                                    transition_source_type< ::boost::mpl::placeholders::_2> >,
                             // insert a new element in the value type
-//                            push_to_map_of_vec<::boost::mpl::placeholders::_2, ::boost::mpl::placeholders::_1>,
-                            boost::fusion::result_of::as_map<boost::fusion::result_of::insert<
-                                ::boost::mpl::placeholders::_1,
-                                ::boost::fusion::result_of::end<mpl::placeholders::_1 >,
-                                ::boost::fusion::result_of::make_pair<transition_source_type< ::boost::mpl::placeholders::_2>,
-                                                   ::boost::mpl::push_back<
-                                                        ::boost::fusion::result_of::value_at_key< ::boost::mpl::placeholders::_1,
-                                                        transition_source_type< ::boost::mpl::placeholders::_2> >,
-                                                        change_frow_event< ::boost::mpl::placeholders::_2 > >
-                                                   > > >,
+                            push_to_map_of_vec<::boost::mpl::placeholders::_2, ::boost::mpl::placeholders::_1>,                            
                             // first row on this source state, make a vector with 1 element
-                            boost::fusion::result_of::as_map<boost::fusion::result_of::insert<
+                            boost::fusion::result_of::as_map<boost::fusion::result_of::push_back<
                                         ::boost::mpl::placeholders::_1,
-                                        ::boost::fusion::result_of::end<mpl::placeholders::_1 >,
                                         ::boost::fusion::result_of::make_pair<transition_source_type< ::boost::mpl::placeholders::_2>,
-                                        make_vector< change_frow_event< ::boost::mpl::placeholders::_2> > > > >
+                                        boost::msm::back11::make_vector< change_frow_event< ::boost::mpl::placeholders::_2> > > > >
                                >
                        >::type map_of_row_seq;
 

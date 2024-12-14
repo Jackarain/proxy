@@ -9,23 +9,6 @@
 #include <memory>
 #include <utility>
 
-#if defined( BOOST_NO_CXX11_SMART_PTR )
-
-BOOST_PRAGMA_MESSAGE("Skipping test because BOOST_NO_CXX11_SMART_PTR is defined")
-int main() {}
-
-#elif defined( BOOST_NO_CXX11_RVALUE_REFERENCES )
-
-BOOST_PRAGMA_MESSAGE("Skipping test because BOOST_NO_CXX11_RVALUE_REFERENCES is defined")
-int main() {}
-
-#elif defined(BOOST_MSVC) && BOOST_MSVC < 1700
-
-BOOST_PRAGMA_MESSAGE("Skipping test because msvc-10.0 unique_ptr doesn't support move-only deleters")
-int main() {}
-
-#else
-
 struct Y
 {
     static int instances;
@@ -149,5 +132,3 @@ int main()
 
     return boost::report_errors();
 }
-
-#endif

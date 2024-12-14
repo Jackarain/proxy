@@ -25,7 +25,7 @@ Consider the following grammar:
 version = "v" dec-octet "." dec-octet
 ----
 
-We can express this using `tuple_rule`, which matches one or more specified rules in sequence.
+We can express this using cpp:tuple_rule[], which matches one or more specified rules in sequence.
 The folllowing defines a sequence using some character literals and two decimal octets, which is a fancy way of saying a number between 0 and 255:
 
 [source,cpp]
@@ -34,7 +34,7 @@ include::example$unit/doc_grammar.cpp[tag=code_grammar_3_1,indent=0]
 ----
 
 This rule has a value type of cpp:std::tuple[], whose types correspond to the value type of each rule specified upon construction.
-The decimal octets are represented by the `dec_octet_rule` which stores its result in an `unsigned char`:
+The decimal octets are represented by the cpp:grammar::dec_octet_rule[dec_octet_rule] which stores its result in an cpp:unsigned char[]:
 
 [source,cpp]
 ----
@@ -44,16 +44,16 @@ include::example$unit/doc_grammar.cpp[tag=code_grammar_3_2,indent=0]
 To extract elements from cpp:std::tuple[] the function cpp:std::get[]
 must be used.
 In this case, we don't care to know the value for the matching character literals.
-The `tuple_rule` discards match results whose value type is `void`.
-We can use the `squelch`
-compound rule to convert a matching value type to `void`, and reformulate our rule:
+The cpp:tuple_rule[] discards match results whose value type is cpp:void[].
+We can use the cpp:grammar::squelch[squelch]
+compound rule to convert a matching value type to cpp:void[], and reformulate our rule:
 
 [source,cpp]
 ----
 include::example$unit/doc_grammar.cpp[tag=code_grammar_3_3,indent=0]
 ----
 
-When all but one of the value types is `void`, the cpp:std::tuple[] is elided and the remaining value type is promoted to the result of the match:
+When all but one of the value types is cpp:void[], the cpp:std::tuple[] is elided and the remaining value type is promoted to the result of the match:
 
 [source,cpp]
 ----
@@ -63,8 +63,8 @@ include::example$unit/doc_grammar.cpp[tag=code_grammar_3_4,indent=0]
 == Optional Rule
 
 BNF elements in brackets denote optional components.
-These are expressed using `optional_rule`, whose value type is an
-`optional`.
+These are expressed using cpp:grammar::optional_rule[optional_rule], whose value type is an
+cpp:optional[].
 For example, we can adapt the port rule from above to be an optional component:
 
 [source,cpp]
@@ -79,8 +79,8 @@ In this example we build up a rule to represent an endpoint as an IPv4 address w
 include::example$unit/doc_grammar.cpp[tag=code_grammar_3_6,indent=0]
 ----
 
-This can be simplified; the library provides `ipv4_address_rule`
-whose result type is `ipv4_address`, offering more utility than representing the address simply as a collection of four numbers:
+This can be simplified; the library provides cpp:ipv4_address_rule[]
+whose result type is cpp:ipv4_address[], offering more utility than representing the address simply as a collection of four numbers:
 
 [source,cpp]
 ----
@@ -90,7 +90,7 @@ include::example$unit/doc_grammar.cpp[tag=code_grammar_3_7,indent=0]
 == Variant Rule
 
 BNF elements separated by unquoted slashes represent a set of alternatives from which one element may match.
-We represent them using `variant_rule`, whose value type is a variant.
+We represent them using cpp:variant_rule[], whose value type is a variant.
 Consider the following HTTP production rule which comes from
 https://datatracker.ietf.org/doc/html/rfc7230#section-5.3"[rfc7230,window=blank_]:
 
@@ -103,7 +103,7 @@ request-target = origin-form
 ----
 
 The __request-target__ can be exactly one of these things.
-Here we define the rule, using `origin_form_rule`, `absolute_uri_rule`, and `authority_rule` which come with the library, and obtain a result from parsing a string:
+Here we define the rule, using cpp:origin_form_rule[], cpp:absolute_uri_rule[], and cpp:authority_rule[] which come with the library, and obtain a result from parsing a string:
 
 [source,cpp]
 ----

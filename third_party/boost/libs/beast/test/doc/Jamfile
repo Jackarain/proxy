@@ -7,8 +7,12 @@
 # Official repository: https://github.com/boostorg/beast
 #
 
+project
+    : requirements
+        <include>../.. ;
+
 local libs =
-    /boost/beast//lib-asio-ssl
+    /boost/beast/test//lib-asio-ssl
     /boost/beast/test//lib-test
     ;
 

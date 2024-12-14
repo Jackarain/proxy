@@ -17,6 +17,11 @@
 #include <boost/core/lightweight_test.hpp>
 #include "aligned_object.hpp"
 
+#if defined(BOOST_MSVC)
+// conditional expression is constant
+#pragma warning(disable: 4127)
+#endif
+
 static const char* const lock_free_level[] =
 {
     "never",

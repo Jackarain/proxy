@@ -53,23 +53,26 @@ jobs:
       matrix: ${{ steps.cpp-matrix.outputs.matrix }}
     steps:
       - name: Generate Test Matrix
-        uses: alandefreitas/cpp-actions/cpp-matrix@v1.8.2
+        uses: alandefreitas/cpp-actions/cpp-matrix@v1.8.7
         id: cpp-matrix
         with:
           compilers: |
             gcc >=4.8
-            clang >=3.8 <18
+            clang >=3.8
             msvc >=14.20
             apple-clang *
             mingw *
             clang-cl *
+          subrange-policy: |
+            msvc: one-per-minor
           standards: '>=11'
           latest-factors: |
-            gcc Coverage UBSan
+            gcc  ASan
+            clang Fuzz
           factors: |
-            gcc ASan Shared No-Threads
+            gcc  UBSan Coverage Shared No-Threads
             msvc Shared x86
-            clang Time-Trace Fuzz ASan+UBSan IntegerSan
+            clang ASan UBSan IntSan BoundsSan Time-Trace 
             mingw Shared
           trace-commands: true
 
@@ -90,25 +93,39 @@ jobs:
     timeout-minutes: 120
 
     steps:
+      # GitHub Actions no longer support older containers.
+      # The workaround is to install our own Node.js for the actions.
+      - name: Patch Node
+        # The containers that need Node.js 20 will have volumes set up so that
+        # the Node.js 20 installation can go there.
+        if: ${{ matrix.container.volumes }}
+        run: |
+          set -x
+          apt-get update
+          apt-get install -y curl xz-utils
+          curl -LO https://unofficial-builds.nodejs.org/download/release/v20.9.0/node-v20.9.0-linux-x64-glibc-217.tar.xz
+          tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
+          ldd /__e/node20/bin/node
+
       - name: Clone Boost.URL
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup C++
-        uses: alandefreitas/cpp-actions/setup-cpp@v1.8.2
+        uses: alandefreitas/cpp-actions/setup-cpp@v1.8.7
         id: setup-cpp
         with:
           compiler: ${{ matrix.compiler }}
-          version: ${{ (matrix.subrange-policy == 'one-per-major' && matrix.major) || matrix.version }}
+          version: ${{ matrix.version }}
 
       - name: Install packages
         if: matrix.install != ''
-        uses: alandefreitas/cpp-actions/package-install@v1.8.2
+        uses: alandefreitas/cpp-actions/package-install@v1.8.7
         id: package-install
         with:
           apt-get: ${{ matrix.install }}
 
       - name: Clone Boost
-        uses: alandefreitas/cpp-actions/boost-clone@v1.8.2
+        uses: alandefreitas/cpp-actions/boost-clone@v1.8.7
         id: boost-clone
         with:
           branch: ${{ (github.ref_name == 'master' && github.ref_name) || 'develop' }}
@@ -151,9 +168,9 @@ jobs:
           echo 'CMAKE_GENERATOR_TOOLSET=${{ matrix.generator-toolset || '' }}' >> $GITHUB_ENV
           echo 'CMAKE_BUILD_TYPE=${{ matrix.build-type || '' }}' >> $GITHUB_ENV
           echo 'CC=${{ steps.setup-cpp.outputs.cc || matrix.cc || '' }}' >> $GITHUB_ENV
-          echo 'CFLAGS=${{ (matrix.integersan && '-fsanitize=integer -fno-sanitize=unsigned-integer-overflow -fno-sanitize-recover=integer -fno-omit-frame-pointer') || matrix.ccflags || '' }}' >> $GITHUB_ENV
+          echo 'CFLAGS=${{ (matrix.intsan && '-fsanitize=integer -fno-sanitize=unsigned-integer-overflow -fno-sanitize-recover=integer -fno-omit-frame-pointer') || (matrix.boundssan && '-fsanitize=bounds -fno-sanitize-recover=bounds -fno-omit-frame-pointer') || matrix.ccflags || '' }}' >> $GITHUB_ENV
           echo 'CXX=${{ steps.setup-cpp.outputs.cxx || matrix.cxx || '' }}' >> $GITHUB_ENV
-          echo 'CXXFLAGS=${{ (matrix.integersan && '-fsanitize=integer -fno-sanitize=unsigned-integer-overflow -fno-sanitize-recover=integer -fno-omit-frame-pointer') || matrix.cxxflags || '' }}' >> $GITHUB_ENV
+          echo 'CXXFLAGS=${{ (matrix.intsan && '-fsanitize=integer -fno-sanitize=unsigned-integer-overflow -fno-sanitize-recover=integer -fno-omit-frame-pointer') || (matrix.boundssan && '-fsanitize=bounds -fno-sanitize-recover=bounds -fno-omit-frame-pointer') || matrix.cxxflags || '' }}' >> $GITHUB_ENV
           echo 'CXXSTD=${{ matrix.latest-cxxstd || '' }}' >> $GITHUB_ENV
           echo 'BUILD_SHARED_LIBS=${{ matrix.shared || '' }}' >> $GITHUB_ENV
           echo 'CMAKE_RUN_TESTS=true' >> $GITHUB_ENV
@@ -166,7 +183,7 @@ jobs:
 
       - name: Fuzz corpus
         if: matrix.fuzz
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4
         id: cache-corpus
         with:
           path: ${{ steps.patch.outputs.workspace_root }}/corpus.tar
@@ -176,7 +193,7 @@ jobs:
             corpus-
 
       - name: CMake Workflow
-        uses: alandefreitas/cpp-actions/cmake-workflow@v1.8.2
+        uses: alandefreitas/cpp-actions/cmake-workflow@v1.8.7
         if: matrix.is-no-factor-intermediary != 'true'
         with:
           source-dir: ../boost-root
@@ -196,7 +213,7 @@ jobs:
           trace-commands: true
 
       - name: CMake Integration Workflow
-        uses: alandefreitas/cpp-actions/cmake-workflow@v1.8.2
+        uses: alandefreitas/cpp-actions/cmake-workflow@v1.8.7
         if: matrix.is-no-factor-intermediary != 'true'
         with:
           source-dir: ../boost-root/libs/${{ steps.patch.outputs.module }}/test/cmake_test
@@ -212,7 +229,7 @@ jobs:
           trace-commands: true
 
       - name: CMake Root Workflow
-        uses: alandefreitas/cpp-actions/cmake-workflow@v1.8.2
+        uses: alandefreitas/cpp-actions/cmake-workflow@v1.8.7
         if: matrix.is-no-factor-intermediary != 'true'
         with:
           source-dir: .
@@ -229,7 +246,7 @@ jobs:
           trace-commands: true
 
       - name: B2 Workflow
-        uses: alandefreitas/cpp-actions/b2-workflow@v1.8.2
+        uses: alandefreitas/cpp-actions/b2-workflow@v1.8.7
         env:
           # Set flags via B2 options exclusively
           CFLAGS: ''
@@ -246,18 +263,18 @@ jobs:
           cxxstd: ${{ ( matrix.is-latest && ((matrix.cxxstd && format('{0},latest', matrix.cxxstd)) || 'latest' )) || matrix.cxxstd }}
           address-model: ${{ (matrix.x86 && '32') || '64' }}
           asan: ${{ matrix.asan }}
-          ubsan: ${{ matrix.ubsan || matrix.integersan }}
+          ubsan: ${{ matrix.ubsan || matrix.intsan }}
           tsan: ${{ matrix.tsan }}
           # integer-sanitizer is passed directly as flags
-          ccflags: ${{ (matrix.integersan && '-fsanitize=integer -fno-sanitize=unsigned-integer-overflow -fno-sanitize-recover=integer -fno-omit-frame-pointer') || '' }}
-          cxxflags: ${{ (matrix.integersan && '-fsanitize=integer -fno-sanitize=unsigned-integer-overflow -fno-sanitize-recover=integer -fno-omit-frame-pointer') || '' }}
+          ccflags: ${{ (matrix.intsan && '-fsanitize=integer -fno-sanitize=unsigned-integer-overflow -fno-sanitize-recover=integer -fno-omit-frame-pointer') || '' }}
+          cxxflags: ${{ (matrix.intsan && '-fsanitize=integer -fno-sanitize=unsigned-integer-overflow -fno-sanitize-recover=integer -fno-omit-frame-pointer') || '' }}
           shared: ${{ matrix.shared }}
           coverage: ${{ matrix.coverage }}
           define: ${{ (matrix.no-threads && 'BOOST_URL_DISABLE_THREADS') || '' }}
           warnings-as-errors: ${{ matrix.is-latest }}
 
       - name: FlameGraph
-        uses: alandefreitas/cpp-actions/flamegraph@v1.8.2
+        uses: alandefreitas/cpp-actions/flamegraph@v1.8.7
         if: matrix.time-trace
         with:
           source-dir: ../boost-root/libs/url
@@ -322,13 +339,13 @@ jobs:
 
     steps:
       - name: Clone Boost.URL
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # Avoid the common API rate limit exceeded error in boostorg by including 100 latest commits in any case
           fetch-depth: 100
 
       - name: Changelog
-        uses: alandefreitas/cpp-actions/create-changelog@v1.8.2
+        uses: alandefreitas/cpp-actions/create-changelog@v1.8.7
         with:
           thank-non-regular: ${{ startsWith(github.ref, 'refs/tags/') }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -337,32 +354,67 @@ jobs:
           trace-commands: true
 
   antora:
-    name: Antora Docs
     needs: [ runner-selection ]
-    runs-on: ${{ fromJSON(needs.runner-selection.outputs.labelmatrix)['ubuntu-latest'] }}
+    strategy:
+      matrix:
+        include:
+          - { name: Windows, os: windows-latest }
+          - { name: Ubuntu, os: ubuntu-latest }
+          - { name: MacOS, os: macos-latest }
+    name: Antora Docs (${{ matrix.name }})
+    runs-on: ${{ fromJSON(needs.runner-selection.outputs.labelmatrix)[matrix.os] }}
+    defaults:
+      run:
+        shell: bash
     steps:
-      - name: Clone Boost.URL
-        uses: actions/checkout@v3
+      - name: Install packages
+        uses: alandefreitas/cpp-actions/package-install@v1.8.7
+        with:
+          apt-get: git cmake
 
-      - uses: actions/setup-node@v3
+      - name: Clone Boost.URL
+        uses: actions/checkout@v4
+
+      - name: Clone Boost
+        uses: alandefreitas/cpp-actions/boost-clone@v1.8.7
+        id: boost-clone
+        with:
+          branch: ${{ (github.ref_name == 'master' && github.ref_name) || 'develop' }}
+          boost-dir: ../boost-source
+          scan-modules-dir: .
+          scan-modules-ignore: url
+
+      - uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Setup C++
-        uses: alandefreitas/cpp-actions/setup-cpp@v1.8.2
-        id: setup-cpp
-        with:
-          compiler: clang
-          version: 17
+      - name: Setup Ninja
+        if: runner.os == 'Windows'
+        uses: seanmiddleditch/gha-setup-ninja@v5
 
       - name: Build Antora Docs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          git config --global --add safe.directory "$(pwd)"
+          
+          cd ..
+          BOOST_SRC_DIR="$(pwd)/boost-source"
+          export BOOST_SRC_DIR
+          cd url
+          
           cd doc
           bash ./build_antora.sh
+          
+          # Antora returns zero even if it fails, so we check if the site directory exists
+          if [ ! -d "build/site" ]; then
+              echo "Antora build failed"
+              exit 1
+          fi
 
       - name: Create Antora Docs Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: antora-docs
+          name: antora-docs-${{ matrix.name }}
           path: doc/build/site
           

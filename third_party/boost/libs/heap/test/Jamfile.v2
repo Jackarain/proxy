@@ -6,11 +6,15 @@ import testing ;
 import path ;
 import regex ;
 
+path-constant HERE : . ;
+
+project : requirements <library>/boost/heap//boost_heap ;
+
 rule test_all
 {
     local all_rules ;
     local file ;
-    local headers_path = [ path.make $(BOOST_ROOT)/libs/heap/include/boost/heap ] ;
+    local headers_path = [ path.make $(HERE)/../include/boost/heap ] ;
     for file in [ path.glob-tree $(headers_path) : *.hpp : detail ]
     {
         local rel_file = [ path.relative-to $(headers_path) $(file) ] ;
@@ -29,6 +33,8 @@ rule test_all
                 :  # additional args
                 :  # test-files
                 : <library>/boost/test//boost_unit_test_framework # requirements
+                  <library>/boost/container//boost_container
+                  <library>/boost/foreach//boost_foreach
             ] ;
         }
    }

@@ -459,13 +459,14 @@ h|unsuccessful lookup
 
 |===
 
-== boost::concurrent_flat_map
+== boost::concurrent_(flat|node)_map
 
 All benchmarks were created using:
 
 * `https://spec.oneapi.io/versions/latest/elements/oneTBB/source/containers/concurrent_hash_map_cls.html[oneapi::tbb::concurrent_hash_map^]<int, int>`
 * `https://github.com/greg7mdp/gtl/blob/main/docs/phmap.md[gtl::parallel_flat_hash_map^]<int, int>` with 64 submaps
 * `boost::concurrent_flat_map<int, int>`
+* `boost::concurrent_node_map<int, int>`
 
 The source code can be https://github.com/boostorg/boost_unordered_benchmarks/tree/boost_concurrent_flat_map[found here^].
 
@@ -475,7 +476,7 @@ operations follow a https://en.wikipedia.org/wiki/Zipf%27s_law#Formal_definition
 with different _skew_ parameters: the higher the skew, the more concentrated are the keys in the lower values
 of the covered range.
 
-`boost::concurrent_flat_map` is exercised using both regular and xref:#concurrent_bulk_visitation[bulk visitation]:
+`boost::concurrent_flat_map` and `boost::concurrent_node_map` are exercised using both regular and xref:#concurrent_bulk_visitation[bulk visitation]:
 in the latter case, lookup keys are buffered in a local array and then processed at
 once each time the buffer reaches xref:#concurrent_flat_map_constants[`bulk_visit_size`].
 

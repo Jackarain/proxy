@@ -1,4 +1,4 @@
-/* Copyright 2016-2018 Joaquin M Lopez Munoz.
+/* Copyright 2016-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -995,8 +995,8 @@ private:
   {
     const auto& id=subtypeid(x);
     auto it=map.find(id);
-    if(it!=map.end())return it;
-    else throw unregistered_type{id};
+    if(it==map.end())throw unregistered_type{id};
+    return it;
   }
 
   template<
@@ -1042,8 +1042,8 @@ private:
     const std::type_info& info)const
   {
     auto it=map.find(info);
-    if(it!=map.end())return it;
-    else throw unregistered_type{info};
+    if(it==map.end())throw unregistered_type{info};
+    return it;
   }
 
   static segment_type& segment(const_segment_map_iterator pos)

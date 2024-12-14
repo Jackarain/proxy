@@ -56,14 +56,14 @@ if(CMAKE_SOURCE_DIR STREQUAL Boost_SOURCE_DIR)
     add_custom_target(tests)
   endif()
 
-  add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --no-tests=error -C $<CONFIG>)
+  add_custom_target(check VERBATIM COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --no-tests=error -C $<CONFIG>)
   add_dependencies(check tests)
 
   if(NOT TARGET tests-quick)
     add_custom_target(tests-quick)
   endif()
 
-  add_custom_target(check-quick COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --no-tests=error -C $<CONFIG> -R quick)
+  add_custom_target(check-quick VERBATIM COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --no-tests=error -C $<CONFIG> -R quick)
   add_dependencies(check-quick tests-quick)
 
   # link=static|shared
@@ -379,7 +379,7 @@ foreach(__boost_lib_cml IN LISTS __boost_libraries)
 
 endforeach()
 
-# Compatibility targets
+# Compatibility targets for use with add_subdirectory/FetchContent
 
 if(BOOST_ENABLE_COMPATIBILITY_TARGETS)
 
@@ -453,3 +453,9 @@ else()
 endif()
 
 install(FILES "${CONFIG_VERSION_FILE_NAME}" DESTINATION "${CONFIG_INSTALL_DIR}")
+
+set(CPACK_PACKAGE_VENDOR "Boost")
+set(CPACK_GENERATOR "TGZ")
+set(CPACK_RESOURCE_FILE_LICENSE "${Boost_SOURCE_DIR}/LICENSE_1_0.txt")
+set(CPACK_RESOURCE_FILE_README "${Boost_SOURCE_DIR}/README.md")
+include(CPack)

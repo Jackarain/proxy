@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE(async_wait, *boost::unit_test::timeout(4))
     std::error_code ec;
     bool called = false;
 
-    boost::asio::deadline_timer timeout{io_context, boost::posix_time::seconds(3)};
+    boost::asio::steady_timer timeout{io_context, std::chrono::seconds(3)};
     timeout.async_wait([&](boost::system::error_code ec){if (!ec) io_context.stop();});
 
 

@@ -136,8 +136,17 @@ public:
         dereferenced.
     */
 #ifdef BOOST_URL_DOCS
-    using iterator = __see_below__;
+    using iterator = __see_below__
 #else
+
+    /** An iterator of constant, decoded characters.
+
+        This iterator is used to access the encoded
+        string as a bidirectional range of characters
+        with percent-decoding applied. Escape sequences
+        are not decoded until the iterator is
+        dereferenced.
+    */
     class iterator;
 #endif
 
@@ -575,6 +584,12 @@ private:
     }
 public:
 
+    /// Compare two decode views for equality
+    /**
+     * This function is only enabled if both types are
+     * decode_view or convertible to `core::string_view`,
+     * but not both are convertible to `core::string_view`
+     */
     template<class S0, class S1>
     BOOST_CXX14_CONSTEXPR friend auto operator==(
         S0 const& s0, S1 const& s1) noexcept ->
@@ -584,6 +599,12 @@ public:
         return decode_compare(s0, s1) == 0;
     }
 
+    /// Compare two decode views for inequality
+    /**
+     * This function is only enabled if both types are
+     * decode_view or convertible to `core::string_view`,
+     * but not both are convertible to `core::string_view`
+     */
     template<class S0, class S1>
     BOOST_CXX14_CONSTEXPR friend auto operator!=(
         S0 const& s0, S1 const& s1) noexcept ->
@@ -593,6 +614,12 @@ public:
         return decode_compare(s0, s1) != 0;
     }
 
+    /// Compare two decode views for less than
+    /**
+     * This function is only enabled if both types are
+     * decode_view or convertible to `core::string_view`,
+     * but not both are convertible to `core::string_view`
+     */
     template<class S0, class S1>
     BOOST_CXX14_CONSTEXPR friend auto operator<(
         S0 const& s0, S1 const& s1) noexcept ->
@@ -602,6 +629,12 @@ public:
         return decode_compare(s0, s1) < 0;
     }
 
+    /// Compare two decode views for less than or equal
+    /**
+     * This function is only enabled if both types are
+     * decode_view or convertible to `core::string_view`,
+     * but not both are convertible to `core::string_view`
+     */
     template<class S0, class S1>
     BOOST_CXX14_CONSTEXPR friend auto operator<=(
         S0 const& s0, S1 const& s1) noexcept ->
@@ -611,6 +644,12 @@ public:
         return decode_compare(s0, s1) <= 0;
     }
 
+    /// Compare two decode views for greater than
+    /**
+     * This function is only enabled if both types are
+     * decode_view or convertible to `core::string_view`,
+     * but not both are convertible to `core::string_view`
+     */
     template<class S0, class S1>
     BOOST_CXX14_CONSTEXPR friend auto operator>(
         S0 const& s0, S1 const& s1) noexcept ->
@@ -620,6 +659,12 @@ public:
         return decode_compare(s0, s1) > 0;
     }
 
+    /// Compare two decode views for greater than or equal
+    /**
+     * This function is only enabled if both types are
+     * decode_view or convertible to `core::string_view`,
+     * but not both are convertible to `core::string_view`
+     */
     template<class S0, class S1>
     BOOST_CXX14_CONSTEXPR friend auto operator>=(
         S0 const& s0, S1 const& s1) noexcept ->
@@ -630,7 +675,17 @@ public:
     }
 #endif
 
-    // hidden friend
+    /** Format the string with percent-decoding applied to the output stream
+
+        This hidden friend function serializes the decoded view
+        to the output stream.
+
+        @return A reference to the output stream, for chaining
+
+        @param os The output stream to write to
+
+        @param s The decoded view to write
+    */
     friend
     std::ostream&
     operator<<(

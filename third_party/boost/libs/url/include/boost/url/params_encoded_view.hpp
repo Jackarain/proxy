@@ -22,6 +22,10 @@
 namespace boost {
 namespace urls {
 
+namespace implementation_defined {
+    struct query_rule_t;
+}
+
 /** A view representing query parameters in a URL
 
     Objects of this type are used to interpret
@@ -57,7 +61,7 @@ class BOOST_URL_DECL params_encoded_view
     friend class url_view_base;
     friend class params_view;
     friend class params_encoded_ref;
-    friend struct query_rule_t;
+    friend struct implementation_defined::query_rule_t;
 
     params_encoded_view(
         detail::query_ref const& ref) noexcept;
@@ -225,6 +229,30 @@ public:
 
     //--------------------------------------------
 
+    /** Parse a string and return an encoded params view
+
+        This function parses the string and returns the
+        corresponding params object if the string is valid,
+        otherwise returns an error.
+
+        @par BNF
+        @code
+        query         = *( pchar / "/" / "?" )
+        @endcode
+
+        @par Exception Safety
+        No-throw guarantee.
+
+        @return A valid view on success, otherwise an
+        error code.
+
+        @param s The string to parse
+
+        @par Specification
+
+        @see
+            @ref params_encoded_view.
+    */
     friend
     BOOST_URL_DECL
     system::result<params_encoded_view>

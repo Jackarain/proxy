@@ -29,6 +29,7 @@ jobs:
           # Linux, gcc-4.6
           - toolset: gcc-4.6
             cxxstd: "03,0x"
+            cxxflags: -pipe
             address-model: 32,64
             os: ubuntu-latest
             container: ubuntu:16.04
@@ -39,6 +40,7 @@ jobs:
           # Linux, gcc-4.7
           - toolset: gcc-4.7
             cxxstd: "03,11"
+            cxxflags: -pipe
             address-model: 32,64
             os: ubuntu-latest
             container: ubuntu:16.04
@@ -47,6 +49,7 @@ jobs:
           # Linux, gcc-4.8
           - toolset: gcc-4.8
             cxxstd: "03,11"
+            cxxflags: -pipe
             address-model: 32,64
             os: ubuntu-latest
             container: ubuntu:18.04
@@ -55,6 +58,7 @@ jobs:
           # Linux, gcc-4.9
           - toolset: gcc-4.9
             cxxstd: "03,11"
+            cxxflags: -pipe
             address-model: 32,64
             os: ubuntu-latest
             container: ubuntu:16.04
@@ -62,6 +66,7 @@ jobs:
               - g++-4.9-multilib
           # Linux, gcc-5
           - toolset: gcc-5
+            cxxflags: -pipe
             cxxstd: "03,11,14,1z"
             address-model: 32,64
             os: ubuntu-latest
@@ -71,6 +76,7 @@ jobs:
           # Linux, gcc-6
           - toolset: gcc-6
             cxxstd: "03,11,14,1z"
+            cxxflags: -pipe
             address-model: 32,64
             os: ubuntu-latest
             container: ubuntu:18.04
@@ -79,6 +85,7 @@ jobs:
           # Linux, gcc-7
           - toolset: gcc-7
             cxxstd: "03,11,14,17"
+            cxxflags: -pipe
             address-model: 32,64
             os: ubuntu-latest
             container: ubuntu:18.04
@@ -87,6 +94,7 @@ jobs:
           # Linux, gcc-8
           - toolset: gcc-8
             cxxstd: "03,11,14,17,2a"
+            cxxflags: -pipe
             address-model: 32,64
             os: ubuntu-latest
             container: ubuntu:18.04
@@ -95,6 +103,7 @@ jobs:
           # Linux, gcc-9
           - toolset: gcc-9
             cxxstd: "03,11,14,17,2a"
+            cxxflags: -pipe
             address-model: 32,64
             os: ubuntu-latest
             container: ubuntu:20.04
@@ -103,6 +112,7 @@ jobs:
           # Linux, gcc-10
           - toolset: gcc-10
             cxxstd: "03,11,14,17,20"
+            cxxflags: -pipe
             address-model: 32,64
             os: ubuntu-latest
             container: ubuntu:20.04
@@ -111,6 +121,7 @@ jobs:
           # Linux, gcc-11
           - toolset: gcc-11
             cxxstd: "03,11,14,17,20,23"
+            cxxflags: -pipe
             address-model: 32,64
             os: ubuntu-latest
             container: ubuntu:22.04
@@ -119,6 +130,7 @@ jobs:
           # Linux, gcc-12
           - toolset: gcc-12
             cxxstd: "03,11,14,17,20,23"
+            cxxflags: -pipe
             address-model: 32,64
             os: ubuntu-latest
             container: ubuntu:22.04
@@ -127,6 +139,7 @@ jobs:
           # Linux, gcc-13
           - toolset: gcc-13
             cxxstd: "11,14,17,20,2b"
+            cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:24.04
             install: g++-13-multilib
@@ -134,6 +147,7 @@ jobs:
           # Linux, gcc-14
           - toolset: gcc-14
             cxxstd: "11,14,17,20,2b"
+            cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:24.04
             install: g++-14-multilib
@@ -142,6 +156,7 @@ jobs:
           - name: UBSAN
             toolset: gcc-12
             cxxstd: "03,11,14,17,20,23"
+            cxxflags: -pipe
             ubsan: 1
             os: ubuntu-latest
             container: ubuntu:22.04
@@ -154,6 +169,7 @@ jobs:
           - toolset: clang
             compiler: clang++-3.5
             cxxstd: "03,11"
+            cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:16.04
             install:
@@ -162,6 +178,7 @@ jobs:
           - toolset: clang
             compiler: clang++-3.6
             cxxstd: "03,11,14"
+            cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:16.04
             install:
@@ -170,6 +187,7 @@ jobs:
           - toolset: clang
             compiler: clang++-3.7
             cxxstd: "03,11,14"
+            cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:16.04
             install:
@@ -178,6 +196,7 @@ jobs:
           - toolset: clang
             compiler: clang++-3.8
             cxxstd: "03,11,14"
+            cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:16.04
             install:
@@ -186,6 +205,7 @@ jobs:
           - toolset: clang
             compiler: clang++-3.9
             cxxstd: "03,11,14"
+            cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:18.04
             install:
@@ -194,6 +214,7 @@ jobs:
           - toolset: clang
             compiler: clang++-4.0
             cxxstd: "03,11,14"
+            cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:18.04
             install:
@@ -202,6 +223,7 @@ jobs:
           - toolset: clang
             compiler: clang++-5.0
             cxxstd: "03,11,14,1z"
+            cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:18.04
             install:
@@ -210,6 +232,7 @@ jobs:
           - toolset: clang
             compiler: clang++-6.0
             cxxstd: "03,11,14,17"
+            cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:18.04
             install:
@@ -218,6 +241,7 @@ jobs:
           - toolset: clang
             compiler: clang++-7
             cxxstd: "03,11,14,17"
+            cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:18.04
             install:
@@ -227,6 +251,7 @@ jobs:
           - toolset: clang
             compiler: clang++-8
             cxxstd: "03,11,14,17,2a"
+            cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:18.04
             install:
@@ -237,6 +262,7 @@ jobs:
           - toolset: clang
             compiler: clang++-9
             cxxstd: "03,11,14,17,2a"
+            cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:20.04
             install:
@@ -245,6 +271,7 @@ jobs:
           - toolset: clang
             compiler: clang++-10
             cxxstd: "03,11,14,17,20"
+            cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:20.04
             install:
@@ -253,6 +280,7 @@ jobs:
           - toolset: clang
             compiler: clang++-11
             cxxstd: "03,11,14,17,20"
+            cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:22.04
             install:
@@ -261,6 +289,7 @@ jobs:
           - toolset: clang
             compiler: clang++-12
             cxxstd: "03,11,14,17,20"
+            cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:22.04
             install:
@@ -269,6 +298,7 @@ jobs:
           - toolset: clang
             compiler: clang++-13
             cxxstd: "03,11,14,17,20"
+            cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:22.04
             install:
@@ -277,6 +307,7 @@ jobs:
           - toolset: clang
             compiler: clang++-14
             cxxstd: "03,11,14,17,20"
+            cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:22.04
             install:
@@ -285,12 +316,14 @@ jobs:
           - toolset: clang
             compiler: clang++-15
             cxxstd: "03,11,14,17,20"
+            cxxflags: -pipe
             container: ubuntu:22.04
             os: ubuntu-latest
             install: clang-15
           # Linux, clang-16
           - toolset: clang
             compiler: clang++-16
+            cxxflags: -pipe
             cxxstd: "03,11,14,17,20,2b"
             container: ubuntu:24.04
             os: ubuntu-latest
@@ -299,6 +332,7 @@ jobs:
           - toolset: clang
             compiler: clang++-17
             cxxstd: "03,11,14,17,20,2b"
+            cxxflags: -pipe
             container: ubuntu:24.04
             os: ubuntu-latest
             install: clang-17
@@ -306,6 +340,7 @@ jobs:
           - toolset: clang
             compiler: clang++-18
             cxxstd: "03,11,14,17,20,2b"
+            cxxflags: -pipe
             container: ubuntu:24.04
             os: ubuntu-latest
             install: clang-18
@@ -318,7 +353,7 @@ jobs:
               - clang-15
               - libc++-15-dev
               - libc++abi-15-dev
-            cxxflags: -stdlib=libc++
+            cxxflags: -pipe -stdlib=libc++
             linkflags: -stdlib=libc++
           # Linux, clang-18 libc++
           - toolset: clang
@@ -329,14 +364,14 @@ jobs:
               - clang-18
               - libc++-18-dev
               - libc++abi-18-dev
-            cxxflags: -stdlib=libc++
+            cxxflags: -pipe -stdlib=libc++
             linkflags: -stdlib=libc++
           # Linux, clang-14 libc++, ubsan
           - name: UBSAN
             toolset: clang
             compiler: clang++-14
             cxxstd: "03,11,14,17,20"
-            cxxflags: -stdlib=libc++
+            cxxflags: -pipe -stdlib=libc++
             linkflags: -stdlib=libc++
             ubsan: 1
             os: ubuntu-22.04
@@ -349,7 +384,7 @@ jobs:
             toolset: clang
             compiler: clang++-18
             cxxstd: "11,14,17,20"
-            cxxflags: -stdlib=libc++
+            cxxflags: -pipe -stdlib=libc++
             linkflags: -stdlib=libc++
             ubsan: 1
             os: ubuntu-24.04
@@ -363,14 +398,17 @@ jobs:
           # Macos 12, clang
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
+            cxxflags: -pipe
             os: macos-12
           # Macos 13, clang
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
+            cxxflags: -pipe
             os: macos-13
           # Macos 17, clang
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
+            cxxflags: -pipe
             os: macos-14
 
     timeout-minutes: 180
@@ -608,6 +646,7 @@ jobs:
             os: windows-2022
           - toolset: gcc
             cxxstd: "03,11,14,17,2a"
+            cxxflags: -pipe
             addrmd: 64
             os: windows-2019
 

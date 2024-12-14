@@ -15,6 +15,7 @@
 #include "bcp_imp.hpp"
 #include "fileview.hpp"
 #include <boost/regex.hpp>
+#include <boost/filesystem/directory.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/exception.hpp>
 #include <iostream>
@@ -43,12 +44,12 @@ static void init_library_scanner(const fs::path& p, bool cvs_mode, const std::st
    //
    // Don't add files created by build system:
    //
-   if((p.leaf() == "bin") || (p.leaf() == "bin-stage"))
+   if((p.filename() == "bin") || (p.filename() == "bin-stage"))
       return; 
    //
    // Don't add version control directories:
    //
-   if((p.leaf() == "CVS") || (p.leaf() == ".svn"))
+   if((p.filename() == "CVS") || (p.filename() == ".svn"))
       return; 
    //
    // don't add directories not under version control:

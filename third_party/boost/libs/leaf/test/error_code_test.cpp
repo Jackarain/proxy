@@ -1,5 +1,4 @@
-// Copyright 2018-2023 Emil Dotchevski and Reverge Studios, Inc.
-
+// Copyright 2018-2024 Emil Dotchevski and Reverge Studios, Inc.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -20,13 +19,18 @@ int main()
 #ifdef BOOST_LEAF_TEST_SINGLE_HEADER
 #   include "leaf.hpp"
 #else
-#   include <boost/leaf/handle_errors.hpp>
+#   include <boost/leaf/diagnostics.hpp>
 #   include <boost/leaf/pred.hpp>
 #   include <boost/leaf/result.hpp>
 #endif
 
 #include "_test_res.hpp"
 #include "lightweight_test.hpp"
+
+#include "boost/system/result.hpp"
+namespace boost { namespace leaf {
+    template <class T> struct is_result_type<boost::system::result<T, std::error_code>>: std::true_type { };
+} }
 
 namespace leaf = boost::leaf;
 
@@ -179,7 +183,7 @@ void test()
             {
                 std::error_code const & ec = cond.matched;
                 BOOST_TEST_EQ(ec, errc_a::a0);
-                BOOST_TEST(ec==make_error_condition(cond_x::x00));
+                BOOST_TEST(ec == make_error_condition(cond_x::x00));
                 return 42;
             },
             []
@@ -199,7 +203,7 @@ void test()
             {
                 std::error_code const & ec = cond.matched;
                 BOOST_TEST_EQ(ec, errc_a::a0);
-                BOOST_TEST(ec==make_error_condition(cond_x::x00));
+                BOOST_TEST(ec == make_error_condition(cond_x::x00));
                 return 42;
             },
             []
@@ -214,7 +218,7 @@ void test()
         int r = leaf::try_handle_all(
             []() -> R
             {
-                return R(leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } ));
+                return leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } );
             },
             []( e_wrapped_error_code const & wec )
             {
@@ -232,7 +236,7 @@ void test()
         int r = leaf::try_handle_all(
             []() -> R
             {
-                return R(leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } ));
+                return leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } );
             },
             []( leaf::match_value<leaf::condition<e_wrapped_error_code, errc_a>, errc_a::a0> code )
             {
@@ -252,7 +256,7 @@ void test()
         int r = leaf::try_handle_all(
             []() -> R
             {
-                return R(leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } ));
+                return leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } );
             },
             []( leaf::match_value<e_wrapped_error_code, errc_a::a0> code )
             {
@@ -272,14 +276,14 @@ void test()
         int r = leaf::try_handle_all(
             []() -> R
             {
-                return R(leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } ));
+                return leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } );
             },
             []( leaf::match_value<leaf::condition<e_wrapped_error_code, cond_x>, cond_x::x00> cond )
             {
                 e_wrapped_error_code const & wec = cond.matched;
                 std::error_code const & ec = wec.value;
                 BOOST_TEST_EQ(ec, errc_a::a0);
-                BOOST_TEST(ec==make_error_condition(cond_x::x00));
+                BOOST_TEST(ec == make_error_condition(cond_x::x00));
                 return 42;
             },
             []
@@ -293,14 +297,14 @@ void test()
         int r = leaf::try_handle_all(
             []() -> R
             {
-                return R(leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } ));
+                return leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } );
             },
             []( leaf::match_value<e_wrapped_error_code, cond_x::x00> cond )
             {
                 e_wrapped_error_code const & wec = cond.matched;
                 std::error_code const & ec = wec.value;
                 BOOST_TEST_EQ(ec, errc_a::a0);
-                BOOST_TEST(ec==make_error_condition(cond_x::x00));
+                BOOST_TEST(ec == make_error_condition(cond_x::x00));
                 return 42;
             },
             []
@@ -467,7 +471,7 @@ void test_void()
             {
                 std::error_code const & ec = cond.matched;
                 BOOST_TEST_EQ(ec, errc_a::a0);
-                BOOST_TEST(ec==make_error_condition(cond_x::x00));
+                BOOST_TEST(ec == make_error_condition(cond_x::x00));
                 r = 42;
             },
             [&]
@@ -488,7 +492,7 @@ void test_void()
             {
                 std::error_code const & ec = cond.matched;
                 BOOST_TEST_EQ(ec, errc_a::a0);
-                BOOST_TEST(ec==make_error_condition(cond_x::x00));
+                BOOST_TEST(ec == make_error_condition(cond_x::x00));
                 r = 42;
             },
             [&]
@@ -504,7 +508,7 @@ void test_void()
         leaf::try_handle_all(
             []() -> R
             {
-                return R(leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } ));
+                return leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } );
             },
             [&]( e_wrapped_error_code const & wec )
             {
@@ -523,7 +527,7 @@ void test_void()
         leaf::try_handle_all(
             []() -> R
             {
-                return R(leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } ));
+                return leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } );
             },
             [&]( leaf::match_value<leaf::condition<e_wrapped_error_code, errc_a>, errc_a::a0> code )
             {
@@ -544,7 +548,7 @@ void test_void()
         leaf::try_handle_all(
             []() -> R
             {
-                return R(leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } ));
+                return leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } );
             },
             [&]( leaf::match_value<e_wrapped_error_code, errc_a::a0> code )
             {
@@ -565,14 +569,14 @@ void test_void()
         leaf::try_handle_all(
             []() -> R
             {
-                return R(leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } ));
+                return leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } );
             },
             [&]( leaf::match_value<leaf::condition<e_wrapped_error_code, cond_x>, cond_x::x00> cond )
             {
                 e_wrapped_error_code const & wec = cond.matched;
                 std::error_code const & ec = wec.value;
                 BOOST_TEST_EQ(ec, errc_a::a0);
-                BOOST_TEST(ec==make_error_condition(cond_x::x00));
+                BOOST_TEST(ec == make_error_condition(cond_x::x00));
                 r = 42;
             },
             [&]
@@ -587,14 +591,14 @@ void test_void()
         leaf::try_handle_all(
             []() -> R
             {
-                return R(leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } ));
+                return leaf::new_error( e_wrapped_error_code { make_error_code(errc_a::a0) } );
             },
             [&]( leaf::match_value<e_wrapped_error_code, cond_x::x00> cond )
             {
                 e_wrapped_error_code const & wec = cond.matched;
                 std::error_code const & ec = wec.value;
                 BOOST_TEST_EQ(ec, errc_a::a0);
-                BOOST_TEST(ec==make_error_condition(cond_x::x00));
+                BOOST_TEST(ec == make_error_condition(cond_x::x00));
                 r = 42;
             },
             [&]
@@ -612,6 +616,7 @@ int main()
     test<test_res<int, std::error_code>>();
     test_void<leaf::result<void>>();
     test_void<test_res<void, std::error_code>>();
+    test<boost::system::result<int, std::error_code>>();
     return boost::report_errors();
 }
 

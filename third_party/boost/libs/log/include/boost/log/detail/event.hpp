@@ -37,9 +37,9 @@
 #include <boost/atomic/atomic.hpp>
 #define BOOST_LOG_EVENT_USE_WINAPI
 #else
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/condition_variable.hpp>
-#define BOOST_LOG_EVENT_USE_BOOST_CONDITION_VARIABLE
+#include <mutex>
+#include <condition_variable>
+#define BOOST_LOG_EVENT_USE_STD_CONDITION_VARIABLE
 #endif
 
 #include <boost/log/detail/header.hpp>
@@ -130,8 +130,8 @@ typedef winapi_based_event event;
 class generic_event
 {
 private:
-    boost::mutex m_mutex;
-    boost::condition_variable m_cond;
+    std::mutex m_mutex;
+    std::condition_variable m_cond;
     bool m_state;
 
 public:

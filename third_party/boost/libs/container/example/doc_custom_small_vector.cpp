@@ -41,6 +41,14 @@ int main ()
    growth_50_vector.push_back(1);
    assert(growth_50_vector.capacity() == old_cap*3/2);
 
+   //This option specifies that a vector that will use "unsigned char" as
+   //the type to store capacity or size internally.
+   typedef small_vector_options< stored_size<unsigned char> >::type size_option_t;
+
+   //Size-optimized vector is smaller than the default one.
+   typedef small_vector<int, 10, new_allocator<int>, size_option_t > size_optimized_vector_t;
+   assert((sizeof(size_optimized_vector_t) < sizeof(small_vector<int, 10>)));
+
    return 0;
 }
 //]

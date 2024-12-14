@@ -82,7 +82,7 @@ void test_move_ctor_from_U()
   BOOST_TEST(o2->s == sValueCopyConstructed || o2->s == sCopyConstructed || o2->s == sMoveConstructed );
   BOOST_TEST(v1.s == sIntConstructed);
     
-  optional<Oracle> o3 (boost::move(v1));
+  optional<Oracle> o3 (std::move(v1));
   BOOST_TEST(o3);
   BOOST_TEST(o3->s == sValueMoveConstructed || o3->s == sMoveConstructed);
   BOOST_TEST(v1.s == sMovedFrom);
@@ -100,7 +100,7 @@ void test_move_ctor_form_T()
   BOOST_TEST(o2->s == sCopyConstructed);
   BOOST_TEST(v1.s == sDefaultConstructed);
     
-  optional<Oracle> o3 (boost::move(v1));
+  optional<Oracle> o3 (std::move(v1));
   BOOST_TEST(o3);
   BOOST_TEST(o3->s == sMoveConstructed);
   BOOST_TEST(v1.s == sMovedFrom);
@@ -109,13 +109,13 @@ void test_move_ctor_form_T()
 void test_move_ctor_from_optional_T()
 {
   optional<Oracle> o1;
-  optional<Oracle> o2(boost::move(o1));
+  optional<Oracle> o2(std::move(o1));
   
   BOOST_TEST(!o1);
   BOOST_TEST(!o2);
   
   optional<Oracle> o3((Oracle()));
-  optional<Oracle> o4(boost::move(o3));
+  optional<Oracle> o4(std::move(o3));
   BOOST_TEST(o3);
   BOOST_TEST(o4);
   BOOST_TEST(o3->s == sMovedFrom);
@@ -156,7 +156,7 @@ void test_move_assign_from_U()
   BOOST_TEST(v1.s == sIntConstructed);
     
   optional<Oracle> o3;
-  o3 = boost::move(v1);
+  o3 = std::move(v1);
   BOOST_TEST(o3);
   BOOST_TEST(o3->s == sValueMoveConstructed);
   BOOST_TEST(v1.s == sMovedFrom);
@@ -185,7 +185,7 @@ void test_move_assign_from_T()
   BOOST_TEST(v1.s == sDefaultConstructed);
     
   optional<Oracle> o3;
-  o3 = boost::move(v1);
+  o3 = std::move(v1);
   BOOST_TEST(o3);
   BOOST_TEST(o3->s == sMoveConstructed);
   BOOST_TEST(v1.s == sMovedFrom);
@@ -204,7 +204,7 @@ void test_move_assign_from_optional_T()
     BOOST_TEST(o1);
     BOOST_TEST(o1->s == sCopyConstructed);
     
-    o2 = boost::move(o3);
+    o2 = std::move(o3);
     BOOST_TEST(o3);
     BOOST_TEST(o3->s == sMovedFrom);
     BOOST_TEST(o2);
@@ -236,15 +236,15 @@ void test_with_move_only()
     optional<MoveOnly> o2((MoveOnly(1)));
     BOOST_TEST(o2);
     BOOST_TEST(o2->val == 1);
-    optional<MoveOnly> o3 (boost::move(o1));
+    optional<MoveOnly> o3 (std::move(o1));
     BOOST_TEST(!o3);
-    optional<MoveOnly> o4 (boost::move(o2));
+    optional<MoveOnly> o4 (std::move(o2));
     BOOST_TEST(o4);
     BOOST_TEST(o4->val == 1);
     BOOST_TEST(o2);
     BOOST_TEST(o2->val == 0);
     
-    o3 = boost::move(o4);
+    o3 = std::move(o4);
     BOOST_TEST(o3);
     BOOST_TEST(o3->val == 1);
     BOOST_TEST(o4);
@@ -272,7 +272,7 @@ void test_move_assign_from_optional_U()
 {
     optional<MoveOnly> a((MoveOnly(2)));
     optional<MoveOnlyB> b1;
-    b1 = boost::move(a);
+    b1 = std::move(a);
     
     BOOST_TEST(b1);
     BOOST_TEST(b1->val == 2);
@@ -288,7 +288,7 @@ void test_move_assign_from_optional_U()
 void test_move_ctor_from_optional_U()
 {
     optional<MoveOnly> a((MoveOnly(2)));
-    optional<MoveOnlyB> b1(boost::move(a));
+    optional<MoveOnlyB> b1(std::move(a));
     
     BOOST_TEST(b1);
     BOOST_TEST(b1->val == 2);
@@ -323,7 +323,7 @@ void test_optional_ref_to_movables()
     BOOST_TEST(m.val == 1);
     BOOST_TEST(orm->val == 1);
     
-    optional<MoveOnly&> orm3 = boost::move(orm);
+    optional<MoveOnly&> orm3 = std::move(orm);
     orm3->val = 4;
     BOOST_TEST(m.val == 4);
     BOOST_TEST(orm->val == 4);

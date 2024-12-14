@@ -27,7 +27,7 @@
 #include <boost/bimap/bimap.hpp>
 #include <boost/bimap/unordered_set_of.hpp>
 
-#include <libs/bimap/test/strong_type.hpp>
+#include "strong_type.hpp"
 
 int test_bimap_info()
 {
@@ -123,13 +123,13 @@ void test_heterogeneous_access_bimap_info()
     using namespace boost::bimaps;
 
     typedef bimap
-    < 
+    <
       set_of< int, std::less< strong<int> > >,
       unordered_set_of
       <
         int, boost::hash< strong<int> >, std::equal_to< strong<int> >
       >,
-      with_info<int> 
+      with_info<int>
     > bm_type;
 
     bm_type bm;

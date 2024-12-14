@@ -25,7 +25,6 @@
 #include "test_unit/create_ok.hpp"
 #include "test_unit/create_ok_frame.hpp"
 #include "test_unit/create_row_message.hpp"
-#include "test_unit/create_statement.hpp"
 #include "test_unit/mock_execution_processor.hpp"
 #include "test_unit/printing.hpp"
 
@@ -43,7 +42,7 @@ static constexpr std::uint8_t serialized_select_1[] = {0x03, 0x53, 0x45, 0x4c, 0
 struct read_response_fixture : algo_fixture_base
 {
     mock_execution_processor proc;
-    detail::read_execute_response_algo algo{&diag, &proc};
+    detail::read_execute_response_algo algo{diag, &proc};
 
     read_response_fixture() { proc.sequence_number() = 42; }
 };
@@ -180,7 +179,7 @@ struct execute_fixture : algo_fixture_base
     mock_execution_processor proc;
     detail::execute_algo algo;
 
-    execute_fixture(any_execution_request req = {"SELECT 1"}) : algo({&diag, req, &proc}) {}
+    execute_fixture(any_execution_request req = {"SELECT 1"}) : algo(diag, {req, &proc}) {}
 };
 
 BOOST_AUTO_TEST_CASE(execute_success_eof)
@@ -239,15 +238,11 @@ BOOST_AUTO_TEST_CASE(execute_success_rows)
 BOOST_AUTO_TEST_CASE(execute_error_num_params)
 {
     // Setup
-    auto stmt = statement_builder().id(1).num_params(2).build();
     const auto params = make_fv_arr("test", nullptr, 42);  // too many params
-    execute_fixture fix(any_execution_request(stmt, params));
+    execute_fixture fix(any_execution_request({std::uint32_t(1), std::uint16_t(2), params}));
 
     // Run the algo. Nothing should be written to the server
     algo_test().check(fix, client_errc::wrong_num_params);
-
-    // We didn't modify the processor
-    fix.proc.num_calls().validate();
 }
 
 // Tests error on write, while reading head and while reading rows (error spotcheck)

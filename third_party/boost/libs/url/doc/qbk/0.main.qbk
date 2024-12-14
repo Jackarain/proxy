@@ -58,7 +58,7 @@
 [def __append_to__              [link url.ref.boost__urls__string_token__append_to `string_token::append_to`]]
 [def __assign_to__              [link url.ref.boost__urls__string_token__assign_to `string_token::assign_to`]]
 [def __preserve_size__          [link url.ref.boost__urls__string_token__preserve_size `string_token::preserve_size`]]
-[def __append_to__              [link url.ref.boost__urls__string_token__return_string `string_token::return_string`]]
+[def __return_string__          [link url.ref.boost__urls__string_token__return_string `string_token::return_string`]]
 
 
 [def __std_format__             [@https://en.cppreference.com/w/cpp/utility/format/format `std::format`]]

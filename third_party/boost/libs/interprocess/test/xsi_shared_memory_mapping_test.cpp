@@ -27,14 +27,14 @@ using namespace boost::interprocess;
 
 void remove_shared_memory(const xsi_key &key)
 {
-   BOOST_TRY{
+   BOOST_INTERPROCESS_TRY{
       xsi_shared_memory xsi(open_only, key);
       xsi_shared_memory::remove(xsi.get_shmid());
    }
-   BOOST_CATCH(interprocess_exception &e){
+   BOOST_INTERPROCESS_CATCH(interprocess_exception &e){
       if(e.get_error_code() != not_found_error)
-         BOOST_RETHROW
-   } BOOST_CATCH_END
+         BOOST_INTERPROCESS_RETHROW
+   } BOOST_INTERPROCESS_CATCH_END
 }
 
 class xsi_shared_memory_remover
@@ -63,27 +63,27 @@ int main ()
    remove_shared_memory(key);
 
    unsigned int i;
-   BOOST_TRY{
+   BOOST_INTERPROCESS_TRY{
       for(i = 0; i < sizeof(names)/sizeof(names[0]); ++i)
       {
          const std::size_t FileSize = 16*1024;
          //Create a file mapping
          xsi_shared_memory mapping (create_only, names[i] ? key : xsi_key(), FileSize);
          xsi_shared_memory_remover rem(mapping);
-         BOOST_TRY{
+         BOOST_INTERPROCESS_TRY{
             {
                //Partial mapping should fail fox XSI shared memory
                bool thrown = false;
-               BOOST_TRY{
+               BOOST_INTERPROCESS_TRY{
                   mapped_region region2(mapping, read_write, FileSize/2, FileSize - FileSize/2, 0);
                }
-               BOOST_CATCH(...){
+               BOOST_INTERPROCESS_CATCH(...){
                   thrown = true;
-               } BOOST_CATCH_END
+               } BOOST_INTERPROCESS_CATCH_END
                if(thrown == false){
                   return 1;
                }
-               BOOST_TRY{
+               BOOST_INTERPROCESS_TRY{
                   //Create a mapped region
                   mapped_region region (mapping, read_write, 0, FileSize, 0);
 
@@ -93,9 +93,9 @@ int main ()
                      *filler++ = static_cast<unsigned char>(i);
                   }
                }
-               BOOST_CATCH(std::exception& exc){
+               BOOST_INTERPROCESS_CATCH(std::exception& exc){
                   std::cout << "Unhandled exception 0: " << exc.what() << " name: " << (names[i] ? names[i] : "null") << std::endl;
-               } BOOST_CATCH_END
+               } BOOST_INTERPROCESS_CATCH_END
             }
 
             //Now check the pattern mapping a single read only mapped_region
@@ -112,16 +112,16 @@ int main ()
                }
             }
          }
-         BOOST_CATCH(std::exception &exc){
+         BOOST_INTERPROCESS_CATCH(std::exception &exc){
             std::cout << "Unhandled exception 1: " << exc.what() << " name: " << (names[i] ? names[i] : "null") << std::endl;
             return 1;
-         } BOOST_CATCH_END
+         } BOOST_INTERPROCESS_CATCH_END
       }
    }
-   BOOST_CATCH(std::exception &exc){
+   BOOST_INTERPROCESS_CATCH(std::exception &exc){
       std::cout << "Unhandled exception 2: " << exc.what() << " name: " << (names[i] ? names[i] : "null") << std::endl;
       return 1;
-   } BOOST_CATCH_END
+   } BOOST_INTERPROCESS_CATCH_END
    return 0;
 }
 

@@ -590,3 +590,81 @@ jobs:
           cmake --build . --config Release && cmake --build . --config Release --target check
           cmake --build . --config MinSizeRel && cmake --build . --config MinSizeRel --target check
           cmake --build . --config RelWithDebInfo && cmake --build . --config RelWithDebInfo --target check
+
+  windows-noprefix:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+
+          - lib: filesystem
+            os: windows-2022
+
+          - lib: headers
+            os: windows-2019
+
+          - lib: iostreams
+            os: windows-2019
+
+          - lib: log
+            os: windows-2019
+
+          - lib: serialization
+            os: windows-2019
+
+          - lib: random
+            os: windows-2019
+
+          - lib: regex
+            os: windows-2019
+
+          - lib: test
+            os: windows-2019
+
+          - lib: thread
+            os: windows-2019
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Boost
+        shell: cmd
+        run: |
+          echo GITHUB_BASE_REF: %GITHUB_BASE_REF%
+          echo GITHUB_REF: %GITHUB_REF%
+          if "%GITHUB_BASE_REF%" == "" set GITHUB_BASE_REF=%GITHUB_REF%
+          set BOOST_BRANCH=develop
+          for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
+          echo BOOST_BRANCH: %BOOST_BRANCH%
+          cd ..
+          git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          git submodule update --init --jobs 3 tools/boostdep libs/assert libs/config libs/core libs/${{matrix.lib}}
+          python tools/boostdep/depinst/depinst.py -X test -g "--jobs 3" ${{matrix.lib}}
+          rd /s/q tools\boost_install
+          xcopy /s /e /q %GITHUB_WORKSPACE% tools\boost_install\
+          cmd /c bootstrap
+          set USER_CONFIG=%HOMEDRIVE%%HOMEPATH%\user-config.jam
+          echo using python : 3.7 ; >> %USER_CONFIG%
+          echo using python : 3.9 ; >> %USER_CONFIG%
+          b2 -d0 headers
+
+      - name: Run tests
+        shell: cmd
+        run: |
+          echo on
+          cd ../boost-root
+          set ZLIB_SOURCE=%CD%\tools\boost_install\test\iostreams\zlib-1.2.11
+          set BZIP2_SOURCE=%CD%\tools\boost_install\test\iostreams\bzip2-1.0.8
+          b2 -d0 -j3 --with-headers install
+          b2 -j3 --with-${{matrix.lib}} install
+          cd tools\boost_install\test\${{matrix.lib}}
+          mkdir __build__ && cd __build__
+          cmake -DCMAKE_INSTALL_PREFIX=C:\Boost -DUSE_BOOST_PACKAGE=1 -DBoost_VERBOSE=ON ..
+          PATH %PATH%;C:\Boost\lib
+          cmake --build . --config Debug && cmake --build . --config Debug --target check
+          cmake --build . --config Release && cmake --build . --config Release --target check
+          cmake --build . --config MinSizeRel && cmake --build . --config MinSizeRel --target check
+          cmake --build . --config RelWithDebInfo && cmake --build . --config RelWithDebInfo --target check

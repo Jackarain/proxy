@@ -7,19 +7,28 @@
 
 # See library home page at http://www.boost.org/libs/timer
 
-project boost/timer ;
+constant boost_dependencies_private :
+    /boost/io//boost_io
+    /boost/predef//boost_predef
+    ;
 
-SOURCES = auto_timers_construction cpu_timer ;
+project
+    : common-requirements
 
-lib boost_timer
-   : ../src/$(SOURCES).cpp
-   : # requirements
-     <link>shared:<define>BOOST_TIMER_DYN_LINK=1
-     <link>static:<define>BOOST_TIMER_STATIC_LINK=1
-   : # default-build
-   : # usage-requirements
-     <link>shared:<define>BOOST_TIMER_DYN_LINK=1
-     <link>static:<define>BOOST_TIMER_STATIC_LINK=1
-   ;
+      <include>../include
 
-boost-install boost_timer ;
+      <library>$(boost_dependencies)
+
+      <link>shared:<define>BOOST_TIMER_DYN_LINK=1
+      <link>static:<define>BOOST_TIMER_STATIC_LINK=1
+
+      <define>BOOST_TIMER_NO_LIB=1
+
+    : requirements
+
+      <library>$(boost_dependencies_private)
+;
+
+local SOURCES = auto_timers_construction cpu_timer ;
+
+lib boost_timer : ../src/$(SOURCES).cpp ;

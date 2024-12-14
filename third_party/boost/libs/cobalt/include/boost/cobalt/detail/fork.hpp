@@ -18,6 +18,7 @@
 #include <boost/intrusive_ptr.hpp>
 
 #include <coroutine>
+#include <optional>
 
 namespace boost::cobalt::detail
 {
@@ -56,13 +57,13 @@ struct fork
 
     bool outstanding_work() {return use_count != 0u;}
 
-    const executor * exec = nullptr;
-    bool wired_up() {return exec != nullptr;}
+    std::optional<executor> exec;
+    bool wired_up() {return exec.has_value();}
 
     using executor_type = executor;
     const executor_type & get_executor() const
     {
-      BOOST_ASSERT(exec != nullptr);
+      BOOST_ASSERT(exec.has_value());
       return *exec;
     }
 

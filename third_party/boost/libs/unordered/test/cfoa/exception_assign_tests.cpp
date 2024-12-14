@@ -1,5 +1,5 @@
 // Copyright (C) 2023 Christian Mazakas
-// Copyright (C) 2023 Joaquin M Lopez Munoz
+// Copyright (C) 2023-2024 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -7,6 +7,8 @@
 
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
+#include <boost/unordered/concurrent_node_map.hpp>
+#include <boost/unordered/concurrent_node_set.hpp>
 
 using hasher = stateful_hash;
 using key_equal = stateful_key_equal;
@@ -14,11 +16,19 @@ using key_equal = stateful_key_equal;
 using map_type = boost::unordered::concurrent_flat_map<raii, raii, hasher,
   key_equal, stateful_allocator<std::pair<raii const, raii> > >;
 
+using node_map_type = boost::unordered::concurrent_node_map<raii, raii, hasher,
+  key_equal, stateful_allocator<std::pair<raii const, raii> > >;
+
 using set_type = boost::unordered::concurrent_flat_set<raii, hasher,
   key_equal, stateful_allocator<raii> >;
 
+using node_set_type = boost::unordered::concurrent_node_set<raii, hasher,
+  key_equal, stateful_allocator<raii> >;
+
 map_type* test_map;
+node_map_type* test_node_map;
 set_type* test_set;
+node_set_type* test_node_set;
 
 std::initializer_list<map_type::value_type> map_init_list{
   {raii{0}, raii{0}},
@@ -71,7 +81,9 @@ std::initializer_list<set_type::value_type> set_init_list{
 };
 
 auto test_map_and_init_list=std::make_pair(test_map,map_init_list);
+auto test_node_map_and_init_list=std::make_pair(test_node_map,map_init_list);
 auto test_set_and_init_list=std::make_pair(test_set,set_init_list);
+auto test_node_set_and_init_list=std::make_pair(test_node_set,set_init_list);
 
 namespace {
   test::seed_t initialize_seed(1794114520);
@@ -206,19 +218,20 @@ using test::sequential;
 // clang-format off
 UNORDERED_TEST(
   copy_assign,
-  ((test_map)(test_set))
+  ((test_map)(test_node_map)(test_set)(test_node_set))
   ((exception_value_type_generator_factory))
   ((default_generator)(sequential)(limited_range)))
 
 UNORDERED_TEST(
   move_assign,
-  ((test_map)(test_set))
+  ((test_map)(test_node_map)(test_set)(test_node_set))
   ((exception_value_type_generator_factory))
   ((default_generator)(sequential)))
 
 UNORDERED_TEST(
   intializer_list_assign,
-  ((test_map_and_init_list)(test_set_and_init_list)))
+  ((test_map_and_init_list)(test_node_map_and_init_list)
+   (test_set_and_init_list)(test_node_set_and_init_list)))
 // clang-format on
 
 RUN_TESTS()

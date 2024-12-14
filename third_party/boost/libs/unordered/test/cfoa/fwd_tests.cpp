@@ -1,5 +1,5 @@
 // Copyright (C) 2023 Christian Mazakas
-// Copyright (C) 2023 Joaquin M Lopez Munoz
+// Copyright (C) 2023-2024 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -7,6 +7,8 @@
 #include <boost/config/workaround.hpp>
 #include <boost/unordered/concurrent_flat_map_fwd.hpp>
 #include <boost/unordered/concurrent_flat_set_fwd.hpp>
+#include <boost/unordered/concurrent_node_map_fwd.hpp>
+#include <boost/unordered/concurrent_node_set_fwd.hpp>
 #include <limits>
 
 test::seed_t initialize_seed{32304628};
@@ -37,6 +39,27 @@ bool unequal_call(boost::unordered::concurrent_flat_map<T, T>& x1,
 }
 
 template <class T>
+void swap_call(boost::unordered::concurrent_node_map<T, T>& x1,
+  boost::unordered::concurrent_node_map<T, T>& x2)
+{
+  swap(x1, x2);
+}
+
+template <class T>
+bool equal_call(boost::unordered::concurrent_node_map<T, T>& x1,
+  boost::unordered::concurrent_node_map<T, T>& x2)
+{
+  return x1 == x2;
+}
+
+template <class T>
+bool unequal_call(boost::unordered::concurrent_node_map<T, T>& x1,
+  boost::unordered::concurrent_node_map<T, T>& x2)
+{
+  return x1 != x2;
+}
+
+template <class T>
 void swap_call(boost::unordered::concurrent_flat_set<T>& x1,
   boost::unordered::concurrent_flat_set<T>& x2)
 {
@@ -57,14 +80,41 @@ bool unequal_call(boost::unordered::concurrent_flat_set<T>& x1,
   return x1 != x2;
 }
 
+template <class T>
+void swap_call(boost::unordered::concurrent_node_set<T>& x1,
+  boost::unordered::concurrent_node_set<T>& x2)
+{
+  swap(x1, x2);
+}
+
+template <class T>
+bool equal_call(boost::unordered::concurrent_node_set<T>& x1,
+  boost::unordered::concurrent_node_set<T>& x2)
+{
+  return x1 == x2;
+}
+
+template <class T>
+bool unequal_call(boost::unordered::concurrent_node_set<T>& x1,
+  boost::unordered::concurrent_node_set<T>& x2)
+{
+  return x1 != x2;
+}
+
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
+#include <boost/unordered/concurrent_node_map.hpp>
+#include <boost/unordered/concurrent_node_set.hpp>
 
 using map_type = boost::unordered::concurrent_flat_map<int, int>;
-using set_type = boost::unordered::concurrent_flat_map<int, int>;
+using node_map_type = boost::unordered::concurrent_node_map<int, int>;
+using set_type = boost::unordered::concurrent_flat_set<int>;
+using node_set_type = boost::unordered::concurrent_node_set<int>;
 
 map_type* test_map;
+node_map_type* test_node_map;
 set_type* test_set;
+node_set_type* test_node_set;
 
 template <typename X>
 void fwd_swap_call(X*)
@@ -106,19 +156,19 @@ void max_size(X*)
 // clang-format off
 UNORDERED_TEST(
   fwd_swap_call,
-  ((test_map)(test_set)))
+  ((test_map)(test_node_map)(test_set)(test_node_set)))
 
 UNORDERED_TEST(
   fwd_equal_call,
-  ((test_map)(test_set)))
+  ((test_map)(test_node_map)(test_set)(test_node_set)))
 
 UNORDERED_TEST(
   fwd_unequal_call,
-  ((test_map)(test_set)))
+  ((test_map)(test_node_map)(test_set)(test_node_set)))
 
 UNORDERED_TEST(
   max_size,
-  ((test_map)(test_set)))
+  ((test_map)(test_node_map)(test_set)(test_node_set)))
 // clang-format on
 
 RUN_TESTS()

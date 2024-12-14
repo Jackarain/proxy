@@ -29,11 +29,7 @@ struct ignore_case_t
     comparisons should be case-insensitive.
 */
 constexpr
-#ifdef BOOST_URL_DOCS
-__implementation_defined__
-#else
-ignore_case_t
-#endif
+BOOST_URL_IMPLEMENTATION_DEFINED(ignore_case_t)
 ignore_case{};
 
 /** An optional parameter to determine case-sensitivity

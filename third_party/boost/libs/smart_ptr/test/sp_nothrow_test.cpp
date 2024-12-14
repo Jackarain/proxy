@@ -8,16 +8,6 @@
 // http://www.boost.org/LICENSE_1_0.txt
 //
 
-#include <boost/config.hpp>
-
-#if defined( BOOST_NO_CXX11_HDR_TYPE_TRAITS )
-
-int main()
-{
-}
-
-#else
-
 #include <boost/shared_ptr.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/weak_ptr.hpp>
@@ -75,14 +65,7 @@ int main()
     test_default< Y >();
     test_destroy< Y >();
 
-    // test_move< Y >();
-    BOOST_TEST_TRAIT_TRUE(( std::is_nothrow_move_constructible<Y> ));
-
-#if !( defined( BOOST_MSVC ) && BOOST_MSVC == 1700 )
-
-    BOOST_TEST_TRAIT_TRUE(( std::is_nothrow_move_assignable<Y> ));
-
-#endif
+    test_move< Y >();
 
     test_default< boost::scoped_ptr<X> >();
     test_default< boost::scoped_array<X> >();
@@ -92,5 +75,3 @@ int main()
 
     return boost::report_errors();
 }
-
-#endif // #if defined( BOOST_NO_CXX11_HDR_TYPE_TRAITS )

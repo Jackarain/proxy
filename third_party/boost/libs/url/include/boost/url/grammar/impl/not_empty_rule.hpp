@@ -17,6 +17,7 @@ namespace boost {
 namespace urls {
 namespace grammar {
 
+namespace implementation_defined {
 template<class R>
 auto
 not_empty_rule_t<R>::
@@ -46,6 +47,7 @@ parse(
     }
     // value
     return rv;
+}
 }
 
 } // grammar

@@ -11,7 +11,7 @@
 
 #include "boost/core/lightweight_test.hpp"
 #include "boost/optional/detail/optional_config.hpp"
-#include "boost/predef.h"
+//#include "boost/predef.h"
 #include <string>
 
 int main()
@@ -19,13 +19,13 @@ int main()
 #if defined(__GNUC__)
 
   std::string emptys;
-  
+
 #ifdef BOOST_INTEL_CXX_VERSION
   BOOST_TEST_EQ(emptys, "HAS INTEL INSIDE");
 #else
   BOOST_TEST_EQ(emptys, "NO INTEL INSIDE");
 #endif
-  
+
 #if !defined BOOST_NO_CXX11_RVALUE_REFERENCES
   BOOST_TEST_EQ(emptys, "HAS RVALUE REFS");
 #else

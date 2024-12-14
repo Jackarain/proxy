@@ -2,6 +2,13 @@
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
 
+if(NOT DEFINED CMAKE_CXX_COMPILER_VERSION)
+
+  message(SEND_ERROR "Boost requires C++, but no C++ compiler is configured; add LANGUAGES CXX to your project() declaration")
+  return()
+
+endif()
+
 string(REGEX MATCHALL "[0-9]+" _BOOST_COMPILER_VERSION ${CMAKE_CXX_COMPILER_VERSION})
 
 list(GET _BOOST_COMPILER_VERSION 0 _BOOST_COMPILER_VERSION_MAJOR)

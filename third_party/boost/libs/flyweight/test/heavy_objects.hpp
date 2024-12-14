@@ -1,6 +1,6 @@
 /* Classes for Boost.Flyweight key-value tests.
  *
- * Copyright 2006-2014 Joaquin M Lopez Munoz.
+ * Copyright 2006-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -90,11 +90,17 @@ struct throwing_value_exception{};
 
 struct throwing_value
 {
-  throwing_value():n(0){}
-  throwing_value(const throwing_value&){throw throwing_value_exception();}
+  throwing_value(bool does_throw_=true):n(0),does_throw(does_throw_){}
+
+  throwing_value(const throwing_value& x):n(x.n),does_throw(x.does_throw)
+  {
+    if(does_throw)throw throwing_value_exception();
+  }
+
   throwing_value(int){throw throwing_value_exception();}
 
-  int n;
+  int  n;
+  bool does_throw;
 };
 
 struct from_throwing_value_to_int

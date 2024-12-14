@@ -1,27 +1,31 @@
 # Copyright 2020 Evan Miller
 # Copyright 2020 Matt Borland
 # Copyright 2021 John Maddock
+# Copyright René Ferdinand Rivera Morell 2024
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
 
 name: CI
 on:
+  pull_request:
   push:
     branches:
       - master
       - develop
-  pull_request:
-  release:
-    types: [published, created, edited]
+      - feature/**
+      - modular
 jobs:
   ubuntu-jammy:
-    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ g++-12 ]
+        include:
+          - compiler: g++-12
+            toolset: gcc
+            os: ubuntu-latest
+    runs-on: ${{matrix.os}}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@main
         with:
           fetch-depth: '0'
       - uses: mstachniuk/ci-skip@v1
@@ -29,19 +33,24 @@ jobs:
           commit-filter: '[skip ci];[ci skip];[CI SKIP];[SKIP CI];***CI SKIP***;***SKIP CI***;[windows];[Windows];[WINDOWS];[apple];[Apple];[APPLE]'
           commit-filter-separator: ';'
           fail-fast: true
-      - name: Set TOOLSET
-        run: echo ${{ matrix.compiler }} | awk '/^g/ { print "TOOLSET=gcc" } /^clang/ { print "TOOLSET=clang" }' >> $GITHUB_ENV
       - name: Add repository
         run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
       - name: Install packages
         run: sudo apt install g++-12 git xsltproc docbook-xsl docbook-xml
       - name: Checkout main boost
-        run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
+        run: |
+          BOOST_GIT=https://github.com/${GITHUB_REPOSITORY/bcp/boost}.git
+          BOOST_BRANCH=develop && ( test "${GITHUB_REF_NAME}" == "master" || test "${GITHUB_REF_NAME}" == "modular" ) && BOOST_BRANCH=${GITHUB_REF_NAME} || true
+          echo "BOOST_GIT: ${BOOST_GIT}"
+          echo "BRANCH/TAG: ${BOOST_BRANCH}"
+          git clone -b "${BOOST_BRANCH}" --depth 1 "${BOOST_GIT}" '../boost-root'
       - name: Update tools/boostdep
         run: git submodule update --init
         working-directory: ../boost-root
       - name: Copy files
-        run: cp -r $GITHUB_WORKSPACE/* tools/bcp
+        run: |
+          rm -rf tools/bcp/*
+          cp -rv $GITHUB_WORKSPACE/* tools/bcp
         working-directory: ../boost-root
       - name: Bootstrap
         run: ./bootstrap.sh
@@ -50,7 +59,7 @@ jobs:
         run: ./b2 headers
         working-directory: ../boost-root
       - name: Generate user config
-        run: 'echo "using $TOOLSET : : ${{ matrix.compiler }} ;" > ~/user-config.jam'
+        run: 'echo "using ${{ matrix.toolset }} : : ${{ matrix.compiler }} ;" > ~/user-config.jam'
         working-directory: ../boost-root
       - name: Config info
         run: ./b2 libs/config/test//print_config_info

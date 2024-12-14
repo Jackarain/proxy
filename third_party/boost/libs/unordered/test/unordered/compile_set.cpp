@@ -52,19 +52,32 @@ template class instantiate_node_set<test::minimal::assignable const,
 
 #else
 
-#define INSTANTIATE(type)                                                      \
-  template class boost::unordered::detail::instantiate_##type
+template <typename T, typename H, typename P, typename A> class instantiate_set
+{
+  typedef boost::unordered_set<T, H, P, A> container;
+  container x;
+  typename container::node_type node_type;
+  typename container::insert_return_type insert_return_type;
+};
 
-INSTANTIATE(set)<int, boost::hash<int>, std::equal_to<int>,
-  test::minimal::allocator<int> >;
-INSTANTIATE(multiset)<int const, boost::hash<int>, std::equal_to<int>,
-  test::minimal::allocator<int> >;
+template <typename T, typename H, typename P, typename A>
+class instantiate_multiset
+{
+  typedef boost::unordered_multiset<T, H, P, A> container;
+  container x;
+  typename container::node_type node_type;
+};
 
-INSTANTIATE(set)<test::minimal::assignable const,
+template class instantiate_set<int, boost::hash<int>, std::equal_to<int>,
+  test::minimal::allocator<int> >;
+template class instantiate_multiset<int const, boost::hash<int>,
+  std::equal_to<int>, test::minimal::allocator<int> >;
+
+template class instantiate_set<test::minimal::assignable const,
   test::minimal::hash<test::minimal::assignable>,
   test::minimal::equal_to<test::minimal::assignable>,
   test::minimal::allocator<int> >;
-INSTANTIATE(multiset)<test::minimal::assignable,
+template class instantiate_multiset<test::minimal::assignable,
   test::minimal::hash<test::minimal::assignable>,
   test::minimal::equal_to<test::minimal::assignable>,
   test::minimal::allocator<int> >;

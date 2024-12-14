@@ -43,7 +43,8 @@ boost::unordered_node_map
 boost::unordered_flat_map
 
 ^.^h|*Concurrent*
-^|
+^| `boost::concurrent_node_set` +
+`boost::concurrent_node_map`
 ^| `boost::concurrent_flat_set` +
 `boost::concurrent_flat_map`
 
@@ -59,6 +60,7 @@ There are two variants: **flat** (the fastest) and **node-based**, which
 provide pointer stability under rehashing at the expense of being slower.
 * Finally, **concurrent containers** are designed and implemented to be used in high-performance
 multithreaded scenarios. Their interface is radically different from that of regular C++ containers.
+Flat and node-based variants are provided.
 
 All sets and maps in Boost.Unordered are instantiatied similarly as
 `std::unordered_set` and `std::unordered_map`, respectively:
@@ -72,8 +74,8 @@ namespace boost {
         class Pred = std::equal_to<Key>,
         class Alloc = std::allocator<Key> >
     class unordered_set; 
-    // same for unordered_multiset, unordered_flat_set, unordered_node_set
-    // and concurrent_flat_set
+    // same for unordered_multiset, unordered_flat_set, unordered_node_set,
+    // concurrent_flat_set and concurrent_node_set
 
     template <
         class Key, class Mapped,
@@ -81,8 +83,8 @@ namespace boost {
         class Pred = std::equal_to<Key>,
         class Alloc = std::allocator<std::pair<Key const, Mapped> > >
     class unordered_map;
-    // same for unordered_multimap, unordered_flat_map, unordered_node_map
-    // and concurrent_flat_map
+    // same for unordered_multimap, unordered_flat_map, unordered_node_map,
+    // concurrent_flat_map and concurrent_node_map
 }
 ----
 

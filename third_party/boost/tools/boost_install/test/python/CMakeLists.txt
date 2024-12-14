@@ -48,6 +48,6 @@ target_link_libraries(main Boost::${component} ${PYTHON_LIBRARIES})
 target_include_directories(main PRIVATE ${PYTHON_INCLUDE_DIRS})
 
 enable_testing()
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>)
+add_custom_target(check VERBATIM COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --no-tests=error -C $<CONFIG>)
 
 add_test(main main)

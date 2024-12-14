@@ -5,19 +5,19 @@
 
 import os ;
 import modules ;
-import path ; 
+import path ;
 
 project
     : requirements
+      <library>/boost/odeint//boost_odeint
       <define>BOOST_ALL_NO_LIB=1
-      <include>../../../..
-      <cxxflags>-std=c++11
+      <cxxstd>11
       <toolset>gcc:<cxxflags>-ffast-math
       <toolset>intel:<cxxflags>"-fast -inline-forceinline"
     : default-build release
     ;
-    
-    
+
+
 lib libgsl : : <name>gsl ;
 lib libgslcblas : : <name>gslcblas ;
 
@@ -29,4 +29,5 @@ lib libpthread : : <name>pthread ;
 
 exe odeint_rk4_array
     : odeint_rk4_array.cpp
+      /boost/timer//boost_timer
     ;

@@ -3,9 +3,12 @@
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
-import ../../config/checks/config : requires ;
+require-b2 5.0.1 ;
+import-search /boost/config/checks ;
 
-project boost/charconv ;
+import config : requires ;
+
+project : common-requirements <library>$(boost_dependencies) ;
 
 local SOURCES = from_chars.cpp to_chars.cpp ;
 
@@ -28,6 +31,5 @@ lib boost_charconv
 
   # usage-requirements
   : <link>shared:<define>BOOST_CHARCONV_DYN_LINK=1
+    <define>BOOST_CHARCONV_NO_LIB=1
 ;
-
-boost-install boost_charconv ;

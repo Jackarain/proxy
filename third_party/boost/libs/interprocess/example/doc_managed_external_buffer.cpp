@@ -11,7 +11,7 @@
 //[doc_managed_external_buffer
 #include <boost/interprocess/managed_external_buffer.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
-#include <boost/interprocess/containers/list.hpp>
+#include <boost/container/list.hpp>
 #include <cstring>
 #include <boost/aligned_storage.hpp>
 
@@ -38,7 +38,7 @@ int main()
       allocator_t;
 
    //Alias a STL compatible list to be constructed in the static buffer
-   typedef list<int, allocator_t>    MyBufferList;
+   typedef boost::container::list<int, allocator_t>    MyBufferList;
 
    //The list must be initialized with the allocator
    //All objects created with objects_in_static_memory will

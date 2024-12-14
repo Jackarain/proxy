@@ -4,11 +4,21 @@
 
 import testing ;
 
+project : requirements
+    <library>/boost/crc//boost_crc
+    <library>/boost/core//boost_core
+    ;
+
 run crc_test.cpp
-  /boost//timer ;
-run crc_test2.cpp ;
+  /boost/integer//boost_integer /boost/timer//boost_timer ;
+
+run crc_test2.cpp
+  /boost/integer//boost_integer ;
 
 run pr15_test.cpp ;
 compile issue25_test.cpp ;
+
+run uint_t_test.cpp
+  /boost/integer//boost_integer ;
 
 run quick.cpp ;

@@ -1,0 +1,88 @@
+name: Fedora
+
+on:
+    push:
+      branches: [ master, develop ]
+    pull_request:
+      branches: [ master, develop ]
+
+env:
+  BUILD_TYPE: Debug
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        # this doesn't support specific gcc versions yet
+        cxx: [gcc, clang-15, clang-16, clang-17, clang-18]
+        cxx_std: [17, 20, 23]
+        # older clang versions have insufficient concepts support for
+        # libstdc++' ranges implementation
+        exclude:
+          - cxx: clang-15
+            cxx_std: 20
+          - cxx: clang-15
+            cxx_std: 23
+          - cxx: clang-16
+            cxx_std: 23
+    runs-on: ubuntu-latest
+    container: docker.io/library/fedora:latest
+
+    steps:
+      - name: Install Dependencies
+        run: |
+          case "${{ matrix.cxx }}" in
+            gcc)
+              dnf install -y gcc-c++
+              ;;
+            clang-16)
+              # the llvm-compat-packages copr lacks clang-16 for some reason
+              dnf install -y 'dnf-command(copr)'
+              dnf copr enable -y @fedora-llvm-team/llvm16
+              dnf install -y 'clang-16*'
+              ;;
+            clang-*)
+              VERSION="$(echo "${{ matrix.cxx }}" | sed 's/clang-//')"
+              AVAILABLE_VERSION="$(dnf --showduplicates --quiet list clang.x86_64 | awk '{print $2}' | grep "${VERSION}" | sort --version-sort | tail -n 1)"
+              if [[ "$AVAILABLE_VERSION" ]]; then
+                # use the main repo version if available, because installing
+                # the same version from copr may cause library conflicts
+                dnf install -y clang
+              else
+                # official repo from the Fedora llvm team
+                # https://copr.fedorainfracloud.org/groups/g/fedora-llvm-team/coprs/
+                dnf install -y 'dnf-command(copr)'
+                dnf copr enable -y @fedora-llvm-team/llvm-compat-packages
+                dnf install -y "$(echo "${{ matrix.cxx }}" | sed 's/-//')"
+              fi
+              ;;
+          esac
+
+          dnf install -y cmake git
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: |
+          case "${{ matrix.cxx }}" in
+            gcc)
+              export CC=gcc
+              export CXX=g++
+              ;;
+            clang-*)
+              export CC="${{ matrix.cxx }}"
+              export CXX="$(echo "${{ matrix.cxx }}" | sed 's/clang/clang++/')"
+              ;;
+          esac
+
+          mkdir build
+          cd build
+          cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER="${CC}" -DCMAKE_CXX_COMPILER="${CXX}" -DCXX_STD=${{ matrix.cxx_std }}
+
+      - name: Build
+        run: cd build ; make -j4
+
+      - name: Test
+        run: cd build ; make check

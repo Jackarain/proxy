@@ -108,11 +108,26 @@ class BOOST_URL_DECL
     url_view_base& operator=(
         url_view_base const&) = delete;
 
-#ifndef BOOST_URL_DOCS
-public:
-#endif
+protected:
+    /** Calculate a hash of the url
+
+        This function calculates a hash of the
+        url as if it were always normalized.
+
+        @par Complexity
+        Linear in `this->size()`.
+
+        @par Exception Safety
+        Throws nothing.
+
+        @param salt An initial value to add to
+        the hash
+
+        @return A hash value suitable for use
+        in hash-based containers.
+    */
     std::size_t
-    digest(std::size_t = 0) const noexcept;
+    digest(std::size_t salt = 0) const noexcept;
 
 public:
     //--------------------------------------------
@@ -2378,24 +2393,7 @@ public:
         a.normalize();
         url b(u1);
         b.normalize();
-        return std::make_tuple(
-                   a.scheme(),
-                   a.user(),
-                   a.password(),
-                   a.host(),
-                   a.port(),
-                   a.path(),
-                   a.query(),
-                   a.fragment()) ==
-               std::make_tuple(
-                   b.scheme(),
-                   b.user(),
-                   b.password(),
-                   b.host(),
-                   b.port(),
-                   b.path(),
-                   b.query(),
-                   b.fragment());
+        return a.buffer() == b.buffer();
         @endcode
 
         @par Complexity
@@ -2438,24 +2436,7 @@ public:
         a.normalize();
         url b(u1);
         b.normalize();
-        return std::make_tuple(
-                   a.scheme(),
-                   a.user(),
-                   a.password(),
-                   a.host(),
-                   a.port(),
-                   a.path(),
-                   a.query(),
-                   a.fragment()) !=
-               std::make_tuple(
-                   b.scheme(),
-                   b.user(),
-                   b.password(),
-                   b.host(),
-                   b.port(),
-                   b.path(),
-                   b.query(),
-                   b.fragment());
+        return a.buffer() != b.buffer();
         @endcode
 
         @par Complexity
@@ -2498,24 +2479,7 @@ public:
         a.normalize();
         url b(u1);
         b.normalize();
-        return std::make_tuple(
-                   a.scheme(),
-                   a.user(),
-                   a.password(),
-                   a.host(),
-                   a.port(),
-                   a.path(),
-                   a.query(),
-                   a.fragment()) <
-               std::make_tuple(
-                   b.scheme(),
-                   b.user(),
-                   b.password(),
-                   b.host(),
-                   b.port(),
-                   b.path(),
-                   b.query(),
-                   b.fragment());
+        return a.buffer() < b.buffer();
         @endcode
 
         @par Complexity
@@ -2558,24 +2522,7 @@ public:
         a.normalize();
         url b(u1);
         b.normalize();
-        return std::make_tuple(
-                   a.scheme(),
-                   a.user(),
-                   a.password(),
-                   a.host(),
-                   a.port(),
-                   a.path(),
-                   a.query(),
-                   a.fragment()) <=
-               std::make_tuple(
-                   b.scheme(),
-                   b.user(),
-                   b.password(),
-                   b.host(),
-                   b.port(),
-                   b.path(),
-                   b.query(),
-                   b.fragment());
+        return a.buffer() <= b.buffer();
         @endcode
 
         @par Complexity
@@ -2618,24 +2565,7 @@ public:
         a.normalize();
         url b(u1);
         b.normalize();
-        return std::make_tuple(
-                   a.scheme(),
-                   a.user(),
-                   a.password(),
-                   a.host(),
-                   a.port(),
-                   a.path(),
-                   a.query(),
-                   a.fragment()) >
-               std::make_tuple(
-                   b.scheme(),
-                   b.user(),
-                   b.password(),
-                   b.host(),
-                   b.port(),
-                   b.path(),
-                   b.query(),
-                   b.fragment());
+        return a.buffer() > b.buffer();
         @endcode
 
         @par Complexity
@@ -2678,24 +2608,7 @@ public:
         a.normalize();
         url b(u1);
         b.normalize();
-        return std::make_tuple(
-                   a.scheme(),
-                   a.user(),
-                   a.password(),
-                   a.host(),
-                   a.port(),
-                   a.path(),
-                   a.query(),
-                   a.fragment()) >=
-               std::make_tuple(
-                   b.scheme(),
-                   b.user(),
-                   b.password(),
-                   b.host(),
-                   b.port(),
-                   b.path(),
-                   b.query(),
-                   b.fragment());
+        return a.buffer() >= b.buffer();
         @endcode
 
         @par Complexity
@@ -2719,6 +2632,38 @@ public:
         return u0.compare(u1) >= 0;
     }
 
+    /** Format the url to the output stream
+
+        This function serializes the url to
+        the specified output stream. Any
+        percent-escapes are emitted as-is;
+        no decoding is performed.
+
+        @par Example
+        @code
+        url_view u( "http://www.example.com/index.htm" );
+        std::stringstream ss;
+        ss << u;
+        assert( ss.str() == "http://www.example.com/index.htm" );
+        @endcode
+
+        @par Effects
+        @code
+        return os << u.buffer();
+        @endcode
+
+        @par Complexity
+        Linear in `u.buffer().size()`
+
+        @par Exception Safety
+        Basic guarantee.
+
+        @return A reference to the output stream, for chaining
+
+        @param os The output stream to write to.
+
+        @param u The url to write.
+    */
     friend
     std::ostream&
     operator<<(

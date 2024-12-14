@@ -64,6 +64,11 @@ jobs:
             os: ubuntu-latest
             container: ubuntu:23.04
             install: g++-13
+          - toolset: gcc-14
+            cxxstd: "03,11,14,17,20,2b"
+            os: ubuntu-latest
+            container: ubuntu:24.04
+            install: g++-14
           - toolset: clang
             compiler: clang++-3.9
             cxxstd: "03,11,14"
@@ -117,45 +122,48 @@ jobs:
           - toolset: clang
             compiler: clang++-13
             cxxstd: "03,11,14,17,20,2b"
-            os: ubuntu-latest
             container: ubuntu:22.04
+            os: ubuntu-latest
             install: clang-13
           - toolset: clang
             compiler: clang++-14
             cxxstd: "03,11,14,17,20,2b"
-            os: ubuntu-latest
             container: ubuntu:22.04
+            os: ubuntu-latest
             install: clang-14
           - toolset: clang
             compiler: clang++-15
             cxxstd: "03,11,14,17,20,2b"
-            os: ubuntu-latest
             container: ubuntu:22.04
+            os: ubuntu-latest
             install: clang-15
           - toolset: clang
             compiler: clang++-16
             cxxstd: "03,11,14,17,20,2b"
-            os: ubuntu-latest
             container: ubuntu:23.04
+            os: ubuntu-latest
             install: clang-16
           - toolset: clang
             compiler: clang++-17
             cxxstd: "03,11,14,17,20,2b"
-            os: ubuntu-latest
             container: ubuntu:23.10
+            os: ubuntu-latest
             install: clang-17
           - toolset: clang
-            cxxstd: "03,11,14,17,2a"
-            os: macos-11
-          - toolset: clang
+            compiler: clang++-18
             cxxstd: "03,11,14,17,20,2b"
-            os: macos-12
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-18
           - toolset: clang
             cxxstd: "03,11,14,17,20,2b"
             os: macos-13
           - toolset: clang
             cxxstd: "03,11,14,17,20,2b"
             os: macos-14
+          - toolset: clang
+            cxxstd: "03,11,14,17,20,2b"
+            os: macos-15
 
     runs-on: ${{matrix.os}}
     container: ${{matrix.container}}
@@ -165,6 +173,10 @@ jobs:
         shell: bash
 
     steps:
+      - name: Enable Node 16
+        run: |
+          echo "ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true" >> $GITHUB_ENV
+
       - uses: actions/checkout@v3
 
       - name: Setup container environment
@@ -237,7 +249,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd
@@ -274,14 +286,15 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
-          - os: macos-12
+          - os: ubuntu-24.04
           - os: macos-13
+          - os: macos-14
+          - os: macos-15
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -322,14 +335,15 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
-          - os: macos-12
+          - os: ubuntu-24.04
           - os: macos-13
+          - os: macos-14
+          - os: macos-15
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -380,14 +394,15 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
-          - os: macos-12
+          - os: ubuntu-24.04
           - os: macos-13
+          - os: macos-14
+          - os: macos-15
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -436,14 +451,15 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
-          - os: macos-12
+          - os: ubuntu-24.04
           - os: macos-13
+          - os: macos-14
+          - os: macos-15
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -464,14 +480,15 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
-          - os: macos-12
+          - os: ubuntu-24.04
           - os: macos-13
+          - os: macos-14
+          - os: macos-15
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -501,14 +518,15 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-11
-          - os: macos-12
+          - os: ubuntu-24.04
           - os: macos-13
+          - os: macos-14
+          - os: macos-15
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -533,8 +551,8 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: Jimver/cuda-toolkit@v0.2.10
+      - uses: actions/checkout@v4
+      - uses: Jimver/cuda-toolkit@v0.2.16
         with:
           cuda: '11.7.1'
           linux-local-args: '["--toolkit"]'
@@ -568,8 +586,8 @@ jobs:
     runs-on: windows-2019
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: Jimver/cuda-toolkit@v0.2.10
+      - uses: actions/checkout@v4
+      - uses: Jimver/cuda-toolkit@v0.2.16
       - uses: ilammy/msvc-dev-cmd@v1
 
       - name: Setup Boost
@@ -599,7 +617,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd
@@ -648,7 +666,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd
@@ -715,7 +733,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd

@@ -136,6 +136,43 @@ public:
     operator fs::path() const { return m_path; }
 };
 
+//! Test type to verify that the conversion to path is preferred (https://github.com/boostorg/filesystem/issues/326)
+class convertible_to_path_and_strings
+{
+private:
+    fs::path m_path;
+
+public:
+    convertible_to_path_and_strings() {}
+    convertible_to_path_and_strings(convertible_to_path_and_strings const& that) : m_path(that.m_path) {}
+    template< typename T >
+    convertible_to_path_and_strings(T const& that) : m_path(that) {}
+
+    convertible_to_path_and_strings& operator= (convertible_to_path_and_strings const& that)
+    {
+        m_path = that.m_path;
+        return *this;
+    }
+    template< typename T >
+    convertible_to_path_and_strings& operator= (T const& that)
+    {
+        m_path = that;
+        return *this;
+    }
+
+    operator fs::path() const { return m_path; }
+    operator const fs::path::value_type*() const
+    {
+#if defined(BOOST_WINDOWS_API)
+        return L"[invalid path]";
+#else
+        return "[invalid path]";
+#endif
+    }
+    operator fs::path::string_type() const { return fs::path::string_type(static_cast< const fs::path::value_type* >(*this)); }
+};
+
+
 template< typename Char >
 class basic_custom_string
 {
@@ -2188,6 +2225,7 @@ void construction_tests()
 
     PATH_TEST_EQ(derived_from_path("foo"), "foo");
     PATH_TEST_EQ(convertible_to_path("foo"), "foo");
+    PATH_TEST_EQ(convertible_to_path_and_strings("foo"), "foo");
     PATH_TEST_EQ(fs::path(pcustom_string("foo")), "foo");
     PATH_TEST_EQ(boost::string_view("foo"), "foo");
 #if !defined(BOOST_NO_CXX17_HDR_STRING_VIEW)
@@ -2204,9 +2242,9 @@ void construction_tests()
 
 #if !defined(BOOST_NO_CXX17_HDR_STRING_VIEW)
 #define APPEND_TEST_STD_STRING_VIEW(appnd, expected)\
-        path p6(p);\
-        p6 /= std::string_view(appnd);\
-        PATH_TEST_EQ(p6, expected);
+        path p7(p);\
+        p7 /= std::string_view(appnd);\
+        PATH_TEST_EQ(p7, expected);
 #else
 #define APPEND_TEST_STD_STRING_VIEW(appnd, expected)
 #endif
@@ -2229,15 +2267,18 @@ void construction_tests()
         p3 /= convertible_to_path(appnd);\
         PATH_TEST_EQ(p3, expected);\
         path p4(p);\
-        p4 /= pcustom_string(appnd);\
+        p4 /= convertible_to_path_and_strings(appnd);\
         PATH_TEST_EQ(p4, expected);\
         path p5(p);\
-        p5 /= boost::string_view(appnd);\
+        p5 /= pcustom_string(appnd);\
         PATH_TEST_EQ(p5, expected);\
+        path p6(p);\
+        p6 /= boost::string_view(appnd);\
+        PATH_TEST_EQ(p6, expected);\
         APPEND_TEST_STD_STRING_VIEW(appnd, expected)\
-        path p7(p);\
-        p7.append(s.begin(), s.end());\
-        PATH_TEST_EQ(p7.string(), expected);\
+        path p8(p);\
+        p8.append(s.begin(), s.end());\
+        PATH_TEST_EQ(p8.string(), expected);\
     }
 
 void append_tests()
@@ -2350,9 +2391,9 @@ void append_tests()
 
 #if !defined(BOOST_NO_CXX17_HDR_STRING_VIEW)
 #define CONCAT_TEST_STD_STRING_VIEW(appnd, expected)\
-        path p9(p);\
-        p9 += std::string_view(appnd);\
-        PATH_TEST_EQ(p9, expected);
+        path p10(p);\
+        p10 += std::string_view(appnd);\
+        PATH_TEST_EQ(p10, expected);
 #else
 #define CONCAT_TEST_STD_STRING_VIEW(appnd, expected)
 #endif
@@ -2380,15 +2421,18 @@ void append_tests()
         p6 += convertible_to_path(appnd);\
         PATH_TEST_EQ(p6, expected);\
         path p7(p);\
-        p7 += pcustom_string(appnd);\
+        p7 += convertible_to_path_and_strings(appnd);\
         PATH_TEST_EQ(p7, expected);\
         path p8(p);\
-        p8 += boost::string_view(appnd);\
+        p8 += pcustom_string(appnd);\
         PATH_TEST_EQ(p8, expected);\
+        path p9(p);\
+        p9 += boost::string_view(appnd);\
+        PATH_TEST_EQ(p9, expected);\
         CONCAT_TEST_STD_STRING_VIEW(appnd, expected)\
-        path p10(p);\
-        p10.concat(s.begin(), s.end());\
-        PATH_TEST_EQ(p10.string(), expected);\
+        path p11(p);\
+        p11.concat(s.begin(), s.end());\
+        PATH_TEST_EQ(p11.string(), expected);\
     }
 
 void concat_tests()

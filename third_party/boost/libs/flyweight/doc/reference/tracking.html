@@ -72,7 +72,7 @@ helper associated to a <a href="factories.html#factory">factory</a> type
 is a value of
 <code>Factory::handle_type</code> associated to a <code>Factory</code> <code>f</code>
 and <code>check</code> is a value of
-a <a href="https://boost.org/sgi/stl/Predicate.html"><code>Predicate</code></a>
+a <a href="https://en.cppreference.com/w/cpp/named_req/Predicate"><code>Predicate</code></a>
 type <code>Checker</code> with argument of type <code>Factory::handle_type</code>.
 </p>
 
@@ -131,9 +131,9 @@ A type <code>Tracking</code> is a tracking policy if:
     <a href="../../../mpl/doc/refmanual/lambda-expression.html"><code>MPL Lambda
     Expression</code></a> that resolves, when invoked with different types 
     (<code>Value</code>,<code>Key</code>) such that <code>Value</code> is
-    <a href="https://boost.org/sgi/stl/Assignable.html"><code>Assignable</code></a>
-    and implicitly convertible to <code>const Key&amp;</code>, to an
-    <a href="https://boost.org/sgi/stl/Assignable.html"><code>Assignable</code></a>
+    <a href="https://en.cppreference.com/w/cpp/named_req/MoveConstructible"><code>MoveConstructible</code></a>
+    and implicitly convertible to <code>const Key&amp;</code>, to a
+    <a href="https://en.cppreference.com/w/cpp/named_req/MoveConstructible"><code>MoveConstructible</code></a>
     type <code>Entry</code> implicitly convertible to both <code>const Value&amp;</code>
     and <code>const Key&amp;</code>.
   </li>
@@ -143,10 +143,12 @@ A type <code>Tracking</code> is a tracking policy if:
     Expression</code></a>; this expression, when invoked with types
     (<code>InternalHandle</code>,<a href="#preliminary"><code>TrackingHelper</code></a>),
     with <code>InternalHandle</code> being 
-    <a href="https://boost.org/sgi/stl/Assignable.html"><code>Assignable</code></a>
+    <a href="https://en.cppreference.com/w/cpp/named_req/CopyConstructible"><code>CopyConstructible</code></a>
+    and <a href="https://en.cppreference.com/w/cpp/named_req/CopyAssignable"><code>CopyAssignable</code></a>
     and providing the nothrow guarantee for copy and assignment,
-    resolves to an
-    <a href="https://boost.org/sgi/stl/Assignable.html"><code>Assignable</code></a>
+    resolves to a
+    <a href="https://en.cppreference.com/w/cpp/named_req/CopyConstructible"><code>CopyConstructible</code></a>
+    and <a href="https://en.cppreference.com/w/cpp/named_req/CopyAssignable"><code>CopyAssignable</code></a>
     type <code>Handle</code> which also provides the nothrow guarantee for
     copy and assignment and is constructible from and implicitly
     convertible to <code>InternalHandle</code>. 
@@ -278,9 +280,9 @@ Performance
 
 <br>
 
-<p>Revised April 24th 2019</p>
+<p>Revised September 27th 2024</p>
 
-<p>&copy; Copyright 2006-2019 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
+<p>&copy; Copyright 2006-2024 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
 Distributed under the Boost Software 
 License, Version 1.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">
 LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">

@@ -17,7 +17,6 @@ target_link_libraries(boost_lexical_cast
     Boost::config
     Boost::container
     Boost::core
-    Boost::integer
     Boost::throw_exception
     Boost::type_traits
 )

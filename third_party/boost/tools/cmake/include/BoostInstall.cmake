@@ -167,7 +167,7 @@ function(__boost_install_set_output_name LIB TYPE VERSION)
 
     else()
 
-      if(CMAKE_SYSTEM_PROCESSOR MATCHES "(i[3-6]86|amd64)")
+      if(CMAKE_SYSTEM_PROCESSOR MATCHES "(i[3-6]86|amd64|AMD64)")
         set(arch "x")
       else()
         string(SUBSTRING "${CMAKE_SYSTEM_PROCESSOR}" 0 1 arch)
@@ -383,6 +383,7 @@ function(boost_install_target)
       elseif(dep STREQUAL "MPI::MPI_CXX")
 
         # COMPONENTS requires 3.9, but the imported target also requires 3.9
+        string(APPEND CONFIG_FILE_CONTENTS "set(MPI_CXX_SKIP_MPICXX ON)\n")
         string(APPEND CONFIG_FILE_CONTENTS "find_dependency(MPI COMPONENTS CXX)\n")
 
       elseif(dep STREQUAL "Iconv::Iconv")

@@ -29,8 +29,8 @@ class read_reset_connection_response_algo
     std::uint8_t seqnum_{0};
 
 public:
-    read_reset_connection_response_algo(diagnostics* diag, std::uint8_t seqnum) noexcept
-        : diag_(diag), seqnum_(seqnum)
+    read_reset_connection_response_algo(diagnostics& diag, std::uint8_t seqnum) noexcept
+        : diag_(&diag), seqnum_(seqnum)
     {
     }
 
@@ -56,26 +56,22 @@ public:
             }
 
             // Done
-            return ec;
         }
 
-        return next_action();
+        return ec;
     }
 };
 
-inline run_pipeline_algo_params setup_reset_connection_pipeline(
-    connection_state_data& st,
-    reset_connection_algo_params params
-)
+inline run_pipeline_algo_params setup_reset_connection_pipeline(connection_state_data& st)
 {
+    // reset_connection request is fixed size and small, so we don't enforce any buffer limit
     st.write_buffer.clear();
     st.shared_pipeline_stages[0] = {
         pipeline_stage_kind::reset_connection,
-        serialize_top_level(reset_connection_command{}, st.write_buffer),
+        serialize_top_level_checked(reset_connection_command{}, st.write_buffer),
         {}
     };
     return {
-        params.diag,
         st.write_buffer,
         {st.shared_pipeline_stages.data(), 1},
         nullptr

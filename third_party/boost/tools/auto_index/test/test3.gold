@@ -26,7 +26,7 @@ to ensure complete testing.
     A printer-friendly <ulink url="http://svn.boost.org/svn/boost/sandbox/pdf/type_traits/release/type_traits.pdf">PDF
     version of this manual is also available</ulink>.
   </para>
-  <section id="boost_typetraits.intro">
+  <section id="boost_typetraits.intro"><indexterm type="test_index_1"><primary>type-traits</primary><secondary>Introduction</secondary></indexterm><indexterm><primary>Introduction</primary><secondary>type-traits</secondary></indexterm><indexterm type="test_index_1"><primary>type-traits</primary><secondary>Introduction</secondary></indexterm><indexterm><primary>Introduction</primary><secondary>type-traits</secondary></indexterm><indexterm type="test_index_1"><primary>type-traits</primary><secondary>Introduction</secondary></indexterm><indexterm><primary>Introduction</primary><secondary>type-traits</secondary></indexterm>
     <title><link linkend="boost_typetraits.intro"> Introduction</link></title>
     <para>
       The Boost type-traits library contains a set of very specific traits classes,
@@ -48,7 +48,7 @@ to ensure complete testing.
       that is the result of the transformation.
     </para>
   </section>
-  <section id="boost_typetraits.background">
+  <section id="boost_typetraits.background"><indexterm type="test_index_2"><primary>type-traits</primary><secondary>Background and Tutorial</secondary></indexterm><indexterm><primary>Background and Tutorial</primary><secondary>type-traits</secondary></indexterm><indexterm type="test_index_2"><primary>type-traits</primary><secondary>Background and Tutorial</secondary></indexterm><indexterm><primary>Background and Tutorial</primary><secondary>type-traits</secondary></indexterm><indexterm type="class_name"><primary>remove_extent</primary><secondary>Background and Tutorial</secondary></indexterm><indexterm><primary>Background and Tutorial</primary><secondary>remove_extent</secondary></indexterm><indexterm type="class_name"><primary>is_pointer</primary><secondary>Background and Tutorial</secondary></indexterm><indexterm><primary>Background and Tutorial</primary><secondary>is_pointer</secondary></indexterm><indexterm type="class_name"><primary>is_void</primary><secondary>Background and Tutorial</secondary></indexterm><indexterm><primary>Background and Tutorial</primary><secondary>is_void</secondary></indexterm><indexterm type="test_index_2"><primary>type-traits</primary><secondary>Background and Tutorial</secondary></indexterm><indexterm><primary>Background and Tutorial</primary><secondary>type-traits</secondary></indexterm><indexterm type="test_index_2"><primary>type-traits</primary><secondary>Background and Tutorial</secondary></indexterm><indexterm><primary>Background and Tutorial</primary><secondary>type-traits</secondary></indexterm><indexterm type="test_index_2"><primary>type-traits</primary><secondary>Background and Tutorial</secondary></indexterm><indexterm><primary>Background and Tutorial</primary><secondary>type-traits</secondary></indexterm>
     <title><link linkend="boost_typetraits.background"> Background and Tutorial</link></title>
     <para>
       The following is an updated version of the article "C++ Type traits"
@@ -880,7 +880,7 @@ to ensure complete testing.
 </programlisting>
       </section>
     </section>
-    <section id="boost_typetraits.category.transform">
+    <section id="boost_typetraits.category.transform"><indexterm type="macro_name"><primary>BOOST_BROKEN_COMPILER_TYPE_TRAITS_SPECIALIZATION</primary><secondary>Type Traits that Transform One Type to Another</secondary></indexterm><indexterm><primary>Type Traits that Transform One Type to Another</primary><secondary>BOOST_BROKEN_COMPILER_TYPE_TRAITS_SPECIALIZATION</secondary></indexterm><indexterm type="macro_name"><primary>BOOST_BROKEN_COMPILER_TYPE_TRAITS_SPECIALIZATION</primary><secondary>Type Traits that Transform One Type to Another</secondary></indexterm><indexterm><primary>Type Traits that Transform One Type to Another</primary><secondary>BOOST_BROKEN_COMPILER_TYPE_TRAITS_SPECIALIZATION</secondary></indexterm>
       <title><link linkend="boost_typetraits.category.transform"> Type Traits that
       Transform One Type to Another</link></title>
       <para>
@@ -1044,7 +1044,7 @@ to ensure complete testing.
 </programlisting>
     </section>
   </section>
-  <section id="boost_typetraits.user_defined">
+  <section id="boost_typetraits.user_defined"><indexterm type="class_name"><primary>is_union</primary><secondary>User Defined Specializations</secondary></indexterm><indexterm><primary>User Defined Specializations</primary><secondary>is_union</secondary></indexterm><indexterm type="class_name"><primary>is_class</primary><secondary>User Defined Specializations</secondary></indexterm><indexterm><primary>User Defined Specializations</primary><secondary>is_class</secondary></indexterm>
     <title><link linkend="boost_typetraits.user_defined"> User Defined Specializations</link></title>
     <para>
       Occationally the end user may need to provide their own specialization for
@@ -1082,7 +1082,7 @@ to ensure complete testing.
 <phrase role="special">}</phrase>
 </programlisting>
   </section>
-  <section id="boost_typetraits.intrinsics">
+  <section id="boost_typetraits.intrinsics"><indexterm type="macro_name"><primary>BOOST_IS_UNION</primary><secondary>Support for Compiler Intrinsics</secondary></indexterm><indexterm><primary>Support for Compiler Intrinsics</primary><secondary>BOOST_IS_UNION</secondary></indexterm><indexterm type="macro_name"><primary>BOOST_IS_POLYMORPHIC</primary><secondary>Support for Compiler Intrinsics</secondary></indexterm><indexterm><primary>Support for Compiler Intrinsics</primary><secondary>BOOST_IS_POLYMORPHIC</secondary></indexterm><indexterm type="macro_name"><primary>BOOST_IS_POD</primary><secondary>Support for Compiler Intrinsics</secondary></indexterm><indexterm><primary>Support for Compiler Intrinsics</primary><secondary>BOOST_IS_POD</secondary></indexterm><indexterm type="macro_name"><primary>BOOST_IS_ENUM</primary><secondary>Support for Compiler Intrinsics</secondary></indexterm><indexterm><primary>Support for Compiler Intrinsics</primary><secondary>BOOST_IS_ENUM</secondary></indexterm><indexterm type="macro_name"><primary>BOOST_IS_EMPTY</primary><secondary>Support for Compiler Intrinsics</secondary></indexterm><indexterm><primary>Support for Compiler Intrinsics</primary><secondary>BOOST_IS_EMPTY</secondary></indexterm><indexterm type="macro_name"><primary>BOOST_IS_CONVERTIBLE</primary><secondary>Support for Compiler Intrinsics</secondary></indexterm><indexterm><primary>Support for Compiler Intrinsics</primary><secondary>BOOST_IS_CONVERTIBLE</secondary></indexterm><indexterm type="macro_name"><primary>BOOST_IS_CLASS</primary><secondary>Support for Compiler Intrinsics</secondary></indexterm><indexterm><primary>Support for Compiler Intrinsics</primary><secondary>BOOST_IS_CLASS</secondary></indexterm><indexterm type="macro_name"><primary>BOOST_IS_BASE_OF</primary><secondary>Support for Compiler Intrinsics</secondary></indexterm><indexterm><primary>Support for Compiler Intrinsics</primary><secondary>BOOST_IS_BASE_OF</secondary></indexterm><indexterm type="macro_name"><primary>BOOST_IS_ABSTRACT</primary><secondary>Support for Compiler Intrinsics</secondary></indexterm><indexterm><primary>Support for Compiler Intrinsics</primary><secondary>BOOST_IS_ABSTRACT</secondary></indexterm><indexterm type="macro_name"><primary>BOOST_HAS_VIRTUAL_DESTRUCTOR</primary><secondary>Support for Compiler Intrinsics</secondary></indexterm><indexterm><primary>Support for Compiler Intrinsics</primary><secondary>BOOST_HAS_VIRTUAL_DESTRUCTOR</secondary></indexterm><indexterm type="macro_name"><primary>BOOST_HAS_TRIVIAL_DESTRUCTOR</primary><secondary>Support for Compiler Intrinsics</secondary></indexterm><indexterm><primary>Support for Compiler Intrinsics</primary><secondary>BOOST_HAS_TRIVIAL_DESTRUCTOR</secondary></indexterm><indexterm type="macro_name"><primary>BOOST_HAS_TRIVIAL_COPY</primary><secondary>Support for Compiler Intrinsics</secondary></indexterm><indexterm><primary>Support for Compiler Intrinsics</primary><secondary>BOOST_HAS_TRIVIAL_COPY</secondary></indexterm><indexterm type="macro_name"><primary>BOOST_HAS_TRIVIAL_CONSTRUCTOR</primary><secondary>Support for Compiler Intrinsics</secondary></indexterm><indexterm><primary>Support for Compiler Intrinsics</primary><secondary>BOOST_HAS_TRIVIAL_CONSTRUCTOR</secondary></indexterm><indexterm type="macro_name"><primary>BOOST_HAS_TRIVIAL_ASSIGN</primary><secondary>Support for Compiler Intrinsics</secondary></indexterm><indexterm><primary>Support for Compiler Intrinsics</primary><secondary>BOOST_HAS_TRIVIAL_ASSIGN</secondary></indexterm><indexterm type="macro_name"><primary>BOOST_HAS_NOTHROW_COPY</primary><secondary>Support for Compiler Intrinsics</secondary></indexterm><indexterm><primary>Support for Compiler Intrinsics</primary><secondary>BOOST_HAS_NOTHROW_COPY</secondary></indexterm><indexterm type="macro_name"><primary>BOOST_HAS_NOTHROW_CONSTRUCTOR</primary><secondary>Support for Compiler Intrinsics</secondary></indexterm><indexterm><primary>Support for Compiler Intrinsics</primary><secondary>BOOST_HAS_NOTHROW_CONSTRUCTOR</secondary></indexterm><indexterm type="macro_name"><primary>BOOST_HAS_NOTHROW_ASSIGN</primary><secondary>Support for Compiler Intrinsics</secondary></indexterm><indexterm><primary>Support for Compiler Intrinsics</primary><secondary>BOOST_HAS_NOTHROW_ASSIGN</secondary></indexterm><indexterm type="macro_name"><primary>BOOST_ALIGNMENT_OF</primary><secondary>Support for Compiler Intrinsics</secondary></indexterm><indexterm><primary>Support for Compiler Intrinsics</primary><secondary>BOOST_ALIGNMENT_OF</secondary></indexterm>
     <title><link linkend="boost_typetraits.intrinsics"> Support for Compiler Intrinsics</link></title>
     <para>
       There are some traits that can not be implemented within the current C++ language:
@@ -1394,7 +1394,7 @@ to ensure complete testing.
   </section>
   <section id="boost_typetraits.examples">
     <title><link linkend="boost_typetraits.examples"> Examples</link></title>
-    <section id="boost_typetraits.examples.copy">
+    <section id="boost_typetraits.examples.copy"><indexterm type="typedef_name"><primary>value_type</primary><secondary>An Optimized Version of std::copy</secondary></indexterm><indexterm><primary>Optimized Version of std::copy</primary><secondary>value_type</secondary></indexterm>
       <title><link linkend="boost_typetraits.examples.copy"> An Optimized Version
       of std::copy</link></title>
       <para>
@@ -1609,7 +1609,7 @@ to ensure complete testing.
   </section>
   <section id="boost_typetraits.reference">
     <title><link linkend="boost_typetraits.reference"> Alphabetical Reference</link></title>
-    <section id="boost_typetraits.reference.add_const">
+    <section id="boost_typetraits.reference.add_const"><indexterm type="class_name"><primary>Constrained Index Term</primary><secondary>add_const</secondary></indexterm><indexterm><primary>add_const</primary><secondary>Constrained Index Term</secondary></indexterm><indexterm type="class_name"><primary>Constrained Index Term</primary><secondary>add_const</secondary></indexterm><indexterm><primary>add_const</primary><secondary>Constrained Index Term</secondary></indexterm><indexterm type="class_name"><primary>add_const</primary><secondary>add_const</secondary></indexterm><indexterm type="class_name"><primary>Constrained Index Term</primary><secondary>add_const</secondary></indexterm><indexterm><primary>add_const</primary><secondary>Constrained Index Term</secondary></indexterm><indexterm type="class_name"><primary>Constrained Index Term</primary><secondary>add_const</secondary></indexterm><indexterm><primary>add_const</primary><secondary>Constrained Index Term</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.add_const"> add_const</link></title>
        <indexterm type="class_name">
           <primary>one</primary>
@@ -1707,7 +1707,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.add_cv">
+    <section id="boost_typetraits.reference.add_cv"><indexterm type="class_name"><primary>add_cv</primary><secondary>add_cv</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.add_cv"> add_cv</link></title>
        <indexterm type="class_name">
           <primary>one</primary>
@@ -1809,7 +1809,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.add_pointer">
+    <section id="boost_typetraits.reference.add_pointer"><indexterm type="class_name"><primary>add_pointer</primary><secondary>add_pointer</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.add_pointer"> add_pointer</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -1905,7 +1905,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.add_reference">
+    <section id="boost_typetraits.reference.add_reference"><indexterm type="class_name"><primary>add_reference</primary><secondary>add_reference</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.add_reference"> add_reference</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -1998,7 +1998,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.add_volatile">
+    <section id="boost_typetraits.reference.add_volatile"><indexterm type="class_name"><primary>add_volatile</primary><secondary>add_volatile</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.add_volatile"> add_volatile</link></title>
        <indexterm type="class_name">
           <primary>one</primary>
@@ -2096,7 +2096,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.aligned_storage">
+    <section id="boost_typetraits.reference.aligned_storage"><indexterm type="class_name"><primary>aligned_storage</primary><secondary>aligned_storage</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.aligned_storage"> aligned_storage</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="identifier">std</phrase><phrase role="special">::</phrase><phrase role="identifier">size_t</phrase> <phrase role="identifier">Size</phrase><phrase role="special">,</phrase> <phrase role="identifier">std</phrase><phrase role="special">::</phrase><phrase role="identifier">size_t</phrase> <phrase role="identifier">Align</phrase><phrase role="special">&gt;</phrase>
@@ -2116,7 +2116,7 @@ to ensure complete testing.
         or <computeroutput xmlns:xi="http://www.w3.org/2001/XInclude"> <phrase role="preprocessor">#include</phrase> <phrase role="special">&lt;</phrase><phrase role="identifier">boost</phrase><phrase role="special">/</phrase><phrase role="identifier">type_traits</phrase><phrase role="special">.</phrase><phrase role="identifier">hpp</phrase><phrase role="special">&gt;</phrase></computeroutput>
       </para>
     </section>
-    <section id="boost_typetraits.reference.alignment_of">
+    <section id="boost_typetraits.reference.alignment_of"><indexterm type="class_name"><primary>integral_constant</primary><secondary>alignment_of</secondary></indexterm><indexterm><primary>alignment_of</primary><secondary>integral_constant</secondary></indexterm><indexterm type="class_name"><primary>alignment_of</primary><secondary>alignment_of</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.alignment_of"> alignment_of</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -2171,7 +2171,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.decay">
+    <section id="boost_typetraits.reference.decay"><indexterm type="class_name"><primary>decay</primary><secondary>decay</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.decay"> decay</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -2270,7 +2270,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.extent">
+    <section id="boost_typetraits.reference.extent"><indexterm type="class_name"><primary>integral_constant</primary><secondary>extent</secondary></indexterm><indexterm><primary>extent</primary><secondary>integral_constant</secondary></indexterm><indexterm type="class_name"><primary>extent</primary><secondary>extent</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.extent"> extent</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">,</phrase> <phrase role="identifier">std</phrase><phrase role="special">::</phrase><phrase role="identifier">size_t</phrase> <phrase role="identifier">N</phrase> <phrase role="special">=</phrase> <phrase role="number">0</phrase><phrase role="special">&gt;</phrase>
@@ -2351,7 +2351,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.floating_point_promotion">
+    <section id="boost_typetraits.reference.floating_point_promotion"><indexterm type="class_name"><primary>floating_point_promotion</primary><secondary>floating_point_promotion</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.floating_point_promotion">
       floating_point_promotion</link></title> 
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -2429,7 +2429,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.function_traits">
+    <section id="boost_typetraits.reference.function_traits"><indexterm type="typedef_name"><primary>result_type</primary><secondary>function_traits</secondary></indexterm><indexterm><primary>function_traits</primary><secondary>result_type</secondary></indexterm><indexterm type="class_name"><primary>function_traits</primary><secondary>function_traits</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.function_traits"> function_traits</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">F</phrase><phrase role="special">&gt;</phrase>
@@ -2636,7 +2636,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.has_nothrow_assign">
+    <section id="boost_typetraits.reference.has_nothrow_assign"><indexterm type="class_name"><primary>has_nothrow_assign</primary><secondary>has_nothrow_assign</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.has_nothrow_assign"> has_nothrow_assign</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -2667,7 +2667,7 @@ to ensure complete testing.
         or <computeroutput xmlns:xi="http://www.w3.org/2001/XInclude"> <phrase role="preprocessor">#include</phrase> <phrase role="special">&lt;</phrase><phrase role="identifier">boost</phrase><phrase role="special">/</phrase><phrase role="identifier">type_traits</phrase><phrase role="special">.</phrase><phrase role="identifier">hpp</phrase><phrase role="special">&gt;</phrase></computeroutput>
       </para>
     </section>
-    <section id="boost_typetraits.reference.has_nothrow_constructor">
+    <section id="boost_typetraits.reference.has_nothrow_constructor"><indexterm type="class_name"><primary>has_nothrow_default_constructor</primary><secondary>has_nothrow_constructor</secondary></indexterm><indexterm><primary>has_nothrow_constructor</primary><secondary>has_nothrow_default_constructor</secondary></indexterm><indexterm type="class_name"><primary>has_nothrow_constructor</primary><secondary>has_nothrow_constructor</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.has_nothrow_constructor">
       has_nothrow_constructor</link></title> 
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -2704,7 +2704,7 @@ to ensure complete testing.
         or <computeroutput xmlns:xi="http://www.w3.org/2001/XInclude"> <phrase role="preprocessor">#include</phrase> <phrase role="special">&lt;</phrase><phrase role="identifier">boost</phrase><phrase role="special">/</phrase><phrase role="identifier">type_traits</phrase><phrase role="special">.</phrase><phrase role="identifier">hpp</phrase><phrase role="special">&gt;</phrase></computeroutput>
       </para>
     </section>
-    <section id="boost_typetraits.reference.has_nothrow_copy">
+    <section id="boost_typetraits.reference.has_nothrow_copy"><indexterm type="class_name"><primary>has_nothrow_copy_constructor</primary><secondary>has_nothrow_copy</secondary></indexterm><indexterm><primary>has_nothrow_copy</primary><secondary>has_nothrow_copy_constructor</secondary></indexterm><indexterm type="class_name"><primary>has_nothrow_copy</primary><secondary>has_nothrow_copy</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.has_nothrow_copy"> has_nothrow_copy</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -2753,7 +2753,7 @@ to ensure complete testing.
         See <link linkend="boost_typetraits.reference.has_nothrow_constructor">has_nothrow_constructor</link>.
       </para>
     </section>
-    <section id="boost_typetraits.reference.has_trivial_assign">
+    <section id="boost_typetraits.reference.has_trivial_assign"><indexterm type="class_name"><primary>has_trivial_assign</primary><secondary>has_trivial_assign</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.has_trivial_assign"> has_trivial_assign</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -2831,7 +2831,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.has_trivial_constructor">
+    <section id="boost_typetraits.reference.has_trivial_constructor"><indexterm type="class_name"><primary>has_trivial_default_constructor</primary><secondary>has_trivial_constructor</secondary></indexterm><indexterm><primary>has_trivial_constructor</primary><secondary>has_trivial_default_constructor</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.has_trivial_constructor">
       has_trivial_constructor</link></title> 
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -2918,7 +2918,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.has_trivial_copy">
+    <section id="boost_typetraits.reference.has_trivial_copy"><indexterm type="class_name"><primary>has_trivial_copy_constructor</primary><secondary>has_trivial_copy</secondary></indexterm><indexterm><primary>has_trivial_copy</primary><secondary>has_trivial_copy_constructor</secondary></indexterm><indexterm type="class_name"><primary>has_trivial_copy</primary><secondary>has_trivial_copy</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.has_trivial_copy"> has_trivial_copy</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -3014,7 +3014,7 @@ to ensure complete testing.
         See <link linkend="boost_typetraits.reference.has_trivial_constructor">has_trivial_constructor</link>.
       </para>
     </section>
-    <section id="boost_typetraits.reference.has_trivial_destructor">
+    <section id="boost_typetraits.reference.has_trivial_destructor"><indexterm type="class_name"><primary>has_trivial_destructor</primary><secondary>has_trivial_destructor</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.has_trivial_destructor"> has_trivial_destructor</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -3095,7 +3095,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.has_virtual_destructor">
+    <section id="boost_typetraits.reference.has_virtual_destructor"><indexterm type="class_name"><primary>has_virtual_destructor</primary><secondary>has_virtual_destructor</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.has_virtual_destructor"> has_virtual_destructor</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -3125,7 +3125,7 @@ to ensure complete testing.
         or <computeroutput xmlns:xi="http://www.w3.org/2001/XInclude"> <phrase role="preprocessor">#include</phrase> <phrase role="special">&lt;</phrase><phrase role="identifier">boost</phrase><phrase role="special">/</phrase><phrase role="identifier">type_traits</phrase><phrase role="special">.</phrase><phrase role="identifier">hpp</phrase><phrase role="special">&gt;</phrase></computeroutput>
       </para>
     </section>
-    <section id="boost_typetraits.reference.integral_constant">
+    <section id="boost_typetraits.reference.integral_constant"><indexterm type="typedef_name"><primary>value_type</primary><secondary>integral_constant</secondary></indexterm><indexterm><primary>integral_constant</primary><secondary>value_type</secondary></indexterm><indexterm type="typedef_name"><primary>true_type</primary><secondary>integral_constant</secondary></indexterm><indexterm><primary>integral_constant</primary><secondary>true_type</secondary></indexterm><indexterm type="class_name"><primary>integral_constant</primary><secondary>integral_constant</secondary></indexterm><indexterm type="typedef_name"><primary>false_type</primary><secondary>integral_constant</secondary></indexterm><indexterm><primary>integral_constant</primary><secondary>false_type</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.integral_constant"> integral_constant</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">,</phrase> <phrase role="identifier">T</phrase> <phrase role="identifier">val</phrase><phrase role="special">&gt;</phrase>
@@ -3147,7 +3147,7 @@ to ensure complete testing.
         one of these.
       </para>
     </section>
-    <section id="boost_typetraits.reference.integral_promotion">
+    <section id="boost_typetraits.reference.integral_promotion"><indexterm type="class_name"><primary>integral_promotion</primary><secondary>integral_promotion</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.integral_promotion"> integral_promotion</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -3226,7 +3226,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.is_abstract">
+    <section id="boost_typetraits.reference.is_abstract"><indexterm type="class_name"><primary>is_abstract</primary><secondary>is_abstract</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_abstract"> is_abstract</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -3296,7 +3296,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_arithmetic">
+    <section id="boost_typetraits.reference.is_arithmetic"><indexterm type="class_name"><primary>is_arithmetic</primary><secondary>is_arithmetic</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_arithmetic"> is_arithmetic</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -3351,7 +3351,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_array">
+    <section id="boost_typetraits.reference.is_array"><indexterm type="class_name"><primary>is_array</primary><secondary>is_array</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_array"> is_array</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -3409,7 +3409,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_base_of">
+    <section id="boost_typetraits.reference.is_base_of"><indexterm type="class_name"><primary>is_base_of</primary><secondary>is_base_of</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_base_of"> is_base_of</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">Base</phrase><phrase role="special">,</phrase> <phrase role="keyword">class</phrase> <phrase role="identifier">Derived</phrase><phrase role="special">&gt;</phrase>
@@ -3510,7 +3510,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_class">
+    <section id="boost_typetraits.reference.is_class"><indexterm type="class_name"><primary>is_class</primary><secondary>is_class</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_class"> is_class</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -3595,7 +3595,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_complex">
+    <section id="boost_typetraits.reference.is_complex"><indexterm type="class_name"><primary>is_complex</primary><secondary>is_complex</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_complex"> is_complex</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -3616,7 +3616,7 @@ to ensure complete testing.
         or <computeroutput xmlns:xi="http://www.w3.org/2001/XInclude"> <phrase role="preprocessor">#include</phrase> <phrase role="special">&lt;</phrase><phrase role="identifier">boost</phrase><phrase role="special">/</phrase><phrase role="identifier">type_traits</phrase><phrase role="special">.</phrase><phrase role="identifier">hpp</phrase><phrase role="special">&gt;</phrase></computeroutput>
       </para>
     </section>
-    <section id="boost_typetraits.reference.is_compound">
+    <section id="boost_typetraits.reference.is_compound"><indexterm type="class_name"><primary>is_compound</primary><secondary>is_compound</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_compound"> is_compound</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -3686,7 +3686,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_const">
+    <section id="boost_typetraits.reference.is_const"><indexterm type="class_name"><primary>is_const</primary><secondary>is_const</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_const"> is_const</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -3764,7 +3764,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_convertible">
+    <section id="boost_typetraits.reference.is_convertible"><indexterm type="class_name"><primary>is_convertible</primary><secondary>is_convertible</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_convertible"> is_convertible</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">From</phrase><phrase role="special">,</phrase> <phrase role="keyword">class</phrase> <phrase role="identifier">To</phrase><phrase role="special">&gt;</phrase>
@@ -3883,7 +3883,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_empty">
+    <section id="boost_typetraits.reference.is_empty"><indexterm type="class_name"><primary>is_empty</primary><secondary>is_empty</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_empty"> is_empty</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -3968,7 +3968,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_enum">
+    <section id="boost_typetraits.reference.is_enum"><indexterm type="class_name"><primary>is_enum</primary><secondary>is_enum</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_enum"> is_enum</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -4053,7 +4053,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_floating_point">
+    <section id="boost_typetraits.reference.is_floating_point"><indexterm type="class_name"><primary>is_floating_point</primary><secondary>is_floating_point</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_floating_point"> is_floating_point</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -4106,7 +4106,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_function">
+    <section id="boost_typetraits.reference.is_function"><indexterm type="class_name"><primary>is_function</primary><secondary>is_function</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_function"> is_function</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -4235,7 +4235,7 @@ to ensure complete testing.
         </para>
       </tip>
     </section>
-    <section id="boost_typetraits.reference.is_fundamental">
+    <section id="boost_typetraits.reference.is_fundamental"><indexterm type="class_name"><primary>is_fundamental</primary><secondary>is_fundamental</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_fundamental"> is_fundamental</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -4293,7 +4293,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_integral">
+    <section id="boost_typetraits.reference.is_integral"><indexterm type="class_name"><primary>is_integral</primary><secondary>is_integral</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_integral"> is_integral</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -4347,7 +4347,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_member_function_pointer">
+    <section id="boost_typetraits.reference.is_member_function_pointer"><indexterm type="class_name"><primary>is_member_function_pointer</primary><secondary>is_member_function_pointer</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_member_function_pointer">
       is_member_function_pointer</link></title> 
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -4412,7 +4412,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_member_object_pointer">
+    <section id="boost_typetraits.reference.is_member_object_pointer"><indexterm type="class_name"><primary>is_member_object_pointer</primary><secondary>is_member_object_pointer</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_member_object_pointer">
       is_member_object_pointer</link></title> 
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -4477,7 +4477,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_member_pointer">
+    <section id="boost_typetraits.reference.is_member_pointer"><indexterm type="class_name"><primary>is_member_pointer</primary><secondary>is_member_pointer</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_member_pointer"> is_member_pointer</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -4531,7 +4531,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_object">
+    <section id="boost_typetraits.reference.is_object"><indexterm type="class_name"><primary>is_object</primary><secondary>is_object</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_object"> is_object</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -4702,7 +4702,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_pointer">
+    <section id="boost_typetraits.reference.is_pointer"><indexterm type="class_name"><primary>is_pointer</primary><secondary>is_pointer</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_pointer"> is_pointer</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -4784,7 +4784,7 @@ to ensure complete testing.
         </para>
       </important>
     </section>
-    <section id="boost_typetraits.reference.is_polymorphic">
+    <section id="boost_typetraits.reference.is_polymorphic"><indexterm type="class_name"><primary>is_polymorphic</primary><secondary>is_polymorphic</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_polymorphic"> is_polymorphic</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -4852,7 +4852,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_same">
+    <section id="boost_typetraits.reference.is_same"><indexterm type="class_name"><primary>is_same</primary><secondary>is_same</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_same"> is_same</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">,</phrase> <phrase role="keyword">class</phrase> <phrase role="identifier">U</phrase><phrase role="special">&gt;</phrase>
@@ -4923,7 +4923,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_scalar">
+    <section id="boost_typetraits.reference.is_scalar"><indexterm type="class_name"><primary>is_scalar</primary><secondary>is_scalar</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_scalar"> is_scalar</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -5007,7 +5007,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_signed">
+    <section id="boost_typetraits.reference.is_signed"><indexterm type="class_name"><primary>is_signed</primary><secondary>is_signed</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_signed"> is_signed</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -5133,7 +5133,7 @@ to ensure complete testing.
         to make this template work automatically.
       </para>
     </section>
-    <section id="boost_typetraits.reference.is_reference">
+    <section id="boost_typetraits.reference.is_reference"><indexterm type="class_name"><primary>is_reference</primary><secondary>is_reference</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_reference"> is_reference</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -5194,7 +5194,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_union">
+    <section id="boost_typetraits.reference.is_union"><indexterm type="class_name"><primary>is_union</primary><secondary>is_union</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_union"> is_union</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -5269,7 +5269,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_unsigned">
+    <section id="boost_typetraits.reference.is_unsigned"><indexterm type="class_name"><primary>is_unsigned</primary><secondary>is_unsigned</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_unsigned"> is_unsigned</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -5349,7 +5349,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_void">
+    <section id="boost_typetraits.reference.is_void"><indexterm type="class_name"><primary>is_void</primary><secondary>is_void</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_void"> is_void</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -5411,7 +5411,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.is_volatile">
+    <section id="boost_typetraits.reference.is_volatile"><indexterm type="class_name"><primary>is_volatile</primary><secondary>is_volatile</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.is_volatile"> is_volatile</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -5473,7 +5473,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.make_signed">
+    <section id="boost_typetraits.reference.make_signed"><indexterm type="class_name"><primary>make_signed</primary><secondary>make_signed</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.make_signed"> make_signed</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -5581,7 +5581,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.make_unsigned">
+    <section id="boost_typetraits.reference.make_unsigned"><indexterm type="class_name"><primary>make_unsigned</primary><secondary>make_unsigned</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.make_unsigned"> make_unsigned</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -5690,7 +5690,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.promote">
+    <section id="boost_typetraits.reference.promote"><indexterm type="class_name"><primary>promote</primary><secondary>promote</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.promote"> promote</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -5770,7 +5770,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.rank">
+    <section id="boost_typetraits.reference.rank"><indexterm type="class_name"><primary>integral_constant</primary><secondary>rank</secondary></indexterm><indexterm><primary>rank</primary><secondary>integral_constant</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.rank"> rank</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -5841,7 +5841,7 @@ to ensure complete testing.
         </para>
       </blockquote>
     </section>
-    <section id="boost_typetraits.reference.remove_all_extents">
+    <section id="boost_typetraits.reference.remove_all_extents"><indexterm type="class_name"><primary>remove_all_extents</primary><secondary>remove_all_extents</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.remove_all_extents"> remove_all_extents</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -5946,7 +5946,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.remove_const">
+    <section id="boost_typetraits.reference.remove_const"><indexterm type="class_name"><primary>remove_const</primary><secondary>remove_const</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.remove_const"> remove_const</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -6051,7 +6051,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.remove_cv">
+    <section id="boost_typetraits.reference.remove_cv"><indexterm type="class_name"><primary>remove_cv</primary><secondary>remove_cv</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.remove_cv"> remove_cv</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -6156,7 +6156,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.remove_extent">
+    <section id="boost_typetraits.reference.remove_extent"><indexterm type="class_name"><primary>remove_extent</primary><secondary>remove_extent</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.remove_extent"> remove_extent</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -6261,7 +6261,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.remove_pointer">
+    <section id="boost_typetraits.reference.remove_pointer"><indexterm type="class_name"><primary>remove_pointer</primary><secondary>remove_pointer</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.remove_pointer"> remove_pointer</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -6365,7 +6365,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.remove_reference">
+    <section id="boost_typetraits.reference.remove_reference"><indexterm type="class_name"><primary>remove_reference</primary><secondary>remove_reference</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.remove_reference"> remove_reference</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -6458,7 +6458,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.remove_volatile">
+    <section id="boost_typetraits.reference.remove_volatile"><indexterm type="class_name"><primary>remove_volatile</primary><secondary>remove_volatile</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.remove_volatile"> remove_volatile</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="keyword">class</phrase> <phrase role="identifier">T</phrase><phrase role="special">&gt;</phrase>
@@ -6563,7 +6563,7 @@ to ensure complete testing.
       </tgroup>
       </table>
     </section>
-    <section id="boost_typetraits.reference.type_with_alignment">
+    <section id="boost_typetraits.reference.type_with_alignment"><indexterm type="class_name"><primary>type_with_alignment</primary><secondary>type_with_alignment</secondary></indexterm>
       <title><link linkend="boost_typetraits.reference.type_with_alignment"> type_with_alignment</link></title>
       
 <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">template</phrase> <phrase role="special">&lt;</phrase><phrase role="identifier">std</phrase><phrase role="special">::</phrase><phrase role="identifier">size_t</phrase> <phrase role="identifier">Align</phrase><phrase role="special">&gt;</phrase>
@@ -6631,7 +6631,7 @@ to ensure complete testing.
 </programlisting>
   </section>
 
-  <section id="boost_typetraits.ignored_block">
+  <section id="boost_typetraits.ignored_block"><indexterm type="class_name"><primary>add_volatile</primary><secondary>This section contains one block that must not be indexed and one that should be.</secondary></indexterm><indexterm><primary>This section contains one block that must not be indexed and one that should be.</primary><secondary>add_volatile</secondary></indexterm>
     <title>This section contains one block that must not be indexed and one that should be.</title>
        <programlisting xmlns:xi="http://www.w3.org/2001/XInclude"><phrase role="keyword">
      <?BoostAutoIndex IgnoreBlock?>
@@ -6651,21 +6651,21 @@ to ensure complete testing.
   </section>
 
   
-    <index>
+    <index type="class_name">
   <title>Class Index</title>
-  <para><link linkend="idx_id_0">A</link> <link linkend="idx_id_2">C</link> <link linkend="idx_id_3">D</link> <link linkend="idx_id_4">E</link> <link linkend="idx_id_5">F</link> <link linkend="idx_id_6">H</link> <link linkend="idx_id_7">I</link> <link linkend="idx_id_8">M</link> <link linkend="idx_id_9">O</link> <link linkend="idx_id_10">P</link> <link linkend="idx_id_11">R</link> <link linkend="idx_id_13">T</link></para><variablelist><varlistentry id="idx_id_0"><term>A</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.add_const"><phrase role="index-entry-level-0">add_const</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.add_cv"><phrase role="index-entry-level-0">add_cv</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.add_pointer"><phrase role="index-entry-level-0">add_pointer</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.add_reference"><phrase role="index-entry-level-0">add_reference</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">add_volatile</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.add_volatile"><phrase role="index-entry-level-1">add_volatile</phrase></link></emphasis></para></listitem><listitem><para><link linkend="boost_typetraits.ignored_block"><phrase role="index-entry-level-1">This section contains one block that must not be indexed and one that should be.</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.aligned_storage"><phrase role="index-entry-level-0">aligned_storage</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.alignment_of"><phrase role="index-entry-level-0">alignment_of</phrase></link></para></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_2"><term>C</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">Constrained Index Term</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.add_const"><phrase role="index-entry-level-1">add_const</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_3"><term>D</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.decay"><phrase role="index-entry-level-0">decay</phrase></link></para></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_4"><term>E</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.extent"><phrase role="index-entry-level-0">extent</phrase></link></para></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_5"><term>F</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.floating_point_promotion"><phrase role="index-entry-level-0">floating_point_promotion</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.function_traits"><phrase role="index-entry-level-0">function_traits</phrase></link></para></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_6"><term>H</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.has_nothrow_assign"><phrase role="index-entry-level-0">has_nothrow_assign</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.has_nothrow_constructor"><phrase role="index-entry-level-0">has_nothrow_constructor</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.has_nothrow_copy"><phrase role="index-entry-level-0">has_nothrow_copy</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">has_nothrow_copy_constructor</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.has_nothrow_copy"><phrase role="index-entry-level-1">has_nothrow_copy</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">has_nothrow_default_constructor</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.has_nothrow_constructor"><phrase role="index-entry-level-1">has_nothrow_constructor</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.has_trivial_assign"><phrase role="index-entry-level-0">has_trivial_assign</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.has_trivial_copy"><phrase role="index-entry-level-0">has_trivial_copy</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">has_trivial_copy_constructor</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.has_trivial_copy"><phrase role="index-entry-level-1">has_trivial_copy</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">has_trivial_default_constructor</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.has_trivial_constructor"><phrase role="index-entry-level-1">has_trivial_constructor</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.has_trivial_destructor"><phrase role="index-entry-level-0">has_trivial_destructor</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.has_virtual_destructor"><phrase role="index-entry-level-0">has_virtual_destructor</phrase></link></para></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_7"><term>I</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">integral_constant</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.alignment_of"><phrase role="index-entry-level-1">alignment_of</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.extent"><phrase role="index-entry-level-1">extent</phrase></link></para></listitem><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.integral_constant"><phrase role="index-entry-level-1">integral_constant</phrase></link></emphasis></para></listitem><listitem><para><link linkend="boost_typetraits.reference.rank"><phrase role="index-entry-level-1">rank</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.integral_promotion"><phrase role="index-entry-level-0">integral_promotion</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_abstract"><phrase role="index-entry-level-0">is_abstract</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_arithmetic"><phrase role="index-entry-level-0">is_arithmetic</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_array"><phrase role="index-entry-level-0">is_array</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_base_of"><phrase role="index-entry-level-0">is_base_of</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">is_class</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.is_class"><phrase role="index-entry-level-1">is_class</phrase></link></emphasis></para></listitem><listitem><para><link linkend="boost_typetraits.user_defined"><phrase role="index-entry-level-1">User Defined Specializations</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.is_complex"><phrase role="index-entry-level-0">is_complex</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_compound"><phrase role="index-entry-level-0">is_compound</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_const"><phrase role="index-entry-level-0">is_const</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_convertible"><phrase role="index-entry-level-0">is_convertible</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_empty"><phrase role="index-entry-level-0">is_empty</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_enum"><phrase role="index-entry-level-0">is_enum</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_floating_point"><phrase role="index-entry-level-0">is_floating_point</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_function"><phrase role="index-entry-level-0">is_function</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_fundamental"><phrase role="index-entry-level-0">is_fundamental</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_integral"><phrase role="index-entry-level-0">is_integral</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_member_function_pointer"><phrase role="index-entry-level-0">is_member_function_pointer</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_member_object_pointer"><phrase role="index-entry-level-0">is_member_object_pointer</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_member_pointer"><phrase role="index-entry-level-0">is_member_pointer</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_object"><phrase role="index-entry-level-0">is_object</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">is_pointer</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.background"><phrase role="index-entry-level-1">Background and Tutorial</phrase></link></para></listitem><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.is_pointer"><phrase role="index-entry-level-1">is_pointer</phrase></link></emphasis></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.is_polymorphic"><phrase role="index-entry-level-0">is_polymorphic</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_reference"><phrase role="index-entry-level-0">is_reference</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_same"><phrase role="index-entry-level-0">is_same</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_scalar"><phrase role="index-entry-level-0">is_scalar</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_signed"><phrase role="index-entry-level-0">is_signed</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">is_union</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.is_union"><phrase role="index-entry-level-1">is_union</phrase></link></emphasis></para></listitem><listitem><para><link linkend="boost_typetraits.user_defined"><phrase role="index-entry-level-1">User Defined Specializations</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.is_unsigned"><phrase role="index-entry-level-0">is_unsigned</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">is_void</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.background"><phrase role="index-entry-level-1">Background and Tutorial</phrase></link></para></listitem><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.is_void"><phrase role="index-entry-level-1">is_void</phrase></link></emphasis></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.is_volatile"><phrase role="index-entry-level-0">is_volatile</phrase></link></para></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_8"><term>M</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.make_signed"><phrase role="index-entry-level-0">make_signed</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.make_unsigned"><phrase role="index-entry-level-0">make_unsigned</phrase></link></para></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_9"><term>O</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">one</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.add_volatile"><phrase role="index-entry-level-1">add_volatile</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-1">two</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.add_const"><phrase role="index-entry-level-2">add_const</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-2">three</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.add_cv"><phrase role="index-entry-level-3">add_cv</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_10"><term>P</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.promote"><phrase role="index-entry-level-0">promote</phrase></link></para></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_11"><term>R</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.remove_all_extents"><phrase role="index-entry-level-0">remove_all_extents</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.remove_const"><phrase role="index-entry-level-0">remove_const</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.remove_cv"><phrase role="index-entry-level-0">remove_cv</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">remove_extent</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.background"><phrase role="index-entry-level-1">Background and Tutorial</phrase></link></para></listitem><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.remove_extent"><phrase role="index-entry-level-1">remove_extent</phrase></link></emphasis></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.remove_pointer"><phrase role="index-entry-level-0">remove_pointer</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.remove_reference"><phrase role="index-entry-level-0">remove_reference</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.remove_volatile"><phrase role="index-entry-level-0">remove_volatile</phrase></link></para></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_13"><term>T</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.type_with_alignment"><phrase role="index-entry-level-0">type_with_alignment</phrase></link></para></listitem></itemizedlist></listitem></varlistentry></variablelist></index>
-  <index>
+  </index>
+  <index type="typedef_name">
   <title>Typedef Index</title>
-  <para><link linkend="idx_id_21">F</link> <link linkend="idx_id_27">R</link> <link linkend="idx_id_29">T</link> <link linkend="idx_id_31">V</link></para><variablelist><varlistentry id="idx_id_21"><term>F</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">false_type</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.integral_constant"><phrase role="index-entry-level-1">integral_constant</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_27"><term>R</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">result_type</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.function_traits"><phrase role="index-entry-level-1">function_traits</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_29"><term>T</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">true_type</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.integral_constant"><phrase role="index-entry-level-1">integral_constant</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_31"><term>V</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">value_type</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.examples.copy"><phrase role="index-entry-level-1">An Optimized Version of std::copy</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.integral_constant"><phrase role="index-entry-level-1">integral_constant</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry></variablelist></index>
-  <index>
+  </index>
+  <index type="macro_name">
   <title>Macro Index</title>
-  <para><link linkend="idx_id_33">B</link></para><variablelist><varlistentry id="idx_id_33"><term>B</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">BOOST_ALIGNMENT_OF</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_BROKEN_COMPILER_TYPE_TRAITS_SPECIALIZATION</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.category.transform"><phrase role="index-entry-level-1">Type Traits that Transform One Type to Another</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_HAS_NOTHROW_ASSIGN</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_HAS_NOTHROW_CONSTRUCTOR</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_HAS_NOTHROW_COPY</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_HAS_TRIVIAL_ASSIGN</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_HAS_TRIVIAL_CONSTRUCTOR</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_HAS_TRIVIAL_COPY</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_HAS_TRIVIAL_DESTRUCTOR</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_HAS_VIRTUAL_DESTRUCTOR</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_IS_ABSTRACT</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_IS_BASE_OF</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_IS_CLASS</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_IS_CONVERTIBLE</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_IS_EMPTY</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_IS_ENUM</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_IS_POD</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_IS_POLYMORPHIC</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_IS_UNION</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry></variablelist></index>
-     <index>
+  </index>
+     <index type="test_index_1">
         <title>Index Test 1</title>
-     <para><link linkend="idx_id_61">T</link></para><variablelist><varlistentry id="idx_id_61"><term>T</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">type-traits</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intro"><phrase role="index-entry-level-1">Introduction</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry></variablelist></index>
-     <index>
+     </index>
+     <index type="test_index_2">
         <title>Index Test 2</title>
-     <para><link linkend="idx_id_77">T</link></para><variablelist><varlistentry id="idx_id_77"><term>T</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">type-traits</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.background"><phrase role="index-entry-level-1">Background and Tutorial</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry></variablelist></index>
-     <index><title>Index</title><para><link linkend="idx_id_80">A</link> <link linkend="idx_id_81">B</link> <link linkend="idx_id_82">C</link> <link linkend="idx_id_83">D</link> <link linkend="idx_id_84">E</link> <link linkend="idx_id_85">F</link> <link linkend="idx_id_86">H</link> <link linkend="idx_id_87">I</link> <link linkend="idx_id_88">M</link> <link linkend="idx_id_89">O</link> <link linkend="idx_id_90">P</link> <link linkend="idx_id_91">R</link> <link linkend="idx_id_92">S</link> <link linkend="idx_id_93">T</link> <link linkend="idx_id_94">U</link> <link linkend="idx_id_95">V</link></para><variablelist><varlistentry id="idx_id_80"><term>A</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">add_const</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.add_const"><phrase role="index-entry-level-1">add_const</phrase></link></emphasis></para></listitem><listitem><para><link linkend="boost_typetraits.reference.add_const"><phrase role="index-entry-level-1">Constrained Index Term</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.add_cv"><phrase role="index-entry-level-0">add_cv</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.add_pointer"><phrase role="index-entry-level-0">add_pointer</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.add_reference"><phrase role="index-entry-level-0">add_reference</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">add_volatile</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.add_volatile"><phrase role="index-entry-level-1">add_volatile</phrase></link></emphasis></para></listitem><listitem><para><link linkend="boost_typetraits.ignored_block"><phrase role="index-entry-level-1">This section contains one block that must not be indexed and one that should be.</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.aligned_storage"><phrase role="index-entry-level-0">aligned_storage</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">alignment_of</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.alignment_of"><phrase role="index-entry-level-1">alignment_of</phrase></link></emphasis></para></listitem><listitem><para><link linkend="boost_typetraits.reference.alignment_of"><phrase role="index-entry-level-1">integral_constant</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_81"><term>B</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">Background and Tutorial</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.background"><phrase role="index-entry-level-1">is_pointer</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.background"><phrase role="index-entry-level-1">is_void</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.background"><phrase role="index-entry-level-1">remove_extent</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.background"><phrase role="index-entry-level-1">type-traits</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_ALIGNMENT_OF</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_BROKEN_COMPILER_TYPE_TRAITS_SPECIALIZATION</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.category.transform"><phrase role="index-entry-level-1">Type Traits that Transform One Type to Another</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_HAS_NOTHROW_ASSIGN</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_HAS_NOTHROW_CONSTRUCTOR</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_HAS_NOTHROW_COPY</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_HAS_TRIVIAL_ASSIGN</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_HAS_TRIVIAL_CONSTRUCTOR</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_HAS_TRIVIAL_COPY</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_HAS_TRIVIAL_DESTRUCTOR</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_HAS_VIRTUAL_DESTRUCTOR</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_IS_ABSTRACT</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_IS_BASE_OF</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_IS_CLASS</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_IS_CONVERTIBLE</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_IS_EMPTY</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_IS_ENUM</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_IS_POD</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_IS_POLYMORPHIC</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">BOOST_IS_UNION</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">Support for Compiler Intrinsics</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_82"><term>C</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">Constrained Index Term</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.add_const"><phrase role="index-entry-level-1">add_const</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_83"><term>D</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.decay"><phrase role="index-entry-level-0">decay</phrase></link></para></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_84"><term>E</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">extent</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.extent"><phrase role="index-entry-level-1">extent</phrase></link></emphasis></para></listitem><listitem><para><link linkend="boost_typetraits.reference.extent"><phrase role="index-entry-level-1">integral_constant</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_85"><term>F</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">false_type</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.integral_constant"><phrase role="index-entry-level-1">integral_constant</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.floating_point_promotion"><phrase role="index-entry-level-0">floating_point_promotion</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">Foo1</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.background"><phrase role="index-entry-level-1">Background and Tutorial</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">Foo2</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-1">Bar2</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.category.value_traits"><phrase role="index-entry-level-2">Type Traits that Describe the Properties of a Type</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">function_traits</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.function_traits"><phrase role="index-entry-level-1">function_traits</phrase></link></emphasis></para></listitem><listitem><para><link linkend="boost_typetraits.reference.function_traits"><phrase role="index-entry-level-1">result_type</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_86"><term>H</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.has_nothrow_assign"><phrase role="index-entry-level-0">has_nothrow_assign</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">has_nothrow_constructor</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.has_nothrow_constructor"><phrase role="index-entry-level-1">has_nothrow_constructor</phrase></link></emphasis></para></listitem><listitem><para><link linkend="boost_typetraits.reference.has_nothrow_constructor"><phrase role="index-entry-level-1">has_nothrow_default_constructor</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">has_nothrow_copy</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.has_nothrow_copy"><phrase role="index-entry-level-1">has_nothrow_copy</phrase></link></emphasis></para></listitem><listitem><para><link linkend="boost_typetraits.reference.has_nothrow_copy"><phrase role="index-entry-level-1">has_nothrow_copy_constructor</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">has_nothrow_copy_constructor</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.has_nothrow_copy"><phrase role="index-entry-level-1">has_nothrow_copy</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">has_nothrow_default_constructor</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.has_nothrow_constructor"><phrase role="index-entry-level-1">has_nothrow_constructor</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.has_trivial_assign"><phrase role="index-entry-level-0">has_trivial_assign</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">has_trivial_constructor</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.has_trivial_constructor"><phrase role="index-entry-level-1">has_trivial_default_constructor</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">has_trivial_copy</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.has_trivial_copy"><phrase role="index-entry-level-1">has_trivial_copy</phrase></link></emphasis></para></listitem><listitem><para><link linkend="boost_typetraits.reference.has_trivial_copy"><phrase role="index-entry-level-1">has_trivial_copy_constructor</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">has_trivial_copy_constructor</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.has_trivial_copy"><phrase role="index-entry-level-1">has_trivial_copy</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">has_trivial_default_constructor</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.has_trivial_constructor"><phrase role="index-entry-level-1">has_trivial_constructor</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.has_trivial_destructor"><phrase role="index-entry-level-0">has_trivial_destructor</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.has_virtual_destructor"><phrase role="index-entry-level-0">has_virtual_destructor</phrase></link></para></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_87"><term>I</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">integral_constant</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.alignment_of"><phrase role="index-entry-level-1">alignment_of</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.extent"><phrase role="index-entry-level-1">extent</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.integral_constant"><phrase role="index-entry-level-1">false_type</phrase></link></para></listitem><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.integral_constant"><phrase role="index-entry-level-1">integral_constant</phrase></link></emphasis></para></listitem><listitem><para><link linkend="boost_typetraits.reference.rank"><phrase role="index-entry-level-1">rank</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.integral_constant"><phrase role="index-entry-level-1">true_type</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.integral_constant"><phrase role="index-entry-level-1">value_type</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.integral_promotion"><phrase role="index-entry-level-0">integral_promotion</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">Introduction</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intro"><phrase role="index-entry-level-1">type-traits</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.is_abstract"><phrase role="index-entry-level-0">is_abstract</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_arithmetic"><phrase role="index-entry-level-0">is_arithmetic</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_array"><phrase role="index-entry-level-0">is_array</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_base_of"><phrase role="index-entry-level-0">is_base_of</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">is_class</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.is_class"><phrase role="index-entry-level-1">is_class</phrase></link></emphasis></para></listitem><listitem><para><link linkend="boost_typetraits.user_defined"><phrase role="index-entry-level-1">User Defined Specializations</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.is_complex"><phrase role="index-entry-level-0">is_complex</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_compound"><phrase role="index-entry-level-0">is_compound</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_const"><phrase role="index-entry-level-0">is_const</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_convertible"><phrase role="index-entry-level-0">is_convertible</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_empty"><phrase role="index-entry-level-0">is_empty</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_enum"><phrase role="index-entry-level-0">is_enum</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_floating_point"><phrase role="index-entry-level-0">is_floating_point</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_function"><phrase role="index-entry-level-0">is_function</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_fundamental"><phrase role="index-entry-level-0">is_fundamental</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_integral"><phrase role="index-entry-level-0">is_integral</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_member_function_pointer"><phrase role="index-entry-level-0">is_member_function_pointer</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_member_object_pointer"><phrase role="index-entry-level-0">is_member_object_pointer</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_member_pointer"><phrase role="index-entry-level-0">is_member_pointer</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_object"><phrase role="index-entry-level-0">is_object</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">is_pointer</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.background"><phrase role="index-entry-level-1">Background and Tutorial</phrase></link></para></listitem><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.is_pointer"><phrase role="index-entry-level-1">is_pointer</phrase></link></emphasis></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.is_polymorphic"><phrase role="index-entry-level-0">is_polymorphic</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_reference"><phrase role="index-entry-level-0">is_reference</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_same"><phrase role="index-entry-level-0">is_same</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_scalar"><phrase role="index-entry-level-0">is_scalar</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.is_signed"><phrase role="index-entry-level-0">is_signed</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">is_union</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.is_union"><phrase role="index-entry-level-1">is_union</phrase></link></emphasis></para></listitem><listitem><para><link linkend="boost_typetraits.user_defined"><phrase role="index-entry-level-1">User Defined Specializations</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.is_unsigned"><phrase role="index-entry-level-0">is_unsigned</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">is_void</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.background"><phrase role="index-entry-level-1">Background and Tutorial</phrase></link></para></listitem><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.is_void"><phrase role="index-entry-level-1">is_void</phrase></link></emphasis></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.is_volatile"><phrase role="index-entry-level-0">is_volatile</phrase></link></para></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_88"><term>M</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.make_signed"><phrase role="index-entry-level-0">make_signed</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.make_unsigned"><phrase role="index-entry-level-0">make_unsigned</phrase></link></para></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_89"><term>O</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">one</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.add_volatile"><phrase role="index-entry-level-1">add_volatile</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-1">two</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.add_const"><phrase role="index-entry-level-2">add_const</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-2">three</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.add_cv"><phrase role="index-entry-level-3">add_cv</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">Optimized Version of std::copy</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.examples.copy"><phrase role="index-entry-level-1">value_type</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_90"><term>P</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.promote"><phrase role="index-entry-level-0">promote</phrase></link></para></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_91"><term>R</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">rank</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.rank"><phrase role="index-entry-level-1">integral_constant</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.remove_all_extents"><phrase role="index-entry-level-0">remove_all_extents</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.remove_const"><phrase role="index-entry-level-0">remove_const</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.remove_cv"><phrase role="index-entry-level-0">remove_cv</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">remove_extent</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.background"><phrase role="index-entry-level-1">Background and Tutorial</phrase></link></para></listitem><listitem><para><emphasis role="bold"><link linkend="boost_typetraits.reference.remove_extent"><phrase role="index-entry-level-1">remove_extent</phrase></link></emphasis></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.remove_pointer"><phrase role="index-entry-level-0">remove_pointer</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.remove_reference"><phrase role="index-entry-level-0">remove_reference</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.remove_volatile"><phrase role="index-entry-level-0">remove_volatile</phrase></link></para></listitem><listitem><para><phrase role="index-entry-level-0">result_type</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.function_traits"><phrase role="index-entry-level-1">function_traits</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_92"><term>S</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">Support for Compiler Intrinsics</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">BOOST_ALIGNMENT_OF</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">BOOST_HAS_NOTHROW_ASSIGN</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">BOOST_HAS_NOTHROW_CONSTRUCTOR</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">BOOST_HAS_NOTHROW_COPY</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">BOOST_HAS_TRIVIAL_ASSIGN</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">BOOST_HAS_TRIVIAL_CONSTRUCTOR</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">BOOST_HAS_TRIVIAL_COPY</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">BOOST_HAS_TRIVIAL_DESTRUCTOR</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">BOOST_HAS_VIRTUAL_DESTRUCTOR</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">BOOST_IS_ABSTRACT</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">BOOST_IS_BASE_OF</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">BOOST_IS_CLASS</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">BOOST_IS_CONVERTIBLE</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">BOOST_IS_EMPTY</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">BOOST_IS_ENUM</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">BOOST_IS_POD</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">BOOST_IS_POLYMORPHIC</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.intrinsics"><phrase role="index-entry-level-1">BOOST_IS_UNION</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_93"><term>T</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">This section contains one block that must not be indexed and one that should be.</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.ignored_block"><phrase role="index-entry-level-1">add_volatile</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">true_type</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.reference.integral_constant"><phrase role="index-entry-level-1">integral_constant</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">Type Traits that Transform One Type to Another</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.category.transform"><phrase role="index-entry-level-1">BOOST_BROKEN_COMPILER_TYPE_TRAITS_SPECIALIZATION</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><phrase role="index-entry-level-0">type-traits</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.background"><phrase role="index-entry-level-1">Background and Tutorial</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.intro"><phrase role="index-entry-level-1">Introduction</phrase></link></para></listitem></itemizedlist></listitem><listitem><para><link linkend="boost_typetraits.reference.type_with_alignment"><phrase role="index-entry-level-0">type_with_alignment</phrase></link></para></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_94"><term>U</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">User Defined Specializations</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.user_defined"><phrase role="index-entry-level-1">is_class</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.user_defined"><phrase role="index-entry-level-1">is_union</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry><varlistentry id="idx_id_95"><term>V</term><listitem><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><phrase role="index-entry-level-0">value_type</phrase></para><itemizedlist mark="none" spacing="compact" role="index"><listitem><para><link linkend="boost_typetraits.examples.copy"><phrase role="index-entry-level-1">An Optimized Version of std::copy</phrase></link></para></listitem><listitem><para><link linkend="boost_typetraits.reference.integral_constant"><phrase role="index-entry-level-1">integral_constant</phrase></link></para></listitem></itemizedlist></listitem></itemizedlist></listitem></varlistentry></variablelist></index>
+     </index>
+     <index/>
   
 </chapter>

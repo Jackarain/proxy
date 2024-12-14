@@ -12,6 +12,7 @@ project
         <library>/boost/iostreams//boost_iostreams
         <define>BOOST_ALL_NO_LIB=1
       # <toolset>msvc:<define>_SCL_SECURE_NO_WARNINGS
+        <include>.
     ;
 
 test-suite "iostreams-examples"

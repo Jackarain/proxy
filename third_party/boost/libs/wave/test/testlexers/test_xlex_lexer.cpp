@@ -26,8 +26,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 //  include the Xpressive lexer related stuff
 #include <boost/wave/cpplexer/cpp_lex_token.hpp>                  // token type
-#include <libs/wave/samples/token_statistics/xlex/xlex_lexer.hpp> // lexer type
-#include <libs/wave/samples/token_statistics/xlex_iterator.hpp>   // iterator
+#include <token_statistics/xlex/xlex_lexer.hpp> // lexer type
+#include <token_statistics/xlex_iterator.hpp>   // iterator
 
 typedef boost::wave::cpplexer::lex_token<> token_type;
 typedef boost::wave::cpplexer::xlex::xlex_iterator<token_type> lexer_type;

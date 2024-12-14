@@ -1,4 +1,4 @@
-// Copyright 2024 Joaquin M Lopez Muoz.
+// Copyright 2024 Joaquin M Lopez Munoz.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -7,8 +7,12 @@
 #ifdef BOOST_UNORDERED_CFOA_TESTS
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
+#include <boost/unordered/concurrent_node_map.hpp>
+#include <boost/unordered/concurrent_node_set.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <boost/unordered/unordered_flat_set.hpp>
+#include <boost/unordered/unordered_node_map.hpp>
+#include <boost/unordered/unordered_node_set.hpp>
 #include "../cfoa/helpers.hpp"
 #else
 #include "../helpers/unordered.hpp"
@@ -19,6 +23,7 @@
 #include "../helpers/test.hpp"
 #include <boost/assert.hpp>
 #include <boost/core/make_span.hpp>
+#include <cmath>
 #include <cstring>
 
 template <class T> struct unequal_allocator
@@ -45,16 +50,20 @@ template <class T> struct unequal_allocator
   int n_;
 };
 
-bool exact_same(double x, double y)
+bool esentially_same(double x, double y)
 {
-  return std::memcmp(
-    reinterpret_cast<void*>(&x), reinterpret_cast<void*>(&y),
-    sizeof(double))==0;
+  // Some optimizer-related issues in GCC X86 result in last-bit differences
+  // on doubles that should otherwise be identical.
+
+  // https://stackoverflow.com/a/253874/213114
+
+  static constexpr double epsilon = 1.0E-6;
+  return fabs(x - y) <= ( (fabs(x) > fabs(y) ? fabs(x) : fabs(y)) * epsilon);
 }
 
-bool not_exact_same(double x, double y)
+bool not_esentially_same(double x, double y)
 {
-  return !exact_same(x, y);
+  return !esentially_same(x, y);
 }
 
 enum check_stats_contition
@@ -69,19 +78,19 @@ void check_stat(const Stats& s, check_stats_contition cond)
 {
   switch (cond) {
   case stats_empty:
-    BOOST_TEST(exact_same(s.average, 0.0));
-    BOOST_TEST(exact_same(s.variance, 0.0));
-    BOOST_TEST(exact_same(s.deviation, 0.0));
+    BOOST_TEST(esentially_same(s.average, 0.0));
+    BOOST_TEST(esentially_same(s.variance, 0.0));
+    BOOST_TEST(esentially_same(s.deviation, 0.0));
     break;
   case stats_full:
     BOOST_TEST_GT(s.average, 0.0);
-    if(not_exact_same(s.variance, 0.0)) {
+    if(not_esentially_same(s.variance, 0.0)) {
       BOOST_TEST_GT(s.variance, 0.0);
       BOOST_TEST_GT(s.deviation, 0.0);
     }
     break;
   case stats_mostly_full:
-    if(not_exact_same(s.variance, 0.0)) {
+    if(not_esentially_same(s.variance, 0.0)) {
       BOOST_TEST_GT(s.average, 0.0);
       BOOST_TEST_GT(s.variance, 0.0);
       BOOST_TEST_GT(s.deviation, 0.0);
@@ -94,9 +103,9 @@ void check_stat(const Stats& s, check_stats_contition cond)
 
 template <class Stats> void check_stat(const Stats& s1, const Stats& s2)
 {
-  BOOST_TEST(exact_same(s1.average, s2.average));
-  BOOST_TEST(exact_same(s1.variance, s2.variance));
-  BOOST_TEST(exact_same(s1.deviation, s2.deviation));
+  BOOST_TEST(esentially_same(s1.average, s2.average));
+  BOOST_TEST(esentially_same(s1.variance, s2.variance));
+  BOOST_TEST(esentially_same(s1.deviation, s2.deviation));
 }
 
 template <class Stats>
@@ -346,14 +355,27 @@ UNORDERED_AUTO_TEST (stats_) {
       int, int, boost::hash<int>, std::equal_to<int>,
       unequal_allocator< std::pair< const int, int> >>>();
   test_stats<
+    boost::concurrent_node_map<
+      int, int, boost::hash<int>, std::equal_to<int>,
+      unequal_allocator< std::pair< const int, int> >>>();
+  test_stats<
     boost::concurrent_flat_set<
+      int, boost::hash<int>, std::equal_to<int>, unequal_allocator<int>>>();
+  test_stats<
+    boost::concurrent_node_set<
       int, boost::hash<int>, std::equal_to<int>, unequal_allocator<int>>>();
   test_stats_concurrent_unordered_interop<
     boost::unordered_flat_map<int, int>,
     boost::concurrent_flat_map<int, int>>();
   test_stats_concurrent_unordered_interop<
+    boost::unordered_node_map<int, int>,
+    boost::concurrent_node_map<int, int>>();
+  test_stats_concurrent_unordered_interop<
     boost::unordered_flat_set<int>,
     boost::concurrent_flat_set<int>>();
+  test_stats_concurrent_unordered_interop<
+    boost::unordered_node_set<int>,
+    boost::concurrent_node_set<int>>();
 #elif defined(BOOST_UNORDERED_FOA_TESTS)
   test_stats<
     boost::unordered_flat_map<

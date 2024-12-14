@@ -20,6 +20,16 @@
 #include <cstdint>
 #include <cstring>
 
+#if defined(__has_builtin)
+# if __has_builtin(__builtin_is_constant_evaluated)
+#  define BOOST_UUID_HAS_BUILTIN_ISCONSTEVAL
+# endif
+#endif
+
+#if !defined(BOOST_UUID_HAS_BUILTIN_ISCONSTEVAL) && defined(BOOST_MSVC) && BOOST_MSVC >= 1925
+# define BOOST_UUID_HAS_BUILTIN_ISCONSTEVAL
+#endif
+
 #if defined(__cpp_impl_three_way_comparison) && __cpp_impl_three_way_comparison >= 201907L && defined(__has_include)
 # if __has_include(<compare>)
 #  include <compare>
@@ -47,7 +57,7 @@ private:
 
         union
         {
-#if BOOST_WORKAROUND(BOOST_MSVC, < 1910)
+#if BOOST_WORKAROUND(BOOST_MSVC, < 1950)
 
             std::uint8_t repr_[ 16 ] = {};
 
@@ -66,19 +76,19 @@ private:
 
     public:
 
-        operator repr_type& () noexcept { return repr_; }
-        operator repr_type const& () const noexcept { return repr_; }
+        BOOST_CXX14_CONSTEXPR operator repr_type& () noexcept { return repr_; }
+        constexpr operator repr_type const& () const noexcept { return repr_; }
 
-        std::uint8_t* operator()() noexcept { return repr_; }
-        std::uint8_t const* operator()() const noexcept { return repr_; }
+        BOOST_CXX14_CONSTEXPR std::uint8_t* operator()() noexcept { return repr_; }
+        constexpr std::uint8_t const* operator()() const noexcept { return repr_; }
 
 #if BOOST_WORKAROUND(BOOST_MSVC, < 1930)
 
-        std::uint8_t* operator+( std::ptrdiff_t i ) noexcept { return repr_ + i; }
-        std::uint8_t const* operator+( std::ptrdiff_t i ) const noexcept { return repr_ + i; }
+        BOOST_CXX14_CONSTEXPR std::uint8_t* operator+( std::ptrdiff_t i ) noexcept { return repr_ + i; }
+        constexpr std::uint8_t const* operator+( std::ptrdiff_t i ) const noexcept { return repr_ + i; }
 
-        std::uint8_t& operator[]( std::ptrdiff_t i ) noexcept { return repr_[ i ]; }
-        std::uint8_t const& operator[]( std::ptrdiff_t i ) const noexcept { return repr_[ i ]; }
+        BOOST_CXX14_CONSTEXPR std::uint8_t& operator[]( std::ptrdiff_t i ) noexcept { return repr_[ i ]; }
+        constexpr std::uint8_t const& operator[]( std::ptrdiff_t i ) const noexcept { return repr_[ i ]; }
 
 #endif
     };
@@ -87,7 +97,7 @@ public:
 
     // data
 
-#if BOOST_WORKAROUND(BOOST_MSVC, < 1910)
+#if BOOST_WORKAROUND(BOOST_MSVC, < 1950)
 
     data_type data;
 
@@ -103,10 +113,35 @@ public:
 
     uuid() = default;
 
-    uuid( repr_type const& r )
+#if defined(BOOST_NO_CXX14_CONSTEXPR)
+
+    uuid( repr_type const& r ) noexcept
     {
         std::memcpy( data, r, 16 );
     }
+
+#elif defined(BOOST_UUID_HAS_BUILTIN_ISCONSTEVAL)
+
+    constexpr uuid( repr_type const& r ) noexcept
+    {
+        if( __builtin_is_constant_evaluated() )
+        {
+            for( int i = 0; i < 16; ++i ) data[ i ] = r[ i ];
+        }
+        else
+        {
+            std::memcpy( data, r, 16 );
+        }
+    }
+
+#else
+
+    constexpr uuid( repr_type const& r ) noexcept
+    {
+        for( int i = 0; i < 16; ++i ) data[ i ] = r[ i ];
+    }
+
+#endif
 
     // iteration
 
@@ -121,8 +156,8 @@ public:
     iterator begin() noexcept { return data; }
     const_iterator begin() const noexcept { return data; }
 
-    iterator end() noexcept { return data + size(); }
-    const_iterator end() const noexcept { return data + size(); }
+    iterator end() noexcept { return data() + size(); }
+    const_iterator end() const noexcept { return data() + size(); }
 
     // size
 
@@ -266,7 +301,7 @@ public:
 
     node_type node_identifier() const noexcept
     {
-        node_type node = {};
+        node_type node = {{}};
 
         std::memcpy( node.data(), this->data + 10, 6 );
         return node;

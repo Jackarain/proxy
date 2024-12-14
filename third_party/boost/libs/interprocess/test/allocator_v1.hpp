@@ -25,7 +25,6 @@
 #include <boost/interprocess/detail/utilities.hpp>
 #include <boost/interprocess/exceptions.hpp>
 #include <boost/move/adl_move_swap.hpp>
-#include <boost/static_assert.hpp>
 
 //!\file
 //!Describes an allocator_v1 that allocates portions of fixed size

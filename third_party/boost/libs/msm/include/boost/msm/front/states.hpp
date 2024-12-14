@@ -17,6 +17,7 @@
 
 #include <boost/fusion/include/vector.hpp>
 #include <boost/fusion/include/make_vector.hpp>
+#include <boost/fusion/include/insert_range.hpp>
 
 #include <boost/msm/front/common_states.hpp>
 #include <boost/msm/row_tags.hpp>

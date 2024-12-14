@@ -23,9 +23,12 @@
 #endif
 
 #if (defined(__APPLE__) && defined(__MACH__))
-#include <sys/proc_info.h>
-#include <sys/sysctl.h>
-#include <libproc.h>
+#include <TargetConditionals.h>
+#if !TARGET_OS_IOS
+  #include <sys/proc_info.h>
+  #include <sys/sysctl.h>
+  #include <libproc.h>
+#endif
 #endif
 
 #if (defined(__linux__) || defined(__ANDROID__))
@@ -49,6 +52,7 @@
 #endif
 
 #if defined(__sun)
+#include <cstdlib>
 #include <sys/types.h>
 #include <kvm.h>
 #include <sys/param.h>
@@ -156,7 +160,7 @@ shell cmd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
 
 }
     
-#elif (defined(__APPLE__) && defined(__MACH__))
+#elif (defined(__APPLE__) && defined(__MACH__)) && !TARGET_OS_IOS
 
 shell cmd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
 {
@@ -165,7 +169,7 @@ shell cmd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
     auto size = sizeof(argmax);
     if (sysctl(mib, 2, &argmax, &size, nullptr, 0) == -1)
     {
-        BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec)
+        BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec);
         return {};
     }
 
@@ -178,7 +182,7 @@ shell cmd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
 
     if (sysctl(mib, 3, &*procargs.begin(), &size, nullptr, 0) != 0)
     {
-        BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec)
+        BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec);
         return {};
     }
 
@@ -195,7 +199,7 @@ shell cmd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
         auto e = std::find(itr, end, '\0');
         if (e == end && n < argc) // something off
         {
-            BOOST_PROCESS_V2_ASSIGN_EC(ec, EINVAL, system_category())
+            BOOST_PROCESS_V2_ASSIGN_EC(ec, EINVAL, system_category());
             return {};
         }
         argv[n] = &*itr;
@@ -220,7 +224,7 @@ shell cmd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
         auto r = ::read(f, &*(procargs.end() - 4096), 4096);
         if (r < 0)
         {
-            BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec)
+            BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec);
             ::close(f);
             return {};
         }
@@ -251,7 +255,7 @@ shell cmd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
         auto e = std::find(itr, end, '\0');
         if (e == end && n < argc) // something off
         {
-            BOOST_PROCESS_V2_ASSIGN_EC(ec, EINVAL, system_category())
+            BOOST_PROCESS_V2_ASSIGN_EC(ec, EINVAL, system_category());
             return {};
         }
         argv[n] = &*itr;
@@ -271,6 +275,7 @@ shell cmd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
     kinfo_proc *proc_info = nullptr;
     const char *nlistf, *memf;
     nlistf = memf = "/dev/null";
+  
     struct closer
     {
         void operator()(kvm_t * kd)
@@ -280,17 +285,17 @@ shell cmd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
     };
 
     std::unique_ptr<kvm_t, closer> kd{kvm_openfiles(nlistf, memf, nullptr, O_RDONLY, nullptr)};
-    if (!kd) {BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec) return {};}
+    if (!kd) {BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec); return {};}
     if ((proc_info = kvm_getprocs(kd.get(), KERN_PROC_PID, pid, &cntp))) 
     {
         char **cmd = kvm_getargv(kd.get(), proc_info, 0);
         if (cmd)
             return make_cmd_shell_::clone(cmd);
         else
-            BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec)
+            BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec);
     }
     else
-        BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec)
+        BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec);
     return {};
 }
     
@@ -298,10 +303,9 @@ shell cmd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
 
 shell cmd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
 {
-
-    std::vector<std::string> vec;
     int cntp = 0;
     kinfo_proc2 *proc_info = nullptr;
+  
     struct closer
     {
         void operator()(kvm_t * kd)
@@ -312,25 +316,24 @@ shell cmd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
 
     std::unique_ptr<kvm_t, closer> kd{kvm_openfiles(nullptr, nullptr, nullptr, KVM_NO_FILES, nullptr)};
 
-    if (!kd) {BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec) return vec;}
+    if (!kd) {BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec); return {};}
     if ((proc_info = kvm_getproc2(kd.get(), KERN_PROC_PID, pid, sizeof(struct kinfo_proc2), &cntp))) 
     {
         char **cmd = kvm_getargv2(kd.get(), proc_info, 0);
         if (cmd)
             return make_cmd_shell_::clone(cmd);
         else
-            BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec)
+            BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec);
     }
     else
-        BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec)
-    return vec;
+        BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec);
+    return {};
 }
     
 #elif defined(__OpenBSD__)
 
 shell cmd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
 {
-    std::vector<std::string> vec;
     int cntp = 0;
     kinfo_proc *proc_info = nullptr;
 
@@ -343,18 +346,17 @@ shell cmd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
     };
 
     std::unique_ptr<kvm_t, closer> kd{kvm_openfiles(nullptr, nullptr, nullptr, KVM_NO_FILES, nullptr)};
-    if (!kd) {BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec) return vec;}
+    if (!kd) {BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec); return {};}
     if ((proc_info = kvm_getprocs(kd.get(), KERN_PROC_PID, pid, sizeof(struct kinfo_proc), &cntp))) 
     {
         char **cmd = kvm_getargv(kd.get(), proc_info, 0);
         if (cmd)
             return make_cmd_shell_::clone(cmd);
         else
-            BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec)
+            BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec);
     }
     else
-        BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec)
-    kvm_close(kd);
+        BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec);
     return {};
 }
     
@@ -365,36 +367,47 @@ shell cmd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
     char **cmd = nullptr;
     proc *proc_info = nullptr;
     user *proc_user = nullptr;
-    kd = kvm_open(nullptr, nullptr, nullptr, O_RDONLY, nullptr);
-    if (!kd) {BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec) return {};}
-    if ((proc_info = kvm_getproc(kd, pid))) 
+
+    struct closer
     {
-        if ((proc_user = kvm_getu(kd, proc_info))) 
+        void operator()(kvm_t * kd)
         {
-            if (!kvm_getcmd(kd, proc_info, proc_user, &cmd, nullptr)) 
+            kvm_close(kd);
+        }
+    };
+
+    std::unique_ptr<kvm_t, closer> kd{kvm_open(nullptr, nullptr, nullptr, O_RDONLY, nullptr)};
+    if (!kd) {BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec); return {};}
+    if ((proc_info = kvm_getproc(kd.get(), pid))) 
+    {
+        if ((proc_user = kvm_getu(kd.get(), proc_info))) 
+        {
+            if (!kvm_getcmd(kd.get(), proc_info, proc_user, &cmd, nullptr)) 
             {
                 int argc = 0;
                 for (int i = 0; cmd[i] != nullptr; i++)
-                    argc ++;
+                    argc++;
                 return make_cmd_shell_::make(
                         {}, argc, cmd,
-                        +[](int, char ** argv) {::free(argv);})
+                        +[](int, char ** argv) {::free(argv);});
             }
             else
-                BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec)
+                BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec);
         }
         else
-            BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec)
+            BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec);
     }
     else
-        BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec)
-    
-    kvm_close(kd);
+        BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec);
     return {};
 }
 
 #else
-#error "Platform not supported"
+filesystem::path cmd(boost::process::v2::pid_type, boost::system::error_code & ec)
+{
+  BOOST_PROCESS_V2_ASSIGN_EC(ec, ENOTSUP, system_category());
+  return "";
+}
 #endif
 
 shell cmd(boost::process::v2::pid_type pid)

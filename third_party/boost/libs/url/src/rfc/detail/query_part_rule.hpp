@@ -50,11 +50,14 @@ struct query_part_rule_t
         ++it;
         auto rv = grammar::parse(
             it, end, query_rule);
-        if(! rv)
-            return rv.error();
+        // query_rule is optionally empty and must not fail
+        BOOST_ASSERT( rv );
         value_type t;
         t.query = rv->buffer();
         t.count = rv->size();
+        // a query_rule represents at least one parameter:
+        // <empty key, no value>
+        BOOST_ASSERT( t.count );
         t.has_query = true;
         return t;
     }

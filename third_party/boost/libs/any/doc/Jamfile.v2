@@ -35,8 +35,8 @@ local doxygen_params =
 
 doxygen autodoc_any
     :
-        [ glob ../../../boost/any.hpp ]
-        [ glob ../../../boost/any/*.hpp ]
+        [ glob ../include/boost/any.hpp ]
+        [ glob ../include/boost/any/*.hpp ]
     :
         $(doxygen_params)
         <xsl:param>"boost.doxygen.reftitle=Reference Section of Boost.Any"

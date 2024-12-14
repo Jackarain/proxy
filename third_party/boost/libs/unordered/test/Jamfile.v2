@@ -8,7 +8,7 @@
 import path ;
 import regex ;
 import testing ;
-import ../../config/checks/config : requires ;
+import config : requires ;
 
 path-constant TOP : . ;
 
@@ -21,6 +21,9 @@ local msvc-flags = /wd4494 ;
 
 project
     : requirements
+        <library>/boost/concept_check//boost_concept_check
+        <library>/boost/compat//boost_compat
+        <library>/boost/iterator//boost_iterator
         <warnings>pedantic
         <toolset>intel:<warnings>on
 
@@ -41,6 +44,10 @@ project
 path-constant BOOST_UNORDERED_TEST_DIR : . ;
 
 run quick.cpp ;
+
+compile debuggability/visualization_tests.cpp
+  : <target-os>cygwin:<define>_XOPEN_SOURCE=600
+  ;
 
 compile unordered/self_include_tests_obj.cpp
   : <define>BOOST_UNORDERED_HEADER="boost/unordered_map.hpp"
@@ -108,6 +115,7 @@ local FCA_TESTS =
   move_tests
   narrow_cast_tests
   node_handle_tests
+  node_handle_allocator_tests
   noexcept_tests
   post_move_tests
   prime_fmod_tests
@@ -148,12 +156,16 @@ run unordered/serialization_tests.cpp
       <toolset>gcc:<optimization>space
       <toolset>clang:<inlining>on
       <toolset>clang:<optimization>space
-      <library>/boost//serialization/<warnings>off ;
+      <library>/boost/serialization//boost_serialization/<warnings>off ;
 
 compile-fail unordered/insert_node_type_fail.cpp : <define>UNORDERED_TEST_MAP      : insert_node_type_fail_map ;
 compile-fail unordered/insert_node_type_fail.cpp : <define>UNORDERED_TEST_MULTIMAP : insert_node_type_fail_multimap ;
 compile-fail unordered/insert_node_type_fail.cpp : <define>UNORDERED_TEST_SET      : insert_node_type_fail_set ;
 compile-fail unordered/insert_node_type_fail.cpp : <define>UNORDERED_TEST_MULTISET : insert_node_type_fail_multiset ;
+
+compile unordered/explicit_instantiation_tests.cpp :                                   : fca_explicit_instantiation_tests ;
+compile unordered/explicit_instantiation_tests.cpp : <define>BOOST_UNORDERED_FOA_TESTS : foa_explicit_instantiation_tests ;
+compile cfoa/explicit_instantiation_tests.cpp      :                                   : cfoa_explicit_instantiation_tests ;
 
 local FCA_EXCEPTION_TESTS =
   constructor_exception_tests
@@ -230,6 +242,7 @@ local FOA_TESTS =
   fancy_pointer_noleak
   pmr_allocator_tests
   stats_tests
+  node_handle_allocator_tests
 ;
 
 for local test in $(FOA_TESTS)
@@ -251,7 +264,7 @@ run unordered/serialization_tests.cpp
       <toolset>gcc:<optimization>space
       <toolset>clang:<inlining>on
       <toolset>clang:<optimization>space
-      <library>/boost//serialization/<warnings>off
+      <library>/boost/serialization//boost_serialization/<warnings>off
     : foa_serialization_tests ;
 
 local FOA_EXCEPTION_TESTS =
@@ -286,11 +299,19 @@ local MMAP_CONTAINERS =
 
 for local container in $(MMAP_CONTAINERS)
 {
-  run unordered/mmap_tests.cpp /boost/filesystem//boost_filesystem : :
+  run unordered/mmap_tests.cpp
+    /boost/filesystem//boost_filesystem
+    /boost/interprocess//boost_interprocess
+    /boost/process//boost_process
+    /boost/uuid//boost_uuid
+  : :
   : <define>BOOST_UNORDERED_FOA_MMAP_MAP_TYPE="boost::$(container)"
     <warnings>off
     <link>static
+    <toolset>gcc-4.8:<build>no # Boost.Process does not compile
+    <toolset>gcc-4.9:<build>no # ditto
     <target-os>cygwin:<build>no
+    <toolset>gcc,<target-os>windows:<build>no # Process on MinGW on Appveyor doesn't compile
   : foa_mmap_$(container)_tests ;
 }
 
@@ -306,11 +327,10 @@ alias foa_tests :
 ;
 
 local CFOA_TESTS =
-  insert_tests
   erase_tests
   try_emplace_tests
   emplace_tests
-  visit_tests
+  extract_insert_tests
   constructor_tests
   assign_tests
   clear_tests
@@ -336,6 +356,7 @@ local CFOA_TESTS =
   explicit_alloc_ctor_tests
   pmr_allocator_tests
   stats_tests
+  node_handle_allocator_tests
 ;
 
 for local test in $(CFOA_TESTS)
@@ -345,6 +366,28 @@ for local test in $(CFOA_TESTS)
   : target-name cfoa_$(test)
   ;
 }
+
+run cfoa/insert_tests.cpp
+    :
+    :
+    : $(CPP11) <threading>multi
+      <toolset>msvc:<cxxflags>/bigobj
+      <toolset>gcc:<inlining>on
+      <toolset>gcc:<optimization>space
+      <toolset>clang:<inlining>on
+      <toolset>clang:<optimization>space
+    : cfoa_insert_tests ;
+
+run cfoa/visit_tests.cpp
+    :
+    :
+    : $(CPP11) <threading>multi
+      <toolset>msvc:<cxxflags>/bigobj
+      <toolset>gcc:<inlining>on
+      <toolset>gcc:<optimization>space
+      <toolset>clang:<inlining>on
+      <toolset>clang:<optimization>space
+    : cfoa_visit_tests ;
 
 run cfoa/serialization_tests.cpp
     :
@@ -357,12 +400,12 @@ run cfoa/serialization_tests.cpp
       <toolset>gcc:<optimization>space
       <toolset>clang:<inlining>on
       <toolset>clang:<optimization>space
-      <library>/boost//serialization/<warnings>off
+      <library>/boost/serialization//boost_serialization/<warnings>off
     : cfoa_serialization_tests ;
 
 rule make_cfoa_interprocess_concurrency_tests ( name : defines ? )
 {
-    run cfoa/interprocess_concurrency_tests.cpp /boost/filesystem//boost_filesystem : :
+    run cfoa/interprocess_concurrency_tests.cpp : :
         : <define>$(defines)
           <warnings>off
           <link>static
@@ -370,7 +413,14 @@ rule make_cfoa_interprocess_concurrency_tests ( name : defines ? )
           <toolset>clang-3.6:<build>no # idem
           <toolset>clang-3.7:<build>no # idem
           <toolset>clang-3.8:<build>no # idem
+          <toolset>gcc-4.8:<build>no # idem
+          <toolset>gcc-4.9:<build>no # idem
           <target-os>cygwin:<build>no
+          <toolset>gcc,<target-os>windows:<build>no # Process on MinGW on Appveyor doesn't compile
+          <library>/boost/filesystem//boost_filesystem
+          <library>/boost/interprocess//boost_interprocess
+          <library>/boost/process//boost_process
+          <library>/boost/uuid//boost_uuid
         : $(name) ;
 }
 
@@ -381,6 +431,8 @@ make_cfoa_interprocess_concurrency_tests cfoa_interproc_conc_tests_stats
 
 alias cfoa_tests :
   cfoa_$(CFOA_TESTS)
+  cfoa_insert_tests
+  cfoa_visit_tests
   cfoa_serialization_tests
   cfoa_interproc_conc_tests
   cfoa_interproc_conc_tests_stats ;

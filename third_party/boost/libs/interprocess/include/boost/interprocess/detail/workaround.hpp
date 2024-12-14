@@ -34,6 +34,10 @@
 #else
    #include <unistd.h>
 
+   #if defined (__CYGWIN__) && (!defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE < 200112L))
+   #error "Error: Compiling on Cygwin without POSIX is not supported. Please define _XOPEN_SOURCE >= 600 or _POSIX_C_SOURCE >= 200112 when compiling"
+   #endif
+
    //////////////////////////////////////////////////////
    //Check for XSI shared memory objects. They are available in nearly all UNIX platforms
    //////////////////////////////////////////////////////
@@ -260,6 +264,115 @@
 #  endif
 #endif
 
-#include <boost/core/no_exceptions_support.hpp>
+namespace boost {
+namespace interprocess {
+
+template <typename T1>
+BOOST_FORCEINLINE BOOST_CXX14_CONSTEXPR void ignore(T1 const&)
+{}
+
+}} //namespace boost::interprocess {
+
+#if !(defined BOOST_NO_EXCEPTIONS)
+#    define BOOST_INTERPROCESS_TRY { try
+#    define BOOST_INTERPROCESS_CATCH(x) catch(x)
+#    define BOOST_INTERPROCESS_RETHROW throw;
+#    define BOOST_INTERPROCESS_CATCH_END }
+#else
+#    if !defined(BOOST_MSVC) || BOOST_MSVC >= 1900
+#        define BOOST_INTERPROCESS_TRY { if (true)
+#        define BOOST_INTERPROCESS_CATCH(x) else if (false)
+#    else
+// warning C4127: conditional expression is constant
+#        define BOOST_INTERPROCESS_TRY { \
+             __pragma(warning(push)) \
+             __pragma(warning(disable: 4127)) \
+             if (true) \
+             __pragma(warning(pop))
+#        define BOOST_INTERPROCESS_CATCH(x) else \
+             __pragma(warning(push)) \
+             __pragma(warning(disable: 4127)) \
+             if (false) \
+             __pragma(warning(pop))
+#    endif
+#    define BOOST_INTERPROCESS_RETHROW
+#    define BOOST_INTERPROCESS_CATCH_END }
+#endif
+
+#ifndef BOOST_NO_CXX11_STATIC_ASSERT
+#  ifndef BOOST_NO_CXX11_VARIADIC_MACROS
+#     define BOOST_INTERPROCESS_STATIC_ASSERT( ... ) static_assert(__VA_ARGS__, #__VA_ARGS__)
+#  else
+#     define BOOST_INTERPROCESS_STATIC_ASSERT( B ) static_assert(B, #B)
+#  endif
+#else
+namespace boost {
+   namespace interprocess {
+      namespace dtl {
+
+         template<bool B>
+         struct STATIC_ASSERTION_FAILURE;
+
+         template<>
+         struct STATIC_ASSERTION_FAILURE<true> {};
+
+         template<unsigned> struct static_assert_test {};
+
+      }
+   }
+}
+
+#define BOOST_INTERPROCESS_STATIC_ASSERT(B) \
+         typedef ::boost::interprocess::dtl::static_assert_test<\
+            (unsigned)sizeof(::boost::interprocess::dtl::STATIC_ASSERTION_FAILURE<bool(B)>)>\
+               BOOST_JOIN(boost_container_static_assert_typedef_, __LINE__) BOOST_ATTRIBUTE_UNUSED
+
+#endif
+
+#ifndef BOOST_NO_CXX11_STATIC_ASSERT
+#  ifndef BOOST_NO_CXX11_VARIADIC_MACROS
+#     define BOOST_INTERPROCESS_STATIC_ASSERT_MSG( ... ) static_assert(__VA_ARGS__)
+#  else
+#     define BOOST_INTERPROCESS_STATIC_ASSERT_MSG( B, Msg ) static_assert( B, Msg )
+#  endif
+#else
+#     define BOOST_INTERPROCESS_STATIC_ASSERT_MSG( B, Msg ) BOOST_INTERPROCESS_STATIC_ASSERT( B )
+#endif
+
+#if !defined(BOOST_NO_CXX17_INLINE_VARIABLES)
+#  define BOOST_INTERPROCESS_CONSTANT_VAR BOOST_INLINE_CONSTEXPR
+#else
+#  define BOOST_INTERPROCESS_CONSTANT_VAR static BOOST_CONSTEXPR_OR_CONST
+#endif
+
+#if defined(__GNUC__) && ((__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__) >= 40600)
+#define BOOST_INTERPROCESS_GCC_COMPATIBLE_HAS_DIAGNOSTIC_IGNORED
+#elif defined(__clang__)
+#define BOOST_INTERPROCESS_GCC_COMPATIBLE_HAS_DIAGNOSTIC_IGNORED
+#endif
+
+
+////////////////////////////////////////////
+//
+//    BOOST_INTERPROCESS_EINTR_RETRY
+//
+////////////////////////////////////////////
+
+//#define DISABLE_BOOST_INTERPROCESS_EINTR_RETRY
+#if !defined(DISABLE_BOOST_INTERPROCESS_EINTR_RETRY) && defined(__GNUC__)
+
+/* taken from glibc unistd.h and fixes musl */
+#define BOOST_INTERPROCESS_EINTR_RETRY(RESULTTYPE, FAILUREVALUE, EXPRESSION) \
+  (__extension__                                   \
+    ({ RESULTTYPE __result;                        \
+       do __result = (RESULTTYPE) (EXPRESSION);    \
+       while (__result == FAILUREVALUE && errno == EINTR);  \
+       __result; }))
+
+#else    //!defined(DISABLE_BOOST_INTERPROCESS_EINTR_RETRY) && defined(__GNUC__)
+
+#define BOOST_INTERPROCESS_EINTR_RETRY(RESULTTYPE, FAILUREVALUE, EXPRESSION) ((RESULTTYPE)(EXPRESSION))
+
+#endif   //!defined(DISABLE_BOOST_INTERPROCESS_EINTR_RETRY) && defined(__GNUC__)
 
 #endif   //#ifndef BOOST_INTERPROCESS_DETAIL_WORKAROUND_HPP

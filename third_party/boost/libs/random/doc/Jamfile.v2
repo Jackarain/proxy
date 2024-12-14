@@ -83,8 +83,8 @@ local BOOST_ROOT = [ path.relative-to
                            [ path.pwd ] ] ] ;
 
 doxygen reference :
-    $(here)/../../../boost/random/$(doxygen_files).hpp
-    $(here)/../../../boost/random.hpp
+    $(here)/../include/boost/random/$(doxygen_files).hpp
+    $(here)/../include/boost/random.hpp
   :
     <doxygen:param>EXPAND_ONLY_PREDEF=YES
     <doxygen:param>"ALIASES= \\

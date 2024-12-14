@@ -263,6 +263,25 @@ public:
     pct_string_view& operator=(
         pct_string_view const& other) = default;
 
+    /** Return a valid percent-encoded string
+
+        If `s` is a valid percent-encoded string,
+        the function returns the buffer as a valid
+        view which may be used to perform decoding
+        or measurements.
+        Otherwise the result contains an error code.
+        Upon success, the returned view references
+        the original character buffer;
+        Ownership is not transferred.
+
+        @par Complexity
+        Linear in `s.size()`.
+
+        @par Exception Safety
+        Throws nothing.
+
+        @param s The string to validate.
+    */
     friend
     BOOST_URL_DECL
     system::result<pct_string_view>
@@ -362,7 +381,7 @@ public:
     }
 
 #ifndef BOOST_URL_DOCS
-    // arrow support
+    /// Arrow support
     pct_string_view const*
     operator->() const noexcept
     {

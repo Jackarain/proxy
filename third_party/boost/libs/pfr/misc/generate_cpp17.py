@@ -38,7 +38,12 @@ PROLOGUE = """// Copyright (c) 2016-2024 Antony Polukhin
 
 #include <boost/pfr/detail/sequence_tuple.hpp>
 #include <boost/pfr/detail/size_t_.hpp>
+
+#ifdef BOOST_PFR_HAS_STD_MODULE
+import std;
+#else
 #include <type_traits> // for std::conditional_t, std::is_reference
+#endif
 
 namespace boost { namespace pfr { namespace detail {
 
@@ -134,7 +139,7 @@ class EmptyLinePrinter:
 
 indexes = "    a"
 print(PROLOGUE)
-funcs_count = 100 if len(sys.argv) == 1 else int(sys.argv[1])
+funcs_count = 200 if len(sys.argv) == 1 else int(sys.argv[1])
 max_args_on_a_line = len(ascii_letters)
 for i in range(1, funcs_count):
     if i % max_args_on_a_line == 0:

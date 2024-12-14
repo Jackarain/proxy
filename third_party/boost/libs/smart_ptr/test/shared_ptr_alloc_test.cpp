@@ -10,7 +10,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/config.hpp>
-#include <boost/detail/quick_allocator.hpp>
+#include <boost/smart_ptr/detail/quick_allocator.hpp>
 
 #include <iostream>
 #include <vector>

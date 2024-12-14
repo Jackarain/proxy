@@ -78,10 +78,14 @@ def entities():
         'id': 'f2',
         'static': 'yes',
         'constexpr': 'yes',
+        'noexcept': 'yes',
         'items': [
             { 'tag': 'name', 'items': ['func'] },
-            { 'tag': 'argsstring', 'items': ['()'] },
             { 'tag': 'type', 'items': ['constexpr void'] },
+            {
+                'tag': 'argsstring',
+                 'items': ['() noexcept(noexcept((void)12))'],
+            },
         ]
     }
     g1 = {
@@ -89,6 +93,8 @@ def entities():
         'kind': 'function',
         'id': 'g1',
         'refqual': 'rvalue',
+        'noexcept': 'yes',
+        'noexceptexpression': 'foobar(")", "(")',
         'items': [
             { 'tag': 'name', 'items': ['g'] },
             { 'tag': 'argsstring', 'items': ['()'] },
@@ -165,12 +171,30 @@ def entities():
             ]
         }
 
+    cl4 = docca.Class(
+        make_elem({
+            'tag': 'compound',
+            'id': 'cl4',
+            'items': [
+                { 'tag': 'compoundname', 'items': ['nested2'] },
+                {
+                    'tag': 'detaileddescription',
+                    'items': [
+                        'See ',
+                        { 'tag': 'ref', 'refid': 'cl4', 'items': ['nested2'] },
+                        '.',
+                    ],
+                },
+            ]
+        }),
+        index)
     cl2 = docca.Class(
         make_elem({
             'tag': 'compound',
             'id': 'cl2',
             'items': [
                 { 'tag': 'compoundname', 'items': ['nested'] },
+                { 'tag': 'innerclass', 'refid': cl4.id },
                 {
                     'tag': 'templateparamlist',
                     'items': [
@@ -310,6 +334,27 @@ def entities():
             { 'tag': 'initializer', 'items': ['= 11'] }
         ]
     }
+    v2 = {
+        'tag': 'memberdef',
+        'kind': 'variable',
+        'id': 'v2',
+        'static': 'yes',
+        'constexpr': 'yes',
+        'items': [
+            { 'tag': 'name', 'items': ['Var2'] },
+            { 'tag': 'type', 'items': ['double'] },
+        ]
+    }
+    v3 = {
+        'tag': 'memberdef',
+        'kind': 'variable',
+        'id': 'v3',
+        'items': [
+            { 'tag': 'name', 'items': ['Var3'] },
+            { 'tag': 'type', 'items': ['int(*'] },
+            { 'tag': 'argsstring', 'items': [')(int, long)'] },
+        ]
+    }
 
     ns1 = docca.Namespace(
         make_elem({
@@ -318,7 +363,7 @@ def entities():
             'items': [
                 { 'tag': 'compoundname', 'items': ['ns1'] },
                 { 'tag': 'innernamespace', 'refid': ns2.id },
-                { 'tag': 'sectiondef', 'items': [e1, t1, v1] },
+                { 'tag': 'sectiondef', 'items': [e1, t1, v1, v2, v3] },
                 {
                     'tag': 'briefdescription',
                     'items': [
@@ -421,8 +466,19 @@ def test_text_helper(cfg, render):
         {{ qbk.text_helper(entities) }}'''
     assert render('[[foobar]]') == '\\[\\[foobar\\]\\]'
 
+    render.template = '''
+        {%- import "docca/quickbook/components.jinja2" as qbk -%}
+        {{ qbk.text_helper(entities, in_code=True) }}'''
     cfg['replace_strings'] = {'foobar': 'FooBar'}
-    assert render('[[foobar]]') == '\\[\\[FooBar\\]\\]'
+    assert render('[[foobar]]') == '[[FooBar]]'
+
+    cfg['replace_strings'] = {'foob\\b': 'FooBar'}
+    assert render('[[foobar]]') == '[[foobar]]'
+
+    cfg['replace_strings'] = {'\\bf(o+)bar\\b': 'F\\1BaR'}
+    assert render('[[fobar]]') == '[[FoBaR]]'
+    assert render('[[foobar]]') == '[[FooBaR]]'
+    assert render('[[fooobar]]') == '[[FoooBaR]]'
 
     render.template = '''
         {%- import "docca/quickbook/components.jinja2" as qbk -%}
@@ -542,13 +598,17 @@ def test_phrase(entities, cfg, render):
         docca.Linebreak(),
         docca.EntityRef(entities['ostream'], ['output stream']),
         docca.Phrase([' ', 'more text']),
+        docca.Linebreak(),
+        docca.EntityRef(entities['o[]'], 'operator[]'),
     ]
     assert render(parts) == textwrap.dedent('''\
         regular text `monospaced text` ['emph [*bold]]
 
         [@http://a.b/c link text][link ns1__ns2__klass.g `ref text`]
 
-        [@http://ostream.org `output stream`] more text''')
+        [@http://ostream.org `output stream`] more text
+
+        [link ns1__ns2__klass.operator__lb__rb_ `operator[]`]''')
 
     render.template = '''
         {%- import "docca/quickbook/components.jinja2" as qbk -%}
@@ -558,14 +618,15 @@ def test_phrase(entities, cfg, render):
 
         [@http://a.b/c link text]``[link ns1__ns2__klass.g [^ns1::ns2::klass::g]]``
 
-        ``[@http://ostream.org [^std::ostream]]`` more text''')
+        ``[@http://ostream.org [^std::ostream]]`` more text
+
+        ``[link ns1__ns2__klass.operator__lb__rb_ [^ns1::ns2::klass::operator\[\]]]``''')
 
 def test_description(render):
     render.template = '''
         {%- import "docca/quickbook/components.jinja2" as qbk -%}
         {{ qbk.description(entities, nesting='  ') }}'''
-    parts = []
-    assert render(parts) == ''
+    assert render([]) == ''
 
     parts = [
         docca.Paragraph([ '1 ', docca.Monospaced(['2']) ]),
@@ -670,6 +731,70 @@ def test_description(render):
             ]
           ]
         ]
+        [heading Parameters]
+        [table [[Name][Description]]
+          [
+            [`int a`, `char const* b`
+            ]
+            [
+        param1 description
+
+
+            ]
+          ]
+          [
+            [`float c`
+            ]
+            [
+        param2 description
+
+
+            ]
+          ]
+        ]
+
+        ''')
+
+    render.template = '''\
+        {%- import "docca/quickbook/components.jinja2" as qbk -%}
+        {{ qbk.description(entities, nesting='  ', title='Title') }}'''
+    assert render([]) == ''
+
+    parts = [ docca.Paragraph([ '1 ', docca.Monospaced(['2']) ]) ]
+    assert render(parts) == textwrap.dedent('''\
+        [heading Title]
+        1 `2`
+
+        ''')
+    parts = [
+        docca.ParameterList(
+            'param',
+            [
+                docca.ParameterDescription(
+                    [docca.Paragraph(['param1 description'])],
+                    [
+                        docca.ParameterItem(
+                            docca.Phrase(['int']),
+                            docca.Phrase(['a']),
+                            None),
+                        docca.ParameterItem(
+                            docca.Phrase(['char const*']),
+                            docca.Phrase(['b']),
+                            None),
+                    ],
+                ),
+                docca.ParameterDescription(
+                    [docca.Paragraph(['param2 description'])],
+                    [
+                        docca.ParameterItem(
+                            docca.Phrase(['float']),
+                            docca.Phrase(['c']),
+                            None),
+                    ]
+                ),
+            ])
+    ]
+    assert render(parts) == textwrap.dedent('''\
         [heading Parameters]
         [table [[Name][Description]]
           [
@@ -906,6 +1031,8 @@ def test_entity_declaration(entities, render):
     assert render(entities['e1']) == 'enum class e1\n    : unsigned;'
     assert render(entities['t1']) == 'using TA = std::string;'
     assert render(entities['v1']) == 'static\nint Var = 11;'
+    assert render(entities['v2']) == 'static constexpr\ndouble Var2;'
+    assert render(entities['v3']) == 'int(*Var3)(int, long);'
 
 def test_function_declaration(entities, render):
     render.template = '''\
@@ -918,11 +1045,11 @@ def test_function_declaration(entities, render):
             int (&n) [1],
             ``[link ns1__ns2__klass [^ns1::ns2::klass]]`` = ``[link ns1__Var [^ns1::Var]]``,
             unsigned t = 2);''')
-    assert render(entities['f2']) == 'static constexpr\nvoid\nfunc();'
-    assert render(entities['cl1_c']) == 'explicit\nconstexpr\nklass();'
+    assert render(entities['f2']) == 'static constexpr void\nfunc() noexcept(noexcept((void)12));'
+    assert render(entities['cl1_c']) == 'explicit constexpr\nklass();'
     assert render(entities['cl1_d']) == '~klass() noexcept(false);'
     assert render(entities['o=']) == 'void\noperator=() noexcept;'
-    assert render(entities['g1']) == 'void\ng() &&;'
+    assert render(entities['g1']) == 'void\ng() && noexcept(foobar(")", "("));'
     assert render(entities['g2']) == 'void\ng() const&;'
     assert render(entities['g3']) == 'void\ng() & = delete;'
 
@@ -986,6 +1113,39 @@ def test_write_entity(cfg, entities, render):
         ```
         static
         int Var = 11;
+        ```
+
+
+
+
+
+        [endsect]
+        [section:ns1__Var2 ns1::Var2]
+        [indexterm1 Var2]
+
+
+        [heading Synopsis]
+        Defined in header [include_file /path/to/ns1.hpp]
+
+        ```
+        static constexpr
+        double Var2;
+        ```
+
+
+
+
+
+        [endsect]
+        [section:ns1__Var3 ns1::Var3]
+        [indexterm1 Var3]
+
+
+        [heading Synopsis]
+        Defined in header [include_file /path/to/ns1.hpp]
+
+        ```
+        int(*Var3)(int, long);
         ```
 
 
@@ -1088,8 +1248,39 @@ def test_write_entity(cfg, entities, render):
             class T = std::String>
         class nested;
         ```
+        [heading Types]
+        [table [[Name][Description]]
+          [
+            [[*[link ns1__ns2__klass.nested.nested2 nested2]]
+            ]
+            [
+            ]
+          ]
+        ]
 
 
+
+
+
+        [section:nested2 ns2::klass::nested::nested2]
+        [indexterm2 nested2..nested]
+
+
+        [heading Synopsis]
+
+
+        ```
+        class nested2;
+        ```
+
+        [heading Description]
+        See [link ns1__ns2__klass.nested.nested2 `nested2`].
+
+
+
+
+
+        [endsect]
 
 
 
@@ -1102,7 +1293,7 @@ def test_write_entity(cfg, entities, render):
         One overload of g
         ```
         void
-        ``[link ns1__ns2__klass.g.overload1 g]``() &&;
+        ``[link ns1__ns2__klass.g.overload1 g]``() && noexcept(foobar(")", "("));
           ``[''\''&raquo;\''' [link ns1__ns2__klass.g.overload1 `more...`]]``
         ```
         Another overload of g
@@ -1128,7 +1319,7 @@ def test_write_entity(cfg, entities, render):
 
         ```
         void
-        g() &&;
+        g() && noexcept(foobar(")", "("));
         ```
 
 
@@ -1183,8 +1374,7 @@ def test_write_entity(cfg, entities, render):
 
 
         ```
-        explicit
-        constexpr
+        explicit constexpr
         klass();
         ```
 
@@ -1242,9 +1432,8 @@ def test_write_entity(cfg, entities, render):
 
 
         ```
-        static constexpr
-        void
-        func();
+        static constexpr void
+        func() noexcept(noexcept((void)12));
         ```
 
 
@@ -1281,3 +1470,39 @@ def test_write_entity(cfg, entities, render):
         [endsect]
 
         ''')
+
+def test_defaulted(cfg, render):
+    func = {
+        'tag': 'memberdef',
+        'kind': 'function',
+        'id': 'func',
+        'items': [
+            { 'tag': 'name', 'items': ['func'] },
+            { 'tag': 'argsstring', 'items': ['() =default'] },
+            { 'tag': 'type', 'items': ['void'] },
+        ]
+    }
+    ns = docca.Namespace(
+        make_elem({
+            'tag': 'compound',
+            'id': 'ns',
+            'items': [
+                { 'tag': 'compoundname', 'items': ['ns'] },
+                { 'tag': 'sectiondef', 'items': [func] },
+            ]
+        }))
+    ns.resolve_references()
+    func = ns.index['func']
+    func.resolve_references()
+
+    render.template = '''\
+        {%- import "docca/quickbook/components.jinja2" as qbk -%}
+        {{ qbk.function_declaration(entities) }}'''
+    assert render(func) == textwrap.dedent('''\
+        void
+        func();''')
+
+    render.env.globals['Config']['show_defaulted'] = True
+    assert render(func) == textwrap.dedent('''\
+        void
+        func() = default;''')

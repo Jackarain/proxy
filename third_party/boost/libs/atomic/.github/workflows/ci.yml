@@ -468,7 +468,7 @@ jobs:
 
           - name: CMake tests
             cmake_tests: 1
-            os: ubuntu-20.04
+            os: ubuntu-22.04
 
     timeout-minutes: 30
     runs-on: ${{matrix.os}}
@@ -710,7 +710,7 @@ jobs:
                 ./b2 "${B2_ARGS[@]}" "address-model=32" "cxxstd=${{matrix.cxxstd32}}" "libs/$LIBRARY/test"
             fi
 
-      - name: Run CMake tests
+      - name: Build CMake tests
         if: matrix.cmake_tests
         run: |
             if [ -n "${{matrix.macosx_version_min}}" ]
@@ -719,12 +719,21 @@ jobs:
             fi
             cd boost-root
             mkdir __build_static__ && cd __build_static__
-            cmake ../libs/$LIBRARY/test/test_cmake
-            cmake --build . --target boost_${LIBRARY}_cmake_self_test -j $BUILD_JOBS
+            cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DBUILD_TESTING=ON ..
+            cmake --build . --target tests -j $BUILD_JOBS
             cd ..
             mkdir __build_shared__ && cd __build_shared__
-            cmake -DBUILD_SHARED_LIBS=On ../libs/$LIBRARY/test/test_cmake
-            cmake --build . --target boost_${LIBRARY}_cmake_self_test -j $BUILD_JOBS
+            cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=ON ..
+            cmake --build . --target tests -j $BUILD_JOBS
+
+      - name: Run CMake tests
+        if: matrix.cmake_tests
+        run: |
+            cd boost-root
+            cd __build_static__
+            ctest --output-on-failure --no-tests=error -j $BUILD_JOBS
+            cd ../__build_shared__
+            ctest --output-on-failure --no-tests=error -j $BUILD_JOBS
 
   windows:
     defaults:
@@ -828,16 +837,25 @@ jobs:
                 b2 %B2_ARGS% cxxstd=${{matrix.cxxstd32}} address-model=32 libs/%LIBRARY%/test
             )
 
-      - name: Run CMake tests
+      - name: Build CMake tests
         if: matrix.cmake_tests
         run: |
             cd boost-root
             mkdir __build_static__
             cd __build_static__
-            cmake ../libs/%LIBRARY%/test/test_cmake
-            cmake --build . --target boost_%LIBRARY%_cmake_self_test -j %NUMBER_OF_PROCESSORS%
+            cmake -DBOOST_INCLUDE_LIBRARIES=%LIBRARY% -DBUILD_TESTING=ON ..
+            cmake --build . --config Release --target tests -j %NUMBER_OF_PROCESSORS%
             cd ..
             mkdir __build_shared__
             cd __build_shared__
-            cmake -DBUILD_SHARED_LIBS=On ../libs/%LIBRARY%/test/test_cmake
-            cmake --build . --target boost_%LIBRARY%_cmake_self_test -j %NUMBER_OF_PROCESSORS%
+            cmake -DBOOST_INCLUDE_LIBRARIES=%LIBRARY% -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=ON ..
+            cmake --build . --config Release --target tests -j %NUMBER_OF_PROCESSORS%
+
+      - name: Run CMake tests
+        if: matrix.cmake_tests
+        run: |
+            cd boost-root
+            cd __build_static__
+            ctest -C Release --output-on-failure --no-tests=error -j %NUMBER_OF_PROCESSORS%
+            cd ../__build_shared__
+            ctest -C Release --output-on-failure --no-tests=error -j %NUMBER_OF_PROCESSORS%

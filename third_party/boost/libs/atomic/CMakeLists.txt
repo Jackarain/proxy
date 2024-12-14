@@ -1,6 +1,7 @@
 # Copyright 2018 Mike Dev
 # Copyright 2019 Peter Dimov
-# Copyright 2020-2023 Andrey Semashev
+# Copyright 2020-2024 Andrey Semashev
+#
 # Distributed under the Boost Software License, Version 1.0.
 # See accompanying file LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt
 
@@ -97,10 +98,10 @@ target_link_libraries(boost_atomic
     PUBLIC
         Boost::assert
         Boost::config
+        Boost::predef
         Boost::type_traits
     PRIVATE
         Boost::align
-        Boost::predef
         Boost::preprocessor
 
         Threads::Threads
@@ -137,4 +138,8 @@ if (BOOST_ATOMIC_COMPILER_HAS_SSE2)
 endif()
 if (BOOST_ATOMIC_COMPILER_HAS_SSE41)
     target_compile_definitions(boost_atomic PRIVATE BOOST_ATOMIC_USE_SSE41)
+endif()
+
+if (BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
+    add_subdirectory(test)
 endif()

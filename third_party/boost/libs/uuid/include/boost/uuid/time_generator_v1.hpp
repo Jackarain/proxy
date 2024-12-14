@@ -45,10 +45,20 @@ public:
 
 private:
 
-    uuid::node_type node_ = {};
+    uuid::node_type node_ = {{}};
 
     std::atomic<state_type>* ps_ = nullptr;
+
+#if BOOST_WORKAROUND(BOOST_GCC, < 50000)
+
+    // Avoid -Wmissing-field-initializers under GCC 4.x
+    state_type state_ = { 0, 0 };
+
+#else
+
     state_type state_ = {};
+
+#endif
 
 public:
 

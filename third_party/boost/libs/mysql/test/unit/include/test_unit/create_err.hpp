@@ -12,8 +12,6 @@
 #include <boost/mysql/string_view.hpp>
 
 #include <boost/mysql/impl/internal/protocol/deserialization.hpp>
-#include <boost/mysql/impl/internal/protocol/impl/protocol_types.hpp>
-#include <boost/mysql/impl/internal/protocol/impl/serialization_context.hpp>
 
 #include "test_unit/create_frame.hpp"
 
@@ -21,20 +19,7 @@ namespace boost {
 namespace mysql {
 namespace test {
 
-inline std::vector<std::uint8_t> serialize_err_impl(detail::err_view pack, bool with_header)
-{
-    std::vector<std::uint8_t> buff;
-    detail::serialization_context ctx(buff, detail::disable_framing);
-    if (with_header)
-        ctx.add(0xff);  // header
-    ctx.serialize(
-        detail::int2{pack.error_code},
-        detail::string_fixed<1>{},  // SQL state marker
-        detail::string_fixed<5>{},  // SQL state
-        detail::string_eof{pack.error_message}
-    );
-    return buff;
-}
+std::vector<std::uint8_t> serialize_err_impl(detail::err_view pack, bool with_header);
 
 class err_builder
 {

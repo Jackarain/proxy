@@ -11,8 +11,6 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/core/lightweight_test.hpp>
 
-#if !defined( BOOST_NO_CXX11_RVALUE_REFERENCES )
-
 struct X
 {};
 
@@ -95,12 +93,3 @@ int main()
 
     return boost::report_errors();
 }
-
-#else // !defined( BOOST_NO_CXX11_RVALUE_REFERENCES )
-
-int main()
-{
-    return 0;
-}
-
-#endif // !defined( BOOST_NO_CXX11_RVALUE_REFERENCES )

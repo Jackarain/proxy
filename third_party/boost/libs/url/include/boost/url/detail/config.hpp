@@ -131,6 +131,26 @@
 #define BOOST_URL_DEPRECATED(msg) BOOST_DEPRECATED(msg)
 #endif
 
+// Implementation defined type for Doxygen while Clang
+// can still parse the comments into the AST
+#ifndef BOOST_URL_DOCS
+#define BOOST_URL_IMPLEMENTATION_DEFINED(Type) Type
+#else
+#define BOOST_URL_IMPLEMENTATION_DEFINED(Type) __implementation_defined__
+#endif
+
+#ifndef BOOST_URL_DOCS
+#define BOOST_URL_SEE_BELOW(Type) Type
+#else
+#define BOOST_URL_SEE_BELOW(Type) __see_below__
+#endif
+
+#ifdef __cpp_lib_array_constexpr
+#define BOOST_URL_LIB_ARRAY_CONSTEXPR constexpr
+#else
+#define BOOST_URL_LIB_ARRAY_CONSTEXPR
+#endif
+
 // avoid Boost.TypeTraits for these traits
 namespace boost {
 namespace urls {

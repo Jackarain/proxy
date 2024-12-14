@@ -9,13 +9,6 @@
 #include <memory>
 #include <utility>
 
-#if defined( BOOST_NO_CXX11_RVALUE_REFERENCES )
-
-BOOST_PRAGMA_MESSAGE("Skipping test because BOOST_NO_CXX11_RVALUE_REFERENCES is defined")
-int main() {}
-
-#else
-
 struct Y
 {
     static int instances;
@@ -125,8 +118,6 @@ int main()
         BOOST_TEST( Y::instances == 0 );
     }
 
-#if !defined( BOOST_NO_CXX11_NULLPTR )
-
     {
         boost::shared_ptr<Y> p( nullptr, YD() );
 
@@ -145,9 +136,5 @@ int main()
         BOOST_TEST( del.moved_ );
     }
 
-#endif
-
     return boost::report_errors();
 }
-
-#endif

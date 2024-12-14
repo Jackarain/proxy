@@ -176,12 +176,9 @@ struct float128_backend
 
  public:
    constexpr   float128_backend() noexcept : m_value(0) {}
-   constexpr   float128_backend(const float128_backend& o) noexcept : m_value(o.m_value) {}
-   BOOST_MP_CXX14_CONSTEXPR float128_backend& operator=(const float128_backend& o) noexcept
-   {
-      m_value = o.m_value;
-      return *this;
-   }
+   constexpr   float128_backend(const float128_backend& o) noexcept = default;
+   BOOST_MP_CXX14_CONSTEXPR float128_backend& operator=(const float128_backend& o) noexcept = default;
+
    template <class T>
    constexpr float128_backend(const T& i, const typename std::enable_if<std::is_convertible<T, float128_type>::value>::type* = nullptr) noexcept(noexcept(std::declval<float128_type&>() = std::declval<const T&>()))
        : m_value(i) {}

@@ -20,7 +20,7 @@ list(APPEND BOOST_URL_TESTS_FILES CMakeLists.txt Jamfile)
 set(EXAMPLE_FILES ../../example/router/impl/matches.cpp ../../example/router/detail/impl/router.cpp)
 
 # Test target
-add_executable(boost_url_unit_tests ${BOOST_URL_TESTS_FILES} ${SUITE_FILES} ${EXAMPLE_FILES})
+add_executable(boost_url_unit_tests EXCLUDE_FROM_ALL ${BOOST_URL_TESTS_FILES} ${SUITE_FILES} ${EXAMPLE_FILES})
 target_include_directories(boost_url_unit_tests PRIVATE . ../../extra ../../example/router)
 target_link_libraries(boost_url_unit_tests PUBLIC Boost::url)
 foreach (BOOST_URL_UNIT_TEST_LIBRARY ${BOOST_URL_UNIT_TEST_LIBRARIES})

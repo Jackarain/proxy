@@ -20,11 +20,9 @@ import os ;
 local NT2_ROOT_PATH = [ os.environ NT2_ROOT_PATH ] ;
 local NT2_SIMD_FLAGS = [ os.environ NT2_SIMD_FLAGS ] ;
 
-use-project boost : $(BOOST_ROOT) ;
-
 project
   : requirements
-    <library>$(BOOST_ROOT)/boost/test/included/unit_test_framework.hpp
+    <library>/boost/test//included
     <define>BOOST_ALL_NO_LIB=1
     <include>$(NT2_ROOT_PATH)/include/
     <link>static

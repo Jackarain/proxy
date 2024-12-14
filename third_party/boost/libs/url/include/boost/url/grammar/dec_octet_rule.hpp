@@ -53,6 +53,7 @@ namespace grammar {
 #ifdef BOOST_URL_DOCS
 constexpr __implementation_defined__ dec_octet_rule;
 #else
+namespace implementation_defined {
 struct dec_octet_rule_t
 {
     using value_type = unsigned char;
@@ -65,8 +66,42 @@ struct dec_octet_rule_t
             ) const noexcept ->
         system::result<value_type>;
 };
+}
 
-constexpr dec_octet_rule_t dec_octet_rule{};
+/** Match a decimal octet
+
+    A decimal octet is precise way of
+    saying a number from 0 to 255. These
+    are commonly used in IPv4 addresses.
+
+    @par Value Type
+    @code
+    using value_type = unsigned char;
+    @endcode
+
+    @par Example
+    Rules are used with the function @ref parse.
+    @code
+    system::result< unsigned char > rv = parse( "255", dec_octet_rule );
+    @endcode
+
+    @par BNF
+    @code
+    dec-octet   = DIGIT                 ; 0-9
+                / %x31-39 DIGIT         ; 10-99
+                / "1" 2DIGIT            ; 100-199
+                / "2" %x30-34 DIGIT     ; 200-249
+                / "25" %x30-35          ; 250-255
+    @endcode
+
+    @par Specification
+    @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.2.2"
+        >3.2.2.  Host (rfc3986)</a>
+
+    @see
+        @ref parse.
+*/
+constexpr implementation_defined::dec_octet_rule_t dec_octet_rule{};
 #endif
 
 } // grammar

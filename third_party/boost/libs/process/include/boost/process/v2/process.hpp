@@ -34,7 +34,7 @@ BOOST_PROCESS_V2_BEGIN_NAMESPACE
 /* A `basic_process` object manages a subprocess; it tracks the status and exit-code,
  * and will terminate the process on destruction if `detach` was not called.
 */
-template<typename Executor = BOOST_PROCESS_V2_ASIO_NAMESPACE::any_io_executor>
+template<typename Executor = net::any_io_executor>
 struct basic_process
 {
   /// The executor of the process
@@ -111,7 +111,7 @@ struct basic_process
       ExecutionContext & context,
       typename std::enable_if<
           std::is_convertible<ExecutionContext&, 
-                              BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context&>::value,
+                              net::execution_context&>::value,
           const filesystem::path&>::type exe,
       std::initializer_list<string_view> args,
       Inits&&... inits)
@@ -125,7 +125,7 @@ struct basic_process
       ExecutionContext & context,
       typename std::enable_if<
           std::is_convertible<ExecutionContext&, 
-                              BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context&>::value,
+                              net::execution_context&>::value,
           const filesystem::path&>::type exe,
       Args&& args, Inits&&... inits)
       : basic_process(default_process_launcher()(executor_type(context.get_executor()),
@@ -148,7 +148,7 @@ struct basic_process
   explicit basic_process(ExecutionContext & context, pid_type pid,
                          typename std::enable_if<
                              std::is_convertible<ExecutionContext&,
-                                BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context&>::value, void *>::type = nullptr)
+                                net::execution_context&>::value, void *>::type = nullptr)
        : process_handle_(context, pid) {}
 
   /// Attach to an existing process and the internal handle
@@ -156,7 +156,7 @@ struct basic_process
   explicit basic_process(ExecutionContext & context, pid_type pid, native_handle_type native_handle,
                          typename std::enable_if<
                             std::is_convertible<ExecutionContext&, 
-                                BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context&>::value, void *>::type = nullptr)
+                                net::execution_context&>::value, void *>::type = nullptr)
       : process_handle_(context.get_executor(), pid, native_handle) {}
 
   /// Create an invalid handle
@@ -164,7 +164,7 @@ struct basic_process
   explicit basic_process(ExecutionContext & context,
                          typename std::enable_if<
                              is_convertible<ExecutionContext&, 
-                                BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context&>::value, void *>::type = nullptr)
+                                net::execution_context&>::value, void *>::type = nullptr)
      : process_handle_(context.get_executor()) {}
 
 
@@ -325,15 +325,7 @@ struct basic_process
   /** Note that this might be a process that already exited.*/
   bool is_open() const { return process_handle_.is_open(); }
   
-  /// Asynchronously wait for the process to exit and deliver the native exit-code in the completion handler.
-  template <BOOST_PROCESS_V2_COMPLETION_TOKEN_FOR(void (error_code, int))
-            WaitHandler BOOST_PROCESS_V2_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_PROCESS_V2_INITFN_AUTO_RESULT_TYPE(WaitHandler, void (error_code, int))
-  async_wait(WaitHandler && handler BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
-  {
-    return BOOST_PROCESS_V2_ASIO_NAMESPACE::async_compose<WaitHandler, void (error_code, int)>(
-      async_wait_op_{process_handle_, exit_status_}, handler, process_handle_);
-  }
+
 
 private:
   template<typename Executor1>
@@ -363,7 +355,7 @@ private:
             }
         };
 
-        BOOST_PROCESS_V2_ASIO_NAMESPACE::post(handle.get_executor(),
+        net::post(handle.get_executor(),
                                               completer{static_cast<int>(res), std::move(self)});
       }
       else
@@ -383,6 +375,18 @@ private:
       }
     }
   };
+
+ public:
+  /// Asynchronously wait for the process to exit and deliver the native exit-code in the completion handler.
+  template <BOOST_PROCESS_V2_COMPLETION_TOKEN_FOR(void (error_code, int))
+  WaitHandler = net::default_completion_token_t<executor_type>>
+  auto async_wait(WaitHandler && handler = net::default_completion_token_t<executor_type>())
+    -> decltype(net::async_compose<WaitHandler, void (error_code, int)>(
+        async_wait_op_{process_handle_, exit_status_}, handler, process_handle_))
+  {
+    return net::async_compose<WaitHandler, void (error_code, int)>(
+        async_wait_op_{process_handle_, exit_status_}, handler, process_handle_);
+  }
 };
 
 /// Process with the default executor.

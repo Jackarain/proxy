@@ -49,18 +49,18 @@ void bcp_implementation::copy_path(const fs::path& p)
    if(fs::exists(m_dest_path / p))
    {
       std::cout << "Copying (and overwriting) file: " << p.string() << "\n";
-     fs::remove(m_dest_path / p);
+      fs::remove(m_dest_path / p);
    }
    else
       std::cout << "Copying file: " << p.string() << "\n";
    //
    // create the path to the new file if it doesn't already exist:
    //
-   create_path(p.branch_path());
+   create_path(p.parent_path());
    //
    // do text based copy if requested:
    //
-   if((p.leaf() == "Jamroot") && m_namespace_name.size())
+   if((p.filename() == "Jamroot") && m_namespace_name.size())
    {
       static std::vector<char> v1, v2;
       v1.clear();
@@ -240,7 +240,7 @@ void bcp_implementation::create_path(const fs::path& p)
    if(!fs::exists(m_dest_path / p))
    {
       // recurse then create the path:
-      create_path(p.branch_path());
+      create_path(p.parent_path());
       fs::create_directory(m_dest_path / p);
    }
 }

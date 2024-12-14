@@ -41,8 +41,8 @@ project
         <toolset>clang:<cxxflags>-pedantic
         <toolset>clang:<cxxflags>-Wno-long-long
         <toolset>clang:<cxxflags>-Wno-variadic-macros
-        <toolset>gcc-4.5.0,<target-os>windows:<cxxflags>-Wno-missing-field-initializers 
-        <toolset>gcc-4.5.0,<target-os>windows:<cxxflags>-fdiagnostics-show-option 
+        <toolset>gcc-4.5.0,<target-os>windows:<cxxflags>-Wno-missing-field-initializers
+        <toolset>gcc-4.5.0,<target-os>windows:<cxxflags>-fdiagnostics-show-option
         <toolset>msvc:<cxxflags>/wd4127
         <toolset>msvc:<cxxflags>/wd4512
 # Note: Some of the remarks from the Intel compiler are disabled
@@ -59,6 +59,8 @@ project
         <toolset>intel:<cxxflags>-wd593,981
         <toolset>intel:<cxxflags>-wd1418
         <toolset>intel:<cxxflags>-wd2415
+        <library>/boost/rational//boost_rational
+        <use>/boost/chrono//boost_chrono
     ;
 
 rule chrono-run ( sources )
@@ -116,7 +118,7 @@ rule chrono-v1-v2-run ( sources )
         :   $(sources[1]:B)_d  ]
     [ run $(sources) ../build//boost_chrono/<link>static
         : :
-        :
+        : -<use>/boost/chrono//boost_chrono
         :   v1_$(sources[1]:B)_s ]
     [ run $(sources)
         : :
@@ -445,7 +447,7 @@ rule chrono-compile2 ( sources : name )
         [ chrono-v1-v2-run-header io/time_point_output.cpp  ]
         [ chrono-run test_7868.cpp  ]
         [ chrono-run test_11006.cpp  ]
-        [ chrono-run test_11012.cpp  ]
+        [ chrono-run test_11012.cpp ]
         [ chrono-runXXX test_12176.cpp  ]
         ;
 
@@ -463,3 +465,7 @@ rule chrono-compile2 ( sources : name )
         [ chrono-run test_10631.cpp  ]
         ;
 
+# 'quick` target for CI
+
+run quick.cpp
+  : : : -<use>/boost/chrono//boost_chrono <library>/boost/chrono//boost_chrono ;

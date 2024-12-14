@@ -9,6 +9,10 @@
 # bring in rules for testing
 import testing ;
 
+project : requirements
+    <include>.
+    <library>/boost/bimap//boost_bimap
+    ;
 
 test-suite "tagged_test"
     :
@@ -41,10 +45,12 @@ test-suite "bimap_test"
     [ run test_bimap_sequenced.cpp : : :
           <toolset>gcc-4.4.7,<variant>release:<build>no                       ]
     [ run test_bimap_unconstrained.cpp                                        ]
-    [ run test_bimap_assign.cpp                                               ]
+    [ run test_bimap_assign.cpp
+          /boost/assign//boost_assign                                         ]
     [ run test_bimap_property_map.cpp                                         ]
     [ run test_bimap_modify.cpp                                               ]
-    [ run test_bimap_range.cpp                                                ]
+    [ run test_bimap_range.cpp
+          /boost/range//boost_range                                           ]
     [ run test_bimap_operator_bracket.cpp                                     ]
     [ run test_bimap_lambda.cpp                                               ]
     [ run test_bimap_mutable.cpp                                              ]
@@ -70,11 +76,16 @@ test-suite "compile_fail_test"
 test-suite "bimap_and_boost"
     :
     [ run     ../example/bimap_and_boost/property_map.cpp                     ]
-    [ run     ../example/bimap_and_boost/range.cpp                            ]
-    [ run     ../example/bimap_and_boost/foreach.cpp                          ]
+    [ run     ../example/bimap_and_boost/range.cpp
+                    /boost/range//boost_range                                 ]
+    [ run     ../example/bimap_and_boost/foreach.cpp
+                    /boost/foreach//boost_foreach                             ]
     [ run     ../example/bimap_and_boost/lambda.cpp                           ]
-    [ run     ../example/bimap_and_boost/assign.cpp                           ]
-    [ run     ../example/bimap_and_boost/xpressive.cpp : : :
+    [ run     ../example/bimap_and_boost/assign.cpp
+                    /boost/assign//boost_assign                               ]
+    [ run     ../example/bimap_and_boost/xpressive.cpp
+                    /boost/xpressive//boost_xpressive
+        : : :
         <toolset>gcc-10,<cxxstd>03:<build>no
         <toolset>gcc-11,<cxxstd>03:<build>no                                  ]
     [ run     ../example/bimap_and_boost/typeof.cpp                           ]

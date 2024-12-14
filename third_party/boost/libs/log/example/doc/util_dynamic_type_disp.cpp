@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <string>
 #include <iostream>
+#include <boost/core/ignore_unused.hpp>
 #include <boost/log/utility/type_dispatch/dynamic_type_dispatcher.hpp>
 
 namespace logging = boost::log;
@@ -85,13 +86,16 @@ int main(int, char*[])
     // These two attributes are supported by the dispatcher
     bool res = print(my_value< std::string >("Hello world!"));
     assert(res);
+    boost::ignore_unused(res);
 
     res = print(my_value< double >(1.2));
     assert(res);
+    boost::ignore_unused(res);
 
     // This one is not
     res = print(my_value< float >(-4.3f));
     assert(!res);
+    boost::ignore_unused(res);
 
     return 0;
 }

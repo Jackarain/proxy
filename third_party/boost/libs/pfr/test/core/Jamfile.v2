@@ -5,13 +5,20 @@
 # http://www.boost.org/LICENSE_1_0.txt)
 #
 
+import-search /boost/config/checks ;
+
 import python ;
 import testing ;
-import ../../config/checks/config : requires ;
+import config : requires ;
 
 project
     : source-location .
     : requirements
+        <library>/boost/config//boost_config
+        <library>/boost/core//boost_core
+        <library>/boost/container_hash//boost_container_hash
+        <library>/boost/type_index//boost_type_index
+
         <define>BOOST_PFR_DETAIL_STRICT_RVALUE_TESTING=1
         [ requires cxx14_constexpr ]
     ;
@@ -63,6 +70,10 @@ test-suite pfr_tests
     [ run ../../example/sample_printing.cpp  : : : : auto_engine_sample_printing ]
     [ run ../../example/get.cpp              : : : : auto_engine_get ]
     [ run ../../example/quick_examples.cpp   : : : : auto_engine_quick ]
+
+    [ compile-fail fields_count_on_incomplete_type.cpp : <define>BOOST_PFR_RUN_TEST_ON=void : fields_count_on_incomplete_type_void ]
+    [ compile-fail fields_count_on_incomplete_type.cpp : <define>BOOST_PFR_RUN_TEST_ON="void()" : fields_count_on_incomplete_type_function ]
+    [ compile-fail fields_count_on_incomplete_type.cpp : <define>BOOST_PFR_RUN_TEST_ON="struct Foo" : fields_count_on_incomplete_type_struct ]
   ;
 
 local BLACKLIST_TESTS_FOR_LOOPHOLE =
@@ -73,7 +84,7 @@ local BLACKLIST_TESTS_FOR_LOOPHOLE =
     tie_anonymous_const_field           # boost::pfr::structure_tie gives compile time error on const fields
   ;
 
-# Those tests are either 
+# Those tests are either
 # * reflecting a non literal type
 # * or calling boost::pfr::get and the result is a user defined structure
 local BLACKLIST_TESTS_FOR_CLASSIC =
@@ -99,7 +110,7 @@ for local source_file in [ glob ./run/*.cpp ] [ glob ../../example/*.cpp ]
 {
     local target_name = $(source_file[1]:B) ;
     pfr_tests += [ run $(source_file) : : : $(STRUCTURED_BINDING_ENGINE) : $(target_name)_sb ] ;
-    
+
     if ! $(target_name) in $(BLACKLIST_TESTS_FOR_LOOPHOLE)
     {
         pfr_tests += [ run $(source_file) : : : $(LOOPHOLE_ENGINE) : $(target_name)_lh ] ;

@@ -34,7 +34,7 @@ BOOST_PROCESS_V2_BEGIN_NAMESPACE
  * 
  * Popen can be used as a stream object in other protocols.
  */ 
-template<typename Executor = BOOST_PROCESS_V2_ASIO_NAMESPACE::any_io_executor>
+template<typename Executor = net::any_io_executor>
 struct basic_popen : basic_process<Executor>
 {
     /// The executor of the process
@@ -69,7 +69,7 @@ struct basic_popen : basic_process<Executor>
     explicit basic_popen(ExecutionContext & context,
         typename std::enable_if<
             is_convertible<ExecutionContext&,
-                    BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context&>::value, void *>::type = nullptr)
+                    net::execution_context&>::value, void *>::type = nullptr)
         : basic_process<Executor>{context}
     {
     }
@@ -148,7 +148,7 @@ struct basic_popen : basic_process<Executor>
             ExecutionContext & context,
             typename std::enable_if<
                 std::is_convertible<ExecutionContext&,
-                    BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context&>::value,
+                    net::execution_context&>::value,
             const filesystem::path&>::type exe,
             std::initializer_list<string_view> args,
             Inits&&... inits)
@@ -169,7 +169,7 @@ struct basic_popen : basic_process<Executor>
             ExecutionContext & context,
             typename std::enable_if<
                 std::is_convertible<ExecutionContext&,
-                    BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context&>::value,
+                    net::execution_context&>::value,
             const filesystem::path&>::type exe,
             std::initializer_list<string_view> args,
             Inits&&... inits)
@@ -189,7 +189,7 @@ struct basic_popen : basic_process<Executor>
             ExecutionContext & context,
             typename std::enable_if<
                 std::is_convertible<ExecutionContext&,
-                    BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context&>::value,
+                    net::execution_context&>::value,
             const filesystem::path&>::type exe,
             Args&& args, Inits&&... inits)
             : basic_process<Executor>(context)
@@ -209,7 +209,7 @@ struct basic_popen : basic_process<Executor>
             ExecutionContext & context,
             typename std::enable_if<
                 std::is_convertible<ExecutionContext&,
-                    BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context&>::value,
+                    net::execution_context&>::value,
             const filesystem::path&>::type exe,
             Args&& args, Inits&&... inits)
             : basic_process<Executor>(context)
@@ -224,9 +224,9 @@ struct basic_popen : basic_process<Executor>
 
 
     /// The type used for stdin on the parent process side.
-    using stdin_type = BOOST_PROCESS_V2_ASIO_NAMESPACE::basic_writable_pipe<Executor>;
+    using stdin_type = net::basic_writable_pipe<Executor>;
     /// The type used for stdout on the parent process side.
-    using stdout_type = BOOST_PROCESS_V2_ASIO_NAMESPACE::basic_readable_pipe<Executor>;
+    using stdout_type = net::basic_readable_pipe<Executor>;
 
     /// Get the stdin pipe.
     stdin_type  & get_stdin()  {return stdin_; }
@@ -336,14 +336,11 @@ struct basic_popen : basic_process<Executor>
      * std::vector.
      */
     template <typename ConstBufferSequence,
-            BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-                                                    std::size_t)) WriteToken
-            BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_PROCESS_V2_INITFN_AUTO_RESULT_TYPE(WriteToken,
-                                       void (boost::system::error_code, std::size_t))
-    async_write_some(const ConstBufferSequence& buffers,
-                     BOOST_ASIO_MOVE_ARG(WriteToken) token
-                     BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+            BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code, std::size_t))
+            WriteToken = net::default_completion_token_t<executor_type>>
+    auto async_write_some(const ConstBufferSequence& buffers,
+                     WriteToken && token = net::default_completion_token_t<executor_type>())
+         -> decltype(std::declval<stdin_type&>().async_write_some(buffers, std::forward<WriteToken>(token)))
     {
         return stdin_.async_write_some(buffers, std::forward<WriteToken>(token));
     }
@@ -451,14 +448,12 @@ struct basic_popen : basic_process<Executor>
      * std::vector.
      */
     template <typename MutableBufferSequence,
-            BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-                                                    std::size_t)) ReadToken
-            BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-    BOOST_PROCESS_V2_INITFN_AUTO_RESULT_TYPE(ReadToken,
-                                       void (boost::system::error_code, std::size_t))
-    async_read_some(const MutableBufferSequence& buffers,
+            BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code, std::size_t))
+            ReadToken = net::default_completion_token_t<executor_type>>
+    auto async_read_some(const MutableBufferSequence& buffers,
                     BOOST_ASIO_MOVE_ARG(ReadToken) token
-                    BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+                    = net::default_completion_token_t<executor_type>())
+        -> decltype(std::declval<stdout_type&>().async_read_some(buffers, std::forward<ReadToken>(token)))
     {
         return stdout_.async_read_some(buffers, std::forward<ReadToken>(token));
     }

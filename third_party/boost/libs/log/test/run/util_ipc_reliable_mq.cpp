@@ -39,11 +39,10 @@
 #include <stdexcept>
 #include <boost/move/utility_core.hpp>
 #if !defined(BOOST_LOG_NO_THREADS)
+#include <chrono>
+#include <thread>
 #include <algorithm>
-#include <boost/core/ref.hpp>
 #include <boost/atomic/fences.hpp>
-#include <boost/thread/thread.hpp>
-#include <boost/chrono/duration.hpp>
 #endif
 #include "char_definitions.hpp"
 
@@ -351,9 +350,9 @@ BOOST_AUTO_TEST_CASE(multithreaded_message_passing)
     unsigned int failure_count1 = 0, failure_count2 = 0, failure_count3 = 0;
     boost::atomic_thread_fence(boost::memory_order_release);
 
-    boost::thread thread1(&multithreaded_message_passing_feeding_thread, "Thread 1", boost::ref(failure_count1));
-    boost::thread thread2(&multithreaded_message_passing_feeding_thread, "Thread 2", boost::ref(failure_count2));
-    boost::thread thread3(&multithreaded_message_passing_feeding_thread, "Thread 3", boost::ref(failure_count3));
+    std::thread thread1([&failure_count1]() { multithreaded_message_passing_feeding_thread("Thread 1", failure_count1); });
+    std::thread thread2([&failure_count2]() { multithreaded_message_passing_feeding_thread("Thread 2", failure_count2); });
+    std::thread thread3([&failure_count3]() { multithreaded_message_passing_feeding_thread("Thread 3", failure_count3); });
 
     BOOST_TEST_PASSPOINT();
 
@@ -447,14 +446,14 @@ BOOST_AUTO_TEST_CASE(stop_reset_local)
     BOOST_TEST_PASSPOINT();
 
     // Case 1: Let the feeder block and then we unblock it with stop_local()
-    boost::thread feeder_thread(&stop_reset_feeding_thread, boost::ref(feeder_queue), feeder_results, 3);
-    boost::thread reader_thread(&stop_reset_reading_thread, boost::ref(reader_queue), reader_results, 1);
+    std::thread feeder_thread([&feeder_queue, &feeder_results]() { stop_reset_feeding_thread(feeder_queue, feeder_results, 3); });
+    std::thread reader_thread([&reader_queue, &reader_results]() { stop_reset_reading_thread(reader_queue, reader_results, 1); });
 
     BOOST_TEST_PASSPOINT();
 
     reader_thread.join();
     BOOST_TEST_PASSPOINT();
-    boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     BOOST_TEST_PASSPOINT();
 
@@ -480,14 +479,14 @@ BOOST_AUTO_TEST_CASE(stop_reset_local)
     BOOST_TEST_PASSPOINT();
 
     // Case 2: Let the reader block and then we unblock it with stop_local()
-    boost::thread(&stop_reset_feeding_thread, boost::ref(feeder_queue), feeder_results, 1).swap(feeder_thread);
-    boost::thread(&stop_reset_reading_thread, boost::ref(reader_queue), reader_results, 2).swap(reader_thread);
+    feeder_thread = std::thread([&feeder_queue, &feeder_results]() { stop_reset_feeding_thread(feeder_queue, feeder_results, 1); });
+    reader_thread = std::thread([&reader_queue, &reader_results]() { stop_reset_reading_thread(reader_queue, reader_results, 2); });
 
     BOOST_TEST_PASSPOINT();
 
     feeder_thread.join();
     BOOST_TEST_PASSPOINT();
-    boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     BOOST_TEST_PASSPOINT();
 

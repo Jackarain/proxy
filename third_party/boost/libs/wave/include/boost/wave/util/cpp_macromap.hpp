@@ -1262,25 +1262,36 @@ macromap<ContextT>::expand_replacement_list(
             else if (adjacent_stringize &&
                     !IS_CATEGORY(*cit, WhiteSpaceTokenType))
             {
-                // stringize the current argument
-                BOOST_ASSERT(!arguments[i].empty());
-
-                // safe a copy of the first tokens position (not a reference!)
-                position_type pos((*arguments[i].begin()).get_position());
-
-#if BOOST_WAVE_SUPPORT_VARIADICS_PLACEMARKERS != 0
-                if (is_ellipsis && boost::wave::need_variadics(ctx.get_language())) {
-                    impl::trim_sequence_left(arguments[i]);
-                    impl::trim_sequence_right(arguments.back());
-                    expanded.push_back(token_type(T_STRINGLIT,
-                        impl::as_stringlit(arguments, i, pos), pos));
-                }
+#if BOOST_WAVE_SUPPORT_CPP2A != 0
+                if (i >= arguments.size()) {
+                    // no argument supplied; do nothing (only c20 should reach here)
+                    BOOST_ASSERT(boost::wave::need_cpp2a(ctx.get_language()));
+                    position_type last_valid(arguments.back().back().get_position());
+                    // insert a empty string
+                    expanded.push_back(token_type(T_STRINGLIT, "\"\"", last_valid));
+                } 
                 else
 #endif
                 {
-                    impl::trim_sequence(arguments[i]);
-                    expanded.push_back(token_type(T_STRINGLIT,
-                        impl::as_stringlit(arguments[i], pos), pos));
+                    // shouldn't be oob (w.o. cpp20)
+                    BOOST_ASSERT(i < arguments.size() && !arguments[i].empty());
+                    // safe a copy of the first tokens position (not a reference!)
+                    position_type pos((*arguments[i].begin()).get_position());
+
+#if BOOST_WAVE_SUPPORT_VARIADICS_PLACEMARKERS != 0
+                    if (is_ellipsis && boost::wave::need_variadics(ctx.get_language())) {
+                        impl::trim_sequence_left(arguments[i]);
+                        impl::trim_sequence_right(arguments.back());
+                        expanded.push_back(token_type(T_STRINGLIT,
+                            impl::as_stringlit(arguments, i, pos), pos));
+                    }
+                    else
+#endif
+                    {
+                        impl::trim_sequence(arguments[i]);
+                        expanded.push_back(token_type(T_STRINGLIT,
+                            impl::as_stringlit(arguments[i], pos), pos));
+                    }
                 }
                 adjacent_stringize = false;
             }

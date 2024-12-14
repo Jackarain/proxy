@@ -8,7 +8,7 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#include <boost/detail/lightweight_mutex.hpp>
+#include <boost/smart_ptr/detail/lightweight_mutex.hpp>
 
 // Sanity check only
 

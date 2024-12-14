@@ -23,8 +23,7 @@
 #include <boost/log/detail/singleton.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
 #if !defined(BOOST_LOG_NO_THREADS)
-#include <boost/thread/mutex.hpp>
-#include <boost/log/detail/locks.hpp>
+#include <mutex>
 #endif
 #include <boost/log/detail/header.hpp>
 
@@ -47,7 +46,7 @@ struct loggers_repository :
 
 #if !defined(BOOST_LOG_NO_THREADS)
     //! Synchronization primitive
-    mutable mutex m_Mutex;
+    mutable std::mutex m_Mutex;
 #endif
     //! Map of logger holders
     loggers_map_t m_Loggers;
@@ -61,7 +60,7 @@ BOOST_LOG_API shared_ptr< logger_holder_base > global_storage::get_or_init(typei
     typedef loggers_repository::loggers_map_t loggers_map_t;
     loggers_repository& repo = loggers_repository::get();
 
-    BOOST_LOG_EXPR_IF_MT(log::aux::exclusive_lock_guard< mutex > lock(repo.m_Mutex);)
+    BOOST_LOG_EXPR_IF_MT(std::lock_guard< std::mutex > lock(repo.m_Mutex);)
     loggers_map_t::iterator it = repo.m_Loggers.find(key);
     if (it != repo.m_Loggers.end())
     {

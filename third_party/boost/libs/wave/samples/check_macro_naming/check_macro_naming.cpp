@@ -11,7 +11,7 @@
 =============================================================================*/
 
 #include "check_macro_naming.hpp"
-#include "libs/filesystem/include/boost/filesystem/file_status.hpp"
+#include "boost/filesystem/file_status.hpp"
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Utilities from the rest of Boost

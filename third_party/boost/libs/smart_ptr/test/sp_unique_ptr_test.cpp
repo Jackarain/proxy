@@ -11,11 +11,9 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/core/lightweight_test.hpp>
-#include <boost/type_traits/remove_reference.hpp>
 #include <memory>
 #include <utility>
-
-#if !defined( BOOST_NO_CXX11_SMART_PTR ) && !defined( BOOST_NO_CXX11_RVALUE_REFERENCES )
+#include <type_traits>
 
 struct X: public boost::enable_shared_from_this< X >
 {
@@ -89,7 +87,7 @@ template<class U, class T, class D> static void test_null_unique_ptr( std::uniqu
     BOOST_TEST( sp.get() == 0 );
     BOOST_TEST( sp.use_count() == 0 );
 
-    sp.reset( new T, typename boost::remove_reference<D>::type() );
+    sp.reset( new T, typename std::remove_reference<D>::type() );
 
     BOOST_TEST( sp.get() != 0 );
     BOOST_TEST( sp.use_count() == 1 );
@@ -283,12 +281,3 @@ int main()
 
     return boost::report_errors();
 }
-
-#else // !defined( BOOST_NO_CXX11_SMART_PTR ) && !defined( BOOST_NO_CXX11_RVALUE_REFERENCES )
-
-int main()
-{
-    return 0;
-}
-
-#endif

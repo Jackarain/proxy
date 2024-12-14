@@ -54,6 +54,7 @@
 #include <boost/mysql/row_view.hpp>
 #include <boost/mysql/rows.hpp>
 #include <boost/mysql/rows_view.hpp>
+#include <boost/mysql/sequence.hpp>
 #include <boost/mysql/ssl_mode.hpp>
 #include <boost/mysql/statement.hpp>
 #include <boost/mysql/static_execution_state.hpp>
@@ -66,5 +67,7 @@
 #include <boost/mysql/underlying_row.hpp>
 #include <boost/mysql/unix.hpp>
 #include <boost/mysql/unix_ssl.hpp>
+#include <boost/mysql/with_diagnostics.hpp>
+#include <boost/mysql/with_params.hpp>
 
 #endif

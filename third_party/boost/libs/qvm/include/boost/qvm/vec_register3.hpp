@@ -1,11 +1,10 @@
-// Copyright 2008-2022 Emil Dotchevski and Reverge Studios, Inc.
-// Copyright 2018 agate-pris
-
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-
 #ifndef BOOST_QVM_VEC_REGISTER3_HPP
 #define BOOST_QVM_VEC_REGISTER3_HPP
+
+// Copyright 2008-2024 Emil Dotchevski and Reverge Studios, Inc.
+// Copyright 2018 agate-pris
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/qvm/detail/vec_register_impl.hpp>
 

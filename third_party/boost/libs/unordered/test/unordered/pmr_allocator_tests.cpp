@@ -33,12 +33,23 @@ namespace pmr_allocator_tests {
     test_string_flat_map;
   static boost::unordered::pmr::concurrent_flat_map<pmr_string, pmr_string>*
     test_pmr_string_flat_map;
+  static boost::unordered::pmr::concurrent_node_map<std::string, std::string>*
+    test_string_node_map;
+  static boost::unordered::pmr::concurrent_node_map<pmr_string, pmr_string>*
+    test_pmr_string_node_map;
   static boost::unordered::pmr::concurrent_flat_set<std::string>*
     test_string_flat_set;
   static boost::unordered::pmr::concurrent_flat_set<pmr_string>*
     test_pmr_string_flat_set;
+  static boost::unordered::pmr::concurrent_node_set<std::string>*
+    test_string_node_set;
+  static boost::unordered::pmr::concurrent_node_set<pmr_string>*
+    test_pmr_string_node_set;
 #define PMR_ALLOCATOR_TESTS_ARGS                                               \
-  ((test_string_flat_map)(test_pmr_string_flat_map)(test_string_flat_set)(test_pmr_string_flat_set))
+  ((test_string_flat_map)(test_pmr_string_flat_map)                            \
+   (test_string_node_map)(test_pmr_string_node_map)                            \
+   (test_string_flat_set)(test_pmr_string_flat_set)                            \
+   (test_string_node_set)(test_pmr_string_node_set))
 #elif defined(BOOST_UNORDERED_FOA_TESTS)
   static boost::unordered::pmr::unordered_flat_map<std::string, std::string>*
     test_string_flat_map;

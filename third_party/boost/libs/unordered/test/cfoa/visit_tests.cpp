@@ -1,5 +1,5 @@
 // Copyright (C) 2023 Christian Mazakas
-// Copyright (C) 2023 Joaquin M Lopez Munoz
+// Copyright (C) 2023-2024 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -17,7 +17,10 @@
 
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
+#include <boost/unordered/concurrent_node_map.hpp>
+#include <boost/unordered/concurrent_node_set.hpp>
 
+#include <boost/compat/latch.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <boost/iterator/transform_iterator.hpp>
 
@@ -27,7 +30,10 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <functional>
+#include <iterator>
+#include <thread>
 #include <vector>
 
 namespace {
@@ -967,9 +973,158 @@ namespace {
   boost::unordered::concurrent_flat_map<raii, raii>* map;
   boost::unordered::concurrent_flat_map<raii, raii, transp_hash,
     transp_key_equal>* transp_map;
+  boost::unordered::concurrent_node_map<raii, raii>* node_map;
+  boost::unordered::concurrent_node_map<raii, raii, transp_hash,
+    transp_key_equal>* transp_node_map;
   boost::unordered::concurrent_flat_set<raii>* set;
   boost::unordered::concurrent_flat_set<raii, transp_hash,
     transp_key_equal>* transp_set;
+  boost::unordered::concurrent_node_set<raii>* node_set;
+  boost::unordered::concurrent_node_set<raii, transp_hash,
+    transp_key_equal>* transp_node_set;
+
+  struct mutable_pair
+  {
+    mutable_pair(int first_ = 0, int second_ = 0):
+      first{first_}, second{second_} {}
+
+    int         first = 0;
+    mutable int second = 0;
+  };
+
+  struct null_mutable_pair
+  {
+    operator mutable_pair() const { return {0,0}; }
+  };
+
+  struct mutable_pair_hash
+  {
+    using is_transparent = void;
+
+    std::size_t operator()(const mutable_pair& x) const
+    {
+      return boost::hash<int>{}(x.first);
+    }
+
+    std::size_t operator()(const null_mutable_pair&) const
+    {
+      return boost::hash<int>{}(0);
+    }
+  };
+
+  struct mutable_pair_equal_to
+  {
+    using is_transparent = void;
+
+    bool operator()(const mutable_pair& x, const mutable_pair& y) const
+    {
+      return x.first == y.first;
+    }
+
+    bool operator()(const null_mutable_pair&, const mutable_pair& y) const
+    {
+      return 0 == y.first;
+    }
+
+    bool operator()(const mutable_pair& x, const null_mutable_pair&) const
+    {
+      return x.first == 0;
+    }
+  };
+
+  template<typename F>
+  void exclusive_access_for(F f)
+  {
+    std::atomic_int      num_started{0};
+    std::atomic_int      in_visit{0};
+    boost::compat::latch finish{1};
+
+    auto bound_f = [&] {
+      ++num_started;
+      f([&] (const mutable_pair& x) {
+        ++in_visit;
+        ++x.second;
+        finish.wait();
+        --in_visit;
+        return true;
+      });
+    };
+
+    std::thread t1{bound_f}, t2{bound_f};
+    while(num_started != 2) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    BOOST_TEST(in_visit <= 1);
+    finish.count_down();
+    t1.join();
+    t2.join();
+  }  
+
+  template<class X>
+  void exclusive_access_set_visit(X*)
+  {
+    using visit_function = std::function<void (const mutable_pair&)>;
+    using returning_visit_function = std::function<bool (const mutable_pair&)>;
+    X x;
+    x.insert({0, 0});
+
+    exclusive_access_for([&](visit_function f) {
+      x.visit({0, 0}, f);
+    });
+    exclusive_access_for([&](visit_function f) {
+      x.visit(null_mutable_pair{}, f);
+    });
+
+    exclusive_access_for([&](visit_function f) {
+      mutable_pair a[] = {{0, 0}};
+      x.visit(std::begin(a), std::end(a), f);
+    });
+
+    exclusive_access_for([&](visit_function f) {
+      x.visit_all(f);
+    });
+    exclusive_access_for([&](returning_visit_function f) {
+      x.visit_while(f);
+    });
+
+  #if defined(BOOST_UNORDERED_PARALLEL_ALGORITHMS)
+    exclusive_access_for([&](visit_function f) {
+      x.visit_all(std::execution::par, f);
+    });
+    exclusive_access_for([&](returning_visit_function f) {
+      x.visit_while(std::execution::par, f);
+    });
+  #endif
+
+    exclusive_access_for([&](visit_function f) {
+      const mutable_pair p;
+      x.insert_or_visit(p, f);
+    });
+    exclusive_access_for([&](visit_function f) {
+      x.insert_or_visit({0,0}, f);
+    });
+    exclusive_access_for([&](visit_function f) {
+      x.insert_or_visit(null_mutable_pair{}, f);
+    });
+
+    exclusive_access_for([&](visit_function f) {
+      mutable_pair a[] = {{0, 0}};
+      x.insert_or_visit(std::begin(a), std::end(a), f);
+    });
+    exclusive_access_for([&](visit_function f) {
+      std::initializer_list<mutable_pair> il = {{0, 0}};
+      x.insert_or_visit(il, f);
+    });
+
+    exclusive_access_for([&](visit_function f) {
+      x.emplace_or_visit(0, 0, f);
+    });
+  }
+
+  boost::concurrent_flat_set<
+    mutable_pair, mutable_pair_hash, mutable_pair_equal_to>* mutable_set;
+  boost::concurrent_node_set<
+    mutable_pair, mutable_pair_hash, mutable_pair_equal_to>* mutable_node_set;
 
 } // namespace
 
@@ -981,7 +1136,7 @@ using test::sequential;
 
 UNORDERED_TEST(
   visit,
-  ((map)(set))
+  ((map)(node_map)(set)(node_set))
   ((value_type_generator_factory)(init_type_generator_factory))
   ((lvalue_visitor)(visit_all)(visit_while)(exec_policy_visit_all)
    (exec_policy_visit_while))
@@ -989,28 +1144,29 @@ UNORDERED_TEST(
 
 UNORDERED_TEST(
   visit,
-  ((transp_map)(transp_set))
+  ((transp_map)(transp_node_map)(transp_set)(transp_node_set))
   ((value_type_generator_factory)(init_type_generator_factory))
   ((transp_visitor))
   ((default_generator)(sequential)(limited_range)))
 
 UNORDERED_TEST(
   empty_visit,
-  ((map)(transp_map)(set)(transp_set))
+  ((map)(transp_map)(node_map)(transp_node_map)
+   (set)(transp_set)(node_set)(transp_node_set))
   ((value_type_generator_factory)(init_type_generator_factory))
   ((default_generator)(sequential)(limited_range))
 )
 
 UNORDERED_TEST(
   insert_and_visit,
-  ((map)(set))
+  ((map)(node_map)(set)(node_set))
   ((value_type_generator_factory))
   ((sequential))
 )
 
 UNORDERED_TEST(
   bulk_visit,
-  ((map)(set))
+  ((map)(node_map)(set)(node_set))
   ((regular_key_extract))
   ((value_type_generator_factory))
   ((sequential))
@@ -1018,10 +1174,17 @@ UNORDERED_TEST(
 
 UNORDERED_TEST(
   bulk_visit,
-  ((transp_map)(transp_set))
+  ((transp_map)(transp_node_map)(transp_set)(transp_node_set))
   ((transp_key_extract))
   ((value_type_generator_factory))
   ((sequential))
+)
+
+// https://github.com/boostorg/unordered/issues/260
+
+UNORDERED_TEST(
+  exclusive_access_set_visit,
+  ((mutable_set)(mutable_node_set))
 )
 
 // clang-format on

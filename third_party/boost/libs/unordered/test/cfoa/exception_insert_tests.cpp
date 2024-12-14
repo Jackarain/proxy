@@ -1,5 +1,5 @@
 // Copyright (C) 2023 Christian Mazakas
-// Copyright (C) 2023 Joaquin M Lopez Munoz
+// Copyright (C) 2023-2024 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -7,6 +7,8 @@
 
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
+#include <boost/unordered/concurrent_node_map.hpp>
+#include <boost/unordered/concurrent_node_set.hpp>
 
 #include <boost/core/ignore_unused.hpp>
 
@@ -153,7 +155,15 @@ namespace {
 
       BOOST_TEST_EQ(raii::default_constructor, 0u);
       BOOST_TEST_GT(raii::copy_constructor, 0u);
-      BOOST_TEST_GT(raii::move_constructor, 0u);
+
+      if (is_container_node_based<X>::value) {
+        BOOST_TEST_EQ(raii::move_constructor, 0u);
+      }
+      else{
+        // don't check move construction count here because of rehashing
+        BOOST_TEST_GT(raii::move_constructor, 0u);
+      }
+
       BOOST_TEST_EQ(raii::move_assignment, 0u);
     }
   } lvalue_insert_or_assign_copy_assign;
@@ -198,7 +208,7 @@ namespace {
 
       BOOST_TEST_EQ(raii::default_constructor, 0u);
       BOOST_TEST_GT(raii::copy_constructor, 0u);
-      BOOST_TEST_GT(raii::move_constructor, x.size()); // rehashing
+      BOOST_TEST_GT(raii::move_constructor, 0u);
       BOOST_TEST_EQ(raii::move_assignment, 0u);
     }
   } rvalue_insert_or_assign_copy_assign;
@@ -249,8 +259,15 @@ namespace {
 
       BOOST_TEST_GT(num_inserts, 0u);
       BOOST_TEST_EQ(raii::default_constructor, 0u);
-      // don't check move construction count here because of rehashing
-      BOOST_TEST_GT(raii::move_constructor, 0u);
+
+      if (is_container_node_based<X>::value) {
+        BOOST_TEST_EQ(raii::move_constructor, 0u);
+      }
+      else{
+        // don't check move construction count here because of rehashing
+        BOOST_TEST_GT(raii::move_constructor, 0u);
+      }
+
       BOOST_TEST_EQ(raii::move_assignment, 0u);
     }
   } lvalue_insert_or_cvisit;
@@ -288,8 +305,14 @@ namespace {
 
       BOOST_TEST_EQ(raii::default_constructor, 0u);
 
-      // don't check move construction count here because of rehashing
-      BOOST_TEST_GT(raii::move_constructor, 0u);
+      if (is_container_node_based<X>::value) {
+        BOOST_TEST_EQ(raii::move_constructor, 0u);
+      }
+      else{
+        // don't check move construction count here because of rehashing
+        BOOST_TEST_GT(raii::move_constructor, 0u);
+      }
+
       BOOST_TEST_EQ(raii::move_assignment, 0u);
     }
   } lvalue_insert_or_visit;
@@ -426,8 +449,12 @@ namespace {
 
   boost::unordered::concurrent_flat_map<raii, raii, stateful_hash,
     stateful_key_equal, stateful_allocator<std::pair<raii const, raii> > >* map;
+  boost::unordered::concurrent_node_map<raii, raii, stateful_hash,
+    stateful_key_equal, stateful_allocator<std::pair<raii const, raii> > >* node_map;
   boost::unordered::concurrent_flat_set<raii, stateful_hash,
     stateful_key_equal, stateful_allocator<raii> >* set;
+  boost::unordered::concurrent_node_set<raii, stateful_hash,
+    stateful_key_equal, stateful_allocator<raii> >* node_set;
 
 } // namespace
 
@@ -438,7 +465,7 @@ using test::sequential;
 // clang-format off
 UNORDERED_TEST(
   insert,
-  ((map)(set))
+  ((map)(node_map)(set)(node_set))
   ((exception_value_type_generator_factory)
    (exception_init_type_generator_factory))
   ((lvalue_inserter)(rvalue_inserter)(iterator_range_inserter)
@@ -450,7 +477,7 @@ UNORDERED_TEST(
 
 UNORDERED_TEST(
   insert,
-  ((map))
+  ((map)(node_map))
   ((exception_init_type_generator_factory))
   ((lvalue_insert_or_assign_copy_assign)(lvalue_insert_or_assign_move_assign)
    (rvalue_insert_or_assign_copy_assign)(rvalue_insert_or_assign_move_assign))

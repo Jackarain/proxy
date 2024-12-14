@@ -1,5 +1,4 @@
-// Copyright 2018-2023 Emil Dotchevski and Reverge Studios, Inc.
-
+// Copyright 2018-2024 Emil Dotchevski and Reverge Studios, Inc.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -20,7 +19,7 @@ int main()
 #ifdef BOOST_LEAF_TEST_SINGLE_HEADER
 #   include "leaf.hpp"
 #else
-#   include <boost/leaf/handle_errors.hpp>
+#   include <boost/leaf/diagnostics.hpp>
 #   include <boost/leaf/pred.hpp>
 #   include <boost/leaf/exception.hpp>
 #   include <boost/leaf/on_error.hpp>
@@ -200,33 +199,33 @@ int main()
             {
                 wh = ex.what();
             } );
-        BOOST_TEST(wh!=0 || !strcmp(wh,"Test"));
+        BOOST_TEST(wh != 0 || !strcmp(wh,"Test"));
     }
 
     {
-        int const id = leaf::leaf_detail::current_id();
+        int const id = leaf::detail::current_id();
         BOOST_TEST_EQ( 21, test<my_exception const &>( []
         {
             auto load = leaf::on_error(info{42});
             throw my_exception(42);
         } ) );
-        BOOST_TEST_NE(id, leaf::leaf_detail::current_id());
+        BOOST_TEST_NE(id, leaf::detail::current_id());
     }
 
     {
-        int const id = leaf::leaf_detail::current_id();
+        int const id = leaf::detail::current_id();
         BOOST_TEST_EQ( 21, test<my_exception &>( []
         {
             auto load = leaf::on_error(info{42});
             throw my_exception(42);
         } ) );
-        BOOST_TEST_NE(id, leaf::leaf_detail::current_id());
+        BOOST_TEST_NE(id, leaf::detail::current_id());
     }
 
     {
         BOOST_TEST_EQ( 23, test<my_exception const &>( []
         {
-            int const id = leaf::leaf_detail::current_id();
+            int const id = leaf::detail::current_id();
             try
             {
                 leaf::try_catch(
@@ -237,7 +236,7 @@ int main()
             }
             catch(...)
             {
-                BOOST_TEST_EQ(id, leaf::leaf_detail::current_id());
+                BOOST_TEST_EQ(id, leaf::detail::current_id());
                 throw;
             }
         } ) );
@@ -246,7 +245,7 @@ int main()
     {
         BOOST_TEST_EQ( 23, test<my_exception &>( []
         {
-            int const id = leaf::leaf_detail::current_id();
+            int const id = leaf::detail::current_id();
             try
             {
                 leaf::try_catch(
@@ -257,7 +256,7 @@ int main()
             }
             catch(...)
             {
-                BOOST_TEST_EQ(id, leaf::leaf_detail::current_id());
+                BOOST_TEST_EQ(id, leaf::detail::current_id());
                 throw;
             }
         } ) );

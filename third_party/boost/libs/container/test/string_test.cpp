@@ -524,12 +524,6 @@ struct alloc_propagate_base<boost_container_string>
 
 int main()
 {
-   {
-      boost::container::string a = "abcdefghijklmnopqrstuvwxyz";
-      boost::container::hash_value(a);
-   }
-
-
    if(string_test<char>()){
       return 1;
    }

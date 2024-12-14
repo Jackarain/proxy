@@ -847,6 +847,15 @@ struct param_pct_view
             has_value);
     }
 
+    /** Conversion to param_view
+
+        This function performs a conversion from
+        a pct_string_view query parameter to one
+        using a simple string_view.
+
+        @par Exception Safety
+        Calls to allocate may throw.
+    */
     operator
     param_view() const noexcept
     {
@@ -855,14 +864,14 @@ struct param_pct_view
     }
 
 #ifndef BOOST_URL_DOCS
-    // arrow support
+    /// Arrow support
     param_pct_view const*
     operator->() const noexcept
     {
         return this;
     }
 
-    // aggregate construction
+    /// aggregate construction
     param_pct_view(
         pct_string_view key,
         pct_string_view value,

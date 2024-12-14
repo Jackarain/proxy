@@ -1578,9 +1578,9 @@ pp_iterator_functor<ContextT>::on_include_helper(char const* f, char const* s,
     char const* current_name = 0; // never try to match current file name
 #endif
 
-// call the 'found_include_directive' hook function
+    // call the 'found_include_directive' hook function
     if (ctx.get_hooks().found_include_directive(ctx.derived(), f, include_next))
-        return true;    // client returned false: skip file to include
+        return true;    // client returned true: skip file to include
 
     file_path = util::impl::unescape_lit(file_path);
     std::string native_path_str;
@@ -1607,6 +1607,7 @@ pp_iterator_functor<ContextT>::on_include_helper(char const* f, char const* s,
                 boost::wave::enable_prefer_pp_numbers(ctx.get_language()),
                 is_system ? base_iteration_context_type::system_header :
                             base_iteration_context_type::user_header));
+        new_iter_ctx->emitted_lines = (unsigned int)(-1); // force #line directive
 
         // call the include policy trace function
         ctx.get_hooks().opened_include_file(ctx.derived(), dir_path, file_path,

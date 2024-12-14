@@ -217,8 +217,7 @@ inline std::string test_output_impl( char const& v )
     else
     {
         char buffer[ 8 ];
-        std::sprintf( buffer, "\\x%02X", static_cast<unsigned char>( v ) );
-
+        std::snprintf( buffer, sizeof(buffer), "\\x%02X", static_cast<unsigned char>( v ) );
         return buffer;
     }
 }

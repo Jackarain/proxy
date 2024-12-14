@@ -23,7 +23,12 @@ will nonetheless refer to the same object.
 * Value-access will actually provide access to the referenced object
 rather than the reference itself.
 
-[caution On compilers that do not conform to Standard C++ rules of reference binding, some operations on optional references are disabled in order to prevent subtle bugs. For more details see [link boost_optional.dependencies_and_portability.optional_reference_binding Dependencies and Portability section].]
+[caution
+On compilers that do not conform to Standard C++ rules of reference binding,
+some operations on optional references are disabled in order to prevent subtle
+bugs. For more details see
+[link boost_optional.dependencies_and_portability.optional_reference_binding Dependencies and Portability section].
+]
 
 [heading Rvalue references]
 
@@ -45,7 +50,7 @@ the first time) to the object. Clearly, there is no other choice.
     optional<int&> orb(x) ;
     ora = orb ; // now 'ora' is bound to 'x' through 'rx'
     *ora = 2 ; // Changes value of 'x' through 'ora'
-    assert(x==2); 
+    assert(x==2);
 
 If you assign to a bare C++ reference, the assignment is forwarded to the
 referenced object; its value changes but the reference is never rebound.
@@ -71,8 +76,8 @@ bare C++ references.
     optional<int&> orb(rb) ;
     ora = orb ; // 'ora' is rebound to 'b'
     *ora = 3 ; // Changes value of 'b' (not 'a')
-    assert(a==1); 
-    assert(b==3); 
+    assert(a==1);
+    assert(b==3);
 
 [heading Rationale]
 

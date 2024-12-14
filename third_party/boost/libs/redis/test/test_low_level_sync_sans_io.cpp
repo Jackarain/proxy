@@ -15,9 +15,11 @@
 using boost::redis::request;
 using boost::redis::config;
 using boost::redis::detail::push_hello;
+using boost::redis::response;
 using boost::redis::adapter::adapt2;
 using boost::redis::adapter::result;
 using boost::redis::resp3::detail::deserialize;
+using boost::redis::ignore_t;
 
 BOOST_AUTO_TEST_CASE(low_level_sync_sans_io)
 {
@@ -88,3 +90,113 @@ BOOST_AUTO_TEST_CASE(config_to_hello_cmd_auth)
    std::string_view const expected = "*5\r\n$5\r\nHELLO\r\n$1\r\n3\r\n$4\r\nAUTH\r\n$3\r\nfoo\r\n$3\r\nbar\r\n";
    BOOST_CHECK_EQUAL(req.payload(), expected);
 }
+
+BOOST_AUTO_TEST_CASE(issue_210_empty_set)
+{
+   try {
+      result<
+         std::tuple<
+            result<int>,
+            result<std::vector<std::string>>,
+            result<std::string>,
+            result<int>
+         >
+      > resp;
+
+      char const* wire = "*4\r\n:1\r\n~0\r\n$25\r\nthis_should_not_be_in_set\r\n:2\r\n";
+
+      deserialize(wire, adapt2(resp));
+
+      BOOST_CHECK_EQUAL(std::get<0>(resp.value()).value(), 1);
+      BOOST_CHECK(std::get<1>(resp.value()).value().empty());
+      BOOST_CHECK_EQUAL(std::get<2>(resp.value()).value(), "this_should_not_be_in_set");
+      BOOST_CHECK_EQUAL(std::get<3>(resp.value()).value(), 2);
+
+   } catch (std::exception const& e) {
+      std::cerr << e.what() << std::endl;
+      exit(EXIT_FAILURE);
+   }
+}
+
+BOOST_AUTO_TEST_CASE(issue_210_non_empty_set_size_one)
+{
+   try {
+      result<
+         std::tuple<
+            result<int>,
+            result<std::vector<std::string>>,
+            result<std::string>,
+            result<int>
+         >
+      > resp;
+
+      char const* wire = "*4\r\n:1\r\n~1\r\n$3\r\nfoo\r\n$25\r\nthis_should_not_be_in_set\r\n:2\r\n";
+
+      deserialize(wire, adapt2(resp));
+
+      BOOST_CHECK_EQUAL(std::get<0>(resp.value()).value(), 1);
+      BOOST_CHECK_EQUAL(std::get<1>(resp.value()).value().size(), 1);
+      BOOST_CHECK_EQUAL(std::get<1>(resp.value()).value().at(0), std::string{"foo"});
+      BOOST_CHECK_EQUAL(std::get<2>(resp.value()).value(), "this_should_not_be_in_set");
+      BOOST_CHECK_EQUAL(std::get<3>(resp.value()).value(), 2);
+
+   } catch (std::exception const& e) {
+      std::cerr << e.what() << std::endl;
+      exit(EXIT_FAILURE);
+   }
+}
+
+BOOST_AUTO_TEST_CASE(issue_210_non_empty_set_size_two)
+{
+   try {
+      result<
+         std::tuple<
+            result<int>,
+            result<std::vector<std::string>>,
+            result<std::string>,
+            result<int>
+         >
+      > resp;
+
+      char const* wire = "*4\r\n:1\r\n~2\r\n$3\r\nfoo\r\n$3\r\nbar\r\n$25\r\nthis_should_not_be_in_set\r\n:2\r\n";
+
+      deserialize(wire, adapt2(resp));
+
+      BOOST_CHECK_EQUAL(std::get<0>(resp.value()).value(), 1);
+      BOOST_CHECK_EQUAL(std::get<1>(resp.value()).value().at(0), std::string{"foo"});
+      BOOST_CHECK_EQUAL(std::get<1>(resp.value()).value().at(1), std::string{"bar"});
+      BOOST_CHECK_EQUAL(std::get<2>(resp.value()).value(), "this_should_not_be_in_set");
+
+   } catch (std::exception const& e) {
+      std::cerr << e.what() << std::endl;
+      exit(EXIT_FAILURE);
+   }
+}
+
+BOOST_AUTO_TEST_CASE(issue_210_no_nested)
+{
+   try {
+      result<
+         std::tuple<
+            result<int>,
+            result<std::string>,
+            result<std::string>,
+            result<std::string>
+         >
+      > resp;
+
+      char const* wire = "*4\r\n:1\r\n$3\r\nfoo\r\n$3\r\nbar\r\n$25\r\nthis_should_not_be_in_set\r\n";
+
+      deserialize(wire, adapt2(resp));
+
+      BOOST_CHECK_EQUAL(std::get<0>(resp.value()).value(), 1);
+      BOOST_CHECK_EQUAL(std::get<1>(resp.value()).value(), std::string{"foo"});
+      BOOST_CHECK_EQUAL(std::get<2>(resp.value()).value(), std::string{"bar"});
+      BOOST_CHECK_EQUAL(std::get<3>(resp.value()).value(), "this_should_not_be_in_set");
+
+   } catch (std::exception const& e) {
+      std::cerr << e.what() << std::endl;
+      exit(EXIT_FAILURE);
+   }
+}
+

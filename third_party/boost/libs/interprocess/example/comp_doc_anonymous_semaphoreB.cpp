@@ -13,6 +13,10 @@
 #include <boost/interprocess/mapped_region.hpp>
 #include <iostream>
 #include "doc_anonymous_semaphore_shared_data.hpp"
+//<-
+#include "../test/get_process_id_name.hpp"
+//->
+
 
 using namespace boost::interprocess;
 
@@ -21,7 +25,7 @@ int main ()
    //Remove shared memory on destruction
    struct shm_remove
    {
-      ~shm_remove(){ shared_memory_object::remove("MySharedMemory"); }
+      ~shm_remove(){ shared_memory_object::remove(test::get_process_id_name()); }
    } remover;
    //<-
    (void)remover;
@@ -29,9 +33,9 @@ int main ()
 
    //Create a shared memory object.
    shared_memory_object shm
-      (open_only                    //only open
-      ,"MySharedMemory"              //name
-      ,read_write  //read-write mode
+      ( open_only                      //only open
+      , test::get_process_id_name()    //name
+      , read_write                     //read-write mode
       );
 
    //Map the whole shared memory in this process

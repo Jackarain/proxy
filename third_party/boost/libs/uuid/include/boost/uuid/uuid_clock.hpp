@@ -63,7 +63,7 @@ inline uuid_clock::time_point uuid_clock::from_timestamp( std::uint64_t timestam
 
 inline std::uint64_t uuid_clock::to_timestamp( time_point const& tp ) noexcept
 {
-    return tp.time_since_epoch().count();
+    return static_cast<std::uint64_t>(tp.time_since_epoch().count());
 }
 
 } // uuids

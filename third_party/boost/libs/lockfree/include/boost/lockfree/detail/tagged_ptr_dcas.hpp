@@ -9,60 +9,45 @@
 #ifndef BOOST_LOCKFREE_TAGGED_PTR_DCAS_HPP_INCLUDED
 #define BOOST_LOCKFREE_TAGGED_PTR_DCAS_HPP_INCLUDED
 
-#include <cstddef>              /* for std::size_t */
+#include <cstddef> /* for std::size_t */
 #include <limits>
 
+#include <boost/config.hpp>
 #include <boost/predef.h>
 
-namespace boost    {
-namespace lockfree {
-namespace detail   {
+namespace boost { namespace lockfree { namespace detail {
 
 
-
-template <class T>
+template < class T >
 class
 #if BOOST_COMP_MSVC && BOOST_ARCH_X86_64
-BOOST_ALIGNMENT(16)
+    BOOST_ALIGNMENT( 16 )
 #elif BOOST_COMP_MSVC && BOOST_ARCH_X86_32
-BOOST_ALIGNMENT(8)
+    BOOST_ALIGNMENT( 8 )
 #else
-BOOST_ALIGNMENT(2 * sizeof(void*))
+    BOOST_ALIGNMENT( 2 * sizeof( void* ) )
 #endif
-  tagged_ptr
+        tagged_ptr
 {
 public:
     typedef std::size_t tag_t;
 
     /** uninitialized constructor */
-    tagged_ptr(void) BOOST_NOEXCEPT//: ptr(0), tag(0)
+    tagged_ptr( void ) noexcept //: ptr(0), tag(0)
     {}
 
-#ifdef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
-    tagged_ptr(tagged_ptr const & p):
-        ptr(p.ptr), tag(p.tag)
-    {}
-#else
-    tagged_ptr(tagged_ptr const & p) = default;
-#endif
+    tagged_ptr( tagged_ptr const& p ) = default;
 
-    explicit tagged_ptr(T * p, tag_t t = 0):
-        ptr(p), tag(t)
+    explicit tagged_ptr( T* p, tag_t t = 0 ) :
+        ptr( p ),
+        tag( t )
     {}
 
     /** unsafe set operation */
     /* @{ */
-#ifdef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
-    tagged_ptr & operator= (tagged_ptr const & p)
-    {
-        set(p.ptr, p.tag);
-        return *this;
-    }
-#else
-    tagged_ptr & operator= (tagged_ptr const & p) = default;
-#endif
+    tagged_ptr& operator=( tagged_ptr const& p ) = default;
 
-    void set(T * p, tag_t t)
+    void set( T* p, tag_t t )
     {
         ptr = p;
         tag = t;
@@ -71,25 +56,25 @@ public:
 
     /** comparing semantics */
     /* @{ */
-    bool operator== (volatile tagged_ptr const & p) const
+    bool operator==( volatile tagged_ptr const& p ) const
     {
-        return (ptr == p.ptr) && (tag == p.tag);
+        return ( ptr == p.ptr ) && ( tag == p.tag );
     }
 
-    bool operator!= (volatile tagged_ptr const & p) const
+    bool operator!=( volatile tagged_ptr const& p ) const
     {
-        return !operator==(p);
+        return !operator==( p );
     }
     /* @} */
 
     /** pointer access */
     /* @{ */
-    T * get_ptr(void) const
+    T* get_ptr( void ) const
     {
         return ptr;
     }
 
-    void set_ptr(T * p)
+    void set_ptr( T* p )
     {
         ptr = p;
     }
@@ -104,11 +89,11 @@ public:
 
     tag_t get_next_tag() const
     {
-        tag_t next = (get_tag() + 1) & (std::numeric_limits<tag_t>::max)();
+        tag_t next = ( get_tag() + 1 ) & ( std::numeric_limits< tag_t >::max )();
         return next;
     }
 
-    void set_tag(tag_t t)
+    void set_tag( tag_t t )
     {
         tag = t;
     }
@@ -116,29 +101,27 @@ public:
 
     /** smart pointer support  */
     /* @{ */
-    T & operator*() const
+    T& operator*() const
     {
         return *ptr;
     }
 
-    T * operator->() const
+    T* operator->() const
     {
         return ptr;
     }
 
-    operator bool(void) const
+    operator bool( void ) const
     {
         return ptr != 0;
     }
     /* @} */
 
 protected:
-    T * ptr;
+    T*    ptr;
     tag_t tag;
 };
 
-} /* namespace detail */
-} /* namespace lockfree */
-} /* namespace boost */
+}}}    // namespace boost::lockfree::detail
 
 #endif /* BOOST_LOCKFREE_TAGGED_PTR_DCAS_HPP_INCLUDED */

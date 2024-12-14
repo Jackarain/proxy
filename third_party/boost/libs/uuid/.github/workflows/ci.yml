@@ -213,13 +213,13 @@ jobs:
             install: clang-17
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
-            os: macos-12
-          - toolset: clang
-            cxxstd: "11,14,17,20,2b"
             os: macos-13
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-14
+          - toolset: clang
+            cxxstd: "11,14,17,20,2b"
+            os: macos-15
 
     runs-on: ${{matrix.os}}
     container: ${{matrix.container}}
@@ -361,9 +361,12 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-12
+          - os: ubuntu-24.04
+          - os: ubuntu-latest
+            opts: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
           - os: macos-13
           - os: macos-14
+          - os: macos-15
 
     runs-on: ${{matrix.os}}
 
@@ -398,7 +401,7 @@ jobs:
         run: |
           cd ../boost-root/libs/$LIBRARY/test/cmake_subdir_test
           mkdir __build__ && cd __build__
-          cmake ..
+          cmake ${{matrix.opts}} ..
           cmake --build .
           ctest --output-on-failure --no-tests=error
 
@@ -409,9 +412,12 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-12
+          - os: ubuntu-24.04
+          - os: ubuntu-latest
+            opts: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
           - os: macos-13
           - os: macos-14
+          - os: macos-15
 
     runs-on: ${{matrix.os}}
 
@@ -446,7 +452,7 @@ jobs:
         run: |
           cd ../boost-root
           mkdir __build__ && cd __build__
-          cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DCMAKE_INSTALL_PREFIX=~/.local ..
+          cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DCMAKE_INSTALL_PREFIX=~/.local ${{matrix.opts}} ..
 
       - name: Install
         run: |
@@ -456,7 +462,7 @@ jobs:
       - name: Use the installed library
         run: |
           cd ../boost-root/libs/$LIBRARY/test/cmake_install_test && mkdir __build__ && cd __build__
-          cmake -DCMAKE_INSTALL_PREFIX=~/.local ..
+          cmake -DCMAKE_INSTALL_PREFIX=~/.local ${{matrix.opts}} ..
           cmake --build .
           ctest --output-on-failure --no-tests=error
 
@@ -467,9 +473,12 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-12
+          - os: ubuntu-24.04
+          - os: ubuntu-latest
+            opts: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
           - os: macos-13
           - os: macos-14
+          - os: macos-15
 
     runs-on: ${{matrix.os}}
 
@@ -504,7 +513,7 @@ jobs:
         run: |
           cd ../boost-root
           mkdir __build__ && cd __build__
-          cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DBUILD_TESTING=ON ..
+          cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DBUILD_TESTING=ON ${{matrix.opts}} ..
 
       - name: Build tests
         run: |
@@ -523,6 +532,10 @@ jobs:
         include:
           - os: windows-2019
           - os: windows-2022
+          - os: windows-latest
+            opts: "-G \"MinGW Makefiles\""
+          - os: windows-latest
+            opts: "-T clangcl"
 
     runs-on: ${{matrix.os}}
 
@@ -554,7 +567,7 @@ jobs:
         run: |
           cd ../boost-root/libs/%LIBRARY%/test/cmake_subdir_test
           mkdir __build__ && cd __build__
-          cmake ..
+          cmake ${{matrix.opts}} ..
           cmake --build . --config Debug
           ctest --output-on-failure --no-tests=error -C Debug
 
@@ -572,6 +585,10 @@ jobs:
         include:
           - os: windows-2019
           - os: windows-2022
+          - os: windows-latest
+            opts: "-G \"MinGW Makefiles\""
+          - os: windows-latest
+            opts: "-T clangcl"
 
     runs-on: ${{matrix.os}}
 
@@ -603,7 +620,7 @@ jobs:
         run: |
           cd ../boost-root
           mkdir __build__ && cd __build__
-          cmake -DBOOST_INCLUDE_LIBRARIES=%LIBRARY% -DCMAKE_INSTALL_PREFIX=C:/cmake-prefix ..
+          cmake -DBOOST_INCLUDE_LIBRARIES=%LIBRARY% -DCMAKE_INSTALL_PREFIX=C:/cmake-prefix ${{matrix.opts}} ..
 
       - name: Install (Debug)
         shell: cmd
@@ -621,7 +638,7 @@ jobs:
         shell: cmd
         run: |
           cd ../boost-root/libs/%LIBRARY%/test/cmake_install_test && mkdir __build__ && cd __build__
-          cmake -DCMAKE_INSTALL_PREFIX=C:/cmake-prefix ..
+          cmake -DCMAKE_INSTALL_PREFIX=C:/cmake-prefix ${{matrix.opts}} ..
           cmake --build . --config Debug
           ctest --output-on-failure --no-tests=error -C Debug
 
@@ -639,6 +656,10 @@ jobs:
         include:
           - os: windows-2019
           - os: windows-2022
+          - os: windows-latest
+            opts: "-G \"MinGW Makefiles\""
+          - os: windows-latest
+            opts: "-T clangcl"
 
     runs-on: ${{matrix.os}}
 
@@ -670,7 +691,7 @@ jobs:
         run: |
           cd ../boost-root
           mkdir __build__ && cd __build__
-          cmake -DBOOST_INCLUDE_LIBRARIES=%LIBRARY% -DBUILD_TESTING=ON ..
+          cmake -DBOOST_INCLUDE_LIBRARIES=%LIBRARY% -DBUILD_TESTING=ON ${{matrix.opts}} ..
 
       - name: Build tests (Debug)
         shell: cmd

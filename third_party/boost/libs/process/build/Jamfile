@@ -5,7 +5,8 @@
 
 import os ;
 import feature ;
-import ../../config/checks/config : requires ;
+import-search /boost/config/checks ;
+import config : requires ;
 
 project : requirements
   <define>BOOST_ASIO_NO_DEPRECATED
@@ -15,10 +16,10 @@ project : requirements
   <target-os>windows:<define>WIN32_LEAN_AND_MEAN
   <target-os>linux:<linkflags>-lpthread
   : source-location ../src
+  : common-requirements
+    <library>$(boost_dependencies)
+    <boost.process.fs>std:<define>BOOST_PROCESS_USE_STD_FS=1
 ;
-
-feature.feature boost.process.fs : boost std : propagated composite ;
-feature.compose <boost.process.fs>std : <define>BOOST_PROCESS_USE_STD_FS=1 ;
 
 alias process_sources
    : detail/environment_posix.cpp
@@ -40,26 +41,33 @@ alias process_sources
      shell.cpp
    ;
 
-if [ os.name ] = NT
-{
-  lib shell32 ;
-  lib advapi32 ;
-  lib ntdll ;
-  lib user32 ;
-  explicit shell32 advapi32 ntdll user32 ;
-}
+lib shell32 ;
+lib advapi32 ;
+lib ntdll ;
+lib user32 ;
+lib ws2_32 ;
+
+lib kvm ;
+lib procstat ;
 
 lib boost_process
    : process_sources
    : requirements <define>BOOST_PROCESS_SOURCE=1
      <link>shared:<define>BOOST_PROCESS_DYN_LINK=1
-     <boost.process.fs>boost:<library>/boost//filesystem
+     <boost.process.fs>boost:<library>/boost/filesystem//boost_filesystem
+     <boost.process.disable-close-range>on:<define>BOOST_PROCESS_V2_POSIX_FORCE_DISABLE_CLOSE_RANGE=1
      <target-os>windows:<library>shell32
      <target-os>windows:<library>user32
      <target-os>windows:<library>ntdll
      <target-os>windows:<library>advapi32
+     <target-os>windows:<library>ws2_32
+     <target-os>bsd:<library>kvm
+     <target-os>freebsd:<library>kvm
+     <target-os>freebsd:<library>procstat
+     <target-os>netbsd:<library>kvm
+     <target-os>openbsd:<library>kvm
+     <target-os>solaris:<library>kvm
    : usage-requirements
      <link>shared:<define>BOOST_PROCESS_DYN_LINK=1
+     <boost.process.fs>boost:<library>/boost/filesystem//boost_filesystem
   ;
-
-boost-install boost_process ;

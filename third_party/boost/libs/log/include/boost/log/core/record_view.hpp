@@ -23,7 +23,8 @@
 #include <boost/log/attributes/attribute_value_set.hpp>
 #include <boost/log/expressions/keyword_fwd.hpp>
 #ifndef BOOST_LOG_NO_THREADS
-#include <boost/detail/atomic_count.hpp>
+#include <boost/memory_order.hpp>
+#include <boost/atomic/atomic.hpp>
 #endif // BOOST_LOG_NO_THREADS
 #include <boost/log/detail/header.hpp>
 
@@ -63,19 +64,34 @@ private:
     //! Publicly available record data
     struct public_data
     {
+    private:
         //! Reference counter
 #ifndef BOOST_LOG_NO_THREADS
-        mutable boost::detail::atomic_count m_ref_counter;
+        mutable boost::atomic< unsigned int > m_ref_counter;
+
+        friend void intrusive_ptr_add_ref(const public_data* p) BOOST_NOEXCEPT
+        {
+            p->m_ref_counter.opaque_add(1u, boost::memory_order_relaxed);
+        }
+        friend void intrusive_ptr_release(const public_data* p) BOOST_NOEXCEPT
+        {
+            if (!p->m_ref_counter.sub_and_test(1u, boost::memory_order_acq_rel))
+                public_data::destroy(p);
+        }
 #else
         mutable unsigned int m_ref_counter;
+
+        friend void intrusive_ptr_add_ref(const public_data* p) BOOST_NOEXCEPT { ++p->m_ref_counter; }
+        friend void intrusive_ptr_release(const public_data* p) BOOST_NOEXCEPT { if (--p->m_ref_counter == 0u) public_data::destroy(p); }
 #endif // BOOST_LOG_NO_THREADS
 
+    public:
         //! Attribute values view
         attribute_value_set m_attribute_values;
 
         //! Constructor from the attribute value set
         explicit public_data(BOOST_RV_REF(attribute_value_set) values) BOOST_NOEXCEPT :
-            m_ref_counter(1),
+            m_ref_counter(1u),
             m_attribute_values(boost::move(values))
         {
         }
@@ -88,9 +104,6 @@ private:
 
         BOOST_DELETED_FUNCTION(public_data(public_data const&))
         BOOST_DELETED_FUNCTION(public_data& operator= (public_data const&))
-
-        friend void intrusive_ptr_add_ref(const public_data* p) BOOST_NOEXCEPT { ++p->m_ref_counter; }
-        friend void intrusive_ptr_release(const public_data* p) BOOST_NOEXCEPT { if (--p->m_ref_counter == 0) public_data::destroy(p); }
     };
 
 private:

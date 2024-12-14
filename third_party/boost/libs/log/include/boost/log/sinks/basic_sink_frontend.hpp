@@ -28,7 +28,6 @@
 #if !defined(BOOST_LOG_NO_THREADS)
 #include <boost/memory_order.hpp>
 #include <boost/atomic/atomic.hpp>
-#include <boost/thread/exceptions.hpp>
 #include <boost/thread/tss.hpp>
 #include <boost/log/detail/locks.hpp>
 #include <boost/log/detail/light_rw_mutex.hpp>
@@ -131,12 +130,6 @@ public:
         {
             return m_Filter(attrs);
         }
-#if !defined(BOOST_LOG_NO_THREADS)
-        catch (thread_interrupted&)
-        {
-            throw;
-        }
-#endif
         catch (...)
         {
             if (m_ExceptionHandler.empty())
@@ -166,12 +159,6 @@ protected:
             BOOST_LOG_EXPR_IF_MT(boost::log::aux::exclusive_lock_guard< BackendMutexT > lock(backend_mutex);)
             backend.consume(rec);
         }
-#if !defined(BOOST_LOG_NO_THREADS)
-        catch (thread_interrupted&)
-        {
-            throw;
-        }
-#endif
         catch (...)
         {
             BOOST_LOG_EXPR_IF_MT(boost::log::aux::shared_lock_guard< mutex_type > lock(m_Mutex);)
@@ -190,10 +177,6 @@ protected:
         {
             if (!backend_mutex.try_lock())
                 return false;
-        }
-        catch (thread_interrupted&)
-        {
-            throw;
         }
         catch (...)
         {
@@ -231,12 +214,6 @@ private:
             BOOST_LOG_EXPR_IF_MT(boost::log::aux::exclusive_lock_guard< BackendMutexT > lock(backend_mutex);)
             backend.flush();
         }
-#if !defined(BOOST_LOG_NO_THREADS)
-        catch (thread_interrupted&)
-        {
-            throw;
-        }
-#endif
         catch (...)
         {
             BOOST_LOG_EXPR_IF_MT(boost::log::aux::shared_lock_guard< mutex_type > lock(m_Mutex);)
@@ -464,12 +441,6 @@ protected:
             BOOST_LOG_EXPR_IF_MT(boost::log::aux::exclusive_lock_guard< BackendMutexT > lock(backend_mutex);)
             backend.consume(rec, context->m_FormattedRecord);
         }
-#if !defined(BOOST_LOG_NO_THREADS)
-        catch (thread_interrupted&)
-        {
-            throw;
-        }
-#endif
         catch (...)
         {
             BOOST_LOG_EXPR_IF_MT(boost::log::aux::shared_lock_guard< mutex_type > lock(this->frontend_mutex());)
@@ -488,10 +459,6 @@ protected:
         {
             if (!backend_mutex.try_lock())
                 return false;
-        }
-        catch (thread_interrupted&)
-        {
-            throw;
         }
         catch (...)
         {

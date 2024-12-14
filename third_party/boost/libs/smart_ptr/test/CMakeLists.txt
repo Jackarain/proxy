@@ -10,6 +10,6 @@ if(HAVE_BOOST_TEST)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads)
 
-boost_test_jamfile(FILE Jamfile LINK_LIBRARIES Boost::smart_ptr Boost::core Boost::align Boost::atomic Boost::container_hash Boost::bind Threads::Threads)
+boost_test_jamfile(FILE Jamfile LINK_LIBRARIES Boost::smart_ptr Boost::core Boost::align Boost::atomic Boost::container_hash Boost::bind Boost::move Threads::Threads)
 
 endif()

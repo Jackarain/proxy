@@ -58,6 +58,7 @@ namespace grammar {
 #ifdef BOOST_URL_DOCS
 constexpr __implementation_defined__ hexdig_chars;
 #else
+namespace implementation_defined {
 struct hexdig_chars_t
 {
     /** Return true if c is in the character set.
@@ -92,8 +93,47 @@ struct hexdig_chars_t
     }
 #endif
 };
+}
 
-constexpr hexdig_chars_t hexdig_chars{};
+/** The set of hexadecimal digits
+
+    @par Example
+    Character sets are used with rules and the
+    functions @ref find_if and @ref find_if_not.
+    @code
+    system::result< core::string_view > rv = parse( "8086FC19", token_rule( hexdig_chars ) );
+    @endcode
+
+    @par BNF
+    @code
+    HEXDIG      = DIGIT
+                / "A" / "B" / "C" / "D" / "E" / "F"
+                / "a" / "b" / "c" / "d" / "e" / "f"
+    @endcode
+
+    @note The RFCs are inconsistent on the case
+    sensitivity of hexadecimal digits. Existing
+    uses suggest case-insensitivity is a de-facto
+    standard.
+
+    @par Specification
+    @li <a href="https://datatracker.ietf.org/doc/html/rfc5234#appendix-B.1"
+        >B.1. Core Rules (rfc5234)</a>
+    @li <a href="https://datatracker.ietf.org/doc/html/rfc7230#section-1.2"
+        >1.2. Syntax Notation (rfc7230)</a>
+    @li <a href="https://datatracker.ietf.org/doc/html/rfc5952#section-2.3"
+        >2.3. Uppercase or Lowercase (rfc5952)</a>
+    @li <a href="https://datatracker.ietf.org/doc/html/rfc5952#section-4.3"
+        >4.3. Lowercase (rfc5952)</a>
+
+    @see
+        @ref find_if,
+        @ref find_if_not,
+        @ref hexdig_value,
+        @ref parse,
+        @ref token_rule.
+*/
+constexpr implementation_defined::hexdig_chars_t hexdig_chars{};
 #endif
 
 // VFALCO We can declare

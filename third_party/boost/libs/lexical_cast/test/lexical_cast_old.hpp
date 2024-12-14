@@ -35,7 +35,7 @@
 #include <boost/limits.hpp>
 #include <boost/type_traits/is_pointer.hpp>
 #include <boost/detail/lcast_precision.hpp>
-#include <boost/detail/workaround.hpp>
+#include <boost/config/workaround.hpp>
 
 #ifdef BOOST_NO_STRINGSTREAM
 #include <strstream>

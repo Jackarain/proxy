@@ -19,7 +19,7 @@
 #if defined(BOOST_PROCESS_V2_WINDOWS)
 #include <windows.h>
 #include <shellapi.h>
-#else
+#elif !defined(__OpenBSD__)
 #include <wordexp.h>
 #endif
 
@@ -30,7 +30,7 @@ BOOST_PROCESS_V2_DECL const error_category& get_shell_category()
 {
     return system_category();
 }
-#else
+#elif !defined(__OpenBSD__)
 
 struct shell_category_t final : public error_category
 {
@@ -38,7 +38,7 @@ struct shell_category_t final : public error_category
 
     const char* name() const noexcept
     {
-        return "process.v2.utf8";
+        return "process.v2.shell";
     }
     std::string message(int value) const
     {
@@ -64,6 +64,13 @@ BOOST_PROCESS_V2_DECL const error_category& get_shell_category()
 {
     static shell_category_t instance;
     return instance;
+}
+
+#else
+
+const error_category& get_shell_category()
+{
+    return system_category();
 }
 
 #endif
@@ -92,7 +99,7 @@ auto shell::args() const-> args_type
     return input_.c_str();
 }
 
-#else
+#elif !defined(__OpenBSD__)
 
 void shell::parse_()
 {
@@ -133,6 +140,22 @@ auto shell::args() const -> args_type
     }
     else
         return const_cast<const char**>(argv());
+}
+
+#else
+
+void shell::parse_()
+{
+    error_code ec;
+    BOOST_PROCESS_V2_ASSIGN_EC(ec, ENOTSUP, system_category());
+    throw system_error(ec, "shell::parse");
+}
+
+shell::~shell() = default;
+
+auto shell::args() const -> args_type
+{
+    return nullptr;
 }
 
 #endif

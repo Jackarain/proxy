@@ -12,9 +12,9 @@
 //[doc_complex_map
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
-#include <boost/interprocess/containers/map.hpp>
-#include <boost/interprocess/containers/vector.hpp>
-#include <boost/interprocess/containers/string.hpp>
+#include <boost/container/map.hpp>
+#include <boost/container/vector.hpp>
+#include <boost/container/string.hpp>
 //<-
 #include "../test/get_process_id_name.hpp"
 //->
@@ -25,11 +25,11 @@ using namespace boost::interprocess;
 typedef managed_shared_memory::segment_manager                       segment_manager_t;
 typedef allocator<void, segment_manager_t>                           void_allocator;
 typedef allocator<int, segment_manager_t>                            int_allocator;
-typedef vector<int, int_allocator>                                   int_vector;
+typedef boost::container::vector<int, int_allocator>                 int_vector;
 typedef allocator<int_vector, segment_manager_t>                     int_vector_allocator;
-typedef vector<int_vector, int_vector_allocator>                     int_vector_vector;
+typedef boost::container::vector<int_vector, int_vector_allocator>   int_vector_vector;
 typedef allocator<char, segment_manager_t>                           char_allocator;
-typedef basic_string<char, std::char_traits<char>, char_allocator>   char_string;
+typedef boost::container::basic_string<char, std::char_traits<char>, char_allocator>   char_string;
 
 class complex_data
 {
@@ -55,7 +55,7 @@ class complex_data
 typedef std::pair<const char_string, complex_data>                      map_value_type;
 typedef std::pair<char_string, complex_data>                            movable_to_map_value_type;
 typedef allocator<map_value_type, segment_manager_t>                    map_value_type_allocator;
-typedef map< char_string, complex_data
+typedef boost::container::map< char_string, complex_data
            , std::less<char_string>, map_value_type_allocator>          complex_map_type;
 
 int main ()
@@ -63,32 +63,15 @@ int main ()
    //Remove shared memory on construction and destruction
    struct shm_remove
    {
-      //<-
-      #if 1
       shm_remove() { shared_memory_object::remove(test::get_process_id_name()); }
       ~shm_remove(){ shared_memory_object::remove(test::get_process_id_name()); }
-      #else
-      //->
-      shm_remove() { shared_memory_object::remove("MySharedMemory"); }
-      ~shm_remove(){ shared_memory_object::remove("MySharedMemory"); }
-      //<-
-      #endif
-      //->
    } remover;
    //<-
    (void)remover;
    //->
 
    //Create shared memory
-   //<-
-   #if 1
    managed_shared_memory segment(create_only,test::get_process_id_name(), 65536);
-   #else
-   //->
-   managed_shared_memory segment(create_only,"MySharedMemory", 65536);
-   //<-
-   #endif
-   //->
 
    //An allocator convertible to any allocator<T, segment_manager_t> type
    void_allocator alloc_inst (segment.get_segment_manager());

@@ -9,27 +9,13 @@
 //
 
 #include <boost/pointer_cast.hpp>
-
-#include <boost/config.hpp>
-#include <boost/core/lightweight_test.hpp>
-#include <boost/get_pointer.hpp>
 #include <boost/shared_ptr.hpp>
-
+#include <boost/get_pointer.hpp>
+#include <boost/core/lightweight_test.hpp>
+#include <boost/config.hpp>
 #include <memory>
 #include <utility>
 #include <functional>
-
-#if defined( BOOST_NO_CXX11_RVALUE_REFERENCES ) \
- || defined( BOOST_NO_CXX11_HDR_FUNCTIONAL ) \
- || defined( BOOST_NO_CXX11_HDR_UTILITY ) \
- || defined( BOOST_NO_CXX11_LAMBDAS ) \
- || defined( BOOST_NO_CXX11_RVALUE_REFERENCES )
-
-// We expect all the features or none of the features to be
-// available, since we should be on C++11
-int main() { return 0; }
-
-#else
 
 namespace
 {
@@ -221,4 +207,3 @@ int main()
 
     return boost::report_errors();
 }
-#endif

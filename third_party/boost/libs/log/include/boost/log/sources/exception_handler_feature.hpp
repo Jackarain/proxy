@@ -26,9 +26,6 @@
 #include <boost/log/core/record.hpp>
 #include <boost/log/sources/threading_models.hpp>
 #include <boost/log/utility/strictest_lock.hpp>
-#if !defined(BOOST_LOG_NO_THREADS)
-#include <boost/thread/exceptions.hpp>
-#endif
 #include <boost/log/detail/header.hpp>
 
 #ifdef BOOST_HAS_PRAGMA_ONCE
@@ -155,12 +152,6 @@ protected:
         {
             return base_type::open_record_unlocked(args);
         }
-#ifndef BOOST_LOG_NO_THREADS
-        catch (thread_interrupted&)
-        {
-            throw;
-        }
-#endif
         catch (...)
         {
             handle_exception();
@@ -177,12 +168,6 @@ protected:
         {
             base_type::push_record_unlocked(boost::move(rec));
         }
-#ifndef BOOST_LOG_NO_THREADS
-        catch (thread_interrupted&)
-        {
-            throw;
-        }
-#endif
         catch (...)
         {
             handle_exception();

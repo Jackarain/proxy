@@ -5,10 +5,13 @@
 #include <boost/describe.hpp>
 #include <boost/mp11.hpp>
 #include <boost/json.hpp>
+#include <boost/version.hpp>
 #include <type_traits>
 
 namespace app
 {
+
+#if BOOST_VERSION < 108100
 
 template<class T> void extract( boost::json::object const & obj, char const * name, T & value )
 {
@@ -35,6 +38,8 @@ template<class T,
 
     return t;
 }
+
+#endif
 
 struct A
 {

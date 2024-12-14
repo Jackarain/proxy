@@ -22,23 +22,22 @@
 
 #include <boost/mysql/detail/access.hpp>
 #include <boost/mysql/detail/algo_params.hpp>
-#include <boost/mysql/detail/any_execution_request.hpp>
 #include <boost/mysql/detail/config.hpp>
 #include <boost/mysql/detail/connect_params_helpers.hpp>
 #include <boost/mysql/detail/engine.hpp>
 #include <boost/mysql/detail/execution_processor/execution_processor.hpp>
-#include <boost/mysql/detail/writable_field_traits.hpp>
+#include <boost/mysql/detail/initiation_base.hpp>
+#include <boost/mysql/detail/intermediate_handler.hpp>
 
-#include <boost/core/ignore_unused.hpp>
-#include <boost/mp11/integer_sequence.hpp>
+#include <boost/asio/any_io_executor.hpp>
 #include <boost/system/result.hpp>
 
-#include <array>
 #include <cstddef>
 #include <cstring>
 #include <memory>
-#include <tuple>
+#include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace boost {
 namespace mysql {
@@ -52,12 +51,11 @@ class pipeline_request;
 
 namespace detail {
 
-// Forward decl
-class connection_state;
-
 //
 // Helpers to interact with connection_state, without including its definition
 //
+class connection_state;
+
 struct connection_state_deleter
 {
     BOOST_MYSQL_DECL void operator()(connection_state*) const;
@@ -66,77 +64,15 @@ struct connection_state_deleter
 BOOST_MYSQL_DECL std::vector<field_view>& get_shared_fields(connection_state&);
 
 template <class AlgoParams>
-any_resumable_ref setup(connection_state&, const AlgoParams&);
+any_resumable_ref setup(connection_state&, diagnostics&, const AlgoParams&);
 
 // Note: AlgoParams should have !is_void_result
 template <class AlgoParams>
 typename AlgoParams::result_type get_result(const connection_state&);
 
 //
-// execution helpers
-//
-template <class... T, std::size_t... I>
-std::array<field_view, sizeof...(T)> tuple_to_array_impl(const std::tuple<T...>& t, mp11::index_sequence<I...>) noexcept
-{
-    boost::ignore_unused(t);  // MSVC gets confused if sizeof...(T) == 0
-    return std::array<field_view, sizeof...(T)>{{to_field(std::get<I>(t))...}};
-}
-
-template <class... T>
-std::array<field_view, sizeof...(T)> tuple_to_array(const std::tuple<T...>& t) noexcept
-{
-    return tuple_to_array_impl(t, mp11::make_index_sequence<sizeof...(T)>());
-}
-
-struct query_request_getter
-{
-    any_execution_request value;
-    any_execution_request get() const noexcept { return value; }
-};
-inline query_request_getter make_request_getter(string_view q, std::vector<field_view>&) noexcept
-{
-    return query_request_getter{q};
-}
-
-struct stmt_it_request_getter
-{
-    statement stmt;
-    span<const field_view> params;  // Points into the connection state's shared fields
-
-    any_execution_request get() const noexcept { return any_execution_request(stmt, params); }
-};
-
-template <class FieldViewFwdIterator>
-inline stmt_it_request_getter make_request_getter(
-    const bound_statement_iterator_range<FieldViewFwdIterator>& req,
-    std::vector<field_view>& shared_fields
-)
-{
-    auto& impl = access::get_impl(req);
-    shared_fields.assign(impl.first, impl.last);
-    return {impl.stmt, shared_fields};
-}
-
-template <std::size_t N>
-struct stmt_tuple_request_getter
-{
-    statement stmt;
-    std::array<field_view, N> params;
-
-    any_execution_request get() const noexcept { return any_execution_request(stmt, params); }
-};
-template <class WritableFieldTuple>
-stmt_tuple_request_getter<std::tuple_size<WritableFieldTuple>::value>
-make_request_getter(const bound_statement_tuple<WritableFieldTuple>& req, std::vector<field_view>&)
-{
-    auto& impl = access::get_impl(req);
-    return {impl.stmt, tuple_to_array(impl.params)};
-}
-
-//
 // helpers to run algos
 //
-
 template <class AlgoParams>
 using has_void_result = std::is_same<typename AlgoParams::result_type, void>;
 
@@ -163,52 +99,66 @@ using completion_signature_t = typename completion_signature_impl<
     has_void_result<AlgoParams>::value>::type;
 
 // Intermediate handler
-template <class AlgoParams, class Handler>
-struct generic_algo_handler
+template <class AlgoParams>
+struct generic_algo_fn
 {
     static_assert(!has_void_result<AlgoParams>::value, "Internal error: result_type should be non-void");
 
     using result_t = typename AlgoParams::result_type;
 
-    template <class DeducedHandler>
-    generic_algo_handler(DeducedHandler&& h, connection_state& st)
-        : final_handler(std::forward<DeducedHandler>(h)), st(&st)
+    template <class Handler>
+    void operator()(Handler&& handler, error_code ec)
     {
+        std::move(handler)(ec, ec ? result_t{} : get_result<AlgoParams>(*st));
     }
 
-    void operator()(error_code ec)
-    {
-        std::move(final_handler)(ec, ec ? result_t{} : get_result<AlgoParams>(*st));
-    }
-
-    Handler final_handler;  // needs to be accessed by associator
     connection_state* st;
 };
 
+// Note: the 1st async_initiate arg should be a diagnostics*,
+// so completion tokens knowing how Boost.MySQL work can operate
 class connection_impl
 {
     std::unique_ptr<engine> engine_;
     std::unique_ptr<connection_state, connection_state_deleter> st_;
+
+    asio::any_io_executor get_executor() const { return engine_->get_executor(); }
+
+    // Helper for execution requests
+    template <class T>
+    static auto make_request(T&& input, connection_state& st)
+        -> decltype(execution_request_traits<typename std::decay<T>::type>::make_request(
+            std::forward<T>(input),
+            get_shared_fields(st)
+        ))
+    {
+        return execution_request_traits<typename std::decay<T>::type>::make_request(
+            std::forward<T>(input),
+            get_shared_fields(st)
+        );
+    }
 
     // Generic algorithm
     template <class AlgoParams>
     typename AlgoParams::result_type run_impl(
         AlgoParams params,
         error_code& ec,
+        diagnostics& diag,
         std::true_type /* has_void_result */
     )
     {
-        engine_->run(setup(*st_, params), ec);
+        engine_->run(setup(*st_, diag, params), ec);
     }
 
     template <class AlgoParams>
     typename AlgoParams::result_type run_impl(
         AlgoParams params,
         error_code& ec,
+        diagnostics& diag,
         std::false_type /* has_void_result */
     )
     {
-        engine_->run(setup(*st_, params), ec);
+        engine_->run(setup(*st_, diag, params), ec);
         return get_result<AlgoParams>(*st_);
     }
 
@@ -217,11 +167,12 @@ class connection_impl
         engine& eng,
         connection_state& st,
         AlgoParams params,
+        diagnostics& diag,
         Handler&& handler,
         std::true_type /* has_void_result */
     )
     {
-        eng.async_run(setup(st, params), std::forward<Handler>(handler));
+        eng.async_run(setup(st, diag, params), std::forward<Handler>(handler));
     }
 
     template <class AlgoParams, class Handler>
@@ -229,119 +180,143 @@ class connection_impl
         engine& eng,
         connection_state& st,
         AlgoParams params,
+        diagnostics& diag,
         Handler&& handler,
         std::false_type /* has_void_result */
     )
     {
-        using intermediate_handler_t = generic_algo_handler<AlgoParams, typename std::decay<Handler>::type>;
-        eng.async_run(setup(st, params), intermediate_handler_t(std::forward<Handler>(handler), st));
+        eng.async_run(
+            setup(st, diag, params),
+            make_intermediate_handler(generic_algo_fn<AlgoParams>{&st}, std::forward<Handler>(handler))
+        );
     }
 
     template <class AlgoParams, class Handler>
-    static void async_run_impl(engine& eng, connection_state& st, AlgoParams params, Handler&& handler)
+    static void async_run_impl(
+        engine& eng,
+        connection_state& st,
+        AlgoParams params,
+        diagnostics& diag,
+        Handler&& handler
+    )
     {
-        async_run_impl(eng, st, params, std::forward<Handler>(handler), has_void_result<AlgoParams>{});
+        async_run_impl(eng, st, params, diag, std::forward<Handler>(handler), has_void_result<AlgoParams>{});
     }
 
-    struct run_algo_initiation
+    struct run_algo_initiation : initiation_base
     {
+        using initiation_base::initiation_base;
+
         template <class Handler, class AlgoParams>
-        void operator()(Handler&& handler, engine* eng, connection_state* st, AlgoParams params)
+        void operator()(
+            Handler&& handler,
+            diagnostics* diag,
+            engine* eng,
+            connection_state* st,
+            AlgoParams params
+        )
         {
-            async_run_impl(*eng, *st, params, std::forward<Handler>(handler));
+            async_run_impl(*eng, *st, params, *diag, std::forward<Handler>(handler));
         }
     };
 
     // Connect
-    static connect_algo_params make_params_connect(diagnostics& diag, const handshake_params& params)
+    static connect_algo_params make_params_connect(const handshake_params& params)
     {
-        return connect_algo_params{&diag, params, false};
+        return connect_algo_params{params, false};
     }
 
-    static connect_algo_params make_params_connect_v2(diagnostics& diag, const connect_params& params)
+    static connect_algo_params make_params_connect_v2(const connect_params& params)
     {
         return connect_algo_params{
-            &diag,
             make_hparams(params),
             params.server_address.type() == address_type::unix_path
         };
     }
 
     template <class EndpointType>
-    struct initiate_connect
+    struct initiate_connect : initiation_base
     {
+        using initiation_base::initiation_base;
+
         template <class Handler>
         void operator()(
             Handler&& handler,
+            diagnostics* diag,
             engine* eng,
             connection_state* st,
             const EndpointType& endpoint,
-            handshake_params params,
-            diagnostics* diag
+            handshake_params params
         )
         {
             eng->set_endpoint(&endpoint);
-            async_run_impl(*eng, *st, make_params_connect(*diag, params), std::forward<Handler>(handler));
+            async_run_impl(*eng, *st, make_params_connect(params), *diag, std::forward<Handler>(handler));
         }
     };
 
-    struct initiate_connect_v2
+    struct initiate_connect_v2 : initiation_base
     {
+        using initiation_base::initiation_base;
+
         template <class Handler>
         void operator()(
             Handler&& handler,
+            diagnostics* diag,
             engine* eng,
             connection_state* st,
-            const connect_params* params,
-            diagnostics* diag
+            const connect_params* params
         )
         {
             eng->set_endpoint(&params->server_address);
-            async_run_impl(*eng, *st, make_params_connect_v2(*diag, *params), std::forward<Handler>(handler));
+            async_run_impl(*eng, *st, make_params_connect_v2(*params), *diag, std::forward<Handler>(handler));
         }
     };
 
     // execute
-    struct initiate_execute
+    struct initiate_execute : initiation_base
     {
+        using initiation_base::initiation_base;
+
         template <class Handler, class ExecutionRequest>
         void operator()(
             Handler&& handler,
+            diagnostics* diag,
             engine* eng,
             connection_state* st,
-            const ExecutionRequest& req,
-            execution_processor* proc,
-            diagnostics* diag
+            ExecutionRequest&& req,
+            execution_processor* proc
         )
         {
-            auto getter = make_request_getter(req, get_shared_fields(*st));
             async_run_impl(
                 *eng,
                 *st,
-                execute_algo_params{diag, getter.get(), proc},
+                execute_algo_params{make_request(std::forward<ExecutionRequest>(req), *st), proc},
+                *diag,
                 std::forward<Handler>(handler)
             );
         }
     };
 
     // start execution
-    struct initiate_start_execution
+    struct initiate_start_execution : initiation_base
     {
+        using initiation_base::initiation_base;
+
         template <class Handler, class ExecutionRequest>
         void operator()(
             Handler&& handler,
+            diagnostics* diag,
             engine* eng,
             connection_state* st,
-            const ExecutionRequest& req,
-            execution_processor* proc,
-            diagnostics* diag
+            ExecutionRequest&& req,
+            execution_processor* proc
         )
         {
-            auto getter = make_request_getter(req, get_shared_fields(*st));
             async_run_impl(
                 *eng,
                 *st,
-                start_execution_algo_params{diag, getter.get(), proc},
+                start_execution_algo_params{make_request(std::forward<ExecutionRequest>(req), *st), proc},
+                *diag,
                 std::forward<Handler>(handler)
             );
         }
@@ -359,7 +334,7 @@ public:
     BOOST_MYSQL_DECL bool ssl_active() const;
     BOOST_MYSQL_DECL bool backslash_escapes() const;
     BOOST_MYSQL_DECL system::result<character_set> current_character_set() const;
-    BOOST_MYSQL_DECL diagnostics& shared_diag();  // TODO: get rid of this
+    BOOST_MYSQL_DECL diagnostics& shared_diag();
 
     engine& get_engine()
     {
@@ -375,24 +350,26 @@ public:
 
     // Generic algorithm
     template <class AlgoParams>
-    typename AlgoParams::result_type run(AlgoParams params, error_code& ec)
+    typename AlgoParams::result_type run(AlgoParams params, error_code& ec, diagnostics& diag)
     {
-        return run_impl(params, ec, has_void_result<AlgoParams>{});
+        return run_impl(params, ec, diag, has_void_result<AlgoParams>{});
     }
 
     template <class AlgoParams, class CompletionToken>
-    auto async_run(AlgoParams params, CompletionToken&& token)
+    auto async_run(AlgoParams params, diagnostics& diag, CompletionToken&& token)
         -> decltype(asio::async_initiate<CompletionToken, completion_signature_t<AlgoParams>>(
-            run_algo_initiation(),
+            run_algo_initiation(get_executor()),
             token,
+            &diag,
             engine_.get(),
             st_.get(),
             params
         ))
     {
         return asio::async_initiate<CompletionToken, completion_signature_t<AlgoParams>>(
-            run_algo_initiation(),
+            run_algo_initiation(get_executor()),
             token,
+            &diag,
             engine_.get(),
             st_.get(),
             params
@@ -409,13 +386,13 @@ public:
     )
     {
         engine_->set_endpoint(&endpoint);
-        run(make_params_connect(diag, params), err);
+        run(make_params_connect(params), err, diag);
     }
 
     void connect_v2(const connect_params& params, error_code& err, diagnostics& diag)
     {
         engine_->set_endpoint(&params.server_address);
-        run(make_params_connect_v2(diag, params), err);
+        run(make_params_connect_v2(params), err, diag);
     }
 
     template <class EndpointType, class CompletionToken>
@@ -426,59 +403,65 @@ public:
         CompletionToken&& token
     )
         -> decltype(asio::async_initiate<CompletionToken, void(error_code)>(
-            initiate_connect<EndpointType>(),
+            initiate_connect<EndpointType>(get_executor()),
             token,
+            &diag,
             engine_.get(),
             st_.get(),
             endpoint,
-            params,
-            &diag
+            params
         ))
     {
         return asio::async_initiate<CompletionToken, void(error_code)>(
-            initiate_connect<EndpointType>(),
+            initiate_connect<EndpointType>(get_executor()),
             token,
+            &diag,
             engine_.get(),
             st_.get(),
             endpoint,
-            params,
-            &diag
+            params
         );
     }
 
     template <class CompletionToken>
     auto async_connect_v2(const connect_params& params, diagnostics& diag, CompletionToken&& token)
         -> decltype(asio::async_initiate<CompletionToken, void(error_code)>(
-            initiate_connect_v2(),
+            initiate_connect_v2(get_executor()),
             token,
+            &diag,
             engine_.get(),
             st_.get(),
-            &params,
-            &diag
+            &params
         ))
     {
         return asio::async_initiate<CompletionToken, void(error_code)>(
-            initiate_connect_v2(),
+            initiate_connect_v2(get_executor()),
             token,
+            &diag,
             engine_.get(),
             st_.get(),
-            &params,
-            &diag
+            &params
         );
     }
 
     // Handshake
-    handshake_algo_params make_params_handshake(const handshake_params& params, diagnostics& diag) const
+    handshake_algo_params make_params_handshake(const handshake_params& params) const
     {
-        return {&diag, params, false};
+        return {params, false};
     }
 
     // Execute
     template <class ExecutionRequest, class ResultsType>
-    void execute(const ExecutionRequest& req, ResultsType& result, error_code& err, diagnostics& diag)
+    void execute(ExecutionRequest&& req, ResultsType& result, error_code& err, diagnostics& diag)
     {
-        auto getter = make_request_getter(req, get_shared_fields(*st_));
-        run(execute_algo_params{&diag, getter.get(), &access::get_impl(result).get_interface()}, err);
+        run(
+            execute_algo_params{
+                make_request(std::forward<ExecutionRequest>(req), *st_),
+                &access::get_impl(result).get_interface()
+            },
+            err,
+            diag
+        );
     }
 
     template <class ExecutionRequest, class ResultsType, class CompletionToken>
@@ -489,38 +472,43 @@ public:
         CompletionToken&& token
     )
         -> decltype(asio::async_initiate<CompletionToken, void(error_code)>(
-            initiate_execute(),
+            initiate_execute(get_executor()),
             token,
+            &diag,
             engine_.get(),
             st_.get(),
             std::forward<ExecutionRequest>(req),
-            &access::get_impl(result).get_interface(),
-            &diag
+            &access::get_impl(result).get_interface()
         ))
     {
         return asio::async_initiate<CompletionToken, void(error_code)>(
-            initiate_execute(),
+            initiate_execute(get_executor()),
             token,
+            &diag,
             engine_.get(),
             st_.get(),
             std::forward<ExecutionRequest>(req),
-            &access::get_impl(result).get_interface(),
-            &diag
+            &access::get_impl(result).get_interface()
         );
     }
 
     // Start execution
     template <class ExecutionRequest, class ExecutionStateType>
     void start_execution(
-        const ExecutionRequest& req,
+        ExecutionRequest&& req,
         ExecutionStateType& exec_st,
         error_code& err,
         diagnostics& diag
     )
     {
-        auto getter = make_request_getter(req, get_shared_fields(*st_));
-        run(start_execution_algo_params{&diag, getter.get(), &access::get_impl(exec_st).get_interface()},
-            err);
+        run(
+            start_execution_algo_params{
+                make_request(std::forward<ExecutionRequest>(req), *st_),
+                &access::get_impl(exec_st).get_interface()
+            },
+            err,
+            diag
+        );
     }
 
     template <class ExecutionRequest, class ExecutionStateType, class CompletionToken>
@@ -531,43 +519,40 @@ public:
         CompletionToken&& token
     )
         -> decltype(asio::async_initiate<CompletionToken, void(error_code)>(
-            initiate_start_execution(),
+            initiate_start_execution(get_executor()),
             token,
+            &diag,
             engine_.get(),
             st_.get(),
             std::forward<ExecutionRequest>(req),
-            &access::get_impl(exec_st).get_interface(),
-            &diag
+            &access::get_impl(exec_st).get_interface()
         ))
     {
         return asio::async_initiate<CompletionToken, void(error_code)>(
-            initiate_start_execution(),
+            initiate_start_execution(get_executor()),
             token,
+            &diag,
             engine_.get(),
             st_.get(),
             std::forward<ExecutionRequest>(req),
-            &access::get_impl(exec_st).get_interface(),
-            &diag
+            &access::get_impl(exec_st).get_interface()
         );
     }
 
     // Read some rows (dynamic)
-    read_some_rows_dynamic_algo_params make_params_read_some_rows(execution_state& st, diagnostics& diag)
-        const
+    read_some_rows_dynamic_algo_params make_params_read_some_rows(execution_state& st) const
     {
-        return {&diag, &access::get_impl(st).get_interface()};
+        return {&access::get_impl(st).get_interface()};
     }
 
     // Read some rows (static)
     template <class SpanElementType, class ExecutionState>
     read_some_rows_algo_params make_params_read_some_rows_static(
         ExecutionState& exec_st,
-        span<SpanElementType> output,
-        diagnostics& diag
+        span<SpanElementType> output
     ) const
     {
         return {
-            &diag,
             &access::get_impl(exec_st).get_interface(),
             access::get_impl(exec_st).make_output_ref(output)
         };
@@ -575,45 +560,19 @@ public:
 
     // Read resultset head
     template <class ExecutionStateType>
-    read_resultset_head_algo_params make_params_read_resultset_head(ExecutionStateType& st, diagnostics& diag)
-        const
+    read_resultset_head_algo_params make_params_read_resultset_head(ExecutionStateType& st) const
     {
-        return {&diag, &detail::access::get_impl(st).get_interface()};
+        return {&detail::access::get_impl(st).get_interface()};
     }
 
     // Close statement
-    close_statement_algo_params make_params_close_statement(statement stmt, diagnostics& diag) const
-    {
-        return {&diag, stmt.id()};
-    }
-
-    // Set character set
-    set_character_set_algo_params make_params_set_character_set(
-        const character_set& charset,
-        diagnostics& diag
-    ) const
-    {
-        return {&diag, charset};
-    }
-
-    // Ping
-    ping_algo_params make_params_ping(diagnostics& diag) const { return {&diag}; }
-
-    // Reset connection
-    reset_connection_algo_params make_params_reset_connection(diagnostics& diag) const { return {&diag}; }
-
-    // Quit connection
-    quit_connection_algo_params make_params_quit(diagnostics& diag) const { return {&diag}; }
-
-    // Close connection
-    close_connection_algo_params make_params_close(diagnostics& diag) const { return {&diag}; }
+    close_statement_algo_params make_params_close_statement(statement stmt) const { return {stmt.id()}; }
 
     // Run pipeline. Separately compiled to avoid including the pipeline header here
     BOOST_MYSQL_DECL
     static run_pipeline_algo_params make_params_pipeline(
         const pipeline_request& req,
-        std::vector<stage_response>& response,
-        diagnostics& diag
+        std::vector<stage_response>& response
     );
 };
 
@@ -621,8 +580,11 @@ public:
 // BOOST_ASIO_INITFN_AUTO_RESULT_TYPE are no longer enough.
 // Helper typedefs to reduce duplication
 template <class AlgoParams, class CompletionToken>
-using async_run_t = decltype(std::declval<connection_impl&>()
-                                 .async_run(std::declval<AlgoParams>(), std::declval<CompletionToken>()));
+using async_run_t = decltype(std::declval<connection_impl&>().async_run(
+    std::declval<AlgoParams>(),
+    std::declval<diagnostics&>(),
+    std::declval<CompletionToken>()
+));
 
 template <class EndpointType, class CompletionToken>
 using async_connect_t = decltype(std::declval<connection_impl&>().async_connect(
@@ -690,31 +652,6 @@ using async_run_pipeline_t = async_run_t<run_pipeline_algo_params, CompletionTok
 
 }  // namespace detail
 }  // namespace mysql
-}  // namespace boost
-
-// Propagate associated properties
-namespace boost {
-namespace asio {
-
-template <template <class, class> class Associator, class AlgoParams, class Handler, class DefaultCandidate>
-struct associator<Associator, mysql::detail::generic_algo_handler<AlgoParams, Handler>, DefaultCandidate>
-    : Associator<Handler, DefaultCandidate>
-{
-    using mysql_handler = mysql::detail::generic_algo_handler<AlgoParams, Handler>;
-
-    static typename Associator<Handler, DefaultCandidate>::type get(const mysql_handler& h)
-    {
-        return Associator<Handler, DefaultCandidate>::get(h.final_handler);
-    }
-
-    static auto get(const mysql_handler& h, const DefaultCandidate& c)
-        -> decltype(Associator<Handler, DefaultCandidate>::get(h.final_handler, c))
-    {
-        return Associator<Handler, DefaultCandidate>::get(h.final_handler, c);
-    }
-};
-
-}  // namespace asio
 }  // namespace boost
 
 #ifdef BOOST_MYSQL_HEADER_ONLY

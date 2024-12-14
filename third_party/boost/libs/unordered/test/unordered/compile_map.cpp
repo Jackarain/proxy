@@ -52,23 +52,39 @@ template class instantiate_node_map<test::minimal::assignable const,
   test::minimal::allocator<int> >;
 
 #else
-#define INSTANTIATE(type)                                                      \
-  template class boost::unordered::detail::instantiate_##type
 
-INSTANTIATE(map)<int, int, boost::hash<int>, std::equal_to<int>,
+template <typename K, typename M, typename H, typename P, typename A>
+class instantiate_map
+{
+  typedef boost::unordered_map<K, M, H, P, A> container;
+  container x;
+  typename container::node_type node_type;
+  typename container::insert_return_type insert_return_type;
+};
+
+template <typename K, typename M, typename H, typename P, typename A>
+class instantiate_multimap
+{
+  typedef boost::unordered_multimap<K, M, H, P, A> container;
+  container x;
+  typename container::node_type node_type;
+};
+
+template class instantiate_map<int, int, boost::hash<int>, std::equal_to<int>,
   test::minimal::allocator<int> >;
-INSTANTIATE(multimap)<int const, int const, boost::hash<int>,
+template class instantiate_multimap<int const, int const, boost::hash<int>,
   std::equal_to<int>, test::minimal::allocator<int> >;
 
-INSTANTIATE(
-  map)<test::minimal::assignable const, test::minimal::default_assignable const,
+template class instantiate_map<test::minimal::assignable const,
+  test::minimal::default_assignable const,
   test::minimal::hash<test::minimal::assignable>,
   test::minimal::equal_to<test::minimal::assignable>,
   test::minimal::allocator<int> >;
-INSTANTIATE(multimap)<test::minimal::assignable, test::minimal::assignable,
-  test::minimal::hash<test::minimal::assignable>,
+template class instantiate_multimap<test::minimal::assignable,
+  test::minimal::assignable, test::minimal::hash<test::minimal::assignable>,
   test::minimal::equal_to<test::minimal::assignable>,
   test::minimal::allocator<int> >;
+
 #endif
 
 template <template <class Key, class T, class H = boost::hash<Key>,

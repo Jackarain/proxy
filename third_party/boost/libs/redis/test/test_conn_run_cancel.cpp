@@ -15,14 +15,14 @@
 
 #ifdef BOOST_ASIO_HAS_CO_AWAIT
 #include <boost/asio/experimental/awaitable_operators.hpp>
-#include <boost/asio/experimental/as_tuple.hpp>
+#include <boost/asio/as_tuple.hpp>
 
 namespace net = boost::asio;
 
 using boost::redis::operation;
 using boost::redis::connection;
 using boost::system::error_code;
-using net::experimental::as_tuple;
+using net::as_tuple;
 using boost::redis::request;
 using boost::redis::response;
 using boost::redis::ignore;

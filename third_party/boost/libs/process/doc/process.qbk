@@ -11,7 +11,7 @@
     ]
 ]
 
-[note Process v1 will be deprecated in the future. Use v2 for new projects.]
+[note Process v1 will be deprecated in the next release (1.88). Use v2 for new projects.]
 
 [include v1.qbk]
 [include v2.qbk]

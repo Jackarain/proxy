@@ -19,7 +19,7 @@ namespace boost {
 namespace urls {
 
 auto
-ipv4_address_rule_t::
+implementation_defined::ipv4_address_rule_t::
 parse(
     char const*& it,
     char const* end

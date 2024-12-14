@@ -11,8 +11,8 @@
 #include <boost/interprocess/detail/workaround.hpp>
 //[doc_where_allocate
 #include <boost/interprocess/managed_shared_memory.hpp>
-#include <boost/interprocess/containers/vector.hpp>
-#include <boost/interprocess/containers/string.hpp>
+#include <boost/container/vector.hpp>
+#include <boost/container/string.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 //<-
 #include "../test/get_process_id_name.hpp"
@@ -24,42 +24,25 @@ int main ()
    //Typedefs
    typedef allocator<char, managed_shared_memory::segment_manager>
       CharAllocator;
-   typedef basic_string<char, std::char_traits<char>, CharAllocator>
+   typedef boost::container::basic_string<char, std::char_traits<char>, CharAllocator>
       MyShmString;
    typedef allocator<MyShmString, managed_shared_memory::segment_manager>
       StringAllocator;
-   typedef vector<MyShmString, StringAllocator>
+   typedef boost::container::vector<MyShmString, StringAllocator>
       MyShmStringVector;
 
    //Open shared memory
    //Remove shared memory on construction and destruction
    struct shm_remove
    {
-   //<-
-   #if 1
       shm_remove() { shared_memory_object::remove(test::get_process_id_name()); }
       ~shm_remove(){ shared_memory_object::remove(test::get_process_id_name()); }
-   #else
-   //->
-      shm_remove() { shared_memory_object::remove("MySharedMemory"); }
-      ~shm_remove(){ shared_memory_object::remove("MySharedMemory"); }
-   //<-
-   #endif
-   //->
    } remover;
    //<-
    (void)remover;
    //->
 
-   //<-
-   #if 1
    managed_shared_memory shm(create_only, test::get_process_id_name(), 10000);
-   #else
-   //->
-   managed_shared_memory shm(create_only, "MySharedMemory", 10000);
-   //<-
-   #endif
-   //->
 
    //Create allocators
    CharAllocator     charallocator  (shm.get_segment_manager());

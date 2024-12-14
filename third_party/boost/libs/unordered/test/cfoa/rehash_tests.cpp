@@ -1,5 +1,5 @@
 // Copyright (C) 2023 Christian Mazakas
-// Copyright (C) 2023 Joaquin M Lopez Munoz
+// Copyright (C) 2023-2024 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -7,6 +7,8 @@
 
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
+#include <boost/unordered/concurrent_node_map.hpp>
+#include <boost/unordered/concurrent_node_set.hpp>
 
 using test::default_generator;
 using test::limited_range;
@@ -18,11 +20,19 @@ using key_equal = stateful_key_equal;
 using map_type = boost::unordered::concurrent_flat_map<raii, raii, hasher,
   key_equal, stateful_allocator<std::pair<raii const, raii> > >;
 
+using node_map_type = boost::unordered::concurrent_node_map<raii, raii, hasher,
+  key_equal, stateful_allocator<std::pair<raii const, raii> > >;
+
 using set_type = boost::unordered::concurrent_flat_set<raii, hasher,
   key_equal, stateful_allocator<raii> >;
 
+using node_set_type = boost::unordered::concurrent_node_set<raii, hasher,
+  key_equal, stateful_allocator<raii> >;
+
 map_type* test_map;
+node_map_type* test_node_map;
 set_type* test_set;
+node_set_type* test_node_set;
 
 namespace {
   test::seed_t initialize_seed{748775921};
@@ -187,15 +197,15 @@ namespace {
 // clang-format off
 UNORDERED_TEST(
   rehash_no_insert,
-  ((test_map)(test_set)))
+  ((test_map)(test_node_map)(test_set)(test_node_set)))
 
 UNORDERED_TEST(
   reserve_no_insert,
-  ((test_map)(test_set)))
+  ((test_map)(test_node_map)(test_set)(test_node_set)))
 
 UNORDERED_TEST(
   insert_and_erase_with_rehash,
-  ((test_map)(test_set))
+  ((test_map)(test_node_map)(test_set)(test_node_set))
   ((value_type_generator_factory))
   ((default_generator)(sequential)(limited_range)))
 // clang-format on

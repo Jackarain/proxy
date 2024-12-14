@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2023 Marcelo Zimbres Silva (mzimbres@gmail.com)
+/* Copyright (c) 2018-2024 Marcelo Zimbres Silva (mzimbres@gmail.com)
  *
  * Distributed under the Boost Software License, Version 1.0. (See
  * accompanying file LICENSE.txt)
@@ -12,9 +12,8 @@
 #include <boost/redis/error.hpp>
 #include <boost/asio/compose.hpp>
 #include <boost/asio/coroutine.hpp>
-#include <boost/asio/experimental/parallel_group.hpp>
 #include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/steady_timer.hpp>
+#include <boost/asio/cancel_after.hpp>
 #include <string>
 #include <chrono>
 
@@ -28,51 +27,23 @@ struct resolve_op {
 
    template <class Self>
    void operator()( Self& self
-                  , std::array<std::size_t, 2> order = {}
-                  , system::error_code ec1 = {}
-                  , asio::ip::tcp::resolver::results_type res = {}
-                  , system::error_code ec2 = {})
+                  , system::error_code ec = {}
+                  , asio::ip::tcp::resolver::results_type res = {})
    {
       BOOST_ASIO_CORO_REENTER (coro)
       {
-         resv_->timer_.expires_after(resv_->timeout_);
-
          BOOST_ASIO_CORO_YIELD
-         asio::experimental::make_parallel_group(
-            [this](auto token)
-            {
-               return resv_->resv_.async_resolve(resv_->addr_.host, resv_->addr_.port, token);
-            },
-            [this](auto token) { return resv_->timer_.async_wait(token);}
-         ).async_wait(
-            asio::experimental::wait_for_one(),
-            std::move(self));
+         resv_->resv_.async_resolve(
+            resv_->addr_.host,
+            resv_->addr_.port,
+            asio::cancel_after(resv_->timeout_, std::move(self)));
 
-         if (is_cancelled(self)) {
-            self.complete(asio::error::operation_aborted);
-            return;
-         }
+         resv_->results_ = res;
 
-         switch (order[0]) {
-            case 0: {
-               // Resolver completed first.
-               resv_->results_ = res;
-               self.complete(ec1);
-            } break;
-
-            case 1: {
-               if (ec2) {
-                  // Timer completed first with error, perhaps a
-                  // cancellation going on.
-                  self.complete(ec2);
-               } else {
-                  // Timer completed first without an error, this is a
-                  // resolve timeout.
-                  self.complete(error::resolve_timeout);
-               }
-            } break;
-
-            default: BOOST_ASSERT(false);
+         if (ec == asio::error::operation_aborted) {
+            self.complete(error::resolve_timeout);
+         } else {
+            self.complete(ec);
          }
       }
    }
@@ -81,13 +52,7 @@ struct resolve_op {
 template <class Executor>
 class resolver {
 public:
-   using timer_type =
-      asio::basic_waitable_timer<
-         std::chrono::steady_clock,
-         asio::wait_traits<std::chrono::steady_clock>,
-         Executor>;
-
-   resolver(Executor ex) : resv_{ex} , timer_{ex} {}
+   resolver(Executor ex) : resv_{ex} {}
 
    template <class CompletionToken>
    auto async_resolve(CompletionToken&& token)
@@ -104,7 +69,6 @@ public:
          case operation::resolve:
          case operation::all:
             resv_.cancel();
-            timer_.cancel();
             break;
          default: /* ignore */;
       }
@@ -126,7 +90,6 @@ private:
    template <class> friend struct resolve_op;
 
    resolver_type resv_;
-   timer_type timer_;
    address addr_;
    std::chrono::steady_clock::duration timeout_;
    asio::ip::tcp::resolver::results_type results_;

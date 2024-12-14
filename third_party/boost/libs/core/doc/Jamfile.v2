@@ -9,7 +9,7 @@ import project ;
 import doxygen ;
 import quickbook ;
 
-path-constant INCLUDES : ../../.. ;
+path-constant INCLUDES : ../include ;
 
 doxygen ref_reference
   :

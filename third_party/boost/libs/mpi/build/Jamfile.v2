@@ -15,20 +15,25 @@ import python ;
 import option ;
 import regex ;
 
-#
-# The `version-suffix` rule really belongs into python.jam, and
-# should be moved there. `split-version` is only duplicated here
-# as a prerequisite. (See https://github.com/boostorg/build/pull/290)
-#
+rule tag ( name : type ? : property-set )
+{
+    if python-tag in [ RULENAMES $(__name__) ]
+    {
+        return [  $(__name__).python-tag $(name) : $(type) : $(property-set) ] ;
+    }
+}
 
-
-mpi_python_libs = ;
+constant boost_dependencies_private :
+    /boost/utility//boost_utility
+    ;
 
 if [ mpi.configured ]
 {
 
-project boost/mpi
+project
   : source-location ../src
+  : common-requirements <library>$(boost_dependencies)
+  : requirements <library>$(boost_dependencies_private)
   ;
 
 lib boost_mpi
@@ -57,7 +62,7 @@ lib boost_mpi
     text_skeleton_oarchive.cpp
     timer.cpp
   : # Requirements
-    <library>../../serialization/build//boost_serialization
+    <library>/boost/serialization//boost_serialization
     <library>/mpi//mpi [ mpi.extra-requirements ]
     <define>BOOST_MPI_SOURCE=1
     <link>shared:<define>BOOST_MPI_DYN_LINK=1
@@ -65,12 +70,13 @@ lib boost_mpi
   : # Default build
     <link>shared
   : # Usage requirements
-    <library>../../serialization/build//boost_serialization
+    <library>/boost/serialization//boost_serialization
     <library>/mpi//mpi [ mpi.extra-requirements ]
+    <define>BOOST_MPI_NO_LIB=1
   ;
 
-  if [ python.configured ]
-  {
+    if [ python.configured ]
+    {
             lib boost_mpi_python
               : # Sources
                 python/serialize.cpp
@@ -84,8 +90,9 @@ lib boost_mpi
                 <link>shared:<define>BOOST_PYTHON_DYN_LINK=1
                 <define>BOOST_MPI_PYTHON_SOURCE=1
                 <python-debugging>on:<define>BOOST_DEBUG_PYTHON
+                -<tag>@%boostcpp.tag
                 -<tag>@$(BOOST_JAMROOT_MODULE)%$(BOOST_JAMROOT_MODULE).tag
-                <tag>@python-tag
+                <tag>@tag
                 <conditional>@python.require-py
                 <local-visibility>global
 
@@ -93,6 +100,8 @@ lib boost_mpi
                 <link>shared
               : # Usage requirements
                 <library>/mpi//mpi [ mpi.extra-requirements ]
+                <library>/python//python
+                <define>BOOST_MPI_PYTHON_NO_LIB=1
               ;
 
             python-extension mpi
@@ -120,22 +129,25 @@ lib boost_mpi
                 <link>shared <runtime-link>shared
                 <python-debugging>on:<define>BOOST_DEBUG_PYTHON
               ;
-
-            mpi_python_libs = boost_mpi_python mpi ;
-  }
-}
-else if ! ( --without-mpi in  [ modules.peek : ARGV ] )
-{
-  message boost_mpi   
-      : "warning: skipping optional Message Passing Interface (MPI) library."
-      : "note: to enable MPI support, add \"using mpi ;\" to user-config.jam."
-      : "note: to suppress this message, pass \"--without-mpi\" to bjam."
-      : "note: otherwise, you can safely ignore this message." 
-      ;
+    }
+    else
+    {
+        alias boost_mpi_python ;
+        alias mpi ;
+    }
 }
 else
 {
-  alias boost_mpi ;
+    if ! ( --without-mpi in  [ modules.peek : ARGV ] )
+    {
+        message boost_mpi
+            : "warning: skipping optional Message Passing Interface (MPI) library."
+            : "note: to enable MPI support, add \"using mpi ;\" to user-config.jam."
+            : "note: to suppress this message, pass \"--without-mpi\" to b2."
+            : "note: otherwise, you can safely ignore this message."
+            ;
+    }
+    alias boost_mpi_python ;
+    alias mpi ;
+    alias boost_mpi ;
 }
-
-boost-install boost_mpi $(mpi_python_libs) ;

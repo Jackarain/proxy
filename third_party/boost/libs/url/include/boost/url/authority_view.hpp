@@ -1354,7 +1354,24 @@ public:
 
     //--------------------------------------------
 
-    // hidden friend
+    /** Format the encoded authority to the output stream
+
+        This hidden friend function serializes the encoded URL
+        to the output stream.
+
+        @par Example
+        @code
+        authority_view a( "www.example.com" );
+
+        std::cout << a << std::endl;
+        @endcode
+
+        @return A reference to the output stream, for chaining
+
+        @param os The output stream to write to
+
+        @param a The URL to write
+    */
     friend
     std::ostream&
     operator<<(

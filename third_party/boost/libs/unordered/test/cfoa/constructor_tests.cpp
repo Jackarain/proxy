@@ -1,5 +1,5 @@
 // Copyright (C) 2023 Christian Mazakas
-// Copyright (C) 2023 Joaquin M Lopez Munoz
+// Copyright (C) 2023-2024 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -7,6 +7,8 @@
 
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
+#include <boost/unordered/concurrent_node_map.hpp>
+#include <boost/unordered/concurrent_node_set.hpp>
 
 test::seed_t initialize_seed(4122023);
 
@@ -52,11 +54,19 @@ using key_equal = stateful_key_equal;
 using map_type = boost::unordered::concurrent_flat_map<raii, raii, hasher,
   key_equal, stateful_allocator<std::pair<raii const, raii> > >;
 
+using node_map_type = boost::unordered::concurrent_node_map<raii, raii, hasher,
+  key_equal, stateful_allocator<std::pair<raii const, raii> > >;
+
 using set_type = boost::unordered::concurrent_flat_set<raii, hasher,
   key_equal, stateful_allocator<raii> >;
 
+using node_set_type = boost::unordered::concurrent_node_set<raii, hasher,
+  key_equal, stateful_allocator<raii> >;
+
 map_type* test_map;
+node_map_type* test_node_map;
 set_type* test_set;
+node_set_type* test_node_set;
 
 std::initializer_list<map_type::value_type> map_init_list{
   {raii{0}, raii{0}},
@@ -109,7 +119,9 @@ std::initializer_list<set_type::value_type> set_init_list{
 };
 
 auto test_map_and_init_list=std::make_pair(test_map,map_init_list);
+auto test_node_map_and_init_list=std::make_pair(test_node_map,map_init_list);
 auto test_set_and_init_list=std::make_pair(test_set,set_init_list);
+auto test_node_set_and_init_list=std::make_pair(test_node_set,set_init_list);
 
 namespace {
   template <class X>
@@ -865,7 +877,7 @@ namespace {
   }
 
   template <class X, class GF>
-  void flat_constructor(X*, GF gen_factory, test::random_generator rg)
+  void nonconcurrent_constructor(X*, GF gen_factory, test::random_generator rg)
   {
     using value_type = typename X::value_type;
     static constexpr auto value_type_cardinality =
@@ -875,12 +887,13 @@ namespace {
     auto gen = gen_factory.template get<X>();
     auto values = make_random_values(1024 * 16, [&] { return gen(rg); });
     auto reference_cont = reference_container<X>(values.begin(), values.end());
-    auto reference_flat= flat_container<X>(values.begin(), values.end());
+    auto reference_nonc = 
+      nonconcurrent_container<X>(values.begin(), values.end());
 
     raii::reset_counts();
 
     {
-      flat_container<X> flat(
+      nonconcurrent_container<X> nonc(
         values.begin(), values.end(), reference_cont.size(), hasher(1),
         key_equal(2), allocator_type(3));
 
@@ -890,9 +903,9 @@ namespace {
 
       BOOST_TEST_EQ(old_dc, 0u);
       BOOST_TEST_EQ(old_mc, 0u);
-      BOOST_TEST_EQ(old_cc, value_type_cardinality * flat.size());
+      BOOST_TEST_EQ(old_cc, value_type_cardinality * nonc.size());
 
-      X x(std::move(flat));
+      X x(std::move(nonc));
 
       test_fuzzy_matches_reference(x, reference_cont, rg);
 
@@ -904,15 +917,16 @@ namespace {
       BOOST_TEST_EQ(x.key_eq(), key_equal(2));
       BOOST_TEST(x.get_allocator() == allocator_type(3));
 
-      BOOST_TEST(flat.empty());
+      BOOST_TEST(nonc.empty());
     }
 
     check_raii_counts();
 
     {
-      flat_container<X> flat(0, hasher(1), key_equal(2), allocator_type(3));
+      nonconcurrent_container<X> nonc(
+        0, hasher(1), key_equal(2), allocator_type(3));
 
-      X x(std::move(flat));
+      X x(std::move(nonc));
 
       BOOST_TEST(x.empty());
 
@@ -920,7 +934,7 @@ namespace {
       BOOST_TEST_EQ(x.key_eq(), key_equal(2));
       BOOST_TEST(x.get_allocator() == allocator_type(3));
 
-      BOOST_TEST(flat.empty());
+      BOOST_TEST(nonc.empty());
     }
 
     check_raii_counts();
@@ -937,17 +951,17 @@ namespace {
       BOOST_TEST_EQ(old_mc, 0u);
       BOOST_TEST_EQ(old_cc, 2u * value_type_cardinality * x.size());
 
-      flat_container<X> flat(std::move(x));
+      nonconcurrent_container<X> nonc(std::move(x));
 
-      BOOST_TEST(flat == reference_flat);
+      BOOST_TEST(nonc == reference_nonc);
 
       BOOST_TEST_EQ(+raii::default_constructor, old_dc);
       BOOST_TEST_EQ(+raii::move_constructor, old_mc);
       BOOST_TEST_EQ(+raii::copy_constructor, old_cc);
 
-      BOOST_TEST_EQ(flat.hash_function(), hasher(1));
-      BOOST_TEST_EQ(flat.key_eq(), key_equal(2));
-      BOOST_TEST(flat.get_allocator() == allocator_type(3));
+      BOOST_TEST_EQ(nonc.hash_function(), hasher(1));
+      BOOST_TEST_EQ(nonc.key_eq(), key_equal(2));
+      BOOST_TEST(nonc.get_allocator() == allocator_type(3));
 
       BOOST_TEST(x.empty());
     }
@@ -957,13 +971,13 @@ namespace {
     {
       X x(0, hasher(1), key_equal(2), allocator_type(3));
 
-      flat_container<X> flat(std::move(x));
+      nonconcurrent_container<X> nonc(std::move(x));
 
-      BOOST_TEST(flat.empty());
+      BOOST_TEST(nonc.empty());
 
-      BOOST_TEST_EQ(flat.hash_function(), hasher(1));
-      BOOST_TEST_EQ(flat.key_eq(), key_equal(2));
-      BOOST_TEST(flat.get_allocator() == allocator_type(3));
+      BOOST_TEST_EQ(nonc.hash_function(), hasher(1));
+      BOOST_TEST_EQ(nonc.key_eq(), key_equal(2));
+      BOOST_TEST(nonc.get_allocator() == allocator_type(3));
 
       BOOST_TEST(x.empty());
     }
@@ -976,83 +990,84 @@ namespace {
 // clang-format off
 UNORDERED_TEST(
   default_constructor,
-  ((test_map)(test_set)))
+  ((test_map)(test_node_map)(test_set)(test_node_set)))
 
 UNORDERED_TEST(
   bucket_count_with_hasher_key_equal_and_allocator,
-  ((test_map)(test_set)))
+  ((test_map)(test_node_map)(test_set)(test_node_set)))
 
 UNORDERED_TEST(
   soccc,
-  ((test_map)(test_set)))
+  ((test_map)(test_node_map)(test_set)(test_node_set)))
 
 UNORDERED_TEST(
   from_iterator_range,
-  ((test_map)(test_set))
+  ((test_map)(test_node_map)(test_set)(test_node_set))
   ((value_type_generator_factory))
   ((default_generator)(sequential)(limited_range)))
 
 UNORDERED_TEST(
   copy_constructor,
-  ((test_map)(test_set))
+  ((test_map)(test_node_map)(test_set)(test_node_set))
   ((value_type_generator_factory))
   ((default_generator)(sequential)(limited_range)))
 
 UNORDERED_TEST(
   copy_constructor_with_insertion,
-  ((test_map)(test_set))
+  ((test_map)(test_node_map)(test_set)(test_node_set))
   ((value_type_generator_factory))
   ((default_generator)(sequential)(limited_range)))
 
 UNORDERED_TEST(
   move_constructor,
-  ((test_map)(test_set))
+  ((test_map)(test_node_map)(test_set)(test_node_set))
   ((value_type_generator_factory))
   ((default_generator)(sequential)(limited_range)))
 
 UNORDERED_TEST(
   move_constructor_with_insertion,
-  ((test_map)(test_set))
+  ((test_map)(test_node_map)(test_set)(test_node_set))
   ((value_type_generator_factory))
   ((default_generator)(sequential)(limited_range)))
 
 UNORDERED_TEST(
   iterator_range_with_allocator,
-  ((test_map)(test_set))
+  ((test_map)(test_node_map)(test_set)(test_node_set))
   ((value_type_generator_factory))
   ((default_generator)(sequential)(limited_range)))
 
 UNORDERED_TEST(
   explicit_allocator,
-  ((test_map)(test_set)))
+  ((test_map)(test_node_map)(test_set)(test_node_set)))
 
 UNORDERED_TEST(
   initializer_list_with_all_params,
-  ((test_map_and_init_list)(test_set_and_init_list)))
+  ((test_map_and_init_list)(test_node_map_and_init_list)
+   (test_set_and_init_list)(test_node_set_and_init_list)))
 
 UNORDERED_TEST(
   bucket_count_and_allocator,
-  ((test_map)(test_set)))
+  ((test_map)(test_node_map)(test_set)(test_node_set)))
 
 UNORDERED_TEST(
   bucket_count_with_hasher_and_allocator,
-  ((test_map)(test_set)))
+  ((test_map)(test_node_map)(test_set)(test_node_set)))
   
 UNORDERED_TEST(
   iterator_range_with_bucket_count_and_allocator,
-  ((test_map)(test_set))
+  ((test_map)(test_node_map)(test_set)(test_node_set))
   ((value_type_generator_factory))
   ((default_generator)(sequential)(limited_range)))
 
 UNORDERED_TEST(
   iterator_range_with_bucket_count_hasher_and_allocator,
-  ((test_map)(test_set))
+  ((test_map)(test_node_map)(test_set)(test_node_set))
   ((value_type_generator_factory))
   ((default_generator)(sequential)(limited_range)))
 
 UNORDERED_TEST(
-  flat_constructor,
-  ((test_map)(test_set))
+  nonconcurrent_constructor,
+  ((test_map)(test_node_map)(test_set)(test_node_set))
   ((value_type_generator_factory))
   ((default_generator)(sequential)(limited_range)))
 // clang-format on

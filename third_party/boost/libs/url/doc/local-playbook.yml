@@ -26,16 +26,29 @@ content:
 
 ui:
   bundle:
-    url: https://github.com/cppalliance/site-docs/releases/download/ui-master/ui-bundle.zip
+    url: https://github.com/boostorg/website-v2-docs/releases/download/ui-master/ui-bundle.zip
     snapshot: true
 
 antora:
   extensions:
     - require: '@antora/lunr-extension' # https://gitlab.com/antora/antora-lunr-extension
       index_latest_only: true
-    - '@antora/collector-extension'
+    - require: '@cppalliance/antora-cpp-tagfiles-extension'
+      cpp-tagfiles:
+        using-namespaces:
+          - 'boost::'
+    - require: '@cppalliance/antora-cpp-reference-extension'
+      dependencies:
+        - name: 'boost'
+          repo: 'https://github.com/boostorg/boost.git'
+          tag: 'develop'
+          variable: 'BOOST_SRC_DIR'
+          system-env: 'BOOST_SRC_DIR'
+
 asciidoc:
+  attributes:
+    # Enable pagination
+    page-pagination: ''
   extensions:
-    - ./lib/boost-link-inline-macro.js
-    - ./lib/cpp.js
+    - '@cppalliance/asciidoctor-boost-links'
     - '@asciidoctor/tabs'

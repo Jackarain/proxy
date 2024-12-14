@@ -12,11 +12,12 @@ import os ;
 import path ;
 import testing ;
 import toolset ;
-import ../../config/checks/config : requires ;
+import-search /boost/config/checks ;
+import config : requires ;
 
-project boost/coroutine2/test
+project
     : requirements
-      <library>../../test/build//boost_unit_test_framework
+      <library>/boost/test//boost_unit_test_framework
       <library>/boost/context//boost_context
       <target-os>linux,<toolset>gcc,<segmented-stacks>on:<cxxflags>-fsplit-stack
       <target-os>linux,<toolset>gcc,<segmented-stacks>on:<cxxflags>-DBOOST_USE_SEGMENTED_STACKS
@@ -47,7 +48,7 @@ rule native-impl ( properties * )
 }
 
 test-suite minimal :
-[ run test_coroutine.cpp : 
+[ run test_coroutine.cpp :
     : :
     <context-impl>fcontext
     [ requires cxx11_auto_declarations
@@ -63,7 +64,7 @@ test-suite minimal :
                cxx11_variadic_templates ]
     : test_coroutine_asm ]
 
-[ run test_coroutine.cpp : 
+[ run test_coroutine.cpp :
     : :
     <conditional>@native-impl
     [ requires cxx11_auto_declarations

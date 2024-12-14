@@ -8,8 +8,8 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 
-#include <boost/interprocess/containers/string.hpp>
-#include <boost/interprocess/containers/vector.hpp>
+#include <boost/container/string.hpp>
+#include <boost/container/vector.hpp>
 #include <boost/interprocess/streams/vectorstream.hpp>
 #include <boost/interprocess/streams/bufferstream.hpp>
 #include <sstream>
@@ -22,9 +22,9 @@ namespace boost {
 namespace interprocess {
 
 //Force instantiations to catch compile-time errors
-typedef basic_string<char> my_string;
+typedef boost::container::basic_string<char> my_string;
 typedef basic_vectorstream<my_string > my_stringstream_t;
-typedef vector<char> my_vector;
+typedef boost::container::vector<char> my_vector;
 typedef basic_vectorstream<my_vector>  my_vectorstream_t;
 template class basic_vectorstream<my_string>;
 template class basic_vectorstream<std::vector<char> >;
@@ -153,7 +153,7 @@ static int vectorstream_test()
       my_stringstream << "ABCDEFGHIJKLM";
       my_stringstream.seekp(0);
       my_stringstream << "PQRST";
-      string s("PQRSTFGHIJKLM");
+      boost::container::string s("PQRSTFGHIJKLM");
       if(s != my_stringstream.vector()){
          return 1;
       }

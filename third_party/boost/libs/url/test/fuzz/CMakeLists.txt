@@ -74,7 +74,7 @@ target_link_libraries(boost_url_fuzz PRIVATE -fsanitize=fuzzer,address,undefined
 function(add_boost_url_fuzzer NAME)
     # Fuzzer executable
     set(SOURCE_FILES ${ARGN})
-    add_executable(fuzzer_${NAME} ${SOURCE_FILES})
+    add_executable(fuzzer_${NAME} EXCLUDE_FROM_ALL ${SOURCE_FILES})
     target_link_libraries(fuzzer_${NAME} PRIVATE boost_url_fuzz)
     target_compile_options(fuzzer_${NAME} PRIVATE -g -O2 -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=undefined)
     target_link_libraries(fuzzer_${NAME} PRIVATE -fsanitize=fuzzer,address,undefined)

@@ -46,9 +46,9 @@ struct variant_rule_test
             (void)rv;
         }
 
-        ok(r, "(", variant<core::string_view, core::string_view>(
+        ok(r, "(", variant2::variant<core::string_view, core::string_view>(
             variant2::in_place_index_t<0>{}, "("));
-        ok(r, ")", variant<core::string_view, core::string_view>(
+        ok(r, ")", variant2::variant<core::string_view, core::string_view>(
             variant2::in_place_index_t<1>{}, ")"));
         bad(r, "", error::mismatch);
         bad(r, "[]", error::mismatch);

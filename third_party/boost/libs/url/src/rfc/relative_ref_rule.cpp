@@ -23,7 +23,7 @@ namespace boost {
 namespace urls {
 
 auto
-relative_ref_rule_t::
+implementation_defined::relative_ref_rule_t::
 parse(
     char const*& it,
     char const* const end
@@ -52,13 +52,13 @@ parse(
             it, end, detail::query_part_rule);
         if(! rv)
             return rv.error();
-        if(rv->has_query)
+        auto& v = *rv;
+        if(v.has_query)
         {
             // map "?" to { {} }
             u.apply_query(
-                rv->query,
-                rv->count +
-                    rv->query.empty());
+                v.query,
+                v.count);
         }
     }
 

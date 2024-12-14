@@ -97,6 +97,29 @@ struct params_ref_test
         }
     }
 
+    static
+    void
+    check(
+        url_view const& u,
+        std::initializer_list<
+            param_pct_view> init)
+    {
+        BOOST_TEST_EQ(u.params().size(), init.size());
+        check(u.params(), init);
+    }
+
+    static
+    void
+    check(
+        system::result<url_view> const& r,
+        std::initializer_list<
+            param_pct_view> init)
+    {
+        if(! BOOST_TEST(r.has_value()))
+            return;
+        check(*r, init);
+    }
+
     // check that modification produces
     // the string and correct sequence
     static
@@ -275,6 +298,50 @@ struct params_ref_test
             url u;
             params_ref qp = u.params();
             BOOST_TEST_EQ(&qp.url(), &u);
+        }
+
+        // begin()/end()
+        {
+            // empty
+            check(
+                boost::urls::parse_relative_ref(""),
+                {});
+
+            // empty with fragment
+            check(
+                boost::urls::parse_relative_ref("#"),
+                {});
+
+            // one empty element
+            check(
+                boost::urls::parse_relative_ref("?"),
+                { { "", no_value } });
+
+            // one empty element with fragment
+            check(
+                boost::urls::parse_relative_ref("?#"),
+                { { "", no_value } });
+
+            // one element with empty value
+            check(
+                boost::urls::parse_relative_ref("?="),
+                { { "", "" } });
+
+            // one element with empty value with fragment
+            // issue #864
+            check(
+                boost::urls::parse_relative_ref("?=#"),
+                { { "", "" } });
+
+            // one param
+            check(
+                boost::urls::parse_relative_ref("?key=value"),
+                { { "key", "value" } });
+
+            // two params
+            check(
+                boost::urls::parse_relative_ref("?key1=value1&key2=value2"),
+                { { "key1", "value1" }, { "key2", "value2" } });
         }
     }
 

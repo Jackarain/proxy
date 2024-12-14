@@ -210,7 +210,8 @@ T* get() const noexcept;
 [none]
 * {blank}
 +
-Returns:: The stored pointer.
+Returns::
+  The stored pointer.
 
 ### unique
 
@@ -220,8 +221,8 @@ bool unique() const noexcept;
 [none]
 * {blank}
 +
-Returns:: `true` if no other `shared_array` is sharing ownership of the
-stored pointer, `false` otherwise.
+Returns::
+  `true` if no other `shared_array` is sharing ownership of the stored pointer, `false` otherwise.
 
 ### use_count
 
@@ -253,7 +254,8 @@ void swap(shared_array<T>& b) noexcept;
 [none]
 * {blank}
 +
-Effects:: Exchanges the contents of the two smart pointers.
+Effects::
+  Exchanges the contents of the two smart pointers.
 
 ## Free Functions
 

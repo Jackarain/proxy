@@ -11,8 +11,8 @@
 #include <boost/interprocess/ipc/message_queue.hpp>
 #include <boost/interprocess/managed_external_buffer.hpp>
 #include <boost/interprocess/managed_heap_memory.hpp>
-#include <boost/interprocess/containers/map.hpp>
-#include <boost/interprocess/containers/set.hpp>
+#include <boost/container/map.hpp>
+#include <boost/container/set.hpp>
 #include <boost/interprocess/allocators/node_allocator.hpp>
 #include <boost/interprocess/detail/os_thread_functions.hpp>
 // intrusive/detail
@@ -121,7 +121,7 @@ bool test_serialize_db()
    typedef std::less<std::size_t>   MyLess;
    typedef node_allocator<MyPair, managed_external_buffer::segment_manager>
       node_allocator_t;
-   typedef map<std::size_t,
+   typedef boost::container::map<std::size_t,
                std::size_t,
                std::less<std::size_t>,
                node_allocator_t>
@@ -153,14 +153,14 @@ bool test_serialize_db()
          return false;
 
       //Fill map1 until is full
-      BOOST_TRY{
+      BOOST_INTERPROCESS_TRY{
          std::size_t i = 0;
          while(1){
             (*map1)[i] = i;
             ++i;
          }
       }
-      BOOST_CATCH(boost::interprocess::bad_alloc &){} BOOST_CATCH_END
+      BOOST_INTERPROCESS_CATCH(boost::interprocess::bad_alloc &){} BOOST_INTERPROCESS_CATCH_END
 
       //Data control data sending through the message queue
       std::size_t sent = 0;
@@ -305,13 +305,13 @@ static void multireceive()
 {
    char buff;
    size_t size;
-   int received_msgs = 0;
+   //int received_msgs = 0;
    unsigned int priority;
    do {
       global_queue->receive(&buff, 1, size, priority);
-      ++received_msgs;
+      //++received_msgs;
    } while (size > 0);
-   --received_msgs;
+   //--received_msgs;
    //std::cout << "reader thread complete, read msgs: " << received_msgs << std::endl;
 }
 
@@ -320,7 +320,7 @@ bool test_multi_sender_receiver()
 {
    bool ret = true;
    //std::cout << "Testing multi-sender / multi-receiver " << std::endl;
-   BOOST_TRY {
+   BOOST_INTERPROCESS_TRY {
       boost::interprocess::message_queue::remove(test::get_process_id_name());
       boost::interprocess::message_queue mq
          (boost::interprocess::open_or_create, test::get_process_id_name(), MULTI_QUEUE_SIZE, 1);
@@ -343,10 +343,10 @@ bool test_multi_sender_receiver()
          //std::cout << "Joined thread " << i << std::endl;
       }
    }
-   BOOST_CATCH(std::exception &e) {
+   BOOST_INTERPROCESS_CATCH(std::exception &e) {
       std::cout << "error " << e.what() << std::endl;
       ret = false;
-   } BOOST_CATCH_END
+   } BOOST_INTERPROCESS_CATCH_END
    boost::interprocess::message_queue::remove(test::get_process_id_name());
    return ret;
 }
@@ -402,7 +402,7 @@ class msg_queue_named_test_wrapper_w
 int main ()
 {
    int ret = 0;
-   BOOST_TRY{
+   BOOST_INTERPROCESS_TRY{
       message_queue::remove(test::get_process_id_name());
       test::test_named_creation<msg_queue_named_test_wrapper>();
       #if defined(BOOST_INTERPROCESS_WCHAR_NAMED_RESOURCES)
@@ -425,12 +425,11 @@ int main ()
          return 1;
       }
    }
-   BOOST_CATCH(std::exception &ex) {
+   BOOST_INTERPROCESS_CATCH(std::exception &ex) {
       std::cout << ex.what() << std::endl;
       ret = 1;
-   } BOOST_CATCH_END
+   } BOOST_INTERPROCESS_CATCH_END
    
    message_queue::remove(test::get_process_id_name());
    return ret;
 }
-

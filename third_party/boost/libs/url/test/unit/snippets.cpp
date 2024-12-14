@@ -1577,6 +1577,56 @@ normalizing()
 }
 
 void
+decode_with_token()
+{
+    {
+        //[snippet_string_token_1
+        url_view u("http://www.example.com/my%20file.txt");
+        pct_string_view sv = u.encoded_path();
+        assert(sv == "/my%20file.txt");
+        std::string s = u.path();
+        assert(s == "/my file.txt");
+        //]
+    }
+
+    {
+        //[snippet_string_token_2
+        url_view u("http://www.example.com/my%20file.txt");
+        std::string s = "existing string";
+        u.path(string_token::assign_to(s));
+        assert(s == "/my file.txt");
+        //]
+    }
+
+    {
+        //[snippet_string_token_3
+        url_view u("http://www.example.com/my%20file.txt");
+        std::string s = "existing string";
+        u.path(string_token::append_to(s));
+        assert(s == "existing string/my file.txt");
+        //]
+    }
+
+    {
+        //[snippet_string_token_4
+        url_view u("http://www.example.com/my%20file.txt");
+        std::string s = "existing string";
+        boost::core::string_view sv = u.path(string_token::preserve_size(s));
+        assert(sv == "/my file.txt");
+        //]
+    }
+
+    {
+#if defined(__cpp_static_assert) && __cpp_static_assert >= 201411L
+        //[snippet_string_token_5
+        static_assert(
+            string_token::is_token<string_token::return_string>::value);
+        //]
+#endif
+    }
+}
+
+void
 encoding()
 {
     {
@@ -1793,6 +1843,7 @@ public:
         ignore_unused(&grammar_customization);
         ignore_unused(&modifying_path);
         normalizing();
+        decode_with_token();
         encoding();
         ignore_unused(&readme_snippets);
 

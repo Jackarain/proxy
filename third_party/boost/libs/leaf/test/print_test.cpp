@@ -1,5 +1,4 @@
-// Copyright 2018-2023 Emil Dotchevski and Reverge Studios, Inc.
-
+// Copyright 2018-2024 Emil Dotchevski and Reverge Studios, Inc.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -34,7 +33,7 @@ struct c0
 {
     friend std::ostream & operator<<( std::ostream & os, c0 const & )
     {
-        return os << "c0";
+        return os << "info";
     }
 };
 
@@ -42,9 +41,9 @@ struct c1
 {
     int value;
 
-    friend std::ostream & operator<<( std::ostream & os, c1 const & )
+    friend std::ostream & operator<<( std::ostream & os, c1 const & x )
     {
-        return os << "c1";
+        return os << "value " << x.value;
     }
 };
 
@@ -53,9 +52,9 @@ struct c2
     int value;
 };
 
-std::ostream & operator<<( std::ostream & os, c2 const & )
+std::ostream & operator<<( std::ostream & os, c2 const & x )
 {
-    return os << "c2";
+    return os << "value " << x.value;
 }
 
 struct c3
@@ -70,59 +69,48 @@ struct c4
 };
 
 template <int Line, class T>
-bool check( T const & x, char const * sub )
+std::string print(T const & x, char const * prefix, char const * delimiter)
 {
-    using namespace leaf::leaf_detail;
+    using namespace leaf::detail;
     std::ostringstream s;
-    diagnostic<T>::print(s,x);
+    diagnostic<T>::print(s, prefix, delimiter, x);
+    diagnostic<T>::print(s, prefix, delimiter, x);
     std::string q = s.str();
-    std::cout << "LINE " << Line << ": " << q << std::endl;
-    return q.find(sub)!=q.npos;
+    std::cout << "[LINE " << Line << "] " << q << '\n';
+    return q;
 }
 
 struct my_exception: std::exception
 {
-    char const * what() const noexcept override { return "my_exception_what"; }
+    char const * what() const noexcept override { return "my_exception what"; }
 };
 
 int main()
 {
-    BOOST_TEST(check<__LINE__>(c0{ },"c0"));
-    BOOST_TEST(check<__LINE__>(c1{42},"c1"));
     {
-        c1 x;
-        c1 & y = x;
-        BOOST_TEST(check<__LINE__>(x,"c1"));
-        BOOST_TEST(check<__LINE__>(y,"c1"));
+        std::string out = print<__LINE__>(c0{}, "Title " , ", ");
+        BOOST_TEST_EQ(out, "Title c0: info, c0: info");
     }
-    BOOST_TEST(check<__LINE__>(c2{42},"c2"));
     {
-        c2 x = {42};
-        c2 & y = x;
-        BOOST_TEST(check<__LINE__>(x,"c2"));
-        BOOST_TEST(check<__LINE__>(y,"c2"));
+        std::string out = print<__LINE__>(c1{42}, "Title ", ", ");
+        BOOST_TEST_EQ(out, "Title c1: value 42, c1: value 42");
     }
-    BOOST_TEST(check<__LINE__>(c3{42},"c3"));
-    BOOST_TEST(check<__LINE__>(c3{42},"42"));
     {
-        c3 x = {42};
-        c3 & y = x;
-        BOOST_TEST(check<__LINE__>(x,"c3"));
-        BOOST_TEST(check<__LINE__>(x,"42"));
-        BOOST_TEST(check<__LINE__>(y,"c3"));
-        BOOST_TEST(check<__LINE__>(y,"42"));
+        std::string out = print<__LINE__>(c2{42}, "Title ", ", ");
+        BOOST_TEST_EQ(out, "Title c2: value 42, c2: value 42");
     }
-    BOOST_TEST(check<__LINE__>(c4(),"c4"));
-    BOOST_TEST(check<__LINE__>(c4(),"{not printable}"));
     {
-        c4 x;
-        c4 & y = x;
-        BOOST_TEST(check<__LINE__>(x,"c4"));
-        BOOST_TEST(check<__LINE__>(x,"{not printable}"));
-        BOOST_TEST(check<__LINE__>(y,"c4"));
-        BOOST_TEST(check<__LINE__>(y,"{not printable}"));
+        std::string out = print<__LINE__>(c3{42}, "Title ", ", ");
+        BOOST_TEST_EQ(out, "Title c3: 42, c3: 42");
     }
-    BOOST_TEST(check<__LINE__>(my_exception{}, "std::exception::what(): my_exception_what"));
+    {
+        std::string out = print<__LINE__>(c4{}, "Title ", ", ");
+        BOOST_TEST_EQ(out, "Title c4, c4");
+    }
+    {
+        std::string out = print<__LINE__>(my_exception{}, "Title ", ", ");
+        BOOST_TEST_EQ(out, "Title my_exception: \"my_exception what\", my_exception: \"my_exception what\"");
+    }
     return boost::report_errors();
 }
 

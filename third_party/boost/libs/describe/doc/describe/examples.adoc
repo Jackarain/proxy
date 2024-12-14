@@ -263,6 +263,11 @@ The presence of private members is taken as an indication that
 a universal conversion is not suitable, so the overload is
 disabled in this case using `std::enable_if_t`.
 
+NOTE: Since release 1.81.0, Boost.JSON provides its
+own, built-in, support for described classes. Consequently,
+when using Boost 1.81.0 or later, you don't need the below
+`tag_invoke` function.
+
 [source]
 ----
 include::../../example/to_json.cpp[lines=5..-1]
@@ -281,6 +286,11 @@ Sample output:
 Like the previous example, but in the other direction. Defines
 a `tag_invoke` overload that converts a `boost::json::value` to
 an annotated struct.
+
+NOTE: Since release 1.81.0, Boost.JSON provides its
+own, built-in, support for described classes. Consequently,
+when using Boost 1.81.0 or later, you don't need the below
+`tag_invoke` function.
 
 [source]
 ----

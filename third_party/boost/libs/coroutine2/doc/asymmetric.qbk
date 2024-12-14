@@ -247,7 +247,7 @@ pending __forced_unwind__ exception.]
 
         try {
             // code that might throw
-        } catch(const boost::coroutines2::detail::forced_unwind&) {
+        } catch(const boost::context::detail::forced_unwind&) {
             throw;
         } catch(...) {
             // possibly not re-throw pending exception
@@ -275,22 +275,22 @@ After unwinding, a __coro__ is complete.
 
         struct X {
             X(){
-                std::cout<<"X()"<<std::endl;
+                std::cout << "X()" << std::endl;
             }
 
             ~X(){
-                std::cout<<"~X()"<<std::endl;
+                std::cout << "~X()" << std::endl;
             }
         };
 
         {
-            typedef boost::coroutines2::coroutine<void>::push_type   coro_t;
+            typedef boost::coroutines2::coroutine<void> coro_t;
 
             coro_t::push_type sink(
                 [&](coro_t::pull_type& source){
                     X x;
-                    for(int=0;;++i){
-                        std::cout<<"fn(): "<<i<<std::endl;
+                    for(int i = 0; ; ++i){
+                        std::cout << "fn(): " << i << std::endl;
                         // transfer execution control back to main()
                         source();
                     }
@@ -312,7 +312,6 @@ After unwinding, a __coro__ is complete.
             fn(): 2
             fn(): 3
             fn(): 4
-            fn(): 5
             sink is complete: false
             ~X()
 

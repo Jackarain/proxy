@@ -88,6 +88,37 @@ public:
 #ifdef BOOST_URL_DOCS
     using iterator = __see_below__;
 #else
+
+    /** A Bidirectional iterator to a query parameter
+
+        Objects of this type allow iteration
+        through the parameters in the query.
+        Any percent-escapes in returned strings
+        are decoded first.
+        The values returned are read-only;
+        changes to parameters must be made
+        through the container instead, if the
+        container supports modification.
+
+        <br>
+
+        The strings produced when iterators are
+        dereferenced belong to the iterator and
+        become invalidated when that particular
+        iterator is incremented, decremented,
+        or destroyed.
+
+        @note
+
+        The implementation may use temporary,
+        recycled storage to store decoded
+        strings. These iterators are meant
+        to be used ephemerally. That is, for
+        short durations such as within a
+        function scope. Do not store
+        iterators with static storage
+        duration or as long-lived objects.
+    */
     class iterator;
 #endif
 

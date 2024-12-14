@@ -38,10 +38,20 @@
 #  endif
 #endif
 
-#if BOOST_CXX_VERSION >= 201103L
+#if (BOOST_CXX_VERSION >= 201103L) && (!defined(BOOST_GCC) || (BOOST_GCC >= 40800))
+//boost.System is not tested under GCC <= 4.8 and has compilation errors
+//due to incomplete language support in older compilers
+#define BOOST_INTERPROCESS_BOOST_CHRONO_AVAILABLE
+#endif
+
+#if (BOOST_CXX_VERSION >= 201103L)
+#define BOOST_INTERPROCESS_DATE_TIME_AVAILABLE
+#include <boost/date_time/posix_time/posix_time_types.hpp>
+#endif
+
+#ifdef BOOST_INTERPROCESS_BOOST_CHRONO_AVAILABLE
 #define BOOST_CHRONO_HEADER_ONLY
 #include <boost/chrono/system_clocks.hpp>
-#include <boost/date_time/posix_time/posix_time_types.hpp>
 #endif
 
 #include <boost/version.hpp>
@@ -60,7 +70,7 @@ namespace test {
 
 // ptime_delay_ms + ptime_ms
 
-#if BOOST_CXX_VERSION >= 201103L
+#if defined(BOOST_INTERPROCESS_DATE_TIME_AVAILABLE)
 inline boost::posix_time::ptime ptime_delay_ms(unsigned msecs)
 {
    using namespace boost::posix_time;
@@ -86,7 +96,7 @@ inline boost::posix_time::time_duration ptime_ms(unsigned msecs)
 
 // boost_systemclock_delay_ms + boost_systemclock_ms
 
-#if BOOST_CXX_VERSION >= 201103L
+#if defined(BOOST_INTERPROCESS_BOOST_CHRONO_AVAILABLE)
    inline boost::chrono::system_clock::time_point boost_systemclock_delay_ms(unsigned msecs)
    {  return boost::chrono::system_clock::now() + boost::chrono::milliseconds(msecs);  }
 
@@ -110,7 +120,7 @@ inline boost::posix_time::time_duration ptime_ms(unsigned msecs)
    inline std::chrono::milliseconds std_systemclock_ms(unsigned msecs)
    {  return std::chrono::milliseconds(msecs);  }
 
-#elif BOOST_CXX_VERSION >= 201103L
+#elif defined(BOOST_INTERPROCESS_BOOST_CHRONO_AVAILABLE)
    //Otherwise use boost chrono
    inline boost::chrono::system_clock::time_point std_systemclock_delay_ms(unsigned msecs)
    {  return boost_systemclock_delay_ms(msecs);  }

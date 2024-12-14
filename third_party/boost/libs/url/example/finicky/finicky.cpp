@@ -30,7 +30,7 @@ namespace json = boost::json;
 namespace core = boost::core;
 
 json::value
-read_json( std::istream& is, json::error_code& ec )
+read_json( std::istream& is, boost::system::error_code& ec )
 {
     json::parse_options opt;
     opt.allow_comments = true;
@@ -176,7 +176,7 @@ int main(int argc, char** argv)
     // Open config file
     std::fstream fin(argv[1]);
     CHECK(fin.good(), "Cannot open configuration file");
-    json::error_code ec;
+    boost::system::error_code ec;
     json::value c = read_json(fin, ec);
     CHECK(!ec.failed(), "Cannot parse configuration file");
     CHECK(c.is_object(), "Configuration file is not an object");

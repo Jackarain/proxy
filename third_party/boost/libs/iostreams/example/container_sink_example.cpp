@@ -8,7 +8,7 @@
 #include <cassert>
 #include <string>
 #include <boost/iostreams/stream.hpp>
-#include <libs/iostreams/example/container_device.hpp>
+#include "container_device.hpp"
 
 namespace io = boost::iostreams;
 namespace ex = boost::iostreams::example;

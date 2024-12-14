@@ -1,12 +1,11 @@
-// Copyright 2018-2023 Emil Dotchevski and Reverge Studios, Inc.
-
+// Copyright 2018-2024 Emil Dotchevski and Reverge Studios, Inc.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #ifdef BOOST_LEAF_TEST_SINGLE_HEADER
 #   include "leaf.hpp"
 #else
-#   include <boost/leaf/handle_errors.hpp>
+#   include <boost/leaf/diagnostics.hpp>
 #   include <boost/leaf/result.hpp>
 #endif
 
@@ -33,7 +32,7 @@ int main()
                 BOOST_LEAF_CHECK(hidden_result());
                 return 0;
             },
-            []( my_info<1> x1, my_info<2> x2, leaf::verbose_diagnostic_info const & info, leaf::verbose_diagnostic_info const & vinfo )
+            []( my_info<1> x1, my_info<2> x2, leaf::diagnostic_details const & info, leaf::diagnostic_details const & vinfo )
             {
                 BOOST_TEST_EQ(x1.value, 1);
                 BOOST_TEST_EQ(x2.value, 2);
@@ -49,8 +48,9 @@ int main()
                 }
                 return 1;
             },
-            []
+            [](leaf::diagnostic_details const & vinfo)
             {
+                std::cout << "Test is failing\n" << vinfo;
                 return 2;
             } );
         BOOST_TEST_EQ(r, 1);
@@ -64,7 +64,7 @@ int main()
                 hidden_throw();
                 return 0;
             },
-            []( my_info<1> x1, my_info<2> x2, leaf::verbose_diagnostic_info const & info, leaf::verbose_diagnostic_info const & vinfo )
+            []( my_info<1> x1, my_info<2> x2, leaf::diagnostic_details const & info, leaf::diagnostic_details const & vinfo )
             {
                 BOOST_TEST_EQ(x1.value, 1);
                 BOOST_TEST_EQ(x2.value, 2);
@@ -80,8 +80,9 @@ int main()
                 }
                 return 1;
             },
-            []
+            [](leaf::diagnostic_details const & vinfo)
             {
+                std::cout << "Test is failing\n" << vinfo;
                 return 2;
             } );
         BOOST_TEST_EQ(r, 1);

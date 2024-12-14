@@ -650,7 +650,7 @@ X u = rv;
     ]
     [
         [ `a.swap(b)` ]
-        [ Convertible to `bool`. ]
+        [ `void`. ]
         [ Exchanges the contents of `a` and `b`. ]
         [ ]
     ]

@@ -19,12 +19,12 @@ install images_glob : $(images) : <location>$(BOOST_ROOT)/doc/html/boost_process
 import type ;
 type.register XMLPROCESSWORKAROUND : : XML ;
 import generators ;
-generators.register-standard common.copy : XML : XMLPROCESSWORKAROUND ; 
+generators.register-standard common.copy : XML : XMLPROCESSWORKAROUND ;
 
 xmlprocessworkaround posix_pseudocode   : v1/posix_pseudocode.xml   ;
 xmlprocessworkaround windows_pseudocode : v1/windows_pseudocode.xml ;
 
-path-constant INCLUDES : ../../.. ;
+path-constant INCLUDES : ../include ;
 
 doxygen reference_v1
 :
@@ -66,7 +66,7 @@ doxygen reference_v2
     BOOST_PROCESS_V2_INITFN_AUTO_RESULT_TYPE(x,y)=deduced \\
     BOOST_PROCESS_V2_COMPLETION_TOKEN_FOR(X)=Token \\
     BOOST_PROCESS_V2_DEFAULT_COMPLETION_TOKEN_TYPE(E)=DEFAULT_TYPE \\
-    BOOST_ASIO_DEFAULT_COMPLETION_TOKEN=DEFAULT \\ 
+    BOOST_ASIO_DEFAULT_COMPLETION_TOKEN=DEFAULT \\
     BOOST_CONSTEXPR=constexpr \\
     BOOST_CXX14_CONSTEXPR=constexpr \\
     BOOST_PROCESS_V2_INLINE= \\
@@ -98,7 +98,7 @@ boostbook standalone
 ###############################################################################
 alias boostdoc
     : standalone/<format>docbook
-    : 
+    :
     : <dependency>images_glob
     : ;
 explicit boostdoc ;

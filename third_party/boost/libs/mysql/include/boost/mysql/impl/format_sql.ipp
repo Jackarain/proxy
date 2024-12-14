@@ -253,7 +253,7 @@ inline void append_field_view(
     case field_kind::date: return append_quoted_date(fv.get_date(), ctx);
     case field_kind::datetime: return append_quoted_datetime(fv.get_datetime(), ctx);
     case field_kind::time: return append_quoted_time(fv.get_time(), ctx);
-    default: BOOST_ASSERT(false); return;
+    default: BOOST_ASSERT(false); return;  // LCOV_EXCL_LINE
     }
 }
 
@@ -412,7 +412,7 @@ class format_state
         case arg_id_t::type_t::none: return append_auto_field(spec);
         case arg_id_t::type_t::integral: return append_indexed_field(arg_id.data.integral, spec);
         case arg_id_t::type_t::identifier: return append_named_field(arg_id.data.identifier, spec);
-        default: BOOST_ASSERT(false); return false;
+        default: BOOST_ASSERT(false); return false;  // LCOV_EXCL_LINE
         }
     }
 
@@ -541,17 +541,17 @@ void boost::mysql::format_context_base::format_arg(detail::formattable_ref_impl 
             add_error(client_errc::format_string_invalid_specifier);
         }
         break;
-    default: BOOST_ASSERT(false);
+    default: BOOST_ASSERT(false);  // LCOV_EXCL_LINE
     }
 }
 
-void boost::mysql::format_sql_to(
+void boost::mysql::detail::vformat_sql_to(
     format_context_base& ctx,
     constant_string_view format_str,
-    std::initializer_list<format_arg> args
+    span<const format_arg> args
 )
 {
-    detail::format_state(ctx, {args.begin(), args.end()}).format(format_str.get());
+    detail::format_state(ctx, args).format(format_str.get());
 }
 
 std::string boost::mysql::format_sql(

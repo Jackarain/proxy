@@ -17,7 +17,7 @@ using namespace boost::interprocess;
 
 int main ()
 {
-   BOOST_TRY{
+   BOOST_INTERPROCESS_TRY{
       //Open a message queue.
       message_queue mq
          (open_only        //only open
@@ -35,11 +35,11 @@ int main ()
             return 1;
       }
    }
-   BOOST_CATCH(interprocess_exception &ex){
+   BOOST_INTERPROCESS_CATCH(interprocess_exception &ex){
       message_queue::remove("message_queue");
       std::cout << ex.what() << std::endl;
       return 1;
-   } BOOST_CATCH_END
+   } BOOST_INTERPROCESS_CATCH_END
    message_queue::remove("message_queue");
    return 0;
 }

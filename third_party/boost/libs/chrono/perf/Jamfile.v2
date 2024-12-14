@@ -13,9 +13,9 @@ import feature ;
 
 project
     : requirements
-        <target-os>freebsd:<linkflags>"-lrt" 
-        <target-os>linux:<linkflags>"-lrt" 
-        <toolset>pgi:<linkflags>"-lrt" 
+        <target-os>freebsd:<linkflags>"-lrt"
+        <target-os>linux:<linkflags>"-lrt"
+        <toolset>pgi:<linkflags>"-lrt"
         #<threading>single:<define>BOOST_CHRONO_THREAD_DISABLED
         <toolset>msvc:<asynch-exceptions>on
         <define>BOOST_CHRONO_USES_MPL_ASSERT
@@ -42,6 +42,7 @@ project
 # remark #1418: external function definition with no prior declaration
         <toolset>intel:<cxxflags>-wd304,383,1418
         <define>BOOST_CHRONO_VERSION=2
+        <include>.
     ;
 
 rule chrono-run ( sources )

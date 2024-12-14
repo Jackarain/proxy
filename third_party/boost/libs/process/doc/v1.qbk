@@ -6,6 +6,6 @@
 [include v1/design.qbk]
 [include v1/extend.qbk]
 [include v1/faq.qbk]
-[xinclude reference_v2.xml]
+[xinclude reference_v1.xml]
 
 [endsect]

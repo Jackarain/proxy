@@ -83,10 +83,10 @@ though their expected interface is much more concise:
 <span class=keyword>template</span><span class=special>&lt;</span><span class=keyword>typename</span> <span class=identifier>Entry</span><span class=special>,</span><span class=keyword>typename</span> <span class=identifier>Key</span><span class=special>&gt;</span>
 <span class=keyword>class</span> <span class=identifier>custom_factory_class</span>
 <span class=special>{</span>
-<span class=keyword>public</span><span class=special>:</span>
+  <span class=keyword>public</span><span class=special>:</span>
   <span class=keyword>typedef</span> <span class=special>...</span> <span class=identifier>handle_type</span><span class=special>;</span>
   
-  <span class=identifier>handle_type</span>  <span class=identifier>insert</span><span class=special>(</span><span class=keyword>const</span> <span class=identifier>Entry</span><span class=special>&amp;</span> <span class=identifier>x</span><span class=special>);</span>
+  <span class=identifier>handle_type</span>  <span class=identifier>insert</span><span class=special>(</span><span class=identifier>Entry</span><span class=special>&amp;&amp;</span> <span class=identifier>x</span><span class=special>);</span>
   <span class=keyword>void</span>         <span class=identifier>erase</span><span class=special>(</span><span class=identifier>handle_type</span> <span class=identifier>h</span><span class=special>);</span>
   <span class=keyword>const</span> <span class=identifier>Entry</span><span class=special>&amp;</span> <span class=identifier>entry</span><span class=special>(</span><span class=identifier>handle_type</span> <span class=identifier>h</span><span class=special>);</span>
 <span class=special>};</span>
@@ -133,9 +133,9 @@ functionality on a regular <code>std::set</code>:
 <span class=keyword>public</span><span class=special>:</span>
   <span class=keyword>typedef</span> <span class=keyword>typename</span> <span class=identifier>store_type</span><span class=special>::</span><span class=identifier>iterator</span> <span class=identifier>handle_type</span><span class=special>;</span>
 
-  <span class=identifier>handle_type</span> <span class=identifier>insert</span><span class=special>(</span><span class=keyword>const</span> <span class=identifier>Entry</span><span class=special>&amp;</span> <span class=identifier>x</span><span class=special>)</span>
+  <span class=identifier>handle_type</span> <span class=identifier>insert</span><span class=special>(</span><span class=identifier>Entry</span><span class=special>&amp;&amp;</span> <span class=identifier>x</span><span class=special>)</span>
   <span class=special>{</span>
-    <span class=identifier>std</span><span class=special>::</span><span class=identifier>pair</span><span class=special>&lt;</span><span class=identifier>handle_type</span><span class=special>,</span> <span class=keyword>bool</span><span class=special>&gt;</span> <span class=identifier>p</span><span class=special>=</span><span class=identifier>store</span><span class=special>.</span><span class=identifier>insert</span><span class=special>(</span><span class=identifier>x</span><span class=special>);</span>
+    <span class=identifier>std</span><span class=special>::</span><span class=identifier>pair</span><span class=special>&lt;</span><span class=identifier>handle_type</span><span class=special>,</span> <span class=keyword>bool</span><span class=special>&gt;</span> <span class=identifier>p</span><span class=special>=</span><span class=identifier>store</span><span class=special>.</span><span class=identifier>insert</span><span class=special>(</span><span class=identifier>std</span><span class=special>::</span><span class=identifier>move</span><span class=special>(</span><span class=identifier>x</span><span class=special>));</span>
     <span class=keyword>if</span><span class=special>(</span><span class=identifier>p</span><span class=special>.</span><span class=identifier>second</span><span class=special>){</span> <span class=comment>/* new entry */</span>
       <span class=identifier>std</span><span class=special>::</span><span class=identifier>cout</span><span class=special>&lt;&lt;</span><span class=string>&quot;new: &quot;</span><span class=special>&lt;&lt;(</span><span class=keyword>const</span> <span class=identifier>Key</span><span class=special>&amp;)</span><span class=identifier>x</span><span class=special>&lt;&lt;</span><span class=identifier>std</span><span class=special>::</span><span class=identifier>endl</span><span class=special>;</span>
     <span class=special>}</span>
@@ -549,9 +549,9 @@ Technical issues
 
 <br>
 
-<p>Revised September 1st 2014</p>
+<p>Revised September 27th 2024</p>
 
-<p>&copy; Copyright 2006-2014 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
+<p>&copy; Copyright 2006-2024 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
 Distributed under the Boost Software 
 License, Version 1.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">
 LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">

@@ -360,18 +360,15 @@ jobs:
           #------------------
           # MacOS, clang
           #------------------
-          # Macos 12, clang
           - toolset: clang
-            cxxstd: "11,14,17,20,2b"
-            os: macos-12
-          # Macos 13, clang
-          - toolset: clang
-            cxxstd: "11,14,17,20,2b"
+            cxxstd: "03,11,14,17,20,2b"
             os: macos-13
-          # Macos 17, clang
           - toolset: clang
-            cxxstd: "11,14,17,20,2b"
+            cxxstd: "03,11,14,17,20,2b"
             os: macos-14
+          - toolset: clang
+            cxxstd: "03,11,14,17,20,2b"
+            os: macos-15
 
     timeout-minutes: 180
     runs-on: ${{matrix.os}}

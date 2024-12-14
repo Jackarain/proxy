@@ -11,7 +11,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/core/lightweight_test.hpp>
-#include <boost/type_traits/is_convertible.hpp>
+#include <type_traits>
 
 //
 
@@ -25,7 +25,7 @@ class D: public B
 {
 };
 
-using boost::is_convertible;
+using std::is_convertible;
 
 #define TEST_CV_TRUE_( S1, T, S2, U ) \
     BOOST_TEST(( is_convertible< S1<T>, S2<U> >::value == true )); \
@@ -78,8 +78,6 @@ using boost::weak_ptr;
 
 int main()
 {
-#if !defined( BOOST_SP_NO_SP_CONVERTIBLE )
-
     TEST_CV_TRUE( X, X )
     TEST_CV_TRUE( X, void )
     TEST_CV_FALSE( void, X )
@@ -101,8 +99,6 @@ int main()
 
     TEST_CV_TRUE( X[3], void )
     TEST_CV_FALSE( void, X[3] )
-
-#endif
 
     return boost::report_errors();
 }

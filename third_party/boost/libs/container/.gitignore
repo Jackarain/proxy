@@ -16,3 +16,4 @@
 /bench/hash_map.hpp
 /bench/hash_set.hpp
 /bench/detail/hash_table.hpp
+/Bin/

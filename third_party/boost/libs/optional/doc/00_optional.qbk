@@ -2,7 +2,7 @@
     [quickbook 1.4]
     [authors [Cacciola Carballal, Fernando Luis]]
     [copyright 2003-2007 Fernando Luis Cacciola Carballal]
-    [copyright 2014-2023 Andrzej Krzemie&#324;ski]
+    [copyright 2014-2024 Andrzej Krzemie&#324;ski]
     [category miscellaneous]
     [id optional]
     [dirname optional]
@@ -47,14 +47,20 @@ Distributed under the Boost Software License, Version 1.0.
 [/ Icons ]
 
 [def __SPACE__ [$images/space.png]]
-[def __GO_TO__ [$images/callouts/R.png]]
+[def __GO_TO__ [$images/R.png]]
+
+[/ Common terms ]
+
+[def __UB__ [@https://en.cppreference.com/w/cpp/language/ub ['undefined behavior]]]
 
 
 [section Introduction]
-Class template `optional` is a wrapper for representing 'optional' (or 'nullable') objects who may not (yet) contain a valid value. Optional objects offer full value semantics; they are good for passing by value and usage inside STL containers. This is a header-only library.
+Class template `optional` is a wrapper for representing 'optional' (or 'nullable')
+objects who may not (yet) contain a valid value. Optional objects offer full value semantics;
+they are good for passing by value and usage inside STL containers. This is a header-only C++11 library.
 
 [heading Problem]
-Suppose we want to read a parameter form a config file which represents some integral value, let's call it `"MaxValue"`. It is possible that this parameter is not specified; such situation is no error. It is valid to not specify the parameter and in that case the program is supposed to behave slightly differently. Also, suppose that any possible value of type `int` is a valid value for `"MaxValue"`, so we cannot just use `-1` to represent the absence of the parameter in the config file.
+Suppose we want to read a parameter from a config file which represents some integral value, let's call it `"MaxValue"`. It is possible that this parameter is not specified; such situation is no error. It is valid to not specify the parameter and in that case the program is supposed to behave slightly differently. Also, suppose that any possible value of type `int` is a valid value for `"MaxValue"`, so we cannot just use `-1` to represent the absence of the parameter in the config file.
 
 [heading Solution]
 
@@ -75,19 +81,16 @@ This is how you solve it with `boost::optional`:
 [endsect]
 
 [include 01_quick_start.qbk]
-[section Tutorial]
-[include 10_motivation.qbk]
+[section:design Design Overview and Rationale]
 [include 11_development.qbk]
-[include 12_when_to_use.qbk]
-[include 13_relational_operators.qbk]
-[include 14_monadic_interface.qbk]
+[include 12_relational_operators.qbk]
+[include 13_convenience.qbk]
 [include 15_io.qbk]
 [include 16_optional_references.qbk]
 [include 17_in_place_factories.qbk]
 [include 18_gotchas.qbk]
 [include 19_exception_safety.qbk]
 [include 1A_type_requirements.qbk]
-[include 1B_on_performance.qbk]
 [endsect]
 [section:reference Reference]
 [include 21_ref_none.qbk]
@@ -100,6 +103,11 @@ This is how you solve it with `boost::optional`:
 [endsect]
 [include 29_ref_optional_convenience.qbk]
 [endsect]
+[section:advice Advice]
+[include 31_when_to_use.qbk]
+[include 32_on_performance.qbk]
+[endsect]
 [include 90_dependencies.qbk]
-[include 91_relnotes.qbk]
-[include 92_acknowledgments.qbk]
+[include 91_comparison_with_std.qbk]
+[include 92_relnotes.qbk]
+[include 93_acknowledgments.qbk]

@@ -28,32 +28,15 @@ int main(int argc, char *argv[])
       //Remove shared memory on construction and destruction
       struct shm_remove
       {
-      //<-
-      #if 1
          shm_remove() { shared_memory_object::remove(test::get_process_id_name()); }
          ~shm_remove(){ shared_memory_object::remove(test::get_process_id_name()); }
-      #else
-      //->
-         shm_remove() { shared_memory_object::remove("MySharedMemory"); }
-         ~shm_remove(){ shared_memory_object::remove("MySharedMemory"); }
-      //<-
-      #endif
-      //->
       } remover;
       //<-
       (void)remover;
       //->
 
       //Construct managed shared memory
-      //<-
-      #if 1
       managed_shared_memory segment(create_only, test::get_process_id_name(), 65536);
-      #else
-      //->
-      managed_shared_memory segment(create_only, "MySharedMemory", 65536);
-      //<-
-      #endif
-      //->
 
       //Create an object of MyType initialized to {0.0, 0}
       MyType *instance = segment.construct<MyType>
@@ -99,15 +82,7 @@ int main(int argc, char *argv[])
    }
    else{
       //Open managed shared memory
-      //<-
-      #if 1
       managed_shared_memory segment(open_only, argv[2]);
-      #else
-      //->
-      managed_shared_memory segment(open_only, "MySharedMemory");
-      //<-
-      #endif
-      //->
 
       std::pair<MyType*, managed_shared_memory::size_type> res;
 

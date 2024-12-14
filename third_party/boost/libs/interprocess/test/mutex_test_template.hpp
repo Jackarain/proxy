@@ -193,15 +193,15 @@ void lock_and_sleep(void *arg, M &sm)
 template<typename M>
 void lock_and_catch_errors(void *arg, M &sm)
 {
-   BOOST_TRY
+   BOOST_INTERPROCESS_TRY
    {
       lock_and_sleep(arg, sm);
    }
-   BOOST_CATCH(interprocess_exception const & e)
+   BOOST_INTERPROCESS_CATCH(interprocess_exception const & e)
    {
       data<M>* pdata = static_cast<data<M>*>(arg);
       pdata->m_error = e.get_error_code();
-   } BOOST_CATCH_END
+   } BOOST_INTERPROCESS_CATCH_END
 }
 
 template<typename M>

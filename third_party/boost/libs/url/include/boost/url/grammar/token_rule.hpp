@@ -53,6 +53,7 @@ __implementation_defined__
 token_rule(
     CharSet cs) noexcept;
 #else
+namespace implementation_defined {
 template<class CharSet>
 struct token_rule_t
 {
@@ -69,15 +70,6 @@ struct token_rule_t
             ) const noexcept ->
         system::result<value_type>;
 
-private:
-    template<class CharSet_>
-    friend
-    constexpr
-    auto
-    token_rule(
-        CharSet_ const&) noexcept ->
-            token_rule_t<CharSet_>;
-
     constexpr
     token_rule_t(
         CharSet const& cs) noexcept
@@ -85,15 +77,44 @@ private:
     {
     }
 
+private:
     CharSet const cs_;
 };
+}
 
+/** Match a non-empty string of characters from a set
+
+    If there is no more input, the error code
+    @ref error::need_more is returned.
+
+    @par Value Type
+    @code
+    using value_type = core::string_view;
+    @endcode
+
+    @par Example
+    Rules are used with the function @ref parse.
+    @code
+    system::result< core::string_view > rv = parse( "abcdef", token_rule( alpha_chars ) );
+    @endcode
+
+    @par BNF
+    @code
+    token     = 1*( ch )
+    @endcode
+
+    @param cs The character set to use
+
+    @see
+        @ref alpha_chars,
+        @ref parse.
+*/
 template<class CharSet>
 constexpr
 auto
 token_rule(
     CharSet const& cs) noexcept ->
-        token_rule_t<CharSet>
+        implementation_defined::token_rule_t<CharSet>
 {
     return {cs};
 }

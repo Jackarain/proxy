@@ -3,8 +3,11 @@
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
+require-b2 5.0.1 ;
+import-search /boost/config/checks ;
+
 import testing ;
-import ../../config/checks/config : requires ;
+import config : requires ;
 
 project : requirements
 
@@ -58,11 +61,12 @@ run P2497.cpp ;
 run github_issue_110.cpp ;
 run github_issue_122.cpp ;
 run from_chars_string_view.cpp ;
-run github_issue_152.cpp ;
+run github_issue_152.cpp /boost/random//boost_random ;
 run github_issue_152_float128.cpp : : : [ check-target-builds ../config//has_float128 "GCC libquadmath and __float128 support" : <library>"quadmath" ] ;
 run github_issue_154.cpp ;
 #run github_issue_156.cpp ;
 run github_issue_158.cpp ;
 run github_issue_166.cpp ;
+run github_issue_166_float128.cpp ;
 run github_issue_186.cpp ;
 run github_issue_212.cpp ;

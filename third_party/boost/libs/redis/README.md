@@ -9,7 +9,7 @@ The requirements for using Boost.Redis are:
 * Boost. The library is included in Boost distributions starting with 1.84.
 * C++17 or higher.
 * Redis 6 or higher (must support RESP3).
-* Gcc (10, 11, 12), Clang (11, 13, 14) and Visual Studio (16 2019, 17 2022).
+* Gcc (11, 12), Clang (11, 13, 14) and Visual Studio (16 2019, 17 2022).
 * Have basic-level knowledge about [Redis](https://redis.io/docs/)
   and [Boost.Asio](https://www.boost.org/doc/libs/1_82_0/doc/html/boost_asio/overview.html).
 
@@ -676,16 +676,34 @@ https://lists.boost.org/Archives/boost/2023/01/253944.php.
 
 ## Changelog
 
+### Boost 1.87
+
+* (Issue [205](https://github.com/boostorg/redis/issues/205))
+  Improves reaction time to disconnection by using `wait_for_one_error`
+  instead of `wait_for_all`. The function `connection::async_run` was
+  also changed to return EOF to the user when that error is received
+  from the server. That is a breaking change.
+
+* (Issue [210](https://github.com/boostorg/redis/issues/210))
+  Fixes the adapter of empty nested reposponses.
+
+* (Issues [211](https://github.com/boostorg/redis/issues/211) and [212](https://github.com/boostorg/redis/issues/212))
+  Fixes the reconnect loop that would hang under certain conditions,
+  see the linked issues for more details.
+
+* (Issue [219](https://github.com/boostorg/redis/issues/219))
+  Changes the default log level from `disabled` to `debug`.
+
 ### Boost 1.85
 
-* ([Issue 170](https://github.com/boostorg/redis/issues/170))
+* (Issue [170](https://github.com/boostorg/redis/issues/170))
   Under load and on low-latency networks it is possible to start
   receiving responses before the write operation completed and while
   the request is still marked as staged and not written. This messes
   up with the heuristics that classifies responses as unsolicied or
   not.
 
-* ([Issue 168](https://github.com/boostorg/redis/issues/168)).
+* (Issue [168](https://github.com/boostorg/redis/issues/168)).
   Provides a way of passing a custom SSL context to the connection.
   The design here differs from that of Boost.Beast and Boost.MySql
   since in Boost.Redis the connection owns the context instead of only
@@ -693,16 +711,16 @@ https://lists.boost.org/Archives/boost/2023/01/253944.php.
   apps need only one connection for their entire application, which
   makes the overhead of one ssl-context per connection negligible.
 
-* ([Issue 181](https://github.com/boostorg/redis/issues/181)).
+* (Issue [181](https://github.com/boostorg/redis/issues/181)).
   See a detailed description of this bug in
   [this](https://github.com/boostorg/redis/issues/181#issuecomment-1913346983)
   comment.
 
-* ([Issue 182](https://github.com/boostorg/redis/issues/182)).
+* (Issue [182](https://github.com/boostorg/redis/issues/182)).
   Sets `"default"` as the default value of `config::username`. This
   makes it simpler to use the `requirepass` configuration in Redis.
 
-* ([Issue 189](https://github.com/boostorg/redis/issues/189)).
+* (Issue [189](https://github.com/boostorg/redis/issues/189)).
   Fixes narrowing convertion by using `std::size_t` instead of
   `std::uint64_t` for the sizes of bulks and aggregates. The code
   relies now on `std::from_chars` returning an error if a value

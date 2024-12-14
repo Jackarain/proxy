@@ -304,8 +304,15 @@ try_make_tuple_like(
             typename std::decay<tuple_element_t<Is, T>>::type >(
                 arr[Is], ctx, ec)
             ...);
+#if defined(BOOST_GCC)
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
     if( ec.failed() )
         return {boost::system::in_place_error, ec};
+#if defined(BOOST_GCC)
+# pragma GCC diagnostic pop
+#endif
 
     return {
         boost::system::in_place_value, T(std::move(*std::get<Is>(items))...)};
@@ -339,17 +346,13 @@ value_to_impl(
         *arr, ctx, boost::mp11::make_index_sequence<N>());
 }
 
-template< class Ctx, class T, bool non_throwing = true >
+template< class Ctx, class T >
 struct to_described_member
 {
     using Ds = described_members<T>;
 
-    using result_type = mp11::mp_eval_if_c<
-        !non_throwing, T, system::result, T>;
-
-    result_type& res;
+    system::result<T>& res;
     object const& obj;
-    std::size_t count;
     Ctx const& ctx;
 
     template< class I >
@@ -368,7 +371,7 @@ struct to_described_member
             BOOST_IF_CONSTEXPR( !is_optional_like<M>::value )
             {
                 system::error_code ec;
-                BOOST_JSON_FAIL(ec, error::unknown_name);
+                BOOST_JSON_FAIL(ec, error::size_mismatch);
                 res = {boost::system::in_place_error, ec};
             }
             return;
@@ -384,10 +387,7 @@ struct to_described_member
 # pragma GCC diagnostic pop
 #endif
         if( member_res )
-        {
             (*res).* D::pointer = std::move(*member_res);
-            ++count;
-        }
         else
             res = {boost::system::in_place_error, member_res.error()};
     }
@@ -414,7 +414,7 @@ value_to_impl(
         return res;
     }
 
-    to_described_member< Ctx, T > member_converter{ res, *obj, 0u, ctx };
+    to_described_member<Ctx, T> member_converter{res, *obj, ctx};
 
     using Ds = typename decltype(member_converter)::Ds;
     constexpr std::size_t N = mp11::mp_size<Ds>::value;
@@ -422,14 +422,6 @@ value_to_impl(
 
     if( !res )
         return res;
-
-    if( member_converter.count != obj->size() )
-    {
-        system::error_code ec;
-        BOOST_JSON_FAIL(ec, error::size_mismatch);
-        res = {boost::system::in_place_error, ec};
-        return res;
-    }
 
     return res;
 }
@@ -518,55 +510,6 @@ initialize_variant( V&& v, mp11::mp_int<1> )
 }
 #endif // BOOST_NO_CXX17_HDR_VARIANT
 
-struct locally_prohibit_exceptions
-{};
-
-template< class Ctx >
-Ctx const&
-make_locally_nonthrowing_context(Ctx const& ctx) noexcept
-{
-    return ctx;
-}
-
-template< class... Ctxes >
-std::tuple<Ctxes...> const&
-make_locally_nonthrowing_context(std::tuple<Ctxes...> const& ctx) noexcept
-{
-    return ctx;
-}
-
-template< class... Ctxes >
-std::tuple<locally_prohibit_exceptions, allow_exceptions, Ctxes...>
-make_locally_nonthrowing_context(std::tuple<allow_exceptions, Ctxes...> const& ctx)
-    noexcept
-{
-    return std::tuple_cat(std::make_tuple( locally_prohibit_exceptions() ), ctx);
-}
-
-template< class Ctx >
-Ctx const&
-remove_local_exception_prohibition(Ctx const& ctx) noexcept
-{
-    return ctx;
-}
-
-template< class T, class... Ts, std::size_t... Is>
-std::tuple<Ts...>
-remove_local_exception_prohibition_helper(
-    std::tuple<T, Ts...> const& tup,
-    mp11::index_sequence<Is...>) noexcept
-{
-    return std::tuple<Ts...>( std::get<Is + 1>(tup)... );
-}
-
-template< class... Ctxes >
-std::tuple<Ctxes...>
-remove_local_exception_prohibition(
-    std::tuple<locally_prohibit_exceptions, Ctxes...> const& ctx) noexcept
-{
-    return remove_local_exception_prohibition_helper(
-        ctx, mp11::index_sequence_for<Ctxes...>() );
-}
 
 template< class T, class Ctx >
 struct alternative_converter
@@ -581,9 +524,8 @@ struct alternative_converter
         if( res )
             return;
 
-        auto&& local_ctx = make_locally_nonthrowing_context(ctx);
         using V = mp11::mp_at<T, I>;
-        auto attempt = try_value_to<V>(jv, local_ctx);
+        auto attempt = try_value_to<V>(jv, ctx);
         if( attempt )
         {
             using cat = variant_construction_category<T, V, I>;
@@ -702,28 +644,6 @@ value_to_impl(
     return std::move(*res);
 }
 
-template< class Ctx >
-std::tuple<allow_exceptions, Ctx>
-make_throwing_context(Ctx const& ctx)
-{
-    return std::tuple<allow_exceptions, Ctx>(allow_exceptions(), ctx);
-}
-
-template< class... Ctxes >
-std::tuple<allow_exceptions, Ctxes...>
-make_throwing_context(std::tuple<Ctxes...> const& ctx)
-{
-    return std::tuple_cat(std::make_tuple( allow_exceptions() ), ctx);
-}
-
-template< class... Ctxes >
-std::tuple<allow_exceptions, Ctxes...> const&
-make_throwing_context(std::tuple<allow_exceptions, Ctxes...> const& ctx)
-    noexcept
-{
-    return ctx;
-}
-
 template<
     class T,
     class Ctx,
@@ -739,11 +659,7 @@ value_to_impl(
     value const& jv,
     Ctx const& ctx )
 {
-    auto res = tag_invoke(
-        try_value_to_tag<T>(),
-        jv,
-        Sup::get(ctx),
-        make_throwing_context(ctx));
+    auto res = tag_invoke(try_value_to_tag<T>(), jv, Sup::get(ctx), ctx);
     if( res.has_error() )
         throw_system_error( res.error() );
     return std::move(*res);
@@ -802,36 +718,17 @@ value_to_impl(
 //----------------------------------------------------------
 // User-provided conversions; nonthrowing -> throwing
 
-template< class Ctx >
-struct does_allow_exceptions : std::false_type
-{ };
-
-template< class... Ctxes >
-struct does_allow_exceptions< std::tuple<allow_exceptions, Ctxes...> >
-    : std::true_type
-{ };
-
 template< class T, class... Args >
 system::result<T>
-wrap_conversion_exceptions( std::true_type, value_to_tag<T>, Args&& ... args )
-{
-    return {
-        boost::system::in_place_value,
-        tag_invoke( value_to_tag<T>(), static_cast<Args&&>(args)... )};
-}
-
-template< class T, class... Args >
-system::result<T>
-wrap_conversion_exceptions( std::false_type, value_to_tag<T>, Args&& ... args )
+wrap_conversion_exceptions( value_to_tag<T>, Args&& ... args )
 {
 #ifndef BOOST_NO_EXCEPTIONS
     try
     {
 #endif
-        return wrap_conversion_exceptions(
-            std::true_type(),
-            value_to_tag<T>(),
-            static_cast<Args&&>(args)... );
+        return {
+            boost::system::in_place_value,
+            tag_invoke( value_to_tag<T>(), static_cast<Args&&>(args)... )};
 #ifndef BOOST_NO_EXCEPTIONS
     }
     catch( std::bad_alloc const&)
@@ -858,8 +755,7 @@ mp11::mp_if_c<
 value_to_impl(
     user_conversion_tag, try_value_to_tag<T>, value const& jv, Ctx const& )
 {
-    return wrap_conversion_exceptions(
-        does_allow_exceptions<Ctx>(), value_to_tag<T>(), jv);
+    return wrap_conversion_exceptions(value_to_tag<T>(), jv);
 }
 
 template<
@@ -879,8 +775,7 @@ value_to_impl(
     value const& jv,
     Ctx const& ctx )
 {
-    return wrap_conversion_exceptions(
-        does_allow_exceptions<Ctx>(), value_to_tag<T>(), jv, Sup::get(ctx) );
+    return wrap_conversion_exceptions( value_to_tag<T>(), jv, Sup::get(ctx) );
 }
 
 template<
@@ -901,11 +796,7 @@ value_to_impl(
     Ctx const& ctx )
 {
     return wrap_conversion_exceptions(
-        does_allow_exceptions<Ctx>(),
-        value_to_tag<T>(),
-        jv,
-        Sup::get(ctx),
-        remove_local_exception_prohibition(ctx) );
+        value_to_tag<T>(), jv, Sup::get(ctx), ctx);
 }
 
 // no suitable conversion implementation
@@ -923,8 +814,7 @@ template< class Impl, class T, class Ctx >
 T
 value_to_impl( Impl impl, value_to_tag<T>, value const& jv, Ctx const& ctx )
 {
-    return value_to_impl(
-        impl, try_value_to_tag<T>(), jv, make_throwing_context(ctx) ).value();
+    return value_to_impl(impl, try_value_to_tag<T>(), jv, ctx).value();
 }
 
 template< class Ctx, class T >

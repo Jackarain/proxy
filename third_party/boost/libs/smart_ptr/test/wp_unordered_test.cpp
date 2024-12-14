@@ -6,13 +6,6 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <boost/config.hpp>
-
-#if defined(BOOST_NO_CXX11_HDR_UNORDERED_SET)
-
-int main() {}
-
-#else
-
 #include <unordered_set>
 
 int main()
@@ -83,5 +76,3 @@ int main()
 
     return boost::report_errors();
 }
-
-#endif // #if defined(BOOST_NO_CXX11_HDR_UNORDERED_SET)

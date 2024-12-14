@@ -64,13 +64,11 @@ int main()
         boost::shared_ptr< ByRef > x = boost::make_shared< ByRef >(boost::move(a));
         BOOST_TEST( x->constructed_by_ == ByRef::move_constructor);
     }
-#if !defined( BOOST_NO_CXX11_RVALUE_REFERENCES )
     {
         boost::shared_ptr< ByVal > x = boost::make_shared< ByVal >(movearg());
         boost::shared_ptr< ByRef > y = boost::make_shared< ByRef >(movearg());
         BOOST_TEST( y->constructed_by_ == ByRef::move_constructor);
     }
-#endif // !defined( BOOST_NO_CXX11_RVALUE_REFERENCES )
     {
         const movearg ca;
         boost::shared_ptr< ByRef > x = boost::make_shared< ByRef >(ca);

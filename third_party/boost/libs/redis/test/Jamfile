@@ -1,12 +1,14 @@
 
-import ../config/checks/config : requires ;
+import-search /boost/config/checks ;
+import config : requires ;
 import ac ;
 
 # Configure openssl if it hasn't been done yet
 using openssl ;
 
 # Use these requirements as both regular and usage requirements across all tests
-local requirements = 
+local requirements =
+        <library>/boost/redis//boost_redis
         <define>BOOST_ASIO_NO_DEPRECATED=1
         <define>BOOST_ASIO_DISABLE_BOOST_ARRAY=1
         <define>BOOST_ASIO_DISABLE_BOOST_BIND=1
@@ -14,7 +16,6 @@ local requirements =
         <define>BOOST_ASIO_DISABLE_BOOST_REGEX=1
         <toolset>msvc:<cxxflags>"/bigobj"
         <target-os>windows:<define>_WIN32_WINNT=0x0601
-        <include>../include
         [ requires
             cxx14_constexpr
             cxx14_generic_lambdas
@@ -30,6 +31,7 @@ local requirements =
         ]
         [ ac.check-library /openssl//ssl    : <library>/openssl//ssl/<link>shared : <build>no ]
         [ ac.check-library /openssl//crypto : <library>/openssl//crypto/<link>shared : <build>no ]
+        <library>/boost/test//boost_unit_test_framework
     ;
 
 
@@ -44,7 +46,7 @@ lib redis_test_common
 
 # B2 runs tests in parallel, and some tests rely on having exclusive
 # access to a Redis server, so we only run the ones that don't require a DB server.
-local tests = 
+local tests =
     test_low_level_sync_sans_io
     test_low_level
     test_request
@@ -54,7 +56,7 @@ local tests =
 # Build and run the tests
 for local test in $(tests)
 {
-    run 
+    run
         $(test).cpp
         redis_test_common/<link>static
     : target-name $(test)

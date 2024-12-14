@@ -34,6 +34,7 @@ target_link_libraries(
     Boost::asio
     Boost::assert
     Boost::charconv
+    Boost::compat
     Boost::config
     Boost::core
     Boost::describe
@@ -56,6 +57,13 @@ target_compile_features(boost_mysql INTERFACE cxx_std_11)
 # Don't run integration testing unless explicitly requested, since these require a running MySQL server
 option(BOOST_MYSQL_INTEGRATION_TESTS OFF "Whether to build and run integration tests or not")
 mark_as_advanced(BOOST_MYSQL_INTEGRATION_TESTS)
+
+# List of server features that the CI DB server does not support.
+# Disables running some integration tests and examples
+set(BOOST_MYSQL_DISABLED_SERVER_FEATURES "" CACHE STRING
+    "A CMake list of server features not supported by the CI server, for integration tests"
+)
+mark_as_advanced(BOOST_MYSQL_DISABLED_SERVER_FEATURES)
 
 # Examples and tests
 if(BUILD_TESTING)

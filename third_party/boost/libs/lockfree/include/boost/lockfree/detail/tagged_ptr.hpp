@@ -13,9 +13,9 @@
 #include <boost/lockfree/detail/prefix.hpp>
 
 #ifndef BOOST_LOCKFREE_PTR_COMPRESSION
-#include <boost/lockfree/detail/tagged_ptr_dcas.hpp>
+#    include <boost/lockfree/detail/tagged_ptr_dcas.hpp>
 #else
-#include <boost/lockfree/detail/tagged_ptr_ptrcompression.hpp>
+#    include <boost/lockfree/detail/tagged_ptr_ptrcompression.hpp>
 #endif
 
 #endif /* BOOST_LOCKFREE_TAGGED_PTR_HPP_INCLUDED */

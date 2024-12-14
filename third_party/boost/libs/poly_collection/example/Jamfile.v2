@@ -7,7 +7,7 @@
 
 project
     : requirements
-      <include>$(BOOST_ROOT)
+      <library>/boost/poly_collection//boost_poly_collection
       <cxxstd>11
     ;
 
@@ -39,6 +39,7 @@ exe insertion_emplacement
 
 exe perf
     : perf.cpp
+      /boost/ptr_container//boost_ptr_container
     :
     : release
     ;

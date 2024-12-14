@@ -12,8 +12,6 @@
 #include <boost/core/lightweight_test.hpp>
 #include <utility>
 
-#if !defined( BOOST_NO_CXX11_RVALUE_REFERENCES )
-
 struct X
 {
     static long instances;
@@ -111,12 +109,3 @@ int main()
 
     return boost::report_errors();
 }
-
-#else // defined( BOOST_NO_CXX11_RVALUE_REFERENCES )
-
-int main()
-{
-    return 0;
-}
-
-#endif

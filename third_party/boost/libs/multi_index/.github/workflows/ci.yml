@@ -1,4 +1,4 @@
-name: GitHub Actions CI
+name: CI
 
 on:
   pull_request:
@@ -6,10 +6,10 @@ on:
     branches:
       - master
       - develop
-      - githubactions*
       - feature/**
-      - fix/**
-      - pr/**
+
+env:
+  UBSAN_OPTIONS: print_stacktrace=1
 
 jobs:
   posix:
@@ -17,527 +17,276 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: "TOOLSET=gcc COMPILER=g++ CXXSTD=03,11 Job 0"
-            buildtype: "boost"
-            packages: ""
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:16.04"
-            cxx: "g++"
-            sources: ""
-            llvm_os: ""
-            llvm_ver: ""
-            toolset: "gcc"
-            compiler: "g++"
-            cxxstd: "03,11"
-          - name: "TOOLSET=gcc COMPILER=g++-4.4 CXXSTD=98,0x Job 1"
-            buildtype: "boost"
-            packages: "g++-4.4"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:14.04"
-            cxx: "g++"
-            sources: ""
-            llvm_os: ""
-            llvm_ver: ""
-            toolset: "gcc"
-            compiler: "g++-4.4"
-            cxxstd: "98,0x"
-          - name: "TOOLSET=gcc COMPILER=g++-4.6 CXXSTD=03,0x Job 2"
-            buildtype: "boost"
-            packages: "g++-4.6"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:16.04"
-            cxx: "g++"
-            sources: ""
-            llvm_os: ""
-            llvm_ver: ""
-            toolset: "gcc"
-            compiler: "g++-4.6"
-            cxxstd: "03,0x"
-          - name: "TOOLSET=gcc COMPILER=g++-4.7 CXXSTD=03,11 Job 3"
-            buildtype: "boost"
-            packages: "g++-4.7"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:14.04"
-            cxx: "g++-4.7"
-            sources: ""
-            llvm_os: ""
-            llvm_ver: ""
-            toolset: "gcc"
-            compiler: "g++-4.7"
-            cxxstd: "03,11"
-          - name: "TOOLSET=gcc COMPILER=g++-4.8 CXXSTD=03,11 Job 4"
-            buildtype: "boost"
-            packages: "g++-4.8"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:14.04"
-            cxx: "g++-4.8"
-            sources: ""
-            llvm_os: ""
-            llvm_ver: ""
-            toolset: "gcc"
-            compiler: "g++-4.8"
-            cxxstd: "03,11"
-          - name: "TOOLSET=gcc COMPILER=g++-4.9 CXXSTD=03,11 Job 5"
-            buildtype: "boost"
-            packages: "g++-4.9"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:16.04"
-            cxx: "g++-4.9"
-            sources: ""
-            llvm_os: ""
-            llvm_ver: ""
-            toolset: "gcc"
-            compiler: "g++-4.9"
-            cxxstd: "03,11"
-          - name: "TOOLSET=gcc COMPILER=g++-5 CXXSTD=03,11,14,1z Job 6"
-            buildtype: "boost"
-            packages: "g++-5"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:16.04"
-            cxx: "g++-5"
-            sources: ""
-            llvm_os: ""
-            llvm_ver: ""
-            toolset: "gcc"
-            compiler: "g++-5"
-            cxxstd: "03,11,14,1z"
-          - name: "TOOLSET=gcc COMPILER=g++-6 CXXSTD=03,11,14,1z Job 7"
-            buildtype: "boost"
-            packages: "g++-6"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:14.04"
-            cxx: "g++-6"
-            sources: ""
-            llvm_os: ""
-            llvm_ver: ""
-            toolset: "gcc"
-            compiler: "g++-6"
-            cxxstd: "03,11,14,1z"
-          - name: "TOOLSET=gcc COMPILER=g++-7 CXXSTD=03,11,14,17 Job 8"
-            buildtype: "boost"
-            packages: "g++-7"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:16.04"
-            cxx: "g++-7"
-            sources: ""
-            llvm_os: ""
-            llvm_ver: ""
-            toolset: "gcc"
-            compiler: "g++-7"
-            cxxstd: "03,11,14,17"
-          - name: "TOOLSET=gcc COMPILER=g++-8 CXXSTD=03,11,14,17 Job 9"
-            buildtype: "boost"
-            packages: "g++-8"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:16.04"
-            cxx: "g++-8"
-            sources: ""
-            llvm_os: ""
-            llvm_ver: ""
-            toolset: "gcc"
-            compiler: "g++-8"
-            cxxstd: "03,11,14,17,2a"
-          - name: "UBSAN=1 TOOLSET=gcc COMPILER=g++-7 CXXSTD=03, Job 10"
-            buildtype: "boost"
-            packages: "g++-7"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:16.04"
-            cxx: "g++-7"
-            sources: ""
-            llvm_os: ""
-            llvm_ver: ""
-            ubsan: "1"
-            toolset: "gcc"
-            compiler: "g++-7"
-            cxxstd: "03,11,14,17"
-            ubsan_options: "print_stacktrace=1"
-            linkflags: "-fuse-ld=gold"
-          - name: "TOOLSET=clang COMPILER=clang++ CXXSTD=03,11 Job 11"
-            buildtype: "boost"
-            packages: ""
-            packages_to_remove: ""
-            os: "ubuntu-18.04"
-            cxx: "clang++"
-            sources: ""
-            llvm_os: ""
-            llvm_ver: ""
-            toolset: "clang"
-            compiler: "clang++"
-            cxxstd: "03,11"
-          - name: "TOOLSET=clang COMPILER=/usr/bin/clang++ CXXST Job 12"
-            buildtype: "boost"
-            packages: "clang-3.3"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:14.04"
-            cxx: "/usr/bin/clang++"
-            sources: ""
-            llvm_os: ""
-            llvm_ver: ""
-            toolset: "clang"
-            compiler: "/usr/bin/clang++"
-            cxxstd: "03,11"
-          - name: "TOOLSET=clang COMPILER=/usr/bin/clang++ CXXST Job 13"
-            buildtype: "boost"
-            packages: "clang-3.4"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:14.04"
-            cxx: "/usr/bin/clang++"
-            sources: ""
-            llvm_os: ""
-            llvm_ver: ""
-            toolset: "clang"
-            compiler: "/usr/bin/clang++"
-            cxxstd: "03,11"
-          - name: "TOOLSET=clang COMPILER=clang++-3.5 CXXSTD=03, Job 14"
-            buildtype: "boost"
-            packages: "clang-3.5 libstdc++-4.9-dev"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:14.04"
-            cxx: "clang++-3.5"
-            sources: ""
-            llvm_os: "precise"
-            llvm_ver: "3.5"
-            toolset: "clang"
-            compiler: "clang++-3.5"
-            cxxstd: "03,11,14"
-          - name: "TOOLSET=clang COMPILER=clang++-3.6 CXXSTD=03, Job 15"
-            buildtype: "boost"
-            packages: "clang-3.6"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:14.04"
-            cxx: "clang++-3.6"
-            sources: ""
-            llvm_os: "precise"
-            llvm_ver: "3.6"
-            toolset: "clang"
-            compiler: "clang++-3.6"
-            cxxstd: "03,11,14"
-          - name: "TOOLSET=clang COMPILER=clang++-3.7 CXXSTD=03, Job 16"
-            buildtype: "boost"
-            packages: "clang-3.7"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:14.04"
-            cxx: "clang++-3.7"
-            sources: ""
-            llvm_os: "precise"
-            llvm_ver: "3.7"
-            toolset: "clang"
-            compiler: "clang++-3.7"
-            cxxstd: "03,11,14"
-          - name: "TOOLSET=clang COMPILER=clang++-3.8 CXXSTD=03, Job 17"
-            buildtype: "boost"
-            packages: "clang-3.8 libstdc++-4.9-dev"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:14.04"
-            cxx: "clang++-3.8"
-            sources: ""
-            llvm_os: "precise"
-            llvm_ver: "3.8"
-            toolset: "clang"
-            compiler: "clang++-3.8"
-            cxxstd: "03,11,14"
-          - name: "TOOLSET=clang COMPILER=clang++-3.9 CXXSTD=03, Job 18"
-            buildtype: "boost"
-            packages: "clang-3.9 libstdc++-4.9-dev"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:14.04"
-            cxx: "clang++-3.9"
-            sources: ""
-            llvm_os: "precise"
-            llvm_ver: "3.9"
-            toolset: "clang"
-            compiler: "clang++-3.9"
-            cxxstd: "03,11,14"
-          - name: "TOOLSET=clang COMPILER=clang++-4.0 CXXSTD=03, Job 19"
-            buildtype: "boost"
-            packages: "clang-4.0"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:14.04"
-            cxx: "clang++-4.0"
-            sources: ""
-            llvm_os: "trusty"
-            llvm_ver: "4.0"
-            toolset: "clang"
-            compiler: "clang++-4.0"
-            cxxstd: "03,11,14"
-          - name: "TOOLSET=clang COMPILER=clang++-5.0 CXXSTD=03, Job 20"
-            buildtype: "boost"
-            packages: "clang-5.0"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:14.04"
-            cxx: "clang++-5.0"
-            sources: ""
-            llvm_os: "trusty"
-            llvm_ver: "5.0"
-            toolset: "clang"
-            compiler: "clang++-5.0"
-            cxxstd: "03,11,14,1z"
-          - name: "TOOLSET=clang COMPILER=clang++-6.0 CXXSTD=03, Job 21"
-            buildtype: "boost"
-            packages: "clang-6.0"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:14.04"
-            cxx: "clang++-6.0"
-            sources: ""
-            llvm_os: "trusty"
-            llvm_ver: "6.0"
-            toolset: "clang"
-            compiler: "clang++-6.0"
-            cxxstd: "03,11,14,17,2a"
-          - name: "TOOLSET=clang COMPILER=clang++-7 CXXSTD=03,11 Job 22"
-            buildtype: "boost"
-            packages: "clang-7"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:16.04"
-            cxx: "clang++-7"
-            sources: ""
-            llvm_os: "xenial"
-            llvm_ver: "7"
-            toolset: "clang"
-            compiler: "clang++-7"
-            cxxstd: "03,11,14,17,2a"
-          - name: "UBSAN=1 TOOLSET=clang COMPILER=clang++-7 CXXS Job 23"
-            buildtype: "boost"
-            packages: "clang-7 libstdc++-5-dev"
-            packages_to_remove: ""
-            os: "ubuntu-20.04"
-            container: "ubuntu:16.04"
-            cxx: "clang++-7"
-            sources: ""
-            llvm_os: "xenial"
-            llvm_ver: "7"
-            ubsan: "1"
-            toolset: "clang"
-            compiler: "clang++-7"
-            cxxstd: "03,11,14,17,2a"
-            ubsan_options: "print_stacktrace=1"
-          - name: "TOOLSET=clang COMPILER=clang++-libc++ CXXSTD= Job 24"
-            buildtype: "boost"
-            packages: " libc++-9-dev libc++abi-9-dev"
-            packages_to_remove: "libc++-dev libc++abi-dev"
-            os: "ubuntu-18.04"
-            cxx: "clang++-libc++"
-            sources: ""
-            llvm_os: "xenial"
-            llvm_ver: "9"
-            toolset: "clang"
-            compiler: "clang++-libc++"
-            cxxstd: "03,11,14,1z"
-          - name: "UBSAN=1 TOOLSET=clang COMPILER=clang++-libc++ Job 25"
-            buildtype: "boost"
-            packages: " libc++-9-dev libc++abi-9-dev"
-            packages_to_remove: "libc++-dev libc++abi-dev"
-            os: "ubuntu-18.04"
-            cxx: "clang++-libc++"
-            sources: ""
-            llvm_os: "xenial"
-            llvm_ver: "9"
-            ubsan: "1"
-            toolset: "clang"
-            compiler: "clang++-libc++"
-            cxxstd: "03,11,14,1z"
-            ubsan_options: "print_stacktrace=1"
+          - toolset: gcc-4.8
+            cxxstd: "11"
+            container: ubuntu:18.04
+            os: ubuntu-latest
+            install: g++-4.8-multilib
+            address-model: 32,64
+          - toolset: gcc-5
+            cxxstd: "11,14,1z"
+            container: ubuntu:18.04
+            os: ubuntu-latest
+            install: g++-5-multilib
+            address-model: 32,64
+          - toolset: gcc-6
+            cxxstd: "11,14,1z"
+            container: ubuntu:18.04
+            os: ubuntu-latest
+            install: g++-6-multilib
+            address-model: 32,64
+          - toolset: gcc-7
+            cxxstd: "11,14,17"
+            os: ubuntu-20.04
+            install: g++-7-multilib
+            address-model: 32,64
+          - toolset: gcc-8
+            cxxstd: "11,14,17,2a"
+            os: ubuntu-20.04
+            install: g++-8-multilib
+            address-model: 32,64
+          - toolset: gcc-9
+            cxxstd: "11,14,17,2a"
+            os: ubuntu-20.04
+            install: g++-9-multilib
+            address-model: 32,64
+          - toolset: gcc-10
+            cxxstd: "11,14,17,2a"
+            os: ubuntu-22.04
+            install: g++-10-multilib
+            address-model: 32,64
+          - toolset: gcc-11
+            cxxstd: "11,14,17,20"
+            os: ubuntu-22.04
+            install: g++-11-multilib
+            address-model: 32,64
+          - toolset: gcc-12
+            cxxstd: "11,14,17,20,2b"
+            os: ubuntu-22.04
+            install: g++-12-multilib
+            address-model: 32,64
+          - toolset: gcc-13
+            cxxstd: "11,14,17,20,2b"
+            os: ubuntu-24.04
+            install: g++-13-multilib
+            address-model: 32,64
+          - toolset: gcc-14
+            cxxstd: "11,14,17,20,2b"
+            os: ubuntu-24.04
+            install: g++-14-multilib
+            address-model: 32,64
+          - toolset: clang
+            compiler: clang++-3.9
+            cxxstd: "11,14"
+            os: ubuntu-latest
+            container: ubuntu:18.04
+            install: clang-3.9
+          - toolset: clang
+            compiler: clang++-4.0
+            cxxstd: "11,14"
+            os: ubuntu-latest
+            container: ubuntu:18.04
+            install: clang-4.0
+          - toolset: clang
+            compiler: clang++-5.0
+            cxxstd: "11,14,1z"
+            os: ubuntu-latest
+            container: ubuntu:18.04
+            install: clang-5.0
+          - toolset: clang
+            compiler: clang++-6.0
+            cxxstd: "11,14,17"
+            os: ubuntu-latest
+            container: ubuntu:18.04
+            install: clang-6.0
+          - toolset: clang
+            compiler: clang++-7
+            cxxstd: "11,14,17"
+            os: ubuntu-latest
+            container: ubuntu:18.04
+            install: clang-7
+          - toolset: clang
+            compiler: clang++-8
+            cxxstd: "11,14,17"
+            os: ubuntu-20.04
+            install: clang-8
+          - toolset: clang
+            compiler: clang++-9
+            cxxstd: "11,14,17,2a"
+            os: ubuntu-20.04
+            install: clang-9
+          - toolset: clang
+            compiler: clang++-10
+            cxxstd: "11,14,17,2a"
+            os: ubuntu-20.04
+          - toolset: clang
+            compiler: clang++-11
+            cxxstd: "11,14,17,2a"
+            os: ubuntu-20.04
+          - toolset: clang
+            compiler: clang++-12
+            cxxstd: "11,14,17,20"
+            os: ubuntu-20.04
+          - toolset: clang
+            compiler: clang++-13
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:22.04
+            os: ubuntu-latest
+            install: clang-13
+          - toolset: clang
+            compiler: clang++-14
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:22.04
+            os: ubuntu-latest
+            install: clang-14
+          - toolset: clang
+            compiler: clang++-15
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:22.04
+            os: ubuntu-latest
+            install: clang-15
+          - toolset: clang
+            compiler: clang++-16
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-16
+          - toolset: clang
+            compiler: clang++-17
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-17
+          - toolset: clang
+            compiler: clang++-18
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-18
+          - toolset: clang
+            cxxstd: "11,14,17,20,2b"
+            os: macos-12
+          - toolset: clang
+            cxxstd: "11,14,17,20,2b"
+            os: macos-13
+          - toolset: clang
+            cxxstd: "11,14,17,20,2b"
+            os: macos-14
 
-    runs-on: ${{ matrix.os }}
-    container: ${{ matrix.container }}
+    runs-on: ${{matrix.os}}
+    container: ${{matrix.container}}
+
+    defaults:
+      run:
+        shell: bash
 
     steps:
-      - name: Check if running in container
-        if: matrix.container != ''
-        run: echo "GHA_CONTAINER=${{ matrix.container }}" >> $GITHUB_ENV
-      - name: If running in container, upgrade packages
-        if: matrix.container != ''
+      - name: Enable Node 16
         run: |
-            apt-get -o Acquire::Retries=3 update && DEBIAN_FRONTEND=noninteractive apt-get -y install tzdata && apt-get -o Acquire::Retries=3 install -y sudo software-properties-common wget curl apt-transport-https make apt-file sudo unzip libssl-dev build-essential autotools-dev autoconf automake g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3 ccache libpython-dev
-            sudo apt-add-repository ppa:git-core/ppa
-            sudo apt-get -o Acquire::Retries=3 update && apt-get -o Acquire::Retries=3 -y install git
-            python_version=$(python3 -c 'import sys; print("{0.major}.{0.minor}".format(sys.version_info))')
-            sudo wget https://bootstrap.pypa.io/pip/$python_version/get-pip.py
-            sudo python3 get-pip.py
-            sudo /usr/local/bin/pip install cmake
+          echo "ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true" >> $GITHUB_ENV
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - name: linux
-        shell: bash
-        env:
-          CXX: ${{ matrix.cxx }}
-          SOURCES: ${{ matrix.sources }}
-          LLVM_OS: ${{ matrix.llvm_os }}
-          LLVM_VER: ${{ matrix.llvm_ver }}
-          PACKAGES: ${{ matrix.packages }}
-          PACKAGES_TO_REMOVE: ${{ matrix.packages_to_remove }}
-          JOB_BUILDTYPE: ${{ matrix.buildtype }}
-          TOOLSET: ${{ matrix.toolset }}
-          COMPILER: ${{ matrix.compiler }}
-          CXXSTD: ${{ matrix.cxxstd }}
-          UBSAN: ${{ matrix.ubsan }}
-          UBSAN_OPTIONS: ${{ matrix.ubsan_options }}
-          LINKFLAGS: ${{ matrix.linkflags }}
-          TRAVIS_BRANCH: ${{ github.base_ref }}
-          TRAVIS_OS_NAME: "linux"
+      - name: Setup container environment
+        if: matrix.container
         run: |
-          echo '==================================> SETUP'
-          echo '==================================> PACKAGES'
-          set -e
-          if [ -n "$PACKAGES_TO_REMOVE" ]; then sudo apt-get purge -y $PACKAGES_TO_REMOVE; fi
-          echo ">>>>> APT: REPO.."
-          for i in {1..3}; do sudo -E apt-add-repository -y "ppa:ubuntu-toolchain-r/test" && break || sleep 2; done
-          
-          if test -n "${LLVM_OS}" ; then
-              wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-              if test -n "${LLVM_VER}" ; then
-                  sudo -E apt-add-repository "deb http://apt.llvm.org/${LLVM_OS}/ llvm-toolchain-${LLVM_OS}-${LLVM_VER} main"
-              else
-                  # Snapshot (i.e. trunk) build of clang
-                  sudo -E apt-add-repository "deb http://apt.llvm.org/${LLVM_OS}/ llvm-toolchain-${LLVM_OS} main"
-              fi
-          fi
-          echo ">>>>> APT: UPDATE.."
-          sudo -E apt-get -o Acquire::Retries=3 update
-          if test -n "${SOURCES}" ; then
-              echo ">>>>> APT: INSTALL SOURCES.."
-              for SOURCE in $SOURCES; do
-                  sudo -E apt-add-repository ppa:$SOURCE
-              done
-          fi
-          echo ">>>>> APT: INSTALL ${PACKAGES}.."
-          sudo -E DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 -y --no-install-suggests --no-install-recommends install ${PACKAGES}
+          apt-get update
+          apt-get -y install sudo python3 git g++
 
-          echo '==================================> INSTALL AND COMPILE'
-          set -e
-          export TRAVIS_BUILD_DIR=$(pwd)
-          export TRAVIS_BRANCH=${TRAVIS_BRANCH:-$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')}
-          export VCS_COMMIT_ID=$GITHUB_SHA
-          export GIT_COMMIT=$GITHUB_SHA
-          export REPO_NAME=$(basename $GITHUB_REPOSITORY)
-          export USER=$(whoami)
-          export CC=${CC:-gcc}
-          export PATH=~/.local/bin:/usr/local/bin:$PATH
+      - name: Install packages
+        if: matrix.install
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install ${{matrix.install}}
 
-          if [ "$JOB_BUILDTYPE" == "boost" ]; then
-
-          echo '==================================> INSTALL'
-
+      - name: Setup Boost
+        run: |
+          echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+          LIBRARY=${GITHUB_REPOSITORY#*/}
+          echo LIBRARY: $LIBRARY
+          echo "LIBRARY=$LIBRARY" >> $GITHUB_ENV
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
           cd ..
-          BOOST_BRANCH=develop && [ "$TRAVIS_BRANCH" == "master" ] && BOOST_BRANCH=master || true
           git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
           cd boost-root
-          git submodule update --init
-          git rm --ignore-unmatch libs/multi_index/
+          cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
+          git submodule update --init tools/boostdep
+          python3 tools/boostdep/depinst/depinst.py -I example --git_args "--jobs 3" $LIBRARY
           ./bootstrap.sh
-          ./b2 headers
-          mkdir libs/multi_index
-          cp -r $TRAVIS_BUILD_DIR/* libs/multi_index
+          ./b2 -d0 headers
 
-          echo '==================================> SCRIPT'
+      - name: Create user-config.jam
+        if: matrix.compiler
+        run: |
+          echo "using ${{matrix.toolset}} : : ${{matrix.compiler}} ;" > ~/user-config.jam
 
-          echo "using $TOOLSET : : $COMPILER ;" > ~/user-config.jam
-          ./b2 libs/multi_index/test toolset=$TOOLSET cxxstd=$CXXSTD
+      - name: Run tests
+        run: |
+          cd ../boost-root
+          export ADDRMD=${{matrix.address-model}}
+          ./b2 -j3 libs/$LIBRARY/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} ${ADDRMD:+address-model=$ADDRMD} variant=debug,release
 
-          fi
-  osx:
+  windows:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: "TOOLSET=clang COMPILER=clang++ CXXSTD=03,11,1 Job 26"
-            buildtype: "boost"
-            packages: ""
-            os: "macos-11"
-            cxx: "clang++"
-            sources: ""
-            llvm_os: ""
-            llvm_ver: ""
-            xcode_version: 11.7
-            toolset: "clang"
-            compiler: "clang++"
-            cxxstd: "03,11,14,1z"
+          - toolset: msvc-14.0
+            cxxstd: 14,latest
+            addrmd: 32,64
+            os: windows-2019
+          - toolset: msvc-14.2
+            cxxstd: "14,17,20,latest"
+            addrmd: 32,64
+            os: windows-2019
+          - toolset: msvc-14.3
+            cxxstd: "14,17,20,latest"
+            addrmd: 32,64
+            os: windows-2022
+          - toolset: clang-win
+            cxxstd: "14,17,latest"
+            addrmd: 32,64
+            os: windows-2022
+          - toolset: gcc
+            cxxstd: "11,14,17,2a"
+            addrmd: 64
+            os: windows-2019
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: Set DEVELOPER_DIR
-        if: matrix.xcode_version != ''
-        run: echo "DEVELOPER_DIR=/Applications/Xcode_${{ matrix.xcode_version }}.app/Contents/Developer" >> $GITHUB_ENV
-      - name: Test DEVELOPER_DIR
-        run: echo $DEVELOPER_DIR
-
-      - name: "osx"
-        shell: bash
-        env:
-          CXX: ${{ matrix.cxx }}
-          SOURCES: ${{ matrix.sources }}
-          LLVM_OS: ${{ matrix.llvm_os }}
-          LLVM_VER: ${{ matrix.llvm_ver }}
-          PACKAGES: ${{ matrix.packages }}
-          JOB_BUILDTYPE: ${{ matrix.buildtype }}
-          TOOLSET: ${{ matrix.toolset }}
-          COMPILER: ${{ matrix.compiler }}
-          CXXSTD: ${{ matrix.cxxstd }}
-          UBSAN: ${{ matrix.ubsan }}
-          UBSAN_OPTIONS: ${{ matrix.ubsan_options }}
-          LINKFLAGS: ${{ matrix.linkflags }}
-          TRAVIS_BRANCH: ${{ github.base_ref }}
-          TRAVIS_OS_NAME: "osx"
+      - name: Setup Boost
+        shell: cmd
         run: |
-          echo '==================================> SETUP'
-          set -e
-          sudo mv /Library/Developer/CommandLineTools /Library/Developer/CommandLineTools.bck
-          echo '==================================> PACKAGES'
-          echo '==================================> INSTALL AND COMPILE'
-          set -e
-          export TRAVIS_BUILD_DIR=$(pwd)
-          export TRAVIS_BRANCH=${TRAVIS_BRANCH:-$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')}
-          export VCS_COMMIT_ID=$GITHUB_SHA
-          export GIT_COMMIT=$GITHUB_SHA
-          export REPO_NAME=$(basename $GITHUB_REPOSITORY)
-          export USER=$(whoami)
-          export CC=${CC:-gcc}
-          export PATH=~/.local/bin:/usr/local/bin:$PATH
-
-          if [ "$JOB_BUILDTYPE" == "boost" ]; then
-
-          echo '==================================> INSTALL'
-
+          echo GITHUB_REPOSITORY: %GITHUB_REPOSITORY%
+          for /f %%i in ("%GITHUB_REPOSITORY%") do set LIBRARY=%%~nxi
+          echo LIBRARY: %LIBRARY%
+          echo LIBRARY=%LIBRARY%>>%GITHUB_ENV%
+          echo GITHUB_BASE_REF: %GITHUB_BASE_REF%
+          echo GITHUB_REF: %GITHUB_REF%
+          if "%GITHUB_BASE_REF%" == "" set GITHUB_BASE_REF=%GITHUB_REF%
+          set BOOST_BRANCH=develop
+          for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
+          echo BOOST_BRANCH: %BOOST_BRANCH%
           cd ..
-          BOOST_BRANCH=develop && [ "$TRAVIS_BRANCH" == "master" ] && BOOST_BRANCH=master || true
-          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
           cd boost-root
-          git submodule update --init
-          git rm --ignore-unmatch libs/multi_index/
-          ./bootstrap.sh
-          ./b2 headers
-          mkdir libs/multi_index
-          cp -r $TRAVIS_BUILD_DIR/* libs/multi_index
+          xcopy /s /e /q %GITHUB_WORKSPACE% libs\%LIBRARY%\
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py -I example --git_args "--jobs 3" %LIBRARY%
+          cmd /c bootstrap
+          b2 -d0 headers
 
-          echo '==================================> SCRIPT'
-
-          echo "using $TOOLSET : : $COMPILER ;" > ~/user-config.jam
-          ./b2 libs/multi_index/test toolset=$TOOLSET cxxstd=$CXXSTD
-
-          fi
+      - name: Run tests
+        shell: cmd
+        run: |
+          cd ../boost-root
+          b2 -j3 libs/%LIBRARY%/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} address-model=${{matrix.addrmd}} variant=debug,release embed-manifest-via=linker

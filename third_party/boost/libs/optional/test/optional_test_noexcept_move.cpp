@@ -9,7 +9,6 @@
 // You are welcome to contact the author at:
 //  akrzemi1@gmail.com
 
-#include "boost/static_assert.hpp"
 #include "boost/optional/optional.hpp"
 
 #ifdef BOOST_BORLANDC
@@ -44,36 +43,36 @@ struct NothrowNone {
 #if 0 // these also test type_traits, which are wrong
 void test_noexcept_as_defined() // this is a compile-time test
 {
-  BOOST_STATIC_ASSERT(::boost::is_nothrow_move_constructible<NothrowBoth>::value);
-  BOOST_STATIC_ASSERT(::boost::is_nothrow_move_assignable<NothrowBoth>::value);
-  
-  BOOST_STATIC_ASSERT(::boost::is_nothrow_move_constructible<NothrowCtor>::value);
-  BOOST_STATIC_ASSERT(!::boost::is_nothrow_move_assignable<NothrowCtor>::value);
-  
-  BOOST_STATIC_ASSERT(!::boost::is_nothrow_move_constructible<NothrowAssign>::value);
-  BOOST_STATIC_ASSERT(::boost::is_nothrow_move_assignable<NothrowAssign>::value);
-  
-  BOOST_STATIC_ASSERT(!::boost::is_nothrow_move_constructible<NothrowNone>::value);
-  BOOST_STATIC_ASSERT(!::boost::is_nothrow_move_assignable<NothrowNone>::value);
+  static_assert(::boost::is_nothrow_move_constructible<NothrowBoth>::value, "ERROR");
+  static_assert(::boost::is_nothrow_move_assignable<NothrowBoth>::value, "ERROR");
+
+  static_assert(::boost::is_nothrow_move_constructible<NothrowCtor>::value, "ERROR");
+  static_assert(!::boost::is_nothrow_move_assignable<NothrowCtor>::value, "ERROR");
+
+  static_assert(!::boost::is_nothrow_move_constructible<NothrowAssign>::value, "ERROR");
+  static_assert(::boost::is_nothrow_move_assignable<NothrowAssign>::value, "ERROR");
+
+  static_assert(!::boost::is_nothrow_move_constructible<NothrowNone>::value, "ERROR");
+  static_assert(!::boost::is_nothrow_move_assignable<NothrowNone>::value, "ERROR");
 }
 
 void test_noexcept_on_optional_with_type_traits() // this is a compile-time test
 {
-  BOOST_STATIC_ASSERT(::boost::is_nothrow_move_constructible<optional<NothrowBoth> >::value);
-  BOOST_STATIC_ASSERT(::boost::is_nothrow_move_assignable<optional<NothrowBoth> >::value);
-  BOOST_STATIC_ASSERT(BOOST_NOEXCEPT_EXPR(optional<NothrowBoth>()));
-    
-  BOOST_STATIC_ASSERT(::boost::is_nothrow_move_constructible<optional<NothrowCtor> >::value);
-  BOOST_STATIC_ASSERT(!::boost::is_nothrow_move_assignable<optional<NothrowCtor> >::value);
-  BOOST_STATIC_ASSERT(BOOST_NOEXCEPT_EXPR(optional<NothrowCtor>()));
-    
-  BOOST_STATIC_ASSERT(!::boost::is_nothrow_move_constructible<optional<NothrowAssign> >::value);
-  BOOST_STATIC_ASSERT(!::boost::is_nothrow_move_assignable<optional<NothrowAssign> >::value);
-  BOOST_STATIC_ASSERT(BOOST_NOEXCEPT_EXPR(optional<NothrowAssign>()));
-    
-  BOOST_STATIC_ASSERT(!::boost::is_nothrow_move_constructible<optional<NothrowNone> >::value);
-  BOOST_STATIC_ASSERT(!::boost::is_nothrow_move_assignable<optional<NothrowNone> >::value);
-  BOOST_STATIC_ASSERT(BOOST_NOEXCEPT_EXPR(optional<NothrowNone>()));
+  static_assert(::boost::is_nothrow_move_constructible<optional<NothrowBoth> >::value, "ERROR");
+  static_assert(::boost::is_nothrow_move_assignable<optional<NothrowBoth> >::value, "ERROR");
+  static_assert(BOOST_NOEXCEPT_EXPR(optional<NothrowBoth>()), "ERROR");
+
+  static_assert(::boost::is_nothrow_move_constructible<optional<NothrowCtor> >::value, "ERROR");
+  static_assert(!::boost::is_nothrow_move_assignable<optional<NothrowCtor> >::value, "ERROR");
+  static_assert(BOOST_NOEXCEPT_EXPR(optional<NothrowCtor>()), "ERROR");
+
+  static_assert(!::boost::is_nothrow_move_constructible<optional<NothrowAssign> >::value, "ERROR");
+  static_assert(!::boost::is_nothrow_move_assignable<optional<NothrowAssign> >::value, "ERROR");
+  static_assert(BOOST_NOEXCEPT_EXPR(optional<NothrowAssign>()), "ERROR");
+
+  static_assert(!::boost::is_nothrow_move_constructible<optional<NothrowNone> >::value, "ERROR");
+  static_assert(!::boost::is_nothrow_move_assignable<optional<NothrowNone> >::value, "ERROR");
+  static_assert(BOOST_NOEXCEPT_EXPR(optional<NothrowNone>()), "ERROR");
 }
 #endif
 
@@ -87,22 +86,22 @@ void test_noexcept_optional_with_operator() // compile-time test
   ONxC onxC;
   ONxA onxA;
   ONx0 onx0;
-  
-  BOOST_STATIC_ASSERT( BOOST_NOEXCEPT_EXPR( ONx2() ));
-  BOOST_STATIC_ASSERT( BOOST_NOEXCEPT_EXPR( ONx2(boost::move(onx2)) ));
-  BOOST_STATIC_ASSERT( BOOST_NOEXCEPT_EXPR( onx2 = ONx2() )); 
-  
-  BOOST_STATIC_ASSERT( BOOST_NOEXCEPT_EXPR( ONxC() ));
-  BOOST_STATIC_ASSERT( BOOST_NOEXCEPT_EXPR( ONxC(boost::move(onxC)) ));
-  BOOST_STATIC_ASSERT(!BOOST_NOEXCEPT_EXPR( onxC = ONxC() ));
-  
-  BOOST_STATIC_ASSERT( BOOST_NOEXCEPT_EXPR( ONxA() ));
-  BOOST_STATIC_ASSERT(!BOOST_NOEXCEPT_EXPR( ONxA(boost::move(onxA)) ));
-  BOOST_STATIC_ASSERT(!BOOST_NOEXCEPT_EXPR( onxA = ONxA() ));
-  
-  BOOST_STATIC_ASSERT( BOOST_NOEXCEPT_EXPR( ONx0() ));
-  BOOST_STATIC_ASSERT(!BOOST_NOEXCEPT_EXPR( ONx0(boost::move(onx0)) ));
-  BOOST_STATIC_ASSERT(!BOOST_NOEXCEPT_EXPR( onx0 = ONx0() ));
+
+  static_assert( BOOST_NOEXCEPT_EXPR( ONx2() ), "ERROR");
+  static_assert( BOOST_NOEXCEPT_EXPR( ONx2(std::move(onx2)) ), "ERROR");
+  static_assert( BOOST_NOEXCEPT_EXPR( onx2 = ONx2() ), "ERROR");
+
+  static_assert( BOOST_NOEXCEPT_EXPR( ONxC() ), "ERROR");
+  static_assert( BOOST_NOEXCEPT_EXPR( ONxC(std::move(onxC)) ), "ERROR");
+  static_assert(!BOOST_NOEXCEPT_EXPR( onxC = ONxC() ), "ERROR");
+
+  static_assert( BOOST_NOEXCEPT_EXPR( ONxA() ), "ERROR");
+  static_assert(!BOOST_NOEXCEPT_EXPR( ONxA(std::move(onxA)) ), "ERROR");
+  static_assert(!BOOST_NOEXCEPT_EXPR( onxA = ONxA() ), "ERROR");
+
+  static_assert( BOOST_NOEXCEPT_EXPR( ONx0() ), "ERROR");
+  static_assert(!BOOST_NOEXCEPT_EXPR( ONx0(std::move(onx0)) ), "ERROR");
+  static_assert(!BOOST_NOEXCEPT_EXPR( onx0 = ONx0() ), "ERROR");
 }
 
 #endif // !defined BOOST_NO_CXX11_NOEXCEPT
@@ -112,5 +111,3 @@ int main()
 {
   return 0;
 }
-
-

@@ -17,13 +17,8 @@ target_link_libraries(boost_interprocess
     Boost::assert
     Boost::config
     Boost::container
-    Boost::core
-    Boost::integer
     Boost::intrusive
     Boost::move
-    Boost::static_assert
-    Boost::type_traits
-    Boost::unordered
     Boost::winapi
 )
 

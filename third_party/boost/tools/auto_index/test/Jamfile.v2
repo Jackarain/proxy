@@ -12,56 +12,31 @@ import toolset ;
 import type ;
 
 path-constant ROOT : ../../.. ;
-path-constant HERE : . ;
 
-exe line_compare_tool : text_diff.cpp ;
+actions auto-index
+{
+    "$(>[1])" "--prefix=$(ROOT)" "--in=$(>[2])" "--script=$(>[3])" "--out=$(<[1])"
+}
 
 rule auto-index-test ( target-name : input-file : script-file : output-file ? : options * )
 {
-    local project = [ project.current ] ;
-
-    local t =
-        [ targets.create-typed-target RUN
-            : $(project)
-            : $(target-name)
-            : [ alias autoindex : ../build//auto_index : release ]
-            : $(requirements)
-                <location-prefix>$(target-name).test
-                <testing.arg>--prefix=$(ROOT)
-                <testing.arg>$(options)
-                <testing.arg>--in=$(HERE)/$(input-file)
-                <testing.arg>--script=$(HERE)/$(script-file)
-                <testing.arg>--out=$(HERE)/$(target-name).out
-                <preserve-test-targets>on
-                <dependency>Jamfile.v2
-                <dependency>$(input-file)
-                <dependency>$(script-file)
-        ]
+    make $(target-name)._out
+        :  ../build//auto_index/<variant>release
+            $(input-file)
+            $(script-file)
+        :   @auto-index
+        :   <location-prefix>$(target-name).test
+            <dependency>Jamfile.v2
         ;
 
-    local n = [ $(t).name ] ;
-    #ECHO n: $(n) ;
-
-    t += 
-        [ targets.create-typed-target RUN
-            : $(project)
-            : $(target-name)_check
-            : [ alias lct : line_compare_tool : release ]
-            : $(requirements)
-                <location-prefix>$(target-name).test
-                <testing.arg>$(HERE)/$(target-name).out
-                <testing.arg>$(HERE)/$(target-name).gold
-                <preserve-test-targets>on
-                <dependency>$(n)
-                <dependency>Jamfile.v2
-                <dependency>$(input-file)
-                <dependency>$(script-file)
-        ]
+    testing.run text_diff.cpp
+        :
+        :   $(target-name)._out
+            $(target-name).gold
+        :   <preserve-test-targets>on
+            <dependency>Jamfile.v2
+        :   $(target-name)_check
         ;
-
-    modules.poke testing : .all-tests : \$\(all-tests\) $(t) ;
-
-    return $(t) ;
 }
 
 auto-index-test test1 : type_traits.docbook : index.idx ;

@@ -1,5 +1,5 @@
 // Copyright (C) 2023 Christian Mazakas
-// Copyright (C) 2023 Joaquin M Lopez Munoz
+// Copyright (C) 2023-2024 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -7,6 +7,8 @@
 
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
+#include <boost/unordered/concurrent_node_map.hpp>
+#include <boost/unordered/concurrent_node_set.hpp>
 
 #include <boost/core/ignore_unused.hpp>
 
@@ -283,8 +285,12 @@ namespace {
 
   boost::unordered::concurrent_flat_map<raii, raii, stateful_hash,
     stateful_key_equal, stateful_allocator<std::pair<raii const, raii> > >* map;
+  boost::unordered::concurrent_node_map<raii, raii, stateful_hash,
+    stateful_key_equal, stateful_allocator<std::pair<raii const, raii> > >* node_map;
   boost::unordered::concurrent_flat_set<raii, stateful_hash,
     stateful_key_equal, stateful_allocator<raii> >* set;
+  boost::unordered::concurrent_node_set<raii, stateful_hash,
+    stateful_key_equal, stateful_allocator<raii> >* node_set;
 
 } // namespace
 
@@ -295,7 +301,7 @@ using test::sequential;
 // clang-format off
 UNORDERED_TEST(
   erase,
-  ((map)(set))
+  ((map)(node_map)(set)(node_set))
   ((exception_value_type_generator_factory)
    (exception_init_type_generator_factory))
   ((lvalue_eraser)(lvalue_eraser_if)(erase_if)(free_fn_erase_if))

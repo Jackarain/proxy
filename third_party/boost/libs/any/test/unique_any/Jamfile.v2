@@ -8,7 +8,9 @@
 #
 # For more information, see http://www.boost.org/libs/any
 
-import ../../config/checks/config : requires ;
+require-b2 5.0.1 ;
+import-search /boost/config/checks ;
+import config : requires ;
 
 import testing ;
 

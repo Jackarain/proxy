@@ -10,6 +10,9 @@ if(BOOST_RUNTIME_LINK STREQUAL "static")
   set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
+# Put .dll in the same directory as .exe
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
 set(BOOST_INCLUDE_LIBRARIES iostreams)
 
 add_subdirectory(../../../../ deps/boost)
@@ -20,4 +23,4 @@ target_link_libraries(test_fd Boost::iostreams Boost::core)
 enable_testing()
 add_test(NAME test_fd COMMAND test_fd WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>)
+add_custom_target(check VERBATIM COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --no-tests=error -C $<CONFIG>)

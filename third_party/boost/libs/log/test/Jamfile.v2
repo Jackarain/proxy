@@ -55,7 +55,6 @@ project
         <library>/boost/filesystem//boost_filesystem
         <library>/boost/test//boost_unit_test_framework
         <threading>single:<define>BOOST_LOG_NO_THREADS
-        <threading>multi:<library>/boost/thread//boost_thread
     : default-build
         # Testers typically don't specify threading environment and the library can be built and tested for single and multi. I'm more interested in multi though.
         <threading>multi

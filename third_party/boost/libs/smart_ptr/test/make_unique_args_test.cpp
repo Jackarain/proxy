@@ -5,10 +5,9 @@ Copyright 2014 Glen Joseph Fernandes
 Distributed under the Boost Software License, Version 1.0.
 (http://www.boost.org/LICENSE_1_0.txt)
 */
-#include <boost/config.hpp>
-#if !defined(BOOST_NO_CXX11_SMART_PTR)
-#include <boost/core/lightweight_test.hpp>
 #include <boost/smart_ptr/make_unique.hpp>
+#include <boost/core/lightweight_test.hpp>
+#include <boost/config.hpp>
 
 class type {
 public:
@@ -56,7 +55,6 @@ int main()
         BOOST_TEST(type::instances == 0);
     }
 
-#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
     {
         std::unique_ptr<type> result = boost::make_unique<type>(1);
         BOOST_TEST(result.get() != 0);
@@ -144,12 +142,6 @@ int main()
         result.reset();
         BOOST_TEST(type::instances == 0);
     }
-#endif
+
     return boost::report_errors();
 }
-#else
-int main()
-{
-    return 0;
-}
-#endif

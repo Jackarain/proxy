@@ -29,7 +29,7 @@
 #include <boost/bimap/vector_of.hpp>
 #include <boost/bimap/unconstrained_set_of.hpp>
 
-#include <libs/bimap/test/strong_type.hpp>
+#include "strong_type.hpp"
 
 void test_bimap_operator_bracket()
 {
@@ -194,7 +194,7 @@ void test_bimap_operator_bracket()
         typedef bimap
         <
           set_of<int, std::less< strong<int> > >,
-          list_of<std::string>                    
+          list_of<std::string>
         > bm;
 
         bm b;

@@ -10,9 +10,6 @@
 
 #include <boost/mysql/string_view.hpp>
 
-#include <boost/mysql/impl/internal/protocol/impl/serialization_context.hpp>
-#include <boost/mysql/impl/internal/protocol/impl/span_string.hpp>
-
 #include <cstdint>
 #include <vector>
 
@@ -22,14 +19,7 @@ namespace boost {
 namespace mysql {
 namespace test {
 
-inline std::vector<std::uint8_t> create_query_body_impl(std::uint8_t command_id, string_view sql)
-{
-    std::vector<std::uint8_t> buff;
-    detail::serialization_context ctx(buff, detail::disable_framing);
-    ctx.add(command_id);
-    ctx.add(detail::to_span(sql));
-    return buff;
-}
+std::vector<std::uint8_t> create_query_body_impl(std::uint8_t command_id, string_view sql);
 
 inline std::vector<std::uint8_t> create_query_frame(std::uint8_t seqnum, string_view sql)
 {

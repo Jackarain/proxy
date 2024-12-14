@@ -34,12 +34,25 @@ struct TmpDir
     }
 };
 
+//! Converts root path of the argument to canonical form, i.e. "C:\" instead of "c:\".
+inline fs::path canonicalize_root_path(fs::path const& p)
+{
+    fs::path root_path = p.root_path();
+    if (root_path.empty())
+        return p;
+    root_path = fs::canonical(root_path);
+    fs::path rel_path = p.relative_path();
+    if (!rel_path.empty())
+        root_path.append(rel_path);
+    return root_path;
+}
+
 // Test fs::canonical for various path in a Windows directory junction point
 // This failed before due to broken handling of absolute paths and ignored ReparseTag
 int main()
 {
-
-    const fs::path cwd = fs::current_path();
+    // Note: Use cacnonical form of the root path in all subsequent paths to make path comparisons more stable
+    const fs::path cwd = canonicalize_root_path(fs::current_path());
     const TmpDir tmp(cwd);
     const fs::path junction = tmp.path / "junction";
     const fs::path real = tmp.path / "real";

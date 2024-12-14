@@ -353,11 +353,6 @@
 	url = ../type_traits.git
 	fetchRecurseSubmodules = on-demand
 	branch = .
-[submodule "compatibility"]
-	path = libs/compatibility
-	url = ../compatibility.git
-	fetchRecurseSubmodules = on-demand
-	branch = .
 [submodule "bind"]
 	path = libs/bind
 	url = ../bind.git
@@ -826,5 +821,15 @@
 [submodule "scope"]
 	path = libs/scope
 	url = ../scope.git
+	fetchRecurseSubmodules = on-demand
+	branch = .
+[submodule "boostlook"]
+	path = tools/boostlook
+	url = ../boostlook.git
+	fetchRecurseSubmodules = on-demand
+	branch = .
+[submodule "parser"]
+	path = libs/parser
+	url = ../parser.git
 	fetchRecurseSubmodules = on-demand
 	branch = .

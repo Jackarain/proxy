@@ -1,12 +1,3 @@
-#include <boost/config.hpp>
-
-#if defined(BOOST_MSVC)
-#pragma warning(disable: 4786)  // identifier truncated in debug info
-#pragma warning(disable: 4710)  // function not inlined
-#pragma warning(disable: 4711)  // function selected for automatic inline expansion
-#pragma warning(disable: 4514)  // unreferenced inline removed
-#endif
-
 //
 //  shared_ptr_assign_fail.cpp - a negative test for shared_ptr assignment
 //
@@ -18,11 +9,6 @@
 //
 
 #include <boost/shared_ptr.hpp>
-
-bool boost_error(char const *, char const *, char const *, long)
-{
-    return true;
-}
 
 int main()
 {

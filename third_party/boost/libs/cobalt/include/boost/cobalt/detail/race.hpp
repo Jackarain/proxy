@@ -101,9 +101,7 @@ struct race_variadic_impl
   struct awaitable : fork::static_shared_state<256 * tuple_size>
   {
 
-#if !defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
     boost::source_location loc;
-#endif
 
     template<std::size_t ... Idx>
     awaitable(std::tuple<Args...> & args, URBG & g, std::index_sequence<Idx...>) :
@@ -307,7 +305,7 @@ struct race_variadic_impl
     {
       this->loc = loc;
 
-      this->exec = &cobalt::detail::get_executor(h);
+      this->exec = cobalt::detail::get_executor(h);
       last_forked.release().resume();
 
       if (!this->outstanding_work()) // already done, resume rightaway.
@@ -619,7 +617,7 @@ struct race_ranged_impl
                        const boost::source_location & loc = BOOST_CURRENT_LOCATION)
     {
       this->loc = loc;
-      this->exec = &detail::get_executor(h);
+      this->exec = detail::get_executor(h);
       last_forked.release().resume();
 
       if (!this->outstanding_work()) // already done, resume rightaway.

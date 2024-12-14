@@ -15,15 +15,15 @@ path-constant here : . ;
 
 doxygen autodoc
    :
-      [ glob ../../../boost/interprocess/*.hpp ]
-      [ glob ../../../boost/interprocess/allocators/*.hpp ]
-      [ glob ../../../boost/interprocess/containers/*.hpp ]
-      [ glob ../../../boost/interprocess/indexes/*.hpp ]
-      [ glob ../../../boost/interprocess/ipc/*.hpp ]
-      [ glob ../../../boost/interprocess/mem_algo/*.hpp ]
-      [ glob ../../../boost/interprocess/smart_ptr/*.hpp ]
-      [ glob ../../../boost/interprocess/streams/*.hpp ]
-      [ glob ../../../boost/interprocess/sync/*.hpp ]
+      [ glob ../include/boost/interprocess/*.hpp ]
+      [ glob ../include/boost/interprocess/allocators/*.hpp ]
+      [ glob ../include/boost/interprocess/containers/*.hpp ]
+      [ glob ../include/boost/interprocess/indexes/*.hpp ]
+      [ glob ../include/boost/interprocess/ipc/*.hpp ]
+      [ glob ../include/boost/interprocess/mem_algo/*.hpp ]
+      [ glob ../include/boost/interprocess/smart_ptr/*.hpp ]
+      [ glob ../include/boost/interprocess/streams/*.hpp ]
+      [ glob ../include/boost/interprocess/sync/*.hpp ]
    :
         <doxygen:param>EXTRACT_ALL=NO
         <doxygen:param>HIDE_UNDOC_MEMBERS=YES
@@ -46,6 +46,7 @@ doxygen autodoc
                                    \"BOOST_RV_REF_END=&&\" \\
                                    \"BOOST_FWD_REF(T)=T&&\" \\
                                    \"BOOST_INTERPROCESS_FORCEINLINE=inline\" \\
+                                   \"op_nullptr_t=std::nullptr_t\" \\
                                    "
 
         <xsl:param>"boost.doxygen.reftitle=Boost.Interprocess Header Reference"

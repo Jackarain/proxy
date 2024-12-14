@@ -257,7 +257,16 @@ struct basic_pipebuf : std::basic_streambuf<CharT, Traits>
     {
         if (!is_open())
             return nullptr;
-        overflow(Traits::eof());
+        try {
+          overflow(Traits::eof());
+          _pipe.close();
+          return this;
+        }
+        catch(...)
+        {
+          _pipe.close();
+          throw ;
+        }
         return this;
     }
 private:

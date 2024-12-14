@@ -1,14 +1,17 @@
-// Copyright 2024 Joaquin M Lopez Muoz.
+// Copyright 2024 Joaquin M Lopez Munoz.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at htT://www.boost.org/LICENSE_1_0.txt)
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #ifdef BOOST_UNORDERED_CFOA_TESTS
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
+#include <boost/unordered/concurrent_node_map.hpp>
+#include <boost/unordered/concurrent_node_set.hpp>
 #else
 #include "../helpers/unordered.hpp"
 #endif
 
+#include "../helpers/helpers.hpp"
 #include "../helpers/test.hpp"
 #include <boost/type_traits/make_void.hpp>
 #include <memory>
@@ -62,7 +65,16 @@ template <class Container> void test_explicit_alloc_ctor_extract(
 template <class Container> void test_explicit_alloc_ctor_extract(
   Container& c, std::true_type)
 {
+#ifdef BOOST_UNORDERED_CFOA_TESTS
+  typename Container::key_type k;
+  c.cvisit_while([&](typename Container::value_type const & x) {
+    k = test::get_key<Container>(x);
+    return false;
+  });
+  auto n = c.extract(k);
+#else
   auto n = c.extract(c.begin());
+#endif
   c.insert(std::move(n));
   n = c.extract(typename Container::key_type());
   c.insert(std::move(n));
@@ -122,7 +134,12 @@ UNORDERED_AUTO_TEST (explicit_alloc_ctor) {
   test_explicit_alloc_ctor<boost::concurrent_flat_map<int, int,
     boost::hash<int>, std::equal_to<int>,
     explicit_allocator<std::pair<const int, int> > > >();
+  test_explicit_alloc_ctor<boost::concurrent_node_map<int, int,
+    boost::hash<int>, std::equal_to<int>,
+    explicit_allocator<std::pair<const int, int> > > >();
   test_explicit_alloc_ctor<boost::concurrent_flat_set<
+    int, boost::hash<int>, std::equal_to<int>, explicit_allocator<int> > >();
+  test_explicit_alloc_ctor<boost::concurrent_node_set<
     int, boost::hash<int>, std::equal_to<int>, explicit_allocator<int> > >();
 #elif defined(BOOST_UNORDERED_FOA_TESTS)
   test_explicit_alloc_ctor<boost::unordered_flat_map<int, int,

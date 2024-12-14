@@ -393,8 +393,14 @@ static inline int generic_to_chars_fixed(const struct floating_decimal_128 v, ch
 
     if (v.exponent == 0)
     {
-        // Option 1: We need to do nothing
-        return current_len + static_cast<int>(v.sign);
+        // Option 1: We need to do nothing but insert 0s
+        if (precision > 0)
+        {
+            result[current_len++] = '.';
+            memset(result+current_len, '0', precision);
+            current_len += precision;
+            precision = 0;
+        }
     }
     else if (v.exponent > 0)
     {
@@ -408,9 +414,8 @@ static inline int generic_to_chars_fixed(const struct floating_decimal_128 v, ch
         result = r.ptr;
         memset(result, '0', static_cast<std::size_t>(v.exponent));
         result += static_cast<std::size_t>(v.exponent);
-        current_len += v.exponent;
         *result++ = '.';
-        ++precision;
+        current_len += v.exponent + 1;
     }
     else if ((-v.exponent) < current_len)
     {
@@ -421,10 +426,51 @@ static inline int generic_to_chars_fixed(const struct floating_decimal_128 v, ch
         }
 
         memmove(result + current_len + v.exponent + 1, result + current_len + v.exponent, static_cast<std::size_t>(-v.exponent));
-        memcpy(result + current_len + v.exponent, ".", 1U);
+        const auto shift = result + current_len + v.exponent;
+        const auto shift_width = (shift - result) + 1;
+        memcpy(shift, ".", 1U);
         ++current_len;
-        precision -= current_len + v.exponent;
-        result += current_len + v.exponent + 1;
+        if (current_len - shift_width > precision)
+        {
+            if (precision > 0)
+            {
+                current_len = static_cast<int>(shift_width) + precision;
+            }
+
+            precision = 0;
+            // Since we wrote additional characters into the buffer we need to add a null terminator,
+            // so they are not read
+            const auto round_val = result[current_len];
+            result[current_len] = '\0';
+
+            // More complicated rounding situations like 9999.999999 are already handled
+            // so we don't need to worry about rounding past the decimal point
+            if (round_val >= '5')
+            {
+                auto current_spot = current_len - 1;
+                bool continue_rounding = true;
+                while (result[current_spot] != '.' && continue_rounding)
+                {
+                    if (result[current_spot] < '9')
+                    {
+                        result[current_spot] = static_cast<char>(static_cast<int>(result[current_spot]) + 1);
+                        continue_rounding = false;
+                    }
+                    else
+                    {
+                        result[current_spot] = '0';
+                        continue_rounding = true;
+                    }
+                    --current_spot;
+                }
+                BOOST_CHARCONV_ASSERT(!continue_rounding);
+            }
+        }
+        else
+        {
+            precision -= current_len - static_cast<int>(shift_width);
+            result += current_len + v.exponent + 1;
+        }
     }
     else
     {
@@ -486,7 +532,17 @@ static inline int generic_to_chars(const struct floating_decimal_128 v, char* re
         const int64_t exp = v.exponent + static_cast<int64_t>(olength);
         if (std::abs(exp) <= olength)
         {
-            return generic_to_chars_fixed(v, result, result_size, precision);
+            auto ptr = generic_to_chars_fixed(v, result, result_size, precision);
+            if (ptr >= 1 && result[ptr - 1] == '0')
+            {
+                --ptr;
+                while (ptr > 0 && result[ptr] == '0')
+                {
+                    --ptr;
+                }
+                ++ptr;
+            }
+            return ptr;
         }
     }
 

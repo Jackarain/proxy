@@ -18,7 +18,7 @@ using namespace boost::interprocess;
 
 int main ()
 {
-   BOOST_TRY{
+   BOOST_INTERPROCESS_TRY{
       const std::size_t MemSize = 99999*2;
       {
          //Now check anonymous mapping
@@ -43,9 +43,9 @@ int main ()
          }
       }
    }
-   BOOST_CATCH(std::exception &exc){
+   BOOST_INTERPROCESS_CATCH(std::exception &exc){
       std::cout << "Unhandled exception: " << exc.what() << std::endl;
       return 1;
-   } BOOST_CATCH_END
+   } BOOST_INTERPROCESS_CATCH_END
    return 0;
 }

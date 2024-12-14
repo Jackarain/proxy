@@ -4,11 +4,11 @@
 #
 # http://www.boost.org/
 #
-# Copyright (c) 2001-2010 Hartmut Kaiser. Distributed under the Boost 
-# Software License, Version 1.0. (See accompanying file 
+# Copyright (c) 2001-2010 Hartmut Kaiser. Distributed under the Boost
+# Software License, Version 1.0. (See accompanying file
 # LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-SOURCES = 
+SOURCES =
         ../idl
         ../instantiate_cpp_grammar
         ../instantiate_defined_grammar
@@ -17,16 +17,20 @@ SOURCES =
         ../instantiate_re2c_lexer
         ../instantiate_re2c_lexer_str
         ../idllexer/idl_re
-	;
-	
+    ;
+
+project
+    : requirements
+        <library>/boost/wave//boost_wave
+        <library>/boost/program_options//boost_program_options/<link>static
+        <library>/boost/system//boost_system
+        <library>/boost/thread//boost_thread
+        <library>/boost/filesystem//boost_filesystem
+    ;
+
 exe waveidl
     :
         $(SOURCES)
-        /boost/wave//boost_wave
-        /boost/program_options//boost_program_options/<link>static
-        /boost/system//boost_system
-        /boost/thread//boost_thread
-        /boost/filesystem//boost_filesystem
     ;
 
 for local source in $(SOURCES)

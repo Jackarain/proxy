@@ -6,6 +6,22 @@
 :github-pr-url: https://github.com/boostorg/unordered/pull
 :cpp: C++
 
+== Release 1.87.0 - Major update
+
+* Added concurrent, node-based containers `boost::concurrent_node_map` and `boost::concurrent_node_set`.
+* Added `insert_and_visit(x, f1, f2)` and similar operations to concurrent containers, which
+allow for visitation of an element right after insertion (by contrast, `insert_or_visit(x, f)` only
+visits the element if insertion did _not_ take place).
+* Made visitation exclusive-locked within certain
+`boost::concurrent_flat_set` operations to allow for safe mutable modification of elements
+({github-pr-url}/265[PR#265^]).
+* In Visual Studio Natvis, supported any container with an allocator that uses fancy pointers. This applies to any fancy pointer type, as long as the proper Natvis customization point "Intrinsic" functions are written for the fancy pointer type.
+* Added GDB pretty-printers for all containers and iterators. For a container with an allocator that uses fancy pointers, these only work if the proper pretty-printer is written for the fancy pointer type itself.
+* Fixed `std::initializer_list` assignment issues for open-addressing containers
+({github-pr-url}/277[PR#277^]).
+* Allowed non-copyable callables to be passed to the `std::initializer_list` overloads of `insert_{and|or}_[c]visit` for concurrent containers, by internally passing a `std::reference_wrapper` of the callable to the iterator-pair overloads.
+
+
 == Release 1.86.0
 
 * Added container `pmr` aliases when header `<memory_resource>` is available. The alias `boost::unordered::pmr::[container]` refers to `boost::unordered::[container]` with a `std::pmr::polymorphic_allocator` allocator type.

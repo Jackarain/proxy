@@ -27,7 +27,7 @@ BOOST_PROCESS_V2_DECL filesystem::path cwd(pid_type pid, error_code & ec);
 BOOST_PROCESS_V2_DECL filesystem::path cwd(pid_type pid);
 
 template<typename Executor>
-BOOST_PROCESS_V2_DECL filesystem::path cwd(basic_process_handle<Executor> & handle, error_code & ec)
+inline filesystem::path cwd(basic_process_handle<Executor> & handle, error_code & ec)
 {
 #if defined(BOOST_PROCESS_V2_WINDOWS)
     return cwd(handle.native_handle(), ec);
@@ -37,7 +37,7 @@ BOOST_PROCESS_V2_DECL filesystem::path cwd(basic_process_handle<Executor> & hand
 }
 
 template<typename Executor>
-BOOST_PROCESS_V2_DECL filesystem::path cwd(basic_process_handle<Executor> & handle)
+inline filesystem::path cwd(basic_process_handle<Executor> & handle)
 {
 #if defined(BOOST_PROCESS_V2_WINDOWS)
     return cwd(handle.native_handle());

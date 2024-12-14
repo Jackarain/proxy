@@ -9,14 +9,15 @@
  * \author Andrey Semashev
  * \date   28.10.2018
  *
- * \brief  This file contains a test boilerplate for checking that every public header is self-contained and does not have any missing #includes.
+ * \brief  This file contains a test boilerplate for checking that every public header is self-contained and does not
+ * have any missing #includes.
  */
 
 #define BOOST_HEAP_TEST_INCLUDE_HEADER() <boost/heap/BOOST_HEAP_TEST_HEADER>
 
 #include BOOST_HEAP_TEST_INCLUDE_HEADER()
 
-int main(int, char*[])
+int main( int, char*[] )
 {
     return 0;
 }

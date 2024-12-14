@@ -20,7 +20,7 @@ struct fork_and_forget_launcher : default_launcher
     template<typename ExecutionContext, typename Args, typename ... Inits>
     auto operator()(ExecutionContext & context,
                     const typename std::enable_if<is_convertible<
-                            ExecutionContext&, BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context&>::value,
+                            ExecutionContext&, net::execution_context&>::value,
                             filesystem::path >::type & executable,
                     Args && args,
                     Inits && ... inits ) -> basic_process<typename ExecutionContext::executor_type>
@@ -39,7 +39,7 @@ struct fork_and_forget_launcher : default_launcher
     auto operator()(ExecutionContext & context,
                     error_code & ec,
                     const typename std::enable_if<is_convertible<
-                            ExecutionContext&, BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context&>::value,
+                            ExecutionContext&, net::execution_context&>::value,
                             filesystem::path >::type & executable,
                     Args && args,
                     Inits && ... inits ) -> basic_process<typename ExecutionContext::executor_type>
@@ -50,8 +50,8 @@ struct fork_and_forget_launcher : default_launcher
     template<typename Executor, typename Args, typename ... Inits>
     auto operator()(Executor exec,
                     const typename std::enable_if<
-                            BOOST_PROCESS_V2_ASIO_NAMESPACE::execution::is_executor<Executor>::value ||
-                            BOOST_PROCESS_V2_ASIO_NAMESPACE::is_executor<Executor>::value,
+                            net::execution::is_executor<Executor>::value ||
+                            net::is_executor<Executor>::value,
                             filesystem::path >::type & executable,
                     Args && args,
                     Inits && ... inits ) -> basic_process<Executor>
@@ -69,8 +69,8 @@ struct fork_and_forget_launcher : default_launcher
     auto operator()(Executor exec,
                     error_code & ec,
                     const typename std::enable_if<
-                            BOOST_PROCESS_V2_ASIO_NAMESPACE::execution::is_executor<Executor>::value ||
-                            BOOST_PROCESS_V2_ASIO_NAMESPACE::is_executor<Executor>::value,
+                            net::execution::is_executor<Executor>::value ||
+                            net::is_executor<Executor>::value,
                             filesystem::path >::type & executable,
                     Args && args,
                     Inits && ... inits ) -> basic_process<Executor>
@@ -84,22 +84,22 @@ struct fork_and_forget_launcher : default_launcher
                 return basic_process<Executor>(exec);
             }
 
-            auto & ctx = BOOST_PROCESS_V2_ASIO_NAMESPACE::query(
-                    exec, BOOST_PROCESS_V2_ASIO_NAMESPACE::execution::context);
-            ctx.notify_fork(BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context::fork_prepare);
+            auto & ctx = net::query(
+                    exec, net::execution::context);
+            ctx.notify_fork(net::execution_context::fork_prepare);
             pid = ::fork();
             if (pid == -1)
             {
-                ctx.notify_fork(BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context::fork_parent);
+                ctx.notify_fork(net::execution_context::fork_parent);
                 detail::on_fork_error(*this, executable, argv, ec, inits...);
                 detail::on_error(*this, executable, argv, ec, inits...);
 
-                BOOST_PROCESS_V2_ASSIGN_EC(ec, errno, system_category())
+                BOOST_PROCESS_V2_ASSIGN_EC(ec, errno, system_category());
                 return basic_process<Executor>{exec};
             }
             else if (pid == 0)
             {
-                ctx.notify_fork(BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context::fork_child);
+                ctx.notify_fork(net::execution_context::fork_child);
 
                 ec = detail::on_exec_setup(*this, executable, argv, inits...);
                 if (!ec)
@@ -107,12 +107,12 @@ struct fork_and_forget_launcher : default_launcher
                 if (!ec)
                     ::execve(executable.c_str(), const_cast<char * const *>(argv), const_cast<char * const *>(env));
 
-                BOOST_PROCESS_V2_ASSIGN_EC(ec, errno, system_category())
+                BOOST_PROCESS_V2_ASSIGN_EC(ec, errno, system_category());
                 detail::on_exec_error(*this, executable, argv, ec, inits...);
                 ::exit(EXIT_FAILURE);
                 return basic_process<Executor>{exec};
             }
-            ctx.notify_fork(BOOST_PROCESS_V2_ASIO_NAMESPACE::execution_context::fork_parent);
+            ctx.notify_fork(net::execution_context::fork_parent);
             if (ec)
             {
                 detail::on_error(*this, executable, argv, ec, inits...);
