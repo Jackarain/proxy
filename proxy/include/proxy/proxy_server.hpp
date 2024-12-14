@@ -361,7 +361,7 @@ R"x*x*x(<html>
 	inline bool detect_hostname(const std::string& host) noexcept
 	{
 		boost::system::error_code ec;
-		net::ip::address::from_string(host, ec);
+		net::ip::make_address(host, ec);
 		if (ec)
 			return true;
 		return false;
@@ -750,7 +750,7 @@ R"x*x*x(<html>
 			// 将 local_ip 转换为 ip::address 对象, 用于后面向外发起连接时
 			// 绑定到指定的本地地址.
 			boost::system::error_code ec;
-			m_bind_interface = net::ip::address::from_string(
+			m_bind_interface = net::ip::make_address(
 				m_option.local_ip_, ec);
 			if (ec)
 			{
@@ -824,7 +824,7 @@ R"x*x*x(<html>
 			m_udp_socket.close(ignore_ec);
 
 			// 取消所有定时器.
-			m_timer.cancel(ignore_ec);
+			m_timer.cancel();
 		}
 
 		virtual void set_tproxy_remote(
@@ -1278,7 +1278,7 @@ R"x*x*x(<html>
 			}
 			BOOST_ASSERT(bytes == 2);
 
-			auto p = net::buffer_cast<const char*>(m_local_buffer.data());
+			auto p = (const char*)m_local_buffer.data().data();
 			int socks_version = read<uint8_t>(p);
 
 			if (socks_version == SOCKS_VERSION_5)
@@ -1371,7 +1371,7 @@ R"x*x*x(<html>
 
 		inline net::awaitable<void> socks_connect_v5()
 		{
-			auto p = net::buffer_cast<const char*>(m_local_buffer.data());
+			auto p = (const char*)m_local_buffer.data().data();
 
 			auto socks_version = read<int8_t>(p);
 			BOOST_ASSERT(socks_version == SOCKS_VERSION_5);
@@ -1410,7 +1410,7 @@ R"x*x*x(<html>
 			auto auth_required = !m_option.auth_users_.empty();
 
 			// 循环读取客户端支持的代理方式.
-			p = net::buffer_cast<const char*>(m_local_buffer.data());
+			p = (const char*)m_local_buffer.data().data();
 
 			int method = SOCKS5_AUTH_UNACCEPTABLE;
 			while (bytes != 0)
@@ -1440,7 +1440,7 @@ R"x*x*x(<html>
 			net::streambuf wbuf;
 
 			// 回复客户端, server所选择的代理方式.
-			auto wp = net::buffer_cast<char*>(wbuf.prepare(1024));
+			auto wp = (char*)wbuf.prepare(1024).data();
 			write<uint8_t>(socks_version, wp);
 			write<uint8_t>((uint8_t)method, wp);
 
@@ -1501,7 +1501,7 @@ R"x*x*x(<html>
 				co_return;
 			}
 
-			p = net::buffer_cast<const char*>(m_local_buffer.data());
+			p = (const char*)m_local_buffer.data().data();
 			auto ver = read<int8_t>(p);
 			if (ver != SOCKS_VERSION_5)
 			{
@@ -1556,7 +1556,7 @@ R"x*x*x(<html>
 
 			auto executor = co_await net::this_coro::executor;
 
-			p = net::buffer_cast<const char*>(m_local_buffer.data());
+			p = (const char*)m_local_buffer.data().data();
 			if (atyp == SOCKS5_ATYP_IPV4)
 			{
 				dst_endpoint.address(net::ip::address_v4(read<uint32_t>(p)));
@@ -1672,8 +1672,7 @@ R"x*x*x(<html>
 					forward_udp(), net::detached);
 
 				wbuf.consume(wbuf.size());
-				auto wp = net::buffer_cast<char*>(
-					wbuf.prepare(64 + domain.size()));
+				auto wp = (char*)wbuf.prepare(64 + domain.size()).data();
 
 				write<uint8_t>(SOCKS_VERSION_5, wp);	// VER
 				write<uint8_t>(0, wp);					// REP
@@ -1707,7 +1706,7 @@ R"x*x*x(<html>
 					write<uint16_t>(local_endp.port(), wp);
 				}
 
-				auto len = wp - net::buffer_cast<const char*>(wbuf.data());
+				auto len = wp - (const char*)wbuf.data().data();
 				wbuf.commit(len);
 				bytes = co_await net::async_write(m_local_socket,
 					wbuf,
@@ -1746,8 +1745,7 @@ R"x*x*x(<html>
 				//  [                                               ]
 
 				wbuf.consume(wbuf.size());
-				auto wp = net::buffer_cast<char*>(
-					wbuf.prepare(64 + domain.size()));
+				auto wp = (char*)wbuf.prepare(64 + domain.size()).data();
 
 				write<uint8_t>(SOCKS_VERSION_5, wp); // VER
 				write<uint8_t>(error_code, wp);		// REP
@@ -1784,7 +1782,7 @@ R"x*x*x(<html>
 					write<uint16_t>(0, wp);
 				}
 
-				auto len = wp - net::buffer_cast<const char*>(wbuf.data());
+				auto len = wp - (const char*)wbuf.data().data();
 				wbuf.commit(len);
 				bytes = co_await net::async_write(m_local_socket,
 					wbuf,
@@ -2004,7 +2002,7 @@ R"x*x*x(<html>
 
 			while (!m_abort)
 			{
-				m_timer.expires_from_now(std::chrono::seconds(1));
+				m_timer.expires_after(std::chrono::seconds(1));
 				co_await m_timer.async_wait(net_awaitable[ec]);
 				if (ec)
 				{
@@ -2035,7 +2033,7 @@ R"x*x*x(<html>
 		inline net::awaitable<void> socks_connect_v4()
 		{
 			auto self = shared_from_this();
-			auto p = net::buffer_cast<const char*>(m_local_buffer.data());
+			auto p = (const char*)m_local_buffer.data().data();
 
 			[[maybe_unused]] auto socks_version = read<int8_t>(p);
 			BOOST_ASSERT(socks_version == SOCKS_VERSION_4);
@@ -2063,7 +2061,7 @@ R"x*x*x(<html>
 			}
 
 			tcp::endpoint dst_endpoint;
-			p = net::buffer_cast<const char*>(m_local_buffer.data());
+			p = (const char*)m_local_buffer.data().data();
 
 			auto port = read<uint16_t>(p);
 			dst_endpoint.port(port);
@@ -2159,13 +2157,13 @@ R"x*x*x(<html>
 				//  [                                       ]
 
 				net::streambuf wbuf;
-				auto wp = net::buffer_cast<char*>(wbuf.prepare(16));
+				auto wp = (char*)wbuf.prepare(16).data();
 
 				write<uint8_t>(0, wp);
 				write<uint8_t>(SOCKS4_REQUEST_REJECTED_USER_NO_ALLOW, wp);
 
 				write<uint16_t>(dst_endpoint.port(), wp);
-				write<uint32_t>(dst_endpoint.address().to_v4().to_ulong(), wp);
+				write<uint32_t>(dst_endpoint.address().to_v4().to_uint(), wp);
 
 				wbuf.commit(8);
 				bytes = co_await net::async_write(m_local_socket,
@@ -2230,14 +2228,14 @@ R"x*x*x(<html>
 			//  [                                       ]
 
 			net::streambuf wbuf;
-			auto wp = net::buffer_cast<char*>(wbuf.prepare(16));
+			auto wp = (char*)wbuf.prepare(16).data();
 
 			write<uint8_t>(0, wp);
 			write<uint8_t>((uint8_t)error_code, wp);
 
 			// 返回IP:PORT.
 			write<uint16_t>(dst_endpoint.port(), wp);
-			write<uint32_t>(dst_endpoint.address().to_v4().to_ulong(), wp);
+			write<uint32_t>(dst_endpoint.address().to_v4().to_uint(), wp);
 
 			wbuf.commit(8);
 			bytes = co_await net::async_write(m_local_socket,
@@ -2722,7 +2720,7 @@ R"x*x*x(<html>
 				co_return false;
 			}
 
-			auto p = net::buffer_cast<const char*>(m_local_buffer.data());
+			auto p = (const char*)m_local_buffer.data().data();
 			int auth_version = read<int8_t>(p);
 			if (auth_version != 1)
 			{
@@ -2763,7 +2761,7 @@ R"x*x*x(<html>
 
 			std::string uname;
 
-			p = net::buffer_cast<const char*>(m_local_buffer.data());
+			p = (const char*)m_local_buffer.data().data();
 			for (size_t i = 0; i < bytes - 1; i++)
 				uname.push_back(read<int8_t>(p));
 
@@ -2798,7 +2796,7 @@ R"x*x*x(<html>
 
 			std::string passwd;
 
-			p = net::buffer_cast<const char*>(m_local_buffer.data());
+			p = (const char*)m_local_buffer.data().data();
 			for (size_t i = 0; i < bytes; i++)
 				passwd.push_back(read<int8_t>(p));
 
@@ -2830,7 +2828,7 @@ R"x*x*x(<html>
 				<< client;
 
 			net::streambuf wbuf;
-			auto wp = net::buffer_cast<char*>(wbuf.prepare(16));
+			auto wp = (char*)wbuf.prepare(16).data();
 			write<uint8_t>(0x01, wp);			// version 只能是1.
 			if (verify_passed)
 			{
@@ -2981,7 +2979,7 @@ R"x*x*x(<html>
 			if (!detect_hostname(proxy_host))
 			{
 				net::ip::tcp::endpoint endp(
-					net::ip::address::from_string(proxy_host),
+					net::ip::make_address(proxy_host),
 					m_bridge_proxy->port_number() ?
 						m_bridge_proxy->port_number() :
 							urls::default_port(m_bridge_proxy->scheme_id()));
@@ -3157,7 +3155,7 @@ R"x*x*x(<html>
 						net::buffer(default_dh_param()), ec);
 
 					m_ssl_cli_context.set_verify_callback(
-						net::ssl::rfc2818_verification(proxy_host), ec);
+						net::ssl::host_name_verification(proxy_host), ec);
 					if (ec)
 					{
 						XLOG_FWARN("connection id: {},"
@@ -3366,7 +3364,7 @@ R"x*x*x(<html>
 					tcp::endpoint dst_endpoint;
 
 					dst_endpoint.address(
-						net::ip::address::from_string(target_host));
+						net::ip::make_address(target_host));
 					dst_endpoint.port(target_port);
 
 					targets = net::ip::basic_resolver_results<tcp>::create(
@@ -5095,7 +5093,7 @@ R"x*x*x(<html>
 				}
 
 				// 每隔 duration 检查一次证书是否过期.
-				m_timer.expires_from_now(duration);
+				m_timer.expires_after(duration);
 				co_await m_timer.async_wait(net_awaitable[ec]);
 				if (ec)
 					break;
@@ -5177,7 +5175,7 @@ R"x*x*x(<html>
 			boost::system::error_code ignore_ec;
 			m_abort = true;
 
-			m_timer.cancel(ignore_ec);
+			m_timer.cancel();
 
 			for (auto& acceptor : m_tcp_acceptors)
 				acceptor.close(ignore_ec);
@@ -5422,9 +5420,8 @@ R"x*x*x(<html>
 			}
 
 			tcp::resolver resolver(m_executor);
-			tcp::resolver::query query(hostname, "");
 
-			auto it = co_await resolver.async_resolve(query, net_awaitable[ec]);
+			auto results = co_await resolver.async_resolve(hostname, "", net_awaitable[ec]);
 			if (ec)
 			{
 				XLOG_WARN
@@ -5434,7 +5431,8 @@ R"x*x*x(<html>
 				co_return;
 			}
 
-			while (it != tcp::resolver::iterator())
+			auto it = results.begin();
+			while (it != results.end())
 			{
 				tcp::endpoint ep = *it++;
 				m_local_addrs.insert(ep.address());

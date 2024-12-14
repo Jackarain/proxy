@@ -120,7 +120,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 
 		listens.emplace_back(
 			tcp::endpoint{
-				net::ip::address::from_string(host),
+				net::ip::make_address(host),
 				(unsigned short)atoi(port.c_str())},
 			v6only
 		);

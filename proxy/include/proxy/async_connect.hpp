@@ -256,7 +256,7 @@ struct initiate_do_connect {
 
         const auto delay = 200ms;
 
-        timer->expires_from_now(delay);
+        timer->expires_after(delay);
         timer->async_wait([timer, conn_func = std::move(conn_func),
                            context]([[maybe_unused]] auto error) {
           if (context->flag_)

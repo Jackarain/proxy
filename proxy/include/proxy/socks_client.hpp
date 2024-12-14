@@ -262,7 +262,8 @@ namespace proxy {
 						co_return;
 					}
 
-					endp = (*target_endpoints).endpoint().address().to_v4();
+					auto it = *target_endpoints.begin();
+					endp = it.endpoint().address().to_v4();
 				}
 
 				if (endp.is_v4())
@@ -438,12 +439,13 @@ namespace proxy {
 					co_return;
 				}
 
-				address = (*target_endpoints).endpoint().address().to_v4();
+				auto it = *target_endpoints.begin();
+				address = it.endpoint().address().to_v4();
 			}
 
 			// Using socks4a...
 			if (opt.version == socks4a_version)
-				address = net::ip::address_v4::from_string("0.0.0.1");
+				address = net::ip::make_address("0.0.0.1").to_v4();
 
 			write<uint32_t>(address.to_uint(), req); // DST I
 
