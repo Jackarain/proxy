@@ -438,6 +438,7 @@ set_property(TARGET boost_system PROPERTY FOLDER "third_party/boost")
 set_property(TARGET boost_thread PROPERTY FOLDER "third_party/boost")
 set_property(TARGET boost_variant2 PROPERTY FOLDER "third_party/boost")
 set_property(TARGET boost_unordered PROPERTY FOLDER "third_party/boost")
+set_property(TARGET boost_optional PROPERTY FOLDER "third_party/boost")
 
 ################################################################################
 # 使用 Threads
