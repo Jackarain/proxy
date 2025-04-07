@@ -2881,7 +2881,7 @@ R"x*x*x(<html>
 			auto primary_buf = buf0.get();
 			auto secondary_buf = buf1.get();
 
-			// 首先邓读取第一个数据作为预备, 以用于后面的交替读写逻辑.
+			// 首先读取第一个数据作为预备, 以用于后面的交替读写逻辑.
 			boost::system::error_code ec;
 			auto bytes = co_await from.async_read_some(net::buffer(primary_buf, buf_size), net_awaitable[ec]);
 			if (ec || m_abort)
