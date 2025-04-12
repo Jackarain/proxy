@@ -81,6 +81,9 @@ enum class error
 
    /// Incompatible node depth.
    incompatible_node_depth,
+
+   /// Resp3 hello command error
+   resp3_hello,
 };
 
 /** \internal

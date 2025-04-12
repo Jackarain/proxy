@@ -1,0 +1,16 @@
+# Copyright 2020, 2024 Peter Dimov
+# Distributed under the Boost Software License, Version 1.0.
+
+project : default-build release <link>static ;
+
+exe md5sum : md5sum.cpp ;
+exe hash2sum : hash2sum.cpp ;
+exe compile_time : compile_time.cpp ;
+exe compile_time_2 : compile_time_2.cpp ;
+exe hash_without_seed : hash_without_seed.cpp ;
+exe hash_with_uint64_seed : hash_with_uint64_seed.cpp ;
+exe hash_with_byte_seed : hash_with_byte_seed.cpp ;
+exe hash_with_any_seed : hash_with_any_seed.cpp ;
+exe hash_32_64 : hash_32_64.cpp ;
+exe xxh128_from_xxh64 : xxh128_from_xxh64.cpp ;
+exe json_value : json_value.cpp : <library>/boost/json//boost_json ;

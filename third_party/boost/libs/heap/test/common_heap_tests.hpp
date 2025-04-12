@@ -10,6 +10,7 @@
 #define COMMON_HEAP_TESTS_HPP_INCLUDED
 
 #include <algorithm>
+#include <random>
 #include <vector>
 
 #include <boost/concept/assert.hpp>
@@ -20,32 +21,9 @@
 #include <boost/shared_ptr.hpp>
 
 #include <boost/test/tools/old/interface.hpp>
+#include <boost/test/unit_test_log.hpp>
 
 #include <boost/heap/heap_concepts.hpp>
-
-#ifdef BOOST_NO_CXX98_RANDOM_SHUFFLE
-#    include <cstdlib>
-#    include <iterator>
-
-template < class RandomIt >
-void random_shuffle( RandomIt first, RandomIt last )
-{
-    typedef typename std::iterator_traits< RandomIt >::difference_type difference_type;
-    difference_type                                                    n = last - first;
-    for ( difference_type i = n - 1; i > 0; --i ) {
-        difference_type j = std::rand() % ( i + 1 );
-        if ( j != i ) {
-            using std::swap;
-            swap( first[ i ], first[ j ] );
-        }
-    }
-}
-
-#else
-
-using std::random_shuffle;
-
-#endif
 
 typedef boost::default_constructible_archetype<
     boost::less_than_comparable_archetype< boost::copy_constructible_archetype< boost::assignable_archetype<> > > >
@@ -61,7 +39,6 @@ struct dummy_run
     {}
 };
 
-
 test_data make_test_data( int size, int offset = 0, int strive = 1 )
 {
     test_data ret;
@@ -71,6 +48,11 @@ test_data make_test_data( int size, int offset = 0, int strive = 1 )
     return ret;
 }
 
+auto& get_rng()
+{
+    static std::mt19937_64 rng;
+    return rng;
+}
 
 template < typename pri_queue, typename data_container >
 void check_q( pri_queue& q, data_container const& expected )
@@ -96,7 +78,6 @@ void fill_q( pri_queue& q, data_container const& data )
         q.push( data[ i ] );
 }
 
-#if !defined( BOOST_NO_CXX11_RVALUE_REFERENCES ) && !defined( BOOST_NO_CXX11_VARIADIC_TEMPLATES )
 template < typename pri_queue, typename data_container >
 void fill_emplace_q( pri_queue& q, data_container const& data )
 {
@@ -105,7 +86,6 @@ void fill_emplace_q( pri_queue& q, data_container const& data )
         q.emplace( std::move( value ) );
     }
 }
-#endif
 
 template < typename pri_queue >
 void pri_queue_test_sequential_push( void )
@@ -134,7 +114,6 @@ void pri_queue_test_sequential_reverse_push( void )
 template < typename pri_queue >
 void pri_queue_test_emplace( void )
 {
-#if !defined( BOOST_NO_CXX11_RVALUE_REFERENCES ) && !defined( BOOST_NO_CXX11_VARIADIC_TEMPLATES )
     for ( int i = 0; i != test_size; ++i ) {
         pri_queue q;
         test_data data = make_test_data( i );
@@ -143,7 +122,6 @@ void pri_queue_test_emplace( void )
         std::reverse( data.begin(), data.end() );
         check_q( q, data );
     }
-#endif
 }
 
 
@@ -155,7 +133,7 @@ void pri_queue_test_random_push( void )
         test_data data = make_test_data( i );
 
         test_data shuffled( data );
-        random_shuffle( shuffled.begin(), shuffled.end() );
+        std::shuffle( shuffled.begin(), shuffled.end(), get_rng() );
 
         fill_q( q, shuffled );
 
@@ -195,7 +173,6 @@ void pri_queue_test_assignment( void )
 template < typename pri_queue >
 void pri_queue_test_moveconstructor( void )
 {
-#ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
     pri_queue q;
     test_data data = make_test_data( test_size );
     fill_q( q, data );
@@ -204,13 +181,11 @@ void pri_queue_test_moveconstructor( void )
 
     check_q( r, data );
     BOOST_REQUIRE( q.empty() );
-#endif
 }
 
 template < typename pri_queue >
 void pri_queue_test_move_assignment( void )
 {
-#ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
     pri_queue q;
     test_data data = make_test_data( test_size );
     fill_q( q, data );
@@ -220,7 +195,6 @@ void pri_queue_test_move_assignment( void )
 
     check_q( r, data );
     BOOST_REQUIRE( q.empty() );
-#endif
 }
 
 
@@ -231,7 +205,7 @@ void pri_queue_test_swap( void )
         pri_queue q;
         test_data data = make_test_data( i );
         test_data shuffled( data );
-        random_shuffle( shuffled.begin(), shuffled.end() );
+        std::shuffle( shuffled.begin(), shuffled.end(), get_rng() );
         fill_q( q, shuffled );
 
         pri_queue r;
@@ -249,7 +223,7 @@ void pri_queue_test_iterators( void )
     for ( int i = 0; i != test_size; ++i ) {
         test_data data = make_test_data( test_size );
         test_data shuffled( data );
-        random_shuffle( shuffled.begin(), shuffled.end() );
+        std::shuffle( shuffled.begin(), shuffled.end(), get_rng() );
         pri_queue q;
         BOOST_REQUIRE( q.begin() == q.end() );
         fill_q( q, shuffled );
@@ -278,7 +252,7 @@ void pri_queue_test_ordered_iterators( void )
     for ( int i = 0; i != test_size; ++i ) {
         test_data data = make_test_data( i );
         test_data shuffled( data );
-        random_shuffle( shuffled.begin(), shuffled.end() );
+        std::shuffle( shuffled.begin(), shuffled.end(), get_rng() );
         pri_queue q;
         BOOST_REQUIRE( q.ordered_begin() == q.ordered_end() );
         fill_q( q, shuffled );
@@ -493,8 +467,6 @@ struct less_with_T
 };
 
 
-#if !defined( BOOST_NO_CXX11_RVALUE_REFERENCES ) && !defined( BOOST_NO_CXX11_VARIADIC_TEMPLATES )
-
 class thing
 {
 public:
@@ -523,18 +495,14 @@ public:
     }
 };
 
-#    define RUN_EMPLACE_TEST( HEAP_TYPE )                                                                                \
-        do {                                                                                                             \
-            cmpthings                                                          ord;                                      \
-            boost::heap::HEAP_TYPE< thing, boost::heap::compare< cmpthings > > vpq( ord );                               \
-            vpq.emplace( 5, 6, 7 );                                                                                      \
-            boost::heap::HEAP_TYPE< thing, boost::heap::compare< cmpthings >, boost::heap::stable< true > > vpq2( ord ); \
-            vpq2.emplace( 5, 6, 7 );                                                                                     \
-        } while ( 0 );
-
-#else
-#    define RUN_EMPLACE_TEST( HEAP_TYPE )
-#endif
+#define RUN_EMPLACE_TEST( HEAP_TYPE )                                                                                \
+    do {                                                                                                             \
+        cmpthings                                                          ord;                                      \
+        boost::heap::HEAP_TYPE< thing, boost::heap::compare< cmpthings > > vpq( ord );                               \
+        vpq.emplace( 5, 6, 7 );                                                                                      \
+        boost::heap::HEAP_TYPE< thing, boost::heap::compare< cmpthings >, boost::heap::stable< true > > vpq2( ord ); \
+        vpq2.emplace( 5, 6, 7 );                                                                                     \
+    } while ( 0 );
 
 
 #endif // COMMON_HEAP_TESTS_HPP_INCLUDED

@@ -7,6 +7,7 @@
 #if defined(BOOST_CHARCONV_HAS_QUADMATH) && defined(BOOST_HAS_INT128)
 
 #include <ostream>
+#include <quadmath.h>
 
 #ifdef BOOST_CHARCONV_HAS_STDFLOAT128
 #include <charconv>
@@ -85,13 +86,13 @@ std::ostream& operator<<( std::ostream& os, boost::int128_type v )
 #include <boost/charconv.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <boost/core/detail/splitmix64.hpp>
-#include <boost/charconv/detail/generate_nan.hpp>
 #include <boost/charconv/detail/issignaling.hpp>
 #include <limits>
 #include <iostream>
 #include <iomanip>
 #include <string>
 #include <random>
+#include "../src/float128_impl.hpp"
 
 constexpr int N = 1024;
 static boost::detail::splitmix64 rng;

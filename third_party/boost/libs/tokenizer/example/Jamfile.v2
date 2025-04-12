@@ -7,6 +7,8 @@
 
 import testing ;
 
+project : requirements <library>/boost/tokenizer//boost_tokenizer ;
+
 test-suite "tokenizer-examples"
    :    [ run char_sep_example_1.cpp ]
         [ run char_sep_example_2.cpp ]

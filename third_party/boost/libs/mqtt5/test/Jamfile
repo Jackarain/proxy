@@ -1,0 +1,28 @@
+#
+# Copyright (c) 2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+#
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+#
+
+import-search /boost/config/checks ;
+import ac ;
+
+# Use these requirements as both regular and usage requirements across all tests
+local requirements =
+        <library>/boost/mqtt5//boost_mqtt5
+        <define>BOOST_ALL_NO_LIB=1
+        <define>BOOST_ASIO_NO_DEPRECATED=1
+        <define>BOOST_TEST_NO_MAIN=1
+        <toolset>msvc:<cxxflags>"/bigobj"
+        <target-os>windows:<define>_WIN32_WINNT=0x0601
+        <library>/boost/test//included
+    ;
+
+run
+    src/run_tests.cpp
+    [ glob "unit/*.cpp" ]
+: requirements $(requirements)
+    <include>include
+: target-name boost_mqtt5_tests
+;

@@ -1,6 +1,6 @@
 # Copyright 2020-2021 Peter Dimov
 # Copyright 2021 Andrey Semashev
-# Copyright 2021-2024 Alexander Grund
+# Copyright 2021-2025 Alexander Grund
 # Copyright 2022 James E. King III
 #
 # Distributed under the Boost Software License, Version 1.0.
@@ -86,39 +86,50 @@ jobs:
         include:
           # Linux, gcc
           # GCC 5 is the first to have enough C++11 support, so don't test anything older except for one to verify the checks
-          - { compiler: gcc-4.9,   cxxstd: '03,11',       os: ubuntu-20.04, container: 'ubuntu:16.04' }
-          - { compiler: gcc-5,     cxxstd: '03,11,14,1z', os: ubuntu-22.04, container: 'ubuntu:18.04' }
-          - { compiler: gcc-6,     cxxstd: '11,14,17',    os: ubuntu-22.04, container: 'ubuntu:18.04' }
-          - { compiler: gcc-7,     cxxstd: '11,14,17',    os: ubuntu-22.04, container: 'ubuntu:18.04' }
-          - { compiler: gcc-8,     cxxstd: '11,14,17,2a', os: ubuntu-22.04, container: 'ubuntu:18.04' }
-          - { compiler: gcc-9,     cxxstd: '11,14,17,2a', os: ubuntu-22.04, container: 'ubuntu:18.04' }
-          - { compiler: gcc-10,    cxxstd: '11,14,17,20', os: ubuntu-20.04 }
-          - { compiler: gcc-11,    cxxstd: '11,14,17,20', os: ubuntu-20.04 }
+          - { compiler: gcc-4.9,   cxxstd: '03,11',          os: ubuntu-latest, container: 'ubuntu:16.04' }
+          - { compiler: gcc-5,     cxxstd: '03,11,14,1z',    os: ubuntu-latest, container: 'ubuntu:18.04' }
+          - { compiler: gcc-6,     cxxstd: '11,14,17',       os: ubuntu-latest, container: 'ubuntu:18.04' }
+            # GCC 7 & 8 on Ubuntu 20 show failures in basic_filebuf::_M_convert_to_external conversion
+          - { compiler: gcc-7,     cxxstd: '11,14,17',       os: ubuntu-latest, container: 'ubuntu:18.04' }
+          - { compiler: gcc-8,     cxxstd: '11,14,17,2a',    os: ubuntu-latest, container: 'ubuntu:18.04' }
+          - { compiler: gcc-9,     cxxstd: '11,14,17,2a',    os: ubuntu-20.04 }
+          - { compiler: gcc-10,    cxxstd: '11,14,17,20',    os: ubuntu-22.04 }
+          - { compiler: gcc-11,    cxxstd: '11,14,17,20',    os: ubuntu-22.04 }
+          - { compiler: gcc-12,    cxxstd: '11,14,17,20',    os: ubuntu-22.04 }
+          - { compiler: gcc-13,    cxxstd: '11,14,17,20,2b', os: ubuntu-24.04 }
+          - { compiler: gcc-14,    cxxstd: '11,14,17,20,2b', os: ubuntu-24.04 }
+          
           - { name: GCC w/ sanitizers, sanitize: yes,
-              compiler: gcc-12,    cxxstd: '11,14,17,20', os: ubuntu-22.04 }
+              compiler: gcc-13,    cxxstd: '11,14,17,20',    os: ubuntu-24.04 }
           - { name: Collect coverage, coverage: yes,
-              compiler: gcc-8,     cxxstd: '11,2a',       os: ubuntu-20.04, install: 'g++-8-multilib', address-model: '32,64' }
+              compiler: gcc-8,     cxxstd: '11,2a',          os: ubuntu-20.04, install: 'g++-8-multilib', address-model: '32,64' }
 
           # Linux, clang
-          - { compiler: clang-3.5, cxxstd: '03,11',       os: ubuntu-20.04, container: 'ubuntu:16.04' }
-          - { compiler: clang-3.6, cxxstd: '11,14',       os: ubuntu-20.04, container: 'ubuntu:16.04' }
-          - { compiler: clang-3.7, cxxstd: '11,14',       os: ubuntu-20.04, container: 'ubuntu:16.04' }
-          - { compiler: clang-3.8, cxxstd: '11,14',       os: ubuntu-20.04, container: 'ubuntu:16.04' }
-          - { compiler: clang-3.9, cxxstd: '11,14',       os: ubuntu-22.04, container: 'ubuntu:18.04' }
-          - { compiler: clang-4.0, cxxstd: '11,14',       os: ubuntu-22.04, container: 'ubuntu:18.04' }
-          - { compiler: clang-5.0, cxxstd: '11,14,1z',    os: ubuntu-22.04, container: 'ubuntu:18.04' }
-          - { compiler: clang-6.0, cxxstd: '11,14,17',    os: ubuntu-22.04, container: 'ubuntu:18.04' }
-          - { compiler: clang-7,   cxxstd: '11,14,17',    os: ubuntu-22.04, container: 'ubuntu:18.04' }
+          - { compiler: clang-3.5, cxxstd: '11',             os: ubuntu-latest, container: 'ubuntu:16.04' }
+          - { compiler: clang-3.6, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:16.04' }
+          - { compiler: clang-3.7, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:16.04' }
+          - { compiler: clang-3.8, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:16.04' }
+          - { compiler: clang-3.9, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:18.04' }
+          - { compiler: clang-4.0, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:18.04' }
+          - { compiler: clang-5.0, cxxstd: '11,14,1z',       os: ubuntu-latest, container: 'ubuntu:18.04' }
+          - { compiler: clang-6.0, cxxstd: '11,14,17',       os: ubuntu-20.04 }
+          - { compiler: clang-7,   cxxstd: '11,14,17',       os: ubuntu-20.04 }
           # Note: clang-8 does not fully support C++20, so it is not compatible with some libstdc++ versions in this mode
-          - { compiler: clang-8,   cxxstd: '11,14,17,2a', os: ubuntu-22.04, container: 'ubuntu:18.04', install: 'clang-8 g++-7', gcc_toolchain: 7 }
-          - { compiler: clang-9,   cxxstd: '11,14,17,2a', os: ubuntu-20.04 }
-          - { compiler: clang-10,  cxxstd: '11,14,17,20', os: ubuntu-20.04 }
-          - { compiler: clang-11,  cxxstd: '11,14,17,20', os: ubuntu-20.04 }
-          - { compiler: clang-12,  cxxstd: '11,14,17,20', os: ubuntu-20.04 }
+          - { compiler: clang-8,   cxxstd: '11,14,17,2a',    os: ubuntu-20.04 , gcc_toolchain: 7 }
+          - { compiler: clang-9,   cxxstd: '11,14,17,2a',    os: ubuntu-20.04 }
+          - { compiler: clang-10,  cxxstd: '11,14,17,20',    os: ubuntu-20.04 }
+          - { compiler: clang-11,  cxxstd: '11,14,17,20',    os: ubuntu-20.04 }
+          - { compiler: clang-12,  cxxstd: '11,14,17,20',    os: ubuntu-20.04 }
           # Clang isn't compatible with libstdc++-13, so use the slightly older one
-          - { compiler: clang-13,  cxxstd: '11,14,17,20', os: ubuntu-22.04, install: 'clang-13 g++-12', gcc_toolchain: 12 }
-          - { compiler: clang-14,  cxxstd: '11,14,17,20', os: ubuntu-22.04, install: 'clang-14 g++-12', gcc_toolchain: 12 }
-          - { compiler: clang-15,  cxxstd: '11,14,17,20', os: ubuntu-22.04, install: 'clang-15 g++-12', gcc_toolchain: 12 }
+          - { compiler: clang-13,  cxxstd: '11,14,17,20',    os: ubuntu-22.04, gcc_toolchain: 11 }
+          - { compiler: clang-14,  cxxstd: '11,14,17,20',    os: ubuntu-22.04, gcc_toolchain: 11 }
+          - { compiler: clang-15,  cxxstd: '11,14,17,20',    os: ubuntu-22.04, gcc_toolchain: 12 }
+          - { compiler: clang-16,  cxxstd: '11,14,17,20,2b', os: ubuntu-24.04 }
+          # https://github.com/llvm/llvm-project/issues/59827: disabled 2b/23 for clang-17 with libstdc++13 in 24.04
+          - { compiler: clang-17,  cxxstd: '11,14,17,20',    os: ubuntu-24.04 }
+          - { compiler: clang-18,  cxxstd: '11,14,17,20,23,2c', os: ubuntu-24.04 }
+          - { name: Run code fuzzer, fuzzing: yes,
+              compiler: clang-18,  cxxstd: '20',             os: ubuntu-24.04, variant: debug, link: static }
 
           # libc++
           - { compiler: clang-6.0, cxxstd: '11,14',       os: ubuntu-22.04, container: 'ubuntu:18.04', stdlib: libc++, install: 'clang-6.0 libc++-dev libc++abi-dev' }
@@ -126,7 +137,6 @@ jobs:
               compiler: clang-12,  cxxstd: '11,14,17,20', os: ubuntu-20.04, stdlib: libc++, install: 'clang-12 libc++-12-dev libc++abi-12-dev' }
 
           # OSX, clang
-          - { compiler: clang,     cxxstd: '11,14,17,20',    os: macos-12 }
           - { name: MacOS w/ clang and sanitizers,
               compiler: clang,     cxxstd: '11,14,17,20,2b', os: macos-13, ubsan: yes }
           # TODO: Iconv issue
@@ -134,8 +144,12 @@ jobs:
 
     timeout-minutes: 120
     runs-on: ${{matrix.os}}
-    container: ${{matrix.container}}
-    env: {B2_USE_CCACHE: 1, ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true}
+    container:
+      image: ${{matrix.container}}
+      volumes:
+        - /node20217:/node20217:rw,rshared
+        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
+    env: {B2_USE_CCACHE: 1}
 
     steps:
       - name: Setup environment
@@ -158,14 +172,18 @@ jobs:
                 echo "B2_USE_CCACHE=0" >> $GITHUB_ENV
             fi
             git config --global pack.threads 0
+            if [[ "${{matrix.container}}" == "ubuntu:1"* ]]; then
+              # Node 20 doesn't work with Ubuntu 16/18 glibc: https://github.com/actions/checkout/issues/1590
+              curl -sL https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz | tar -xJ --strip-components 1 -C /node20217
+            fi
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           # For coverage builds fetch the whole history, else only 1 commit using a 'fake ternary'
           fetch-depth: ${{ matrix.coverage && '0' || '1' }}
 
       - name: Cache ccache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         if: env.B2_USE_CCACHE
         with:
           path: ~/.ccache
@@ -173,7 +191,7 @@ jobs:
           restore-keys: ${{matrix.os}}-${{matrix.container}}-${{matrix.compiler}}-
 
       - name: Fetch Boost.CI
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: boostorg/boost-ci
           ref: master
@@ -190,13 +208,8 @@ jobs:
         run: |
             SOURCE_KEYS=(${{join(matrix.source_keys, ' ')}})
             SOURCES=(${{join(matrix.sources, ' ')}})
-            # Add these by default
-            SOURCE_KEYS+=(
-                'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x1E9377A2BA9EF27F'
-                'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x40976EAF437D05B5'
-                'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x3B4FE6ACC0B21F32'
-            )
-            SOURCES+=(ppa:ubuntu-toolchain-r/test)
+
+            [[ "${{matrix.address-model}}" != *32* ]] || sudo dpkg --add-architecture i386
 
             ci/add-apt-keys.sh "${SOURCE_KEYS[@]}"
             # Initial update before adding sources required to get e.g. keys
@@ -207,9 +220,11 @@ jobs:
             if [[ -z "${{matrix.install}}" ]]; then
                 pkgs="${{matrix.compiler}}"
                 pkgs="${pkgs/gcc-/g++-}"
+                [[ -z "${{matrix.gcc_toolchain}}" ]] || pkgs+=" g++-${{matrix.gcc_toolchain}}"
             else
                 pkgs="${{matrix.install}}"
             fi
+            [[ "${{matrix.address-model}}" != *32* ]] || pkgs+=" libicu-dev:i386"
             sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT install -y $pkgs libicu-dev
 
       - name: Setup GCC Toolchain
@@ -283,7 +298,8 @@ jobs:
           # More entries can be added in the same way, see the B2_ARGS assignment in ci/enforce.sh for the possible keys.
           # B2_DEFINES: ${{matrix.defines}}
           # Variables set here (to non-empty) will override the top-level environment variables, e.g.
-          # B2_VARIANT: ${{matrix.variant}}
+          B2_VARIANT: ${{matrix.variant}}
+          B2_LINK: ${{matrix.link}}
           B2_UBSAN: ${{matrix.ubsan}}
         run: source ci/github/install.sh
 
@@ -297,27 +313,53 @@ jobs:
           B2_TARGETS="libs/$SELF/test//show_config --verbose-test" ci/build.sh
           ci/build.sh
 
+      - name: Show config.log
+        if: '!matrix.coverity && always()'
+        run: cat "$BOOST_ROOT/bin.v2/config.log"
+
+      - name: Test output
+        if: '!matrix.coverity && always()'
+        run: |
+          for f in $(find "$BOOST_ROOT/bin.v2/libs/$SELF/test" -type f -name '*.run'); do
+              name=$(basename "$f")
+              name=${name%.run}
+              config=$(dirname "$f")
+              config=${config#*.test/*/}
+              config=${config/\/visibility-hidden/}
+              echo "::group::$name"
+              echo "$config"
+              echo ""
+              cat "$f"
+              echo "::endgroup::"
+          done
+
+      - name: Collect coverage
+        if: matrix.coverage
+        run: ci/codecov.sh "collect" && mv coverage.info coverage.all.info
+
       - name: Run tests with iconv only
         if: '!matrix.coverity'
         run: ci/build.sh
         env: {B2_FLAGS: -a boost.locale.icu=off boost.locale.iconv=on}
+      - name: Collect coverage
+        if: matrix.coverage
+        run: ci/codecov.sh "collect" && mv coverage.info coverage.iconv.info
+
       - name: Run tests with ICU only
         if: '!matrix.coverity'
         run: ci/build.sh
         env: {B2_FLAGS: -a boost.locale.icu=on  boost.locale.iconv=off}
-
       - name: Collect coverage
         if: matrix.coverage
-        run: ci/codecov.sh "upload"
-        env:
-          BOOST_CI_CODECOV_IO_UPLOAD: skip
+        run: ci/codecov.sh "collect" && mv coverage.info coverage.icu.info
 
       - name: Upload coverage
         if: matrix.coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
+          fail_ci_if_error: true
           disable_search: true
-          file: coverage.info
+          files: coverage.all.info,coverage.iconv.info,coverage.icu.info
           name: Github Actions
           token: ${{secrets.CODECOV_TOKEN}}
           verbose: true
@@ -328,6 +370,11 @@ jobs:
         env:
           COVERITY_SCAN_NOTIFICATION_EMAIL: ${{ secrets.COVERITY_SCAN_NOTIFICATION_EMAIL }}
           COVERITY_SCAN_TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
+
+      - name: Run fuzzing
+        if: matrix.fuzzing
+        run: B2_TARGETS="libs/$SELF/fuzzing" ci/build.sh
+        env: {B2_FLAGS: -a}
 
   windows:
     defaults:
@@ -434,10 +481,10 @@ jobs:
 
       - name: Upload coverage
         if: matrix.coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           disable_search: true
-          file: __out/cobertura.xml
+          files: __out/cobertura.xml
           name: Github Actions
           token: ${{secrets.CODECOV_TOKEN}}
           verbose: true

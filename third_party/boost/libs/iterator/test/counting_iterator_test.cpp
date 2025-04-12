@@ -30,13 +30,12 @@
 #include <boost/iterator/new_iterator_tests.hpp>
 
 #include <boost/next_prior.hpp>
-#include <boost/type_traits/conditional.hpp>
 #include <boost/detail/workaround.hpp>
 #include <boost/limits.hpp>
 
 #include <algorithm>
-#include <climits>
 #include <iterator>
+#include <type_traits>
 #include <stdlib.h>
 #ifndef BOOST_BORLANDC
 # include <boost/tuple/tuple.hpp>
@@ -68,7 +67,7 @@ struct unsigned_assert_nonnegative
 
 template <class T>
 struct assert_nonnegative
-  : boost::conditional<
+  : std::conditional<
         std::numeric_limits<T>::is_signed
       , signed_assert_nonnegative<T>
       , unsigned_assert_nonnegative<T>

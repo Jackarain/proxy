@@ -19,15 +19,7 @@ namespace boost { namespace lockfree { namespace detail {
 
 
 template < class T >
-class
-#if BOOST_COMP_MSVC && BOOST_ARCH_X86_64
-    BOOST_ALIGNMENT( 16 )
-#elif BOOST_COMP_MSVC && BOOST_ARCH_X86_32
-    BOOST_ALIGNMENT( 8 )
-#else
-    BOOST_ALIGNMENT( 2 * sizeof( void* ) )
-#endif
-        tagged_ptr
+class alignas( 2 * sizeof( void* ) ) tagged_ptr
 {
 public:
     typedef std::size_t tag_t;

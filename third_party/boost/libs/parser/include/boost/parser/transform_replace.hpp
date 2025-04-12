@@ -4,7 +4,8 @@
 #include <boost/parser/replace.hpp>
 
 #if (!defined(_MSC_VER) || BOOST_PARSER_USE_CONCEPTS) &&                       \
-    (!defined(__GNUC__) || 12 <= __GNUC__ || !BOOST_PARSER_USE_CONCEPTS)
+    (!defined(BOOST_PARSER_GCC) || 12 <= __GNUC__ ||                           \
+     !BOOST_PARSER_USE_CONCEPTS)
 
 
 namespace boost::parser {
@@ -28,16 +29,15 @@ namespace boost::parser {
         using range_attr_t = attr_type<iterator_t<R>, sentinel_t<R>, Parser>;
 
 #if BOOST_PARSER_USE_CONCEPTS
-        // clang-format off
         template<typename F, typename V, typename Parser>
         concept transform_replacement_for =
             std::regular_invocable<F &, range_attr_t<V, Parser>> &&
             detail::replacement_for<
-                std::invoke_result_t<F &, range_attr_t<V, Parser>>, V> &&
+                std::invoke_result_t<F &, range_attr_t<V, Parser>>,
+                V> &&
             (detail::range_utf_format_v<V> ==
              detail::range_utf_format_v<
                  std::invoke_result_t<F &, range_attr_t<V, Parser>>>);
-        // clang-format on
 #else
         template<typename F, typename V, typename Parser>
         using transform_replacement_for_expr = decltype(std::declval<F &>()(
@@ -646,24 +646,20 @@ namespace boost::parser {
                 typename GlobalState,
                 typename ErrorHandler,
                 typename SkipParser>
-            requires
-                // clang-format off
-                std::ranges::viewable_range<R> &&
-                std::regular_invocable<
-                    F &,
-                    range_attr_t<to_range_t<R>, Parser>> &&
-                // clang-format on
-                can_transform_replace_view<
-                    to_range_t<R>,
-                    utf_rvalue_shim<
-                        to_range_t<R>,
-                        std::remove_cvref_t<F>,
-                        range_attr_t<to_range_t<R>, Parser>>,
-                    Parser,
-                    GlobalState,
-                    ErrorHandler,
-                    SkipParser>
-                // clang-format off
+                requires std::ranges::viewable_range<R> &&
+                         std::regular_invocable<
+                             F &,
+                             range_attr_t<to_range_t<R>, Parser>> &&
+                         can_transform_replace_view<
+                             to_range_t<R>,
+                             utf_rvalue_shim<
+                                 to_range_t<R>,
+                                 std::remove_cvref_t<F>,
+                                 range_attr_t<to_range_t<R>, Parser>>,
+                             Parser,
+                             GlobalState,
+                             ErrorHandler,
+                             SkipParser>
             [[nodiscard]] constexpr auto operator()(
                 R && r,
                 parser_interface<Parser, GlobalState, ErrorHandler> const &
@@ -671,16 +667,15 @@ namespace boost::parser {
                 parser_interface<SkipParser> const & skip,
                 F && f,
                 trace trace_mode = trace::off) const
-            // clang-format on
             {
                 return transform_replace_view(
-                    to_range<R>::call((R &&) r),
+                    to_range<R>::call((R &&)r),
                     parser,
                     skip,
                     utf_rvalue_shim<
                         to_range_t<R>,
                         std::remove_cvref_t<F>,
-                        range_attr_t<to_range_t<R>, Parser>>((F &&) f),
+                        range_attr_t<to_range_t<R>, Parser>>((F &&)f),
                     trace_mode);
             }
 
@@ -690,37 +685,32 @@ namespace boost::parser {
                 typename Parser,
                 typename GlobalState,
                 typename ErrorHandler>
-            requires
-                // clang-format off
-                std::ranges::viewable_range<R> &&
-                std::regular_invocable<
-                    F &,
-                    range_attr_t<to_range_t<R>, Parser>> &&
-                // clang-format on
-                can_transform_replace_view<
-                    to_range_t<R>,
-                    utf_rvalue_shim<
-                        to_range_t<R>,
-                        std::remove_cvref_t<F>,
-                        range_attr_t<to_range_t<R>, Parser>>,
-                    Parser,
-                    GlobalState,
-                    ErrorHandler,
-                    parser_interface<eps_parser<detail::phony>>>
-                // clang-format off
+                requires std::ranges::viewable_range<R> &&
+                         std::regular_invocable<
+                             F &,
+                             range_attr_t<to_range_t<R>, Parser>> &&
+                         can_transform_replace_view<
+                             to_range_t<R>,
+                             utf_rvalue_shim<
+                                 to_range_t<R>,
+                                 std::remove_cvref_t<F>,
+                                 range_attr_t<to_range_t<R>, Parser>>,
+                             Parser,
+                             GlobalState,
+                             ErrorHandler,
+                             parser_interface<eps_parser<detail::phony>>>
             [[nodiscard]] constexpr auto operator()(
                 R && r,
                 parser_interface<Parser, GlobalState, ErrorHandler> const &
                     parser,
                 F && f,
                 trace trace_mode = trace::off) const
-            // clang-format on
             {
                 return (*this)(
-                    (R &&) r,
+                    (R &&)r,
                     parser,
                     parser_interface<eps_parser<detail::phony>>{},
-                    (F &&) f,
+                    (F &&)f,
                     trace_mode);
             }
 

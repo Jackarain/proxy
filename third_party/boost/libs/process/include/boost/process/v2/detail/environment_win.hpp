@@ -85,7 +85,7 @@ struct key_char_traits
     if (s1 < s2)
       return std::move(s2, s2 + n, s1);
     else
-      return std::move_backward(s2, s2 + n, s1);
+      return std::move_backward(s2, s2 + n, s1 + n);
   }
 
   BOOST_CONSTEXPR static

@@ -1,4 +1,4 @@
-/* Copyright 2016-2018 Joaquin M Lopez Munoz.
+/* Copyright 2016-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -14,6 +14,7 @@
 #include "any_types.hpp"
 #include "base_types.hpp"
 #include "function_types.hpp"
+#include "variant_types.hpp"
 #include "test_utilities.hpp"
 
 using namespace test_utilities;
@@ -68,21 +69,21 @@ void test_iterators(PolyCollection& p)
 
   const PolyCollection&     cp=p;
   std::size_t               n=0;
-  local_base_iterator       lbfirst=p.begin(typeid(Type)),
-                            lblast=p.end(typeid(Type));
-  const_local_base_iterator clbfirst=cp.begin(typeid(Type)),
-                            clblast=cp.end(typeid(Type));
+  local_base_iterator       lbfirst=p.begin(typeid_<Type>(p)),
+                            lblast=p.end(typeid_<Type>(p));
+  const_local_base_iterator clbfirst=cp.begin(typeid_<Type>(p)),
+                            clblast=cp.end(typeid_<Type>(p));
   local_iterator            lfirst=p.template begin<Type>(),
                             llast=p.template end<Type>();
   const_local_iterator      clfirst=cp.template begin<Type>(),
                             cllast=cp.template end<Type>();
-  base_segment_info         bi=p.segment(typeid(Type));
-  const_base_segment_info   cbi=cp.segment(typeid(Type));
+  base_segment_info         bi=p.segment(typeid_<Type>(p));
+  const_base_segment_info   cbi=cp.segment(typeid_<Type>(p));
   segment_info              i=p.template segment<Type>();
   const_segment_info        ci=cp.template segment<Type>();
 
-  BOOST_TEST(clbfirst==cp.cbegin(typeid(Type)));
-  BOOST_TEST(clblast==cp.cend(typeid(Type)));
+  BOOST_TEST(clbfirst==cp.cbegin(typeid_<Type>(p)));
+  BOOST_TEST(clblast==cp.cend(typeid_<Type>(p)));
   BOOST_TEST(clfirst==cp.template cbegin<Type>());
   BOOST_TEST(cllast==cp.template cend<Type>());
 
@@ -124,12 +125,13 @@ void test_iterators(PolyCollection& p)
   BOOST_TEST(lfirst==static_cast<local_iterator>(llast));
   BOOST_TEST(clfirst==static_cast<const_local_iterator>(cllast));
   BOOST_TEST(clfirst==llast);
-  BOOST_TEST((std::ptrdiff_t)n==p.end(typeid(Type))-p.begin(typeid(Type)));
+  BOOST_TEST(
+    (std::ptrdiff_t)n==p.end(typeid_<Type>(p))-p.begin(typeid_<Type>(p)));
   BOOST_TEST(
     (std::ptrdiff_t)n==p.template end<Type>()-p.template begin<Type>());
 
   for(auto s:p.segment_traversal()){
-    if(s.type_info()==typeid(Type)){
+    if(s.type_info()==typeid_<Type>(p)){
       const auto& cs=s;
 
       BOOST_TEST(
@@ -307,4 +309,8 @@ void test_iterators()
     function_types::collection,auto_increment,
     function_types::t1,function_types::t2,function_types::t3,
     function_types::t4,function_types::t5>();
+  test_iterators<
+    variant_types::collection,auto_increment,
+    variant_types::t1,variant_types::t2,variant_types::t3,
+    variant_types::t4,variant_types::t5>();
 }

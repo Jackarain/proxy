@@ -8,6 +8,7 @@ int main()
 {
     __float128 f = -2.0Q;
     f = fabsq(f);
+    __float128 big = HUGE_VALQ;
 
-    return 0;
+    return f == big;
 }

@@ -89,18 +89,22 @@ if(MSVC)
   else()
     set(_default_asm masm)
   endif()
+elseif(BOOST_CONTEXT_ARCHITECTURE STREQUAL arm64 AND MINGW)
+  set(_default_asm armclang)
 else()
   set(_default_asm gas)
 endif()
 
-set(BOOST_CONTEXT_ASSEMBLER "${_default_asm}" CACHE STRING "Boost.Context assembler (masm, gas, armasm)")
-set_property(CACHE BOOST_CONTEXT_ASSEMBLER PROPERTY STRINGS masm gas armasm)
+set(BOOST_CONTEXT_ASSEMBLER "${_default_asm}" CACHE STRING "Boost.Context assembler (masm, gas, armasm, armclang)")
+set_property(CACHE BOOST_CONTEXT_ASSEMBLER PROPERTY STRINGS masm gas armasm armclang)
 
 unset(_default_asm)
 
 ## Assembler source suffix
 
-if(BOOST_CONTEXT_BINARY_FORMAT STREQUAL pe)
+if(BOOST_CONTEXT_ASSEMBLER STREQUAL armclang)
+  set(_default_ext .S)
+elseif(BOOST_CONTEXT_BINARY_FORMAT STREQUAL pe)
   set(_default_ext .asm)
 elseif(BOOST_CONTEXT_ASSEMBLER STREQUAL gas)
   set(_default_ext .S)
@@ -133,18 +137,18 @@ message(STATUS "Boost.Context: "
   "implementation ${BOOST_CONTEXT_IMPLEMENTATION}")
 
 # Enable the right assembler
-
+set(ASM_LANGUAGE)
 if(BOOST_CONTEXT_IMPLEMENTATION STREQUAL "fcontext")
-  if(BOOST_CONTEXT_ASSEMBLER STREQUAL gas)
+  if(BOOST_CONTEXT_ASSEMBLER STREQUAL gas OR BOOST_CONTEXT_ASSEMBLER STREQUAL armclang)
     if(CMAKE_CXX_PLATFORM_ID MATCHES "Cygwin")
-      enable_language(ASM-ATT)
+      set(ASM_LANGUAGE ASM-ATT)
     else()
-      enable_language(ASM)
+      set(ASM_LANGUAGE ASM)
     endif()
   elseif(BOOST_CONTEXT_ASSEMBLER STREQUAL armasm)
-    enable_language(ASM_ARMASM)
+    set(ASM_LANGUAGE ASM_ARMASM)
   else()
-    enable_language(ASM_MASM)
+    set(ASM_LANGUAGE ASM_MASM)
   endif()
 endif()
 
@@ -170,13 +174,27 @@ if(BOOST_CONTEXT_IMPLEMENTATION STREQUAL "fcontext")
 
   set(IMPL_SOURCES ${ASM_SOURCES} src/fcontext.cpp)
 
-  if(BOOST_CONTEXT_ASSEMBLER STREQUAL masm AND BOOST_CONTEXT_ARCHITECTURE STREQUAL i386)
-      set_source_files_properties(${ASM_SOURCES} PROPERTIES COMPILE_FLAGS "/safeseh")
+  if(BOOST_CONTEXT_ASSEMBLER STREQUAL masm)
+
+    set_property(SOURCE ${ASM_SOURCES} APPEND PROPERTY COMPILE_OPTIONS "/nologo")
+
+    if(MSVC AND NOT(MSVC_VERSION LESS 1936)) # Visual Studio 2022 version 17.6
+      set_property(SOURCE ${ASM_SOURCES} APPEND PROPERTY COMPILE_OPTIONS "/quiet")
+    endif()
+
+    if(BOOST_CONTEXT_ARCHITECTURE STREQUAL i386)
+      set_property(SOURCE ${ASM_SOURCES} APPEND PROPERTY COMPILE_OPTIONS "/safeseh")
+    endif()
   endif()
 
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set_property(SOURCE ${ASM_SOURCES} APPEND PROPERTY COMPILE_OPTIONS "-x" "assembler-with-cpp")
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set_property(SOURCE ${ASM_SOURCES} APPEND PROPERTY COMPILE_OPTIONS "-Wno-unused-command-line-argument")
   endif()
+
+  enable_language(${ASM_LANGUAGE})
+  set_source_files_properties(${ASM_SOURCES} PROPERTIES LANGUAGE ${ASM_LANGUAGE})
 else()
   set(IMPL_SOURCES
     src/continuation.cpp

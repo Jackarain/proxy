@@ -107,6 +107,8 @@ public:
 
         @par Exception Safety
         Throws nothing
+
+        @param other The other view.
     */
     segments_view(
         segments_view const& other) = default;
@@ -184,6 +186,9 @@ public:
 
         @par Exception Safety
         Throws nothing
+
+        @param other The other view.
+        @return A reference to this object.
     */
     segments_view&
     operator=(segments_view const& other) = default;

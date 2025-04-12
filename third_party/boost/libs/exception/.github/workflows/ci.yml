@@ -18,177 +18,181 @@ jobs:
       matrix:
         include:
           - toolset: gcc-4.8
-            cxxstd: "03,11"
+            cxxstd: "11"
             os: ubuntu-latest
             container: ubuntu:18.04
-            install: g++-4.8-multilib
-            address-model: 32,64
+            install: g++-4.8
           - toolset: gcc-5
-            cxxstd: "03,11,14,1z"
+            cxxstd: "11,14,1z"
             os: ubuntu-latest
             container: ubuntu:18.04
-            install: g++-5-multilib
-            address-model: 32,64
+            install: g++-5
           - toolset: gcc-6
-            cxxstd: "03,11,14,1z"
+            cxxstd: "11,14,1z"
             os: ubuntu-latest
             container: ubuntu:18.04
-            install: g++-6-multilib
-            address-model: 32,64
+            install: g++-6
           - toolset: gcc-7
-            cxxstd: "03,11,14,17"
+            cxxstd: "11,14,17"
             os: ubuntu-latest
             container: ubuntu:18.04
-            install: g++-7-multilib
-            address-model: 32,64
           - toolset: gcc-8
-            cxxstd: "03,11,14,17,2a"
+            cxxstd: "11,14,17,2a"
             os: ubuntu-20.04
-            install: g++-8-multilib
-            address-model: 32,64
+            install: g++-8
           - toolset: gcc-9
-            cxxstd: "03,11,14,17,2a"
+            cxxstd: "11,14,17,2a"
             os: ubuntu-20.04
-            install: g++-9-multilib
-            address-model: 32,64
           - toolset: gcc-10
-            cxxstd: "03,11,14,17,2a"
+            cxxstd: "11,14,17,2a"
             os: ubuntu-20.04
-            install: g++-10-multilib
-            address-model: 32,64
+            install: g++-10
           - toolset: gcc-11
-            cxxstd: "03,11,14,17,20"
+            cxxstd: "11,14,17,2a"
             os: ubuntu-22.04
-            install: g++-11-multilib
-            address-model: 32,64
           - toolset: gcc-12
-            cxxstd: "03,11,14,17,20,2b"
+            cxxstd: "11,14,17,20,2b"
             os: ubuntu-22.04
-            install: g++-12-multilib
-            address-model: 32,64
+            install: g++-12
           - toolset: gcc-13
-            cxxstd: "03,11,14,17,20,2b"
-            container: ubuntu:23.04
+            cxxstd: "11,14,17,20,2b"
             os: ubuntu-latest
-            install: g++-13-multilib
-            address-model: 32,64
-          - toolset: gcc-14
-            cxxstd: "03,11,14,17,20,2b"
             container: ubuntu:24.04
+            install: g++-13
+          - toolset: gcc-14
+            cxxstd: "11,14,17,20,2b"
             os: ubuntu-latest
-            install: g++-14-multilib
-            address-model: 32,64
+            container: ubuntu:24.04
+            install: g++-14
           - toolset: clang
             compiler: clang++-3.9
-            cxxstd: "03,11,14"
+            cxxstd: "11,14"
             os: ubuntu-latest
             container: ubuntu:18.04
             install: clang-3.9
           - toolset: clang
             compiler: clang++-4.0
-            cxxstd: "03,11,14"
+            cxxstd: "11,14"
             os: ubuntu-latest
             container: ubuntu:18.04
             install: clang-4.0
           - toolset: clang
             compiler: clang++-5.0
-            cxxstd: "03,11,14,1z"
+            cxxstd: "11,14,1z"
             os: ubuntu-latest
             container: ubuntu:18.04
             install: clang-5.0
           - toolset: clang
             compiler: clang++-6.0
-            cxxstd: "03,11,14,17"
+            cxxstd: "11,14,17"
             os: ubuntu-20.04
             install: clang-6.0
           - toolset: clang
             compiler: clang++-7
-            cxxstd: "03,11,14,17"
+            cxxstd: "11,14,17"
             os: ubuntu-20.04
             install: clang-7
           - toolset: clang
             compiler: clang++-8
-            cxxstd: "03,11,14,17"
+            cxxstd: "11,14,17"
             os: ubuntu-20.04
             install: clang-8
           - toolset: clang
             compiler: clang++-9
-            cxxstd: "03,11,14,17,2a"
+            cxxstd: "11,14,17"
             os: ubuntu-20.04
             install: clang-9
           - toolset: clang
             compiler: clang++-10
-            cxxstd: "03,11,14,17,2a"
+            cxxstd: "11,14,17,2a"
             os: ubuntu-20.04
           - toolset: clang
             compiler: clang++-11
-            cxxstd: "03,11,14,17,2a"
+            cxxstd: "11,14,17,2a"
             os: ubuntu-20.04
           - toolset: clang
             compiler: clang++-12
-            cxxstd: "03,11,14,17,20"
+            cxxstd: "11,14,17,20"
             os: ubuntu-20.04
           - toolset: clang
             compiler: clang++-13
-            cxxstd: "03,11,14,17,20,2b"
+            cxxstd: "11,14,17,20,2b"
             container: ubuntu:22.04
             os: ubuntu-latest
             install: clang-13
           - toolset: clang
             compiler: clang++-14
-            cxxstd: "03,11,14,17,20,2b"
+            cxxstd: "11,14,17,20,2b"
             container: ubuntu:22.04
             os: ubuntu-latest
             install: clang-14
           - toolset: clang
             compiler: clang++-15
-            cxxstd: "03,11,14,17,20,2b"
+            cxxstd: "11,14,17,20,2b"
             container: ubuntu:22.04
             os: ubuntu-latest
             install: clang-15
           - toolset: clang
             compiler: clang++-16
-            cxxstd: "03,11,14,17,20,2b"
-            container: ubuntu:23.04
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:24.04
             os: ubuntu-latest
             install: clang-16
           - toolset: clang
             compiler: clang++-17
-            cxxstd: "03,11,14,17,20,2b"
-            container: ubuntu:23.10
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:24.04
             os: ubuntu-latest
             install: clang-17
           - toolset: clang
             compiler: clang++-18
-            cxxstd: "03,11,14,17,20,2b"
+            cxxstd: "11,14,17,20,2b"
             container: ubuntu:24.04
             os: ubuntu-latest
             install: clang-18
           - toolset: clang
-            cxxstd: "03,11,14,17,20,2b"
-            os: macos-12
+            compiler: clang++-19
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:24.10
+            os: ubuntu-latest
+            install: clang-19
           - toolset: clang
-            cxxstd: "03,11,14,17,20,2b"
+            cxxstd: "11,14,17,20,2b"
             os: macos-13
           - toolset: clang
-            cxxstd: "03,11,14,17,20,2b"
+            cxxstd: "11,14,17,20,2b"
             os: macos-14
+          - toolset: clang
+            cxxstd: "11,14,17,20,2b"
+            os: macos-15
 
     runs-on: ${{matrix.os}}
-    container: ${{matrix.container}}
+
+    container:
+      image: ${{matrix.container}}
+      volumes:
+        - /node20217:/node20217:rw,rshared
+        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
 
     defaults:
       run:
         shell: bash
 
     steps:
-      - uses: actions/checkout@v3
-
       - name: Setup container environment
         if: matrix.container
         run: |
           apt-get update
-          apt-get -y install sudo python3 git g++
+          apt-get -y install sudo python3 git g++ curl xz-utils
+
+      - name: Install nodejs20glibc2.17
+        if: ${{ startsWith( matrix.container, 'ubuntu:1' ) }}
+        run: |
+          curl -LO https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz
+          tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
+          ldd /__e/node20/bin/node
+
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -226,7 +230,7 @@ jobs:
       - name: Run tests
         run: |
           cd ../boost-root
-          ./b2 -j3 libs/$LIBRARY/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} ${ADDRMD:+address-model=$ADDRMD} variant=debug,release exception-handling=on,off rtti=on,off link=static,shared visibility=hidden,global
+          ./b2 -j3 libs/$LIBRARY/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} variant=debug,release exception-handling=on,off rtti=on,off link=static,shared visibility=hidden,global
 
   windows:
     strategy:
@@ -234,7 +238,7 @@ jobs:
       matrix:
         include:
           - toolset: msvc-14.0
-            cxxstd: 14,latest
+            cxxstd: "14"
             addrmd: 32,64
             os: windows-2019
           - toolset: msvc-14.2
@@ -246,18 +250,18 @@ jobs:
             addrmd: 32,64
             os: windows-2022
           - toolset: clang-win
-            cxxstd: "14,17,latest"
+            cxxstd: "14,17,20,latest"
             addrmd: 32,64
             os: windows-2022
           - toolset: gcc
-            cxxstd: "03,11,14,17,2a"
+            cxxstd: "11,14,17,2a"
             addrmd: 64
             os: windows-2019
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd

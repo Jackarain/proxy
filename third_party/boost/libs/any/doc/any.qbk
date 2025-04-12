@@ -1,5 +1,5 @@
 [/
-    Copyright Antony Polukhin, 2013-2024.
+    Copyright Antony Polukhin, 2013-2025.
 
     Distributed under the Boost Software License, Version 1.0. (See accompanying
     file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)
@@ -10,7 +10,7 @@
     [version 1.2]
     [id any]
     [copyright 2001 Kevlin Henney]
-    [copyright 2013-2024 Antony Polukhin]
+    [copyright 2013-2025 Antony Polukhin]
     [category Language Features Emulation]
     [license
         Distributed under the Boost Software License, Version 1.0.
@@ -83,7 +83,7 @@ and copying of any objects:
 #include <boost/any.hpp>
 
 using boost::any_cast;
-typedef std::list<boost::any> many;
+using many = std::list<boost::any>;
 
 void append_int(many & values, int value)
 {
@@ -169,7 +169,7 @@ struct property
     boost::any value;
 };
 
-typedef std::list<property> properties;
+using properties = std::list<property>;
 ```
 
 The following base class demonstrates one approach to

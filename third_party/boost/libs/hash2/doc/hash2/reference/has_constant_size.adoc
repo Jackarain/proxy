@@ -1,0 +1,46 @@
+////
+Copyright 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_has_constant_size]
+# <boost/hash2/has_constant_size.hpp>
+:idprefix: ref_has_constant_size_
+
+```
+namespace boost {
+namespace hash2 {
+
+template<class T> struct has_constant_size;
+
+} // namespace hash2
+} // namespace boost
+```
+
+## has_constant_size
+
+```
+template<class T> struct has_constant_size<T>: std::integral_constant<bool, /*see below*/>
+{
+};
+
+template<class T> struct has_constant_size<T const>: has_constant_size<T>
+{
+};
+```
+
+The trait `has_constant_size` is used by the library to detect container and range types that have a constant size.
+This allows `hash_append` to not include the size in the _message_, as it doesn't contribute to the object state.
+
+A container or range type has constant size if for all values `v` of that type, `v.size()` has the same value.
+
+The default implementation reports `true` for tuple-like types (those for which `std::tuple_size` is specialized), such as `std::array`, for `boost::array`, and for `digest`.
+
+`has_constant_size` can be specialized for user-defined container and range types that have constant size.
+
+For example, `boost::uuids::uuid` has a constant size of 16, so a specialization can be added appropriately:
+
+```
+template<> struct boost::hash2::has_constant_size<boost::uuids::uuid>: std::true_type {};
+```

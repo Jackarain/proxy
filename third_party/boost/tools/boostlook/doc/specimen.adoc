@@ -438,7 +438,7 @@ See <<chars_format overview>> for description.
 [#integral_usage_notes_]
 * All built-in integral types are allowed except bool which is deleted
 * from_chars for integral type is constexpr (BOOST_CHARCONV_CONSTEXPR is defined) when:
-** compiled using `-std=c++14` or newer 
+** compiled using `-std=c++14` or newer
 ** using a compiler with `\__builtin_ is_constant_evaluated`
 * These functions have been tested to support `\__int128` and `unsigned __int128`
 
@@ -993,4 +993,3 @@ This documentation is copyright 2022-2023 Peter Dimov and Matt Borland and is di
 the http://www.boost.org/LICENSE_1_0.txt[Boost Software License, Version 1.0].
 
 :leveloffset: -1
-

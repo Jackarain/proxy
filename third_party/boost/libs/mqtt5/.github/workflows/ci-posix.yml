@@ -1,0 +1,273 @@
+#
+# Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+#
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+#
+
+name: CI-posix
+
+on: [push, pull_request]
+
+jobs:
+  posix-cmake:
+    name: "CMake ${{ matrix.toolset }} std=c++${{ matrix.cxxstd }} ${{ matrix.cxxflags }}"
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - toolset: gcc-9
+            install: g++-9
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            build-type: 'Release'
+            cxxstd: 17
+            cxxflags: ''
+            ldflags: ''
+
+          - toolset: gcc-10
+            install: g++-10
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            build-type: 'Release'
+            cxxstd: 17
+            cxxflags: ''
+            ldflags: ''
+
+          - toolset: gcc-12
+            install: g++-12
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            build-type: 'Release'
+            cxxstd: 17
+            cxxflags: ''
+            ldflags: ''
+          
+          - toolset: gcc-13
+            install: g++-13
+            os: ubuntu-24.04
+            container: ubuntu:24.04
+            build-type: 'Release'
+            cxxstd: 20
+            cxxflags: ''
+            ldflags: ''
+          
+          - toolset: gcc-14
+            install: g++-14
+            os: ubuntu-24.04
+            container: ubuntu:24.04
+            build-type: 'Debug'
+            cxxstd: 20
+            cxxflags: '-fsanitize=address,undefined -fno-sanitize-recover=all'
+            ldflags: '-fsanitize=address,undefined'
+
+          - toolset: clang-12
+            install: clang++-12
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            build-type: 'Release'
+            cxxstd: 17
+            cxxflags: '-fdeclspec'
+            ldflags: ''
+
+          - toolset: clang-13
+            install: clang++-13
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            build-type: 'Release'
+            cxxstd: 17
+            cxxflags: '-fdeclspec'
+            ldflags: ''
+
+          - toolset: clang-14
+            install: 'clang++-14 libc++-14-dev libc++abi-14-dev'
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            build-type: 'Release'
+            cxxstd: 17
+            cxxflags: '-stdlib=libc++'
+            ldflags: '-lc++'
+
+          - toolset: clang-15
+            install: clang++-15
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            build-type: 'Release'
+            cxxstd: 17
+            cxxflags: ''
+            ldflags: ''
+
+          - toolset: clang-16
+            install: clang++-16
+            os: ubuntu-24.04
+            container: ubuntu:24.04
+            build-type: 'Release'
+            cxxstd: 17
+            cxxflags: ''
+            ldflags: ''
+
+          - toolset: clang-17
+            install: clang++-17
+            os: ubuntu-24.04
+            container: ubuntu:24.04
+            build-type: 'Release'
+            cxxstd: 20
+            cxxflags: ''
+            ldflags: ''
+
+          - toolset: clang-18
+            install: clang++-18
+            os: ubuntu-24.04
+            container: ubuntu:24.04
+            build-type: 'Debug'
+            cxxstd: 20
+            cxxflags: '-fsanitize=address,undefined -fno-sanitize-recover=all'
+            ldflags: '-fsanitize=address,undefined'
+
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    env:
+      CXXFLAGS: ${{ matrix.cxxflags }} -Wall -Wextra
+      LDFLAGS:  ${{ matrix.ldflags }}
+      CMAKE_BUILD_PARALLEL_LEVEL: 4
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup container environment
+        if: matrix.container
+        run: |
+          apt-get update
+          apt-get -y install --no-install-recommends \
+             sudo git g++ cmake make openssl libssl-dev ca-certificates pkg-config python3
+
+      - name: Install toolset
+        run: sudo apt-get install -y ${{ matrix.install }}
+
+      - name: Setup Boost
+        run: |
+          python3 tools/ci.py setup-boost \
+            --source-dir=$(pwd)
+
+      - name: Build a Boost distribution using B2
+        run : |
+          python3 tools/ci.py build-b2-distro \
+            --toolset ${{ matrix.toolset }}
+
+      - name: Build a Boost distribution using CMake
+        run: |
+          python3 tools/ci.py build-cmake-distro \
+            --build-type ${{ matrix.build-type }} \
+            --cxxstd ${{ matrix.cxxstd }} \
+            --toolset ${{ matrix.toolset }}
+
+      - name: Build standalone examples using CMake
+        run: |
+          python3 tools/ci.py build-cmake-standalone-examples \
+            --build-type ${{ matrix.build-type }} \
+            --cxxstd ${{ matrix.cxxstd }} \
+            --toolset ${{ matrix.toolset }}
+
+      - name: Build standalone tests using CMake
+        run: |
+          python3 tools/ci.py build-cmake-standalone-tests \
+            --build-type ${{ matrix.build-type }} \
+            --cxxstd ${{ matrix.cxxstd }} \
+            --toolset ${{ matrix.toolset }}
+
+      - name: Run standalone tests
+        run: |
+          python3 tools/ci.py run-cmake-standalone-tests \
+           --build-type ${{ matrix.build-type }}
+
+      - name: Run CMake find_package test with B2 distribution
+        run: |
+          python3 tools/ci.py run-cmake-b2-find-package-tests \
+            --build-type ${{ matrix.build-type }} \
+            --cxxstd ${{ matrix.cxxstd }} \
+            --toolset ${{ matrix.toolset }}
+
+      - name: Run CMake find_package test with CMake distribution
+        run : |
+          python3 tools/ci.py run-cmake-find-package-tests \
+            --build-type ${{ matrix.build-type }} \
+            --cxxstd ${{ matrix.cxxstd }} \
+            --toolset ${{ matrix.toolset }}
+
+      - name: Run CMake add_subdirectory test with CMake distribution
+        run: |
+          python3 tools/ci.py run-cmake-add-subdirectory-tests \
+            --build-type ${{ matrix.build-type }} \
+            --cxxstd ${{ matrix.cxxstd }} \
+            --toolset ${{ matrix.toolset }}
+
+  posix-b2:
+    name: "B2 ${{ matrix.toolset }} std=c++${{ matrix.cxxstd }} ${{ matrix.cxxflags }}"
+
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - toolset: gcc-11
+            install: g++-11
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            build-type: 'debug,release'
+            cxxstd: "17,20"
+            cxxflags: ''
+            ldflags: ''
+
+          - toolset: clang-14
+            install: clang-14
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            build-type: 'debug,release'
+            cxxstd: "17,20"
+            cxxflags: ''
+            ldflags: ''
+
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    env:
+      CXXFLAGS: ${{ matrix.cxxflags }} -Wall -Wextra
+      LDFLAGS:  ${{ matrix.ldflags }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup container environment
+        if: matrix.container
+        run: |
+          apt-get update
+          apt-get -y install --no-install-recommends \
+             sudo git g++ ca-certificates pkg-config python3
+
+      - name: Install toolset
+        run: sudo apt-get install -y ${{ matrix.install }}
+
+      - name: Setup Boost
+        run: |
+          python3 tools/ci.py setup-boost \
+            --source-dir=$(pwd)
+
+      - name: Build a Boost distribution using B2
+        run : |
+          python3 tools/ci.py build-b2-distro \
+            --toolset ${{ matrix.toolset }}
+      
+      - name: Build and run tests using B2
+        run: |
+          python3 tools/ci.py run-b2-tests \
+            --toolset ${{ matrix.toolset }} \
+            --cxxstd ${{ matrix.cxxstd }} \
+            --variant ${{ matrix.build-type }}

@@ -15,7 +15,7 @@ namespace boost::redis
  *
  *  @note: To simplify the implementation, the commands_sent and
  *  bytes_sent in the struct below are computed just before writing to
- *  the socket, which means on error they might not represent exaclty
+ *  the socket, which means on error they might not represent exactly
  *  what has been received by the Redis server.
  */
 struct usage {

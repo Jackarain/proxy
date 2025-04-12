@@ -38,7 +38,7 @@ namespace nowide {
     /// has the effect as-if `in >> std::quoted(path.native())` was used if that would be valid.
     /// To that effect a temporary string is used, which on success is assigned to `path`.
     ///
-    /// Will automatically convert between the streams `char_type` and `path::value_type` if neccessary.
+    /// Will automatically convert between the streams `char_type` and `path::value_type` if necessary.
     template<class Path>
 #ifdef BOOST_NOWIDE_DOXYGEN
     unspecified_type

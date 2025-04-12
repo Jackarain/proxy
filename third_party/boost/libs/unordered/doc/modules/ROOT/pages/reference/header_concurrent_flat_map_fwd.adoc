@@ -1,0 +1,7 @@
+[#header_concurrent_flat_map_fwd]
+== `<boost/unordered/concurrent_flat_map_fwd.hpp>` Synopsis
+
+:idprefix: header_concurrent_flat_map_fwd_
+
+Forward declares all the definitions in
+xref:reference/header_concurrent_flat_map.adoc[`<boost/unordered/concurrent_flat_map.hpp>`].

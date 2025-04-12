@@ -9,11 +9,11 @@
 
 #include <boost/core/lightweight_test.hpp>
 
-#include <boost/process.hpp>
+#include <boost/process/v1/child.hpp>
 #include <boost/process/v1/cmd.hpp>
 #include <system_error>
 
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 
 int main(int argc, char* argv[])
 {

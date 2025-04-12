@@ -252,6 +252,7 @@ public:
         Throws nothing.
 
         @param ch The character to test.
+        @return `true` if `ch` is in the set.
     */
     constexpr
     bool

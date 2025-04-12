@@ -121,7 +121,7 @@ inline to_chars_result to_chars_nonfinite(char* first, char* last, Real value, i
 
 #endif // BOOST_CHARCONV_LDBL_BITS == 128
 
-#ifdef BOOST_CHARCONV_HAS_FLOAT128
+#ifdef BOOST_CHARCONV_HAS_QUADMATH
 
 // GCC-5 evaluates the following specialization for other types
 #if defined(__GNUC__) && __GNUC__ == 5
@@ -200,7 +200,7 @@ inline to_chars_result to_chars_nonfinite<__float128>(char* first, char* last, _
 # pragma GCC diagnostic pop
 #endif
 
-#endif // BOOST_CHARCONV_HAS_FLOAT128
+#endif // BOOST_CHARCONV_HAS_QUADMATH
 
 template <typename Unsigned_Integer, typename Real, typename std::enable_if<!std::is_same<Unsigned_Integer, uint128>::value, bool>::type = true>
 Unsigned_Integer convert_value(Real value) noexcept
@@ -273,7 +273,7 @@ to_chars_result to_chars_hex(char* first, char* last, Real value, int precision)
 
         typename std::conditional<std::is_same<Real, float>::value, ieee754_binary32,
             typename std::conditional<std::is_same<Real, double>::value, ieee754_binary64,
-                    #ifdef BOOST_CHARCONV_HAS_FLOAT128
+                    #ifdef BOOST_CHARCONV_HAS_QUADMATH
                     typename std::conditional<std::is_same<Real, __float128>::value, ieee754_binary128,
                     #endif
                         #if BOOST_CHARCONV_LDBL_BITS == 128
@@ -283,7 +283,7 @@ to_chars_result to_chars_hex(char* first, char* last, Real value, int precision)
                         #else
                         ieee754_binary64
                         #endif
-                    #ifdef BOOST_CHARCONV_HAS_FLOAT128
+                    #ifdef BOOST_CHARCONV_HAS_QUADMATH
                     >::type
                     #endif
             >::type>::type
@@ -843,7 +843,7 @@ to_chars_result to_chars_float_impl(char* first, char* last, long double value, 
 
 #endif
 
-#ifdef BOOST_CHARCONV_HAS_FLOAT128
+#ifdef BOOST_CHARCONV_HAS_QUADMATH
 
 template <>
 to_chars_result to_chars_float_impl(char* first, char* last, __float128 value, chars_format fmt, int precision) noexcept

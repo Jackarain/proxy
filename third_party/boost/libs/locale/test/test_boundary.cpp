@@ -37,9 +37,10 @@ void run_segment_iterator_test(const lb::segment_index<Iterator>& map,
         unsigned i = 0;
         typename lb::segment_index<Iterator>::iterator p;
         for(p = map.begin(); p != map.end(); ++p, i++) {
-            TEST_REQUIRE(i < masks.size());
-            TEST_EQ(p->str(), chunks[i]);
-            TEST_EQ(p->rule(), masks[i]);
+            if TEST(i < masks.size()) {
+                TEST_EQ(p->str(), chunks[i]);
+                TEST_EQ(p->rule(), masks[i]);
+            }
         }
         TEST_EQ(i, chunks.size());
 
@@ -88,9 +89,10 @@ void run_break_iterator_test(const lb::boundary_point_index<Iterator>& map,
     unsigned i = 0;
     typename lb::boundary_point_index<Iterator>::iterator p;
     for(p = map.begin(); p != map.end(); ++p, i++) {
-        TEST_REQUIRE(i < masks.size());
-        TEST(p->iterator() == iters[i]);
-        TEST_EQ(p->rule(), masks[i]);
+        if TEST(i < masks.size()) {
+            TEST(p->iterator() == iters[i]);
+            TEST_EQ(p->rule(), masks[i]);
+        }
     }
 
     TEST_EQ(i, iters.size());
@@ -117,12 +119,13 @@ void verify_index(const lb::boundary_point_index<Iterator>& map,
                   const masks_t& masks)
 {
     BOOST_ASSERT(iters.size() == masks.size());
-    TEST_REQUIRE(static_cast<size_t>(std::distance(map.begin(), map.end())) == masks.size());
-    size_t i = 0;
-    for(const auto& b_point : map) {
-        TEST(b_point.iterator() == iters[i]);
-        TEST_EQ(b_point.rule(), masks[i]);
-        ++i;
+    if TEST(static_cast<size_t>(std::distance(map.begin(), map.end())) == masks.size()) {
+        size_t i = 0;
+        for(const auto& b_point : map) {
+            TEST(b_point.iterator() == iters[i]);
+            TEST_EQ(b_point.rule(), masks[i]);
+            ++i;
+        }
     }
 }
 
@@ -130,12 +133,13 @@ template<typename Iterator, typename Char>
 void verify_index(const lb::segment_index<Iterator>& map, const chunks_t<Char>& chunks, const masks_t& masks)
 {
     BOOST_ASSERT(chunks.size() == masks.size());
-    TEST_REQUIRE(static_cast<size_t>(std::distance(map.begin(), map.end())) == masks.size());
-    size_t i = 0;
-    for(const auto& seg : map) {
-        TEST_EQ(seg.str(), chunks[i]);
-        TEST_EQ(seg.rule(), masks[i]);
-        ++i;
+    if TEST(static_cast<size_t>(std::distance(map.begin(), map.end())) == masks.size()) {
+        size_t i = 0;
+        for(const auto& seg : map) {
+            TEST_EQ(seg.str(), chunks[i]);
+            TEST_EQ(seg.rule(), masks[i]);
+            ++i;
+        }
     }
 }
 
@@ -306,7 +310,7 @@ void test_boundaries(std::string* all, int* first, int* second, lb::boundary_typ
     run_word<char>(all, first, second, nullptr, nullptr, nullptr, g("he_IL.cp1255"), t);
     std::cout << " wchar_t" << std::endl;
     run_word<wchar_t>(all, first, second, nullptr, nullptr, nullptr, g("he_IL.UTF-8"), t);
-#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+#ifdef __cpp_lib_char8_t
     std::cout << " char8_t" << std::endl;
     run_word<char8_t>(all, first, second, nullptr, nullptr, nullptr, g("he_IL.UTF-8"), t);
 #endif
@@ -369,7 +373,7 @@ void word_boundary()
     run_word<wchar_t>(txt_simple, none_simple, zero, word_simple, zero, zero, utf8_en_locale);
     run_word<wchar_t>(txt_all, none_all, num_all, word_all, kana_all, ideo_all, utf8_jp_locale);
 
-#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+#ifdef __cpp_lib_char8_t
     std::cout << " char8_t" << std::endl;
     run_word<char8_t>(txt_empty, zero, zero, zero, zero, zero, g("ja_JP.UTF-8"));
     run_word<char8_t>(txt_simple, none_simple, zero, word_simple, zero, zero, utf8_en_locale);

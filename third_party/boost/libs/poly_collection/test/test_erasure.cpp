@@ -1,4 +1,4 @@
-/* Copyright 2016-2017 Joaquin M Lopez Munoz.
+/* Copyright 2016-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -13,6 +13,7 @@
 #include "any_types.hpp"
 #include "base_types.hpp"
 #include "function_types.hpp"
+#include "variant_types.hpp"
 #include "test_utilities.hpp"
 
 using namespace test_utilities;
@@ -88,7 +89,7 @@ void test_erasure()
   }
 
   do_((
-    p2.template is_registered<Types>()?test_local_erase<Types>(p2),0:0)...);
+    is_registered<Types>(p2)?test_local_erase<Types>(p2),0:0)...);
 
   for(size_type i=0;i<=p2.size();++i){
     for(size_type j=i;j<=p2.size();++j){
@@ -115,7 +116,7 @@ void test_erasure()
     }
   }
 
-  do_((p2.template is_registered<Types>()?
+  do_((is_registered<Types>(p2)?
     test_local_range_erase<Types>(p2),0:0)...);
 
   p=p2;
@@ -130,7 +131,7 @@ void test_erasure()
     BOOST_TEST(p.size()==p2.size()-p2.size(info));
   }
 
-  do_((p2.template is_registered<Types>()?
+  do_((is_registered<Types>(p2)?
     test_local_clear<Types>(p2),0:0)...);
 }
 
@@ -148,4 +149,8 @@ void test_erasure()
     function_types::collection,auto_increment,
     function_types::t1,function_types::t2,function_types::t3,
     function_types::t4,function_types::t5>();
+  test_erasure<
+    variant_types::collection,auto_increment,
+    variant_types::t1,variant_types::t2,variant_types::t3,
+    variant_types::t4,variant_types::t5>();
 }

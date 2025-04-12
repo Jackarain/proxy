@@ -11,6 +11,7 @@ http://www.boost.org/LICENSE_1_0.txt)
 
 * Guard against using the obsolete `predef/check/predef.jam` B2 module.
   Instead of using the current `predef/tools/check/predef.jam` module.
+* Fix `architecture` tool check rule returning `ppc` instead of `power`.
 
 == 1.15.0
 

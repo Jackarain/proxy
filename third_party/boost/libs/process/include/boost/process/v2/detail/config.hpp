@@ -68,11 +68,11 @@ BOOST_PROCESS_V2_END_NAMESPACE
 
 
 #if !defined(BOOST_PROCESS_VERSION)
-#define  BOOST_PROCESS_VERSION 1
+#define  BOOST_PROCESS_VERSION 2
 #endif
 
 
-#if BOOST_PROCESS_VERSION == 2
+#if BOOST_PROCESS_VERSION == 1
 #define BOOST_PROCESS_V2_BEGIN_NAMESPACE namespace boost { namespace process { namespace v2 {
 #else
 #define BOOST_PROCESS_V2_BEGIN_NAMESPACE namespace boost { namespace process { inline namespace v2 {
@@ -151,6 +151,14 @@ BOOST_PROCESS_V2_END_NAMESPACE
 #define BOOST_PROCESS_V2_DECL
 #endif
 
+#if !defined(BOOST_PROCESS_SOURCE) && !defined(BOOST_ALL_NO_LIB) && !defined(BOOST_PROCESS_NO_LIB)
+#define BOOST_LIB_NAME boost_process
+#if defined(BOOST_ALL_DYN_LINK) || defined(BOOST_PROCESS_DYN_LINK)
+#define BOOST_DYN_LINK
+#endif
+#include <boost/config/auto_link.hpp>
+#endif 
+
 #if defined(BOOST_PROCESS_V2_POSIX)
 
 #if defined(__linux__) && !defined(BOOST_PROCESS_V2_DISABLE_PIDFD_OPEN)
@@ -170,12 +178,5 @@ BOOST_PROCESS_V2_END_NAMESPACE
 #else
 #define BOOST_PROCESS_V2_HAS_PROCESS_HANDLE 1
 #endif
-
-#if BOOST_PROCESS_VERSION == 2
-#define BOOST_PROCESS_V2_INLINE inline
-#else
-#define BOOST_PROCESS_V2_INLINE
-#endif
-
 
 #endif //BOOST_PROCESS_V2_DETAIL_CONFIG_HPP

@@ -397,7 +397,7 @@ static inline int generic_to_chars_fixed(const struct floating_decimal_128 v, ch
         if (precision > 0)
         {
             result[current_len++] = '.';
-            memset(result+current_len, '0', precision);
+            memset(result+current_len, '0', static_cast<size_t>(precision));
             current_len += precision;
             precision = 0;
         }

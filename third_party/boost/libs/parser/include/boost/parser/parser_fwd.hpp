@@ -143,6 +143,8 @@ namespace boost { namespace parser {
 
         struct punct_chars
         {};
+        struct symb_chars
+        {};
         struct lower_case_chars
         {};
         struct upper_case_chars
@@ -207,7 +209,7 @@ namespace boost { namespace parser {
         `ParserTuple`, not the order of the parsers' matches.  It is an error
         to specialize `perm_parser` with a `ParserTuple` template parameter
         that includes an `eps_parser`. */
-    template<typename ParserTuple>
+    template<typename ParserTuple, typename DelimiterParser>
     struct perm_parser;
 
     /** Applies each parser in `ParserTuple`, in order.  The parse succeeds
@@ -380,7 +382,10 @@ namespace boost { namespace parser {
 
     /** Matches a string delimited by quotation marks; produces a
         `std::string` attribute. */
-    template<typename Quotes = detail::nope, typename Escapes = detail::nope>
+    template<
+        typename Quotes = detail::nope,
+        typename Escapes = detail::nope,
+        typename CharParser = char_parser<detail::nope>>
     struct quoted_string_parser;
 
     /** Matches an end-of-line (`NewlinesOnly == true`), whitespace

@@ -99,6 +99,75 @@ public:
         {
             doTestPing(AsyncClient{yield});
         });
+
+        // inactivity timeout doesn't happen when you get pings
+        {
+            net::io_context ioc;
+            stream<test::stream> ws1(ioc);
+            stream<test::stream> ws2(ioc);
+            test::connect(ws1.next_layer(), ws2.next_layer());
+            ws1.set_option(stream_base::timeout{
+                stream_base::none(),
+                std::chrono::seconds(1),
+                false
+            });
+            ws2.async_accept(test::success_handler());
+            ws1.async_handshake("localhost", "/", test::success_handler());
+            ioc.run();
+            ioc.restart();
+            bool got_timeout = false;
+            flat_buffer b1;
+            ws1.async_read(b1,
+                [&](error_code ec, std::size_t)
+                {
+                    if(ec != beast::error::timeout)
+                        BOOST_THROW_EXCEPTION(
+                            system_error{ec});
+                    got_timeout = true;
+                });
+            ioc.run_for(std::chrono::milliseconds(500));
+            ioc.restart();
+            ws2.async_ping("", test::success_handler());
+            ioc.run_for(std::chrono::milliseconds(600));
+            ioc.restart();
+            BEAST_EXPECT(!got_timeout);
+            ioc.run_for(std::chrono::seconds(1));
+            ioc.restart();
+            BEAST_EXPECT(got_timeout);
+        }
+
+        // inactivity timeout doesn't happen when you send pings
+        {
+            net::io_context ioc;
+            stream<test::stream> ws1(ioc);
+            stream<test::stream> ws2(ioc);
+            test::connect(ws1.next_layer(), ws2.next_layer());
+            ws1.set_option(stream_base::timeout{
+                stream_base::none(),
+                std::chrono::milliseconds(1500),
+                true
+            });
+            unsigned n_pongs = 0;
+            ws1.control_callback({[&](frame_type kind, string_view)
+                {
+                    if (kind == frame_type::pong)
+                        ++n_pongs;
+                }});
+            ws2.async_accept(test::success_handler());
+            ws1.async_handshake("localhost", "/", test::success_handler());
+            ioc.run();
+            ioc.restart();
+            flat_buffer b1, b2;
+            ws1.async_read(b1, test::fail_handler(asio::error::operation_aborted));
+            ws2.async_read(b2, test::fail_handler(error::closed));
+            ioc.run_for(std::chrono::seconds(2));
+            ioc.restart();
+            ws1.async_close({}, test::success_handler());
+            ioc.run();
+            ioc.restart();
+            // We should have close to 2 pings/pongs, and no timeout
+            BEAST_EXPECTS(1 <= n_pongs && n_pongs <= 3, "Unexpected nr of pings: " + std::to_string(n_pongs));
+        }
     }
 
     void

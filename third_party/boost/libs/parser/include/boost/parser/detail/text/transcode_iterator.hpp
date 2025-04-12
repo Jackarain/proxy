@@ -2350,11 +2350,9 @@ namespace boost::parser::detail { namespace text { BOOST_PARSER_DETAIL_TEXT_NAME
     }
 
     template<typename Cont>
-    // clang-format off
         requires requires { typename Cont::value_type; } &&
-        utf_code_unit<typename Cont::value_type>
+                 utf_code_unit<typename Cont::value_type>
     constexpr auto from_utf8_inserter(Cont & c, typename Cont::iterator it)
-    // clang-format on
     {
         if constexpr (sizeof(typename Cont::value_type) == 1) {
             return std::insert_iterator<Cont>(c, it);
@@ -2366,11 +2364,9 @@ namespace boost::parser::detail { namespace text { BOOST_PARSER_DETAIL_TEXT_NAME
     }
 
     template<typename Cont>
-    // clang-format off
         requires requires { typename Cont::value_type; } &&
-        utf_code_unit<typename Cont::value_type>
+                 utf_code_unit<typename Cont::value_type>
     constexpr auto from_utf16_inserter(Cont & c, typename Cont::iterator it)
-    // clang-format on
     {
         if constexpr (sizeof(typename Cont::value_type) == 1) {
             return utf_16_to_8_insert_iterator<Cont>(c, it);
@@ -2382,11 +2378,9 @@ namespace boost::parser::detail { namespace text { BOOST_PARSER_DETAIL_TEXT_NAME
     }
 
     template<typename Cont>
-    // clang-format off
         requires requires { typename Cont::value_type; } &&
-        utf_code_unit<typename Cont::value_type>
+                 utf_code_unit<typename Cont::value_type>
     constexpr auto from_utf32_inserter(Cont & c, typename Cont::iterator it)
-    // clang-format on
     {
         if constexpr (sizeof(typename Cont::value_type) == 1) {
             return utf_32_to_8_insert_iterator<Cont>(c, it);
@@ -2398,11 +2392,9 @@ namespace boost::parser::detail { namespace text { BOOST_PARSER_DETAIL_TEXT_NAME
     }
 
     template<typename Cont>
-    // clang-format off
         requires requires { typename Cont::value_type; } &&
-        utf_code_unit<typename Cont::value_type>
+                 utf_code_unit<typename Cont::value_type>
     constexpr auto from_utf8_back_inserter(Cont & c)
-    // clang-format on
     {
         if constexpr (sizeof(typename Cont::value_type) == 1) {
             return std::back_insert_iterator<Cont>(c);
@@ -2414,11 +2406,9 @@ namespace boost::parser::detail { namespace text { BOOST_PARSER_DETAIL_TEXT_NAME
     }
 
     template<typename Cont>
-    // clang-format off
         requires requires { typename Cont::value_type; } &&
-        utf_code_unit<typename Cont::value_type>
+                 utf_code_unit<typename Cont::value_type>
     constexpr auto from_utf16_back_inserter(Cont & c)
-    // clang-format on
     {
         if constexpr (sizeof(typename Cont::value_type) == 1) {
             return utf_16_to_8_back_insert_iterator<Cont>(c);
@@ -2430,11 +2420,9 @@ namespace boost::parser::detail { namespace text { BOOST_PARSER_DETAIL_TEXT_NAME
     }
 
     template<typename Cont>
-    // clang-format off
         requires requires { typename Cont::value_type; } &&
-        utf_code_unit<typename Cont::value_type>
+                 utf_code_unit<typename Cont::value_type>
     constexpr auto from_utf32_back_inserter(Cont & c)
-    // clang-format on
     {
         if constexpr (sizeof(typename Cont::value_type) == 1) {
             return utf_32_to_8_back_insert_iterator<Cont>(c);
@@ -2446,11 +2434,9 @@ namespace boost::parser::detail { namespace text { BOOST_PARSER_DETAIL_TEXT_NAME
     }
 
     template<typename Cont>
-    // clang-format off
         requires requires { typename Cont::value_type; } &&
-        utf_code_unit<typename Cont::value_type>
+                 utf_code_unit<typename Cont::value_type>
     constexpr auto from_utf8_front_inserter(Cont & c)
-    // clang-format on
     {
         if constexpr (sizeof(typename Cont::value_type) == 1) {
             return std::front_insert_iterator<Cont>(c);
@@ -2462,11 +2448,9 @@ namespace boost::parser::detail { namespace text { BOOST_PARSER_DETAIL_TEXT_NAME
     }
 
     template<typename Cont>
-    // clang-format off
         requires requires { typename Cont::value_type; } &&
-        utf_code_unit<typename Cont::value_type>
+                 utf_code_unit<typename Cont::value_type>
     constexpr auto from_utf16_front_inserter(Cont & c)
-    // clang-format on
     {
         if constexpr (sizeof(typename Cont::value_type) == 1) {
             return utf_16_to_8_front_insert_iterator<Cont>(c);
@@ -2478,11 +2462,9 @@ namespace boost::parser::detail { namespace text { BOOST_PARSER_DETAIL_TEXT_NAME
     }
 
     template<typename Cont>
-    // clang-format off
         requires requires { typename Cont::value_type; } &&
-        utf_code_unit<typename Cont::value_type>
+                 utf_code_unit<typename Cont::value_type>
     constexpr auto from_utf32_front_inserter(Cont & c)
-    // clang-format on
     {
         if constexpr (sizeof(typename Cont::value_type) == 1) {
             return utf_32_to_8_front_insert_iterator<Cont>(c);
@@ -2492,7 +2474,6 @@ namespace boost::parser::detail { namespace text { BOOST_PARSER_DETAIL_TEXT_NAME
             return std::front_insert_iterator<Cont>(c);
         }
     }
-
 }}}
 
 #endif

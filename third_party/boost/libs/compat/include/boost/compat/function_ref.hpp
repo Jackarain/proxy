@@ -131,7 +131,7 @@ public:
   function_ref_base(const function_ref_base&) noexcept = default;
   function_ref_base& operator=(const function_ref_base&) noexcept = default;
 
-  R operator()(Args&&... args) const noexcept(NoEx) { return this->invoke_(thunk_, std::forward<Args>(args)...); }
+  R operator()(Args... args) const noexcept(NoEx) { return this->invoke_(thunk_, std::forward<Args>(args)...); }
 };
 
 } // namespace detail

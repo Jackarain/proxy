@@ -6,7 +6,7 @@
 # https://www.boost.org/LICENSE_1_0.txt
 
 import config : requires ;
-import ../../predef/tools/check/predef : check : predef-check ;
+import predef : check : predef-check ;
 
 project : requirements
     <library>/boost/locale//boost_locale
@@ -37,6 +37,7 @@ run test_catalog.cpp ;
 run test_encoding.cpp ;
 run test_utf.cpp ;
 run test_util.cpp test_helpers.cpp ;
+run test_util_numeric_convert.cpp ;
 run test_date_time.cpp ;
 run test_ios_info.cpp ;
 run test_ios_prop.cpp ;

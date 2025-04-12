@@ -1,5 +1,5 @@
 /* Proposed SG14 status_code
-(C) 2018 - 2020 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
+(C) 2018 - 2024 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
 File Created: Feb 2018
 
 
@@ -28,6 +28,11 @@ http://www.boost.org/LICENSE_1_0.txt)
 #include "status_error.hpp"
 
 #include <cerrno>  // for error constants
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma warning(push)
+#pragma warning(disable : 6326)  // constant comparison
+#endif
 
 BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE_BEGIN
 
@@ -487,5 +492,9 @@ BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator!=(const T &a, const
 
 
 BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE_END
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma warning(pop)
+#endif
 
 #endif

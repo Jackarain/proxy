@@ -34,10 +34,18 @@ elseif(BOOST_CI_URL_SUBDIR_TEST)
         set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
     endif()
     set(BOOST_URL_BUILD_TESTS OFF CACHE BOOL "Build the tests." FORCE)
+    set(BOOST_URL_BUILD_FUZZERS OFF CACHE BOOL "Build the fuzzers." FORCE)
+    set(BOOST_URL_BUILD_EXAMPLES OFF CACHE BOOL "Build the examples." FORCE)
     set(PREV_BUILD_TESTING ${BUILD_TESTING} OFF CACHE BOOL "Build the tests." FORCE)
     set(BUILD_TESTING OFF CACHE BOOL "Build the tests." FORCE)
     file(GLOB subdirs RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/../../.. ${CMAKE_CURRENT_SOURCE_DIR}/../../../*)
     foreach(subdir ${subdirs})
+        # We explicitly don't want to add the context library
+        # because we know Boost.URL doesn't depend on it and
+        # causes issues with MASM in many environments.
+        if (subdir STREQUAL "context")
+            continue()
+        endif()
         # This is testing the case when the super-project is not available
         # and users want to add libraries as subdirectories.
         # According to the convention above, users should scan all dependencies

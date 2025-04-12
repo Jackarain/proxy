@@ -9,8 +9,6 @@
 
 #include <boost/config.hpp>
 
-#if (__cplusplus >= 201402L) || (defined(_MSVC_LANG) && _MSVC_LANG >= 201402L)
-
 #include "../example/b2_workarounds.hpp"
 
 #include <iostream>
@@ -24,7 +22,7 @@ using namespace std;
 #include <boost/core/lightweight_test.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/variant.hpp>
-#include <boost/function.hpp>
+#include <functional>
 
 #define L cout << __LINE__ << endl;
 
@@ -92,7 +90,7 @@ int main(int argc, char* argv[])
         BOOST_TEST((cl->*fun2)(5 ,2 ) == 7 );
 
         //test if it binds.
-        boost::function<int(override_class* const, int, int)> mem_fn_obj = func;
+        std::function<int(override_class* const, int, int)> mem_fn_obj = func;
 
 
         const std::type_info & ti = cl.get_type_info();
@@ -109,7 +107,3 @@ int main(int argc, char* argv[])
 
     return boost::report_errors();
 }
-
-#else
-int main() {return 0;}
-#endif

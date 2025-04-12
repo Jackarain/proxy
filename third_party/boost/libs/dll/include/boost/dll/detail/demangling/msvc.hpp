@@ -8,16 +8,12 @@
 #define BOOST_DLL_DETAIL_DEMANGLING_MSVC_HPP_
 
 #include <boost/dll/detail/demangling/mangled_storage_base.hpp>
+
+#include <boost/core/detail/string_view.hpp>
+
 #include <iterator>
 #include <algorithm>
-#include <boost/type_traits/is_const.hpp>
-#include <boost/type_traits/is_volatile.hpp>
-#include <boost/type_traits/is_lvalue_reference.hpp>
-#include <boost/type_traits/is_rvalue_reference.hpp>
-#include <boost/type_traits/function_traits.hpp>
-#include <boost/type_traits/remove_reference.hpp>
-
-#include <boost/spirit/home/x3.hpp>
+#include <type_traits>
 
 namespace boost { namespace dll { namespace detail {
 
@@ -26,11 +22,6 @@ class mangled_storage_impl  : public mangled_storage_base
     template<typename T>
     struct dummy {};
 
-    template<typename Return, typename ...Args>
-    std::vector<std::string> get_func_params(dummy<Return(Args...)>) const
-    {
-        return {get_name<Args>()...};
-    }
     template<typename Return, typename ...Args>
     std::string get_return_type(dummy<Return(Args...)>) const
     {
@@ -85,7 +76,7 @@ void mangled_storage_impl::trim_typename(std::string & val)
         static constexpr char class_ [7] = "class ";
         static constexpr char struct_[8] = "struct ";
 
-        if (equal(begin(class_), end(class_)-1, val.begin())) //aklright, starts with 'class '
+        if (equal(begin(class_), end(class_)-1, val.begin()))
             val.erase(0, 6);
         else if (val.size() >= 7)
             if (equal(begin(struct_), end(struct_)-1, val.begin()))
@@ -93,134 +84,256 @@ void mangled_storage_impl::trim_typename(std::string & val)
     }
 }
 
+namespace parser {
 
-namespace parser
-{
-    namespace x3 = spirit::x3;
-
-    inline auto ptr_rule_impl(std::integral_constant<std::size_t, 32>)
-    {
-        return -((-x3::space) >> "__ptr32");
-    }
-    inline auto ptr_rule_impl(std::integral_constant<std::size_t, 64>)
-    {
-        return -((-x3::space) >> "__ptr64");
+    inline bool try_consume_prefix(boost::core::string_view& s, boost::core::string_view prefix) {
+        const bool result = s.starts_with(prefix);
+        if (result) {
+            s.remove_prefix(prefix.size());
+        }
+        return result;
     }
 
-    inline auto ptr_rule() {
-        return ptr_rule_impl(std::integral_constant<std::size_t, sizeof(std::size_t)*8>());
+    inline bool ignore_prefix(boost::core::string_view& s, boost::core::string_view prefix) {
+        parser::try_consume_prefix(s, prefix);
+        return true;
     }
 
-    auto const visibility = ("public:" | x3::lit("protected:") | "private:");
-    auto const virtual_ = x3::space >> "virtual";
-    auto const static_     = x3::space >> x3::lit("static") ;
-
-    inline auto const_rule_impl(true_type )  {return x3::space >> "const";};
-    inline auto const_rule_impl(false_type)  {return x3::eps;};
-    template<typename T>
-    auto const_rule() {using t = is_const<typename remove_reference<T>::type>; return const_rule_impl(t());}
-
-    inline auto volatile_rule_impl(true_type )  {return x3::space >> "volatile";};
-    inline auto volatile_rule_impl(false_type)  {return x3::eps;};
-    template<typename T>
-    auto volatile_rule() {using t = is_volatile<typename remove_reference<T>::type>; return volatile_rule_impl(t());}
-
-
-    inline auto inv_const_rule_impl(true_type )  {return "const" >>  x3::space ;};
-    inline auto inv_const_rule_impl(false_type)  {return x3::eps;};
-    template<typename T>
-    auto inv_const_rule() {using t = is_const<typename remove_reference<T>::type>; return inv_const_rule_impl(t());}
-
-    inline auto inv_volatile_rule_impl(true_type )  {return "volatile" >> x3::space;};
-    inline auto inv_volatile_rule_impl(false_type)  {return x3::eps;};
-    template<typename T>
-    auto inv_volatile_rule() {using t = is_volatile<typename remove_reference<T>::type>; return inv_volatile_rule_impl(t());}
-
-
-    inline auto reference_rule_impl(false_type, false_type) {return x3::eps;}
-    inline auto reference_rule_impl(true_type,  false_type) {return x3::space >>"&"  ;}
-    inline auto reference_rule_impl(false_type, true_type ) {return x3::space >>"&&" ;}
-
-
-    template<typename T>
-    auto reference_rule() {using t_l = is_lvalue_reference<T>; using t_r = is_rvalue_reference<T>; return reference_rule_impl(t_l(), t_r());}
-
-    auto const class_ = ("class" | x3::lit("struct"));
-
-    //it takes a string, because it may be overloaded.
-    template<typename T>
-    auto type_rule(const std::string & type_name)
-    {
-        using namespace std;
-
-        return -(class_ >> x3::space)>> x3::string(type_name) >>
-                const_rule<T>() >>
-                volatile_rule<T>() >>
-                reference_rule<T>() >>
-                ptr_rule();
+    inline void consume_ptrs(boost::core::string_view& s) {
+        do {
+            while (parser::try_consume_prefix(s, " ")) {}
+        } while (parser::try_consume_prefix(s, "__ptr32") || parser::try_consume_prefix(s, "__ptr64"));
     }
-    template<>
-    inline auto type_rule<void>(const std::string &) { return x3::string("void"); };
 
-    auto const cdecl_   = "__cdecl"     >> x3::space;
-    auto const stdcall  = "__stdcall"     >> x3::space;
-#if defined(_WIN64)//seems to be necessary by msvc 14-x64
-    auto const thiscall = "__cdecl"     >> x3::space;
-#else
-    auto const thiscall = "__thiscall"     >> x3::space;
-#endif
+    inline bool ignore_ptrs(boost::core::string_view& s) {
+        parser::consume_ptrs(s);
+        return true;
+    }
+
+    inline bool try_consume_visibility(boost::core::string_view& s) {
+        return parser::try_consume_prefix(s, "public:")
+            || parser::try_consume_prefix(s, "protected:")
+            || parser::try_consume_prefix(s, "private:");
+    }
+
+    template<typename T>
+    bool try_consume_type(boost::core::string_view& s, const mangled_storage_impl& ms) {
+        if (std::is_void<T>::value) {
+            return parser::try_consume_prefix(s, "void");
+        }
+
+        parser::ignore_prefix(s, "class ");
+        parser::ignore_prefix(s, "struct ");
+
+        const auto& mangled_name = ms.get_name<T>();
+
+        static_assert(
+            !std::is_function<typename std::remove_pointer<T>::type>::value,
+            "boost::dll::smart_library on Windows platform does not support "
+            "functions that accept functions. If you wish to see such support "
+            "- please provide a working PR on github with sufficient tests. "
+            "Otherwise simplify the function. For example, use `void*` "
+            "parameter instead of a function pointer. "
+        );
+        if (!parser::try_consume_prefix(s, mangled_name)) {
+            return false;
+        }
+
+        if (std::is_const<typename std::remove_reference<T>::type>::value) {
+            if (!parser::try_consume_prefix(s, " const")) {
+                return false;
+            }
+        }
+
+        if (std::is_volatile<typename std::remove_reference<T>::type>::value) {
+            if (!parser::try_consume_prefix(s, " volatile")) {
+                return false;
+            }
+        }
+
+        if (std::is_rvalue_reference<T>::value) {
+            if (!parser::try_consume_prefix(s, " &&")) {
+                return false;
+            }
+        }
+
+        if (std::is_lvalue_reference<T>::value) {
+            if (!parser::try_consume_prefix(s, " &")) {
+                return false;
+            }
+        }
+
+        return parser::ignore_ptrs(s);
+    }
+
+    inline bool try_consume_thiscall(boost::core::string_view& s) {
+        parser::try_consume_prefix(s, " ");
+        return parser::try_consume_prefix(s, "__cdecl ")         // Win 64bit
+            || parser::try_consume_prefix(s, "__thiscall ");     // Win 32bit
+    }
 
     template<typename Return, typename Arg>
-    auto arg_list(const mangled_storage_impl & ms, Return (*)(Arg))
-    {
-        using namespace std;
-
-        return type_rule<Arg>(ms.get_name<Arg>());
+    bool try_consume_arg_list(boost::core::string_view& s, const mangled_storage_impl& ms, Return (*)(Arg)) {
+        return parser::try_consume_type<Arg>(s, ms);
     }
 
     template<typename Return, typename First, typename Second, typename ...Args>
-    auto arg_list(const mangled_storage_impl & ms, Return (*)(First, Second, Args...))
-    {
-
+    bool try_consume_arg_list(boost::core::string_view& s, const mangled_storage_impl& ms, Return (*)(First, Second, Args...)) {
         using next_type = Return (*)(Second, Args...);
-        return type_rule<First>(ms.get_name<First>()) >> x3::char_(',') >> arg_list(ms, next_type());
+        return parser::try_consume_type<First>(s, ms)
+            && parser::try_consume_prefix(s, ",")
+            && parser::try_consume_arg_list(s, ms, next_type());
     }
 
     template<typename Return>
-    auto arg_list(const mangled_storage_impl& /*ms*/, Return (*)())
-    {
-        return x3::string("void");
+    bool try_consume_arg_list(boost::core::string_view& s, const mangled_storage_impl& ms, Return (*)()) {
+        return parser::try_consume_type<void>(s, ms);
     }
-}
 
+    class is_destructor_with_name {
+        const std::string& dtor_name_;
 
-template<typename T> std::string mangled_storage_impl::get_variable(const std::string &name) const
-{
-    using namespace std;
-    using namespace boost;
+    public:
+        explicit is_destructor_with_name(const std::string& dtor_name)
+            : dtor_name_(dtor_name) {}
 
-    namespace x3 = spirit::x3;
-    using namespace parser;
+        inline bool operator()(boost::core::string_view s) const {
+            return parser::try_consume_visibility(s)
+                && parser::ignore_prefix(s, " virtual")
+                && parser::try_consume_thiscall(s)
+                && parser::try_consume_prefix(s, dtor_name_)
+                && parser::ignore_ptrs(s)
+                && s.empty();
+        }
 
-    auto type_name = get_name<T>();
+        inline bool operator()(const mangled_storage_base::entry& e) const {
+            return (*this)(boost::core::string_view(e.demangled.data(), e.demangled.size()));
+        }
+    };
 
-    auto matcher =
-            -(visibility >> static_ >> x3::space) >> //it may be a static class-member
-            parser::type_rule<T>(type_name) >> x3::space >>
-            name;
+    template<typename T>
+    class is_variable_with_name {
+        const std::string& variable_name_;
+        const mangled_storage_impl& ms_;
 
-    auto predicate = [&](const mangled_storage_base::entry & e)
-        {
-            if (e.demangled == name)//maybe not mangled,
-                return true;
+    public:
+        is_variable_with_name(const std::string& variable_name, const mangled_storage_impl& ms)
+            : variable_name_(variable_name), ms_(ms) {}
 
-            auto itr = e.demangled.begin();
-            auto end = e.demangled.end();
-            auto res = x3::parse(itr, end, matcher);
-            return res && (itr == end);
-        };
+        inline bool operator()(boost::core::string_view s) const {
+            if (parser::try_consume_visibility(s) && !parser::try_consume_prefix(s, " static ")) {
+                return false;
+            }
 
-    auto found = std::find_if(storage_.begin(), storage_.end(), predicate);
+            return parser::try_consume_type<T>(s, ms_)
+                && parser::try_consume_prefix(s, variable_name_)
+                && s.empty();
+        }
+
+        inline bool operator()(const mangled_storage_base::entry& e) const {
+            return (*this)(boost::core::string_view(e.demangled.data(), e.demangled.size()));
+        }
+    };
+
+    template <class Signature>
+    class is_constructor_with_name {
+        const std::string& ctor_name_;
+        const mangled_storage_impl& ms_;
+
+    public:
+        is_constructor_with_name(const std::string& ctor_name, const mangled_storage_impl& ms)
+            : ctor_name_(ctor_name), ms_(ms) {}
+
+        inline bool operator()(boost::core::string_view s) const {
+            return parser::try_consume_visibility(s)
+                && parser::try_consume_thiscall(s)
+                && parser::try_consume_prefix(s, ctor_name_)
+                && parser::try_consume_prefix(s, "(")
+                && parser::try_consume_arg_list(s, ms_, Signature())
+                && parser::try_consume_prefix(s, ")")
+                && parser::ignore_ptrs(s)
+                && s.empty();
+        }
+
+        inline bool operator()(const mangled_storage_base::entry& e) const {
+            return (*this)(boost::core::string_view(e.demangled.data(), e.demangled.size()));
+        }
+    };
+
+    template <class Signature>
+    class is_function_with_name;
+
+    template <class Result, class... Args>
+    class is_function_with_name<Result(*)(Args...)> {
+        const std::string& function_name_;
+        const mangled_storage_impl& ms_;
+
+    public:
+        is_function_with_name(const std::string& function_name, const mangled_storage_impl& ms)
+            : function_name_(function_name), ms_(ms) {}
+
+        inline bool operator()(boost::core::string_view s) const {
+            if (parser::try_consume_visibility(s) && !parser::try_consume_prefix(s, " static ")) {
+                return false;
+            }
+
+            using Signature = Result(*)(Args...);
+            return parser::try_consume_type<Result>(s,  ms_)
+                && parser::ignore_prefix(s, " ")
+                && parser::try_consume_prefix(s, "__cdecl ")
+                && parser::try_consume_prefix(s, function_name_)
+                && parser::try_consume_prefix(s, "(")
+                && parser::try_consume_arg_list(s, ms_, Signature())
+                && parser::try_consume_prefix(s, ")")
+                && parser::ignore_ptrs(s)
+                && s.empty();
+        }
+
+        inline bool operator()(const mangled_storage_base::entry& e) const {
+            return (*this)(boost::core::string_view(e.demangled.data(), e.demangled.size()));
+        }
+    };
+
+    template <typename Class, typename Func>
+    class is_mem_fn_with_name;
+
+    template <typename Class, class Result, class... Args>
+    class is_mem_fn_with_name<Class, Result(*)(Args...)> {
+        const std::string& function_name_;
+        const mangled_storage_impl& ms_;
+
+    public:
+        is_mem_fn_with_name(const std::string& function_name, const mangled_storage_impl& ms)
+            : function_name_(function_name), ms_(ms) {}
+
+        inline bool operator()(boost::core::string_view s) const {
+            using Signature = Result(*)(Args...);
+            return parser::try_consume_visibility(s)
+                && parser::ignore_prefix(s, " virtual")
+                && parser::try_consume_prefix(s, " ")
+                && parser::try_consume_type<Result>(s, ms_)
+                && parser::try_consume_thiscall(s)
+                && parser::try_consume_type<typename std::remove_cv<Class>::type>(s, ms_)
+                && parser::try_consume_prefix(s, "::")
+                && parser::try_consume_prefix(s, function_name_)
+                && parser::try_consume_prefix(s, "(")
+                && parser::try_consume_arg_list(s, ms_, Signature())
+                && parser::try_consume_prefix(s, ")")
+                && (!std::is_const<Class>::value || parser::try_consume_prefix(s, "const "))
+                && (!std::is_volatile<Class>::value || parser::try_consume_prefix(s, "volatile "))
+                && parser::ignore_ptrs(s)
+                && s.empty();
+        }
+
+        inline bool operator()(const mangled_storage_base::entry& e) const {
+            return (*this)(boost::core::string_view(e.demangled.data(), e.demangled.size()));
+        }
+    };
+}  // namespace parser
+
+template<typename T>
+std::string mangled_storage_impl::get_variable(const std::string &name) const {
+    const auto found = std::find_if(storage_.begin(), storage_.end(), parser::is_variable_with_name<T>(name, *this));
 
     if (found != storage_.end())
         return found->mangled;
@@ -228,73 +341,19 @@ template<typename T> std::string mangled_storage_impl::get_variable(const std::s
         return "";
 }
 
-template<typename Func> std::string mangled_storage_impl::get_function(const std::string &name) const
-{
-    namespace x3 = spirit::x3;
-    using namespace parser;
-    using func_type = Func*;
-    using return_type = typename function_traits<Func>::result_type;
-    std::string return_type_name = get_name<return_type>();
-
-
-    auto matcher =
-                -(visibility >> static_ >> x3::space) >> //it may be a static class-member, which does however not have the static attribute.
-                parser::type_rule<return_type>(return_type_name) >>  x3::space >>
-                cdecl_ >> //cdecl declaration for methods. stdcall cannot be
-                name >> x3::lit('(') >> parser::arg_list(*this, func_type()) >> x3::lit(')') >>  parser::ptr_rule();
-
-
-    auto predicate = [&](const mangled_storage_base::entry & e)
-            {
-                if (e.demangled == name)//maybe not mangled,
-                    return true;
-
-                auto itr = e.demangled.begin();
-                auto end = e.demangled.end();
-                auto res = x3::parse(itr, end, matcher);
-
-                return res && (itr == end);
-            };
-
-    auto found = std::find_if(storage_.begin(), storage_.end(), predicate);
+template<typename Func>
+std::string mangled_storage_impl::get_function(const std::string &name) const {
+    const auto found = std::find_if(storage_.begin(), storage_.end(), parser::is_function_with_name<Func*>(name, *this));
 
     if (found != storage_.end())
         return found->mangled;
     else
         return "";
-
 }
 
 template<typename Class, typename Func>
-std::string mangled_storage_impl::get_mem_fn(const std::string &name) const
-{
-    namespace x3 = spirit::x3;
-    using namespace parser;
-    using func_type = Func*;
-    using return_type = typename function_traits<Func>::result_type;
-    auto return_type_name = get_name<return_type>();
-
-
-    auto cname = get_name<Class>();
-
-    auto matcher =
-                visibility >> -virtual_ >> x3::space >>
-                parser::type_rule<return_type>(return_type_name) >>  x3::space >>
-                thiscall >> //cdecl declaration for methods. stdcall cannot be
-                cname >> "::" >> name >>
-                x3::lit('(') >> parser::arg_list(*this, func_type()) >> x3::lit(')') >>
-                inv_const_rule<Class>() >> inv_volatile_rule<Class>() >> parser::ptr_rule();
-
-    auto predicate = [&](const mangled_storage_base::entry & e)
-            {
-                auto itr = e.demangled.begin();
-                auto end = e.demangled.end();
-                auto res = x3::parse(itr, end, matcher);
-
-                return res && (itr == end);
-            };
-
-    auto found = std::find_if(storage_.begin(), storage_.end(), predicate);
+std::string mangled_storage_impl::get_mem_fn(const std::string &name) const {
+    const auto found = std::find_if(storage_.begin(), storage_.end(), parser::is_mem_fn_with_name<Class, Func*>(name, *this));
 
     if (found != storage_.end())
         return found->mangled;
@@ -304,14 +363,7 @@ std::string mangled_storage_impl::get_mem_fn(const std::string &name) const
 
 
 template<typename Signature>
-auto mangled_storage_impl::get_constructor() const -> ctor_sym
-{
-    namespace x3 = spirit::x3;
-    using namespace parser;
-
-    using func_type = Signature*;
-
-
+auto mangled_storage_impl::get_constructor() const -> ctor_sym {
     std::string ctor_name; // = class_name + "::" + name;
     std::string unscoped_cname; //the unscoped class-name
     {
@@ -329,23 +381,7 @@ auto mangled_storage_impl::get_constructor() const -> ctor_sym
         }
     }
 
-    auto matcher =
-                visibility >> x3::space >>
-                thiscall >> //cdecl declaration for methods. stdcall cannot be
-                ctor_name >>
-                x3::lit('(') >> parser::arg_list(*this, func_type()) >> x3::lit(')') >> parser::ptr_rule();
-
-
-    auto predicate = [&](const mangled_storage_base::entry & e)
-            {
-                auto itr = e.demangled.begin();
-                auto end = e.demangled.end();
-                auto res = x3::parse(itr, end, matcher);
-
-                return res && (itr == end);
-            };
-
-    auto f = std::find_if(storage_.begin(), storage_.end(), predicate);
+    const auto f = std::find_if(storage_.begin(), storage_.end(), parser::is_constructor_with_name<Signature*>(ctor_name, *this));
 
     if (f != storage_.end())
         return f->mangled;
@@ -354,10 +390,7 @@ auto mangled_storage_impl::get_constructor() const -> ctor_sym
 }
 
 template<typename Class>
-auto mangled_storage_impl::get_destructor() const -> dtor_sym
-{
-    namespace x3 = spirit::x3;
-    using namespace parser;
+auto mangled_storage_impl::get_destructor() const -> dtor_sym {
     std::string dtor_name; // = class_name + "::" + name;
     std::string unscoped_cname; //the unscoped class-name
     {
@@ -375,23 +408,7 @@ auto mangled_storage_impl::get_destructor() const -> dtor_sym
         }
     }
 
-    auto matcher =
-                visibility >> -virtual_ >> x3::space >>
-                thiscall >> //cdecl declaration for methods. stdcall cannot be
-                dtor_name >> parser::ptr_rule();
-
-
-    auto predicate = [&](const mangled_storage_base::entry & e)
-                {
-                    auto itr = e.demangled.begin();
-                    auto end = e.demangled.end();
-                    auto res = x3::parse(itr, end, matcher);
-
-                    return res && (itr == end);
-                };
-
-    auto found = std::find_if(storage_.begin(), storage_.end(), predicate);
-
+    const auto found = std::find_if(storage_.begin(), storage_.end(), parser::is_destructor_with_name(dtor_name));
 
     if (found != storage_.end())
         return found->mangled;
@@ -400,8 +417,7 @@ auto mangled_storage_impl::get_destructor() const -> dtor_sym
 }
 
 template<typename T>
-std::string mangled_storage_impl::get_vtable() const
-{
+std::string mangled_storage_impl::get_vtable() const {
     std::string id = "const " + get_name<T>() + "::`vftable'";
 
     auto predicate = [&](const mangled_storage_base::entry & e)
@@ -419,8 +435,7 @@ std::string mangled_storage_impl::get_vtable() const
 }
 
 template<typename T>
-std::vector<std::string> mangled_storage_impl::get_related() const
-{
+std::vector<std::string> mangled_storage_impl::get_related() const {
     std::vector<std::string> ret;
     auto name = get_name<T>();
 
@@ -433,9 +448,6 @@ std::vector<std::string> mangled_storage_impl::get_related() const
     return ret;
 }
 
-
 }}}
-
-
 
 #endif /* BOOST_DLL_DETAIL_DEMANGLING_MSVC_HPP_ */

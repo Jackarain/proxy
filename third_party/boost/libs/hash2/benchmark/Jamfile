@@ -1,0 +1,9 @@
+# Copyright 2020 Peter Dimov
+# Distributed under the Boost Software License, Version 1.0.
+
+project : default-build release <link>static ;
+
+exe buffer : buffer.cpp ;
+exe unordered : unordered.cpp ;
+exe average : average.cpp ;
+exe keys : keys.cpp ;

@@ -1,4 +1,4 @@
-/* Copyright 2016-2018 Joaquin M Lopez Munoz.
+/* Copyright 2016-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -49,17 +49,22 @@ struct function_model<R(Args...)>
 {
   using value_type=callable_wrapper<R(Args...)>;
 
+  using type_index=std::type_info;
+
   template<typename Callable>
   using is_implementation=is_invocable_r<R,Callable&,Args...>;
 
   template<typename T>
   using is_terminal=function_model_is_terminal<T>;
 
+  template<typename T> 
+  static const std::type_info& index(){return typeid(T);}
+
   template<typename T>
-  static const std::type_info& subtypeid(const T&){return typeid(T);}
+  static const std::type_info& subindex(const T&){return typeid(T);}
 
   template<typename Signature>
-  static const std::type_info& subtypeid(
+  static const std::type_info& subindex(
     const callable_wrapper<Signature>& f)
   {
     return f.target_type();

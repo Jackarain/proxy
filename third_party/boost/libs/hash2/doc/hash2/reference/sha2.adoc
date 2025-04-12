@@ -1,0 +1,258 @@
+////
+Copyright 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_sha2]
+# <boost/hash2/sha2.hpp>
+:idprefix: ref_sha2_
+
+```
+#include <boost/hash2/hmac.hpp>
+#include <boost/hash2/digest.hpp>
+
+namespace boost {
+namespace hash2 {
+
+class sha2_256;
+class sha2_224;
+class sha2_512;
+class sha2_384;
+class sha2_512_256;
+class sha2_512_224;
+
+using hmac_sha2_256 = hmac<sha2_256>;
+using hmac_sha2_224 = hmac<sha2_224>;
+using hmac_sha2_512 = hmac<sha2_512>;
+using hmac_sha2_384 = hmac<sha2_384>;
+using hmac_sha2_512_256 = hmac<sha2_512_256>;
+using hmac_sha2_512_224 = hmac<sha2_512_224>;
+
+} // namespace hash2
+} // namespace boost
+```
+
+This header implements the https://csrc.nist.gov/pubs/fips/180-4/upd1/final[SHA-2] family of functions.
+
+## sha2_256
+
+```
+class sha2_256
+{
+    using result_type = digest<32>;
+
+    static constexpr std::size_t block_size = 64;
+
+    constexpr sha2_256();
+    constexpr explicit sha2_256( std::uint64_t seed );
+    sha2_256( void const* p, std::size_t n );
+    constexpr sha2_256( unsigned char const* p, std::size_t n );
+
+    void update( void const* p, std::size_t n );
+    constexpr void update( unsigned char const* p, std::size_t n );
+
+    constexpr result_type result();
+};
+```
+
+### Constructors
+
+```
+constexpr sha2_256();
+```
+
+Default constructor.
+
+Effects: ::
+  Initializes the internal state of the SHA-256 algorithm to its initial values.
+
+```
+constexpr explicit sha2_256( std::uint64_t seed );
+```
+
+Constructor taking an integer seed value.
+
+Effects: ::
+  Initializes the state as if by default construction, then if `seed` is not zero, performs `update(p, 8); result();` where `p` points to a little-endian representation of the value of `seed`.
+
+Remarks: ::
+  By convention, if `seed` is zero, the effect of this constructor is the same as default construction.
+
+```
+sha2_256( void const* p, std::size_t n );
+constexpr sha2_256( unsigned char const* p, std::size_t n );
+```
+
+Constructor taking a byte sequence seed.
+
+Effects: ::
+  Initializes the state as if by default construction, then if `n` is not zero, performs `update(p, n); result()`.
+
+Remarks: ::
+  By convention, if `n` is zero, the effect of this constructor is the same as default construction.
+
+### update
+
+```
+void update( void const* p, std::size_t n );
+constexpr void update( unsigned char const* p, std::size_t n );
+```
+
+Effects: ::
+  Updates the internal state of the SHA-256 algorithm from the byte sequence `[p, p+n)`.
+
+Remarks: ::
+  Consecutive calls to `update` are equivalent to a single call with the concatenated byte sequences of the individual calls.
+
+### result
+
+```
+constexpr result_type result();
+```
+
+Effects: ::
+  Pads the accumulated message and finalizes the SHA-256 digest.
+
+Returns: ::
+  The SHA-256 digest of the message formed from the byte sequences of the preceding calls to `update`.
+
+Remarks: ::
+  Repeated calls to `result()` return a pseudorandom sequence of `result_type` values, effectively extending the output.
+
+## sha2_224
+
+The SHA-224 algorithm is identical to the SHA-256 algorithm described above.
+
+The only differences are the internal state's initial values and the size of the message digest, which is:
+```
+using result_type = digest<28>;
+```
+
+Otherwise, all other operations and constants are identical.
+
+The message digest is obtained by truncating the final results of the SHA-256 algorithm to its leftmost 224 bits.
+
+## sha2_512
+
+```
+class sha2_512
+{
+    using result_type = digest<64>;
+
+    static constexpr std::size_t block_size = 128;
+
+    constexpr sha2_512();
+    constexpr explicit sha2_512( std::uint64_t seed );
+    sha2_512( void const* p, std::size_t n );
+    constexpr sha2_512( unsigned char const* p, std::size_t n );
+
+    void update( void const* p, std::size_t n );
+    constexpr void update( unsigned char const* p, std::size_t n );
+
+    constexpr result_type result();
+};
+```
+
+### Constructors
+
+```
+constexpr sha2_512();
+```
+
+Default constructor.
+
+Effects: ::
+  Initializes the internal state of the SHA-512 algorithm to its initial values.
+
+```
+constexpr explicit sha2_512( std::uint64_t seed );
+```
+
+Constructor taking an integer seed value.
+
+Effects: ::
+  Initializes the state as if by default construction, then if `seed` is not zero, performs `update(p, 8); result();` where `p` points to a little-endian representation of the value of `seed`.
+
+Remarks: ::
+  By convention, if `seed` is zero, the effect of this constructor is the same as default construction.
+
+```
+sha2_512( void const* p, std::size_t n );
+constexpr sha2_512( unsigned char const* p, std::size_t n );
+```
+
+Constructor taking a byte sequence seed.
+
+Effects: ::
+  Initializes the state as if by default construction, then if `n` is not zero, performs `update(p, n); result()`.
+
+Remarks: ::
+  By convention, if `n` is zero, the effect of this constructor is the same as default construction.
+
+### update
+
+```
+void update( void const* p, std::size_t n );
+constexpr void update( unsigned char const* p, std::size_t n );
+```
+
+Effects: ::
+  Updates the internal state of the SHA-512 algorithm from the byte sequence `[p, p+n)`.
+
+Remarks: ::
+  Consecutive calls to `update` are equivalent to a single call with the concatenated byte sequences of the individual calls.
+
+### result
+
+```
+constexpr result_type result();
+```
+
+Effects: ::
+  Pads the accumulated message and finalizes the SHA-512 digest.
+
+Returns: ::
+  The SHA-512 digest of the message formed from the byte sequences of the preceding calls to `update`.
+
+Remarks: ::
+  Repeated calls to `result()` return a pseudorandom sequence of `result_type` values, effectively extending the output.
+
+## sha2_384
+
+The SHA-384 algorithm is identical to the SHA-512 algorithm described above.
+
+The only differences are the internal state's initial values and the size of the message digest, which is:
+```
+using result_type = digest<48>;
+```
+
+Otherwise, all other operations and constants are identical.
+
+The message digest is obtained by truncating the final results of the SHA-512 algorithm to its leftmost 384 bits.
+
+## sha2_512_224
+
+The SHA-512/224 algorithm is identical to the SHA-512 algorithm described above.
+
+The only differences are the internal state's initial values and the size of the message digest, which is:
+```
+using result_type = digest<28>;
+```
+
+Otherwise, all other operations and constants are identical.
+
+The message digest is obtained by truncating the final results of the SHA-512 algorithm to its leftmost 224 bits.
+
+## sha2_512_256
+
+The SHA-512/256 algorithm is identical to the SHA-512 algorithm described above.
+
+The only differences are the internal state's initial values and the size of the message digest, which is:
+```
+using result_type = digest<32>;
+```
+
+Otherwise, all other operations and constants are identical.
+
+The message digest is obtained by truncating the final results of the SHA-512 algorithm to its leftmost 256 bits.

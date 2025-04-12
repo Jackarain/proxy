@@ -1,0 +1,181 @@
+////
+Copyright 2020, 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#examples]
+# Usage Examples
+:idprefix: example_
+
+## Use with Unordered Containers
+
+To use one of our _hash algorithms_ (such as `fnv1a_64`) with an unordered container (such as `boost::unordered_flat_map`), we need
+to create an adaptor class that exposes an interface compatible with `std::hash<T>`.
+
+To do that, in the `operator()(T const& v)` member function of our adaptor, we need to create an instance `h` of the _hash algorithm_,
+use `hash_append(h, {}, v)` to send `v` to it, and then extract the result using `h.result()` and return it as `std::size_t`.
+
+The minimal working example below illustrates this approach.
+
+[source]
+----
+include::../../example/hash_without_seed.cpp[lines=5..-1]
+----
+
+Since `hash<T, H>` is templated not just on the key type `T`, but on the hash algorithm type `H`, we can easily switch from `fnv1a_64`
+to another hash algorithm, for example `siphash_64`, by only changing the line
+
+```
+    using hasher = hash<std::string, boost::hash2::fnv1a_64>;
+```
+
+to
+
+```
+    using hasher = hash<std::string, boost::hash2::siphash_64>;
+```
+
+This will work, but SipHash is not intended to be used without an initial random seed, and we don't pass any. To rectify this, let's
+modify `hash<T, H>` to have a constructor taking a seed of type `uint64_t`:
+
+[source]
+----
+include::../../example/hash_with_uint64_seed.cpp[lines=5..-1]
+----
+
+NOTE: In real code, the seed will not be a hardcoded constant; ideally, every unordered container instance will have its own random and unpredictable seed.
+
+Since all _hash algorithms_ that conform to our library requirements are constructible with an initial seed of type `uint64_t`, the above will work with any of them.
+
+This is good enough for any practical purposes, but in principle, SipHash64 takes a 16 byte seed per specification, and we only (effectively) pass 8 bytes.
+We could modify our `hash` yet again and this time use a constructor taking a sequence of bytes as the seed:
+
+[source]
+----
+include::../../example/hash_with_byte_seed.cpp[lines=5..-1]
+----
+
+As before, construction from a byte sequence is a required part of the _hash algorithm_ interface, so the above will work with any of them.
+
+To avoid the need to store the initial seed as we did in the `uint64_t` case --
+which would require an allocation because `n` can be arbitrary, necessitating the use of `std::vector<unsigned char>` --
+we construct an instance `h_` of the hash algorithm, passing it the seed, to capture the initial seeded state, and then
+copy this seeded instance in `operator()`.
+
+But once we've done that, we might notice that we can construct this initial instance `h_` using any of the three supported constructors, not just the one taking a byte sequence:
+
+[source]
+----
+include::../../example/hash_with_any_seed.cpp[lines=5..-1]
+----
+
+This variation of `hash<T, H>` is universal; it can be used without a seed, with an unsigned integer seed, and with a byte sequence seed.
+
+NOTE: In real code, you might want to omit the default constructor, to avoid the possibility of accidentally using an unseeded hash algorithm.
+
+There's one final modification we could do to `hash`. In the examples above, we unconditionally use the 64 bit variant of SipHash, even though we only need a result of type `std::size_t` because that's what `std::hash` mandates.
+
+It would be better for performance if we used `siphash_32` when `std::size_t` is 32 bit, and `siphash_64` when it's 64 bit.
+
+For that, we can make `hash` take two hash algorithms, one 32 bit and one 64 bit, and have it pick the appropriate one automatically:
+
+[source]
+----
+include::../../example/hash_32_64.cpp[lines=5..-1]
+----
+
+To keep the case where we only pass one hash algorithm working, we default the second template parameter to the first one, so that if only one hash algorithm is passed, it will always be used.
+
+## md5sum
+
+A command line utility that prints the MD5 digests
+of a list of files passed as arguments.
+
+[source]
+----
+include::../../example/md5sum.cpp[lines=7..-1]
+----
+
+Sample command:
+
+[listing]
+----
+md5sum apache_builds.json canada.json citm_catalog.json twitter.json
+----
+
+Sample output:
+
+[listing]
+----
+7dc25b5fd9eb2217ed648dad23b311da *apache_builds.json
+8767d618bff99552b4946078d3a90c0c *canada.json
+b4391581160654374bee934a3b91255e *citm_catalog.json
+bf7d37451840af4e8873b65763315cbf *twitter.json
+----
+
+## hash2sum
+
+A command line utility that prints the digests
+of a list of files, using a specified hash algorithm.
+
+The hash algorithm is passed as the first command
+line argument.
+
+This example requires {cpp}14.
+
+[source]
+----
+include::../../example/hash2sum.cpp[lines=7..-1]
+----
+
+Sample command:
+
+[listing]
+----
+hash2sum sha2_512_224 apache_builds.json canada.json citm_catalog.json twitter.json
+----
+
+Sample output:
+
+[listing]
+----
+a95d7fde785fe24f9507fd1709014567bbc595867f1abaad96f50dbc *apache_builds.json
+b07e42587d10ec323a25fd8fc3eef2213fb0997beb7950350f4e8a4b *canada.json
+4ceee5a83ad320fedb0dfddfb6f80af50b99677e87158e2d039aa168 *citm_catalog.json
+854ebe0da98cadd426ea0fa3218d60bb52cf6494e435d2f385a37d48 *twitter.json
+----
+
+## Compile Time Hashing
+
+This example demonstrates calculating the MD5 digest of a data array, embedded in the program source, at compile time. It requires {cpp}14.
+
+[source]
+----
+include::../../example/compile_time.cpp[lines=11..-1]
+----
+
+Since the `constexpr` overload of `update` takes `unsigned char const*` (`void const*` is not allowed in `constexpr` functions), if the
+data to be hashed is a character array of type `char const[]`, passing it directly to `update` will not compile. In that case, we can
+use `hash_append_range` instead of calling `update`, as in the following example.
+
+[source]
+----
+include::../../example/compile_time_2.cpp[lines=11..-1]
+----
+
+## Result Extension
+
+Some of our hash algorithms, such as `xxhash_64` and `siphash_64`, have more than 64 bits of internal state, but only produce a 64 bit result.
+
+If we're using one of these algorithms to produce file or content checksums, do not tolerate collisions, and operate on a large number of files or items (many millions), it might be better to use a 128 bit digest instead.
+
+Since the algorithms maintain more than 64 bits of state, we can call `result()` twice and obtain a meaningful 128 bit result.
+
+The following example demonstrates how. It defines an algorithm `xxhash_128` which is implemented by wrapping `xxhash_64` and redefining its `result_type` and `result` members appropriately:
+
+[source]
+----
+include::../../example/xxh128_from_xxh64.cpp[lines=5..-1]
+----
+

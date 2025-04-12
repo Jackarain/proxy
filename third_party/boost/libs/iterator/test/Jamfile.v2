@@ -58,9 +58,13 @@ test-suite iterator
     [ run function_input_iterator_test.cpp ]
     [ run function_output_iterator_test.cpp ]
     [ compile-fail function_output_iterator_cf.cpp ]
+    [ compile-fail function_output_iterator_def_ctor_cf.cpp ]
 
     [ run generator_iterator_test.cpp ]
 
+    [ run min_category.cpp ]
+    [ compile-fail min_category_compile_fail1.cpp ]
+    [ compile-fail min_category_compile_fail2.cpp ]
     [ run minimum_category.cpp ]
     [ compile-fail minimum_category_compile_fail.cpp ]
 
@@ -70,5 +74,5 @@ test-suite iterator
     [ compile adl_test.cpp : <library>/boost/array//boost_array ]
     [ compile range_distance_compat_test.cpp : <library>/boost/range//boost_range ]
 
-    [ run shared_iterator_test.cpp ]
+    [ run shared_iterator_test.cpp : : : <library>/boost/smart_ptr//boost_smart_ptr ]
 ;

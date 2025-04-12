@@ -132,6 +132,11 @@ the input they match unless otherwise stated in the table below.]
      [ The code point type in Unicode parsing, or `char` in non-Unicode parsing.  See the entry for _ch_. ]
      []]
 
+    [[ `_symb_` ]
+     [ Matches a single symbol code point. ]
+     [ The code point type in Unicode parsing, or `char` in non-Unicode parsing.  See the entry for _ch_. ]
+     []]
+
     [[ `_hex_digit_` ]
      [ Matches a single hexidecimal digit code point. ]
      [ The code point type in Unicode parsing, or `char` in non-Unicode parsing.  See the entry for _ch_. ]
@@ -385,10 +390,10 @@ consume the input they match unless otherwise stated in the table below.]
     [[`*p`] [ Parses using `p` repeatedly until `p` no longer matches; always matches. ] [`std::string` if `_ATTR_np_(p)` is `char` or `char32_t`, otherwise `std::vector<_ATTR_np_(p)>`] [ Matching _e_ an unlimited number of times creates an infinite loop, which is undefined behavior in C++.  _Parser_ will assert in debug mode when it encounters `*_e_` (this applies to unconditional _e_ only). ]]
     [[`+p`] [ Parses using `p` repeatedly until `p` no longer matches; matches iff `p` matches at least once. ] [`std::string` if `_ATTR_np_(p)` is `char` or `char32_t`, otherwise `std::vector<_ATTR_np_(p)>`] [ Matching _e_ an unlimited number of times creates an infinite loop, which is undefined behavior in C++.  _Parser_ will assert in debug mode when it encounters `+_e_` (this applies to unconditional _e_ only). ]]
     [[`-p`] [ Equivalent to `p | _e_`. ] [`std::optional<_ATTR_np_(p)>`] []]
-    [[`p1 >> p2`] [ Matches iff `p1` matches and then `p2` matches. ] [`_bp_tup_<_ATTR_np_(p1), _ATTR_np_(p2)>` (See note.)] [ `>>` is associative; `p1 >> p2 >> p3`, `(p1 >> p2) >> p3`, and `p1 >> (p2 >> p3)` are all equivalent.  This attribute type only applies to the case where `p1` and `p2` both generate attributes; see _attr_gen_ for the full rules. ]]
+    [[`p1 >> p2`] [ Matches iff `p1` matches and then `p2` matches. ] [`_bp_tup_<_ATTR_np_(p1), _ATTR_np_(p2)>` (See note.)] [ `>>` is associative; `p1 >> p2 >> p3`, `(p1 >> p2) >> p3`, and `p1 >> (p2 >> p3)` are all equivalent.  This attribute type only applies to the case where `p1` and `p2` both generate attributes; see _attr_gen_ for the full rules.  Differs in precedence from `operator>`. ]]
     [[`p >> c`] [ Equivalent to `p >> lit(c)`. ] [`_ATTR_np_(p)`] []]
     [[`p >> r`] [ Equivalent to `p >> lit(r)`. ] [`_ATTR_np_(p)`] []]
-    [[`p1 > p2`] [ Matches iff `p1` matches and then `p2` matches.  No back-tracking is allowed after `p1` matches; if `p1` matches but then `p2` does not, the top-level parse fails. ] [`_bp_tup_<_ATTR_np_(p1), _ATTR_np_(p2)>` (See note.)] [ `>` is associative; `p1 > p2 > p3`, `(p1 > p2) > p3`, and `p1 > (p2 > p3)` are all equivalent.  This attribute type only applies to the case where `p1` and `p2` both generate attributes; see _attr_gen_ for the full rules. ]]
+    [[`p1 > p2`] [ Matches iff `p1` matches and then `p2` matches.  No back-tracking is allowed after `p1` matches; if `p1` matches but then `p2` does not, the top-level parse fails. ] [`_bp_tup_<_ATTR_np_(p1), _ATTR_np_(p2)>` (See note.)] [ `>` is associative; `p1 > p2 > p3`, `(p1 > p2) > p3`, and `p1 > (p2 > p3)` are all equivalent.  This attribute type only applies to the case where `p1` and `p2` both generate attributes; see _attr_gen_ for the full rules.  Differs in precedence from `operator>>`. ]]
     [[`p > c`] [ Equivalent to `p > lit(c)`. ] [`_ATTR_np_(p)`] []]
     [[`p > r`] [ Equivalent to `p > lit(r)`. ] [`_ATTR_np_(p)`] []]
     [[`p1 | p2`] [ Matches iff either `p1` matches or `p2` matches. ] [`std::variant<_ATTR_np_(p1), _ATTR_np_(p2)>` (See note.)] [ `|` is associative; `p1 | p2 | p3`, `(p1 | p2) | p3`, and `p1 | (p2 | p3)` are all equivalent.  This attribute type only applies to the case where `p1` and `p2` both generate attributes, and where the attribute types are different; see _attr_gen_ for the full rules. ]]
@@ -424,6 +429,15 @@ because, for any parser `p`, `_e_ | p` is equivalent to _e_, since _e_ always
 matches.  This is not true for _e_ parameterized with a condition.  For any
 condition `cond`, `_e_(cond)` is allowed to appear anywhere within an
 alternative parser.
+
+[important The C++ operators `>` and `>>` have different precedences.  This
+will sometimes come up in warnings from your compiler.  No matter how you do
+or do not parenthesize chains of parsers separated by `>` and `>>`, the
+resulting expression evaluates the same.  Feel free to add parentheses if your
+compiler complains.  More broadly, keep the C++ operator precedence rules in
+mind when writing your parsers _emdash_ the simplest thing to write may not
+have your intended semantics. ]
+
 ]
 
 [template table_attribute_generation

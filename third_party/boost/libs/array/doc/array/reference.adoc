@@ -1,0 +1,452 @@
+////
+Copyright 2001-2004 Nicolai M. Josuttis
+Copyright 2012 Marshall Clow
+Copyright 2024 Christian Mazakas
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#reference]
+# Reference
+:idprefix: reference_
+:cpp: C++
+
+## Header <boost/array.hpp>
+
+```cpp
+namespace boost {
+
+  template<typename T, std::size_t N> class array;
+
+  template<typename T, std::size_t N>
+    void swap(array<T, N>&, array<T, N>&);
+
+  template<typename T, std::size_t N>
+    constexpr bool operator==(const array<T, N>&, const array<T, N>&);
+  template<typename T, std::size_t N>
+    constexpr bool operator!=(const array<T, N>&, const array<T, N>&);
+
+  template<typename T, std::size_t N>
+    constexpr bool operator<(const array<T, N>&, const array<T, N>&);
+  template<typename T, std::size_t N>
+    constexpr bool operator>(const array<T, N>&, const array<T, N>&);
+  template<typename T, std::size_t N>
+    constexpr bool operator<=(const array<T, N>&, const array<T, N>&);
+  template<typename T, std::size_t N>
+    constexpr bool operator>=(const array<T, N>&, const array<T, N>&);
+
+  template<typename T, std::size_t N>
+    constexpr auto operator<=>(const array<T, N>&, const array<T, N>&);
+
+  template<std::size_t Idx, typename T, std::size_t N>
+    constexpr T& get(array<T, N>&) noexcept;
+  template<std::size_t Idx, typename T, std::size_t N>
+    constexpr const T& get(const array<T, N>&) noexcept;
+
+  template<class T, std::size_t N>
+    constexpr array<T, N> to_array( T const (&)[N] );
+  template<class T, std::size_t N>
+    constexpr array<T, N> to_array( T (&&)[N] );
+  template<class T, std::size_t N>
+    constexpr array<T, N> to_array( T const (&&)[N] );
+}
+```
+
+## Class template array
+
+### Synopsis
+
+```cpp
+// In header: <boost/array.hpp>
+
+template<typename T, std::size_t N>
+class array {
+public:
+
+  // types
+
+  typedef T                                     value_type;
+  typedef T*                                    iterator;
+  typedef const T*                              const_iterator;
+  typedef std::reverse_iterator<iterator>       reverse_iterator;
+  typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+  typedef T&                                    reference;
+  typedef const T&                              const_reference;
+  typedef std::size_t                           size_type;
+  typedef std::ptrdiff_t                        difference_type;
+
+  // static constants
+
+  static const size_type static_size = N;
+
+  // construct/copy/destroy
+
+  template<typename U> array& operator=(const array<U, N>&);
+
+  // iterator support
+
+  constexpr iterator begin() noexcept;
+  constexpr const_iterator begin() const noexcept;
+  constexpr const_iterator cbegin() const noexcept;
+
+  constexpr iterator end() noexcept;
+  constexpr const_iterator end() const noexcept;
+  constexpr const_iterator cend() const noexcept;
+
+  // reverse iterator support
+
+  reverse_iterator rbegin() noexcept;
+  const_reverse_iterator rbegin() const noexcept;
+  const_reverse_iterator crbegin() const noexcept;
+
+  reverse_iterator rend() noexcept;
+  const_reverse_iterator rend() const noexcept;
+  const_reverse_iterator crend() const noexcept;
+
+  // capacity
+
+  static constexpr size_type size() noexcept;
+  static constexpr bool empty() noexcept;
+  static constexpr size_type max_size() noexcept;
+
+  // element access
+
+  constexpr reference operator[](size_type);
+  constexpr const_reference operator[](size_type) const;
+
+  constexpr reference at(size_type);
+  constexpr const_reference at(size_type) const;
+
+  constexpr reference front();
+  constexpr const_reference front() const;
+
+  constexpr reference back();
+  constexpr const_reference back() const;
+
+  constexpr T* data() noexcept;
+  constexpr const T* data() const noexcept;
+
+  T* c_array() noexcept; // deprecated
+
+  // modifiers
+
+  swap(array<T, N>&);
+
+  constexpr void fill(const T&);
+  void assign(const T&); // deprecated
+
+  // public data members
+  T elems[N];
+};
+```
+
+### Construct/Copy/Destroy
+
+```
+template<typename U> array& operator=(const array<U, N>& other);
+```
+[horizontal]
+Effects: :: For each `i` in `[0..N)`, performs `elems[i] = other.elems[i];`.
+
+---
+
+### Iterator Support
+
+```
+constexpr iterator begin() noexcept;
+constexpr const_iterator begin() const noexcept;
+constexpr const_iterator cbegin() const noexcept;
+```
+[horizontal]
+Returns: :: `data()`.
+
+---
+
+```
+constexpr iterator end() noexcept;
+constexpr const_iterator end() const noexcept;
+constexpr const_iterator cend() const noexcept;
+```
+[horizontal]
+Returns: :: `data() + size()`.
+
+---
+
+### Reverse Iterator Support
+
+```
+reverse_iterator rbegin() noexcept;
+```
+[horizontal]
+Returns: :: `reverse_iterator(end())`.
+
+---
+
+```
+const_reverse_iterator rbegin() const noexcept;
+const_reverse_iterator crbegin() const noexcept;
+```
+[horizontal]
+Returns: :: `const_reverse_iterator(end())`.
+
+---
+
+```
+reverse_iterator rend() noexcept;
+```
+[horizontal]
+Returns: :: `reverse_iterator(begin())`.
+
+---
+
+```
+const_reverse_iterator rend() const noexcept;
+const_reverse_iterator crend() const noexcept;
+```
+[horizontal]
+Returns: ::  `const_reverse_iterator(begin())`.
+
+---
+
+### Capacity
+
+```
+static constexpr size_type size() noexcept;
+```
+[horizontal]
+Returns: :: `N`.
+
+---
+
+```
+static constexpr bool empty() noexcept;
+```
+[horizontal]
+Returns: :: `N == 0`.
+
+---
+
+```
+static constexpr size_type max_size() noexcept;
+```
+[horizontal]
+Returns: :: `N`.
+
+---
+
+### Element Access
+
+```
+constexpr reference operator[](size_type i);
+constexpr const_reference operator[](size_type i) const;
+```
+[horizontal]
+Requires: :: `i < N`.
+Returns: ::  `elems[i]`.
+Throws: :: Nothing.
+
+---
+
+```
+constexpr reference at(size_type i);
+constexpr const_reference at(size_type i) const;
+```
+[horizontal]
+Returns: :: `elems[i]`.
+Throws: :: `std::out_of_range` if `i >= N`.
+
+---
+
+```
+constexpr reference front();
+constexpr const_reference front() const;
+```
+[horizontal]
+Requires: ::  `N > 0`.
+Returns: :: `elems[0]`.
+Throws: :: Nothing.
+
+---
+
+```
+constexpr reference back();
+constexpr const_reference back() const;
+```
+[horizontal]
+Requires: :: `N > 0`.
+Returns: :: `elems[N-1]`.
+Throws: :: Nothing.
+
+---
+
+```
+constexpr T* data() noexcept;
+constexpr const T* data() const noexcept;
+```
+[horizontal]
+Returns: :: `elems`.
+
+---
+
+```
+T* c_array() noexcept; // deprecated
+```
+[horizontal]
+Returns: :: `data()`.
+Remarks: :: This function is deprecated. Use `data()` instead.
+
+---
+
+### Modifiers
+
+```
+void swap(array<T, N>& other);
+```
+[horizontal]
+Effects: :: `std::swap(elems, other.elems)`.
+Complexity: :: linear in `N`.
+
+---
+
+```
+void fill(const T& value);
+```
+[horizontal]
+Effects: :: For each `i` in `[0..N)`, performs `elems[i] = value;`.
+
+---
+
+```
+void assign(const T& value); // deprecated
+```
+[horizontal]
+Effects: :: `fill(value)`.
+Remarks: :: An obsolete and deprecated spelling of `fill`. Use `fill` instead.
+
+---
+
+### Specialized Algorithms
+
+```
+template<typename T, std::size_t N>
+  void swap(array<T, N>& x, array<T, N>& y);
+```
+[horizontal]
+Effects: :: `x.swap(y)`.
+
+---
+
+### Comparisons
+
+```
+template<typename T, std::size_t N>
+  constexpr bool operator==(const array<T, N>& x, const array<T, N>& y);
+```
+[horizontal]
+Returns: :: `std::equal(x.begin(), x.end(), y.begin())`.
+
+---
+
+```
+template<typename T, std::size_t N>
+  constexpr bool operator!=(const array<T, N>& x, const array<T, N>& y);
+```
+[horizontal]
+Returns: :: `!(x == y)`.
+
+---
+
+```
+template<typename T, std::size_t N>
+  constexpr bool operator<(const array<T, N>& x, const array<T, N>& y);
+```
+[horizontal]
+Returns: :: `std::lexicographical_compare(x.begin(), x.end(), y.begin(), y.end())`.
+
+---
+
+```
+template<typename T, std::size_t N>
+  constexpr bool operator>(const array<T, N>& x, const array<T, N>& y);
+```
+[horizontal]
+Returns: :: `y < x`.
+
+---
+
+```
+template<typename T, std::size_t N>
+  constexpr bool operator<=(const array<T, N>& x, const array<T, N>& y);
+```
+[horizontal]
+Returns: :: `!(y < x)`.
+
+---
+
+```
+template<typename T, std::size_t N>
+  constexpr bool operator>=(const array<T, N>& x, const array<T, N>& y);
+```
+[horizontal]
+Returns: :: `!(x < y)`.
+
+---
+
+```
+template<typename T, std::size_t N>
+  constexpr auto operator<=>(const array<T, N>& x, const array<T, N>& y)
+  -> decltype(x[0] <=> y[0]);
+```
+[horizontal]
+Effects: :: For each `i` in `[0..N)`, if `(x[i] \<\=> y[i]) != 0`, returns `x[i] \<\=> y[i]`. Otherwise, returns `std::strong_ordering::equal`, converted to the return type.
+Remarks: :: When `N` is 0, the return type is `std::strong_ordering` and the return value is `std::strong_ordering::equal`.
+
+---
+
+### Specializations
+
+```
+template<std::size_t Idx, typename T, std::size_t N>
+  constexpr T& get(array<T, N>& arr) noexcept;
+```
+[horizontal]
+Mandates: :: `Idx < N`.
+Returns: :: `arr[Idx]`.
+
+---
+
+```
+template<std::size_t Idx, typename T, std::size_t N>
+  constexpr const T& get(const array<T, N>& arr) noexcept;
+```
+[horizontal]
+Mandates: :: `Idx < N`.
+Returns: :: `arr[Idx]`.
+
+---
+
+
+### Creation
+
+```
+template<class T, std::size_t N>
+  constexpr array<T, N> to_array( T const (&a)[N] );
+```
+[horizontal]
+Returns: :: an `array<T, N>` `r` such that for each `i` in `[0..N)`, `r[i]` is copied from `a[i]`.
+
+```
+template<class T, std::size_t N>
+  constexpr array<T, N> to_array( T (&&a)[N] );
+```
+[horizontal]
+Returns: :: an `array<T, N>` `r` such that for each `i` in `[0..N)`, `r[i]` is moved from `std::move(a[i])`.
+
+```
+template<class T, std::size_t N>
+  constexpr array<T, N> to_array( T const (&&a)[N] );
+```
+[horizontal]
+Returns: :: an `array<T, N>` `r` such that for each `i` in `[0..N)`, `r[i]` is copied from `a[i]`.
+
+---

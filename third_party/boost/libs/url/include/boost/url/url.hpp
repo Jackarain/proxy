@@ -267,6 +267,7 @@ public:
         Throws nothing.
 
         @param u The url to assign from.
+        @return A reference to this object.
     */
     url&
     operator=(url&& u) noexcept;
@@ -293,6 +294,7 @@ public:
         @throw std::length_error `u.size() > max_size()`.
 
         @param u The url to copy.
+        @return A reference to this object.
     */
     url&
     operator=(
@@ -322,6 +324,7 @@ public:
         Calls to allocate may throw.
 
         @param u The url to copy.
+        @return A reference to this object.
     */
     url&
     operator=(url const& u)
@@ -388,7 +391,8 @@ public:
         @par Exception Safety
         Throws nothing
 
-        @param v0, v1 The objects to swap
+        @param v0 The first object to swap
+        @param v1 The second object to swap
 
         @see
             @ref url::swap

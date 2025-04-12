@@ -138,7 +138,7 @@ Since April 2018 there is a (Beta) function available in Windows 10 to use UTF-8
 
 Both methods do work but have a major drawback: They are not fully reliable for the app developer.
 The code page via manifest method falls back to a legacy code page when an older Windows version than 1903 is used.
-Hence it is only usable if the targetted system is Windows 10 after May 2019.   
+Hence it is only usable if the targeted system is Windows 10 after May 2019.   
 The second method relies on user interaction prior to starting the program.
 Obviously this is not reliable when expecting only UTF-8 in the code.
 
@@ -243,7 +243,7 @@ and temporarily replaces the original \c argv (and optionally \c env) with point
 UTF-8 strings for the lifetime of the instance.
 - \c boost::nowide::ifstream converts the passed filename (which is now valid UTF-8) to UTF-16
 and calls the Windows Wide API to open the file stream which can then be used as usual.
-- Similarily \c boost::nowide::cerr and \c boost::nowide::cout use an underlying stream buffer
+- Similarly \c boost::nowide::cerr and \c boost::nowide::cout use an underlying stream buffer
 that converts the UTF-8 string to UTF-16 and use another Wide API function to write it to console.
 
 \subsection using_custom Custom API
@@ -289,7 +289,7 @@ before including any of the Boost.Nowide headers
 \subsection using_integration Integration with Boost.Filesystem
 
 Boost.Filesystem supports selection of narrow encoding.
-Unfortunatelly the default narrow encoding on Windows isn't UTF-8.
+Unfortunately the default narrow encoding on Windows isn't UTF-8.
 But you can enable UTF-8 as default encoding on Boost.Filesystem by calling
 `boost::nowide::nowide_filesystem()` in the beginning of your program which
 imbues a locale with a UTF-8 conversion facet to convert between \c char and \c wchar_t.
@@ -300,7 +300,7 @@ used as the storage format.
 
 For `std::filesystem::path` available since C++17 there is no way to imbue a locale.
 However the `u8string()` member function can be used to obtain an UTF-8 encoded string from a `path`.
-And to optain a `path` from an UTF-8 encoded string you may use `std::filesystem::u8path`
+And to obtain a `path` from an UTF-8 encoded string you may use `std::filesystem::u8path`
 or since C++20 one of the `path` constructors taking a `char8_t`-type input.
 
 To read/write `std::filesystem::path` instances from/to streams you'd usually use e.g. `os << path`.

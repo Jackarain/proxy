@@ -16,8 +16,60 @@
 #include <boost/url/detail/vformat.hpp>
 #include <initializer_list>
 
+#ifdef BOOST_URL_HAS_CONCEPTS
+#include <concepts>
+#endif
+
 namespace boost {
 namespace urls {
+
+/** A temporary reference to a named formatting argument
+
+    This class represents a temporary reference
+    to a named formatting argument used by the
+    @ref format function.
+
+    Named arguments should always be created
+    with the @ref arg function.
+
+    Any type that can be formatted into a URL
+    with the @ref format function can also be used
+    in a named argument. All named arguments
+    are convertible to @ref format_arg and
+    can be used in the @ref format function.
+
+    @see
+        @ref arg,
+        @ref format,
+        @ref format_to,
+        @ref format_arg.
+  */
+template <class T>
+using named_arg = detail::named_arg<T>;
+
+/** A temporary reference to a formatting argument
+
+    This class represents a temporary reference
+    to a formatting argument used by the
+    @ref format function.
+
+    A @ref format argument should always be
+    created by passing the argument to be
+    formatted directly to the @ref format function.
+
+    Any type that can be formatted into a URL
+    with the @ref format function is convertible
+    to this type.
+
+    This includes basic types, types convertible
+    to `core::string_view`, and @ref named_arg.
+
+    @see
+        @ref format,
+        @ref format_to,
+        @ref arg.
+  */
+using format_arg = detail::format_arg;
 
 /** Format arguments into a URL
 
@@ -84,10 +136,10 @@ namespace urls {
         >Format String Syntax</a>
 
     @see
-        @ref format_to.
-
+        @ref format_to,
+        @ref arg.
 */
-template <class... Args>
+template <BOOST_URL_CONSTRAINT(std::convertible_to<format_arg>)... Args>
 url
 format(
     core::string_view fmt,
@@ -170,7 +222,7 @@ format(
         @ref format.
 
 */
-template <class... Args>
+template <BOOST_URL_CONSTRAINT(std::convertible_to<format_arg>)... Args>
 void
 format_to(
     url_base& u,
@@ -263,12 +315,7 @@ inline
 url
 format(
     core::string_view fmt,
-#ifdef BOOST_URL_DOCS
-    std::initializer_list<__see_below__> args
-#else
-    std::initializer_list<see_below::format_arg> args
-#endif
-    )
+    std::initializer_list<format_arg> args)
 {
     return detail::vformat(
         fmt, detail::format_args(
@@ -361,12 +408,7 @@ void
 format_to(
     url_base& u,
     core::string_view fmt,
-#ifdef BOOST_URL_DOCS
-    std::initializer_list<__see_below__> args
-#else
-    std::initializer_list<see_below::format_arg> args
-#endif
-    )
+    std::initializer_list<format_arg> args)
 {
     detail::vformat_to(
         u, fmt, detail::format_args(
@@ -384,15 +426,18 @@ format_to(
     potentially used as a format argument.
 
     @par Example
+    The function should be used to designate a named
+    argument for a replacement field in a format
+    URL string.
     @code
     assert(format("user/{id}", arg("id", 1)).buffer() == "user/1");
     @endcode
 
-    @return An temporary object with reference
+    @return A temporary object with reference
     semantics for a named argument
 
-    @param name The argument name
-    @param arg The argument value
+    @param name The format argument name
+    @param arg The format argument value
 
     @see
         @ref format,
@@ -400,7 +445,7 @@ format_to(
 
 */
 template <class T>
-BOOST_URL_IMPLEMENTATION_DEFINED(implementation_defined::named_arg<T>)
+named_arg<T>
 arg(core::string_view name, T const& arg)
 {
     return {name, arg};

@@ -5,7 +5,7 @@
 
 [section Rationale]
 
-[heading There Are Minimal Derived-Type Contraints]
+[heading There Are Minimal Derived-Type Constraints]
 
 This is the constraint on the `Derived` template parameter to _iter_iface_,
 _view_iface_ and _cont_iface_:

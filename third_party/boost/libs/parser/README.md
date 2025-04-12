@@ -57,7 +57,7 @@ Master status:
 
 [![Windows MSVC](https://github.com/tzlaine/parser/actions/workflows/windows.yml/badge.svg?branch=master)](https://github.com/tzlaine/parser/actions/workflows/windows.yml)
 
-[![macos-12 - Clang 14](https://github.com/tzlaine/parser/actions/workflows/macos-12.yml/badge.svg?branch=master)](https://github.com/tzlaine/parser/actions/workflows/macos-12.yml)
+[![macos-13 - Clang 14](https://github.com/tzlaine/parser/actions/workflows/macos-13.yml/badge.svg?branch=master)](https://github.com/tzlaine/parser/actions/workflows/macos-13.yml)
 
 Develop status:
 
@@ -67,6 +67,6 @@ Develop status:
 
 [![Windows MSVC](https://github.com/tzlaine/parser/actions/workflows/windows.yml/badge.svg?branch=develop)](https://github.com/tzlaine/parser/actions/workflows/windows.yml)
 
-[![macos-12 - Clang 14](https://github.com/tzlaine/parser/actions/workflows/macos-12.yml/badge.svg?branch=develop)](https://github.com/tzlaine/parser/actions/workflows/macos-12.yml)
+[![macos-13 - Clang 14](https://github.com/tzlaine/parser/actions/workflows/macos-13.yml/badge.svg?branch=develop)](https://github.com/tzlaine/parser/actions/workflows/macos-13.yml)
 
 [![License](https://img.shields.io/badge/license-boost-brightgreen.svg)](LICENSE_1_0.txt)

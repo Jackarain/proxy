@@ -26,12 +26,14 @@
 #include <unistd.h>
 #endif
 
+#if defined(BOOST_PROCESS_V2_WINDOWS)
+#include <io.h>
+#endif
+
 BOOST_PROCESS_V2_BEGIN_NAMESPACE
 namespace detail
 {
 #if defined(BOOST_PROCESS_V2_WINDOWS)
-
-extern "C" intptr_t _get_osfhandle(int fd);
 
 struct handle_closer
 {
@@ -80,11 +82,11 @@ struct process_io_binding
   process_io_binding() = default;
 
   template<typename Stream>
-  process_io_binding(Stream && str, decltype(std::declval<Stream>().native_handle()) = nullptr)
+  process_io_binding(Stream && str, decltype(std::declval<Stream>().native_handle())* = nullptr)
       : process_io_binding(str.native_handle())
   {}
 
-  process_io_binding(FILE * f) : process_io_binding(_get_osfhandle(_fileno(f))) {}
+  process_io_binding(FILE * f) : process_io_binding(reinterpret_cast<HANDLE>(::_get_osfhandle(_fileno(f)))) {}
   process_io_binding(HANDLE h) : h{h, get_flags(h)} {}
   process_io_binding(std::nullptr_t) : process_io_binding(filesystem::path("NUL")) {}
   template<typename T, typename = typename std::enable_if<std::is_same<T, filesystem::path>::value>::type>
@@ -164,9 +166,34 @@ struct process_io_binding
   }
 
   process_io_binding() = default;
+  process_io_binding(const process_io_binding &) = delete;
+  process_io_binding & operator=(const process_io_binding &) = delete;
+
+  process_io_binding(process_io_binding && other) noexcept
+          : fd(other.fd), fd_needs_closing(other.fd), ec(other.ec)
+  {
+    other.fd = target;
+    other.fd_needs_closing = false;
+    other.ec = {};
+  }
+
+  process_io_binding & operator=(process_io_binding && other) noexcept
+  {
+    if (fd_needs_closing)
+      ::close(fd);
+
+    fd = other.fd;
+    fd_needs_closing = other.fd_needs_closing;
+    ec = other.ec;
+
+    other.fd = target;
+    other.fd_needs_closing = false;
+    other.ec = {};
+    return *this;
+  }
 
   template<typename Stream>
-  process_io_binding(Stream && str, decltype(std::declval<Stream>().native_handle()) = -1)
+  process_io_binding(Stream && str, decltype(std::declval<Stream>().native_handle()) * = nullptr)
           : process_io_binding(str.native_handle())
   {}
 
@@ -303,16 +330,18 @@ struct process_stdio
 #if defined(BOOST_PROCESS_V2_WINDOWS)
   error_code on_setup(windows::default_launcher & launcher, const filesystem::path &, const std::wstring &)
   {
-
     launcher.startup_info.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
     launcher.startup_info.StartupInfo.hStdInput  = in.prepare();
     launcher.startup_info.StartupInfo.hStdOutput = out.prepare();
     launcher.startup_info.StartupInfo.hStdError  = err.prepare();
-    launcher.inherit_handles = true;
+    launcher.inherited_handles.reserve(launcher.inherited_handles.size() + 3);
+    launcher.inherited_handles.push_back(launcher.startup_info.StartupInfo.hStdInput);
+    launcher.inherited_handles.push_back(launcher.startup_info.StartupInfo.hStdOutput);
+    launcher.inherited_handles.push_back(launcher.startup_info.StartupInfo.hStdError);
     return error_code {};
   };
 #else
-  error_code on_exec_setup(posix::default_launcher & launcher, const filesystem::path &, const char * const *)
+  error_code on_exec_setup(posix::default_launcher & /*launcher*/, const filesystem::path &, const char * const *)
   {
     if (::dup2(in.fd, in.target) == -1)
       return error_code(errno, system_category());

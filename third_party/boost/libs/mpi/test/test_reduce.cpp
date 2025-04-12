@@ -123,6 +123,19 @@ struct int_generator
   int base;
 };
 
+// Generates bools to test with reduce()
+struct bool_generator
+{
+  typedef bool result_type;
+
+  bool_generator(int nbtrue) : nb_true(nbtrue) { }
+  
+  int operator()(int p) const { return p < nb_true; }
+
+ private:
+  int nb_true;
+};
+
 // Generate points to test with reduce()
 struct point_generator
 {
@@ -219,7 +232,9 @@ int main()
                                "maximum", 0), failed);
   BOOST_MPI_COUNT_FAILED(reduce_test(comm, int_generator(), "integers", minimum<int>(),
                                "minimum", 2), failed);
-
+  BOOST_MPI_COUNT_FAILED(reduce_test(comm, bool_generator(2), "bools", std::logical_or<bool>(), "logical_or", 0), failed);
+  BOOST_MPI_COUNT_FAILED(reduce_test(comm, bool_generator(2), "bools", std::logical_and<bool>(), "logical_and", 0), failed);
+  
   // User-defined MPI datatypes with operations that have the
   // same name as built-in operations.
   BOOST_MPI_COUNT_FAILED(reduce_test(comm, point_generator(point(0,0,0)), "points",

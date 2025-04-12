@@ -5,12 +5,20 @@
  * http://www.boost.org/LICENSE_1_0.txt)
  */
 
+#define BOOST_ALLOW_DEPRECATED_SYMBOLS // get_c_array
+
+#include <boost/array.hpp>
+#include <boost/core/lightweight_test.hpp>
+#include <boost/config.hpp>
 #include <string>
 #include <iostream>
-#include <boost/array.hpp>
 #include <algorithm>
 
-#include <boost/core/lightweight_test_trait.hpp>
+#if defined(BOOST_GCC) && BOOST_GCC / 10000 == 13
+// false -Warray-bounds positive when using -fsanitize=undefined
+// restricted to GCC 13 because that's what is tested on Drone
+# pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
 
 namespace {
     template< class T >

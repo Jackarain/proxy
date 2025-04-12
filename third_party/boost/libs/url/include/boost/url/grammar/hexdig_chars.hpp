@@ -61,7 +61,10 @@ constexpr __implementation_defined__ hexdig_chars;
 namespace implementation_defined {
 struct hexdig_chars_t
 {
-    /** Return true if c is in the character set.
+    /** Determine if a character is a hexadecimal digit
+
+        @param c The character to test
+        @return `true` if `c` is a hexadecimal digit.
     */
     constexpr
     bool

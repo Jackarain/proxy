@@ -44,6 +44,7 @@ struct error_category_impl : system::error_category {
 	 case error::ssl_handshake_timeout: return "SSL handshake timeout.";
 	 case error::sync_receive_push_failed: return "Can't receive server push synchronously without blocking.";
 	 case error::incompatible_node_depth: return "Incompatible node depth.";
+	 case error::resp3_hello: return "RESP3 handshake error (hello command).";
 	 default: BOOST_ASSERT(false); return "Boost.Redis error.";
       }
    }

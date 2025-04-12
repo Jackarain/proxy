@@ -275,7 +275,7 @@ class executor
         prepare_cmd_style_fn = exe;
         if ((prepare_cmd_style_fn.find('/') == std::string::npos) && ::access(prepare_cmd_style_fn.c_str(), X_OK))
         {
-            const auto * e = ::environ;
+            const auto * e = environ;
             while ((e != nullptr) && (*e != nullptr) && !boost::starts_with(*e, "PATH="))
                 e++;
 
@@ -316,7 +316,7 @@ public:
     const char * exe      = nullptr;
     char *const* cmd_line = nullptr;
     bool cmd_style = false;
-    char **env      = ::environ;
+    char **env      = environ;
     pid_t pid = -1;
     std::shared_ptr<std::atomic<int>> exit_status = std::make_shared<std::atomic<int>>(still_active);
 

@@ -213,6 +213,10 @@ BOOST_MPI_DATATYPE(packed, MPI_PACKED, builtin);
 BOOST_MPI_DATATYPE(char, MPI_CHAR, builtin);
 
 /// INTERNAL ONLY
+/// We need to pick a boolean type, MPI_CXX_BOOL seems appropriate
+BOOST_MPI_DATATYPE(bool, MPI_CXX_BOOL, logical);
+
+/// INTERNAL ONLY
 BOOST_MPI_DATATYPE(short, MPI_SHORT, integer);
 
 /// INTERNAL ONLY
@@ -316,33 +320,6 @@ BOOST_MPI_DATATYPE(signed char, MPI_SIGNED_CHAR, builtin);
 
 
 #endif // Doxygen
-
-namespace detail {
-  inline MPI_Datatype build_mpi_datatype_for_bool()
-  {
-    // this is explicitly freed in mpi_datatype_map::clear
-    MPI_Datatype type;
-    MPI_Type_contiguous(sizeof(bool), MPI_BYTE, &type);
-    MPI_Type_commit(&type);
-    return type;
-  }
-}
-
-/// Support for bool. There is no corresponding MPI_BOOL.
-/// INTERNAL ONLY
-template<>
-inline MPI_Datatype get_mpi_datatype<bool>(const bool&)
-{
-  static MPI_Datatype type = detail::build_mpi_datatype_for_bool();
-  return type;
-}
-
-/// INTERNAL ONLY
-template<>
-struct is_mpi_datatype<bool>
-  : boost::mpl::bool_<true>
-{};
-
 
 #ifndef BOOST_MPI_DOXYGEN
 // direct support for special primitive data types of the serialization library

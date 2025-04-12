@@ -21,15 +21,7 @@
 #include <boost/pending/iterator_tests.hpp>
 #include <boost/concept_check.hpp>
 
-#ifdef BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION
-namespace boost { namespace detail
-{
-  template<> struct function_object_result<int (*)(int)>
-  {
-      typedef int type;
-  };
-}}
-#endif
+#include "static_assert_same.hpp"
 
 struct mult_functor {
   // Functors used with transform_iterator must be
@@ -172,20 +164,20 @@ main()
   {
     {
       typedef boost::transform_iterator<adaptable_mult_functor, int*, float> iter_t;
-      BOOST_STATIC_ASSERT((boost::is_same<iter_t::reference,  float>::value));
-      BOOST_STATIC_ASSERT((boost::is_same<iter_t::value_type, float>::value));
+      STATIC_ASSERT_SAME(iter_t::reference,  float);
+      STATIC_ASSERT_SAME(iter_t::value_type, float);
     }
 
     {
       typedef boost::transform_iterator<adaptable_mult_functor, int*, boost::use_default, float> iter_t;
-      BOOST_STATIC_ASSERT((boost::is_same<iter_t::reference,  int>::value));
-      BOOST_STATIC_ASSERT((boost::is_same<iter_t::value_type, float>::value));
+      STATIC_ASSERT_SAME(iter_t::reference,  int);
+      STATIC_ASSERT_SAME(iter_t::value_type, float);
     }
 
     {
       typedef boost::transform_iterator<adaptable_mult_functor, int*, float, double> iter_t;
-      BOOST_STATIC_ASSERT((boost::is_same<iter_t::reference,  float>::value));
-      BOOST_STATIC_ASSERT((boost::is_same<iter_t::value_type, double>::value));
+      STATIC_ASSERT_SAME(iter_t::reference,  float);
+      STATIC_ASSERT_SAME(iter_t::value_type, double);
     }
   }
 

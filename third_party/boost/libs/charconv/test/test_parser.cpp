@@ -4,6 +4,7 @@
 
 #include <boost/charconv/detail/parser.hpp>
 #include <boost/charconv/chars_format.hpp>
+#include <boost/charconv/to_chars.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <system_error>
 #include <type_traits>
@@ -11,7 +12,6 @@
 #include <cstring>
 #include <cerrno>
 
-template <typename T>
 void test_integer()
 {
     std::uint64_t significand {};
@@ -38,10 +38,52 @@ void test_integer()
 
     auto r3 = boost::charconv::detail::parser(val2, val2 + std::strlen(val2), sign, significand, exponent, boost::charconv::chars_format::scientific);
     BOOST_TEST(r3.ec == std::errc::invalid_argument);
+
+    // Get the maximum value of the significant type
+    constexpr auto max_sig_v = (std::numeric_limits<decltype(significand)>::max)();
+    char max_sig_buf[boost::charconv::limits<decltype(significand)>::max_chars10 + 1u];
+    const auto r4 = boost::charconv::to_chars(max_sig_buf + 1, max_sig_buf + sizeof(max_sig_buf), max_sig_v);
+    if (BOOST_TEST(r4)) {
+
+        significand = 0;
+        exponent = 1;
+        sign = true;
+
+        auto r5 = boost::charconv::detail::parser(max_sig_buf + 1, r4.ptr, sign, significand, exponent);
+        BOOST_TEST(r5);
+        BOOST_TEST_EQ(sign, false);
+        BOOST_TEST_EQ(exponent, 0);
+        BOOST_TEST_EQ(significand, max_sig_v);
+
+        significand = 0;
+        exponent = 1;
+        sign = false;
+        max_sig_buf[0] = '-';
+        auto r6 = boost::charconv::detail::parser(max_sig_buf, r4.ptr, sign, significand, exponent);
+        BOOST_TEST(r6);
+        BOOST_TEST_EQ(sign, true);
+        BOOST_TEST_EQ(exponent, 0);
+        BOOST_TEST_EQ(significand, max_sig_v);
+    }
+
+    // Small significant type
+    std::uint8_t significand_8{};
+    exponent = 0;
+    sign = false;
+
+    const char* val3 = "255";
+    auto r5 = boost::charconv::detail::parser(val3, val3 + std::strlen(val3), sign, significand_8, exponent);
+    BOOST_TEST(r5);
+    BOOST_TEST_EQ(sign, false);
+    BOOST_TEST_EQ(exponent, 0);
+    BOOST_TEST_EQ(significand_8, 255);
+
+    const char* val4 = "256";
+    auto r6 = boost::charconv::detail::parser(val4, val4 + std::strlen(val4), sign, significand_8, exponent);
+    BOOST_TEST(r6.ec == std::errc::result_out_of_range);
 }
 
-template <typename T>
-void test_scientifc()
+void test_scientific()
 {
     std::uint64_t significand {};
     std::int64_t  exponent {};
@@ -102,7 +144,6 @@ void test_scientifc()
 
 }
 
-template <typename T>
 void test_hex_integer()
 {
     std::uint64_t significand {};
@@ -131,7 +172,6 @@ void test_hex_integer()
     BOOST_TEST(r3.ec == std::errc::invalid_argument);
 }
 
-template <typename T>
 void test_hex_scientific()
 {
     std::uint64_t significand {};
@@ -167,23 +207,36 @@ void test_hex_scientific()
     BOOST_TEST_EQ(significand, UINT64_C(80427));
 }
 
+void test_zeroes()
+{
+    for (const char* val : {
+        "0", "00", "000", "0000",
+        "0.", "00.", "000.", "0000.",
+        "0.0", "00.0", "000.0", "0000.0",
+        "0e0", "00e0", "000e0", "0000e0",
+        "0.e0", "00.e0", "000.e0", "0000.e0",
+        "0.0e0", "00.0e0", "000.0e0", "0000.0e0",
+        }) {
+        // Use small integer type to reduce input test string lengths
+        std::uint8_t significand = 1;
+        std::int64_t exponent = 1;
+        bool sign = (std::strlen(val) % 2) == 0; // Different initial values
+
+        auto r1 = boost::charconv::detail::parser(val, val + std::strlen(val), sign, significand, exponent);
+        BOOST_TEST(r1);
+        BOOST_TEST_EQ(sign, false);
+        BOOST_TEST_EQ(significand, 0u);
+        BOOST_TEST_EQ(exponent, 0);
+    }
+}
+
 int main()
 {
-    test_integer<float>();
-    test_integer<double>();
-    test_integer<long double>();
+    test_integer();
+    test_scientific();
+    test_hex_integer();
+    test_hex_scientific();
 
-    test_scientifc<float>();
-    test_scientifc<double>();
-    test_scientifc<long double>();
-
-    test_hex_integer<float>();
-    test_hex_integer<double>();
-    test_hex_integer<long double>();
-
-    test_hex_scientific<float>();
-    test_hex_scientific<double>();
-    test_hex_scientific<long double>();
-
+    test_zeroes();
     return boost::report_errors();
 }

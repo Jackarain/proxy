@@ -8,17 +8,6 @@ if(HAVE_BOOST_TEST)
 
 boost_test_jamfile(FILE Jamfile.v2 LINK_LIBRARIES Boost::core Boost::static_assert Boost::type_traits)
 
-set(BOOST_TEST_LINK_LIBRARIES Boost::core Boost::type_traits)
-
-boost_test(TYPE run SOURCES eif_constructors.cpp)
-boost_test(TYPE run SOURCES eif_dummy_arg_disambiguation.cpp)
-boost_test(TYPE run SOURCES eif_lazy.cpp)
-boost_test(TYPE run SOURCES eif_lazy_test.cpp)
-boost_test(TYPE run SOURCES eif_member_templates.cpp)
-boost_test(TYPE run SOURCES eif_namespace_disambiguation.cpp)
-boost_test(TYPE run SOURCES eif_no_disambiguation.cpp)
-boost_test(TYPE run SOURCES eif_partial_specializations.cpp)
-
 set(BOOST_TEST_LINK_LIBRARIES Boost::core Boost::throw_exception)
 
 boost_test(TYPE run SOURCES no_exceptions_support_test.cpp)
@@ -26,6 +15,10 @@ boost_test(TYPE run SOURCES no_exceptions_support_test.cpp)
 set(BOOST_TEST_LINK_LIBRARIES Boost::core Boost::utility)
 
 boost_test(TYPE run SOURCES sv_conversion_test2.cpp)
+
+set(BOOST_TEST_LINK_LIBRARIES Boost::core Boost::container_hash)
+
+boost_test(TYPE run SOURCES sv_hash_test.cpp)
 
 set(BOOST_TEST_LINK_LIBRARIES Boost::core Boost::config Boost::move Boost::smart_ptr)
 

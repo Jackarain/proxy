@@ -26,7 +26,7 @@
 #include <array>
 BOOST_AUTO_TEST_SUITE( async );
 
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 BOOST_AUTO_TEST_CASE(stackful_except, *boost::unit_test::timeout(15))
 {
     using boost::unit_test::framework::master_test_suite;

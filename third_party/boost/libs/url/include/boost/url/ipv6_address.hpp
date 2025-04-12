@@ -108,6 +108,8 @@ public:
         ipv6_address const&) = default;
 
     /** Copy Assignment
+
+        @return `*this`
     */
     ipv6_address&
     operator=(
@@ -171,6 +173,8 @@ public:
         core::string_view s);
 
     /** Return the address as bytes, in network byte order
+
+        @return The address as an array of bytes.
     */
     bytes_type
     to_bytes() const noexcept
@@ -253,6 +257,8 @@ public:
         unspecified address. It indicates the
         absence of an address.
 
+        @return `true` if the address is unspecified
+
         @par Specification
         @li <a href="https://datatracker.ietf.org/doc/html/rfc4291#section-2.5.2">
             2.5.2. The Unspecified Address (rfc4291)</a>
@@ -267,6 +273,8 @@ public:
         the loopback address. It may be used by a node
         to send an IPv6 packet to itself.
 
+        @return `true` if the address is a loopback address
+
         @par Specification
         @li <a href="https://datatracker.ietf.org/doc/html/rfc4291#section-2.5.3">
             2.5.3. The Loopback Address (rfc4291)</a>
@@ -280,6 +288,8 @@ public:
         This address type is used to represent the
         addresses of IPv4 nodes as IPv6 addresses.
 
+        @return `true` if the address is a mapped IPv4 address
+
         @par Specification
         @li <a href="https://datatracker.ietf.org/doc/html/rfc4291#section-2.5.5.2">
             2.5.5.2. IPv4-Mapped IPv6 Address (rfc4291)</a>
@@ -289,6 +299,10 @@ public:
     is_v4_mapped() const noexcept;
 
     /** Return true if two addresses are equal
+
+        @param a1 The first address to compare.
+        @param a2 The second address to compare.
+        @return `true` if the addresses are equal
     */
     friend
     bool
@@ -300,6 +314,10 @@ public:
     }
 
     /** Return true if two addresses are not equal
+
+        @param a1 The first address to compare.
+        @param a2 The second address to compare.
+        @return `true` if the addresses are not equal
     */
     friend
     bool
@@ -319,6 +337,8 @@ public:
         @par Specification
         @li <a href="https://datatracker.ietf.org/doc/html/rfc4291#section-2.5.3">
             2.5.3. The Loopback Address (rfc4291)</a>
+
+        @return The loopback address.
     */
     BOOST_URL_DECL
     static

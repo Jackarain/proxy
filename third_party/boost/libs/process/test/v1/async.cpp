@@ -25,7 +25,7 @@
 
 using namespace std;
 
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 
 #if __APPLE__
 auto abort_sig = signal(SIGALRM, +[](int){std::terminate();});

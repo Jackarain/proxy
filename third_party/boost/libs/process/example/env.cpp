@@ -8,17 +8,38 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/process.hpp>
+#include <unordered_map>
 
-namespace bp = boost::process;
+using namespace boost::process;
+namespace asio = boost::asio;
 
 int main()
 {
-    bp::environment my_env = boost::this_process::environment();
+  { // tag::current_env[]
+    // search in the current environment
+    auto exe = environment::find_executable("g++");
 
-    my_env["PATH"] += "/foo";
-    bp::system("test.exe", my_env);
+    std::unordered_map <environment::key, environment::value> my_env =
+        {
+            {"SECRET", "THIS_IS_A_TEST"},
+            {"PATH",   {"/bin", "/usr/bin"}}
+        };
 
+    auto other_exe = environment::find_executable("g++", my_env);
+    //end::current_env[]
+  }
 
-
-    bp::system("test.exe", bp::env["PATH"]+="/bar");
+  {
+    // tag::subprocess_env[]
+    asio::io_context ctx;
+    std::unordered_map<environment::key, environment::value> my_env =
+        {
+            {"SECRET", "THIS_IS_A_TEST"},
+            {"PATH", {"/bin", "/usr/bin"}}
+        };
+    auto exe = environment::find_executable("g++", my_env);
+    process proc(ctx, exe, {"main.cpp"}, process_environment(my_env));
+    process pro2(ctx, exe, {"test.cpp"}, process_environment(my_env));
+    // end::subprocess_env[]
+  }
 }

@@ -12,7 +12,7 @@
 #include <boost/test/included/unit_test.hpp>
 #include <boost/process/v1/environment.hpp>
 
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 
 
 namespace std

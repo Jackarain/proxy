@@ -150,6 +150,7 @@ test-suite "framework-ts"
   [ boost.test-self-test run : framework-ts : decorators-datatestcase-test : : : : : : $(requirements_datasets) ]
   [ compile-fail framework-ts/master-test-suite-non-copyable-test.cpp ../build//included ]
   [ boost.test-self-test run : framework-ts : log-count-skipped-test : included : baseline-outputs/log-count-skipped-tests.pattern ]
+  [ boost.test-self-test run : framework-ts : dataset-size ]
 
   # ticket 13371: "Use-after-free with --log_sink=file"
   # this single check is not enough as we should check for various command line options: we make extensive

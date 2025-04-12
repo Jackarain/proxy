@@ -1,4 +1,4 @@
-# Copyright 2021-2024 Andrey Semashev
+# Copyright 2021-2025 Andrey Semashev
 #
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
@@ -91,18 +91,22 @@ jobs:
               - g++-12
           - toolset: gcc-13
             cxxstd: "11,14,17,20,23"
-            os: ubuntu-latest
-            container: ubuntu:23.04
+            os: ubuntu-24.04
             install:
               - g++-13
+          - toolset: gcc-14
+            cxxstd: "11,14,17,20,23,26"
+            os: ubuntu-24.04
+            install:
+              - g++-14
           - name: UBSAN
-            toolset: gcc-11
+            toolset: gcc-13
             cxxstd: "11,14,17,20,23"
             ubsan: 1
             build_variant: debug
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             install:
-              - g++-11
+              - g++-13
 
           # Linux, clang
           - toolset: clang
@@ -196,6 +200,8 @@ jobs:
             os: ubuntu-22.04
             install:
               - clang-11
+              - g++-11
+            gcc_toolchain: 11
           - toolset: clang
             compiler: clang++-12
             cxxstd: "11,14,17,20,2b"
@@ -229,86 +235,75 @@ jobs:
               - g++-11
             gcc_toolchain: 11
           - toolset: clang
-            compiler: clang++-15
-            cxxstd: "11,14,17,20,2b"
-            os: ubuntu-22.04
-            install:
-              - clang-15
-              - libc++-15-dev
-              - libc++abi-15-dev
-            cxxflags: -stdlib=libc++
-            linkflags: -stdlib=libc++
-          - toolset: clang
             compiler: clang++-16
             cxxstd: "11,14,17,20,2b"
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             install:
               - clang-16
-            sources:
-              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main"
-            source_keys:
-              - "https://apt.llvm.org/llvm-snapshot.gpg.key"
-          - toolset: clang
-            compiler: clang++-16
-            cxxstd: "11,14,17,20,2b"
-            os: ubuntu-22.04
-            install:
-              - clang-16
-              - libc++-16-dev
-              - libc++abi-16-dev
-            sources:
-              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main"
-            source_keys:
-              - "https://apt.llvm.org/llvm-snapshot.gpg.key"
-            cxxflags: -stdlib=libc++
-            linkflags: -stdlib=libc++
+              - g++-11
+            gcc_toolchain: 11
           - toolset: clang
             compiler: clang++-17
-            cxxstd: "11,14,17,20,23"
-            os: ubuntu-22.04
+            cxxstd: "11,14,17,20,23,26"
+            os: ubuntu-24.04
             install:
               - clang-17
+              - g++-11
+            gcc_toolchain: 11
+          - toolset: clang
+            compiler: clang++-18
+            cxxstd: "11,14,17,20,23,26"
+            os: ubuntu-24.04
+            install:
+              - clang-18
+              - g++-13
+          - toolset: clang
+            compiler: clang++-19
+            cxxstd: "11,14,17,20,23,26"
+            os: ubuntu-24.04
+            install:
+              - clang-19
             sources:
-              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main"
+              - "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-19 main"
             source_keys:
               - "https://apt.llvm.org/llvm-snapshot.gpg.key"
           - toolset: clang
-            compiler: clang++-17
-            cxxstd: "11,14,17,20,23"
-            os: ubuntu-22.04
+            compiler: clang++-19
+            cxxstd: "11,14,17,20,23,26"
+            os: ubuntu-24.04
             install:
-              - clang-17
-              - libc++-17-dev
-              - libc++abi-17-dev
+              - clang-19
+              - libc++-19-dev
+              - libc++abi-19-dev
             sources:
-              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main"
+              - "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-19 main"
             source_keys:
               - "https://apt.llvm.org/llvm-snapshot.gpg.key"
             cxxflags: -stdlib=libc++
             linkflags: -stdlib=libc++
           - name: UBSAN
             toolset: clang
-            compiler: clang++-15
-            cxxstd: "11,14,17,20,2b"
+            compiler: clang++-18
+            cxxstd: "11,14,17,20,23,26"
             cxxflags: -stdlib=libc++
-            linkflags: -stdlib=libc++
+            linkflags: "-stdlib=libc++ -lubsan"
             ubsan: 1
             build_variant: debug
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             install:
-              - clang-15
-              - libc++-15-dev
-              - libc++abi-15-dev
+              - clang-18
+              - libc++-18-dev
+              - libc++abi-18-dev
 
-          - toolset: clang
-            cxxstd: "11,14,17,20,2b"
-            os: macos-12
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-13
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-14
+          - toolset: clang
+            cxxstd: "11,14,17,20,2b"
+            os: macos-15
 
           - name: CMake tests
             cmake_tests: 1
@@ -542,6 +537,10 @@ jobs:
             cmake --build . --target boost_${LIBRARY}_cmake_self_test -j $BUILD_JOBS
 
   windows:
+    defaults:
+      run:
+        shell: cmd
+
     strategy:
       fail-fast: false
       matrix:
@@ -572,7 +571,6 @@ jobs:
 
     steps:
       - name: Setup Boost
-        shell: cmd
         run: |
             echo GITHUB_REPOSITORY: %GITHUB_REPOSITORY%
             for /f %%i in ("%GITHUB_REPOSITORY%") do set LIBRARY=%%~nxi
@@ -608,7 +606,6 @@ jobs:
             b2 -d0 headers
 
       - name: Run tests
-        shell: cmd
         run: |
             cd boost-root
             if not "${{matrix.cxxstd}}" == "" set CXXSTD=cxxstd=${{matrix.cxxstd}}

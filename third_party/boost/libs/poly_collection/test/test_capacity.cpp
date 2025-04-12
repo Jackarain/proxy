@@ -1,4 +1,4 @@
-/* Copyright 2016-2017 Joaquin M Lopez Munoz.
+/* Copyright 2016-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -13,6 +13,7 @@
 #include "any_types.hpp"
 #include "base_types.hpp"
 #include "function_types.hpp"
+#include "variant_types.hpp"
 #include "test_utilities.hpp"
 
 using namespace test_utilities;
@@ -27,29 +28,30 @@ void test_capacity()
   BOOST_TEST(cp.empty());
   BOOST_TEST(cp.size()==0);
 
-  p.template register_types<Types...>();
+  register_types<Types...>(p);
   BOOST_TEST(cp.empty());
-  do_((BOOST_TEST(cp.empty(typeid(Types))),0)...);
+  do_((BOOST_TEST(cp.empty(typeid_<Types>(cp))),0)...);
   do_((BOOST_TEST(cp.template empty<Types>()),0)...);
   BOOST_TEST(cp.size()==0);
-  do_((BOOST_TEST(cp.size(typeid(Types))==0),0)...);
+  do_((BOOST_TEST(cp.size(typeid_<Types>(cp))==0),0)...);
   do_((BOOST_TEST(cp.template size<Types>()==0),0)...);
 
   p.reserve(10);
-  do_((BOOST_TEST(cp.capacity(typeid(Types))>=10),0)...);
+  do_((BOOST_TEST(cp.capacity(typeid_<Types>(cp))>=10),0)...);
   do_((BOOST_TEST(
-    cp.template capacity<Types>()==cp.capacity(typeid(Types))),0)...);
+    cp.template capacity<Types>()==cp.capacity(typeid_<Types>(cp))),0)...);
 
-  do_((p.reserve(typeid(Types),20),0)...);
-  do_((BOOST_TEST(cp.capacity(typeid(Types))>=20),0)...);
+  do_((p.reserve(typeid_<Types>(p),20),0)...);
+  do_((BOOST_TEST(cp.capacity(typeid_<Types>(cp))>=20),0)...);
 
   do_((p.template reserve<Types>(30),0)...);
   do_((BOOST_TEST(cp.template capacity<Types>()>=30),0)...);
 
   fill<constraints<>,Types...>(p,v,30);
   BOOST_TEST(cp.size()==30*sizeof...(Types));
-  do_((BOOST_TEST(cp.size(typeid(Types))==30),0)...);
-  do_((BOOST_TEST(cp.template size<Types>()==cp.size(typeid(Types))),0)...);
+  do_((BOOST_TEST(cp.size(typeid_<Types>(cp))==30),0)...);
+  do_((BOOST_TEST(
+    cp.template size<Types>()==cp.size(typeid_<Types>(cp))),0)...);
 
   auto min_capacity=[&]{
     return (std::min)({cp.template capacity<Types>()...});
@@ -66,7 +68,7 @@ void test_capacity()
   do_((p.erase(cp.template begin<Types>()),0)...);
   BOOST_TEST(c==min_capacity());
 
-  do_((p.shrink_to_fit(typeid(Types)),0)...);
+  do_((p.shrink_to_fit(typeid_<Types>(p)),0)...);
   BOOST_TEST(c>=min_capacity());
   c=min_capacity();
 
@@ -89,4 +91,8 @@ void test_capacity()
     function_types::collection,auto_increment,
     function_types::t1,function_types::t2,function_types::t3,
     function_types::t4,function_types::t5>();
+  test_capacity<
+    variant_types::collection,auto_increment,
+    variant_types::t1,variant_types::t2,variant_types::t3,
+    variant_types::t4,variant_types::t5>();
 }

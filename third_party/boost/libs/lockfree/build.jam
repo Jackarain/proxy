@@ -28,4 +28,3 @@ explicit
 
 call-if : boost-library lockfree
     ;
-

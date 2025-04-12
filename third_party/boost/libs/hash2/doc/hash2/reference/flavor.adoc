@@ -1,0 +1,77 @@
+////
+Copyright 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_flavor]
+# <boost/hash2/flavor.hpp>
+:idprefix: ref_flavor_
+
+```
+#include <boost/hash2/endian.hpp>
+
+namespace boost {
+namespace hash2 {
+
+struct default_flavor;
+struct little_endian_flavor;
+struct big_endian_flavor;
+
+} // namespace hash2
+} // namespace boost
+```
+
+The header `boost/hash2/flavor.hpp` contains the predefined _flavor_ types.
+
+(A _flavor_ is passed as the second argument to `hash_append` in order to influence its behavior.)
+
+Flavor types have two members, a type `size_type` and a value `byte_order` of type `boost::hash2::endian`.
+
+`size_type` controls how the argument of `hash_append_size` is treated (it's converted to `size_type` before hashing.)
+
+`byte_order` controls the endianness that is used to hash scalar types.
+
+## default_flavor
+
+```
+struct default_flavor
+{
+    using size_type = std::uint32_t;
+    static constexpr auto byte_order = endian::native;
+};
+```
+
+`default_flavor` requests native, endian-dependent, hashing of scalar types.
+This makes the hash values dependent on the endianness of the current platform, but has the potential of being substantially faster if large arrays of scalar types are being passed to `hash_append`.
+
+There is rarely a need to use `default_flavor` explicitly, because it's default when no flavor is given to `hash_append`, like so: `hash_append( h, {}, v );`
+
+## little_endian_flavor
+
+```
+struct little_endian_flavor
+{
+    using size_type = std::uint32_t;
+    static constexpr auto byte_order = endian::little;
+};
+```
+
+`little_endian_flavor` requests little endian hashing of scalar types.
+This makes the hash values independent of the endianness of the underlying platform.
+However, if the platform is big endian, `hash_append` will be slower because it will need to convert scalar types to little endian.
+
+## big_endian_flavor
+
+```
+struct big_endian_flavor
+{
+    using size_type = std::uint32_t;
+    static constexpr auto byte_order = endian::big;
+};
+```
+
+`big_endian_flavor` requests big endian hashing of scalar types.
+This makes the hash values independent of the endianness of the underlying platform.
+However, if the platform is little endian, which is very likely, `hash_append` will be slower because it will need to convert scalar types to big endian.
+

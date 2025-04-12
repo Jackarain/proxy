@@ -6,7 +6,10 @@
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+require-b2 5.0.1 ;
 import testing ;
+import-search /boost/config/checks ;
+import config : requires ;
 
 local gcc-flags = -Wsign-promo -Wconversion -Wsign-conversion -Wshadow -Wundef ;
 
@@ -15,8 +18,6 @@ project
 
         <library>/boost/throw_exception//boost_throw_exception
         <library>/boost/core//boost_core
-
-        <use>/boost/exception//boost_exception
 
         <warnings>extra
 
@@ -28,6 +29,8 @@ project
         <toolset>clang:<cxxflags>$(gcc-flags)
     ;
 
+local with-boost-exception = <use>/boost/exception//boost_exception [ requires cxx11_noexcept ] ;
+
 run throw_exception_test.cpp ;
 run throw_exception_no_exceptions_test.cpp ;
 run throw_exception_no_integration_test.cpp ;
@@ -37,27 +40,32 @@ compile-fail throw_exception_fail.cpp
   : <warnings-as-errors>off ;
 
 run throw_exception_test2.cpp ;
-run throw_exception_test3.cpp ;
-run throw_exception_test4.cpp ;
-run throw_exception_test5.cpp ;
+run throw_exception_test3.cpp
+  : : : $(with-boost-exception) ;
+run throw_exception_test4.cpp
+  : : : $(with-boost-exception) ;
+run throw_exception_test5.cpp
+  : : : $(with-boost-exception) ;
 
 lib lib1_throw : lib1_throw.cpp : <define>LIB1_SOURCE=1 <link>shared:<define>LIB1_DYN_LINK=1 : : <link>shared:<define>LIB1_DYN_LINK=1 ;
 lib lib2_throw : lib2_throw.cpp : <define>LIB2_SOURCE=1 <link>shared:<define>LIB2_DYN_LINK=1 : : <link>shared:<define>LIB2_DYN_LINK=1 ;
 lib lib3_throw : lib3_throw.cpp : <define>LIB3_SOURCE=1 <link>shared:<define>LIB3_DYN_LINK=1 : : <link>shared:<define>LIB3_DYN_LINK=1 ;
 lib lib4_throw : lib4_throw.cpp : <define>LIB4_SOURCE=1 <link>shared:<define>LIB4_DYN_LINK=1 : : <link>shared:<define>LIB4_DYN_LINK=1 ;
 
-run throw_from_library_test.cpp lib1_throw lib2_throw lib3_throw lib4_throw : : : <link>static : throw_from_library_static ;
-run throw_from_library_test.cpp lib1_throw lib2_throw lib3_throw lib4_throw : : : <link>shared <target-os>darwin,<undefined-sanitizer>norecover:<build>no : throw_from_library_shared ;
+run throw_from_library_test.cpp lib1_throw lib2_throw lib3_throw lib4_throw : : : $(with-boost-exception) <link>static : throw_from_library_static ;
+run throw_from_library_test.cpp lib1_throw lib2_throw lib3_throw lib4_throw : : : $(with-boost-exception) <link>shared <target-os>darwin,<undefined-sanitizer>norecover:<build>no : throw_from_library_shared ;
 
 run throw_exception_nx_test.cpp : : : <exception-handling>off ;
 run throw_exception_nx_test2.cpp : : : <exception-handling>off ;
 run throw_exception_nx_test3.cpp : : : <exception-handling>off ;
 
-run make_exception_ptr_test.cpp ;
-run make_exception_ptr_test2.cpp ;
+run make_exception_ptr_test.cpp
+  : : : $(with-boost-exception) ;
+run make_exception_ptr_test2.cpp
+  : : : $(with-boost-exception) ;
 
-run make_exception_ptr_nx_test.cpp : : : <exception-handling>off ;
-run make_exception_ptr_nx_test2.cpp : : : <exception-handling>off ;
+run make_exception_ptr_nx_test.cpp : : : $(with-boost-exception) <exception-handling>off ;
+run make_exception_ptr_nx_test2.cpp : : : $(with-boost-exception) <exception-handling>off ;
 
 run throw_with_location_test.cpp ;
 run throw_with_location_test2.cpp ;

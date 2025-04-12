@@ -1,0 +1,193 @@
+////
+Copyright 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_siphash]
+# <boost/hash2/siphash.hpp>
+:idprefix: ref_siphash_
+
+```
+namespace boost {
+namespace hash2 {
+
+class siphash_32;
+class siphash_64;
+
+} // namespace hash2
+} // namespace boost
+```
+
+This header implements the https://github.com/veorq/SipHash[SipHash and HalfSipHash algorithms].
+
+## siphash_32
+
+```
+class siphash_32
+{
+public:
+
+    using result_type = std::uint32_t;
+
+    constexpr siphash_32();
+    explicit constexpr siphash_32( std::uint64_t seed );
+    siphash_32( void const* p, std::size_t n );
+    constexpr siphash_32( unsigned char const* p, std::size_t n );
+
+    void update( void const* p, std::size_t n );
+    constexpr void update( unsigned char const* p, std::size_t n );
+
+    constexpr result_type result();
+};
+```
+
+### Constructors
+
+```
+constexpr siphash_32();
+```
+
+Default constructor.
+
+Effects: ::
+  Initializes the internal state of the HalfSipHash algorithm as if using a sequence of 8 zero bytes as the key.
+
+```
+explicit constexpr siphash_32( std::uint64_t seed );
+```
+
+Constructor taking an integer seed value.
+
+Effects: ::
+  Initializes the internal state of the HalfSipHash algorithm using `seed` as the key, as if it were a sequence of its 8 constituent bytes, in little-endian order.
+
+Remarks: ::
+  By convention, if `seed` is zero, the effect of this constructor is the same as default construction.
+
+```
+siphash_32( void const* p, std::size_t n );
+constexpr siphash_32( unsigned char const* p, std::size_t n );
+```
+
+Constructor taking a byte sequence seed.
+
+Effects: ::
+  If `n` is 8, initializes the state as specified by the algorithm; otherwise, initializes the state as if by default construction, then if `n` is not zero, performs `update(p, n); result()`.
+
+Remarks: ::
+  By convention, if `n` is zero, the effect of this constructor is the same as default construction.
+
+### update
+
+```
+void update( void const* p, std::size_t n );
+constexpr void update( unsigned char const* p, std::size_t n );
+```
+
+Effects: ::
+  Updates the internal state of the HalfSipHash algorithm from the byte sequence `[p, p+n)`.
+
+Remarks: ::
+  Consecutive calls to `update` are equivalent to a single call with the concatenated byte sequences of the individual calls.
+
+### result
+
+```
+constexpr result_type result();
+```
+
+Effects: ::
+  Obtains a 32 bit hash value from the state as specified by HalfSipHash.
+
+Returns: ::
+  The obtained hash value.
+
+Remarks: ::
+  The state is updated, which allows repeated calls to `result()` to return a pseudorandom sequence of `result_type` values, effectively extending the output.
+
+## siphash_64
+
+```
+class siphash_64
+{
+public:
+
+    using result_type = std::uint64_t;
+
+    constexpr siphash_64();
+    explicit constexpr siphash_64( std::uint64_t seed );
+    siphash_64( void const* p, std::size_t n );
+    constexpr siphash_64( unsigned char const* p, std::size_t n );
+
+    void update( void const* p, std::size_t n );
+    constexpr void update( unsigned char const* p, std::size_t n );
+
+    constexpr result_type result();
+};
+```
+
+### Constructors
+
+```
+constexpr siphash_64();
+```
+
+Default constructor.
+
+Effects: ::
+  Initializes the internal state of the SipHash algorithm as if using a sequence of 16 zero bytes as the key.
+
+```
+explicit constexpr siphash_64( std::uint64_t seed );
+```
+
+Constructor taking an integer seed value.
+
+Effects: ::
+  Initializes the internal state of the SipHash algorithm using `seed` as the key, as if it were a sequence of its 8 constituent bytes, in little-endian order, followed by 8 zero bytes.
+
+Remarks: ::
+  By convention, if `seed` is zero, the effect of this constructor is the same as default construction.
+
+```
+siphash_64( void const* p, std::size_t n );
+constexpr siphash_64( unsigned char const* p, std::size_t n );
+```
+
+Constructor taking a byte sequence seed.
+
+Effects: ::
+  If `n` is 16, initializes the state as specified by the algorithm; otherwise, initializes the state as if by default construction, then if `n` is not zero, performs `update(p, n); result()`.
+
+Remarks: ::
+  By convention, if `n` is zero, the effect of this constructor is the same as default construction.
+
+### update
+
+```
+void update( void const* p, std::size_t n );
+constexpr void update( unsigned char const* p, std::size_t n );
+```
+
+Effects: ::
+  Updates the internal state of the SipHash algorithm from the byte sequence `[p, p+n)`.
+
+Remarks: ::
+  Consecutive calls to `update` are equivalent to a single call with the concatenated byte sequences of the individual calls.
+
+### result
+
+```
+constexpr result_type result();
+```
+
+Effects: ::
+  Obtains a 64 bit hash value from the state as specified by SipHash, then updates the state.
+
+Returns: ::
+  The obtained hash value.
+
+Remarks: ::
+  The state is updated, which allows repeated calls to `result()` to return a pseudorandom sequence of `result_type` values, effectively extending the output.
+

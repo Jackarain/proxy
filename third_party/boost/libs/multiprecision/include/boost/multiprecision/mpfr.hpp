@@ -852,6 +852,8 @@ struct mpfr_float_imp<digits10, allocate_stack>
                         round_up = true;
                         break;
                      }
+
+                     ++i;
                   }
                   if (round_up)
                   {

@@ -8,15 +8,15 @@
 #define BOOST_LOCALE_TEST_TOOLS_HPP
 
 #include <boost/locale/encoding.hpp>
-#include "boostLocale/test/posix_tools.hpp"
-#include "boostLocale/test/unit_test.hpp"
+#include "posix_tools.hpp"
+#include "unit_test.hpp"
 #include <cstdio>
 #include <ctime>
 #include <fstream>
 #include <sstream>
 #include <string>
 #ifndef BOOST_LOCALE_NO_WINAPI_BACKEND
-#    include "../src/boost/locale/win32/lcid.hpp"
+#    include "../src/win32/lcid.hpp"
 #else
 #    include <boost/core/ignore_unused.hpp>
 #endif
@@ -113,7 +113,7 @@ std::basic_string<Char> to(const std::string& utf8)
     return out;
 }
 
-#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+#ifdef __cpp_lib_char8_t
 template<>
 std::basic_string<char8_t> to(const std::string& utf8)
 {

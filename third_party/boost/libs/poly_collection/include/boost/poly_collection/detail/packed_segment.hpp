@@ -1,4 +1,4 @@
-/* Copyright 2016-2020 Joaquin M Lopez Munoz.
+/* Copyright 2016-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -35,13 +35,23 @@ namespace detail{
  *    {value_type*,sizeof(store_value_type)}.
  *  - Model provides a function value_ptr for
  *    const Concrete* -> const value_type* conversion.
+ *  - If Model provides a final_type<Concrete> template alias, it is this
+ *    type that is stored in the segment rather than Concrete. In this case,
+ *    final_type<Concrete> must be constructible from Concrete and
+ *    Concrete* must be reinterpret_castable to final_type<Concrete>* and vice
+ *    versa.
  */
 
 template<typename Model,typename Concrete,typename Allocator>
 class packed_segment:public segment_backend<Model,Allocator>
 {
+  template<typename M>
+  static typename M::template final_type<Concrete> final_type_helper(M);
+  static Concrete final_type_helper(...);
+
   using value_type=typename Model::value_type;
-  using store_value_type=value_holder<Concrete>;
+  using final_type=decltype(final_type_helper(std::declval<Model>()));
+  using store_value_type=value_holder<final_type,Concrete>;
   using store=std::vector<
     store_value_type,
     typename std::allocator_traits<Allocator>::
@@ -266,7 +276,7 @@ private:
   static Concrete* concrete_ptr(store_value_type* p)noexcept
   {
     return reinterpret_cast<Concrete*>(
-      static_cast<value_holder_base<Concrete>*>(p));
+      static_cast<value_holder_base<final_type>*>(p));
   }
 
   static const Concrete* const_concrete_ptr(const store_value_type* p)noexcept
@@ -282,8 +292,8 @@ private:
   static const store_value_type* const_store_value_type_ptr(
     const Concrete* p)noexcept
   {
-    return static_cast<const value_holder<Concrete>*>(
-      reinterpret_cast<const value_holder_base<Concrete>*>(p));
+    return static_cast<const store_value_type*>(
+      reinterpret_cast<const value_holder_base<final_type>*>(p));
   }
 
   /* It would have sufficed if iterator_from returned const_store_iterator

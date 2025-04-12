@@ -86,11 +86,16 @@ struct fork_and_forget_launcher : default_launcher
 
             auto & ctx = net::query(
                     exec, net::execution::context);
+#if !defined(BOOST_PROCESS_V2_DISABLE_NOTIFY_FORK)
             ctx.notify_fork(net::execution_context::fork_prepare);
+#endif
             pid = ::fork();
             if (pid == -1)
             {
+#if !defined(BOOST_PROCESS_V2_DISABLE_NOTIFY_FORK)
                 ctx.notify_fork(net::execution_context::fork_parent);
+#endif
+                detail::on_fork_error(*this, executable, argv, ec, inits...);
                 detail::on_fork_error(*this, executable, argv, ec, inits...);
                 detail::on_error(*this, executable, argv, ec, inits...);
 
@@ -99,8 +104,9 @@ struct fork_and_forget_launcher : default_launcher
             }
             else if (pid == 0)
             {
+#if !defined(BOOST_PROCESS_V2_DISABLE_NOTIFY_FORK)
                 ctx.notify_fork(net::execution_context::fork_child);
-
+#endif
                 ec = detail::on_exec_setup(*this, executable, argv, inits...);
                 if (!ec)
                     close_all_fds(ec);
@@ -112,10 +118,13 @@ struct fork_and_forget_launcher : default_launcher
                 ::exit(EXIT_FAILURE);
                 return basic_process<Executor>{exec};
             }
+#if !defined(BOOST_PROCESS_V2_DISABLE_NOTIFY_FORK)
             ctx.notify_fork(net::execution_context::fork_parent);
+#endif
             if (ec)
             {
                 detail::on_error(*this, executable, argv, ec, inits...);
+                do { ::waitpid(pid, nullptr, 0); } while (errno == EINTR);
                 return basic_process<Executor>{exec};
             }
         }

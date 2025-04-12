@@ -7,10 +7,12 @@
 
 import testing ;
 
+project : requirements <library>/boost/format//boost_format ;
+
 test-suite "format-examples"
    :    [ run sample_advanced.cpp ]
         [ run sample_formats.cpp ]
         [ run sample_new_features.cpp ]
-        [ run sample_userType.cpp ]
+        [ run sample_userType.cpp : : : <library>/boost/numeric_conversion//boost_numeric_conversion ]
    ;
 

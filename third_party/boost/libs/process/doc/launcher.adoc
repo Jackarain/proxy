@@ -1,0 +1,126 @@
+= Launcher
+
+The process creation is done by a process_launcher. 
+The constructor of `process` will use the default_launcher, which varies by system.
+There are additional launcher available on most systems.
+
+[cols="1,1,1,1"]
+|===
+|Name | Summary | Default on | Available on
+
+
+
+
+|`windows::default_launcher`    | `CreateProcessW`          | windows       |windows
+|`windows::as_user_launcher`    | `CreateProcessAsUserW`    |               |windows
+|`windows::with_logon_launcher` | `CreateProcessWithLogonW` |               |windows
+|`windows::with_token_launcher` | `CreateProcessWithTokenW` |               |windows
+|`posix::default_launcher`      | fork & an error pipe      | most of posix |posix
+|`posix::fork_and_forget`       | fork without error pipe   |               |posix
+|`posix::vfork_launcher`        | vfork                     |               |posix
+|===
+
+A launcher is invoked through the call operator.
+
+[source,cpp]
+----
+auto l = windows::as_user_launcher((HANDLE)0xDEADBEEF);
+asio::io_context ctx;
+boost::system::error_code ec;
+auto proc = l(ctx, ec, "C:\\User\\boost\\Downloads\\totally_not_a_virus.exe", {});
+----
+
+The launcher will call certain functions on the initializer if they're present, as documented below.
+The initializer are used to modify the process behaviour.
+
+
+== Linux Launchers
+
+The default launchers on linux open an internal pipe to communicate errors that occur after forking back to the parent process.
+
+NOTE: A pipe can be used if one end is open on the parent, the other on the child.
+This allows the parents to select on his pipe-end to know if the child exited.
+
+This can be prevented by using the `fork_and_forget_launcher`. 
+Alternatively, the `vfork_launcher` can report errors directly back to the parent process.
+
+Thus some calls to the initializers occur after forking from the child process.
+
+[source,cpp]
+----
+struct custom_initializer
+{
+    // called before a call to fork. A returned error will cancel the launch.
+    template<typename Launcher>
+    error_code on_setup(Launcher & launcher, const filesystem::path &executable, const char * const * (&cmd_line));
+
+    // called for every initializer if an error occurred during setup or process creation
+    template<typename Launcher>
+    void on_error(Launcher & launcher, const filesystem::path &executable, const char * const * (&cmd_line),
+                  const error_code & ec);
+
+    // called after successful process creation
+    template<typename Launcher>
+    void on_success(Launcher & launcher, const filesystem::path &executable, const char * const * (&cmd_line));
+
+    // called for every initializer if an error occurred when forking, in addition to on_error.
+    template<typename Launcher>
+    void on_fork_error(Launcher & launcher, const filesystem::path &executable, const char * const * (&cmd_line),
+                       const error_code & ec);
+
+
+    // called before a call to execve. A returned error will cancel the launch. Called from the child process.
+    template<typename Launcher>
+    error_code on_exec_setup(Launcher & launcher, const filesystem::path &executable, const char * const * (&cmd_line));
+
+
+    // called after a failed call to execve from the child process.
+    template<typename Launcher>
+    void on_exec_error(Launcher & launcher, const filesystem::path &executable, const char * const * (&cmd_line));
+};
+----
+
+The call sequence on success:
+
+image::posix_success.svg[]
+
+The call sequence when fork fails:
+
+image::posix_fork_err.svg[]
+
+The call sequence when exec fails:
+
+image::posix_exec_err.svg[]
+
+The launcher will close all non-whitelisted file descriptors after `on_exec_setup`.
+
+== Windows Launchers
+
+Windows launchers are pretty straight forward, they will call the following functions on the initializer if present.
+
+[source,cpp]
+----
+struct custom_initializer
+{
+    // called before a call to CreateProcess. A returned error will cancel the launch.
+    template<typename Launcher>
+    error_code on_setup(Launcher & launcher, const filesystem::path &executable, std::wstring &cmd_line);
+
+    // called for every initializer if an error occurred during setup or process creation
+    template<typename Launcher>
+    void on_error(Launcher & launcher, const filesystem::path &executable, std::wstring &cmd_line,
+                  const error_code & ec);
+
+    // called after successful process creation
+    template<typename Launcher>
+    void on_success(Launcher & launcher, const filesystem::path &executable, std::wstring &cmd_line);
+
+};
+----
+
+NTOE: All the additional launchers for windows inherit `default_launcher`.
+
+The call sequence is as follows:
+
+image::windows_exec.svg
+'''

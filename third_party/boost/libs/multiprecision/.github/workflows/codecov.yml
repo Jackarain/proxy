@@ -28,7 +28,6 @@ env:
   B2_LINK: shared,static
   LCOV_BRANCH_COVERAGE: 0
   CODECOV_NAME: Github Actions
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
 jobs:
   posix:
@@ -94,13 +93,13 @@ jobs:
           fi
           git config --global pack.threads 0
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           # For coverage builds fetch the whole history, else only 1 commit using a 'fake ternary'
           fetch-depth: ${{ matrix.coverage && '0' || '1' }}
 
       - name: Cache ccache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         if: env.B2_USE_CCACHE
         with:
           path: ~/.ccache
@@ -108,7 +107,7 @@ jobs:
           restore-keys: ${{matrix.os}}-${{matrix.container}}-${{matrix.compiler}}-
 
       - name: Fetch Boost.CI
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: boostorg/boost-ci
           ref: master

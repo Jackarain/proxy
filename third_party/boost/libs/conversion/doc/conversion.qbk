@@ -1,6 +1,6 @@
 [/
     Copyright 2016 Mikhail Maximov.
-    Copyright Antony Polukhin, 2020-2024.
+    Copyright Antony Polukhin, 2020-2025.
 
     Distributed under the Boost Software License, Version 1.0. (See accompanying
     file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)
@@ -12,7 +12,7 @@
     [id conversion]
     [version 1.7]
     [authors [Stroustrup, Bjarne], [Abrahams, Dave], [Rasin, Boris], [Polukhin, Antony]]
-    [copyright 2001 Beman Dawes, 2014-2024 Antony Polukhin]
+    [copyright 2001 Beman Dawes, 2014-2025 Antony Polukhin]
     [license
         Distributed under the Boost Software License, Version 1.0.
         (See accompanying file LICENSE_1_0.txt or copy at
@@ -150,10 +150,10 @@ This includes C++ built-in pointers, `std::shared_ptr`,
     class Banana : public Fruit {};
 
     // Use one of these:
-    typedef Fruit* FruitPtr;
-    typedef std::shared_ptr<Fruit> FruitPtr;
-    typedef boost::shared_ptr<Fruit> FruitPtr;
-    typedef boost::intrusive_ptr<Fruit> FruitPtr;
+    using FruitPtr = Fruit*;
+    using FruitPtr = std::shared_ptr<Fruit>;
+    using FruitPtr = boost::shared_ptr<Fruit>;
+    using FruitPtr = boost::intrusive_ptr<Fruit>;
 
     void f(FruitPtr fruit) {
       // ... logic which leads us to believe it is a banana

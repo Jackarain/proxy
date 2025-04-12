@@ -22,7 +22,7 @@
 #include <string>
 #include <iostream>
 
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 BOOST_AUTO_TEST_SUITE( bind_stdin_stdout );
 
 BOOST_AUTO_TEST_CASE(sync_io, *boost::unit_test::timeout(10))

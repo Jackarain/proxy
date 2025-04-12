@@ -11,7 +11,7 @@ else
     alias mt19937ar ;
 }
 
-exe random_speed.exe : random_speed.cpp mt19937ar : release ;
+exe random_speed.exe : random_speed.cpp mt19937ar /boost/random//boost_random : release <link>static ;
 exe generate_table.exe : generate_table.cpp /boost/regex//boost_regex : <link>static ;
 exe nondet_random_speed.exe : nondet_random_speed.cpp /boost/random//boost_random : release <link>static  ;
 

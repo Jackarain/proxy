@@ -2,7 +2,9 @@
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/process.hpp>
+#include <boost/process/v1/child.hpp>
+#include <boost/process/v1/io.hpp>
+#include <boost/process/v1/group.hpp>
 #include <boost/program_options.hpp>
 
 #include <vector>
@@ -20,7 +22,7 @@ int main(int argc, char *argv[])
 {
     using namespace std;
     using namespace boost::program_options;
-    using namespace boost::process;
+    using namespace boost::process::v1;
 
     bool launch_detached = false;
     bool launch_attached = false;

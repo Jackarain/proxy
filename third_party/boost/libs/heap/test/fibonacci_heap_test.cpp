@@ -16,7 +16,6 @@
 #include "mutable_heap_tests.hpp"
 #include "stable_heap_tests.hpp"
 
-
 template < bool stable, bool constant_time_size >
 void run_fibonacci_heap_test( void )
 {

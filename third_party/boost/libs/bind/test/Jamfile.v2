@@ -46,7 +46,8 @@ run bind_not_test.cpp ;
 run bind_rel_test.cpp ;
 run bind_function_test.cpp ;
 run bind_lookup_problem_test.cpp ;
-run bind_rv_sp_test.cpp ;
+run bind_rv_sp_test.cpp
+  : : : <toolset>msvc-12.0:<build>no ;
 compile bind_unary_addr.cpp ;
 run bind_dm3_test.cpp ;
 run bind_visit_test.cpp ;
@@ -56,12 +57,17 @@ run bind_and_or_test.cpp ;
 run bind_void_test.cpp ;
 run bind_void_dm_test.cpp ;
 run bind_void_mf_test.cpp ;
-run mem_fn_test.cpp ;
-run mem_fn_void_test.cpp ;
-run mem_fn_derived_test.cpp ;
+run mem_fn_test.cpp
+  : : : <toolset>msvc-12.0:<build>no ;
+run mem_fn_void_test.cpp
+  : : : <toolset>msvc-12.0:<build>no ;
+run mem_fn_derived_test.cpp
+  : : : <toolset>msvc-12.0:<build>no ;
 run mem_fn_eq_test.cpp ;
-run mem_fn_dm_test.cpp ;
-run mem_fn_rv_test.cpp ;
+run mem_fn_dm_test.cpp
+  : : : <toolset>msvc-12.0:<build>no ;
+run mem_fn_rv_test.cpp
+  : : : <toolset>msvc-12.0:<build>no ;
 run ref_fn_test.cpp ;
 run bind_fnobj2_test.cpp ;
 run bind_fn2_test.cpp ;
@@ -69,7 +75,8 @@ run bind_mf2_test.cpp ;
 run bind_eq2_test.cpp ;
 run mem_fn_ref_test.cpp ;
 run bind_ref_test.cpp ;
-run bind_eq3_test.cpp ;
+run bind_eq3_test.cpp
+  : : : <toolset>msvc-12.0:<build>no ;
 run protect_test.cpp ;
 run mem_fn_unary_addr_test.cpp ;
 run bind_function2_test.cpp ;
@@ -80,7 +87,8 @@ run placeholder_const_ref_test.cpp ;
 run bind_function_ap_test.cpp ;
 run bind_type_test.cpp ;
 run bind_unique_ptr_test.cpp ;
-run bind_nested_rv_test.cpp ;
+run bind_nested_rv_test.cpp
+  : : : <toolset>gcc-4.7:<build>no <toolset>msvc-12.0:<build>no ;
 compile arg_copy_test.cpp ;
 compile-fail arg_copy_fail.cpp
   : <warnings>off ;
@@ -90,13 +98,17 @@ run bind_stdcall_test.cpp ;
 run bind_cdecl_mf_test.cpp ;
 run bind_fastcall_mf_test.cpp ;
 run bind_stdcall_mf_test.cpp ;
-run mem_fn_cdecl_test.cpp ;
-run mem_fn_fastcall_test.cpp ;
-run mem_fn_stdcall_test.cpp ;
+run mem_fn_cdecl_test.cpp
+  : : : <toolset>msvc-12.0:<build>no ;
+run mem_fn_fastcall_test.cpp
+  : : : <toolset>msvc-12.0:<build>no ;
+run mem_fn_stdcall_test.cpp
+  : : : <toolset>msvc-12.0:<build>no ;
 run bind_noexcept_test.cpp ;
 run bind_noexcept_mf_test.cpp ;
 run global_placeholders.cpp ;
-run mem_fn_noexcept_test.cpp ;
+run mem_fn_noexcept_test.cpp
+  : : : <toolset>msvc-12.0:<build>no ;
 run bind_cpp20_test.cpp ;
 run protect_test2.cpp ;
 run protect_cpp20_test.cpp ;

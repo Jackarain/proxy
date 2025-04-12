@@ -16,7 +16,7 @@
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
-#include <boost/detail/atomic_count.hpp>
+#include <boost/smart_ptr/detail/atomic_count.hpp>
 #include <boost/detail/lightweight_test.hpp>
 #include <iostream>
 

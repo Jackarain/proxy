@@ -27,7 +27,6 @@ env:
   GIT_FETCH_JOBS: 8
   NET_RETRY_COUNT: 5
   DEFAULT_BUILD_VARIANT: release
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
 jobs:
   posix:
@@ -252,9 +251,6 @@ jobs:
               - libc++abi-14-dev
 
           - toolset: clang
-            cxxstd: "11,14"
-            os: macos-12
-          - toolset: clang
             cxxstd: "20"
             os: macos-13
           - toolset: clang
@@ -262,7 +258,11 @@ jobs:
             os: macos-14
 
     runs-on: ${{matrix.os}}
-    container: ${{matrix.container}}
+    container:
+      image: ${{matrix.container}}
+      volumes:
+        - /node20217:/node20217:rw,rshared
+        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
 
     steps:
       - name: Setup environment
@@ -286,9 +286,13 @@ jobs:
                   fi
                   apt-get -o Acquire::Retries=$NET_RETRY_COUNT install -y sudo software-properties-common tzdata wget curl apt-transport-https ca-certificates make build-essential g++ $PYTHON_PACKAGE python3 perl git cmake
               fi
+              if [[ "${{matrix.container}}" == "ubuntu:1"* ]]; then
+                # Node 20 doesn't work with Ubuntu 16/18  glibc: https://github.com/actions/checkout/issues/1590
+                curl -sL https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz | tar -xJ --strip-components 1 -C /node20217
+              fi
           fi
           git config --global pack.threads 0
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install

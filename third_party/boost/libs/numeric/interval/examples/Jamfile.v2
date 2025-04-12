@@ -7,14 +7,16 @@
 
 import testing ;
 
+project : requirements <library>/boost/interval//boost_interval ;
+
 {
   test-suite interval-examples
     : [ compile filter.cpp         : <build>yes <toolset>msvc-10.0:<build>no ]  # ambiguous sin()
       [ compile findroot_demo.cpp  ]
       [ compile horner.cpp         ]
-      [ compile io.cpp             ]
+      [ compile io.cpp : <library>/boost/io//boost_io ]
       [ compile newton-raphson.cpp ]
-      [ compile rational.cpp       ]
-    # [ compile transc.cpp         ] requires gmp3, mpfr 
+      [ compile rational.cpp : <library>/boost/rational//boost_rational ]
+    # [ compile transc.cpp         ] requires gmp3, mpfr
     ;
 }

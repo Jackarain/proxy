@@ -1,0 +1,182 @@
+////
+Copyright 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_hash_append]
+# <boost/hash2/hash_append.hpp>
+:idprefix: ref_hash_append_
+
+```
+#include <boost/hash2/flavor.hpp>
+
+namespace boost {
+namespace hash2 {
+
+template<class Hash, class Flavor = default_flavor, class T>
+constexpr void hash_append( Hash& h, Flavor const& f, T const& v );
+
+template<class Hash, class Flavor = default_flavor, class It>
+constexpr void hash_append_range( Hash& h, Flavor const& f, It first, It last );
+
+template<class Hash, class Flavor = default_flavor, class T>
+constexpr void hash_append_size( Hash& h, Flavor const& f, T const& v );
+
+template<class Hash, class Flavor = default_flavor, class It>
+constexpr void hash_append_range_and_size( Hash& h, Flavor const& f, It first, It last );
+
+template<class Hash, class Flavor = default_flavor, class It>
+constexpr void hash_append_unordered_range( Hash& h, Flavor const& f, It first, It last );
+
+struct hash_append_tag;
+
+struct hash_append_provider;
+
+} // namespace hash2
+} // namespace boost
+```
+
+## hash_append
+
+```
+template<class Hash, class Flavor = default_flavor, class T>
+constexpr void hash_append( Hash& h, Flavor const& f, T const& v );
+```
+
+Appends the representation of `v` to the message stored in `h`.
+
+Effects: ::
+* If `is_contiguously_hashable<T, Flavor::byte_order>::value` is `true`, calls `h.update(&v, sizeof(v))`;
+* If `std::is_integral<T>::value` is `true`, obtains a byte representation of `v` in the byte order requested by `Flavor::byte_order`, then calls `h.update(p, n)` where `p` is the address of that representation and `n` is `sizeof(v)`;
+* If `std::is_floating_point<T>::value` is true, first replaces `v` with positive zero if it's negative zero, then calls `hash_append(h, f, std::bit_cast<U>(v))`, where `U` is an unsigned integer type with the same size as `T`;
+* If `std::is_pointer<T>::value` is `true`, calls `hash_append(h, f, reinterpret_cast<std::uintptr_t>(v))`;
+* If `T` is `std::nullptr_t`, calls `hash_append(h, f, static_cast<void*>(v))`;
+* If `T` is an array type `U[N]`, calls `hash_append_range(h, f, v + 0, v + N)`;
+* If a suitable overload of `tag_invoke` exists for `T`, calls (unqualified) `tag_invoke(hash_append_tag(), hash_append_provider(), h, f, v)`;
+* If `std::is_enum<T>::value` is `true`, calls `hash_append(h, f, w)`, where `w` is `v` converted to the underlying type of `T`;
+* If `boost::container_hash::is_unordered_range<T>::value` is `true`, calls `hash_append_unordered_range(h, f, v.begin(), v.end())`;
+* If `boost::container_hash::is_contiguous_range<T>::value` is `true` and
+  - `has_constant_size<T>::value` is `true`, calls `hash_append_range(h, f, v.data(), v.data() + v.size())`;
+  - `has_constant_size<T>::value` is `false`, calls `hash_append_range_and_size(h, f, v.data(), v.data() + v.size())`;
+* If `boost::container_hash::is_range<T>::value` is `true` and
+  - `has_constant_size<T>::value` is `true`, calls `hash_append_range(h, f, v.begin(), v.end())`;
+  - `has_constant_size<T>::value` is `false`, calls `hash_append_range_and_size(h, f, v.begin(), v.end())`;
+* If `boost::container_hash::is_tuple_like<T>::value` is `true`, calls `hash_append(h, f, w)` for each tuple element `w`;
+* If `boost::container_hash::is_described_class<T>::value` is `true`, calls `hash_append(h, f, b)` for each base class subobject `b` of `v`, then `hash_append(h, f, m)` for each member subobject `m` of `v`;
+* Otherwise, the result is a compile-time error.
+
+Remarks: ::
+  In case the above description would result in no calls being made (e.g. for a range of constant size zero, or a described `struct` with no bases and members),
+  a call to `hash_append(h, f, '\x00')` is made to satisfy the requirement that `hash_append` always results in at least one call to `Hash::update`.
+
+## hash_append_range
+
+```
+template<class Hash, class Flavor = default_flavor, class It>
+constexpr void hash_append_range( Hash& h, Flavor const& f, It first, It last );
+```
+
+Appends the representations of the elements of the range `[first, last)` to the message stored in `h`.
+
+Requires: ::
+  `It` must be an _iterator_ type. `[first, last)` must be a valid _iterator range_.
+
+Effects: ::
+  * If `It` is `T*` and `is_contiguously_hashable<T, Flavor::byte_order>::value` is `true`, calls `h.update(first, (last - first) * sizeof(T));`.
+  * Otherwise, for each element `v` in the range denoted by `[first, last)`, calls `hash_append(h, f, v);`.
+
+Remarks: ::
+  If `hash_append_range` is called in a constant expression, the contiguously hashable optimization is only applied for `unsigned char*` and `unsigned char const*`.
+
+## hash_append_size
+
+```
+template<class Hash, class Flavor = default_flavor, class T>
+constexpr void hash_append_size( Hash& h, Flavor const& f, T const& v );
+```
+
+Appends the representation of `v`, converted to `Flavor::size_type`, to the message stored in `h`.
+
+Requires: ::
+  `T` must be an integral type.
+
+Effects: ::
+  Equivalent to `hash_append(h, f, static_cast<typename Flavor::size_type>(v));`
+
+## hash_append_range_and_size
+
+```
+template<class Hash, class Flavor = default_flavor, class It>
+constexpr void hash_append_range_and_size( Hash& h, Flavor const& f, It first, It last );
+```
+
+Appends the representations of the elements of the range `[first, last)`, followed by the size of the range, to the message stored in `h`.
+
+Requires: ::
+  `It` must be an _iterator_ type. `[first, last)` must be a valid _iterator range_.
+
+Effects: ::
+  Equivalent to `hash_append_range(h, f, first, last); hash_append(h, f, m);`, where `m` is `std::distance(first, last)`.
+
+## hash_append_unordered_range
+
+```
+template<class Hash, class Flavor = default_flavor, class It>
+constexpr void hash_append_unordered_range( Hash& h, Flavor const& f, It first, It last );
+```
+
+Constructs a value from the representations of the elements of the range `[first, last)`, in a way such that their order doesn't affect the result, then appends that value, followed by the size of the range, to the message stored in `h`.
+
+Requires: ::
+  `It` must be an _iterator_ type. `[first, last)` must be a valid _iterator range_.
+
+Effects: ::
++
+For each element `v` in the range denoted by `[first, last)`, obtains a hash value `r` by doing
++
+```
+Hash h2(h);
+hash_append(h2, f, v);
+auto r = h2.result();
+```
++
+and then combines the so obtained `r` values in a way that is not sensitive to their order, producing a combined value `q`. Calls `hash_append(h, f, q)`, followed by `hash_append(h, f, m)`, where `m` is `std::distance(first, last)`.
+
+## hash_append_tag
+
+```
+struct hash_append_tag
+{
+};
+```
+
+`hash_append_tag` is a tag type used as the first argument of a `tag_invoke` overload to identify the `hash_append` operation.
+
+## hash_append_provider
+
+```
+struct hash_append_provider
+{
+    template<class Hash, class Flavor, class T>
+    static constexpr void hash_append( Hash& h, Flavor const& f, T const& v );
+
+    template<class Hash, class Flavor, class It>
+    static constexpr void hash_append_range( Hash& h, Flavor const& f, It first, It last );
+
+    template<class Hash, class Flavor, class T>
+    static constexpr void hash_append_size( Hash& h, Flavor const& f, T const& v );
+
+    template<class Hash, class Flavor, class It>
+    static constexpr void hash_append_range_and_size( Hash& h, Flavor const& f,
+        It first, It last );
+
+    template<class Hash, class Flavor, class It>
+    static constexpr void hash_append_unordered_range( Hash& h, Flavor const& f,
+        It first, It last );
+};
+```
+
+An object of type `hash_append_provider` is passed as the second argument of a `tag_invoke` overload.
+
+All its member functions call the corresponding functions with the same names in `boost::hash2`.

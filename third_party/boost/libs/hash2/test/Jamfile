@@ -1,0 +1,196 @@
+# Copyright 2017-2024 Peter Dimov
+# Distributed under the Boost Software License, Version 1.0.
+
+import testing ;
+
+local werror =
+    <toolset>msvc:<warnings-as-errors>on
+    <toolset>gcc:<warnings-as-errors>on
+    <toolset>clang:<warnings-as-errors>on
+    ;
+
+project
+  : default-build
+
+    <warnings>extra
+
+  : requirements
+
+    $(werror)
+  ;
+
+# type traits
+
+run is_range.cpp ;
+run is_contiguous_range.cpp ;
+run is_unordered_range.cpp ;
+run is_tuple_like.cpp ;
+
+run endian.cpp ;
+run flavor.cpp ;
+
+run is_contiguously_hashable.cpp ;
+run is_trivially_equality_comparable.cpp ;
+run is_endian_independent.cpp ;
+run has_constant_size.cpp ;
+
+# get_integral_result
+
+run get_integral_result.cpp ;
+run get_integral_result_2.cpp ;
+run get_integral_result_3.cpp ;
+run get_integral_result_4.cpp ;
+run get_integral_result_5.cpp ;
+run get_integral_result_6.cpp ;
+
+# digest
+
+run digest.cpp ;
+
+# detail
+
+run detail_read.cpp ;
+run detail_write.cpp ;
+run detail_write_2.cpp ;
+run detail_rot.cpp ;
+run detail_has_tag_invoke.cpp ;
+
+# hash_append
+
+run append_integer.cpp ;
+run append_bool.cpp ;
+run append_byte_sized.cpp ;
+run append_character.cpp ;
+run append_floating_point.cpp ;
+run append_pointer.cpp ;
+run append_array.cpp ;
+run append_container.cpp ;
+run append_string.cpp ;
+run append_string_view.cpp ;
+run append_tuple_like.cpp ;
+run append_tuple_like_2.cpp ;
+run append_set.cpp ;
+run append_map.cpp ;
+
+run append_described.cpp ;
+run append_described_2.cpp ;
+run append_described_3.cpp ;
+run append_described_4.cpp ;
+run append_described_5.cpp ;
+
+run append_tag_invoke.cpp ;
+run append_tag_invoke_2.cpp ;
+run append_tag_invoke_3.cpp ;
+
+run hash_append_5.cpp ;
+run hash_append_range.cpp ;
+run hash_append_range_2.cpp ;
+
+run append_zero_sized.cpp ;
+run append_digest.cpp ;
+
+compile-fail append_tag_invoke_4.cpp
+  : -$(werror) ;
+
+run hash_append_provider.cpp ;
+
+# hash_append, constexpr
+
+compile append_byte_sized_cx.cpp ;
+run append_integer_cx.cpp ;
+run append_character_cx.cpp ;
+run append_floating_point_cx.cpp ;
+run append_vector_cx.cpp ;
+run append_string_cx.cpp ;
+run append_array_cx.cpp ;
+run append_array_cx_2.cpp ;
+run append_array_cx_3.cpp ;
+run append_string_view_cx.cpp ;
+run append_tuple_like_cx.cpp ;
+
+# non-cryptographic
+
+run fnv1a.cpp ;
+run fnv1a_cx.cpp ;
+run fnv1a_cx_2.cpp ;
+
+run xxhash.cpp ;
+run xxhash_2.cpp ;
+run xxhash_cx.cpp ;
+run xxhash_cx_2.cpp ;
+
+run siphash32.cpp ;
+run siphash64.cpp ;
+run siphash_cx.cpp ;
+run siphash_cx_2.cpp ;
+
+# cryptographic
+
+run md5.cpp ;
+run hmac_md5.cpp ;
+run md5_cx.cpp ;
+run md5_cx_2.cpp ;
+run hmac_md5_cx.cpp ;
+run hmac_md5_cx_2.cpp ;
+
+run sha1.cpp ;
+run hmac_sha1.cpp ;
+run sha1_cx.cpp ;
+run sha1_cx_2.cpp ;
+
+run sha2.cpp ;
+run hmac_sha2.cpp ;
+run sha2_cx.cpp ;
+run sha2_cx_2.cpp ;
+
+run detail_keccak.cpp ;
+run sha3.cpp ;
+run shake.cpp ;
+run hmac_sha3.cpp ;
+run sha3_224_cx.cpp ;
+run sha3_256_cx.cpp ;
+run sha3_384_cx.cpp ;
+run sha3_512_cx.cpp ;
+run shake_128_cx.cpp ;
+run shake_256_cx.cpp ;
+run sha3_cx_2.cpp ;
+
+run ripemd.cpp ;
+run hmac_ripemd.cpp ;
+run ripemd_cx.cpp ;
+run ripemd_cx_2.cpp ;
+
+# legacy
+
+run legacy/spooky2.cpp ;
+run legacy/murmur3_32.cpp ;
+run legacy/murmur3_128.cpp ;
+
+# general requirements
+
+run concept.cpp ;
+run plaintext_leak.cpp ;
+run multiple_result.cpp ;
+run integral_result.cpp ;
+run quality.cpp ;
+
+# benchmarks
+
+link ../benchmark/buffer.cpp ;
+link ../benchmark/unordered.cpp ;
+link ../benchmark/average.cpp ;
+link ../benchmark/keys.cpp ;
+
+# examples
+
+link ../example/md5sum.cpp ;
+link ../example/hash2sum.cpp : <cxxstd>11:<build>no <toolset>msvc-14.0:<build>no ;
+link ../example/compile_time.cpp : <cxxstd>11:<build>no <toolset>msvc-14.0:<build>no ;
+link ../example/compile_time_2.cpp : <cxxstd>11:<build>no <toolset>msvc-14.0:<build>no <toolset>gcc-5:<build>no ;
+link ../example/hash_without_seed.cpp ;
+link ../example/hash_with_uint64_seed.cpp ;
+link ../example/hash_with_byte_seed.cpp ;
+link ../example/hash_with_any_seed.cpp ;
+link ../example/hash_32_64.cpp ;
+link ../example/xxh128_from_xxh64.cpp ;
+link ../example/json_value.cpp : <library>/boost/json//boost_json <cxxstd>11:<build>no ;

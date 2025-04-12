@@ -1,0 +1,70 @@
+== `posix/bind_fd.hpp`
+
+`bind_fd` is a utility class to bind a file descriptor to an explicit file descriptor for the child process.
+
+[source,cpp]
+----
+struct bind_fd
+{
+  // Inherit file descriptor with the same value.
+  /*
+  * This will pass descriptor 42 as 42 to the child process:
+  * @code
+  * process p{"test", {},  posix::bind_fd(42)};
+  * @endcode
+  */
+  bind_fd(int target);
+
+  // Inherit an asio io-object as a given file descriptor to the child process.
+  /*
+  * This will pass the tcp::socket, as 42 to the child process:
+  * @code
+  * extern tcp::socket sock;
+  * process p{"test", {},  posix::bind_fd(42, sock)};
+  * @endcode
+  */
+
+  template<typename Stream>
+  bind_fd(int target, Stream && str);
+
+  // Inherit a `FILE` as a given file descriptor to the child process.
+  /* This will pass the given `FILE*`, as 42 to the child process:
+
+       process p{"test", {},  posix::bind_fd(42, stderr)};
+
+   */
+  bind_fd(int target, FILE * f);
+
+  // Inherit a file descriptor with as a different value.
+  /* This will pass 24 as 42 to the child process:
+
+       process p{"test", {},  posix::bind_fd(42, 24)};
+
+   */
+  bind_fd(int target, int fd):
+
+  // Inherit a null device as a set descriptor.
+  /* This will a null device as 42 to the child process:
+
+       process p{"test", {},  posix::bind_fd(42, nullptr)};
+
+   */
+  bind_fd(int target, std::nullptr_t);
+
+  // Inherit a newly opened-file as a set descriptor.
+  /* This will pass a descriptor to "extra-output.txt" as 42 to the child process:
+
+       process p{"test", {},  posix::bind_fd(42, "extra-output.txt")};
+
+   */
+  bind_fd(int target, const filesystem::path & pth, int flags = O_RDWR | O_CREAT);
+
+};
+----
+
+Using `bind_fd` can be used to inherit file descriptors explicitly, because no unused one will be.
+
+[source,cpp]
+----
+
+----

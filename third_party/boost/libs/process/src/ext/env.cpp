@@ -172,7 +172,7 @@ namespace ext
 
 #if defined(BOOST_PROCESS_V2_WINDOWS)
 
-env_view env(HANDLE proc, boost::system::error_code & ec)
+env_view env(HANDLE proc, error_code & ec)
 {
     wchar_t *buffer = nullptr;
     PEB peb;
@@ -221,14 +221,14 @@ env_view env(HANDLE proc, boost::system::error_code & ec)
 
 env_view env(HANDLE handle)
 {
-    boost::system::error_code ec;
+    error_code ec;
     auto res = env(handle, ec);
     if (ec)
         detail::throw_error(ec, "env");
     return res;
 }
 
-env_view env(boost::process::v2::pid_type pid, boost::system::error_code & ec)
+env_view env(boost::process::v2::pid_type pid, error_code & ec)
 {
     struct del
     {
@@ -248,7 +248,7 @@ env_view env(boost::process::v2::pid_type pid, boost::system::error_code & ec)
 
 #elif (defined(__APPLE___) || defined(__MACH__)) && !TARGET_OS_IOS
 
-env_view env(boost::process::v2::pid_type pid, boost::system::error_code & ec)
+env_view env(boost::process::v2::pid_type pid, error_code & ec)
 {
     int mib[3] = {CTL_KERN, KERN_ARGMAX, 0};
     int argmax = 0;
@@ -311,7 +311,7 @@ env_view env(boost::process::v2::pid_type pid, boost::system::error_code & ec)
 
 #elif (defined(__linux__) || defined(__ANDROID__))
 
-env_view env(boost::process::v2::pid_type pid, boost::system::error_code & ec)
+env_view env(boost::process::v2::pid_type pid, error_code & ec)
 {
     std::size_t size = 0;
     std::unique_ptr<char, detail::ext::native_env_handle_deleter> procargs{};
@@ -346,7 +346,7 @@ env_view env(boost::process::v2::pid_type pid, boost::system::error_code & ec)
 }
 
 #elif defined(__FreeBSD__) || defined(__DragonFly__)
-env_view env(boost::process::v2::pid_type pid, boost::system::error_code & ec)
+env_view env(boost::process::v2::pid_type pid, error_code & ec)
 {
   std::vector<char> vec;
   int cntp = 0;
@@ -388,7 +388,7 @@ env_view env(boost::process::v2::pid_type pid, boost::system::error_code & ec)
 }
 
 #elif defined(__NetBSD__)
-env_view env(boost::process::v2::pid_type pid, boost::system::error_code & ec)
+env_view env(boost::process::v2::pid_type pid, error_code & ec)
 {
   std::vector<char> vec;
   int cntp = 0;
@@ -427,7 +427,7 @@ env_view env(boost::process::v2::pid_type pid, boost::system::error_code & ec)
   return ev;
 }
 #elif defined(__OpenBSD__)
-env_view env(boost::process::v2::pid_type pid, boost::system::error_code & ec)
+env_view env(boost::process::v2::pid_type pid, error_code & ec)
 {
   std::vector<char> vec;
   int cntp = 0;
@@ -468,7 +468,7 @@ env_view env(boost::process::v2::pid_type pid, boost::system::error_code & ec)
   return ev;
 }
 #elif defined(__sun)
-env_view env(boost::process::v2::pid_type pid, boost::system::error_code & ec)
+env_view env(boost::process::v2::pid_type pid, error_code & ec)
 {
   std::vector<char> vec;
   char **env = nullptr;
@@ -518,7 +518,7 @@ env_view env(boost::process::v2::pid_type pid, boost::system::error_code & ec)
 
 env_view env(boost::process::v2::pid_type pid)
 {
-    boost::system::error_code ec;
+    error_code ec;
     auto res = env(pid, ec);
     if (ec)
         detail::throw_error(ec, "env");

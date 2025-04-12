@@ -10,10 +10,12 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <type_traits>
+
 #include <boost/dll/detail/demangling/demangle_symbol.hpp>
 #include <boost/dll/library_info.hpp>
 #include <boost/type_index/ctti_type_index.hpp>
-#include <boost/type_traits/remove_reference.hpp>
+
 
 namespace boost { namespace dll { namespace detail {
 

@@ -1,0 +1,39 @@
+////
+Copyright 2001-2004 Nicolai M. Josuttis
+Copyright 2012 Marshall Clow
+Copyright 2024 Christian Mazakas
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#design]
+# Design Rationale
+:idprefix: design_
+:cpp: C++
+
+There was an important design tradeoff regarding the constructors: We could implement array as an "aggregate" (see Section 8.5.1, [dcl.init.aggr], of the C++ Standard). This would mean:
+
+* An array can be initialized with a brace-enclosing, comma-separated list of initializers for the elements of the container, written in increasing subscript order:
++
+--
+```cpp
+boost::array<int,4> a = { { 1, 2, 3 } };
+```
+
+Note that if there are fewer elements in the initializer list, then each remaining element gets default-initialized (thus, it has a defined value).
+--
+
+However, this approach has its drawbacks: **passing no initializer list means that the elements have an indetermined initial value**, because the rule says that aggregates may have:
+
+* No user-declared constructors.
+* No private or protected non-static data members.
+* No base classes.
+* No virtual functions.
+
+Nevertheless, the current implementation uses this approach.
+
+Note that for standard conforming compilers it is possible to use fewer braces (according to 8.5.1 (11) of the Standard). That is, you can initialize an array as follows:
+
+```cpp
+boost::array<int,4> a = { 1, 2, 3 };
+```

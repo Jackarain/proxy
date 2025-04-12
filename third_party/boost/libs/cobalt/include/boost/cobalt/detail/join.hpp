@@ -369,6 +369,8 @@ struct join_ranged_impl
     {
     }
 
+
+
     void cancel_all()
     {
       for (auto & r : cancel)
@@ -511,7 +513,7 @@ struct join_ranged_impl
         rr.reserve(result.size());
         for (auto & t : result)
           rr.push_back(*std::move(t));
-        return rr;
+        return system::result<decltype(rr), std::exception_ptr>(std::move(rr));
       }
     }
 

@@ -39,7 +39,7 @@ child::child(Args&&...args)
 typedef ::boost::process::v1::detail::api::pid_t pid_t;
 
 #if defined(BOOST_PROCESS_DOXYGEN)
-/** The main class to hold a child process. It is simliar to [std::thread](http://en.cppreference.com/w/cpp/thread/thread),
+/** The main class to hold a child process. It is similar to [std::thread](http://en.cppreference.com/w/cpp/thread/thread),
  * in that it has a join and detach function.
  *
  * @attention The destructor will call terminate on the process if not joined or detached without any warning.

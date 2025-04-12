@@ -1,0 +1,14 @@
+site:
+  title: Boost.Unordered
+  start_page: unordered::index.adoc
+content:
+  sources:
+  - url: ..
+    start_path: doc
+    branches: HEAD
+output:
+  dir: html
+ui:
+  bundle:
+    url: https://github.com/boostorg/unordered-ui-bundle/raw/c80db72a7ba804256beb36e3a46d9c7df265d8d7/ui-bundle.zip
+  output_dir: unordered/_

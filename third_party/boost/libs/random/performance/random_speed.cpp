@@ -8,6 +8,7 @@
  * $Id$
  */
 
+#define BOOST_TIMER_ENABLE_DEPRECATED
 #include <iostream>
 #include <cstdlib>
 #include <string>
@@ -379,6 +380,17 @@ int main(int argc, char*argv[])
   run(iter, "ranlux48", boost::ranlux4());
 
   run(iter, "counting", counting());
+
+  run(iter, "splitmix64", boost::random::splitmix64());
+  run(iter, "xoshiro256pp", boost::random::xoshiro256pp());
+  run(iter, "xoshiro256d", boost::random::xoshiro256d());
+  run(iter, "xoshiro256mm", boost::random::xoshiro256mm());
+  run(iter, "xoshiro512pp", boost::random::xoshiro512pp());
+  run(iter, "xoshiro512d", boost::random::xoshiro512d());
+  run(iter, "xoshiro512mm", boost::random::xoshiro512mm());
+  run(iter, "xoshiro128pp", boost::random::xoshiro128pp());
+  run(iter, "xoshiro128f", boost::random::xoshiro128f());
+  run(iter, "xoshiro128mm", boost::random::xoshiro128mm());
 
 #ifdef HAVE_MT19937INT_C
   // requires the original mt19937int.c

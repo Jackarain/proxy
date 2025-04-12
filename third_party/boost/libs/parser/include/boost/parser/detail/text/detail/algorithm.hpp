@@ -51,13 +51,10 @@ namespace boost::parser::detail { namespace text { namespace detail {
     // that is comparable with T's interator type.
     template<typename T>
     concept cp_sentinel_gr_rng =
-        // clang-format off
-        grapheme_range<T> &&
-        !grapheme_iter<sentinel_t<T>> &&
+        grapheme_range<T> && !grapheme_iter<sentinel_t<T>> &&
         requires(iterator_t<T> first, sentinel_t<T> last) {
-        { first.base() == last } -> std::convertible_to<bool>;
-        // clang-format on
-    };
+            { first.base() == last } -> std::convertible_to<bool>;
+        };
 
     template<typename T>
     using gr_rng_cp_iter_t = decltype(std::declval<iterator_t<T>>().base());

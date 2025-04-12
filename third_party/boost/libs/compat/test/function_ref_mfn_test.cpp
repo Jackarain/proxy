@@ -41,8 +41,9 @@ int main() {
     compat::function_ref<int(F1&)> fn1(compat::nontype_t<&F1::m1>{});
     BOOST_TEST_EQ(fn1(f1), 0);
 
+    int x = 2;
     compat::function_ref<int(F1&, int)> fn2(compat::nontype_t<&F1::m2>{});
-    BOOST_TEST_EQ(fn2(f1, 2), 12);
+    BOOST_TEST_EQ(fn2(f1, x), 12);
 
     compat::function_ref<int(F1&, int, int)> fn3(compat::nontype_t<&F1::m3>{});
     BOOST_TEST_EQ(fn3(f1, 2, 3), 123);

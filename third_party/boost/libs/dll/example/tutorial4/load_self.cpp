@@ -1,5 +1,5 @@
 // Copyright 2014 Renato Tegon Forti, Antony Polukhin.
-// Copyright Antony Polukhin, 2015-2024.
+// Copyright Antony Polukhin, 2015-2025.
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
@@ -12,8 +12,8 @@
 #include <boost/dll/shared_library.hpp>         // for shared_library
 #include <boost/dll/runtime_symbol_info.hpp>    // for program_location()
 #include "static_plugin.hpp"                    // without this headers some compilers may optimize out the `create_plugin` symbol
-#include <boost/function.hpp>
 #include <iostream>
+#include <memory>
 
 namespace dll = boost::dll;
 
@@ -21,8 +21,7 @@ int main() {
     dll::shared_library self(dll::program_location());
 
     std::cout << "Call function" << std::endl;
-    boost::function<boost::shared_ptr<my_plugin_api>()> creator 
-        = self.get_alias<boost::shared_ptr<my_plugin_api>()>("create_plugin");
+    auto creator = self.get_alias<std::shared_ptr<my_plugin_api>()>("create_plugin");
 
     std::cout << "Computed Value: " << creator()->calculate(2, 2) << std::endl;
     //<-

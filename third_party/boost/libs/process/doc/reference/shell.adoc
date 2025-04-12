@@ -1,0 +1,57 @@
+== `shell.hpp`
+[#shell]
+
+This utility class parses command lines into tokens
+and allows users to execute processes based on textual inputs.
+
+In v1, this was possible directly when starting a process,
+but has been removed based on the security risks associated with this.
+
+By making the shell parsing explicitly, it encourages
+a user to run a sanity check on the executable before launching it.
+
+.Example
+[source,cpp]
+----
+asio::io_context ctx;
+
+auto cmd = shell("my-app --help");
+auto exe = cmd.exe();
+check_if_malicious(exe);
+
+process proc{ctx, exe, cmd.args()};
+
+----
+
+[source,cpp]
+----
+/// Utility to parse commands
+struct shell
+{
+  shell() = default;
+  template<typename Char, typename Traits>
+  shell(basic_string_view<Char, Traits> input);
+
+  shell(basic_cstring_ref<char_type> input);
+  shell(const shell &) = delete;
+  shell(shell && lhs) noexcept;
+  shell& operator=(const shell &) = delete;
+  shell& operator=(shell && lhs) noexcept;
+
+
+  // the length of the parsed shell, including the executable
+  int argc() const ;
+  char_type** argv() const;
+
+  char_type** begin() const;
+  char_type** end()   const;
+
+  bool empty() const;
+  std::size_t size() const;
+
+  // Native representation of the arguments to be used - excluding the executable
+  args_type args() const;
+  template<typename Environment = environment::current_view>
+  filesystem::path exe(Environment && env = environment::current()) const;
+};
+----

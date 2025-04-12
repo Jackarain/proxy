@@ -997,7 +997,7 @@ struct numeric_limits<boost::charconv::detail::uint128>
     BOOST_ATTRIBUTE_UNUSED static constexpr boost::charconv::detail::uint128 infinity() { return 0; }
     BOOST_ATTRIBUTE_UNUSED static constexpr boost::charconv::detail::uint128 quiet_NaN() { return 0; }
     BOOST_ATTRIBUTE_UNUSED static constexpr boost::charconv::detail::uint128 signaling_NaN() { return 0; }
-    BOOST_ATTRIBUTE_UNUSED static constexpr boost::charconv::detail::uint128 denorm_min() { return 0; }
+    BOOST_ATTRIBUTE_UNUSED static constexpr boost::charconv::detail::uint128 (denorm_min)() { return 0; }
 };
 
 } // Namespace std

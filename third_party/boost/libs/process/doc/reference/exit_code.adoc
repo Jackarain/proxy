@@ -1,0 +1,43 @@
+== `exit_code.hpp`
+[#exit_code]
+
+The exit code header provides portable handles for exit codes.
+
+[source,cpp]
+----
+// The native exit-code type, usually an integral value
+/* The OS may have a value different from `int` to represent
+ * the exit codes of subprocesses. It might also
+ * contain additional information.
+ */
+typedef implementation_defined native_exit_code_type;
+
+
+// Check if the native exit code indicates the process is still running
+bool process_is_running(native_exit_code_type code);
+
+// Obtain the portable part of the exit code, i.e. what the subprocess has returned from main.
+int evaluate_exit_code(native_exit_code_type code);
+
+// Helper to subsume an exit-code into an error_code if there's no actual error isn't set.
+error_code check_exit_code(
+    error_code &ec, native_exit_code_type native_code,
+    const error_category & category = error::get_exit_code_category());
+----
+
+
+The `check_exit_code` can be used like this:
+
+[source,cpp]
+----
+
+process proc{co_await this_coro::executor, "exit", {"1"}};
+
+co_await proc.async_wait(
+    asio::deferred(
+     [&proc](error_code ec, int)
+     {
+       return asio::deferred.values(
+                 check_exit_code(ec, proc.native_exit_code())
+             );
+----

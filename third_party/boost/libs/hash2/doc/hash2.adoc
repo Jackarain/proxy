@@ -1,0 +1,27 @@
+////
+Copyright 2020 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+# Hash2: An Extensible Hashing Framework
+Peter Dimov
+:toc: left
+:toclevels: 4
+:idprefix:
+:docinfo: private-footer
+:source-highlighter: rouge
+:source-language: c++
+:sectanchors:
+
+:leveloffset: +1
+
+include::hash2/overview.adoc[]
+include::hash2/hashing_bytes.adoc[]
+include::hash2/hashing_objects.adoc[]
+include::hash2/examples.adoc[]
+include::hash2/implementation.adoc[]
+include::hash2/reference.adoc[]
+include::hash2/copyright.adoc[]
+
+:leveloffset: -1

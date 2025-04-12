@@ -1,0 +1,52 @@
+////
+Copyright 2020, 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#reference]
+# Reference
+:idprefix: ref_
+
+[#ref_hash_algorithms]
+## Hash Algorithms
+
+:leveloffset: +2
+
+include::reference/fnv1a.adoc[]
+include::reference/xxhash.adoc[]
+include::reference/siphash.adoc[]
+include::reference/hmac.adoc[]
+include::reference/md5.adoc[]
+include::reference/sha1.adoc[]
+include::reference/sha2.adoc[]
+include::reference/sha3.adoc[]
+include::reference/ripemd.adoc[]
+
+:leveloffset: -2
+
+[#ref_utilities_and_traits]
+## Utilities and Traits
+
+:leveloffset: +2
+
+include::reference/digest.adoc[]
+include::reference/endian.adoc[]
+include::reference/flavor.adoc[]
+include::reference/get_integral_result.adoc[]
+include::reference/is_trivially_equality_comparable.adoc[]
+include::reference/is_endian_independent.adoc[]
+include::reference/is_contiguously_hashable.adoc[]
+include::reference/has_constant_size.adoc[]
+
+:leveloffset: -2
+
+[#ref_hashing_cpp_objects]
+## Hashing {cpp} Objects
+
+:leveloffset: +2
+
+include::reference/hash_append_fwd.adoc[]
+include::reference/hash_append.adoc[]
+
+:leveloffset: -2

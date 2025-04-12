@@ -411,7 +411,6 @@ struct race_ranged_impl
     std::exception_ptr error;
 
 #if !defined(BOOST_COBALT_NO_PMR)
-    pmr::monotonic_buffer_resource res;
     pmr::polymorphic_allocator<void> alloc{&resource};
 
     Range &aws;
@@ -672,7 +671,7 @@ struct race_ranged_impl
     }
 
     auto await_resume(const as_result_tag & )
-    -> system::result<result_type, std::exception_ptr>
+    -> system::result<std::conditional_t<std::is_void_v<result_type>, std::size_t, std::pair<std::size_t, result_type>>, std::exception_ptr>
     {
       if (error)
         return {system::in_place_error, error};

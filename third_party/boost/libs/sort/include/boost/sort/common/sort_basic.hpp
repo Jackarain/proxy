@@ -13,7 +13,6 @@
 #ifndef __BOOST_SORT_COMMON_SORT_BASIC_HPP
 #define __BOOST_SORT_COMMON_SORT_BASIC_HPP
 
-#include <ciso646>
 #include <cstdlib>
 #include <functional>
 #include <iterator>
@@ -56,7 +55,7 @@ inline Iter_t is_stable_sorted_forward (Iter_t first, Iter_t last,
 #endif
     if ((last - first) < 2) return first;
     Iter_t it2 = first + 1;
-    for (Iter_t it1 = first; it2 != last and not comp(*it2, *it1); it1 = it2++);
+    for (Iter_t it1 = first; it2 != last && ! comp(*it2, *it1); it1 = it2++);
     return it2;
 }
 //-----------------------------------------------------------------------------
@@ -79,9 +78,9 @@ inline Iter_t is_reverse_stable_sorted_forward(Iter_t first, Iter_t last,
 #endif
     if ((last - first) < 2) return first;
     Iter_t it2 = first + 1;
-    for (Iter_t it1 = first; it2 != last and comp(*it2, *it1); it1 = it2++);
+    for (Iter_t it1 = first; it2 != last && comp(*it2, *it1); it1 = it2++);
     return it2;
-};
+}
 //-----------------------------------------------------------------------------
 //  function : number_stable_sorted_forward
 /// @brief examine the elements in the range first, last if they are stable
@@ -105,20 +104,20 @@ size_t number_stable_sorted_forward (Iter_t first, Iter_t last,
 
     // sorted elements
     Iter_t it2 = first + 1;
-    for (Iter_t it1 = first; it2 != last and not comp(*it2, *it1); it1 = it2++);
+    for (Iter_t it1 = first; it2 != last && ! comp(*it2, *it1); it1 = it2++);
     size_t nsorted = size_t ( it2 - first);
     if ( nsorted != 1)
     	return (nsorted >= min_process) ? nsorted: 0;
 
     // reverse sorted elements
     it2 = first + 1;
-    for (Iter_t it1 = first; it2 != last and comp(*it2, *it1); it1 = it2++);
+    for (Iter_t it1 = first; it2 != last && comp(*it2, *it1); it1 = it2++);
     nsorted = size_t ( it2 - first);
 
     if ( nsorted < min_process) return 0 ;
     util::reverse ( first , it2);
     return nsorted;
-};
+}
 
 //-----------------------------------------------------------------------------
 //  function : is_stable_sorted_backward
@@ -140,7 +139,7 @@ inline Iter_t is_stable_sorted_backward(Iter_t first, Iter_t last,
 #endif
     if ((last - first) < 2) return first;
     Iter_t itaux = last - 1;
-    while (itaux != first and not comp(*itaux, *(itaux - 1))) {--itaux; };
+    while (itaux != first && ! comp(*itaux, *(itaux - 1))) {--itaux; };
     return itaux;
 }
 //-----------------------------------------------------------------------------
@@ -163,7 +162,7 @@ inline Iter_t is_reverse_stable_sorted_backward (Iter_t first, Iter_t last,
 #endif
     if ((last - first) < 2) return first;
     Iter_t itaux = last - 1;
-    for (; itaux != first and comp(*itaux, *(itaux - 1)); --itaux);
+    for (; itaux != first && comp(*itaux, *(itaux - 1)); --itaux);
     return itaux;
 }
 
@@ -188,13 +187,13 @@ size_t number_stable_sorted_backward (Iter_t first, Iter_t last,
 #endif
     if ((last - first) < 2) return 0;
     Iter_t itaux = last - 1;
-    while (itaux != first and not comp(*itaux, *(itaux - 1))) {--itaux; };
+    while (itaux != first && ! comp(*itaux, *(itaux - 1))) {--itaux; };
     size_t nsorted = size_t ( last - itaux);
     if ( nsorted != 1)
     	return ( nsorted >= min_process)?nsorted: 0 ;
 
     itaux = last - 1;
-    for (; itaux != first and comp(*itaux, *(itaux - 1)); --itaux);
+    for (; itaux != first && comp(*itaux, *(itaux - 1)); --itaux);
     nsorted = size_t ( last - itaux);
     if ( nsorted < min_process) return 0 ;
     util::reverse ( itaux, last );
@@ -238,7 +237,7 @@ inline void internal_sort (const range<Iter1_t> &rng1,
     range<Iter2_t> rng2_left(rng2.first, rng2.first + nelem), 
                    rng2_right(rng2.first + nelem, rng2.last);
 
-    if (nelem <= 32 and (level & 1) == even)
+    if (nelem <= 32 && (level & 1) == even)
     {
         insert_sort(rng1_left.first, rng1_left.last, comp);
         insert_sort(rng1_right.first, rng1_right.last, comp);
@@ -249,7 +248,7 @@ inline void internal_sort (const range<Iter1_t> &rng1,
         internal_sort(rng2_right, rng1_right, comp, level + 1, even);
     };
     merge(rng2, rng1_left, rng1_right, comp);
-};
+}
 //-----------------------------------------------------------------------------
 //  function : range_sort_data
 /// @brief this sort elements using the range_sort function and receiving a
@@ -286,7 +285,7 @@ static void range_sort_data (const range<Iter1_t> & rng_data,
     };
 
     internal_sort(rng_aux, rng_data, comp, 0, true);
-};
+}
 //-----------------------------------------------------------------------------
 //  function : range_sort_buffer
 /// @brief this sort elements using the range_sort function and receiving a
@@ -324,11 +323,11 @@ static void range_sort_buffer(const range<Iter1_t> & rng_data,
     };
 
     internal_sort(rng_data, rng_aux, comp, 0, false);
-};
+}
 //****************************************************************************
-};//    End namespace common
-};//    End namespace sort
-};//    End namepspace boost
+}//    End namespace common
+}//    End namespace sort
+}//    End namepspace boost
 //****************************************************************************
 //
 #endif

@@ -15,7 +15,7 @@
 namespace boost {
 namespace urls {
 namespace grammar {
-namespace see_below {
+namespace implementation_defined {
 
 template<
     std::size_t Size,

@@ -17,14 +17,12 @@ target_include_directories(boost_random PUBLIC include)
 
 target_link_libraries(boost_random
   PUBLIC
-    Boost::array
     Boost::assert
     Boost::config
     Boost::core
     Boost::dynamic_bitset
     Boost::integer
     Boost::io
-    Boost::range
     Boost::static_assert
     Boost::system
     Boost::throw_exception
@@ -51,4 +49,3 @@ if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
   add_subdirectory(test)
 
 endif()
-

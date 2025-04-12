@@ -46,10 +46,6 @@ namespace urls {
 
     @throw std::length_error `s.size() > url_view::max_size`
 
-    @return A @ref result containing a value or an error
-
-    @param s The string to parse
-
     @par Specification
     @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-4.3"
         >4.3. Absolute URI (rfc3986)</a>
@@ -60,6 +56,9 @@ namespace urls {
         @ref parse_uri,
         @ref parse_uri_reference,
         @ref url_view.
+
+    @param s The string to parse
+    @return A view to the parsed URL
 */
 BOOST_URL_DECL
 system::result<url_view>
@@ -93,10 +92,6 @@ parse_absolute_uri(
 
     @throw std::length_error `s.size() > url_view::max_size`
 
-    @return A @ref result containing a value or an error
-
-    @param s The string to parse
-
     @par Specification
     @li <a href="https://datatracker.ietf.org/doc/html/rfc7230#section-5.3.1"
         >5.3.1.  origin-form (rfc7230)</a>
@@ -107,6 +102,9 @@ parse_absolute_uri(
         @ref parse_uri,
         @ref parse_uri_reference,
         @ref url_view.
+
+    @param s The string to parse
+    @return A view to the parsed URL
 */
 BOOST_URL_DECL
 system::result<url_view>
@@ -142,10 +140,6 @@ parse_origin_form(
                   / path-empty
     @endcode
 
-    @return A @ref result containing a value or an error
-
-    @param s The string to parse
-
     @throw std::length_error `s.size() > url_view::max_size`
 
     @par Specification
@@ -160,6 +154,9 @@ parse_origin_form(
         @ref parse_uri,
         @ref parse_uri_reference,
         @ref url_view.
+
+    @param s The string to parse
+    @return A view to the parsed URL
 */
 BOOST_URL_DECL
 system::result<url_view>
@@ -196,10 +193,6 @@ parse_relative_ref(
 
     @throw std::length_error `s.size() > url_view::max_size`
 
-    @return A @ref result containing a value or an error
-
-    @param s The string to parse
-
     @par Specification
     @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3"
         >3. Syntax Components (rfc3986)</a>
@@ -210,6 +203,9 @@ parse_relative_ref(
         @ref parse_relative_ref,
         @ref parse_uri_reference,
         @ref url_view.
+
+    @param s The string to parse
+    @return A `boost::system::result` containing a value or an error
 */
 BOOST_URL_DECL
 system::result<url_view>
@@ -256,10 +252,6 @@ parse_uri(
 
     @throw std::length_error `s.size() > url_view::max_size`
 
-    @return A @ref result containing a value or an error
-
-    @param s The string to parse
-
     @par Specification
     @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-4.1"
         >4.1. URI Reference (rfc3986)</a>
@@ -272,6 +264,9 @@ parse_uri(
         @ref parse_relative_ref,
         @ref parse_uri,
         @ref url_view.
+
+    @param s The string to parse
+    @return A view to the parsed URL
 */
 BOOST_URL_DECL
 system::result<url_view>

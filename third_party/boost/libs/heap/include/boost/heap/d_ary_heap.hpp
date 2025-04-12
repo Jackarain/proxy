@@ -19,7 +19,6 @@
 #include <boost/heap/detail/mutable_heap.hpp>
 #include <boost/heap/detail/ordered_adaptor_iterator.hpp>
 #include <boost/heap/detail/stable_heap.hpp>
-#include <boost/mem_fn.hpp>
 
 #ifdef BOOST_HAS_PRAGMA_ONCE
 #    pragma once
@@ -30,7 +29,7 @@
 #    ifdef BOOST_HEAP_SANITYCHECKS
 #        define BOOST_HEAP_ASSERT BOOST_ASSERT
 #    else
-#        define BOOST_HEAP_ASSERT( expression )
+#        define BOOST_HEAP_ASSERT( expression ) static_assert( true, "force semicolon" )
 #    endif
 #endif
 
@@ -156,7 +155,6 @@ public:
         q_( rhs.q_ )
     {}
 
-#ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
     d_ary_heap( d_ary_heap&& rhs ) :
         super_t( std::move( rhs ) ),
         q_( std::move( rhs.q_ ) )
@@ -168,7 +166,6 @@ public:
         q_ = std::move( rhs.q_ );
         return *this;
     }
-#endif
 
     d_ary_heap& operator=( d_ary_heap const& rhs )
     {
@@ -215,7 +212,6 @@ public:
         siftup( q_.size() - 1 );
     }
 
-#if !defined( BOOST_NO_CXX11_RVALUE_REFERENCES ) && !defined( BOOST_NO_CXX11_VARIADIC_TEMPLATES )
     template < class... Args >
     void emplace( Args&&... args )
     {
@@ -223,7 +219,7 @@ public:
         reset_index( size() - 1, size() - 1 );
         siftup( q_.size() - 1 );
     }
-#endif
+
     void pop( void )
     {
         BOOST_ASSERT( !empty() );
@@ -415,9 +411,9 @@ struct select_dary_heap
 {
     static const bool is_mutable = extract_mutable< BoundArgs >::value;
 
-    typedef typename boost::conditional< is_mutable,
-                                         priority_queue_mutable_wrapper< d_ary_heap< T, BoundArgs, nop_index_updater > >,
-                                         d_ary_heap< T, BoundArgs, nop_index_updater > >::type type;
+    typedef typename std::conditional< is_mutable,
+                                       priority_queue_mutable_wrapper< d_ary_heap< T, BoundArgs, nop_index_updater > >,
+                                       d_ary_heap< T, BoundArgs, nop_index_updater > >::type type;
 };
 
 } /* namespace detail */
@@ -517,7 +513,6 @@ public:
         super_t( rhs )
     {}
 
-#ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
     /// \copydoc boost::heap::priority_queue::priority_queue(priority_queue &&)
     d_ary_heap( d_ary_heap&& rhs ) :
         super_t( std::move( rhs ) )
@@ -529,7 +524,6 @@ public:
         super_t::operator=( std::move( rhs ) );
         return *this;
     }
-#endif
 
     /// \copydoc boost::heap::priority_queue::operator=(priority_queue const &)
     d_ary_heap& operator=( d_ary_heap const& rhs )
@@ -575,19 +569,17 @@ public:
     }
 
     /// \copydoc boost::heap::priority_queue::push
-    typename boost::conditional< is_mutable, handle_type, void >::type push( value_type const& v )
+    typename std::conditional< is_mutable, handle_type, void >::type push( value_type const& v )
     {
         return super_t::push( v );
     }
 
-#if !defined( BOOST_NO_CXX11_RVALUE_REFERENCES ) && !defined( BOOST_NO_CXX11_VARIADIC_TEMPLATES )
     /// \copydoc boost::heap::priority_queue::emplace
     template < class... Args >
-    typename boost::conditional< is_mutable, handle_type, void >::type emplace( Args&&... args )
+    typename std::conditional< is_mutable, handle_type, void >::type emplace( Args&&... args )
     {
         return super_t::emplace( std::forward< Args >( args )... );
     }
-#endif
 
     /// \copydoc boost::heap::priority_queue::operator<(HeapType const & rhs) const
     template < typename HeapType >

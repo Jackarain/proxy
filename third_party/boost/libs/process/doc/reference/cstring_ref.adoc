@@ -1,0 +1,3 @@
+== `cstring_ref.hpp`
+
+The `cstring_ref` is a string-view like type that holds a null-terminated string.

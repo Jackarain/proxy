@@ -67,7 +67,7 @@ namespace ext {
 
 #if defined(BOOST_PROCESS_V2_WINDOWS)
 
-filesystem::path cwd(HANDLE proc, boost::system::error_code & ec)
+filesystem::path cwd(HANDLE proc, error_code & ec)
 {
     auto buffer = boost::process::v2::detail::ext::cwd_cmd_from_proc(proc, 1/*=MEMCWD*/, ec);
     if (!buffer.empty())
@@ -77,7 +77,7 @@ filesystem::path cwd(HANDLE proc, boost::system::error_code & ec)
     return "";
 }
 
-filesystem::path cwd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
+filesystem::path cwd(boost::process::v2::pid_type pid, error_code & ec)
 {
     struct del
     {
@@ -96,7 +96,7 @@ filesystem::path cwd(boost::process::v2::pid_type pid, boost::system::error_code
 
 filesystem::path cwd(HANDLE proc)
 {
-    boost::system::error_code ec;
+    error_code ec;
     auto res = cwd(proc, ec);
     if (ec)
         detail::throw_error(ec, "cwd");
@@ -105,7 +105,7 @@ filesystem::path cwd(HANDLE proc)
 
 #elif (defined(__APPLE__) && defined(__MACH__)) && !TARGET_OS_IOS
 
-filesystem::path cwd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
+filesystem::path cwd(boost::process::v2::pid_type pid, error_code & ec)
 {
     proc_vnodepathinfo vpi;
     if (proc_pidinfo(pid, PROC_PIDVNODEPATHINFO, 0, &vpi, sizeof(vpi)) > 0)
@@ -117,14 +117,14 @@ filesystem::path cwd(boost::process::v2::pid_type pid, boost::system::error_code
 
 #elif (defined(__linux__) || defined(__ANDROID__) || defined(__sun))
 
-filesystem::path cwd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
+filesystem::path cwd(boost::process::v2::pid_type pid, error_code & ec)
 {
 #if (defined(__linux__) || defined(__ANDROID__))
     return filesystem::canonical(
             filesystem::path("/proc") / std::to_string(pid) / "cwd", ec
             );
 #elif defined(__sun)
-    return fileystem::canonical(
+    return filesystem::canonical(
             filesystem::path("/proc") / std::to_string(pid) / "path/cwd", ec
             );
 #endif
@@ -132,7 +132,7 @@ filesystem::path cwd(boost::process::v2::pid_type pid, boost::system::error_code
 
 #elif defined(__FreeBSD__)
 
-filesystem::path cwd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
+filesystem::path cwd(boost::process::v2::pid_type pid, error_code & ec)
 {
     filesystem::path path;
     struct kinfo_file kif;
@@ -155,7 +155,7 @@ filesystem::path cwd(boost::process::v2::pid_type pid, boost::system::error_code
 
 #elif defined(__DragonFly__)
 
-filesystem::path cwd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
+filesystem::path cwd(boost::process::v2::pid_type pid, error_code & ec)
 {
     filesystem::path path;
     char buffer[PATH_MAX];
@@ -172,7 +172,7 @@ filesystem::path cwd(boost::process::v2::pid_type pid, boost::system::error_code
 
 #elif (defined(__NetBSD__) || defined(__OpenBSD__))
 
-filesystem::path cwd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
+filesystem::path cwd(boost::process::v2::pid_type pid, error_code & ec)
 {
     filesystem::path path;
 #if defined(__NetBSD__)
@@ -200,7 +200,7 @@ filesystem::path cwd(boost::process::v2::pid_type pid, boost::system::error_code
 }
 
 #else
-filesystem::path cwd(boost::process::v2::pid_type pid, boost::system::error_code & ec)
+filesystem::path cwd(boost::process::v2::pid_type pid, error_code & ec)
 {
   BOOST_PROCESS_V2_ASSIGN_EC(ec, ENOTSUP, system_category());
   return "";
@@ -209,7 +209,7 @@ filesystem::path cwd(boost::process::v2::pid_type pid, boost::system::error_code
 
 filesystem::path cwd(boost::process::v2::pid_type pid)
 {
-    boost::system::error_code ec;
+    error_code ec;
     auto res = cwd(pid, ec);
     if (ec)
         detail::throw_error(ec, "cwd");

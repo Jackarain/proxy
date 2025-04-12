@@ -17,137 +17,138 @@
 
 | *Types (1/2)*
 
-xref:reference:boost/urls/authority_view.adoc[`authority_view`]
+cpp:boost::urls::authority_view[authority_view]
 
-xref:reference:boost/urls/ignore_case_param.adoc[`ignore_case_param`]
+cpp:boost::urls::ignore_case_param[ignore_case_param]
 
-xref:reference:boost/urls/ipv4_address.adoc[`ipv4_address`]
+cpp:boost::urls::ipv4_address[ipv4_address]
 
-xref:reference:boost/urls/ipv6_address.adoc[`ipv6_address`]
+cpp:boost::urls::ipv6_address[ipv6_address]
 
-xref:reference:boost/urls/no_value_t.adoc[`no_value_t`]
+cpp:boost::urls::no_value_t[no_value_t]
 
-xref:reference:boost/urls/param.adoc[`param`]
+cpp:boost::urls::param[param]
 
-xref:reference:boost/urls/param_pct_view.adoc[`param_pct_view`]
+cpp:boost::urls::param_pct_view[param_pct_view]
 
-xref:reference:boost/urls/param_view.adoc[`param_view`]
+cpp:boost::urls::param_view[param_view]
 
-xref:reference:boost/urls/params_base.adoc[`params_base`]
+cpp:boost::urls::params_base[params_base]
 
-xref:reference:boost/urls/params_encoded_base.adoc[`params_encoded_base`]
+cpp:boost::urls::params_encoded_base[params_encoded_base]
 
-xref:reference:boost/urls/params_encoded_ref.adoc[`params_encoded_ref`]
+cpp:boost::urls::params_encoded_ref[params_encoded_ref]
 
-xref:reference:boost/urls/params_encoded_view.adoc[`params_encoded_view`]
+cpp:boost::urls::params_encoded_view[params_encoded_view]
 
-xref:reference:boost/urls/params_ref.adoc[`params_ref`]
+cpp:boost::urls::params_ref[params_ref]
 
-xref:reference:boost/urls/params_view.adoc[`params_view`]
+cpp:boost::urls::params_view[params_view]
 
-xref:reference:boost/urls/segments_base.adoc[`segments_base`]
+cpp:boost::urls::segments_base[segments_base]
 
-xref:reference:boost/urls/segments_view.adoc[`segments_view`]
+cpp:boost::urls::segments_view[segments_view]
 
-xref:reference:boost/urls/segments_encoded_base.adoc[`segments_encoded_base`]
+cpp:boost::urls::segments_encoded_base[segments_encoded_base]
 
 | **Types (2/2)**
 
-xref:reference:boost/urls/segments_encoded_ref.adoc[`segments_encoded_ref`]
+cpp:boost::urls::segments_encoded_ref[segments_encoded_ref]
 
-xref:reference:boost/urls/segments_encoded_view.adoc[`segments_encoded_view`]
+cpp:boost::urls::segments_encoded_view[segments_encoded_view]
 
-xref:reference:boost/urls/segments_ref.adoc[`segments_ref`]
+cpp:boost::urls::segments_ref[segments_ref]
 
-xref:reference:boost/urls/static_url.adoc[`static_url`]
+cpp:boost::urls::static_url[static_url]
 
-xref:reference:boost/urls/static_url_base.adoc[`static_url_base`]
+cpp:boost::urls::static_url_base[static_url_base]
 
-xref:reference:boost/urls/url.adoc[`url`]
+cpp:boost::urls::url[url]
 
-xref:reference:boost/urls/url_base.adoc[`url_base`]
+cpp:boost::urls::url_base[url_base]
 
-xref:reference:boost/urls/url_view.adoc[`url_view`]
+cpp:boost::urls::url_view[url_view]
 
-xref:reference:boost/urls/url_view_base.adoc[`url_view_base`]
+cpp:boost::urls::url_view_base[url_view_base]
 
 **Constants**
 
-xref:reference:boost/urls/error.adoc[`error`]
+cpp:boost::urls::error[error]
 
-xref:reference:boost/urls/ignore_case.adoc[`ignore_case`]
+cpp:boost::urls::ignore_case[ignore_case]
 
-xref:reference:boost/urls/host_type.adoc[`host_type`]
+cpp:boost::urls::host_type[host_type]
 
-xref:reference:boost/urls/no_value.adoc[`no_value`]
+cpp:boost::urls::no_value[no_value]
 
-xref:reference:boost/urls/scheme.adoc[`scheme`]
-
-| **Functions**
-
-xref:reference:boost/urls/operator_lshift.adoc[`operator<<`]
-
-xref:reference:boost/urls/arg.adoc[`arg`]
-
-xref:reference:boost/urls/format.adoc[`format`]
-
-xref:reference:boost/urls/format_to.adoc[`format_to`]
-
-xref:reference:boost/urls/parse_absolute_uri.adoc[`parse_absolute_uri`]
-
-xref:reference:boost/urls/parse_authority.adoc[`parse_authority`]
-
-xref:reference:boost/urls/parse_origin_form.adoc[`parse_origin_form`]
-
-xref:reference:boost/urls/parse_path.adoc[`parse_path`]
-
-xref:reference:boost/urls/parse_query.adoc[`parse_query`]
-
-xref:reference:boost/urls/parse_relative_ref.adoc[`parse_relative_ref`]
-
-xref:reference:boost/urls/parse_uri.adoc[`parse_uri`]
-
-xref:reference:boost/urls/parse_uri_reference.adoc[`parse_uri_reference`]
-
-xref:reference:boost/urls/resolve.adoc[`resolve`]
+cpp:boost::urls::scheme[scheme]
 
 | **Functions**
 
-xref:reference:boost/urls/encode.adoc[`encode`]
+// AFREITAS: cpp extension could not handle "<<"
+// cpp:boost::urls::operator<<[operator<<]
 
-xref:reference:boost/urls/encoded_size.adoc[`encoded_size`]
+cpp:boost::urls::arg[arg]
 
-xref:reference:boost/urls/make_pct_string_view.adoc[`make_pct_string_view`]
+cpp:boost::urls::format[format]
+
+cpp:boost::urls::format_to[format_to]
+
+cpp:boost::urls::parse_absolute_uri[parse_absolute_uri]
+
+cpp:boost::urls::parse_authority[parse_authority]
+
+cpp:boost::urls::parse_origin_form[parse_origin_form]
+
+cpp:boost::urls::parse_path[parse_path]
+
+cpp:boost::urls::parse_query[parse_query]
+
+cpp:boost::urls::parse_relative_ref[parse_relative_ref]
+
+cpp:boost::urls::parse_uri[parse_uri]
+
+cpp:boost::urls::parse_uri_reference[parse_uri_reference]
+
+cpp:boost::urls::resolve[resolve]
+
+| **Functions**
+
+cpp:boost::urls::encode[encode]
+
+cpp:boost::urls::encoded_size[encoded_size]
+
+cpp:boost::urls::make_pct_string_view[make_pct_string_view]
 
 **Types**
 
-xref:reference:boost/urls/decode_view.adoc[`decode_view`]
+cpp:boost::urls::decode_view[decode_view]
 
-xref:reference:boost/urls/encoding_opts.adoc[`encoding_opts`]
+cpp:boost::urls::encoding_opts[encoding_opts]
 
-xref:reference:boost/urls/pct_string_view.adoc[`pct_string_view`]
+cpp:boost::urls::pct_string_view[pct_string_view]
 
 | **Types**
 
-xref:reference:boost/urls/error_types/errc.adoc[`errc`]
+cpp:boost::urls::error_types::errc[errc]
 
-xref:reference:boost/urls/error_types/error_category.adoc[`error_category`]
+cpp:boost::urls::error_types::error_category[error_category]
 
-xref:reference:boost/urls/error_types/error_code.adoc[`error_code`]
+cpp:boost::urls::error_types::error_code[error_code]
 
-xref:reference:boost/urls/error_types/error_condition.adoc[`error_condition`]
+cpp:boost::urls::error_types::error_condition[error_condition]
 
-xref:reference:boost/urls/error_types/generic_category.adoc[`generic_category`]
+cpp:boost::urls::error_types::generic_category[generic_category]
 
-xref:reference:boost/urls/optional.adoc[`optional`]
+cpp:boost::urls::optional[optional]
 
-xref:reference:boost/urls/error_types/result.adoc[`result`]
+cpp:boost::urls::error_types::result[result]
 
-xref:reference:boost/urls/string_view.adoc[`string_view`]
+cpp:boost::urls::string_view[string_view]
 
-xref:reference:boost/urls/error_types/system_category.adoc[`system_category`]
+cpp:boost::urls::error_types::system_category[system_category]
 
-xref:reference:boost/urls/error_types/system_error.adoc[`system_error`]
+cpp:boost::urls::error_types::system_error[system_error]
 
 |===
 
@@ -157,155 +158,156 @@ xref:reference:boost/urls/error_types/system_error.adoc[`system_error`]
 
 | **Grammar**
 
-xref:reference:boost/urls/absolute_uri_rule.adoc[`absolute_uri_rule`]
+cpp:boost::urls::absolute_uri_rule[absolute_uri_rule]
 
-xref:reference:boost/urls/authority_rule.adoc[`authority_rule`]
+cpp:boost::urls::authority_rule[authority_rule]
 
-xref:reference:boost/urls/gen_delim_chars.adoc[`gen_delim_chars`]
+cpp:boost::urls::gen_delim_chars[gen_delim_chars]
 
-xref:reference:boost/urls/ipv4_address_rule.adoc[`ipv4_address_rule`]
+cpp:boost::urls::ipv4_address_rule[ipv4_address_rule]
 
-xref:reference:boost/urls/ipv6_address_rule.adoc[`ipv6_address_rule`]
+cpp:boost::urls::ipv6_address_rule[ipv6_address_rule]
 
-xref:reference:boost/urls/pchars.adoc[`pchars`]
+cpp:boost::urls::pchars[pchars]
 
-xref:reference:boost/urls/pct_encoded_rule.adoc[`pct_encoded_rule`]
+cpp:boost::urls::pct_encoded_rule[pct_encoded_rule]
 
-xref:reference:boost/urls/query_rule.adoc[`query_rule`]
+cpp:boost::urls::query_rule[query_rule]
 
-xref:reference:boost/urls/relative_ref_rule.adoc[`relative_ref_rule`]
+cpp:boost::urls::relative_ref_rule[relative_ref_rule]
 
-xref:reference:boost/urls/reserved_chars.adoc[`reserved_chars`]
+cpp:boost::urls::reserved_chars[reserved_chars]
 
-xref:reference:boost/urls/sub_delim_chars.adoc[`sub_delim_chars`]
+cpp:boost::urls::sub_delim_chars[sub_delim_chars]
 
-xref:reference:boost/urls/unreserved_chars.adoc[`unreserved_chars`]
+cpp:boost::urls::unreserved_chars[unreserved_chars]
 
-xref:reference:boost/urls/uri_reference_rule.adoc[`uri_reference_rule`]
+cpp:boost::urls::uri_reference_rule[uri_reference_rule]
 
-xref:reference:boost/urls/uri_rule.adoc[`uri_rule`]
+cpp:boost::urls::uri_rule[uri_rule]
 
 | **Functions (1/2)**
 
-xref:reference:boost/urls/grammar/ci_compare.adoc[`ci_compare`]
+cpp:boost::urls::grammar::ci_compare[ci_compare]
 
-xref:reference:boost/urls/grammar/ci_digest.adoc[`ci_digest`]
+cpp:boost::urls::grammar::ci_digest[ci_digest]
 
-xref:reference:boost/urls/grammar/ci_is_equal.adoc[`ci_is_equal`]
+cpp:boost::urls::grammar::ci_is_equal[ci_is_equal]
 
-xref:reference:boost/urls/grammar/ci_is_less.adoc[`ci_is_less`]
+cpp:boost::urls::grammar::ci_is_less[ci_is_less]
 
-xref:reference:boost/urls/grammar/delim_rule.adoc[`delim_rule`]
+cpp:boost::urls::grammar::delim_rule[delim_rule]
 
-xref:reference:boost/urls/grammar/find_if.adoc[`find_if`]
+cpp:boost::urls::grammar::find_if[find_if]
 
-xref:reference:boost/urls/grammar/find_if_not.adoc[`find_if_not`]
+cpp:boost::urls::grammar::find_if_not[find_if_not]
 
-xref:reference:boost/urls/grammar/hexdig_value.adoc[`hexdig_value`]
+cpp:boost::urls::grammar::hexdig_value[hexdig_value]
 
-xref:reference:boost/urls/grammar/not_empty_rule.adoc[`not_empty_rule`]
+cpp:boost::urls::grammar::not_empty_rule[not_empty_rule]
 
-xref:reference:boost/urls/grammar/optional_rule.adoc[`optional_rule`]
+cpp:boost::urls::grammar::optional_rule[optional_rule]
 
-xref:reference:boost/urls/grammar/parse.adoc[`parse`]
+cpp:boost::urls::grammar::parse[parse]
 
-xref:reference:boost/urls/grammar/range_rule.adoc[`range_rule`]
+cpp:boost::urls::grammar::range_rule[range_rule]
 
-xref:reference:boost/urls/grammar/ref.adoc[`ref`]
+cpp:boost::urls::grammar::ref[ref]
 
 | **Functions (2/2)**
 
-xref:reference:boost/urls/grammar/squelch.adoc[`squelch`]
+cpp:boost::urls::grammar::squelch[squelch]
 
-xref:reference:boost/urls/grammar/to_lower.adoc[`to_lower`]
+cpp:boost::urls::grammar::to_lower[to_lower]
 
-xref:reference:boost/urls/grammar/to_upper.adoc[`to_upper`]
+cpp:boost::urls::grammar::to_upper[to_upper]
 
-xref:reference:boost/urls/grammar/token_rule.adoc[`token_rule`]
+cpp:boost::urls::grammar::token_rule[token_rule]
 
-xref:reference:boost/urls/grammar/tuple_rule.adoc[`tuple_rule`]
+cpp:boost::urls::grammar::tuple_rule[tuple_rule]
 
-xref:reference:boost/urls/grammar/variant_rule.adoc[`variant_rule`]
+cpp:boost::urls::grammar::variant_rule[variant_rule]
 
 **Type Traits**
 
-xref:reference:boost/urls/grammar/is_charset.adoc[`is_charset`]
+cpp:boost::urls::grammar::is_charset[is_charset]
 
-xref:reference:boost/urls/grammar/is_rule.adoc[`is_rule`]
+cpp:boost::urls::grammar::is_rule[is_rule]
 
 | **Types**
 
-xref:reference:boost/urls/grammar/aligned_storage.adoc[`aligned_storage`]
+cpp:boost::urls::grammar::aligned_storage[aligned_storage]
 
-xref:reference:boost/urls/grammar/ci_hash.adoc[`ci_hash`]
+cpp:boost::urls::grammar::ci_hash[ci_hash]
 
-xref:reference:boost/urls/grammar/ci_equal.adoc[`ci_equal`]
+cpp:boost::urls::grammar::ci_equal[ci_equal]
 
-xref:reference:boost/urls/grammar/ci_less.adoc[`ci_less`]
+cpp:boost::urls::grammar::ci_less[ci_less]
 
-xref:reference:boost/urls/grammar/lut_chars.adoc[`lut_chars`]
+cpp:boost::urls::grammar::lut_chars[lut_chars]
 
-xref:reference:boost/urls/grammar/range.adoc[`range`]
+cpp:boost::urls::grammar::range[range]
 
-xref:reference:boost/urls/grammar/recycled.adoc[`recycled`]
+cpp:boost::urls::grammar::recycled[recycled]
 
-xref:reference:boost/urls/grammar/recycled_ptr.adoc[`recycled_ptr`]
+cpp:boost::urls::grammar::recycled_ptr[recycled_ptr]
 
-xref:reference:boost/urls/grammar/string_view_base.adoc[`string_view_base`]
+cpp:boost::urls::grammar::string_view_base[string_view_base]
 
-xref:reference:boost/urls/grammar/unsigned_rule.adoc[`unsigned_rule`]
+cpp:boost::urls::grammar::unsigned_rule[unsigned_rule]
 
 **StringToken**
 
-xref:reference:boost/urls/string_token/append_to.adoc[`append_to`]
+cpp:boost::urls::string_token::append_to[append_to]
 
-xref:reference:boost/urls/string_token/arg.adoc[`arg`]
+cpp:boost::urls::string_token::arg[arg]
 
-xref:reference:boost/urls/string_token/assign_to.adoc[`assign_to`]
+cpp:boost::urls::string_token::assign_to[assign_to]
 
-xref:reference:boost/urls/string_token/is_token.adoc[`is_token`]
+cpp:boost::urls::string_token::is_token[is_token]
 
-xref:reference:boost/urls/string_token/preserve_size.adoc[`preserve_size`]
+cpp:boost::urls::string_token::preserve_size[preserve_size]
 
-xref:reference:boost/urls/string_token/return_string.adoc[`return_string`]
-
-| **Constants**
-
-xref:reference:boost/urls/grammar/all_chars.adoc[`all_chars`]
-
-xref:reference:boost/urls/grammar/alnum_chars.adoc[`alnum_chars`]
-
-xref:reference:boost/urls/grammar/alpha_chars.adoc[`alpha_chars`]
-
-xref:reference:boost/urls/grammar/condition.adoc[`condition`]
-
-xref:reference:boost/urls/grammar/dec_octet_rule.adoc[`dec_octet_rule`]
-
-xref:reference:boost/urls/grammar/digit_chars.adoc[`digit_chars`]
-
-xref:reference:boost/urls/grammar/error.adoc[`error`]
-
-xref:reference:boost/urls/grammar/hexdig_chars.adoc[`hexdig_chars`]
-
-xref:reference:boost/urls/grammar/not_empty_rule.adoc[`not_empty_rule`]
-
-xref:reference:boost/urls/grammar/unsigned_rule.adoc[`unsigned_rule`]
-
-xref:reference:boost/urls/grammar/vchars.adoc[`vchars`]
-
-**Enums**
-
-xref:reference:boost/urls/grammar/error.adoc[`error`]
-
-xref:reference:boost/urls/grammar/condition.adoc[`condition`]
+cpp:boost::urls::string_token::return_string[return_string]
 
 **Concepts**
 
-xref:concepts/CharSet.adoc[`CharSet`]
+cpp:boost::urls::string_token::StringToken[StringToken]
 
-xref:concepts/Rule.adoc[`Rule`]
+| **Constants**
 
-xref:concepts/StringToken.adoc[`StringToken`]
+cpp:boost::urls::grammar::all_chars[all_chars]
+
+cpp:boost::urls::grammar::alnum_chars[alnum_chars]
+
+cpp:boost::urls::grammar::alpha_chars[alpha_chars]
+
+cpp:boost::urls::grammar::condition[condition]
+
+cpp:boost::urls::grammar::dec_octet_rule[dec_octet_rule]
+
+cpp:boost::urls::grammar::digit_chars[digit_chars]
+
+cpp:boost::urls::grammar::error[error]
+
+cpp:boost::urls::grammar::hexdig_chars[hexdig_chars]
+
+cpp:boost::urls::grammar::not_empty_rule[not_empty_rule]
+
+cpp:boost::urls::grammar::unsigned_rule[unsigned_rule]
+
+cpp:boost::urls::grammar::vchars[vchars]
+
+**Enums**
+
+cpp:boost::urls::grammar::error[error]
+
+cpp:boost::urls::grammar::condition[condition]
+
+**Concepts**
+
+cpp:boost::urls::grammar::CharSet[CharSet]
+
+cpp:boost::urls::grammar::Rule[Rule]
 
 |===
-

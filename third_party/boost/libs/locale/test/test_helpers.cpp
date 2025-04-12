@@ -17,7 +17,7 @@
 #    endif
 #endif
 
-#include <boostLocale/test/test_helpers.hpp>
+#include "boostLocale/test/test_helpers.hpp"
 #include <cstdlib>
 #ifdef BOOST_WINDOWS
 #    include <list>

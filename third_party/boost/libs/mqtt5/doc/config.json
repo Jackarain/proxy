@@ -1,0 +1,16 @@
+{
+    "include_private": false,
+    "legacy_behavior": false,
+    "external_marker": "!EXTERNAL!",
+    "link_prefix": "mqtt5.ref.",
+    "convenience_header": "boost/mqtt5.hpp",
+    "replace_strings": {
+        "__see_below__": "``['see-below]``",
+        "\\btypename CompletionToken\\b": "typename __CompletionToken__",
+        "\\btypename Executor\\b": "typename __Executor__",
+        "\\btypename ExecutionContext\\b": "typename __ExecutionContext__",
+        "\\btypename TlsContext\\b": "typename __TlsContext__",
+        "\\btypename StreamType\\b": "typename __StreamType__",
+        "\\btypename LoggerType\\b": "typename __LoggerType__"
+    }
+}

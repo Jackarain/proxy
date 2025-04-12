@@ -75,9 +75,19 @@
 # define BOOST_URL_POS (BOOST_CURRENT_LOCATION)
 #endif
 
+#if !defined(BOOST_NO_CXX20_HDR_CONCEPTS) && defined(__cpp_lib_concepts)
+#define BOOST_URL_HAS_CONCEPTS
+#endif
+
+#ifdef  BOOST_URL_HAS_CONCEPTS
+#define BOOST_URL_CONSTRAINT(C) C
+#else
+#define BOOST_URL_CONSTRAINT(C) class
+#endif
+
 // String token parameters
 #ifndef BOOST_URL_STRTOK_TPARAM
-#define BOOST_URL_STRTOK_TPARAM class StringToken = string_token::return_string
+#define BOOST_URL_STRTOK_TPARAM BOOST_URL_CONSTRAINT(string_token::StringToken) StringToken = string_token::return_string
 #endif
 #ifndef BOOST_URL_STRTOK_RETURN
 #define BOOST_URL_STRTOK_RETURN typename StringToken::result_type

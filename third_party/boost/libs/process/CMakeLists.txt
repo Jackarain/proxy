@@ -35,7 +35,6 @@ target_link_libraries(boost_process
     Boost::asio
     Boost::config
     Boost::core
-    Boost::filesystem
     Boost::fusion
     Boost::iterator
     Boost::move
@@ -57,7 +56,7 @@ else()
 endif()
 
 if (WIN32)
-  target_link_libraries(boost_process PUBLIC ntdll shell32 advapi32 user32)
+  target_link_libraries(boost_process PUBLIC ntdll shell32 advapi32 user32 ws2_32)
 endif()
 
 if(BUILD_SHARED_LIBS)

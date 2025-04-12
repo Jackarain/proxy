@@ -13,6 +13,7 @@
 #pragma once
 #endif
 
+#include <boost/config.hpp>
 #include <boost/detail/workaround.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <type_traits>
@@ -63,32 +64,7 @@ public:
   stride_iterator& operator=(Value* p_)noexcept{p=p_;return *this;}
   operator Value*()const noexcept{return p;}
 
-  template<
-    typename DerivedValue,
-    typename std::enable_if<
-      std::is_base_of<Value,DerivedValue>::value&&
-      (std::is_const<Value>::value||!std::is_const<DerivedValue>::value)
-    >::type* =nullptr
-  >
-  explicit stride_iterator(DerivedValue* x)noexcept:
-    p{x},stride_{sizeof(DerivedValue)}{}
-
-#if BOOST_WORKAROUND(BOOST_GCC_VERSION,>=40900)||\
-    BOOST_WORKAROUND(BOOST_CLANG,>=1)&&\
-    (__clang_major__>3 || __clang_major__==3 && __clang_minor__ >= 8)
-/* https://github.com/boostorg/poly_collection/issues/15 */
-  
-#define BOOST_POLY_COLLECTION_NO_SANITIZE
-
-/* UBSan seems not to be supported in some environments */
-#if defined(BOOST_GCC_VERSION)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wattributes"
-#elif defined(BOOST_CLANG)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wattributes"
-#endif
-#endif
+#include <boost/poly_collection/detail/begin_no_sanitize.hpp>
 
   template<
     typename DerivedValue,
@@ -97,21 +73,11 @@ public:
       (!std::is_const<Value>::value||std::is_const<DerivedValue>::value)
     >::type* =nullptr
   >
-#if defined(BOOST_POLY_COLLECTION_NO_SANITIZE)
-  __attribute__((no_sanitize("undefined")))
-#endif
+  BOOST_POLY_COLLECTION_NO_SANITIZE
   explicit operator DerivedValue*()const noexcept
   {return static_cast<DerivedValue*>(p);}
 
-#if defined(BOOST_POLY_COLLECTION_NO_SANITIZE)
-#if defined(BOOST_GCC_VERSION)
-#pragma GCC diagnostic pop
-#elif defined(BOOST_CLANG)
-#pragma clang diagnostic pop
-#endif
-
-#undef BOOST_POLY_COLLECTION_NO_SANITIZE
-#endif
+#include <boost/poly_collection/detail/end_no_sanitize.hpp>
 
   std::size_t stride()const noexcept{return stride_;}
 

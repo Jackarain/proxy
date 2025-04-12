@@ -1,0 +1,5 @@
+*.zip
+*.tar.*
+fop-*/
+docbook-xsl-*/
+docbook-dtd-*/

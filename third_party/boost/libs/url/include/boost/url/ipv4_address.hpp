@@ -81,10 +81,13 @@ public:
         ipv4_address const&) = default;
 
     /** Copy Assignment.
+
+        @param other The object to copy.
+        @return A reference to this object.
     */
     ipv4_address&
     operator=(
-        ipv4_address const&) = default;
+        ipv4_address const& other) = default;
 
     //
     //---
@@ -130,8 +133,7 @@ public:
         @par Exception Safety
         Exceptions thrown on invalid input.
 
-        @throw system_error
-        The input failed to parse correctly.
+        @throw system_error The input failed to parse correctly.
 
         @param s The string to parse.
 
@@ -148,12 +150,16 @@ public:
         core::string_view s);
 
     /** Return the address as bytes, in network byte order.
+
+        @return The address as an array of bytes.
     */
     BOOST_URL_DECL
     bytes_type
     to_bytes() const noexcept;
 
     /** Return the address as an unsigned integer.
+
+        @return The address as an unsigned integer.
     */
     BOOST_URL_DECL
     uint_type
@@ -194,8 +200,7 @@ public:
     */
     template<BOOST_URL_STRTOK_TPARAM>
     BOOST_URL_STRTOK_RETURN
-    to_string(
-        BOOST_URL_STRTOK_ARG(token)) const
+    to_string(StringToken&& token = {}) const
     {
         to_string_impl(token);
         return token.result();
@@ -221,24 +226,35 @@ public:
         std::size_t dest_size) const;
 
     /** Return true if the address is a loopback address
+
+        @return `true` if the address is a loopback address
     */
     BOOST_URL_DECL
     bool
     is_loopback() const noexcept;
 
     /** Return true if the address is unspecified
+
+        @return `true` if the address is unspecified
     */
     BOOST_URL_DECL
     bool
     is_unspecified() const noexcept;
 
     /** Return true if the address is a multicast address
+
+        @return `true` if the address is a multicast address,
     */
     BOOST_URL_DECL
     bool
     is_multicast() const noexcept;
 
     /** Return true if two addresses are equal
+
+        @param a1 The first address to compare.
+        @param a2 The second address to compare.
+        @return `true` if the addresses are equal, otherwise `false`.
+
     */
     friend
     bool
@@ -250,6 +266,10 @@ public:
     }
 
     /** Return true if two addresses are not equal
+
+        @param a1 The first address to compare.
+        @param a2 The second address to compare.
+        @return `true` if the addresses are not equal, otherwise `false`.
     */
     friend
     bool
@@ -261,6 +281,8 @@ public:
     }
 
     /** Return an address object that represents any address
+
+        @return The any address.
     */
     static
     ipv4_address
@@ -270,6 +292,8 @@ public:
     }
 
     /** Return an address object that represents the loopback address
+
+        @return The loopback address.
     */
     static
     ipv4_address
@@ -279,6 +303,8 @@ public:
     }
 
     /** Return an address object that represents the broadcast address
+
+        @return The broadcast address.
     */
     static
     ipv4_address
@@ -329,8 +355,8 @@ private:
     are written in their dotted decimal format.
 
     @param os The output stream.
-
     @param addr The address to format.
+    @return The output stream.
 */
 std::ostream&
 operator<<(
@@ -340,6 +366,9 @@ operator<<(
 //------------------------------------------------
 
 /** Return an IPv4 address from an IP address string in dotted decimal form
+
+    @param s The string to parse.
+    @return The parsed address, or an error code.
 */
 BOOST_URL_DECL
 system::result<ipv4_address>

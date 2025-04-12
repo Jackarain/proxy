@@ -27,7 +27,7 @@ namespace nowide {
 
             static constexpr bool value = decltype(test<T>(0))::value;
         };
-        /// SFINAE trait which has a member "type = Result" if the Path is a *\::filesystem::path
+        /// SFINAE trait/alias which resolves to Result if the Path is a *\::filesystem::path
         template<typename Path, typename Result>
         using enable_if_path_t = typename std::enable_if<is_path<Path>::value, Result>::type;
 

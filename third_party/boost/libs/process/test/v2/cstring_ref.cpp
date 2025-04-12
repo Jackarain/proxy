@@ -43,7 +43,7 @@ BOOST_AUTO_TEST_CASE(cstring_view_test)
     BOOST_CHECK_EQUAL_COLLECTIONS(s.rbegin(), s.rend(), sv.rbegin(), sv.rend());
     BOOST_CHECK_EQUAL_COLLECTIONS(s.crbegin(), s.crend(), sv.crbegin(), sv.crend());
 
-    BOOST_CHECK_EQUAL(sv.size(), 6);
+    BOOST_CHECK_EQUAL(sv.size(), 6u);
     sv.remove_prefix(1);
     BOOST_CHECK_EQUAL(sv.at(0), 'a');
     BOOST_CHECK_EQUAL(sv.at(4), 'o');
@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(cstring_view_test)
     BOOST_CHECK_EQUAL(sv.front(), 'a');
     BOOST_CHECK_EQUAL(sv.back(), 'o');
 
-    BOOST_CHECK_EQUAL(sv.length(), 5);
+    BOOST_CHECK_EQUAL(sv.length(), 5u);
     BOOST_CHECK_EQUAL(sv.c_str(), s.c_str() + 1);
     BOOST_CHECK_EQUAL(sv.substr(2).c_str(), s.c_str() + 3);
 

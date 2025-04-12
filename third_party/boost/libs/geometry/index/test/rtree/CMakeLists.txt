@@ -1,4 +1,5 @@
 # Boost.Geometry
+# Copyright (c) 2025 Adam Wulkiewicz, Lodz, Poland.
 # Copyright (c) 2024, Oracle and/or its affiliates.
 # Contributed and/or modified by Vissarion Fysikopoulos, on behalf of Oracle
 # Use, modification and distribution is subject to the Boost Software License,
@@ -17,3 +18,7 @@ foreach(item IN ITEMS
   )
   boost_geometry_add_unit_test("index" ${item})
 endforeach()
+
+add_subdirectory(exceptions)
+add_subdirectory(generated)
+add_subdirectory(strategies)

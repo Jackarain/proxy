@@ -38,7 +38,7 @@
 #include <cstdlib>
 
 namespace fs = boost::process::v1::filesystem;
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 
 BOOST_AUTO_TEST_CASE(explicit_async_io, *boost::unit_test::timeout(2))
 {

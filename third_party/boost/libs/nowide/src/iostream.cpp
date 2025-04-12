@@ -82,27 +82,32 @@ namespace nowide {
             }
         };
 
-        winconsole_ostream::winconsole_ostream(const bool isBuffered, winconsole_ostream* tieStream) : std::ostream(0)
+        winconsole_ostream::winconsole_ostream(const target_stream target,
+                                               const bool isBuffered,
+                                               winconsole_ostream* tieStream) :
+            std::ostream(nullptr)
         {
-            HANDLE h;
-            if(isBuffered)
-                h = GetStdHandle(STD_OUTPUT_HANDLE);
-            else
-                h = GetStdHandle(STD_ERROR_HANDLE);
+            const HANDLE h = GetStdHandle(target == target_stream::output ? STD_OUTPUT_HANDLE : STD_ERROR_HANDLE);
+
             if(is_atty_handle(h))
             {
                 d.reset(new console_output_buffer(h));
-                std::ostream::rdbuf(d.get());
+                rdbuf(d.get());
             } else
             {
-                std::ostream::rdbuf(isBuffered ? std::cout.rdbuf() : std::cerr.rdbuf());
-                assert(rdbuf());
+                switch(target)
+                {
+                case target_stream::error: rdbuf(std::cerr.rdbuf()); break;
+                case target_stream::log: rdbuf(std::clog.rdbuf()); break;
+                case target_stream::output: rdbuf(std::cout.rdbuf()); break;
+                }
             }
+            assert(rdbuf());
+
             if(tieStream)
-            {
                 tie(tieStream);
-                setf(ios_base::unitbuf); // If tieStream is set, this is cerr -> set unbuffered
-            }
+            if(!isBuffered)
+                setf(ios_base::unitbuf);
         }
         winconsole_ostream::~winconsole_ostream()
         {
@@ -134,7 +139,7 @@ namespace nowide {
 
     } // namespace detail
 
-    // Make sure those are initialized as early as possible
+// Make sure those are initialized as early as possible
 #ifdef BOOST_MSVC
 #pragma warning(disable : 4073)
 #pragma init_seg(lib)
@@ -144,10 +149,11 @@ namespace nowide {
 #else
 #define BOOST_NOWIDE_INIT_PRIORITY
 #endif
-    detail::winconsole_ostream cout BOOST_NOWIDE_INIT_PRIORITY(true, nullptr);
+    using target_stream = detail::winconsole_ostream::target_stream;
+    detail::winconsole_ostream cout BOOST_NOWIDE_INIT_PRIORITY(target_stream::output, true, nullptr);
     detail::winconsole_istream cin BOOST_NOWIDE_INIT_PRIORITY(&cout);
-    detail::winconsole_ostream cerr BOOST_NOWIDE_INIT_PRIORITY(false, &cout);
-    detail::winconsole_ostream clog BOOST_NOWIDE_INIT_PRIORITY(false, nullptr);
+    detail::winconsole_ostream cerr BOOST_NOWIDE_INIT_PRIORITY(target_stream::error, false, &cout);
+    detail::winconsole_ostream clog BOOST_NOWIDE_INIT_PRIORITY(target_stream::log, true, nullptr);
 } // namespace nowide
 } // namespace boost
 

@@ -12,5 +12,5 @@
     "maintainers": [
         "Douglas Gregor <dgregor -at- cs.indiana.edu>"
     ],
-    "cxxstd": "03"
+    "cxxstd": "11"
 }

@@ -1,5 +1,5 @@
 // Copyright 2014 Renato Tegon Forti, Antony Polukhin.
-// Copyright Antony Polukhin, 2015-2024.
+// Copyright Antony Polukhin, 2015-2025.
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
@@ -14,109 +14,108 @@
 # pragma once
 #endif
 
+#include <cstdint>
 #include <cstring>
 #include <fstream>
-#include <limits>
 #include <vector>
 
-#include <boost/cstdint.hpp>
 #include <boost/throw_exception.hpp>
 
 namespace boost { namespace dll { namespace detail {
 
 template <class AddressOffsetT>
 struct Elf_Ehdr_template {
-  unsigned char     e_ident[16];    /* Magic number and other info */
-  boost::uint16_t   e_type;         /* Object file type */
-  boost::uint16_t   e_machine;      /* Architecture */
-  boost::uint32_t   e_version;      /* Object file version */
-  AddressOffsetT    e_entry;        /* Entry point virtual address */
-  AddressOffsetT    e_phoff;        /* Program header table file offset */
-  AddressOffsetT    e_shoff;        /* Section header table file offset */
-  boost::uint32_t   e_flags;        /* Processor-specific flags */
-  boost::uint16_t   e_ehsize;       /* ELF header size in bytes */
-  boost::uint16_t   e_phentsize;    /* Program header table entry size */
-  boost::uint16_t   e_phnum;        /* Program header table entry count */
-  boost::uint16_t   e_shentsize;    /* Section header table entry size */
-  boost::uint16_t   e_shnum;        /* Section header table entry count */
-  boost::uint16_t   e_shstrndx;     /* Section header string table index */
+  unsigned char   e_ident[16];    /* Magic number and other info */
+  std::uint16_t   e_type;         /* Object file type */
+  std::uint16_t   e_machine;      /* Architecture */
+  std::uint32_t   e_version;      /* Object file version */
+  AddressOffsetT  e_entry;        /* Entry point virtual address */
+  AddressOffsetT  e_phoff;        /* Program header table file offset */
+  AddressOffsetT  e_shoff;        /* Section header table file offset */
+  std::uint32_t   e_flags;        /* Processor-specific flags */
+  std::uint16_t   e_ehsize;       /* ELF header size in bytes */
+  std::uint16_t   e_phentsize;    /* Program header table entry size */
+  std::uint16_t   e_phnum;        /* Program header table entry count */
+  std::uint16_t   e_shentsize;    /* Section header table entry size */
+  std::uint16_t   e_shnum;        /* Section header table entry count */
+  std::uint16_t   e_shstrndx;     /* Section header string table index */
 };
 
-typedef Elf_Ehdr_template<boost::uint32_t> Elf32_Ehdr_;
-typedef Elf_Ehdr_template<boost::uint64_t> Elf64_Ehdr_;
+using Elf32_Ehdr_ = Elf_Ehdr_template<std::uint32_t>;
+using Elf64_Ehdr_ = Elf_Ehdr_template<std::uint64_t>;
 
 template <class AddressOffsetT>
 struct Elf_Shdr_template {
-  boost::uint32_t   sh_name;        /* Section name (string tbl index) */
-  boost::uint32_t   sh_type;        /* Section type */
-  AddressOffsetT    sh_flags;       /* Section flags */
-  AddressOffsetT    sh_addr;        /* Section virtual addr at execution */
-  AddressOffsetT    sh_offset;      /* Section file offset */
-  AddressOffsetT    sh_size;        /* Section size in bytes */
-  boost::uint32_t   sh_link;        /* Link to another section */
-  boost::uint32_t   sh_info;        /* Additional section information */
-  AddressOffsetT    sh_addralign;   /* Section alignment */
-  AddressOffsetT    sh_entsize;     /* Entry size if section holds table */
+  std::uint32_t   sh_name;        /* Section name (string tbl index) */
+  std::uint32_t   sh_type;        /* Section type */
+  AddressOffsetT  sh_flags;       /* Section flags */
+  AddressOffsetT  sh_addr;        /* Section virtual addr at execution */
+  AddressOffsetT  sh_offset;      /* Section file offset */
+  AddressOffsetT  sh_size;        /* Section size in bytes */
+  std::uint32_t   sh_link;        /* Link to another section */
+  std::uint32_t   sh_info;        /* Additional section information */
+  AddressOffsetT  sh_addralign;   /* Section alignment */
+  AddressOffsetT  sh_entsize;     /* Entry size if section holds table */
 };
 
-typedef Elf_Shdr_template<boost::uint32_t> Elf32_Shdr_;
-typedef Elf_Shdr_template<boost::uint64_t> Elf64_Shdr_;
+using Elf32_Shdr_ = Elf_Shdr_template<std::uint32_t>;
+using Elf64_Shdr_ = Elf_Shdr_template<std::uint64_t>;
 
 template <class AddressOffsetT>
 struct Elf_Sym_template;
 
 template <>
-struct Elf_Sym_template<boost::uint32_t> {
-  typedef boost::uint32_t AddressOffsetT;
+struct Elf_Sym_template<std::uint32_t> {
+  using AddressOffsetT = std::uint32_t;
 
-  boost::uint32_t   st_name;    /* Symbol name (string tbl index) */
-  AddressOffsetT    st_value;   /* Symbol value */
-  AddressOffsetT    st_size;    /* Symbol size */
-  unsigned char     st_info;    /* Symbol type and binding */
-  unsigned char     st_other;   /* Symbol visibility */
-  boost::uint16_t   st_shndx;   /* Section index */
+  std::uint32_t   st_name;    /* Symbol name (string tbl index) */
+  AddressOffsetT  st_value;   /* Symbol value */
+  AddressOffsetT  st_size;    /* Symbol size */
+  unsigned char   st_info;    /* Symbol type and binding */
+  unsigned char   st_other;   /* Symbol visibility */
+  std::uint16_t   st_shndx;   /* Section index */
 };
 
 template <>
-struct Elf_Sym_template<boost::uint64_t> {
-  typedef boost::uint64_t AddressOffsetT;
+struct Elf_Sym_template<std::uint64_t> {
+  using AddressOffsetT = std::uint64_t;
 
-  boost::uint32_t   st_name;    /* Symbol name (string tbl index) */
-  unsigned char     st_info;    /* Symbol type and binding */
-  unsigned char     st_other;   /* Symbol visibility */
-  boost::uint16_t   st_shndx;   /* Section index */
-  AddressOffsetT    st_value;   /* Symbol value */
-  AddressOffsetT    st_size;    /* Symbol size */
+  std::uint32_t   st_name;    /* Symbol name (string tbl index) */
+  unsigned char   st_info;    /* Symbol type and binding */
+  unsigned char   st_other;   /* Symbol visibility */
+  std::uint16_t   st_shndx;   /* Section index */
+  AddressOffsetT  st_value;   /* Symbol value */
+  AddressOffsetT  st_size;    /* Symbol size */
 };
 
 
-typedef Elf_Sym_template<boost::uint32_t> Elf32_Sym_;
-typedef Elf_Sym_template<boost::uint64_t> Elf64_Sym_;
+using Elf32_Sym_ = Elf_Sym_template<std::uint32_t>;
+using Elf64_Sym_ = Elf_Sym_template<std::uint64_t>;
 
 template <class AddressOffsetT>
 class elf_info {
-    typedef boost::dll::detail::Elf_Ehdr_template<AddressOffsetT>  header_t;
-    typedef boost::dll::detail::Elf_Shdr_template<AddressOffsetT>  section_t;
-    typedef boost::dll::detail::Elf_Sym_template<AddressOffsetT>   symbol_t;
+    using header_t = boost::dll::detail::Elf_Ehdr_template<AddressOffsetT>;
+    using section_t= boost::dll::detail::Elf_Shdr_template<AddressOffsetT>;
+    using symbol_t = boost::dll::detail::Elf_Sym_template<AddressOffsetT>;
 
-    BOOST_STATIC_CONSTANT(boost::uint32_t, SHT_SYMTAB_ = 2);
-    BOOST_STATIC_CONSTANT(boost::uint32_t, SHT_STRTAB_ = 3);
-    BOOST_STATIC_CONSTANT(boost::uint32_t, SHT_DYNSYM_ = 11);
+    static constexpr std::uint32_t SHT_SYMTAB_ = 2;
+    static constexpr std::uint32_t SHT_STRTAB_ = 3;
+    static constexpr std::uint32_t SHT_DYNSYM_ = 11;
 
-    BOOST_STATIC_CONSTANT(unsigned char, STB_LOCAL_ = 0);   /* Local symbol */
-    BOOST_STATIC_CONSTANT(unsigned char, STB_GLOBAL_ = 1);  /* Global symbol */
-    BOOST_STATIC_CONSTANT(unsigned char, STB_WEAK_ = 2);    /* Weak symbol */
+    static constexpr unsigned char STB_LOCAL_ = 0;   /* Local symbol */
+    static constexpr unsigned char STB_GLOBAL_ = 1;  /* Global symbol */
+    static constexpr unsigned char STB_WEAK_ = 2;    /* Weak symbol */
 
     /* Symbol visibility specification encoded in the st_other field.  */
-    BOOST_STATIC_CONSTANT(unsigned char, STV_DEFAULT_ = 0);      /* Default symbol visibility rules */
-    BOOST_STATIC_CONSTANT(unsigned char, STV_INTERNAL_ = 1);     /* Processor specific hidden class */
-    BOOST_STATIC_CONSTANT(unsigned char, STV_HIDDEN_ = 2);       /* Sym unavailable in other modules */
-    BOOST_STATIC_CONSTANT(unsigned char, STV_PROTECTED_ = 3);    /* Not preemptible, not exported */
+    static constexpr unsigned char STV_DEFAULT_ = 0;      /* Default symbol visibility rules */
+    static constexpr unsigned char STV_INTERNAL_ = 1;     /* Processor specific hidden class */
+    static constexpr unsigned char STV_HIDDEN_ = 2;       /* Sym unavailable in other modules */
+    static constexpr unsigned char STV_PROTECTED_ = 3;    /* Not preemptible, not exported */
 
 public:
     static bool parsing_supported(std::ifstream& fs) {
         const unsigned char magic_bytes[5] = { 
-            0x7f, 'E', 'L', 'F', sizeof(boost::uint32_t) == sizeof(AddressOffsetT) ? 1 : 2
+            0x7f, 'E', 'L', 'F', sizeof(std::uint32_t) == sizeof(AddressOffsetT) ? 1 : 2
         };
 
         unsigned char ch;
@@ -154,14 +153,15 @@ public:
 private:
     template <class Integer>
     static void checked_seekg(std::ifstream& fs, Integer pos) {
-        /* TODO: use cmp_less, cmp_greater
-        if ((std::numeric_limits<std::streamoff>::max)() < pos) {
-            boost::throw_exception(std::runtime_error("Integral overflow while getting info from ELF file"));
-        }
-        if ((std::numeric_limits<std::streamoff>::min)() > pos){
+        if (pos < 0) {
             boost::throw_exception(std::runtime_error("Integral underflow while getting info from ELF file"));
         }
-        */
+        if (static_cast<std::streamoff>(pos) < 0) {
+            boost::throw_exception(std::runtime_error("Integral overflow while getting info from ELF file"));
+        }
+
+        // `seekg` will throw exceptions on an attempt to get outsize of the
+        // file size.
         fs.seekg(static_cast<std::streamoff>(pos));
     }
 
@@ -259,7 +259,7 @@ private:
         read_raw(fs, symbols[0], static_cast<std::size_t>(symtab_size - (symtab_size % sizeof(symbol_t))) );
     }
 
-    static bool is_visible(const symbol_t& sym) BOOST_NOEXCEPT {
+    static bool is_visible(const symbol_t& sym) noexcept {
         const unsigned char visibility = (sym.st_other & 0x03);
         // `(sym.st_info >> 4) != STB_LOCAL_ && !!sym.st_size` check also workarounds the
         // GCC's issue https://sourceware.org/bugzilla/show_bug.cgi?id=13621
@@ -336,8 +336,8 @@ public:
     }
 };
 
-typedef elf_info<boost::uint32_t> elf_info32;
-typedef elf_info<boost::uint64_t> elf_info64;
+using elf_info32 = elf_info<std::uint32_t> ;
+using elf_info64 = elf_info<std::uint64_t>;
 
 }}} // namespace boost::dll::detail
 

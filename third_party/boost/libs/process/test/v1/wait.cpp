@@ -22,7 +22,7 @@
 #   include <signal.h>
 #endif
 
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 
 BOOST_AUTO_TEST_SUITE( wait_test );
 

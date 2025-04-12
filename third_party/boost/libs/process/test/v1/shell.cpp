@@ -22,7 +22,7 @@
 #include <boost/process/v1/child.hpp>
 #include <boost/process/v1/shell.hpp>
 
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 
 
 BOOST_AUTO_TEST_CASE(shell_simple, *boost::unit_test::timeout(5))

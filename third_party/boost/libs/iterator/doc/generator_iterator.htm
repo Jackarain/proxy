@@ -15,7 +15,7 @@
   <h1>Generator Iterator Adaptor</h1>
 
   <p>Defined in header <a href=
-  "../../boost/generator_iterator.hpp">boost/generator_iterator.hpp</a></p>
+  "../../boost/iterator/generator_iterator.hpp">boost/iterator/generator_iterator.hpp</a></p>
 
   <p>The generator iterator adaptor makes it easier to create custom input
   iterators from 0-ary functions and function objects. The adaptor takes a
@@ -33,15 +33,14 @@
   <blockquote>
     <pre>
 namespace boost {
-  template &lt;class Generator&gt;
-  class generator_iterator_policies;
-
+namespace iterators {
   template &lt;class Generator&gt;
   class generator_iterator_generator;
 
   template &lt;class Generator&gt;
   typename generator_iterator_generator&lt;Generator&gt;::type
   make_generator_iterator(Generator &amp; gen);
+}
 }
 </pre>
   </blockquote>
@@ -60,8 +59,8 @@ template &lt;class Generator&gt;
 class generator_iterator_generator
 {
 public:
-  typedef <i>unspecified</i> type; // the resulting generator iterator type 
-}
+  using type = <i>unspecified</i>; // the resulting generator iterator type
+};
 </pre>
 
   <h3>Template Parameters</h3>
@@ -78,8 +77,8 @@ public:
       "http://www.sgi.com/tech/stl/Generator.html">Generator</a></tt></td>
 
       <td>The generator (0-ary function object) type being wrapped. The
-      return type of the function must be defined as
-      <tt>Generator::result_type</tt>. The function object must be a model of
+      return type of the function is deduced automatically from its
+      <tt>operator()</tt>. The function object must be a model of
       <a href=
       "http://www.sgi.com/tech/stl/Generator.html">Generator</a>.</td>
     </tr>
@@ -122,14 +121,14 @@ make_generator_iterator(Generator &amp; gen);
   <blockquote>
     <pre>
 #include &lt;iostream&gt;
-#include &lt;boost/generator_iterator.hpp&gt;
+#include &lt;boost/iterators/generator_iterator.hpp&gt;
 
 class my_generator
 {
 public:
-  typedef int result_type;
+  using result_type = int;
   my_generator() : state(0) { }
-  int operator()() { return ++state; }
+  result_type operator()() { return ++state; }
 private:
   int state;
 };
@@ -137,7 +136,7 @@ private:
 int main()
 {
   my_generator gen;
-  boost::generator_iterator_generator&lt;my_generator&gt;::type it = boost::make_generator_iterator(gen);
+  auto it = boost::iterators::make_generator_iterator(gen);
   for(int i = 0; i &lt; 10; ++i, ++it)
     std::cout &lt;&lt; *it &lt;&lt; std::endl;
 }

@@ -146,7 +146,7 @@ void close_all(const std::vector<int> & whitelist, error_code & ec)
 
 
 // linux impl - whitelist must be ordered
-void close_all(const std::vector<int> & whitelist, error_code & ec)
+void close_all(const std::vector<int> & whitelist, error_code & /*ec*/)
 {
 // https://patchwork.kernel.org/project/linux-fsdevel/cover/20200602204219.186620-1-christian.brauner@ubuntu.com/
     //the most common scenario is whitelist = {0,1,2}
@@ -185,7 +185,7 @@ void close_all(const std::vector<int> & whitelist, error_code & ec)
         return ;
     }
 
-    auto dir_fd = ::dirfd(dir.get());
+    auto dir_fd = dirfd(dir.get());
     if (dir_fd == -1)
     {
         ec = BOOST_PROCESS_V2_NAMESPACE::detail::get_last_error();

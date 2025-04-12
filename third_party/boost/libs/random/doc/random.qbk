@@ -1,7 +1,7 @@
 [library Boost.Random
   [quickbook 1.5]
   [authors [Maurer, Jens]]
-  [copyright 2000-2005 Jens Maurer, 2009-2010 Steven Watanabe]
+  [copyright 2000-2005 Jens Maurer, 2009-2010 Steven Watanabe, 2022-2025 Matt Borland]
   [license
       Distributed under the Boost Software License, Version 1.0.
       (See accompanying file LICENSE_1_0.txt or copy at
@@ -69,6 +69,16 @@
 [def __niederreiter_base2 [classref boost::random::niederreiter_base2 niederreiter_base2]]
 [def __sobol [classref boost::random::sobol sobol]]
 [def __faure [classref boost::random::faure faure]]
+[def __splitmix64 [classref boost::random::splitmix64 splitmix64]]
+[def __xoshiro256pp [classref boost::random::xoshiro256pp xoshiro256pp]]
+[def __xoshiro256d [classref boost::random::xoshiro256d xoshiro256d]]
+[def __xoshiro256mm [classref boost::random::xoshiro256mm xoshiro256mm]]
+[def __xoshiro512pp [classref boost::random::xoshiro512pp xoshiro512pp]]
+[def __xoshiro512d [classref boost::random::xoshiro512d xoshiro512d]]
+[def __xoshiro512mm [classref boost::random::xoshiro512mm xoshiro512mm]]
+[def __xoshiro128pp [classref boost::random::xoshiro128pp xoshiro128pp]]
+[def __xoshiro128f [classref boost::random::xoshiro128f xoshiro128f]]
+[def __xoshiro128mm [classref boost::random::xoshiro128mm xoshiro128mm]]
 
 [def __uniform_smallint [classref boost::random::uniform_smallint uniform_smallint]]
 [def __uniform_int_distribution [classref boost::random::uniform_int_distribution uniform_int_distribution]]
@@ -98,6 +108,8 @@
 [def __non_central_chi_squared_distribution [classref boost::random::non_central_chi_squared_distribution non_central_chi_squared_distribution]]
 [def __piecewise_constant_distribution [classref boost::random::piecewise_constant_distribution piecewise_constant_distribution]]
 [def __piecewise_linear_distribution [classref boost::random::piecewise_linear_distribution piecewise_linear_distribution]]
+[def __inverse_gaussian_distribution [classref boost::random::inverse_gaussian_distribution inverse_gaussian_distribution]]
+[def __generalized_inverse_gaussian_distribution [classref boost::random::generalized_inverse_gaussian_distribution generalized_inverse_gaussian_distribution]]
 
 [include performance_data.qbk]
 

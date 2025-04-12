@@ -1,0 +1,353 @@
+////
+Copyright 2020, 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#hashing_bytes]
+# Hashing Byte Sequences
+:idprefix: hashing_bytes_
+
+This library addresses two major use cases: hashing an untyped sequence
+of bytes, and hashing {cpp} objects.
+
+Untyped byte sequences (also called _messages_) are hashed by passing
+them to a _hash algorithm_, which then produces a hash value (or a
+_message digest_).
+
+The same _hash algorithm_, when passed the same _message_, will always
+produce the same _digest_. (Published algorithms provide _message_ and
+corresponding _digest_ pairs, called _test vectors_, to enable
+verification of independent implementations.)
+
+(To hash a {cpp} object, it's first converted (serialized) to a sequence
+of bytes, then passed to a _hash algorithm_.)
+
+## Hash Algorithm Requirements
+
+A _hash algorithm_ must have the following structure, and meet the
+following minimum requirements:
+
+```
+struct HashAlgorithm
+{
+    using result_type = /*integral or array-like*/;
+
+    static constexpr std::size_t block_size = /*...*/; // optional
+
+    HashAlgorithm();
+    explicit HashAlgorithm( std::uint64_t seed );
+    HashAlgorithm( void const* seed, std::size_t n );
+
+    HashAlgorithm( HashAlgorithm const& r );
+    HashAlgorithm& operator=( HashAlgorithm const& r );
+
+    void update( void const* data, std::size_t n );
+
+    result_type result();
+};
+```
+
+### result_type
+
+The nested type `result_type` is the type of the produced hash value. It
+can be an unsigned integer type (that is not `bool`), typically
+`std::uint32_t` or `std::uint64_t`, or a `std::array`-like type with a
+value type of `unsigned char`.
+
+Normally, non-cryptographic hash functions have an integer `result_type`,
+and cryptographic hash functions have an array-like `result_type`, but
+that's not required.
+
+The provided utility function `get_integral_result` can be used to obtain
+an integer hash value from any valid `result_type`.
+
+### block_size
+
+Cryptographic hash functions provide a `block_size` value, which is their
+block size (e.g. 64 for MD5, 128 for SHA2-512) and is required in order
+to implement the corresponding https://en.wikipedia.org/wiki/HMAC[HMAC].
+
+`block_size` is an optional requirement.
+
+### Default Constructor
+
+All _hash algorithms_ must be default constructible. The default
+constructor initializes the internal state of the hash algorithm to its
+initial values, as published in its specification.
+
+For example, the default constructor of `md5_128` corresponds to calling
+the function `MD5_Init` of the reference implementation.
+
+### Constructor Taking an Integer Seed
+
+All _hash algorithms_ must be constructible from a value of type
+`std::uint64_t`, which serves as a seed.
+
+Using a seed value of 0 is equivalent to default construction.
+
+Distinct seed values cause the internal state to be initialized differently,
+and therefore, instances of the hash algorithm initialized by different seeds
+produce different hash values when passed the same message.
+
+Seeding using random (unobservable from the outside) values is useful for
+preventing https://en.wikipedia.org/wiki/Collision_attack#Hash_flooding[hash flooding attacks].
+
+### Constructor Taking a Byte Sequence Seed
+
+All _hash algorithms_ can be constructed from a seed sequence of
+`unsigned char` values (this makes all hash algorithms
+https://en.wikipedia.org/wiki/Keyed_hash_function[keyed hash functions].)
+
+A null sequence (one with length 0) produces a default-constructed instance.
+
+Different seed sequences produce differently initialized instances.
+
+While this requirement makes all hash algorithms usable as MACs
+(https://en.wikipedia.org/wiki/Message_authentication_code[Message Authentication Codes]),
+you should as a general rule prefer an established MAC algorithm, such as
+https://en.wikipedia.org/wiki/HMAC[HMAC]. (A HMAC implementation is provided.)
+
+### Copy Constructor, Copy Assignment
+
+Hash algorithms are copy constructible and copy assignable, providing the
+usual guarantees for these operations. That is, a copy is equivalent to the
+original.
+
+### update
+
+The function `update` is the mechanism by which the input message is provided
+to the hash algorithm.
+
+Calling `update` several times is equivalent to calling it once with the
+concatenated byte sequences from the individual calls. That is, the input
+message may be provided in parts, and the way it's split into parts does
+not matter and does not affect the final hash value.
+
+Given
+```
+Hash hash; // some hash algorithm
+unsigned char message[6] = { /*...*/ }; // some input message
+```
+the following `update` call
+```
+hash.update( message, 6 );
+```
+is equivalent to
+```
+hash.update( message, 4 );
+hash.update( message + 4, 2 );
+```
+and to
+```
+for( int i = 0; i < 6; ++i ) hash.update( &message[i], 1 );
+```
+
+### result
+
+After the entire input message has been provided via calls to `update`, the
+final hash value can be obtained by calling `result`.
+
+The call to `result` finalizes the internal state, by padding the message as
+per the concrete algorithm specification, by optionally incorporating the
+length of the message into the state, and by performing finalization
+operations on the state, again as specified by the concrete algorithm.
+
+A final hash value is then obtained by transforming the internal state, and
+returned.
+
+Note that `result` is non-const, because it changes the internal state. It's
+allowed for `result` to be called more than once; subsequent calls perform
+the state finalization again and as a result produce a pseudorandom sequence
+of `result_type` values. This can be used to effectively extend the output of
+the hash function. For example, a 256 bit result can be obtained from a hash
+algorithm whose `result_type` is 64 bit, by calling `result` four times.
+
+As a toy example, _not intended for production use_, this is how one could
+write a random number generator on top of the FNV-1a implementation provided
+by the library:
+
+```
+std::uint64_t random()
+{
+    static boost::hash2::fnv1a_64 hash;
+    return hash.result();
+}
+```
+
+## Compile Time Hashing
+
+Under {cpp}14, it's possible to invoke some hash algorithms at compile time.
+These algorithms provide the following interface:
+
+```
+struct HashAlgorithm
+{
+    using result_type = /*integral or array-like*/;
+
+    static constexpr std::size_t block_size = /*...*/; // optional
+
+    constexpr HashAlgorithm();
+    explicit constexpr HashAlgorithm( std::uint64_t seed );
+    HashAlgorithm( void const* seed, std::size_t n );
+    constexpr HashAlgorithm( unsigned char const* seed, std::size_t n );
+
+    constexpr HashAlgorithm( HashAlgorithm const& r );
+    constexpr HashAlgorithm& operator=( HashAlgorithm const& r );
+
+    void update( void const* data, std::size_t n );
+    constexpr void update( unsigned char const* data, std::size_t n );
+
+    constexpr result_type result();
+};
+```
+
+Apart from the added `constexpr` qualifiers, the only difference is that
+the byte seed constructor and `update` have a second overload that takes
+`unsigned char const*` instead of `void const*`.
+(Pointers to `void` cannot be used in `constexpr` functions before {cpp}26.)
+
+## Provided Hash Algorithms
+
+### FNV-1a
+
+The https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function[Fowler-Noll-Vo hash function]
+is provided as a representative of the class of hash functions that process
+their input one byte at a time. The 32 or 64 bit state is updated for each
+input character `ch` by using the operation `state = (state ^ ch) * fnv_prime`.
+
+FNV-1a is non-cryptographic, relatively weak compared to state of the art
+hash functions (although good for its class), but fast when the input strings
+are short.
+
+### xxHash
+
+https://xxhash.com/[xxHash] is a fast non-cryptographic hashing algorithm by Yann Collet.
+
+Its speed (~5GB/s for `xxhash_32`, ~10GB/s for `xxhash_64` on a Xeon E5-2683 v4 @ 2.10GHz)
+makes it well suited for quick generation of file or data integrity checksums.
+
+### SipHash
+
+https://en.wikipedia.org/wiki/SipHash[SipHash] by Jean-Philippe Aumasson and Daniel J. Bernstein
+(https://eprint.iacr.org/2012/351[paper]) has been designed to thwart
+https://en.wikipedia.org/wiki/Collision_attack#Hash_flooding[hash flooding attacks] against hash tables that receive
+external untrusted input (e.g. HTTP message headers, or JSON objects.)
+
+It's not a cryptographic hash function (even though its design is similar to one),
+because it does not provide collision resistance when the initial seed is known.
+
+It is, however, a cryptographically strong keyed hash function (or a pseudorandom function, PRF).
+If the initial seed is unknown to the attacker, it's computationally difficult to engineer a collision, or to recover the seed by observing the output.
+
+SipHash has been adopted as the de-facto standard hash function for hash tables that can be exposed to external input,
+and is used in Python, Perl, Ruby, Rust, and other languages.
+
+SipHash is the recommended hash function for hash tables exposed to external input. As a best practice, it should be seeded with a random value that varies per connection, and not a fixed one per process.
+
+### MD5
+
+Designed in 1991 by Ron Rivest, https://en.wikipedia.org/wiki/MD5[MD5] used
+to be the best known and the most widely used https://en.wikipedia.org/wiki/Cryptographic_hash_function[cryptographic hash function],
+but has been broken and is no longer considered cryptographic for any purposes.
+It produces a 128 bit digest.
+
+MD5 should no longer be used in new code when cryptographic strength is required, except when implementing an existing
+specification or protocol that calls for its use.
+
+Prefer SHA2-512/256 (or SHA2-256 in 32 bit code) instead.
+
+If you require a digest of exactly 128 bits, use RIPEMD-128 instead.
+Do note that 128 bit digests are no longer considered cryptographic, because attacks with a complexity of 2^64^ are within the capabilities of well-funded attackers.
+
+### SHA-1
+
+https://en.wikipedia.org/wiki/SHA-1[SHA-1] is a cryptographic hash function that was designed by NSA and
+https://csrc.nist.gov/pubs/fips/180-1/final[published] in 1995 by https://en.wikipedia.org/wiki/NIST[NIST]
+as a https://en.wikipedia.org/wiki/Federal_Information_Processing_Standard[Federal Information Processing Standard] (FIPS).
+It produces a 160 bit digest.
+
+SHA-1 is now considered insecure against a well-funded attacker, and should no
+longer be used in new code. Prefer SHA2-512/256, SHA2-256 in 32 bit code, or, if
+you require a digest of exactly 160 bits, RIPEMD-160 instead.
+
+### SHA-2
+
+https://en.wikipedia.org/wiki/SHA-2[SHA-2] is a family of cryptographic hash functions, also designed by NSA,
+https://csrc.nist.gov/pubs/fips/180-2/upd1/final[initially published] by NIST in 2002,
+and https://csrc.nist.gov/pubs/fips/180-4/upd1/final[updated] in 2015.
+It includes SHA2-224, SHA2-256, SHA2-384, SHA2-512, SHA2-512/224, and SHA2-512/256, each producing a digest with the corresponding bit length.
+
+Of these, SHA2-256 and SHA2-512 are the basis ones, and the rest are variants with the digest truncated.
+
+The SHA-2 functions haven't been broken and are in wide use, despite the existence of a newer standard (SHA-3).
+
+SHA2-256 and its truncated variant SHA2-224 use 32 bit operations and therefore do not lose performance on a 32 bit platform.
+
+SHA2-512 and its truncated variants SHA2-384, SHA2-512/224, and SHA2-512/256 use 64 bit operations and are approximately 1.5 times as fast
+as SHA2-256 on a 64 bit platform, but twice as slow in 32 bit code.
+
+On 64 bit platforms, SHA2-512/256 and SHA2-512/224 should be preferred over SHA2-256 and SHA2-224 not just because of speed, but because
+they are resistant to length extension attacks as they don't expose all of the bits of their internal state in the final digest.
+
+### SHA-3
+
+https://en.wikipedia.org/wiki/SHA-3[SHA-3] is the most recent addition to the Secure Hash Algorithm standards, published in 2015
+as https://csrc.nist.gov/pubs/fips/202/final[FIPS 202].
+
+SHA-3 includes 6 algorithms: SHA3-224, SHA3-256, SHA3-384, SHA3-512, SHAKE128, and SHAKE256.
+
+The SHA3 functions output a fixed-sized digest while SHAKE128 and SHAKE256 are approved extendable-output functions, also known as XOFs. XOFs permit generation
+of an arbitrarily long message digest in a defined manner.
+
+Unlike SHA-2, SHA3-224 is not a truncated version of the SHA3-256 algorithm. Instead, all SHA-3 algorithms create their digests by truncating the
+lower portion of the 1600-bit state permuted by the Keccak algorithm. The XOFs return their digests incrementally as fixed-sized blocks, using the truncation specified
+in Algorithm 8, step 8 of FIPS 202.
+
+SHA-3 uses 64 bit operations for all of the algorithms in the family.
+
+### RIPEMD-160, RIPEMD-128
+
+Designed in 1996, https://en.wikipedia.org/wiki/RIPEMD[RIPEMD-160] is a cryptographic hash function that was less well known than MD5 and SHA-1,
+but that has recently become popular because of its use in Bitcoin and other cryptocurrencies.
+
+Even though it hasn't been broken, there's no reason to prefer its use in new code over SHA-2.
+
+RIPEMD-128 is a truncated variant of RIPEMD-160. (Do note that 128 bit digests are no longer considered cryptographic, because attacks with a complexity of 2^64^ are within the capabilities of well-funded attackers.)
+
+### HMAC
+
+https://en.wikipedia.org/wiki/HMAC[HMAC] (Hash-based Message Authentication Code) is an algorithm for deriving
+a _message authentication code_ by using a cryptographic hash function. It's described in https://datatracker.ietf.org/doc/html/rfc2104[RFC 2104].
+
+A message authentication code differs from a digest by the fact that it depends on both the contents of the message
+and on a secret _key_; in contrast, a message digest only depends on the contents of the message.
+
+Even though all hash algorithms provided by the library can be used to produce message authentication codes,
+by means of seeding the hash algorithm initially with a secret key by calling the constructor taking a byte
+sequence, hash algorithms have usually not been designed to be used in this manner, and such use hasn't been
+cryptographically analyzed and vetted. (SipHash is an exception; it has specifically been designed as a MAC.)
+
+The HMAC algorithm is provided in the form of a class template `hmac<H>` that adapts a cryptographic hash
+algorithm `H`. `hmac<H>` satisfies the requirements of a cryptographic hash algorithm.
+
+Convenience aliases of common HMAC instantiations are provided. For example, the `md5.hpp` header defining
+`md5_128` also defines `hmac_md5_128` as an alias to `hmac<md5_128>`.
+
+## Choosing a Hash Algorithm
+
+If your use case requires cryptographic strength, use SHA2-512/256 (or SHA2-256 in 32 bit code) for digests, and the corresponding HMAC for message authentication codes.
+
+NOTE: Digests of fewer than 256 bits in length are no longer recommended when cryptographic security is required or desired.
+
+For computing file or content checksums, when speed is of the essence and externally induced collisions aren't a concern, use xxHash-64.
+
+NOTE: xxHash-32 will be faster in 32 bit code, but since it only produces a 32 bit result, collisions will become an issue when the number of items reaches tens of thousands, which is usually unacceptable.
+
+For a large number of items (many millions), 64 bits may not be enough; in that case, use either MD5, or xxHash-64, <<example_result_extension,extended to 128 bits>>.
+
+NOTE: Even though MD5 is no longer cryptographically secure, it can still be used when cryptographic strength is not a requirement.
+
+For hash tables, use SipHash by default, <<example_use_with_unordered_containers,with a random (unpredictable from the outside) seed>> that varies per connection or per container. Avoid using a fixed processwide seed. Never use SipHash without a seed.
+
+For hash tables with very short keys (3-4-5 bytes), unexposed to external input, you can use FNV-1a, although the default hash function of e.g. `boost::unordered_flat_map` will typically perform better.

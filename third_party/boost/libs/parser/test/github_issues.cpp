@@ -237,6 +237,27 @@ void github_issue_125()
     }
 }
 
+void github_issue_209()
+{
+    namespace bp = boost::parser;
+
+    BOOST_TEST(std::is_sorted(
+        std::begin(bp::detail::char_set<detail::punct_chars>::chars),
+        std::end(bp::detail::char_set<detail::punct_chars>::chars)));
+
+    BOOST_TEST(std::is_sorted(
+        std::begin(bp::detail::char_set<detail::symb_chars>::chars),
+        std::end(bp::detail::char_set<detail::symb_chars>::chars)));
+
+    BOOST_TEST(std::is_sorted(
+        std::begin(bp::detail::char_set<detail::lower_case_chars>::chars),
+        std::end(bp::detail::char_set<detail::lower_case_chars>::chars)));
+
+    BOOST_TEST(std::is_sorted(
+        std::begin(bp::detail::char_set<detail::upper_case_chars>::chars),
+        std::end(bp::detail::char_set<detail::upper_case_chars>::chars)));
+}
+
 
 int main()
 {
@@ -246,5 +267,6 @@ int main()
     github_issue_78();
     github_issue_90();
     github_issue_125();
+    github_issue_209();
     return boost::report_errors();
 }

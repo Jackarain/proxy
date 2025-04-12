@@ -1,4 +1,4 @@
-/* Copyright 2016-2017 Joaquin M Lopez Munoz.
+/* Copyright 2016-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -12,6 +12,7 @@
 #include <boost/poly_collection/algorithm.hpp>
 #include <boost/poly_collection/any_collection.hpp>
 #include <boost/poly_collection/base_collection.hpp>
+#include <boost/poly_collection/variant_collection.hpp>
 #include <boost/type_erasure/any.hpp>
 #include <boost/type_erasure/any_cast.hpp>
 #include <boost/type_erasure/builtin.hpp>
@@ -31,6 +32,11 @@ std::ostream& operator<<(std::ostream& os,const window& w)
   w.display(os);
   return os;
 }
+
+template<typename... Ts>
+struct overloaded:Ts...{using Ts::operator()...;};
+template<class... Ts>
+overloaded(Ts...)->overloaded<Ts...>;
 
 int main()
 {
@@ -168,4 +174,33 @@ int main()
     });
   std::cout<<"\n";
 //]
+
+  {
+//[algorithms_9
+    boost::variant_collection<
+      boost::mp11::mp_list<warrior,juggernaut,goblin,elf,std::string,window>
+    > c;
+//=    ...
+//<-
+    c.insert(warrior(0));
+    c.insert(std::string("play again"));
+    c.insert(window("player one"));
+//->
+    
+    auto print_sprite=[](const sprite& s)       { s.render(std::cout); };
+    auto print_string=[](const std::string& str){ std::cout<<str; };
+    auto print_window=[](const window& w)       { w.display(std::cout); };
+    auto print=overloaded{print_sprite,print_string,print_window};
+
+    const char* comma="";
+    boost::poly_collection::for_each<boost::poly_collection::all_types>(
+      c.begin(),c.end(),[&](const auto& r){
+        std::cout<<comma;
+        print(r);
+        comma=",";
+    });
+    std::cout<<"\n";
+
+//]
+  }
 }

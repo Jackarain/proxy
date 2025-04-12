@@ -62,6 +62,24 @@ inline from_chars_result from_chars_dispatch(const char* first, const char* last
 }
 #endif
 
+template<typename Unsigned_Integer>
+typename std::enable_if<std::is_unsigned<Unsigned_Integer>::value &&
+                        std::numeric_limits<Unsigned_Integer>::is_integer &&
+                        sizeof(Unsigned_Integer) < sizeof(std::uint64_t),
+         from_chars_result>::type
+    from_chars_dispatch(const char* first, const char* last, Unsigned_Integer& value, int base) noexcept
+{
+    std::uint64_t tmp_value;
+    auto result = boost::charconv::detail::from_chars(first, last, tmp_value, base);
+    if (result) {
+        if (tmp_value > (std::numeric_limits<Unsigned_Integer>::max)())
+            result.ec = std::errc::result_out_of_range;
+        else
+            value = static_cast<Unsigned_Integer>(tmp_value);
+    }
+    return result;
+}
+
 template <typename Unsigned_Integer, typename Integer>
 inline from_chars_result parser(const char* first, const char* last, bool& sign, Unsigned_Integer& significand, Integer& exponent, chars_format fmt = chars_format::general) noexcept
 {
@@ -170,7 +188,7 @@ inline from_chars_result parser(const char* first, const char* last, bool& sign,
     }
 
     // Next we get the significand
-    constexpr std::size_t significand_buffer_size = limits<Unsigned_Integer>::max_chars10 - 1; // Base 10 or 16
+    constexpr std::size_t significand_buffer_size = limits<Unsigned_Integer>::max_chars10; // Base 10 or 16
     char significand_buffer[significand_buffer_size] {};
     std::size_t i = 0;
     std::size_t dot_position = 0;
@@ -234,6 +252,8 @@ inline from_chars_result parser(const char* first, const char* last, bool& sign,
 
             if (next == last)
             {
+                significand = 0;
+                exponent = 0;
                 return {last, std::errc()};
             }
         }
@@ -306,7 +326,6 @@ inline from_chars_result parser(const char* first, const char* last, bool& sign,
             return {first, std::errc::invalid_argument};
         }
 
-        exponent = static_cast<Integer>(i - 1);
         std::size_t offset = i;
         bool round = false;
         // If more digits are present than representable in the significand of the target type
@@ -345,9 +364,11 @@ inline from_chars_result parser(const char* first, const char* last, bool& sign,
 
             if (round)
             {
-                significand += 1;
+                significand = static_cast<Unsigned_Integer>(significand + 1u);
             }
         }
+        else
+            significand = 0;
     }
     else
     {

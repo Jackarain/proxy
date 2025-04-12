@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE library PUBLIC "-//Boost//DTD BoostBook XML V1.0//EN" "http://www.boost.org/tools/boostbook/dtd/boostbook.dtd">
+
+<!--
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+-->
+
+<informaltable frame="all">
+  <tgroup cols="4">
+    <colspec colname="a"/><colspec colname="b"/><colspec colname="c"/><colspec colname="d"/>
+    <tbody><row>
+      <entry valign="top">
+        <bridgehead renderas="sect3">Classes</bridgehead>
+        <simplelist type="vert" columns="1">
+          <member><link linkend="mqtt5.ref.boost__mqtt5__authority_path">authority_path</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__mqtt_client">mqtt_client</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_code">reason_code</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__subscribe_options">subscribe_options</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__subscribe_topic">subscribe_topic</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__will">will</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__prop__subscription_identifiers">subscription_identifiers</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__prop__properties">properties</link></member>
+        </simplelist>
+        <bridgehead renderas="sect3">Concepts</bridgehead>
+        <simplelist type="vert" columns="1">
+          <member><link linkend="mqtt5.ref.StreamType">StreamType</link></member>
+          <member><link linkend="mqtt5.ref.TlsContext">TlsContext</link></member>
+          <member><link linkend="mqtt5.ref.Authenticator">Authenticator</link></member>
+        </simplelist>
+      </entry>
+      <entry valign="top">
+        <bridgehead renderas="sect3">Type aliases</bridgehead>
+        <simplelist type="vert" columns="1">
+          <member><link linkend="mqtt5.ref.boost__mqtt5__error_code">error_code</link></member>
+        </simplelist>
+        <bridgehead renderas="sect3">Enumerations</bridgehead>
+        <simplelist type="vert" columns="1">
+          <member><link linkend="mqtt5.ref.boost__mqtt5__auth_step_e">auth_step_e</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__client__error">client::error</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__disconnect_rc_e">disconnect_rc_e</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__qos_e">qos_e</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__retain_e">retain_e</link></member>
+        </simplelist>
+      </entry>
+      <entry valign="top">
+        <bridgehead renderas="sect3">Properties</bridgehead>
+        <simplelist type="vert" columns="1">
+          <member><link linkend="mqtt5.ref.will_props">will_props</link></member>
+          <member><link linkend="mqtt5.ref.connect_props">connect_props</link></member>
+          <member><link linkend="mqtt5.ref.connack_props">connack_props</link></member>
+          <member><link linkend="mqtt5.ref.publish_props">publish_props</link></member>
+          <member><link linkend="mqtt5.ref.puback_props">puback_props</link></member>
+          <member><link linkend="mqtt5.ref.pubrec_props">pubrec_props</link></member>
+          <member><link linkend="mqtt5.ref.pubrel_props">pubrel_props</link></member>
+          <member><link linkend="mqtt5.ref.pubcomp_props">pubcomp_props</link></member>
+          <member><link linkend="mqtt5.ref.subscribe_props">subscribe_props</link></member>
+          <member><link linkend="mqtt5.ref.suback_props">suback_props</link></member>
+          <member><link linkend="mqtt5.ref.unsubscribe_props">unsubscribe_props</link></member>
+          <member><link linkend="mqtt5.ref.unsuback_props">unsuback_props</link></member>
+          <member><link linkend="mqtt5.ref.disconnect_props">disconnect_props</link></member>
+          <member><link linkend="mqtt5.ref.auth_props">auth_props</link></member>
+        </simplelist>
+      </entry>
+      <entry valign="top">
+        <bridgehead renderas="sect3">Reference tables</bridgehead>
+        <simplelist type="vert" columns="1">
+          <member><link linkend="mqtt5.ref.Reason_codes">Reason codes</link></member>
+          <member><link linkend="mqtt5.ref.Error_handling">Error handling</link></member>
+        </simplelist>
+        <bridgehead renderas="sect3">Logging</bridgehead>
+        <simplelist type="vert" columns="1">
+          <member><link linkend="mqtt5.ref.LoggerType">LoggerType</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__logger">logger</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__log_level">log_level</link></member>
+        </simplelist>
+      </entry>
+    </row></tbody>
+  </tgroup>
+</informaltable>

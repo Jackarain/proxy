@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE library PUBLIC "-//Boost//DTD BoostBook XML V1.0//EN" "http://www.boost.org/tools/boostbook/dtd/boostbook.dtd">
+
+<!--
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+-->
+
+<informaltable frame="all">
+  <tgroup cols="3">
+    <colspec colname="a"/><colspec colname="b"/><colspec colname="c"/>
+    <tbody><row>
+      <entry valign="top">
+        <bridgehead renderas="sect3">Success</bridgehead>
+        <simplelist type="vert" columns="1">
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__continue_authentication">continue_authentication</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__disconnect_with_will_message">disconnect_with_will_message</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__granted_qos_0">granted_qos_0</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__granted_qos_1">granted_qos_1</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__granted_qos_2">granted_qos_2</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__no_matching_subscribers">no_matching_subscribers</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__no_subscription_existed">no_subscription_existed</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__normal_disconnection">normal_disconnection</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__reauthenticate">reauthenticate</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__success">success</link></member>
+        </simplelist>
+      </entry>
+      <entry valign="top">
+        <bridgehead renderas="sect3">Error</bridgehead>
+        <simplelist type="vert" columns="1">
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__administrative_action">administrative_action</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__bad_authentication_method">bad_authentication_method</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__bad_username_or_password">bad_username_or_password</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__banned">banned</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__client_identifier_not_valid">client_identifier_not_valid</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__connection_rate_exceeded">connection_rate_exceeded</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__implementation_specific_error">implementation_specific_error</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__keep_alive_timeout">keep_alive_timeout</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__maximum_connect_time">maximum_connect_time</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__message_rate_too_high">message_rate_too_high</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__not_authorized">not_authorized</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__packet_identifier_in_use">packet_identifier_in_use</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__packet_identifier_not_found">packet_identifier_not_found</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__packet_too_large">packet_too_large</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__payload_format_invalid">payload_format_invalid</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__qos_not_supported">qos_not_supported</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__quota_exceeded">quota_exceeded</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__receive_maximum_exceeded">receive_maximum_exceeded</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__retain_not_supported">retain_not_supported</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__server_busy">server_busy</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__server_moved">server_moved</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__server_shutting_down">server_shutting_down</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__server_unavailable">server_unavailable</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__session_taken_over">session_taken_over</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__shared_subscriptions_not_supported">shared_subscriptions_not_supported</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__subscription_ids_not_supported">subscription_ids_not_supported</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__topic_alias_invalid">topic_alias_invalid</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__topic_filter_invalid">topic_filter_invalid</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__topic_name_invalid">topic_name_invalid</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__unsupported_protocol_version">unsupported_protocol_version</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__use_another_server">use_another_server</link></member>
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__wildcard_subscriptions_not_supported">wildcard_subscriptions_not_supported</link></member>
+        </simplelist>
+      </entry>
+      <entry valign="top">
+        <bridgehead renderas="sect3">Special</bridgehead>
+        <simplelist type="vert" columns="1">
+          <member><link linkend="mqtt5.ref.boost__mqtt5__reason_codes__empty">empty</link></member>
+        </simplelist>
+      </entry>
+    </row></tbody>
+  </tgroup>
+</informaltable>

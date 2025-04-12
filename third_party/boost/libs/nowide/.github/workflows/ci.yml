@@ -1,6 +1,6 @@
 # Copyright 2020-2021 Peter Dimov
 # Copyright 2021 Andrey Semashev
-# Copyright 2021 Alexander Grund
+# Copyright 2021-2025 Alexander Grund
 # Copyright 2022 James E. King III
 #
 # Distributed under the Boost Software License, Version 1.0.
@@ -44,56 +44,71 @@ jobs:
       matrix:
         include:
           # Linux, gcc
-          - { compiler: gcc-4.4,   cxxstd: '98,0x',          os: ubuntu-22.04, container: 'ubuntu:16.04' }
-          - { compiler: gcc-4.6,   cxxstd: '03,0x',          os: ubuntu-22.04, container: 'ubuntu:16.04' }
-          - { compiler: gcc-4.7,   cxxstd: '03,11',          os: ubuntu-22.04, container: 'ubuntu:16.04' }
-          - { compiler: gcc-4.8,   cxxstd: '03,11',          os: ubuntu-22.04, container: 'ubuntu:16.04' }
-          - { compiler: gcc-4.9,   cxxstd: '03,11',          os: ubuntu-22.04, container: 'ubuntu:16.04' }
-          - { compiler: gcc-5,     cxxstd: '03,11,14,1z',    os: ubuntu-22.04, container: 'ubuntu:18.04' }
-          - { compiler: gcc-6,     cxxstd: '03,11,14,17',    os: ubuntu-22.04, container: 'ubuntu:18.04' }
-          - { compiler: gcc-7,     cxxstd: '03,11,14,17',    os: ubuntu-20.04 }
-          - { compiler: gcc-8,     cxxstd: '03,11,14,17,2a', os: ubuntu-20.04 }
-          - { compiler: gcc-9,     cxxstd: '03,11,14,17,2a', os: ubuntu-20.04 }
-          - { compiler: gcc-10,    cxxstd: '03,11,14,17,20', os: ubuntu-20.04 }
-          - { compiler: gcc-11,    cxxstd: '03,11,14,17,20', os: ubuntu-20.04 }
-          - { compiler: gcc-12,    cxxstd: '03,11,14,17,20', os: ubuntu-22.04 }
+          - { compiler: gcc-4.4,   cxxstd: '98,0x',          os: ubuntu-latest, container: 'ubuntu:16.04' }
+          - { compiler: gcc-4.6,   cxxstd: '03,0x',          os: ubuntu-latest, container: 'ubuntu:16.04' }
+          - { compiler: gcc-4.7,   cxxstd: '03,11',          os: ubuntu-latest, container: 'ubuntu:16.04' }
+          - { compiler: gcc-4.8,   cxxstd: '03,11',          os: ubuntu-latest, container: 'ubuntu:16.04' }
+          - { compiler: gcc-4.9,   cxxstd: '03,11',          os: ubuntu-latest, container: 'ubuntu:16.04' }
+          - { compiler: gcc-5,     cxxstd: '03,11,14,1z',    os: ubuntu-latest, container: 'ubuntu:18.04' }
+          - { compiler: gcc-6,     cxxstd: '11,14,17',       os: ubuntu-latest, container: 'ubuntu:18.04' }
+          - { compiler: gcc-7,     cxxstd: '11,14,17',       os: ubuntu-20.04 }
+          - { compiler: gcc-8,     cxxstd: '11,14,17,2a',    os: ubuntu-20.04 }
+          - { compiler: gcc-9,     cxxstd: '11,14,17,2a',    os: ubuntu-20.04 }
+          - { compiler: gcc-10,    cxxstd: '11,14,17,20',    os: ubuntu-22.04 }
+          - { compiler: gcc-11,    cxxstd: '11,14,17,20',    os: ubuntu-22.04 }
+          - { compiler: gcc-12,    cxxstd: '11,14,17,20',    os: ubuntu-22.04 }
+          - { compiler: gcc-13,    cxxstd: '11,14,17,20,2b', os: ubuntu-24.04 }
+          - { compiler: gcc-14,    cxxstd: '11,14,17,20,2b', os: ubuntu-24.04 }
+
           - { name: GCC w/ sanitizers, sanitize: yes,
-              compiler: gcc-12,    cxxstd: '03,11,14,17,20', os: ubuntu-22.04 }
+              compiler: gcc-13,    cxxstd: '11,14,17,20',    os: ubuntu-24.04 }
           - { name: Collect coverage, coverage: yes,
-              compiler: gcc-8,     cxxstd: '03,11,14,17,2a', os: ubuntu-20.04, install: 'g++-8-multilib', address-model: '32,64' }
+              compiler: gcc-8,     cxxstd: '11,14,17,2a',    os: ubuntu-20.04, install: 'g++-8-multilib', address-model: '32,64' }
 
           # Linux, clang
-          - { compiler: clang-3.5, cxxstd: '03,11',          os: ubuntu-22.04, container: 'ubuntu:16.04' }
-          - { compiler: clang-3.6, cxxstd: '03,11,14',       os: ubuntu-22.04, container: 'ubuntu:16.04' }
-          - { compiler: clang-3.7, cxxstd: '03,11,14',       os: ubuntu-22.04, container: 'ubuntu:16.04' }
-          - { compiler: clang-3.8, cxxstd: '03,11,14',       os: ubuntu-22.04, container: 'ubuntu:16.04' }
-          - { compiler: clang-3.9, cxxstd: '03,11,14',       os: ubuntu-22.04, container: 'ubuntu:18.04' }
-          - { compiler: clang-4.0, cxxstd: '03,11,14',       os: ubuntu-22.04, container: 'ubuntu:18.04' }
-          - { compiler: clang-5.0, cxxstd: '03,11,14,1z',    os: ubuntu-22.04, container: 'ubuntu:18.04' }
-          - { compiler: clang-6.0, cxxstd: '03,11,14,17',    os: ubuntu-22.04, container: 'ubuntu:18.04' }
-          - { compiler: clang-7,   cxxstd: '03,11,14,17',    os: ubuntu-22.04, container: 'ubuntu:18.04' }
+          - { compiler: clang-3.5, cxxstd: '11',             os: ubuntu-latest, container: 'ubuntu:16.04' }
+          - { compiler: clang-3.6, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:16.04' }
+          - { compiler: clang-3.7, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:16.04' }
+          - { compiler: clang-3.8, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:16.04' }
+          - { compiler: clang-3.9, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:18.04' }
+          - { compiler: clang-4.0, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:18.04' }
+          - { compiler: clang-5.0, cxxstd: '11,14,1z',       os: ubuntu-latest, container: 'ubuntu:18.04' }
+          - { compiler: clang-6.0, cxxstd: '11,14,17',       os: ubuntu-20.04 }
+          - { compiler: clang-7,   cxxstd: '11,14,17',       os: ubuntu-20.04 }
           # Note: clang-8 does not fully support C++20, so it is not compatible with some libstdc++ versions in this mode
-          - { compiler: clang-8,   cxxstd: '03,11,14,17,2a', os: ubuntu-22.04, container: 'ubuntu:18.04', install: 'clang-8 g++-7', gcc_toolchain: 7 }
-          - { compiler: clang-9,   cxxstd: '03,11,14,17,2a', os: ubuntu-20.04 }
-          - { compiler: clang-10,  cxxstd: '03,11,14,17,20', os: ubuntu-20.04 }
-          - { compiler: clang-11,  cxxstd: '03,11,14,17,20', os: ubuntu-20.04 }
-          - { compiler: clang-12,  cxxstd: '03,11,14,17,20', os: ubuntu-20.04 }
+          - { compiler: clang-8,   cxxstd: '11,14,17,2a',    os: ubuntu-20.04 , install: 'clang-8 g++-7', gcc_toolchain: 7 }
+          - { compiler: clang-9,   cxxstd: '11,14,17,2a',    os: ubuntu-20.04 }
+          - { compiler: clang-10,  cxxstd: '11,14,17,20',    os: ubuntu-20.04 }
+          - { compiler: clang-11,  cxxstd: '11,14,17,20',    os: ubuntu-20.04 }
+          - { compiler: clang-12,  cxxstd: '11,14,17,20',    os: ubuntu-20.04 }
           # Clang isn't compatible with libstdc++-13, so use the slightly older one
-          - { compiler: clang-13,  cxxstd: '03,11,14,17,20', os: ubuntu-22.04, install: 'clang-13 g++-12', gcc_toolchain: 12 }
-          - { compiler: clang-14,  cxxstd: '03,11,14,17,20', os: ubuntu-22.04, install: 'clang-14 g++-12', gcc_toolchain: 12 }
+          - { compiler: clang-13,  cxxstd: '11,14,17,20',    os: ubuntu-22.04, install: 'clang-13 g++-12', gcc_toolchain: 12 }
+          - { compiler: clang-14,  cxxstd: '11,14,17,20',    os: ubuntu-22.04, install: 'clang-14 g++-12', gcc_toolchain: 12 }
+          - { compiler: clang-15,  cxxstd: '11,14,17,20',    os: ubuntu-22.04, install: 'clang-15 g++-12', gcc_toolchain: 12 }
+          - { compiler: clang-16,  cxxstd: '11,14,17,20,2b', os: ubuntu-24.04 }
+          # https://github.com/llvm/llvm-project/issues/59827: disabled 2b/23 for clang-17 with libstdc++13 in 24.04
+          - { compiler: clang-17,  cxxstd: '11,14,17,20',    os: ubuntu-24.04 }
+          - { compiler: clang-18,  cxxstd: '11,14,17,20,23,2c', os: ubuntu-24.04 }
 
           # libc++
-          - { compiler: clang-6.0, cxxstd: '03,11,14',       os: ubuntu-22.04, container: 'ubuntu:18.04', stdlib: libc++, install: 'clang-6.0 libc++-dev libc++abi-dev' }
-          - { compiler: clang-12,  cxxstd: '03,11,14,17,20', os: ubuntu-20.04, stdlib: libc++, install: 'clang-12 libc++-12-dev libc++abi-12-dev' }
+          - { compiler: clang-6.0, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:18.04', stdlib: libc++, install: 'clang-6.0 libc++-dev libc++abi-dev' }
+          - { compiler: clang-12,  cxxstd: '11,14,17,20',    os: ubuntu-20.04, stdlib: libc++, install: 'clang-12 libc++-12-dev libc++abi-12-dev' }
           - { name: Clang w/ sanitizers, sanitize: yes,
-              compiler: clang-14,  cxxstd: '03,11,14,17,20', os: ubuntu-22.04, stdlib: libc++, install: 'clang-14 libc++-14-dev libc++abi-14-dev' }
+              compiler: clang-14,  cxxstd: '11,14,17,20',    os: ubuntu-22.04, stdlib: libc++, install: 'clang-14 libc++-14-dev libc++abi-14-dev' }
 
           # OSX, clang
-          - { compiler: clang,     cxxstd: '03,11,14,17,2a', os: macos-11, sanitize: yes }
+          - { name: MacOS w/ clang and sanitizers,
+              compiler: clang,     cxxstd: '11,14,17,20,2b', os: macos-13, sanitize: yes }
+          - { compiler: clang,     cxxstd: '11,14,17,20,2b', os: macos-14 }
+          - { compiler: clang,     cxxstd: '11,14,17,20,2b', os: macos-15 }
 
     timeout-minutes: 120
     runs-on: ${{matrix.os}}
-    container: ${{matrix.container}}
+    container:
+      image: ${{matrix.container}}
+      volumes:
+        - /node20217:/node20217:rw,rshared
+        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
     env: {B2_USE_CCACHE: 1}
 
     steps:
@@ -105,37 +120,50 @@ jobs:
             fi
             if [ -n "${{matrix.container}}" ] && [ -f "/etc/debian_version" ]; then
                 apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
-                apt-get -o Acquire::Retries=$NET_RETRY_COUNT install -y sudo software-properties-common curl
+                apt-get -o Acquire::Retries=$NET_RETRY_COUNT -y -q --no-install-suggests --no-install-recommends install sudo software-properties-common curl
                 # Need (newer) git, and the older Ubuntu container may require requesting the key manually using port 80
-                curl -sSL --retry ${NET_RETRY_COUNT:-5} 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0xE1DD270288B4E6030699E45FA1715D88E1DF1F24' | sudo gpg --dearmor > /etc/apt/trusted.gpg.d/git-core_ubuntu_ppa.gpg
+                curl -sSL --retry ${NET_RETRY_COUNT:-5} 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0xE1DD270288B4E6030699E45FA1715D88E1DF1F24' | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/git-core_ubuntu_ppa.gpg
                 for i in {1..${NET_RETRY_COUNT:-3}}; do sudo -E add-apt-repository -y ppa:git-core/ppa && break || sleep 10; done
                 apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
-                apt-get -o Acquire::Retries=$NET_RETRY_COUNT install -y g++ python libpython-dev git
+                osver=$(lsb_release -sr | cut -f1 -d.)
+                pkgs="g++ git xz-utils"
+                # Ubuntu 22+ has only Python 3 in the repos
+                if [ -n "$osver" ] && [ "$osver" -ge "22" ]; then
+                  pkgs+=" python-is-python3 libpython3-dev"
+                else
+                  pkgs+=" python libpython-dev"
+                fi
+                apt-get -o Acquire::Retries=$NET_RETRY_COUNT -y -q --no-install-suggests --no-install-recommends install $pkgs
             fi
             # For jobs not compatible with ccache, use "ccache: no" in the matrix
             if [[ "${{ matrix.ccache }}" == "no" ]]; then
                 echo "B2_USE_CCACHE=0" >> $GITHUB_ENV
             fi
+            if [[ "${{ matrix.sanitize }}" == "yes" ]]; then
+                echo "LSAN_OPTIONS=suppressions=${GITHUB_WORKSPACE}/test/suppressions.txt" >> $GITHUB_ENV
+            fi
             git config --global pack.threads 0
+            if [[ "${{matrix.container}}" == "ubuntu:1"* ]]; then
+              # Node 20 doesn't work with Ubuntu 16/18  glibc: https://github.com/actions/checkout/issues/1590
+              curl -sL https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz | tar -xJ --strip-components 1 -C /node20217
+            fi
             ! command -v cmake &> /dev/null || echo "B2_FLAGS=--nowide-enable-cmake" >> $GITHUB_ENV
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           # For coverage builds fetch the whole history, else only 1 commit using a 'fake ternary'
           fetch-depth: ${{ matrix.coverage && '0' || '1' }}
 
       - name: Cache ccache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         if: env.B2_USE_CCACHE
         with:
           path: ~/.ccache
           key: ${{matrix.os}}-${{matrix.container}}-${{matrix.compiler}}-${{github.sha}}
-          restore-keys: |
-            ${{matrix.os}}-${{matrix.container}}-${{matrix.compiler}}-
-            ${{matrix.os}}-${{matrix.container}}-${{matrix.compiler}}
+          restore-keys: ${{matrix.os}}-${{matrix.container}}-${{matrix.compiler}}-
 
       - name: Fetch Boost.CI
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: boostorg/boost-ci
           ref: master
@@ -150,21 +178,17 @@ jobs:
       - name: Install packages
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-            SOURCE_KEYS=(${{join(matrix.source_keys, ' ')}})
-            SOURCES=(${{join(matrix.sources, ' ')}})
+            SOURCE_KEYS=("${{join(matrix.source_keys, '" "')}}")
+            SOURCES=("${{join(matrix.sources, '" "')}}")
             # Add this by default
+            SOURCE_KEYS+=('http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x1E9377A2BA9EF27F')
             SOURCES+=(ppa:ubuntu-toolchain-r/test)
-            for key in "${SOURCE_KEYS[@]}"; do
-                for i in {1..$NET_RETRY_COUNT}; do
-                    keyfilename=$(basename -s .key $key)
-                    curl -sSL --retry ${NET_RETRY_COUNT:-5} "$key" | sudo gpg --dearmor > /etc/apt/trusted.gpg.d/${keyfilename} && break || sleep 10
-                done
-            done
-            for source in "${SOURCES[@]}"; do
-                for i in {1..$NET_RETRY_COUNT}; do
-                    sudo add-apt-repository $source && break || sleep 10
-                done
-            done
+
+            ci/add-apt-keys.sh "${SOURCE_KEYS[@]}"
+            # Initial update before adding sources required to get e.g. keys
+            sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
+            ci/add-apt-repositories.sh "${SOURCES[@]}"
+
             sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
             if [[ -z "${{matrix.install}}" ]]; then
                 pkgs="${{matrix.compiler}}"
@@ -172,7 +196,7 @@ jobs:
             else
                 pkgs="${{matrix.install}}"
             fi
-            sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT install -y $pkgs
+            sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT -y -q --no-install-suggests --no-install-recommends install $pkgs
 
       - name: Setup GCC Toolchain
         if: matrix.gcc_toolchain
@@ -180,7 +204,7 @@ jobs:
             GCC_TOOLCHAIN_ROOT="$HOME/gcc-toolchain"
             echo "GCC_TOOLCHAIN_ROOT=$GCC_TOOLCHAIN_ROOT" >> $GITHUB_ENV
             if ! command -v dpkg-architecture; then
-                apt-get install -y dpkg-dev
+                apt-get -o Acquire::Retries=$NET_RETRY_COUNT -y -q --no-install-suggests --no-install-recommends install dpkg-dev
             fi
             MULTIARCH_TRIPLET="$(dpkg-architecture -qDEB_HOST_MULTIARCH)"
             mkdir -p "$GCC_TOOLCHAIN_ROOT"
@@ -191,15 +215,11 @@ jobs:
 
       - name: Setup multiarch
         if: matrix.multiarch
-        run: |
-          sudo apt-get install --no-install-recommends -y binfmt-support qemu-user-static
-          sudo docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-          git clone https://github.com/jeking3/bdde.git
-          echo "$(pwd)/bdde/bin/linux" >> ${GITHUB_PATH}
-          echo "BDDE_DISTRO=${{ matrix.distro }}" >> ${GITHUB_ENV}
-          echo "BDDE_EDITION=${{ matrix.edition }}" >> ${GITHUB_ENV}
-          echo "BDDE_ARCH=${{ matrix.arch }}" >> ${GITHUB_ENV}
-          echo "B2_WRAPPER=bdde" >> ${GITHUB_ENV}
+        env:
+          BDDE_DISTRO: ${{matrix.distro}}
+          BDDE_EDITION: ${{matrix.edition}}
+          BDDE_ARCH: ${{matrix.arch}}
+        run: ci/github/setup_bdde.sh
 
       - name: Setup Boost
         env:
@@ -208,6 +228,13 @@ jobs:
           B2_CXXSTD: ${{matrix.cxxstd}}
           B2_SANITIZE: ${{matrix.sanitize}}
           B2_STDLIB: ${{matrix.stdlib}}
+          # More entries can be added in the same way, see the B2_ARGS assignment in ci/enforce.sh for the possible keys.
+          # B2_DEFINES: ${{matrix.defines}}
+          # Variables set here (to non-empty) will override the top-level environment variables, e.g.
+          # B2_VARIANT: ${{matrix.variant}}
+          # Set the (B2) target(s) to build, defaults to the test folder of the current library
+          # Can alternatively be done like this in the build step or in the build command of the build step, e.g. `run: B2_TARGETS=libs/$SELF/doc ci/build.sh`
+          # B2_TARGETS: libs/foo/test//bar
         run: source ci/github/install.sh
 
       - name: Setup coverage collection
@@ -223,9 +250,21 @@ jobs:
           B2_FLAGS: boost.nowide.lfs=no
         run: ci/build.sh
 
+      - name: Collect coverage
+        if: matrix.coverage
+        run: ci/codecov.sh "collect"
+
       - name: Upload coverage
         if: matrix.coverage
-        run: ci/codecov.sh "upload"
+        uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          disable_search: true
+          files: coverage.info
+          name: Github Actions
+          token: ${{secrets.CODECOV_TOKEN}}
+          verbose: true
+          working-directory: ${{env.BOOST_CI_SRC_FOLDER}}
 
       - name: Run coverity
         if: matrix.coverity && github.event_name == 'push' && (github.ref_name == 'develop' || github.ref_name == 'master')
@@ -248,7 +287,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup MSYS2 environment
         uses: msys2/setup-msys2@v2
@@ -259,7 +298,7 @@ jobs:
           pacboy: gcc:p cmake:p ninja:p
 
       - name: Fetch Boost.CI
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: boostorg/boost-ci
           ref: master
@@ -308,9 +347,9 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Fetch Boost.CI
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: boostorg/boost-ci
           ref: master

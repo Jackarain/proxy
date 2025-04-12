@@ -51,7 +51,7 @@ void unset(basic_cstring_ref<char_type, key_char_traits<char_type>> key, error_c
 }
 
 
-native_handle_type load_native_handle() { return ::environ; }
+native_handle_type load_native_handle() { return environ; }
 
 
 native_iterator next(native_iterator nh)

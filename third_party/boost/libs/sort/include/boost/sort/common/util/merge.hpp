@@ -13,7 +13,6 @@
 #ifndef __BOOST_SORT_COMMON_UTIL_MERGE_HPP
 #define __BOOST_SORT_COMMON_UTIL_MERGE_HPP
 
-#include <ciso646>
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -107,29 +106,29 @@ static Iter3_t merge(Iter1_t buf1, const Iter1_t end_buf1, Iter2_t buf2,
         if (buf1 == end_buf1) return move_forward(buf_out, buf2, end_buf2);
         if (buf2 == end_buf2) return move_forward(buf_out, buf1, end_buf1);
 
-        if (not comp(*buf2, *(end_buf1 - 1)))
+        if (! comp(*buf2, *(end_buf1 - 1)))
         {
             Iter3_t mid = move_forward(buf_out, buf1, end_buf1);
             return move_forward(mid, buf2, end_buf2);
-        };
+        }
 
         if (comp(*(end_buf2 - 1), *buf1))
         {
             Iter3_t mid = move_forward(buf_out, buf2, end_buf2);
             return move_forward(mid, buf1, end_buf1);
-        };
-    };
-    while ((buf1 != end_buf1) and (buf2 != end_buf2))
+        }
+    }
+    while ((buf1 != end_buf1) && (buf2 != end_buf2))
     {
-        *(buf_out++) = (not comp(*buf2, *buf1)) ?
+        *(buf_out++) = (! comp(*buf2, *buf1)) ?
                         std::move(*(buf1++)) : std::move(*(buf2++));
-    };
+    }
 
     return (buf1 == end_buf1) ?
                     move_forward(buf_out, buf2, end_buf2) :
                     move_forward(buf_out, buf1, end_buf1);
 }
-;
+
 //
 //-----------------------------------------------------------------------------
 //  function : merge_construct
@@ -168,29 +167,29 @@ static Value_t *merge_construct(Iter1_t first1, const Iter1_t last1,
         if (first1 == last1) return move_construct(it_out, first2, last2);
         if (first2 == last2) return move_construct(it_out, first1, last1);
 
-        if (not comp(*first2, *(last1 - 1)))
+        if (! comp(*first2, *(last1 - 1)))
         {
             Value_t* mid = move_construct(it_out, first1, last1);
             return move_construct(mid, first2, last2);
-        };
+        }
 
         if (comp(*(last2 - 1), *first1))
         {
             Value_t* mid = move_construct(it_out, first2, last2);
             return move_construct(mid, first1, last1);
-        };
-    };
-    while (first1 != last1 and first2 != last2)
+        }
+    }
+    while (first1 != last1 && first2 != last2)
     {
         construct_object((it_out++),
-                        (not comp(*first2, *first1)) ?
+                        (! comp(*first2, *first1)) ?
                                         std::move(*(first1++)) :
                                         std::move(*(first2++)));
-    };
+    }
     return (first1 == last1) ?
                     move_construct(it_out, first2, last2) :
                     move_construct(it_out, first1, last1);
-};
+}
 //
 //---------------------------------------------------------------------------
 //  function : merge_half
@@ -232,25 +231,25 @@ static Iter2_t merge_half(Iter1_t buf1, const Iter1_t end_buf1, Iter2_t buf2,
         if (buf1 == end_buf1) return end_buf2;
         if (buf2 == end_buf2) return move_forward(buf_out, buf1, end_buf1);
 
-        if (not comp(*buf2, *(end_buf1 - 1)))
+        if (! comp(*buf2, *(end_buf1 - 1)))
         {
             move_forward(buf_out, buf1, end_buf1);
             return end_buf2;
-        };
+        }
 
         if (comp(*(end_buf2 - 1), *buf1))
         {
             Iter2_t mid = move_forward(buf_out, buf2, end_buf2);
             return move_forward(mid, buf1, end_buf1);
-        };
-    };
-    while ((buf1 != end_buf1) and (buf2 != end_buf2))
+        }
+    }
+    while ((buf1 != end_buf1) && (buf2 != end_buf2))
     {
-        *(buf_out++) = (not comp(*buf2, *buf1)) ?
+        *(buf_out++) = (! comp(*buf2, *buf1)) ?
                         std::move(*(buf1++)) : std::move(*(buf2++));
-    };
+    }
     return (buf2 == end_buf2)? move_forward(buf_out, buf1, end_buf1) : end_buf2;
-};
+}
 
 //
 //---------------------------------------------------------------------------
@@ -295,28 +294,28 @@ static Iter2_t merge_half_backward(Iter1_t buf1, Iter1_t end_buf1, Iter2_t buf2,
         if (buf1 == end_buf1)
             return here::move_backward(end_buf_out, buf2, end_buf2);
 
-        if (not comp(*buf2, *(end_buf1 - 1)))
+        if (! comp(*buf2, *(end_buf1 - 1)))
         {
             here::move_backward(end_buf_out, buf2, end_buf2);
             return buf1;
-        };
+        }
 
         if (comp(*(end_buf2 - 1), *buf1))
         {
             Iter1_t mid = here::move_backward(end_buf_out, buf1, end_buf1);
             return here::move_backward(mid, buf2, end_buf2);
-        };
-    };
-    while ((buf1 != end_buf1) and (buf2 != end_buf2))
+        }
+    }
+    while ((buf1 != end_buf1) && (buf2 != end_buf2))
     {
         *(--end_buf_out) =
-                        (not comp(*(end_buf2 - 1), *(end_buf1 - 1))) ?
+                        (! comp(*(end_buf2 - 1), *(end_buf1 - 1))) ?
                                         std::move(*(--end_buf2)):
                                         std::move(*(--end_buf1));
-    };
+    }
     return (buf1 == end_buf1) ?
                     here::move_backward(end_buf_out, buf2, end_buf2) : buf1;
-};
+}
 
 //
 //-----------------------------------------------------------------------------
@@ -352,19 +351,19 @@ static bool merge_uncontiguous(Iter1_t src1, const Iter1_t end_src1,
     //-------------------------------------------------------------------------
     //                    Code
     //-------------------------------------------------------------------------
-    if (src1 == end_src1 or src2 == end_src2
-                    or not comp(*src2, *(end_src1 - 1))) return true;
+    if (src1 == end_src1 || src2 == end_src2
+                    || ! comp(*src2, *(end_src1 - 1))) return true;
 
-    while (src1 != end_src1 and not comp(*src2, *src1))
+    while (src1 != end_src1 && ! comp(*src2, *src1))
         ++src1;
 
     Iter3_t const end_aux = aux + (end_src1 - src1);
     Iter2_t src2_first = src2;
     move_forward(aux, src1, end_src1);
 
-    while ((src1 != end_src1) and (src2 != end_src2))
+    while ((src1 != end_src1) && (src2 != end_src2))
     {
-        *(src1++) = std::move((not comp(*src2, *aux)) ? *(aux++) : *(src2++));
+        *(src1++) = std::move((! comp(*src2, *aux)) ? *(aux++) : *(src2++));
     }
 
     if (src2 == end_src2)
@@ -376,9 +375,9 @@ static bool merge_uncontiguous(Iter1_t src1, const Iter1_t end_src1,
     else
     {
         merge_half(aux, end_aux, src2, end_src2, src2_first, comp);
-    };
+    }
     return false;
-};
+}
 
 //
 //-----------------------------------------------------------------------------
@@ -409,11 +408,11 @@ static bool merge_contiguous(Iter1_t src1, Iter1_t src2, Iter1_t end_src2,
     //-------------------------------------------------------------------------
     //                         Code
     //-------------------------------------------------------------------------
-    if (src1 == src2 or src2 == end_src2 or not comp(*src2, *(src2 - 1)))
+    if (src1 == src2 || src2 == end_src2 || ! comp(*src2, *(src2 - 1)))
         return true;
 
     Iter1_t end_src1 = src2;
-    while (src1 != end_src1 and not comp(*src2, *src1))
+    while (src1 != end_src1 && ! comp(*src2, *src1))
         ++src1;
 
     if (src1 == end_src1) return false;
@@ -422,7 +421,7 @@ static bool merge_contiguous(Iter1_t src1, Iter1_t src2, Iter1_t end_src2,
     move_forward(buf, src1, end_src1);
     merge_half(buf, buf + nx, src2, end_src2, src1, comp);
     return false;
-};
+}
 //
 //-----------------------------------------------------------------------------
 //  function : merge_circular
@@ -460,13 +459,13 @@ static bool merge_circular(Iter1_t buf1, Iter1_t end_buf1, Iter2_t buf2,
     assert ( circ.free_size() >= size_t ((end_buf1-buf1) + (end_buf2-buf2)));
 #endif
 
-    if (not comp(*buf2, *(end_buf1 - 1)))
+    if (! comp(*buf2, *(end_buf1 - 1)))
     {
         circ.push_move_back(buf1, (end_buf1 - buf1));
         it1_out = end_buf1;
         it2_out = buf2;
         return true;
-    };
+    }
     if (comp(*(end_buf2 - 1), *buf1))
     {
         circ.push_move_back(buf2, (end_buf2 - buf2));
@@ -474,22 +473,22 @@ static bool merge_circular(Iter1_t buf1, Iter1_t end_buf1, Iter2_t buf2,
         it2_out = end_buf2;
         return false;
     }
-    while (buf1 != end_buf1 and buf2 != end_buf2)
+    while (buf1 != end_buf1 && buf2 != end_buf2)
     {
         circ.push_back(comp(*buf2, *buf1) ? std::move(*(buf2++))
                                           : std::move(*(buf1++)));
-    };
+    }
     it2_out = buf2;
     it1_out = buf1;
     bool ret = (buf1 == end_buf1);
     return ret;
-};
+}
 //
 //****************************************************************************
-};//    End namespace util
-};//    End namespace common
-};//    End namespace sort
-};//    End namespace boost
+} //    End namespace util
+} //    End namespace common
+} //    End namespace sort
+} //    End namespace boost
 //****************************************************************************
 //
 #endif

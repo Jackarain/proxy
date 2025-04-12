@@ -210,6 +210,9 @@ BOOST_AUTO_TEST_CASE(test_generation) {
     boost::minstd_rand0 gen;
     BOOST_RANDOM_DISTRIBUTION dist BOOST_RANDOM_TEST1_PARAMS;
     BOOST_RANDOM_DISTRIBUTION dist_two BOOST_RANDOM_TEST2_PARAMS;
+#ifdef BOOST_RANDOM_TEST3_PARAMS
+    BOOST_RANDOM_DISTRIBUTION dist_three BOOST_RANDOM_TEST3_PARAMS;
+#endif
     typedef BOOST_RANDOM_DISTRIBUTION::result_type result_type;
     for(int i = 0; i < 10; ++i) {
         result_type value = dist(gen);
@@ -228,6 +231,16 @@ BOOST_AUTO_TEST_CASE(test_generation) {
 #ifdef BOOST_RANDOM_TEST2_MAX
         BOOST_CHECK_LE(value_two, BOOST_RANDOM_TEST2_MAX);
 #endif
+#ifdef BOOST_RANDOM_TEST3_PARAMS
+    	result_type value_three = dist_three(gen);
+    	use(value_three);
+#endif
+#ifdef BOOST_RANDOM_TEST3_MIN
+        BOOST_CHECK_GE(value_three, BOOST_RANDOM_TEST3_MIN);
+#endif
+#ifdef BOOST_RANDOM_TEST3_MAX
+        BOOST_CHECK_LE(value_three, BOOST_RANDOM_TEST3_MAX);
+#endif
         result_type value_param = dist_two(gen, dist.param());
         use(value_param);
 #ifdef BOOST_RANDOM_TEST1_MIN
@@ -243,6 +256,16 @@ BOOST_AUTO_TEST_CASE(test_generation) {
 #endif
 #ifdef BOOST_RANDOM_TEST2_MAX
         BOOST_CHECK_LE(value_two_param, BOOST_RANDOM_TEST2_MAX);
+#endif
+#ifdef BOOST_RANDOM_TEST3_PARAMS
+    	result_type value_three_param = dist(gen, dist_three.param());
+        use(value_three_param);
+#endif
+#ifdef BOOST_RANDOM_TEST3_MIN
+        BOOST_CHECK_GE(value_three_param, BOOST_RANDOM_TEST3_MIN);
+#endif
+#ifdef BOOST_RANDOM_TEST3_MAX
+        BOOST_CHECK_LE(value_three_param, BOOST_RANDOM_TEST3_MAX);
 #endif
     }
 }

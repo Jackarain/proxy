@@ -7,7 +7,6 @@
 =============================================================================*/
 
 #include "common_heap_tests.hpp"
-#include <boost/foreach.hpp>
 
 struct q_tester
 {

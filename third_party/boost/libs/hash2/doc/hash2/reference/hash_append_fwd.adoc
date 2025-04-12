@@ -1,0 +1,119 @@
+////
+Copyright 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_hash_append_fwd]
+# <boost/hash2/hash_append_fwd.hpp>
+:idprefix: ref_hash_append_fwd_
+
+## Synopsis
+
+```
+namespace boost {
+namespace hash2 {
+
+template<class Hash, class Flavor, class T>
+constexpr void hash_append( Hash& h, Flavor const& f, T const& v );
+
+template<class Hash, class Flavor, class It>
+constexpr void hash_append_range( Hash& h, Flavor const& f, It first, It last );
+
+template<class Hash, class Flavor, class T>
+constexpr void hash_append_size( Hash& h, Flavor const& f, T const& v );
+
+template<class Hash, class Flavor, class It>
+constexpr void hash_append_range_and_size( Hash& h, Flavor const& f, It first, It last );
+
+template<class Hash, class Flavor, class It>
+constexpr void hash_append_unordered_range( Hash& h, Flavor const& f, It first, It last );
+
+struct hash_append_tag;
+
+} // namespace hash2
+} // namespace boost
+```
+
+The header `boost/hash2/hash_append_fwd.hpp` declares the functions implemented in `boost/hash2/hash_append.hpp`.
+
+It can be used when code wishes to implement `hash_append` support for a user-defined type without physically depending on the implementation of `hash_append`.
+
+## Examples
+
+.X.hpp
+[source]
+----
+#include <boost/hash2/hash_append_fwd.hpp>
+#include <vector>
+
+class X
+{
+private:
+
+    int a = -1;
+    std::vector<int> b{ 1, 2, 3 };
+
+    template<class Provider, class Hash, class Flavor>
+    friend void tag_invoke(
+        boost::hash2::hash_append_tag const&, Provider const&,
+        Hash& h, Flavor const& f, X const* v )
+    {
+        boost::hash2::hash_append( h, f, v->a );
+        boost::hash2::hash_append( h, f, v->b );
+    }
+
+public:
+
+    X() = default;
+};
+----
+
+.main.cpp
+[source]
+----
+#include "X.hpp"
+#include <boost/hash2/hash_append.hpp>
+#include <boost/hash2/md5.hpp>
+#include <iostream>
+
+int main()
+{
+    X x;
+
+    boost::hash2::md5_128 hash;
+    boost::hash2::hash_append( hash, {}, x );
+
+    std::cout << "MD5 digest of x: " << hash.result() << std::endl;
+}
+----
+
+Note, however, that it's possible to achieve the same effect even without including `<boost/hash2/hash_append_fwd.hpp>`, by using the `Provider` argument of `tag_invoke`:
+
+.X.hpp
+[source]
+----
+#include <vector>
+
+class X
+{
+private:
+
+    int a = -1;
+    std::vector<int> b{ 1, 2, 3 };
+
+    template<class Provider, class Hash, class Flavor>
+    friend void tag_invoke(
+        boost::hash2::hash_append_tag const&, Provider const& pr,
+        Hash& h, Flavor const& f, X const* v )
+    {
+        pr.hash_append( h, f, v->a );
+        pr.hash_append( h, f, v->b );
+    }
+
+public:
+
+    X() = default;
+};
+----
+

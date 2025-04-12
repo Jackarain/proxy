@@ -187,15 +187,15 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
     ),
 
     linux_pipeline(
-        "Linux 23.04 GCC 13 32/64 UBSAN",
-        "cppalliance/droneubuntu2304:1",
+        "Linux 24.04 GCC 13 32/64 UBSAN",
+        "cppalliance/droneubuntu2404:1",
         { TOOLSET: 'gcc', COMPILER: 'g++-13', CXXSTD: '11,14,17,20,2b', ADDRMD: '32,64' } + ubsan,
         "g++-13-multilib",
     ),
 
     linux_pipeline(
-        "Linux 23.04 GCC 13 32 ASAN",
-        "cppalliance/droneubuntu2304:1",
+        "Linux 24.04 GCC 13 32 ASAN",
+        "cppalliance/droneubuntu2404:1",
         { TOOLSET: 'gcc', COMPILER: 'g++-13', CXXSTD: '11,14,17,20,2b', ADDRMD: '32' } + asan,
         "g++-13-multilib",
     ),
@@ -334,22 +334,22 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
     ),
 
     linux_pipeline(
-        "Linux 23.04 Clang 16",
-        "cppalliance/droneubuntu2304:1",
+        "Linux 24.04 Clang 16",
+        "cppalliance/droneubuntu2404:1",
         { TOOLSET: 'clang', COMPILER: 'clang++-16', CXXSTD: '11,14,17,20,2b' },
         "clang-16",
     ),
 
     linux_pipeline(
-        "Linux 23.10 Clang 17 UBSAN",
-        "cppalliance/droneubuntu2310:1",
+        "Linux 24.04 Clang 17 UBSAN",
+        "cppalliance/droneubuntu2404:1",
         { TOOLSET: 'clang', COMPILER: 'clang++-17', CXXSTD: '11,14,17,20,2b' } + ubsan,
         "clang-17",
     ),
 
     linux_pipeline(
-        "Linux 23.10 Clang 17 ASAN",
-        "cppalliance/droneubuntu2310:1",
+        "Linux 24.04 Clang 17 ASAN",
+        "cppalliance/droneubuntu2404:1",
         { TOOLSET: 'clang', COMPILER: 'clang++-17', CXXSTD: '11,14,17,20,2b' } + asan,
         "clang-17",
     ),
@@ -366,6 +366,13 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
         "cppalliance/droneubuntu2404:1",
         { TOOLSET: 'clang', COMPILER: 'clang++-18', CXXSTD: '11,14,17,20,2b' } + asan,
         "clang-18",
+    ),
+
+    linux_pipeline(
+        "Linux 24.10 Clang 19",
+        "cppalliance/droneubuntu2410:1",
+        { TOOLSET: 'clang', COMPILER: 'clang++-19', CXXSTD: '11,14,17,20,2b' },
+        "clang-19",
     ),
 
     macos_pipeline(

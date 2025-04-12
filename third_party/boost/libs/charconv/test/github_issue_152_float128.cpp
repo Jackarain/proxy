@@ -7,6 +7,8 @@
 
 #ifdef BOOST_CHARCONV_HAS_QUADMATH
 
+#include <quadmath.h>
+
 std::ostream& operator<<( std::ostream& os, __float128 v )
 {
     char buffer[ 256 ] {};

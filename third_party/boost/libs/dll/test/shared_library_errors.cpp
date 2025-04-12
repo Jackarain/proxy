@@ -1,6 +1,6 @@
 // Copyright 2011-2012 Renato Tegon Forti.
 // Copyright 2014 Renato Tegon Forti, Antony Polukhin.
-// Copyright Antony Polukhin, 2015-2024.
+// Copyright Antony Polukhin, 2015-2025.
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
@@ -12,7 +12,6 @@
 #include <boost/dll/shared_library.hpp>
 #include <boost/dll/library_info.hpp>
 #include <boost/core/lightweight_test.hpp>
-#include <boost/function.hpp>
 
 
 // Unit Tests

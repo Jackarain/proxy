@@ -7,22 +7,22 @@
 #ifndef BOOST_REDIS_RUNNER_HPP
 #define BOOST_REDIS_RUNNER_HPP
 
-#include <boost/redis/detail/health_checker.hpp>
+#include <boost/redis/adapter/any_adapter.hpp>
 #include <boost/redis/config.hpp>
+#include <boost/redis/request.hpp>
 #include <boost/redis/response.hpp>
 #include <boost/redis/detail/helper.hpp>
 #include <boost/redis/error.hpp>
 #include <boost/redis/logger.hpp>
 #include <boost/redis/operation.hpp>
-#include <boost/redis/detail/connector.hpp>
-#include <boost/redis/detail/resolver.hpp>
-#include <boost/redis/detail/handshaker.hpp>
 #include <boost/asio/compose.hpp>
 #include <boost/asio/coroutine.hpp>
 #include <boost/asio/experimental/parallel_group.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/asio/prepend.hpp>
+#include <boost/asio/ssl.hpp>
+#include <boost/asio/cancel_after.hpp>
 #include <string>
 #include <memory>
 #include <chrono>
@@ -32,6 +32,9 @@ namespace boost::redis::detail
 
 void push_hello(config const& cfg, request& req);
 
+// TODO: Can we avoid this whole function whose only purpose is to
+// check for an error in the hello response and complete with an error
+// so that the parallel group that starts it can exit?
 template <class Runner, class Connection, class Logger>
 struct hello_op {
    Runner* runner_ = nullptr;
@@ -47,13 +50,18 @@ struct hello_op {
          runner_->add_hello();
 
          BOOST_ASIO_CORO_YIELD
-         conn_->async_exec(runner_->hello_req_, runner_->hello_resp_, std::move(self));
+         conn_->async_exec(runner_->hello_req_, any_adapter(runner_->hello_resp_), std::move(self));
          logger_.on_hello(ec, runner_->hello_resp_);
 
-         if (ec || runner_->has_error_in_response() || is_cancelled(self)) {
-            logger_.trace("hello-op: error/canceled. Exiting ...");
+         if (ec) {
             conn_->cancel(operation::run);
-            self.complete(!!ec ? ec : asio::error::operation_aborted);
+            self.complete(ec);
+            return;
+         }
+
+         if (runner_->has_error_in_response()) {
+            conn_->cancel(operation::run);
+            self.complete(error::resp3_hello);
             return;
          }
 
@@ -70,6 +78,8 @@ private:
    Logger logger_;
    asio::coroutine coro_{};
 
+   using order_t = std::array<std::size_t, 5>;
+
 public:
    runner_op(Runner* runner, Connection* conn, Logger l)
    : runner_{runner}
@@ -79,82 +89,113 @@ public:
 
    template <class Self>
    void operator()( Self& self
-                  , std::array<std::size_t, 3> order = {}
+                  , order_t order = {}
                   , system::error_code ec0 = {}
                   , system::error_code ec1 = {}
                   , system::error_code ec2 = {}
-                  , std::size_t = 0)
+                  , system::error_code ec3 = {}
+                  , system::error_code ec4 = {})
    {
-      BOOST_ASIO_CORO_REENTER (coro_)
+      BOOST_ASIO_CORO_REENTER (coro_) for (;;)
       {
          BOOST_ASIO_CORO_YIELD
-         runner_->resv_.async_resolve(
-            asio::prepend(std::move(self), std::array<std::size_t, 3> {}));
+         conn_->resv_.async_resolve(asio::prepend(std::move(self), order_t {}));
 
-         logger_.on_resolve(ec0, runner_->resv_.results());
+         logger_.on_resolve(ec0, conn_->resv_.results());
 
-         if (ec0 || redis::detail::is_cancelled(self)) {
-            self.complete(!!ec0 ? ec0 : asio::error::operation_aborted);
+         if (ec0) {
+            self.complete(ec0);
             return;
          }
 
          BOOST_ASIO_CORO_YIELD
-         runner_->ctor_.async_connect(
+         conn_->ctor_.async_connect(
             conn_->next_layer().next_layer(),
-            runner_->resv_.results(),
-            asio::prepend(std::move(self), std::array<std::size_t, 3> {}));
+            conn_->resv_.results(),
+            asio::prepend(std::move(self), order_t {}));
 
-         logger_.on_connect(ec0, runner_->ctor_.endpoint());
+         logger_.on_connect(ec0, conn_->ctor_.endpoint());
 
-         if (ec0 || redis::detail::is_cancelled(self)) {
-            self.complete(!!ec0 ? ec0 : asio::error::operation_aborted);
+         if (ec0) {
+            self.complete(ec0);
             return;
          }
 
          if (conn_->use_ssl()) {
             BOOST_ASIO_CORO_YIELD
-            runner_->hsher_.async_handshake(
-               conn_->next_layer(),
-               asio::prepend(std::move(self),
-                  std::array<std::size_t, 3> {}));
+            conn_->next_layer().async_handshake(
+               asio::ssl::stream_base::client,
+               asio::prepend(
+                  asio::cancel_after(
+                     runner_->cfg_.ssl_handshake_timeout,
+                     std::move(self)
+                  ),
+                  order_t {}
+               )
+            );
 
             logger_.on_ssl_handshake(ec0);
-            if (ec0 || redis::detail::is_cancelled(self)) {
-               self.complete(!!ec0 ? ec0 : asio::error::operation_aborted);
+
+            if (ec0) {
+               self.complete(ec0);
                return;
             }
          }
 
-         // Note: Oder is important here because async_run might
+         conn_->reset();
+
+         // Note: Order is important here because the writer might
          // trigger an async_write before the async_hello thereby
-         // causing authentication problems.
+         // causing an authentication problem.
          BOOST_ASIO_CORO_YIELD
          asio::experimental::make_parallel_group(
             [this](auto token) { return runner_->async_hello(*conn_, logger_, token); },
-            [this](auto token) { return runner_->health_checker_.async_check_health(*conn_, logger_, token); },
-            [this](auto token) { return conn_->async_run_lean(runner_->cfg_, logger_, token); }
+            [this](auto token) { return conn_->health_checker_.async_ping(*conn_, logger_, token); },
+            [this](auto token) { return conn_->health_checker_.async_check_timeout(*conn_, logger_, token);},
+            [this](auto token) { return conn_->reader(logger_, token);},
+            [this](auto token) { return conn_->writer(logger_, token);}
          ).async_wait(
             asio::experimental::wait_for_one_error(),
             std::move(self));
-
-         logger_.on_runner(ec0, ec1, ec2);
-
-         if (is_cancelled(self)) {
-            self.complete(asio::error::operation_aborted);
-            return;
-         }
 
          if (order[0] == 0 && !!ec0) {
             self.complete(ec0);
             return;
          }
 
-         if (order[0] == 1 && ec1 == error::pong_timeout) {
+         if (order[0] == 2 && ec2 == error::pong_timeout) {
             self.complete(ec1);
             return;
          }
 
-         self.complete(ec2);
+         // The receive operation must be cancelled because channel
+         // subscription does not survive a reconnection but requires
+         // re-subscription.
+         conn_->cancel(operation::receive);
+
+         if (!conn_->will_reconnect()) {
+            conn_->cancel(operation::reconnection);
+            self.complete(ec3);
+            return;
+         }
+
+         // It is safe to use the writer timer here because we are not
+         // connected.
+         conn_->writer_timer_.expires_after(conn_->cfg_.reconnect_wait_interval);
+
+         BOOST_ASIO_CORO_YIELD
+         conn_->writer_timer_.async_wait(asio::prepend(std::move(self), order_t {}));
+         if (ec0) {
+            self.complete(ec0);
+            return;
+         }
+
+         if (!conn_->will_reconnect()) {
+            self.complete(asio::error::operation_aborted);
+            return;
+         }
+
+         conn_->reset_stream();
       }
    }
 };
@@ -163,27 +204,12 @@ template <class Executor>
 class runner {
 public:
    runner(Executor ex, config cfg)
-   : resv_{ex}
-   , hsher_{ex}
-   , health_checker_{ex}
-   , cfg_{cfg}
+   : cfg_{cfg}
    { }
-
-   std::size_t cancel(operation op)
-   {
-      resv_.cancel(op);
-      hsher_.cancel(op);
-      health_checker_.cancel(op);
-      return 0U;
-   }
 
    void set_config(config const& cfg)
    {
       cfg_ = cfg;
-      resv_.set_config(cfg);
-      ctor_.set_config(cfg);
-      hsher_.set_config(cfg);
-      health_checker_.set_config(cfg);
    }
 
    template <class Connection, class Logger, class CompletionToken>
@@ -195,12 +221,7 @@ public:
          >(runner_op<runner, Connection, Logger>{this, &conn, l}, token, conn);
    }
 
-   config const& get_config() const noexcept {return cfg_;}
-
 private:
-   using resolver_type = resolver<Executor>;
-   using handshaker_type = detail::handshaker<Executor>;
-   using health_checker_type = health_checker<Executor>;
 
    template <class, class, class> friend class runner_op;
    template <class, class, class> friend struct hello_op;
@@ -239,10 +260,6 @@ private:
       return std::any_of(std::cbegin(hello_resp_.value()), std::cend(hello_resp_.value()), f);
    }
 
-   resolver_type resv_;
-   connector ctor_;
-   handshaker_type hsher_;
-   health_checker_type health_checker_;
    request hello_req_;
    generic_response hello_resp_;
    config cfg_;

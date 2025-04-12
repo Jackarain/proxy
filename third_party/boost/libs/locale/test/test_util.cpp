@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2022-2023 Alexander Grund
+// Copyright (c) 2022-2024 Alexander Grund
 //
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
@@ -37,31 +37,33 @@ void test_hold_ptr()
         auto* raw = new Dummy(42);
         boost::locale::hold_ptr<Dummy> ptr(raw);
         const boost::locale::hold_ptr<Dummy>& const_ptr = ptr;
-        TEST_REQUIRE(ptr);
-        TEST(ptr.get() == raw);
-        TEST(const_ptr.get() == raw);
-        // const propagation
-        TEST_EQ((*ptr).foo(), raw->i_);
-        TEST_EQ((*const_ptr).foo(), -raw->i_);
-        TEST_EQ(ptr->foo(), raw->i_);
-        TEST_EQ(const_ptr->foo(), -raw->i_);
-        TEST_EQ(ptr.get()->foo(), raw->i_);
-        TEST_EQ(const_ptr.get()->foo(), -raw->i_);
-        // move construct
-        boost::locale::hold_ptr<Dummy> ptr2 = std::move(ptr);
-        TEST(!ptr);
-        TEST_REQUIRE(ptr2);
-        TEST(ptr2.get() == raw);
-        // move assign
-        ptr = std::move(ptr2);
-        TEST(ptr);
-        TEST_REQUIRE(!ptr2);
-        TEST(ptr.get() == raw);
-        // Swap
-        boost::locale::hold_ptr<Dummy> ptr3(new Dummy(1337));
-        ptr.swap(ptr3);
-        TEST_EQ(ptr->foo(), 1337);
-        TEST_EQ(ptr3->foo(), 42);
+        if TEST(ptr) {
+            TEST(ptr.get() == raw);
+            TEST(const_ptr.get() == raw);
+            // const propagation
+            TEST_EQ((*ptr).foo(), raw->i_);
+            TEST_EQ((*const_ptr).foo(), -raw->i_);
+            TEST_EQ(ptr->foo(), raw->i_);
+            TEST_EQ(const_ptr->foo(), -raw->i_);
+            TEST_EQ(ptr.get()->foo(), raw->i_);
+            TEST_EQ(const_ptr.get()->foo(), -raw->i_);
+            // move construct
+            boost::locale::hold_ptr<Dummy> ptr2 = std::move(ptr);
+            TEST(!ptr);
+            if TEST(ptr2) {
+                TEST(ptr2.get() == raw);
+                // move assign
+                ptr = std::move(ptr2);
+                TEST(ptr);
+                TEST(!ptr2);
+                TEST(ptr.get() == raw);
+                // Swap
+                boost::locale::hold_ptr<Dummy> ptr3(new Dummy(1337));
+                ptr.swap(ptr3);
+                TEST_EQ(ptr->foo(), 1337);
+                TEST_EQ(ptr3->foo(), 42);
+            }
+        }
     }
     TEST_EQ(Dummy::ctr, 0);
     auto* raw = new Dummy(42);
@@ -112,6 +114,34 @@ void test_get_system_locale()
     TEST_EQ(get_system_locale(true), "barlang.bar");
 }
 
+#ifndef BOOST_LOCALE_WITH_ICU
+void verify_against_icu(){};
+#else
+#    include <unicode/locid.h>
+void verify_against_icu()
+{
+    int32_t count;
+    auto* cur_locale = icu::Locale::getAvailableLocales(count);
+    boost::locale::util::locale_data data;
+    for(int i = 0; i < count; i++, cur_locale++) {
+        const std::string loc_name = cur_locale->getName();
+        if(loc_name == "en_US_POSIX")
+            continue; // Parsed as "C", tested elsewhere
+        for(const bool add_utf8 : {false, true}) {
+            // Also test with added encoding to verify input is fully parsed
+            const std::string curName = add_utf8 ? loc_name + ".UTF-8" : loc_name;
+            TEST_CONTEXT(curName);
+            TEST(data.parse(curName));
+            TEST_EQ(data.language(), cur_locale->getLanguage());
+            TEST_EQ(data.country(), cur_locale->getCountry());
+            TEST_EQ(data.encoding(), add_utf8 ? "UTF-8" : "US-ASCII");
+            TEST_EQ(data.variant(), cur_locale->getVariant());
+            TEST_EQ(data.to_string(), curName);
+        }
+    }
+}
+#endif
+
 void test_locale_data()
 {
     boost::locale::util::locale_data data;
@@ -131,6 +161,7 @@ void test_locale_data()
 
     TEST(data.parse("C"));
     TEST_EQ(data.language(), "C");
+    TEST_EQ(data.script(), "");
     TEST_EQ(data.country(), "");
     TEST_EQ(data.encoding(), "US-ASCII");
     TEST(!data.is_utf8());
@@ -138,6 +169,7 @@ void test_locale_data()
 
     TEST(data.parse("ku_TR.UTF-8@sorani"));
     TEST_EQ(data.language(), "ku");
+    TEST_EQ(data.script(), "");
     TEST_EQ(data.country(), "TR");
     TEST_EQ(data.encoding(), "UTF-8");
     TEST(data.is_utf8());
@@ -200,6 +232,17 @@ void test_locale_data()
     TEST(data.is_utf8());
     TEST_EQ(data.variant(), "");
 
+    // Script used, optionally with dashes instead of underscores
+    for(const std::string name : {"pa_Arab_PK.UTF-8", "pa-Arab_PK.UTF-8", "pa_Arab-PK.UTF-8"}) {
+        TEST(data.parse("pa_Arab_PK.UTF-8"));
+        TEST_EQ(data.language(), "pa");
+        TEST_EQ(data.script(), "Arab");
+        TEST_EQ(data.country(), "PK");
+        TEST_EQ(data.encoding(), "UTF-8");
+        TEST(data.is_utf8());
+        TEST_EQ(data.variant(), "");
+    }
+
     // to_string yields the input (if format is correct already)
     for(const std::string name : {"C",
                                   "en_US.UTF-8",
@@ -211,8 +254,18 @@ void test_locale_data()
                                   "th_TH.TIS620",
                                   "zh_TW.UTF-8@radical",
                                   "en_001",
-                                  "en_150.UTF-8"})
+                                  "en_150.UTF-8",
+                                  // Different variation with parts missing
+                                  "pa_Arab_PK.UTF-8",
+                                  "pa_Arab_PK@euro",
+                                  "pa_Arab.UTF-8",
+                                  "pa_Arab@euro",
+                                  "pa.UTF-8",
+                                  "pa@euro",
+                                  "pa_PK.UTF-8",
+                                  "pa_PK@euro"})
     {
+        TEST_CONTEXT(name);
         TEST(data.parse(name));
         TEST_EQ(data.to_string(), name);
     }
@@ -224,16 +277,18 @@ void test_locale_data()
 
     // Unify casing:
     // - language: lowercase
+    // - script: Capitalized
     // - region: uppercase
     // - encoding: uppercase
     // - variant: lowercase
-    TEST(data.parse("EN_us.utf-8@EUro"));
+    TEST(data.parse("EN_sCrI_us.utf-8@EUro"));
     TEST_EQ(data.language(), "en");
+    TEST_EQ(data.script(), "Scri");
     TEST_EQ(data.country(), "US");
     TEST_EQ(data.encoding(), "UTF-8");
     TEST(data.is_utf8());
     TEST_EQ(data.variant(), "euro");
-    TEST_EQ(data.to_string(), "en_US.UTF-8@euro");
+    TEST_EQ(data.to_string(), "en_Scri_US.UTF-8@euro");
     TEST(data.parse("lAnGUagE_cOunTRy.eNCo-d123inG@Va-r1_Ant"));
     TEST_EQ(data.to_string(), "language_COUNTRY.ENCO-D123ING@va-r1_ant");
 
@@ -313,46 +368,8 @@ void test_locale_data()
     // Construct from string
     TEST_EQ(boost::locale::util::locale_data("en_US.UTF-8").to_string(), "en_US.UTF-8");
     TEST_THROWS(boost::locale::util::locale_data invalid("en_UÖ.UTF-8"), std::invalid_argument);
-}
 
-#include "../src/boost/locale/util/numeric.hpp"
-#include <limits>
-#include <locale>
-#include <sstream>
-
-void test_try_to_int()
-{
-    using boost::locale::util::try_to_int;
-
-    int v = 1337;
-    TEST(try_to_int("0", v));
-    TEST_EQ(v, 0);
-
-    TEST(try_to_int("42", v));
-    TEST_EQ(v, 42);
-
-    TEST(try_to_int("-1337", v));
-    TEST_EQ(v, -1337);
-
-    std::ostringstream ss;
-    ss.imbue(std::locale::classic());
-    empty_stream(ss) << std::numeric_limits<int>::min();
-    TEST(try_to_int(ss.str(), v));
-    TEST_EQ(v, std::numeric_limits<int>::min());
-    empty_stream(ss) << std::numeric_limits<int>::max();
-    TEST(try_to_int(ss.str(), v));
-    TEST_EQ(v, std::numeric_limits<int>::max());
-
-    TEST(!try_to_int("", v));
-    TEST(!try_to_int("a", v));
-    TEST(!try_to_int("1.", v));
-    TEST(!try_to_int("1a", v));
-    TEST(!try_to_int("a1", v));
-    static_assert(sizeof(long long) > sizeof(int), "Value below under/overflows!");
-    empty_stream(ss) << static_cast<long long>(std::numeric_limits<int>::min()) - 1;
-    TEST(!try_to_int(ss.str(), v));
-    empty_stream(ss) << static_cast<long long>(std::numeric_limits<int>::max()) + 1;
-    TEST(!try_to_int(ss.str(), v));
+    verify_against_icu();
 }
 
 void test_main(int /*argc*/, char** /*argv*/)
@@ -360,5 +377,4 @@ void test_main(int /*argc*/, char** /*argv*/)
     test_hold_ptr();
     test_get_system_locale();
     test_locale_data();
-    test_try_to_int();
 }

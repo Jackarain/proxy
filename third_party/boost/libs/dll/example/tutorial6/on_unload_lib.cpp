@@ -1,5 +1,5 @@
 // Copyright 2014 Renato Tegon Forti, Antony Polukhin.
-// Copyright Antony Polukhin, 2015-2024.
+// Copyright Antony Polukhin, 2015-2025.
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
@@ -10,14 +10,14 @@
 
 //[plugcpp_on_unload
 #include <boost/dll/alias.hpp> // for BOOST_DLL_ALIAS
-#include <boost/function.hpp>
+#include <functional>
 #include <vector>
 
 namespace my_namespace {
 
 struct on_unload {
-    typedef boost::function<void()> callback_t;
-    typedef on_unload this_type;
+    using callback_t = std::function<void()> ;
+    using this_type = on_unload;
 
     ~on_unload() {
         for (std::size_t i = 0; i < callbacks_.size(); ++i) {

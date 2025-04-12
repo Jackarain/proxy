@@ -12,6 +12,11 @@ on:
 
 env:
   UBSAN_OPTIONS: print_stacktrace=1
+  # ASAN complains:
+  # ==5457==ERROR: AddressSanitizer: odr-violation (0x7f6112f03b00):
+  # [1] size=8 'rvalue_reference_to_internal_integer' test/test_library.cpp:122:7 in bin.v2/libs/dll/test/gcc-14/debug/x86_64/cxxstd-17-iso/threading-multi/visibility-hidden/libtest_library.so
+  # [2] size=8 'rvalue_reference_to_internal_integer' test/test_library.cpp:122:7 in bin.v2/libs/dll/test/gcc-14/debug/x86_64/cxxstd-17-iso/threading-multi/visibility-hidden/libtest_library.so.1.88.0
+  ASAN_OPTIONS: detect_odr_violation=0
 
 jobs:
   posix:
@@ -19,28 +24,30 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: gcc-12
+          - toolset: gcc-14
             cxxstd: "11,14,17,2a"
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             # UBSAN complains on vtables and fails. No ',undefined -fno-sanitize-recover=undefined' flags!
             cxxflags: "cxxflags=--coverage -fsanitize=address,leak -DBOOST_TRAVISCI_BUILD"
             linkflags: "linkflags=--coverage -lasan"
             launcher: "testing.launcher=LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.8"
-            gcov_tool: "gcov-12"
+            gcov_tool: "gcov-14"
             ignore_coverage: "*/detail/pe_info.hpp */detail/macho_info.hpp */filesystem/src/*"
-          - toolset: gcc-12
+          - toolset: gcc-14
             cxxstd: "17,2a"
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             # UBSAN complains on vtables and fails. No ',undefined -fno-sanitize-recover=undefined' flags!
             cxxflags: "cxxflags=--coverage -fsanitize=address,leak -DBOOST_DLL_USE_STD_FS -DBOOST_TRAVISCI_BUILD"
             linkflags: "linkflags=--coverage -lasan"
             launcher: "testing.launcher=LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.8"
-            gcov_tool: "gcov-12"
+            gcov_tool: "gcov-14"
             ignore_coverage: "*/detail/pe_info.hpp */detail/macho_info.hpp */filesystem/src/*"
           - toolset: clang
-            compiler: clang++-10
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
+            os: ubuntu-22.04
+          - toolset: clang-18
+            cxxstd: "11,14,17,2a"
+            os: ubuntu-24.04
           #- toolset: clang
           #  cxxstd: "11,14,17,2a"
           #  os: macos-10.15
@@ -84,11 +91,6 @@ jobs:
           ./bootstrap.sh
           ./b2 -d0 headers
           ./b2 -j4 variant=debug tools/inspect/build
-
-      - name: Create user-config.jam
-        if: matrix.compiler
-        run: |
-          echo "using ${{matrix.toolset}} : : ${{matrix.compiler}} ;" > ~/user-config.jam
 
       - name: Run tests
         run: |

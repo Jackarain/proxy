@@ -196,7 +196,7 @@ inline const wchar_t * get_octet1_modifier_table() noexcept
 }
 
 
-std::size_t size_as_utf8(const wchar_t * in, std::size_t size, error_code & ec)
+std::size_t size_as_utf8(const wchar_t * in, std::size_t size, error_code &)
 {
     std::size_t res = 0u;
     const auto from_end = in + size;
@@ -205,12 +205,15 @@ std::size_t size_as_utf8(const wchar_t * in, std::size_t size, error_code & ec)
     return res;
 }
 
-std::size_t size_as_wide(const  char   * in, std::size_t size, error_code & ec)
+std::size_t size_as_wide(const  char   * in, std::size_t size, error_code &)
 {
     const auto from = in;
     const auto from_end = from + size;
     const char * from_next = from;
-    for (std::size_t char_count = 0u; from_next < from_end; ++char_count) {
+    std::size_t char_count = 0u;
+    while (from_next < from_end)
+    {
+        ++char_count;
         unsigned int octet_count = get_octet_count(*from_next);
         // The buffer may represent incomplete characters, so terminate early if one is found
         if (octet_count > static_cast<std::size_t>(from_end - from_next))

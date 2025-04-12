@@ -1,4 +1,4 @@
-/* Copyright 2016-2018 Joaquin M Lopez Munoz.
+/* Copyright 2016-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -175,6 +175,12 @@ public:
       impl<U>().nv_insert(it,*static_cast<const U*>(subaddress(x))));
   }
 
+  template<typename U,typename T>
+  base_iterator insert(iterator<U> it,const T& x)
+  {
+    return insert(const_iterator<U>{it},x);
+  }
+
   template<
     typename T,
     typename std::enable_if<
@@ -196,6 +202,17 @@ public:
   {
     return filter(
       impl<U>().nv_insert(it,std::move(*static_cast<U*>(subaddress(x)))));
+  }
+
+  template<
+    typename U,typename T,
+    typename std::enable_if<
+      !std::is_lvalue_reference<T>::value&&!std::is_const<T>::value
+    >::type* =nullptr
+  >
+  base_iterator insert(iterator<U> it,T&& x)
+  {
+    return insert(const_iterator<U>{it},std::move(x));
   }
 
   template<typename InputIterator>

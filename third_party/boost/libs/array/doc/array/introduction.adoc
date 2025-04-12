@@ -1,0 +1,44 @@
+////
+Copyright 2001-2004 Nicolai M. Josuttis
+Copyright 2012 Marshall Clow
+Copyright 2024 Christian Mazakas
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#introduction]
+# Introduction
+:idprefix: introduction_
+:cpp: C++
+
+The {cpp} Standard Template Library STL as part of the {cpp} Standard Library provides a framework for processing algorithms on different kind of containers.
+However, ordinary arrays don't provide the interface of STL containers (although, they provide the iterator interface of STL containers).
+
+As replacement for ordinary arrays, the STL provides class `std::vector`.
+However, `std::vector<>` provides the semantics of dynamic arrays.
+Thus, it manages data to be able to change the number of elements.
+This results in some overhead in case only arrays with static size are needed.
+
+In his book, _Generic Programming and the STL_, Matthew H. Austern introduces a useful wrapper class for ordinary arrays with static size, called `block`.
+It is safer and has no worse performance than ordinary arrays.
+In _The {cpp} Programming Language_, 3rd edition, Bjarne Stroustrup introduces a similar class, called c_array, which I (http://www.josuttis.com/[Nicolai Josuttis]) present slightly modified in my book _The {cpp} Standard Library - A Tutorial and Reference_, called `carray`.
+This is the essence of these approaches spiced with many feedback from https://www.boost.org/[Boost].
+
+After considering different names, we decided to name this class simply `array`.
+
+Note that this class is suggested to be part of the next Technical Report, which will extend the {cpp} Standard (see http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2003/n1548.htm).
+
+Update: `std::array` is (as of {cpp}11) part of the {cpp} standard. The differences between `boost::array` and `std::array` are minimal. If you are using {cpp}11, you should consider using `std::array` instead of `boost::array`.
+
+Class `array` fulfills most but not all of the requirements of "reversible containers" (see Section 23.1, [lib.container.requirements] of the {cpp} Standard). The reasons array is not an reversible STL container is because:
+
+* No constructors are provided.
+* Elements may have an undetermined initial value (see the <<design, section called "Design Rationale">>).
+* `swap()` has no constant complexity.
+* `size()` is always constant, based on the second template argument of the type.
+* The container provides no allocator support.
+
+It doesn't fulfill the requirements of a "sequence" (see Section 23.1.1, [lib.sequence.reqmts] of the {cpp} Standard), except that:
+
+* `front()` and `back()` are provided.
+* `operator[]` and `at()` are provided.

@@ -1,0 +1,7 @@
+[#header_concurrent_node_map_fwd]
+== `<boost/unordered/concurrent_node_map_fwd.hpp>` Synopsis
+
+:idprefix: header_concurrent_node_map_fwd_
+
+Forward declares all the definitions in
+xref:reference/header_concurrent_node_map.adoc[`<boost/unordered/concurrent_node_map.hpp>`].

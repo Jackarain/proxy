@@ -44,7 +44,6 @@ foreach(Test ${Tests})
     set (Libs Boost::heap
               Boost::unit_test_framework
               Boost::container
-              Boost::foreach
               boost_heap_test_common)
 
     source_group( TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${Test}.cpp)

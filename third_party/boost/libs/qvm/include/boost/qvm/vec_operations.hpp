@@ -221,7 +221,7 @@ vec_traits< qvm_detail::zero_vec_<T,Dim> >
     scalar_type
     read_element_idx( int i, this_vector const & )
         {
-        BOOST_QVM_ASSERT(i>=0);
+        BOOST_QVM_ASSERT(i>=0); (void)i;
         BOOST_QVM_ASSERT(i<Dim);
         return scalar_traits<scalar_type>::value(0);
         }

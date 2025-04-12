@@ -30,7 +30,7 @@
 
 #define TEST_EQ_FMT(t, X)    \
     empty_stream(ss) << (t); \
-    test_eq_impl(ss.str(), X, #t "==" #X, __LINE__)
+    test_eq_impl(ss.str(), X, #t "==" #X, __FILE__, __LINE__)
 
 // Very simple container for a part of the tests. Counts its instances
 struct mock_calendar : public boost::locale::abstract_calendar {
@@ -599,7 +599,7 @@ void test_main(int /*argc*/, char** /*argv*/)
             TEST_EQ(time_point.get(week_of_year()), 6);
 
             // cldr changes
-#if BOOST_LOCALE_ICU_VERSION >= 408 && BOOST_LOCALE_ICU_VERSION <= 6000
+#if BOOST_LOCALE_ICU_VERSION <= 6000
             const bool ICU_cldr_issue = backend_name == "icu";
 #else
             const bool ICU_cldr_issue = false;

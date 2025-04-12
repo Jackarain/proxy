@@ -5,11 +5,11 @@
  * http://www.boost.org/LICENSE_1_0.txt)
  */
 
+#include <boost/array.hpp>
+#include <boost/core/lightweight_test_trait.hpp>
+#include <algorithm>
 #include <string>
 #include <iostream>
-#include <boost/array.hpp>
-
-#include <boost/core/lightweight_test_trait.hpp>
 
 namespace {
 
@@ -44,7 +44,12 @@ void    RunTests()
     BOOST_TEST ( const_test_case.begin() == const_test_case.end());
     BOOST_TEST ( const_test_case.cbegin() == const_test_case.cend());
 
-    BOOST_TEST ( test_case.begin() != const_test_case.begin() );
+    // BOOST_TEST ( test_case.begin() != const_test_case.begin() );
+    //
+    // TR1 specified that begin() must return a unique value for zero-sized
+    // arrays. However, this makes constexpr unimplementable, and all standard
+    // libraries have converged on using nullptr instead (see LWG issue 2157.)
+
     if( test_case.data() == const_test_case.data() ) {
     //  Value of data is unspecified in TR1, so no requirement this test pass or fail
     //  However, it must compile!

@@ -10,25 +10,27 @@
 #ifndef BOOST_URL_IMPL_ENCODE_HPP
 #define BOOST_URL_IMPL_ENCODE_HPP
 
+#include "boost/url/grammar/token_rule.hpp"
+#include <boost/assert.hpp>
+#include <boost/static_assert.hpp>
 #include <boost/url/detail/encode.hpp>
 #include <boost/url/detail/except.hpp>
 #include <boost/url/encoding_opts.hpp>
 #include <boost/url/grammar/charset.hpp>
 #include <boost/url/grammar/hexdig_chars.hpp>
+#include <boost/url/grammar/string_token.hpp>
 #include <boost/url/grammar/type_traits.hpp>
-#include <boost/assert.hpp>
-#include <boost/static_assert.hpp>
 
 namespace boost {
 namespace urls {
 
 //------------------------------------------------
 
-template<class CharSet>
+template<BOOST_URL_CONSTRAINT(grammar::CharSet) CS>
 std::size_t
 encoded_size(
     core::string_view s,
-    CharSet const& unreserved,
+    CS const& unreserved,
     encoding_opts opt) noexcept
 {
 /*  If you get a compile error here, it
@@ -36,9 +38,8 @@ encoded_size(
     not meet the requirements stated in
     the documentation.
 */
-    static_assert(
-        grammar::is_charset<CharSet>::value,
-        "Type requirements not met");
+    BOOST_STATIC_ASSERT(
+        grammar::is_charset<CS>::value);
 
     std::size_t n = 0;
     auto it = s.data();
@@ -75,13 +76,13 @@ encoded_size(
 
 //------------------------------------------------
 
-template<class CharSet>
+template<BOOST_URL_CONSTRAINT(grammar::CharSet) CS>
 std::size_t
 encode(
     char* dest,
     std::size_t size,
     core::string_view s,
-    CharSet const& unreserved,
+    CS const& unreserved,
     encoding_opts opt)
 {
 /*  If you get a compile error here, it
@@ -89,9 +90,8 @@ encode(
     not meet the requirements stated in
     the documentation.
 */
-    static_assert(
-        grammar::is_charset<CharSet>::value,
-        "Type requirements not met");
+    BOOST_STATIC_ASSERT(
+        grammar::is_charset<CS>::value);
 
     // '%' must be reserved
     BOOST_ASSERT(! unreserved('%'));
@@ -169,15 +169,18 @@ encode(
 // unsafe encode just
 // asserts on the output buffer
 //
-template<class CharSet>
+template<BOOST_URL_CONSTRAINT(grammar::CharSet) CS>
 std::size_t
 encode_unsafe(
     char* dest,
     std::size_t size,
     core::string_view s,
-    CharSet const& unreserved,
+    CS const& unreserved,
     encoding_opts opt)
 {
+    BOOST_STATIC_ASSERT(
+        grammar::is_charset<CS>::value);
+
     // '%' must be reserved
     BOOST_ASSERT(! unreserved('%'));
 
@@ -245,23 +248,17 @@ encode_unsafe(
 //------------------------------------------------
 
 template<
-    class StringToken,
-    class CharSet>
+    BOOST_URL_CONSTRAINT(string_token::StringToken) StringToken,
+    BOOST_URL_CONSTRAINT(grammar::CharSet) CS>
 BOOST_URL_STRTOK_RETURN
 encode(
     core::string_view s,
-    CharSet const& unreserved,
+    CS const& unreserved,
     encoding_opts opt,
     StringToken&& token) noexcept
 {
-/*  If you get a compile error here, it
-    means that the value you passed does
-    not meet the requirements stated in
-    the documentation.
-*/
-    static_assert(
-        grammar::is_charset<CharSet>::value,
-        "Type requirements not met");
+    BOOST_STATIC_ASSERT(
+        grammar::is_charset<CS>::value);
 
     auto const n = encoded_size(
         s, unreserved, opt);

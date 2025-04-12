@@ -34,7 +34,6 @@ rule test_all
                 :  # test-files
                 : <library>/boost/test//boost_unit_test_framework # requirements
                   <library>/boost/container//boost_container
-                  <library>/boost/foreach//boost_foreach
             ] ;
         }
    }

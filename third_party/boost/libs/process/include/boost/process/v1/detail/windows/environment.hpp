@@ -222,7 +222,7 @@ basic_environment_impl<Char>::basic_environment_impl(const native_environment_im
     while ((*p != null_char<Char>()) || (*(p+1) !=  null_char<Char>()))
         p++;
     p++; //pointing to the second nullchar
-    p++; //to get the pointer behing the second nullchar, so it's end.
+    p++; //to get the pointer behind the second nullchar, so it's end.
 
     this->_data.assign(beg, p);
     this->reload();

@@ -13,7 +13,6 @@
 #ifndef __BOOST_SORT_INTROSORT_DETAIL_INSERT_SORT_HPP
 #define __BOOST_SORT_INTROSORT_DETAIL_INSERT_SORT_HPP
 
-#include <ciso646>
 #include <functional>
 #include <iterator>
 #include <algorithm>
@@ -51,19 +50,19 @@ static void insert_sort (Iter_t first, Iter_t last,
         value_t Aux = std::move (*it_examine);
         Iter_t it_insertion = it_examine;
 
-        while (it_insertion != first and comp (Aux, *(it_insertion - 1)))
+        while (it_insertion != first && comp (Aux, *(it_insertion - 1)))
         {
             *it_insertion = std::move (*(it_insertion - 1));
             --it_insertion;
         };
         *it_insertion = std::move (Aux);
     };
-};
+}
 
 //
 //****************************************************************************
-}; //    End namespace sort
-}; //    End namespace boost
+} //    End namespace sort
+} //    End namespace boost
 //****************************************************************************
 //
 #endif

@@ -13,12 +13,17 @@
 
 #include <boost/mpl/char.hpp>
 #include <boost/preprocessor/repeat.hpp>
+#include <climits>
 
 #include "integral_wrapper_test.hpp"
 
 
 MPL_TEST_CASE()
 {
+#if CHAR_MAX > 0
+#   define WRAPPER(T, i) char_<static_cast<char>(i)>
+#else
 #   define WRAPPER(T, i) char_<i>
+#endif
     BOOST_PP_REPEAT(10, INTEGRAL_WRAPPER_TEST, char)
 }

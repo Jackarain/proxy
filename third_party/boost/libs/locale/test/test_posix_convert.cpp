@@ -52,13 +52,14 @@ void test_char()
     else {
         std::cout << "Testing " << name << std::endl;
         locale_holder cl(newlocale(LC_ALL_MASK, name.c_str(), nullptr));
-        TEST_REQUIRE(cl);
+        if TEST(cl) {
 #ifndef BOOST_LOCALE_NO_POSIX_BACKEND
-        if(towupper_l(L'i', cl) == 0x130)
-            test_one<CharType>(gen(name), "i", "i", "İ");
-        else
-            std::cout << "  Turkish locale is not supported well" << std::endl; // LCOV_EXCL_LINE
+            if(towupper_l(L'i', cl) == 0x130)
+                test_one<CharType>(gen(name), "i", "i", "İ");
+            else
+                std::cout << "  Turkish locale is not supported well" << std::endl; // LCOV_EXCL_LINE
 #endif
+        }
     }
 }
 

@@ -60,10 +60,10 @@ run variant_in_place_type_construct.cpp ;
 compile variant_in_place_type_construct_cx.cpp : <toolset>msvc-14.0:<build>no ;
 
 run variant_copy_assign.cpp ;
-compile variant_copy_assign_cx.cpp : [ requires cxx14_constexpr ] ;
+compile variant_copy_assign_cx.cpp : [ requires cxx14_constexpr ] <toolset>gcc-5:<build>no <toolset>gcc-6:<build>no ;
 
 run variant_move_assign.cpp ;
-compile variant_move_assign_cx.cpp : [ requires cxx14_constexpr ] ;
+compile variant_move_assign_cx.cpp : [ requires cxx14_constexpr ] <toolset>gcc-5:<build>no <toolset>gcc-6:<build>no ;
 
 run variant_value_assign.cpp ;
 compile variant_value_assign_cx.cpp : [ requires cxx14_constexpr ] ;
@@ -139,3 +139,21 @@ run variant_json_value_to.cpp : : : $(JSON) ;
 compile variant_uses_double_storage.cpp ;
 
 run variant_derived_construct2.cpp ;
+
+compile variant_visit_cx.cpp : [ requires cxx14_constexpr ] ;
+compile variant_visit_cx_2.cpp : [ requires cxx14_constexpr ] ;
+compile variant_visit_r_cx.cpp : [ requires cxx14_constexpr ] ;
+
+local index-type-reqs =
+
+  <variant>release
+  <toolset>msvc,<address-model>32:<build>no
+  <toolset>clang,<target-os>linux:<cxxflags>-ftemplate-depth=1024 # for Clang 3.x
+;
+
+local list-sizes = 126 127 128 129 254 255 256 257 ;
+
+for local list-size in $(list-sizes)
+{
+    run variant_index_type.cpp : : : $(index-type-reqs) <define>LIST_SIZE=$(list-size) : variant_index_type_$(list-size) ;
+}

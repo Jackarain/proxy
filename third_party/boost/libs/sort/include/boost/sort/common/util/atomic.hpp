@@ -35,7 +35,7 @@ template<typename T>
 inline T atomic_read(std::atomic<T> &at_var)
 {
     return std::atomic_load_explicit < T > (&at_var, std::memory_order_acquire);
-};
+}
 //
 //-----------------------------------------------------------------------------
 //  function : atomic_add
@@ -50,7 +50,7 @@ inline T atomic_add(std::atomic<T> &at_var, T2 num)
     static_assert (std::is_integral< T2 >::value, "Bad parameter");
     return std::atomic_fetch_add_explicit <T> 
                                (&at_var, (T) num, std::memory_order_acq_rel);
-};
+}
 //
 //-----------------------------------------------------------------------------
 //  function : atomic_sub
@@ -65,7 +65,7 @@ inline T atomic_sub(std::atomic<T> &at_var, T2 num)
     static_assert (std::is_integral< T2 >::value, "Bad parameter");
     return std::atomic_fetch_sub_explicit <T> 
                                 (&at_var, (T) num, std::memory_order_acq_rel);
-};
+}
 //
 //-----------------------------------------------------------------------------
 //  function : atomic_write
@@ -79,21 +79,21 @@ inline void atomic_write(std::atomic<T> &at_var, T2 num)
     static_assert (std::is_integral< T2 >::value, "Bad parameter");
     std::atomic_store_explicit <T> 
                                 (&at_var, (T) num, std::memory_order_release);
-};
+}
 template<typename T>
 struct counter_guard
 {
     typedef std::atomic<T> atomic_t;
     atomic_t &count;
 
-    counter_guard(atomic_t & counter): count(counter) { };
-    ~counter_guard() {atomic_sub(count, 1); };
+    counter_guard(atomic_t & counter): count(counter) { }
+    ~counter_guard() {atomic_sub(count, 1); }
 };
 //
 //****************************************************************************
-};// End namespace util
-};// End namespace common
-};// End namespace sort
-};// End namespace boost
+} // End namespace util
+} // End namespace common
+} // End namespace sort
+} // End namespace boost
 //****************************************************************************
 #endif

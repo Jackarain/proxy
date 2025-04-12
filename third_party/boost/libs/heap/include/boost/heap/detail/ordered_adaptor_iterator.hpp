@@ -65,9 +65,9 @@ class ordered_adaptor_iterator :
 
 public:
     ordered_adaptor_iterator( void ) :
-        container( NULL ),
+        container( nullptr ),
         current_index( ( std::numeric_limits< size_t >::max )() ),
-        unvisited_nodes( compare_by_heap_value( NULL, ValueCompare() ) )
+        unvisited_nodes( compare_by_heap_value( nullptr, ValueCompare() ) )
     {}
 
     ordered_adaptor_iterator( const ContainerType* container, ValueCompare const& cmp ) :

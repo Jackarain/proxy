@@ -47,11 +47,9 @@ namespace boost::parser::detail { namespace stl_interfaces {
         `T`. */
     template<typename T>
 #if defined(BOOST_STL_INTERFACES_DOXYGEN) || BOOST_PARSER_USE_CONCEPTS
-    // clang-format off
         requires std::is_object_v<T>
 #endif
     struct proxy_arrow_result
-    // clang-format on
     {
         constexpr proxy_arrow_result(T const & value) noexcept(
             noexcept(T(value))) :
@@ -619,33 +617,25 @@ namespace boost::parser::detail { namespace stl_interfaces { BOOST_PARSER_DETAIL
         using iter_concept_t = typename iter_concept<Iterator>::type;
 
         template<typename D, typename DifferenceType>
-        // clang-format off
-        concept plus_eq = requires (D d) { d += DifferenceType(1); };
-        // clang-format on
+        concept plus_eq = requires(D d) { d += DifferenceType(1); };
 
         template<typename D, typename D2 = D>
-        // clang-format off
         concept base_3way =
 #if defined(__cpp_impl_three_way_comparison)
-            requires (D d, D2 d2) { access::base(d) <=> access::base(d2); };
+            requires(D d, D2 d2) { access::base(d) <=> access::base(d2); };
 #else
             false;
 #endif
-        // clang-format on
 
         template<typename D1, typename D2 = D1>
-        // clang-format off
         concept base_eq =
-            requires (D1 d1, D2 d2) { access::base(d1) == access::base(d2); };
-        // clang-format on
+            requires(D1 d1, D2 d2) { access::base(d1) == access::base(d2); };
 
         template<typename D, typename D2 = D>
-        // clang-format off
-        concept iter_sub = requires (D d, D2 d2) {
+        concept iter_sub = requires(D d, D2 d2) {
             typename D::difference_type;
-            {d - d2} -> std::convertible_to<typename D::difference_type>;
+            { d - d2 } -> std::convertible_to<typename D::difference_type>;
         };
-        // clang-format on
 
         // This iterator concept -> category mapping scheme follows the one
         // from zip_transform_view; see

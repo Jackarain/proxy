@@ -65,8 +65,8 @@ int main() {
       BOOST_TEST_TRAIT_FALSE((std::is_constructible<compat::function_ref<S1>, F1 const&&>));
 
       compat::function_ref<S2> fv2(f);
-
-      BOOST_TEST_EQ(fv2(1), 1);
+      int x = 1;
+      BOOST_TEST_EQ(fv2(x), 1);
 
       BOOST_TEST_TRAIT_FALSE((std::is_constructible<compat::function_ref<S2>, F1 const>));
       BOOST_TEST_TRAIT_FALSE((std::is_constructible<compat::function_ref<S2>, F1 const&>));

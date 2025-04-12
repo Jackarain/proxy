@@ -294,6 +294,7 @@ public:
         Throws nothing.
 
         @param u The url to copy.
+        @return A reference to this object.
     */
     static_url&
     operator=(
@@ -326,6 +327,7 @@ public:
         Capacity would be exceeded.
 
         @param u The url to copy.
+        @return A reference to this object.
     */
     static_url&
     operator=(

@@ -177,7 +177,7 @@ namespace boost { namespace yap {
 
         /** Creates literal placeholders.  Placeholder indices are 1-based. */
         template<char... c>
-        constexpr auto operator"" _p()
+        constexpr auto operator""_p()
         {
             using i = hana::llong<hana::ic_detail::parse<sizeof...(c)>({c...})>;
             static_assert(1 <= i::value, "Placeholders must be >= 1.");

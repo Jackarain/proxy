@@ -25,7 +25,7 @@ struct param_pct_view;
 struct param_view;
 #endif
 
-/** The type of no_value
+/** The type of @ref no_value
 */
 struct no_value_t
 {
@@ -137,7 +137,7 @@ struct param
         @par Exception Safety
         Throws nothing.
 
-        @par other The object to construct from.
+        @param other The object to construct from.
     */
     param(param&& other) noexcept
         : key(std::move(other.key))
@@ -168,7 +168,8 @@ struct param
         @par Exception Safety
         Calls to allocate may throw.
 
-        @par other The object to construct from.
+        @param other The object to construct from.
+        @return A reference to this object.
     */
     param(param const& other) = default;
 
@@ -186,7 +187,9 @@ struct param
         @par Exception Safety
         Throws nothing.
 
-        @par other The object to assign from.
+
+        @param other The object to assign from.
+        @return A reference to this object.
     */
     param&
     operator=(param&& other) noexcept
@@ -219,10 +222,12 @@ struct param
         @par Exception Safety
         Calls to allocate may throw.
 
-        @par other The object to assign from.
+
+        @param other The object to assign from.
+        @return A reference to this object.
     */
     param& operator=(
-        param const&) = default;
+        param const& other) = default;
 
     //--------------------------------------------
 
@@ -272,7 +277,8 @@ struct param
         `std::nullptr`, @ref no_value_t, or
         `optional<core::string_view>`.
 
-        @param key, value The key and value to set.
+        @param key The key to set.
+        @param value The value to set.
     */
     template <class OptionalString>
     param(
@@ -299,6 +305,7 @@ struct param
         Calls to allocate may throw.
 
         @param other The parameter to copy.
+        @return A reference to this object.
     */
     param&
     operator=(param_view const& other);
@@ -320,19 +327,32 @@ struct param
         Calls to allocate may throw.
 
         @param other The parameter to copy.
+        @return A reference to this object.
     */
     param&
     operator=(param_pct_view const& other);
 
-#ifndef BOOST_URL_DOCS
-    // arrow support
+    /** Arrow support
+
+        This operator returns the address of the
+        object so that it can be used in pointer
+        contexts.
+
+        @return A pointer to the object.
+
+     */
     param const*
     operator->() const noexcept
     {
         return this;
     }
 
-    // aggregate construction
+    /** Aggregate construction
+
+        @param key The key to set.
+        @param value The value to set.
+        @param has_value True if a value is present.
+     */
     param(
         core::string_view key,
         core::string_view value,
@@ -344,7 +364,6 @@ struct param
         , has_value(has_value)
     {
     }
-#endif
 
 private:
     param(
@@ -357,7 +376,7 @@ private:
 
 //------------------------------------------------
 
-/** A query parameter
+/** A view of a query parameter
 
     Objects of this type represent a single key
     and value pair in a query string where a key
@@ -488,7 +507,8 @@ struct param_view
         `std::nullptr`, @ref no_value_t, or
         `optional<core::string_view>`.
 
-        @param key, value The key and value to set.
+        @param key The key to set.
+        @param value The value to set.
     */
     template <class OptionalString>
     param_view(
@@ -550,6 +570,8 @@ struct param_view
 
         @par Exception Safety
         Calls to allocate may throw.
+
+        @return A new query parameter.
     */
     explicit
     operator
@@ -558,15 +580,26 @@ struct param_view
         return { key, value, has_value };
     }
 
-#ifndef BOOST_URL_DOCS
-    // arrow support
+    /** Arrow support
+
+        This operator returns the address of the
+        object so that it can be used in pointer
+        contexts.
+
+        @return A pointer to the object.
+     */
     param_view const*
     operator->() const noexcept
     {
         return this;
     }
 
-    // aggregate construction
+    /** Aggregate construction
+
+        @param key_ The key to set.
+        @param value_ The value to set.
+        @param has_value_ True if a value is present.
+     */
     param_view(
         core::string_view key_,
         core::string_view value_,
@@ -578,7 +611,6 @@ struct param_view
         , has_value(has_value_)
     {
     }
-#endif
 
 private:
     param_view(
@@ -591,7 +623,7 @@ private:
 
 //------------------------------------------------
 
-/** A query parameter
+/** A view of a percent-encoded query parameter
 
     Objects of this type represent a single key
     and value pair in a query string where a key
@@ -720,7 +752,8 @@ struct param_pct_view
         @throw system_error
         `key` or `value` contains an invalid percent-encoding.
 
-        @param key, value The key and value to set.
+        @param key The key to set.
+        @param value The value to set.
     */
     param_pct_view(
         pct_string_view key,
@@ -770,7 +803,9 @@ struct param_pct_view
         `boost::optional<core::string_view>` or
         `std::optional<core::string_view>`.
 
-        @param key, value The key and value to set.
+        @param key The key to set.
+        @param value The optional value to set.
+        @return A param object
     */
     template <class OptionalString>
     param_pct_view(
@@ -836,6 +871,8 @@ struct param_pct_view
 
         @par Exception Safety
         Calls to allocate may throw.
+
+        @return A param object
     */
     explicit
     operator
@@ -855,6 +892,8 @@ struct param_pct_view
 
         @par Exception Safety
         Calls to allocate may throw.
+
+        @return A param_view object
     */
     operator
     param_view() const noexcept
@@ -863,15 +902,26 @@ struct param_pct_view
             key, value, has_value);
     }
 
-#ifndef BOOST_URL_DOCS
-    /// Arrow support
+    /** Arrow support
+
+        This operator returns the address of the
+        object so that it can be used in pointer
+        contexts.
+
+        @return A pointer to this object
+     */
     param_pct_view const*
     operator->() const noexcept
     {
         return this;
     }
 
-    /// aggregate construction
+    /** Aggregate construction
+
+        @param key The key
+        @param value The value
+        @param has_value True if a value is present
+     */
     param_pct_view(
         pct_string_view key,
         pct_string_view value,
@@ -883,7 +933,6 @@ struct param_pct_view
         , has_value(has_value)
     {
     }
-#endif
 
 private:
     param_pct_view(

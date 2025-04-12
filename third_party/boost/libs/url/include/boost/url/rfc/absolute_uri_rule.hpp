@@ -17,41 +17,6 @@
 namespace boost {
 namespace urls {
 
-/** Rule for absolute-URI
-
-    @par Value Type
-    @code
-    using value_type = url_view;
-    @endcode
-
-    @par Example
-    Rules are used with the function @ref grammar::parse.
-    @code
-    system::result< url_view > rv = grammar::parse( "http://example.com/index.htm?id=1", absolute_uri_rule );
-    @endcode
-
-    @par BNF
-    @code
-    absolute-URI    = scheme ":" hier-part [ "?" query ]
-
-    hier-part       = "//" authority path-abempty
-                    / path-absolute
-                    / path-rootless
-                    / path-empty
-    @endcode
-
-    @par Specification
-    @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-4.3"
-        >4.3. Absolute URI (rfc3986)</a>
-
-    @see
-        @ref grammar::parse,
-        @ref parse_absolute_uri,
-        @ref url_view.
-*/
-#ifdef BOOST_URL_DOCS
-constexpr __implementation_defined__ absolute_uri_rule;
-#else
 namespace implementation_defined {
 struct absolute_uri_rule_t
 {
@@ -99,8 +64,7 @@ struct absolute_uri_rule_t
         @ref parse_absolute_uri,
         @ref url_view.
 */
-constexpr implementation_defined::absolute_uri_rule_t absolute_uri_rule{};
-#endif
+BOOST_INLINE_CONSTEXPR implementation_defined::absolute_uri_rule_t absolute_uri_rule{};
 
 } // urls
 } // boost

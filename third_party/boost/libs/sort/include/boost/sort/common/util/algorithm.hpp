@@ -144,7 +144,7 @@ template <class Value_t, class ... Args>
 inline void construct_object (Value_t *ptr, Args &&... args)
 {
     (::new (static_cast<void *>(ptr)) Value_t(std::forward< Args > (args)...));
-};
+}
 //
 //-----------------------------------------------------------------------------
 //  function : destroy_object
@@ -155,7 +155,7 @@ template<class Value_t>
 inline void destroy_object(Value_t *ptr)
 {
     ptr->~Value_t();
-};
+}
 //
 //-----------------------------------------------------------------------------
 //  function : initialize
@@ -185,9 +185,9 @@ inline void initialize (Iter_t first, Iter_t last, Value_t & val)
     while (it2 != last)
     {
         construct_object(&(*(it2++)), std::move(*(it1++)));
-    };
+    }
     val = std::move(*(last - 1));
-};
+}
 //
 //-----------------------------------------------------------------------------
 //  function : move_forward
@@ -216,8 +216,8 @@ inline Iter2_t move_forward (Iter2_t it_dest, Iter1_t first, Iter1_t last)
     {   *it_dest++ = std::move(*first++);
     }
     return it_dest;
+}
 
-};
 //
 //-----------------------------------------------------------------------------
 //  function : move_backard
@@ -244,7 +244,7 @@ inline Iter2_t move_backward(Iter2_t it_dest, Iter1_t  first, Iter1_t last)
     {   *(--it_dest) = std::move (*(--last));
     }
     return it_dest;
-};
+}
 
 //
 //-----------------------------------------------------------------------------
@@ -271,9 +271,9 @@ inline Value_t * move_construct(Value_t *ptr, Iter_t first, Iter_t last)
     while (first != last)
     {
         ::new (static_cast<void *>(ptr++)) Value_t(std::move(*(first++)));
-    };
+    }
     return ptr;
-};
+}
 //
 //-----------------------------------------------------------------------------
 //  function : destroy
@@ -286,7 +286,7 @@ inline void destroy(Iter_t first, const Iter_t last)
 {
     while (first != last)
         destroy_object(&(*(first++)));
-};
+}
 //
 //-----------------------------------------------------------------------------
 //  function : reverse
@@ -298,13 +298,13 @@ template<class Iter_t>
 inline void reverse(Iter_t first, Iter_t last)
 {
     std::reverse ( first, last);
-};
+}
 //
 //****************************************************************************
-};//    End namespace util
-};//    End namespace common
-};//    End namespace sort
-};//    End namespace boost
+} //    End namespace util
+} //    End namespace common
+} //    End namespace sort
+} //    End namespace boost
 //****************************************************************************
 //
 #endif

@@ -29,7 +29,7 @@ int main( int argc, char* argv[] )
             }
         } remover;
 
-        managed_shared_memory segment( create_only, "boost_queue_interprocess_test_shm", 524288 );
+        managed_shared_memory segment( create_only, "boost_queue_interprocess_test_shm", 1'048'576 );
         ShmemAllocator        alloc_inst( segment.get_segment_manager() );
 
         queue* q = segment.construct< queue >( "queue" )( alloc_inst );

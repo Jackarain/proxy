@@ -14,7 +14,7 @@
 #include <boost/process/v1/environment.hpp>
 
 using namespace std;
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 
 BOOST_AUTO_TEST_SUITE( pipe_tests );
 

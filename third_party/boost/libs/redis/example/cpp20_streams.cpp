@@ -5,7 +5,6 @@
  */
 
 #include <boost/redis/connection.hpp>
-#include <boost/asio/deferred.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/consign.hpp>
@@ -26,7 +25,7 @@ using boost::redis::generic_response;
 using boost::redis::operation;
 using boost::redis::request;
 using boost::redis::connection;
-using signal_set = net::deferred_t::as_default_on_t<net::signal_set>;
+using net::signal_set;
 
 auto stream_reader(std::shared_ptr<connection> conn) -> net::awaitable<void>
 {
@@ -39,7 +38,7 @@ auto stream_reader(std::shared_ptr<connection> conn) -> net::awaitable<void>
 
     for (;;) {
         req.push("XREAD", "BLOCK", "0", "STREAMS", "test-topic", stream_id);
-        co_await conn->async_exec(req, resp, net::deferred);
+        co_await conn->async_exec(req, resp);
 
         //std::cout << "Response: ";
         //for (auto i = 0UL; i < resp->size(); ++i) {

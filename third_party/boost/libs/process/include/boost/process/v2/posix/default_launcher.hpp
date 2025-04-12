@@ -26,11 +26,17 @@
 #endif
 
 #include <fcntl.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
-
-#if defined(__APPLE__) || defined(__MACH__) || defined(__FreeBSD__) || defined(__DragonFly__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__sun)
-extern "C" { extern char **environ; }
+#if defined(__APPLE__)
+# include <crt_externs.h>
+# if !defined(environ)
+#  define environ (*_NSGetEnviron())
+# endif
+#elif defined(__MACH__) || defined(__FreeBSD__) || defined(__DragonFly__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__sun)
+ extern "C" { extern char **environ; }
 #endif
 
 BOOST_PROCESS_V2_BEGIN_NAMESPACE
@@ -49,9 +55,9 @@ struct base {};
 struct derived : base {};
 
 template<typename Launcher, typename Init>
-inline error_code invoke_on_setup(Launcher & launcher, const filesystem::path &executable,
-                                  const char * const * (&cmd_line),
-                                  Init && init, base && )
+inline error_code invoke_on_setup(Launcher & /*launcher*/, const filesystem::path &/*executable*/,
+                                  const char * const * (&/*cmd_line*/),
+                                  Init && /*init*/, base && )
 {
     return error_code{};
 }
@@ -66,8 +72,8 @@ inline auto invoke_on_setup(Launcher & launcher, const filesystem::path &executa
 }
 
 template<typename Launcher>
-inline error_code on_setup(Launcher & launcher, const filesystem::path &executable,
-                           const char * const * (&cmd_line))
+inline error_code on_setup(Launcher & /*launcher*/, const filesystem::path &/*executable*/,
+                           const char * const * (&/*cmd_line*/))
 {
     return error_code{};
 }
@@ -86,9 +92,9 @@ inline error_code on_setup(Launcher & launcher, const filesystem::path &executab
 
 
 template<typename Launcher, typename Init>
-inline void invoke_on_error(Launcher & launcher, const filesystem::path &executable,
-                            const char * const * (&cmd_line),
-                            const error_code & ec, Init && init, base && )
+inline void invoke_on_error(Launcher & /*launcher*/, const filesystem::path &/*executable*/,
+                            const char * const * (&/*cmd_line*/),
+                            const error_code & /*ec*/, Init && /*init*/, base && )
 {
 }
 
@@ -96,15 +102,15 @@ template<typename Launcher, typename Init>
 inline auto invoke_on_error(Launcher & launcher, const filesystem::path &executable,
                             const char * const * (&cmd_line),
                             const error_code & ec, Init && init, derived && )
--> decltype(init.on_error(launcher, ec, executable, cmd_line, ec))
+-> decltype(init.on_error(launcher, executable, cmd_line, ec))
 {
     init.on_error(launcher, executable, cmd_line, ec);
 }
 
 template<typename Launcher>
-inline void on_error(Launcher & launcher, const filesystem::path &executable,
-                     const char * const * (&cmd_line),
-                     const error_code & ec)
+inline void on_error(Launcher & /*launcher*/, const filesystem::path &/*executable*/,
+                     const char * const * (&/*cmd_line*/),
+                     const error_code & /*ec*/)
 {
 }
 
@@ -119,9 +125,9 @@ inline void on_error(Launcher & launcher, const filesystem::path &executable,
 }
 
 template<typename Launcher, typename Init>
-inline void invoke_on_success(Launcher & launcher, const filesystem::path &executable,
-                              const char * const * (&cmd_line),
-                              Init && init, base && )
+inline void invoke_on_success(Launcher & /*launcher*/, const filesystem::path &/*executable*/,
+                              const char * const * (&/*cmd_line*/),
+                              Init && /*init*/, base && )
 {
 }
 
@@ -135,8 +141,8 @@ inline auto invoke_on_success(Launcher & launcher, const filesystem::path &execu
 }
 
 template<typename Launcher>
-inline void on_success(Launcher & launcher, const filesystem::path &executable,
-                       const char * const * (&cmd_line))
+inline void on_success(Launcher & /*launcher*/, const filesystem::path &/*executable*/,
+                       const char * const * (&/*cmd_line*/))
 {
 }
 
@@ -150,9 +156,9 @@ inline void on_success(Launcher & launcher, const filesystem::path &executable,
 }
 
 template<typename Launcher, typename Init>
-inline void invoke_on_fork_error(Launcher & launcher, const filesystem::path &executable,
-                                 const char * const * (&cmd_line),
-                                 const error_code & ec, Init && init, base && )
+inline void invoke_on_fork_error(Launcher & /*launcher*/, const filesystem::path &/*executable*/,
+                                 const char * const * (&/*cmd_line*/),
+                                 const error_code & /*ec*/, Init && /*init*/, base && )
 {
 }
 
@@ -160,15 +166,15 @@ template<typename Launcher, typename Init>
 inline auto invoke_on_fork_error(Launcher & launcher, const filesystem::path &executable,
                                  const char * const * (&cmd_line),
                                  const error_code & ec, Init && init, derived && )
--> decltype(init.on_fork_error(launcher, ec, executable, cmd_line, ec))
+-> decltype(init.on_fork_error(launcher, executable, cmd_line, ec))
 {
     init.on_fork_error(launcher, executable, cmd_line, ec);
 }
 
 template<typename Launcher>
-inline void on_fork_error(Launcher & launcher, const filesystem::path &executable,
-                          const char * const * (&cmd_line),
-                          const error_code & ec)
+inline void on_fork_error(Launcher & /*launcher*/, const filesystem::path &/*executable*/,
+                          const char * const * (&/*cmd_line*/),
+                          const error_code & /*ec*/)
 {
 }
 
@@ -182,45 +188,10 @@ inline void on_fork_error(Launcher & launcher, const filesystem::path &executabl
     on_fork_error(launcher, executable, cmd_line, ec, inits...);
 }
 
-
-
 template<typename Launcher, typename Init>
-inline void invoke_on_fork_success(Launcher & launcher, const filesystem::path &executable,
-                                   const char * const * (&cmd_line),
-                                   Init && init, base && )
-{
-
-}
-
-template<typename Launcher, typename Init>
-inline auto invoke_on_fork_success(Launcher & launcher, const filesystem::path &executable,
-                                   const char * const * (&cmd_line),
-                                   Init && init, derived && )
--> decltype(init.on_fork_success(launcher, executable, cmd_line))
-{
-    init.on_fork_success(launcher, executable, cmd_line);
-}
-
-template<typename Launcher>
-inline void on_fork_success(Launcher & launcher, const filesystem::path &executable,
-                            const char * const * (&cmd_line))
-{
-}
-
-template<typename Launcher, typename Init1, typename ... Inits>
-inline void on_fork_success(Launcher & launcher, const filesystem::path &executable,
-                            const char * const * (&cmd_line),
-                            Init1 && init1, Inits && ... inits)
-{
-    invoke_on_fork_success(launcher, executable, cmd_line, init1, derived{});
-    on_fork_success(launcher, executable, cmd_line, inits...);
-}
-
-
-template<typename Launcher, typename Init>
-inline error_code invoke_on_exec_setup(Launcher & launcher, const filesystem::path &executable,
-                                       const char * const * (&cmd_line),
-                                       Init && init, base && )
+inline error_code invoke_on_exec_setup(Launcher & /*launcher*/, const filesystem::path &/*executable*/,
+                                       const char * const * (&/*cmd_line*/),
+                                       Init && /*init*/, base && )
 {
     return error_code{};
 }
@@ -235,8 +206,8 @@ inline auto invoke_on_exec_setup(Launcher & launcher, const filesystem::path &ex
 }
 
 template<typename Launcher>
-inline error_code on_exec_setup(Launcher & launcher, const filesystem::path &executable,
-                                const char * const * (&cmd_line))
+inline error_code on_exec_setup(Launcher & /*launcher*/, const filesystem::path &/*executable*/,
+                                const char * const * (&/*cmd_line*/))
 {
     return error_code{};
 }
@@ -256,9 +227,9 @@ inline error_code on_exec_setup(Launcher & launcher, const filesystem::path &exe
 
 
 template<typename Launcher, typename Init>
-inline void invoke_on_exec_error(Launcher & launcher, const filesystem::path &executable,
-                                 const char * const * (&cmd_line),
-                                 const error_code & ec, Init && init, base && )
+inline void invoke_on_exec_error(Launcher & /*launcher*/, const filesystem::path &/*executable*/,
+                                 const char * const * (&/*cmd_line*/),
+                                 const error_code & /*ec*/, Init && /*init*/, base && )
 {
 }
 
@@ -266,15 +237,15 @@ template<typename Launcher, typename Init>
 inline auto invoke_on_exec_error(Launcher & launcher, const filesystem::path &executable,
                                  const char * const * (&cmd_line),
                                  const error_code & ec, Init && init, derived && )
--> decltype(init.on_exec_error(launcher, ec, executable, cmd_line, ec))
+-> decltype(init.on_exec_error(launcher, executable, cmd_line, ec))
 {
     init.on_exec_error(launcher, executable, cmd_line, ec);
 }
 
 template<typename Launcher>
-inline void on_exec_error(Launcher & launcher, const filesystem::path &executable,
-                          const char * const * (&cmd_line),
-                          const error_code & ec)
+inline void on_exec_error(Launcher & /*launcher*/, const filesystem::path &/*executable*/,
+                          const char * const * (&/*cmd_line*/),
+                          const error_code & /*ec*/)
 {
 }
 
@@ -293,7 +264,7 @@ inline void on_exec_error(Launcher & launcher, const filesystem::path &executabl
 struct default_launcher
 {
     /// The pointer to the environment forwarded to the subprocess.
-    const char * const * env = ::environ;
+    const char * const * env = environ;
     /// The pid of the subprocess - will be assigned after fork.
     int pid = -1;
 
@@ -383,11 +354,15 @@ struct default_launcher
 
             auto & ctx = net::query(
                     exec, net::execution::context);
+#if !defined(BOOST_PROCESS_V2_DISABLE_NOTIFY_FORK)
             ctx.notify_fork(net::execution_context::fork_prepare);
+#endif
             pid = ::fork();
             if (pid == -1)
             {
+#if !defined(BOOST_PROCESS_V2_DISABLE_NOTIFY_FORK)
                 ctx.notify_fork(net::execution_context::fork_parent);
+#endif
                 detail::on_fork_error(*this, executable, argv, ec, inits...);
                 detail::on_error(*this, executable, argv, ec, inits...);
 
@@ -397,7 +372,9 @@ struct default_launcher
             else if (pid == 0)
             {
                 ::close(pg.p[0]);
+#if !defined(BOOST_PROCESS_V2_DISABLE_NOTIFY_FORK)
                 ctx.notify_fork(net::execution_context::fork_child);
+#endif
                 ec = detail::on_exec_setup(*this, executable, argv, inits...);
                 if (!ec)
                 {
@@ -412,8 +389,9 @@ struct default_launcher
                 ::exit(EXIT_FAILURE);
                 return basic_process<Executor>{exec};
             }
-
+#if !defined(BOOST_PROCESS_V2_DISABLE_NOTIFY_FORK)
             ctx.notify_fork(net::execution_context::fork_parent);
+#endif
             ::close(pg.p[1]);
             pg.p[1] = -1;
             int child_error{0};
@@ -433,6 +411,7 @@ struct default_launcher
             if (ec)
             {
                 detail::on_error(*this, executable, argv, ec, inits...);
+                do { ::waitpid(pid, nullptr, 0); } while (errno == EINTR);
                 return basic_process<Executor>{exec};
             }
         }

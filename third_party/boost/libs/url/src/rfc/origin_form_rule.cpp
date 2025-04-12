@@ -21,7 +21,7 @@ namespace boost {
 namespace urls {
 
 auto
-origin_form_rule_t::
+implementation_defined::origin_form_rule_t::
 parse(
     char const*& it,
     char const* end

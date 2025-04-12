@@ -1,0 +1,28 @@
+////
+Copyright 2001-2004 Nicolai M. Josuttis
+Copyright 2012 Marshall Clow
+Copyright 2024 Christian Mazakas
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+# Boost.Array
+Nicolai M. Josuttis
+:toc: left
+:toclevels: 4
+:idprefix:
+:docinfo: private-footer
+:source-highlighter: rouge
+:source-language: c++
+:sectanchors:
+
+:leveloffset: +1
+
+include::array/introduction.adoc[]
+include::array/changes.adoc[]
+include::array/reference.adoc[]
+include::array/design_rationale.adoc[]
+include::array/information.adoc[]
+include::array/copyright.adoc[]
+
+:leveloffset: -1

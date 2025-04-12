@@ -32,4 +32,6 @@ lib boost_charconv
   # usage-requirements
   : <link>shared:<define>BOOST_CHARCONV_DYN_LINK=1
     <define>BOOST_CHARCONV_NO_LIB=1
+
+    [ check-target-builds ../config//has_float128 "GCC libquadmath and __float128 support" : <library>"quadmath" <define>BOOST_CHARCONV_HAS_QUADMATH ]
 ;

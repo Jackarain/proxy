@@ -35,6 +35,8 @@ local pedantic-errors = <warnings>pedantic
     <toolset>gcc:<warnings-as-errors>on
     <toolset>clang:<warnings-as-errors>on ;
 
+local CPP11 = [ requires cxx11_variadic_templates cxx11_template_aliases cxx11_decltype cxx11_constexpr cxx11_noexcept cxx11_ref_qualifiers ] ;
+
 # quick test (for CI)
 run quick.cpp ;
 
@@ -83,14 +85,14 @@ compile-fail ref_implicit_fail4.cpp
 run ref_cv_test.cpp ;
 run ref_conversion_test.cpp ;
 
-run eif_constructors.cpp : ;
-run eif_dummy_arg_disambiguation.cpp : ;
-run eif_lazy.cpp : ;
-run eif_lazy_test.cpp : ;
-run eif_member_templates.cpp : ;
-run eif_namespace_disambiguation.cpp : ;
-run eif_no_disambiguation.cpp : ;
-run eif_partial_specializations.cpp : ;
+run eif_constructors.cpp ;
+run eif_dummy_arg_disambiguation.cpp ;
+run eif_lazy.cpp ;
+run eif_lazy_test.cpp ;
+run eif_member_templates.cpp ;
+run eif_namespace_disambiguation.cpp ;
+run eif_no_disambiguation.cpp ;
+run eif_partial_specializations.cpp ;
 
 compile-fail noncopyable_compile_fail.cpp
   : $(warnings-as-errors-off) ;
@@ -201,14 +203,19 @@ run underlying_type.cpp ;
 compile-fail null_deleter_compile_fail_adl.cpp
   : $(warnings-as-errors-off) ;
 
-run fclose_deleter_test.cpp /boost/move//boost_move /boost/smart_ptr//boost_smart_ptr : : : <target-os>windows:<define>_CRT_SECURE_NO_WARNINGS <target-os>windows:<define>_CRT_SECURE_NO_DEPRECATE ;
+run fclose_deleter_test.cpp : : :
+  $(CPP11)
+  <library>/boost/move//boost_move
+  <library>/boost/smart_ptr//boost_smart_ptr
+  <target-os>windows:<define>_CRT_SECURE_NO_WARNINGS
+  <target-os>windows:<define>_CRT_SECURE_NO_DEPRECATE ;
+
 compile-fail fclose_deleter_compile_fail_adl.cpp
   : <target-os>windows:<define>_CRT_SECURE_NO_WARNINGS <target-os>windows:<define>_CRT_SECURE_NO_DEPRECATE $(warnings-as-errors-off) ;
 
 run functor_test.cpp ;
 compile-fail functor_compile_fail_adl.cpp
   : $(warnings-as-errors-off) ;
-
 
 run pointer_traits_pointer_test.cpp ;
 run pointer_traits_element_type_test.cpp ;
@@ -385,7 +392,7 @@ run sv_stream_insert_test.cpp
   : : : $(pedantic-errors) ;
 run sv_conversion_test.cpp
   : : : $(pedantic-errors) ;
-run sv_conversion_test2.cpp /boost/utility//boost_utility : ;
+run sv_conversion_test2.cpp : : : <library>/boost/utility//boost_utility ;
 run sv_common_reference_test.cpp
   : : : $(pedantic-errors) ;
 compile sv_common_reference_test2.cpp ;
@@ -396,10 +403,13 @@ compile-fail sv_nullptr_fail.cpp
 compile sv_construct_test_cx.cpp ;
 compile sv_construct_test_cx2.cpp ;
 
+run sv_hash_test.cpp : : : $(CPP11) <library>/boost/container_hash//boost_container_hash ;
+
 run span_test.cpp ;
 run span_types_test.cpp ;
 run span_constructible_test.cpp ;
 run span_deduction_guide_test.cpp ;
+run span_constexpr_test.cpp ;
 run as_bytes_test.cpp ;
 run as_writable_bytes_test.cpp ;
 compile span_boost_begin_test.cpp ;
@@ -423,9 +433,15 @@ run memory_resource_test.cpp ;
 run data_test.cpp ;
 run size_test.cpp ;
 
-local CPP11 = [ requires cxx11_variadic_templates cxx11_template_aliases cxx11_decltype cxx11_constexpr cxx11_noexcept cxx11_ref_qualifiers ] ;
-
-local with-serialization = <library>/boost/serialization//boost_serialization/<warnings>off $(warnings-as-errors-off) <undefined-sanitizer>norecover:<link>static $(CPP11) ;
+local with-serialization =
+    <library>/boost/serialization//boost_serialization/<warnings>off
+    $(warnings-as-errors-off)
+    <undefined-sanitizer>norecover:<link>static
+    $(CPP11)
+    # Serialization no longer builds under classic MinGW
+    # and <toolset>gcc,<target-os>windows,<address-model>32 fails for some reason
+    <toolset>gcc,<target-os>windows:<build>no
+;
 
 run serialization_nvp_test.cpp : : : $(with-serialization) <undefined-sanitizer>norecover:<build>no ;
 run serialization_split_free_test.cpp : : : $(with-serialization) ;

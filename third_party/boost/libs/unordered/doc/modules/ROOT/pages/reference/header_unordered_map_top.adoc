@@ -1,0 +1,9 @@
+[#header_unordered_map_fwd_top]
+== `<boost/unordered_map.hpp>` Synopsis
+
+:idprefix: header_unordered_map_top_
+
+[listing,subs="+macros,+quotes"]
+-----
+#include xref:reference/header_unordered_map.adoc[<boost/unordered/unordered_map.hpp>]
+-----

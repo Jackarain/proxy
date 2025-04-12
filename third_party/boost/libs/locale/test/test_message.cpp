@@ -84,7 +84,7 @@ std::wstring same_w(std::wstring s)
     return s;
 }
 
-#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+#ifdef __cpp_lib_char8_t
 std::basic_string<char8_t> same_u8(std::basic_string<char8_t> s)
 {
     return s;
@@ -376,7 +376,7 @@ void test_cntranslate(const std::string& c,
     impl::test_cntranslate<char>(c, s, p, n, expected, l, domain);
     std::cout << "  wchar_t" << std::endl;
     impl::test_cntranslate<wchar_t>(c, s, p, n, expected, l, domain);
-#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+#ifdef __cpp_lib_char8_t
     std::cout << "  char8_t" << std::endl;
     impl::test_cntranslate<char8_t>(c, s, p, n, expected, l, domain);
 #endif
@@ -401,7 +401,7 @@ void test_ntranslate(const std::string& s,
     impl::test_ntranslate<char>(s, p, n, expected, l, domain);
     std::cout << "  wchar_t" << std::endl;
     impl::test_ntranslate<wchar_t>(s, p, n, expected, l, domain);
-#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+#ifdef __cpp_lib_char8_t
     std::cout << "  char8_t" << std::endl;
     impl::test_ntranslate<char8_t>(s, p, n, expected, l, domain);
 #endif
@@ -425,7 +425,7 @@ void test_ctranslate(const std::string& c,
     impl::test_ctranslate<char>(c, original, expected, l, domain);
     std::cout << "  wchar_t" << std::endl;
     impl::test_ctranslate<wchar_t>(c, original, expected, l, domain);
-#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+#ifdef __cpp_lib_char8_t
     std::cout << "  char8_t" << std::endl;
     impl::test_ctranslate<char8_t>(c, original, expected, l, domain);
 #endif
@@ -448,7 +448,7 @@ void test_translate(const std::string& original,
     impl::test_translate<char>(original, expected, l, domain);
     std::cout << "  wchar_t" << std::endl;
     impl::test_translate<wchar_t>(original, expected, l, domain);
-#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+#ifdef __cpp_lib_char8_t
     std::cout << "  char8_t" << std::endl;
     impl::test_translate<char8_t>(original, expected, l, domain);
 #endif
@@ -570,7 +570,7 @@ void test_main(int argc, char** argv)
         TEST_EQ(same_s(bl::translate("hello")), "שלום");
         TEST_EQ(same_w(bl::translate(to<wchar_t>("hello"))), to<wchar_t>("שלום"));
 
-#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+#ifdef __cpp_lib_char8_t
         TEST_EQ(same_u8(bl::translate(to<char8_t>("hello"))), to<char8_t>("שלום"));
 #endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T

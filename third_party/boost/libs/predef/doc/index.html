@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 2.0.20">
+<meta name="generator" content="Asciidoctor 2.0.23">
 <meta name="author" content="René Ferdinand Rivera Morell">
 <title>Boost.Predef</title>
 <style>
@@ -875,6 +875,16 @@ pre.rouge .gh {
   background-color: #002b36;
   font-weight: bold;
 }
+pre.rouge .ge {
+  font-style: italic;
+}
+pre.rouge .ges {
+  font-weight: bold;
+  font-style: italic;
+}
+pre.rouge .gs {
+  font-weight: bold;
+}
 pre.rouge .k, pre.rouge .kn, pre.rouge .kp, pre.rouge .kr, pre.rouge .kv {
   color: #6c71c4;
 }
@@ -1130,23 +1140,24 @@ pre.rouge .ss {
 </li>
 <li><a href="#_history">6. History</a>
 <ul class="sectlevel2">
-<li><a href="#_1_15_0">6.1. 1.15.0</a></li>
-<li><a href="#_1_14_0">6.2. 1.14.0</a></li>
-<li><a href="#_1_13_1">6.3. 1.13.1</a></li>
-<li><a href="#_1_13">6.4. 1.13</a></li>
-<li><a href="#_1_12">6.5. 1.12</a></li>
-<li><a href="#_1_11">6.6. 1.11</a></li>
-<li><a href="#_1_10">6.7. 1.10</a></li>
-<li><a href="#_1_9">6.8. 1.9</a></li>
-<li><a href="#_1_8">6.9. 1.8</a></li>
-<li><a href="#_1_7">6.10. 1.7</a></li>
-<li><a href="#_1_6">6.11. 1.6</a></li>
-<li><a href="#_1_5">6.12. 1.5</a></li>
-<li><a href="#_1_4_1">6.13. 1.4.1</a></li>
-<li><a href="#_1_4">6.14. 1.4</a></li>
-<li><a href="#_1_3">6.15. 1.3</a></li>
-<li><a href="#_1_2">6.16. 1.2</a></li>
-<li><a href="#_1_1">6.17. 1.1</a></li>
+<li><a href="#_1_15_1">6.1. 1.15.1</a></li>
+<li><a href="#_1_15_0">6.2. 1.15.0</a></li>
+<li><a href="#_1_14_0">6.3. 1.14.0</a></li>
+<li><a href="#_1_13_1">6.4. 1.13.1</a></li>
+<li><a href="#_1_13">6.5. 1.13</a></li>
+<li><a href="#_1_12">6.6. 1.12</a></li>
+<li><a href="#_1_11">6.7. 1.11</a></li>
+<li><a href="#_1_10">6.8. 1.10</a></li>
+<li><a href="#_1_9">6.9. 1.9</a></li>
+<li><a href="#_1_8">6.10. 1.8</a></li>
+<li><a href="#_1_7">6.11. 1.7</a></li>
+<li><a href="#_1_6">6.12. 1.6</a></li>
+<li><a href="#_1_5">6.13. 1.5</a></li>
+<li><a href="#_1_4_1">6.14. 1.4.1</a></li>
+<li><a href="#_1_4">6.15. 1.4</a></li>
+<li><a href="#_1_3">6.16. 1.3</a></li>
+<li><a href="#_1_2">6.17. 1.2</a></li>
+<li><a href="#_1_1">6.18. 1.1</a></li>
 </ul>
 </li>
 <li><a href="#_to_do">7. To Do</a></li>
@@ -7343,7 +7354,21 @@ expressions. It defaults to "c++", but can be any of: "c", "cpp",
 <h2 id="_history"><a class="anchor" href="#_history"></a>6. History</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_1_15_0"><a class="anchor" href="#_1_15_0"></a>6.1. 1.15.0</h3>
+<h3 id="_1_15_1"><a class="anchor" href="#_1_15_1"></a>6.1. 1.15.1</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Guard against using the obsolete <code>predef/check/predef.jam</code> B2 module.
+Instead of using the current <code>predef/tools/check/predef.jam</code> module.</p>
+</li>
+<li>
+<p>Fix <code>architecture</code> tool check rule returning <code>ppc</code> instead of <code>power</code>.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_1_15_0"><a class="anchor" href="#_1_15_0"></a>6.2. 1.15.0</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -7353,7 +7378,7 @@ expressions. It defaults to "c++", but can be any of: "c", "cpp",
 </div>
 </div>
 <div class="sect2">
-<h3 id="_1_14_0"><a class="anchor" href="#_1_14_0"></a>6.2. 1.14.0</h3>
+<h3 id="_1_14_0"><a class="anchor" href="#_1_14_0"></a>6.3. 1.14.0</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -7363,7 +7388,7 @@ expressions. It defaults to "c++", but can be any of: "c", "cpp",
 </div>
 </div>
 <div class="sect2">
-<h3 id="_1_13_1"><a class="anchor" href="#_1_13_1"></a>6.3. 1.13.1</h3>
+<h3 id="_1_13_1"><a class="anchor" href="#_1_13_1"></a>6.4. 1.13.1</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -7379,7 +7404,7 @@ expressions. It defaults to "c++", but can be any of: "c", "cpp",
 </div>
 </div>
 <div class="sect2">
-<h3 id="_1_13"><a class="anchor" href="#_1_13"></a>6.4. 1.13</h3>
+<h3 id="_1_13"><a class="anchor" href="#_1_13"></a>6.5. 1.13</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -7398,7 +7423,7 @@ expressions. It defaults to "c++", but can be any of: "c", "cpp",
 </div>
 </div>
 <div class="sect2">
-<h3 id="_1_12"><a class="anchor" href="#_1_12"></a>6.5. 1.12</h3>
+<h3 id="_1_12"><a class="anchor" href="#_1_12"></a>6.6. 1.12</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -7427,7 +7452,7 @@ Initial implementation inspired by submission from Mikhail Komarov.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_1_11"><a class="anchor" href="#_1_11"></a>6.6. 1.11</h3>
+<h3 id="_1_11"><a class="anchor" href="#_1_11"></a>6.7. 1.11</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -7455,7 +7480,7 @@ Initial implementation inspired by submission from Mikhail Komarov.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_1_10"><a class="anchor" href="#_1_10"></a>6.7. 1.10</h3>
+<h3 id="_1_10"><a class="anchor" href="#_1_10"></a>6.8. 1.10</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -7480,7 +7505,7 @@ removed in a future release.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_1_9"><a class="anchor" href="#_1_9"></a>6.8. 1.9</h3>
+<h3 id="_1_9"><a class="anchor" href="#_1_9"></a>6.9. 1.9</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -7493,7 +7518,7 @@ removed in a future release.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_1_8"><a class="anchor" href="#_1_8"></a>6.9. 1.8</h3>
+<h3 id="_1_8"><a class="anchor" href="#_1_8"></a>6.10. 1.8</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -7515,7 +7540,7 @@ removed in a future release.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_1_7"><a class="anchor" href="#_1_7"></a>6.10. 1.7</h3>
+<h3 id="_1_7"><a class="anchor" href="#_1_7"></a>6.11. 1.7</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -7531,7 +7556,7 @@ removed in a future release.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_1_6"><a class="anchor" href="#_1_6"></a>6.11. 1.6</h3>
+<h3 id="_1_6"><a class="anchor" href="#_1_6"></a>6.12. 1.6</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -7555,7 +7580,7 @@ Baratov)</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_1_5"><a class="anchor" href="#_1_5"></a>6.12. 1.5</h3>
+<h3 id="_1_5"><a class="anchor" href="#_1_5"></a>6.13. 1.5</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -7574,7 +7599,7 @@ version instead of the varied product versions.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_1_4_1"><a class="anchor" href="#_1_4_1"></a>6.13. 1.4.1</h3>
+<h3 id="_1_4_1"><a class="anchor" href="#_1_4_1"></a>6.14. 1.4.1</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -7587,7 +7612,7 @@ version instead of the varied product versions.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_1_4"><a class="anchor" href="#_1_4"></a>6.14. 1.4</h3>
+<h3 id="_1_4"><a class="anchor" href="#_1_4"></a>6.15. 1.4</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -7608,7 +7633,7 @@ use cases. And changed the BBv2 check support to use compile only checks.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_1_3"><a class="anchor" href="#_1_3"></a>6.15. 1.3</h3>
+<h3 id="_1_3"><a class="anchor" href="#_1_3"></a>6.16. 1.3</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -7633,7 +7658,7 @@ use cases. And changed the BBv2 check support to use compile only checks.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_1_2"><a class="anchor" href="#_1_2"></a>6.16. 1.2</h3>
+<h3 id="_1_2"><a class="anchor" href="#_1_2"></a>6.17. 1.2</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -7657,7 +7682,7 @@ checks.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_1_1"><a class="anchor" href="#_1_1"></a>6.17. 1.1</h3>
+<h3 id="_1_1"><a class="anchor" href="#_1_1"></a>6.18. 1.1</h3>
 <div class="ulist">
 <ul>
 <li>

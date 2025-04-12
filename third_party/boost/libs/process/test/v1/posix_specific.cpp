@@ -11,10 +11,14 @@
 #define BOOST_TEST_IGNORE_SIGCHLD
 #include <boost/test/included/unit_test.hpp>
 
-#include <boost/process.hpp>
-#include <boost/process/v1/posix.hpp>
-
+#include <boost/process/v1/child.hpp>
+#include <boost/process/v1/environment.hpp>
 #include <boost/process/v1/filesystem.hpp>
+#include <boost/process/v1/io.hpp>
+#include <boost/process/v1/pipe.hpp>
+#include <boost/process/v1/posix.hpp>
+#include <boost/process/v1/spawn.hpp>
+#include <boost/process/v1/system.hpp>
 
 #if !defined(BOOST_PROCESS_USE_STD_FS)
 #include <boost/filesystem/directory.hpp>
@@ -29,7 +33,7 @@
 #include <errno.h>
 
 namespace fs = boost::process::v1::filesystem;
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 
 BOOST_AUTO_TEST_CASE(bind_fd, *boost::unit_test::timeout(2))
 {

@@ -75,6 +75,45 @@ namespace windows
     return itr - begin;
   }
 
+  LPPROC_THREAD_ATTRIBUTE_LIST default_launcher::get_thread_attribute_list(error_code & ec)
+  {
+    if (startup_info.lpAttributeList != nullptr)
+      return startup_info.lpAttributeList;
+    SIZE_T size;
+    if (!(::InitializeProcThreadAttributeList(NULL, 1, 0, &size) ||
+          GetLastError() == ERROR_INSUFFICIENT_BUFFER))
+    {
+      BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec);
+      return nullptr;
+    }
+
+    LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeList = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(::HeapAlloc(::GetProcessHeap(), 0, size));
+    if (lpAttributeList == nullptr)
+      return nullptr;
+
+    if (!::InitializeProcThreadAttributeList(lpAttributeList, 1, 0, &size))
+    {
+      BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec);
+      ::HeapFree(GetProcessHeap(), 0, lpAttributeList);
+      return nullptr;
+    }
+
+    proc_attribute_list_storage.reset(lpAttributeList);
+    startup_info.lpAttributeList = proc_attribute_list_storage.get();
+    return startup_info.lpAttributeList;
+  }
+
+  void default_launcher::set_handle_list(error_code & ec)
+  {
+    auto tl = get_thread_attribute_list(ec);
+    if (ec)
+      return;
+    if (!::UpdateProcThreadAttribute(
+        tl, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+        inherited_handles.data(), inherited_handles.size() * sizeof(HANDLE), nullptr, nullptr))
+      BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec);
+  }
+
 }
 BOOST_PROCESS_V2_END_NAMESPACE
 

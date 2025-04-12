@@ -73,6 +73,12 @@
 
 #endif
 
+// Follows logic in boost/config/detail/select_compiler_config.hpp.
+#if defined(__clang__) && !defined(__ibmxl__) && !defined(__CODEGEARC__)
+#elif defined(__GNUC__) && !defined(__ibmxl__)
+#define BOOST_PARSER_GCC
+#endif
+
 #if defined(__cpp_lib_constexpr_algorithms)
 #    define BOOST_PARSER_ALGO_CONSTEXPR constexpr
 #else

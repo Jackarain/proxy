@@ -627,7 +627,7 @@ public:
     using base_type::operator=;
 };
 
-///Type definition to hold a seperate environment.
+///Type definition to hold a separate environment.
 template<typename Char>
 class basic_environment : public basic_environment_impl<Char, detail::api::basic_environment_impl>
 {
@@ -646,10 +646,10 @@ typedef basic_native_environment<char>     native_environment;
 typedef basic_native_environment<wchar_t> wnative_environment;
 
 #if !defined(BOOST_NO_ANSI_APIS)
-///Type definition to hold a seperate environment.
+///Type definition to hold a separate environment.
 typedef basic_environment<char>     environment;
 #endif
-///Type definition to hold a seperate environment.
+///Type definition to hold a separate environment.
 typedef basic_environment<wchar_t> wenvironment;
 
 }}
@@ -673,10 +673,10 @@ inline int get_id()                     { return ::boost::process::v1::detail::a
 ///Get the native handle of the current process.
 inline native_handle_type native_handle()  { return ::boost::process::v1::detail::api::native_handle();}
 #if !defined(BOOST_NO_ANSI_APIS)
-///Get the enviroment of the current process.
+///Get the environment of the current process.
 inline native_environment   environment() { return ::boost::process::v1:: native_environment(); }
 #endif
-///Get the enviroment of the current process.
+///Get the environment of the current process.
 inline wnative_environment wenvironment() { return ::boost::process::v1::wnative_environment(); }
 ///Get the path environment variable of the current process runs.
 inline std::vector<boost::process::v1::filesystem::path> path()

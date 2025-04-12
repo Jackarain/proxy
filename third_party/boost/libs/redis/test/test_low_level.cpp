@@ -522,6 +522,7 @@ BOOST_AUTO_TEST_CASE(cover_error)
    check_error("boost.redis", boost::redis::error::ssl_handshake_timeout);
    check_error("boost.redis", boost::redis::error::sync_receive_push_failed);
    check_error("boost.redis", boost::redis::error::incompatible_node_depth);
+   check_error("boost.redis", boost::redis::error::resp3_hello);
 }
 
 std::string get_type_as_str(boost::redis::resp3::type t)

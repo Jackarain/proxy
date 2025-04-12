@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2024 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+// Copyright (c) 2019-2025 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -138,6 +138,31 @@ enum class client_errc : int
      * size. Try increasing \ref any_connection_params::max_buffer_size.
      */
     max_buffer_size_exceeded,
+
+    /**
+     * \brief Another operation is currently in progress for this connection. Make sure
+     * that a single connection does not run two asynchronous operations in parallel.
+     */
+    operation_in_progress,
+
+    /**
+     * \brief The requested operation requires an established session.
+     * Call `async_connect` before invoking other operations.
+     */
+    not_connected,
+
+    /**
+     * \brief The connection is currently engaged in a multi-function operation.
+     * Finish the current operation by calling `async_read_some_rows` and `async_read_resultset_head`
+     * before starting any other operation.
+     */
+    engaged_in_multi_function,
+
+    /**
+     * \brief The operation requires the connection to be engaged in a multi-function operation.
+     * Use `async_start_execution` to start one.
+     */
+    not_engaged_in_multi_function,
 };
 
 BOOST_MYSQL_DECL

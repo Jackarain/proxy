@@ -73,10 +73,10 @@ namespace boost { namespace parser { namespace detail {
         std::ostream & os,
         int components = 0);
 
-    template<typename Context, typename ParserTuple>
+    template<typename Context, typename ParserTuple, typename DelimiterParser>
     void print_parser(
         Context const & context,
-        perm_parser<ParserTuple> const & parser,
+        perm_parser<ParserTuple, DelimiterParser> const & parser,
         std::ostream & os,
         int components = 0);
 
@@ -248,6 +248,13 @@ namespace boost { namespace parser { namespace detail {
     template<typename Context>
     void print_parser(
         Context const & context,
+        char_set_parser<symb_chars> const & parser,
+        std::ostream & os,
+        int components = 0);
+
+    template<typename Context>
+    void print_parser(
+        Context const & context,
         char_set_parser<lower_case_chars> const & parser,
         std::ostream & os,
         int components = 0);
@@ -280,10 +287,14 @@ namespace boost { namespace parser { namespace detail {
         std::ostream & os,
         int components = 0);
 
-    template<typename Context, typename Quotes, typename Escapes>
+    template<
+        typename Context,
+        typename Quotes,
+        typename Escapes,
+        typename CharParser>
     void print_parser(
         Context const & context,
-        quoted_string_parser<Quotes, Escapes> const & parser,
+        quoted_string_parser<Quotes, Escapes, CharParser> const & parser,
         std::ostream & os,
         int components = 0);
 

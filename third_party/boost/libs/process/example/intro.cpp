@@ -1,8 +1,4 @@
-// Copyright (c) 2006, 2007 Julio M. Merino Vidal
-// Copyright (c) 2008 Ilya Sokolov, Boris Schaeling
-// Copyright (c) 2009 Boris Schaeling
-// Copyright (c) 2010 Felipe Tanus, Boris Schaeling
-// Copyright (c) 2011, 2012 Jeff Flinn, Boris Schaeling
+// Copyright (c) 2022 Klemens Morgenstern
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -10,21 +6,35 @@
 //[intro
 #include <boost/process.hpp>
 
+#include <boost/asio/read.hpp>
+#include <boost/asio/readable_pipe.hpp>
+#include <boost/system/error_code.hpp>
+
 #include <string>
 #include <iostream>
 
-using namespace boost::process;
+namespace proc   = boost::process;
+namespace asio   = boost::asio;
+
 
 int main()
 {
-    ipstream pipe_stream;
-    child c("gcc --version", std_out > pipe_stream);
+    asio::io_context ctx;
+    asio::readable_pipe p{ctx};
+
+    const auto exe = proc::environment::find_executable("gcc");
+
+    proc::process c{ctx, exe, {"--version"}, proc::process_stdio{nullptr, p}};
 
     std::string line;
+    boost::system::error_code ec;
 
-    while (pipe_stream && std::getline(pipe_stream, line) && !line.empty())
-        std::cerr << line << std::endl;
+    auto sz = asio::read(p, asio::dynamic_buffer(line), ec);
+    assert(ec == asio::error::eof);
+
+    std::cout << "Gcc version: '"  << line << "'" << std::endl;
 
     c.wait();
+    return c.exit_code();
 }
 //]

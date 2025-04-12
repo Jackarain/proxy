@@ -1,5 +1,5 @@
 // Copyright 2014 Renato Tegon Forti, Antony Polukhin.
-// Copyright Antony Polukhin, 2015-2024.
+// Copyright Antony Polukhin, 2015-2025.
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
@@ -7,7 +7,6 @@
 
 #include <boost/core/lightweight_test.hpp>
 #include <boost/dll.hpp>
-#include <boost/function.hpp>
 #include <string>
 #include "b2_workarounds.hpp"
 
@@ -20,7 +19,7 @@ int main(int argc, char* argv[]) {
     
     //[getting_started_imports_c_function
     // Importing pure C function
-    function<int(int)> c_func = dll::import_symbol<int(int)>(
+    auto c_func = dll::import_symbol<int(int)>(
             path_to_shared_library, "c_func_name"
         );
     //]
@@ -31,7 +30,7 @@ int main(int argc, char* argv[]) {
 
     //[getting_started_imports_c_variable
     // Importing pure C variable
-    shared_ptr<int> c_var = dll::import_symbol<int>(
+    std::shared_ptr<int> c_var = dll::import_symbol<int>(
             path_to_shared_library, "c_variable_name"
         );
     //]
@@ -43,7 +42,7 @@ int main(int argc, char* argv[]) {
 
     //[getting_started_imports_alias
     // Importing function by alias name
-   /*<-*/ function<std::string(const std::string&)> /*->*/ /*=auto*/ cpp_func = dll::import_alias<std::string(const std::string&)>(
+    auto cpp_func = dll::import_alias<std::string(const std::string&)>(
             path_to_shared_library, "pretty_name"
         );
     //]
@@ -52,7 +51,6 @@ int main(int argc, char* argv[]) {
     std::string cpp_func_res = cpp_func(std::string("In importer.")); 
     BOOST_TEST(cpp_func_res == "In importer. Hello from lib!");
 
-#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES) && !defined(BOOST_NO_CXX11_AUTO_DECLARATIONS)
     //[getting_started_imports_cpp11_function
     // Importing function.
     auto cpp11_func = dll::import_symbol<int(std::string&&)>(
@@ -63,12 +61,10 @@ int main(int argc, char* argv[]) {
     // calling the function
     int cpp11_func_res = cpp11_func(std::string("In importer.")); 
     BOOST_TEST(cpp11_func_res == sizeof("In importer.") - 1);
-#endif
-
 
     //[getting_started_imports_cpp_variable
     // Importing  variable.
-    shared_ptr<std::string> cpp_var = dll::import_symbol<std::string>(
+    std::shared_ptr<std::string> cpp_var = dll::import_symbol<std::string>(
             path_to_shared_library, "cpp_variable_name"
         );
     //]

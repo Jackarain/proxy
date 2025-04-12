@@ -14,12 +14,14 @@
 //
 
 
-#include "boost/shared_container_iterator.hpp"
-#include "boost/shared_ptr.hpp"
+#include <boost/iterator/shared_container_iterator.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <vector>
+#include <memory>
 
-struct resource {
+struct resource
+{
   static int count;
   resource() { ++count; }
   resource(resource const&) { ++count; }
@@ -27,20 +29,20 @@ struct resource {
 };
 int resource::count = 0;
 
-typedef std::vector<resource> resources_t;
+typedef std::vector< resource > resources_t;
 
 typedef boost::shared_container_iterator< resources_t > iterator;
 
-
-void set_range(iterator& i, iterator& end)  {
-
-  boost::shared_ptr< resources_t > objs(new resources_t());
+template< typename SharedPtr >
+void set_range(iterator& i, iterator& end)
+{
+  SharedPtr objs(new resources_t());
 
   for (int j = 0; j != 6; ++j)
     objs->push_back(resource());
 
-  i = iterator(objs->begin(),objs);
-  end = iterator(objs->end(),objs);
+  i = iterator(objs->begin(), objs);
+  end = iterator(objs->end(), objs);
   BOOST_TEST_EQ(resource::count, 6);
 }
 
@@ -53,7 +55,18 @@ int main() {
     iterator i;
     {
       iterator end;
-      set_range(i,end);
+      set_range< boost::shared_ptr< resources_t > >(i, end);
+      BOOST_TEST_EQ(resource::count, 6);
+    }
+    BOOST_TEST_EQ(resource::count, 6);
+  }
+  BOOST_TEST_EQ(resource::count, 0);
+
+  {
+    iterator i;
+    {
+      iterator end;
+      set_range< std::shared_ptr< resources_t > >(i, end);
       BOOST_TEST_EQ(resource::count, 6);
     }
     BOOST_TEST_EQ(resource::count, 6);

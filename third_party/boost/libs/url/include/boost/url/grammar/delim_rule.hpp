@@ -21,44 +21,6 @@ namespace boost {
 namespace urls {
 namespace grammar {
 
-/** Match a character literal
-
-    This matches the specified character.
-    The value is a reference to the character
-    in the underlying buffer, expressed as a
-    `core::string_view`. The function @ref squelch
-    may be used to turn this into `void` instead.
-    If there is no more input, the error code
-    @ref error::need_more is returned.
-
-    @par Value Type
-    @code
-    using value_type = core::string_view;
-    @endcode
-
-    @par Example
-    Rules are used with the function @ref parse.
-    @code
-    system::result< core::string_view > rv = parse( ".", delim_rule('.') );
-    @endcode
-
-    @par BNF
-    @code
-    char        = %00-FF
-    @endcode
-
-    @param ch The character to match
-
-    @see
-        @ref parse,
-        @ref squelch.
-*/
-#ifdef BOOST_URL_DOCS
-constexpr
-__implementation_defined__
-delim_rule( char ch ) noexcept;
-#else
-
 namespace implementation_defined {
 struct ch_delim_rule
 {
@@ -108,6 +70,7 @@ private:
     @endcode
 
     @param ch The character to match
+    @return A rule which matches the character.
 
     @see
         @ref parse,
@@ -119,45 +82,9 @@ delim_rule( char ch ) noexcept
 {
     return {ch};
 }
-#endif
 
 //------------------------------------------------
 
-/** Match a single character from a character set
-
-    This matches exactly one character which
-    belongs to the specified character set.
-    The value is a reference to the character
-    in the underlying buffer, expressed as a
-    `core::string_view`. The function @ref squelch
-    may be used to turn this into `void` instead.
-    If there is no more input, the error code
-    @ref error::need_more is returned.
-
-    @par Value Type
-    @code
-    using value_type = core::string_view;
-    @endcode
-
-    @par Example
-    Rules are used with the function @ref parse.
-    @code
-    system::result< core::string_view > rv = parse( "X", delim_rule( alpha_chars ) );
-    @endcode
-
-    @param cs The character set to use.
-
-    @see
-        @ref alpha_chars,
-        @ref parse,
-        @ref squelch.
-*/
-#ifdef BOOST_URL_DOCS
-template<class CharSet>
-constexpr
-__implementation_defined__
-delim_rule( CharSet const& cs ) noexcept;
-#else
 namespace implementation_defined {
 template<class CharSet>
 struct cs_delim_rule
@@ -220,32 +147,32 @@ private:
     @endcode
 
     @param cs The character set to use.
+    @return A rule which matches a single character from the set.
 
     @see
         @ref alpha_chars,
         @ref parse,
         @ref squelch.
 */
-template<class CharSet>
+template<BOOST_URL_CONSTRAINT(CharSet) CS>
 constexpr
 typename std::enable_if<
     ! std::is_convertible<
-        CharSet, char>::value,
-    implementation_defined::cs_delim_rule<CharSet>>::type
+        CS, char>::value,
+    implementation_defined::cs_delim_rule<CS>>::type
 delim_rule(
-    CharSet const& cs) noexcept
+    CS const& cs) noexcept
 {
     // If you get a compile error here it
     // means that your type does not meet
     // the requirements for a CharSet.
     // Please consult the documentation.
     static_assert(
-        is_charset<CharSet>::value,
+        is_charset<CS>::value,
         "CharSet requirements not met");
 
-    return implementation_defined::cs_delim_rule<CharSet>(cs);
+    return implementation_defined::cs_delim_rule<CS>(cs);
 }
-#endif
 
 } // grammar
 } // urls

@@ -49,7 +49,7 @@ int main()
     }
 }
 
-// different_char
+// different_quote
 {
     constexpr auto parser = bp::quoted_string('\'');
 
@@ -75,9 +75,18 @@ int main()
         BOOST_TEST(result);
         BOOST_TEST(*result == "'foo'");
     }
+
+    {
+        constexpr auto parser = bp::quoted_string('\'', bp::char_("g\t"));
+
+        auto result = bp::parse(R"('\'ggg\'')", parser, bp::ws);
+        BOOST_TEST(result);
+        BOOST_TEST(*result == "'ggg'");
+        BOOST_TEST(!bp::parse(R"('\'fff\'')", parser, bp::ws));
+    }
 }
 
-// different_char_with_escapes
+// different_quote_with_escapes
 {
     {
         auto parser = bp::quoted_string('\'', cu_escapes);
@@ -114,6 +123,58 @@ int main()
 
         {
             auto result = bp::parse(R"('f\xoo')", parser, bp::ws);
+            BOOST_TEST(!result);
+        }
+    }
+}
+
+// different_quote_with_escapes_and_char_p
+{
+    {
+        auto parser = bp::quoted_string('\'', cu_escapes, bp::char_("g\t"));
+
+        {
+            auto result = bp::parse("", parser, bp::ws);
+            BOOST_TEST(!result);
+        }
+
+        {
+            auto result = bp::parse("'ggg'", parser, bp::ws);
+            BOOST_TEST(result);
+        }
+
+        {
+            auto result = bp::parse("'fff'", parser, bp::ws);
+            BOOST_TEST(!result);
+        }
+
+        {
+            auto result = bp::parse(R"('ggg\t')", parser, bp::ws);
+            BOOST_TEST(result);
+            BOOST_TEST(*result == "ggg\t");
+        }
+
+        {
+            auto result = bp::parse(R"('ggg\g')", parser, bp::ws);
+            BOOST_TEST(!result);
+        }
+    }
+    {
+        auto parser = bp::quoted_string('\'', cp_escapes);
+
+        {
+            auto result = bp::parse("", parser, bp::ws);
+            BOOST_TEST(!result);
+        }
+
+        {
+            auto result = bp::parse(R"('\tggg')", parser, bp::ws);
+            BOOST_TEST(result);
+            BOOST_TEST(*result == "\tggg");
+        }
+
+        {
+            auto result = bp::parse(R"('g\ggg')", parser, bp::ws);
             BOOST_TEST(!result);
         }
     }
@@ -170,6 +231,15 @@ int main()
         // Can't escape arbitrary characters, only backslash and the quote
         // character.
         BOOST_TEST(!bp::parse(R"("\'foo")", parser, bp::ws));
+    }
+
+    {
+        constexpr auto parser = bp::quoted_string("'\"", bp::char_("g"));
+
+        auto result = bp::parse(R"('\'ggg\'')", parser, bp::ws);
+        BOOST_TEST(result);
+        BOOST_TEST(*result == "'ggg'");
+        BOOST_TEST(!bp::parse(R"('\'fff\'')", parser, bp::ws));
     }
 }
 
@@ -233,6 +303,15 @@ int main()
             BOOST_TEST(!result);
         }
     }
+
+    {
+        auto parser = bp::quoted_string("'\"", cu_escapes, bp::char_("g"));
+
+        auto result = bp::parse(R"('\'ggg\'')", parser, bp::ws);
+        BOOST_TEST(result);
+        BOOST_TEST(*result == "'ggg'");
+        BOOST_TEST(!bp::parse(R"('\'fff\'')", parser, bp::ws));
+    }
 }
 
 // doc_examples
@@ -278,6 +357,16 @@ int main()
         bp::parse("\"some text\r\"", bp::quoted_string('"', escapes), bp::ws);
     assert(result5);
     std::cout << *result5 << "\n"; // Prints (with a CRLF newline): some text
+    //]
+
+    //[ quoted_string_example_6
+    auto result6 = bp::parse(
+        "'some text'", bp::quoted_string("'\"", bp::char_('g')), bp::ws);
+    assert(!result6);
+    result6 =
+        bp::parse("'gggg'", bp::quoted_string("'\"", bp::char_('g')), bp::ws);
+    assert(result6);
+    std::cout << *result6 << "\n"; // Prints: gggg
     //]
 }
 

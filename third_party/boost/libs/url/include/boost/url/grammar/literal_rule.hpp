@@ -41,11 +41,6 @@ namespace grammar {
         @ref delim_rule,
         @ref parse.
 */
-#ifdef BOOST_URL_DOCS
-constexpr
-__implementation_defined__
-literal_rule( char const* s );
-#else
 class literal_rule
 {
     char const* s_ = nullptr;
@@ -79,7 +74,6 @@ public:
         char const*& it,
         char const* end) const noexcept;
 };
-#endif
 
 } // grammar
 } // urls

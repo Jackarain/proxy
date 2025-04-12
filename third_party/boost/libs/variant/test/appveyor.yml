@@ -45,10 +45,11 @@ environment:
       TOOLSET: gcc
       CXXSTD: 03,11,14,1z
       VARIANT: release          # "variant_get_test.o: File too big" errors in debug
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      ADDPATH: C:\mingw\bin;
-      TOOLSET: gcc
-      CXXSTD: 03,11,14,1z
+    # MinGW 32-bit is not supported by Boost.System any more
+    # - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    #  ADDPATH: C:\mingw\bin;
+    #  TOOLSET: gcc
+    #  CXXSTD: 03,11,14,1z
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       ADDPATH: C:\mingw-w64\x86_64-7.2.0-posix-seh-rt_v5-rev1\mingw64\bin;
       TOOLSET: gcc

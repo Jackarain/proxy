@@ -287,7 +287,7 @@ struct basic_process_handle_win
                 sl.assign(
                     [&h](asio::cancellation_type ct)
                     {
-                      boost::system::error_code ec;
+                      error_code ec;
                       h.cancel(ec);
                     });
             handle.async_wait(std::move(self));
@@ -317,8 +317,6 @@ struct basic_process_handle_win
         );
     }
 };
-
-extern template struct basic_process_handle_win<>;
 
 }
 

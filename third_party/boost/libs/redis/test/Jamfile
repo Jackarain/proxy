@@ -51,6 +51,7 @@ local tests =
     test_low_level
     test_request
     test_run
+    test_any_adapter
 ;
 
 # Build and run the tests

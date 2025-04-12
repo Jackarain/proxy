@@ -33,6 +33,11 @@
 #pragma GCC diagnostic ignored "-Wfloat-equal"
 #endif
 
+#if defined(__clang__)
+// P2614 deprecates has_denorm in C++23
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 char const* float_type(float*) { return "float"; }
 char const* float_type(double*) { return "double"; }
 char const* float_type(long double*) { return "long double"; }

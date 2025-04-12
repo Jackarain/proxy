@@ -9,12 +9,10 @@
 
 
 #include <boost/config.hpp>
-#include <iostream>
 
 #include <boost/iterator/indirect_iterator.hpp>
-#include <boost/static_assert.hpp>
 #include "static_assert_same.hpp"
-#include <boost/type_traits/same_traits.hpp>
+#include <type_traits>
 
 struct zow { };
 
@@ -40,10 +38,12 @@ int main()
     STATIC_ASSERT_SAME(Iter::pointer, int*);
     STATIC_ASSERT_SAME(Iter::difference_type, std::ptrdiff_t);
 
-    BOOST_STATIC_ASSERT((boost::is_convertible<Iter::iterator_category,
-             std::random_access_iterator_tag>::value));
-    BOOST_STATIC_ASSERT((boost::is_convertible<boost::iterator_traversal<Iter>::type,
-             boost::random_access_traversal_tag>::value));
+    static_assert(std::is_convertible<Iter::iterator_category,
+                                      std::random_access_iterator_tag>::value,
+                  "Iter must have a random access category.");
+    static_assert(std::is_convertible<boost::iterator_traversal<Iter>::type,
+                                      boost::random_access_traversal_tag>::value,
+                  "Iter must have a random_access_traversal_tag.");
   }
   {
     typedef boost::indirect_iterator<int const**> Iter;
@@ -71,10 +71,12 @@ int main()
 
     STATIC_ASSERT_SAME(Iter::difference_type, std::ptrdiff_t);
 
-    BOOST_STATIC_ASSERT((boost::is_convertible<Iter::iterator_category,
-             std::random_access_iterator_tag>::value));
-    BOOST_STATIC_ASSERT((boost::is_convertible<boost::iterator_traversal<Iter>::type,
-             boost::random_access_traversal_tag>::value));
+    static_assert(std::is_convertible<Iter::iterator_category,
+                                      std::random_access_iterator_tag>::value,
+                  "Iter must have a random access category.");
+    static_assert(std::is_convertible<boost::iterator_traversal<Iter>::type,
+                                      boost::random_access_traversal_tag>::value,
+                  "Iter must have a random_access_traversal_tag.");
   }
   {
     typedef boost::indirect_iterator<char**, int, std::random_access_iterator_tag, long&, short> Iter;

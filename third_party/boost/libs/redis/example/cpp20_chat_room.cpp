@@ -5,7 +5,6 @@
  */
 
 #include <boost/redis/connection.hpp>
-#include <boost/asio/deferred.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
@@ -18,13 +17,12 @@
 #if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 
 namespace asio = boost::asio;
-using stream_descriptor = asio::deferred_t::as_default_on_t<asio::posix::stream_descriptor>;
-using signal_set = asio::deferred_t::as_default_on_t<asio::signal_set>;
+using asio::posix::stream_descriptor;
+using asio::signal_set;
 using boost::asio::async_read_until;
 using boost::asio::awaitable;
 using boost::asio::co_spawn;
 using boost::asio::consign;
-using boost::asio::deferred;
 using boost::asio::detached;
 using boost::asio::dynamic_buffer;
 using boost::asio::redirect_error;
@@ -52,7 +50,7 @@ receiver(std::shared_ptr<connection> conn) -> awaitable<void>
    while (conn->will_reconnect()) {
 
       // Subscribe to channels.
-      co_await conn->async_exec(req, ignore, deferred);
+      co_await conn->async_exec(req, ignore);
 
       // Loop reading Redis push messages.
       for (error_code ec;;) {
@@ -76,7 +74,7 @@ auto publisher(std::shared_ptr<stream_descriptor> in, std::shared_ptr<connection
       auto n = co_await async_read_until(*in, dynamic_buffer(msg, 1024), "\n");
       request req;
       req.push("PUBLISH", "channel", msg);
-      co_await conn->async_exec(req, ignore, deferred);
+      co_await conn->async_exec(req, ignore);
       msg.erase(0, n);
    }
 }

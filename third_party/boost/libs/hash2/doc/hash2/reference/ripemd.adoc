@@ -1,0 +1,124 @@
+////
+Copyright 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_ripemd]
+# <boost/hash2/ripemd.hpp>
+:idprefix: ref_ripemd_
+
+```
+#include <boost/hash2/hmac.hpp>
+#include <boost/hash2/digest.hpp>
+
+namespace boost {
+namespace hash2 {
+
+class ripemd_160;
+class ripemd_128;
+
+using hmac_ripemd_160 = hmac<ripemd_160>;
+using hmac_ripemd_128 = hmac<ripemd_128>;
+
+} // namespace hash2
+} // namespace boost
+```
+
+This header implements the https://homes.esat.kuleuven.be/~bosselae/ripemd160/pdf/AB-9601/AB-9601.pdf[RIPEMD-160 and RIPEMD-128] algorithms.
+
+## ripemd_160
+
+```
+class ripemd_160
+{
+    using result_type = digest<20>;
+
+    static constexpr std::size_t block_size = 64;
+
+    constexpr ripemd_160();
+    explicit constexpr ripemd_160( std::uint64_t seed );
+    ripemd_160( void const* p, std::size_t n );
+    constexpr ripemd_160( unsigned char const* p, std::size_t n );
+
+    void update( void const * pv, std::size_t n );
+    constexpr void update( unsigned char const* p, std::size_t n );
+
+    constexpr result_type result();
+};
+```
+
+### Constructors
+
+```
+constexpr ripemd_160();
+```
+
+Default constructor.
+
+Effects: ::
+  Initializes the internal state of the RIPEMD-160 algorithm to its initial values.
+
+```
+explicit constexpr ripemd_160( std::uint64_t seed );
+```
+
+Constructor taking an integer seed value.
+
+Effects: ::
+  Initializes the state as if by default construction, then if `seed` is not zero, performs `update(p, 8); result();` where `p` points to a little-endian representation of the value of `seed`.
+
+Remarks: ::
+  By convention, if `seed` is zero, the effect of this constructor is the same as default construction.
+
+```
+ripemd_160( void const* p, std::size_t n );
+constexpr ripemd_160( unsigned char const* p, std::size_t n );
+```
+
+Constructor taking a byte sequence seed.
+
+Effects: ::
+  Initializes the state as if by default construction, then if `n` is not zero, performs `update(p, n); result()`.
+
+Remarks: ::
+  By convention, if `n` is zero, the effect of this constructor is the same as default construction.
+
+### update
+
+```
+void update( void const* p, std::size_t n );
+constexpr void update( unsigned char const* p, std::size_t n );
+```
+
+Effects: ::
+  Updates the internal state of the RIPEMD-160 algorithm from the byte sequence `[p, p+n)`.
+
+Remarks: ::
+  Consecutive calls to `update` are equivalent to a single call with the concatenated byte sequences of the individual calls.
+
+### result
+
+```
+constexpr result_type result();
+```
+
+Effects: ::
+  Pads the accumulated message and finalizes the RIPEMD-160 digest.
+
+Returns: ::
+  The RIPEMD-160 digest of the message formed from the byte sequences of the preceding calls to `update`.
+
+Remarks: ::
+  Repeated calls to `result()` return a pseudorandom sequence of `result_type` values, effectively extending the output.
+
+## ripemd_128
+
+The RIPEMD-128 algorithm is identical to the RIPEMD-160 algorithm described above.
+
+The only differences are the number of rounds used and the size of the message digest, which is:
+```
+using result_type = digest<16>;
+```
+
+Otherwise, all other operations and constants are identical.

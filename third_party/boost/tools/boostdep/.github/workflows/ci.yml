@@ -56,7 +56,7 @@ jobs:
             install: g++-12
           - toolset: gcc-13
             cxxstd: "11,14,17,20,2b"
-            container: ubuntu:23.04
+            container: ubuntu:24.04
             os: ubuntu-latest
             install: g++-13
           - toolset: gcc-14
@@ -138,13 +138,13 @@ jobs:
           - toolset: clang
             compiler: clang++-16
             cxxstd: "11,14,17,20,2b"
-            container: ubuntu:23.04
+            container: ubuntu:24.04
             os: ubuntu-latest
             install: clang-16
           - toolset: clang
             compiler: clang++-17
             cxxstd: "11,14,17,20,2b"
-            container: ubuntu:23.10
+            container: ubuntu:24.04
             os: ubuntu-latest
             install: clang-17
           - toolset: clang
@@ -153,6 +153,12 @@ jobs:
             container: ubuntu:24.04
             os: ubuntu-latest
             install: clang-18
+          - toolset: clang
+            compiler: clang++-19
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:24.10
+            os: ubuntu-latest
+            install: clang-19
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-13
@@ -164,24 +170,32 @@ jobs:
             os: macos-15
 
     runs-on: ${{matrix.os}}
-    container: ${{matrix.container}}
+
+    container:
+      image: ${{matrix.container}}
+      volumes:
+        - /node20217:/node20217:rw,rshared
+        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
 
     defaults:
       run:
         shell: bash
 
     steps:
-      - name: Enable Node 16
-        run: |
-          echo "ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true" >> $GITHUB_ENV
-
-      - uses: actions/checkout@v3
-
       - name: Setup container environment
         if: matrix.container
         run: |
           apt-get update
-          apt-get -y install sudo python3 git g++
+          apt-get -y install sudo python3 git g++ curl xz-utils
+
+      - name: Install nodejs20glibc2.17
+        if: ${{ startsWith( matrix.container, 'ubuntu:1' ) }}
+        run: |
+          curl -LO https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz
+          tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
+          ldd /__e/node20/bin/node
+
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install

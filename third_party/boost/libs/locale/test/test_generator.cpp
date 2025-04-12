@@ -7,7 +7,7 @@
 
 #include <boost/locale.hpp>
 #include <boost/locale/conversion.hpp>
-#include "../src/boost/locale/win32/lcid.hpp"
+#include "../src/win32/lcid.hpp"
 #include "boostLocale/test/tools.hpp"
 #include "boostLocale/test/unit_test.hpp"
 #include <boost/assert.hpp>
@@ -82,7 +82,8 @@ bool hasLocaleForBackend(const std::string& locale_name, const std::string& back
         return has_posix_locale(locale_name);
     else {
         BOOST_ASSERT(backendName == "icu");
-        return BOOST_LOCALE_ICU_VERSION >= 5901; // First version to use (correct) CLDR data
+        return (locale_name.substr(0, 3) != "en_")
+               || (BOOST_LOCALE_ICU_VERSION >= 5901); // First version to use (correct) CLDR data for en_* locales
     }
 }
 
@@ -328,7 +329,7 @@ void test_main(int /*argc*/, char** /*argv*/)
 #else
 #    define TEST_FOR_CHAR8(check) (void)0
 #endif
-#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+#ifdef __cpp_lib_char8_t
 #    define TEST_FOR_STRING8(check) TEST(check)
 #else
 #    define TEST_FOR_STRING8(check) (void)0

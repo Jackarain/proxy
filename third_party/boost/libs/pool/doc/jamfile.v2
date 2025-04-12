@@ -20,15 +20,15 @@ using quickbook ;
 
 doxygen autodoc
    :
-      [ glob ../../../boost/pool/*.hpp ]
-      #[ glob ../../../boost/pool/detail/*.hpp ]
-      #[ glob ../../../boost/pool/detail/*.ipp ] 
+      [ glob ../include/boost/pool/*.hpp ]
+      #[ glob ../include/boost/pool/detail/*.hpp ]
+      #[ glob ../include/boost/pool/detail/*.ipp ]
       # Renamed as .inc are not recognised correctly by doxywizard leaving error message.
       # Warning: include file boost/pool/detail/pool_construct.inc not found, perhaps you forgot to add its directory to INCLUDE_PATH?
       #  and problem with 'no type' in jamfile.
       # error: target { ../../../boost/pool/detail/pool_construct.inc. } has no type
-     
-      #[ glob ../../../boost/pool/examples/*.*pp ] # Example source files.
+
+      #[ glob ../include/boost/pool/examples/*.*pp ] # Example source files.
    :
 			<doxygen:param>WARNINGS=YES # Default NO, but useful to see warnings, especially in a logfile.
 			# It is also wise to to set a warnings logfile like this:
@@ -51,7 +51,7 @@ boostbook standalone
    :
       pool
    :
-   
+
       # General settings
       # =================
       # Options for html and pdf
@@ -66,7 +66,7 @@ boostbook standalone
       <xsl:param>admon.graphics=1
       # Path for links to Boost:
       <xsl:param>boost.root=../../../..
-  
+
       # HTML options:
       # =============
       # Use graphics icons not text for navigation:
@@ -102,38 +102,38 @@ boostbook standalone
       <xsl:param>page.margin.inner=0.5in
       # Margin size:
       <xsl:param>page.margin.outer=0.5in
-		
+
       # Yes, we want graphics for admonishments:
       <xsl:param>admon.graphics=1
-		
+
       # Set these one for PDF generation *only*:
       # default png graphics are awful in PDF form,
       # better use SVG instead:
       <format>pdf:<xsl:param>admon.graphics.extension=".svg"
       #<format>pdf:<xsl:param>admon.graphics.extension=".png" # Only png images are available.
-      <format>pdf:<xsl:param>use.role.for.mediaobject=1 
+      <format>pdf:<xsl:param>use.role.for.mediaobject=1
       <format>pdf:<xsl:param>preferred.mediaobject.role=print
       <format>pdf:<xsl:param>img.src.path=$(images_location)/ # graphics (diagrams) for pdf.
       <format>pdf:<xsl:param>draft.mode="no"
       <format>pdf:<xsl:param>boost.url.prefix=I:/boost-sandbox/guild/pool/libs/pool/doc/html
-		
+
       # <auto-index>on turns on index (or off).
       <auto-index>on
       <auto-index-verbose>on
-                
+
       # Choose indexing method (separately for html and pdf):
       <format>html:<auto-index-internal>on  # on (or off) to use internally generated indexes.
       # <format>html:<xsl:param>generate.index=0 # Don't let the XSL stylesheets generate indexes.
-        
+
       <format>pdf:<auto-index-internal>off # on (or off) to use internally generated indexes.
       # <auto-index-type>index  # Use <index>...</index> as the XML wrapper.
-        
+
       <format>pdf:<xsl:param>index.on.type=1 # For the native stylesheets to generate the different indexes.
       # PDF native index support is probably better for PDFs as then you actually get page numbers.
 
-      <auto-index-script>index.idx # Specifies the name of the script to load. 
+      <auto-index-script>index.idx # Specifies the name of the script to load.
       # <auto-index-prefix>../../../ # Path to /pool so index.idx !scan-path can use boost/ and libs/doc.
-      <auto-index-prefix>../../.. 
+      <auto-index-prefix>../../..
 
       <dependency>autodoc #
    ;

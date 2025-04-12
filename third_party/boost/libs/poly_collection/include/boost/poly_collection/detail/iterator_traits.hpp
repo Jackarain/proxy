@@ -1,4 +1,4 @@
-/* Copyright 2016-2017 Joaquin M Lopez Munoz.
+/* Copyright 2016-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -31,7 +31,8 @@ namespace detail{
 
 /* (Internal) bunch of traits-grouped functions for const-preserving
  * interoperatibility between iterators and local iterators of a
- * poly_collection.
+ * poly_collection, plus access to associated model's index from
+ * an iterator type.
  */
 
 template<typename Iterator>
@@ -53,6 +54,8 @@ template<typename Iterator>
 struct iterator_traits
 {
   using container_type=typename poly_collection_of<Iterator>::type;
+  using model_type=typename model_of<container_type>::type;
+  using type_index=typename container_type::type_index;
   using is_const_iterator=typename std::is_const<
     typename std::remove_reference<
       typename std::iterator_traits<Iterator>::reference
@@ -93,10 +96,7 @@ struct iterator_traits
   static local_base_iterator
   local_base_iterator_from(iterator it)noexcept
   {
-    return {
-      it.mapit,
-      model_of<container_type>::type::nonconst_iterator(it.segpos)
-    };
+    return {it.mapit,model_type::nonconst_iterator(it.segpos)};
   }
 
   static iterator 
@@ -104,6 +104,12 @@ struct iterator_traits
     local_base_iterator lbit,base_segment_info_iterator mapend)noexcept
   {
     return {lbit.mapit,mapend.base(),lbit.base()};
+  }
+
+  template<typename T>
+  static decltype(model_type::template index<T>()) index()
+  {
+    return model_type::template index<T>();
   }
 };
 

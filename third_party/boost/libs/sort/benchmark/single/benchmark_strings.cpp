@@ -47,18 +47,17 @@ using bsort::spreadsort::spreadsort;
 using bsort::pdqsort;
 
 void Generator_random (void);
-void Generator_sorted(void);
-void Generator_sorted_end(size_t n_last);
+void Generator_sorted (void);
+void Generator_sorted_end (size_t n_last);
 void Generator_sorted_middle (size_t n_last);
-void Generator_reverse_sorted(void);
-void Generator_reverse_sorted_end(size_t n_last);
-void Generator_reverse_sorted_middle(size_t n_last);
+void Generator_reverse_sorted (void);
+void Generator_reverse_sorted_end (size_t n_last);
+void Generator_reverse_sorted_middle (size_t n_last);
 
-template <class IA, class compare>
-int Test(std::vector<IA> &B, compare comp = compare());
+int Test (std::vector <std::string> &B);
 
 
-int main(int argc, char *argv[])
+int main (int argc, char *argv [])
 {
     cout << "\n\n";
     cout << "************************************************************\n";
@@ -72,232 +71,224 @@ int main(int argc, char *argv[])
     cout << "************************************************************\n";
     cout << std::endl;
 
-    cout<<"[ 1 ] std::sort   [ 2 ] pdqsort          [ 3 ] std::stable_sort \n";
-    cout<<"[ 4 ] spinsort    [ 5 ] flat_stable_sort [ 6 ] spreadsort\n\n";
-    cout<<"                    |      |      |      |      |      |      |\n";
-    cout<<"                    | [ 1 ]| [ 2 ]| [ 3 ]| [ 4 ]| [ 5 ]| [ 6 ]|\n";
-    cout<<"--------------------+------+------+------+------+------+------+\n";
+    cout << "[ 1 ] std::sort   [ 2 ] pdqsort          [ 3 ] std::stable_sort\n";
+    cout << "[ 4 ] spinsort    [ 5 ] flat_stable_sort [ 6 ] spreadsort\n\n";
+    cout << "                    |      |      |      |      |      |      |\n";
+    cout << "                    | [ 1 ]| [ 2 ]| [ 3 ]| [ 4 ]| [ 5 ]| [ 6 ]|\n";
+    cout << "--------------------+------+------+------+------+------+------+\n";
     std::string empty_line =
            "                    |      |      |      |      |      |      |\n";
 
-    cout<<"random              |";
+    cout << "random              |";
     Generator_random ();
 
-    cout<<empty_line;
-    cout<<"sorted              |";
-    Generator_sorted();
+    cout << empty_line;
+    cout << "sorted              |";
+    Generator_sorted ();
 
-    cout<<"sorted + 0.1% end   |";
-    Generator_sorted_end(NMAXSTRING / 1000);
+    cout << "sorted + 0.1% end   |";
+    Generator_sorted_end (NMAXSTRING / 1000);
 
-    cout<<"sorted +   1% end   |";
-    Generator_sorted_end(NMAXSTRING / 100);
+    cout << "sorted +   1% end   |";
+    Generator_sorted_end (NMAXSTRING / 100);
 
-    cout<<"sorted +  10% end   |";
-    Generator_sorted_end(NMAXSTRING / 10);
+    cout << "sorted +  10% end   |";
+    Generator_sorted_end (NMAXSTRING / 10);
 
-    cout<<empty_line;
-    cout<<"sorted + 0.1% mid   |";
+    cout <<empty_line;
+    cout << "sorted + 0.1% mid   |";
     Generator_sorted_middle (NMAXSTRING / 1000);
 
-    cout<<"sorted +   1% mid   |";
+    cout << "sorted +   1% mid   |";
     Generator_sorted_middle (NMAXSTRING / 100);
 
-    cout<<"sorted +  10% mid   |";
+    cout << "sorted +  10% mid   |";
     Generator_sorted_middle (NMAXSTRING / 10 );
 
-    cout<<empty_line;
-    cout<<"reverse sorted      |";
-    Generator_reverse_sorted();
+    cout <<empty_line;
+    cout << "reverse sorted      |";
+    Generator_reverse_sorted ();
 
-    cout<<"rv sorted + 0.1% end|";
-    Generator_reverse_sorted_end(NMAXSTRING / 1000);
+    cout << "rv sorted + 0.1% end|";
+    Generator_reverse_sorted_end (NMAXSTRING / 1000);
 
-    cout<<"rv sorted +   1% end|";
-    Generator_reverse_sorted_end(NMAXSTRING / 100);
+    cout << "rv sorted +   1% end|";
+    Generator_reverse_sorted_end (NMAXSTRING / 100);
 
-    cout<<"rv sorted +  10% end|";
-    Generator_reverse_sorted_end(NMAXSTRING / 10);
+    cout << "rv sorted +  10% end|";
+    Generator_reverse_sorted_end (NMAXSTRING / 10);
 
-    cout<<empty_line;
-    cout<<"rv sorted + 0.1% mid|";
-    Generator_reverse_sorted_middle(NMAXSTRING / 1000);
+    cout <<empty_line;
+    cout << "rv sorted + 0.1% mid|";
+    Generator_reverse_sorted_middle (NMAXSTRING / 1000);
 
-    cout<<"rv sorted +   1% mid|";
-    Generator_reverse_sorted_middle(NMAXSTRING / 100);
+    cout << "rv sorted +   1% mid|";
+    Generator_reverse_sorted_middle (NMAXSTRING / 100);
 
-    cout<<"rv sorted +  10% mid|";
-    Generator_reverse_sorted_middle(NMAXSTRING / 10);
+    cout << "rv sorted +  10% mid|";
+    Generator_reverse_sorted_middle (NMAXSTRING / 10);
 
-    cout<<"--------------------+------+------+------+------+------+------+\n";
-    cout<<endl<<endl ;
+    cout << "--------------------+------+------+------+------+------+------+\n";
+    cout << endl<<endl ;
     return 0;
 }
 
 void Generator_random(void)
 {
-    std::vector<std::string> A;
-    A.reserve(NMAXSTRING);
-    A.clear();
-    if (bsc::fill_vector_string("input.bin", A, NMAXSTRING) != 0)
+    std::vector <std::string> A;
+    A.reserve (NMAXSTRING);
+    A.clear ();
+    if (bsc::fill_vector_string ("input.bin", A, NMAXSTRING) != 0)
     {
         std::cout << "Error in the input file\n";
-        return;
+        std::exit (EXIT_FAILURE);
     };
-    Test<std::string, std::less<std::string>>(A);
-
+    Test (A);
 };
-void Generator_sorted(void)
+void Generator_sorted (void)
 {
-    std::vector<std::string> A;
-    A.reserve(NMAXSTRING);
-    A.clear();
-    if (bsc::fill_vector_string("input.bin", A, NMAXSTRING) != 0)
+    std::vector <std::string> A;
+    A.reserve (NMAXSTRING);
+    A.clear ();
+    if (bsc::fill_vector_string ("input.bin", A, NMAXSTRING) != 0)
     {
         std::cout << "Error in the input file\n";
-        return;
+        std::exit (EXIT_FAILURE);
     };
-    std::sort( A.begin() , A.end() );
-    Test<std::string, std::less<std::string>>(A);
+    std::sort (A.begin (), A.end ());
+    Test (A);
 };
 
-void Generator_sorted_end(size_t n_last)
+void Generator_sorted_end (size_t n_last)
 {
-    std::vector<std::string> A;
-    A.reserve(NMAXSTRING);
-    A.clear();
-    if (bsc::fill_vector_string("input.bin", A, NMAXSTRING+ n_last) != 0)
+    std::vector <std::string> A;
+    A.reserve (NMAXSTRING);
+    A.clear ();
+    if (bsc::fill_vector_string ("input.bin", A, NMAXSTRING+ n_last) != 0)
     {
         std::cout << "Error in the input file\n";
-        return;
+        std::exit (EXIT_FAILURE);
     };
-    std::sort (A.begin() , A.begin() + NMAXSTRING );
-    Test<std::string, std::less<std::string>>(A);
+    std::sort (A.begin (), A.begin () + NMAXSTRING );
+    Test (A);
 };
-void Generator_sorted_middle(size_t n_last)
+void Generator_sorted_middle (size_t n_middle)
 {
-    std::vector<std::string> A,B,C;
-    A.reserve(NMAXSTRING);
-    A.clear();
-    if (bsc::fill_vector_string("input.bin", A, NMAXSTRING + n_last) != 0)
+    assert (n_middle > 1 && NMAXSTRING >= (n_middle -1));
+    vector <std::string> A, aux;
+    A.reserve (NMAXSTRING + n_middle);
+    aux.reserve (n_middle);
+
+    if (bsc::fill_vector_string ("input.bin", A, NMAXSTRING + n_middle) != 0)
     {
         std::cout << "Error in the input file\n";
-        return;
+        std::exit (EXIT_FAILURE);
     };
-    for ( size_t i = NMAXSTRING ; i < A.size() ; ++i)
-        B.push_back ( std::move ( A[i]));
-    A.resize ( NMAXSTRING);
-    std::sort (A.begin() , A.end() );
-    size_t step = NMAXSTRING /n_last +1 ;
-    size_t pos = 0 ;
+    for (size_t i = 0; i < n_middle; ++i)   aux.push_back (std::move (A [i]));
 
-    for ( size_t i =0 ; i < B.size() ; ++i, pos += step)
-    {   C.push_back ( B[i]);
-        for ( size_t k = 0 ; k < step ; ++k )
-            C.push_back ( A[pos + k] );
-    };
-    while ( pos < A.size() ) C.push_back ( A[pos++]);
-    A = C ;
+    std::sort (A.begin () + n_middle, A.end ());
+    //------------------------------------------------------------------------
+    // To insert n_middle elements, must have (n_middle - 1) intervals between
+    // them. The size of the interval is step
+    // The elements after the last element of aux don't need to be moved
+    //-------------------------------------------------------------------------
+    size_t step = NMAXSTRING / (n_middle - 1);
+    A [0] = std::move (aux [0]);
+    size_t pos_read = n_middle, pos_write = 1;
 
-    Test<std::string, std::less<std::string>>(A);
-};
-
-void Generator_reverse_sorted(void)
-{
-
-    std::vector<std::string> A;
-    A.reserve(NMAXSTRING);
+    for (size_t i = 1; i < n_middle; ++i)
     {
-        std::vector<std::string> B;
-        B.reserve(NMAXSTRING);
-        if (bsc::fill_vector_string("input.bin", B, NMAXSTRING) != 0)
+        for (size_t k = 0 ; k < step; ++k)
+            A [pos_write ++] = std::move (A [pos_read ++]);
+        A [pos_write ++] = std::move (aux [i]);    
+    };
+    aux.clear ();
+    aux.reserve (0);
+    Test (A);
+};
+void Generator_reverse_sorted (void)
+{
+    std::vector <std::string> A;
+    A.reserve (NMAXSTRING);
+    {
+        std::vector <std::string> B;
+        B.reserve (NMAXSTRING);
+        if (bsc::fill_vector_string ("input.bin", B, NMAXSTRING) != 0)
         {
             std::cout << "Error in the input file\n";
-            return;
+            std::exit (EXIT_FAILURE);
         };
-        std::sort(B.begin(), B.end());
-        A.clear();
+        std::sort (B.begin(), B.end());
+        A.clear ();
         for (size_t i = 0; i < NMAXSTRING; ++i)
-            A.push_back(B[NMAXSTRING - 1 - i]);
+            A.push_back (B [NMAXSTRING - 1 - i]);
     };
-    Test<std::string, std::less<std::string>>(A);
-
-/*
-    std::vector<std::string> A;
-    A.reserve(NMAXSTRING);
-    A.clear();
-    if (bsc::fill_vector_string("input.bin", A, NMAXSTRING) != 0)
-    {
-        std::cout << "Error in the input file\n";
-        return;
-    };
-    std::sort( A.begin() , A.end());
-    size_t nmid = (A.size() >>1), nlast = A.size() -1 ;
-    for (size_t i = 0 ; i < nmid ;++i)
-        std::swap ( A[i], A [nlast -i]);
-
-    Test<std::string, std::less<std::string>>(A);
-*/
+    Test (A);
 };
-void Generator_reverse_sorted_end(size_t n_last)
+void Generator_reverse_sorted_end (size_t n_last)
 {
-    std::vector<std::string> A;
-    A.reserve(NMAXSTRING);
-    A.clear();
-    if (bsc::fill_vector_string("input.bin", A, NMAXSTRING+ n_last) != 0)
+    std::vector <std::string> A;
+    A.reserve (NMAXSTRING);
+    A.clear ();
+    if (bsc::fill_vector_string ("input.bin", A, NMAXSTRING + n_last) != 0)
     {
         std::cout << "Error in the input file\n";
-        return;
+        std::exit (EXIT_FAILURE);
     };
-    std::sort (A.begin() , A.begin() + NMAXSTRING );
-    for ( size_t i =0 ; i< (NMAXSTRING >>1); ++i)
-        std::swap ( A[i], A[NMAXSTRING - 1 - i]);
+    std::sort (A.begin (), A.begin () + NMAXSTRING);
+    for (size_t i = 0; i < (NMAXSTRING >> 1); ++i)
+        std::swap (A [i], A [NMAXSTRING - 1 - i]);
 
-    Test<std::string, std::less<std::string>>(A);
-
+    Test (A);
 };
-void Generator_reverse_sorted_middle(size_t n_last)
+void Generator_reverse_sorted_middle (size_t n_middle)
 {
-    std::vector<std::string> A,B,C;
-    A.reserve(NMAXSTRING);
-    A.clear();
-    if (bsc::fill_vector_string("input.bin", A, NMAXSTRING + n_last) != 0)
+    assert (n_middle > 1 && NMAXSTRING >= (n_middle -1));
+    vector <std::string> A, aux;
+    A.reserve (NMAXSTRING + n_middle);
+    aux.reserve (n_middle);
+
+    if (bsc::fill_vector_string ("input.bin", A, NMAXSTRING + n_middle) != 0)
     {
         std::cout << "Error in the input file\n";
-        return;
+        std::exit (EXIT_FAILURE);
     };
-    for ( size_t i = NMAXSTRING ; i < A.size() ; ++i)
-        B.push_back ( std::move ( A[i]));
-    A.resize ( NMAXSTRING);
+    for (size_t i = 0; i < n_middle; ++i)   aux.push_back (std::move (A [i]));
 
-    std::sort (A.begin() , A.end() );
-    for ( size_t i =0 ; i< (NMAXSTRING >>1); ++i)
-        std::swap ( A[i], A[NMAXSTRING - 1 - i]);
+    std::sort (A.begin () + n_middle, A.end ());
+    
+    size_t pos1 = n_middle, pos2 = A.size () - 1;
+    for (size_t i = 0; i < (NMAXSTRING >> 1); ++i)
+        std::swap (A [pos1 ++], A [pos2 --]);
+        
+    //------------------------------------------------------------------------
+    // To insert n_middle elements, must have (n_middle - 1) intervals between
+    // them. The size of the interval is step
+    // The elements after the last element of aux don't need to be moved
+    //-------------------------------------------------------------------------
+    size_t step = NMAXSTRING / (n_middle - 1);
+    A [0] = std::move (aux [0]);
+    size_t pos_read = n_middle, pos_write = 1;
 
-    size_t step = NMAXSTRING /n_last +1 ;
-    size_t pos = 0 ;
-
-    for ( size_t i =0 ; i < B.size() ; ++i, pos += step)
-    {   C.push_back ( B[i]);
-        for ( size_t k = 0 ; k < step ; ++k )
-            C.push_back ( A[pos + k] );
+    for (size_t i = 1; i < n_middle; ++i)
+    {
+        for (size_t k = 0 ; k < step; ++k)
+            A [pos_write ++] = std::move (A [pos_read ++]);
+        A [pos_write ++] = std::move (aux [i]);    
     };
-    while ( pos < A.size() )
-        C.push_back ( A[pos++]);
-    A = C ;
-
-    Test<std::string, std::less<std::string>>(A);
+    aux.clear ();
+    aux.reserve (0);
+    Test (A);
 };
 
-
-template<class IA, class compare>
-int Test (std::vector<IA> &B,  compare comp)
-{   //---------------------------- begin -----------------------------
+int Test (std::vector <std::string> &B)
+{   
+    //---------------------------- begin -----------------------------
+    std::less <std::string> comp;
     double duration;
     time_point start, finish;
-    std::vector<IA> A (B);
-    std::vector<double> V;
-
+    std::vector <std::string> A (B);
+    std::vector <double> V;
 
     A = B;
     start = now ();
@@ -344,11 +335,12 @@ int Test (std::vector<IA> &B,  compare comp)
     //-----------------------------------------------------------------------
     // printing the vector
     //-----------------------------------------------------------------------
-    std::cout<<std::setprecision(2)<<std::fixed;
-    for ( uint32_t i =0 ; i < V.size() ; ++i)
-    {   std::cout<<std::right<<std::setw(5)<<V[i]<<" |";
+    std::cout << std::setprecision (2) << std::fixed;
+    for (uint32_t i = 0; i < V.size () ; ++i)
+    {   
+        std::cout << std::right << std::setw (5) << V [i] << " |";
     };
-    std::cout<<std::endl;
+    std::cout <<std::endl;
     return 0;
 };
 

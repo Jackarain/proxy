@@ -10,6 +10,11 @@ http://www.boost.org/LICENSE_1_0.txt
 :toc-title:
 :idprefix:
 
+## Changes in 1.88.0
+
+* When `BOOST_ASSERT_HANDLER_IS_NORETURN` is defined, `boost::assertion_failed`
+  and `boost::assertion_failed_msg` are declared as `BOOST_NORETURN`.
+
 ## Changes in 1.79.0
 
 * `source_location().file_name()` and `source_location().function_name()`

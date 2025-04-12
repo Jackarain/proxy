@@ -425,7 +425,7 @@ void test_utf_to_utf_for()
     test_from_utf_for_impls(utf<Char>(utf8_string), utf8_string, "UTF-8");
     std::cout << "---- wchar_t\n";
     test_utf_to_utf_for<Char, wchar_t>(utf8_string);
-#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+#ifdef __cpp_lib_char8_t
     std::cout << "---- char8_t\n";
     test_utf_to_utf_for<Char, char8_t>(utf8_string);
 #endif
@@ -446,7 +446,7 @@ void test_utf_to_utf()
     test_utf_to_utf_for<char>();
     std::cout << "-- wchar_t\n";
     test_utf_to_utf_for<wchar_t>();
-#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+#ifdef __cpp_lib_char8_t
     std::cout << "-- char8_t\n";
     test_utf_to_utf_for<char8_t>();
 #endif
@@ -643,7 +643,7 @@ void test_latin1_conversions()
     test_latin1_conversions_for<char>();
     std::cout << "-- wchar_t\n";
     test_latin1_conversions_for<wchar_t>();
-#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+#ifdef __cpp_lib_char8_t
     std::cout << "-- char8_t\n";
     test_latin1_conversions_for<char8_t>();
 #endif
@@ -781,7 +781,7 @@ void test_main(int /*argc*/, char** /*argv*/)
     test_utf_for<char>();
     std::cout << "  wchar_t" << std::endl;
     test_utf_for<wchar_t>();
-#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+#ifdef __cpp_lib_char8_t
     std::cout << "  char8_t" << std::endl;
     test_utf_for<char8_t>();
 #endif
@@ -813,8 +813,8 @@ bool isLittleEndian()
     return reinterpret_cast<const char*>(&endianMark)[0] == 1;
 }
 
-#include "../src/boost/locale/util/encoding.hpp"
-#include "../src/boost/locale/util/win_codepages.hpp"
+#include "../src/util/encoding.hpp"
+#include "../src/util/win_codepages.hpp"
 
 void test_utf_name()
 {
@@ -832,10 +832,9 @@ void test_simple_encodings()
     const auto encodings = get_simple_encodings();
     for(auto it = encodings.begin(), end = encodings.end(); it != end; ++it) {
         TEST_EQ(normalize_encoding(*it), *it); // Must be normalized
-        const auto it2 = std::find(it + 1, end, *it);
-        TEST(it2 == end);
-        if(it2 != end)
-            std::cerr << "Duplicate entry: " << *it << '\n'; // LCOV_EXCL_LINE
+        TEST_CONTEXT("Entry: " << *it);
+        // Must be unique
+        TEST(std::find(it + 1, end, *it) == end);
     }
     const auto it = std::is_sorted_until(encodings.begin(), encodings.end());
     TEST(it == encodings.end());
@@ -852,10 +851,9 @@ void test_win_codepages()
         auto is_same_win_codepage = [&it](const windows_encoding& rhs) -> bool {
             return it->codepage == rhs.codepage && std::strcmp(it->name, rhs.name) == 0;
         };
-        const auto* it2 = std::find_if(it + 1, end, is_same_win_codepage);
-        TEST(it2 == end);
-        if(it2 != end)
-            std::cerr << "Duplicate entry: " << it->name << ':' << it->codepage << '\n'; // LCOV_EXCL_LINE
+        TEST_CONTEXT("Entry: " << it->name << ':' << it->codepage);
+        // Must be unique
+        TEST(std::find_if(it + 1, end, is_same_win_codepage) == end);
     }
     const auto cmp = [](const windows_encoding& rhs, const windows_encoding& lhs) -> bool { return rhs < lhs.name; };
     const auto* it = std::is_sorted_until(all_windows_encodings, std::end(all_windows_encodings), cmp);

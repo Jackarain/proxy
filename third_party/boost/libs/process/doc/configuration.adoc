@@ -1,0 +1,11 @@
+= Configuration
+
+Boost process v2 can be configured in the following ways:
+
+[cols="1,1"]
+|===
+| Macro | Description
+
+| `BOOST_PROCESS_V2_STANDALONE` | Build boost.process for standalone asio
+| `BOOST_PROCESS_USE_STD_FS`    | Use std::filesystem instead of boost::filesystem
+| `BOOST_PROCESS_V2_POSIX_FORCE_DISABLE_CLOSE_RANGE` | Disable usage of `close_range`.

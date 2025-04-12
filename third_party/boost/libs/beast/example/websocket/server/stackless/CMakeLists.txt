@@ -1,5 +1,6 @@
 #
 # Copyright (c) 2016-2017 Vinnie Falco (vinnie dot falco at gmail dot com)
+# Copyright (c) 2024 Mohammad Nejati
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -7,17 +8,15 @@
 # Official repository: https://github.com/boostorg/beast
 #
 
-GroupSources(include/boost/beast beast)
-GroupSources(example/websocket/server/stackless "/")
-
-add_executable (websocket-server-stackless
-    ${BOOST_BEAST_FILES}
+add_executable(websocket-server-stackless
     Jamfile
-    websocket_server_stackless.cpp
-)
+    websocket_server_stackless.cpp)
 
-target_link_libraries(websocket-server-stackless
-    lib-asio
-    lib-beast)
+source_group("" FILES
+    Jamfile
+    websocket_server_stackless.cpp)
 
-set_property(TARGET websocket-server-stackless PROPERTY FOLDER "example-websocket-server")
+target_link_libraries(websocket-server-stackless PRIVATE Boost::beast)
+
+set_target_properties(websocket-server-stackless
+    PROPERTIES FOLDER "example-websocket-server")

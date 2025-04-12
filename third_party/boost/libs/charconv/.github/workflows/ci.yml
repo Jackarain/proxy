@@ -22,7 +22,6 @@ env:
   NET_RETRY_COUNT: 5
   DEFAULT_BUILD_VARIANT: debug,release
   B2_CI_VERSION: 1
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
 jobs:
   posix:
@@ -72,19 +71,22 @@ jobs:
           - toolset: gcc-9
             cxxstd: "03,11,14,17,2a"
             address_model: 32,64
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install:
               - g++-9-multilib
           - toolset: gcc-9
             cxxstd: "03-gnu,11-gnu,14-gnu,17-gnu,2a-gnu"
             address_model: 32,64
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install:
               - g++-9-multilib
           - toolset: gcc-10
             cxxstd: "03,11,14,17,20"
             address_model: 32,64
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install:
               - g++-10-multilib
           - toolset: gcc-11
@@ -119,8 +121,7 @@ jobs:
             os: ubuntu-24.04
             install:
               - g++-13-multilib
-            cxxflags:
-              - "-fexcess-precision=fast"
+            cxxflags: -fexcess-precision=fast
 
           # Linux, clang
           - toolset: clang
@@ -178,13 +179,15 @@ jobs:
           - toolset: clang
             compiler: clang++-9
             cxxstd: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install:
               - clang-9
           - toolset: clang
             compiler: clang++-10
             cxxstd: "03,11,14,17,20"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install:
               - clang-10
           - toolset: clang
@@ -286,7 +289,11 @@ jobs:
 
     timeout-minutes: 60
     runs-on: ${{matrix.os}}
-    container: ${{matrix.container}}
+    container:
+      image: ${{matrix.container}}
+      volumes:
+        - /node20217:/node20217:rw,rshared
+        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
 
     steps:
       - name: Setup environment
@@ -310,9 +317,13 @@ jobs:
                     fi
                     apt-get -o Acquire::Retries=$NET_RETRY_COUNT install -y sudo software-properties-common tzdata wget curl apt-transport-https ca-certificates make build-essential g++ $PYTHON_PACKAGE python3 perl git cmake
                 fi
+                if [[ "${{matrix.container}}" == "ubuntu:1"* ]]; then
+                  # Node 20 doesn't work with Ubuntu 16/18  glibc: https://github.com/actions/checkout/issues/1590
+                  curl -sL https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz | tar -xJ --strip-components 1 -C /node20217
+                fi
             fi
             git config --global pack.threads 0
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -483,6 +494,7 @@ jobs:
                 B2_ARGS+=("address-model=${{matrix.address_model}}")
             fi
             B2_ARGS+=("libs/$LIBRARY/test")
+            set -x
             ./b2 "${B2_ARGS[@]}"
 
   windows:
@@ -549,8 +561,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
+          - os: ubuntu-24.04
           - os: macos-13
           - os: macos-14
           - os: macos-15
@@ -562,7 +574,7 @@ jobs:
 
       - name: Install packages
         if: matrix.install
-        run: sudo apt install ${{matrix.install}}
+        run: sudo apt-get -y install ${{matrix.install}}
 
       - name: Setup Boost
         run: |
@@ -598,8 +610,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
+          - os: ubuntu-24.04
           - os: macos-13
           - os: macos-14
           - os: macos-15
@@ -611,7 +623,7 @@ jobs:
 
       - name: Install packages
         if: matrix.install
-        run: sudo apt install ${{matrix.install}}
+        run: sudo apt-get -y install ${{matrix.install}}
 
       - name: Setup Boost
         run: |
@@ -657,8 +669,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
+          - os: ubuntu-24.04
           - os: macos-13
           - os: macos-14
           - os: macos-15
@@ -670,7 +682,7 @@ jobs:
 
       - name: Install packages
         if: matrix.install
-        run: sudo apt install ${{matrix.install}}
+        run: sudo apt-get -y install ${{matrix.install}}
 
       - name: Setup Boost
         run: |

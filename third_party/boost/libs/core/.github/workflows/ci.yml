@@ -125,7 +125,7 @@ jobs:
             cxxstd: "03,11,14,17,20,23"
             address-model: 32,64
             os: ubuntu-latest
-            container: ubuntu:23.04
+            container: ubuntu:24.04
             install:
               - g++-13-multilib
           - toolset: gcc-14
@@ -283,7 +283,7 @@ jobs:
             compiler: clang++-16
             cxxstd: "03,11,14,17,20,2b"
             os: ubuntu-latest
-            container: ubuntu:23.04
+            container: ubuntu:24.04
             install:
               - clang-16
               - libc++-16-dev
@@ -294,7 +294,7 @@ jobs:
             compiler: clang++-17
             cxxstd: "03,11,14,17,20,2b"
             os: ubuntu-latest
-            container: ubuntu:23.10
+            container: ubuntu:24.04
             install:
               - clang-17
               - libc++-17-dev
@@ -312,6 +312,17 @@ jobs:
               - libc++abi-18-dev
             cxxflags: -stdlib=libc++
             linkflags: -stdlib=libc++
+          - toolset: clang
+            compiler: clang++-19
+            cxxstd: "03,11,14,17,20,2b"
+            os: ubuntu-latest
+            container: ubuntu:24.10
+            install:
+              - clang-19
+              - libc++-19-dev
+              - libc++abi-19-dev
+            cxxflags: -stdlib=libc++
+            linkflags: -stdlib=libc++
           - name: UBSAN
             toolset: clang
             compiler: clang++-15
@@ -327,13 +338,13 @@ jobs:
 
           - toolset: clang
             cxxstd: "03,11,14,17,20,2b"
-            os: macos-12
-          - toolset: clang
-            cxxstd: "03,11,14,17,20,2b"
             os: macos-13
           - toolset: clang
             cxxstd: "03,11,14,17,20,2b"
             os: macos-14
+          - toolset: clang
+            cxxstd: "03,11,14,17,20,2b"
+            os: macos-15
 
     timeout-minutes: 45
     runs-on: ${{matrix.os}}
@@ -626,9 +637,10 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-12
+          - os: ubuntu-24.04
           - os: macos-13
           - os: macos-14
+          - os: macos-15
 
     runs-on: ${{matrix.os}}
     timeout-minutes: 10
@@ -693,9 +705,10 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-12
+          - os: ubuntu-24.04
           - os: macos-13
           - os: macos-14
+          - os: macos-15
 
     runs-on: ${{matrix.os}}
     timeout-minutes: 10
@@ -770,9 +783,10 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-12
+          - os: ubuntu-24.04
           - os: macos-13
           - os: macos-14
+          - os: macos-15
 
     runs-on: ${{matrix.os}}
     timeout-minutes: 20

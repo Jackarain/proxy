@@ -501,16 +501,16 @@ auto_test_unit_registrar::auto_test_unit_registrar( const_string ts_name, const_
 
 //____________________________________________________________________________//
 
-auto_test_unit_registrar::auto_test_unit_registrar( test_unit_generator const& tc_gen, decorator::collector_t& decorators )
+auto_test_unit_registrar::auto_test_unit_registrar( test_unit_generator const& tc_generator, decorator::collector_t& decorators )
 {
-    framework::current_auto_test_suite().add( tc_gen, decorators );
+    framework::current_auto_test_suite().add( tc_generator, decorators );
 }
 
 //____________________________________________________________________________//
 
-auto_test_unit_registrar::auto_test_unit_registrar( boost::shared_ptr<test_unit_generator> tc_gen, decorator::collector_t& decorators )
+auto_test_unit_registrar::auto_test_unit_registrar( boost::shared_ptr<test_unit_generator> tc_generator, decorator::collector_t& decorators )
 {
-    framework::current_auto_test_suite().add( tc_gen, decorators );
+    framework::current_auto_test_suite().add( tc_generator, decorators );
 }
 
 

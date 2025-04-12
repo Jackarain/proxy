@@ -424,3 +424,7 @@ run sp_is_bounded_array_test.cpp ;
 run sp_is_unbounded_array_test.cpp ;
 run sp_type_identity_test.cpp ;
 run sp_type_with_alignment_test.cpp ;
+
+run sp_ostream_test.cpp ;
+run ip_ostream_test.cpp ;
+run lsp_ostream_test.cpp ;

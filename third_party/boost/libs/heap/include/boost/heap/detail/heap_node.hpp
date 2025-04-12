@@ -18,7 +18,7 @@
 #ifdef BOOST_HEAP_SANITYCHECKS
 #    define BOOST_HEAP_ASSERT BOOST_ASSERT
 #else
-#    define BOOST_HEAP_ASSERT( expression )
+#    define BOOST_HEAP_ASSERT( expression ) static_assert( true, "force semicolon" )
 #endif
 
 
@@ -29,7 +29,7 @@ namespace bi = boost::intrusive;
 template < bool auto_unlink = false >
 struct heap_node_base :
     bi::list_base_hook<
-        typename boost::conditional< auto_unlink, bi::link_mode< bi::auto_unlink >, bi::link_mode< bi::safe_link > >::type >
+        typename std::conditional< auto_unlink, bi::link_mode< bi::auto_unlink >, bi::link_mode< bi::safe_link > >::type >
 {};
 
 typedef bi::list< heap_node_base< false > > heap_node_list;
@@ -37,7 +37,7 @@ typedef bi::list< heap_node_base< false > > heap_node_list;
 struct nop_disposer
 {
     template < typename T >
-    void operator()( T* n )
+    void operator()( T* )
     {
         BOOST_HEAP_ASSERT( false );
     }
@@ -165,12 +165,10 @@ public:
         value( v )
     {}
 
-#if !defined( BOOST_NO_CXX11_RVALUE_REFERENCES ) && !defined( BOOST_NO_CXX11_VARIADIC_TEMPLATES )
     template < class... Args >
     heap_node( Args&&... args ) :
         value( std::forward< Args >( args )... )
     {}
-#endif
 
     /* protected:                      */
     heap_node( heap_node const& rhs ) :
@@ -220,16 +218,14 @@ struct parent_pointing_heap_node : heap_node< value_type >
 
     parent_pointing_heap_node( value_type const& v ) :
         super_t( v ),
-        parent( NULL )
+        parent( nullptr )
     {}
 
-#if !defined( BOOST_NO_CXX11_RVALUE_REFERENCES ) && !defined( BOOST_NO_CXX11_VARIADIC_TEMPLATES )
     template < class... Args >
     parent_pointing_heap_node( Args&&... args ) :
         super_t( std::forward< Args >( args )... ),
-        parent( NULL )
+        parent( nullptr )
     {}
-#endif
 
     template < typename Alloc >
     struct node_cloner
@@ -275,12 +271,12 @@ struct parent_pointing_heap_node : heap_node< value_type >
     {
         BOOST_HEAP_ASSERT( parent );
         parent->children.erase( heap_node_list::s_iterator_to( *this ) );
-        parent = NULL;
+        parent = nullptr;
     }
 
     void add_child( parent_pointing_heap_node* n )
     {
-        BOOST_HEAP_ASSERT( n->parent == NULL );
+        BOOST_HEAP_ASSERT( n->parent == nullptr );
         n->parent = this;
         super_t::add_child( n );
     }
@@ -309,13 +305,11 @@ struct marked_heap_node : parent_pointing_heap_node< value_type >
         mark( false )
     {}
 
-#if !defined( BOOST_NO_CXX11_RVALUE_REFERENCES ) && !defined( BOOST_NO_CXX11_VARIADIC_TEMPLATES )
     template < class... Args >
     marked_heap_node( Args&&... args ) :
         super_t( std::forward< Args >( args )... ),
         mark( false )
     {}
-#endif
 
     marked_heap_node* get_parent( void )
     {

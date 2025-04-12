@@ -1,0 +1,22 @@
+== `default_launcher.hpp`
+[#default_launcher]
+
+The `default_launcher` is the standard way of creating a process.
+
+[source,cpp]
+----
+asio::io_context ctx;
+process proc(ctx.get_executor(), "test", {});
+// equivalent to
+process prod = default_launcher()(ctx.get_executor(), "test", {});
+----
+
+It has four overloads:
+
+[source,cpp]
+----
+(ExecutionContext &,              filesystem::path, Args && args, Inits && ... inits) -> basic_process<typename ExecutionContext::executor_type>
+(Executor &,                      filesystem::path, Args && args, Inits && ... inits) -> basic_process<Executor>;
+(ExecutionContext &, error_code&, filesystem::path, Args && args, Inits && ... inits) -> basic_process<typename ExecutionContext::executor_type>;`
+(Executor &,         error_code&, filesystem::path, Args && args, Inits && ... inits) -> basic_process<Executor>
+----

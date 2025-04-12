@@ -1,4 +1,4 @@
-/* Copyright 2017-2018 Joaquin M Lopez Munoz.
+/* Copyright 2017-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -25,7 +25,7 @@ namespace detail{
 template<typename T>
 using is_equality_comparable=std::integral_constant<
   bool,
-  has_equal_to<T,T,bool>::value
+  has_equal_to<const T&,const T&,bool>::value
 >;
 
 } /* namespace poly_collection::detail */

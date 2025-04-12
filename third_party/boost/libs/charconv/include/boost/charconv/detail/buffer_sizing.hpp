@@ -26,7 +26,7 @@ inline int get_real_precision(int precision = -1) noexcept
 
     int real_precision;
     BOOST_IF_CONSTEXPR (!std::is_same<Real, long double>::value
-                        #ifdef BOOST_CHARCONV_HAS_FLOAT128
+                        #ifdef BOOST_CHARCONV_HAS_QUADMATH
                         && !std::is_same<Real, __float128>::value
                         #endif
                         )
@@ -35,7 +35,7 @@ inline int get_real_precision(int precision = -1) noexcept
     }
     else
     {
-        #ifdef BOOST_CHARCONV_HAS_FLOAT128
+        #ifdef BOOST_CHARCONV_HAS_QUADMATH
         BOOST_CHARCONV_IF_CONSTEXPR (std::is_same<Real, __float128>::value)
         {
             real_precision = 33;

@@ -12,6 +12,7 @@
 
 #include <boost/url/grammar/error.hpp>
 #include <boost/url/grammar/parse.hpp>
+#include <boost/static_assert.hpp>
 #include <cstdint>
 #include <type_traits>
 
@@ -98,7 +99,7 @@ parse(
 
 //------------------------------------------------
 
-template<class R0, class... Rn>
+template<BOOST_URL_CONSTRAINT(Rule) R0, BOOST_URL_CONSTRAINT(Rule)... Rn>
 auto
 constexpr
 variant_rule(
@@ -106,6 +107,10 @@ variant_rule(
     Rn const&... rn) noexcept ->
         implementation_defined::variant_rule_t<R0, Rn...>
 {
+    BOOST_STATIC_ASSERT(
+        mp11::mp_all<
+            is_rule<R0>,
+            is_rule<Rn>...>::value);
     return { r0, rn... };
 }
 

@@ -1,6 +1,6 @@
 //
 // Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
-// Copyright (c) 2021-2022 Alexander Grund
+// Copyright (c) 2021-2025 Alexander Grund
 //  Copyright (c) 2002, 2009, 2014 Peter Dimov
 //
 // Distributed under the Boost Software License, Version 1.0.
@@ -10,6 +10,7 @@
 #define BOOST_LOCALE_UNIT_TEST_HPP
 
 #include <boost/locale/config.hpp>
+#include <boost/config/helper_macros.hpp>
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
@@ -23,12 +24,20 @@
 #    include <crtdbg.h>
 #endif
 
+#ifndef BOOST_LOCALE_ERROR_LIMIT
+#    define BOOST_LOCALE_ERROR_LIMIT 20
+#endif
+
+#define BOOST_LOCALE_STRINGIZE(x) #x
+
 namespace boost { namespace locale { namespace test {
     /// Name/path of current executable
     std::string exe_name;
 
+    class test_context;
+
     struct test_result {
-        test_result() : error_counter(0), test_counter(0)
+        test_result()
         {
 #if defined(_MSC_VER) && (_MSC_VER > 1310)
             // disable message boxes on assert(), abort()
@@ -40,59 +49,81 @@ namespace boost { namespace locale { namespace test {
             _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
 #endif
         }
-        int error_counter;
-        int test_counter;
+        int error_counter = 0;
+        int test_counter = 0;
+        const test_context* context = nullptr;
     };
     inline test_result& results()
     {
         static test_result instance;
         return instance;
     }
+
+    class test_context {
+        const test_context* oldCtx_;
+        const std::string msg_;
+
+    public:
+        test_context(std::string ctx) : oldCtx_(results().context), msg_(std::move(ctx)) { results().context = this; }
+        ~test_context() { results().context = oldCtx_; }
+        friend std::ostream& operator<<(std::ostream& os, const test_context& c)
+        {
+            const test_context* current = &c;
+            os << "CONTEXT: ";
+            std::string indent = "\n\t";
+            do {
+                os << indent << current->msg_;
+                indent += '\t';
+            } while((current = current->oldCtx_) != nullptr);
+            return os;
+        }
+    };
+
+    inline void report_error(const char* expr, const char* file, int line)
+    {
+        std::cerr << "Error at " << file << '#' << line << ": " << expr << std::endl;
+        const auto* context = results().context;
+        if(context)
+            std::cerr << ' ' << *context << std::endl;
+        if(++boost::locale::test::results().error_counter > BOOST_LOCALE_ERROR_LIMIT)
+            throw std::runtime_error("Error limits reached, stopping unit test");
+    }
+
+    template<bool require = false>
+    bool test_impl(const char* expr, const char* file, int line, const bool v)
+    {
+        boost::locale::test::results().test_counter++;
+        if(!v) {
+            boost::locale::test::report_error(expr, file, line);
+            if(require)
+                throw std::runtime_error("Critical test " + std::string(expr) + " failed");
+        }
+        return v;
+    }
 }}} // namespace boost::locale::test
 
-#ifndef BOOST_LOCALE_ERROR_LIMIT
-#    define BOOST_LOCALE_ERROR_LIMIT 20
-#endif
+#define BOOST_LOCALE_TEST_REPORT_ERROR(expr) boost::locale::test::report_error(expr, __FILE__, __LINE__)
 
-#define BOOST_LOCALE_STRINGIZE(x) #x
+#define TEST(X) (::boost::locale::test::test_impl(#X, __FILE__, __LINE__, (X) ? true : false))
 
-#define THROW_IF_TOO_BIG(X)            \
-    if((X) > BOOST_LOCALE_ERROR_LIMIT) \
-    throw std::runtime_error("Error limits reached, stopping unit test")
+#define TEST_REQUIRE(X) (::boost::locale::test::test_impl<true>(#X, __FILE__, __LINE__, (X) ? true : false))
 
-#define TEST(X)                                                           \
-    do {                                                                  \
-        boost::locale::test::results().test_counter++;                    \
-        if(X)                                                             \
-            break;                                                        \
-        std::cerr << "Error in line:" << __LINE__ << " " #X << std::endl; \
-        THROW_IF_TOO_BIG(boost::locale::test::results().error_counter++); \
-        BOOST_LOCALE_START_CONST_CONDITION                                \
+#define TEST_THROWS(X, E)                              \
+    do {                                               \
+        boost::locale::test::results().test_counter++; \
+        try {                                          \
+            X;                                         \
+        } catch(E const& /*e*/) {                      \
+            break;                                     \
+        } catch(...) {                                 \
+        }                                              \
+        BOOST_LOCALE_TEST_REPORT_ERROR(#X);            \
+        BOOST_LOCALE_START_CONST_CONDITION             \
     } while(0) BOOST_LOCALE_END_CONST_CONDITION
 
-#define TEST_REQUIRE(X)                                                    \
-    do {                                                                   \
-        boost::locale::test::results().test_counter++;                     \
-        if(X)                                                              \
-            break;                                                         \
-        std::cerr << "Error in line " << __LINE__ << ": " #X << std::endl; \
-        throw std::runtime_error("Critical test " #X " failed");           \
-        BOOST_LOCALE_START_CONST_CONDITION                                 \
-    } while(0) BOOST_LOCALE_END_CONST_CONDITION
-
-#define TEST_THROWS(X, E)                                                  \
-    do {                                                                   \
-        boost::locale::test::results().test_counter++;                     \
-        try {                                                              \
-            X;                                                             \
-        } catch(E const& /*e*/) {                                          \
-            break;                                                         \
-        } catch(...) {                                                     \
-        }                                                                  \
-        std::cerr << "Error in line " << __LINE__ << ": " #X << std::endl; \
-        THROW_IF_TOO_BIG(boost::locale::test::results().error_counter++);  \
-        BOOST_LOCALE_START_CONST_CONDITION                                 \
-    } while(0) BOOST_LOCALE_END_CONST_CONDITION
+#define TEST_CONTEXT(expr)                                                    \
+    boost::locale::test::test_context BOOST_JOIN(test_context_, __COUNTER__)( \
+      static_cast<const std::stringstream&>(std::stringstream{} << expr).str())
 
 void test_main(int argc, char** argv);
 
@@ -136,6 +167,11 @@ std::string to_string(T const& s)
 const std::string& to_string(const std::string& s)
 {
     return s;
+}
+
+std::string to_string(std::nullptr_t)
+{
+    return "<nullptr>";
 }
 
 template<typename T>
@@ -223,58 +259,52 @@ std::string to_string(const char32_t c)
 #endif
 
 template<typename T, typename U>
-void test_impl(bool success, T const& l, U const& r, const char* expr, const char* fail_expr, int line)
+void test_impl(bool success,
+               T const& l,
+               U const& r,
+               const char* expr,
+               const char* fail_expr,
+               const char* file,
+               int line)
 {
     boost::locale::test::results().test_counter++;
     if(!success) {
-        std::cerr << "Error in line " << line << ": " << expr << std::endl;
-        std::cerr << "---- [" << to_string(l) << "] " << fail_expr << " [" << to_string(r) << "]" << std::endl;
-        THROW_IF_TOO_BIG(boost::locale::test::results().error_counter++);
+        if(fail_expr) {
+            std::ostringstream s;
+            s << expr << '\n' << "---- [" << to_string(l) << "] " << fail_expr << " [" << to_string(r) << "]";
+            boost::locale::test::report_error(s.str().c_str(), file, line);
+        } else
+            boost::locale::test::report_error(expr, file, line);
     }
 }
 
-template<typename T, typename U>
-void test_eq_impl(T const& l, U const& r, const char* expr, int line)
+void test_impl(bool success, const char* reason, const char* file, int line)
 {
-    test_impl(l == r, l, r, expr, "!=", line);
+    test_impl(success, nullptr, nullptr, reason, nullptr, file, line);
 }
 
-template<typename T, typename U>
-void test_ne_impl(T const& l, U const& r, const char* expr, int line)
-{
-    test_impl(l != r, l, r, expr, "==", line);
-}
+#define BOOST_LOCALE_TEST_OP_IMPL(name, test_op, fail_op)                                         \
+    template<typename T, typename U>                                                              \
+    void test_##name##_impl(T const& l, U const& r, const char* expr, const char* file, int line) \
+    {                                                                                             \
+        test_impl(l test_op r, l, r, expr, #fail_op, file, line);                                 \
+    }
 
-template<typename T, typename U>
-void test_le_impl(T const& l, U const& r, const char* expr, int line)
-{
-    test_impl(l <= r, l, r, expr, ">", line);
-}
+BOOST_LOCALE_TEST_OP_IMPL(eq, ==, !=)
+BOOST_LOCALE_TEST_OP_IMPL(ne, !=, ==)
+BOOST_LOCALE_TEST_OP_IMPL(le, <=, >)
+BOOST_LOCALE_TEST_OP_IMPL(lt, <, >=)
+BOOST_LOCALE_TEST_OP_IMPL(ge, >=, <)
+BOOST_LOCALE_TEST_OP_IMPL(gt, >, <=)
 
-template<typename T, typename U>
-void test_lt_impl(T const& l, U const& r, const char* expr, int line)
-{
-    test_impl(l < r, l, r, expr, ">=", line);
-}
+#undef BOOST_LOCALE_TEST_OP_IMPL
 
-template<typename T, typename U>
-void test_ge_impl(T const& l, U const& r, const char* expr, int line)
-{
-    test_impl(l >= r, l, r, expr, "<", line);
-}
-
-template<typename T, typename U>
-void test_gt_impl(T const& l, U const& r, const char* expr, int line)
-{
-    test_impl(l > r, l, r, expr, "<=", line);
-}
-
-#define TEST_EQ(x, y) test_eq_impl(x, y, BOOST_LOCALE_STRINGIZE(x == y), __LINE__)
-#define TEST_NE(x, y) test_ne_impl(x, y, BOOST_LOCALE_STRINGIZE(x != y), __LINE__)
-#define TEST_LE(x, y) test_le_impl(x, y, BOOST_LOCALE_STRINGIZE(x <= y), __LINE__)
-#define TEST_LT(x, y) test_lt_impl(x, y, BOOST_LOCALE_STRINGIZE(x < y), __LINE__)
-#define TEST_GE(x, y) test_ge_impl(x, y, BOOST_LOCALE_STRINGIZE(x >= y), __LINE__)
-#define TEST_GT(x, y) test_gt_impl(x, y, BOOST_LOCALE_STRINGIZE(x > y), __LINE__)
+#define TEST_EQ(x, y) test_eq_impl(x, y, BOOST_LOCALE_STRINGIZE(x == y), __FILE__, __LINE__)
+#define TEST_NE(x, y) test_ne_impl(x, y, BOOST_LOCALE_STRINGIZE(x != y), __FILE__, __LINE__)
+#define TEST_LE(x, y) test_le_impl(x, y, BOOST_LOCALE_STRINGIZE(x <= y), __FILE__, __LINE__)
+#define TEST_LT(x, y) test_lt_impl(x, y, BOOST_LOCALE_STRINGIZE(x < y), __FILE__, __LINE__)
+#define TEST_GE(x, y) test_ge_impl(x, y, BOOST_LOCALE_STRINGIZE(x >= y), __FILE__, __LINE__)
+#define TEST_GT(x, y) test_gt_impl(x, y, BOOST_LOCALE_STRINGIZE(x > y), __FILE__, __LINE__)
 
 #if BOOST_LOCALE_SPACESHIP_NULLPTR_WARNING
 #    pragma clang diagnostic pop

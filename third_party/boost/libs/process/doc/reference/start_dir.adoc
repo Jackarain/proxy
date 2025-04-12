@@ -1,0 +1,16 @@
+== `start_dir.hpp`
+[#start_dir]
+
+
+[source,cpp]
+----
+/// Initializer for the starting directory of a subprocess to be launched.
+struct process_start_dir
+{
+  filesystem::path start_dir;
+
+  process_start_dir(filesystem::path start_dir);
+  {
+  }
+};
+----

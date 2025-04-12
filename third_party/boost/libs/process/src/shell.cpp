@@ -19,7 +19,7 @@
 #if defined(BOOST_PROCESS_V2_WINDOWS)
 #include <windows.h>
 #include <shellapi.h>
-#elif !defined(__OpenBSD__)
+#elif !defined(__OpenBSD__) && !defined(__ANDROID__)
 #include <wordexp.h>
 #endif
 
@@ -30,7 +30,7 @@ BOOST_PROCESS_V2_DECL const error_category& get_shell_category()
 {
     return system_category();
 }
-#elif !defined(__OpenBSD__)
+#elif !defined(__OpenBSD__) && !defined(__ANDROID__)
 
 struct shell_category_t final : public error_category
 {
@@ -99,7 +99,7 @@ auto shell::args() const-> args_type
     return input_.c_str();
 }
 
-#elif !defined(__OpenBSD__)
+#elif !defined(__OpenBSD__) && !defined(__ANDROID__)
 
 void shell::parse_()
 {

@@ -5,7 +5,6 @@
  */
 
 #include <boost/redis/connection.hpp>
-#include <boost/asio/deferred.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/describe.hpp>
 #include <boost/asio/consign.hpp>
@@ -22,12 +21,14 @@
 #include <boost/redis/resp3/serialization.hpp>
 
 namespace asio = boost::asio;
+namespace resp3 = boost::redis::resp3;
 using namespace boost::describe;
 using boost::redis::request;
 using boost::redis::response;
 using boost::redis::ignore_t;
 using boost::redis::config;
 using boost::redis::connection;
+using boost::redis::resp3::node_view;
 
 // Struct that will be stored in Redis using json serialization. 
 struct user {
@@ -41,10 +42,18 @@ BOOST_DESCRIBE_STRUCT(user, (), (name, age, country))
 
 // Boost.Redis customization points (example/json.hpp)
 void boost_redis_to_bulk(std::string& to, user const& u)
-   { boost::redis::resp3::boost_redis_to_bulk(to, boost::json::serialize(boost::json::value_from(u))); }
+{
+   resp3::boost_redis_to_bulk(to, boost::json::serialize(boost::json::value_from(u)));
+}
 
-void boost_redis_from_bulk(user& u, std::string_view sv, boost::system::error_code&)
-   { u = boost::json::value_to<user>(boost::json::parse(sv)); }
+void
+boost_redis_from_bulk(
+   user& u,
+   node_view const& node,
+   boost::system::error_code&)
+{
+   u = boost::json::value_to<user>(boost::json::parse(node.value));
+}
 
 auto co_main(config cfg) -> asio::awaitable<void>
 {
@@ -62,7 +71,7 @@ auto co_main(config cfg) -> asio::awaitable<void>
 
    response<ignore_t, user> resp;
 
-   co_await conn->async_exec(req, resp, asio::deferred);
+   co_await conn->async_exec(req, resp);
    conn->cancel();
 
    // Prints the first ping

@@ -113,7 +113,7 @@ project boost/log
         <target-os>windows:<library>advapi32
 
         <target-os>cygwin:<define>BOOST_USE_WINDOWS_H
-        # Boost.Interprocess does not compile on Cygwin: https://github.com/boostorg/interprocess/issues/76
+        # Boost.Interprocess does not compile on Cygwin: https://github.com/boostorg/interprocess/issues/242
         <target-os>cygwin:<define>BOOST_LOG_WITHOUT_IPC
         <target-os>cygwin:<library>ws2_32
         <target-os>cygwin:<library>mswsock

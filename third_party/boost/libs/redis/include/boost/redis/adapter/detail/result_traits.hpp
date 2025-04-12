@@ -30,7 +30,7 @@ namespace boost::redis::adapter::detail
  */
 template <class Result>
 struct result_traits {
-   using adapter_type = adapter::detail::wrapper<typename std::decay<Result>::type>;
+   using adapter_type = wrapper<typename std::decay<Result>::type>;
    static auto adapt(Result& r) noexcept { return adapter_type{&r}; }
 };
 

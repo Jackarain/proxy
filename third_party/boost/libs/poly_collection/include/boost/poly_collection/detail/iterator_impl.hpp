@@ -1,4 +1,4 @@
-/* Copyright 2016-2021 Joaquin M Lopez Munoz.
+/* Copyright 2016-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -226,12 +226,25 @@ private:
     return BaseIterator{bit+(it-static_cast<BaseIterator2>(bit))};
   } 
 
-  base_iterator              base()const noexcept
-    {return local_iterator_impl::iterator_adaptor_::base();}
-  const std::type_info&      type_info()const{return *mapit->first;}
-  segment_type&              segment()noexcept
-    {return const_cast<segment_type&>(mapit->second);}
-  const segment_type&        segment()const noexcept{return mapit->second;}
+  base_iterator base()const noexcept
+  {
+    return local_iterator_impl::iterator_adaptor_::base();
+  }
+
+  const typename PolyCollection::type_index& type_info()const
+  {
+    return mapit->first;
+  }
+  
+  segment_type& segment()noexcept
+  {
+    return const_cast<segment_type&>(mapit->second);
+  }
+
+  const segment_type& segment()const noexcept
+  {
+    return mapit->second;
+  }
 
   const_segment_map_iterator mapit;
 };

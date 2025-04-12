@@ -11,14 +11,12 @@
 
 #include <boost/config.hpp>
 
-#if !defined(BOOST_NO_CXX11_DECLTYPE)
 // Force boost::result_of use decltype, even on compilers that don't support N3276.
 // This enables this test to also verify if the iterator works with lambdas
 // on such compilers with this config macro. Note that without the macro result_of
 // (and consequently the iterator) is guaranteed to _not_ work, so this case is not
 // worth testing anyway.
 #define BOOST_RESULT_OF_USE_DECLTYPE
-#endif
 
 #include <boost/core/lightweight_test.hpp>
 #include <boost/iterator/function_input_iterator.hpp>
@@ -108,8 +106,6 @@ int main()
         BOOST_TEST_EQ(*it3, 54);
     }
 
-#if !defined(BOOST_NO_CXX11_LAMBDAS) && !defined(BOOST_NO_CXX11_AUTO_DECLARATIONS) \
-    && defined(BOOST_RESULT_OF_USE_DECLTYPE)
     // test the iterator with lambda expressions
     int num = 42;
     auto lambda_generator = [&num] { return num++; };
@@ -123,7 +119,6 @@ int main()
     BOOST_TEST_EQ(generated.size(), 10u);
     for(std::size_t i = 0; i != 10; ++i)
         BOOST_TEST_EQ(generated[i], static_cast<int>(42 + i));
-#endif // BOOST_NO_CXX11_LAMBDAS
 
     return boost::report_errors();
 }

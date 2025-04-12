@@ -26,9 +26,9 @@ using namespace boost::lockfree;
 using namespace std;
 
 #ifndef BOOST_LOCKFREE_STRESS_TEST
-static const size_t nodes_per_thread = 100000;
+static const long nodes_per_thread = 100000;
 #else
-static const size_t nodes_per_thread = 100000000;
+static const long nodes_per_thread = 100000000;
 #endif
 
 struct spsc_queue_tester

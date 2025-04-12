@@ -1,21 +1,57 @@
-# Copyright 2005 Daniel James.
-# Distributed under the Boost Software License, Version 1.0. (See accompanying
-# file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+import generate ;
+import path ;
+import property-set ;
+import virtual-target ;
 
-import asciidoctor ;
+path-constant HERE : . ;
 
-html unordered.html : unordered.adoc ;
+make html/index.html : build_antora.sh : @run-script ;
+generate files-to-install : html/index.html : <generating-rule>@delayed-glob ;
+install install
+  : files-to-install
+  : <location>html
+    <install-source-root>html/unordered
+  ;
+explicit html/index.html files-to-install ;
 
-install html_ : unordered.html : <location>html ;
+# this runs the antora script
+actions run-script
+{
+    bash $(>)
+}
 
-pdf unordered.pdf : unordered.adoc ;
-explicit unordered.pdf ;
+# this globs after its sources are created
+rule delayed-glob ( project name : property-set : sources * )
+{
+  for local src in $(sources)
+  {
+    # the next line causes the source to be generated immediately
+    # and not later (which it normally would)
+    UPDATE_NOW [ $(src).actualize ] ;
+  }
 
-install pdf_ : unordered.pdf : <location>pdf ;
-explicit pdf_ ;
+  # we need to construct the path to the globbed directory;
+  # this path would be <current-project>/antora
+  local root = [ path.root html [ $(project).location ] ] ;
+  local files ;
+
+  # actual globbing happens here
+  for local file in [ path.glob-tree $(root) : * ]
+  {
+    # we have to skip directories, because our match expression accepts anything
+    if [ CHECK_IF_FILE $(file) ]
+    {
+      # we construct a list of targets to copy
+      files += [ virtual-target.from-file $(file:D=) : $(file:D) : $(project) ] ;
+    }
+  }
+
+  # we prepend empty usage requirements to the result
+  return [ property-set.empty ] $(files) ;
+}
 
 ###############################################################################
 alias boostdoc ;
 explicit boostdoc ;
-alias boostrelease : html_ ;
+alias boostrelease : install ;
 explicit boostrelease ;

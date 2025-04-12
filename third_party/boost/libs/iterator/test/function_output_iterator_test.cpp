@@ -44,7 +44,6 @@ int main()
         BOOST_TEST_EQ(n, 6);
     }
 
-#if !defined(BOOST_NO_CXX11_LAMBDAS) && !defined(BOOST_NO_CXX11_AUTO_DECLARATIONS)
     {
         int n = 0;
         auto it = boost::iterators::make_function_output_iterator([&n](int x) { n -= x; });
@@ -57,7 +56,6 @@ int main()
 
         BOOST_TEST_EQ(n, -6);
     }
-#endif
 
 #if defined(__cpp_lib_concepts) && ( __cpp_lib_concepts >= 202002L )
     {

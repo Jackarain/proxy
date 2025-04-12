@@ -7,12 +7,15 @@
 
 project
     : requirements
+	  <library>/boost/format//boost_format
 	  <define>_CRT_SECURE_NO_WARNINGS
 	  <link>static
 	;
 
-exe format_matrix 
+exe format_matrix
     : format_matrix.cpp
+	  /boost/array//boost_array
+	  /boost/filesystem//boost_filesystem
 	  /boost/program_options//boost_program_options
 	  /boost/system//boost_system
     ;

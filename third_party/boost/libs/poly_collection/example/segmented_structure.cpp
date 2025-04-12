@@ -1,4 +1,4 @@
-/* Copyright 2016-2017 Joaquin M Lopez Munoz.
+/* Copyright 2016-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <boost/poly_collection/any_collection.hpp>
 #include <boost/poly_collection/base_collection.hpp>
+#include <boost/poly_collection/variant_collection.hpp>
 #include <boost/type_erasure/operators.hpp>
 #include <memory>
 #include <random>
@@ -104,6 +105,22 @@ int main()
 //]
 
 //[segmented_structure_6
+  boost::variant_collection<
+    boost::mp11::mp_list<warrior,juggernaut,goblin,elf,std::string,window>
+  > c3;
+//=  ... // populate c3 some entities
+//=
+//<-
+  c3.insert(warrior{0});
+  c3.insert(warrior{1});
+  c3.insert(std::string("game over"));
+  c3.insert(window{"pop-up"});
+//->
+  std::cout<<c3.size<warrior>()<<"\n"; // same as with other collections
+  std::cout<<c3.size(0)<<"\n";         // list number of warriors (type #0 in the list of types)
+//]
+
+//[segmented_structure_7
   const char* comma="";
   for(auto first=c.begin(typeid(warrior)),last=c.end(typeid(warrior));
       first!=last;++first){
@@ -114,7 +131,7 @@ int main()
   std::cout<<"\n";
 //]
 
-//[segmented_structure_7
+//[segmented_structure_8
   /*=const char**/ comma="";
   for(const auto& x:c.segment(typeid(warrior))){
     std::cout<<comma;
@@ -124,7 +141,7 @@ int main()
   std::cout<<"\n";
 //]
 
-//[segmented_structure_8
+//[segmented_structure_9
   /*=const char**/ comma="";
   for(auto first=c.begin<warrior>(),last=c.end<warrior>();
       first!=last;++first){
@@ -152,8 +169,20 @@ int main()
 
 //]
 
+//[segmented_structure_10
+  // traverse all windows in our variant_collection
+  
+  for(auto& x:c3.segment<window>()){
+    // visitation not required: we're accessing window directly
+    x.display(std::cout);
+  }
+//<-
+  std::cout<<"\n";
+//->
+//]
+
   auto render=[&](){
-//[segmented_structure_9
+//[segmented_structure_11
   const char* comma="";
   for(auto seg:c.segment_traversal()){
     for(sprite& s:seg){
@@ -167,12 +196,12 @@ int main()
   };
   render();
 
-//[segmented_structure_10
+//[segmented_structure_12
   c.reserve<goblin>(100); // no reallocation till we exceed 100 goblins
   std::cout<<c.capacity<goblin>()<<"\n"; // prints 100
 //]
 
-//[segmented_structure_11
+//[segmented_structure_13
   c.reserve(1000); // reserve(1000) for each segment
   std::cout<<c.capacity<warrior>()<<", "
            <<c.capacity<juggernaut>()<<", "

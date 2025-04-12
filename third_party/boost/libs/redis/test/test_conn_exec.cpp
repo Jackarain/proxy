@@ -4,9 +4,11 @@
  * accompanying file LICENSE.txt)
  */
 
+#include <boost/redis/adapter/any_adapter.hpp>
 #include <boost/redis/connection.hpp>
 #include <boost/system/errc.hpp>
 #include <boost/asio/detached.hpp>
+#include <string>
 #define BOOST_TEST_MODULE conn-exec
 #include <boost/test/included/unit_test.hpp>
 #include <iostream>
@@ -189,5 +191,27 @@ BOOST_AUTO_TEST_CASE(large_number_of_concurrent_requests_issue_170)
    ioc.run();
 
    BOOST_CHECK_EQUAL(counter, repeat);
+}
+
+BOOST_AUTO_TEST_CASE(exec_any_adapter)
+{
+   // Executing an any_adapter object works
+   request req;
+   req.push("PING", "PONG");
+   response<std::string> res;
+
+   net::io_context ioc;
+
+   auto conn = std::make_shared<connection>(ioc);
+
+   conn->async_exec(req, boost::redis::any_adapter(res), [&](auto ec, auto){
+      BOOST_TEST(!ec);
+      conn->cancel();
+   });
+
+   run(conn);
+   ioc.run();
+
+   BOOST_TEST(std::get<0>(res).value() == "PONG");
 }
 

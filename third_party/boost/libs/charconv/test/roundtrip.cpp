@@ -219,8 +219,8 @@ template<class T> void test_roundtrip_uint128( int base )
 
 template<class T> void test_roundtrip_bv( int base )
 {
-    test_roundtrip_integers(std::numeric_limits<T>::min(), base);
-    test_roundtrip_integers(std::numeric_limits<T>::max(), base);
+    test_roundtrip_integers((std::numeric_limits<T>::min)(), base);
+    test_roundtrip_integers((std::numeric_limits<T>::max)(), base);
 }
 
 #ifdef BOOST_CHARCONV_HAS_INT128
@@ -388,10 +388,10 @@ template <> void test_roundtrip<long double>(long double value, boost::charconv:
 
 template<class T> void test_roundtrip_bv()
 {
-    test_roundtrip( std::numeric_limits<T>::min() );
-    test_roundtrip( -std::numeric_limits<T>::min() );
-    test_roundtrip( std::numeric_limits<T>::max() );
-    test_roundtrip( +std::numeric_limits<T>::max() );
+    test_roundtrip( (std::numeric_limits<T>::min)() );
+    test_roundtrip( -(std::numeric_limits<T>::min)() );
+    test_roundtrip( (std::numeric_limits<T>::max)() );
+    test_roundtrip( +(std::numeric_limits<T>::max)() );
 }
 
 //

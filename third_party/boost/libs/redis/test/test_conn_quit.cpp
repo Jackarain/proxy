@@ -20,24 +20,6 @@ using boost::redis::response;
 using boost::redis::ignore;
 using namespace std::chrono_literals;
 
-BOOST_AUTO_TEST_CASE(test_eof_no_error)
-{
-   request req;
-   req.get_config().cancel_on_connection_lost = false;
-   req.push("QUIT");
-
-   net::io_context ioc;
-   auto conn = std::make_shared<connection>(ioc);
-
-   conn->async_exec(req, ignore, [&](auto ec, auto) {
-      BOOST_TEST(!ec);
-      conn->cancel(operation::reconnection);
-   });
-
-   run(conn);
-   ioc.run();
-}
-
 // Test if quit causes async_run to exit.
 BOOST_AUTO_TEST_CASE(test_async_run_exits)
 {

@@ -1,0 +1,163 @@
+== `popen.hpp`
+[#popen]
+
+`popen` is a class that launches a process and connect stdin & stderr to pipes.
+
+[source,cpp]
+----
+popen proc(executor, find_executable("addr2line"), {argv[0]});
+asio::write(proc, asio::buffer("main\n"));
+std::string line;
+asio::read_until(proc, asio::dynamic_buffer(line), '\n');
+----
+
+[source,cpp]
+----
+// A subprocess with automatically assigned pipes.
+template<typename Executor = net::any_io_executor>
+struct basic_popen : basic_process<Executor>
+{
+    // The executor of the process
+    using executor_type = Executor;
+
+    // Rebinds the popen type to another executor.
+    template <typename Executor1>
+    struct rebind_executor
+    {
+        // The pipe type when rebound to the specified executor.
+        typedef basic_popen<Executor1> other;
+    };
+
+    // Move construct a popen
+    basic_popen(basic_popen &&) = default;
+    // Move assign a popen
+    basic_popen& operator=(basic_popen &&) = default;
+
+    // Move construct a popen and change the executor type.
+    template<typename Executor1>
+    basic_popen(basic_popen<Executor1>&& lhs)
+        : basic_process<Executor>(std::move(lhs)),
+                stdin_(std::move(lhs.stdin_)), stdout_(std::move(lhs.stdout_))
+    {
+    }
+
+    // Create a closed process handle
+    explicit basic_popen(executor_type exec);
+
+    // Create a closed process handle
+    template <typename ExecutionContext>
+    explicit basic_popen(ExecutionContext & context);
+
+    // Construct a child from a property list and launch it using the default process launcher.
+    template<typename ... Inits>
+    explicit basic_popen(
+            executor_type executor,
+            const filesystem::path& exe,
+            std::initializer_list<string_view> args,
+            Inits&&... inits);
+
+    // Construct a child from a property list and launch it using the default process launcher.
+    template<typename Launcher, typename ... Inits>
+    explicit basic_popen(
+            Launcher && launcher,
+            executor_type executor,
+            const filesystem::path& exe,
+            std::initializer_list<string_view> args,
+            Inits&&... inits);
+
+    // Construct a child from a property list and launch it using the default process launcher.
+    template<typename Args, typename ... Inits>
+    explicit basic_popen(
+            executor_type executor,
+            const filesystem::path& exe,
+            Args&& args, Inits&&... inits);
+
+    // Construct a child from a property list and launch it using the default process launcher.
+    template<typename Launcher, typename Args, typename ... Inits>
+    explicit basic_popen(
+            Launcher && launcher,
+            executor_type executor,
+            const filesystem::path& exe,
+            Args&& args, Inits&&... inits);
+
+    // Construct a child from a property list and launch it using the default process launcher.
+    template<typename ExecutionContext, typename ... Inits>
+    explicit basic_popen(
+            ExecutionContext & context,
+            const filesystem::path& exe,
+            std::initializer_list<string_view> args,
+            Inits&&... inits);
+
+        // Construct a child from a property list and launch it using the default process launcher.
+    template<typename Launcher, typename ExecutionContext, typename ... Inits>
+    explicit basic_popen(
+            Launcher && launcher,
+            ExecutionContext & context,
+            const filesystem::path& exe,
+            std::initializer_list<string_view> args,
+            Inits&&... inits);
+
+    // Construct a child from a property list and launch it using the default process launcher.
+    template<typename ExecutionContext, typename Args, typename ... Inits>
+    explicit basic_popen(
+            ExecutionContext & context,
+            const filesystem::path& exe,
+            Args&& args, Inits&&... inits);
+
+    // Construct a child from a property list and launch it using the default process launcher.
+    template<typename Launcher, typename ExecutionContext, typename Args, typename ... Inits>
+    explicit basic_popen(
+            Launcher && launcher,
+            ExecutionContext & context,
+            const filesystem::path& exe,
+            Args&& args, Inits&&... inits);
+
+    // The type used for stdin on the parent process side.
+    using stdin_type = net::basic_writable_pipe<Executor>;
+    // The type used for stdout on the parent process side.
+    using stdout_type = net::basic_readable_pipe<Executor>;
+
+    // Get the stdin pipe.
+
+    // Get the stdout pipe.
+
+    // Get the stdin pipe.
+          stdin_type & get_stdin();
+    const stdin_type & get_stdin() const;
+    // Get the stdout pipe.
+          stdout_type & get_stdout();
+    const stdout_type & get_stdout() const;
+
+    // Write some data to the stdin pipe.
+    template <typename ConstBufferSequence>
+    std::size_t write_some(const ConstBufferSequence& buffers);
+    template <typename ConstBufferSequence>
+    std::size_t write_some(const ConstBufferSequence& buffers,
+                           boost::system::error_code& ec);
+
+    // Start an asynchronous write.
+    template <typename ConstBufferSequence,
+            BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code, std::size_t))
+            WriteToken = net::default_completion_token_t<executor_type>>
+    auto async_write_some(const ConstBufferSequence& buffers,
+                     WriteToken && token = net::default_completion_token_t<executor_type>());
+
+    // Read some data from the stdout pipe.
+    template <typename MutableBufferSequence>
+    std::size_t read_some(const MutableBufferSequence& buffers);
+    template <typename MutableBufferSequence>
+    std::size_t read_some(const MutableBufferSequence& buffers,
+                          boost::system::error_code& ec)
+
+    // Start an asynchronous read.    template <typename MutableBufferSequence,
+            BOOST_PROCESS_V2_COMPLETION_TOKEN_FOR(void (boost::system::error_code, std::size_t))
+            ReadToken = net::default_completion_token_t<executor_type>>
+    auto async_read_some(const MutableBufferSequence& buffers,
+                    BOOST_ASIO_MOVE_ARG(ReadToken) token
+                    = net::default_completion_token_t<executor_type>());
+};
+
+// A popen object with the default  executor.
+using popen = basic_popen<>;
+
+----

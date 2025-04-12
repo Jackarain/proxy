@@ -332,16 +332,8 @@ template <class T, class = void>
 struct formatter;
 
 } // detail
-namespace see_below {
-using format_arg = detail::format_arg;
-}
-namespace implementation_defined {
-template <class T>
-using named_arg = detail::named_arg<T>;
-}
 } // url
 } // boost
-
 
 #include <boost/url/detail/impl/format_args.hpp>
 

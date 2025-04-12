@@ -1,0 +1,14 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:Reason_codes Reason codes]
+
+This section lists all possible __REASON_CODE__ instances representing
+Reason Codes that can be found in MQTT Control Packets.
+
+[xinclude rcref.xml]
+
+[endsect]

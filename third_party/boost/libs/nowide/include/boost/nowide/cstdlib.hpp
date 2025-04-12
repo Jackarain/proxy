@@ -21,7 +21,12 @@ namespace nowide {
     ///
     /// \brief UTF-8 aware getenv. Returns 0 if the variable is not set.
     ///
-    /// This function is not thread safe or reenterable as defined by the standard library
+    /// The string pointed to shall not be modified by the program.
+    /// This function is thread-safe as long as no other thread modifies the host environment.
+    /// However subsequent calls to this function might overwrite the string pointed to.
+    ///
+    /// Warning: The returned pointer might only be valid for as long as the calling thread is alive.
+    ///          So avoid passing it across thread boundaries.
     ///
     BOOST_NOWIDE_DECL char* getenv(const char* key);
 

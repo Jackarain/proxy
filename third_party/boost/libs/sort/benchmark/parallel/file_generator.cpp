@@ -25,7 +25,7 @@ namespace bsc = boost::sort::common;
 
 void print_banner();
 
-int main(int argc, char *argv[])
+int main(int argc, char *argv [])
 { //---------------------------- begin--------------------------------------
     std::string name;
     size_t number;
@@ -38,13 +38,13 @@ int main(int argc, char *argv[])
         return 0;
     };
     name = argv[1];
-    number = atoi(argv[2]);
+    number = atoi (argv[ 2]);
     if (number == 0) {
         cout << "error, the number can't be zero\n";
         return 0;
     };
 
-    if (bsc::generate_file(name, number) != 0)
+    if (bsc::generate_file (name, number) != 0)
         std::cout << "Error in the file creation\n";
     return 0;
 };

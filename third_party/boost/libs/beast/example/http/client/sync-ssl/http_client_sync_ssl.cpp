@@ -69,9 +69,13 @@ int main(int argc, char** argv)
         // Set SNI Hostname (many hosts need this to handshake successfully)
         if(! SSL_set_tlsext_host_name(stream.native_handle(), host))
         {
-            beast::error_code ec{static_cast<int>(::ERR_get_error()), net::error::get_ssl_category()};
-            throw beast::system_error{ec};
+            throw beast::system_error(
+                static_cast<int>(::ERR_get_error()),
+                net::error::get_ssl_category());
         }
+
+        // Set the expected hostname in the peer certificate for verification
+        stream.set_verify_callback(ssl::host_name_verification(host));
 
         // Look up the domain name
         auto const results = resolver.resolve(host, port);

@@ -101,7 +101,7 @@ void test_spot(T val, boost::charconv::chars_format fmt = boost::charconv::chars
 }
 
 template <typename T>
-void random_test(boost::charconv::chars_format fmt = boost::charconv::chars_format::general, T min_val = 0, T max_val = std::numeric_limits<T>::max())
+void random_test(boost::charconv::chars_format fmt = boost::charconv::chars_format::general, T min_val = 0, T max_val = (std::numeric_limits<T>::max)())
 {   
     std::mt19937_64 gen(42);
 
@@ -168,8 +168,8 @@ void non_finite_test(boost::charconv::chars_format fmt = boost::charconv::chars_
 template <typename T>
 void fixed_test()
 {
-    constexpr T upper_bound = std::is_same<T, double>::value ? T(std::numeric_limits<std::uint64_t>::max()) : 
-                                                               T(std::numeric_limits<std::uint32_t>::max());
+    constexpr T upper_bound = std::is_same<T, double>::value ? T((std::numeric_limits<std::uint64_t>::max)()) :
+                                                               T((std::numeric_limits<std::uint32_t>::max)());
     
     std::mt19937_64 gen(42);
     std::uniform_real_distribution<T> dist(1, upper_bound);

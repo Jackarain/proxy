@@ -1,0 +1,20 @@
+{
+    "key": "mqtt5",
+    "name": "MQTT5",
+    "authors": [
+        "Ivica Siladić",
+        "Bruno Iljazović",
+        "Korina Šimičević"
+    ],
+    "description": "MQTT5 client library built on top of Boost.Asio.",
+    "category": [
+        "Concurrent",
+        "IO"
+    ],
+    "maintainers": [
+        "Ivica Siladić",
+        "Bruno Iljazović",
+        "Korina Šimičević"
+    ],
+    "cxxstd": "17"
+}

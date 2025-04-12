@@ -26,7 +26,7 @@ typedef boost::asio::windows::stream_handle pipe_end;
 typedef boost::asio::posix::stream_descriptor pipe_end;
 #endif
 
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 
 BOOST_AUTO_TEST_CASE(sync_wait, *boost::unit_test::timeout(10))
 {

@@ -6,7 +6,7 @@
 # NOTE: This does NOT run the unit tests for Boost.Filesystem.
 #       It only tests, if the CMakeLists.txt file in it's root works as expected
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.5...3.16)
 
 project(BoostFilesystemCMakeSelfTest)
 

@@ -329,26 +329,26 @@ void run_test_cases( BOOST_EXPLICIT_TEMPLATE_TYPE(Block) )
       Tests::find_first(b);
   }
   //=====================================================================
-  // Test find_next
+  // Test find_next and offset find_first
   {
       // empty bitset
       bitset_type b;
 
       // check
-      Tests::find_next(b, 0);
-      Tests::find_next(b, 1);
-      Tests::find_next(b, 200);
-      Tests::find_next(b, b.npos);
+      Tests::find_pos(b, 0);
+      Tests::find_pos(b, 1);
+      Tests::find_pos(b, 200);
+      Tests::find_pos(b, b.npos);
   }
   {
       // bitset of size 1 (find_next can never find)
       bitset_type b(1, 1ul);
 
       // check
-      Tests::find_next(b, 0);
-      Tests::find_next(b, 1);
-      Tests::find_next(b, 200);
-      Tests::find_next(b, b.npos);
+      Tests::find_pos(b, 0);
+      Tests::find_pos(b, 1);
+      Tests::find_pos(b, 200);
+      Tests::find_pos(b, b.npos);
   }
   {
       // all-1s bitset
@@ -358,9 +358,9 @@ void run_test_cases( BOOST_EXPLICIT_TEMPLATE_TYPE(Block) )
       // check
       const typename bitset_type::size_type larger_than_size = 5 + b.size();
       for(typename bitset_type::size_type i = 0; i <= larger_than_size; ++i) {
-          Tests::find_next(b, i);
+          Tests::find_pos(b, i);
       }
-      Tests::find_next(b, b.npos);
+      Tests::find_pos(b, b.npos);
   }
   {
       // a bitset with 1s at block boundary only
@@ -379,9 +379,9 @@ void run_test_cases( BOOST_EXPLICIT_TEMPLATE_TYPE(Block) )
       // check
       const typename bitset_type::size_type larger_than_size = 5 + b.size();
       for (i = 0; i <= larger_than_size; ++i) {
-          Tests::find_next(b, i);
+          Tests::find_pos(b, i);
       }
-      Tests::find_next(b, b.npos);
+      Tests::find_pos(b, b.npos);
 
   }
   {
@@ -397,9 +397,9 @@ void run_test_cases( BOOST_EXPLICIT_TEMPLATE_TYPE(Block) )
       // check
       const typename bitset_type::size_type larger_than_size = 5 + b.size();
       for (i = 0; i <= larger_than_size; ++i) {
-          Tests::find_next(b, i);
+          Tests::find_pos(b, i);
       }
-      Tests::find_next(b, b.npos);
+      Tests::find_pos(b, b.npos);
 
   }
   //=====================================================================

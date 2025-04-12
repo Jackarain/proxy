@@ -13,7 +13,6 @@
 #ifndef __BOOST_SORT_COMMON_REARRANGE_HPP
 #define __BOOST_SORT_COMMON_REARRANGE_HPP
 
-#include <ciso646>
 #include <functional>
 #include <iterator>
 #include <type_traits>
@@ -83,7 +82,7 @@ void rearrange(Iter_data global_first, Iter_index itx_first,
     pos_ini = 0;
     while (pos_ini < nelem)
     {
-        while (pos_ini < nelem and pos(index[pos_ini]) == pos_ini)
+        while (pos_ini < nelem && pos(index[pos_ini]) == pos_ini)
             ++pos_ini;
         if (pos_ini == nelem) return;
         pos_dest = pos_src = pos_ini;
@@ -102,7 +101,7 @@ void rearrange(Iter_data global_first, Iter_index itx_first,
         index[pos_ini] = std::move(itx_src);
         ++pos_ini;
     };
-};
+}
 
 /*
  //
@@ -162,9 +161,9 @@ void rearrange(Iter_data global_first, Iter_index itx_first,
  */
 //
 //****************************************************************************
-};//    End namespace common
-};//    End namespace sort
-};//    End namespace boost
+}//    End namespace common
+}//    End namespace sort
+}//    End namespace boost
 //****************************************************************************
 //
 #endif

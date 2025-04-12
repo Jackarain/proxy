@@ -1,4 +1,4 @@
-/* Copyright 2016-2017 Joaquin M Lopez Munoz.
+/* Copyright 2016-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -34,7 +34,7 @@ struct is_nothrow_equality_comparable<
   >::type
 >:std::integral_constant<
   bool,
-  noexcept(std::declval<T>()==std::declval<T>())
+  noexcept(std::declval<const T&>()==std::declval<const T&>())
 >{};
 
 } /* namespace poly_collection::detail */

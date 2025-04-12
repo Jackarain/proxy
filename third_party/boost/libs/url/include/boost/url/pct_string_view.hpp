@@ -55,20 +55,6 @@ ref(pct_string_view& s) noexcept;
     Attempting construction from a string
     containing invalid or malformed percent
     escapes results in an exception.
-
-    @par Operators
-    The following operators are supported between
-    @ref pct_string_view and any object that is
-    convertible to `core::string_view`
-
-    @code
-    bool operator==( pct_string_view, pct_string_view ) noexcept;
-    bool operator!=( pct_string_view, pct_string_view ) noexcept;
-    bool operator<=( pct_string_view, pct_string_view ) noexcept;
-    bool operator< ( pct_string_view, pct_string_view ) noexcept;
-    bool operator> ( pct_string_view, pct_string_view ) noexcept;
-    bool operator>=( pct_string_view, pct_string_view ) noexcept;
-    @endcode
 */
 class pct_string_view final
     : public grammar::string_view_base
@@ -88,6 +74,7 @@ class pct_string_view final
 #endif
 
     // unsafe
+    BOOST_CXX14_CONSTEXPR
     pct_string_view(
         char const* data,
         std::size_t size,
@@ -133,7 +120,8 @@ public:
         @par Exception Safety
         Throws nothing.
 
-        @par other The string to copy.
+        @param other The string to copy.
+
     */
     constexpr
     pct_string_view(
@@ -164,7 +152,7 @@ public:
         @param s The string to construct from.
     */
     template<
-        class String
+        BOOST_URL_CONSTRAINT(std::convertible_to<core::string_view>) String
 #ifndef BOOST_URL_DOCS
         , class = typename std::enable_if<
             std::is_convertible<
@@ -173,6 +161,7 @@ public:
                     >::value>::type
 #endif
     >
+    BOOST_CXX14_CONSTEXPR
     pct_string_view(
         String const& s)
         : pct_string_view(
@@ -205,7 +194,8 @@ public:
         @throw system_error
          The string contains an invalid percent encoding.
 
-        @param s, len The string to construct from.
+        @param s The string to construct from.
+        @param len The length of the string.
     */
     pct_string_view(
         char const* s,
@@ -258,30 +248,12 @@ public:
         @par Exception Safety
         Throws nothing.
 
-        @par other The string to copy.
+        @param other The string to copy.
+        @return A reference to this object.
     */
     pct_string_view& operator=(
         pct_string_view const& other) = default;
 
-    /** Return a valid percent-encoded string
-
-        If `s` is a valid percent-encoded string,
-        the function returns the buffer as a valid
-        view which may be used to perform decoding
-        or measurements.
-        Otherwise the result contains an error code.
-        Upon success, the returned view references
-        the original character buffer;
-        Ownership is not transferred.
-
-        @par Complexity
-        Linear in `s.size()`.
-
-        @par Exception Safety
-        Throws nothing.
-
-        @param s The string to validate.
-    */
     friend
     BOOST_URL_DECL
     system::result<pct_string_view>
@@ -302,7 +274,10 @@ public:
 
         @par Exception Safety
         Throws nothing.
+
+        @return The number of characters in the decoded string.
     */
+    BOOST_CXX14_CONSTEXPR
     std::size_t
     decoded_size() const noexcept
     {
@@ -319,6 +294,8 @@ public:
 
         @see
             @ref decode_view.
+
+        @return A range of decoded characters.
     */
     decode_view
     operator*() const noexcept;
@@ -356,6 +333,8 @@ public:
         Otherwise, the function return type
         is the result type of the token.
 
+        @return The decoded string.
+
         @see
             @ref encoding_opts,
             @ref string_token::return_string.
@@ -381,7 +360,10 @@ public:
     }
 
 #ifndef BOOST_URL_DOCS
-    /// Arrow support
+    /** Arrow support
+
+        @return A pointer to this object.
+    */
     pct_string_view const*
     operator->() const noexcept
     {
@@ -393,6 +375,8 @@ public:
 
     // VFALCO No idea why this fails in msvc
     /** Swap
+
+        @param s The object to swap with
     */
     /*BOOST_CXX14_CONSTEXPR*/ void swap(
         pct_string_view& s ) noexcept
@@ -439,6 +423,7 @@ ref(pct_string_view& s) noexcept
     Throws nothing.
 
     @param s The string to validate.
+    @return On success, the valid percent-encoded string.
 */
 BOOST_URL_DECL
 system::result<pct_string_view>
@@ -467,6 +452,7 @@ make_pct_string_view_unsafe(
 namespace detail {
 template <>
 inline
+BOOST_CXX14_CONSTEXPR
 core::string_view
 to_sv(pct_string_view const& s) noexcept
 {

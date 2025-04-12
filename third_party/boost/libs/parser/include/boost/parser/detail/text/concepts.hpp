@@ -97,17 +97,14 @@ namespace boost::parser::detail { namespace text { BOOST_PARSER_DETAIL_TEXT_NAME
 
     template<typename T>
     concept grapheme_iter =
-        // clang-format off
-        std::input_iterator<T> &&
-        code_point_range<std::iter_reference_t<T>> &&
+        std::input_iterator<T> && code_point_range<std::iter_reference_t<T>> &&
         requires(T t) {
-        { t.base() } -> code_point_iter;
-        // clang-format on
-    };
+            { t.base() } -> code_point_iter;
+        };
 
     template<typename T>
     concept grapheme_range = std::ranges::input_range<T> &&
-        grapheme_iter<std::ranges::iterator_t<T>>;
+                             grapheme_iter<std::ranges::iterator_t<T>>;
 
     template<typename R>
     using code_point_iterator_t = decltype(std::declval<R>().begin().base());
@@ -116,75 +113,63 @@ namespace boost::parser::detail { namespace text { BOOST_PARSER_DETAIL_TEXT_NAME
     using code_point_sentinel_t = decltype(std::declval<R>().end().base());
 
     template<typename T, format F>
-    concept grapheme_iter_code_unit =
-        // clang-format off
-        grapheme_iter<T> &&
-        requires(T t) {
+    concept grapheme_iter_code_unit = grapheme_iter<T> && requires(T t) {
         { t.base().base() } -> code_unit_iter<F>;
-        // clang-format on
     };
 
     template<typename T, format F>
-    concept grapheme_range_code_unit = grapheme_range<T> &&
+    concept grapheme_range_code_unit =
+        grapheme_range<T> &&
         grapheme_iter_code_unit<std::ranges::iterator_t<T>, F>;
 
 
     namespace dtl {
         template<typename T, class CodeUnit>
         concept eraseable_insertable_sized_bidi_range =
-            // clang-format off
-            std::ranges::sized_range<T> &&
-            std::ranges::input_range<T> &&
+            std::ranges::sized_range<T> && std::ranges::input_range<T> &&
             requires(T t, CodeUnit const * it) {
-                { t.erase(t.begin(), t.end()) } ->
-                    std::same_as<std::ranges::iterator_t<T>>;
-                { t.insert(t.end(), it, it) } ->
-                    std::same_as<std::ranges::iterator_t<T>>;
+                {
+                    t.erase(t.begin(), t.end())
+                } -> std::same_as<std::ranges::iterator_t<T>>;
+                {
+                    t.insert(t.end(), it, it)
+                } -> std::same_as<std::ranges::iterator_t<T>>;
             };
-        // clang-format on
     }
 
     template<typename T>
-    concept utf8_string =
-        // clang-format off
-        utf8_code_unit<std::ranges::range_value_t<T>> &&
-        dtl::eraseable_insertable_sized_bidi_range<
-            T, std::ranges::range_value_t<T>>;
-        // clang-format on
+    concept utf8_string = utf8_code_unit<std::ranges::range_value_t<T>> &&
+                          dtl::eraseable_insertable_sized_bidi_range<
+                              T,
+                              std::ranges::range_value_t<T>>;
 
     template<typename T>
-    concept utf16_string =
-        // clang-format off
-        utf16_code_unit<std::ranges::range_value_t<T>> &&
-        dtl::eraseable_insertable_sized_bidi_range<
-            T, std::ranges::range_value_t<T>>;
-        // clang-format on
+    concept utf16_string = utf16_code_unit<std::ranges::range_value_t<T>> &&
+                           dtl::eraseable_insertable_sized_bidi_range<
+                               T,
+                               std::ranges::range_value_t<T>>;
 
     template<typename T>
     concept utf_string = utf8_string<T> || utf16_string<T>;
 
     template<typename T>
-    // clang-format off
-        concept transcoding_error_handler = requires(T t, std::string_view msg) {
+    concept transcoding_error_handler = requires(T t, std::string_view msg) {
         { t(msg) } -> std::same_as<char32_t>;
-        // clang-format on
     };
     //]
 
     // Clang 13 defines __cpp_lib_concepts but not std::indirectly copyable.
 #if defined(__clang_major__) && __clang_major__ <= 13
     template<typename In, typename Out>
-    // clang-format off
     concept indirectly_copyable =
         std::indirectly_readable<In> &&
         std::indirectly_writable<Out, std::iter_reference_t<In>>;
-    // clang-format on
 #else
     template<typename In, typename Out>
     concept indirectly_copyable = std::indirectly_copyable<In, Out>;
 #endif
-
-}}}
+    }
+}}
 
 #endif
 

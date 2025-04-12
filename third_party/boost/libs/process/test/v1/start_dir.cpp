@@ -10,14 +10,19 @@
 #define BOOST_TEST_MAIN
 #define BOOST_TEST_IGNORE_SIGCHLD
 #include <boost/test/included/unit_test.hpp>
-#include <boost/process.hpp>
 #include <boost/system/error_code.hpp>
+#include <boost/process/v1/args.hpp>
+#include <boost/process/v1/child.hpp>
+#include <boost/process/v1/exe.hpp>
 #include <boost/process/v1/filesystem.hpp>
+#include <boost/process/v1/io.hpp>
+#include <boost/process/v1/pipe.hpp>
+#include <boost/process/v1/start_dir.hpp>
 #include <boost/algorithm/string/compare.hpp>
-#include <string>
-#include <iostream>
 
-namespace bp  = boost::process;
+#include <string>
+
+namespace bp = boost::process::v1;
 
 
 struct test_dir

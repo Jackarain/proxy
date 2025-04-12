@@ -306,7 +306,7 @@ like this:
 }``
 
 Either of these forms works, since _iter_iface_ is concept-based _emdash_ the
-appropriate expressions need to be well-formed for the _iter_iface_ tempalte
+appropriate expressions need to be well-formed for the _iter_iface_ template
 to do its work. ]
 
 Finally, we need a using declaration to make

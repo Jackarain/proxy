@@ -12,6 +12,9 @@
 
 This section describes the experimental feature of allowing the import of mangled symbols from an dll. While this feature is unique to this library and looks quite promising, it is not throroughly tested and thus not considered stable.
 
+\warning Experimental feature that relies on an incomplete implementation of platform specific C++
+         mangling. In case of an issue provide a PR with a fix and tests to https://github.com/boostorg/dll
+
 As a short example we can import the following functions quite easily:
 
 ```

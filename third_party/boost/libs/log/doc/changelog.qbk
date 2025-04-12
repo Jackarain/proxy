@@ -1,5 +1,5 @@
 [/
-              Copyright Andrey Semashev 2007 - 2024.
+              Copyright Andrey Semashev 2007 - 2025.
      Distributed under the Boost Software License, Version 1.0.
         (See accompanying file LICENSE_1_0.txt or copy at
               http://www.boost.org/LICENSE_1_0.txt)
@@ -8,6 +8,12 @@
 /]
 
 [section:changelog Changelog]
+
+[heading 2.31, Boost 1.88]
+
+* Disabled usage of `std::codecvt<char16_t>` and `std::codecvt<char32_t>` locale facets in C++20 and later modes as they were deprecated in C++20. This means character code conversions to/from `char16_t` and `char32_t` is no longer available in C++20 and later.
+* Fixed building issues when using CMake and MinGW-w64. ([pull_request 241])
+* Fixed incorrect file counter used by `text_file_backend` when the backend was configured to append to an existing file and the actively written file name pattern didn't have a counter placeholder but the target file name pattern did, and the log files were written directly into the target storage. ([github_issue 245])
 
 [heading 2.30, Boost 1.87]
 

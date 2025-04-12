@@ -67,8 +67,7 @@ jobs:
             address-model: 32,64
           - toolset: gcc-13
             cxxstd: "03,11,14,17,20,2b"
-            os: ubuntu-latest
-            container: ubuntu:23.04
+            os: ubuntu-24.04
             install: g++-13-multilib
             address-model: 32,64
           - toolset: gcc-14
@@ -145,14 +144,12 @@ jobs:
           - toolset: clang
             compiler: clang++-16
             cxxstd: "03,11,14,17,20,2b"
-            container: ubuntu:23.04
-            os: ubuntu-latest
+            os: ubuntu-24.04
             install: clang-16
           - toolset: clang
             compiler: clang++-17
             cxxstd: "03,11,14,17,20,2b"
-            container: ubuntu:23.10
-            os: ubuntu-latest
+            os: ubuntu-24.04
             install: clang-17
           - toolset: clang
             compiler: clang++-18
@@ -162,33 +159,34 @@ jobs:
             install: clang-18
           - toolset: clang
             cxxstd: "03,11,14,17,20,2b"
-            os: macos-12
-          - toolset: clang
-            cxxstd: "03,11,14,17,20,2b"
             os: macos-13
           - toolset: clang
             cxxstd: "03,11,14,17,20,2b"
             os: macos-14
 
     runs-on: ${{matrix.os}}
-    container: ${{matrix.container}}
+    container:
+      image: ${{matrix.container}}
+      volumes:
+        - /node20217:/node20217:rw,rshared
+        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
 
     defaults:
       run:
         shell: bash
 
     steps:
-      - name: Enable Node 16
-        run: |
-          echo "ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true" >> $GITHUB_ENV
-
-      - uses: actions/checkout@v3
-
       - name: Setup container environment
         if: matrix.container
         run: |
           apt-get update
-          apt-get -y install sudo python3 git g++
+          apt-get -y install sudo python3 git g++ curl xz-utils
+          if [[ "${{matrix.container}}" == "ubuntu:1"* ]]; then
+            # Node 20 doesn't work with Ubuntu 16/18  glibc: https://github.com/actions/checkout/issues/1590
+            curl -sL https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz | tar -xJ --strip-components 1 -C /node20217
+          fi
+
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -295,7 +293,6 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-12
           - os: macos-13
           - os: macos-14
 
@@ -343,7 +340,6 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-12
           - os: macos-13
           - os: macos-14
 
@@ -401,7 +397,6 @@ jobs:
         include:
           - os: ubuntu-20.04
           - os: ubuntu-22.04
-          - os: macos-12
           - os: macos-13
           - os: macos-14
 

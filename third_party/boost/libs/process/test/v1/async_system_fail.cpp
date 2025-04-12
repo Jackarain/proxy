@@ -18,7 +18,7 @@
 #include <boost/process/v1/async_system.hpp>
 #include <system_error>
 
-namespace bp = boost::process;;
+namespace bp = boost::process::v1;
 
 void fail_func()
 {

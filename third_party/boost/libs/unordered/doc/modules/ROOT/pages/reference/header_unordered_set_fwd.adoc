@@ -1,0 +1,7 @@
+[#header_unordered_set_fwd]
+== `<boost/unordered/unordered_set_fwd.hpp>` Synopsis
+
+:idprefix: header_unordered_set_fwd_
+
+Forward declares all the definitions in
+xref:reference/header_unordered_set.adoc[`<boost/unordered/unordered_set.hpp>`].

@@ -25,7 +25,7 @@ void logger::on_resolve(system::error_code const& ec, asio::ip::tcp::resolver::r
 
    write_prefix();
 
-   std::clog << "run-all-op: resolve addresses ";
+   std::clog << "resolve results: ";
 
    if (ec) {
       std::clog << ec.message() << std::endl;
@@ -51,7 +51,7 @@ void logger::on_connect(system::error_code const& ec, asio::ip::tcp::endpoint co
 
    write_prefix();
 
-   std::clog << "run-all-op: connected to endpoint ";
+   std::clog << "connected to ";
 
    if (ec)
       std::clog << ec.message() << std::endl;
@@ -68,22 +68,7 @@ void logger::on_ssl_handshake(system::error_code const& ec)
 
    write_prefix();
 
-   std::clog << "Runner: SSL handshake " << ec.message() << std::endl;
-}
-
-void logger::on_connection_lost(system::error_code const& ec)
-{
-   if (level_ < level::info)
-      return;
-
-   write_prefix();
-
-   if (ec)
-      std::clog << "Connection lost: " << ec.message();
-   else
-      std::clog << "Connection lost.";
-
-   std::clog << std::endl;
+   std::clog << "SSL handshake: " << ec.message() << std::endl;
 }
 
 void
@@ -97,9 +82,9 @@ logger::on_write(
    write_prefix();
 
    if (ec)
-      std::clog << "writer-op: " << ec.message();
+      std::clog << "writer_op: " << ec.message();
    else
-      std::clog << "writer-op: " << std::size(payload) << " bytes written.";
+      std::clog << "writer_op: " << std::size(payload) << " bytes written.";
 
    std::clog << std::endl;
 }
@@ -112,23 +97,9 @@ void logger::on_read(system::error_code const& ec, std::size_t n)
    write_prefix();
 
    if (ec)
-      std::clog << "reader-op: " << ec.message();
+      std::clog << "reader_op: " << ec.message();
    else
-      std::clog << "reader-op: " << n << " bytes read.";
-
-   std::clog << std::endl;
-}
-
-void logger::on_run(system::error_code const& reader_ec, system::error_code const& writer_ec)
-{
-   if (level_ < level::info)
-      return;
-
-   write_prefix();
-
-   std::clog << "run-op: "
-      << reader_ec.message() << " (reader), "
-      << writer_ec.message() << " (writer)";
+      std::clog << "reader_op: " << n << " bytes read.";
 
    std::clog << std::endl;
 }
@@ -144,60 +115,34 @@ logger::on_hello(
    write_prefix();
 
    if (ec) {
-      std::clog << "hello-op: " << ec.message();
+      std::clog << "hello_op: " << ec.message();
       if (resp.has_error())
          std::clog << " (" << resp.error().diagnostic << ")";
    } else {
-      std::clog << "hello-op: Success";
+      std::clog << "hello_op: Success";
    }
 
    std::clog << std::endl;
 }
 
-void
-   logger::on_runner(
-      system::error_code const& hello,
-      system::error_code const& check_health,
-      system::error_code const& run)
-{
-   if (level_ < level::info)
-      return;
-
-   write_prefix();
-
-   std::clog << "hello: "
-      << hello.message() << " (async_hello), "
-      << check_health.message() << " (async_check_health) " 
-      << run.message() << " (async_run_lean).";
-
-   std::clog << std::endl;
-}
-
-void
-   logger::on_check_health(
-      system::error_code const& ping_ec,
-      system::error_code const& timeout_ec)
-{
-   if (level_ < level::info)
-      return;
-
-   write_prefix();
-
-   std::clog << "check-health-op: "
-      << ping_ec.message() << " (async_ping), "
-      << timeout_ec.message() << " (async_check_timeout).";
-
-   std::clog << std::endl;
-}
-
-void logger::trace(std::string_view reason)
+void logger::trace(std::string_view message)
 {
    if (level_ < level::debug)
       return;
 
    write_prefix();
 
-   std::clog << reason << std::endl;
+   std::clog << message << std::endl;
+}
+
+void logger::trace(std::string_view op, system::error_code const& ec)
+{
+   if (level_ < level::debug)
+      return;
+
+   write_prefix();
+
+   std::clog << op << ": " << ec.message() << std::endl;
 }
 
 } // boost::redis

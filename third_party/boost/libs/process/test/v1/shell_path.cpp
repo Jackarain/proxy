@@ -13,7 +13,7 @@
 #include <boost/process/v1/filesystem.hpp>
 #include <system_error>
 
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 
 BOOST_AUTO_TEST_CASE(shell_set_on_error)
 {

@@ -1,0 +1,47 @@
+////
+Copyright 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_is_contiguously_hashable]
+# <boost/hash2/is_contiguously_hashable.hpp>
+:idprefix: ref_is_contiguously_hashable_
+
+```
+#include <boost/hash2/endian.hpp>
+#include <boost/hash2/is_trivially_equality_comparable.hpp>
+#include <boost/hash2/is_endian_independent.hpp>
+
+namespace boost {
+namespace hash2 {
+
+template<class T, endian E> struct is_contiguously_hashable;
+
+} // namespace hash2
+} // namespace boost
+```
+
+## is_contiguously_hashable
+
+```
+template<class T, endian E> struct is_contiguously_hashable:
+  std::integral_constant<bool,
+    is_trivially_equality_comparable<T>::value &&
+      (E == endian::native || is_endian_independent<T>::value)>
+{
+};
+
+template<class T, std::size_t N, endian E> struct is_contiguously_hashable<T[N], E>:
+  is_contiguously_hashable<T, E>
+{
+};
+```
+
+The trait `is_contiguously_hashable` is used by the library to detect _contiguously hashable_ types.
+
+A type is _contiguously hashable_ under a particular byte order `E` if the _message_ that would have been produced for the type if it weren't considered _contiguously hashable_ is the same as its underlying storage byte representation.
+
+`hash_append(hash, flavor, value)`, when the type of `value` is _contiguously hashable_ under the byte order requested by `flavor` (`decltype(flavor)::byte_order`), issues a single call to `hash.update(&value, sizeof(value))` as an optimization.
+
+`is_contiguously_hashable` is not intended to be specialized for user-defined types. Its implementation relies on `is_trivially_equality_comparable` and `is_endian_independent`, and is correct as long as those underlying traits are correct.

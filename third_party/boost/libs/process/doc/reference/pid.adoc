@@ -1,0 +1,23 @@
+== `pid.hpp`
+[#pid]
+
+[source,cpp]
+----
+//An integral type representing a process id.
+typedef implementation_defined pid_type;
+
+// Get the process id of the current process.
+pid_type current_pid();
+
+// List all available pids.
+std::vector<pid_type> all_pids(boost::system::error_code & ec);
+std::vector<pid_type> all_pids();
+
+// return parent pid of pid.
+pid_type parent_pid(pid_type pid, boost::system::error_code & ec);
+pid_type parent_pid(pid_type pid);
+
+// return child pids of pid.
+std::vector<pid_type> child_pids(pid_type pid, boost::system::error_code & ec);
+std::vector<pid_type> child_pids(pid_type pid);
+----

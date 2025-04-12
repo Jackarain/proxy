@@ -1,0 +1,43 @@
+#
+# Copyright (c) 2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+#
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+#
+
+name: docs
+
+on: [push]
+
+jobs:
+
+  posix:
+    name: "Docs ${{ matrix.container }}"
+
+    runs-on: ubuntu-latest
+    container: ubuntu:22.04
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup container environment
+        run: |
+          apt-get update
+          export DEBIAN_FRONTEND=noninteractive # for tzdata
+          apt-get -y install --no-install-recommends \
+            doxygen docbook-xsl docutils-doc xsltproc wget ca-certificates g++ \
+            python3 python-is-python3 python3-jinja2 rsync git unzip
+
+      - name: Setup Boost
+        run: |
+          python3 tools/ci.py setup-boost \
+            --source-dir=$(pwd) \
+            --docs-install=1
+
+      - name: Build docs
+        run: |
+          python3 tools/ci.py build-docs

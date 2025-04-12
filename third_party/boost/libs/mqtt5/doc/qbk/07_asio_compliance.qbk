@@ -1,0 +1,28 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:asio_compliance Compliance With Boost.Asio]
+
+Every asynchronous operation in __Asio__ has associated characteristics that specify their behaviour.
+
+* An *allocator* determines how the asynchronous operations allocate memory resources.
+* A *cancellation slot* determines how the asynchronous operations support cancellation.
+* An *executor* determines the queuing and execution strategy for completion handlers.
+
+This section expands further into the roles of allocators,
+cancellation slots, and executors, highlighting their integration and usage within the __Client__.
+
+* See [link mqtt5.asio_compliance.allocators Allocators] for more information about how the 
+__Client__ supports and uses associated allocators.
+* See [link mqtt5.asio_compliance.per_op_cancellation Per-Operation Cancellation] for more information about how
+asynchronous operations within the __Client__ support cancellation.
+* See [link mqtt5.asio_compliance.executors Executors] for more information about executors.
+
+[include 08_allocators.qbk]
+[include 09_per_op_cancellation.qbk]
+[include 10_executors.qbk]
+
+[endsect] [/asio_compliance]

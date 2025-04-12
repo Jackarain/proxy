@@ -7,6 +7,11 @@
 
 import testing ;
 
+project : requirements
+    <library>/boost/format//boost_format
+    <library>/boost/algorithm//boost_algorithm
+    ;
+
 test-suite "format"
    :    [ run format_test1.cpp ]
         [ run format_test1.cpp : : : <toolset>msvc:<cxxflags>"/FIWindows.h" : format_test1_windows_h ]

@@ -1,5 +1,5 @@
 // Copyright 2014 Renato Tegon Forti, Antony Polukhin.
-// Copyright Antony Polukhin, 2015-2024.
+// Copyright Antony Polukhin, 2015-2025.
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
@@ -12,9 +12,9 @@
 #include "../tutorial4/static_plugin.hpp"
 #include <boost/dll/runtime_symbol_info.hpp> // for program_location()
 #include <boost/dll/shared_library.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/container/map.hpp>
 #include <boost/filesystem.hpp>
+
+#include <map>
 #include <iostream>
 
 //[plugcpp_plugins_collector_def
@@ -22,7 +22,7 @@ namespace dll = boost::dll;
 
 class plugins_collector {
     // Name => plugin
-    typedef boost::container::map<std::string, dll::shared_library> plugins_t;
+    using plugins_t = std::map<std::string, dll::shared_library>;
 
     boost::dll::fs::path            plugins_directory_;
     plugins_t                       plugins_;
@@ -32,7 +32,7 @@ class plugins_collector {
 
     // Gets `my_plugin_api` instance using "create_plugin" or "plugin" imports,
     // stores plugin with its name in the `plugins_` map.
-    void insert_plugin(BOOST_RV_REF(dll::shared_library) lib);
+    void insert_plugin(dll::shared_library&& lib);
 
 public:
     plugins_collector(const boost::dll::fs::path& plugins_directory)
@@ -52,8 +52,7 @@ public:
 //[plugcpp_plugins_collector_load_all
 void plugins_collector::load_all() {
     namespace fs = ::boost::dll::fs;
-    typedef fs::path::string_type string_type;
-    const string_type extension = dll::shared_library::suffix().native();
+    const auto extension = dll::shared_library::suffix().native();
 
     // Searching a folder for files with '.so' or '.dll' extension
     fs::recursive_directory_iterator endit;
@@ -67,7 +66,7 @@ void plugins_collector::load_all() {
         }
         /*->*/
         // We found a file. Trying to load it
-        boost::dll::fs::error_code error;
+        std::error_code error;
         dll::shared_library plugin(it->path(), error);
         if (error) {
             continue;
@@ -75,20 +74,20 @@ void plugins_collector::load_all() {
         std::cout << "Loaded (" << plugin.native() << "):" << it->path() << '\n';
 
         // Gets plugin using "create_plugin" or "plugin" function
-        insert_plugin(boost::move(plugin));
+        insert_plugin(std::move(plugin));
     }
 
     dll::shared_library plugin(dll::program_location());
     std::cout << "Loaded self\n";
-    insert_plugin(boost::move(plugin));
+    insert_plugin(std::move(plugin));
 }
 //]
 
 //[plugcpp_plugins_collector_insert_plugin
-void plugins_collector::insert_plugin(BOOST_RV_REF(dll::shared_library) lib) {
+void plugins_collector::insert_plugin(dll::shared_library&& lib) {
     std::string plugin_name;
     if (lib.has("create_plugin")) {
-        plugin_name = lib.get_alias<boost::shared_ptr<my_plugin_api>()>("create_plugin")()->name();
+        plugin_name = lib.get_alias<std::shared_ptr<my_plugin_api>()>("create_plugin")()->name();
     } else if (lib.has("plugin")) {
         plugin_name = lib.get<my_plugin_api>("plugin").name();
     } else {
@@ -96,7 +95,7 @@ void plugins_collector::insert_plugin(BOOST_RV_REF(dll::shared_library) lib) {
     }
 
     if (plugins_.find(plugin_name) == plugins_.cend()) {
-        plugins_[plugin_name] = boost::move(lib);
+        plugins_[plugin_name] = std::move(lib);
     }
 }
 //]

@@ -1,0 +1,22 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:StreamType StreamType concept]
+
+`StreamType` represents the transport protocol type used to transfer stream of bytes.
+
+`StreamType` should meet the [beastconceptslink streams AsyncStream] concept.
+
+It should follow Asio's layered stream model by having a `lowest_layer_type` member type,
+and a `lowest_layer` member function, returing a `lowest_layer_type&`. 
+The `lowest_layer_type` should inherit from __TCP_SOCKET__.
+
+Additionally, it should have an overload of [ghreflink include/boost/mqtt5/detail/shutdown.hpp async_shutdown]
+function that is discoverable via argument-dependent lookup (ADL).
+
+The types __TCP_SOCKET__, __SSL_STREAM__ and __WEBSOCKET_STREAM__ meet these requirements.
+
+[endsect]

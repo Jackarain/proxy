@@ -1,0 +1,20 @@
+////
+Copyright 2020, 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#implementation]
+# Implementation Features
+:idprefix: implementation_
+
+## Supported Compilers
+
+The library requires {cpp}11. The following compilers:
+
+* g++ 4.8 or later
+* clang++ 3.9 or later
+* Visual Studio 2015 and above
+
+are being tested on https://github.com/pdimov/hash2/actions/[Github Actions]
+and https://ci.appveyor.com/project/pdimov/hash2/[Appveyor].

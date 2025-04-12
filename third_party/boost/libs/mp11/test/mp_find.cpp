@@ -1,11 +1,6 @@
-
-//  Copyright 2015 Peter Dimov.
-//
+// Copyright 2015, 2024 Peter Dimov
 // Distributed under the Boost Software License, Version 1.0.
-//
-// See accompanying file LICENSE_1_0.txt or copy at
-// http://www.boost.org/LICENSE_1_0.txt
-
+// https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/mp11/algorithm.hpp>
 #include <boost/mp11/list.hpp>
@@ -57,6 +52,25 @@ int main()
         BOOST_TEST_TRAIT_TRUE((std::is_same<mp_find<L5, void>, mp_size_t<2>>));
         BOOST_TEST_TRAIT_TRUE((std::is_same<mp_find<L5, X1>, mp_size_t<0>>));
         BOOST_TEST_TRAIT_TRUE((std::is_same<mp_find<L5, X2>, mp_size_t<1>>));
+    }
+
+    {
+        using boost::mp11::mp_iota_c;
+
+#if !defined( BOOST_MP11_HAS_CXX14_CONSTEXPR )
+
+        int const N = 257;
+
+#else
+
+        int const N = 1089;
+
+#endif
+
+        using L = mp_iota_c<N>;
+        using R = mp_find<L, mp_size_t<N/2>>;
+
+        BOOST_TEST_TRAIT_TRUE((std::is_same<R, mp_size_t<N/2>>));
     }
 
     return boost::report_errors();

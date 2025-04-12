@@ -15,7 +15,7 @@
 #include <boost/process/v1/error.hpp>
 #include <boost/process/v1/child.hpp>
 
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 
 int main(int argc, char* argv[])
 {

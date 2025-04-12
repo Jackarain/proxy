@@ -71,14 +71,14 @@ do_session(
         return fail(ec, "connect");
 
     // Set SNI Hostname (many hosts need this to handshake successfully)
-    if(! SSL_set_tlsext_host_name(
-        ws.next_layer().native_handle(),
-        host.c_str()))
+    if(! SSL_set_tlsext_host_name(ws.next_layer().native_handle(), host.c_str()))
     {
-        ec = beast::error_code(static_cast<int>(::ERR_get_error()),
-            net::error::get_ssl_category());
+        ec.assign(static_cast<int>(::ERR_get_error()), net::error::get_ssl_category());
         return fail(ec, "connect");
     }
+
+    // Set the expected hostname in the peer certificate for verification
+    ws.next_layer().set_verify_callback(ssl::host_name_verification(host));
 
     // Update the host string. This will provide the value of the
     // Host HTTP header during the WebSocket handshake.
@@ -162,6 +162,9 @@ int main(int argc, char** argv)
 
     // The SSL context is required, and holds certificates
     ssl::context ctx{ssl::context::tlsv12_client};
+
+    // Verify the remote server's certificate
+    ctx.set_verify_mode(ssl::verify_peer);
 
     // This holds the root certificate used for verification
     load_root_certificates(ctx);

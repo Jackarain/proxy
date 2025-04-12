@@ -82,18 +82,22 @@ jobs:
               - g++-12
           - toolset: gcc-13
             cxxstd: "11,14,17,20,23"
-            os: ubuntu-latest
-            container: ubuntu:23.04
+            os: ubuntu-24.04
             install:
               - g++-13
+          - toolset: gcc-14
+            cxxstd: "11,14,17,20,23,26"
+            os: ubuntu-24.04
+            install:
+              - g++-14
           - name: UBSAN
-            toolset: gcc-11
+            toolset: gcc-13
             cxxstd: "11,14,17,20,23"
             ubsan: 1
             build_variant: debug
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             install:
-              - g++-11
+              - g++-13
 
           # Linux, clang
           - toolset: clang
@@ -224,54 +228,64 @@ jobs:
           - toolset: clang
             compiler: clang++-16
             cxxstd: "11,14,17,20,2b"
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             install:
               - clang-16
+              - g++-11
+            gcc_toolchain: 11
+          - toolset: clang
+            compiler: clang++-17
+            cxxstd: "11,14,17,20,23,26"
+            os: ubuntu-24.04
+            install:
+              - clang-17
+              - g++-11
+            gcc_toolchain: 11
+          - toolset: clang
+            compiler: clang++-18
+            cxxstd: "11,14,17,20,23,26"
+            os: ubuntu-24.04
+            install:
+              - clang-18
+              - g++-13
+          - toolset: clang
+            compiler: clang++-19
+            cxxstd: "11,14,17,20,23,26"
+            os: ubuntu-24.04
+            install:
+              - clang-19
             sources:
-              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main"
+              - "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-19 main"
             source_keys:
               - "https://apt.llvm.org/llvm-snapshot.gpg.key"
           - toolset: clang
-            compiler: clang++-17
-            cxxstd: "11,14,17,20,23"
-            os: ubuntu-22.04
+            compiler: clang++-19
+            cxxstd: "11,14,17,20,23,26"
+            os: ubuntu-24.04
             install:
-              - clang-17
+              - clang-19
+              - libc++-19-dev
+              - libc++abi-19-dev
             sources:
-              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main"
-            source_keys:
-              - "https://apt.llvm.org/llvm-snapshot.gpg.key"
-          - toolset: clang
-            compiler: clang++-17
-            cxxstd: "11,14,17,20,23"
-            os: ubuntu-22.04
-            install:
-              - clang-17
-              - libc++-17-dev
-              - libc++abi-17-dev
-            sources:
-              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main"
+              - "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-19 main"
             source_keys:
               - "https://apt.llvm.org/llvm-snapshot.gpg.key"
             cxxflags: -stdlib=libc++
             linkflags: -stdlib=libc++
           - name: UBSAN
             toolset: clang
-            compiler: clang++-15
-            cxxstd: "11,14,17,20,2b"
+            compiler: clang++-18
+            cxxstd: "11,14,17,20,23,26"
             cxxflags: -stdlib=libc++
             linkflags: "-stdlib=libc++ -lubsan"
             ubsan: 1
             build_variant: debug
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             install:
-              - clang-15
-              - libc++-15-dev
-              - libc++abi-15-dev
+              - clang-18
+              - libc++-18-dev
+              - libc++abi-18-dev
 
-          - toolset: clang
-            cxxstd: "11,14,17,20,2b"
-            os: macos-12
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-13
@@ -543,9 +557,13 @@ jobs:
             cxxstd: "11-gnu,14-gnu,17-gnu,2a-gnu"
             os: windows-2019
 
-          - name: CMake tests
+          - name: CMake MSVC tests
             cmake_tests: 1
             os: windows-2022
+          - name: CMake MinGW-w64 tests
+            cmake_tests: 1
+            os: windows-2022
+            cmake_generator: "MinGW Makefiles"
 
     timeout-minutes: 60
     runs-on: ${{matrix.os}}
@@ -607,6 +625,7 @@ jobs:
       - name: Run CMake tests
         if: matrix.cmake_tests
         run: |
+            if not "${{matrix.cmake_generator}}" == "" set "CMAKE_GENERATOR=${{matrix.cmake_generator}}"
             cd boost-root
             mkdir __build_static__
             cd __build_static__
@@ -619,3 +638,106 @@ jobs:
             cmake -DBUILD_SHARED_LIBS=On ../libs/%LIBRARY%/test/test_cmake
             cmake --build . --target boost_%LIBRARY%_cmake_self_test -j %NUMBER_OF_PROCESSORS%
             cmake --build . --target boost_%LIBRARY%_setup_cmake_self_test -j %NUMBER_OF_PROCESSORS%
+
+  cygwin:
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      SHELLOPTS: igncr
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - toolset: gcc
+            cxxstd: "14-gnu,17-gnu,20-gnu,23-gnu"
+            build_variant: debug
+            os: windows-2022
+
+    timeout-minutes: 60
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - name: Install Cygwin
+        uses: cygwin/cygwin-install-action@v4
+        with:
+          packages:
+            gcc-g++
+
+      - name: Setup Boost
+        run: |
+            echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+            LIBRARY=${GITHUB_REPOSITORY#*/}
+            echo LIBRARY: $LIBRARY
+            echo "LIBRARY=$LIBRARY" >> $GITHUB_ENV
+            echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+            echo GITHUB_REF: $GITHUB_REF
+            REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+            REF=${REF#refs/heads/}
+            echo REF: $REF
+            BOOST_BRANCH=develop && [ "$REF" = "master" ] && BOOST_BRANCH=master || true
+            echo BOOST_BRANCH: $BOOST_BRANCH
+            BUILD_JOBS=$((nproc) 2> /dev/null)
+            echo "BUILD_JOBS=$BUILD_JOBS" >> $GITHUB_ENV
+            echo "CMAKE_BUILD_PARALLEL_LEVEL=$BUILD_JOBS" >> $GITHUB_ENV
+            DEPINST_ARGS=("--git_args" "--jobs $GIT_FETCH_JOBS")
+            mkdir -p snapshot
+            cd snapshot
+            echo "Downloading library snapshot: https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+            curl -L --retry "$NET_RETRY_COUNT" -o "${LIBRARY}-${GITHUB_SHA}.tar.gz" "https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+            tar -xf "${LIBRARY}-${GITHUB_SHA}.tar.gz"
+            if [ ! -d "${LIBRARY}-${GITHUB_SHA}" ]
+            then
+                echo "Library snapshot does not contain the library directory ${LIBRARY}-${GITHUB_SHA}:"
+                ls -la
+                exit 1
+            fi
+            rm -f "${LIBRARY}-${GITHUB_SHA}.tar.gz"
+            cd ..
+            git clone -b "$BOOST_BRANCH" --depth 1 "https://github.com/boostorg/boost.git" "boost-root"
+            cd boost-root
+            mkdir -p libs
+            rm -rf "libs/$LIBRARY"
+            mv -f "../snapshot/${LIBRARY}-${GITHUB_SHA}" "libs/$LIBRARY"
+            rm -rf "../snapshot"
+            git submodule update --init tools/boostdep
+            if [ -n "${{matrix.extra_tests}}" ]
+            then
+                DEPINST_ARGS+=("--include" "example")
+            fi
+            DEPINST_ARGS+=("$LIBRARY")
+            python tools/boostdep/depinst/depinst.py "${DEPINST_ARGS[@]}"
+            ./bootstrap.sh
+            ./b2 -d0 headers
+
+      - name: Run tests
+        run: |
+            cd boost-root
+            if [ -z "${{matrix.extra_tests}}" ]
+            then
+                export BOOST_LOG_TEST_WITHOUT_SELF_CONTAINED_HEADER_TESTS=1
+                export BOOST_LOG_TEST_WITHOUT_EXAMPLES=1
+            fi
+            B2_ARGS=("-j" "$BUILD_JOBS" "toolset=${{matrix.toolset}}" "cxxstd=${{matrix.cxxstd}}")
+            if [ -n "${{matrix.build_variant}}" ]
+            then
+                B2_ARGS+=("variant=${{matrix.build_variant}}")
+            else
+                B2_ARGS+=("variant=$DEFAULT_BUILD_VARIANT")
+            fi
+            if [ -n "${{matrix.threading}}" ]
+            then
+                B2_ARGS+=("threading=${{matrix.threading}}")
+            fi
+            if [ -n "${{matrix.cxxflags}}" ]
+            then
+                B2_ARGS+=("cxxflags=${{matrix.cxxflags}}")
+            fi
+            if [ -n "${{matrix.linkflags}}" ]
+            then
+                B2_ARGS+=("linkflags=${{matrix.linkflags}}")
+            fi
+            B2_ARGS+=("libs/$LIBRARY/test")
+            ./b2 "${B2_ARGS[@]}"

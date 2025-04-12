@@ -1,0 +1,57 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:subscribe_props SUBSCRIBE properties]
+The last field in the Variable header of __SUBSCRIBE__ packet is a set of Properties.
+A set contains a Property Length followed by the Properties.
+A Property consists of an Identifier and a value.
+
+This class extends [reflink2 prop__properties prop::properties], which provides common functionalities for all property classes.
+Below is a list of possible __SUBSCRIBE__ Properties, along with descriptions of their usage:
+
+[table:subscribe_props SUBSCRIBE properties
+    [[Identifier] [Value type] [Description]]
+    [[subscription_identifier] [`boost::mqtt5::prop::subscription_identifiers`] [Identifier of the Subscription in range of 1 to 268,435,455.]]
+    [[user_property] [`std::vector<std::pair<std::string, std::string>>`] [Name, value pair (__UTF8_STRING_PAIR__) defining User Property. There can be multiple pairs in one packet. 
+        This property can be used to send subscription related properties from the Client to the Server. 
+        The meaning of these properties is not defined by the specification ]]
+]
+
+[h4 Usage]
+After obtaining an instance of `boost::mqtt5::subscribe_props`, the subscript operator can be used to access a Property.
+
+The Identifiers listed in the table above are available within the `boost::mqtt5::prop` namespace for Property access.
+
+[note When accessing a property value, the subscript operator will return a `std::optional` of the value type for all properties,
+except for `boost::mqtt5::prop::user_property` and `boost::mqtt5::prop::subscription_identifier`, where it will return an instance of
+`std::vector<std::pair<std::string, std::string>>` and [reflink2 prop__subscription_identifiers prop::subscription_identifiers] respectively.
+[reflink2 prop__subscription_identifiers prop::subscription_identifiers] has the interface of `std::optional<int32_t>`.]
+
+[h4 Example]
+
+The following example shows how to set a Property value:
+
+[!c++]
+    boost::mqtt5::subscribe_props props;
+    props[boost::mqtt5::prop::subscription_identifier] = 1234;
+    props[boost::mqtt5::prop::user_property].emplace_back("name", "value");
+
+The following example shows how to retrieve a Property value:
+
+[!c++]
+    boost::mqtt5::prop::subscription_identifiers sub_id = props[boost::mqtt5::prop::subscription_identifier];
+    if (sub_id.has_value())
+        // subscription identifier property was previously set
+    else
+        // subscription identifier property was not set
+    
+    std::vector<std::pair<std::string, std::string>>& user_props = props[boost::mqtt5::prop::user_property];
+    if (!user_props.empty())
+        // user property was previously set
+    else
+        // user property was not set
+
+[endsect]

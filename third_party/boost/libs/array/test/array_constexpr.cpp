@@ -5,27 +5,15 @@
  * http://www.boost.org/LICENSE_1_0.txt)
  */ 
 
-#include <string>
-#include <iostream>
 #include <boost/array.hpp>
-#include <algorithm>
-#ifndef BOOST_NO_CXX11_HDR_ARRAY
-#include <array>
-#endif
+#include <boost/config.hpp>
 
 #ifndef BOOST_NO_CXX11_CONSTEXPR
+
 constexpr boost::array<int, 10> arr  {{ 0,1,2,3,4,5,6,7,8,9 }};
-constexpr std::array<int, 10> arr_std {{ 0,1,2,3,4,5,6,7,8,9 }};
-
-template <typename T>
-void sink ( T t ) {}
-
-template <typename T, size_t N>
-void sink ( boost::array<T,N> &arr ) {}
 
 int main()
 {
-//    constexpr int two = arr_std.at (2);
     constexpr int three = arr.at (3);
     int whatever [ arr.at(4) ];
     (void)three;
@@ -33,7 +21,9 @@ int main()
 }
 
 #else   // no constexpr means no constexpr tests!
+
 int main()
 {
 }
+
 #endif

@@ -86,13 +86,16 @@ struct vfork_launcher :  default_launcher
             return basic_process<Executor>(exec);
         }
 
-        auto & ctx = net::query(
-                exec, net::execution::context);
+        auto & ctx = net::query(exec, net::execution::context);
+#if !defined(BOOST_PROCESS_V2_DISABLE_NOTIFY_FORK)
         ctx.notify_fork(net::execution_context::fork_prepare);
+#endif
         pid = ::vfork();
         if (pid == -1)
         {
+#if !defined(BOOST_PROCESS_V2_DISABLE_NOTIFY_FORK)
             ctx.notify_fork(net::execution_context::fork_parent);
+#endif
             detail::on_fork_error(*this, executable, argv, ec, inits...);
             detail::on_error(*this, executable, argv, ec, inits...);
 
@@ -112,11 +115,13 @@ struct vfork_launcher :  default_launcher
             ::_exit(EXIT_FAILURE);
             return basic_process<Executor>{exec};
         }
+#if !defined(BOOST_PROCESS_V2_DISABLE_NOTIFY_FORK)
         ctx.notify_fork(net::execution_context::fork_parent);
-
+#endif
         if (ec)
         {
             detail::on_error(*this, executable, argv, ec, inits...);
+            do { ::waitpid(pid, nullptr, 0); } while (errno == EINTR);
             return basic_process<Executor>{exec};
         }
 

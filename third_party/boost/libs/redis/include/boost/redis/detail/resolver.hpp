@@ -8,7 +8,6 @@
 #define BOOST_REDIS_RESOLVER_HPP
 
 #include <boost/redis/config.hpp>
-#include <boost/redis/detail/helper.hpp>
 #include <boost/redis/error.hpp>
 #include <boost/asio/compose.hpp>
 #include <boost/asio/coroutine.hpp>
@@ -63,18 +62,8 @@ public:
          >(resolve_op<resolver>{this}, token, resv_);
    }
 
-   std::size_t cancel(operation op)
-   {
-      switch (op) {
-         case operation::resolve:
-         case operation::all:
-            resv_.cancel();
-            break;
-         default: /* ignore */;
-      }
-
-      return 0;
-   }
+   void cancel()
+      { resv_.cancel(); }
 
    auto const& results() const noexcept
       { return results_;}

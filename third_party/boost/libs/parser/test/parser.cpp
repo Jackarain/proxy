@@ -417,7 +417,6 @@ int main()
     }
 
     // int_uint
-    // clang-format off
     {
         {
             std::string str = "-42";
@@ -425,7 +424,6 @@ int main()
             BOOST_TEST(parse(str, int_, i));
             BOOST_TEST(i == -42);
         }
-        // clang-format on
         {
             std::string str = "42";
             int i = 0;
@@ -458,12 +456,14 @@ int main()
             BOOST_TEST(parse(str, uint4, i));
             BOOST_TEST(i == 42u);
         }
-        }
+    }
 
-        // bool_
-        {{std::string str = "";
-        bool b = false;
-        BOOST_TEST(!parse(str, bool_, b));
+    // bool_
+    {
+        {
+            std::string str = "";
+            bool b = false;
+            BOOST_TEST(!parse(str, bool_, b));
         }
         {
             std::string str = "true";
@@ -503,28 +503,30 @@ int main()
             BOOST_TEST(prefix_parse(first, last, bool_, b));
             BOOST_TEST(b == false);
         }
-        }
+    }
 
-        // star
-        {{constexpr auto parser = *char_;
+    // star
+    {
         {
-            std::string str = "";
-            std::vector<char> chars;
-            BOOST_TEST(parse(str, parser, chars));
-            BOOST_TEST(chars == std::vector<char>());
-        }
-        {
-            std::string str = "a";
-            std::vector<char> chars;
-            BOOST_TEST(parse(str, parser, chars));
-            BOOST_TEST(chars == std::vector<char>({'a'}));
-        }
-        {
-            std::string str = "ba";
-            std::vector<char> chars;
-            BOOST_TEST(parse(str, parser, chars));
-            BOOST_TEST(chars == std::vector<char>({'b', 'a'}));
-        }
+            constexpr auto parser = *char_;
+            {
+                std::string str = "";
+                std::vector<char> chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<char>());
+            }
+            {
+                std::string str = "a";
+                std::vector<char> chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<char>({'a'}));
+            }
+            {
+                std::string str = "ba";
+                std::vector<char> chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<char>({'b', 'a'}));
+            }
         }
 
         {
@@ -548,28 +550,30 @@ int main()
                 BOOST_TEST(chars == std::vector<char>({'b', 'b'}));
             }
         }
-        }
+    }
 
-        // plus
-        {{constexpr auto parser = +char_;
+    // plus
+    {
+        {
+            constexpr auto parser = +char_;
 
-        {
-            std::string str = "";
-            std::vector<char> chars;
-            BOOST_TEST(!parse(str, parser, chars));
-        }
-        {
-            std::string str = "a";
-            std::vector<char> chars;
-            BOOST_TEST(parse(str, parser, chars));
-            BOOST_TEST(chars == std::vector<char>({'a'}));
-        }
-        {
-            std::string str = "ba";
-            std::vector<char> chars;
-            BOOST_TEST(parse(str, parser, chars));
-            BOOST_TEST(chars == std::vector<char>({'b', 'a'}));
-        }
+            {
+                std::string str = "";
+                std::vector<char> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+            }
+            {
+                std::string str = "a";
+                std::vector<char> chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<char>({'a'}));
+            }
+            {
+                std::string str = "ba";
+                std::vector<char> chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<char>({'b', 'a'}));
+            }
         }
 
         {
@@ -593,28 +597,30 @@ int main()
                 BOOST_TEST(chars == std::vector<char>({'b', 'b'}));
             }
         }
-        }
+    }
 
-        // star_and_plus_collapsing
-        {{constexpr auto parser = +(+char_('b'));
+    // star_and_plus_collapsing
+    {
+        {
+            constexpr auto parser = +(+char_('b'));
 
-        {
-            std::string str = "";
-            std::vector<char> chars;
-            BOOST_TEST(!parse(str, parser, chars));
-        }
-        {
-            std::string str = "b";
-            std::vector<char> chars;
-            BOOST_TEST(parse(str, parser, chars));
-            BOOST_TEST(chars == std::vector<char>({'b'}));
-        }
-        {
-            std::string str = "bb";
-            std::vector<char> chars;
-            BOOST_TEST(parse(str, parser, chars));
-            BOOST_TEST(chars == std::vector<char>({'b', 'b'}));
-        }
+            {
+                std::string str = "";
+                std::vector<char> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+            }
+            {
+                std::string str = "b";
+                std::vector<char> chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<char>({'b'}));
+            }
+            {
+                std::string str = "bb";
+                std::vector<char> chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<char>({'b', 'b'}));
+            }
         }
 
         {
@@ -685,34 +691,36 @@ int main()
                 BOOST_TEST(chars == std::vector<char>({'z', 'z'}));
             }
         }
-        }
+    }
 
-        // action_
-        {{std::string str = "";
+    // action_
+    {
         {
-            std::stringstream ss;
-            auto action = [&ss](auto & ctx) { ss << _attr(ctx); };
-            auto parser = *char_('b')[action];
-            BOOST_TEST(parse(str, parser));
-            BOOST_TEST(ss.str() == "");
-        }
-        {
-            str = "b";
-            std::stringstream ss;
-            auto action = [&ss](auto & ctx) { ss << _attr(ctx); };
-            auto parser = *char_('b')[action];
-            BOOST_TEST(parse(str, parser));
-            BOOST_TEST(ss.str() == "b");
-        }
-        {
-            str = "bb";
-            std::stringstream ss;
-            auto action = [&ss](auto & ctx) { ss << _attr(ctx); };
-            auto parser = *char_('b')[action];
-            BOOST_TEST(parse(str, parser));
-            BOOST_TEST(parse(str, parser));
-            BOOST_TEST(ss.str() == "bbbb");
-        }
+            std::string str = "";
+            {
+                std::stringstream ss;
+                auto action = [&ss](auto & ctx) { ss << _attr(ctx); };
+                auto parser = *char_('b')[action];
+                BOOST_TEST(parse(str, parser));
+                BOOST_TEST(ss.str() == "");
+            }
+            {
+                str = "b";
+                std::stringstream ss;
+                auto action = [&ss](auto & ctx) { ss << _attr(ctx); };
+                auto parser = *char_('b')[action];
+                BOOST_TEST(parse(str, parser));
+                BOOST_TEST(ss.str() == "b");
+            }
+            {
+                str = "bb";
+                std::stringstream ss;
+                auto action = [&ss](auto & ctx) { ss << _attr(ctx); };
+                auto parser = *char_('b')[action];
+                BOOST_TEST(parse(str, parser));
+                BOOST_TEST(parse(str, parser));
+                BOOST_TEST(ss.str() == "bbbb");
+            }
         }
 
         {
@@ -742,29 +750,31 @@ int main()
                 BOOST_TEST(ss.str() == "bbbb");
             }
         }
-        }
+    }
 
-        // star_as_string_or_vector
-        {{constexpr auto parser = *char_('z');
+    // star_as_string_or_vector
+    {
+        {
+            constexpr auto parser = *char_('z');
 
-        {
-            std::string str = "";
-            std::string chars;
-            BOOST_TEST(parse(str, parser, chars));
-            BOOST_TEST(chars == "");
-        }
-        {
-            std::string str = "z";
-            std::string chars;
-            BOOST_TEST(parse(str, parser, chars));
-            BOOST_TEST(chars == "z");
-        }
-        {
-            std::string str = "zz";
-            std::string chars;
-            BOOST_TEST(parse(str, parser, chars));
-            BOOST_TEST(chars == "zz");
-        }
+            {
+                std::string str = "";
+                std::string chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(chars == "");
+            }
+            {
+                std::string str = "z";
+                std::string chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(chars == "z");
+            }
+            {
+                std::string str = "zz";
+                std::string chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(chars == "zz");
+            }
         }
 
         {
@@ -906,141 +916,141 @@ int main()
                 BOOST_TEST(chars == std::vector<std::string>({"zs", "zs"}));
             }
         }
-        }
+    }
 
-        // transform
-        {
-            int calls = 0;
-            auto by_value_str_sum = [&](std::string s) {
-                ++calls;
-                std::transform(s.begin(), s.end(), s.begin(), [](auto ch) {
-                    return ch - '0';
-                });
-                return std::accumulate(s.begin(), s.end(), 0);
-            };
-            auto cref_str_sum = [&](std::string const & s) {
-                ++calls;
-                int retval = 0;
-                for (auto ch : s) {
-                    retval += ch - '0';
-                }
-                return retval;
-            };
-            auto rv_ref_str_sum = [&](std::string && s) {
-                ++calls;
-                std::transform(s.begin(), s.end(), s.begin(), [](auto ch) {
-                    return ch - '0';
-                });
-                return std::accumulate(s.begin(), s.end(), 0);
-            };
-            {
-                constexpr auto parser = +char_;
-                std::string str = "012345";
-                {
-                    auto result = parse(str, parser);
-                    BOOST_TEST(result);
-                    BOOST_TEST(*result == "012345");
-                }
-                {
-                    calls = 0;
-                    auto result =
-                        parse(str, transform(by_value_str_sum)[parser]);
-                    BOOST_TEST(result);
-                    BOOST_TEST(*result == 15);
-                    BOOST_TEST(calls == 1);
-                }
-                {
-                    calls = 0;
-                    auto result = parse(str, transform(cref_str_sum)[parser]);
-                    BOOST_TEST(result);
-                    BOOST_TEST(*result == 15);
-                    BOOST_TEST(calls == 1);
-                }
-                {
-                    calls = 0;
-                    auto result = parse(str, transform(rv_ref_str_sum)[parser]);
-                    BOOST_TEST(result);
-                    BOOST_TEST(*result == 15);
-                    BOOST_TEST(calls == 1);
-                }
+    // transform
+    {
+        int calls = 0;
+        auto by_value_str_sum = [&](std::string s) {
+            ++calls;
+            std::transform(s.begin(), s.end(), s.begin(), [](auto ch) {
+                return ch - '0';
+            });
+            return std::accumulate(s.begin(), s.end(), 0);
+        };
+        auto cref_str_sum = [&](std::string const & s) {
+            ++calls;
+            int retval = 0;
+            for (auto ch : s) {
+                retval += ch - '0';
             }
-            {
-                constexpr auto parser = +char_;
-                std::string str = "012345";
-                {
-                    calls = 0;
-                    auto result =
-                        parse(str, omit[transform(by_value_str_sum)[parser]]);
-                    BOOST_TEST(result);
-                    BOOST_TEST(calls == 0);
-                }
-                {
-                    calls = 0;
-                    auto result =
-                        parse(str, omit[transform(cref_str_sum)[parser]]);
-                    BOOST_TEST(result);
-                    BOOST_TEST(calls == 0);
-                }
-                {
-                    calls = 0;
-                    auto result =
-                        parse(str, omit[transform(rv_ref_str_sum)[parser]]);
-                    BOOST_TEST(result);
-                    BOOST_TEST(calls == 0);
-                }
-            }
-        }
-
-        // transform_doc_example
+            return retval;
+        };
+        auto rv_ref_str_sum = [&](std::string && s) {
+            ++calls;
+            std::transform(s.begin(), s.end(), s.begin(), [](auto ch) {
+                return ch - '0';
+            });
+            return std::accumulate(s.begin(), s.end(), 0);
+        };
         {
-            //[ transform_directive_example
-            auto str_sum = [&](std::string const & s) {
-                int retval = 0;
-                for (auto ch : s) {
-                    retval += ch - '0';
-                }
-                return retval;
-            };
-
-            namespace bp = boost::parser;
-            constexpr auto parser = +bp::char_;
+            constexpr auto parser = +char_;
             std::string str = "012345";
+            {
+                auto result = parse(str, parser);
+                BOOST_TEST(result);
+                BOOST_TEST(*result == "012345");
+            }
+            {
+                calls = 0;
+                auto result = parse(str, transform(by_value_str_sum)[parser]);
+                BOOST_TEST(result);
+                BOOST_TEST(*result == 15);
+                BOOST_TEST(calls == 1);
+            }
+            {
+                calls = 0;
+                auto result = parse(str, transform(cref_str_sum)[parser]);
+                BOOST_TEST(result);
+                BOOST_TEST(*result == 15);
+                BOOST_TEST(calls == 1);
+            }
+            {
+                calls = 0;
+                auto result = parse(str, transform(rv_ref_str_sum)[parser]);
+                BOOST_TEST(result);
+                BOOST_TEST(*result == 15);
+                BOOST_TEST(calls == 1);
+            }
+        }
+        {
+            constexpr auto parser = +char_;
+            std::string str = "012345";
+            {
+                calls = 0;
+                auto result =
+                    parse(str, omit[transform(by_value_str_sum)[parser]]);
+                BOOST_TEST(result);
+                BOOST_TEST(calls == 0);
+            }
+            {
+                calls = 0;
+                auto result = parse(str, omit[transform(cref_str_sum)[parser]]);
+                BOOST_TEST(result);
+                BOOST_TEST(calls == 0);
+            }
+            {
+                calls = 0;
+                auto result =
+                    parse(str, omit[transform(rv_ref_str_sum)[parser]]);
+                BOOST_TEST(result);
+                BOOST_TEST(calls == 0);
+            }
+        }
+    }
 
-            auto result = bp::parse(str, bp::transform(str_sum)[parser]);
-            assert(result);
-            assert(*result == 15);
-            static_assert(std::is_same_v<decltype(result), std::optional<int>>);
-            //]
-            (void)result;
-        }
+    // transform_doc_example
+    {
+        //[ transform_directive_example
+        auto str_sum = [&](std::string const & s) {
+            int retval = 0;
+            for (auto ch : s) {
+                retval += ch - '0';
+            }
+            return retval;
+        };
 
-        // omit
-        {{constexpr auto parser = omit[*+char_('z')];
+        namespace bp = boost::parser;
+        constexpr auto parser = +bp::char_;
+        std::string str = "012345";
 
+        auto result = bp::parse(str, bp::transform(str_sum)[parser]);
+        assert(result);
+        assert(*result == 15);
+        static_assert(std::is_same_v<decltype(result), std::optional<int>>);
+        //]
+        (void)result;
+    }
+
+    // omit
+    {
         {
-            std::string str = "";
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string str = "z";
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string str = "zz";
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string str = "";
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string str = "z";
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string str = "zz";
-            BOOST_TEST(parse(str, parser));
-        }
+            constexpr auto parser = omit[*+char_('z')];
+
+            {
+                std::string str = "";
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string str = "z";
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string str = "zz";
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string str = "";
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string str = "z";
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string str = "zz";
+                BOOST_TEST(parse(str, parser));
+            }
         }
 
         {
@@ -1069,60 +1079,63 @@ int main()
                 BOOST_TEST(parse(str, parser));
             }
         }
-        }
+    }
 
-        // repeat
-        {{constexpr auto parser = repeat(2, 3)[string("zs")];
-
+    // repeat
+    {
         {
-            std::string str = "";
-            std::vector<std::string> chars;
-            BOOST_TEST(!parse(str, parser, chars));
-            BOOST_TEST(chars == std::vector<std::string>{});
+            constexpr auto parser = repeat(2, 3)[string("zs")];
 
             {
-                std::optional<std::vector<std::string>> const chars =
-                    parse(str, parser);
-                BOOST_TEST(!chars);
-            }
-        }
-        {
-            std::string str = "z";
-            std::vector<std::string> chars;
-            BOOST_TEST(!parse(str, parser, chars));
-            BOOST_TEST(chars == std::vector<std::string>{});
+                std::string str = "";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
 
-            {
-                std::optional<std::vector<std::string>> const chars =
-                    parse(str, parser);
-                BOOST_TEST(!chars);
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
             }
-        }
-        {
-            std::string str = "zs";
-            std::vector<std::string> chars;
-            BOOST_TEST(!parse(str, parser, chars));
-            BOOST_TEST(chars == std::vector<std::string>{});
+            {
+                std::string str = "z";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
 
-            {
-                std::optional<std::vector<std::string>> const chars =
-                    parse(str, parser);
-                BOOST_TEST(!chars);
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
             }
-        }
-        {
-            std::string str = "zszs";
-            std::vector<std::string> chars;
-            BOOST_TEST(parse(str, parser, chars));
-            BOOST_TEST(chars == std::vector<std::string>({"zs", "zs"}));
+            {
+                std::string str = "zs";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
 
-            {
-                std::optional<std::vector<std::string>> const chars =
-                    parse(str, parser);
-                BOOST_TEST(chars);
-                BOOST_TEST(*chars == std::vector<std::string>({"zs", "zs"}));
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
             }
-        }
+            {
+                std::string str = "zszs";
+                std::vector<std::string> chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>({"zs", "zs"}));
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(chars);
+                    BOOST_TEST(
+                        *chars == std::vector<std::string>({"zs", "zs"}));
+                }
+            }
         }
         {
             constexpr auto parser = *char_ >> eps >> *string("str");
@@ -1137,374 +1150,377 @@ int main()
             BOOST_TEST(
                 *result == std::vector<std::string>({"abcdefg", "str", "str"}));
         }
-        }
+    }
 
-        // raw
+    // raw
+    {
         {
-            {
-                constexpr auto parser = raw[*string("zs")];
-                using range_t = BOOST_PARSER_DETAIL_TEXT_SUBRANGE<
-                    std::string::const_iterator>;
+            constexpr auto parser = raw[*string("zs")];
+            using range_t =
+                BOOST_PARSER_DETAIL_TEXT_SUBRANGE<std::string::const_iterator>;
 
-                {
-                    std::string const str = "";
-                    range_t r;
-                    BOOST_TEST(parse(str, parser, r));
-                    BOOST_TEST(r.begin() == str.begin());
-                    BOOST_TEST(r.end() == str.begin());
-                }
-                {
-                    std::string const str = "z";
-                    range_t r;
-                    BOOST_TEST(!parse(str, parser, r));
-                    BOOST_TEST(r.begin() == r.end());
-                }
-                {
-                    std::string const str = "z";
-                    range_t r;
-                    auto first = str.begin();
-                    BOOST_TEST(prefix_parse(first, str.end(), parser, r));
-                    BOOST_TEST(r.begin() == str.begin());
-                    BOOST_TEST(r.end() == str.begin());
-                }
-                {
-                    std::string const str = "zs";
-                    range_t r;
-                    BOOST_TEST(parse(str, parser, r));
-                    BOOST_TEST(r.begin() == str.begin());
-                    BOOST_TEST(r.end() == str.end());
-                }
-                {
-                    std::string const str = "zszs";
-                    range_t r;
-                    BOOST_TEST(parse(str, parser, r));
-                    BOOST_TEST(r.begin() == str.begin());
-                    BOOST_TEST(r.end() == str.end());
-                }
-                {
-                    std::string const str = "";
-                    std::optional<range_t> result = parse(str, parser);
-                    BOOST_TEST(result);
-                    BOOST_TEST(result->begin() == str.begin());
-                    BOOST_TEST(result->end() == str.begin());
-                }
-                {
-                    std::string const str = "z";
-                    std::optional<range_t> result = parse(str, parser);
-                    BOOST_TEST(!result);
-                }
-                {
-                    std::string const str = "z";
-                    auto first = str.begin();
-                    std::optional<range_t> result =
-                        prefix_parse(first, str.end(), parser);
-                    BOOST_TEST(result);
-                    BOOST_TEST(result->begin() == str.begin());
-                    BOOST_TEST(result->end() == str.begin());
-                }
-                {
-                    std::string const str = "zs";
-                    std::optional<range_t> result = parse(str, parser);
-                    BOOST_TEST(result);
-                    BOOST_TEST(result->begin() == str.begin());
-                    BOOST_TEST(result->end() == str.end());
-                }
-                {
-                    std::string const str = "zszs";
-                    std::optional<range_t> result = parse(str, parser);
-                    BOOST_TEST(result);
-                    BOOST_TEST(result->begin() == str.begin());
-                    BOOST_TEST(result->end() == str.end());
-                }
+            {
+                std::string const str = "";
+                range_t r;
+                BOOST_TEST(parse(str, parser, r));
+                BOOST_TEST(r.begin() == str.begin());
+                BOOST_TEST(r.end() == str.begin());
+            }
+            {
+                std::string const str = "z";
+                range_t r;
+                BOOST_TEST(!parse(str, parser, r));
+                BOOST_TEST(r.begin() == r.end());
+            }
+            {
+                std::string const str = "z";
+                range_t r;
+                auto first = str.begin();
+                BOOST_TEST(prefix_parse(first, str.end(), parser, r));
+                BOOST_TEST(r.begin() == str.begin());
+                BOOST_TEST(r.end() == str.begin());
+            }
+            {
+                std::string const str = "zs";
+                range_t r;
+                BOOST_TEST(parse(str, parser, r));
+                BOOST_TEST(r.begin() == str.begin());
+                BOOST_TEST(r.end() == str.end());
+            }
+            {
+                std::string const str = "zszs";
+                range_t r;
+                BOOST_TEST(parse(str, parser, r));
+                BOOST_TEST(r.begin() == str.begin());
+                BOOST_TEST(r.end() == str.end());
+            }
+            {
+                std::string const str = "";
+                std::optional<range_t> result = parse(str, parser);
+                BOOST_TEST(result);
+                BOOST_TEST(result->begin() == str.begin());
+                BOOST_TEST(result->end() == str.begin());
+            }
+            {
+                std::string const str = "z";
+                std::optional<range_t> result = parse(str, parser);
+                BOOST_TEST(!result);
+            }
+            {
+                std::string const str = "z";
+                auto first = str.begin();
+                std::optional<range_t> result =
+                    prefix_parse(first, str.end(), parser);
+                BOOST_TEST(result);
+                BOOST_TEST(result->begin() == str.begin());
+                BOOST_TEST(result->end() == str.begin());
+            }
+            {
+                std::string const str = "zs";
+                std::optional<range_t> result = parse(str, parser);
+                BOOST_TEST(result);
+                BOOST_TEST(result->begin() == str.begin());
+                BOOST_TEST(result->end() == str.end());
+            }
+            {
+                std::string const str = "zszs";
+                std::optional<range_t> result = parse(str, parser);
+                BOOST_TEST(result);
+                BOOST_TEST(result->begin() == str.begin());
+                BOOST_TEST(result->end() == str.end());
             }
         }
+    }
 
 #if BOOST_PARSER_USE_CONCEPTS
-        // string_view
+    // string_view
+    {
         {
-            {
-                constexpr auto parser = string_view[*string("zs")];
-                using range_t = std::string_view;
+            constexpr auto parser = string_view[*string("zs")];
+            using range_t = std::string_view;
 
-                {
-                    std::string const str = "";
-                    range_t r;
-                    BOOST_TEST(parse(str, parser, r));
-                    BOOST_TEST(r == "");
-                }
-                {
-                    std::string const str = "z";
-                    range_t r;
-                    BOOST_TEST(!parse(str, parser, r));
-                    BOOST_TEST(r == "");
-                }
-                {
-                    std::string const str = "z";
-                    range_t r;
-                    auto first = str.begin();
-                    BOOST_TEST(prefix_parse(first, str.end(), parser, r));
-                    BOOST_TEST(r == "");
-                }
-                {
-                    std::string const str = "zs";
-                    range_t r;
-                    BOOST_TEST(parse(str, parser, r));
-                    BOOST_TEST(r == "zs");
-                }
-                {
-                    std::string const str = "zszs";
-                    range_t r;
-                    BOOST_TEST(parse(str, parser, r));
-                    BOOST_TEST(r == "zszs");
-                }
-                {
-                    std::string const str = "";
-                    std::optional<range_t> result = parse(str, parser);
-                    BOOST_TEST(result);
-                    BOOST_TEST(*result == "");
-                }
-                {
-                    std::string const str = "z";
-                    std::optional<range_t> result = parse(str, parser);
-                    BOOST_TEST(!result);
-                }
-                {
-                    std::string const str = "z";
-                    auto first = str.begin();
-                    std::optional<range_t> result =
-                        prefix_parse(first, str.end(), parser);
-                    BOOST_TEST(result);
-                    BOOST_TEST(*result == "");
-                }
-                {
-                    std::string const str = "zs";
-                    std::optional<range_t> result = parse(str, parser);
-                    BOOST_TEST(result);
-                    BOOST_TEST(*result == "zs");
-                }
-                {
-                    std::string const str = "zszs";
-                    std::optional<range_t> result = parse(str, parser);
-                    BOOST_TEST(result);
-                    BOOST_TEST(*result == "zszs");
-                }
+            {
+                std::string const str = "";
+                range_t r;
+                BOOST_TEST(parse(str, parser, r));
+                BOOST_TEST(r == "");
             }
             {
-                constexpr auto parser = string_view[*string("zs")];
-                using range_t = std::u32string_view;
-
-                {
-                    std::u32string const str = U"";
-                    range_t r;
-                    BOOST_TEST(parse(str, parser, r));
-                    BOOST_TEST(r == U"");
-                }
-                {
-                    std::u32string const str = U"z";
-                    range_t r;
-                    BOOST_TEST(!parse(str, parser, r));
-                    BOOST_TEST(r == U"");
-                }
-                {
-                    std::u32string const str = U"z";
-                    range_t r;
-                    auto first = str.begin();
-                    BOOST_TEST(prefix_parse(first, str.end(), parser, r));
-                    BOOST_TEST(r == U"");
-                }
-                {
-                    std::u32string const str = U"zs";
-                    range_t r;
-                    BOOST_TEST(parse(str, parser, r));
-                    BOOST_TEST(r == U"zs");
-                }
-                {
-                    std::u32string const str = U"zszs";
-                    range_t r;
-                    BOOST_TEST(parse(str, parser, r));
-                    BOOST_TEST(r == U"zszs");
-                }
-                {
-                    std::u32string const str = U"";
-                    std::optional<range_t> result = parse(str, parser);
-                    BOOST_TEST(result);
-                    BOOST_TEST(*result == U"");
-                }
-                {
-                    std::u32string const str = U"z";
-                    std::optional<range_t> result = parse(str, parser);
-                    BOOST_TEST(!result);
-                }
-                {
-                    std::u32string const str = U"z";
-                    auto first = str.begin();
-                    std::optional<range_t> result =
-                        prefix_parse(first, str.end(), parser);
-                    BOOST_TEST(result);
-                    BOOST_TEST(*result == U"");
-                }
-                {
-                    std::u32string const str = U"zs";
-                    std::optional<range_t> result = parse(str, parser);
-                    BOOST_TEST(result);
-                    BOOST_TEST(*result == U"zs");
-                }
-                {
-                    std::u32string const str = U"zszs";
-                    std::optional<range_t> result = parse(str, parser);
-                    BOOST_TEST(result);
-                    BOOST_TEST(*result == U"zszs");
-                }
+                std::string const str = "z";
+                range_t r;
+                BOOST_TEST(!parse(str, parser, r));
+                BOOST_TEST(r == "");
+            }
+            {
+                std::string const str = "z";
+                range_t r;
+                auto first = str.begin();
+                BOOST_TEST(prefix_parse(first, str.end(), parser, r));
+                BOOST_TEST(r == "");
+            }
+            {
+                std::string const str = "zs";
+                range_t r;
+                BOOST_TEST(parse(str, parser, r));
+                BOOST_TEST(r == "zs");
+            }
+            {
+                std::string const str = "zszs";
+                range_t r;
+                BOOST_TEST(parse(str, parser, r));
+                BOOST_TEST(r == "zszs");
+            }
+            {
+                std::string const str = "";
+                std::optional<range_t> result = parse(str, parser);
+                BOOST_TEST(result);
+                BOOST_TEST(*result == "");
+            }
+            {
+                std::string const str = "z";
+                std::optional<range_t> result = parse(str, parser);
+                BOOST_TEST(!result);
+            }
+            {
+                std::string const str = "z";
+                auto first = str.begin();
+                std::optional<range_t> result =
+                    prefix_parse(first, str.end(), parser);
+                BOOST_TEST(result);
+                BOOST_TEST(*result == "");
+            }
+            {
+                std::string const str = "zs";
+                std::optional<range_t> result = parse(str, parser);
+                BOOST_TEST(result);
+                BOOST_TEST(*result == "zs");
+            }
+            {
+                std::string const str = "zszs";
+                std::optional<range_t> result = parse(str, parser);
+                BOOST_TEST(result);
+                BOOST_TEST(*result == "zszs");
             }
         }
+        {
+            constexpr auto parser = string_view[*string("zs")];
+            using range_t = std::u32string_view;
+
+            {
+                std::u32string const str = U"";
+                range_t r;
+                BOOST_TEST(parse(str, parser, r));
+                BOOST_TEST(r == U"");
+            }
+            {
+                std::u32string const str = U"z";
+                range_t r;
+                BOOST_TEST(!parse(str, parser, r));
+                BOOST_TEST(r == U"");
+            }
+            {
+                std::u32string const str = U"z";
+                range_t r;
+                auto first = str.begin();
+                BOOST_TEST(prefix_parse(first, str.end(), parser, r));
+                BOOST_TEST(r == U"");
+            }
+            {
+                std::u32string const str = U"zs";
+                range_t r;
+                BOOST_TEST(parse(str, parser, r));
+                BOOST_TEST(r == U"zs");
+            }
+            {
+                std::u32string const str = U"zszs";
+                range_t r;
+                BOOST_TEST(parse(str, parser, r));
+                BOOST_TEST(r == U"zszs");
+            }
+            {
+                std::u32string const str = U"";
+                std::optional<range_t> result = parse(str, parser);
+                BOOST_TEST(result);
+                BOOST_TEST(*result == U"");
+            }
+            {
+                std::u32string const str = U"z";
+                std::optional<range_t> result = parse(str, parser);
+                BOOST_TEST(!result);
+            }
+            {
+                std::u32string const str = U"z";
+                auto first = str.begin();
+                std::optional<range_t> result =
+                    prefix_parse(first, str.end(), parser);
+                BOOST_TEST(result);
+                BOOST_TEST(*result == U"");
+            }
+            {
+                std::u32string const str = U"zs";
+                std::optional<range_t> result = parse(str, parser);
+                BOOST_TEST(result);
+                BOOST_TEST(*result == U"zs");
+            }
+            {
+                std::u32string const str = U"zszs";
+                std::optional<range_t> result = parse(str, parser);
+                BOOST_TEST(result);
+                BOOST_TEST(*result == U"zszs");
+            }
+        }
+    }
 #endif
 
-        // delimited
-        {{constexpr auto parser = string("yay") % ',';
-
+    // delimited
+    {
         {
-            std::string str = "";
-            std::vector<std::string> chars;
-            BOOST_TEST(!parse(str, parser, chars));
-            BOOST_TEST(chars == std::vector<std::string>{});
+            constexpr auto parser = string("yay") % ',';
 
             {
-                std::optional<std::vector<std::string>> const chars =
-                    parse(str, parser);
-                BOOST_TEST(!chars);
-            }
-        }
-        {
-            std::string str = "z";
-            std::vector<std::string> chars;
-            BOOST_TEST(!parse(str, parser, chars));
-            BOOST_TEST(chars == std::vector<std::string>{});
-
-            {
-                std::optional<std::vector<std::string>> const chars =
-                    parse(str, parser);
-                BOOST_TEST(!chars);
-            }
-        }
-        {
-            std::string str = ",";
-            std::vector<std::string> chars;
-            BOOST_TEST(!parse(str, parser, chars));
-            BOOST_TEST(chars == std::vector<std::string>{});
-
-            {
-                std::optional<std::vector<std::string>> const chars =
-                    parse(str, parser);
-                BOOST_TEST(!chars);
-            }
-        }
-        {
-            std::string str = ",yay";
-            std::vector<std::string> chars;
-            BOOST_TEST(!parse(str, parser, chars));
-            BOOST_TEST(chars == std::vector<std::string>{});
-
-            {
-                std::optional<std::vector<std::string>> const chars =
-                    parse(str, parser);
-                BOOST_TEST(!chars);
-            }
-        }
-        {
-            std::string str = "yay";
-            std::vector<std::string> chars;
-            BOOST_TEST(parse(str, parser, chars));
-            BOOST_TEST(chars == std::vector<std::string>({"yay"}));
-
-            {
-                std::optional<std::vector<std::string>> const chars =
-                    parse(str, parser);
-                BOOST_TEST(chars);
-                BOOST_TEST(*chars == std::vector<std::string>({"yay"}));
-            }
-        }
-        {
-            std::string str = "yayyay";
-            {
+                std::string str = "";
                 std::vector<std::string> chars;
                 BOOST_TEST(!parse(str, parser, chars));
                 BOOST_TEST(chars == std::vector<std::string>{});
-            }
-            {
-                std::vector<std::string> chars;
-                auto first = str.c_str();
-                BOOST_TEST(prefix_parse(
-                    first,
-                    boost::parser::detail::text::null_sentinel,
-                    parser,
-                    chars));
-                BOOST_TEST(chars == std::vector<std::string>({"yay"}));
-            }
 
-            {
-                std::optional<std::vector<std::string>> const chars =
-                    parse(str, parser);
-                BOOST_TEST(!chars);
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
             }
             {
-                auto first = str.c_str();
-                std::optional<std::vector<std::string>> const chars =
-                    prefix_parse(
-                        first,
-                        boost::parser::detail::text::null_sentinel,
-                        parser);
-                BOOST_TEST(chars);
-                BOOST_TEST(*chars == std::vector<std::string>({"yay"}));
-            }
-        }
-        {
-            std::string str = "yay,";
-            {
+                std::string str = "z";
                 std::vector<std::string> chars;
                 BOOST_TEST(!parse(str, parser, chars));
-            }
-            {
-                std::vector<std::string> chars;
-                auto first = str.c_str();
-                BOOST_TEST(prefix_parse(
-                    first,
-                    boost::parser::detail::text::null_sentinel,
-                    parser,
-                    chars));
-                BOOST_TEST(chars == std::vector<std::string>({"yay"}));
-            }
+                BOOST_TEST(chars == std::vector<std::string>{});
 
-            {
-                std::optional<std::vector<std::string>> const chars =
-                    parse(str, parser);
-                BOOST_TEST(!chars);
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
             }
             {
-                auto first = str.c_str();
-                std::optional<std::vector<std::string>> const chars =
-                    prefix_parse(
+                std::string str = ",";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+            }
+            {
+                std::string str = ",yay";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+            }
+            {
+                std::string str = "yay";
+                std::vector<std::string> chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>({"yay"}));
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(chars);
+                    BOOST_TEST(*chars == std::vector<std::string>({"yay"}));
+                }
+            }
+            {
+                std::string str = "yayyay";
+                {
+                    std::vector<std::string> chars;
+                    BOOST_TEST(!parse(str, parser, chars));
+                    BOOST_TEST(chars == std::vector<std::string>{});
+                }
+                {
+                    std::vector<std::string> chars;
+                    auto first = str.c_str();
+                    BOOST_TEST(prefix_parse(
                         first,
                         boost::parser::detail::text::null_sentinel,
-                        parser);
-                BOOST_TEST(chars);
-                BOOST_TEST(*chars == std::vector<std::string>({"yay"}));
-            }
-        }
-        {
-            std::string str = "yay,yay,yay";
-            std::vector<std::string> chars;
-            BOOST_TEST(parse(str, parser, chars));
-            BOOST_TEST(
-                chars == std::vector<std::string>({"yay", "yay", "yay"}));
+                        parser,
+                        chars));
+                    BOOST_TEST(chars == std::vector<std::string>({"yay"}));
+                }
 
-            {
-                std::optional<std::vector<std::string>> const chars =
-                    parse(str, parser);
-                BOOST_TEST(chars);
-                BOOST_TEST(
-                    *chars == std::vector<std::string>({"yay", "yay", "yay"}));
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+                {
+                    auto first = str.c_str();
+                    std::optional<std::vector<std::string>> const chars =
+                        prefix_parse(
+                            first,
+                            boost::parser::detail::text::null_sentinel,
+                            parser);
+                    BOOST_TEST(chars);
+                    BOOST_TEST(*chars == std::vector<std::string>({"yay"}));
+                }
             }
-        }
+            {
+                std::string str = "yay,";
+                {
+                    std::vector<std::string> chars;
+                    BOOST_TEST(!parse(str, parser, chars));
+                }
+                {
+                    std::vector<std::string> chars;
+                    auto first = str.c_str();
+                    BOOST_TEST(prefix_parse(
+                        first,
+                        boost::parser::detail::text::null_sentinel,
+                        parser,
+                        chars));
+                    BOOST_TEST(chars == std::vector<std::string>({"yay"}));
+                }
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+                {
+                    auto first = str.c_str();
+                    std::optional<std::vector<std::string>> const chars =
+                        prefix_parse(
+                            first,
+                            boost::parser::detail::text::null_sentinel,
+                            parser);
+                    BOOST_TEST(chars);
+                    BOOST_TEST(*chars == std::vector<std::string>({"yay"}));
+                }
+            }
+            {
+                std::string str = "yay,yay,yay";
+                std::vector<std::string> chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(
+                    chars == std::vector<std::string>({"yay", "yay", "yay"}));
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(chars);
+                    BOOST_TEST(
+                        *chars ==
+                        std::vector<std::string>({"yay", "yay", "yay"}));
+                }
+            }
         }
 
         {
@@ -1918,85 +1934,87 @@ int main()
                 BOOST_TEST(subrange_1.end() == str.begin() + 21);
             }
         }
-        }
+    }
 
-        // lexeme
-        {{constexpr auto parser = lexeme[string("yay") % ','];
-
+    // lexeme
+    {
         {
-            std::string str = "yay, yay, yay";
-            {
-                std::vector<std::string> chars;
-                BOOST_TEST(!parse(str, parser, char_(' '), chars));
-            }
-            {
-                std::vector<std::string> chars;
-                auto first = str.c_str();
-                BOOST_TEST(prefix_parse(
-                    first,
-                    boost::parser::detail::text::null_sentinel,
-                    parser,
-                    char_(' '),
-                    chars));
-                BOOST_TEST(chars == std::vector<std::string>({"yay"}));
-            }
+            constexpr auto parser = lexeme[string("yay") % ','];
 
             {
                 std::string str = "yay, yay, yay";
-                std::optional<std::vector<std::string>> const chars =
-                    parse(str, parser, char_(' '));
-                BOOST_TEST(!chars);
-            }
-            {
-                std::string str = "yay, yay, yay";
-                auto first = str.c_str();
-                std::optional<std::vector<std::string>> const chars =
-                    prefix_parse(
+                {
+                    std::vector<std::string> chars;
+                    BOOST_TEST(!parse(str, parser, char_(' '), chars));
+                }
+                {
+                    std::vector<std::string> chars;
+                    auto first = str.c_str();
+                    BOOST_TEST(prefix_parse(
                         first,
                         boost::parser::detail::text::null_sentinel,
                         parser,
-                        char_(' '));
-                BOOST_TEST(chars);
-                BOOST_TEST(*chars == std::vector<std::string>({"yay"}));
-            }
-        }
-        {
-            std::string str = " yay, yay, yay";
-            {
-                std::vector<std::string> chars;
-                BOOST_TEST(!parse(str, parser, char_(' '), chars));
-            }
-            {
-                std::vector<std::string> chars;
-                auto first = str.c_str();
-                BOOST_TEST(prefix_parse(
-                    first,
-                    boost::parser::detail::text::null_sentinel,
-                    parser,
-                    char_(' '),
-                    chars));
-                BOOST_TEST(chars == std::vector<std::string>({"yay"}));
-            }
+                        char_(' '),
+                        chars));
+                    BOOST_TEST(chars == std::vector<std::string>({"yay"}));
+                }
 
-            {
-                std::string str = " yay, yay, yay";
-                std::optional<std::vector<std::string>> const chars =
-                    parse(str, parser, char_(' '));
-                BOOST_TEST(!chars);
+                {
+                    std::string str = "yay, yay, yay";
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser, char_(' '));
+                    BOOST_TEST(!chars);
+                }
+                {
+                    std::string str = "yay, yay, yay";
+                    auto first = str.c_str();
+                    std::optional<std::vector<std::string>> const chars =
+                        prefix_parse(
+                            first,
+                            boost::parser::detail::text::null_sentinel,
+                            parser,
+                            char_(' '));
+                    BOOST_TEST(chars);
+                    BOOST_TEST(*chars == std::vector<std::string>({"yay"}));
+                }
             }
             {
                 std::string str = " yay, yay, yay";
-                auto first = str.c_str();
-                std::optional<std::vector<std::string>> const chars =
-                    prefix_parse(
+                {
+                    std::vector<std::string> chars;
+                    BOOST_TEST(!parse(str, parser, char_(' '), chars));
+                }
+                {
+                    std::vector<std::string> chars;
+                    auto first = str.c_str();
+                    BOOST_TEST(prefix_parse(
                         first,
                         boost::parser::detail::text::null_sentinel,
                         parser,
-                        char_(' '));
-                BOOST_TEST(chars);
-                BOOST_TEST(*chars == std::vector<std::string>({"yay"}));
+                        char_(' '),
+                        chars));
+                    BOOST_TEST(chars == std::vector<std::string>({"yay"}));
+                }
+
+                {
+                    std::string str = " yay, yay, yay";
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser, char_(' '));
+                    BOOST_TEST(!chars);
+                }
+                {
+                    std::string str = " yay, yay, yay";
+                    auto first = str.c_str();
+                    std::optional<std::vector<std::string>> const chars =
+                        prefix_parse(
+                            first,
+                            boost::parser::detail::text::null_sentinel,
+                            parser,
+                            char_(' '));
+                    BOOST_TEST(chars);
+                    BOOST_TEST(*chars == std::vector<std::string>({"yay"}));
+                }
             }
-        }
         }
 
         {
@@ -2132,69 +2150,73 @@ int main()
                 }
             }
         }
-        }
+    }
 
-        // skip
-        {{constexpr auto parser = skip(char_(' '))[string("yay") % ','];
+    // skip
+    {
+        {
+            constexpr auto parser = skip(char_(' '))[string("yay") % ','];
 
-        {
-            std::string str = "yay, yay, yay";
-            std::vector<std::string> chars;
-            BOOST_TEST(parse(str, parser, chars));
-            BOOST_TEST(
-                chars == std::vector<std::string>({"yay", "yay", "yay"}));
+            {
+                std::string str = "yay, yay, yay";
+                std::vector<std::string> chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(
+                    chars == std::vector<std::string>({"yay", "yay", "yay"}));
+            }
+            {
+                std::string str = "yay, yay, yay";
+                std::optional<std::vector<std::string>> const chars =
+                    parse(str, parser);
+                BOOST_TEST(chars);
+                BOOST_TEST(
+                    *chars == std::vector<std::string>({"yay", "yay", "yay"}));
+            }
+            {
+                std::string str = " yay, yay, yay";
+                std::vector<std::string> chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(
+                    chars == std::vector<std::string>({"yay", "yay", "yay"}));
+            }
+            {
+                std::string str = " yay, yay, yay";
+                std::optional<std::vector<std::string>> const chars =
+                    parse(str, parser);
+                BOOST_TEST(chars);
+                BOOST_TEST(
+                    *chars == std::vector<std::string>({"yay", "yay", "yay"}));
+            }
         }
-        {
-            std::string str = "yay, yay, yay";
-            std::optional<std::vector<std::string>> const chars =
-                parse(str, parser);
-            BOOST_TEST(chars);
-            BOOST_TEST(
-                *chars == std::vector<std::string>({"yay", "yay", "yay"}));
-        }
-        {
-            std::string str = " yay, yay, yay";
-            std::vector<std::string> chars;
-            BOOST_TEST(parse(str, parser, chars));
-            BOOST_TEST(
-                chars == std::vector<std::string>({"yay", "yay", "yay"}));
-        }
-        {
-            std::string str = " yay, yay, yay";
-            std::optional<std::vector<std::string>> const chars =
-                parse(str, parser);
-            BOOST_TEST(chars);
-            BOOST_TEST(
-                *chars == std::vector<std::string>({"yay", "yay", "yay"}));
-        }
-        }
-        }
+    }
 
-        // combined_seq_and_or
-        {{constexpr auto parser = char_('a') >> char_('b') >> char_('c') |
-                                  char_('x') >> char_('y') >> char_('z');
-        using tup = tuple<char, char, char>;
-
+    // combined_seq_and_or
+    {
         {
-            std::string str = "abc";
-            tuple<char, char, char> chars;
-            BOOST_TEST(parse(str, parser, chars));
-            BOOST_TEST(chars == tup('c', '\0', '\0'));
-        }
+            constexpr auto parser = char_('a') >> char_('b') >> char_('c') |
+                                    char_('x') >> char_('y') >> char_('z');
+            using tup = tuple<char, char, char>;
 
-        {
-            std::string str = "abc";
-            std::optional<std::string> const chars = parse(str, parser);
-            BOOST_TEST(chars);
-            BOOST_TEST(*chars == "abc");
-        }
+            {
+                std::string str = "abc";
+                tuple<char, char, char> chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(chars == tup('c', '\0', '\0'));
+            }
 
-        {
-            std::string str = "xyz";
-            tup chars;
-            BOOST_TEST(parse(str, parser, chars));
-            BOOST_TEST(chars == tup('z', '\0', '\0'));
-        }
+            {
+                std::string str = "abc";
+                std::optional<std::string> const chars = parse(str, parser);
+                BOOST_TEST(chars);
+                BOOST_TEST(*chars == "abc");
+            }
+
+            {
+                std::string str = "xyz";
+                tup chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(chars == tup('z', '\0', '\0'));
+            }
         }
 
         {
@@ -2359,570 +2381,583 @@ int main()
             BOOST_TEST(result);
             BOOST_TEST(*result == 34);
         }
-        }
+    }
 
-        // eol_
-        {{constexpr auto parser = eol;
+    // eol_
+    {
+        {
+            constexpr auto parser = eol;
 
-        {
-            std::string str = "y";
-            BOOST_TEST(!parse(str, parser));
+            {
+                std::string str = "y";
+                BOOST_TEST(!parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u000a";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u000d\u000a";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u000b";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u000c";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u000d";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u0085";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2028";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2029";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
         }
-        {
-            std::string s = (char const *)u8"\u000a";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u000d\u000a";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u000b";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u000c";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u000d";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u0085";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2028";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2029";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        }
-        }
+    }
 
-        // ws_
-        {{constexpr auto parser = ws;
+    // ws_
+    {
+        {
+            constexpr auto parser = ws;
 
-        {
-            std::string str = "y";
-            BOOST_TEST(!parse(str, parser));
+            {
+                std::string str = "y";
+                BOOST_TEST(!parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u0009";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u000a";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u000d\u000a";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u000b";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u000c";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u000d";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u0085";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u00a0";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u1680";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2000";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2001";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2002";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2003";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2004";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2005";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2006";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2007";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2008";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2009";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u200a";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2028";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2029";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u202F";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u205F";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u3000";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser));
+            }
         }
-        {
-            std::string s = (char const *)u8"\u0009";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u000a";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u000d\u000a";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u000b";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u000c";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u000d";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u0085";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u00a0";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u1680";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2000";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2001";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2002";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2003";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2004";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2005";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2006";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2007";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2008";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2009";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u200a";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2028";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2029";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u202F";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u205F";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        {
-            std::string s = (char const *)u8"\u3000";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser));
-        }
-        }
-        }
+    }
 
-        // blank_
-        {{constexpr auto parser = blank;
-        constexpr auto alt_parser = ws - eol;
+    // blank_
+    {
+        {
+            constexpr auto parser = blank;
+            constexpr auto alt_parser = ws - eol;
 
-        {
-            std::string str = "y";
-            BOOST_TEST(!parse(str, parser));
+            {
+                std::string str = "y";
+                BOOST_TEST(!parse(str, parser));
+            }
+            {
+                std::string s = (char const *)u8"\u0009";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u000a";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u000d\u000a";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u000b";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u000c";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u000d";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u0085";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u00a0";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u1680";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2000";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2001";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2002";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2003";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2004";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2005";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2006";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2007";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2008";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2009";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u200a";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2028";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u2029";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u202F";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u205F";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
+            {
+                std::string s = (char const *)u8"\u3000";
+                auto str = boost::parser::detail::text::as_utf8(s);
+                BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
+            }
         }
-        {
-            std::string s = (char const *)u8"\u0009";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u000a";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u000d\u000a";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u000b";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u000c";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u000d";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u0085";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u00a0";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u1680";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2000";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2001";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2002";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2003";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2004";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2005";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2006";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2007";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2008";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2009";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u200a";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2028";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u2029";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u202F";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u205F";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        {
-            std::string s = (char const *)u8"\u3000";
-            auto str = boost::parser::detail::text::as_utf8(s);
-            BOOST_TEST(parse(str, parser) == parse(str, alt_parser));
-        }
-        }
-        }
+    }
 
-        // digit_
-        {
-            constexpr auto parser = +digit;
+    // digit_
+    {
+        constexpr auto parser = +digit;
 
-            std::u32string str = U"a/09:\x0659\x0660\x0669\x066a";
-            std::vector<uint32_t> result;
-            BOOST_TEST(parse(str, parser, char_ - digit, result));
-            BOOST_TEST(
-                result == std::vector<uint32_t>({'0', '9', 0x0660, 0x0669}));
-        }
+        std::u32string str = U"a/09:\x0659\x0660\x0669\x066a";
+        std::vector<uint32_t> result;
+        BOOST_TEST(parse(str, parser, char_ - digit, result));
+        BOOST_TEST(result == std::vector<uint32_t>({'0', '9', 0x0660, 0x0669}));
+    }
 
-        // hex_digit_
-        {
-            constexpr auto parser = +hex_digit;
+    // hex_digit_
+    {
+        constexpr auto parser = +hex_digit;
 
-            std::u32string str = U"a/09:A\uff0f\uff10\uff19\uff1a";
-            std::vector<uint32_t> result;
-            BOOST_TEST(parse(str, parser, char_ - hex_digit, result));
-            BOOST_TEST(
-                result == std::vector<uint32_t>(
-                              {'a', '0', '9', 'A', U'\uff10', U'\uff19'}));
-        }
+        std::u32string str = U"a/09:A\uff0f\uff10\uff19\uff1a";
+        std::vector<uint32_t> result;
+        BOOST_TEST(parse(str, parser, char_ - hex_digit, result));
+        BOOST_TEST(
+            result ==
+            std::vector<uint32_t>({'a', '0', '9', 'A', U'\uff10', U'\uff19'}));
+    }
 
-        // control_
-        {
-            constexpr auto parser = +control;
+    // control_
+    {
+        constexpr auto parser = +control;
 
-            std::u32string str = U"\u0001\u001f\u0020\u007e\u007f\u009f\u00a0";
-            std::vector<uint32_t> result;
-            BOOST_TEST(parse(str, parser, char_ - control, result));
-            BOOST_TEST(
-                result == std::vector<uint32_t>({1, 0x001f, 0x007f, 0x009f}));
-        }
+        std::u32string str = U"\u0001\u001f\u0020\u007e\u007f\u009f\u00a0";
+        std::vector<uint32_t> result;
+        BOOST_TEST(parse(str, parser, char_ - control, result));
+        BOOST_TEST(
+            result == std::vector<uint32_t>({1, 0x001f, 0x007f, 0x009f}));
+    }
 
-        // punct_
-        {
-            auto parser = +punct;
+    // punct_
+    {
+        auto parser = +punct;
 
-            std::u32string str = U"\u0020\u0021\u0fda\u0fdb";
-            std::vector<uint32_t> result;
-            BOOST_TEST(parse(str, parser, char_ - punct, result));
-            BOOST_TEST(result == std::vector<uint32_t>({0x21, 0xfda}));
-        }
+        std::u32string str = U"\u0020\u0021\u0fda\u0fdb";
+        std::vector<uint32_t> result;
+        BOOST_TEST(parse(str, parser, char_ - punct, result));
+        BOOST_TEST(result == std::vector<uint32_t>({0x21, 0xfda}));
+    }
 
-        // lower_
-        {
-            auto parser = +lower;
+    // symb_
+    {
+        auto parser = +symb;
 
-            std::u32string str = U"aA\u016F\u0170";
-            std::vector<uint32_t> result;
-            BOOST_TEST(parse(str, parser, char_ - lower, result));
-            BOOST_TEST(result == std::vector<uint32_t>({'a', 0x16f}));
-        }
+        std::u32string str = U"$^\u20AC!\u2194\u220F\U0001D7C6b\u2280\U0001FACE\U0001039F";
+        std::vector<uint32_t> result;
+        BOOST_TEST(parse(str, parser, char_ - symb, result));
+        BOOST_TEST(result == std::vector<uint32_t>({U'$', U'^', 0x20AC, 0x2194, 0x220F, 0x2280, 0x1FACE}));
+    }
 
-        // upper_
-        {
-            auto parser = +upper;
+    // lower_
+    {
+        auto parser = +lower;
 
-            std::u32string str = U"aA\u0105\u0106";
-            std::vector<uint32_t> result;
-            BOOST_TEST(parse(str, parser, char_ - upper, result));
-            BOOST_TEST(result == std::vector<uint32_t>({'A', 0x106}));
-        }
+        std::u32string str = U"aA\u016F\u0170";
+        std::vector<uint32_t> result;
+        BOOST_TEST(parse(str, parser, char_ - lower, result));
+        BOOST_TEST(result == std::vector<uint32_t>({'a', 0x16f}));
+    }
 
-        // no_need_for_sprit_2_hold_directive
-        {
-            namespace bp = boost::parser;
+    // upper_
+    {
+        auto parser = +upper;
 
-            std::vector<int> v;
-            auto result = bp::parse(
-                "1 2",
-                bp::repeat(3)[bp::int_] | repeat(2)[bp::int_] >> bp::attr(0),
-                bp::ws,
-                v,
-                bp::trace::on);
-            BOOST_TEST(result);
+        std::u32string str = U"aA\u0105\u0106";
+        std::vector<uint32_t> result;
+        BOOST_TEST(parse(str, parser, char_ - upper, result));
+        BOOST_TEST(result == std::vector<uint32_t>({'A', 0x106}));
+    }
 
-            BOOST_TEST(v.size() == 3u);
-            BOOST_TEST(v == std::vector<int>({1, 2, 0}));
-        }
+    // no_need_for_sprit_2_hold_directive
+    {
+        namespace bp = boost::parser;
 
-        // raw_doc_example
-        {
-            namespace bp = boost::parser;
-            auto int_parser =
-                bp::int_ % ','; // ATTR(int_parser) is std::vector<int>
-            auto subrange_parser =
-                bp::raw[int_parser]; // ATTR(subrange_parser) is a subrange
+        std::vector<int> v;
+        auto result = bp::parse(
+            "1 2",
+            bp::repeat(3)[bp::int_] | repeat(2)[bp::int_] >> bp::attr(0),
+            bp::ws,
+            v,
+            bp::trace::on);
+        BOOST_TEST(result);
 
-            // Parse using int_parser, generating integers.
-            auto ints = bp::parse("1, 2, 3, 4", int_parser, bp::ws);
-            assert(ints);
-            assert(*ints == std::vector<int>({1, 2, 3, 4}));
+        BOOST_TEST(v.size() == 3u);
+        BOOST_TEST(v == std::vector<int>({1, 2, 0}));
+    }
 
-            // Parse again using int_parser, but this time generating only the
-            // subrange matched by int_parser.  (prefix_parse() allows matches
-            // that don't consume the entire input.)
-            auto const str = std::string("1, 2, 3, 4, a, b, c");
-            auto first = str.begin();
-            auto range =
-                bp::prefix_parse(first, str.end(), subrange_parser, bp::ws);
-            assert(range);
-            assert(range->begin() == str.begin());
-            assert(range->end() == str.begin() + 10);
+    // raw_doc_example
+    {
+        namespace bp = boost::parser;
+        auto int_parser =
+            bp::int_ % ','; // ATTR(int_parser) is std::vector<int>
+        auto subrange_parser =
+            bp::raw[int_parser]; // ATTR(subrange_parser) is a subrange
 
-            static_assert(
-                std::is_same_v<
-                    decltype(range),
-                    std::optional<
-                        BOOST_PARSER_SUBRANGE<std::string::const_iterator>>>);
+        // Parse using int_parser, generating integers.
+        auto ints = bp::parse("1, 2, 3, 4", int_parser, bp::ws);
+        assert(ints);
+        assert(*ints == std::vector<int>({1, 2, 3, 4}));
+
+        // Parse again using int_parser, but this time generating only the
+        // subrange matched by int_parser.  (prefix_parse() allows matches
+        // that don't consume the entire input.)
+        auto const str = std::string("1, 2, 3, 4, a, b, c");
+        auto first = str.begin();
+        auto range =
+            bp::prefix_parse(first, str.end(), subrange_parser, bp::ws);
+        assert(range);
+        assert(range->begin() == str.begin());
+        assert(range->end() == str.begin() + 10);
+
+        static_assert(std::is_same_v<
+                      decltype(range),
+                      std::optional<
+                          BOOST_PARSER_SUBRANGE<std::string::const_iterator>>>);
 
 #if defined(__cpp_char8_t)
-            auto const u8str = std::u8string(u8"1, 2, 3, 4, a, b, c");
-            auto u8first = u8str.begin();
-            auto u8range =
-                bp::prefix_parse(u8first, u8str.end(), subrange_parser, bp::ws);
-            assert(u8range);
-            assert(u8range->begin().base() == u8str.begin());
-            assert(u8range->end().base() == u8str.begin() + 10);
+        auto const u8str = std::u8string(u8"1, 2, 3, 4, a, b, c");
+        auto u8first = u8str.begin();
+        auto u8range =
+            bp::prefix_parse(u8first, u8str.end(), subrange_parser, bp::ws);
+        assert(u8range);
+        assert(u8range->begin().base() == u8str.begin());
+        assert(u8range->end().base() == u8str.begin() + 10);
 #endif
-        }
+    }
 
 
 #if BOOST_PARSER_USE_CONCEPTS
-        // string_view_doc_example
-        {
-            namespace bp = boost::parser;
-            auto int_parser =
-                bp::int_ % ','; // ATTR(int_parser) is std::vector<int>
-            auto sv_parser = bp::string_view[int_parser]; // ATTR(subrange_parser)
-                                                          // is a string_view
+    // string_view_doc_example
+    {
+        namespace bp = boost::parser;
+        auto int_parser =
+            bp::int_ % ','; // ATTR(int_parser) is std::vector<int>
+        auto sv_parser = bp::string_view[int_parser]; // ATTR(subrange_parser)
+                                                      // is a string_view
 
-            auto const str = std::string("1, 2, 3, 4, a, b, c");
-            auto first = str.begin();
-            auto sv1 = bp::prefix_parse(first, str.end(), sv_parser, bp::ws);
-            assert(sv1);
-            assert(*sv1 == str.substr(0, 10));
+        auto const str = std::string("1, 2, 3, 4, a, b, c");
+        auto first = str.begin();
+        auto sv1 = bp::prefix_parse(first, str.end(), sv_parser, bp::ws);
+        assert(sv1);
+        assert(*sv1 == str.substr(0, 10));
 
-            static_assert(
-                std::is_same_v<decltype(sv1), std::optional<std::string_view>>);
+        static_assert(
+            std::is_same_v<decltype(sv1), std::optional<std::string_view>>);
 
-            auto sv2 =
-                bp::parse("1, 2, 3, 4" | bp::as_utf32, sv_parser, bp::ws);
-            assert(sv2);
-            assert(*sv2 == "1, 2, 3, 4");
+        auto sv2 = bp::parse("1, 2, 3, 4" | bp::as_utf32, sv_parser, bp::ws);
+        assert(sv2);
+        assert(*sv2 == "1, 2, 3, 4");
 
-            static_assert(
-                std::is_same_v<decltype(sv2), std::optional<std::string_view>>);
-        }
+        static_assert(
+            std::is_same_v<decltype(sv2), std::optional<std::string_view>>);
+    }
 #endif
 
-        // variant_compat_example
+    // variant_compat_example
+    {
+        struct key_value
         {
-            struct key_value
-            {
-                int key;
-                double value;
-            };
+            int key;
+            double value;
+        };
 
-            namespace bp = boost::parser;
-            key_value kv;
-            bp::parse("42 13.0", bp::int_ >> bp::double_, kv); // Ok.
+        namespace bp = boost::parser;
+        key_value kv;
+        bp::parse("42 13.0", bp::int_ >> bp::double_, kv); // Ok.
 #if 0
             std::variant<key_value, double> kv_or_d;
             bp::parse("42 13.0", bp::int_ >> bp::double_, kv_or_d); // Error: ill-formed!
 #endif
-        }
+    }
 
 
-        // utf_iterator_copy_ctor
+    // utf_iterator_copy_ctor
+    {
+        namespace bp = boost::parser;
+
+        char mut_chars[] = "foo";
+        char const const_chars[] = "bar";
+
+        auto mut_view = mut_chars | bp::as_utf8;
+        auto const_view = const_chars | bp::as_utf8;
+
+        auto mut_it = mut_view.begin();
+        auto mut_last = mut_view.end();
+        auto const_it = const_view.begin();
+        auto const_last = const_view.begin();
+
+        const_it = mut_it;
+        const_last = mut_last;
+
+        std::string copy;
+        copy.resize(3);
+        std::copy(const_it, const_last, copy.begin());
+        BOOST_TEST(copy == "foo");
+    }
+
+    // detail_printing
+    {
+        // print_printable(char > 127)
         {
-            namespace bp = boost::parser;
-
-            char mut_chars[] = "foo";
-            char const const_chars[] = "bar";
-
-            auto mut_view = mut_chars | bp::as_utf8;
-            auto const_view = const_chars | bp::as_utf8;
-
-            auto mut_it = mut_view.begin();
-            auto mut_last = mut_view.end();
-            auto const_it = const_view.begin();
-            auto const_last = const_view.begin();
-
-            const_it = mut_it;
-            const_last = mut_last;
-
-            std::string copy;
-            copy.resize(3);
-            std::copy(const_it, const_last, copy.begin());
-            BOOST_TEST(copy == "foo");
+            std::ostringstream oss;
+            detail::print_printable(oss, char(130));
+            BOOST_TEST(oss.str() == "'\\x82'");
         }
 
-        // detail_printing
+        // print_printable(char32_t)
         {
-            // print_printable(char > 127)
-            {
-                std::ostringstream oss;
-                detail::print_printable(oss, char(130));
-                BOOST_TEST(oss.str() == "'\\x82'");
-            }
-
-            // print_printable(char32_t)
-            {
-                std::ostringstream oss;
-                detail::print_printable(oss, U'a');
-                BOOST_TEST(oss.str() == "U'a'");
-            }
-            {
-                std::ostringstream oss;
-                detail::print_printable(oss, U'ß');
-                BOOST_TEST(oss.str() == "U'\\xdf'");
-            }
-
-            // print(tuple)
-            {
-                std::ostringstream oss;
-                tuple<int, float> tup(42, 13.8);
-                detail::print(oss, tup);
-                BOOST_TEST(oss.str() == "(42, 13.8)");
-            }
-
-            // print(optional)
-            {
-                std::ostringstream oss;
-                detail::print(oss, std::optional<int>());
-                BOOST_TEST(oss.str() == "<<empty>>");
-            }
-            {
-                std::ostringstream oss;
-                detail::print(oss, std::optional(42));
-                BOOST_TEST(oss.str() == "42");
-            }
-
-            // print(variant)
-            {
-                std::ostringstream oss;
-                detail::print(oss, std::variant<int, double>());
-                BOOST_TEST(oss.str() == "<<variant>>");
-            }
+            std::ostringstream oss;
+            detail::print_printable(oss, U'a');
+            BOOST_TEST(oss.str() == "U'a'");
+        }
+        {
+            std::ostringstream oss;
+            detail::print_printable(oss, U'ß');
+            BOOST_TEST(oss.str() == "U'\\xdf'");
         }
 
-        return boost::report_errors();
+        // print(tuple)
+        {
+            std::ostringstream oss;
+            tuple<int, float> tup(42, 13.8);
+            detail::print(oss, tup);
+            BOOST_TEST(oss.str() == "(42, 13.8)");
         }
+
+        // print(optional)
+        {
+            std::ostringstream oss;
+            detail::print(oss, std::optional<int>());
+            BOOST_TEST(oss.str() == "<<empty>>");
+        }
+        {
+            std::ostringstream oss;
+            detail::print(oss, std::optional(42));
+            BOOST_TEST(oss.str() == "42");
+        }
+
+        // print(variant)
+        {
+            std::ostringstream oss;
+            detail::print(oss, std::variant<int, double>());
+            BOOST_TEST(oss.str() == "<<variant>>");
+        }
+    }
+
+    return boost::report_errors();
+}

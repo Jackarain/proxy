@@ -1,0 +1,103 @@
+#
+# Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+#
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+#
+
+project mqtt5/doc ;
+
+import boostbook ;
+import os ;
+import path ;
+import-search /boost/docca ;
+import docca ;
+
+local include-prefix = [ path.root $(__file__:D) [ path.pwd ] ] ;
+include-prefix = [ path.native $(include-prefix:D)/include ] ;
+
+local doxygen_include =
+    error.hpp
+    logger.hpp
+    property_types.hpp
+    reason_codes.hpp
+    types.hpp
+    mqtt_client.hpp
+;
+
+docca.pyreference reference.qbk
+    : 
+        [ glob-tree-ex ../include/boost/mqtt5 : $(doxygen_include) : detail impl ]
+    :
+        <doxygen:param>PROJECT_NAME=MQTT5
+        <doxygen:param>PROJECT_BRIEF="C++ MQTT5 Client Library"
+        <doxygen:param>DISTRIBUTE_GROUP_DOC=YES
+        <doxygen:param>ENABLE_PREPROCESSING=YES
+        <doxygen:param>MACRO_EXPANSION=YES
+        <doxygen:param>EXPAND_ONLY_PREDEF=YES
+        <doxygen:param>SEARCH_INCLUDES=NO
+        <doxygen:param>STRIP_FROM_PATH=$(include-prefix)
+
+        <doxygen:param>SKIP_FUNCTION_MACROS=NO
+        <doxygen:param>OUTPUT_LANGUAGE=English
+        <doxygen:param>ABBREVIATE_BRIEF=
+        <doxygen:param>AUTOLINK_SUPPORT=NO
+        <doxygen:param>EXTRACT_ALL=YES
+        <doxygen:param>HIDE_UNDOC_MEMBERS=YES
+        <doxygen:param>HIDE_UNDOC_CLASSES=YES
+        <doxygen:param>HIDE_FRIEND_COMPOUNDS=YES
+        <doxygen:param>CASE_SENSE_NAMES=YES
+        <doxygen:param>SHOW_INCLUDE_FILES=NO
+        <doxygen:param>INLINE_INFO=NO
+        <doxygen:param>SORT_MEMBER_DOCS=NO
+        <doxygen:param>SORT_MEMBERS_CTORS_1ST=YES
+        <doxygen:param>SHOW_USED_FILES=NO
+        <doxygen:param>SHOW_FILES=NO
+        <doxygen:param>SHOW_NAMESPACES=NO
+
+        <docca:config>config.json
+    ;
+
+install images
+    :
+        [ glob images/*.png ]
+    :
+        <location>html/mqtt5/images
+    ;
+
+explicit images ;
+
+xml mqtt5_doc
+    :
+        qbk/00_main.qbk
+    :
+        <dependency>reference.qbk
+        <dependency>images
+    ;
+
+explicit mqtt5_doc ;
+
+
+boostbook mqtt5
+    :
+        mqtt5_doc
+    :
+        <xsl:param>boost.root=../../../..
+        <xsl:param>chapter.autolabel=1
+        <xsl:param>chunk.section.depth=8
+        <xsl:param>chunk.first.sections=1
+        <xsl:param>toc.max.depth=2
+        <xsl:param>generate.toc="chapter toc,title section nop reference nop part toc"
+        <include>../../../tools/boostbook/dtd
+    :
+        <dependency>images
+    ;
+
+# These are used to inform the build system of the
+# means to build the integrated and stand-alone docs.
+
+alias boostdoc ;
+explicit boostdoc ;
+
+alias boostrelease : mqtt5 ;
+explicit boostrelease ;

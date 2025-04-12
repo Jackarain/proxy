@@ -21,7 +21,14 @@ using boost::random::test::RandomNumberEngine;
 BOOST_CONCEPT_ASSERT((RandomNumberEngine< BOOST_RANDOM_URNG >));
 
 typedef BOOST_RANDOM_URNG::result_type result_type;
+
+// With the xoshiro family we are using splitmix64 we need to allow 64 bit seeds
+// even in the case that we are retuning doubles
+#ifndef BOOST_RANDOM_PROVIDED_SEED_TYPE
 typedef boost::random::detail::seed_type<result_type>::type seed_type;
+#else
+typedef BOOST_RANDOM_PROVIDED_SEED_TYPE seed_type;
+#endif
 
 #ifdef BOOST_MSVC
 #pragma warning(push)

@@ -1,0 +1,61 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:will_props Will properties]
+The Will Properties consist of the properties that determine when to publish the [reflink2 will Will] Message 
+and the Application Message properties to be sent with the [reflink2 will Will] Message.
+The Will Properties consists of a Property Length and the Properties.
+A Property consists of an Identifier and a value.
+
+This class extends [reflink2 prop__properties prop::properties], which provides common functionalities for all property classes.
+Below is a list of possible [reflink2 will Will] Properties, along with descriptions of their usage:
+
+[table:will_props Will properties
+    [[Identifier] [Value type] [Description]]
+    [[will_delay_interval] [`uint32_t`] [The delay in seconds that need to pass before Server publishes the Client's Will Message.]]
+    [[payload_format_indicator] [`uint8_t`] [Value of 0 indicates that the Will Message is in unspecified bytes. Value of 1 indicates that the Will Message is UTF-8 Encoded Character Data.]]
+    [[message_expiry_interval] [`uint32_t`] [The lifetime of the Will Message in seconds. It is send as Publication Expiry Interval when it is published.]]
+    [[content_type] [`std::string`] [A UTF-8 Encoded String describing the content of the Will Message.]]
+    [[response_topic] [`std::string`] [A UTF-8 Encoded String which is used as the Topic Name for a response message.]]
+    [[correlation_data] [`std::string`] [Binary Data used by the sender of the Request Message to identify which request the Response Message is for when it is received.]]
+    [[user_property] [`std::vector<std::pair<std::string, std::string>>`] [Name, value pair (__UTF8_STRING_PAIR__) defining User Property. There can be multiple pairs in one packet. 
+        The meaning of these properties is not defined by the specification.]]
+]
+
+[h4 Usage]
+After creating an instance of [reflink2 will `boost::mqtt5::will`], the subscript operator can be used to access a Property.
+
+The Identifiers listed in the table above are available within the `boost::mqtt5::prop` namespace for Property access.
+
+[note When accessing a property value, the subscript operator will return a `std::optional` of the value type for all properties,
+except for `boost::mqtt5::prop::user_property`, where it will return an instance of `std::vector<std::pair<std::string, std::string>>`.]
+
+[h4 Example]
+
+The following example shows how to set a Property value:
+
+[!c++]
+    boost::mqtt5::will will;
+    will[boost::mqtt5::prop::message_expiry_interval] = 90;
+    will[boost::mqtt5::prop::content_type] = "Notification";
+    props[boost::mqtt5::prop::user_property].emplace_back("name", "value");
+
+The following example shows how to retrieve a Property value:
+
+[!c++]
+    std::optional<std::string> c_type = will[boost::mqtt5::prop::content_type];
+    if (c_type.has_value())
+        // content type property was previously set
+    else
+        // content type property was not set
+
+    std::vector<std::pair<std::string, std::string>>& user_props = props[boost::mqtt5::prop::user_property];
+    if (!user_props.empty())
+        // user property was previously set
+    else
+        // user property was not set
+
+[endsect]

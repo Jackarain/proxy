@@ -136,8 +136,8 @@ template<typename T> void test_integral()
     test_odr_use( &boost::charconv::limits<T>::max_chars10 );
     test_odr_use( &boost::charconv::limits<T>::max_chars );
 
-    test_integral( std::numeric_limits<T>::min() );
-    test_integral( std::numeric_limits<T>::max() );
+    test_integral( (std::numeric_limits<T>::min)() );
+    test_integral( (std::numeric_limits<T>::max)() );
 }
 
 template<typename T> void test_floating_point( T value )
@@ -205,10 +205,10 @@ template<typename T> void test_floating_point()
     test_odr_use( &boost::charconv::limits<T>::max_chars10 );
     test_odr_use( &boost::charconv::limits<T>::max_chars );
 
-    test_floating_point( std::numeric_limits<T>::min() );
-    test_floating_point( -std::numeric_limits<T>::min() );
-    test_floating_point( std::numeric_limits<T>::max() );
-    test_floating_point( -std::numeric_limits<T>::max() );
+    test_floating_point( (std::numeric_limits<T>::min)() );
+    test_floating_point( -(std::numeric_limits<T>::min)() );
+    test_floating_point( (std::numeric_limits<T>::max)() );
+    test_floating_point( -(std::numeric_limits<T>::max)() );
 }
 
 int main()

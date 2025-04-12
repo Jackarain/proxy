@@ -1,0 +1,82 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:optimising_communication Optimising Communication]
+[nochunk]
+
+This chapter provides a detailed breakdown of how __Client__ optimises its communications with the Broker
+with multiflight mode for simultaneous message handling and strategies for efficient bandwidth usage.
+These techniques are key to getting the most out of MQTT in scenarios demanding fast and
+dependable message delivery, all while meeting the protocol's quality of service requirements and network efficiency standards.
+
+[section:multiflight The Multiflight Mode]
+
+The __Self__ library introduces a multiflight feature.
+This allows the initiation of multiple asynchronous requests simultaneously, without waiting for the completion of the previous requests.
+With this feature, you can repeatedly call [refmem mqtt_client async_publish] or any similar `async_xxx` function
+without waiting for the handler invocation of the previous `async_xxx` calls.
+
+This feature is particularly helpful when using __Client__ with callbacks,
+as it allows you to quickly dispatch multiple requests one after the other,
+instead of nesting them in callbacks.
+
+Consider the example below, [refmem mqtt_client async_publish] with QoS 2 is called `5` times in a `for` loop.
+QoS level 2 ensures that each message is delivered exactly once and involves a four-step communication process:
+sending a __PUBLISH__ packet, receiving a __PUBREC__ acknowledgement from the Broker,
+transmitting a __PUBREL__ packet, and finally receiving a __PUBCOMP__ packet, confirming successful message delivery.
+
+Despite the complexity of initiating several such message exchange sequences consecutively,
+the __Client__ will manage all intermediate packet exchanges between the __Client__ and the Broker correctly and complete the message delivery.
+
+It is important to note that there is no guarantee that the final handlers will be invoked
+in the same order as the corresponding `async_xxx` calls were initiated.
+
+[import ../../example/multiflight_client.cpp]
+Source: [link mqtt5.multiflight_client multiflight_client.cpp]
+[multiflight_client]
+
+[endsect] [/multiflight]
+
+[section:packet_queuing Efficient Bandwidth Usage With Packet Queuing]
+
+The __Client__ employs a strategic queuing mechanism crucial in optimising network usage and performance for the user's requests.
+This mechanism bundles multiple MQTT packets for transmission within a single TCP packet whenever feasible 
+[footnote Requests are queued and bundled whenever the __Client__ is in progress of writing previous request(s) to the transport.].
+This significantly reduces performance overhead, enhances data output, and reduces the latency associated with individual packet transmissions.
+This results in fast performance and efficient use of network resources.
+
+Additionally, the queuing mechanism ensures that __Client__ complies with the `Receive Maximum` value set by the Broker.
+This value is used to implement a send quota to restrict the number of __PUBLISH__ packets with QoS > 0 that have not received an acknowledgement
+(__PUBACK__ for QoS 1 and __PUBCOMP__ for QoS 2) (see [mqttlink 3901251 `Flow Control`]).
+When [refmem mqtt_client async_publish] with QoS > 0 is invoked,
+__Client__ evaluates the current count of unacknowledged __PUBLISH__ packets against the Broker's `Receive Maximum` threshold.
+If the count is below this threshold, __Client__ dispatches the __PUBLISH__ packet.
+Otherwise, it remains in the queue until the count decreases below the threshold.
+
+As a result, in the [link mqtt5.multiflight_client multiflight_client.cpp] example,
+the __Client__ will transmit all `5` __PUBLISH__ packets in a single TCP packet
+if possible [footnote The Broker's `Receive Maximum` is equal to or greater than `5`.].
+
+[endsect] [/packet_queuing]
+
+[section:packet_ordering Packet Ordering]
+
+The __Client__ uses a packet ordering mechanism to manage the queued packets pending dispatch to the Broker.
+The most important ordering rules are:
+
+- The __PUBLISH__ packets are transmitted in the order they were initiated through [refmem mqtt_client async_publish] calls.
+This sequential integrity is preserved even in instances requiring packet retransmission, ensuring consistency in message delivery order.
+However, it is important to note that sequentiality is not preserved between QoS 0 and QoS > 0 packets
+when the Broker sets up the `Receive Maximum` value.
+A Broker can set this value to limit the number of simultaneous QoS > 0 messages they can process,
+potentially causing QoS 0 messages to be transmitted ahead of QoS > 0 messages in the delivery order.
+
+- The __DISCONNECT__ packet is sent *in a single TCP packet before any other packets* in the queue.
+See [link mqtt5.disconnecting_the_client Disconnecting the client] for more information about disconnecting.
+
+[endsect] [/packet_ordering]
+
+[endsect] [/optimising_communication]

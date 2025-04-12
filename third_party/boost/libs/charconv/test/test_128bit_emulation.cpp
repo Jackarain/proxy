@@ -199,7 +199,7 @@ void test_bitwise_operators()
 
 void test_memcpy()
 {
-    #if defined(BOOST_CHARCONV_HAS_FLOAT128) && defined(BOOST_CHARCONV_HAS_INT128)
+    #if defined(BOOST_CHARCONV_HAS_QUADMATH) && defined(BOOST_CHARCONV_HAS_INT128)
     __float128 fval = 1e4000Q;
     boost::uint128_type ref;
     trivial_uint128 cpyval;
@@ -215,8 +215,8 @@ void test_memcpy()
 
 void test_limits()
 {
-    BOOST_TEST(std::numeric_limits<uint128>::min() == 0);
-    BOOST_TEST(std::numeric_limits<uint128>::max() == uint128(UINT64_MAX, UINT64_MAX));
+    BOOST_TEST((std::numeric_limits<uint128>::min)() == 0);
+    BOOST_TEST((std::numeric_limits<uint128>::max)() == uint128(UINT64_MAX, UINT64_MAX));
     BOOST_TEST(std::numeric_limits<uint128>::is_signed == false);
     BOOST_TEST(std::numeric_limits<uint128>::is_integer == true);
     BOOST_TEST(std::numeric_limits<uint128>::digits == CHAR_BIT * sizeof(std::uint64_t) * 2);

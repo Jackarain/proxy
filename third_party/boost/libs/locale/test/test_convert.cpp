@@ -25,7 +25,7 @@ void test_norm(std::string orig, std::string normal, boost::locale::norm_type ty
 {
     test_normc<char>(orig, normal, type);
     test_normc<wchar_t>(to<wchar_t>(orig), to<wchar_t>(normal), type);
-#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+#ifdef __cpp_lib_char8_t
     test_normc<char8_t>(to<char8_t>(orig), to<char8_t>(normal), type);
 #endif
 #ifdef BOOST_LOCALE_ENABLE_CHAR16_T
@@ -105,7 +105,7 @@ void test_main(int /*argc*/, char** /*argv*/)
     TEST_ALL_CASES;
 #undef TEST_V
 
-#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+#ifdef __cpp_lib_char8_t
 #    define TEST_V(how, source_s, dest_s) TEST_A(char8_t, how, to<char8_t>(source_s), to<char8_t>(dest_s))
     TEST_ALL_CASES;
 #    undef TEST_V

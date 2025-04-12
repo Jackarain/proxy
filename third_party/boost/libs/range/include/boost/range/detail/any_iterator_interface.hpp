@@ -10,6 +10,7 @@
 #ifndef BOOST_RANGE_DETAIL_ANY_ITERATOR_INTERFACE_HPP_INCLUDED
 #define BOOST_RANGE_DETAIL_ANY_ITERATOR_INTERFACE_HPP_INCLUDED
 
+#include <boost/mpl/if.hpp>
 #include <boost/range/detail/any_iterator_buffer.hpp>
 #include <boost/iterator/iterator_categories.hpp>
 #include <boost/type_traits/is_convertible.hpp>

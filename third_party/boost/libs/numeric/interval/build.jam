@@ -1,0 +1,25 @@
+# Copyright René Ferdinand Rivera Morell 2023-2024
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
+
+require-b2 5.2 ;
+
+constant boost_dependencies :
+    /boost/config//boost_config
+    /boost/detail//boost_detail
+    /boost/logic//boost_logic ;
+
+project /boost/interval
+    : common-requirements
+        <include>include
+    ;
+
+explicit
+    [ alias boost_interval : : : : <library>$(boost_dependencies) ]
+    [ alias all : boost_interval examples test ]
+    ;
+
+call-if : boost-library interval
+    ;
+

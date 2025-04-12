@@ -1,0 +1,193 @@
+////
+Copyright 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_xxhash]
+# <boost/hash2/xxhash.hpp>
+:idprefix: ref_xxhash_
+
+```
+namespace boost {
+namespace hash2 {
+
+class xxhash_32;
+class xxhash_64;
+
+} // namespace hash2
+} // namespace boost
+```
+
+This header implements the https://xxhash.com/[XXH32 and XXH64 algorithms].
+
+## xxhash_32
+
+```
+class xxhash_32
+{
+public:
+
+    using result_type = std::uint32_t;
+
+    constexpr xxhash_32();
+    explicit constexpr xxhash_32( std::uint64_t seed );
+    xxhash_32( void const* p, std::size_t n );
+    constexpr xxhash_32( unsigned char const* p, std::size_t n );
+
+    void update( void const* p, std::size_t n );
+    constexpr void update( unsigned char const* p, std::size_t n );
+
+    constexpr result_type result();
+};
+```
+
+### Constructors
+
+```
+constexpr xxhash_32();
+```
+
+Default constructor.
+
+Effects: ::
+  Initializes the internal state of the XXH32 algorithm to its initial values.
+
+```
+explicit constexpr xxhash_32( std::uint64_t seed );
+```
+
+Constructor taking an integer seed value.
+
+Effects: ::
+  Initializes the internal state of the XXH32 algorithm using the low 32 bits of `seed` as the seed, then if the high 32 bits of `seed` aren't zero, mixes them into the state.
+
+Remarks: ::
+  By convention, if `seed` is zero, the effect of this constructor is the same as default construction.
+
+```
+xxhash_32( void const* p, std::size_t n );
+constexpr xxhash_32( unsigned char const* p, std::size_t n );
+```
+
+Constructor taking a byte sequence seed.
+
+Effects: ::
+  Initializes the state as if by default construction, then if `n` is not zero, performs `update(p, n); result()`.
+
+Remarks: ::
+  By convention, if `n` is zero, the effect of this constructor is the same as default construction.
+
+### update
+
+```
+void update( void const* p, std::size_t n );
+constexpr void update( unsigned char const* p, std::size_t n );
+```
+
+Effects: ::
+  Updates the internal state of the XXH32 algorithm from the byte sequence `[p, p+n)`.
+
+Remarks: ::
+  Consecutive calls to `update` are equivalent to a single call with the concatenated byte sequences of the individual calls.
+
+### result
+
+```
+constexpr result_type result();
+```
+
+Effects: ::
+  Obtains a 32 bit hash value from the state as specified by XXH32, then updates the state.
+
+Returns: ::
+  The obtained hash value.
+
+Remarks: ::
+  The state is updated to allow repeated calls to `result()` to return a pseudorandom sequence of `result_type` values, effectively extending the output.
+
+## xxhash_64
+
+```
+class xxhash_64
+{
+public:
+
+    using result_type = std::uint64_t;
+
+    constexpr xxhash_64();
+    explicit constexpr xxhash_64( std::uint64_t seed );
+    xxhash_64( void const* p, std::size_t n );
+    constexpr xxhash_64( unsigned char const* p, std::size_t n );
+
+    void update( void const* p, std::size_t n );
+    constexpr void update( unsigned char const* p, std::size_t n );
+
+    constexpr result_type result();
+};
+```
+
+### Constructors
+
+```
+constexpr xxhash_64();
+```
+
+Default constructor.
+
+Effects: ::
+  Initializes the internal state of the XXH64 algorithm to its initial values.
+
+```
+explicit constexpr xxhash_64( std::uint64_t seed );
+```
+
+Constructor taking an integer seed value.
+
+Effects: ::
+  Initializes the internal state of the XXH64 algorithm using `seed` as the seed.
+
+Remarks: ::
+  By convention, if `seed` is zero, the effect of this constructor is the same as default construction.
+
+```
+xxhash_64( void const* p, std::size_t n );
+constexpr xxhash_64( unsigned char const* p, std::size_t n );
+```
+
+Constructor taking a byte sequence seed.
+
+Effects: ::
+  Initializes the state as if by default construction, then if `n` is not zero, performs `update(p, n); result()`.
+
+Remarks: ::
+  By convention, if `n` is zero, the effect of this constructor is the same as default construction.
+
+### update
+
+```
+void update( void const* p, std::size_t n );
+constexpr void update( unsigned char const* p, std::size_t n );
+```
+
+Effects: ::
+  Updates the internal state of the XXH64 algorithm from the byte sequence `[p, p+n)`.
+
+Remarks: ::
+  Consecutive calls to `update` are equivalent to a single call with the concatenated byte sequences of the individual calls.
+
+### result
+
+```
+constexpr result_type result();
+```
+
+Effects: ::
+  Obtains a 64 bit hash value from the state as specified by XXH64, then updates the state.
+
+Returns: ::
+  The obtained hash value.
+
+Remarks: ::
+  The state is updated to allow repeated calls to `result()` to return a pseudorandom sequence of `result_type` values, effectively extending the output.
+

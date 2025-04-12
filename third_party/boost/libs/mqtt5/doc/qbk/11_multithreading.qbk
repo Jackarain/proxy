@@ -1,0 +1,91 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:multithreading Using the mqtt_client in a Multithreaded Environment]
+[nochunk]
+
+This chapter provides information about thread safety of the __Client__ and other __Asio__-compliant objects
+and provides examples of how to write thread-safe code in multithreaded environments.
+
+[section:thread_safety Thread Safety of ASIO-Compliant Objects]
+
+A common misconception exists regarding the "thread safety" of ASIO-compliant asynchronous objects,
+specifically around the belief that initialising such an object with a __STRAND__
+[footnote An executor that provides serialised handler execution.]
+executor allows its asynchronous functions (`async_xxx`) to be freely called from any executor or thread.
+That is not correct. Those `async_xxx` functions themselves *must* be called from within the same executor.
+
+Every `async_xxx` function in every ASIO-compliant object begins by executing some initiation code before
+typically proceeding to call an intermediate lower-level ASIO `async_xxx` function, with an adapted handler serving as the callback.
+It is worth noting that the thread safety of this initiation code,
+which is called directly by the [@boost:doc/html/boost_asio/reference/async_initiate.html `boost::asio::async_initiate`]
+function and executed by the same executor that called the `async_xxx` function, is not guaranteed
+and depends on the implementation itself.
+This uncertainty around thread safety is what the notation "Thread Safety: Shared objects: Unsafe" means,
+which appears in the documentation for any ASIO-compliant object.
+
+Consequently, similar to the other ASIO-compliant objects, the __Client__ object *is not thread-safe*.
+Invoking its member functions concurrently from separate threads will result in a race condition.
+
+This design choice is intentional and offloads the responsibility of managing concurrency to the user.
+Given that many applications using __Asio__ often operate in a single-threaded environment for better performance,
+ASIO-compliant objects do not want to pay the cost of the overhead associated with mutexes and other synchronization mechanisms.
+Instead, it encourages developers to implement their own concurrency management strategies, tailoring them to the specific needs of their applications.
+
+[endsect] [/thread_safety]
+
+[section:executors_threads_strands Executors, Threads, and Strands]
+
+Before delving into thread-safe programming, it is essential to understand the distinction between executors and threads.
+Executors are not threads but mechanisms for scheduling how and when work gets done. 
+An executor can distribute tasks across multiple threads, and a single thread can execute tasks from multiple executors.
+Thus, when several threads invoke __IOC_RUN__ on the same __IOC__,
+the underlying executor of that `io_context` has the flexibility to assign tasks to any of those threads.
+
+A __STRAND__ executor is particularly important in maintaining thread safety and managing multithreading.
+As outlined earlier, this type of executor guarantees that tasks assigned to it are executed in a serialised manner,
+preventing concurrent execution. 
+It is important to note that this serialisation does not mean that a single thread handles all tasks within a strand.
+If the `io_context` associated with a strand operates across multiple threads,
+these threads can independently undertake tasks within the strand.
+However, these tasks are executed in a non-concurrent fashion as guaranteed by the strand. 
+Refer to __ASIO_STRANDS__ for more details.
+
+[endsect] [/executors_threads_strands]
+
+[section:thread_safe_code Writing Thread-Safe Code]
+
+As mentioned previously, it is the user's responsibility to ensure that none of the __Client__'s member functions
+are called concurrently from separate threads.
+To achieve thread safety in a multithreaded environment,
+all the __Client__'s member functions must be executed within the same implicit
+[footnote Only one thread is calling __IOC_RUN__.]
+or explicit strand.
+
+Specifically, use __POST__ or __DISPATCH__ to delegate a function call to a strand,
+or __CO_SPAWN__ to spawn the coroutine into the strand.
+For asynchronous functions, this will ensure that the initiation code is executed within the strand in a thread-safe manner.
+__Client__'s executor must be that same strand.
+This will guarantee that the entire sequence of operations
+- the initiation code and any intermediate operation -
+is carried out within the strand, thereby ensuring thread safety.
+
+[important
+    To conclude, to achieve thread safety,
+    all the member functions of the __Client__ *must* be executed in *the same strand*.
+    This strand must be given in the __Client__ constructor.
+]
+
+The examples below demonstrate how to publish a "Hello World" Application Message
+in a multithreaded setting using callbacks (`post`/`dispatch`) and coroutines (`co_spawn`):
+
+* [link mqtt5.hello_world_in_multithreaded_env hello_world_in_multithreaded_env.cpp]
+* [link mqtt5.hello_world_in_coro_multithreaded_env hello_world_in_coro_multithreaded_env.cpp]
+
+
+[endsect] [/thread_safe_code]
+
+[endsect] [/multithreading]

@@ -158,7 +158,6 @@ void resume_(HANDLE handle, error_code & ec)
 }
 #endif
 
-template struct basic_process_handle_win<>;
 
 }
 

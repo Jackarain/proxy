@@ -20,7 +20,7 @@
 #include <boost/asio/streambuf.hpp>
 
 using namespace std;
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 namespace asio = boost::asio;
 
 BOOST_AUTO_TEST_SUITE( async );

@@ -1,0 +1,28 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:allocators Allocators]
+
+Every asynchronous operation has an associated allocator
+designed to provide the operation with a consistent and stable memory source for the duration of its execution.
+This allocated memory, referred to as per-operation stable memory resources (POSMs),
+remains retained for the lifetime of the operation, ensuring its availability whenever needed. 
+Asynchronous operations may utilise POSMs in numerous ways.
+See __ASIO_ALLOCATORS__ and __ASIO_CUSTOM_MEMORY_ALLOCATION__ for more information. 
+
+The __Client__ supports and utilises allocators associated with `async_xxx`'s handlers
+to store the state associated with the operation.
+Specifically, the allocator is used to reserve memory for MQTT Control Packet bytes 
+(__PUBLISH__, __SUBSCRIBE__,...) created by each `async_xxx` operation request.
+Moreover, the __Client__'s internal packet queue
+(described in the section ['Efficient bandwidth usage with packet queuing] in [link mqtt5.optimising_communication Optimising communication])
+associates the allocator of the first packet in the queue to the low-level __Asio__ function
+`async_write` on the transport layer.
+
+Lastly, the __Client__ uses [@boost:doc/html/boost_asio/reference/recycling_allocator.html `boost::asio::recycling_allocator`]
+to allocate memory for its internal operations and components.
+
+[endsect][/allocators]

@@ -91,13 +91,21 @@ struct as_user_launcher : default_launcher
       detail::on_error(*this, executable, command_line, ec, inits...);
       return basic_process<Executor>(exec);
     }
+
+    if (!inherited_handles.empty())
+    {
+      set_handle_list(ec);
+      if (ec)
+        return basic_process<Executor>(exec);
+    }
+
     auto ok = ::CreateProcessAsUserW(
         token,
         executable.empty() ? nullptr : executable.c_str(),
         command_line.empty() ? nullptr : &command_line.front(),
         process_attributes,
         thread_attributes,
-        inherit_handles ? TRUE : FALSE,
+        inherited_handles.empty() ? FALSE : TRUE,
         creation_flags,
         environment,
         current_directory.empty() ? nullptr : current_directory.c_str(),

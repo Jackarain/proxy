@@ -2,12 +2,22 @@
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#include <boost/config.hpp>
+#include <boost/config/pragma_message.hpp>
+
+#if defined(__MSVC_RUNTIME_CHECKS)
+BOOST_PRAGMA_MESSAGE(
+  "Test skipped because of /RTCc, which is incompatible with Boost.Interprocess");
+int main() {}
+#else
+
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <atomic>
+#include <boost/asio.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
-#include <boost/process/child.hpp>
+#include <boost/process/process.hpp>
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <chrono>
@@ -57,9 +67,11 @@ int parent(const char* exe_name)
     allocator(segment.get_segment_manager()));
   std::atomic_int& start = *segment.construct<std::atomic_int>(start_name)(0);
 
-  std::vector<boost::process::child> children;
+  boost::asio::io_context ctx;
+  std::vector<boost::process::process> children;
   for (int i = 0; i < NUM_CHILDS; ++i) {
-    children.emplace_back(exe_name, std::to_string(i), segment_name);
+    children.push_back(boost::process::process(
+      ctx.get_executor(), exe_name, {std::to_string(i), segment_name_str}));
   }
 
   start.store(1);
@@ -112,3 +124,5 @@ int main(int argc, char** argv)
     return child(std::atoi(argv[1]),argv[2]);
   }
 }
+
+#endif

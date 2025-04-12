@@ -1,0 +1,59 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:executors Executors]
+
+Every asynchronous operation has an associated executor that determines how the completion handlers are queued and run.
+Asynchronous operations use the associated executor to track the existence of the work of asynchronous tasks,
+schedule the completion handlers for execution,
+and prevent re-entrant execution of the completion handlers to avoid recursion and potential stack overflow issues.
+
+Every asynchronous operation within the __Client__ is defined as a composed operation.
+This implies that each `async_xxx` operation is a sequence consisting of an initiating function,
+a series of intermediate asynchronous operations, and a final completion handler.
+
+Upon creating an instance of the __Client__, it is necessary to provide an executor or an __ExecutionContext__.
+The specified executor (or __ExecutionContext__'s executor) will become the default executor associated with the __Client__
+and will be used for the execution of all the intermediate operations and a final completion handler for all asynchronous operations
+that have not bound an executor.
+If an executor is bound to an asynchronous operation, that executor will be used for the final completion handler instead.
+
+The following examples will demonstrate the previously described interactions.
+
+[heading Example: using the constructor's executor as the default associated executor]
+
+In this code snippet, the __Client__ is constructed with a strand.
+Consequently, the __Client__ adopts the strand as its new default executor,
+which is used to execute the [refmem mqtt_client async_publish] operation.
+
+```
+int main() {
+    boost::asio::io_context ioc;
+
+    // Construct the Client with a strand.
+    auto strand = boost::asio::make_strand(ioc.get_executor());
+    boost::mqtt5::mqtt_client<boost::asio::ip::tcp::socket> client(strand);
+
+    client.brokers("<your-mqtt-broker>", 1883)
+        .async_run(boost::asio::detached);
+
+    // This asynchronous operation will use the default associated executor,
+    // which is the strand with which the Client is constructed.
+    client.async_publish<boost::mqtt5::qos_e::at_most_once>(
+        "<topic>", "Hello world!",
+        boost::mqtt5::retain_e::no, boost::mqtt5::publish_props {},
+        [&client, &strand](boost::mqtt5::error_code /* ec */) {
+            assert(strand.running_in_this_thread());
+            client.cancel();
+        }
+    );
+
+    ioc.run();
+}
+
+```
+
+[endsect] [/executors]

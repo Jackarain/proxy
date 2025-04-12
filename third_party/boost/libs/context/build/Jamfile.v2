@@ -14,7 +14,6 @@ import modules ;
 import os ;
 import toolset ;
 import config : requires ;
-import feature ;
 
 project
     : common-requirements <library>$(boost_dependencies)
@@ -47,18 +46,6 @@ project
       <variant>release:<define>BOOST_DISABLE_ASSERTS
     : source-location ../src
     ;
-
-
-feature.feature context-impl
-    : fcontext
-      ucontext
-      winfib
-    : propagated
-      composite
-    ;
-feature.set-default context-impl : fcontext ;
-feature.compose <context-impl>ucontext : <define>BOOST_USE_UCONTEXT ;
-feature.compose <context-impl>winfib : <define>BOOST_USE_WINFIB ;
 
 
 # ARM
@@ -202,16 +189,26 @@ alias asm_sources
      <toolset>msvc
    ;
 
-# ARM64/AAPCS/PE
 alias asm_sources
-   : asm/make_arm64_aapcs_pe_armclang.asm
-     asm/jump_arm64_aapcs_pe_armclang.asm
-     asm/ontop_arm64_aapcs_pe_armclang.asm
+   : asm/make_arm64_aapcs_pe_armclang.S
+     asm/jump_arm64_aapcs_pe_armclang.S
+     asm/ontop_arm64_aapcs_pe_armclang.S
    : <abi>aapcs
      <address-model>64
      <architecture>arm
      <binary-format>pe
      <toolset>clang
+   ;
+
+alias asm_sources
+   : asm/make_arm64_aapcs_pe_armclang.S
+     asm/jump_arm64_aapcs_pe_armclang.S
+     asm/ontop_arm64_aapcs_pe_armclang.S
+   : <abi>aapcs
+     <address-model>64
+     <architecture>arm
+     <binary-format>pe
+     <toolset>gcc
    ;
 
 # LOONGARCH64

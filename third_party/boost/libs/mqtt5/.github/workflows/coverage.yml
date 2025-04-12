@@ -1,0 +1,85 @@
+#
+# Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+#
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+#
+
+name: coverage
+
+on: [push, pull_request]
+
+jobs:
+  posix:
+    name: "coverage ${{ matrix.toolset }} -std=c++${{ matrix.cxxstd }} ${{ matrix.container }}"
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - toolset: gcc-11
+            install: g++-11
+            os: ubuntu-latest
+            container: ubuntu:22.04
+            build-type: 'Coverage'
+            cxxstd: 20
+            cxxflags: '-g -O0 -std=c++20 --coverage -fkeep-inline-functions -fkeep-static-functions'
+            ldflags: '--coverage'
+  
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    env:
+      CXXFLAGS: ${{ matrix.cxxflags }}
+      LDFLAGS: ${{ matrix.ldflags }}
+      CMAKE_BUILD_PARALLEL_LEVEL: 4
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup container environment
+        if: matrix.container
+        run: |
+          apt-get update
+          apt-get -y install --no-install-recommends \
+            sudo git g++ cmake make openssl libssl-dev ca-certificates pkg-config \
+            python3 lcov gpg gpg-agent curl
+
+      - name: Install compiler
+        run: sudo apt-get install -y ${{ matrix.install }}
+      
+      - name: Setup Boost
+        run: |
+          python3 tools/ci.py setup-boost \
+            --source-dir=$(pwd)
+
+      - name: Build standalone tests using CMake
+        run: |
+          python3 tools/ci.py build-cmake-standalone-tests \
+            --build-type ${{ matrix.build-type }} \
+            --cxxstd ${{ matrix.cxxstd }} \
+            --toolset ${{ matrix.toolset }}
+
+      - name: Run standalone tests
+        run: |
+          python3 tools/ci.py run-cmake-standalone-tests \
+           --build-type ${{ matrix.build-type }}
+
+      - name: Generate Coverage Report
+        run: |
+          lcov --capture --output-file coverage.info \
+            --directory ~/boost-root/libs/mqtt5/__build_standalone_tests__/test
+          lcov --extract coverage.info '**/boost/mqtt5/*' --output-file coverage.info
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          verbose: true
+          files: coverage.info
+          disable_search: true
+          fail_ci_if_error: true
+          plugins: noop
+          token: ${{ secrets.CODECOV_TOKEN }}

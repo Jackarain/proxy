@@ -1,0 +1,104 @@
+= Quickstart
+
+A process needs four things to be launched:
+
+* an asio execution_context / executor 
+* a path to an executable
+* a list of arguments
+* a variadic set of initializers
+
+.example/quickstart.cpp:13-17
+[source,cpp,indent=0]
+----
+include::../example/quickstart.cpp[tag=cp]
+----
+<1> The executor for the process handle
+<2> The Path to the executable
+<3> The argument list in the form of an `std::initializer_list`.
+<4> Not additional initializers
+
+The started process can then be awaited or terminated.
+
+==  Lifetime
+
+If the process handle goes out of scope, it will terminate the subprocess.
+You can prevent this, by calling `proc.detach()`; do however note that this 
+can lead to zombie processes.
+
+A process that completed will deliver an exit-code, 
+which can be obtained by calling `.exit_code` on the exited process and which is
+also returned from `.wait()`.
+
+.example/quickstart.cpp:22-23
+[source,cpp, indent=0]
+----
+include::../example/quickstart.cpp[tag=ls]
+----
+
+The normal exit-code is what the subprocess returned from `main`;
+posix will however add additional information about the process.
+This is called the `native_exit_code`.
+
+
+The `.running()` function can be used to detect if the process is still active.
+
+
+== Signalling the subprocess
+
+The parent process can signal the subprocess demanding certain actions.
+
+`.terminate` will cause the subprocess to exit immediately (`SIGKILL` on posix).
+This is the only reliable & portable way to end a subprocess.
+
+.example/quickstart.cpp:28-29
+[source,cpp,indent=0]
+----
+include::../example/quickstart.cpp[tag=terminate]
+----
+
+`.request_exit` will ask the subprocess to shutdown (`SIGTERM` on posix),
+which the subprocess might ignore.
+
+.example/quickstart.cpp:34-36
+[source,cpp]
+----
+include::../example/quickstart.cpp[tag=request_exit]
+----
+
+`.interrupt` will send an SIGINT to the subprocess, which a subprocess might 
+interpret as a signal for shutdown.
+
+WARNING: interrupt requires the initializer `windows::create_new_process_group` to be set on windows
+
+.example/quickstart.cpp:41-43
+[source,cpp]
+----
+include::../example/quickstart.cpp[tag=interrupt]
+----
+
+[endsect]
+
+[section:execute Execute functions]
+
+Process v2 provides  `execute` and `async_execute` functions that can be used for managed executions.
+
+.example/quickstart.cpp:48
+[source,cpp]
+----
+include::../example/quickstart.cpp[tag=execute]
+----
+
+The async version supports cancellation and will forward cancellation types as follows:
+
+- `asio::cancellation_type::total`    -> interrupt
+- `asio::cancellation_type::partial`  -> request_exit
+- `asio::cancellation_type::terminal` -> terminate
+
+.example/quickstart.cpp:53-56
+[source,cpp]
+----
+include::../example/quickstart.cpp[tag=async_execute]
+----
+<1> After 10 seconds send a request_exit.
+<2> After 20 seconds terminate
+

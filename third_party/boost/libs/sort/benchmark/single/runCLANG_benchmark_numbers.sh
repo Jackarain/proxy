@@ -7,9 +7,9 @@ echo "=================================================================="
 echo "."
 echo "C O M P I L I N G . . . . . . . . . . ."
 echo "."
-clang++ ./file_generator.cpp -std=c++11 -march=native -w -fexceptions -O3 -I../../include  -s  -o file_generator
+clang++ ./file_generator.cpp -std=c++11  -march=native -w -fno-exceptions -fno-operator-names -O3 -I../../include  -s  -o file_generator
 
-clang++ ./benchmark_numbers.cpp -std=c++11 -march=native -w -fexceptions -O3 -I../../include -s -o benchmark_numbers
+clang++ ./benchmark_numbers.cpp -std=c++11 -march=native -w -fno-exceptions -fno-operator-names -O3 -I../../include -s -o benchmark_numbers
 
 echo "R U N N I N G . . . . . . . . . . ."
 echo "( The time needed is around 10 minutes depending of your machine )"

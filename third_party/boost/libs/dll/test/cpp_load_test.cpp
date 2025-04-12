@@ -1,5 +1,5 @@
 // Copyright 2016 Klemens Morgenstern
-// Copyright Antony Polukhin, 2019-2024
+// Copyright Antony Polukhin, 2019-2025
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
@@ -10,12 +10,7 @@
 #include <boost/config.hpp>
 #include <boost/predef.h>
 
-#if (__cplusplus >= 201103L) || (defined(_MSVC_LANG) && _MSVC_LANG >= 201103L)
-// Make sure that it at least compiles
 #  include <boost/dll/smart_library.hpp>
-#endif
-
-#if (__cplusplus >= 201402L) || (BOOST_COMP_MSVC >= BOOST_VERSION_NUMBER(14,0,0))
 
 #include "../example/b2_workarounds.hpp"
 
@@ -231,7 +226,3 @@ int main(int argc, char* argv[])
     std::cerr << 28 << ' ';
     return boost::report_errors();
 }
-
-#else
-int main() {return 0;}
-#endif

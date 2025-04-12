@@ -1,4 +1,4 @@
-// Copyright Antony Polukhin, 2018-2024
+// Copyright Antony Polukhin, 2018-2025
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
@@ -9,13 +9,8 @@
 
 #include <boost/config.hpp>
 
-#if (__cplusplus >= 201402L) || (defined(_MSVC_LANG) && _MSVC_LANG >= 201402L)
-
 #include <boost/dll/smart_library.hpp>
 #include <boost/dll/import_mangled.hpp>
 #include <boost/dll/import_class.hpp>
-
-#endif
-
 
 #include <boost/dll.hpp>

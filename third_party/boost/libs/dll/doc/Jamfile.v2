@@ -1,5 +1,5 @@
 # Copyright (c) 2014 Renato Tegon Forti, Antony Polukhin.
-# Copyright (c) 2015-2019 Antony Polukhin.
+# Copyright (c) 2015-2025 Antony Polukhin.
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -35,15 +35,8 @@ local doxygen_params =
         \"forcedlinkfs{1}=\\xmlonly<link linkend='boost.dll.fs.\\1'>boost::dll::fs::\\1</link>\\endxmlonly\" \\
         \"forcedmacrolink{1}=\\xmlonly<link linkend='\\1'>\\1</link>\\endxmlonly\" "
     <doxygen:param>"PREDEFINED= \\
-        \"BOOST_RV_REF(T)=T&&\" \\
-        \"BOOST_RV_REF(shared_library)=shared_library&&\" \\
-        \"BOOST_COPY_ASSIGN_REF(shared_library)=const shared_library&\" \\
-        \"BOOST_MOVABLE_BUT_NOT_COPYABLE(shared_library)= \\
-            shared_library(const shared_library&) = delete; \\
-            shared_library& operator=(const shared_library&) = delete; \" \\
         \"BOOST_DLL_IMPORT_RESULT_TYPE=result_type\" \\
         \"BOOST_DLL_MANGLED_IMPORT_RESULT_TYPE=result_type\" \\
-        \"BOOST_EXPLICIT_OPERATOR_BOOL()=explicit operator bool() const noexcept;\" \\
         \"BOOST_DLL_DOXYGEN\" "
     ;
 
@@ -88,7 +81,7 @@ boostbook dll-doc
     :
         <dependency>autodoc_shared_library_core
         <dependency>autodoc_shared_library_refcountable
-        <xsl:param>boost.root=http://www.boost.org/doc/libs/1_60_0
+        <xsl:param>boost.root=http://www.boost.org/doc/libs/1_87_0
         #<xsl:param>boost.root=../../../.
         <xml:param>html.stylesheet=../../../../doc/src/boostbook.css
     ;

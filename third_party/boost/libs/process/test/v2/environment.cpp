@@ -63,7 +63,9 @@ BOOST_AUTO_TEST_CASE(environment)
 
     for (auto && ke : bpe::current())
       if (!std::get<1>(ke).empty())
+      {
         BOOST_CHECK_EQUAL(bpe::get(std::get<0>(ke)), std::get<1>(ke));
+      }
 
 
 #if defined(BOOST_PROCESS_V2_POSIX)

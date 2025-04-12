@@ -42,6 +42,7 @@ project
       <local-visibility>hidden
       <library>/boost/filesystem//boost_filesystem
       <library>/boost/system//boost_system
+      <library>/boost/smart_ptr//boost_smart_ptr
       <threading>multi
       <define>BOOST_SYSTEM_NO_DEPRECATED
     ;
@@ -76,9 +77,11 @@ project
         [ run shared_library_errors.cpp : : test_library : <test-info>always_show_run_output <link>shared ]
         [ run structures_tests.cpp ]
         [ run library_info_test.cpp ../example/tutorial4/static_plugin.cpp : : test_library : <test-info>always_show_run_output <link>shared ]
+        [ run broken_library_info_test.cpp : : : <test-info>always_show_run_output <link>shared ]
         [ run empty_library_info_test.cpp : : empty_library : <test-info>always_show_run_output <link>shared ]
         [ run ../example/getting_started.cpp : : getting_started_library : <link>shared ]
-        [ run ../example/tutorial1/tutorial1.cpp : : my_plugin_sum : <link>shared ]
+        [ run ../example/tutorial1/tutorial1.cpp : : my_plugin_sum : <link>shared : tutorial1_std_shared_ptr ]
+        [ run ../example/tutorial1/tutorial1.cpp : : my_plugin_sum : <link>shared <define>BOOST_DLL_USE_BOOST_SHARED_PTR : tutorial1_boost_shared_ptr ]
         [ run ../example/tutorial2/tutorial2.cpp : : my_plugin_aggregator : <link>shared ]
         [ run ../example/tutorial3/tutorial3.cpp : : my_plugin_aggregator my_plugin_sum : <link>shared ]
         [ run ../example/tutorial4/load_self.cpp ../example/tutorial4/static_plugin.cpp
@@ -97,8 +100,10 @@ project
         [ run ../example/tutorial9/tutorial9.cpp ]
         # test for shared libraries
         [ compile-fail section_name_too_big.cpp ]
-        [ run shared_library_concurrent_load_test.cpp /boost/thread//boost_thread : : library1 library2 my_plugin_aggregator refcounting_plugin : <link>shared ]
+        [ run shared_library_concurrent_load_test.cpp : : library1 library2 my_plugin_aggregator refcounting_plugin : <link>shared ]
         [ run cpp_mangle_test.cpp : : cpp_plugin ]
+        [ run cpp_mangling.cpp ]
+        [ compile-fail cpp_mangling1_cf.cpp ]
         [ run cpp_load_test.cpp   : : cpp_plugin ]
         [ run cpp_import_test.cpp   : : cpp_plugin ]
         [ run template_method_linux_test.cpp : : cpp_plugin ]

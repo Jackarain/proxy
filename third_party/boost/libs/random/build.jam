@@ -6,14 +6,12 @@
 require-b2 5.2 ;
 
 constant boost_dependencies :
-    /boost/array//boost_array
     /boost/assert//boost_assert
     /boost/config//boost_config
     /boost/core//boost_core
     /boost/dynamic_bitset//boost_dynamic_bitset
     /boost/integer//boost_integer
     /boost/io//boost_io
-    /boost/range//boost_range
     /boost/static_assert//boost_static_assert
     /boost/system//boost_system
     /boost/throw_exception//boost_throw_exception
@@ -33,4 +31,3 @@ explicit
 call-if : boost-library random
     : install boost_random
     ;
-

@@ -1,0 +1,58 @@
+[#header_concurrent_flat_map]
+== `<boost/unordered/concurrent_flat_map.hpp>` Synopsis
+
+:idprefix: header_concurrent_flat_map_
+
+Defines `xref:reference/concurrent_flat_map.adoc#concurrent_flat_map[boost::concurrent_flat_map]`
+and associated functions and alias templates.
+
+[listing,subs="+macros,+quotes"]
+-----
+
+namespace boost {
+namespace unordered {
+
+  template<class Key,
+           class T,
+           class Hash = boost::hash<Key>,
+           class Pred = std::equal_to<Key>,
+           class Allocator = std::allocator<std::pair<const Key, T>>>
+  class xref:reference/concurrent_flat_map.adoc#concurrent_flat_map[concurrent_flat_map];
+
+  // Equality Comparisons
+  template<class Key, class T, class Hash, class Pred, class Alloc>
+    bool xref:reference/concurrent_flat_map.adoc#concurrent_flat_map_operator[operator++==++](const concurrent_flat_map<Key, T, Hash, Pred, Alloc>& x,
+                    const concurrent_flat_map<Key, T, Hash, Pred, Alloc>& y);
+
+  template<class Key, class T, class Hash, class Pred, class Alloc>
+    bool xref:reference/concurrent_flat_map.adoc#concurrent_flat_map_operator_2[operator!=](const concurrent_flat_map<Key, T, Hash, Pred, Alloc>& x,
+                    const concurrent_flat_map<Key, T, Hash, Pred, Alloc>& y);
+
+  // swap
+  template<class Key, class T, class Hash, class Pred, class Alloc>
+    void xref:reference/concurrent_flat_map.adoc#concurrent_flat_map_swap_2[swap](concurrent_flat_map<Key, T, Hash, Pred, Alloc>& x,
+              concurrent_flat_map<Key, T, Hash, Pred, Alloc>& y)
+      noexcept(noexcept(x.swap(y)));
+
+  // Erasure
+  template<class K, class T, class H, class P, class A, class Predicate>
+    typename concurrent_flat_map<K, T, H, P, A>::size_type
+      xref:reference/concurrent_flat_map.adoc#concurrent_flat_map_erase_if[erase_if](concurrent_flat_map<K, T, H, P, A>& c, Predicate pred);
+
+  // Pmr aliases (C++17 and up)
+  namespace pmr {
+    template<class Key,
+             class T,
+             class Hash = boost::hash<Key>,
+             class Pred = std::equal_to<Key>>
+    using concurrent_flat_map =
+      boost::unordered::concurrent_flat_map<Key, T, Hash, Pred,
+        std::pmr::polymorphic_allocator<std::pair<const Key, T>>>;
+  } // namespace pmr
+
+} // namespace unordered
+
+using unordered::concurrent_flat_map;
+
+} // namespace boost
+-----

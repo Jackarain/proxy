@@ -1,10 +1,10 @@
-/* Copyright (c) 2018-2022 Marcelo Zimbres Silva (mzimbres@gmail.com)
+/* Copyright (c) 2018-2024 Marcelo Zimbres Silva (mzimbres@gmail.com)
  *
  * Distributed under the Boost Software License, Version 1.0. (See
  * accompanying file LICENSE.txt)
  */
 
-#include <boost/redis/detail/runner.hpp>
+#include <boost/redis/detail/resp3_handshaker.hpp>
 #include <boost/redis/resp3/serialization.hpp>
 #include <boost/redis/adapter/adapt.hpp>
 #define BOOST_TEST_MODULE conn-quit
@@ -200,3 +200,38 @@ BOOST_AUTO_TEST_CASE(issue_210_no_nested)
    }
 }
 
+BOOST_AUTO_TEST_CASE(issue_233_array_with_null)
+{
+   try {
+      result<std::vector<std::optional<std::string>>> resp;
+
+      char const* wire = "*3\r\n+one\r\n_\r\n+two\r\n";
+      deserialize(wire, adapt2(resp));
+
+      BOOST_CHECK_EQUAL(resp.value().at(0).value(), "one");
+      BOOST_TEST(!resp.value().at(1).has_value());
+      BOOST_CHECK_EQUAL(resp.value().at(2).value(), "two");
+
+   } catch (std::exception const& e) {
+      std::cerr << e.what() << std::endl;
+      exit(EXIT_FAILURE);
+   }
+}
+
+BOOST_AUTO_TEST_CASE(issue_233_optional_array_with_null)
+{
+   try {
+      result<std::optional<std::vector<std::optional<std::string>>>> resp;
+
+      char const* wire = "*3\r\n+one\r\n_\r\n+two\r\n";
+      deserialize(wire, adapt2(resp));
+
+      BOOST_CHECK_EQUAL(resp.value().value().at(0).value(), "one");
+      BOOST_TEST(!resp.value().value().at(1).has_value());
+      BOOST_CHECK_EQUAL(resp.value().value().at(2).value(), "two");
+
+   } catch (std::exception const& e) {
+      std::cerr << e.what() << std::endl;
+      exit(EXIT_FAILURE);
+   }
+}

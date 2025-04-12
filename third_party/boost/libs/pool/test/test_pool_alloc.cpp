@@ -294,6 +294,61 @@ void test_mem_usage()
     BOOST_TEST(track_alloc::ok());
 }
 
+void test_free_chunk_selection()
+{
+    typedef boost::pool<track_alloc> pool_type;
+
+    {
+        // Expose a regression from the commit 8ec1be1e82ba559744ecfa3c6ec13f71f9c175cc.
+        // Two checks will fail here.
+        pool_type pool(sizeof(void *), 3);
+        void * ptr_0 = pool.ordered_malloc(1);
+        void * ptr_1 = pool.ordered_malloc(1);
+        void * ptr_2 = pool.ordered_malloc(1);
+        // The blocks are expected to be allocated at subsequent locations
+        BOOST_TEST((char *)ptr_1 - (char *)ptr_0 == sizeof(void *));
+        BOOST_TEST((char *)ptr_2 - (char *)ptr_1 == sizeof(void *));
+
+        pool.ordered_free(ptr_1, 1);
+
+        void * ptr_1a = pool.ordered_malloc(1);
+        // Expected to reallocate the former ptr1 block
+        // which should be the first and only available block
+        BOOST_TEST(ptr_1a == ptr_1);
+
+        pool.ordered_free(ptr_0, 1);
+        pool.ordered_free(ptr_1a, 1);
+        pool.ordered_free(ptr_2, 1);
+    }
+
+    {
+        // Another way to expose a regression from the commit 8ec1be1e82ba559744ecfa3c6ec13f71f9c175cc.
+        // This time we preallocate 4 rather than 3 blocks in the pool. In this case
+        // the location of the ptr_2 block is as expected. The reallocation of ptr_1
+        // block however still fails the location expectation.
+        pool_type pool(sizeof(void *), 4);
+        void * ptr_0 = pool.ordered_malloc(1);
+        void * ptr_1 = pool.ordered_malloc(1);
+        void * ptr_2 = pool.ordered_malloc(1);
+        // The blocks are expected to be allocated at subsequent locations
+        BOOST_TEST((char *)ptr_1 - (char *)ptr_0 == sizeof(void *));
+        BOOST_TEST((char *)ptr_2 - (char *)ptr_1 == sizeof(void *));
+
+        pool.ordered_free(ptr_1, 1);
+
+        void * ptr_1a = pool.ordered_malloc(1);
+        // Expected to reallocate the former ptr1 block
+        // which should be the first available block
+        BOOST_TEST(ptr_1a == ptr_1);
+
+        pool.ordered_free(ptr_0, 1);
+        pool.ordered_free(ptr_1a, 1);
+        pool.ordered_free(ptr_2, 1);
+    }
+
+    BOOST_TEST(track_alloc::ok());
+}
+
 void test_void()
 {
     typedef boost::pool_allocator<void> void_allocator;
@@ -313,6 +368,7 @@ int main()
     test();
     test_alloc();
     test_mem_usage();
+    test_free_chunk_selection();
     test_void();
 
     return boost::report_errors();

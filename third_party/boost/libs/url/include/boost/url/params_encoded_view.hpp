@@ -110,6 +110,8 @@ public:
 
         @par Exception Safety
         Throws nothing
+
+        @param other The object to copy
     */
     params_encoded_view(
         params_encoded_view const& other) = default;
@@ -190,10 +192,13 @@ public:
 
         @par Exception Safety
         Throws nothing
+
+        @param other The object to assign
+        @return `*this`
     */
     params_encoded_view&
     operator=(
-        params_encoded_view const&) = default;
+        params_encoded_view const& other) = default;
 
     /** Conversion
 
@@ -223,36 +228,14 @@ public:
 
         @par Exception Safety
         Throws nothing
+
+        @return A new view with percent escapes decoded.
     */
     operator
     params_view() const noexcept;
 
     //--------------------------------------------
 
-    /** Parse a string and return an encoded params view
-
-        This function parses the string and returns the
-        corresponding params object if the string is valid,
-        otherwise returns an error.
-
-        @par BNF
-        @code
-        query         = *( pchar / "/" / "?" )
-        @endcode
-
-        @par Exception Safety
-        No-throw guarantee.
-
-        @return A valid view on success, otherwise an
-        error code.
-
-        @param s The string to parse
-
-        @par Specification
-
-        @see
-            @ref params_encoded_view.
-    */
     friend
     BOOST_URL_DECL
     system::result<params_encoded_view>

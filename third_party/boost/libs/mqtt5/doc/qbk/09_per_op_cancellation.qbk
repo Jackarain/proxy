@@ -1,0 +1,95 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:per_op_cancellation Per-Operation Cancellation]
+[nochunk]
+
+In __Asio__, various objects such as sockets and timers offer the ability to terminate all ongoing asynchronous operations
+globally through their `close` or `cancel` member functions.
+Beyond this global cancellation capability, __Asio__ also provides mechanisms for cancelling specific asynchronous
+operations on an individual basis.
+This individual per-operation cancellation is enabled by specifying that a completion handler has an associated cancellation slot.
+If the asynchronous operation supports cancellation, then it will install a cancellation handler into the associated slot.
+The cancellation handler will be invoked when the user emits a cancellation signal into the cancellation slot. 
+See __ASIO_PER_OP_CANCELLATION__ for more information.
+
+The utility of per-operation cancellation becomes particularly evident when using `boost::asio::experimental::parallel_group` to launch
+work performed in parallel and wait for one or all of the operations to complete.
+For instance, in a parallel group awaiting the completion of any one operation among several,
+completing one operation will trigger individual cancellation of all the remaining operations.
+The same concept applies to the `awaitable operator ||`, which runs two awaitables in parallel,
+waiting for one to complete and subsequently cancelling the remaining one.
+See __ASIO_PARALLEL_GROUP__ for more information.
+
+Within the __Client__, every asynchronous function is designed to support individual per-operation cancellation.
+This allows for associating of a cancellation slot with any `async_xxx` function call, enabling the emission of a cancellation signal as needed.
+The impact of emitting a cancellation signal varies depending on the signal type (terminal, total, partial) and the operation being cancelled.
+Detailed descriptions of how cancellation signals affect each `async_xxx` function
+are provided in the ['Per-Operation Cancellation] paragraph in their respective sections of the __Client__ reference documentation.
+
+[heading Example: associating a cancellation slot with an asynchronous operation]
+
+This example illustrates associating a cancellation slot with a [refmem mqtt_client async_publish] operation
+and emitting a terminal cancellation signal.
+Executing this sequence effectively results in the immediate cancellation of the entire client operation,
+mirroring the outcome of invoking [refmem mqtt_client cancel] directly.
+
+If a total or partial cancellation signal were issued instead of a terminal one, the implications would be less severe. 
+In such cases, the cancellation would specifically target resending the __PUBLISH__ packet,
+preventing it from being retransmitted should the client reconnect during the ongoing operation.
+
+```
+    boost::mqtt5::mqtt_client<boost::asio::ip::tcp::socket> client(ioc);
+    
+    client.brokers("<your-mqtt-broker>", 1883)
+        .async_run(boost::asio::detached);
+    
+    boost::asio::cancellation_signal signal;
+
+    client.async_publish<boost::mqtt5::qos_e::at_least_once>(
+        "<topic>", "Hello world!",
+        boost::mqtt5::retain_e::no, boost::mqtt5::publish_props {},
+        boost::asio::bind_cancellation_slot(
+            signal.slot(),
+            [&client](boost::mqtt5::error_code ec, boost::mqtt5::reason_code rc, boost::mqtt5::puback_props props ) {
+                std::cout << ec.message() << std::endl;
+            }
+        )
+    );
+
+    signal.emit(boost::asio::cancellation_type_t::terminal);
+```
+
+[section:parallel_group parallel_group/operator || and asynchronous functions in the mqtt_client]
+As a result of supporting per-operation cancellation,
+all the asynchronous functions with the __Client__ can be used in `parallel_group` or with `awaitable operator ||`.
+This feature is especially beneficial for executing operations that require a timeout mechanism.
+
+Below are two examples illustrating how to implement a timeout:
+
+* [link mqtt5.timeout_with_parallel_group timeout_with_parallel_group.cpp]
+* [link mqtt5.timeout_with_awaitable_operators timeout_with_awaitable_operators.cpp]
+
+[endsect] [/parallel_group]
+
+[section:protocol_level_cancellation About protocol-level cancellation]
+In the context of __Client__, the handling of cancellation signals varies across different asynchronous operations.
+Except for [refmem mqtt_client async_receive], all other `async_xxx` operations respond to a terminal cancellation signal by invoking [refmem mqtt_client cancel].
+These operations will halt the resending of certain packets for total and partial cancellation signals.
+
+It is worth noting that cancelling an `async_xxx` operation during an ongoing protocol exchange is not implemented because of a design decision
+to prevent protocol breaches.
+For example, if [refmem mqtt_client async_publish] with QoS 2 is in the middle of a communication with the Broker
+[footnote Publishing with QoS 2 involves sending a __PUBLISH__ packet, receiving a __PUBREC__ acknowledgement from the Broker, transmitting a __PUBREL__ packet, and finally receiving a __PUBCOMP__ packet.] 
+and an attempt to cancel it is made, it could lead to a protocol violation.
+For instance, if the operation is cancelled after a __PUBREC__ packet has been received from the Broker but before sending the __PUBREL__ packet,
+that would breach the MQTT protocol by failing to send a necessary packet and leave the connection with the Broker in an invalid state.
+
+Therefore, the design of __Client__'s cancellation strategy carefully avoids these pitfalls to ensure continuous protocol compliance.
+
+[endsect] [/protocol_level_cancellation]
+
+[endsect] [/per_op_cancellation]

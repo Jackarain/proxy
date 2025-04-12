@@ -53,10 +53,8 @@ void test_codecvt_in_n_m(const cvt_type& cvt, int n, int m)
         std::mbstate_t mb2 = mb;
         std::codecvt_base::result r = cvt.in(mb, from, end, from_next, to, to_end, to_next);
 
-        int count = cvt.length(mb2, from, end, to_end - to);
+        const int count = cvt.length(mb2, from, end, to_end - to);
         TEST_EQ(memcmp(&mb, &mb2, sizeof(mb)), 0);
-        if(count != from_next - from)
-            std::cout << count << " " << from_next - from << std::endl; // LCOV_EXCL_LINE
         TEST_EQ(count, from_next - from);
 
         if(r == cvt_type::partial) {

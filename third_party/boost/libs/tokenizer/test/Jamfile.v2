@@ -4,7 +4,9 @@
 
 import testing ;
 
-run examples.cpp ;
+project : requirements <library>/boost/tokenizer//boost_tokenizer ;
+
+run examples.cpp : : : <library>/boost/array//boost_array ;
 run simple_example_1.cpp ;
 run simple_example_2.cpp ;
 run simple_example_3.cpp ;

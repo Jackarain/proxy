@@ -20,7 +20,7 @@
 #include <system_error>
 #include <thread>
 
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 
 BOOST_AUTO_TEST_CASE(terminate_set_on_error, *boost::unit_test::timeout(5))
 {

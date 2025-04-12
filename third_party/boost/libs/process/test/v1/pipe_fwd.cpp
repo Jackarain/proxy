@@ -29,7 +29,7 @@
 
 BOOST_AUTO_TEST_SUITE( pipe_tests );
 
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 
 BOOST_AUTO_TEST_CASE(sync_io, *boost::unit_test::timeout(5))
 {

@@ -24,6 +24,15 @@ namespace boost { namespace lockfree { namespace detail {
 template < typename bound_args, typename tag_type, typename default_ >
 using extract_arg_or_default_t = typename parameter::binding< bound_args, tag_type, default_ >::type;
 
+
+template < typename BoundArgs, typename TypeTag, typename IntegralType, IntegralType default_ = IntegralType {} >
+struct extract_integral_arg_or_default_t
+{
+    static constexpr IntegralType value
+        = extract_arg_or_default_t< BoundArgs, TypeTag, std::integral_constant< IntegralType, default_ > >::value;
+};
+
+
 struct no_such_parameter_t
 {};
 
@@ -50,7 +59,7 @@ using extract_capacity_t = typename extract_capacity< bound_args >::type;
 template < typename bound_args, typename T >
 struct extract_allocator
 {
-    using default_allocator = boost::alignment::aligned_allocator< T, BOOST_LOCKFREE_CACHELINE_BYTES >;
+    using default_allocator = boost::alignment::aligned_allocator< T, cacheline_bytes >;
     using allocator_t       = extract_arg_or_default_t< bound_args, tag::allocator, default_allocator >;
 
     using has_no_allocator_t            = has_no_arg_t< bound_args, tag::allocator >;
@@ -65,19 +74,15 @@ using extract_allocator_t = typename extract_allocator< bound_args, T >::type;
 //----------------------------------------------------------------------------------------------------------------------
 
 template < typename bound_args, bool default_ = false >
-struct extract_fixed_sized
-{
-    using capacity_t
-        = extract_arg_or_default_t< bound_args, tag::fixed_sized, std::integral_constant< bool, default_ > >;
-
-    static constexpr bool value = capacity_t::value;
-};
-
-template < typename bound_args, bool default_ = false >
-using extract_fixed_sized_t = typename extract_fixed_sized< bound_args, default_ >::type;
+using extract_fixed_sized = extract_integral_arg_or_default_t< bound_args, tag::fixed_sized, bool, default_ >;
 
 //----------------------------------------------------------------------------------------------------------------------
 
+template < typename bound_args, bool default_ = false >
+using extract_allow_multiple_reads
+    = extract_integral_arg_or_default_t< bound_args, tag::allow_multiple_reads, bool, default_ >;
+
+//----------------------------------------------------------------------------------------------------------------------
 
 }}}    // namespace boost::lockfree::detail
 

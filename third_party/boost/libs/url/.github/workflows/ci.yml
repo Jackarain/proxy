@@ -53,7 +53,7 @@ jobs:
       matrix: ${{ steps.cpp-matrix.outputs.matrix }}
     steps:
       - name: Generate Test Matrix
-        uses: alandefreitas/cpp-actions/cpp-matrix@v1.8.7
+        uses: alandefreitas/cpp-actions/cpp-matrix@v1.8.8
         id: cpp-matrix
         with:
           compilers: |
@@ -103,7 +103,7 @@ jobs:
           set -x
           apt-get update
           apt-get install -y curl xz-utils
-          curl -LO https://unofficial-builds.nodejs.org/download/release/v20.9.0/node-v20.9.0-linux-x64-glibc-217.tar.xz
+          curl -LO https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz
           tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
           ldd /__e/node20/bin/node
 
@@ -111,7 +111,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup C++
-        uses: alandefreitas/cpp-actions/setup-cpp@v1.8.7
+        uses: alandefreitas/cpp-actions/setup-cpp@v1.8.8
         id: setup-cpp
         with:
           compiler: ${{ matrix.compiler }}
@@ -119,13 +119,13 @@ jobs:
 
       - name: Install packages
         if: matrix.install != ''
-        uses: alandefreitas/cpp-actions/package-install@v1.8.7
+        uses: alandefreitas/cpp-actions/package-install@v1.8.8
         id: package-install
         with:
           apt-get: ${{ matrix.install }}
 
       - name: Clone Boost
-        uses: alandefreitas/cpp-actions/boost-clone@v1.8.7
+        uses: alandefreitas/cpp-actions/boost-clone@v1.8.8
         id: boost-clone
         with:
           branch: ${{ (github.ref_name == 'master' && github.ref_name) || 'develop' }}
@@ -163,18 +163,28 @@ jobs:
           mkdir "libs/$module"
           cp -r "$workspace_root"/* "libs/$module"
           
-          # Default parameters for CMake workflows
-          echo 'CMAKE_GENERATOR=${{ matrix.generator || '' }}' >> $GITHUB_ENV
-          echo 'CMAKE_GENERATOR_TOOLSET=${{ matrix.generator-toolset || '' }}' >> $GITHUB_ENV
+          # Set default parameters for CMake workflows as env variables
+          if [ ${{ matrix.compiler }} != "clang-cl" ]; then
+              # We ignore clang-cl because in this case we're using the toolset "-T ClangCL",
+              # which defaults to the clang compiler that comes with Visual Studio.
+              echo 'CC=${{ steps.setup-cpp.outputs.cc || matrix.cc || '' }}' >> $GITHUB_ENV
+              echo 'CXX=${{ steps.setup-cpp.outputs.cxx || matrix.cxx || '' }}' >> $GITHUB_ENV
+          fi
           echo 'CMAKE_BUILD_TYPE=${{ matrix.build-type || '' }}' >> $GITHUB_ENV
-          echo 'CC=${{ steps.setup-cpp.outputs.cc || matrix.cc || '' }}' >> $GITHUB_ENV
           echo 'CFLAGS=${{ (matrix.intsan && '-fsanitize=integer -fno-sanitize=unsigned-integer-overflow -fno-sanitize-recover=integer -fno-omit-frame-pointer') || (matrix.boundssan && '-fsanitize=bounds -fno-sanitize-recover=bounds -fno-omit-frame-pointer') || matrix.ccflags || '' }}' >> $GITHUB_ENV
-          echo 'CXX=${{ steps.setup-cpp.outputs.cxx || matrix.cxx || '' }}' >> $GITHUB_ENV
           echo 'CXXFLAGS=${{ (matrix.intsan && '-fsanitize=integer -fno-sanitize=unsigned-integer-overflow -fno-sanitize-recover=integer -fno-omit-frame-pointer') || (matrix.boundssan && '-fsanitize=bounds -fno-sanitize-recover=bounds -fno-omit-frame-pointer') || matrix.cxxflags || '' }}' >> $GITHUB_ENV
           echo 'CXXSTD=${{ matrix.latest-cxxstd || '' }}' >> $GITHUB_ENV
+          echo 'BUILD_SHARED_LIB=${{ matrix.shared || '' }}' >> $GITHUB_ENV
           echo 'BUILD_SHARED_LIBS=${{ matrix.shared || '' }}' >> $GITHUB_ENV
           echo 'CMAKE_RUN_TESTS=true' >> $GITHUB_ENV
           echo 'CMAKE_PACKAGE=false' >> $GITHUB_ENV
+          
+          # If windows, check if ml64.exe is available
+          if [ ${{ runner.os }} == "Windows" ]; then
+              if ! command -v ml64.exe &> /dev/null; then
+                  echo "ml64.exe not found in PATH."
+              fi
+          fi
           
           # Set PATH to find Boost DLLs
           if [ ${{ matrix.shared }} == "true" ]; then
@@ -193,12 +203,14 @@ jobs:
             corpus-
 
       - name: CMake Workflow
-        uses: alandefreitas/cpp-actions/cmake-workflow@v1.8.7
+        uses: alandefreitas/cpp-actions/cmake-workflow@v1.8.8
         if: matrix.is-no-factor-intermediary != 'true'
         with:
           source-dir: ../boost-root
           build-dir: build_cmake
           build-target: tests
+          generator: ${{ matrix.generator }}
+          generator-toolset: ${{ matrix.generator-toolset }}
           install: true
           install-prefix: .local
           cmake-version: '>=3.20'
@@ -213,11 +225,13 @@ jobs:
           trace-commands: true
 
       - name: CMake Integration Workflow
-        uses: alandefreitas/cpp-actions/cmake-workflow@v1.8.7
+        uses: alandefreitas/cpp-actions/cmake-workflow@v1.8.8
         if: matrix.is-no-factor-intermediary != 'true'
         with:
           source-dir: ../boost-root/libs/${{ steps.patch.outputs.module }}/test/cmake_test
           build-dir: build_cmake_test
+          generator: ${{ matrix.generator }}
+          generator-toolset: ${{ matrix.generator-toolset }}
           install: false
           cmake-version: '>=3.20'
           extra-args: |
@@ -229,11 +243,13 @@ jobs:
           trace-commands: true
 
       - name: CMake Root Workflow
-        uses: alandefreitas/cpp-actions/cmake-workflow@v1.8.7
+        uses: alandefreitas/cpp-actions/cmake-workflow@v1.8.8
         if: matrix.is-no-factor-intermediary != 'true'
         with:
           source-dir: .
           build-dir: build_cmake_root
+          generator: ${{ matrix.generator }}
+          generator-toolset: ${{ matrix.generator-toolset }}
           build-target: tests
           run-tests: true
           install: false
@@ -246,7 +262,7 @@ jobs:
           trace-commands: true
 
       - name: B2 Workflow
-        uses: alandefreitas/cpp-actions/b2-workflow@v1.8.7
+        uses: alandefreitas/cpp-actions/b2-workflow@v1.8.8
         env:
           # Set flags via B2 options exclusively
           CFLAGS: ''
@@ -271,10 +287,10 @@ jobs:
           shared: ${{ matrix.shared }}
           coverage: ${{ matrix.coverage }}
           define: ${{ (matrix.no-threads && 'BOOST_URL_DISABLE_THREADS') || '' }}
-          warnings-as-errors: ${{ matrix.is-latest }}
+          warnings-as-errors: true
 
       - name: FlameGraph
-        uses: alandefreitas/cpp-actions/flamegraph@v1.8.7
+        uses: alandefreitas/cpp-actions/flamegraph@v1.8.8
         if: matrix.time-trace
         with:
           source-dir: ../boost-root/libs/url
@@ -345,7 +361,7 @@ jobs:
           fetch-depth: 100
 
       - name: Changelog
-        uses: alandefreitas/cpp-actions/create-changelog@v1.8.7
+        uses: alandefreitas/cpp-actions/create-changelog@v1.8.8
         with:
           thank-non-regular: ${{ startsWith(github.ref, 'refs/tags/') }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -368,7 +384,7 @@ jobs:
         shell: bash
     steps:
       - name: Install packages
-        uses: alandefreitas/cpp-actions/package-install@v1.8.7
+        uses: alandefreitas/cpp-actions/package-install@v1.8.8
         with:
           apt-get: git cmake
 
@@ -376,7 +392,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Clone Boost
-        uses: alandefreitas/cpp-actions/boost-clone@v1.8.7
+        uses: alandefreitas/cpp-actions/boost-clone@v1.8.8
         id: boost-clone
         with:
           branch: ${{ (github.ref_name == 'master' && github.ref_name) || 'develop' }}

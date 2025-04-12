@@ -1,4 +1,4 @@
-// Copyright Antony Polukhin, 2015-2024.
+// Copyright Antony Polukhin, 2015-2025.
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
@@ -10,7 +10,7 @@
 //[callplugcpp_tutorial9
 #include <boost/dll/import.hpp>         // for dll::import
 #include <boost/dll/shared_library.hpp> // for dll::shared_library
-#include <boost/function.hpp>
+#include <functional>
 #include <iostream>
 #include <windows.h>
 
@@ -20,8 +20,6 @@ int main() {
     typedef HANDLE(__stdcall GetStdHandle_t)(DWORD );       // function signature with calling convention
 
     // OPTION #0, requires C++11 compatible compiler that understands GetStdHandle_t signature.
-/*<-*/
-#if defined(_MSC_VER) && !defined(BOOST_NO_CXX11_TRAILING_RESULT_TYPES) && !defined(BOOST_NO_CXX11_DECLTYPE) && !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) && !defined(BOOST_NO_CXX11_RVALUE_REFERENCES) /*->*/
     auto get_std_handle = dll::import_symbol<GetStdHandle_t>(
         "Kernel32.dll",
         "GetStdHandle",
@@ -29,15 +27,12 @@ int main() {
     );
     std::cout << "0.0 GetStdHandle() returned " << get_std_handle(STD_OUTPUT_HANDLE) << std::endl;
 
-    // You may put the `get_std_handle` into boost::function<>. But boost::function<Signature> can not compile with
+    // You may put the `get_std_handle` into std::function<>. But std::function<Signature> may not compile with
     // Signature template parameter that contains calling conventions, so you'll have to remove the calling convention.
-    boost::function<HANDLE(DWORD)> get_std_handle2 = get_std_handle;
+    std::function<HANDLE(DWORD)> get_std_handle2 = get_std_handle;
     std::cout << "0.1 GetStdHandle() returned " << get_std_handle2(STD_OUTPUT_HANDLE) << std::endl;
-/*<-*/
-#endif /*->*/
 
-    // OPTION #1, does not require C++11. But without C++11 dll::import<> can not handle calling conventions,
-    // so you'll need to hand write the import.
+    // OPTION #1, hand write the import.
     dll::shared_library lib("Kernel32.dll", dll::load_mode::search_system_folders);
     GetStdHandle_t& func = lib.get<GetStdHandle_t>("GetStdHandle");
 

@@ -1,4 +1,5 @@
 # Copyright 2020, 2021 Peter Dimov
+# Copyright 2022-2025 Alexander Grund
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
@@ -10,37 +11,38 @@ project(boost_locale VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
 file(GLOB_RECURSE headers include/*.hpp)
 
 add_library(boost_locale
-  src/boost/locale/encoding/codepage.cpp
-  src/boost/locale/encoding/iconv_converter.hpp
-  src/boost/locale/encoding/uconv_converter.hpp
-  src/boost/locale/encoding/wconv_converter.hpp
-  src/boost/locale/shared/date_time.cpp
-  src/boost/locale/shared/format.cpp
-  src/boost/locale/shared/formatting.cpp
-  src/boost/locale/shared/generator.cpp
-  src/boost/locale/shared/iconv_codecvt.cpp
-  src/boost/locale/shared/iconv_codecvt.hpp
-  src/boost/locale/shared/ids.cpp
-  src/boost/locale/shared/localization_backend.cpp
-  src/boost/locale/shared/message.cpp
-  src/boost/locale/shared/mo_lambda.cpp
-  src/boost/locale/shared/std_collate_adapter.hpp
-  src/boost/locale/util/codecvt_converter.cpp
-  src/boost/locale/util/default_locale.cpp
-  src/boost/locale/util/encoding.cpp
-  src/boost/locale/util/encoding.hpp
-  src/boost/locale/util/foreach_char.hpp
-  src/boost/locale/util/info.cpp
-  src/boost/locale/util/locale_data.cpp
-  src/boost/locale/util/make_std_unique.hpp
-  src/boost/locale/util/numeric.hpp
-  src/boost/locale/util/timezone.hpp
+  src/encoding/codepage.cpp
+  src/encoding/iconv_converter.hpp
+  src/encoding/uconv_converter.hpp
+  src/encoding/wconv_converter.hpp
+  src/shared/date_time.cpp
+  src/shared/format.cpp
+  src/shared/formatting.cpp
+  src/shared/generator.cpp
+  src/shared/iconv_codecvt.cpp
+  src/shared/iconv_codecvt.hpp
+  src/shared/ids.cpp
+  src/shared/localization_backend.cpp
+  src/shared/message.cpp
+  src/shared/mo_lambda.cpp
+  src/shared/std_collate_adapter.hpp
+  src/util/codecvt_converter.cpp
+  src/util/default_locale.cpp
+  src/util/encoding.cpp
+  src/util/encoding.hpp
+  src/util/foreach_char.hpp
+  src/util/info.cpp
+  src/util/locale_data.cpp
+  src/util/make_std_unique.hpp
+  src/util/numeric.hpp
+  src/util/numeric_conversion.hpp
+  src/util/timezone.hpp
   ${headers}
 )
 
 add_library(Boost::locale ALIAS boost_locale)
 
-target_include_directories(boost_locale PUBLIC include PRIVATE src)
+target_include_directories(boost_locale PUBLIC include)
 target_compile_features(boost_locale PUBLIC cxx_std_11)
 
 target_link_libraries(boost_locale
@@ -49,8 +51,8 @@ target_link_libraries(boost_locale
     Boost::config
     Boost::core
     Boost::iterator
-    Boost::utility
   PRIVATE
+    Boost::charconv
     Boost::predef
     Boost::thread
 )
@@ -72,7 +74,7 @@ endif()
 
 # Build Options
 
-find_package(ICU COMPONENTS data i18n uc QUIET)
+find_package(ICU 4.8.1 COMPONENTS data i18n uc QUIET)
 option(BOOST_LOCALE_ENABLE_ICU "Boost.Locale: enable ICU backend" ${ICU_FOUND})
 
 # Workaround for an issue e.g. on FreeBSD where including ICU may change the used libiconv
@@ -116,37 +118,39 @@ if(BOOST_LOCALE_ENABLE_ICONV)
   target_link_libraries(boost_locale PRIVATE Iconv::Iconv)
 
   target_sources(boost_locale PRIVATE
-    src/boost/locale/util/iconv.hpp
+    src/util/iconv.hpp
   )
 endif()
 
 if(BOOST_LOCALE_ENABLE_ICU)
 
-  find_package(ICU COMPONENTS data i18n uc REQUIRED)
-
+  find_package(ICU 4.8.1 COMPONENTS data i18n uc REQUIRED)
+  if(ICU_VERSION VERSION_GREATER_EQUAL "50.1" AND ICU_VERSION VERSION_LESS "50.1.1")
+    # https://unicode-org.atlassian.net/browse/ICU-9780
+    message(FATAL_ERROR "ICU 50.1.0 has a bug with integer parsing and cannot be used reliably")
+  endif()
   target_compile_definitions(boost_locale PRIVATE BOOST_LOCALE_WITH_ICU=1)
   target_link_libraries(boost_locale PRIVATE ICU::data ICU::i18n ICU::uc)
 
   target_sources(boost_locale PRIVATE
-    src/boost/locale/icu/all_generator.hpp
-    src/boost/locale/icu/boundary.cpp
-    src/boost/locale/icu/cdata.hpp
-    src/boost/locale/icu/codecvt.cpp
-    src/boost/locale/icu/codecvt.hpp
-    src/boost/locale/icu/collator.cpp
-    src/boost/locale/icu/conversion.cpp
-    src/boost/locale/icu/date_time.cpp
-    src/boost/locale/icu/formatter.cpp
-    src/boost/locale/icu/formatter.hpp
-    src/boost/locale/icu/formatters_cache.cpp
-    src/boost/locale/icu/formatters_cache.hpp
-    src/boost/locale/icu/icu_backend.cpp
-    src/boost/locale/icu/icu_backend.hpp
-    src/boost/locale/icu/icu_util.hpp
-    src/boost/locale/icu/numeric.cpp
-    src/boost/locale/icu/time_zone.cpp
-    src/boost/locale/icu/time_zone.hpp
-    src/boost/locale/icu/uconv.hpp
+    src/icu/all_generator.hpp
+    src/icu/boundary.cpp
+    src/icu/cdata.hpp
+    src/icu/codecvt.cpp
+    src/icu/codecvt.hpp
+    src/icu/collator.cpp
+    src/icu/conversion.cpp
+    src/icu/date_time.cpp
+    src/icu/formatter.cpp
+    src/icu/formatter.hpp
+    src/icu/formatters_cache.cpp
+    src/icu/formatters_cache.hpp
+    src/icu/icu_backend.cpp
+    src/icu/icu_backend.hpp
+    src/icu/icu_util.hpp
+    src/icu/numeric.cpp
+    src/icu/time_zone.hpp
+    src/icu/uconv.hpp
   )
 
 endif()
@@ -154,13 +158,13 @@ endif()
 if(BOOST_LOCALE_ENABLE_STD)
 
   target_sources(boost_locale PRIVATE
-    src/boost/locale/std/all_generator.hpp
-    src/boost/locale/std/codecvt.cpp
-    src/boost/locale/std/collate.cpp
-    src/boost/locale/std/converter.cpp
-    src/boost/locale/std/numeric.cpp
-    src/boost/locale/std/std_backend.cpp
-    src/boost/locale/std/std_backend.hpp
+    src/std/all_generator.hpp
+    src/std/codecvt.cpp
+    src/std/collate.cpp
+    src/std/converter.cpp
+    src/std/numeric.cpp
+    src/std/std_backend.cpp
+    src/std/std_backend.hpp
   )
 
 else()
@@ -172,13 +176,13 @@ endif()
 if(BOOST_LOCALE_ENABLE_WINAPI)
 
   target_sources(boost_locale PRIVATE
-    src/boost/locale/win32/all_generator.hpp
-    src/boost/locale/win32/api.hpp
-    src/boost/locale/win32/collate.cpp
-    src/boost/locale/win32/converter.cpp
-    src/boost/locale/win32/numeric.cpp
-    src/boost/locale/win32/win_backend.cpp
-    src/boost/locale/win32/win_backend.hpp
+    src/win32/all_generator.hpp
+    src/win32/api.hpp
+    src/win32/collate.cpp
+    src/win32/converter.cpp
+    src/win32/numeric.cpp
+    src/win32/win_backend.cpp
+    src/win32/win_backend.hpp
   )
 
 else()
@@ -190,8 +194,8 @@ endif()
 if(BOOST_LOCALE_ENABLE_WINAPI OR (BOOST_LOCALE_ENABLE_STD AND WIN32))
 
   target_sources(boost_locale PRIVATE
-    src/boost/locale/win32/lcid.cpp
-    src/boost/locale/win32/lcid.hpp
+    src/win32/lcid.cpp
+    src/win32/lcid.hpp
   )
 
 endif()
@@ -199,13 +203,13 @@ endif()
 if(BOOST_LOCALE_ENABLE_POSIX)
 
   target_sources(boost_locale PRIVATE
-    src/boost/locale/posix/all_generator.hpp
-    src/boost/locale/posix/codecvt.cpp
-    src/boost/locale/posix/collate.cpp
-    src/boost/locale/posix/converter.cpp
-    src/boost/locale/posix/numeric.cpp
-    src/boost/locale/posix/posix_backend.cpp
-    src/boost/locale/posix/posix_backend.hpp
+    src/posix/all_generator.hpp
+    src/posix/codecvt.cpp
+    src/posix/collate.cpp
+    src/posix/converter.cpp
+    src/posix/numeric.cpp
+    src/posix/posix_backend.cpp
+    src/posix/posix_backend.hpp
   )
 
 else()
@@ -217,8 +221,8 @@ endif()
 if(BOOST_LOCALE_ENABLE_WINAPI OR BOOST_LOCALE_ENABLE_STD OR BOOST_LOCALE_ENABLE_POSIX)
 
   target_sources(boost_locale PRIVATE
-    src/boost/locale/util/gregorian.cpp
-    src/boost/locale/util/gregorian.hpp
+    src/util/gregorian.cpp
+    src/util/gregorian.hpp
   )
 
 endif()
@@ -228,7 +232,7 @@ set(sources_src ${sources})
 list(FILTER sources_src INCLUDE REGEX "^src/")
 set(sources_inc ${sources})
 list(FILTER sources_inc EXCLUDE REGEX "^src/")
-source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src/boost/locale" PREFIX "sources" FILES ${sources_src})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" PREFIX "sources" FILES ${sources_src})
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/include/boost/locale" PREFIX "headers" FILES ${sources_inc})
 source_group("headers" FILES "include/boost/locale.hpp")
 

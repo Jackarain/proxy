@@ -1,6 +1,6 @@
 [section:shared_container Shared Container Iterator]
 
-Defined in header [@../../../boost/shared_container_iterator.hpp `boost/shared_container_iterator.hpp`].
+Defined in header [@../../../boost/iterator/shared_container_iterator.hpp `boost/iterator/shared_container_iterator.hpp`].
 
 The purpose of the shared container iterator is to attach the lifetime
 of a container to the lifetime of its iterators. In other words, the
@@ -24,9 +24,22 @@ iterator.
 [h2 Synopsis]
 
   namespace boost {
+  namespace iterators {
     template <typename Container>
     class shared_container_iterator;
 
+    template <typename Container>
+    shared_container_iterator<Container>
+    make_shared_container_iterator(typename Container::iterator base,
+      std::shared_ptr<Container> const& container);
+
+    std::pair<
+      typename shared_container_iterator<Container>,
+      typename shared_container_iterator<Container>
+    >
+    make_shared_container_range(std::shared_ptr<Container> const& container);
+
+    // Backward compatibility with boost::shared_ptr
     template <typename Container>
     shared_container_iterator<Container>
     make_shared_container_iterator(typename Container::iterator base,
@@ -38,6 +51,15 @@ iterator.
     >
     make_shared_container_range(boost::shared_ptr<Container> const& container);
   }
+  }
+
+[note `shared_container_iterator` and its factory functions support both
+`std::shared_ptr` and `boost::shared_ptr` for a smart pointer that holds
+a shared reference to the container. However, the support for `boost::shared_ptr`
+comes at a cost of wrapping it in a `std::shared_ptr` internally. This means
+that when constructing the iterator from a `boost::shared_ptr`, the construction
+will have to allocate memory for `std::shared_ptr` shared state, which may
+potentially fail. It is recommended to use `std::shared_ptr` directly.]
 
 [section:shared_container_type The Shared Container Iterator Type]
 
@@ -57,18 +79,17 @@ the underlying vector and thereby extend the container's lifetime.
 
 [example_link shared_iterator_example1.cpp..`shared_iterator_example1.cpp`]:
 
-  #include "shared_container_iterator.hpp"
-  #include "boost/shared_ptr.hpp"
+  #include <boost/iterator/shared_container_iterator.hpp>
   #include <algorithm>
   #include <iostream>
   #include <vector>
+  #include <memory>
 
-  typedef boost::shared_container_iterator< std::vector<int> > iterator;
+  using iterator = boost::iterators::shared_container_iterator< std::vector<int> >;
 
 
-  void set_range(iterator& i, iterator& end)  {
-
-    boost::shared_ptr< std::vector<int> > ints(new std::vector<int>());
+  void set_range(iterator& i, iterator& end) {
+    std::shared_ptr< std::vector<int> > ints(new std::vector<int>());
 
     ints->push_back(0);
     ints->push_back(1);
@@ -77,18 +98,17 @@ the underlying vector and thereby extend the container's lifetime.
     ints->push_back(4);
     ints->push_back(5);
 
-    i = iterator(ints->begin(),ints);
-    end = iterator(ints->end(),ints);
+    i = iterator(ints->begin(), ints);
+    end = iterator(ints->end(), ints);
   }
 
 
   int main() {
+    iterator i, end;
 
-    iterator i,end;
+    set_range(i, end);
 
-    set_range(i,end);
-
-    std::copy(i,end,std::ostream_iterator<int>(std::cout,","));
+    std::copy(i, end, std::ostream_iterator<int>(std::cout, ","));
     std::cout.put('\n');
 
     return 0;
@@ -116,8 +136,12 @@ The `shared_container_iterator` type implements the member functions
 and operators required of the
 [@http://www.sgi.com/tech/stl/RandomAccessIterator.html Random Access
 Iterator] concept, though only operations defined for the base
-iterator will be valid. In addition it has the following constructor:
+iterator will be valid. In addition it has the following constructors:
 
+  shared_container_iterator(Container::iterator const& it,
+                            std::shared_ptr<Container> const& container)
+
+  // Backward compatibility with boost::shared_ptr
   shared_container_iterator(Container::iterator const& it,
                             boost::shared_ptr<Container> const& container)
 
@@ -125,6 +149,12 @@ iterator will be valid. In addition it has the following constructor:
 
 [section:shared_container_object_generator The Shared Container Iterator Object Generator]
 
+  template <typename Container>
+  shared_container_iterator<Container>
+  make_shared_container_iterator(Container::iterator base,
+                                 std::shared_ptr<Container> const& container)
+
+  // Backward compatibility with boost::shared_ptr
   template <typename Container>
   shared_container_iterator<Container>
   make_shared_container_iterator(Container::iterator base,
@@ -142,25 +172,23 @@ uses `make_shared_container_iterator()` to create the iterators.
 
 [example_link shared_iterator_example2.cpp..`shared_iterator_example2.cpp`]:
 
-  #include "shared_container_iterator.hpp"
-  #include "boost/shared_ptr.hpp"
+  #include <boost/iterator/shared_container_iterator.hpp>
   #include <algorithm>
   #include <iterator>
   #include <iostream>
   #include <vector>
+  #include <memory>
 
 
   template <typename Iterator>
-  void print_range_nl (Iterator begin, Iterator end) {
-    typedef typename std::iterator_traits<Iterator>::value_type val;
-    std::copy(begin,end,std::ostream_iterator<val>(std::cout,","));
+  void print_range_nl(Iterator begin, Iterator end) {
+    using val = typename std::iterator_traits<Iterator>::value_type;
+    std::copy(begin, end, std::ostream_iterator<val>(std::cout, ","));
     std::cout.put('\n');
   }
 
-
   int main() {
-
-    typedef boost::shared_ptr< std::vector<int> > ints_t;
+    using ints_t = std::shared_ptr< std::vector<int> >;
     {
       ints_t ints(new std::vector<int>());
 
@@ -171,11 +199,9 @@ uses `make_shared_container_iterator()` to create the iterators.
       ints->push_back(4);
       ints->push_back(5);
 
-      print_range_nl(boost::make_shared_container_iterator(ints->begin(),ints),
-                     boost::make_shared_container_iterator(ints->end(),ints));
+      print_range_nl(boost::iterators::make_shared_container_iterator(ints->begin(), ints),
+                     boost::iterators::make_shared_container_iterator(ints->end(), ints));
     }
-
-
 
     return 0;
   }
@@ -192,48 +218,56 @@ named. The output from this example is the same as the previous.
     shared_container_iterator<Container>,
     shared_container_iterator<Container>
   >
+  make_shared_container_range(std::shared_ptr<Container> const& container);
+
+  // Backward compatibility with boost::shared_ptr
+  template <typename Container>
+  std::pair<
+    shared_container_iterator<Container>,
+    shared_container_iterator<Container>
+  >
   make_shared_container_range(boost::shared_ptr<Container> const& container);
-  Class shared_container_iterator is meant primarily to return, using iterators, a range of values that we can guarantee will be alive as long as the iterators are. This is a convenience function to do just that. It is equivalent to
-  std::make_pair(make_shared_container_iterator(container->begin(),container),
-                 make_shared_container_iterator(container->end(),container));
+
+Class `shared_container_iterator` is meant primarily to return, using iterators,
+a range of values that we can guarantee will be alive as long as the iterators are.
+This is a convenience function to do just that. It is functionally equivalent to this:
+
+  std::make_pair(make_shared_container_iterator(container->begin(), container),
+                 make_shared_container_iterator(container->end(), container));
 
 [h2 Example]
 
-In the following example, a range of values is returned as a pair of shared_container_iterator objects.
+In the following example, a range of values is returned as a pair of `shared_container_iterator` objects.
 
 [example_link shared_iterator_example3.cpp..`shared_iterator_example3.cpp`]:
 
-  #include "shared_container_iterator.hpp"
-  #include "boost/shared_ptr.hpp"
-  #include "boost/tuple/tuple.hpp" // for boost::tie
-  #include <algorithm>              // for std::copy
+  #include <boost/iterator/shared_container_iterator.hpp>
+  #include <algorithm>     // for std::copy
   #include <iostream>
   #include <vector>
+  #include <memory>
+  #include <tuple>         // for std::tie
 
 
-  typedef boost::shared_container_iterator< std::vector<int> > iterator;
+  using iterator = boost::iterators::shared_container_iterator< std::vector<int> >;
 
-  std::pair<iterator,iterator>
+  std::pair<iterator, iterator>
   return_range() {
-    boost::shared_ptr< std::vector<int> > range(new std::vector<int>());
+    std::shared_ptr< std::vector<int> > range(new std::vector<int>());
     range->push_back(0);
     range->push_back(1);
     range->push_back(2);
     range->push_back(3);
     range->push_back(4);
     range->push_back(5);
-    return boost::make_shared_container_range(range);
+    return boost::iterators::make_shared_container_range(range);
   }
 
-
   int main() {
-
-
     iterator i,end;
+    std::tie(i, end) = return_range();
 
-    boost::tie(i,end) = return_range();
-
-    std::copy(i,end,std::ostream_iterator<int>(std::cout,","));
+    std::copy(i, end, std::ostream_iterator<int>(std::cout, ","));
     std::cout.put('\n');
 
     return 0;

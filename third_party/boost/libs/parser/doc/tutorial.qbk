@@ -65,7 +65,7 @@ subparsers does.
 
 Finally, there is a /permutation parser/; it is created using `operator||`,
 as in `p1 || p2 || p3`.  A permutation parser tries to match all of its
-subparsers to the input, in any order.  So the parser `p1 || p2 || p3` is equivalent to `(p1 >> p2 >> p3) | (p1 >> p3 >> p2) | (p2 >> p1 >> p3) | (p2 >> p3 >> p1) | (p3 >> p1 >> p2) | (p3 >> p2 >> p1)`.  Hopefully its terseness is self-explanatory.  It matches the
+subparsers to the input, in any order.  So the parser `p1 || p2 || p3` is equivalent to `(p1 >> p2 >> p3) | (p1 >> p3 >> p2) | (p2 >> p1 >> p3) | (p2 >> p3 >> p1) | (p3 >> p1 >> p2) | (p3 >> p2 >> p1)`.  Hopefully the advantage of its terseness is self-explanatory.  It matches the
 input iff all of its subparsers do, regardless of the order they match in.
 
 _Parser_ parsers each have an /attribute/ associated with them, or explicitly
@@ -836,6 +836,14 @@ escaped quote character, since those always work.
 
 [quoted_string_example_5]
 
+Additionally, with each of the forms shown above, you can optionally provide a
+parser as a final argument, to will be used to parse each character inside the
+quotes.  You have to provide an actual full parser here; you cannot provide a
+character or string literal.  If you do not provide a character parser, _ch_
+is used.
+
+[quoted_string_example_6]
+
 [endsect]
 
 [section Parsing In Detail]
@@ -1442,6 +1450,24 @@ _merge_ and _sep_ create a copy of the given _seq_p_.
 
 _transform_ creates a _xfm_p_.
 
+[heading _delimiter_]
+
+The _delimiter_np_ directive enables the use of a delimiter within a
+permutation parser.  It *only* applies to permutation parsers, just as _merge_
+and _sep_ only apply to sequence parsers.  Consider this permutation parser.
+
+    constexpr auto parser = bp::int_ || bp::string("foo") || bp::char_('g');
+
+This will match all of: an integer, `"foo"`, and `'g'`, in any order (for
+example, `"foo g 42"`).  If you also want for those three elements to be
+delimited by commas, you could write this parser instead.
+
+    constexpr auto delimited_parser =
+        bp::delimiter(bp::lit(','))[bp::int_ || bp::string("foo") || bp::char_('g')];
+
+`delimited_parser` will parse the same elements as `parser`, but will also
+require commas between the elements (as in `"foo, g, 42"`).
+
 [endsect]
 
 [section Combining Operations]
@@ -1589,6 +1615,71 @@ attribute becomes `T`.
 `container` concept:
     [container_concept]
 ]
+
+[heading A sequence parser attribute example]
+
+Note that the application of `OP` is done in the style of a left-fold, and
+is therefore greedy.  This can lead to some non-obvious results.  For example,
+consider this program.  Thanks to Duncan Paterson for this very nice example!
+
+    #include <boost/parser/parser.hpp>
+    #include <print>
+
+    namespace bp = boost::parser;
+    int main() {
+      const auto id_set_action = [](auto &ctx) {
+        const auto& [left, right] = _attr(ctx);
+        std::println("{} = {}", left, right);
+      };
+
+      const auto id_parser = bp::char_('a', 'z') > *bp::char_('a', 'z');
+
+      const auto id_set = (id_parser >> '=' >> id_parser)[id_set_action];
+      bp::parse("left=right", id_set);
+      return 0;
+    }
+
+Perhaps surprisingly, this program prints `leftr = ight`!  Why is this?  This
+happens because `id_parser` seems to impose structure, but does not.  `id_set`
+is exactly equivalent to this (comments added to clarify which parts are which
+below).
+
+    const auto id_set = (
+      /*A*/ bp::char_('a', 'z') > /*B*/ *bp::char_('a', 'z') >>
+      /*C*/ '=' >>
+      /*D*/ bp::char_('a', 'z') > /*E*/ *bp::char_('a', 'z')
+    )[id_set_action];
+
+As _Parser_ applies `OP` to this sequence parser, the individual steps are:
+`A` and `B` get merged into a single _std_str_; `C` is ignored, since it
+produces no attribute; and `D` gets merged into the _std_str_ formed earlier
+by `A` and `B`; finally, we have `E`. `E` does not combine with `D`, as `D`
+was already consumed.  `E` also does not combine with the _std_str_ we formed
+from `A`, `B`, and `D`, since we don't combine adjacent containers.  In the
+end, we have a 2-tuple of _std_strs_, in which the first element contains all
+the characters parsed by `A`, `B`, and `D`, and in which the second element
+contains all the characters parsed by `E`.
+
+That's clearly not what we wanted here, though.  How do we get a top-level
+parser that would print `left = right`?  We use a _r_.  The parser used inside
+a _r_ can never combine with any parser(s) outside the _r_.  Instances of a
+rule are inherently separate from all parsers with which they are used,
+whether those parsers are _rs_ or non-_r_ parsers.  So, consider a _r_
+equivalent to the previous `id_parser` above.
+
+    namespace bp = boost::parser;
+    bp::rule<struct id_parser_tag, std::string> id_parser = "identifier";
+    auto const id_parser_def = bp::char_('a', 'z') > *bp::char_('a', 'z');
+    BOOST_PARSER_DEFINE_RULES(id_parser);
+
+Later, we can use it just as we used the previous non-rule version.
+
+    const auto id_set = (id_parser >> '=' >> id_parser)[id_set_action];
+
+This produces the results you might expect, since only the `bp::char_('a',
+'z') > *bp::char_('a', 'z')` parser inside the `id_parser` _r_ is ever
+eligible for combining via `OP`.
+
 
 [heading Alternative parser attribute rules]
 
@@ -2211,6 +2302,8 @@ common use cases for _rs_.  Use a _r_ if you want to:
 * fix the attribute type produced by a parser to something other than the
   default;
 
+* control the attributes generated by adjacent sequence parsers;
+
 * create a parser that produces useful diagnostic text;
 
 * create a recursive rule (more on this below);
@@ -2350,6 +2443,10 @@ action if:
 - `_ATTR_np_(R)` and `_ATTR_np_(P)` are compatible types.
 
 The notion of "compatible" is defined in _p_api_.
+
+[heading Controlling the attributes generated]
+
+See the _seq_parser_example_ in the _attr_gen_ section for details.
 
 [heading Creating a parser for better diagnostics]
 

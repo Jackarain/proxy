@@ -16,7 +16,6 @@ target_link_libraries(boost_array
   INTERFACE
     Boost::assert
     Boost::config
-    Boost::core
     Boost::static_assert
     Boost::throw_exception
 )

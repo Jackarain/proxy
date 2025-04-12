@@ -1,0 +1,107 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:auto_reconnect Built-in Auto-Reconnect and Retry Mechanism]
+[nochunk]
+
+The auto-reconnect and retry mechanism is a key feature of the __Self__ library.
+It is designed to internally manage the complexities of disconnects, backoffs, reconnections, and message retransmissions. 
+These tasks, if handled manually, could lead to extended development times, difficult testing, and compromised reliability. 
+By automating these processes, the __Self__ library enables users of the __Client__ to focus primarily
+on the application's functionality without worrying about the repercussions of lost network connectivity.
+
+You can call any asynchronous function within the __Client__ regardless of its current connection status.
+If the __Client__ is offline, it will queue all outgoing requests and transmit them as soon as the connection is restored.
+In situations where the connection is unexpectedly lost mid-protocol flow,
+the __Client__ complies with the MQTT protocol's specified message delivery retry mechanisms.
+
+The following example will showcase how the __Client__ internally manages various scenarios, including successful transmission, offline queuing,
+and connection loss retransmissions when executing a request to publish a message with QoS 1.
+Note that the same principle applies to all other asynchronous functions within the __Client__ 
+(see /Completion condition/ under [refmem mqtt_client async_publish], [refmem mqtt_client async_subscribe], [refmem mqtt_client async_unsubscribe],
+and [refmem mqtt_client async_disconnect]).
+
+    // Publishing with QoS 1 involves a two-step process: sending a PUBLISH message to the Broker and awaiting a PUBACK (acknowledgement) response.
+    // The scenarios that might happen are:
+    //   1) The Client will immediately send the PUBLISH message and start to wait for the PUBACK reply. 
+    //       The user's completion handler will not be invoked yet, regardless of whether the Client successfully sent the message.
+    //   2) When the Client fails to send the message, it will try to reconnect to the Broker automatically.
+    //       If it succeeds, it will resend the message. If reconnect fails, the Client will try to connect again until it succeeds.
+    //       Meanwhile, the user's completion handler will NOT be invoked except when the Client detects an unrecoverable error (for example, when the list of configured brokers is empty).
+    //       Note that the Client will try to connect indefinitely, meaning the user's completion handler may never be invoked.
+    //   3) When the Client successfully sends the PUBLISH message, the Broker is required to respond with a PUBACK message. 
+    //       The reply message may indicate success or an MQTT error (for example, signalling that the message is not accepted due to implementation or administrative limits).
+    //       The Client will read the PUBACK message and call the user's completion handler with the appropriate arguments.
+    //   4) The PUBACK message should arrive within 20 seconds of the PUBLISH message being successfully sent.
+    //       If it does not, the PUBLISH message will be sent again. In the meantime, the user's callback will not be invoked.
+
+    client.async_publish<boost::mqtt5::qos_e::at_least_once>(
+        "my-topic", "Hello world!",
+        boost::mqtt5::retain_e::no, boost::mqtt5::publish_props {},
+        [](boost::mqtt5::error_code ec, boost::mqtt5::reason_code rc, boost::mqtt5::puback_props props) {
+            // This callback is invoked under any of the following circumstances:
+            //  a) The Client successfully sends the PUBLISH packet and receives a PUBACK from the Broker.
+            //  b) The Client encounters a non-recoverable error, such as a cancellation or providing invalid parameters
+            //     to async_publish, which prevents the message from being sent.
+        }
+    );
+
+[section:sentry ]
+
+
+[endsect] [/sentry]
+
+[section:cons Considerations and Limitations]
+
+The integrated auto-reconnect and retry mechanism greatly improves the user experience
+by simplifying complex processes and ensuring continuous connections.
+However, it is important to be mindful of certain limitations and considerations associated with this feature.
+
+[heading Delayed Handler Invocation]
+
+During extended periods of __Client__ downtime, the completion handlers for asynchronous functions,
+such as those used in [refmem mqtt_client async_publish], may face considerable delays before invocation.
+This can result in users being left in the dark regarding the status of their requests due to the absence of prompt feedback on the initiated actions.
+
+[heading Concealing Configuration-Related Issues]
+
+The __Client__ will always try to reconnect to the Broker(s) regardless of the reason why the connection was previously closed.
+This is desirable behaviour when the connection gets dropped due to underlying stream transport issues,
+such as when a device connected to the network loses its GSM connectivity.
+
+However, the connection may be closed (or never established) for other reasons,
+which are typically related to misconfiguration of broker IPs, ports, expired or incorrect TLS, or MQTT-related errors,
+such as trying to communicate with a Broker that does not support MQTT 5.
+In these cases, the __Client__ will still endlessly try to connect to the Broker(s), but the connection will never succeed.
+
+The most challenging problem here is that users of the __Client__ do not get informed in any way that the connection cannot be established.
+So, if you make a typo in the Broker's IP, run the __Client__, and publish some message, the [refmem mqtt_client async_publish] callback will never be invoked,
+and you will not "catch" the error or detect the root cause of the issue.
+
+The possible alternative approach, where the __Client__ would return something like "unrecoverable error" 
+when you try to publish a message to a misconfigured Broker, would have a terrible consequence if the Broker itself is misconfigured.
+For example, suppose someone forgets to renew the TLS certificate on the Broker.
+The connection will be broken in that case, and the __Client__ would report an "unrecoverable error" through the [refmem mqtt_client async_publish] method.
+Now, the expired TLS certificate on the Broker is most probably a temporary issue,
+so it is natural that the __Client__ would try to reconnect until the certificate gets renewed.
+But, if the __Client__ stops retrying when it detects such an "unrecoverable error," then the decision of when to reconnect would be left to the user.
+
+By design, one of the main functional requirements of the __Client__ was to handle reconnection steps automatically and correctly.
+If the decision for reconnection were left to the user, then the user would need to handle all those error states manually,
+which would dramatically increase the complexity of the user's code, not to mention how difficult it would be to cover all possible error states.
+
+The proposed approach for detecting configuration errors in the __Client__ is to use our logging mechanism as described
+in [link mqtt5.getting_started.debugging Debugging the Client]
+
+[heading Increased Resource Consumption]
+
+The __Client__ is designed to automatically buffer requests that are initiated while it is offline. 
+During extended downtime or when a high volume of requests accumulates, this can lead to an increase in memory usage.
+This aspect is significant for devices with limited resources, as the growing memory consumption can impact their performance and functionality.
+
+[endsect] [/cons]
+
+[endsect] [/auto_reconnect]

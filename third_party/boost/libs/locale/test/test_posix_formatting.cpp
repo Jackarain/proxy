@@ -19,6 +19,7 @@
 #endif
 #include "boostLocale/test/tools.hpp"
 #include "boostLocale/test/unit_test.hpp"
+#include "formatting_common.hpp"
 
 #ifdef BOOST_LOCALE_NO_POSIX_BACKEND
 // Dummy just to make it compile
@@ -163,13 +164,13 @@ void test_main(int /*argc*/, char** /*argv*/)
         else {
             std::locale generated_locale = gen(locale_name);
             locale_holder real_locale(newlocale(LC_ALL_MASK, locale_name.c_str(), nullptr));
-            TEST_REQUIRE(real_locale);
+            if TEST(real_locale) {
+                std::cout << "UTF-8" << std::endl;
+                test_by_char<char>(generated_locale, real_locale);
 
-            std::cout << "UTF-8" << std::endl;
-            test_by_char<char>(generated_locale, real_locale);
-
-            std::cout << "Wide UTF-" << sizeof(wchar_t) * 8 << std::endl;
-            test_by_char<wchar_t>(generated_locale, real_locale);
+                std::cout << "Wide UTF-" << sizeof(wchar_t) * 8 << std::endl;
+                test_by_char<wchar_t>(generated_locale, real_locale);
+            }
         }
     }
     {
@@ -184,6 +185,10 @@ void test_main(int /*argc*/, char** /*argv*/)
             const std::string v = ss.str();
             TEST(v == "12345,45" || v == "12 345,45" || v == "12.345,45");
         }
+    }
+    if(has_posix_locale("en_US.UTF-8")) {
+        test_format_large_number();
+        test_parse_multi_number();
     }
 }
 

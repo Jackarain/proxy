@@ -1,0 +1,56 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:disconnect_props DISCONNECT properties]
+The last field in the Variable header of __DISCONNECT__ packet is a set of Properties.
+A set contains a Property Length followed by the Properties.
+A Property consists of an Identifier and a value.
+
+This class extends [reflink2 prop__properties prop::properties], which provides common functionalities for all property classes.
+Below is a list of possible __DISCONNECT__ Properties, along with descriptions of their usage:
+
+[table:disconnect_props DISCONNECT properties
+    [[Identifier] [Value type] [Description]]
+    [[session_expiry_interval] [`uint32_t`] [Represents the Session Expiry Internal in seconds. Can only be sent by the Client.]]
+    [[reason_string] [`std::string`] [A UTF-8 Encoded String representing the reason associated with this response.]]
+    [[user_property] [`std::vector<std::pair<std::string, std::string>>`] [Name, value pair (__UTF8_STRING_PAIR__) defining User Property. There can be multiple pairs in one packet. 
+        This property may be used to provide additional diagnostic or other information. ]]
+    [[server_reference] [`std::string`] [A UTF-8 Encoded String which can be used by the Client to identfy another Server to use.]]
+]
+
+[h4 Usage]
+After obtaining an instance of `boost::mqtt5::disconnect_props`, the subscript operator can be used to access a Property.
+
+The Identifiers listed in the table above are available within the `boost::mqtt5::prop` namespace for Property access.
+
+[note When accessing a property value, the subscript operator will return a `std::optional` of the value type for all properties,
+except for `boost::mqtt5::prop::user_property`, where it will return an instance of `std::vector<std::pair<std::string, std::string>>`.]
+
+[h4 Example]
+
+The following example shows how to set a Property value:
+
+[!c++]
+    boost::mqtt5::disconnect_props props;
+    props[boost::mqtt5::prop::reason_string] = "Lost connection!";
+    props[boost::mqtt5::prop::user_property].emplace_back("name", "value");
+
+The following example shows how to retrieve a Property value:
+
+[!c++]
+    std::optional<std::string> reason_string = props[boost::mqtt5::prop::reason_string];
+    if (reason_string.has_value())
+        // reason string property was previously set
+    else
+        // reason string property was not set
+    
+    std::vector<std::pair<std::string, std::string>>& user_props = props[boost::mqtt5::prop::user_property];
+    if (!user_props.empty())
+        // user property was previously set
+    else
+        // user property was not set
+
+[endsect]

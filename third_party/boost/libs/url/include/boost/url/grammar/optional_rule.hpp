@@ -13,6 +13,7 @@
 #include <boost/url/detail/config.hpp>
 #include <boost/url/optional.hpp>
 #include <boost/url/error_types.hpp>
+#include <boost/url/grammar/type_traits.hpp>
 #include <boost/core/empty_value.hpp>
 #include <boost/assert.hpp>
 
@@ -20,47 +21,6 @@ namespace boost {
 namespace urls {
 namespace grammar {
 
-/** Match a rule, or the empty string
-
-    Optional BNF elements are denoted with
-    square brackets. If the specified rule
-    returns any error it is treated as if
-    the rule did not match.
-
-    @par Value Type
-    @code
-    using value_type = optional< typename Rule::value_type >;
-    @endcode
-
-    @par Example
-    Rules are used with the function @ref grammar::parse.
-    @code
-    system::result< optional< core::string_view > > rv = parse( "", optional_rule( token_rule( alpha_chars ) ) );
-    @endcode
-
-    @par BNF
-    @code
-    optional     = [ rule ]
-    @endcode
-
-    @par Specification
-    @li <a href="https://datatracker.ietf.org/doc/html/rfc5234#section-3.8"
-        >3.8.  Optional Sequence (rfc5234)</a>
-
-    @param r The rule to match
-
-    @see
-        @ref alpha_chars,
-        @ref parse,
-        @ref optional,
-        @ref token_rule.
-*/
-#ifdef BOOST_URL_DOCS
-template<class Rule>
-constexpr
-__implementation_defined__
-optional_rule( Rule r ) noexcept;
-#else
 namespace implementation_defined {
 template<class Rule>
 struct optional_rule_t
@@ -113,6 +73,7 @@ struct optional_rule_t
         >3.8.  Optional Sequence (rfc5234)</a>
 
     @param r The rule to match
+    @return The adapted rule
 
     @see
         @ref alpha_chars,
@@ -120,16 +81,16 @@ struct optional_rule_t
         @ref optional,
         @ref token_rule.
 */
-template<class Rule>
+template<BOOST_URL_CONSTRAINT(Rule) R>
 auto
 constexpr
 optional_rule(
-    Rule const& r) ->
-        implementation_defined::optional_rule_t<Rule>
+    R const& r) ->
+        implementation_defined::optional_rule_t<R>
 {
+    BOOST_STATIC_ASSERT(grammar::is_rule<R>::value);
     return { r };
 }
-#endif
 
 } // grammar
 } // urls

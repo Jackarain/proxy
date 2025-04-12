@@ -7,9 +7,7 @@
 #define BOOST_TEST_IGNORE_SIGCHLD
 #include <boost/test/included/unit_test.hpp>
 
-#include <iostream>
-
-#include <boost/process.hpp>
+#include <boost/process/v1/system.hpp>
 #include <boost/process/v1/handles.hpp>
 #include <boost/process/v1/pipe.hpp>
 #include <boost/process/v1/io.hpp>
@@ -32,8 +30,7 @@
 #include <dirent.h>
 #endif
 
-namespace fs = boost::process::v1::filesystem;
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 namespace bt = boost::this_process;
 
 BOOST_AUTO_TEST_CASE(leak_test, *boost::unit_test::timeout(5))
@@ -110,7 +107,7 @@ BOOST_AUTO_TEST_CASE(leak_test, *boost::unit_test::timeout(5))
     BOOST_CHECK(!bt::is_stream_handle(event_fd , ec)); BOOST_CHECK_MESSAGE(!ec, ec.message());
 #endif
     auto od = ::opendir(".");
-    int dir_fd = ::dirfd(od);
+    int dir_fd = dirfd(od);
     BOOST_CHECK(!bt::is_stream_handle(dir_fd , ec)); BOOST_CHECK_MESSAGE(!ec, ec.message());
 #endif
 

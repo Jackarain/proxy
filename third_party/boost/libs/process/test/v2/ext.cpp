@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE(cmd_exe)
     bp2::basic_cstring_ref<typename bp2::shell::char_type> ref(cm.argv()[0]);
     BOOST_CHECK_EQUAL(bp2::detail::conv_string<char>(ref.data(), ref.size()), pth);
 
-    BOOST_REQUIRE_EQUAL(cm.argc(), args.size() + 1u);
+    BOOST_REQUIRE_EQUAL(cm.argc(), static_cast<int>(args.size() + 1u));
     for (auto i = 0u; i < args.size(); i++)
     {
       ref = cm.argv()[i + 1];
@@ -110,10 +110,10 @@ BOOST_AUTO_TEST_CASE(test_cwd_exe)
     boost::asio::io_context ctx;
     bp2::process proc(ctx, pth, {"sleep", "10000"},
                       bp2::process_start_dir{tmp});
-    auto tt = bp2::ext::cwd(proc.handle()).string();
-    if (tt.back() == '\\')
-        tt.pop_back();
-    BOOST_CHECK_EQUAL(tt, tmp);
+    auto tt = bp2::ext::cwd(proc.handle());
+
+
+    BOOST_CHECK_MESSAGE(bp2::filesystem::equivalent(tmp, tt), tmp << " == " << tt);
     bp2::error_code ec;
     bp2::filesystem::remove(tmp, ec);
 }

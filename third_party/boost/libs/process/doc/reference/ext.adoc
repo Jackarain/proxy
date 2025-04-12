@@ -1,0 +1,46 @@
+== `ext`
+
+The headers in `process/ext`  provides features to obtain information about third part processes.
+
+[source,cpp]
+----
+// Get the cmd line used to launche the process
+template<typename Executor>
+shell cmd(basic_process_handle<Executor> & handle, error_code & ec);
+template<typename Executor>
+shell cmd(basic_process_handle<Executor> & handle);
+shell cmd(pid_type pid, error_code & ec);
+shell cmd(pid_type pid);
+
+
+// Get the current working directory of the process.
+template<typename Executor>
+filesystem::path cwd(basic_process_handle<Executor> & handle, error_code & ec);
+template<typename Executor>
+filesystem::path cwd(basic_process_handle<Executor> & handle)
+filesystem::path cwd(pid_type pid, error_code & ec);
+filesystem::path cwd(pid_type pid);
+
+
+// Get the current environment of the process.
+template<typename Executor>
+env_view cwd(basic_process_handle<Executor> & handle, error_code & ec);
+template<typename Executor>
+env_view cwd(basic_process_handle<Executor> & handle)
+env_view env(pid_type pid, error_code & ec);
+env_view env(pid_type pid);
+
+
+// Get the executable of the process.
+template<typename Executor>
+filesystem::path exe(basic_process_handle<Executor> & handle, error_code & ec);
+template<typename Executor>
+filesystem::path exe(basic_process_handle<Executor> & handle)
+filesystem::path exe(pid_type pid, error_code & ec);
+filesystem::path exe(pid_type pid);
+----
+
+WARNING: The function may fail with "operation_not_supported" on some niche platforms.
+
+NOTE: On windows overloads taking a `HANDLE` are also available.
+

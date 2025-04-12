@@ -148,29 +148,9 @@ ci_digest(
     The function is defined only for strings
     containing low-ASCII characters.
 
-    @par Example
-    @code
-    assert( ci_is_equal( "Boost", "boost" ) );
-    @endcode
-
-    @see
-        @ref ci_compare,
-        @ref ci_is_less.
-*/
-#ifdef BOOST_URL_DOCS
-template<
-    class String0,
-    class String1>
-bool
-ci_is_equal(
-    String0 const& s0,
-    String1 const& s1);
-#else
-
-/** Return true if s0 equals s1 using case-insensitive comparison
-
-    The function is defined only for strings
-    containing low-ASCII characters.
+    @param s0 The first string
+    @param s1 The second string
+    @return `true` if `s0` case-insensitively equals `s1`, otherwise `false`
 
     @par Example
     @code
@@ -208,6 +188,10 @@ ci_is_equal(
     The function is defined only for strings
     containing low-ASCII characters.
 
+    @param s0 The first string
+    @param s1 The second string
+    @return `true` if `s0` case-insensitively equals `s1`, otherwise `false`
+
     @par Example
     @code
     assert( ci_is_equal( "Boost", "boost" ) );
@@ -229,7 +213,6 @@ ci_is_equal(
         return false;
     return detail::ci_is_equal(s0, s1);
 }
-#endif
 
 /** Return true if s0 is less than s1 using case-insensitive comparison 
 
@@ -239,6 +222,10 @@ ci_is_equal(
     lexicographical comparison.
     The function is defined only for strings
     containing low-ASCII characters.
+
+    @param s0 The first string
+    @param s1 The second string
+    @return `true` if `s0` is case-insensitively less than `s1`, otherwise `false`
 
     @par Example
     @code
@@ -262,31 +249,7 @@ ci_is_less(
 
 //------------------------------------------------
 
-/** A case-insensitive hash function object for strings
-
-    The hash function is non-cryptographic and
-    not hardened against algorithmic complexity
-    attacks.
-    This is a suitable hash function for
-    unordered containers.
-    The function is defined only for strings
-    containing low-ASCII characters.
-
-    @par Example
-    @code
-    boost::unordered_map< std::string, std::string, ci_hash, ci_equal > m1;
-
-    std::unordered_map  < std::string, std::string, ci_hash, ci_equal > m2; // (since C++20)
-    @endcode
-
-    @see
-        @ref ci_equal,
-        @ref ci_less.
-*/
-#ifdef BOOST_URL_DOCS
-using ci_hash = __see_below__;
-#else
-namespace see_below {
+namespace implementation_defined {
 struct ci_hash
 {
     using is_transparent = void;
@@ -321,33 +284,9 @@ struct ci_hash
         @ref ci_equal,
         @ref ci_less.
 */
-using ci_hash = see_below::ci_hash;
-#endif
+using ci_hash = implementation_defined::ci_hash;
 
-/** A case-insensitive equals predicate for strings
-
-    The function object returns `true` when
-    two strings are equal, ignoring case.
-    This is a suitable equality predicate for
-    unordered containers.
-    The function is defined only for strings
-    containing low-ASCII characters.
-
-    @par Example
-    @code
-    boost::unordered_map< std::string, std::string, ci_hash, ci_equal > m1;
-
-    std::unordered_map  < std::string, std::string, ci_hash, ci_equal > m2; // (since C++20)
-    @endcode
-
-    @see
-        @ref ci_hash,
-        @ref ci_less.
-*/
-#ifdef BOOST_URL_DOCS
-using ci_equal = __see_below__;
-#else
-namespace see_below {
+namespace implementation_defined {
 struct ci_equal
 {
     using is_transparent = void;
@@ -362,7 +301,7 @@ struct ci_equal
         return ci_is_equal(s0, s1);
     }
 };
-} // see_below
+} // implementation_defined
 
 /** A case-insensitive equals predicate for strings
 
@@ -384,35 +323,9 @@ struct ci_equal
         @ref ci_hash,
         @ref ci_less.
 */
-using ci_equal = see_below::ci_equal;
-#endif
+using ci_equal = implementation_defined::ci_equal;
 
-/** A case-insensitive less predicate for strings
-
-    The comparison algorithm implements a
-    case-insensitive total order on the set
-    of all ASCII strings; however, it is
-    not a lexicographical comparison.
-    This is a suitable predicate for
-    ordered containers.
-    The function is defined only for strings
-    containing low-ASCII characters.
-
-    @par Example
-    @code
-    boost::container::map< std::string, std::string, ci_less > m1;
-
-    std::map< std::string, std::string, ci_less > m2; // (since C++14)
-    @endcode
-
-    @see
-        @ref ci_equal,
-        @ref ci_hash.
-*/
-#ifdef BOOST_URL_DOCS
-using ci_less = __see_below__;
-#else
-namespace see_below {
+namespace implementation_defined {
 struct ci_less
 {
     using is_transparent = void;
@@ -449,8 +362,7 @@ struct ci_less
         @ref ci_equal,
         @ref ci_hash.
 */
-using ci_less = see_below::ci_less;
-#endif
+using ci_less = implementation_defined::ci_less;
 
 } // grammar
 } // urls

@@ -6,14 +6,7 @@
     http://www.boost.org/LICENSE_1_0.txt)
 =============================================================================*/
 
-// random uses boost.fusion, which clashes with boost.test
-// #define USE_BOOST_RANDOM
-
-#ifdef USE_BOOST_RANDOM
-#    include <boost/random.hpp>
-#else
-#    include <cstdlib>
-#endif
+#include <random>
 
 #include "common_heap_tests.hpp"
 
@@ -81,7 +74,7 @@ void pri_queue_test_update_shuffled( void )
     PUSH_WITH_HANDLES( handles, q, data );
 
     test_data shuffled( data );
-    random_shuffle( shuffled.begin(), shuffled.end() );
+    std::shuffle( shuffled.begin(), shuffled.end(), get_rng() );
 
     for ( int i = 0; i != test_size; ++i )
         q.update( handles[ i ], shuffled[ i ] );
@@ -221,24 +214,15 @@ void pri_queue_test_increase_function_identity( void )
 template < typename pri_queue >
 void pri_queue_test_erase( void )
 {
-#ifdef USE_BOOST_RANDOM
-    boost::mt19937 rng;
-#endif
-
     for ( int i = 0; i != test_size; ++i ) {
         pri_queue q;
         test_data data = make_test_data( test_size );
         PUSH_WITH_HANDLES( handles, q, data );
 
         for ( int j = 0; j != i; ++j ) {
-#ifdef USE_BOOST_RANDOM
-            boost::uniform_int<>                                              range( 0, data.size() - 1 );
-            boost::variate_generator< boost::mt19937&, boost::uniform_int<> > gen( rng, range );
+            std::uniform_int_distribution<> range( 0, data.size() - 1 );
 
-            int index = gen();
-#else
-            int index = std::rand() % ( data.size() - 1 );
-#endif
+            int index = range( get_rng() );
             q.erase( handles[ index ] );
             handles.erase( handles.begin() + index );
             data.erase( data.begin() + index );

@@ -36,7 +36,7 @@ namespace boost { namespace lockfree { namespace detail {
 //----------------------------------------------------------------------------------------------------------------------
 
 template < typename T, typename Alloc = std::allocator< T > >
-class freelist_stack : Alloc
+class alignas( cacheline_bytes ) freelist_stack : Alloc
 {
     struct freelist_node
     {
@@ -267,8 +267,7 @@ private:
     atomic< tagged_node_ptr > pool_;
 };
 
-class BOOST_ALIGNMENT( 4 ) // workaround for bugs in MSVC
-    tagged_index
+class tagged_index
 {
 public:
     typedef std::uint16_t tag_t;
@@ -336,7 +335,7 @@ protected:
 //----------------------------------------------------------------------------------------------------------------------
 
 template < typename T, std::size_t size >
-struct BOOST_ALIGNMENT( BOOST_LOCKFREE_CACHELINE_BYTES ) compiletime_sized_freelist_storage
+struct alignas( cacheline_bytes ) compiletime_sized_freelist_storage
 {
     // array-based freelists only support a 16bit address space.
     BOOST_STATIC_ASSERT( size < 65536 );
@@ -353,7 +352,7 @@ struct BOOST_ALIGNMENT( BOOST_LOCKFREE_CACHELINE_BYTES ) compiletime_sized_freel
     T* nodes( void ) const
     {
         char* data_pointer = const_cast< char* >( data.data() );
-        return reinterpret_cast< T* >( boost::alignment::align_up( data_pointer, BOOST_LOCKFREE_CACHELINE_BYTES ) );
+        return reinterpret_cast< T* >( boost::alignment::align_up( data_pointer, cacheline_bytes ) );
     }
 
     std::size_t node_count( void ) const
@@ -365,12 +364,11 @@ struct BOOST_ALIGNMENT( BOOST_LOCKFREE_CACHELINE_BYTES ) compiletime_sized_freel
 //----------------------------------------------------------------------------------------------------------------------
 
 template < typename T, typename Alloc = std::allocator< T > >
-struct runtime_sized_freelist_storage :
-    boost::alignment::aligned_allocator_adaptor< Alloc, BOOST_LOCKFREE_CACHELINE_BYTES >
+struct runtime_sized_freelist_storage : boost::alignment::aligned_allocator_adaptor< Alloc, cacheline_bytes >
 {
-    typedef boost::alignment::aligned_allocator_adaptor< Alloc, BOOST_LOCKFREE_CACHELINE_BYTES > allocator_type;
-    T*                                                                                           nodes_;
-    std::size_t                                                                                  node_count_;
+    typedef boost::alignment::aligned_allocator_adaptor< Alloc, cacheline_bytes > allocator_type;
+    T*                                                                            nodes_;
+    std::size_t                                                                   node_count_;
 
     template < typename Allocator >
     runtime_sized_freelist_storage( Allocator const& alloc, std::size_t count ) :

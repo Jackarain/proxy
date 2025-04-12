@@ -27,7 +27,7 @@ namespace ext
 #if defined(BOOST_PROCESS_V2_WINDOWS)
 // type of process memory to read?
 enum MEMTYP {MEMCMD, MEMCWD};
-std::wstring cwd_cmd_from_proc(HANDLE proc, int type, boost::system::error_code & ec)
+std::wstring cwd_cmd_from_proc(HANDLE proc, int type, error_code & ec)
 {
     std::wstring buffer;
     PEB peb;
@@ -84,7 +84,7 @@ std::wstring cwd_cmd_from_proc(HANDLE proc, int type, boost::system::error_code 
 
 // with debug_privilege enabled allows reading info from more processes
 // this includes stuff such as exe path, cwd path, cmdline, and environ
-HANDLE open_process_with_debug_privilege(boost::process::v2::pid_type pid, boost::system::error_code & ec)
+HANDLE open_process_with_debug_privilege(boost::process::v2::pid_type pid, error_code & ec)
 {
     HANDLE proc = nullptr;
     HANDLE hToken = nullptr;

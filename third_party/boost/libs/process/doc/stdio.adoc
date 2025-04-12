@@ -1,0 +1,65 @@
+= stdio
+
+When using io with a subprocess, all three standard streams (stdin, stdout, stderr) get set for the child-process.
+The default setting is to inherit the parent process.
+
+This feature meant to be flexible, which is why there is little checking on the arguments assigned to one of those streams. 
+
+== Pipes
+
+asio pipes can be used for io. When using in process_stdio they will get 
+automatically connected and the other side will get assigned to the child process:
+
+.example/stdio.cpp:20-29
+[source,cpp,indent=0]
+----
+include::../example/stdio.cpp[tag=readable_pipe]
+----
+
+readable pipes can be assigned to `out` and `err`, while writable_pipes can be assigned to `in`.
+
+== `FILE*`
+
+`FILE*` can also be used for either side; this allows the `stdin`, `stderr`, `stdout` macros to be used:
+
+.example/stdio.cpp:35-38
+[source,cpp]
+----
+include::../example/stdio.cpp[tag=file]
+----
+
+== `nullptr`
+
+`nullptr` may be used to set a given stream to be opened on the null-device (`/dev/null` on posix, `NUL` on windows). 
+This is used to ignore output or give only EOF as input.
+
+.example/stdio.cpp:43-46
+[source,cpp]
+----
+include::../example/stdio.cpp[tag=null]
+----
+
+== `native_handle`
+
+A native handle can be used as well, which means an `int` on posix or a `HANDLE` on windows. 
+Furthermore, any object that has a `native_handle` function which returns a valid type for a stdio stream.
+
+E.g. a domain socket on linux.
+
+.example/stdio.cpp:52-57
+[source,cpp]
+----
+include::../example/stdio.cpp[tag=native_handle]
+----
+
+== popen
+
+Additionally, process v2 provides a `popen` class. 
+It starts a process and connects pipes for stdin and stdout, so that the popen object can be used as a stream.
+
+.example/stdio.cpp:63-66
+[source,cpp]
+----
+include::../example/stdio.cpp[tag=popen]
+----
+

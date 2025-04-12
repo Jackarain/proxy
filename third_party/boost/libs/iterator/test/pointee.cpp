@@ -3,10 +3,10 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/pointee.hpp>
-#include <boost/type_traits/add_const.hpp>
 #include "static_assert_same.hpp"
 #include <memory>
 #include <list>
+#include <type_traits>
 
 template <class T, class Ref>
 struct proxy_ptr
@@ -27,7 +27,7 @@ struct proxy_ref_ptr : proxy_ptr<T,T&>
 template <class T>
 struct proxy_value_ptr : proxy_ptr<T,T>
 {
-    typedef typename boost::add_const<T>::type element_type;
+    typedef typename std::add_const<T>::type element_type;
 };
 
 struct X {

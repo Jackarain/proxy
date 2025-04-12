@@ -1,4 +1,4 @@
-/* Copyright 2016-2017 Joaquin M Lopez Munoz.
+/* Copyright 2016-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -64,10 +64,13 @@ void resume_timing()
 
 #include <algorithm>
 #include <array>
+#include <boost/mp11/list.hpp>
+#include <boost/variant2/variant.hpp>
 #include <boost/poly_collection/algorithm.hpp>
 #include <boost/poly_collection/any_collection.hpp>
 #include <boost/poly_collection/base_collection.hpp>
 #include <boost/poly_collection/function_collection.hpp>
+#include <boost/poly_collection/variant_collection.hpp>
 #include <boost/ptr_container/ptr_container.hpp>
 #include <boost/type_erasure/any.hpp>
 #include <boost/type_erasure/callable.hpp>
@@ -143,13 +146,13 @@ struct ptr_vector:boost::ptr_vector<Base>
 {
 public:
   template<typename T>
-  void insert(const T& x)
+  BOOST_FORCEINLINE void insert(const T& x)
   {
     this->push_back(new T{x});
   }
 
   template<typename F>
-  void for_each(F f)
+  BOOST_FORCEINLINE void for_each(F f)
   {
     std::for_each(this->begin(),this->end(),f);
   }
@@ -182,7 +185,7 @@ template<typename Base>
 struct base_collection:boost::base_collection<Base>
 {
   template<typename F>
-  void for_each(F f)
+  BOOST_FORCEINLINE void for_each(F f)
   {
     std::for_each(this->begin(),this->end(),f);
   }
@@ -194,7 +197,7 @@ template<typename Base,typename... T>
 struct poly_for_each_base_collection:base_collection<Base>
 {
   template<typename F>
-  void for_each(F f)
+  BOOST_FORCEINLINE void for_each(F f)
   {
     boost::poly_collection::for_each<T...>(this->begin(),this->end(),f);
   }
@@ -203,13 +206,13 @@ struct poly_for_each_base_collection:base_collection<Base>
 template<typename Signature>
 struct func_vector:std::vector<std::function<Signature>>
 {
-  template<typename T> void insert(const T& x)
+  template<typename T> BOOST_FORCEINLINE void insert(const T& x)
   {
     this->push_back(x);
   }
 
   template<typename F>
-  void for_each(F f)
+  BOOST_FORCEINLINE void for_each(F f)
   {
     std::for_each(this->begin(),this->end(),f);
   }
@@ -243,7 +246,7 @@ template<typename Signature>
 struct func_collection:boost::function_collection<Signature>
 {
   template<typename F>
-  void for_each(F f)
+  BOOST_FORCEINLINE void for_each(F f)
   {
     std::for_each(this->begin(),this->end(),f);
   }
@@ -255,7 +258,7 @@ template<typename Signature,typename... T>
 struct poly_for_each_func_collection:func_collection<Signature>
 {
   template<typename F>
-  void for_each(F f)
+  BOOST_FORCEINLINE void for_each(F f)
   {
     boost::poly_collection::for_each<T...>(this->begin(),this->end(),f);
   }
@@ -270,7 +273,7 @@ struct any_vector:std::vector<boost::type_erasure::any<Concept>>
   }
 
   template<typename F>
-  void for_each(F f)
+  BOOST_FORCEINLINE void for_each(F f)
   {
     std::for_each(this->begin(),this->end(),f);
   }
@@ -304,7 +307,7 @@ template<typename Concept>
 struct any_collection:boost::any_collection<Concept>
 {
   template<typename F>
-  void for_each(F f)
+  BOOST_FORCEINLINE void for_each(F f)
   {
     std::for_each(this->begin(),this->end(),f);
   }
@@ -316,7 +319,69 @@ template<typename Concept,typename... T>
 struct poly_for_each_any_collection:any_collection<Concept>
 {
   template<typename F>
-  void for_each(F f)
+  BOOST_FORCEINLINE void for_each(F f)
+  {
+    boost::poly_collection::for_each<T...>(this->begin(),this->end(),f);
+  }
+};
+
+template<typename L>
+struct variant_vector:
+  std::vector<boost::mp11::mp_rename<L,boost::variant2::variant>>
+{
+  template<typename T> void insert(const T& x)
+  {
+    this->push_back(x);
+  }
+
+  template<typename F>
+  BOOST_FORCEINLINE void for_each(F f)
+  {
+    std::for_each(this->begin(),this->end(),f);
+  }
+
+  void prepare_for_for_each(){}
+};
+
+template<typename L>
+struct sorted_variant_vector:variant_vector<L>
+{
+  void prepare_for_for_each()
+  {
+    using value_type=typename sorted_variant_vector::value_type;
+    std::sort(
+      this->begin(),this->end(),[](const value_type& x,const value_type& y){
+        return x.index()<y.index();
+      });
+  }
+};
+
+template<typename L>
+struct shuffled_variant_vector:variant_vector<L>
+{
+  void prepare_for_for_each()
+  {
+    std::shuffle(this->begin(),this->end(),std::mt19937(1));
+  }
+};
+
+template<typename L>
+struct variant_collection:boost::variant_collection<L>
+{
+  template<typename F>
+  BOOST_FORCEINLINE void for_each(F f)
+  {
+    std::for_each(this->begin(),this->end(),f);
+  }
+
+  void prepare_for_for_each(){}
+};
+
+template<typename L,typename... T>
+struct poly_for_each_variant_collection:variant_collection<L>
+{
+  template<typename F>
+  BOOST_FORCEINLINE void for_each(F f)
   {
     boost::poly_collection::for_each<T...>(this->begin(),this->end(),f);
   }
@@ -345,15 +410,37 @@ template<typename... T>
 struct element_sequence{};
 
 template<
+  typename ElementSequence,
+  typename Container
+>
+struct container_fill_helper
+{
+  Container&   c;
+  unsigned int i;
+
+  template<typename J>
+  void operator()(J)const
+  {
+    using T=boost::mp11::mp_at_c<ElementSequence,J::value>;
+    c.insert(T(i));
+  }
+};
+
+template<
   typename... Element,
   typename Container
 >
 void container_fill(unsigned int n,element_sequence<Element...>,Container& c)
 {
-  auto m=n/sizeof...(Element);
-  for(unsigned int i=0;i!=m;++i){
-    using seq=int[sizeof...(Element)];
-    (void)seq{(c.insert(Element(i)),0)...};
+  pause_timing();
+  std::mt19937                    rng{1};
+  std::uniform_int_distribution<> d(0,sizeof...(Element)-1);
+  resume_timing();
+
+  for(unsigned int i=0;i!=n;++i){
+    boost::mp11::mp_with_index<sizeof...(Element)>(
+      d(rng),
+      container_fill_helper<element_sequence<Element...>,Container>{c,i});
   }
 }
 
@@ -404,9 +491,7 @@ void insert_perf(
   for(unsigned int s=0,n=n0;
       (n=(unsigned int)std::round(n0*std::pow(10.0,s/1000.0)))<=n1;
       s+=dsav){
-    unsigned int m=(unsigned int)std::round(n/sizeof...(Element)),
-                 nn=m*sizeof...(Element);
-    print(nn,insert_perf(nn,elements,labels)...);
+    print(n,insert_perf(n,elements,labels)...);
   }
 }
 
@@ -450,9 +535,7 @@ void for_each_perf(
   for(unsigned int s=0,n=n0;
       (n=(unsigned int)std::round(n0*std::pow(10.0,s/1000.0)))<=n1;
       s+=dsav){
-    unsigned int m=(unsigned int)std::round(n/sizeof...(Element)),
-                 nn=m*sizeof...(Element);
-    print(nn,for_each_perf(nn,elements,f,labels)...);
+    print(n,for_each_perf(n,elements,f,labels)...);
   }
 }
 
@@ -485,7 +568,27 @@ struct for_each_incrementable
 };
 //]
 
-int main(int argc, char *argv[])
+//[perf_for_each_alternative
+struct for_each_alternative
+{
+  for_each_alternative():res{0}{}
+
+  template<template<typename...> class V,typename... Ts>
+  void operator()(V<Ts...>& x){
+    visit(*this,x);
+  }
+
+  template<typename T>
+  void operator()(T& x){
+    ++x;
+    ++res;
+  }
+
+  int res;
+};
+//]
+
+int main(int argc,char *argv[])
 {
   using test=std::pair<std::string,bool&>;
 
@@ -495,15 +598,19 @@ int main(int argc, char *argv[])
        insert_function=false,
        for_each_function=false,
        insert_any=false,
-       for_each_any=false;
-  std::array<test,7> tests={{
+       for_each_any=false,
+       insert_variant=false,
+       for_each_variant=false;
+  std::array<test,9> tests={{
     {"all",all},
     {"insert_base",insert_base},
     {"for_each_base",for_each_base},
     {"insert_function",insert_function},
     {"for_each_function",for_each_function},
     {"insert_any",insert_any},
-    {"for_each_any",for_each_any}
+    {"for_each_any",for_each_any},
+    {"insert_variant",insert_variant},
+    {"for_each_variant",for_each_variant}
   }};
 
   if(argc<2){
@@ -526,8 +633,7 @@ int main(int argc, char *argv[])
   unsigned int n0=100,n1=10000000,dsav=50; /* sav for savart */
 
   {
-    auto seq=  element_sequence<
-                 derived1,derived1,derived2,derived2,derived3>{};
+    auto seq=  element_sequence<derived1,derived2,derived3>{};
     auto f=    for_each_callable{};
     auto pv=   label<ptr_vector<base>>
                {"ptr_vector"};
@@ -540,7 +646,7 @@ int main(int argc, char *argv[])
     auto fbc=  label<poly_for_each_base_collection<base>>
                {"base_collection (poly::for_each)"};
     auto rfbc= label<
-                 poly_for_each_base_collection<base,derived1,derived2,derived2>
+                 poly_for_each_base_collection<base,derived1,derived2,derived3>
                >
                {"base_collection (restituted poly::for_each)"};
 
@@ -551,8 +657,7 @@ int main(int argc, char *argv[])
   {
     using signature=int(int);
 
-    auto seq=  element_sequence<
-                 concrete1,concrete1,concrete2,concrete2,concrete3>{};
+    auto seq=  element_sequence<concrete1,concrete2,concrete3>{};
     auto f =   for_each_callable{};
     auto fv=   label<func_vector<signature>>
                {"func_vector"};
@@ -582,7 +687,7 @@ int main(int argc, char *argv[])
     >;
 //]
 
-    auto seq=  element_sequence<int,int,double,double,char>{};
+    auto seq=  element_sequence<int,double,char>{};
     auto f=    for_each_incrementable{};
     auto av=   label<any_vector<concept_>>
                {"any_vector"};
@@ -600,5 +705,31 @@ int main(int argc, char *argv[])
     if(all||insert_any)insert_perf(n0,n1,dsav,seq,av,ac);
     if(all||for_each_any)for_each_perf(
       n0,n1,dsav,seq,f,av,sav,shav,ac,fac,rfac);
+  }
+  {
+//[perf_variant_types
+    using type_list=boost::mp11::mp_list<int,double,char>;
+//]
+
+    auto seq=  element_sequence<int,double,char>{};
+    auto f=    for_each_alternative{};
+    auto vv=   label<variant_vector<type_list>>
+               {"variant_vector"};
+    auto svv=  label<sorted_variant_vector<type_list>>
+               {"sorted variant_vector"};
+    auto shvv= label<shuffled_variant_vector<type_list>>
+               {"shuffled variant_vector"};
+    auto vc=   label<variant_collection<type_list>>
+               {"variant_collection"};
+    auto fvc=  label<poly_for_each_variant_collection<type_list>>
+               {"variant_collection (poly::for_each)"};
+    auto rfvc= label<
+                 poly_for_each_variant_collection<
+                   type_list,boost::poly_collection::all_types>>
+               {"variant_collection (restituted poly::for_each)"};
+
+    if(all||insert_variant)insert_perf(n0,n1,dsav,seq,vv,vc);
+    if(all||for_each_variant)for_each_perf(
+      n0,n1,dsav,seq,f,vv,svv,shvv,vc,fvc,rfvc);
   }
 }

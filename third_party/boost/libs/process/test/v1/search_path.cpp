@@ -13,7 +13,7 @@
 #include <boost/process/v1/filesystem.hpp>
 #include <string>
 
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 namespace fs = boost::process::v1::filesystem;
 
 BOOST_AUTO_TEST_CASE(search_path)

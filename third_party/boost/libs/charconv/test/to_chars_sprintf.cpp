@@ -480,18 +480,18 @@ template<class T> void test_sprintf_uint64()
 
 template<class T> void test_sprintf_bv()
 {
-    test_sprintf( std::numeric_limits<T>::min() );
-    test_sprintf( std::numeric_limits<T>::max() );
+    test_sprintf( (std::numeric_limits<T>::min)() );
+    test_sprintf( (std::numeric_limits<T>::max)() );
 }
 
 // floating point types, boundary values
 
 template<class T> void test_sprintf_bv_fp()
 {
-    test_sprintf_float( std::numeric_limits<T>::min(), boost::charconv::chars_format::scientific );
-    test_sprintf_float( -std::numeric_limits<T>::min(), boost::charconv::chars_format::scientific );
-    test_sprintf_float( std::numeric_limits<T>::max(), boost::charconv::chars_format::scientific );
-    test_sprintf_float( -std::numeric_limits<T>::max(), boost::charconv::chars_format::scientific );
+    test_sprintf_float( (std::numeric_limits<T>::min)(), boost::charconv::chars_format::scientific );
+    test_sprintf_float( -(std::numeric_limits<T>::min)(), boost::charconv::chars_format::scientific );
+    test_sprintf_float( (std::numeric_limits<T>::max)(), boost::charconv::chars_format::scientific );
+    test_sprintf_float( -(std::numeric_limits<T>::max)(), boost::charconv::chars_format::scientific );
 }
 
 #if BOOST_CHARCONV_LDBL_BITS > 64

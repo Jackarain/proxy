@@ -73,7 +73,7 @@ public:
     //  function : stack_cnc
     /// @brief  constructor
     //-------------------------------------------------------------------------
-    explicit stack_cnc(void): v_t() { };
+    explicit stack_cnc(void): v_t() { }
 
     //
     //-------------------------------------------------------------------------
@@ -86,7 +86,7 @@ public:
     //  function : ~stack_cnc
     /// @brief  Destructor
     //-------------------------------------------------------------------------
-    virtual ~stack_cnc(void) { v_t.clear(); };
+    virtual ~stack_cnc(void) { v_t.clear(); }
 
     //-------------------------------------------------------------------------
     //  function : emplace_back
@@ -137,8 +137,8 @@ public:
 // end class stack_cnc
 
 //***************************************************************************
-};// end namespace common
-};// end namespace sort
-};// end namespace boost
+} // end namespace common
+} // end namespace sort
+} // end namespace boost
 //***************************************************************************
 #endif

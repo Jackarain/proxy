@@ -7,22 +7,29 @@
 #
 
 import os ;
+import testing ;
 
 # import rules for testing conditional on config file variables
-import ../../config/checks/config : requires ;
+import-search /boost/config/checks ;
+import config : requires ;
+
+project : requirements <library>/boost/dynamic_bitset//boost_dynamic_bitset ;
 
 test-suite dynamic_bitset :
 
-    [ run dyn_bitset_unit_tests1.cpp : : : <library>/boost/system//boost_system ]
-    [ run dyn_bitset_unit_tests2.cpp : : : <library>/boost/system//boost_system ]
-    [ run dyn_bitset_unit_tests3.cpp : : : <library>/boost/system//boost_system ]
+    [ run dyn_bitset_unit_tests1.cpp : : : <library>/boost/filesystem//boost_filesystem
+                                           <library>/boost/system//boost_system ]
+    [ run dyn_bitset_unit_tests2.cpp : : : <library>/boost/filesystem//boost_filesystem
+                                           <library>/boost/system//boost_system ]
+    [ run dyn_bitset_unit_tests3.cpp : : : <library>/boost/filesystem//boost_filesystem
+                                           <library>/boost/system//boost_system ]
     [ run dyn_bitset_unit_tests4.cpp : : : <library>/boost/filesystem//boost_filesystem
                                            <library>/boost/system//boost_system ]
     [ run test_ambiguous_set.cpp ]
     [ run test_lowest_bit.cpp ]
 
     [ run test_boost_hash.cpp ]
-    [ run test_std_hash.cpp          : : : [ requires cxx11_hdr_unordered_set ] ] 
+    [ run test_std_hash.cpp          : : : [ requires cxx11_hdr_unordered_set ] ]
 
     [ compile-fail test_std_hash.cpp : [ requires cxx11_hdr_unordered_set ]
                                        <define>BOOST_DYNAMIC_BITSET_NO_STD_HASH
@@ -36,6 +43,7 @@ if ! [ os.environ UBSAN_OPTIONS ]
 
     [ run dyn_bitset_unit_tests5.cpp
        : : : <define>_SCL_SECURE_NO_WARNINGS=1
+             <library>/boost/filesystem//boost_filesystem
              <library>/boost/serialization//boost_serialization
              <library>/boost/system//boost_system ]
     ;

@@ -1,0 +1,735 @@
+== `environment.hpp`
+[#environment]
+
+=== `environment`
+
+The `environment` header provides facilities to maniuplate the current environment and set it for new processes.
+
+
+An environment is a a `range` of `T` fulfilling these requirements:
+
+For `T value`
+  *  - std::get<0>(value) must return a type comparable to `key_view`.
+  *  - std::get<1>(value) must return a type convertible to `value_view`.
+
+[source,cpp]
+----
+
+// Namespace for information and functions regarding the calling process.
+namespace environment
+{
+
+// A char traits type that reflects the OS rules for string representing environment keys.
+/* Can be an alias of std::char_traits. May only be defined for `char` and `wchar_t`.
+ *
+ * Windows treats keys as case-insensitive yet perserving. The char traits are made to reflect
+ * that behaviour.
+*/
+template<typename Char>
+using key_char_traits = implementation_defined ;
+
+// A char traits type that reflects the OS rules for string representing environment values.
+/* Can be an alias of std::char_traits. May only be defined for `char` and `wchar_t`.
+*/
+template<typename Char>
+using value_char_traits = implementation_defined ;
+
+// The character type used by the environment. Either `char` or `wchar_t`.
+using char_type = implementation_defined ;
+
+// The equal character in an environment string used to separate key and value.
+constexpr char_type equality_sign = implementation_defined;
+
+// The delimiter in environemtn lists. Commonly used by the `PATH` variable.
+constexpr char_type delimiter = implementation_defined;
+
+// The native handle of an environment. Note that this can be an owning pointer and is generally not thread safe.
+using native_handle = implementation_defined;
+
+
+// A forward iterator over string_view used by a value or value_view to iterator through environments that are lists.
+struct value_iterator;
+
+// A view type for a key of an environment
+struct key_view
+{
+    using value_type       = char_type;
+    using traits_type      = key_char_traits<char_type>;
+    using string_view_type = basic_string_view<char_type, traits_type>;
+    using string_type      = std::basic_string<char_type, key_char_traits<char_type>>;
+
+    key_view() noexcept = default;
+    key_view( const key_view& p ) = default;
+    key_view( key_view&& p ) noexcept = default;
+    template<typename Source>
+    key_view( const Source& source );
+    key_view( const char_type * p);
+    key_view(       char_type * p);
+
+    ~key_view() = default;
+
+    key_view& operator=( const key_view& p ) = default;
+    key_view& operator=( key_view&& p ) noexcept = default;
+    key_view& operator=( string_view_type source );
+
+    void swap( key_view& other ) noexcept;
+
+    string_view_type native() const noexcept;
+
+    operator string_view_type() const;
+
+    int compare( const key_view& p ) const noexcept;
+    int compare( string_view_type str ) const;
+    int compare( const value_type* s ) const;
+
+    template< class CharT, class Traits = std::char_traits<CharT>,
+            class Alloc = std::allocator<CharT> >
+    std::basic_string<CharT,Traits,Alloc>
+    basic_string( const Alloc& alloc = Alloc()) const;
+
+    std::string       string() const;
+    std::wstring     wstring() const;
+
+    string_type native_string() const;
+
+    friend bool operator==(key_view l, key_view r);
+    friend bool operator!=(key_view l, key_view r);
+    friend bool operator<=(key_view l, key_view r);
+    friend bool operator>=(key_view l, key_view r);
+    friend bool operator< (key_view l, key_view r);
+    friend bool operator> (key_view l, key_view r);
+
+    bool empty() const;
+
+    template< class CharT, class Traits >
+    friend std::basic_ostream<CharT,Traits>&
+    operator<<( std::basic_ostream<CharT,Traits>& os, const key_view& p );
+
+    template< class CharT, class Traits >
+    friend std::basic_istream<CharT,Traits>&
+    operator>>( std::basic_istream<CharT,Traits>& is, key_view& p );
+
+    const value_type * data() const;
+    std::size_t size() const;
+};
+
+// A view for a value in an environment
+struct value_view
+{
+    using value_type       = char_type;
+    using string_view_type = basic_cstring_ref<char_type, value_char_traits<char_type>>;
+    using string_type      = std::basic_string<char_type, value_char_traits<char_type>>;
+    using traits_type      = value_char_traits<char_type>;
+
+    value_view() noexcept = default;
+    value_view( const value_view& p ) = default;
+    value_view( value_view&& p ) noexcept = default;
+    template<typename Source>
+    value_view( const Source& source );
+    value_view( const char_type * p);
+    value_view(       char_type * p);
+
+    ~value_view() = default;
+
+    value_view& operator=( const value_view& p ) = default;
+    value_view& operator=( value_view&& p ) noexcept = default;
+    value_view& operator=( string_view_type source );
+
+    void swap( value_view& other ) noexcept;
+
+    string_view_type native() const noexcept ;
+
+    operator string_view_type() const;
+    operator typename string_view_type::string_view_type() const;
+
+    int compare( const value_view& p ) const noexcept;
+    int compare( string_view_type str ) const;
+    int compare( const value_type* s )  const;
+
+    template< class CharT, class Traits = std::char_traits<CharT>,
+            class Alloc = std::allocator<CharT> >
+    std::basic_string<CharT,Traits,Alloc>
+    basic_string( const Alloc& alloc = Alloc() ) const;
+    std::string string() const;
+    std::wstring wstring() const;
+
+    string_type native_string() const;
+    bool empty() const;
+
+    friend bool operator==(value_view l, value_view r);
+    friend bool operator!=(value_view l, value_view r);
+    friend bool operator<=(value_view l, value_view r);
+    friend bool operator>=(value_view l, value_view r);
+    friend bool operator< (value_view l, value_view r);
+    friend bool operator> (value_view l, value_view r);
+
+
+    template< class CharT, class Traits >
+    friend std::basic_ostream<CharT,Traits>&
+    operator<<( std::basic_ostream<CharT,Traits>& os, const value_view& p );
+
+    template< class CharT, class Traits >
+    friend std::basic_istream<CharT,Traits>&
+    operator>>( std::basic_istream<CharT,Traits>& is, value_view& p );
+    value_iterator begin() const;
+    value_iterator   end() const;
+
+    const char_type * c_str();
+    const value_type * data() const;
+    std::size_t size() const;
+};
+
+// A view for a key value pair in an environment
+struct key_value_pair_view
+{
+  using value_type       = char_type;
+  using string_type      = std::basic_string<char_type>;
+  using string_view_type = basic_cstring_ref<char_type>;
+  using traits_type      = std::char_traits<char_type>;
+
+  key_value_pair_view() noexcept = default;
+  key_value_pair_view( const key_value_pair_view& p ) = default;
+  key_value_pair_view( key_value_pair_view&& p ) noexcept = default;
+  template<typename Source,
+           typename = typename std::enable_if<is_constructible<string_view_type, Source>::value>::type>
+  key_value_pair_view( const Source& source );
+
+  key_value_pair_view( const char_type * p);
+  key_value_pair_view(       char_type * p);
+
+
+  ~key_value_pair_view() = default;
+
+  key_value_pair_view& operator=( const key_value_pair_view& p ) = default;
+  key_value_pair_view& operator=( key_value_pair_view&& p ) noexcept = default;
+
+  void swap( key_value_pair_view& other ) noexcept;
+
+  string_view_type native() const noexcept;
+
+  operator string_view_type() const;
+  operator typename string_view_type::string_view_type() const;
+
+  int compare( key_value_pair_view p ) const noexcept;
+  int compare( const string_type& str ) const;
+  int compare( string_view_type str ) const;
+  int compare( const value_type* s ) const;
+
+  template< class CharT, class Traits = std::char_traits<CharT>, class Alloc = std::allocator<CharT> >
+  std::basic_string<CharT,Traits,Alloc>
+  basic_string( const Alloc& alloc = Alloc()) const;
+  std::string   string() const;
+  std::wstring wstring() const;
+
+  string_type native_string() const;
+
+  bool empty() const;
+
+  key_view key() const;
+  value_view value() const;
+
+  friend bool operator==(key_value_pair_view l, key_value_pair_view r);
+  friend bool operator!=(key_value_pair_view l, key_value_pair_view r);
+  friend bool operator<=(key_value_pair_view l, key_value_pair_view r);
+  friend bool operator>=(key_value_pair_view l, key_value_pair_view r);
+  friend bool operator< (key_value_pair_view l, key_value_pair_view r);
+  friend bool operator> (key_value_pair_view l, key_value_pair_view r);
+
+
+  template< class CharT, class Traits >
+  friend std::basic_ostream<CharT,Traits>&
+  operator<<( std::basic_ostream<CharT,Traits>& os, const key_value_pair_view& p );
+
+  template< class CharT, class Traits >
+  friend std::basic_istream<CharT,Traits>&
+  operator>>( std::basic_istream<CharT,Traits>& is, key_value_pair_view& p );
+
+  template<std::size_t Idx>
+  inline auto get() const -> typename conditional<Idx == 0u, key_view,
+                                                             value_view>::type;
+  const value_type * c_str() const noexcept;
+  const value_type * data() const;
+  std::size_t size() const;
+
+};
+
+// Allow tuple-likg getters & structured bindings.
+template<>   key_view key_value_pair_view::get<0u>() const;
+template<> value_view key_value_pair_view::get<1u>() const;
+
+// A class representing a key within an environment.
+struct key
+{
+    using value_type       = char_type;
+    using traits_type      = key_char_traits<char_type>;
+    using string_type      = std::basic_string<char_type, traits_type>;
+    using string_view_type = basic_string_view<char_type, traits_type>;
+
+    key();
+    key( const key& p ) = default;
+    key( key&& p ) noexcept = default;
+    key( const string_type& source );
+    key( string_type&& source );
+    key( const value_type * raw );
+    key(       value_type * raw );
+
+    explicit key(key_view kv);
+
+
+    template< class Source >
+    key( const Source& source);
+
+    key(const typename conditional<is_same<value_type, char>::value, wchar_t, char>::type  * raw);
+
+    template< class InputIt >
+    key( InputIt first, InputIt last);
+
+    ~key() = default;
+
+    key& operator=( const key& p ) = default;
+    key& operator=( key&& p );
+    key& operator=( string_type&& source );
+
+    template< class Source >
+    key& operator=( const Source& source );
+
+    key& assign( string_type&& source );
+
+    template< class Source >
+    key& assign( const Source& source );
+    template< class InputIt >
+    key& assign( InputIt first, InputIt last );
+
+    void clear();
+
+    void swap( key& other ) noexcept;
+
+    const value_type* c_str() const noexcept;
+    const string_type& native() const noexcept;
+    string_view_type native_view() const noexcept;
+
+    operator string_type() const;
+    operator string_view_type() const;
+
+    int compare( const key& p ) const noexcept;
+    int compare( const string_type& str ) const;
+    int compare( string_view_type str ) const;
+    int compare( const value_type* s ) const;
+
+    template< class CharT, class Traits = std::char_traits<CharT>,
+        class Alloc = std::allocator<CharT> >
+    std::basic_string<CharT,Traits,Alloc>
+    basic_string( const Alloc& alloc = Alloc()) const;
+
+
+    std::string string() const;
+    std::wstring wstring() const;
+
+    const string_type & native_string() const;
+    bool empty() const;
+
+    friend bool operator==(const key & l, const key & r);
+    friend bool operator!=(const key & l, const key & r);
+    friend bool operator<=(const key & l, const key & r);
+    friend bool operator>=(const key & l, const key & r);
+    friend bool operator< (const key & l, const key & r);
+    friend bool operator> (const key & l, const key & r);
+
+    template< class CharT, class Traits >
+    friend std::basic_ostream<CharT,Traits>&
+    operator<<( std::basic_ostream<CharT,Traits>& os, const key& p );
+
+    template< class CharT, class Traits >
+    friend std::basic_istream<CharT,Traits>&
+    operator>>( std::basic_istream<CharT,Traits>& is, key& p );
+    const value_type * data() const;
+    std::size_t size() const;
+};
+
+bool operator==(const value_view &, const value_view);
+bool operator!=(const value_view &, const value_view);
+bool operator<=(const value_view &, const value_view);
+bool operator< (const value_view &, const value_view);
+bool operator> (const value_view &, const value_view);
+bool operator>=(const value_view &, const value_view);
+
+
+struct value
+{
+    using value_type       = char_type;
+    using traits_type      = value_char_traits<char_type>;
+    using string_type      = std::basic_string<char_type, traits_type>;
+    using string_view_type = basic_cstring_ref<char_type, traits_type>;
+
+    value();
+    value( const value& p ) = default;
+
+    value( const string_type& source );
+    value( string_type&& source );
+    value( const value_type * raw );
+    value(       value_type * raw );
+
+    explicit value(value_view kv);
+
+    template< class Source >
+    value( const Source& source );
+    value(const typename conditional<is_same<value_type, char>::value, wchar_t, char>::type  * raw);
+
+    template< class InputIt >
+    value( InputIt first, InputIt last);
+
+    ~value() = default;
+
+    value& operator=( const value& p ) = default;
+    value& operator=( value&& p );
+    value& operator=( string_type&& source );
+    template< class Source >
+    value& operator=( const Source& source );
+
+    value& assign( string_type&& source );
+    template< class Source >
+    value& assign( const Source& source );
+
+    template< class InputIt >
+    value& assign( InputIt first, InputIt last );
+
+    void push_back(const value & sv);
+    void clear() {value_.clear();}
+
+    void swap( value& other ) noexcept;
+
+    const value_type* c_str() const noexcept;
+    const string_type& native() const noexcept;
+    string_view_type native_view() const noexcept;
+
+    operator string_type() const;
+    operator string_view_type() const;
+    operator typename string_view_type::string_view_type() const;
+
+    int compare( const value& p ) const noexcept;
+    int compare( const string_type& str ) const;
+    int compare( string_view_type str ) const;
+    int compare( const value_type* s ) const;
+
+    template< class CharT, class Traits = std::char_traits<CharT>,
+            class Alloc = std::allocator<CharT> >
+    std::basic_string<CharT,Traits,Alloc>
+    basic_string( const Alloc& alloc = Alloc()) const;
+
+    std::string string() const;
+    std::wstring wstring() const;
+
+
+    const string_type & native_string() const;
+
+    bool empty() const;
+
+    friend bool operator==(const value & l, const value & r);
+    friend bool operator!=(const value & l, const value & r);
+    friend bool operator<=(const value & l, const value & r);
+    friend bool operator>=(const value & l, const value & r);
+    friend bool operator< (const value & l, const value & r);
+    friend bool operator> (const value & l, const value & r);
+
+    template< class CharT, class Traits >
+    friend std::basic_ostream<CharT,Traits>&
+    operator<<( std::basic_ostream<CharT,Traits>& os, const value& p );
+
+    template< class CharT, class Traits >
+    friend std::basic_istream<CharT,Traits>&
+    operator>>( std::basic_istream<CharT,Traits>& is, value& p );
+
+    value_iterator begin() const;
+    value_iterator   end() const;
+    const value_type * data() const;
+    std::size_t size() const;
+};
+
+
+bool operator==(const value_view &, const value_view);
+bool operator!=(const value_view &, const value_view);
+bool operator<=(const value_view &, const value_view);
+bool operator< (const value_view &, const value_view);
+bool operator> (const value_view &, const value_view);
+bool operator>=(const value_view &, const value_view);
+
+struct key_value_pair
+{
+    using value_type       = char_type;
+    using traits_type      = std::char_traits<char_type>;
+    using string_type      = std::basic_string<char_type>;
+    using string_view_type = basic_cstring_ref<char_type>;
+
+    key_value_pair()l
+    key_value_pair( const key_value_pair& p ) = default;
+    key_value_pair( key_value_pair&& p ) noexcept = default;
+    key_value_pair(key_view key, value_view value);
+
+    key_value_pair(key_view key, std::initializer_list<basic_string_view<char_type>> values);
+    key_value_pair( const string_type& source );
+    key_value_pair( string_type&& source );
+    key_value_pair( const value_type * raw );
+    key_value_pair(       value_type * raw );
+
+    explicit key_value_pair(key_value_pair_view kv) : value_(kv.c_str()) {}
+
+    template< class Source >
+    key_value_pair( const Source& source);
+
+    template< typename Key,
+              typename Value >
+    key_value_pair(
+         const std::pair<Key, Value> & kv);
+
+    key_value_pair(const typename conditional<is_same<value_type, char>::value, wchar_t, char>::type  * raw);
+
+    template< class InputIt , typename std::iterator_traits<InputIt>::iterator_category>
+    key_value_pair( InputIt first, InputIt last );
+
+    ~key_value_pair() = default;
+
+    key_value_pair& operator=( const key_value_pair& p ) = default;
+    key_value_pair& operator=( key_value_pair&& p );
+    key_value_pair& operator=( string_type&& source );
+    template< class Source >
+    key_value_pair& operator=( const Source& source );
+
+    key_value_pair& assign( string_type&& source );
+
+    template< class Source >
+    key_value_pair& assign( const Source& source );
+
+
+    template< class InputIt >
+    key_value_pair& assign( InputIt first, InputIt last );
+
+    void clear();
+
+    void swap( key_value_pair& other ) noexcept;
+
+    const value_type* c_str() const noexcept;
+    const string_type& native() const noexcept;
+    string_view_type native_view() const noexcept;
+
+    operator string_type() const;
+    operator string_view_type() const;
+    operator typename string_view_type::string_view_type() const;
+    operator key_value_pair_view() const;
+
+    int compare( const key_value_pair& p ) const noexcept;
+    int compare( const string_type& str ) const;
+    int compare( string_view_type str ) const;
+    int compare( const value_type* s ) const;
+
+    template< class CharT, class Traits = std::char_traits<CharT>, class Alloc = std::allocator<CharT> >
+    std::basic_string<CharT,Traits,Alloc>
+    basic_string( const Alloc& alloc = Alloc() ) const;
+    std::string string() const       {return basic_string<char>();}
+    std::wstring wstring() const     {return basic_string<wchar_t>();}
+
+    const string_type & native_string() const;
+    friend bool operator==(const key_value_pair & l, const key_value_pair & r);
+    friend bool operator!=(const key_value_pair & l, const key_value_pair & r);
+    friend bool operator<=(const key_value_pair & l, const key_value_pair & r);
+    friend bool operator>=(const key_value_pair & l, const key_value_pair & r);
+    friend bool operator< (const key_value_pair & l, const key_value_pair & r);
+    friend bool operator> (const key_value_pair & l, const key_value_pair & r);
+
+    bool empty() const;
+
+    struct key_view key() const;
+    struct value_view value() const;
+
+    template< class CharT, class Traits >
+    friend std::basic_ostream<CharT,Traits>&
+    operator<<( std::basic_ostream<CharT,Traits>& os, const key_value_pair& p );
+
+    template< class CharT, class Traits >
+    friend std::basic_istream<CharT,Traits>&
+    operator>>( std::basic_istream<CharT,Traits>& is, key_value_pair& p );
+
+    const value_type * data() const;
+    std::size_t size() const;
+
+    template<std::size_t Idx>
+    inline auto get() const -> typename conditional<Idx == 0u,environment::key_view, environment::value_view>::type;
+};
+
+bool operator==(const key_value_pair_view &, const key_value_pair_view);
+bool operator!=(const key_value_pair_view &, const key_value_pair_view);
+bool operator<=(const key_value_pair_view &, const key_value_pair_view);
+bool operator< (const key_value_pair_view &, const key_value_pair_view);
+bool operator> (const key_value_pair_view &, const key_value_pair_view);
+bool operator>=(const key_value_pair_view &, const key_value_pair_view);
+
+
+// Allow tuple-likg getters & structured bindings.
+template<>
+key_view key_value_pair::get<0u>() const;
+
+template<>
+value_view key_value_pair::get<1u>() const;
+
+// A view object for the current environment of this process.
+/*
+ * The view might (windows) or might not (posix) be owning;
+ * if it owns it will deallocate the on destruction, like a unique_ptr.
+ *
+ * Note that accessing the environment in this way is not thread-safe.
+ *
+ * @code
+ *
+ * void dump_my_env(current_view env = current())
+ * {
+ *    for (auto  & [k, v] : env)
+ *        std::cout << k.string() << " = "  << v.string() << std::endl;
+ * }
+ *
+ * @endcode
+ *
+ *
+ */
+struct current_view
+{
+    using native_handle_type = environment::native_handle_type;
+    using value_type = key_value_pair_view;
+
+    current_view() = default;
+    current_view(current_view && nt) = default;
+
+    native_handle_type  native_handle() { return handle_.get(); }
+
+    struct iterator
+    {
+        using value_type        = key_value_pair_view;
+        using difference_type   = int;
+        using reference         = key_value_pair_view;
+        using pointer           = key_value_pair_view;
+        using iterator_category = std::forward_iterator_tag;
+
+        iterator() = default;
+        iterator(const iterator & ) = default;
+        iterator(const native_iterator &native_handle) : iterator_(native_handle) {}
+
+        iterator & operator++()
+        {
+            iterator_ = detail::next(iterator_);
+            return *this;
+        }
+
+        iterator operator++(int)
+        {
+            auto last = *this;
+            iterator_ = detail::next(iterator_);
+            return last;
+        }
+        key_value_pair_view operator*() const
+        {
+            return detail::dereference(iterator_);
+        }
+
+        friend bool operator==(const iterator & l, const iterator & r) {return l.iterator_ == r.iterator_;}
+        friend bool operator!=(const iterator & l, const iterator & r) {return l.iterator_ != r.iterator_;}
+
+      private:
+        environment::native_iterator iterator_;
+    };
+
+    iterator begin() const {return iterator(handle_.get());}
+    iterator   end() const {return iterator(detail::find_end(handle_.get()));}
+
+ private:
+
+  std::unique_ptr<typename remove_pointer<native_handle_type>::type,
+                    detail::native_handle_deleter> handle_{environment::detail::load_native_handle()};
+};
+
+// Obtain a handle to the current environment
+inline current_view current() {return current_view();}
+
+// Find the home folder in an environment-like type.
+/*
+ * @param env The environment to search. Defaults to the current environment of this process
+ *
+ * The environment type passed in must be a range with value T that fulfills the following requirements:
+ *
+ *  For `T value`
+ *
+ *  - std::get<0>(value) must return a type comparable to `key_view`.
+ *  - std::get<1>(value) must return a type convertible to filesystem::path.
+ *
+ * @return A filesystem::path to the home directory or an empty path if it cannot be found.
+ *
+ */
+template<typename Environment = current_view>
+inline filesystem::path home(Environment && env = current());
+
+// Find the executable `name` in an environment-like type.
+template<typename Environment = current_view>
+filesystem::path find_executable(BOOST_PROCESS_V2_NAMESPACE::filesystem::path name,
+                                 Environment && env = current());
+
+// Get an environment variable from the current process.
+value get(const key & k, error_code & ec);
+value get(const key & k);
+value get(basic_cstring_ref<char_type, key_char_traits<char_type>> k, error_code & ec);
+value get(basic_cstring_ref<char_type, key_char_traits<char_type>> k);
+value get(const char_type * c, error_code & ec);
+value get(const char_type * c);
+
+// Set an environment variable for the current process.
+void set(const key & k, value_view vw, error_code & ec);
+void set(const key & k, value_view vw);
+void set(basic_cstring_ref<char_type, key_char_traits<char_type>> k, value_view vw, error_code & ec);
+void set(basic_cstring_ref<char_type, key_char_traits<char_type>> k, value_view vw);
+void set(const char_type * k, value_view vw, error_code & ec);
+void set(const char_type * k, value_view vw);
+template<typename Char>
+void set(const key & k, const Char * vw, error_code & ec);
+template<typename Char>
+void set(const key & k, const Char * vw);
+template<typename Char>
+void set(basic_cstring_ref<char_type, key_char_traits<char_type>> k, const Char * vw, error_code & ec);
+template<typename Char>
+void set(basic_cstring_ref<char_type, key_char_traits<char_type>> k, const Char * vw);
+template<typename Char>
+void set(const char_type * k, const Char * vw, error_code & ec);
+template<typename Char>
+void set(const char_type * k, const Char * vw);
+
+//  Remove an environment variable from the current process.
+void unset(const key & k, error_code & ec);
+void unset(const key & k);
+void unset(basic_cstring_ref<char_type, key_char_traits<char_type>> k, error_code & ec);
+void unset(basic_cstring_ref<char_type, key_char_traits<char_type>> k);
+void unset(const char_type * c, error_code & ec);
+void unset(const char_type * c);
+
+}
+----
+
+
+=== `process_environment`
+
+In order to set the environment of a child process, `process_environment` can be used.
+
+
+
+[source, cpp]
+.This will set the environment in a subprocess:
+----
+process proc{executor, find_executable("printenv"), {"foo"}, process_environment{"foo=bar"}};
+----
+
+The environment initializer will persist it's state, so that it can
+be used multiple times. Do however note the the Operating System is
+allowed to modify the internal state.
+
+[source,cpp]
+----
+auto exe = find_executable("printenv");
+process_environment env = {"FOO=BAR", "BAR=FOO"};
+
+process proc1(executor, exe, {"FOO"}, env);
+process proc2(executor, exe, {"BAR"}, env);
+----

@@ -5,7 +5,6 @@
  */
 
 #include <boost/redis/connection.hpp>
-#include <boost/asio/deferred.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/consign.hpp>
@@ -45,7 +44,7 @@ auto co_main(config cfg) -> asio::awaitable<void>
    conn->next_layer().set_verify_mode(asio::ssl::verify_peer);
    conn->next_layer().set_verify_callback(verify_certificate);
 
-   co_await conn->async_exec(req, resp, asio::deferred);
+   co_await conn->async_exec(req, resp);
    conn->cancel();
 
    std::cout << "Response: " << std::get<0>(resp).value() << std::endl;

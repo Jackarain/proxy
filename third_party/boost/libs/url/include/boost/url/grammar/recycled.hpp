@@ -26,21 +26,6 @@ namespace urls {
 namespace grammar {
 
 /** Provides an aligned storage buffer aligned for T
-*/
-#ifdef BOOST_URL_DOCS
-template<class T>
-struct aligned_storage
-{
-    /** Return a pointer to the aligned storage area
-    */
-    void* addr() noexcept;
-
-    /** Return a pointer to the aligned storage area
-    */
-    void const* addr() const noexcept;
-};
-#else
-/** Provides an aligned storage buffer aligned for T
 
     @code
     template<class T>
@@ -57,11 +42,10 @@ struct aligned_storage
  */
 template<class T>
 using aligned_storage =
-    see_below::aligned_storage_impl<
-        see_below::nearest_pow2(sizeof(T), 64),
+    implementation_defined::aligned_storage_impl<
+        implementation_defined::nearest_pow2(sizeof(T), 64),
             (alignof(::max_align_t) > alignof(T)) ?
                 alignof(::max_align_t) : alignof(T)>;
-#endif
 
 //------------------------------------------------
 
@@ -378,6 +362,7 @@ public:
         Throws nothing.
 
         @param other The pointer to move from
+        @return `*this`
     */
     recycled_ptr&
     operator=(
@@ -405,6 +390,7 @@ public:
         Throws nothing.
 
         @param other The pointer to copy from
+        @return `*this`
     */
     recycled_ptr&
     operator=(
@@ -414,6 +400,8 @@ public:
 
         @par Exception Safety
         Throws nothing.
+
+        @return `p_ == nullptr`
     */
     bool
     empty() const noexcept
@@ -430,6 +418,8 @@ public:
 
         @par Exception Safety
         Throws nothing.
+
+        @return `!this->empty()`
     */
     explicit
     operator bool() const noexcept
@@ -441,6 +431,8 @@ public:
 
         @par Exception Safety
         Throws nothing.
+
+        @return A reference to the recycle bin
     */
     recycled<T>&
     bin() const noexcept
@@ -454,6 +446,8 @@ public:
 
         @par Exception Safety
         Throws nothing.
+
+        @return A pointer to the object
     */
     T* get() const noexcept
     {
@@ -466,6 +460,8 @@ public:
 
         @par Exception Safety
         Throws nothing.
+
+        @return A pointer to the object
     */
     T* operator->() const noexcept
     {
@@ -478,6 +474,8 @@ public:
         @code
         not this->empty()
         @endcode
+
+        @return A reference to the object
     */
     T& operator*() const noexcept
     {
@@ -495,6 +493,8 @@ public:
         @code
         not this->empty()
         @endcode
+
+        @return A reference to the object
     */
     T& acquire();
 

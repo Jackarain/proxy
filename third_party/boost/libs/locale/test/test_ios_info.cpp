@@ -222,7 +222,7 @@ void test_any_string()
     TEST_EQ(s.get<char32_t>(), ascii_to<char32_t>("Char32 Pattern"));
     TEST_THROWS(s.get<char16_t>(), std::bad_cast);
 
-#ifndef BOOST_LOCALE_NO_CXX20_STRING8
+#ifdef __cpp_lib_char8_t
     s.set<char8_t>(ascii_to<char8_t>("Char8 Pattern"));
     TEST_EQ(s.get<char8_t>(), ascii_to<char8_t>("Char8 Pattern"));
     TEST_THROWS(s.get<char32_t>(), std::bad_cast);

@@ -1,11 +1,11 @@
 [/
-  Copyright 2016-2017 Joaquin M Lopez Munoz.
+  Copyright 2016-2024 Joaquin M Lopez Munoz.
   Distributed under the Boost Software License, Version 1.0.
   (See accompanying file LICENSE_1_0.txt or copy at
   http://www.boost.org/LICENSE_1_0.txt)
 ]
 
-[template poly_collection_synopsis[class_name template_header value_type]
+[template poly_collection_synopsis[class_name template_header value_type type_index]
   ``[template_header]``
   class ``[class_name]``
   {
@@ -20,6 +20,7 @@
     using const_reference=const value_type&;
     using pointer=typename std::allocator_traits<Allocator>::pointer;
     using const_pointer=typename std::allocator_traits<Allocator>::const_pointer;
+	using _type_index_=``[type_index]``;
     using iterator=``/implementation-defined/``;
     using const_iterator=``/implementation-defined/``;
     using _local_base_iterator_=``/implementation-defined/``;
@@ -58,7 +59,7 @@
     template<typename... T>
     void _register_types_();
 
-    bool _is_registered_(const std::type_info& info)const;
+    bool _is_registered_(const type_index& info)const;
     template<typename T> bool _is_registered_()const;
 
     ``[link poly_collection.reference.polymorphic_containers.polymorphic_collections.iterators ['// iterators:]]``
@@ -70,12 +71,12 @@
     const_iterator _cbegin_()const noexcept;
     const_iterator _cend_()const noexcept;
 
-    local_base_iterator _begin_(const std::type_info& info);
-    local_base_iterator _end_(const std::type_info& info);
-    const_local_base_iterator _begin_(const std::type_info& info)const;
-    const_local_base_iterator _end_(const std::type_info& info)const;
-    const_local_base_iterator _cbegin_(const std::type_info& info)const;
-    const_local_base_iterator _cend_(const std::type_info& info)const;
+    local_base_iterator _begin_(const type_index& info);
+    local_base_iterator _end_(const type_index& info);
+    const_local_base_iterator _begin_(const type_index& info)const;
+    const_local_base_iterator _end_(const type_index& info)const;
+    const_local_base_iterator _cbegin_(const type_index& info)const;
+    const_local_base_iterator _cend_(const type_index& info)const;
 
     template<typename T> local_iterator<T> _begin_();
     template<typename T> local_iterator<T> _end_();
@@ -84,8 +85,8 @@
     template<typename T> const_local_iterator<T> _cbegin_()const;
     template<typename T> const_local_iterator<T> _cend_()const;
 
-    base_segment_info       _segment_(const std::type_info& info);
-    const_base_segment_info _segment_(const std::type_info& info)const;
+    base_segment_info       _segment_(const type_index& info);
+    const_base_segment_info _segment_(const type_index& info)const;
     template<typename T> segment_info<T>       _segment_();
     template<typename T> const_segment_info<T> _segment_()const;
 
@@ -95,25 +96,25 @@
     ``[link poly_collection.reference.polymorphic_containers.polymorphic_collections.capacity ['// capacity:]]``
 
     bool empty()const noexcept;
-    bool _empty_(const std::type_info& info)const;
+    bool _empty_(const type_index& info)const;
     template<typename T> bool _empty_()const;
 
     size_type size()const noexcept;
-    size_type _size_(const std::type_info& info)const;
+    size_type _size_(const type_index& info)const;
     template<typename T> size_type _size_()const;
 
-    size_type _max_size_(const std::type_info& info)const;
+    size_type _max_size_(const type_index& info)const;
     template<typename T> size_type _max_size_()const;
 
-    size_type _capacity_(const std::type_info& info)const;
+    size_type _capacity_(const type_index& info)const;
     template<typename T> size_type _capacity_()const;
 
     void _reserve_(size_type n);
-    void _reserve_(const std::type_info& info,size_type n);
+    void _reserve_(const type_index& info,size_type n);
     template<typename T>void _reserve_(size_type n);
 
     void _shrink_to_fit_();
-    void _shrink_to_fit_(const std::type_info& info);
+    void _shrink_to_fit_(const type_index& info);
     template<typename T> void _shrink_to_fit_();
 
     ``[link poly_collection.reference.polymorphic_containers.polymorphic_collections.modifiers ['// modifiers:]]``
@@ -146,7 +147,7 @@
     auto _erase_(CollectionIterator first,CollectionIterator last);
 
     void _clear_()noexcept;
-    void _clear_(const std::type_info& info);
+    void _clear_(const type_index& info);
     template<typename T> void _clear_();
 
     void swap(``[class_name]``& x);

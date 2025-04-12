@@ -1,0 +1,246 @@
+////
+Copyright 2024 Peter Dimov
+Copyright 2024 Christian Mazakas
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_digest]
+# <boost/hash2/digest.hpp>
+:idprefix: ref_digest_
+
+```
+namespace boost {
+namespace hash2 {
+
+template<std::size_t N> class digest
+{
+private: // exposition only
+
+    unsigned char data_[ N ] = {};
+
+public:
+
+    using value_type = unsigned char;
+    using reference = unsigned char&;
+    using const_reference = unsigned char const&;
+    using iterator = unsigned char*;
+    using const_iterator = unsigned char const*;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+
+    // constructors
+
+    constexpr digest() = default;
+    constexpr digest( unsigned char const (&v)[ N ] ) noexcept;
+
+    // copy
+
+    constexpr digest( digest const& ) = default;
+    constexpr digest& operator=( digest const& ) = default;
+
+    // iteration
+
+    constexpr iterator begin() noexcept;
+    constexpr const_iterator begin() const noexcept;
+
+    constexpr iterator end() noexcept;
+    constexpr const_iterator end() const noexcept;
+
+    // data, size
+
+    constexpr unsigned char* data() noexcept;
+    constexpr unsigned char const* data() const noexcept;
+
+    constexpr size_type size() const noexcept;
+    constexpr size_type max_size() const noexcept;
+
+    // element access
+
+    constexpr reference operator[]( std::size_t i );
+    constexpr const_reference operator[]( std::size_t i ) const;
+
+    constexpr reference front() noexcept;
+    constexpr const_reference front() const noexcept;
+
+    constexpr reference back() noexcept;
+    constexpr const_reference back() const noexcept;
+};
+
+// comparisons
+
+template<std::size_t N>
+constexpr bool operator==( digest<N> const& a, digest<N> const& b ) noexcept;
+
+template<std::size_t N>
+constexpr bool operator!=( digest<N> const& a, digest<N> const& b ) noexcept;
+
+// to_chars
+
+template<std::size_t N>
+constexpr char* to_chars( digest<N> const& v, char* first, char* last ) noexcept;
+
+template<std::size_t N, std::size_t M>
+constexpr void to_chars( digest<N> const& v, char (&w)[ M ] ) noexcept;
+
+// operator<<
+
+template<std::size_t N>
+std::ostream& operator<<( std::ostream& os, digest<N> const& v );
+
+// to_string
+
+template<std::size_t N>
+std::string to_string( digest<N> const& v );
+
+} // namespace hash2
+} // namespace boost
+```
+
+## digest
+
+`digest<N>` is a `constexpr`-friendly class template similar to `std::array<unsigned char, N>`.
+It is used to store the resulting message digest of hash algorithms such as SHA2-256 or RIPEMD-160.
+
+### Constructors
+
+```
+constexpr digest() = default;
+```
+
+Effects: ::
+  Zero-initializes `data_`.
+
+```
+constexpr digest( unsigned char const (&v)[ N ] ) noexcept;
+```
+
+Effects: ::
+  Initializes the elements of `data_` from the corresponding elements of `v`.
+
+### Iteration
+
+```
+constexpr iterator begin() noexcept;
+constexpr const_iterator begin() const noexcept;
+```
+
+Returns: ::
+  `data_`.
+
+```
+constexpr iterator end() noexcept;
+constexpr const_iterator end() const noexcept;
+```
+
+Returns: ::
+  `data_ + N`.
+
+### Accessors
+
+```
+constexpr unsigned char* data() noexcept;
+constexpr unsigned char const* data() const noexcept;
+```
+
+Returns: ::
+  `data_`.
+
+```
+constexpr size_type size() const noexcept;
+constexpr size_type max_size() const noexcept;
+```
+
+Returns: ::
+  `N`.
+
+### Element Access
+
+```
+constexpr reference operator[]( std::size_t i );
+constexpr const_reference operator[]( std::size_t i ) const;
+```
+
+Requires: ::
+  `i < size()`.
+
+Returns: ::
+  `data_[ i ]`.
+
+```
+constexpr reference front() noexcept;
+constexpr const_reference front() const noexcept;
+```
+
+Returns: ::
+  `data_[ 0 ]`.
+
+```
+constexpr reference back() noexcept;
+constexpr const_reference back() const noexcept;
+```
+
+Returns: ::
+  `data_[ N-1 ]`.
+
+### Comparisons
+
+```
+template<std::size_t N>
+constexpr bool operator==( digest<N> const& a, digest<N> const& b ) noexcept;
+```
+
+Returns: ::
+  `true` when the elements of `a.data_` are equal to the corresponding elements of `b.data_`, `false` otherwise.
+
+```
+template<std::size_t N>
+constexpr bool operator!=( digest<N> const& a, digest<N> const& b ) noexcept;
+```
+
+Returns: ::
+  `!(a == b)`.
+
+### Formatting
+
+```
+template<std::size_t N>
+constexpr char* to_chars( digest<N> const& v, char* first, char* last ) noexcept;
+```
+
+Effects: ::
+  Writes the contents of `data_` as a hexadecimal string to the provided output range `[first, last)`.
+
+Returns: ::
+  A pointer one past the end of the generated output, or `nullptr` if `[first, last)` is not large enough.
+
+```
+template<std::size_t N, std::size_t M>
+constexpr void to_chars( digest<N> const& v, char (&w)[ M ] ) noexcept;
+```
+
+Requires: ::
+  `M >= N*2 + 1`.
+
+Effects: ::
+  Writes the contents of `data_` as a hexadecimal string, then a null terminator, to the provided output buffer `w`.
+
+```
+template<std::size_t N>
+std::ostream& operator<<( std::ostream& os, digest<N> const& v );
+```
+
+Effects: ::
+  Writes the contents of `data_` as a hexadecimal string to `os`.
+
+Returns: ::
+  `os`.
+
+```
+template<std::size_t N>
+std::string to_string( digest<N> const& v );
+```
+
+Returns: ::
+  A string containing the contents of `data_` in hexadecimal format.
+

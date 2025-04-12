@@ -1,0 +1,77 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[block'''<part>''']
+
+[section:hello_world_over_tcp Hello World over TCP/IP]
+This example illustrates the process of setting up the Client to connect to the Broker via TCP/IP and publish a "Hello World!" message.
+[hello_world_over_tcp]
+[endsect] [/hello_world_over_tcp]
+
+[section:hello_world_over_tls Hello World over TLS/SSL]
+This example illustrates the process of setting up the Client to connect to the Broker via TLS/SSL and publish a "Hello World!" message.
+[hello_world_over_tls]
+[endsect] [/hello_world_over_tls]
+
+[section:hello_world_over_websocket_tcp Hello World over Websocket/TCP]
+This example illustrates the process of setting up the Client to connect to the Broker via Websocket/TCP and publish a "Hello World!" message.
+[hello_world_over_websocket_tcp]
+[endsect] [/hello_world_over_websocket_tcp]
+
+[section:hello_world_over_websocket_tls Hello World over Websocket/TLS]
+This example illustrates the process of setting up the Client to connect to the Broker via Websocket/TLS and publish a "Hello World!" message.
+[hello_world_over_websocket_tls]
+[endsect] [/hello_world_over_websocket_tls]
+
+[section:publisher The publisher]
+This example shows how to use __Client__ as a publisher that publishes sensor readings every `5` seconds.
+
+[publisher]
+[endsect]
+
+[section:receiver The receiver]
+This example shows how to use __Client__ as a receiver.
+The __Client__ subscribes and indefinitely receives Application Messages from the Broker.
+
+[receiver]
+[endsect]
+
+[section:multiflight_client The multiflight Client]
+This example shows how to use __Client__ to simultaneously dispatch multiple requests.
+
+[multiflight_client]
+[endsect]
+
+[section:timeout_with_parallel_group Timed MQTT operations with parallel group]
+This example demonstrates how to use the __Client__ with its support for per-operation cancellation to perform operations under a time constraint
+using parallel group.
+Specifically, in this example, the __Client__ will subscribe to a Topic and try to receive a message from the Topic within `5 seconds`.
+
+[timeout_with_parallel_group]
+[endsect]
+
+[section:timeout_with_awaitable_operators Timed MQTT operations with awaitable operators]
+This example demonstrates how to use the __Client__ with its support for per-operation cancellation to perform operations under a time constraint
+using awaitable operators.
+Specifically, in this example, a call to [refmem mqtt_client async_publish] and [refmem mqtt_client async_disconnect] must complete
+within `5 seconds`. Otherwise, they will be cancelled.
+
+[timeout_with_awaitable_operators]
+[endsect]
+
+[section:hello_world_in_multithreaded_env Hello World in a multithreaded environment using callbacks]
+This example demonstrates how to publish a "Hello World" message in a multithreaded environment using callbacks (`post`/`dispatch`).
+
+[hello_world_in_multithreaded_env]
+[endsect]
+
+[section:hello_world_in_coro_multithreaded_env Hello World in a multithreaded environment using coroutines]
+This example demonstrates how to publish a "Hello World" message in a multithreaded environment using coroutines (`co_spawn`).
+
+[hello_world_in_coro_multithreaded_env]
+[endsect]
+
+[block'''</part>''']

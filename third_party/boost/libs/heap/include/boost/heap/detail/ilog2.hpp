@@ -9,7 +9,6 @@
 #ifndef BOOST_HEAP_DETAIL_ILOG2_HPP
 #define BOOST_HEAP_DETAIL_ILOG2_HPP
 
-#include <string> // std::size_t
 
 namespace boost { namespace heap {
 namespace detail {

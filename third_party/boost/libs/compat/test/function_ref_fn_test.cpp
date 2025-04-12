@@ -98,8 +98,9 @@ int main() {
 
   // f1
   {
+    int x = 1;
     compat::function_ref<int(int)> fv1(f1);
-    BOOST_TEST_EQ(fv1(1), 1);
+    BOOST_TEST_EQ(fv1(x), 1);
 
     compat::function_ref<int(int) const> fv2(f1);
     BOOST_TEST_EQ(fv2(1), 1);

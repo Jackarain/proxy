@@ -6,7 +6,7 @@
 # NOTE: This does NOT run the unit tests for Boost.Log.
 #       It only tests if the CMakeLists.txt file in its root works as expected
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.5...3.16)
 
 project(BoostLogCMakeSelfTest)
 

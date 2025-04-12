@@ -13,6 +13,7 @@
 
 #include <boost/mpl/integral_c.hpp>
 #include <boost/preprocessor/repeat.hpp>
+#include <climits>
 
 #include "integral_wrapper_test.hpp"
 
@@ -21,10 +22,14 @@ MPL_TEST_CASE()
 {
 #   define WRAPPER(T, i) integral_c<T,i>
 
-#if !(defined(__APPLE_CC__) && defined(__GNUC__) && (__GNUC__ == 3) && (__GNUC_MINOR__ <= 3))
-    BOOST_PP_REPEAT(10, INTEGRAL_WRAPPER_TEST, char)
-#endif
     BOOST_PP_REPEAT(10, INTEGRAL_WRAPPER_TEST, short)
     BOOST_PP_REPEAT(10, INTEGRAL_WRAPPER_TEST, int)
     BOOST_PP_REPEAT(10, INTEGRAL_WRAPPER_TEST, long)
+
+#if CHAR_MAX > 0
+#   undef WRAPPER
+#   define WRAPPER(T, i) integral_c<T,static_cast<T>(i)>
+#endif
+
+    BOOST_PP_REPEAT(10, INTEGRAL_WRAPPER_TEST, char)
 }

@@ -7,6 +7,8 @@
 # Official repository: https://github.com/boostorg/url
 #
 
+set -xe
+
 if [ $# -eq 0 ]
   then
     echo "No playbook supplied, using default playbook"

@@ -16,6 +16,7 @@ project
 
     # Extra errors that are disabled by default
     <toolset>msvc:<cxxflags>"/we4265"
+    <toolset>msvc:<cxxflags>"/wd4251"
 
     # Warnings in dependencies
     <toolset>gcc:<cxxflags>"-Wno-unused-but-set-variable"

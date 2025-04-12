@@ -117,10 +117,10 @@ jobs:
               stdlib: libc++, install: 'clang-18 libc++-18-dev libc++abi-18-dev', ccache_key: "tsan" }
 
           # OSX, clang
-          - { compiler: clang, cxxstd: '11,14,17,2a',    os: 'macos-12', sanitize: yes, ccache_key: "san1" }
-          - { compiler: clang, cxxstd: '11,14,17,2a',    os: 'macos-12', thread-sanitize: yes, targets: 'libs/unordered/test//cfoa_tests', ccache_key: "tsan" }
-          - { compiler: clang, cxxstd: '11,14,17,20,2b', os: 'macos-13' }
+          - { compiler: clang, cxxstd: '11,14,17,20,2b', os: 'macos-13', sanitize: yes, ccache_key: "san1" }
+          - { compiler: clang, cxxstd: '11,14,17,20,2b', os: 'macos-13', thread-sanitize: yes, targets: 'libs/unordered/test//cfoa_tests', ccache_key: "tsan" }
           - { compiler: clang, cxxstd: '11,14,17,20,2b', os: 'macos-14' }
+          - { compiler: clang, cxxstd: '11,14,17,20,2b', os: 'macos-15' }
 
     timeout-minutes: 360
     # posix (gcc-12 w/ sanitizers is taking longer than 210 minutes
@@ -278,7 +278,8 @@ jobs:
       matrix:
         include:
           - { toolset: msvc-14.0, cxxstd: '14,latest',       addrmd: '32,64', os: 'windows-2019', variant: 'debug,release' }
-          - { toolset: msvc-14.2, cxxstd: '14,17,20,latest', addrmd: '32,64', os: 'windows-2019', variant: 'debug,release' }
+          - { toolset: msvc-14.2, cxxstd: '14,17',           addrmd: '32,64', os: 'windows-2019', variant: 'debug,release' }
+          - { toolset: msvc-14.2, cxxstd: '20,latest',       addrmd: '32,64', os: 'windows-2019', variant: 'debug,release' }
           - { toolset: msvc-14.3, cxxstd: '14,17,20,latest', addrmd: '32,64', os: 'windows-2022', variant: 'debug,release' }
           - { toolset: msvc-14.3, cxxstd: '14',              addrmd: '64',    os: 'windows-2022', variant: 'debug', defines: '_ALLOW_RTCc_IN_STL', cxxflags: '/RTCc'              }
           - { toolset: msvc-14.3, cxxstd: '14',              addrmd: '32',    os: 'windows-2022', variant: 'debug', defines: '_ALLOW_RTCc_IN_STL', cxxflags: '"/RTCc /arch:IA32"' }

@@ -128,7 +128,7 @@ namespace boost { namespace parser {
         /** A literal that can be used to concisely name `parser::llong`
             integral constants. */
         template<char... chars>
-        constexpr auto operator"" _c()
+        constexpr auto operator""_c()
         {
             constexpr long long n =
                 detail::parse_llong<sizeof...(chars)>({chars...});
@@ -185,14 +185,10 @@ namespace boost { namespace parser {
             template<typename T>
             operator T() const && noexcept
             {
-#if defined(__GNUC__) && __GNUC__ < 13
                 // Yuck.
                 std::remove_reference_t<T> * ptr = nullptr;
                 ptr += 1; // warning mitigation
                 return *ptr;
-#else
-                return std::declval<T>();
-#endif
             }
         };
 

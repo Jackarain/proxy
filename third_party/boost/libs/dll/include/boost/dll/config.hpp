@@ -1,4 +1,4 @@
-// Copyright Antony Polukhin, 2018-2024.
+// Copyright Antony Polukhin, 2018-2025.
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
@@ -16,8 +16,12 @@
 #endif
 
 #ifdef BOOST_DLL_DOXYGEN
-/// Define this macro to make Boost.DLL use C++17's std::filesystem::path, std::system_error and std::error_code.
+/// Define this macro to make Boost.DLL use C++17's std::filesystem::path and std::system_error.
 #define BOOST_DLL_USE_STD_FS BOOST_DLL_USE_STD_FS
+
+/// Define this macro to make Boost.DLL use boost::shared_ptr instead of std::shared_ptr. This macro will be removed
+/// after a few releases, consider migrating to std::shared_ptr. 
+#define BOOST_DLL_USE_BOOST_SHARED_PTR BOOST_DLL_USE_BOOST_SHARED_PTR
 
 /// This namespace contains aliases to the Boost or C++17 classes. Aliases are configured using BOOST_DLL_USE_STD_FS macro.
 namespace boost { namespace dll { namespace fs {
@@ -38,19 +42,17 @@ using system_error = std::conditional_t<BOOST_DLL_USE_STD_FS, std::system_error,
 
 #endif
 
+
 #ifdef BOOST_DLL_USE_STD_FS
 #include <filesystem>
+
 #include <system_error>
 
 namespace boost { namespace dll { namespace fs {
 
 using namespace std::filesystem;
-
 using std::error_code;
 using std::system_error;
-using std::make_error_code;
-using std::errc;
-using std::system_category;
 
 }}}
 
@@ -58,22 +60,41 @@ using std::system_category;
 
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
-#include <boost/system/error_code.hpp>
 #include <boost/system/system_error.hpp>
+#include <boost/system/error_code.hpp>
 
 namespace boost { namespace dll { namespace fs {
 
 using namespace boost::filesystem;
-
 using boost::system::error_code;
 using boost::system::system_error;
-using boost::system::errc::make_error_code;
-namespace errc = boost::system::errc;
-using boost::system::system_category;
 
 }}}
 
 #endif // BOOST_DLL_USE_STD_FS
+
+
+#ifdef BOOST_DLL_USE_BOOST_SHARED_PTR
+
+#include <boost/make_shared.hpp>
+
+namespace boost { namespace dll { namespace detail {
+    template <class T>
+    using shared_ptr = boost::shared_ptr<T>;
+    using boost::make_shared;
+}}}
+
+#else  // BOOST_DLL_USE_STD_FS
+
+#include <memory>
+
+namespace boost { namespace dll { namespace detail {
+    template <class T>
+    using shared_ptr = std::shared_ptr<T>;
+    using std::make_shared;
+}}}
+
+#endif  // BOOST_DLL_USE_STD_FS
 
 #endif // BOOST_DLL_DETAIL_PUSH_OPTIONS_HPP
 

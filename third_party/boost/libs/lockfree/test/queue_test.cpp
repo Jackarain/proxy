@@ -19,9 +19,7 @@
 #include <memory>
 
 
-using namespace boost;
 using namespace boost::lockfree;
-using namespace std;
 
 BOOST_AUTO_TEST_CASE( simple_queue_test )
 {
@@ -152,7 +150,7 @@ BOOST_AUTO_TEST_CASE( queue_convert_pop_test )
     }
 
     {
-        unique_ptr< int > i3;
+        std::unique_ptr< int > i3;
         BOOST_TEST_REQUIRE( f.pop( i3 ) );
 
         BOOST_TEST_REQUIRE( *i3 == 3 );

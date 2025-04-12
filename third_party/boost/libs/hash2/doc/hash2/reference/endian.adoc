@@ -1,0 +1,41 @@
+////
+Copyright 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_endian]
+# <boost/hash2/endian.hpp>
+:idprefix: ref_endian_
+
+```
+namespace boost {
+namespace hash2 {
+
+enum class endian;
+
+} // namespace hash2
+} // namespace boost
+```
+
+## endian
+
+```
+enum class endian
+{
+    little = /*...*/,
+    big = /*...*/,
+    native = /*little or big*/
+};
+```
+
+The enumeration type `endian` corresponds to the standard
+`std::endian` type from {cpp}20. Its values are `little`,
+signifying little-endian byte order, `big`, signifying
+big-endian byte order, and `native`, which equals either
+`little` or `big` depending on whether the current platform
+is little- or big-endian.
+
+Unlike `std::endian`, platforms where `little` equals `big`,
+or where `native` equals neither `little` or `big`, aren't
+supported.

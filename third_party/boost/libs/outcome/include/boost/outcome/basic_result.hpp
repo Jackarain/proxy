@@ -44,6 +44,11 @@ DEALINGS IN THE SOFTWARE.
 #pragma clang diagnostic ignored "-Wdocumentation"  // Standardese markup confuses clang
 #endif
 
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma warning(push)
+#pragma warning(disable: 6287) // redundant code
+#endif
+
 BOOST_OUTCOME_V2_NAMESPACE_EXPORT_BEGIN
 
 template <class R, class S, class NoValuePolicy>  //
@@ -760,6 +765,10 @@ static_assert(std::is_standard_layout<basic_result<int, long, policy::all_narrow
 #endif
 
 BOOST_OUTCOME_V2_NAMESPACE_END
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma warning(pop)
+#endif
 
 #ifdef __clang__
 #pragma clang diagnostic pop

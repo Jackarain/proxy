@@ -1,5 +1,5 @@
 // Copyright 2011-2012 Renato Tegon Forti
-// Copyright Antony Polukhin, 2015-2024
+// Copyright Antony Polukhin, 2015-2025
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
@@ -39,7 +39,8 @@ int main(int argc, char* argv[])
 #if defined(__GNUC__) && __GNUC__ >= 4 && defined(__ELF__)
     BOOST_TEST(std::find(symb.begin(), symb.end(), "protected_function") != symb.end());
 #endif
-    
+
+    std::cout << "\n\n'boostdll' symbols:\n";
     symb = lib_info.symbols("boostdll");
     std::copy(symb.begin(), symb.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
     BOOST_TEST(std::find(symb.begin(), symb.end(), "const_integer_g_alias") != symb.end());
@@ -48,6 +49,7 @@ int main(int argc, char* argv[])
     BOOST_TEST(std::find(symb.begin(), symb.end(), "say_hello") == symb.end());
     BOOST_TEST(lib_info.symbols(std::string("boostdll")) == symb);
 
+    std::cout << "\n\n'empty' symbols:\n";
     std::vector<std::string> empty = lib_info.symbols("empty");
     BOOST_TEST(empty.empty() == true);
 

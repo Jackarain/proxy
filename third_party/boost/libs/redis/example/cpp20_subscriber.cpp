@@ -8,7 +8,6 @@
 #include <boost/redis/logger.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/use_awaitable.hpp>
-#include <boost/asio/deferred.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/consign.hpp>
@@ -29,7 +28,7 @@ using boost::redis::ignore;
 using boost::redis::error;
 using boost::system::error_code;
 using boost::redis::connection;
-using signal_set = asio::deferred_t::as_default_on_t<asio::signal_set>;
+using asio::signal_set;
 
 /* This example will subscribe and read pushes indefinitely.
  *
@@ -61,7 +60,7 @@ receiver(std::shared_ptr<connection> conn) -> asio::awaitable<void>
    while (conn->will_reconnect()) {
 
       // Reconnect to the channels.
-      co_await conn->async_exec(req, ignore, asio::deferred);
+      co_await conn->async_exec(req, ignore);
 
       // Loop reading Redis pushs messages.
       for (error_code ec;;) {

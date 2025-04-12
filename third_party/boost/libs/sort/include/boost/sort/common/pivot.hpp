@@ -50,7 +50,7 @@ inline Iter_t mid3 (Iter_t iter_1, Iter_t iter_2, Iter_t iter_3, Compare comp)
 		if (comp (*iter_2, *iter_1)) swap ( *iter_2, *iter_1);
 	};
 	return iter_2;
-};
+}
 //
 //-----------------------------------------------------------------------------
 //  function : pivot3
@@ -69,7 +69,7 @@ inline void pivot3 (Iter_t first, Iter_t last, Compare comp)
     auto N2 = (last - first) >> 1;
     Iter_t it_val = mid3 (first + 1, first + N2, last - 1, comp);
     swap (*first, *it_val);
-};
+}
 
 //
 //-----------------------------------------------------------------------------
@@ -96,7 +96,7 @@ inline Iter_t mid9 (Iter_t iter_1, Iter_t iter_2, Iter_t iter_3, Iter_t iter_4,
     return mid3 (mid3 (iter_1, iter_2, iter_3, comp),
                  mid3 (iter_4, iter_5, iter_6, comp),
                  mid3 (iter_7, iter_8, iter_9, comp), comp);
-};
+}
 //
 //-----------------------------------------------------------------------------
 //  function : pivot9
@@ -118,10 +118,10 @@ inline void pivot9 (Iter_t first, Iter_t last, Compare comp)
                          first + 3 * cupo, first + 4 * cupo, first + 5 * cupo,
                          first + 6 * cupo, first + 7 * cupo, last - 1, comp);
     swap (*first, *itaux);
-};
+}
 //****************************************************************************
-};//    End namespace common
-};//    End namespace sort
-};//    End namespace boost
+}//    End namespace common
+}//    End namespace sort
+}//    End namespace boost
 //****************************************************************************
 #endif

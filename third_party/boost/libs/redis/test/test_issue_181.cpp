@@ -31,12 +31,12 @@ using namespace std::chrono_literals;
 
 BOOST_AUTO_TEST_CASE(issue_181)
 {
-   using connection_base = boost::redis::detail::connection_base<net::any_io_executor>;
+   using basic_connection = boost::redis::basic_connection<net::any_io_executor>;
 
    auto const level = boost::redis::logger::level::debug;
    net::io_context ioc;
    auto ctx = net::ssl::context{net::ssl::context::tlsv12_client};
-   connection_base conn{ioc.get_executor(), std::move(ctx), 1000000};
+   basic_connection conn{ioc.get_executor(), std::move(ctx), 1000000};
    net::steady_timer timer{ioc};
    timer.expires_after(std::chrono::seconds{1});
 

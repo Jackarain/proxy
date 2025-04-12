@@ -11,8 +11,12 @@
 #ifndef BOOST_LOCKFREE_FIFO_HPP_INCLUDED
 #define BOOST_LOCKFREE_FIFO_HPP_INCLUDED
 
+#include <boost/config.hpp>
+#ifdef BOOST_HAS_PRAGMA_ONCE
+#    pragma once
+#endif
+
 #include <boost/assert.hpp>
-#include <boost/config.hpp> // for BOOST_LIKELY & BOOST_ALIGNMENT
 #include <boost/core/allocator_access.hpp>
 #include <boost/parameter/optional.hpp>
 #include <boost/parameter/parameters.hpp>
@@ -25,10 +29,6 @@
 #include <boost/lockfree/detail/tagged_ptr.hpp>
 #include <boost/lockfree/detail/uses_optional.hpp>
 #include <boost/lockfree/lockfree_forward.hpp>
-
-#ifdef BOOST_HAS_PRAGMA_ONCE
-#    pragma once
-#endif
 
 
 #if defined( _MSC_VER )
@@ -104,7 +104,7 @@ private:
     static constexpr bool node_based         = !( has_capacity || fixed_sized );
     static constexpr bool compile_time_sized = has_capacity;
 
-    struct BOOST_ALIGNMENT( BOOST_LOCKFREE_CACHELINE_BYTES ) node
+    struct alignas( detail::cacheline_bytes ) node
     {
         typedef typename detail::select_tagged_handle< node, node_based >::tagged_handle_type tagged_node_handle;
         typedef typename detail::select_tagged_handle< node, node_based >::handle_type        handle_type;
@@ -606,7 +606,7 @@ public:
 private:
 #ifndef BOOST_DOXYGEN_INVOKED
     atomic< tagged_node_handle > head_;
-    static constexpr int         padding_size = BOOST_LOCKFREE_CACHELINE_BYTES - sizeof( tagged_node_handle );
+    static constexpr int         padding_size = detail::cacheline_bytes - sizeof( tagged_node_handle );
     char                         padding1[ padding_size ];
     atomic< tagged_node_handle > tail_;
     char                         padding2[ padding_size ];

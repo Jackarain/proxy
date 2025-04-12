@@ -1,0 +1,91 @@
+////
+Copyright 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_is_trivially_equality_comparable]
+# <boost/hash2/is_trivially_equality_comparable.hpp>
+:idprefix: ref_is_trivially_equality_comparable_
+
+```
+namespace boost {
+namespace hash2 {
+
+template<class T> struct is_trivially_equality_comparable;
+
+} // namespace hash2
+} // namespace boost
+```
+
+## is_trivially_equality_comparable
+
+```
+template<class T> struct is_trivially_equality_comparable:
+  std::integral_constant< bool,
+    std::is_integral<T>::value || std::is_enum<T>::value || std::is_pointer<T>::value >
+{
+};
+
+template<class T> struct is_trivially_equality_comparable<T const>:
+  is_trivially_equality_comparable<T>
+{
+};
+```
+
+The trait `is_trivially_equality_comparable` is used by the library to detect types that are _trivially equality comparable_.
+
+A type is _trivially equality comparable_ if, for two values `x` and `y` of that type, `x == y` is equivalent to `std::memcmp( &x, &y, sizeof(x) ) == 0`.
+
+That is, for trivially equality comparable types, comparing their values is the same as comparing their storage byte representations.
+
+This allows `hash_append` to assume that the _message_ identifying an object's value is the same as the storage bytes of the object.
+
+`is_trivially_equality_comparable` can be specialized for user-defined types if the default implementation does not give the correct result.
+
+For example, for the following type
+
+```
+struct X
+{
+    int v;
+};
+
+bool operator==( X const& x1, X const& x2 )
+{
+    return x1.v == x2.v;
+}
+```
+
+(under the assumption that it has no padding bytes, that is, `sizeof(X) == sizeof(int)`)
+`is_trivially_equality_comparable<X>::value` will be `false` by default, but the type meets the requirements for being trivially equality comparable, so a specialization can be added:
+
+```
+template<> struct boost::hash2::is_trivially_equality_comparable<X>: std::true_type {};
+```
+
+or, if you want to be on the safe side,
+
+```
+template<> struct boost::hash2::is_trivially_equality_comparable<X>:
+  std::integral_constant<bool, sizeof(X) == sizeof(int)> {};
+```
+
+On the other hand, the following type
+
+```
+enum E: unsigned {};
+
+bool operator==( E e1, E e2 )
+{
+    return e1 % 256 == e2 % 256;
+}
+```
+is not trivially equality comparable (because `(E)0x204 == (E)0x704`, but `memcmp` will give a nonzero result), but `is_trivially_equality_comparable<E>::value` will be `true` by default.
+
+In this (quite rare) case, a specialization can be added to report `false`:
+
+```
+template<> struct boost::hash2::is_trivially_equality_comparable<E>: std::false_type {};
+```
+

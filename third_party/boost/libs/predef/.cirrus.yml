@@ -7,17 +7,27 @@
 freebsd_task:
   # All the GCC's and Clang's currently supported by FreeBSD ports.
   matrix:
-    - { name: 'FreeBSD, GCC 11', env: { CXX: 'g++11', PACKAGE: 'gcc11-devel', TOOLSET: gcc }, freebsd_instance: { image_family: 'freebsd-13-0' } }
-    - { name: 'FreeBSD, GCC 10', env: { CXX: 'g++10', PACKAGE: 'gcc10-devel', TOOLSET: gcc }, freebsd_instance: { image_family: 'freebsd-13-0' } }
-    - { name: 'FreeBSD, GCC 9', env: { CXX: 'g++9', PACKAGE: 'gcc9-devel', TOOLSET: gcc }, freebsd_instance: { image_family: 'freebsd-13-0' } }
-    - { name: 'FreeBSD, GCC 8', env: { CXX: 'g++8', PACKAGE: 'gcc8', TOOLSET: gcc }, freebsd_instance: { image_family: 'freebsd-13-0' } }
+    - { name: 'FreeBSD, GCC 14', env: { CXX: 'g++14', PACKAGE: 'lang/gcc14', TOOLSET: gcc }, freebsd_instance: { image_family: 'freebsd-14-1' } }
+    - { name: 'FreeBSD, GCC 13', env: { CXX: 'g++13', PACKAGE: 'gcc13', TOOLSET: gcc }, freebsd_instance: { image_family: 'freebsd-14-1' } }
+    - { name: 'FreeBSD, GCC 12', env: { CXX: 'g++12', PACKAGE: 'gcc12', TOOLSET: gcc }, freebsd_instance: { image_family: 'freebsd-14-1' } }
+    - { name: 'FreeBSD, GCC 11', env: { CXX: 'g++11', PACKAGE: 'gcc11', TOOLSET: gcc }, freebsd_instance: { image_family: 'freebsd-14-1' } }
+    - { name: 'FreeBSD, GCC 10', env: { CXX: 'g++10', PACKAGE: 'gcc10', TOOLSET: gcc }, freebsd_instance: { image_family: 'freebsd-14-1' } }
+    # - { name: 'FreeBSD, GCC 9', env: { CXX: 'g++9', PACKAGE: 'gcc9', TOOLSET: gcc }, freebsd_instance: { image_family: 'freebsd-14-1' } }
+    # - { name: 'FreeBSD, GCC 8', env: { CXX: 'g++8', PACKAGE: 'gcc8', TOOLSET: gcc }, freebsd_instance: { image_family: 'freebsd-14-1' } }
     # - { name: 'FreeBSD, GCC 7', env: { CXX: 'g++7', PACKAGE: 'gcc7', TOOLSET: gcc }, freebsd_instance: { image_family: 'freebsd-12-2' } }
-    - { name: 'FreeBSD, Clang 12', env: { CXX: 'clang++12', PACKAGE: 'devel/llvm12', TOOLSET: clang }, freebsd_instance: { image_family: 'freebsd-13-0' } }
-    - { name: 'FreeBSD, Clang 11', env: { CXX: 'clang++11', PACKAGE: 'devel/llvm11', TOOLSET: clang }, freebsd_instance: { image_family: 'freebsd-13-0' } }
-    - { name: 'FreeBSD, Clang 10', env: { CXX: 'clang++10', PACKAGE: 'devel/llvm10', TOOLSET: clang }, freebsd_instance: { image_family: 'freebsd-13-0' } }
-    - { name: 'FreeBSD, Clang 9', env: { CXX: 'clang++90', PACKAGE: 'devel/llvm90', TOOLSET: clang }, freebsd_instance: { image_family: 'freebsd-13-0' } }
-    - { name: 'FreeBSD, Clang 8', env: { CXX: 'clang++80', PACKAGE: 'devel/llvm80' , TOOLSET: clang}, freebsd_instance: { image_family: 'freebsd-13-0' } }
-    - { name: 'FreeBSD, Clang 7', env: { CXX: 'clang++70', PACKAGE: 'devel/llvm70', TOOLSET: clang }, freebsd_instance: { image_family: 'freebsd-13-0' } }
+    - { name: 'FreeBSD, Clang 19', env: { CXX: 'clang++19', PACKAGE: 'devel/llvm19', TOOLSET: clang }, freebsd_instance: { image_family: 'freebsd-14-1' } }
+    - { name: 'FreeBSD, Clang 18', env: { CXX: 'clang++18', PACKAGE: 'devel/llvm18', TOOLSET: clang }, freebsd_instance: { image_family: 'freebsd-14-1' } }
+    - { name: 'FreeBSD, Clang 17', env: { CXX: 'clang++17', PACKAGE: 'devel/llvm17', TOOLSET: clang }, freebsd_instance: { image_family: 'freebsd-14-1' } }
+    - { name: 'FreeBSD, Clang 16', env: { CXX: 'clang++16', PACKAGE: 'devel/llvm16', TOOLSET: clang }, freebsd_instance: { image_family: 'freebsd-14-1' } }
+    - { name: 'FreeBSD, Clang 15', env: { CXX: 'clang++15', PACKAGE: 'devel/llvm15', TOOLSET: clang }, freebsd_instance: { image_family: 'freebsd-14-1' } }
+    - { name: 'FreeBSD, Clang 14', env: { CXX: 'clang++14', PACKAGE: 'devel/llvm14', TOOLSET: clang }, freebsd_instance: { image_family: 'freebsd-14-1' } }
+    - { name: 'FreeBSD, Clang 13', env: { CXX: 'clang++13', PACKAGE: 'devel/llvm13', TOOLSET: clang }, freebsd_instance: { image_family: 'freebsd-14-1' } }
+    - { name: 'FreeBSD, Clang 12', env: { CXX: 'clang++12', PACKAGE: 'devel/llvm12', TOOLSET: clang }, freebsd_instance: { image_family: 'freebsd-14-1' } }
+    - { name: 'FreeBSD, Clang 11', env: { CXX: 'clang++11', PACKAGE: 'devel/llvm11', TOOLSET: clang }, freebsd_instance: { image_family: 'freebsd-14-1' } }
+    # - { name: 'FreeBSD, Clang 10', env: { CXX: 'clang++10', PACKAGE: 'devel/llvm10', TOOLSET: clang }, freebsd_instance: { image_family: 'freebsd-14-1' } }
+    # - { name: 'FreeBSD, Clang 9', env: { CXX: 'clang++90', PACKAGE: 'devel/llvm90', TOOLSET: clang }, freebsd_instance: { image_family: 'freebsd-14-1' } }
+    # - { name: 'FreeBSD, Clang 8', env: { CXX: 'clang++80', PACKAGE: 'devel/llvm80' , TOOLSET: clang}, freebsd_instance: { image_family: 'freebsd-14-1' } }
+    # - { name: 'FreeBSD, Clang 7', env: { CXX: 'clang++70', PACKAGE: 'devel/llvm70', TOOLSET: clang }, freebsd_instance: { image_family: 'freebsd-14-1' } }
   # To install with ports we need to initialize the package manager. To avoid
   # confirmation prompts we need to set an env var.
   install_script: [

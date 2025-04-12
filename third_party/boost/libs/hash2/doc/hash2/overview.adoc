@@ -1,0 +1,40 @@
+////
+Copyright 2020 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#overview]
+# Overview
+:idprefix: overview_
+
+This library implements an extensible framework for implementing
+hashing algorithms that can support user-defined types. Its structure
+is largely based on the paper http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3980.html["Types don't know #"]
+by Howard Hinnant, Vinnie Falco and John Bytheway.
+
+The key feature of the design is the clean separation between the _hash
+algorithm_, which takes an untyped stream of bytes (a _message_) and produces
+a hash value (a _message digest_), and the `hash_append` function, which takes
+a type and is responsible for turning the value of this type into a
+sequence of bytes and feeding them to a _hash algorithm_.
+
+This allows hashing support for user-defined types to be written once,
+and then automatically being usable with any hash algorithms, even such
+that weren't yet available at the time the type was defined.
+
+The following popular hashing algorithms are provided:
+
+* https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function[FNV-1a]
+* https://cyan4973.github.io/xxHash/[xxHash]
+* https://en.wikipedia.org/wiki/SipHash[SipHash]
+* https://tools.ietf.org/html/rfc1321[MD5]
+* https://tools.ietf.org/html/rfc3174[SHA-1]
+* https://tools.ietf.org/html/rfc6234[SHA-2]
+* https://csrc.nist.gov/pubs/fips/202/final[SHA-3]
+* https://homes.esat.kuleuven.be/%7Ebosselae/ripemd160.html[RIPEMD-160, RIPEMD-128]
+* https://tools.ietf.org/html/rfc2104[HMAC]
+
+but it's also possible for users to write their own; as long as the
+hash algorithm conforms to the concept, `hash_append` will work with it,
+and so will all user-defined types that support `hash_append`.

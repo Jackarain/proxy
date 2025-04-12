@@ -816,7 +816,7 @@
 */
 #define BOOST_YAP_USER_LITERAL_PLACEHOLDER_OPERATOR(expr_template)             \
     template<char... c>                                                        \
-    constexpr auto operator"" _p()                                             \
+    constexpr auto operator""_p()                                              \
     {                                                                          \
         using i = ::boost::hana::llong<                                        \
             ::boost::hana::ic_detail::parse<sizeof...(c)>({c...})>;            \

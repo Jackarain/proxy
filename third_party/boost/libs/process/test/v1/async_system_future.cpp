@@ -23,7 +23,7 @@
 #include <vector>
 #include <array>
 
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 BOOST_AUTO_TEST_SUITE( async );
 
 BOOST_AUTO_TEST_CASE(future, *boost::unit_test::timeout(15))

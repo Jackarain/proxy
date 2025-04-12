@@ -84,12 +84,13 @@ rule address-model ( )
 rule architecture ( )
 {
     local result = ;
-    local deducable-arch =
-        x86 ia64 sparc ppc loongarch mips parisc arm riscv ;
-    for arch in $(deducable-arch)
+    local deducible-arch =
+        x86 ia64 sparc loongarch mips parisc arm riscv ;
+    for arch in $(deducible-arch)
     {
         result += [ check BOOST_ARCH_$(arch:U) : : <architecture>$(arch) ] ;
     }
+    result += [ check BOOST_ARCH_PPC : : <architecture>power ] ;
     result += [ check BOOST_ARCH_SYS390 : : <architecture>s390x ] ;
     return $(result) ;
 }

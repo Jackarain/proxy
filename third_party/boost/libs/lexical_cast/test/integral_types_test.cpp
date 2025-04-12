@@ -4,7 +4,7 @@
 //
 //  Copyright Terje Sletteb and Kevlin Henney, 2005.
 //  Copyright Alexander Nasonov, 2006.
-//  Copyright Antony Polukhin, 2011-2024.
+//  Copyright Antony Polukhin, 2011-2025.
 //
 //  Distributed under the Boost
 //  Software License, Version 1.0. (See accompanying file

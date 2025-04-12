@@ -51,12 +51,10 @@ void run_d_ary_heap_test( void )
         run_stable_heap_tests< stable_pri_queue >();
     }
 
-#if !defined( BOOST_NO_CXX11_RVALUE_REFERENCES ) && !defined( BOOST_NO_CXX11_VARIADIC_TEMPLATES )
     cmpthings ord;
     boost::heap::d_ary_heap< thing, boost::heap::arity< D >, boost::heap::compare< cmpthings >, boost::heap::stable< stable > >
         vpq( ord );
     vpq.emplace( 5, 6, 7 );
-#endif
 }
 
 

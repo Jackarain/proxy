@@ -75,8 +75,13 @@ BOOST_AUTO_TEST_CASE(request_retry_false)
    conn->async_exec(req0, ignore, c0);
 
    auto cfg = make_test_config();
-   cfg.health_check_interval = 5s;
-   run(conn);
+   conn->async_run(cfg, {boost::redis::logger::level::debug},
+      [&](boost::system::error_code const& ec)
+      {
+         std::cout << "async_run: " << ec.message() << std::endl;
+         conn->cancel();
+      }
+   );
 
    ioc.run();
 }
@@ -108,7 +113,7 @@ BOOST_AUTO_TEST_CASE(request_retry_true)
    st.expires_after(std::chrono::seconds{1});
    st.async_wait([&](auto){
       // Cancels the request before receiving the response. This
-      // should cause the thrid request to not complete with error
+      // should cause the third request to not complete with error
       // since it has cancel_if_unresponded = true and cancellation
       // comes after it was written.
       conn->cancel(operation::run);

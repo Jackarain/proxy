@@ -29,7 +29,7 @@ BOOST_AUTO_TEST_SUITE( async );
 
 using namespace std;
 
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 
 BOOST_AUTO_TEST_CASE(async_out_future, *boost::unit_test::timeout(2))
 {

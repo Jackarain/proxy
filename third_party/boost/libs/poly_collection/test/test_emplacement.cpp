@@ -1,4 +1,4 @@
-/* Copyright 2016 Joaquin M Lopez Munoz.
+/* Copyright 2016-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -12,6 +12,7 @@
 #include "any_types.hpp"
 #include "base_types.hpp"
 #include "function_types.hpp"
+#include "variant_types.hpp"
 #include "test_utilities.hpp"
 
 using namespace test_utilities;
@@ -37,25 +38,25 @@ void test_emplacement()
 
     iterator it=p.template emplace<type>(4);
     BOOST_TEST(*p.template begin<type>()==type{4});
-    BOOST_TEST(&*it==&*p.begin(typeid(type)));
+    BOOST_TEST(&*it==&*p.begin(typeid_<type>(p)));
 
     iterator it2=p.template emplace_hint<type>(it,3);
     BOOST_TEST(*p.template begin<type>()==type{3});
-    BOOST_TEST(&*it2==&*p.begin(typeid(type)));
+    BOOST_TEST(&*it2==&*p.begin(typeid_<type>(p)));
 
     iterator it3=p.template emplace_hint<type>(p.cend(),5);
     BOOST_TEST(*(p.template end<type>()-1)==type{5});
-    BOOST_TEST(&*it3==&*(p.end(typeid(type))-1));
+    BOOST_TEST(&*it3==&*(p.end(typeid_<type>(p))-1));
 
     local_base_iterator lbit=
-      p.template emplace_pos<type>(p.begin(typeid(type)),2);
+      p.template emplace_pos<type>(p.begin(typeid_<type>(p)),2);
     BOOST_TEST(*static_cast<local_iterator>(lbit)==type{2});
-    BOOST_TEST(lbit==p.begin(typeid(type)));
+    BOOST_TEST(lbit==p.begin(typeid_<type>(p)));
 
     local_base_iterator lbit2=
-      p.template emplace_pos<type>(p.cend(typeid(type)),6);
+      p.template emplace_pos<type>(p.cend(typeid_<type>(p)),6);
     BOOST_TEST(*static_cast<local_iterator>(lbit2)==type{6});
-    BOOST_TEST(lbit2==p.end(typeid(type))-1);
+    BOOST_TEST(lbit2==p.end(typeid_<type>(p))-1);
 
     local_iterator lit=p.emplace_pos(p.template begin<type>(),1);
     BOOST_TEST(*lit==type{1});
@@ -76,8 +77,8 @@ void test_emplacement()
     p.template emplace<type>();
     p.template emplace_hint<type>(p.begin());
     p.template emplace_hint<type>(p.cend());
-    p.template emplace_pos<type>(p.begin(typeid(type)));
-    p.template emplace_pos<type>(p.cend(typeid(type)));
+    p.template emplace_pos<type>(p.begin(typeid_<type>(p)));
+    p.template emplace_pos<type>(p.cend(typeid_<type>(p)));
     p.emplace_pos(p.template begin<type>());
     p.emplace_pos(p.template cend<type>());
     BOOST_TEST(p.size()==7);
@@ -95,9 +96,9 @@ void test_emplacement()
     p.template emplace_hint<type>(p.begin(),v.template make<type>());
     p.template emplace_hint<type>(p.cend(),v.template make<type>());
     p.template emplace_pos<type>(
-      p.begin(typeid(type)),v.template make<type>());
+      p.begin(typeid_<type>(p)),v.template make<type>());
     p.template emplace_pos<type>(
-      p.cend(typeid(type)),v.template make<type>());
+      p.cend(typeid_<type>(p)),v.template make<type>());
     p.emplace_pos(p.template begin<type>(),v.template make<type>());
     p.emplace_pos(p.template cend<type>(),v.template make<type>());
     BOOST_TEST(p.size()==7);
@@ -118,4 +119,8 @@ void test_emplacement()
     function_types::collection,auto_increment,
     function_types::t1,function_types::t2,function_types::t3,
     function_types::t4,function_types::t5>();
+  test_emplacement<
+    variant_types::collection,auto_increment,
+    variant_types::t1,variant_types::t2,variant_types::t3,
+    variant_types::t4,variant_types::t5>();
 }

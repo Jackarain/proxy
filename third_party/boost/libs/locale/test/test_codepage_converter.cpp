@@ -6,9 +6,9 @@
 
 #include <boost/locale/util.hpp>
 #ifdef BOOST_LOCALE_WITH_ICU
-#    include "../src/boost/locale/icu/codecvt.hpp"
+#    include "../src/icu/codecvt.hpp"
 #endif
-#include "../src/boost/locale/shared/iconv_codecvt.hpp"
+#include "../src/shared/iconv_codecvt.hpp"
 
 #include <cstring>
 #include <iostream>
@@ -86,167 +86,167 @@ void test_main(int /*argc*/, char** /*argv*/)
     TEST(!create_simple_converter("UTF-8"));
     std::unique_ptr<base_converter> cvt = create_utf8_converter();
 
-    TEST_REQUIRE(cvt);
-    TEST(cvt->is_thread_safe());
-    TEST_EQ(cvt->max_len(), 4);
+    if TEST(cvt) {
+        TEST(cvt->is_thread_safe());
+        TEST_EQ(cvt->max_len(), 4);
 
-    std::cout << "-- Correct" << std::endl;
+        std::cout << "-- Correct" << std::endl;
 
-    TEST_TO("\x7f", 0x7f);
-    TEST_TO("\xC2\x80", 0x80);
-    TEST_TO("\xdf\xBF", 0x7FF);
-    TEST_TO("\xe0\xa0\x80", 0x800);
-    TEST_TO("\xef\xbf\xbf", 0xFFFF);
-    TEST_TO("\xf0\x90\x80\x80", 0x10000);
-    TEST_TO("\xf4\x8f\xbf\xbf", 0x10FFFF);
+        TEST_TO("\x7f", 0x7f);
+        TEST_TO("\xC2\x80", 0x80);
+        TEST_TO("\xdf\xBF", 0x7FF);
+        TEST_TO("\xe0\xa0\x80", 0x800);
+        TEST_TO("\xef\xbf\xbf", 0xFFFF);
+        TEST_TO("\xf0\x90\x80\x80", 0x10000);
+        TEST_TO("\xf4\x8f\xbf\xbf", 0x10FFFF);
 
-    std::cout << "-- Too big" << std::endl;
-    TEST_TO("\xf4\x9f\x80\x80", illegal);         //  11 0000
-    TEST_TO("\xfb\xbf\xbf\xbf", illegal);         // 3FF FFFF
-    TEST_TO("\xf8\x90\x80\x80\x80", illegal);     // 400 0000
-    TEST_TO("\xfd\xbf\xbf\xbf\xbf\xbf", illegal); // 7fff ffff
+        std::cout << "-- Too big" << std::endl;
+        TEST_TO("\xf4\x9f\x80\x80", illegal);         //  11 0000
+        TEST_TO("\xfb\xbf\xbf\xbf", illegal);         // 3FF FFFF
+        TEST_TO("\xf8\x90\x80\x80\x80", illegal);     // 400 0000
+        TEST_TO("\xfd\xbf\xbf\xbf\xbf\xbf", illegal); // 7fff ffff
 
-    std::cout << "-- Invalid trail" << std::endl;
-    TEST_TO("\xC2\x7F", illegal);
-    TEST_TO("\xdf\x7F", illegal);
-    TEST_TO("\xe0\x7F\x80", illegal);
-    TEST_TO("\xef\xbf\x7F", illegal);
-    TEST_TO("\xe0\x7F\x80", illegal);
-    TEST_TO("\xef\xbf\x7F", illegal);
-    TEST_TO("\xf0\x7F\x80\x80", illegal);
-    TEST_TO("\xf4\x7f\xbf\xbf", illegal);
-    TEST_TO("\xf0\x90\x7F\x80", illegal);
-    TEST_TO("\xf4\x8f\x7F\xbf", illegal);
-    TEST_TO("\xf0\x90\x80\x7F", illegal);
-    TEST_TO("\xf4\x8f\xbf\x7F", illegal);
+        std::cout << "-- Invalid trail" << std::endl;
+        TEST_TO("\xC2\x7F", illegal);
+        TEST_TO("\xdf\x7F", illegal);
+        TEST_TO("\xe0\x7F\x80", illegal);
+        TEST_TO("\xef\xbf\x7F", illegal);
+        TEST_TO("\xe0\x7F\x80", illegal);
+        TEST_TO("\xef\xbf\x7F", illegal);
+        TEST_TO("\xf0\x7F\x80\x80", illegal);
+        TEST_TO("\xf4\x7f\xbf\xbf", illegal);
+        TEST_TO("\xf0\x90\x7F\x80", illegal);
+        TEST_TO("\xf4\x8f\x7F\xbf", illegal);
+        TEST_TO("\xf0\x90\x80\x7F", illegal);
+        TEST_TO("\xf4\x8f\xbf\x7F", illegal);
 
-    std::cout << "-- Invalid length" << std::endl;
+        std::cout << "-- Invalid length" << std::endl;
 
-    // Test that this actually works
-    TEST_TO(make2(0x80), 0x80);
-    TEST_TO(make2(0x7ff), 0x7ff);
+        // Test that this actually works
+        TEST_TO(make2(0x80), 0x80);
+        TEST_TO(make2(0x7ff), 0x7ff);
 
-    TEST_TO(make3(0x800), 0x800);
-    TEST_TO(make3(0xffff), 0xffff);
+        TEST_TO(make3(0x800), 0x800);
+        TEST_TO(make3(0xffff), 0xffff);
 
-    TEST_TO(make4(0x10000), 0x10000);
-    TEST_TO(make4(0x10ffff), 0x10ffff);
+        TEST_TO(make4(0x10000), 0x10000);
+        TEST_TO(make4(0x10ffff), 0x10ffff);
 
-    TEST_TO(make4(0x110000), illegal);
-    TEST_TO(make4(0x1fffff), illegal);
+        TEST_TO(make4(0x110000), illegal);
+        TEST_TO(make4(0x1fffff), illegal);
 
-    TEST_TO(make2(0), illegal);
-    TEST_TO(make3(0), illegal);
-    TEST_TO(make4(0), illegal);
-    TEST_TO(make2(0x7f), illegal);
-    TEST_TO(make3(0x7f), illegal);
-    TEST_TO(make4(0x7f), illegal);
+        TEST_TO(make2(0), illegal);
+        TEST_TO(make3(0), illegal);
+        TEST_TO(make4(0), illegal);
+        TEST_TO(make2(0x7f), illegal);
+        TEST_TO(make3(0x7f), illegal);
+        TEST_TO(make4(0x7f), illegal);
 
-    TEST_TO(make3(0x80), illegal);
-    TEST_TO(make4(0x80), illegal);
-    TEST_TO(make3(0x7ff), illegal);
-    TEST_TO(make4(0x7ff), illegal);
+        TEST_TO(make3(0x80), illegal);
+        TEST_TO(make4(0x80), illegal);
+        TEST_TO(make3(0x7ff), illegal);
+        TEST_TO(make4(0x7ff), illegal);
 
-    TEST_TO(make4(0x8000), illegal);
-    TEST_TO(make4(0xffff), illegal);
+        TEST_TO(make4(0x8000), illegal);
+        TEST_TO(make4(0xffff), illegal);
 
-    std::cout << "-- Invalid surrogate" << std::endl;
+        std::cout << "-- Invalid surrogate" << std::endl;
 
-    TEST_TO(make3(0xD800), illegal);
-    TEST_TO(make3(0xDBFF), illegal);
-    TEST_TO(make3(0xDC00), illegal);
-    TEST_TO(make3(0xDFFF), illegal);
+        TEST_TO(make3(0xD800), illegal);
+        TEST_TO(make3(0xDBFF), illegal);
+        TEST_TO(make3(0xDC00), illegal);
+        TEST_TO(make3(0xDFFF), illegal);
 
-    TEST_TO(make4(0xD800), illegal);
-    TEST_TO(make4(0xDBFF), illegal);
-    TEST_TO(make4(0xDC00), illegal);
-    TEST_TO(make4(0xDFFF), illegal);
+        TEST_TO(make4(0xD800), illegal);
+        TEST_TO(make4(0xDBFF), illegal);
+        TEST_TO(make4(0xDC00), illegal);
+        TEST_TO(make4(0xDFFF), illegal);
 
-    std::cout << "-- Incomplete" << std::endl;
+        std::cout << "-- Incomplete" << std::endl;
 
-    TEST_TO("\x80", illegal);
-    TEST_TO("\xC2", incomplete);
+        TEST_TO("\x80", illegal);
+        TEST_TO("\xC2", incomplete);
 
-    TEST_TO("\xdf", incomplete);
+        TEST_TO("\xdf", incomplete);
 
-    TEST_TO("\xe0", incomplete);
-    TEST_TO("\xe0\xa0", incomplete);
+        TEST_TO("\xe0", incomplete);
+        TEST_TO("\xe0\xa0", incomplete);
 
-    TEST_TO("\xef\xbf", incomplete);
-    TEST_TO("\xef", incomplete);
+        TEST_TO("\xef\xbf", incomplete);
+        TEST_TO("\xef", incomplete);
 
-    TEST_TO("\xf0\x90\x80", incomplete);
-    TEST_TO("\xf0\x90", incomplete);
-    TEST_TO("\xf0", incomplete);
+        TEST_TO("\xf0\x90\x80", incomplete);
+        TEST_TO("\xf0\x90", incomplete);
+        TEST_TO("\xf0", incomplete);
 
-    TEST_TO("\xf4\x8f\xbf", incomplete);
-    TEST_TO("\xf4\x8f", incomplete);
-    TEST_TO("\xf4", incomplete);
+        TEST_TO("\xf4\x8f\xbf", incomplete);
+        TEST_TO("\xf4\x8f", incomplete);
+        TEST_TO("\xf4", incomplete);
 
-    std::cout << "- To UTF-8\n";
+        std::cout << "- To UTF-8\n";
 
-    std::cout << "-- Test correct" << std::endl;
+        std::cout << "-- Test correct" << std::endl;
 
-    TEST_FROM("\x7f", 0x7f);
-    TEST_FROM("\xC2\x80", 0x80);
-    TEST_FROM("\xdf\xBF", 0x7FF);
-    TEST_INC(0x7FF, 1);
-    TEST_FROM("\xe0\xa0\x80", 0x800);
-    TEST_INC(0x800, 2);
-    TEST_INC(0x800, 1);
-    TEST_FROM("\xef\xbf\xbf", 0xFFFF);
-    TEST_INC(0x10000, 3);
-    TEST_INC(0x10000, 2);
-    TEST_INC(0x10000, 1);
-    TEST_FROM("\xf0\x90\x80\x80", 0x10000);
-    TEST_FROM("\xf4\x8f\xbf\xbf", 0x10FFFF);
+        TEST_FROM("\x7f", 0x7f);
+        TEST_FROM("\xC2\x80", 0x80);
+        TEST_FROM("\xdf\xBF", 0x7FF);
+        TEST_INC(0x7FF, 1);
+        TEST_FROM("\xe0\xa0\x80", 0x800);
+        TEST_INC(0x800, 2);
+        TEST_INC(0x800, 1);
+        TEST_FROM("\xef\xbf\xbf", 0xFFFF);
+        TEST_INC(0x10000, 3);
+        TEST_INC(0x10000, 2);
+        TEST_INC(0x10000, 1);
+        TEST_FROM("\xf0\x90\x80\x80", 0x10000);
+        TEST_FROM("\xf4\x8f\xbf\xbf", 0x10FFFF);
 
-    std::cout << "-- Test no surrogate " << std::endl;
+        std::cout << "-- Test no surrogate " << std::endl;
 
-    TEST_FROM(nullptr, 0xD800);
-    TEST_FROM(nullptr, 0xDBFF);
-    TEST_FROM(nullptr, 0xDC00);
-    TEST_FROM(nullptr, 0xDFFF);
+        TEST_FROM(nullptr, 0xD800);
+        TEST_FROM(nullptr, 0xDBFF);
+        TEST_FROM(nullptr, 0xDC00);
+        TEST_FROM(nullptr, 0xDFFF);
 
-    std::cout << "-- Test invalid " << std::endl;
+        std::cout << "-- Test invalid " << std::endl;
 
-    TEST_FROM(nullptr, 0x110000);
-    TEST_FROM(nullptr, 0x1FFFFF);
-
+        TEST_FROM(nullptr, 0x110000);
+        TEST_FROM(nullptr, 0x1FFFFF);
+    }
     std::cout << "Test windows-1255" << std::endl;
 
     cvt = create_simple_converter("windows-1255");
 
-    TEST_REQUIRE(cvt);
-    TEST(cvt->is_thread_safe());
-    TEST_EQ(cvt->max_len(), 1);
+    if TEST(cvt) {
+        TEST(cvt->is_thread_safe());
+        TEST_EQ(cvt->max_len(), 1);
 
-    std::cout << "- From 1255" << std::endl;
+        std::cout << "- From 1255" << std::endl;
 
-    TEST_TO("\xa4", 0x20aa);
-    TEST_TO("\xe0", 0x05d0);
-    TEST_TO("\xc4", 0x5b4);
-    TEST_TO("\xfb", illegal);
-    TEST_TO("\xdd", illegal);
-    TEST_TO("\xff", illegal);
-    TEST_TO("\xfe", 0x200f);
+        TEST_TO("\xa4", 0x20aa);
+        TEST_TO("\xe0", 0x05d0);
+        TEST_TO("\xc4", 0x5b4);
+        TEST_TO("\xfb", illegal);
+        TEST_TO("\xdd", illegal);
+        TEST_TO("\xff", illegal);
+        TEST_TO("\xfe", 0x200f);
 
-    std::cout << "- To 1255" << std::endl;
+        std::cout << "- To 1255" << std::endl;
 
-    TEST_FROM("\xa4", 0x20aa);
-    TEST_FROM("\xe0", 0x05d0);
-    TEST_FROM("\xc4", 0x5b4);
-    TEST_FROM("\xfe", 0x200f);
+        TEST_FROM("\xa4", 0x20aa);
+        TEST_FROM("\xe0", 0x05d0);
+        TEST_FROM("\xc4", 0x5b4);
+        TEST_FROM("\xfe", 0x200f);
 
-    TEST_FROM(nullptr, 0xe4);
-    TEST_FROM(nullptr, 0xd0);
-
+        TEST_FROM(nullptr, 0xe4);
+        TEST_FROM(nullptr, 0xd0);
+    }
 #ifdef BOOST_LOCALE_WITH_ICU
     std::cout << "Testing Shift-JIS using ICU/uconv" << std::endl;
 
     cvt = boost::locale::impl_icu::create_uconv_converter("Shift-JIS");
-    TEST_REQUIRE(cvt);
-    test_shiftjis(cvt);
+    if TEST(cvt)
+        test_shiftjis(cvt);
 #endif
 
     std::cout << "Testing Shift-JIS using POSIX/iconv" << std::endl;

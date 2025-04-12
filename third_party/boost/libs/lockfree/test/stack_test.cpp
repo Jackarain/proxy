@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE( span_push_test )
 
     long data[ 2 ] = { 1, 2 };
 
-    BOOST_TEST_REQUIRE( stk.push( boost::span< const long >( data ) ) == 2 );
+    BOOST_TEST_REQUIRE( stk.push( boost::span< const long >( data ) ) == size_t( 2 ) );
 
     long out;
     BOOST_TEST_REQUIRE( stk.unsynchronized_pop( out ) );

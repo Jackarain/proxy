@@ -35,7 +35,7 @@ add_mpi_tests(test_mt_level 1 )
  add_mpi_tests(test_mt_init 1 4 )
 # # # Note: Microsoft MPI fails nonblocking_test on 1 processor
 add_mpi_tests(test_nonblocking 2 11 24 )
-add_mpi_tests(test_reduce 1 )
+add_mpi_tests(test_reduce 1 2 7)
 add_mpi_tests(test_ring 2 3 4 7 8 13 17 )
 add_mpi_tests(test_sendrecv 1 4 7 48 )
 add_mpi_tests(test_wait_any 1 4 7 20 )

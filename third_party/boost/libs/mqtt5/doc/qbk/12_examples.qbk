@@ -1,0 +1,65 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:examples Examples]
+[nochunk]
+
+The following list contains all the examples that showcase how to use the __Client__:
+
+[variablelist 
+    [
+        [[link mqtt5.publisher publisher.cpp]]
+        [Shows how to use the __Client__ as a publisher. The __Client__ publishes sensor readings every `5 seconds`.]
+    ]
+    [
+        [[link mqtt5.receiver receiver.cpp]]
+        [Shows how to use the __Client__ as a receiver. The __Client__ subscribes and indefinitely receives Application Messages from the Broker.]
+    ]
+    [
+        [[link mqtt5.hello_world_over_tcp hello_world_over_tcp.cpp]]
+        [Publishes a "Hello World" message via TCP/IP.]
+    ]
+    [
+        [[link mqtt5.hello_world_over_tls hello_world_over_tls.cpp]]
+        [Publishes a "Hello World" message via TLS/SSL.]
+    ]
+    [
+        [[link mqtt5.hello_world_over_websocket_tcp hello_world_over_websocket_tcp.cpp]]
+        [Publishes a "Hello World" message via Websocket/TLS.]
+    ]
+    [
+        [[link mqtt5.hello_world_over_websocket_tls hello_world_over_websocket_tls.cpp]]
+        [Publishes a "Hello World" message via Websocket/TLS.]
+    ]
+    [
+        [[link mqtt5.multiflight_client multiflight_client.cpp]]
+        [Shows how to use the __Client__ to simultaneously dispatch multiple requests.]
+    ]
+    [
+        [[link mqtt5.timeout_with_parallel_group timeout_with_parallel_group.cpp]]
+        [
+            Shows how to use the __Client__ with its support for per-operation cancellation to perform operations under a time constraint
+            using a parallel group.
+        ]
+    ]
+    [
+        [[link mqtt5.timeout_with_awaitable_operators timeout_with_awaitable_operators.cpp]]
+        [
+            Shows how to use the __Client__ with its support for per-operation cancellation to perform operations under a time constraint
+            using awaitable operators.
+        ]
+    ]
+    [
+        [[link mqtt5.hello_world_in_multithreaded_env hello_world_in_multithreaded_env.cpp]]
+        [Shows how to publish a "Hello World" message in a multithreaded environment using callbacks (`post`/`dispatch`).]
+    ]
+    [
+        [[link mqtt5.hello_world_in_coro_multithreaded_env hello_world_in_coro_multithreaded_env.cpp]]
+        [Shows how to publish a "Hello World" message in a multithreaded environment using coroutines (`co_spawn`).]
+    ]
+]
+
+[endsect][/examples]

@@ -1,5 +1,5 @@
 [/
-  Copyright 2016-2017 Joaquin M Lopez Munoz.
+  Copyright 2016-2025 Joaquin M Lopez Munoz.
   Distributed under the Boost Software License, Version 1.0.
   (See accompanying file LICENSE_1_0.txt or copy at
   http://www.boost.org/LICENSE_1_0.txt)
@@ -46,6 +46,11 @@ Static polymorphism is the trivial case where *subobject*(`x`) = `x` for all
 * *Implementation*(`Base`) = { `Derived` : `std::is_base_of_v<Base,Derived>` }.
 * *subobject*(`x`) = `static_cast<Derived&>(x)` with `typeid(x)==typeid(Derived)`.
 
+A polymorphism model is called /closed/ if, for any `I` \u2208 *Interface*,
+*suboject* ranges over a finite subset ot types of *Implementation*(`I`),
+that is, there is only a finite number of types subojects can belong in.
+A non-closed model is called /open/.
+
 [endsect]
 
 [section Polymorphic containers]
@@ -91,9 +96,11 @@ where a type `U` is said to be acceptable if
 [@http://en.cppreference.com/w/cpp/types/is_move_constructible
 `std::is_nothrow_move_constructible<U>::value`] is `true`.
 
+The collection is /open/ (resp. /closed/) if its associated polymorphism model
+is open (resp. closed).
 Polymorphic collections conform
 to the requirements of _PolymorphicContainer_ with the following
-modfications and extra guarantees:
+modifications and extra guarantees:
 
 * The complexity of `empty()` and `size()` is linear on the number of
 segments of the collection.
@@ -107,7 +114,8 @@ _CopyAssignable_, _MoveConstructible_ or _MoveAssignable_.
 A type `U` is said to be /registered/ into the collection if a
 (possibly empty) segment for `U` has been created. Registered types
 continue to stay so for the duration of the container except if it is
-moved from, assigned to, or swapped.
+moved from, assigned to, or swapped. For closed collections, all
+acceptable types are automatically registered upon construction.
 
 Each segment has an associated capacity indicating the maximum size
 that it can attain without reallocation. When the limit
@@ -115,8 +123,10 @@ is exceeded (or explicitly through `reserve`) new storage space is
 allocated with greater capacity and elements are moved.
 
 Collection traversal goes through the elements of the first segment,
-then the second, etc. The order in which segments are visited is
-unspecified but remains stable until a new segment is created.
+then the second, etc. For open collections, the order in which segments
+are visited is unspecified but remains stable until a new segment is created.
+For closed collections, segment order is fixed and determined by
+the specification of the collection type.
 
 Besides `iterator` and `const_iterator`, there are iterator types
 `local_base_iterator` and `local_iterator<U>` (and their `const_`
@@ -144,7 +154,7 @@ we use the following notation:
 * `C` is a polymorphic collection type,
 * `c` is an object of type `C`, `cc` is a possibly `const` object of type `C`,
 * `al` is a value of type `C::allocator_type`,
-* `info` is a `const std::type_info&`,
+* `info` is a value of type `const C::index_type&`,
 * `U` is an acceptable type, `Us...` is a template parameter pack of
 acceptable types, 
 * `n` is a value of `size_type`,
@@ -168,6 +178,18 @@ a `C` collection other than `c` such that \[`lit1`, `lit2`) is a valid range,
 local) of `c` such that \[`xit1`, `xit2`) is a valid range.
 
 [section Types]
+
+[#poly_collection.reference.polymorphic_containers.polymorphic_collections.types.type_index]
+[def _type_index_ [link poly_collection.reference.polymorphic_containers.polymorphic_collections.types.type_index `type_index`]]
+
+`C::type_index`
+
+Can be either `std::type_info` or `std::size_t`. We define `index<U>` as follows:
+
+* if `type_index` is `std::type_info`: `typeid(U)`,
+* if `type_index` is `std::size_t`: the index number `i` such that `U` is the `i`-th
+element in `Us...`, where `Us...` is the list of acceptable types as specified in the
+associated polymorphism model.
 
 [#poly_collection.reference.polymorphic_containers.polymorphic_collections.types.local_base_iterator]
 [def _local_base_iterator_ [link poly_collection.reference.polymorphic_containers.polymorphic_collections.types.local_base_iterator `local_base_iterator`]]
@@ -219,15 +241,15 @@ _CopyConstructible_ and _CopyAssignable_ type with information about a given
 segment of a collection. If `ci` is a possibly `const` object of type
 `C::const_base_segment_info` associated to the segment of `c` for `U`, then
 
-* `ci.begin()==c.cbegin(typeid(U))`
-* `ci.cbegin()==c.cbegin(typeid(U))`
+* `ci.begin()==c.cbegin(index<U>)`
+* `ci.cbegin()==c.cbegin(index<U>)`
 * `ci.begin<U>()==c.cbegin<U>()`
 * `ci.cbegin<U>()==c.cbegin<U>()`
-* `ci.end()==c.cend(typeid(U))`
-* `ci.cend()==c.cend(typeid(U))`
+* `ci.end()==c.cend(index<U>)`
+* `ci.cend()==c.cend(index<U>)`
 * `ci.end<U>()==c.cend<U>()`
 * `ci.cend<U>()==c.cend<U>()`
-* `ci.type_info()==typeid(U)`
+* `ci.type_info()==index<U>`
 
 [#poly_collection.reference.polymorphic_containers.polymorphic_collections.types.base_segment_info]
 [def _base_segment_info_ [link poly_collection.reference.polymorphic_containers.polymorphic_collections.types.base_segment_info `base_segment_info`]]
@@ -239,9 +261,9 @@ _CopyConstructible_ and _CopyAssignable_ type publicly derived from
 if `i` is an object of type `C::base_segment_info` associated to the
 segment of `c` for `U`, then
 
-* `i.begin()==c.begin(typeid(U))`
+* `i.begin()==c.begin(index<U>)`
 * `i.begin<U>()==c.begin<U>()`
-* `i.end()==c.end(typeid(U))`
+* `i.end()==c.end(index<U>)`
 * `i.end<U>()==c.end<U>()`
 
 [#poly_collection.reference.polymorphic_containers.polymorphic_collections.types.const_segment_info]
@@ -330,7 +352,7 @@ Internally calls `this->insert(j1,j2)` on construction.
 
 [endsect]
 
-[section Type registration]
+[section:type_registration Type registration (open collections only)]
 
 [#poly_collection.reference.polymorphic_containers.polymorphic_collections.type_registration.register_types]
 [def _register_types_ [link poly_collection.reference.polymorphic_containers.polymorphic_collections.type_registration.register_types `register_types`]]
@@ -646,6 +668,7 @@ from the last one to the end of its segment.
 [endsect]
 
 [import poly_collection_synopsis.qbk] [/ template poly_collection_synopsis]
+[import closed_poly_collection_synopsis.qbk] [/ template closed_poly_collection_synopsis]
 
 [section Header `"boost/poly_collection/exception.hpp"` synopsis]
 
@@ -794,14 +817,14 @@ namespace.
 
 [section Class template `base_collection`]
 
-`base_collection<Base,Allocator>` is a _PolymorphicCollection_ associated to
+`base_collection<Base,Allocator>` is an open _PolymorphicCollection_ associated to
 the classic base/derived _polymorphism_model_:
 
 * *Interface* = { `Base` : `std::is_polymorphic_v<Base>` }.
 * *Implementation*(`Base`) = { `Derived` : `std::is_base_of_v<Base,Derived>` }.
 * *subobject*(`x`) = `static_cast<Derived&>(x)` with `typeid(x)==typeid(Derived)`.
 
-[poly_collection_synopsis `base_collection`..`template<typename Base,typename Allocator>`..`Base`]
+[poly_collection_synopsis `base_collection`..`template<typename Base,typename Allocator>`..`Base`..`std::type_info`]
 
 [endsect]
 
@@ -974,19 +997,16 @@ wrapped callable object.
 
 [section Class template `function_collection`]
 
-`function_collection<Signature,Allocator>` is a _PolymorphicCollection_ associated to
+`function_collection<Signature,Allocator>` is an open _PolymorphicCollection_ associated to
 a dynamic _polymorphism_model_ based on call signature compatibility:
 
-[itemized_list
-  [*Interface* = { `Signature` : `Signature` = `R(Args...)` }.]
-  [*Implementation*(`Signature`) = { `Callable` : `std::is_invocable_r_v<R,Callable,Args...>` }.]
-  [*subobject*(`x`) =[br]
-    `x.target<T>()` with `typeid(T)==x.target_type()`, if `x` is an instantiation of _function_collection_value_type_,[br]
-    `x`, otherwise.
-  ]
-]
+* *Interface* = { `Signature` : `Signature` = `R(Args...)` }.
+* *Implementation*(`Signature`) = { `Callable` : `std::is_invocable_r_v<R,Callable,Args...>` }.
+* *subobject*(`x`) =
+  * `x.target<T>()` with `typeid(T)==x.target_type()`, if `x` is an instantiation of _function_collection_value_type_,
+  * `x`, otherwise.
 
-[poly_collection_synopsis `function_collection`..`template<typename Signature,typename Allocator>`..`_function_collection_value_type_<Signature>`]
+[poly_collection_synopsis `function_collection`..`template<typename Signature,typename Allocator>`..`_function_collection_value_type_<Signature>`..`std::type_info`]
 
 [endsect]
 
@@ -1093,26 +1113,407 @@ The exact definition of `Concept2` is implementation defined.
 
 [section Class template `any_collection`]
 
-`any_collection<Concept,Allocator>` is a _PolymorphicCollection_ associated to
+`any_collection<Concept,Allocator>` is an open _PolymorphicCollection_ associated to
 a dynamic _polymorphism_model_ based on _duck_typing_ as implemented by
 _Boost.TypeErasure_:
 
-[itemized_list
-  [*Interface* = { `Concept` :
+* *Interface* = { `Concept` :
     as [@boost:/doc/html/boost_typeerasure/conceptdef.html specified] by _Boost.TypeErasure_,
     using the [@boost:/doc/html/boost/type_erasure/_self.html `_self`]
-    [@boost:/doc/html/boost/type_erasure/placeholder.html placeholder] }.]
-  [*Implementation*(`Concept`) = { `Concrete` : `Concrete` satisfies `Concept` }.]
-  [*subobject*(`x`) =[br]
-    `boost::type_erasure::`[@boost:/doc/html/boost/type_erasure/any_cast.html `any_cast`]`<T&>(x)`
+    [@boost:/doc/html/boost/type_erasure/placeholder.html placeholder] }.
+* *Implementation*(`Concept`) = { `Concrete` : `Concrete` satisfies `Concept` }.
+* *subobject*(`x`) =
+  * `boost::type_erasure::`[@boost:/doc/html/boost/type_erasure/any_cast.html `any_cast`]`<T&>(x)`
     with `typeid(T)==boost::type_erasure::`[@boost:/doc/html/boost/type_erasure/typeid_of.html `typeid_of`]`(x)`,
     if `x` is an instantiation of `boost::type_erasure::`[@boost:/doc/html/boost/type_erasure/any.html `any`]
-    including [@boost:/doc/html/boost/type_erasure/typeid_.html `typeid_`]`<>`,[br]
-    `x`, otherwise.
-  ]
-]
+    including [@boost:/doc/html/boost/type_erasure/typeid_.html `typeid_`]`<>`,
+  * `x`, otherwise.
 
-[poly_collection_synopsis `any_collection`..`template<typename Concept,typename Allocator>`..`_any_collection_value_type_<Concept>`]
+[poly_collection_synopsis `any_collection`..`template<typename Concept,typename Allocator>`..`_any_collection_value_type_<Concept>`..`std::type_info`]
+
+[endsect]
+
+[endsect]
+
+[section Header `"boost/poly_collection/variant_collection_fwd.hpp"` synopsis]
+
+[def _variant_collection_ [link poly_collection.reference.header_boost_poly_collection_va0.class_template_variant_collectio `variant_collection`]]
+[def _variant_collection_value_type_ [link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio `variant_collection_value_type`]]
+
+  #include <boost/mp11/list.hpp>
+  #include <memory>
+
+  namespace boost{
+
+  namespace poly_collection{
+
+  template<typename TypeList>
+  using _variant_collection_value_type_=``/implementation-defined/``;
+
+  template<
+    typename TypeList,
+    typename Allocator=std::allocator<variant_collection_value_type<TypeList>>
+  >
+  class _variant_collection_;
+
+  template<typename... Ts>
+  using variant_collection_of=variant_collection<mp11::mp_list<Ts...>>;
+
+  template<typename TypeList,typename Allocator>
+  bool operator==(
+    const variant_collection<TypeList,Allocator>& x,
+    const variant_collection<TypeList,Allocator>& y);
+
+  template<typename TypeList,typename Allocator>
+  bool operator!=(
+    const variant_collection<TypeList,Allocator>& x,
+    const variant_collection<TypeList,Allocator>& y);
+
+  template<typename TypeList,typename Allocator>
+  void swap(
+    variant_collection<TypeList,Allocator>& x,variant_collection<TypeList,Allocator>& y);
+
+  } /* namespace poly_collection */
+
+  using poly_collection::variant_collection;
+  using poly_collection::variant_collection_of;
+
+  } /* namespace boost */
+
+Defines the alias template _variant_collection_value_type_ (the actual type
+it refers to, though, is merely forward declared).
+Forward declares the class template _variant_collection_
+and specifies its default template arguments. 
+Defines the alias template `variant_collection_of`. Forward declares associated
+free functions and brings `boost::poly_collection::variant_collection`
+and `poly_collection::variant_collection_of` to the `boost` namespace.
+
+[endsect]
+
+[section Header `"boost/poly_collection/variant_collection.hpp"` synopsis]
+
+  #include <boost/poly_collection/variant_collection_fwd.hpp>
+
+  namespace boost{
+
+  namespace poly_collection{
+
+  // defines the type ``_variant_collection_value_type_`` refers to
+
+  template<typename TypeList,typename Allocator>
+  class _variant_collection_;
+
+  template<typename TypeList,typename Allocator>
+  bool operator==(
+    const variant_collection<TypeList,Allocator>& x,
+    const variant_collection<TypeList,Allocator>& y);
+
+  template<typename TypeList,typename Allocator>
+  bool operator!=(
+    const variant_collection<TypeList,Allocator>& x,
+    const variant_collection<TypeList,Allocator>& y);
+
+  template<typename TypeList,typename Allocator>
+  void swap(
+    variant_collection<TypeList,Allocator>& x,variant_collection<TypeList,Allocator>& y);
+
+  } /* namespace poly_collection */
+
+  } /* namespace boost */
+
+[section Alias template `variant_collection_value_type`]
+
+`variant_collection_value_type<TypeList>` is the `value_type` of
+`boost::variant_collection<TypeList,Allocator>`, where `TypeList`
+is a [@boost:/libs/mp11/doc/html/mp11.html#definitions Boost.Mp11 list]
+of different types `Ts...`.
+`variant_collection_value_type<TypeList>` behaves similarly to
+_std::variant_`<Ts...>`, with some intentional limitations such as the impossibility
+of changing the type of the underlying alternative.
+
+In what follows, the name [' `variant_collection_value_type_impl`] is used
+just for explanatory purposes in place of the actual class template name,
+which is implementation defined.
+
+  template<typename TypeList>
+  using variant_collection_value_type=
+    mp11::mp_rename<TypeList,``/variant_collection_value_type_impl/``>;
+
+  template<typename... Ts>
+  class ``/variant_collection_value_type_impl/``
+  {
+  public:
+    // copy and assigmnent are disallowed
+
+    std::size_t ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.index index]``()const noexcept;
+    bool        ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.valueless_by_exception valueless_by_exception]``()const noexcept;
+  };
+
+  struct bad_variant_access:std::exception
+  {
+    bad_variant_access()noexcept{}
+    const char* what()const noexcept;
+  };
+
+  template<typename V> struct variant_size; // not defined
+  template<typename... Ts>
+  struct ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.variant_size variant_size]``<``/variant_collection_value_type_impl/``<Ts...>>;
+  template<typename V> struct ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.variant_size variant_size]``<const V>;
+
+  template<typename V>
+  constexpr std::size_t variant_size_v=variant_size<V>::value;
+
+  template<std::size_t I,typename T> struct variant_alternative; // not defined
+  template<std::size_t I,typename... Ts>
+  struct ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.variant_alternative variant_alternative]``<I,``/variant_collection_value_type_impl/``<Ts...>>;
+  template<std::size_t I,typename V> struct ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.variant_alternative variant_alternative]``<I,const T>;
+  template<std::size_t I,typename V> struct ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.variant_alternative variant_alternative]``<I,V&>;
+  template<std::size_t I,typename V> struct ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.variant_alternative variant_alternative]``<I,const V&>;
+  template<std::size_t I,typename V> struct ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.variant_alternative variant_alternative]``<I,V&&>;
+  template<std::size_t I,typename V> struct ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.variant_alternative variant_alternative]``<I,const V&&>;
+
+  template<std::size_t I,typename V>
+  using variant_alternative_t=typename variant_alternative<I,V>::type;
+
+  template<typename T,typename... Ts>
+  bool ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.holds_alternative holds_alternative]``(const ``/variant_collection_value_type_impl/``<Ts...>& x)noexcept;
+
+  template<std::size_t I,typename V>
+  variant_alternative_t<I,V&&> ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.get_by_index get]``(V&& x);
+
+  template<typename T,typename V>
+  variant_alternative_t<mp11::mp_find<std::decay_t<V>,T>::value,V&&> ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.get_by_type get]``(V&& x);
+
+  template<std::size_t I,typename... Ts>
+  variant_alternative_t<I,``/variant_collection_value_type_impl/``<Ts...>>*
+  ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.get_if_by_index get_if]``(``/variant_collection_value_type_impl/``<Ts...>* px)noexcept;
+  template<std::size_t I,typename... Ts>
+  const variant_alternative_t<I,``/variant_collection_value_type_impl/``<Ts...>>*
+  ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.get_if_by_index get_if]``(const ``/variant_collection_value_type_impl/``<Ts...>* px)noexcept;
+
+  template<typename T,typename... Ts>
+  T* ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.get_if_by_type get_if]``(``/variant_collection_value_type_impl/``<Ts...>* px)noexcept;
+  template<typename T,typename... Ts>
+  const T* ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.get_if_by_type get_if]``(const ``/variant_collection_value_type_impl/``<Ts...>* px)noexcept;
+
+  template<typename... Ts>
+  bool ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.operator_eq operator==]``(
+    const ``/variant_collection_value_type_impl/``<Ts...>& x,
+	const ``/variant_collection_value_type_impl/``<Ts...>& y);
+  template<typename... Ts>
+  bool ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.operator_ne operator!=]``(
+    const ``/variant_collection_value_type_impl/``<Ts...>& x,
+	const ``/variant_collection_value_type_impl/``<Ts...>& y);
+  template<typename... Ts>
+  bool ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.operator_lt operator<]``(
+    const ``/variant_collection_value_type_impl/``<Ts...>& x,
+	const ``/variant_collection_value_type_impl/``<Ts...>& y);
+  template<typename... Ts>
+  bool ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.operator_gt operator>]``(
+    const ``/variant_collection_value_type_impl/``<Ts...>& x,
+	const ``/variant_collection_value_type_impl/``<Ts...>& y);
+  template<typename... Ts>
+  bool ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.operator_le operator=<]``(
+    const ``/variant_collection_value_type_impl/``<Ts...>& x,
+	const ``/variant_collection_value_type_impl/``<Ts...>& y);
+  template<typename... Ts>
+  bool ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.operator_ge operator>=]``(
+    const ``/variant_collection_value_type_impl/``<Ts...>& x,
+	const ``/variant_collection_value_type_impl/``<Ts...>& y);
+
+  template<typename R=``/see-below/``,typename F,typename... Vs>
+  ``/see-below/`` ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.visit visit]``(F&& f,Vs&&... xs);
+
+  template<typename R=``/see-below/``,typename V,typename... Fs>
+  ``/see-below/`` ``[link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.visit_by_index visit_by_index]``(V&& x,Fs&&... fs);
+
+[#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.index]
+
+`std::size_t index()const noexcept;`
+
+[*Returns:] The index number into `Ts...` of the type of the alternative
+contained in the variant.
+
+[#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.valueless_by_exception]
+
+`bool valueless_by_exception()const noexcept;`
+
+[*Returns:] `false`.
+
+[#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.variant_size]
+
+`template<typename... Ts>`[br]
+`struct variant_size<`[^ /variant_collection_value_type_impl/]`<Ts...>>;`[br]
+`template<typename V> struct variant_size<const V>;`
+
+`variant_size<...>::value` is a `constexpr std::size_t` value with
+the number of alternative types specified for the variant.
+
+[#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.variant_alternative]
+
+`template<std::size_t I,typename... Ts>`[br]
+`struct variant_alternative<I,`[^ /variant_collection_value_type_impl/]`<Ts...>>;`[br]
+`template<std::size_t I,typename V> struct variant_alternative<I,const T>;`[br]
+`template<std::size_t I,typename V> struct variant_alternative<I,V&>;`[br]
+`template<std::size_t I,typename V> struct variant_alternative<I,const V&>;`[br]
+`template<std::size_t I,typename V> struct variant_alternative<I,V&&>;`[br]
+`template<std::size_t I,typename V> struct variant_alternative<I,const V&&>;`
+
+`variant_alternative<I,V>::type` is the `I`-th alternative type in the variant
+with the same `const` and reference qualification as `V`.
+
+[#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.holds_alternative]
+
+`template<typename T,typename... Ts>`[br]
+`bool holds_alternative(const `[^ /variant_collection_value_type_impl/]`<Ts...>& x)noexcept;`
+
+[*Returns:] `true` iff the type of the alternative contained in the variant is `T`.
+
+[#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.get_by_index]
+
+`template<std::size_t I,typename V>`[br]
+`variant_alternative_t<I,V&&> get(V&& x);` 
+
+[*Effects:] Throws `bad_variant_access` if `x.index()!=I`.[br]
+[*Returns:] A reference to the contained value
+with the same `const` and reference qualification as `x`.
+
+[#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.get_by_type]
+
+`template<typename T,typename V>`[br]
+`variant_alternative_t<mp11::mp_find<std::decay_t<V>,T>::value,V&&> get(V&& x);`
+
+[*Effects:] Throws `bad_variant_access` if `!holds_alternative<T>(x)`.[br]
+[*Returns:] A reference to the contained value
+with the same `const` and reference qualification as `x`.
+
+[#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.get_if_by_index]
+
+`template<std::size_t I,typename... Ts>`[br]
+`variant_alternative_t<I,`[^ /variant_collection_value_type_impl/]`<Ts...>>*`[br]
+`get_if(`[^ /variant_collection_value_type_impl/]`<Ts...>* px)noexcept;`[br]
+`template<std::size_t I,typename... Ts>`[br]
+`const variant_alternative_t<I,`[^ /variant_collection_value_type_impl/]`<Ts...>>*`[br]
+`get_if(const `[^ /variant_collection_value_type_impl/]`<Ts...>* px)noexcept;`
+
+[*Returns:] `nullptr` if `px` is null or `px->index()!=I`,
+a pointer to the contained value otherwise.
+
+[#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.get_if_by_type]
+
+`template<typename T,typename... Ts>`[br]
+`T* get_if(`[^ /variant_collection_value_type_impl/]`<Ts...>* px)noexcept;`[br]
+`template<typename T,typename... Ts>`[br]
+`const T* get_if(const `[^ /variant_collection_value_type_impl/]`<Ts...>* px)noexcept;`
+
+[*Returns:] `nullptr` if `px` is null or `!holds_alternative<T>(*px)`,
+a pointer to the contained value otherwise.
+
+[#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.operator_eq]
+
+`template<typename... Ts>`[br]
+`bool operator==(`[br]
+[^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& x,`[br]
+[^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& y);`
+
+[*Returns:] `x.index()==y.index()&&get<I>(x)==get<I>(y)` with `I==x.index()`.
+
+[#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.operator_ne]
+
+`template<typename... Ts>`[br]
+`bool operator!=(`[br]
+[^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& x,`[br]
+[^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& y);`
+
+[*Returns:] `x.index()!=y.index()||get<I>(x)!=get<I>(y)` with `I==x.index()`.
+
+[#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.operator_lt]
+
+`template<typename... Ts>`[br]
+`bool operator<(`[br]
+[^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& x,`[br]
+[^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& y);`
+
+[*Returns:] `x.index()<y.index()||x.index()==y.index()&&get<I>(x)<get<I>(y)` with `I==x.index()`.
+
+[#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.operator_gt]
+
+`template<typename... Ts>`[br]
+`bool operator>(`[br]
+[^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& x,`[br]
+[^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& y);`
+
+[*Returns:] `x.index()>y.index()||x.index()==y.index()&&get<I>(x)>get<I>(y)` with `I==x.index()`.
+
+[#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.operator_le]
+
+`template<typename... Ts>`[br]
+`bool operator<=(`[br]
+[^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& x,`[br]
+[^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& y);`
+
+[*Returns:] `x.index()<y.index()||x.index()==y.index()&&get<I>(x)<=get<I>(y)` with `I==x.index()`.
+
+[#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.operator_ge]
+
+`template<typename... Ts>`[br]
+`bool operator>=(`[br]
+[^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& x,`[br]
+[^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& y);`
+
+[*Returns:] `x.index()>y.index()||x.index()==y.index()&&get<I>(x)>=get<I>(y)` with `I==x.index()`.
+
+[#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.visit]
+
+`template<typename R=`[^ /see-below/]`,typename F,typename... Vs>`[br]
+[^ /see-below/]` visit(F&& f,Vs&&... xs);`
+
+[*Effects:] Calls the expression `e(Is...)`, defined as
+`std::forward<F>(f)(get<Is>(std::forward<Vs>(xs)...)`, with `Is...` equal to `xs.index()...`.[br]
+[*Returns:] 
+
+* If `R` is specified as `void`: nothing.
+* If `R` is specified as a type different from `void`: the value `e(Is...)` implicitly
+converted to `R`. 
+* If `R` is not specified, `e(Is...)`. In this and the previous case,
+`e(Js...)` must have the same type for all valid index packs `Js...`.
+
+[#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.visit_by_index]
+
+`template<typename R=`[^ /see-below/]`,typename V,typename... Fs>`[br]
+[^ /see-below/]` visit_by_index(V&& x,Fs&&... fs);`
+
+[*Requires:] `sizeof...(Fs)` is equal to the number of alternative types in the variant.[br]
+[*Effects:] Calls the expression `e(i)`, defined as
+`std::forward<Fi>(fi)(get<i>(std::forward<V>(x)))`, with `i==x.index()` and 
+`Fi` and `fi` denoting the `i`-th element of `Fs...` and `fs...`, respectively.[br]
+[*Returns:] 
+
+* If `R` is specified as `void`: nothing.
+* If `R` is specified as a type different from `void`: the value `e(i)` implicitly
+converted to `R`. 
+* If `R` is not specified, `e(i)`. In this and the previous case,
+`e(j)` must have the same type for all `j` in \[0, `sizeof...(Fs)`). 
+
+[endsect]
+
+[section Class template `variant_collection`]
+
+`variant_collection<TypeList,Allocator>` is a closed _PolymorphicCollection_ associated to
+a dynamic _polymorphism_model_ based on the interface of _std::variant_:
+
+* *Interface* = { `TypeList` = `L<Ts...>` : `L` is an arbitrary class template, `Ts...` is not empty, and
+  each `Ti` in `Ts...` is different, _MoveConstructible_, and _MoveAssignable_ or such that
+  [@http://en.cppreference.com/w/cpp/types/is_move_constructible `std::is_nothrow_move_constructible<Ti>::value`] is `true` }.
+* *Implementation*(`L<Ts...>`) = { `Ts...` } \u222a
+  { [link poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio `variant_collection_value_type`]`<Us...>` : `Us...` \u2286 `Ts...` } \u222a
+  { _std::variant_`<Us...>` : `Us...` \u2286 `Ts...` } \u222a
+  { [@boost:libs/variant2/doc/html/variant2.html#ref_variant `boost::variant2::variant`]`<Us...>` : `Us...` \u2286 `Ts...` }.
+* *subobject*(`x`) =
+  * `get<I>(x)` with `I==x.index()`, if the type of `x` is not in `Ts...`,
+  *	`x`, otherwise.
+
+[closed_poly_collection_synopsis `variant_collection`..`template<typename TypeList,typename Allocator>`..`_variant_collection_value_type_<TypeList>`..`std::size_t`]
 
 [endsect]
 
@@ -1123,6 +1524,10 @@ _Boost.TypeErasure_:
   namespace boost{
 
   namespace poly_collection{
+
+  ``['`// total restitution for closed collections:`]``
+
+  struct all_types;
 
   ``['`// non-modifying sequence operations:`]``
 
@@ -1468,12 +1873,16 @@ these algorithms for /type restitution/.
 For the description of the algorithms we use the following notation:
 
 * [' `alg`] is the (unqualified) name of any of the algorithms in
-`"boost/poly_collection/algorithm.hpp"` except `copy_n` and `rotate_copy`.
+`"boost/poly_collection/algorithm.hpp"` except `for_each_n`, `copy_n` and `rotate_copy`.
 * `first`, `middle` and `last` are (same-typed) possibly const global iterators
 of a collection of Boost.PolyCollection such that \[`first`, `middle`) and
 \[`middle`, `last`) are valid ranges.
 * `args...` is a function parameter pack of types `Args&&...`,
-* `Ts...` is a template parameter pack of arbitrary types. 
+* `Ts...` is a template parameter pack of acceptable types for the collection,
+plus optionally `all_types` in the case of closed collections.
+  * Open collections: `Us...` is defined as `Ts...`.
+  * Closed collections: `Us...` is defined as the set of all acceptable types
+  in the collection if `all_types` is in `Ts...`, or as `Ts...` otherwise.
 
 (1) [' `alg`]`(first,last,args...)`[br]
 (2) `for_each_n(first,args...)`[br]
@@ -1503,14 +1912,18 @@ as:[br]
 (4) `std::rotate_copy(rfirst,rmiddle,rlast,args...)`,[br]
 and `rfirst`, `rmiddle` and `rlast` are iterator-like objects behaving like
 their `first`, `middle` and `last` counterparts except that they
-dereference to the corresponding subobject (`const`) `T&` if pointing to a
-segment for `T` and `T` is in `Ts...`
+dereference to the corresponding subobject (`const`) `U&` if pointing to a
+segment for `U` and `U` is in `Us...`
 [footnote Strictly speaking a proper _ForwardIterator_ cannot behave
 like this as dereferencing must yield /exactly/ a (`const`) `value_type&`
 value, which disallows this type of polymorphism.].[br]
 [*Effects:] Equivalent to `expr`.[br]
 [*Returns:] `expr`.[br]
-[*Complexity:] That of `expr`.
+[*Complexity:] That of `expr`.[br]
+[*Note:] In the case of closed collections, if `Us...` is not empty and contains all the
+acceptable types of the collection (/total restitution/), then
+the dereference operation of `rfirst`, `rmiddle` and `rlast` to the
+collection's `value_type` is not ever instantiated.
 
 [endsect]
 

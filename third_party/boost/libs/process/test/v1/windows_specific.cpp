@@ -10,14 +10,14 @@
 #define BOOST_TEST_MAIN
 #define BOOST_TEST_IGNORE_SIGCHLD
 #include <boost/test/included/unit_test.hpp>
-#include <boost/process.hpp>
+#include <boost/process/v1.hpp>
 #include <boost/process/v1/windows.hpp>
 #include <boost/process/v1/extend.hpp>
 #include <boost/system/error_code.hpp>
 
 #include <string>
 
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 
 BOOST_AUTO_TEST_CASE(show_window)
 {

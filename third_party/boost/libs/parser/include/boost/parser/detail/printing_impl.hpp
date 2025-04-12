@@ -63,8 +63,9 @@ namespace boost { namespace parser { namespace detail {
     struct n_aray_parser<or_parser<ParserTuple>> : std::true_type
     {};
 
-    template<typename ParserTuple>
-    struct n_aray_parser<perm_parser<ParserTuple>> : std::true_type
+    template<typename ParserTuple, typename DelimiterParser>
+    struct n_aray_parser<perm_parser<ParserTuple, DelimiterParser>>
+        : std::true_type
     {};
 
     template<
@@ -206,15 +207,23 @@ namespace boost { namespace parser { namespace detail {
             context, parser, os, components, " | ...", " | ");
     }
 
-    template<typename Context, typename ParserTuple>
+    template<typename Context, typename ParserTuple, typename DelimiterParser>
     void print_parser(
         Context const & context,
-        perm_parser<ParserTuple> const & parser,
+        perm_parser<ParserTuple, DelimiterParser> const & parser,
         std::ostream & os,
         int components)
     {
+        if constexpr (!is_nope_v<DelimiterParser>) {
+            os << "delimiter(";
+            detail::print_parser(
+                context, parser.delimiter_parser_, os, components);
+            os << ")[";
+        }
         detail::print_or_like_parser(
             context, parser, os, components, " || ...", " || ");
+        if constexpr (!is_nope_v<DelimiterParser>)
+            os << "]";
     }
 
     template<
@@ -630,6 +639,16 @@ namespace boost { namespace parser { namespace detail {
     template<typename Context>
     void print_parser(
         Context const & context,
+        char_set_parser<symb_chars> const & parser,
+        std::ostream & os,
+        int components)
+    {
+        os << "symb";
+    }
+
+    template<typename Context>
+    void print_parser(
+        Context const & context,
         char_set_parser<lower_case_chars> const & parser,
         std::ostream & os,
         int components)
@@ -695,10 +714,14 @@ namespace boost { namespace parser { namespace detail {
         os << "\"";
     }
 
-    template<typename Context, typename Quotes, typename Escapes>
+    template<
+        typename Context,
+        typename Quotes,
+        typename Escapes,
+        typename CharParser>
     void print_parser(
         Context const & context,
-        quoted_string_parser<Quotes, Escapes> const & parser,
+        quoted_string_parser<Quotes, Escapes, CharParser> const & parser,
         std::ostream & os,
         int components)
     {

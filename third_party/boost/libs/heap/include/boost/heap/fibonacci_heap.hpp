@@ -10,10 +10,10 @@
 #define BOOST_HEAP_FIBONACCI_HEAP_HPP
 
 #include <algorithm>
+#include <array>
+#include <type_traits>
 #include <utility>
-#include <vector>
 
-#include <boost/array.hpp>
 #include <boost/assert.hpp>
 
 #include <boost/heap/detail/heap_comparison.hpp>
@@ -31,7 +31,7 @@
 #    ifdef BOOST_HEAP_SANITYCHECKS
 #        define BOOST_HEAP_ASSERT BOOST_ASSERT
 #    else
-#        define BOOST_HEAP_ASSERT( expression )
+#        define BOOST_HEAP_ASSERT( expression ) static_assert( true, "force semicolon" )
 #    endif
 #endif
 
@@ -49,7 +49,7 @@ template < typename T, typename Parspec >
 struct make_fibonacci_heap_base
 {
     static const bool constant_time_size
-        = parameter::binding< Parspec, tag::constant_time_size, boost::true_type >::type::value;
+        = parameter::binding< Parspec, tag::constant_time_size, std::true_type >::type::value;
 
     typedef typename detail::make_heap_base< T, Parspec, constant_time_size >::type               base_type;
     typedef typename detail::make_heap_base< T, Parspec, constant_time_size >::allocator_argument allocator_argument;
@@ -80,7 +80,6 @@ struct make_fibonacci_heap_base
             return *this;
         }
 
-#ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
         type( type&& rhs ) :
             base_type( std::move( static_cast< base_type& >( rhs ) ) ),
             allocator_type( std::move( static_cast< allocator_type& >( rhs ) ) )
@@ -92,7 +91,6 @@ struct make_fibonacci_heap_base
             allocator_type::operator=( std::move( static_cast< allocator_type& >( rhs ) ) );
             return *this;
         }
-#endif
     };
 };
 
@@ -238,14 +236,13 @@ public:
         size_holder::set_size( rhs.size() );
     }
 
-#ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
     /// \copydoc boost::heap::priority_queue::priority_queue(priority_queue &&)
     fibonacci_heap( fibonacci_heap&& rhs ) :
         super_t( std::move( rhs ) ),
         top_element( rhs.top_element )
     {
         roots.splice( roots.begin(), rhs.roots );
-        rhs.top_element = NULL;
+        rhs.top_element = nullptr;
     }
 
     /// \copydoc boost::heap::priority_queue::operator=(priority_queue &&)
@@ -256,10 +253,9 @@ public:
         super_t::operator=( std::move( rhs ) );
         roots.splice( roots.begin(), rhs.roots );
         top_element     = rhs.top_element;
-        rhs.top_element = NULL;
+        rhs.top_element = nullptr;
         return *this;
     }
-#endif
 
     /// \copydoc boost::heap::priority_queue::operator=(priority_queue const &)
     fibonacci_heap& operator=( fibonacci_heap const& rhs )
@@ -269,7 +265,7 @@ public:
         static_cast< super_t& >( *this ) = rhs;
 
         if ( rhs.empty() )
-            top_element = NULL;
+            top_element = nullptr;
         else
             clone_forest( rhs );
         return *this;
@@ -315,7 +311,7 @@ public:
         roots.clear_and_dispose( disposer( *this ) );
 
         size_holder::set_size( 0 );
-        top_element = NULL;
+        top_element = nullptr;
     }
 
     /// \copydoc boost::heap::priority_queue::get_allocator
@@ -363,7 +359,6 @@ public:
         return handle_type( n );
     }
 
-#if !defined( BOOST_NO_CXX11_RVALUE_REFERENCES ) && !defined( BOOST_NO_CXX11_VARIADIC_TEMPLATES )
     /**
      * \b Effects: Adds a new element to the priority queue. The element is directly constructed in-place. Returns
      * handle to element.
@@ -387,7 +382,6 @@ public:
             top_element = n;
         return handle_type( n );
     }
-#endif
 
     /**
      * \b Effects: Removes the top element from the priority queue.
@@ -454,7 +448,7 @@ public:
         node_pointer parent = n->get_parent();
 
         if ( parent ) {
-            n->parent = NULL;
+            n->parent = nullptr;
             roots.splice( roots.begin(), parent->children, node_list_type::s_iterator_to( *n ) );
         }
         add_children_to_root( n );
@@ -576,7 +570,7 @@ public:
      * */
     ordered_iterator ordered_end( void ) const
     {
-        return ordered_iterator( NULL, super_t::value_comp() );
+        return ordered_iterator( nullptr, super_t::value_comp() );
     }
 
     /**
@@ -594,7 +588,7 @@ public:
 
         roots.splice( roots.end(), rhs.roots );
 
-        rhs.top_element = NULL;
+        rhs.top_element = nullptr;
         rhs.set_size( 0 );
 
         super_t::set_stability_count( ( std::max )( super_t::get_stability_count(), rhs.get_stability_count() ) );
@@ -662,7 +656,7 @@ private:
     {
         BOOST_HEAP_ASSERT( roots.empty() );
         typedef typename node::template node_cloner< allocator_type > node_cloner;
-        roots.clone_from( rhs.roots, node_cloner( *this, NULL ), detail::nop_disposer() );
+        roots.clone_from( rhs.roots, node_cloner( *this, nullptr ), detail::nop_disposer() );
 
         top_element
             = detail::find_max_child< node_list_type, node, internal_compare >( roots, super_t::get_internal_cmp() );
@@ -705,9 +699,8 @@ private:
         if ( roots.empty() )
             return;
 
-        static const size_type                 max_log2 = sizeof( size_type ) * 8;
-        boost::array< node_pointer, max_log2 > aux;
-        aux.assign( NULL );
+        static const size_type               max_log2 = sizeof( size_type ) * 8;
+        std::array< node_pointer, max_log2 > aux {};
 
         node_list_iterator it = roots.begin();
         top_element           = static_cast< node_pointer >( &*it );
@@ -717,7 +710,7 @@ private:
             ++it;
             size_type node_rank = n->child_count();
 
-            if ( aux[ node_rank ] == NULL )
+            if ( aux[ node_rank ] == nullptr )
                 aux[ node_rank ] = n;
             else {
                 do {
@@ -734,9 +727,9 @@ private:
 
                     other->parent = n;
 
-                    aux[ node_rank ] = NULL;
+                    aux[ node_rank ] = nullptr;
                     node_rank        = n->child_count();
-                } while ( aux[ node_rank ] != NULL );
+                } while ( aux[ node_rank ] != nullptr );
                 aux[ node_rank ] = n;
             }
 
@@ -757,7 +750,7 @@ private:
         if ( !empty() )
             consolidate();
         else
-            top_element = NULL;
+            top_element = nullptr;
     }
 
     mutable node_pointer top_element;

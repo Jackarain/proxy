@@ -107,7 +107,7 @@ public:
     using string_type = std::basic_string<char_type>;
     using native_handle_type = char_type **;
 
-    void reload() {this->_env_impl = ::environ;}
+    void reload() {this->_env_impl = environ;}
 
     string_type get(const pointer_type id) { return getenv(id); }
     void        set(const pointer_type id, const pointer_type value)
@@ -136,7 +136,7 @@ public:
     native_environment_impl & operator=(native_environment_impl && ) = default;
     native_handle_type _env_impl = environ;
 
-    native_handle_type native_handle() const {return ::environ;}
+    native_handle_type native_handle() const {return environ;}
 };
 
 

@@ -65,6 +65,9 @@ do_session(
         return;
     }
 
+    // Set the expected hostname in the peer certificate for verification
+    stream.set_verify_callback(ssl::host_name_verification(host));
+
     // Look up the domain name
     auto const results = resolver.async_resolve(host, port, yield[ec]);
     if(ec)

@@ -238,6 +238,7 @@ public:
     bool <a href="#intersects">intersects</a>(const dynamic_bitset&amp; a) const;
 
     size_type <a href="#find_first">find_first</a>() const;
+    size_type <a href="#find_first_off">find_first</a>(size_type pos) const;
     size_type <a href="#find_next">find_next</a>(size_type pos) const;
 
 };
@@ -1372,6 +1373,15 @@ size_type <a id = "find_first">find_first</a>() const;
 
 <b>Returns:</b> the lowest index <tt>i</tt> such as bit <tt>i</tt>
 is set, or <tt>npos</tt> if <tt>*this</tt> has no on bits.
+
+<hr />
+<pre>
+size_type <a id = "find_first_off">find_first</a>(size_type pos) const;
+</pre>
+
+<b>Returns:</b> the lowest index <tt>i</tt> greater or equal to
+<tt>offset</tt> such as bit <tt>i</tt> is set, or <tt>npos</tt> if
+no such index exists.
 
 <hr />
 <pre>

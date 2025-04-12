@@ -11,7 +11,7 @@
 #define BOOST_TEST_IGNORE_SIGCHLD
 #include <boost/test/included/unit_test.hpp>
 
-#include <boost/process.hpp>
+#include <boost/process/v1.hpp>
 #include <boost/process/v1/posix.hpp>
 
 #include <system_error>
@@ -21,7 +21,7 @@
 #include <sys/wait.h>
 #include <errno.h>
 
-namespace bp = boost::process;
+namespace bp = boost::process::v1;
 
 #if defined(BOOST_POSIX_HAS_VFORK)
 

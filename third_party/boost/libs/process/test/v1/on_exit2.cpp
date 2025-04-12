@@ -10,7 +10,8 @@
 #define BOOST_TEST_MAIN
 #define BOOST_TEST_IGNORE_SIGCHLD
 #include <boost/test/included/unit_test.hpp>
-#include <boost/process.hpp>
+#include <boost/process/v1/async.hpp>
+#include <boost/process/v1/child.hpp>
 #include <boost/asio.hpp>
 #include <chrono>
 #include <thread>
@@ -26,7 +27,7 @@ BOOST_AUTO_TEST_CASE(double_ios, *boost::unit_test::timeout(6))
         return;
     }
 
-    namespace bp = boost::process;
+    namespace bp = boost::process::v1;
     boost::asio::io_context ios;
     std::chrono::steady_clock::time_point p1, p2;
 

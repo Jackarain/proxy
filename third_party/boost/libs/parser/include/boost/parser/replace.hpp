@@ -77,22 +77,16 @@ namespace boost::parser {
             range_rvalue_reference_t<V2>>;
 
 #if BOOST_PARSER_USE_CONCEPTS
-        // clang-format off
         template<typename ReplacementV, typename V>
         concept concatable = requires {
             typename detail::concat_reference_t<ReplacementV, V>;
             typename detail::concat_value_t<ReplacementV, V>;
             typename detail::concat_rvalue_reference_t<ReplacementV, V>;
         };
-        // clang-format on
 #else
         template<typename ReplacementV, typename V>
-        // clang-format off
-        using concatable_expr = decltype(
-            std::declval<concat_reference_t<ReplacementV, V>>(),
-            std::declval<concat_value_t<ReplacementV, V>>(),
-            std::declval<concat_rvalue_reference_t<ReplacementV, V>>());
-        // clang-format on
+        using concatable_expr =
+            decltype(std::declval<concat_reference_t<ReplacementV, V>>(), std::declval<concat_value_t<ReplacementV, V>>(), std::declval<concat_rvalue_reference_t<ReplacementV, V>>());
         template<typename ReplacementV, typename V>
         constexpr bool concatable =
             is_detected_v<concatable_expr, ReplacementV, V>;
@@ -107,7 +101,7 @@ namespace boost::parser {
 #endif
             >
 #if BOOST_PARSER_USE_CONCEPTS
-        requires concatable<V1, V2>
+            requires concatable<V1, V2>
 #endif
         struct either_iterator_impl
             : detail::stl_interfaces::iterator_interface<
@@ -169,14 +163,12 @@ namespace boost::parser {
             either_iterator_impl<V1, V2>>;
 
 #if BOOST_PARSER_USE_CONCEPTS
-        // clang-format off
         template<typename ReplacementV, typename V>
-        concept replacement_for = requires (ReplacementV replacement, V base) {
+        concept replacement_for = requires(ReplacementV replacement, V base) {
             { either_iterator<V, ReplacementV>(replacement.begin()) };
             { either_iterator<V, ReplacementV>(replacement.end()) };
             { either_iterator<V, ReplacementV>(base.begin()) };
         };
-        // clang-format on
 #else
         template<typename ReplacementV, typename V>
         using replacement_for_expr = decltype(
@@ -528,23 +520,19 @@ namespace boost::parser {
                 typename GlobalState,
                 typename ErrorHandler,
                 typename SkipParser>
-            requires
-                // clang-format off
-                std::ranges::viewable_range<R> &&
-                std::ranges::viewable_range<ReplacementR> &&
-                // clang-format on
-                can_replace_view<
-                    to_range_t<R>,
-                    decltype(to_range<
-                             ReplacementR,
-                             true,
-                             detail::range_utf_format_v<R>>::
-                                 call(std::declval<ReplacementR>())),
-                    Parser,
-                    GlobalState,
-                    ErrorHandler,
-                    SkipParser>
-                // clang-format off
+                requires std::ranges::viewable_range<R> &&
+                         std::ranges::viewable_range<ReplacementR> &&
+                         can_replace_view<
+                             to_range_t<R>,
+                             decltype(to_range<
+                                      ReplacementR,
+                                      true,
+                                      detail::range_utf_format_v<R>>::
+                                          call(std::declval<ReplacementR>())),
+                             Parser,
+                             GlobalState,
+                             ErrorHandler,
+                             SkipParser>
             [[nodiscard]] constexpr auto operator()(
                 R && r,
                 parser_interface<Parser, GlobalState, ErrorHandler> const &
@@ -552,10 +540,9 @@ namespace boost::parser {
                 parser_interface<SkipParser> const & skip,
                 ReplacementR && replacement,
                 trace trace_mode = trace::off) const
-            // clang-format on
             {
                 return replace_view(
-                    to_range<R>::call((R &&) r),
+                    to_range<R>::call((R &&)r),
                     parser,
                     skip,
                     to_range<
@@ -572,36 +559,31 @@ namespace boost::parser {
                 typename Parser,
                 typename GlobalState,
                 typename ErrorHandler>
-            requires
-                // clang-format off
-                std::ranges::viewable_range<R> &&
-                std::ranges::viewable_range<ReplacementR> &&
-                // clang-format on
-                can_replace_view<
-                    to_range_t<R>,
-                    decltype(to_range<
-                             ReplacementR,
-                             true,
-                             detail::range_utf_format_v<R>>::
-                                 call(std::declval<ReplacementR>())),
-                    Parser,
-                    GlobalState,
-                    ErrorHandler,
-                    parser_interface<eps_parser<detail::phony>>>
-                // clang-format off
+                requires std::ranges::viewable_range<R> &&
+                         std::ranges::viewable_range<ReplacementR> &&
+                         can_replace_view<
+                             to_range_t<R>,
+                             decltype(to_range<
+                                      ReplacementR,
+                                      true,
+                                      detail::range_utf_format_v<R>>::
+                                          call(std::declval<ReplacementR>())),
+                             Parser,
+                             GlobalState,
+                             ErrorHandler,
+                             parser_interface<eps_parser<detail::phony>>>
             [[nodiscard]] constexpr auto operator()(
                 R && r,
                 parser_interface<Parser, GlobalState, ErrorHandler> const &
                     parser,
                 ReplacementR && replacement,
                 trace trace_mode = trace::off) const
-            // clang-format on
             {
                 return (*this)(
-                    (R &&) r,
+                    (R &&)r,
                     parser,
                     parser_interface<eps_parser<detail::phony>>{},
-                    (ReplacementR &&) replacement,
+                    (ReplacementR &&)replacement,
                     trace_mode);
             }
 

@@ -22,7 +22,7 @@
 #include <boost/system/api_config.hpp>
 
 #if !defined(BOOST_PROCESS_VERSION)
-#define  BOOST_PROCESS_VERSION 1
+#define  BOOST_PROCESS_VERSION 2
 #endif
 
 #if BOOST_PROCESS_VERSION == 1

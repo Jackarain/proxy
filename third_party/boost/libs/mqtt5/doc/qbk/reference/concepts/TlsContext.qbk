@@ -1,0 +1,18 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:TlsContext TlsContext concept]
+
+`TlsContext` represents an object that defines the user's configuration for establishing TLS/SSL connections.
+If TLS/SSL is not required, this parameter defaults to `std::monostate`.
+
+The __Client__ treats the `TlsContext` object as an opaque entity.
+It is primarily utilized when creating the underlying transport stream and is not directly manipulated by the __Client__.
+
+For instance, establishing a secure connection using using __SSL_STREAM__ requires __SSL_CONTEXT__ as the `TlsContext` type.
+An example of this can be found in the [link mqtt5.hello_world_over_tls hello_world_over_tls.cpp] example.
+
+[endsect]

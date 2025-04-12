@@ -5,10 +5,9 @@
 #ifndef STATIC_ASSERT_SAME_DWA2003530_HPP
 # define STATIC_ASSERT_SAME_DWA2003530_HPP
 
-#include <boost/static_assert.hpp>
-#include <boost/type_traits/is_same.hpp>
+#include <type_traits>
 
-#define STATIC_ASSERT_SAME( T1,T2 ) BOOST_STATIC_ASSERT((::boost::is_same< T1, T2 >::value))
+#define STATIC_ASSERT_SAME( T1,T2 ) static_assert(std::is_same<T1, T2>::value, "T1 and T2 are expected to be the same types.")
 
 template <class T1, class T2>
 struct static_assert_same

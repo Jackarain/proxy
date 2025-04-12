@@ -1,0 +1,13 @@
+== `process_start_dir`
+
+The easier initializer to use is `process_start_dir`:
+
+.example/start_dir.cpp:17-20
+[source,cpp,indent=0]
+----
+include::../example/start_dir.cpp[tag=start_dir]
+----
+
+This will run `ls` in the folder `/home` instead of the current folder.
+
+WARNING: If your path is relative, it may fail on posix, because the directory is changed before a call to execve.

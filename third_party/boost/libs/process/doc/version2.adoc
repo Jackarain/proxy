@@ -1,0 +1,81 @@
+= Version 2
+
+Boost.process V2 is an redesign of boost.process, based on previous 
+design mistakes & improved system APIs.
+
+The major changes are
+
+* Simplified interface
+* Reliance on pidfd_open on linux
+* Full asio integration
+* Removed unreliable functionality
+* UTF8 Support
+* separate compilation
+* fd safe by default
+
+Version 2 is now the defauled. In order to discourage usage of the deprecated v1, it's documentation has been removed.
+
+== Simplified Interface
+
+In process v1 one can define partial settings in the constructor of the process, 
+which has lead to a small DSL.
+
+[source,cpp]
+----
+child c{exe="test", args+="--help", std_in < null(), env["FOO"] += "BAR"};
+----
+
+While this looks fancy at first, it really does not scale well with more parameters.
+For process v2, the interfaces is simple:
+
+[source,cpp]
+----
+extern std::unordered_map<std::string, std::string> my_env;
+extern asio::io_context ctx;
+process proc(ctx, "./test", {"--help"}, process_stdio{nullptr, {}, {}}, process_environment(my_env));
+----
+
+Every initializer addresses one logical component (e.g. stdio) instead of multiple ones accumulating.
+Furthermore, every process has a path and arguments, instead of a confusing mixture of cmd-style and 
+exe-args that can be randomly spread out.
+
+
+== `pidfd_open`
+
+Since process v1 came out, linux has moved along and added [pidfd_open](https://man7.org/linux/man-pages/man2/pidfd_open.2.html)
+which allows users to obtain a descriptor for a process.
+This is much more reliable since it is not as easy to miss as a `SIGCHLD`.
+Windows has provided `HANDLE`s for processes all along.
+Unless the OS doesn't support it, process v2 will use file descriptors and handles to implement waiting 
+for processes.
+
+== Full asio integration
+
+Process v1 aimed to make asio optional, but synchronous IO with subprocesses usually means one is begging 
+for deadlocks.
+Since asio added pipes in boost 1.78, boost process V2 is fully asio based and uses it's pipes and 
+file-handles for the subprocess.
+
+== Unreliable functionality
+
+Certain parts of boost.process were not as reliable as they should've been. 
+
+This concerns especially the `wait_for` and `wait_until` functions on the process.
+The latter are easy to do on windows, but posix does not provide an API for this. 
+Thus the wait_for used signals or fork, which was all but safe. 
+Since process v2 is based on asio and thus supports cancellation, 
+a wait_for can now safely be implemented with an async_wait + timeout.
+
+== UTF-8
+
+Instead of using ascii-APIs on windows, process V2 just assumes UTF-8 everywhere
+and uses the UTF-16 APIs.
+
+== Fd safe by default
+
+While not a problem on windows (since HANDLEs get manually enabled for inheritance),
+posix systems create a problem with inheriting file handles by default.
+
+Process V2 will automatically close all non-whitelisted descriptors, 
+without needing any option to enable it.
+

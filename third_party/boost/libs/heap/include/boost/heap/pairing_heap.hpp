@@ -10,6 +10,7 @@
 #define BOOST_HEAP_PAIRING_HEAP_HPP
 
 #include <algorithm>
+#include <type_traits>
 #include <utility>
 
 #include <boost/assert.hpp>
@@ -19,7 +20,6 @@
 #include <boost/heap/detail/stable_heap.hpp>
 #include <boost/heap/detail/tree_iterator.hpp>
 #include <boost/heap/policies.hpp>
-#include <boost/type_traits/integral_constant.hpp>
 
 #ifdef BOOST_HAS_PRAGMA_ONCE
 #    pragma once
@@ -30,7 +30,7 @@
 #    ifdef BOOST_HEAP_SANITYCHECKS
 #        define BOOST_HEAP_ASSERT BOOST_ASSERT
 #    else
-#        define BOOST_HEAP_ASSERT( expression )
+#        define BOOST_HEAP_ASSERT( expression ) static_assert( true, "force semicolon" )
 #    endif
 #endif
 
@@ -48,7 +48,7 @@ template < typename T, typename Parspec >
 struct make_pairing_heap_base
 {
     static const bool constant_time_size
-        = parameter::binding< Parspec, tag::constant_time_size, boost::true_type >::type::value;
+        = parameter::binding< Parspec, tag::constant_time_size, std::true_type >::type::value;
     typedef typename detail::make_heap_base< T, Parspec, constant_time_size >::type               base_type;
     typedef typename detail::make_heap_base< T, Parspec, constant_time_size >::allocator_argument allocator_argument;
     typedef typename detail::make_heap_base< T, Parspec, constant_time_size >::compare_argument   compare_argument;
@@ -67,7 +67,6 @@ struct make_pairing_heap_base
             allocator_type( arg )
         {}
 
-#ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
         type( type const& rhs ) :
             base_type( rhs ),
             allocator_type( rhs )
@@ -91,7 +90,6 @@ struct make_pairing_heap_base
             allocator_type::operator=( static_cast< const allocator_type& >( rhs ) );
             return *this;
         }
-#endif
     };
 };
 
@@ -228,19 +226,19 @@ public:
     /// \copydoc boost::heap::priority_queue::priority_queue(value_compare const &)
     explicit pairing_heap( value_compare const& cmp = value_compare() ) :
         super_t( cmp ),
-        root( NULL )
+        root( nullptr )
     {}
 
     /// \copydoc boost::heap::priority_queue::priority_queue(allocator_type const &)
     explicit pairing_heap( allocator_type const& alloc ) :
         super_t( alloc ),
-        root( NULL )
+        root( nullptr )
     {}
 
     /// \copydoc boost::heap::priority_queue::priority_queue(priority_queue const &)
     pairing_heap( pairing_heap const& rhs ) :
         super_t( rhs ),
-        root( NULL )
+        root( nullptr )
     {
         if ( rhs.empty() )
             return;
@@ -249,13 +247,12 @@ public:
         size_holder::set_size( rhs.get_size() );
     }
 
-#ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
     /// \copydoc boost::heap::priority_queue::priority_queue(priority_queue &&)
     pairing_heap( pairing_heap&& rhs ) :
         super_t( std::move( rhs ) ),
         root( rhs.root )
     {
-        rhs.root = NULL;
+        rhs.root = nullptr;
     }
 
     /// \copydoc boost::heap::priority_queue::operator=(priority_queue &&)
@@ -263,10 +260,9 @@ public:
     {
         super_t::operator=( std::move( rhs ) );
         root     = rhs.root;
-        rhs.root = NULL;
+        rhs.root = nullptr;
         return *this;
     }
-#endif
 
     /// \copydoc boost::heap::priority_queue::operator=(priority_queue const & rhs)
     pairing_heap& operator=( pairing_heap const& rhs )
@@ -288,7 +284,7 @@ public:
     /// \copydoc boost::heap::priority_queue::empty
     bool empty( void ) const
     {
-        return root == NULL;
+        return root == nullptr;
     }
 
     /// \copydoc boost::heap::binomial_heap::size
@@ -297,7 +293,7 @@ public:
         if ( constant_time_size )
             return size_holder::get_size();
 
-        if ( root == NULL )
+        if ( root == nullptr )
             return 0;
         else
             return detail::count_nodes( root );
@@ -320,7 +316,7 @@ public:
         root->~node();
         allocator_type& alloc = *this;
         alloc.deallocate( root, 1 );
-        root = NULL;
+        root = nullptr;
         size_holder::set_size( 0 );
     }
 
@@ -367,7 +363,6 @@ public:
         return handle_type( n );
     }
 
-#if !defined( BOOST_NO_CXX11_RVALUE_REFERENCES ) && !defined( BOOST_NO_CXX11_VARIADIC_TEMPLATES )
     /**
      * \b Effects: Adds a new element to the priority queue. The element is directly constructed in-place. Returns
      * handle to element.
@@ -390,7 +385,6 @@ public:
         merge_node( n );
         return handle_type( n );
     }
-#endif
 
     /**
      * \b Effects: Removes the top element from the priority queue.
@@ -529,7 +523,7 @@ public:
             if ( !n->children.empty() )
                 root = merge_node_list( n->children );
             else
-                root = NULL;
+                root = nullptr;
         }
 
         size_holder::decrement();
@@ -559,7 +553,7 @@ public:
     /// \copydoc boost::heap::fibonacci_heap::ordered_begin
     ordered_iterator ordered_end( void ) const
     {
-        return ordered_iterator( NULL, super_t::value_comp() );
+        return ordered_iterator( nullptr, super_t::value_comp() );
     }
 
 
@@ -589,7 +583,7 @@ public:
 
         size_holder::add( rhs.get_size() );
         rhs.set_size( 0 );
-        rhs.root = NULL;
+        rhs.root = nullptr;
 
         super_t::set_stability_count( ( std::max )( super_t::get_stability_count(), rhs.get_stability_count() ) );
         rhs.set_stability_count( 0 );
@@ -647,7 +641,7 @@ private:
 #if !defined( BOOST_DOXYGEN_INVOKED )
     void clone_tree( pairing_heap const& rhs )
     {
-        BOOST_HEAP_ASSERT( root == NULL );
+        BOOST_HEAP_ASSERT( root == nullptr );
         if ( rhs.empty() )
             return;
 
@@ -659,7 +653,7 @@ private:
     void merge_node( node_pointer other )
     {
         BOOST_HEAP_ASSERT( other );
-        if ( root != NULL )
+        if ( root != nullptr )
             root = merge_nodes( root, other );
         else
             root = other;

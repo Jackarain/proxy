@@ -1,0 +1,114 @@
+////
+Copyright 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_hmac]
+# <boost/hash2/hmac.hpp>
+:idprefix: ref_hmac_
+
+```
+namespace boost {
+namespace hash2 {
+
+template<class H> class hmac;
+
+} // namespace hash2
+} // namespace boost
+```
+
+This header implements the https://tools.ietf.org/html/rfc2104[HMAC algorithm].
+
+## hmac
+
+```
+template<class H> class hmac
+{
+public:
+
+    using result_type = typename H::result_type;
+
+    static constexpr std::size_t block_size = H::block_size;
+
+    constexpr hmac();
+    explicit constexpr hmac( std::uint64_t seed );
+    hmac( void const* p, std::size_t n );
+    constexpr hmac( unsigned char const* p, std::size_t n );
+
+    void update( void const* p, std::size_t n );
+    constexpr void update( unsigned char const* p, std::size_t n );
+
+    constexpr result_type result();
+};
+```
+
+The class template `hmac` takes as a parameter a cryptographic _hash algorithm_ `H`
+and implements the corresponding _hash-based message authentication code_ (HMAC) algorithm.
+
+For example, HMAC-SHA2-256 is implemented by `hmac<sha2_256>`.
+
+### Constructors
+
+```
+constexpr hmac();
+```
+
+Default constructor.
+
+Effects: ::
+  Initializes the internal state using an empty byte sequence as the secret key.
+
+```
+explicit constexpr hmac( std::uint64_t seed );
+```
+
+Constructor taking an integer seed value.
+
+Effects: ::
+  If `seed` is zero, initializes the state as if by default construction, otherwise, initializes it using the 8 bytes of the little-endian representation of `seed` as the secret key.
+
+Remarks: ::
+  By convention, if `seed` is zero, the effect of this constructor is the same as default construction.
+
+```
+hmac( void const* p, std::size_t n );
+hmac( unsigned char const* p, std::size_t n );
+```
+
+Constructor taking a byte sequence seed.
+
+Effects: ::
+  Initializes the state as specified by the HMAC algorithm using `[p, p+n)` as the secret key.
+
+Remarks: ::
+  By convention, if `n` is zero, the effect of this constructor is the same as default construction.
+
+### update
+
+```
+void update( void const* p, std::size_t n );
+constexpr void update( unsigned char const* p, std::size_t n );
+```
+
+Effects: ::
+  Updates the internal state of the HMAC algorithm from the byte sequence `[p, p+n)`.
+
+Remarks: ::
+  Consecutive calls to `update` are equivalent to a single call with the concatenated byte sequences of the individual calls.
+
+### result
+
+```
+constexpr result_type result();
+```
+
+Effects: ::
+  Pads the accumulated message and finalizes the HMAC digest.
+
+Returns: ::
+  The HMAC digest of the message formed from the byte sequences of the preceding calls to `update`.
+
+Remarks: ::
+  Repeated calls to `result()` return a pseudorandom sequence of `result_type` values, effectively extending the output.
+

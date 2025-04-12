@@ -6,10 +6,10 @@
 
 #include <boost/iterator/minimum_category.hpp>
 #include <boost/core/lightweight_test_trait.hpp>
-#include <boost/type_traits/is_same.hpp>
 #include <iterator>
+#include <type_traits>
 
-using boost::is_same;
+using std::is_same;
 using boost::iterators::minimum_category;
 
 int main(int, char*[])

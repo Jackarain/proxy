@@ -42,7 +42,8 @@ namespace boost::parser::detail::text::detail {
     template<typename R>
     constexpr bool view =
 #if BOOST_PARSER_DETAIL_TEXT_USE_CONCEPTS ||                                   \
-    (defined(__cpp_lib_concepts) && (!defined(__GNUC__) || 12 <= __GNUC__))
+    (defined(__cpp_lib_concepts) &&                                            \
+     (!defined(BOOST_PARSER_GCC) || 12 <= __GNUC__))
         std::ranges::view<R>
 #else
         range_<R> && !container_<R> &&

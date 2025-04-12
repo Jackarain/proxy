@@ -88,5 +88,66 @@ int main()
         }
     }
 
-return boost::report_errors();
+    {
+        using namespace bp::literals;
+        constexpr auto parser =
+            bp::delimiter(','_l)[bp::int_ || bp::string("foo") || bp::char_('g')];
+
+        {
+            auto result = bp::parse("42 foo g", parser, bp::ws);
+            BOOST_TEST(!result);
+            result = bp::parse("42, foo ,g", parser, bp::ws);
+            BOOST_TEST(result);
+            BOOST_TEST(
+                *result ==
+                (bp::tuple<int, std::string, double>(42, "foo"s, 'g')));
+        }
+        {
+            auto result = bp::parse(",42, g, foo", parser, bp::ws);
+            BOOST_TEST(!result);
+            result = bp::parse("42, g , foo", parser, bp::ws);
+            BOOST_TEST(result);
+            BOOST_TEST(
+                *result ==
+                (bp::tuple<int, std::string, double>(42, "foo"s, 'g')));
+        }
+        {
+            auto result = bp::parse("foo, 42, g,", parser, bp::ws);
+            BOOST_TEST(!result);
+            result = bp::parse("foo, 42, g", parser, bp::ws);
+            BOOST_TEST(result);
+            BOOST_TEST(
+                *result ==
+                (bp::tuple<int, std::string, double>(42, "foo"s, 'g')));
+        }
+        {
+            auto result = bp::parse("foo g 42", parser, bp::ws);
+            BOOST_TEST(!result);
+            result = bp::parse("foo, g, 42", parser, bp::ws);
+            BOOST_TEST(result);
+            BOOST_TEST(
+                *result ==
+                (bp::tuple<int, std::string, double>(42, "foo"s, 'g')));
+        }
+        {
+            auto result = bp::parse("g foo 42", parser, bp::ws);
+            BOOST_TEST(!result);
+            result = bp::parse("g ,foo ,42", parser, bp::ws);
+            BOOST_TEST(result);
+            BOOST_TEST(
+                *result ==
+                (bp::tuple<int, std::string, double>(42, "foo"s, 'g')));
+        }
+        {
+            auto result = bp::parse("g 42 foo", parser, bp::ws);
+            BOOST_TEST(!result);
+            result = bp::parse("g , 42 , foo", parser, bp::ws);
+            BOOST_TEST(result);
+            BOOST_TEST(
+                *result ==
+                (bp::tuple<int, std::string, double>(42, "foo"s, 'g')));
+        }
+    }
+
+    return boost::report_errors();
 }

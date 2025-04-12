@@ -8,6 +8,6 @@ if(HAVE_BOOST_TEST)
 
 # https://crascit.com/2015/03/28/enabling-cxx11-in-cmake/
 set(CMAKE_CXX_EXTENSIONS OFF)
-boost_test_jamfile(FILE Jamfile LINK_LIBRARIES Boost::charconv Boost::core Boost::assert Boost::random)
+boost_test_jamfile(FILE Jamfile LINK_LIBRARIES Boost::charconv Boost::core Boost::assert)
 
 endif()

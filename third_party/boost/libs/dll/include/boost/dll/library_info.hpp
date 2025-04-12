@@ -1,5 +1,5 @@
 // Copyright 2014 Renato Tegon Forti, Antony Polukhin.
-// Copyright Antony Polukhin, 2015-2024.
+// Copyright Antony Polukhin, 2015-2025.
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
@@ -14,9 +14,9 @@
 #include <boost/predef/os.h>
 #include <boost/predef/architecture.h>
 #include <boost/throw_exception.hpp>
-#include <boost/type_traits/integral_constant.hpp>
 
 #include <fstream>
+#include <type_traits>
 
 #include <boost/dll/detail/pe_info.hpp>
 #include <boost/dll/detail/elf_info.hpp>
@@ -50,15 +50,15 @@ private:
     } fmt_;
 
     /// @cond
-    inline static void throw_if_in_32bit_impl(boost::true_type /* is_32bit_platform */) {
+    inline static void throw_if_in_32bit_impl(std::true_type /* is_32bit_platform */) {
         boost::throw_exception(std::runtime_error("Not native format: 64bit binary"));
     }
 
-    inline static void throw_if_in_32bit_impl(boost::false_type /* is_32bit_platform */) BOOST_NOEXCEPT {}
+    inline static void throw_if_in_32bit_impl(std::false_type /* is_32bit_platform */) noexcept {}
 
 
     inline static void throw_if_in_32bit() {
-        throw_if_in_32bit_impl( boost::integral_constant<bool, (sizeof(void*) == 4)>() );
+        throw_if_in_32bit_impl( std::integral_constant<bool, (sizeof(void*) == 4)>() );
     }
 
     static void throw_if_in_windows() {
@@ -116,6 +116,7 @@ public:
     * \param library_path Path to the binary file from which the info must be extracted.
     * \param throw_if_not_native_format Throw an exception if this file format is not
     * supported by OS.
+    * \throws std::exception based exceptions.
     */
     explicit library_info(const boost::dll::fs::path& library_path, bool throw_if_not_native_format = true)
         : f_(
@@ -142,6 +143,7 @@ public:
 
     /*!
     * \return List of sections that exist in binary file.
+    * \throws std::exception based exceptions.
     */
     std::vector<std::string> sections() {
         switch (fmt_) {
@@ -158,6 +160,7 @@ public:
 
     /*!
     * \return List of all the exportable symbols from all the sections that exist in binary file.
+    * \throws std::exception based exceptions.
     */
     std::vector<std::string> symbols() {
         switch (fmt_) {
@@ -175,6 +178,7 @@ public:
     /*!
     * \param section_name Name of the section from which symbol names must be returned.
     * \return List of symbols from the specified section.
+    * \throws std::exception based exceptions.
     */
     std::vector<std::string> symbols(const char* section_name) {
         switch (fmt_) {

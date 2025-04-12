@@ -11,28 +11,30 @@
 
 import testing ;
 
-project : requirements <library>/boost/test//boost_unit_test_framework/<link>static ;
+project : requirements
+    <library>/boost/ptr_container//boost_ptr_container
+    <library>/boost/test//boost_unit_test_framework/<link>static ;
 
-run ptr_inserter.cpp ;
-run ptr_vector.cpp ;
-run ptr_list.cpp ;
-run ptr_deque.cpp ;
-run ptr_set.cpp ;
-run ptr_map.cpp ;
-run ptr_map_adapter.cpp ;
-run ptr_array.cpp ;
-run tree_test.cpp ;
-run incomplete_type_test.cpp ;
+run ptr_inserter.cpp /boost/assign//boost_assign ;
+run ptr_vector.cpp /boost/assign//boost_assign /boost/lexical_cast//boost_lexical_cast ;
+run ptr_list.cpp /boost/assign//boost_assign /boost/lexical_cast//boost_lexical_cast ;
+run ptr_deque.cpp /boost/assign//boost_assign /boost/lexical_cast//boost_lexical_cast ;
+run ptr_set.cpp /boost/lexical_cast//boost_lexical_cast ;
+run ptr_map.cpp /boost/lexical_cast//boost_lexical_cast ;
+run ptr_map_adapter.cpp /boost/lexical_cast//boost_lexical_cast ;
+run ptr_array.cpp /boost/lexical_cast//boost_lexical_cast ;
+run tree_test.cpp /boost/lexical_cast//boost_lexical_cast ;
+run incomplete_type_test.cpp /boost/lexical_cast//boost_lexical_cast ;
 run view_example.cpp ;
 run iterator_test.cpp ;
 run tut1.cpp ;
-run indirect_fun.cpp ;
+run indirect_fun.cpp /boost/assign//boost_assign ;
 run serialization.cpp /boost/serialization//boost_serialization : : : <undefined-sanitizer>norecover:<build>no ;
-run no_exceptions.cpp ;
+run no_exceptions.cpp /boost/assign//boost_assign /boost/lexical_cast//boost_lexical_cast ;
 
-run ptr_unordered_set.cpp ;
-run ptr_unordered_map.cpp ;
-run ptr_circular_buffer.cpp ;
+run ptr_unordered_set.cpp /boost/lexical_cast//boost_lexical_cast ;
+run ptr_unordered_map.cpp /boost/lexical_cast//boost_lexical_cast ;
+run ptr_circular_buffer.cpp /boost/assign//boost_assign /boost/lexical_cast//boost_lexical_cast ;
 compile const_element_containers.cpp ;
 
 compile issue_23.cpp ;

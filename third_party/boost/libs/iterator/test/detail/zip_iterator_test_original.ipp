@@ -160,7 +160,7 @@ int main( void )
 
   // Undo change to vect1
   ZI_TUPLE_GET(1)(ref_tuple) = dblOldVal;
-  
+
 #if defined(ZI_USE_BOOST_TUPLE)
 
   /////////////////////////////////////////////////////////////////////////////
@@ -295,7 +295,7 @@ int main( void )
     ++num_failed_tests;
     std::cout << "not OK" << std::endl;
   }
-  
+
 #endif
 
   /////////////////////////////////////////////////////////////////////////////
@@ -841,7 +841,7 @@ int main( void )
     ++num_failed_tests;
     std::cout << "not OK" << std::endl;
   }
-  
+
 #endif
 
   // Done

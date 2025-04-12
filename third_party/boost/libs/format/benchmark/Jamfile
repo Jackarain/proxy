@@ -6,19 +6,21 @@
 #  See www.boost.org/LICENSE_1_0.txt
 #
 
-project libs/format/benchmark 
+project
     : requirements
-	  <toolset>msvc:<define>_CRT_SECURE_NO_WARNINGS
-	;
+        <library>/boost/format//boost_format
+        <library>/boost/timer//boost_timer
+        <toolset>msvc:<define>_CRT_SECURE_NO_WARNINGS
+    ;
 
 exe bench_format_no_locale
     : bench_format.cpp
       /boost/timer//boost_timer
-    : <define>BOOST_NO_STD_LOCALE <location-prefix>no_locale    
+    : <define>BOOST_NO_STD_LOCALE <location-prefix>no_locale
     ;
 
 exe bench_format_normal
-    : bench_format.cpp 
+    : bench_format.cpp
       /boost/timer//boost_timer
     : <location-prefix>normal
     ;

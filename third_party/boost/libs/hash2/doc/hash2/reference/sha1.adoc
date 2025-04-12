@@ -1,0 +1,114 @@
+////
+Copyright 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_sha1]
+# <boost/hash2/sha1.hpp>
+:idprefix: ref_sha1_
+
+```
+#include <boost/hash2/hmac.hpp>
+#include <boost/hash2/digest.hpp>
+
+namespace boost {
+namespace hash2 {
+
+class sha1_160;
+
+using hmac_sha1_160 = hmac<sha1_160>;
+
+} // namespace hash2
+} // namespace boost
+```
+
+This header implements the https://tools.ietf.org/html/rfc3174[SHA-1 algorithm].
+
+## sha1_160
+
+```
+class sha1_160
+{
+public:
+
+    using result_type = digest<20>;
+
+    static constexpr std::size_t block_size = 64;
+
+    constexpr sha1_160();
+    explicit constexpr sha1_160( std::uint64_t seed );
+    sha1_160( void const* p, std::size_t n );
+    constexpr sha1_160( unsigned char const* p, std::size_t n );
+
+    void update( void const* p, std::size_t n );
+    constexpr void update( unsigned char const* p, std::size_t n );
+
+    constexpr result_type result();
+};
+```
+
+### Constructors
+
+```
+constexpr sha1_160();
+```
+
+Default constructor.
+
+Effects: ::
+  Initializes the internal state of the SHA-1 algorithm to its initial values.
+
+```
+explicit constexpr sha1_160( std::uint64_t seed );
+```
+
+Constructor taking an integer seed value.
+
+Effects: ::
+  Initializes the state as if by default construction, then if `seed` is not zero, performs `update(p, 8); result();` where `p` points to a little-endian representation of the value of `seed`.
+
+Remarks: ::
+  By convention, if `seed` is zero, the effect of this constructor is the same as default construction.
+
+```
+sha1_160( void const* p, std::size_t n );
+constexpr sha1_160( unsigned char const* p, std::size_t n );
+```
+
+Constructor taking a byte sequence seed.
+
+Effects: ::
+  Initializes the state as if by default construction, then if `n` is not zero, performs `update(p, n); result()`.
+
+Remarks: ::
+  By convention, if `n` is zero, the effect of this constructor is the same as default construction.
+
+### update
+
+```
+void update( void const* p, std::size_t n );
+constexpr void update( unsigned char const* p, std::size_t n );
+```
+
+Effects: ::
+  Updates the internal state of the SHA-1 algorithm from the byte sequence `[p, p+n)`.
+
+Remarks: ::
+  Consecutive calls to `update` are equivalent to a single call with the concatenated byte sequences of the individual calls.
+
+### result
+
+```
+constexpr result_type result();
+```
+
+Effects: ::
+  Pads the accumulated message and finalizes the SHA-1 digest.
+
+Returns: ::
+  The SHA-1 digest of the message formed from the byte sequences of the preceding calls to `update`.
+
+Remarks: ::
+  Repeated calls to `result()` return a pseudorandom sequence of `result_type` values, effectively extending the output.
+

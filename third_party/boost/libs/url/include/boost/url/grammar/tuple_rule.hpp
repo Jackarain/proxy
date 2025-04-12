@@ -14,7 +14,9 @@
 #include <boost/url/error_types.hpp>
 #include <boost/url/grammar/error.hpp>
 #include <boost/url/grammar/detail/tuple.hpp>
+#include <boost/url/grammar/type_traits.hpp>
 #include <boost/mp11/algorithm.hpp>
+#include <boost/static_assert.hpp>
 #include <boost/core/empty_value.hpp>
 #include <tuple>
 
@@ -22,67 +24,6 @@ namespace boost {
 namespace urls {
 namespace grammar {
 
-/** Match a series of rules in order
-
-    This matches a series of rules in the
-    order specified. Upon success the input
-    is adjusted to point to the first
-    unconsumed character. There is no
-    implicit specification of linear white
-    space between each rule.
-
-    @par Value Type
-    @code
-    using value_type = __see_below__;
-    @endcode
-
-    The sequence rule usually returns a
-    `std::tuple` containing the the `value_type`
-    of each corresponding rule in the sequence,
-    except that `void` values are removed.
-    However, if there is exactly one non-void
-    value type `T`, then the sequence rule
-    returns `system::result<T>` instead of
-    `system::result<tuple<...>>`.
-
-    @par Example
-    Rules are used with the function @ref parse.
-    @code
-    system::result< std::tuple< unsigned char, unsigned char, unsigned char, unsigned char > > rv =
-        parse( "192.168.0.1", 
-            tuple_rule(
-                dec_octet_rule,
-                squelch( delim_rule('.') ),
-                dec_octet_rule,
-                squelch( delim_rule('.') ),
-                dec_octet_rule,
-                squelch( delim_rule('.') ),
-                dec_octet_rule ) );
-    @endcode
-
-    @par BNF
-    @code
-    sequence     = rule1 rule2 rule3...
-    @endcode
-
-    @par Specification
-    @li <a href="https://datatracker.ietf.org/doc/html/rfc5234#section-3.1"
-        >3.1.  Concatenation (rfc5234)</a>
-
-    @param rn A list of one or more rules to match
-
-    @see
-        @ref dec_octet_rule,
-        @ref delim_rule,
-        @ref parse,
-        @ref squelch.
-*/
-#ifdef BOOST_URL_DOCS
-template<class... Rules>
-constexpr
-__implementation_defined__
-tuple_rule( Rules... rn ) noexcept;
-#else
 namespace implementation_defined {
 template<
     class R0,
@@ -170,7 +111,9 @@ public:
     @li <a href="https://datatracker.ietf.org/doc/html/rfc5234#section-3.1"
         >3.1.  Concatenation (rfc5234)</a>
 
+    @param r0 The first rule to match
     @param rn A list of one or more rules to match
+    @return The sequence rule
 
     @see
         @ref dec_octet_rule,
@@ -179,8 +122,8 @@ public:
         @ref squelch.
 */
 template<
-    class R0,
-    class... Rn>
+    BOOST_URL_CONSTRAINT(Rule) R0,
+    BOOST_URL_CONSTRAINT(Rule)... Rn>
 constexpr
 auto
 tuple_rule(
@@ -189,11 +132,13 @@ tuple_rule(
         implementation_defined::tuple_rule_t<
             R0, Rn...>
 {
+    BOOST_STATIC_ASSERT(
+        mp11::mp_all<
+            is_rule<R0>,
+            is_rule<Rn>...>::value);
     return { r0, rn... };
 }
-#endif
 
-#ifndef BOOST_URL_DOCS
 namespace implementation_defined {
 
 template<class Rule>
@@ -223,7 +168,6 @@ struct squelch_rule_t
 };
 
 } // implementation_defined
-#endif
 
 /** Squelch the value of a rule
 
@@ -262,6 +206,7 @@ struct squelch_rule_t
     @endcode
 
     @param r The rule to squelch
+    @return The squelched rule
 
     @see
         @ref delim_rule,
@@ -273,11 +218,12 @@ struct squelch_rule_t
         @ref pct_encoded_rule,
         @ref unreserved_chars.
 */
-template<class Rule>
+template<BOOST_URL_CONSTRAINT(Rule) R>
 constexpr
-BOOST_URL_IMPLEMENTATION_DEFINED(implementation_defined::squelch_rule_t<Rule>)
-squelch( Rule const& r ) noexcept
+BOOST_URL_IMPLEMENTATION_DEFINED(implementation_defined::squelch_rule_t<R>)
+squelch( R const& r ) noexcept
 {
+    BOOST_STATIC_ASSERT(is_rule<R>::value);
     return { r };
 }
 

@@ -1,0 +1,53 @@
+////
+Copyright 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_get_integral_result]
+# <boost/hash2/get_integral_result.hpp>
+:idprefix: ref_get_integral_result_
+
+```
+namespace boost {
+namespace hash2 {
+
+template<class T, class Hash> constexpr T get_integral_result( Hash& h );
+
+} // namespace hash2
+} // namespace boost
+```
+
+## get_integral_result
+
+```
+template<class T, class Hash> constexpr T get_integral_result( Hash& h );
+```
+
+Requires: ::
+  `T` must be an integral type that is not `bool`.
+  `Hash` must be a _hash algorithm_.
+
+Effects: ::
+  Calls `h.result()` one or more times.
+
+Returns: ::
+  A value that is derived from the return values of the `h.result()` calls in a way that is approximately uniformly distributed over the possible values of `T`.
+
+Remarks: ::
+  When `Hash::result_type` is an array-like type, `get_integral_result` is allowed to assume that `Hash` is a high quality hash algorithm and that therefore the values of `h.result()` are uniformly distributed over the entire domain of `Hash::result_type`.
+
+Example: ::
++
+```
+template<class T, class Hash> struct my_hash
+{
+    std::size_t operator()( std::string const& st ) const noexcept
+    {
+        Hash hash;
+        boost::hash2::hash_append( hash, {}, st );
+        return boost::hash2::get_integral_result<std::size_t>( hash );
+    }
+};
+```
+

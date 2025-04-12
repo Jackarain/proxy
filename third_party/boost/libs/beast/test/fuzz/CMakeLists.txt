@@ -36,7 +36,6 @@ add_custom_target(
     WORKING_DIRECTORY ${BOOST_BEAST_FUZZER_SEEDS_PARENT_DIR}
     COMMENT "Unzipping fuzz seeds"
     VERBATIM)
-
 set(BOOST_BEAST_FUZZER_CORPUS_DIR ${CMAKE_CURRENT_BINARY_DIR}/corpus)
 set(BOOST_BEAST_FUZZER_MERGED_CORPUS_DIR ${CMAKE_CURRENT_BINARY_DIR}/merged-corpus)
 if(EXISTS ${BOOST_BEAST_FUZZER_CORPUS_PATH})
@@ -54,6 +53,7 @@ else()
         COMMENT "Creating fuzz corpus directory"
         VERBATIM)
 endif()
+set_target_properties(untar_corpus untar_seeds PROPERTIES FOLDER "fuzzing")
 add_dependencies(untar_corpus untar_seeds)
 
 # Target that runs all fuzz targets
@@ -64,16 +64,18 @@ add_custom_target(
     COMMAND ${CMAKE_COMMAND} -E tar cf ${BOOST_BEAST_FUZZER_CORPUS_PATH} ${BOOST_BEAST_FUZZER_CORPUS_DIR}
     WORKING_DIRECTORY ${BOOST_BEAST_FUZZER_CORPUS_PARENT_DIR}
     VERBATIM)
+    set_target_properties(boost_beast_fuzz_all PROPERTIES FOLDER "fuzzing")
 
 # Register a single fuzzer and add as dependency to fuzz target
 function(add_boost_beast_fuzzer NAME)
     # Fuzzer executable
     set(SOURCE_FILES ${ARGN})
     add_executable(fuzzer_${NAME} ${SOURCE_FILES})
-    target_link_libraries(fuzzer_${NAME} PRIVATE lib-beast)
+    source_group("" FILES ${SOURCE_FILES})
+    target_link_libraries(fuzzer_${NAME} PRIVATE boost_beast)
     target_compile_options(fuzzer_${NAME} PRIVATE -g -O2 -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=undefined)
     target_link_libraries(fuzzer_${NAME} PRIVATE -fsanitize=fuzzer,address,undefined)
-    set_property(TARGET fuzzer_${NAME} PROPERTY FOLDER "fuzzing")
+    set_target_properties(fuzzer_${NAME} PROPERTIES FOLDER "fuzzing")
 
     # Custom target to run fuzzer executable
     add_custom_target(
@@ -106,7 +108,14 @@ function(add_boost_beast_fuzzer NAME)
         DEPENDS untar_corpus fuzzer_${NAME})
     add_dependencies(fuzz_${NAME} fuzzer_${NAME})
     add_dependencies(boost_beast_fuzz_all fuzz_${NAME})
-    set_property(TARGET fuzz_${NAME} PROPERTY ENVIRONMENT "UBSAN_OPTIONS=halt_on_error=false")
+    set_target_properties(fuzz_${NAME} PROPERTIES FOLDER "UBSAN_OPTIONS=halt_on_error=false")
+    set_target_properties(fuzz_${NAME} PROPERTIES FOLDER "fuzzing")
+    if (BOOST_BEAST_FUZZER_ADD_TO_CTEST)
+        add_test(
+            NAME test_fuzz_${NAME}
+            COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target fuzz_${NAME})
+        add_dependencies(tests test_fuzz_${NAME})
+    endif()
 endfunction()
 
 # Register all fuzzers

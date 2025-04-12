@@ -1,5 +1,6 @@
 project
     :   requirements
+        <library>/boost/mpl//boost_mpl
         <warnings>extra
         <toolset>clang:<cxxflags>-Wno-variadic-macros
         <toolset>gcc:<cxxflags>-Wshadow
@@ -49,7 +50,8 @@ compile find.cpp ;
 compile find_if.cpp ;
 compile fold.cpp ;
 run for_each.cpp
-  : : : <cxxstd>98:<build>no <cxxstd>03:<build>no ;
+  : : : <cxxstd>98:<build>no <cxxstd>03:<build>no
+    <library>/boost/bind//boost_bind ;
 compile front.cpp ;
 compile get_tag_def.cpp ;
 compile has_xxx.cpp ;
@@ -60,9 +62,10 @@ compile inherit.cpp ;
 compile insert.cpp ;
 compile insert_range.cpp ;
 run int.cpp ;
-run char.cpp ;
-run integral_c.cpp
-  : : : <toolset>vacpp:<cxxflags>-qchars=signed ;
+run char.cpp : : :                                                                    : char                ;
+run char.cpp : : : <toolset>gcc:<cxxflags>"-funsigned-char -Wnarrowing -Werror"       : char_unsigned       ;
+run integral_c.cpp : : : <toolset>vacpp:<cxxflags>-qchars=signed                      : integral_c          ;
+run integral_c.cpp : : : <toolset>gcc:<cxxflags>"-funsigned-char -Wnarrowing -Werror" : integral_c_unsigned ;
 compile is_placeholder.cpp ;
 compile is_sequence.cpp ;
 compile iterator_tags.cpp ;

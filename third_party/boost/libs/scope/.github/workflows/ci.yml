@@ -82,11 +82,9 @@ jobs:
               - g++-10
           - toolset: gcc-11
             cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
-            os: ubuntu-20.04
+            os: ubuntu-22.04
             install:
               - g++-11
-            sources:
-              - "ppa:ubuntu-toolchain-r/test"
           - toolset: gcc-12
             cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
             os: ubuntu-22.04
@@ -94,20 +92,22 @@ jobs:
               - g++-12
           - toolset: gcc-13
             cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
-            os: ubuntu-latest
-            container: ubuntu:23.04
+            os: ubuntu-24.04
             install:
               - g++-13
+          - toolset: gcc-14
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
+            os: ubuntu-24.04
+            install:
+              - g++-14
           - name: UBSAN
-            toolset: gcc-11
-            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu"
+            toolset: gcc-13
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
             ubsan: 1
             build_variant: debug
-            os: ubuntu-20.04
+            os: ubuntu-24.04
             install:
-              - g++-11
-            sources:
-              - "ppa:ubuntu-toolchain-r/test"
+              - g++-13
 
           # Linux, clang
           - toolset: clang
@@ -134,7 +134,7 @@ jobs:
           - toolset: clang
             compiler: clang++-3.8
             cxxstd: "11,14"
-            os: ubuntu-20.04
+            os: ubuntu-latest
             container: ubuntu:16.04
             install:
               - clang-3.8
@@ -201,6 +201,8 @@ jobs:
             os: ubuntu-22.04
             install:
               - clang-11
+              - g++-11
+            gcc_toolchain: 11
           # Note: clang-12 through 15 do not fully support C++23, so it is not compatible with libstdc++-13 in this mode
           - toolset: clang
             compiler: clang++-12
@@ -237,54 +239,64 @@ jobs:
           - toolset: clang
             compiler: clang++-16
             cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,2b-gnu"
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             install:
               - clang-16
-            sources:
-              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main"
-            source_keys:
-              - "https://apt.llvm.org/llvm-snapshot.gpg.key"
+              - g++-11
+            gcc_toolchain: 11
           - toolset: clang
             compiler: clang++-17
             cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             install:
               - clang-17
+              - g++-11
+            gcc_toolchain: 11
+          - toolset: clang
+            compiler: clang++-18
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
+            os: ubuntu-24.04
+            install:
+              - clang-18
+              - g++-13
+          - toolset: clang
+            compiler: clang++-19
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
+            os: ubuntu-24.04
+            install:
+              - clang-19
             sources:
-              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main"
+              - "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-19 main"
             source_keys:
               - "https://apt.llvm.org/llvm-snapshot.gpg.key"
           - toolset: clang
-            compiler: clang++-17
-            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
-            os: ubuntu-22.04
-            install:
-              - clang-17
-              - libc++-17-dev
-              - libc++abi-17-dev
-            sources:
-              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main"
-            source_keys:
-              - "https://apt.llvm.org/llvm-snapshot.gpg.key"
+            compiler: clang++-19
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
             cxxflags: -stdlib=libc++
             linkflags: -stdlib=libc++
+            os: ubuntu-24.04
+            install:
+              - clang-19
+              - libc++-19-dev
+              - libc++abi-19-dev
+            sources:
+              - "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-19 main"
+            source_keys:
+              - "https://apt.llvm.org/llvm-snapshot.gpg.key"
           - name: UBSAN
             toolset: clang
-            compiler: clang++-15
-            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,2b-gnu"
+            compiler: clang++-18
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
             cxxflags: -stdlib=libc++
             linkflags: "-stdlib=libc++ -lubsan"
             ubsan: 1
             build_variant: debug
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             install:
-              - clang-15
-              - libc++-15-dev
-              - libc++abi-15-dev
+              - clang-18
+              - libc++-18-dev
+              - libc++abi-18-dev
 
-          - toolset: clang
-            cxxstd: "11,14,17,20,2b"
-            os: macos-12
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-13
@@ -557,9 +569,13 @@ jobs:
             addrmd: 64
             os: windows-2019
 
-          - name: CMake tests
+          - name: CMake MSVC tests
             cmake_tests: 1
             os: windows-2022
+          - name: CMake MinGW-w64 tests
+            cmake_tests: 1
+            os: windows-2022
+            cmake_generator: "MinGW Makefiles"
 
     timeout-minutes: 15
     runs-on: ${{matrix.os}}
@@ -615,6 +631,7 @@ jobs:
       - name: Build CMake tests
         if: matrix.cmake_tests
         run: |
+            if not "${{matrix.cmake_generator}}" == "" set "CMAKE_GENERATOR=${{matrix.cmake_generator}}"
             cd boost-root
             mkdir __build_static__
             cd __build_static__

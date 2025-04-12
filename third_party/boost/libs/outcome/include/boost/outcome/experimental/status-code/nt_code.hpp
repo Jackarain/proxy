@@ -37,6 +37,11 @@ DEALINGS IN THE SOFTWARE.
 
 #include "win32_code.hpp"
 
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma warning(push)
+#pragma warning(disable : 6326)  // constant comparison
+#endif
+
 BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE_BEGIN
 
 //! \exclude
@@ -237,5 +242,9 @@ inline constexpr const _nt_code_domain &_nt_code_domain::get()
 }
 
 BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE_END
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma warning(pop)
+#endif
 
 #endif

@@ -116,9 +116,9 @@ struct constructor
 };
 //
 //****************************************************************************
-};// End namespace util
-};// End namespace common
-};// End namespace sort
-};// End namespace boost
+} // End namespace util
+} // End namespace common
+} // End namespace sort
+} // End namespace boost
 //****************************************************************************
 #endif

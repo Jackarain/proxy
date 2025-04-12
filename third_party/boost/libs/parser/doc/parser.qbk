@@ -110,6 +110,7 @@
 
 
 [def _std_str_             `std::string`]
+[def _std_strs_            `std::string`s]
 [def _std_vec_char_        `std::vector<char>`]
 [def _std_vec_char32_      `std::vector<char32_t>`]
 
@@ -201,6 +202,7 @@
 [def _merge_               [globalref boost::parser::merge `merge[]`]]
 [def _sep_                 [globalref boost::parser::separate `separate[]`]]
 [def _transform_           [globalref boost::parser::transform `transform(f)[]`]]
+[def _delimiter_           [globalref boost::parser::delimiter `delimiter(p)[]`]]
 
 [def _omit_np_             [globalref boost::parser::omit `omit`]]
 [def _raw_np_              [globalref boost::parser::raw `raw`]]
@@ -211,11 +213,13 @@
 [def _merge_np_            [globalref boost::parser::merge `merge`]]
 [def _sep_np_              [globalref boost::parser::separate `separate`]]
 [def _transform_np_        [globalref boost::parser::transform `transform`]]
+[def _delimiter_np_        [globalref boost::parser::delimiter `delimiter`]]
 
 [def _blank_               [globalref boost::parser::blank `blank`]]
 [def _control_             [globalref boost::parser::control `control`]]
 [def _digit_               [globalref boost::parser::digit `digit`]]
 [def _punct_               [globalref boost::parser::punct `punct`]]
+[def _symb_                [globalref boost::parser::symb `symb`]]
 [def _hex_digit_           [globalref boost::parser::hex_digit `hex_digit`]]
 [def _lower_               [globalref boost::parser::lower `lower`]]
 [def _upper_               [globalref boost::parser::upper `upper`]]
@@ -239,6 +243,7 @@
 [def _more_about_rules_    [link boost_parser.tutorial.more_about_rules More About Rules]]
 [def _unicode_             [link boost_parser.tutorial.unicode_support Unicode Support]]
 [def _concepts_            [link boost_parser.concepts Concepts]]
+[def _seq_parser_example_  [link boost_parser.tutorial.attribute_generation.a_sequence_parser_attribute_example A sequence parser attribute example]]
 [def _ex_json_             [link boost_parser.extended_examples.parsing_json Parsing JSON]]
 [def _ex_cb_json_          [link boost_parser.extended_examples.parsing_json_with_callbacks Parsing JSON With Callbacks]]
 [def _rationale_           [link boost_parser.rationale Rationale]]

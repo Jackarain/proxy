@@ -17,14 +17,14 @@
 
 #ifndef BOOST_STL_INTERFACES_DOXYGEN
 
-#if defined(_MSC_VER) || defined(__GNUC__) && __GNUC__ < 8
+#if defined(_MSC_VER) || defined(BOOST_GCC) && __GNUC__ < 8
 #define BOOST_STL_INTERFACES_NO_HIDDEN_FRIEND_CONSTEXPR
 #define BOOST_STL_INTERFACES_HIDDEN_FRIEND_CONSTEXPR
 #else
 #define BOOST_STL_INTERFACES_HIDDEN_FRIEND_CONSTEXPR constexpr
 #endif
 
-#if defined(__GNUC__) && __GNUC__ < 9
+#if defined(BOOST_GCC) && __GNUC__ < 9
 #define BOOST_STL_INTERFACES_CONCEPT concept bool
 #else
 #define BOOST_STL_INTERFACES_CONCEPT concept

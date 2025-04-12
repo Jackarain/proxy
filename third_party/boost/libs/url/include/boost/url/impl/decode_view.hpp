@@ -166,6 +166,57 @@ back() const noexcept ->
     return *--end();
 }
 
+namespace detail {
+
+template <class T>
+BOOST_CXX14_CONSTEXPR
+int
+decoded_strcmp(decode_view s0, T s1)
+{
+    auto const n0 = s0.size();
+    auto const n1 = s1.size();
+    auto n = (std::min)(n0, n1);
+    auto it0 = s0.begin();
+    auto it1 = s1.begin();
+    while (n--)
+    {
+        const char c0 = *it0++;
+        const char c1 = *it1++;
+        if (c0 == c1)
+            continue;
+        return 1 - 2 * (static_cast<unsigned char>(c0)
+                      < static_cast<unsigned char>(c1));
+    }
+    return 1 - (n0 == n1) - 2 * (n0 < n1);
+}
+
+} // detail
+
+
+#if defined(BOOST_NO_CXX14_CONSTEXPR)
+inline
+#else
+BOOST_CXX14_CONSTEXPR
+#endif
+int
+decode_view::
+compare(core::string_view other) const noexcept
+{
+    return detail::decoded_strcmp(*this, other);
+}
+
+#if defined(BOOST_NO_CXX14_CONSTEXPR)
+inline
+#else
+BOOST_CXX14_CONSTEXPR
+#endif
+int
+decode_view::
+compare(decode_view other) const noexcept
+{
+    return detail::decoded_strcmp(*this, other);
+}
+
 } // urls
 } // boost
 

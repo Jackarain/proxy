@@ -1015,8 +1015,8 @@ namespace boost { namespace parser {
         template<typename T>
         struct is_perm_p : std::false_type
         {};
-        template<typename T>
-        struct is_perm_p<perm_parser<T>> : std::true_type
+        template<typename T, typename DelimiterParser>
+        struct is_perm_p<perm_parser<T, DelimiterParser>> : std::true_type
         {};
 
         template<typename T>
@@ -3413,10 +3413,14 @@ namespace boost { namespace parser {
         ParserTuple parsers_;
     };
 
-    template<typename ParserTuple>
+    template<typename ParserTuple, typename DelimiterParser>
     struct perm_parser
     {
         constexpr perm_parser(ParserTuple parsers) : parsers_(parsers) {}
+        constexpr perm_parser(
+            ParserTuple parsers, DelimiterParser delimiter_parser) :
+            parsers_(parsers), delimiter_parser_(delimiter_parser)
+        {}
 
 #ifndef BOOST_PARSER_DOXYGEN
 
@@ -3643,7 +3647,19 @@ namespace boost { namespace parser {
             };
             // Use one of the previously-unused parsers to parse one
             // alternative.
+            bool first_iteration = true;
             auto parsed_one = [&](auto) {
+                if constexpr (!detail::is_nope_v<DelimiterParser>) {
+                    if (!first_iteration) {
+                        detail::skip(first, last, skip, flags);
+                        bool local_success = true;
+                        delimiter_parser_.call(
+                            first, last, context, skip, flags, local_success);
+                        if (!local_success)
+                            return false;
+                    }
+                    first_iteration = false;
+                }
                 return (
                     parse_into(
                         Is,
@@ -3667,6 +3683,7 @@ namespace boost { namespace parser {
 #endif
 
         ParserTuple parsers_;
+        DelimiterParser delimiter_parser_;
     };
 
     namespace detail {
@@ -4434,22 +4451,18 @@ namespace boost { namespace parser {
 #endif
 
     namespace detail {
-        // clang-format off
         template<typename Action, typename Attribute>
         using action_direct_call_expr =
             decltype(std::declval<Action>()(std::declval<Attribute>()));
         template<typename Action, typename Attribute>
-        using action_apply_call_expr =
-            decltype(hl::apply(std::declval<Action>(), std::declval<Attribute>()));
+        using action_apply_call_expr = decltype(hl::apply(
+            std::declval<Action>(), std::declval<Attribute>()));
         template<typename Action, typename Attribute, typename Context>
         using action_assignable_to_val_direct_expr =
-            decltype(_val(std::declval<Context>()) =
-                     std::declval<Action>()(std::declval<Attribute>()));
+            decltype(_val(std::declval<Context>()) = std::declval<Action>()(std::declval<Attribute>()));
         template<typename Action, typename Attribute, typename Context>
         using action_assignable_to_val_apply_expr =
-            decltype(_val(std::declval<Context>()) =
-                     hl::apply(std::declval<Action>(), std::declval<Attribute>()));
-        // clang-format on
+            decltype(_val(std::declval<Context>()) = hl::apply(std::declval<Action>(), std::declval<Attribute>()));
 
         template<typename Action, typename Attribute, typename Context>
         constexpr auto action_assignable_to_val_direct()
@@ -5609,7 +5622,7 @@ namespace boost { namespace parser {
                 return rhs.parser_.prepend(*this);
             } else {
                 return parser::parser_interface{
-                    perm_parser<tuple<parser_type, ParserType2>>{
+                    perm_parser<tuple<parser_type, ParserType2>, detail::nope>{
                         tuple<parser_type, ParserType2>{parser_, rhs.parser_}}};
             }
         }
@@ -6124,23 +6137,23 @@ namespace boost { namespace parser {
         }
     }
 
-    template<typename ParserTuple>
+    template<typename ParserTuple, typename DelimiterParser>
     template<typename Parser>
-    constexpr auto perm_parser<ParserTuple>::prepend(
+    constexpr auto perm_parser<ParserTuple, DelimiterParser>::prepend(
         parser_interface<Parser> parser) const noexcept
     {
         // If you're seeing this as a compile- or run-time failure, you've
         // tried to put an eps parser in a permutation-parser, such as "eps ||
         // int_".
         BOOST_PARSER_ASSERT(!detail::is_eps_p<Parser>{});
-        return parser_interface{perm_parser<decltype(detail::hl::prepend(
-            parsers_, parser.parser_))>{
-            detail::hl::prepend(parsers_, parser.parser_)}};
+        return parser_interface{perm_parser<
+            decltype(detail::hl::prepend(parsers_, parser.parser_)),
+            detail::nope>{detail::hl::prepend(parsers_, parser.parser_)}};
     }
 
-    template<typename ParserTuple>
+    template<typename ParserTuple, typename DelimiterParser>
     template<typename Parser>
-    constexpr auto perm_parser<ParserTuple>::append(
+    constexpr auto perm_parser<ParserTuple, DelimiterParser>::append(
         parser_interface<Parser> parser) const noexcept
     {
         // If you're seeing this as a compile- or run-time failure, you've
@@ -6148,13 +6161,14 @@ namespace boost { namespace parser {
         // || eps".
         BOOST_PARSER_ASSERT(!detail::is_eps_p<Parser>{});
         if constexpr (detail::is_perm_p<Parser>{}) {
-            return parser_interface{perm_parser<decltype(detail::hl::concat(
-                parsers_, parser.parser_.parsers_))>{
+            return parser_interface{perm_parser<
+                decltype(detail::hl::concat(parsers_, parser.parser_.parsers_)),
+                detail::nope>{
                 detail::hl::concat(parsers_, parser.parser_.parsers_)}};
         } else {
-            return parser_interface{perm_parser<decltype(detail::hl::append(
-                parsers_, parser.parser_))>{
-                detail::hl::append(parsers_, parser.parser_)}};
+            return parser_interface{perm_parser<
+                decltype(detail::hl::append(parsers_, parser.parser_)),
+                detail::nope>{detail::hl::append(parsers_, parser.parser_)}};
         }
     }
 
@@ -6307,6 +6321,36 @@ namespace boost { namespace parser {
     repeat(MinType min_, MaxType max_) noexcept
     {
         return repeat_directive<MinType, MaxType>{min_, max_};
+    }
+
+    /** A directive that represents a `perm_parser`, where the items parsed
+        are delimited by `DelimiterParser`,
+        (e.g. `delimiter(delimter_parser)[some_perm_parser]`).  This directive
+        only applies to `perm_parser`s. */
+    template<typename DelimiterParser>
+    struct delimiter_directive
+    {
+        template<typename ParserTuple, typename DelimiterParser2>
+        constexpr auto operator[](
+            parser_interface<perm_parser<ParserTuple, DelimiterParser2>> rhs)
+            const noexcept
+        {
+            using parser_type = perm_parser<ParserTuple, DelimiterParser>;
+            return parser_interface{
+                parser_type{rhs.parser_.parsers_, delimiter_parser_}};
+        }
+
+        DelimiterParser delimiter_parser_;
+    };
+
+    /** Returns a `delimiter_directive` whose `operator[]` returns a
+        `perm_parser`, where the items parsed are delimited by
+        `delimiter_parser`. */
+    template<typename DelimiterParser>
+    constexpr delimiter_directive<DelimiterParser>
+    delimiter(parser_interface<DelimiterParser> delimiter_parser) noexcept
+    {
+        return delimiter_directive<DelimiterParser>{delimiter_parser.parser_};
     }
 
     /** Represents a skip parser as a directive.  When used without a skip
@@ -6684,8 +6728,7 @@ namespace boost { namespace parser {
             \tparam T Constrained by `!parsable_range_like<T>`. */
 #if BOOST_PARSER_USE_CONCEPTS
         template<typename T>
-        // clang-format off
-        requires (!parsable_range_like<T>)
+            requires(!parsable_range_like<T>)
 #else
         template<
             typename T,
@@ -6693,7 +6736,6 @@ namespace boost { namespace parser {
                 std::enable_if_t<!detail::is_parsable_range_like_v<T>>>
 #endif
         constexpr auto operator()(T x) const noexcept
-        // clang-format on
         {
             BOOST_PARSER_ASSERT(
                 (detail::is_nope_v<Expected> &&
@@ -6758,10 +6800,9 @@ namespace boost { namespace parser {
 
             \tparam R Additionally constrained by
             `std::same_as<std::ranges::range_value_t<R>, char32_t>`. */
-        // clang-format off
 #if BOOST_PARSER_USE_CONCEPTS
         template<parsable_range_like R>
-        requires std::same_as<std::ranges::range_value_t<R>, char32_t>
+            requires std::same_as<std::ranges::range_value_t<R>, char32_t>
 #else
         template<
             typename R,
@@ -6770,14 +6811,13 @@ namespace boost { namespace parser {
                 std::is_same_v<detail::range_value_t<R>, char32_t>>>
 #endif
         constexpr auto operator()(sorted_t, R && r) const noexcept
-        // clang-format on
         {
             BOOST_PARSER_ASSERT(
                 ((!std::is_rvalue_reference_v<R &&> ||
                   !detail::is_range<detail::remove_cv_ref_t<R>>) &&
-                     "It looks like you tried to pass an rvalue range to "
-                     "char_().  Don't do that, or you'll end up with dangling "
-                     "references."));
+                 "It looks like you tried to pass an rvalue range to "
+                 "char_().  Don't do that, or you'll end up with dangling "
+                 "references."));
             BOOST_PARSER_ASSERT(
                 (detail::is_nope_v<Expected> &&
                  "If you're seeing this, you tried to chain calls on char_, "
@@ -7260,7 +7300,7 @@ namespace boost { namespace parser {
         return parser_interface{string_parser(str)};
     }
 
-    template<typename Quotes, typename Escapes>
+    template<typename Quotes, typename Escapes, typename CharParser>
     struct quoted_string_parser
     {
         constexpr quoted_string_parser() : chs_(), ch_('"') {}
@@ -7273,7 +7313,11 @@ namespace boost { namespace parser {
             typename Enable =
                 std::enable_if_t<detail::is_parsable_range_like_v<R>>>
 #endif
-        constexpr quoted_string_parser(R && r) : chs_((R &&) r), ch_(0)
+        constexpr quoted_string_parser(
+            R && r,
+            parser_interface<CharParser> char_p =
+                parser_interface{CharParser()}) :
+            chs_((R &&)r), char_p_(char_p), ch_(0)
         {
             BOOST_PARSER_DEBUG_ASSERT(r.begin() != r.end());
         }
@@ -7286,16 +7330,29 @@ namespace boost { namespace parser {
             typename Enable =
                 std::enable_if_t<detail::is_parsable_range_like_v<R>>>
 #endif
-        constexpr quoted_string_parser(R && r, Escapes escapes) :
-            chs_((R &&) r), escapes_(escapes), ch_(0)
+        constexpr quoted_string_parser(
+            R && r,
+            Escapes escapes,
+            parser_interface<CharParser> char_p =
+                parser_interface{CharParser()}) :
+            chs_((R &&)r), escapes_(escapes), char_p_(char_p), ch_(0)
         {
             BOOST_PARSER_DEBUG_ASSERT(r.begin() != r.end());
         }
 
-        constexpr quoted_string_parser(char32_t cp) : chs_(), ch_(cp) {}
+        constexpr quoted_string_parser(
+            char32_t cp,
+            parser_interface<CharParser> char_p =
+                parser_interface{CharParser()}) :
+            chs_(), char_p_(char_p), ch_(cp)
+        {}
 
-        constexpr quoted_string_parser(char32_t cp, Escapes escapes) :
-            chs_(), escapes_(escapes), ch_(cp)
+        constexpr quoted_string_parser(
+            char32_t cp,
+            Escapes escapes,
+            parser_interface<CharParser> char_p =
+                parser_interface{CharParser()}) :
+            chs_(), escapes_(escapes), char_p_(char_p), ch_(cp)
         {}
 
         template<
@@ -7384,11 +7441,11 @@ namespace boost { namespace parser {
             auto make_parser = [&]() {
                 if constexpr (detail::is_nope_v<Escapes>) {
                     return *((lit('\\') >> back_delim) |
-                             (char_ - back_delim))[append] > ch;
+                             (char_p_ - back_delim))[append] > ch;
                 } else {
                     return *((lit('\\') >> back_delim)[append] |
                              (lit('\\') >> parser_interface(escapes_))[append] |
-                             (char_ - back_delim)[append]) > ch;
+                             (char_p_ - back_delim)[append]) > ch;
                 }
             };
 
@@ -7410,17 +7467,17 @@ namespace boost { namespace parser {
         /** Returns a `parser_interface` containing a `quoted_string_parser`
             that uses `x` as its quotation marks. */
 #if BOOST_PARSER_USE_CONCEPTS
-        template<typename T>
-        // clang-format off
-        requires (!parsable_range_like<T>)
+        template<typename T, typename Parser = char_parser<detail::nope>>
+            requires(!parsable_range_like<T>)
 #else
         template<
             typename T,
+            typename Parser = char_parser<detail::nope>,
             typename Enable =
                 std::enable_if_t<!detail::is_parsable_range_like_v<T>>>
 #endif
-        constexpr auto operator()(T x) const noexcept
-        // clang-format on
+        constexpr auto
+        operator()(T x, parser_interface<Parser> char_p = char_) const noexcept
         {
             if constexpr (!detail::is_nope_v<Quotes>) {
                 BOOST_PARSER_ASSERT(
@@ -7429,7 +7486,9 @@ namespace boost { namespace parser {
                      "quoted_string, like 'quoted_string('\"')('\\'')'.  Quit "
                      "it!'"));
             }
-            return parser_interface(quoted_string_parser(std::move(x)));
+            return parser_interface(
+                quoted_string_parser<detail::nope, detail::nope, Parser>(
+                    std::move(x), char_p));
         }
 
         /** Returns a `parser_interface` containing a `quoted_string_parser`
@@ -7440,14 +7499,18 @@ namespace boost { namespace parser {
             character begin matched is directly compared to the elements of
             `r`. */
 #if BOOST_PARSER_USE_CONCEPTS
-        template<parsable_range_like R>
+        template<
+            parsable_range_like R,
+            typename Parser = char_parser<detail::nope>>
 #else
         template<
             typename R,
+            typename Parser = char_parser<detail::nope>,
             typename Enable =
                 std::enable_if_t<detail::is_parsable_range_like_v<R>>>
 #endif
-        constexpr auto operator()(R && r) const noexcept
+        constexpr auto operator()(
+            R && r, parser_interface<Parser> char_p = char_) const noexcept
         {
             BOOST_PARSER_ASSERT(((
                 !std::is_rvalue_reference_v<R &&> ||
@@ -7463,10 +7526,14 @@ namespace boost { namespace parser {
                      "'quoted_string(char-range)(char-range)'.  Quit it!'"));
             }
             return parser_interface(
-                quoted_string_parser<decltype(BOOST_PARSER_SUBRANGE(
-                    detail::make_view_begin(r), detail::make_view_end(r)))>(
+                quoted_string_parser<
+                    decltype(BOOST_PARSER_SUBRANGE(
+                        detail::make_view_begin(r), detail::make_view_end(r))),
+                    detail::nope,
+                    Parser>(
                     BOOST_PARSER_SUBRANGE(
-                        detail::make_view_begin(r), detail::make_view_end(r))));
+                        detail::make_view_begin(r), detail::make_view_end(r)),
+                    char_p));
         }
 
         /** Returns a `parser_interface` containing a `quoted_string_parser`
@@ -7475,18 +7542,23 @@ namespace boost { namespace parser {
             sequence, and what character(s) each escape sequence represents.
             Note that `"\\"` and `"\ch"` are always valid escape sequences. */
 #if BOOST_PARSER_USE_CONCEPTS
-        template<typename T, typename U>
-        // clang-format off
-        requires (!parsable_range_like<T>)
+        template<
+            typename T,
+            typename U,
+            typename Parser = char_parser<detail::nope>>
+            requires(!parsable_range_like<T>)
 #else
         template<
             typename T,
             typename U,
+            typename Parser = char_parser<detail::nope>,
             typename Enable =
                 std::enable_if_t<!detail::is_parsable_range_like_v<T>>>
 #endif
-        auto operator()(T x, symbols<U> const & escapes) const noexcept
-        // clang-format on
+        auto operator()(
+            T x,
+            symbols<U> const & escapes,
+            parser_interface<Parser> char_p = char_) const noexcept
         {
             if constexpr (!detail::is_nope_v<Quotes>) {
                 BOOST_PARSER_ASSERT(
@@ -7497,8 +7569,8 @@ namespace boost { namespace parser {
             }
             auto symbols = symbol_parser(escapes.parser_);
             auto parser =
-                quoted_string_parser<detail::nope, decltype(symbols)>(
-                    char32_t(x), symbols);
+                quoted_string_parser<detail::nope, decltype(symbols), Parser>(
+                    char32_t(x), symbols, char_p);
             return parser_interface(parser);
         }
 
@@ -7513,15 +7585,22 @@ namespace boost { namespace parser {
             escape sequence represents.  Note that `"\\"` and `"\ch"` are
             always valid escape sequences. */
 #if BOOST_PARSER_USE_CONCEPTS
-        template<parsable_range_like R, typename T>
+        template<
+            parsable_range_like R,
+            typename T,
+            typename Parser = char_parser<detail::nope>>
 #else
         template<
             typename R,
             typename T,
+            typename Parser = char_parser<detail::nope>,
             typename Enable =
                 std::enable_if_t<detail::is_parsable_range_like_v<R>>>
 #endif
-        auto operator()(R && r, symbols<T> const & escapes) const noexcept
+        auto operator()(
+            R && r,
+            symbols<T> const & escapes,
+            parser_interface<Parser> char_p = char_) const noexcept
         {
             BOOST_PARSER_ASSERT(((
                 !std::is_rvalue_reference_v<R &&> ||
@@ -7539,14 +7618,16 @@ namespace boost { namespace parser {
             auto symbols = symbol_parser(escapes.parser_);
             auto quotes = BOOST_PARSER_SUBRANGE(
                 detail::make_view_begin(r), detail::make_view_end(r));
-            auto parser =
-                quoted_string_parser<decltype(quotes), decltype(symbols)>(
-                    quotes, symbols);
+            auto parser = quoted_string_parser<
+                decltype(quotes),
+                decltype(symbols),
+                Parser>(quotes, symbols, char_p);
             return parser_interface(parser);
         }
 
         Quotes chs_;
         Escapes escapes_;
+        parser_interface<CharParser> char_p_;
         char32_t ch_;
     };
 
@@ -7730,11 +7811,17 @@ namespace boost { namespace parser {
         control;
 
     /** The punctuation character parser.  Matches the full set of Unicode
-        punctuation clases (specifically, "Pc", "Pd", "Pe", "Pf", "Pi", "Ps",
+        punctuation classes (specifically, "Pc", "Pd", "Pe", "Pf", "Pi", "Ps",
         and "Po"). */
     inline BOOST_PARSER_ALGO_CONSTEXPR
         parser_interface<char_set_parser<detail::punct_chars>>
             punct;
+
+    /** The symbol character parser.  Matches the full set of Unicode
+        symbol classes (specifically, "Sc", "Sk", "Sm", and "So"). */
+    inline BOOST_PARSER_ALGO_CONSTEXPR
+        parser_interface<char_set_parser<detail::symb_chars>>
+            symb;
 
     /** The lower case character parser.  Matches the full set of Unicode
         lower case code points (class "Ll"). */
@@ -8638,10 +8725,8 @@ namespace boost { namespace parser {
         Attr & attr,
         trace trace_mode = trace::off)
 #if BOOST_PARSER_USE_CONCEPTS
-        // clang-format off
-        requires (
+        requires(
             !detail::derived_from_parser_interface_v<std::remove_cvref_t<Attr>>)
-    // clang-format on
 #endif
     {
         detail::attr_reset reset(attr);
@@ -9458,9 +9543,6 @@ namespace boost { namespace parser {
         template<typename... Args>
         constexpr void static_assert_merge_attributes(tuple<Args...> parsers)
         {
-            // This code chokes older GCCs.  I can't figure out why, and this
-            // is an optional check, so I'm disabling it for those GCCs.
-#if !defined(__GNUC__) || 13 <= __GNUC__
             using context_t = parse_context<
                 false,
                 false,
@@ -9507,7 +9589,7 @@ namespace boost { namespace parser {
                         "type as one of the others.");
                     if constexpr (!std::is_same_v<t, first_t>) {
                         [[maybe_unused]] detail::print_type<tuple<Args...>>
-                            tuple_types;
+                            tuple_types(parsers);
                         [[maybe_unused]] detail::print_type<all_types>
                             attribute_types;
                         [[maybe_unused]] detail::print_type<first_t> first_type;
@@ -9515,7 +9597,6 @@ namespace boost { namespace parser {
                     }
                 }
             });
-#endif
         }
     }
 }}

@@ -1,0 +1,87 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:LoggerType LoggerType concept]
+
+`LoggerType` represents an object type that will be used by the __Client__ to log events.
+
+A type satisfies the `LoggerType` concept if it defines [*any number (including zero)] of the following functions:
+
+[table:log_functions
+    [[Function signature] [Arguments] [Description]]
+    [
+        [`void at_resolve(error_code ec, std::string_view host, std::string_view port, const asio::ip::tcp::resolver::results_type& eps);`]
+        [
+            [*`ec`] is the `error_code` returned by the resolve operation.
+            
+            [*`host`] is the hostname used in the resolve.
+            
+            [*`port`] is the port used in the resolve.
+            
+            [*`eps`] is a list of endpoints returned by the resolve operation.
+        ]
+        [Invoked when the resolve operation is complete.]
+    ]
+    [
+        [`void at_tcp_connect(error_code ec, asio::ip::tcp::endpoint ep);`]
+        [
+            [*`ec`] is the `error_code` returned by the TCP connect operation.
+            
+            [*`ep`] is a TCP endpoint used to establish the TCP connection.
+        ]
+        [Invoked when the TCP connect operation is complete.]
+    ]
+    [
+        [`void at_tls_handshake(error_code ec, asio::ip::tcp::endpoint ep);`]
+        [
+            [*`ec`] is the `error_code` returned by the the TLS handshake operation.
+            
+            [*`ep`] is a TCP endpoint used to establish the TLS handshake.
+        ]
+        [Invoked when the TLS handshake operation is complete.]
+    ]
+    [
+        [`void at_ws_handshake(error_code ec, asio::ip::tcp::endpoint ep);`]
+        [
+            [*`ec`] is the `error_code` returned by the the WebSocket handshake operation.
+            
+            [*`ep`] is a TCP endpoint used to establish the WebSocket handshake.
+        ]
+        [Invoked when the WebSocket handshake operation is complete.]
+    ]
+    [
+        [`void at_connack(reason_code rc, bool session_present, const connack_props& ca_props);`]
+        [
+            [*`rc`] is the `reason_code` received in the __CONNACK__ packet indicating the result of the MQTT handshake.
+            
+            [*`session_present`] A flag indicating whether the Broker already has a session associated with this connection.
+            
+            [*`ca_props`] __CONNACK_PROPS__ received in the __CONNACK__ packet.
+        ]
+        [Invoked when the __CONNACK__ packet is received, marking the completion of the MQTT handshake. ]
+    ]
+    [
+        [`void at_disconnect(reason_code rc, const disconnect_props& dc_props);`]
+        [
+            [*`rc`] is the `reason_code` received in the __DISCONNECT__ packet specifying the reason behind the disconnection.
+            
+            [*`dc_props`] __DISCONNECT_PROPS__ received in the __DISCONNECT__ packet.
+        ]
+        [Invoked when the __DISCONNECT__ packet is received, indicating that the Broker wants to close this connection. ]
+    ]
+]
+
+For example, a type `T` that defines `at_connack` and `at_disconnect` functions with their respective arguments is considered a valid `LoggerType`.
+This allows you to create your own `LoggerType` classes with functions of interest.
+
+All defined functions are invoked directly within the __Client__ using its default executor.
+If the __Client__ is initialized with an explicit or implicit strand, none of the functions will be invoked concurrently.
+
+[warning Defined functions should not block and stop the __Client__ from doing work. ]
+
+A class that satifies this concept is [ghreflink include/boost/mqtt5/logger.hpp logger].
+
+[endsect]

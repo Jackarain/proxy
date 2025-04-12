@@ -16,46 +16,24 @@ project
       <library>/boost/poly_collection//boost_poly_collection
       [ requires cxx11_noexcept ] # used as a proxy for C++11 support
       <toolset>msvc:<cxxflags>-D_SCL_SECURE_NO_WARNINGS
+      <toolset>msvc:<cxxflags>/bigobj
+      <toolset>gcc:<inlining>on
+      <toolset>gcc:<optimization>space
+      <toolset>clang:<inlining>on
+      <toolset>clang:<optimization>space
     ;
 
 test-suite "poly_collection" :
-    [ run test_algorithm.cpp      test_algorithm1.cpp
-          test_algorithm2.cpp     test_algorithm3.cpp
-          test_algorithm_main.cpp
-        :
-        :
-        : <toolset>msvc:<cxxflags>/bigobj
-          <toolset>gcc:<inlining>on
-          <toolset>gcc:<optimization>space
-          <toolset>clang:<inlining>on
-          <toolset>clang:<optimization>space                 ]
-    [ run test_capacity.cpp       test_capacity_main.cpp     ]
-    [ run test_comparison.cpp     test_comparison_main.cpp   ]
-    [ run test_construction.cpp   test_construction_main.cpp
-        :
-        :
-        : <toolset>msvc:<cxxflags>/bigobj
-          <toolset>gcc:<inlining>on
-          <toolset>gcc:<optimization>space
-          <toolset>clang:<inlining>on
-          <toolset>clang:<optimization>space                 ]
-    [ run test_emplacement.cpp    test_emplacement_main.cpp  ]
-    [ run test_erasure.cpp        test_erasure_main.cpp      ]
-    [ run test_insertion.cpp      test_insertion_main.cpp
-        :
-        :
-        : <toolset>msvc:<cxxflags>/bigobj
-          <toolset>gcc:<inlining>on
-          <toolset>gcc:<optimization>space
-          <toolset>clang:<inlining>on
-          <toolset>clang:<optimization>space                 ]
-    [ run test_iterators.cpp      test_iterators_main.cpp
-        :
-        :
-        : <toolset>msvc:<cxxflags>/bigobj
-          <toolset>gcc:<inlining>on
-          <toolset>gcc:<optimization>space
-          <toolset>clang:<inlining>on
-          <toolset>clang:<optimization>space                 ]
-    [ run test_registration.cpp   test_registration_main.cpp ]
+    [ run test_algorithm.cpp     test_algorithm1.cpp
+          test_algorithm2.cpp    test_algorithm3.cpp
+          test_algorithm4.cpp    test_algorithm_main.cpp     ]
+    [ run test_capacity.cpp      test_capacity_main.cpp      ]
+    [ run test_comparison.cpp    test_comparison_main.cpp    ]
+    [ run test_construction.cpp  test_construction_main.cpp  ]
+    [ run test_emplacement.cpp   test_emplacement_main.cpp   ]
+    [ run test_erasure.cpp       test_erasure_main.cpp       ] 
+    [ run test_fixed_variant.cpp test_fixed_variant_main.cpp ]
+    [ run test_insertion.cpp     test_insertion_main.cpp     ]
+    [ run test_iterators.cpp     test_iterators_main.cpp     ]
+    [ run test_registration.cpp  test_registration_main.cpp  ]
     ;

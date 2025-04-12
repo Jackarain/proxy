@@ -37,7 +37,7 @@ rule run_doxygen ( files * : name )
 
 }
 
-run_doxygen [ glob $(here)/../../../boost/yap/*.hpp ] : "Headers" ;
+run_doxygen [ glob $(here)/../include/boost/yap/*.hpp ] : "Headers" ;
 
 install images_standalone : [ glob *.png ] : <location>html/yap/img ;
 explicit images_standalone ;

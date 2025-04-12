@@ -29,7 +29,6 @@
 #include <charconv>
 
 // See https://stackoverflow.com/a/31658120/1077832
-#include<ciso646>
 #ifdef _LIBCPP_VERSION
 #else
 #include <cstdlib>
@@ -38,49 +37,120 @@
 namespace boost::redis::adapter::detail
 {
 
-// Serialization.
+template <class> struct is_integral : std::false_type {};
 
-template <class T>
-auto boost_redis_from_bulk(T& i, std::string_view sv, system::error_code& ec) -> typename std::enable_if<std::is_integral<T>::value, void>::type
-{
-   auto const res = std::from_chars(sv.data(), sv.data() + std::size(sv), i);
-   if (res.ec != std::errc())
-      ec = redis::error::not_a_number;
-}
+template <> struct is_integral<long long int         > : std::true_type {};
+template <> struct is_integral<unsigned long long int> : std::true_type {};
+template <> struct is_integral<int                   > : std::true_type {};
 
-inline
-void boost_redis_from_bulk(bool& t, std::string_view sv, system::error_code&)
-{
-   t = *sv.data() == 't';
-}
+template<class T, bool = is_integral<T>::value>
+struct converter;
 
-inline
-void boost_redis_from_bulk(double& d, std::string_view sv, system::error_code& ec)
-{
+template<class T>
+struct converter<T, true> {
+   template <class String>
+   static void
+   apply(
+      T& i,
+      resp3::basic_node<String> const& node,
+      system::error_code& ec)
+   {
+      auto const res =
+         std::from_chars(node.value.data(), node.value.data() + node.value.size(), i);
+      if (res.ec != std::errc())
+         ec = redis::error::not_a_number;
+   }
+};
+
+template<>
+struct converter<bool, false> {
+   template <class String>
+   static void
+   apply(
+      bool& t,
+      resp3::basic_node<String> const& node,
+      system::error_code& ec)
+   {
+      t = *node.value.data() == 't';
+   }
+};
+
+template<>
+struct converter<double, false> {
+   template <class String>
+   static void
+   apply(
+      double& d,
+      resp3::basic_node<String> const& node,
+      system::error_code& ec)
+   {
 #ifdef _LIBCPP_VERSION
-   // The string in sv is not null terminated and we also don't know
-   // if there is enough space at the end for a null char. The easiest
-   // thing to do is to create a temporary.
-   std::string const tmp{sv.data(), sv.data() + std::size(sv)};
-   char* end{};
-   d = std::strtod(tmp.data(), &end);
-   if (d == HUGE_VAL || d == 0)
-      ec = redis::error::not_a_double;
+      // The string in node.value is not null terminated and we also
+      // don't know if there is enough space at the end for a null
+      // char. The easiest thing to do is to create a temporary.
+      std::string const tmp{node.value.data(), node.value.data() + node.value.size()};
+      char* end{};
+      d = std::strtod(tmp.data(), &end);
+      if (d == HUGE_VAL || d == 0)
+         ec = redis::error::not_a_double;
 #else
-   auto const res = std::from_chars(sv.data(), sv.data() + std::size(sv), d);
-   if (res.ec != std::errc())
-      ec = redis::error::not_a_double;
+      auto const res = std::from_chars(node.value.data(), node.value.data() + node.value.size(), d);
+      if (res.ec != std::errc())
+         ec = redis::error::not_a_double;
 #endif // _LIBCPP_VERSION
-}
+   }
+};
 
 template <class CharT, class Traits, class Allocator>
+struct converter<std::basic_string<CharT, Traits, Allocator>, false> {
+   template <class String>
+   static void
+   apply(
+      std::basic_string<CharT, Traits, Allocator>& s,
+      resp3::basic_node<String> const& node,
+      system::error_code&)
+   {
+      s.append(node.value.data(), node.value.size());
+   }
+};
+
+template <class T>
+struct from_bulk_impl {
+   template <class String>
+   static void
+   apply(
+      T& t,
+      resp3::basic_node<String> const& node,
+      system::error_code& ec)
+   {
+      converter<T>::apply(t, node, ec);
+   }
+};
+
+template <class T>
+struct from_bulk_impl<std::optional<T>> {
+   template <class String>
+   static void
+   apply(
+      std::optional<T>& op,
+      resp3::basic_node<String> const& node,
+      system::error_code& ec)
+   {
+      if (node.data_type != resp3::type::null) {
+         op.emplace(T{});
+         converter<T>::apply(op.value(), node, ec);
+      }
+   }
+};
+
+template <class T, class String>
 void
 boost_redis_from_bulk(
-   std::basic_string<CharT, Traits, Allocator>& s,
-   std::string_view sv,
-   system::error_code&)
+  T& t,
+  resp3::basic_node<String> const& node,
+  system::error_code& ec)
 {
-  s.append(sv.data(), sv.size());
+   from_bulk_impl<T>::apply(t, node, ec);
 }
 
 //================================================
@@ -139,14 +209,14 @@ public:
    void on_value_available(Result&) {}
 
    template <class String>
-   void operator()(Result& result, resp3::basic_node<String> const& n, system::error_code& ec)
+   void operator()(Result& result, resp3::basic_node<String> const& node, system::error_code& ec)
    {
-      if (is_aggregate(n.data_type)) {
+      if (is_aggregate(node.data_type)) {
          ec = redis::error::expects_resp3_simple_type;
          return;
       }
 
-      boost_redis_from_bulk(result, n.value, ec);
+      boost_redis_from_bulk(result, node, ec);
    }
 };
 
@@ -176,7 +246,7 @@ public:
       }
 
       typename Result::key_type obj;
-      boost_redis_from_bulk(obj, nd.value, ec);
+      boost_redis_from_bulk(obj, nd, ec);
       hint_ = result.insert(hint_, std::move(obj));
    }
 };
@@ -209,11 +279,11 @@ public:
 
       if (on_key_) {
          typename Result::key_type obj;
-         boost_redis_from_bulk(obj, nd.value, ec);
+         boost_redis_from_bulk(obj, nd, ec);
          current_ = result.insert(current_, {std::move(obj), {}});
       } else {
          typename Result::mapped_type obj;
-         boost_redis_from_bulk(obj, nd.value, ec);
+         boost_redis_from_bulk(obj, nd, ec);
          current_->second = std::move(obj);
       }
 
@@ -234,7 +304,7 @@ public:
          result.reserve(result.size() + m * nd.aggregate_size);
       } else {
          result.push_back({});
-         boost_redis_from_bulk(result.back(), nd.value, ec);
+         boost_redis_from_bulk(result.back(), nd, ec);
       }
    }
 };
@@ -267,7 +337,7 @@ public:
          }
 
          BOOST_ASSERT(nd.aggregate_size == 1);
-         boost_redis_from_bulk(result.at(i_), nd.value, ec);
+         boost_redis_from_bulk(result.at(i_), nd, ec);
       }
 
       ++i_;
@@ -290,7 +360,7 @@ struct list_impl {
         }
 
         result.push_back({});
-        boost_redis_from_bulk(result.back(), nd.value, ec);
+        boost_redis_from_bulk(result.back(), nd, ec);
       }
    }
 };
@@ -341,13 +411,14 @@ struct impl_map<std::deque<T, Allocator>> { using type = list_impl<std::deque<T,
 template <class>
 class wrapper;
 
-template <class Result>
-class wrapper<result<Result>> {
+template <class T>
+class wrapper<result<T>> {
 public:
-   using response_type = result<Result>;
+   using response_type = result<T>;
 private:
    response_type* result_;
-   typename impl_map<Result>::type impl_;
+   typename impl_map<T>::type impl_;
+   bool called_once_ = false;
 
    template <class String>
    bool set_if_resp3_error(resp3::basic_node<String> const& nd) noexcept
@@ -367,7 +438,7 @@ public:
    explicit wrapper(response_type* t = nullptr) : result_(t)
    {
       if (result_) {
-         result_->value() = Result{};
+         result_->value() = T{};
          impl_.on_value_available(result_->value());
       }
    }
@@ -380,7 +451,7 @@ public:
       if (result_->has_error())
          return;
 
-      if (set_if_resp3_error(nd))
+      if (!std::exchange(called_once_, true) && set_if_resp3_error(nd))
          return;
 
       BOOST_ASSERT(result_);
@@ -396,6 +467,7 @@ public:
 private:
    response_type* result_;
    typename impl_map<T>::type impl_{};
+   bool called_once_ = false;
 
    template <class String>
    bool set_if_resp3_error(resp3::basic_node<String> const& nd) noexcept
@@ -427,7 +499,7 @@ public:
       if (set_if_resp3_error(nd))
          return;
 
-      if (nd.data_type == resp3::type::null)
+      if (!std::exchange(called_once_, true) && nd.data_type == resp3::type::null)
          return;
 
       if (!result_->value().has_value()) {

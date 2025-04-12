@@ -1,6 +1,6 @@
 [/
     Copyright 2014 Renato Tegon Forti, Antony Polukhin
-    Copyright Antony Polukhin, 2015-2024
+    Copyright Antony Polukhin, 2015-2025
     Distributed under the Boost Software License, Version 1.0.
     (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 /]
@@ -68,6 +68,21 @@ stability by your own.
 
 * [*Question:]  I have 2 plugins each of them must work with it's own version of `libsome_library` shared library. How to achieve that?
   * [*Answer:]  Avoid such situations by statically linking in the libsome_library into each plugin and loading plugins with `load_mode::rtld_deepbind`.
+
+[pre
+]
+
+* [*Question:]  Is there a `RTLD_NODELETE` mode? Is there a built in way to skip unload or "leak" a dynamically loaded library?
+  * [*Answer:]  No. Boost tries to support best practices and leaking resources is not one of them. If you are dynamically loading a third party library that fails to unload, try the following:
+```
+std::vector<boost::dll::shared_library>& late_unload_registry() {
+    static std::vector<boost::dll::shared_library> registry;
+    return registry;
+}
+```
+and push the library to that registry `late_unload_registry().emplace_back(third_party_shared_library)`. It will force the library to not unload till the end of program.
+
+If the above `late_unload_registry()` does not help - ask the vendor of the library for support to dynamically load/unload the library.
 
 [pre
 ]

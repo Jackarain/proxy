@@ -1,0 +1,199 @@
+////
+Copyright 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_fnv1a]
+# <boost/hash2/fnv1a.hpp>
+:idprefix: ref_fnv1a_
+
+```
+namespace boost {
+namespace hash2 {
+
+class fnv1a_32;
+class fnv1a_64;
+
+} // namespace hash2
+} // namespace boost
+```
+
+This header implements the https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function[FNV-1a algorithm], in 32 and 64 bit variants.
+
+## fnv1a_32
+
+```
+class fnv1a_32
+{
+private:
+
+    std::uint32_t state_; // exposition only
+
+public:
+
+    using result_type = std::uint32_t;
+
+    constexpr fnv1a_32();
+    explicit constexpr fnv1a_32( std::uint64_t seed );
+    fnv1a_32( void const* p, std::size_t n );
+    constexpr fnv1a_32( unsigned char const* p, std::size_t n );
+
+    void update( void const* p, std::size_t n );
+    constexpr void update( unsigned char const* p, std::size_t n );
+
+    constexpr result_type result();
+};
+```
+
+### Constructors
+
+```
+constexpr fnv1a_32();
+```
+
+Default constructor.
+
+Effects: ::
+  Initializes `state_` to `0x811c9dc5`.
+
+```
+explicit constexpr fnv1a_32( std::uint64_t seed );
+```
+
+Constructor taking an integer seed value.
+
+Effects: ::
+  Initializes the state as if by default construction, then if `seed` is not zero, performs `update(p, 8)` where `p` points to a little-endian representation of the value of `seed`.
+
+Remarks: ::
+  By convention, if `seed` is zero, the effect of this constructor is the same as default construction.
+
+```
+fnv1a_32( void const* p, std::size_t n );
+constexpr fnv1a_32( unsigned char const* p, std::size_t n );
+```
+
+Constructor taking a byte sequence seed.
+
+Effects: ::
+  Initializes the state as if by default construction, and then, if `n` is not zero, performs `update(p, n)`.
+
+Remarks: ::
+  By convention, if `n` is zero, the effect of this constructor is the same as default construction.
+
+### update
+
+```
+void update( void const* p, std::size_t n );
+constexpr void update( unsigned char const* p, std::size_t n );
+```
+
+Effects: ::
+  For each `unsigned char` value `ch` in the range `[p, p+n)` performs `state_ = (state_ ^ ch) * 0x01000193`.
+
+### result
+
+```
+constexpr result_type result();
+```
+
+Effects: ::
+  Updates `state_` to `(state_ ^ 0xFF) * 0x01000193`.
+
+Returns: ::
+  The value of `state_` before the update.
+
+Remarks: ::
+  The state is updated to allow repeated calls to `result()` to return
+  a pseudorandom sequence of `result_type` values, effectively extending
+  the output.
+
+## fnv1a_64
+
+```
+class fnv1a_64
+{
+private:
+
+    std::uint64_t state_; // exposition only
+
+public:
+
+    using result_type = std::uint64_t;
+
+    constexpr fnv1a_64();
+    explicit constexpr fnv1a_64( std::uint64_t seed );
+    fnv1a_64( void const* p, std::size_t n );
+    constexpr fnv1a_64( unsigned char const* p, std::size_t n );
+
+    void update( void const* p, std::size_t n );
+    constexpr void update( unsigned char const* p, std::size_t n );
+
+    constexpr result_type result();
+};
+```
+
+### Constructors
+
+```
+constexpr fnv1a_64();
+```
+
+Default constructor.
+
+Effects: ::
+  Initializes `state_` to `0xcbf29ce484222325`.
+
+```
+explicit constexpr fnv1a_64( std::uint64_t seed );
+```
+
+Constructor taking an integer seed value.
+
+Effects: ::
+  Initializes the state as if by default construction, then if `seed` is not zero, performs `update(p, 8)` where `p` points to a little-endian representation of the value of `seed`.
+
+Remarks: ::
+  By convention, if `seed` is zero, the effect of this constructor is the same as default construction.
+
+```
+fnv1a_64( void const* p, std::size_t n );
+constexpr fnv1a_64( unsigned char const* p, std::size_t n );
+```
+
+Constructor taking a byte sequence seed.
+
+Effects: ::
+  Initializes the state as if by default construction, and then, if `n` is not zero, performs `update(p, n)`.
+
+Remarks: ::
+  By convention, if `n` is zero, the effect of this constructor is the same as default construction.
+
+### update
+
+```
+void update( void const* p, std::size_t n );
+constexpr void update( unsigned char const* p, std::size_t n );
+```
+
+Effects: ::
+  For each `unsigned char` value `ch` in the range `[p, p+n)` performs `state_ = (state_ ^ ch) * 0x100000001b3`.
+
+### result
+
+```
+constexpr result_type result();
+```
+
+Effects: ::
+  Updates `state_` to `(state_ ^ 0xFF) * 0x100000001b3`.
+
+Returns: ::
+  The value of `state_` before the update.
+
+Remarks: ::
+  The state is updated to allow repeated calls to `result()` to return
+  a pseudorandom sequence of `result_type` values, effectively extending
+  the output.
+

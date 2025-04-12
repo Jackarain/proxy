@@ -8,7 +8,6 @@
 #include <boost/mpi/collectives/all_reduce.hpp>
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/environment.hpp>
-#include <vector>
 #include <algorithm>
 #include <boost/serialization/string.hpp>
 #include <boost/iterator/counting_iterator.hpp>
@@ -75,110 +74,6 @@ namespace boost { namespace mpi {
 
 } } // end namespace boost::mpi
 
-template<typename Generator, typename Op>
-bool
-all_reduce_one_test(const communicator& comm, Generator generator,
-                    const char* type_kind, Op op, const char* op_kind,
-                    typename Generator::result_type init, bool in_place)
-{
-  typedef typename Generator::result_type value_type;
-  value_type value = generator(comm.rank());
-
-  using boost::mpi::all_reduce;
-  using boost::mpi::inplace;
-
-  if (comm.rank() == 0) {
-    std::cout << "Reducing to " << op_kind << " of " << type_kind << "...";
-    std::cout.flush();
-  }
-
-  value_type result_value;
-  if (in_place) {
-    all_reduce(comm, inplace(value), op);
-    result_value = value;
-  } else {
-    result_value = all_reduce(comm, value, op);
-  }
-  
-  // Compute expected result
-  std::vector<value_type> generated_values;
-  for (int p = 0; p < comm.size(); ++p)
-    generated_values.push_back(generator(p));
-  value_type expected_result = std::accumulate(generated_values.begin(),
-                                               generated_values.end(),
-                                               init, op);
-  bool passed = result_value == expected_result;
-  if (passed && comm.rank() == 0)
-    std::cout << "OK." << std::endl;
-  
-  comm.barrier();
-  return passed;
-}
-
-template<typename Generator, typename Op>
-bool
-all_reduce_array_test(const communicator& comm, Generator generator,
-                      const char* type_kind, Op op, const char* op_kind,
-                      typename Generator::result_type init, bool in_place)
-{
-  typedef typename Generator::result_type value_type;
-  value_type value = generator(comm.rank());
-  std::vector<value_type> send(10, value);
-
-  using boost::mpi::all_reduce;
-  using boost::mpi::inplace;
-
-  if (comm.rank() == 0) {
-      char const* place = in_place ? "in place" : "out of place";
-      std::cout << "Reducing (" << place << ") array to " << op_kind << " of " << type_kind << "...";
-      std::cout.flush();
-  }
-  std::vector<value_type> result;
-  if (in_place) {
-    all_reduce(comm, inplace(&(send[0])), send.size(), op);
-    result.swap(send);
-  } else {
-    std::vector<value_type> recv(10, value_type());
-    all_reduce(comm, &(send[0]), send.size(), &(recv[0]), op);
-    result.swap(recv);
-  }
-
-  // Compute expected result
-  std::vector<value_type> generated_values;
-  for (int p = 0; p < comm.size(); ++p)
-    generated_values.push_back(generator(p));
-  value_type expected_result = std::accumulate(generated_values.begin(),
-                                               generated_values.end(),
-                                               init, op);
-  
-  bool passed = (std::equal_range(result.begin(), result.end(), expected_result)
-                 == std::make_pair(result.begin(), result.end()));
-  if (passed && comm.rank() == 0)
-    std::cout << "OK." << std::endl;
-  
-  comm.barrier();
-  return passed;
-}
-
-// Test the 4 families of all reduce: (value, array) X (in place, out of place)
-// Return numbers of failed tests
-template<typename Generator, typename Op>
-int
-all_reduce_test(const communicator& comm, Generator generator,
-                const char* type_kind, Op op, const char* op_kind,
-                typename Generator::result_type init)
-{
-  const bool in_place = true;
-  const bool out_of_place = false;
-  
-  int failed = 0;
-  failed += int(!all_reduce_one_test(comm, generator, type_kind, op, op_kind,  init, in_place));
-  failed += int(!all_reduce_one_test(comm, generator, type_kind, op, op_kind,  init, out_of_place));
-  failed += int(!all_reduce_array_test(comm, generator, type_kind, op, op_kind, init, in_place));
-  failed += int(!all_reduce_array_test(comm, generator, type_kind, op, op_kind, init, out_of_place));
-  return failed;
-}
-
 // Generates integers to test with all_reduce()
 struct int_generator
 {
@@ -190,6 +85,19 @@ struct int_generator
 
  private:
   int base;
+};
+
+// Generates bools to test with reduce()
+struct bool_generator
+{
+  typedef bool result_type;
+
+  bool_generator(int nbtrue) : nb_true(nbtrue) { }
+  
+  int operator()(int p) const { return p < nb_true; }
+
+ private:
+  int nb_true;
 };
 
 // Generate points to test with all_reduce()
@@ -267,6 +175,112 @@ struct wrapped_int_generator
  private:
   int base;
 };
+
+template<typename Generator, typename Op>
+bool
+all_reduce_one_test(const communicator& comm, Generator generator,
+                    const char* type_kind, Op op, const char* op_kind,
+                    typename Generator::result_type init, bool in_place)
+{
+  typedef typename Generator::result_type value_type;
+  value_type value = generator(comm.rank());
+
+  using boost::mpi::all_reduce;
+  using boost::mpi::inplace;
+
+  if (comm.rank() == 0) {
+    std::cout << "Reducing to " << op_kind << " of " << type_kind << "...";
+    std::cout.flush();
+  }
+
+  value_type result_value;
+  if (in_place) {
+    all_reduce(comm, inplace(value), op);
+    result_value = value;
+  } else {
+    result_value = all_reduce(comm, value, op);
+  }
+  
+  // Compute expected result
+  std::unique_ptr<value_type[]> generated_values = std::make_unique<value_type[]>(comm.size());
+  for (int p = 0; p < comm.size(); ++p)
+    generated_values[p] = generator(p);
+  value_type expected_result = std::accumulate(generated_values.get(),
+                                               generated_values.get()+comm.size(),
+                                               init, op);
+  bool passed = result_value == expected_result;
+  if (passed && comm.rank() == 0)
+    std::cout << "OK." << std::endl;
+  
+  comm.barrier();
+  return passed;
+}
+
+template<typename Generator, typename Op>
+bool
+all_reduce_array_test(const communicator& comm, Generator generator,
+                      const char* type_kind, Op op, const char* op_kind,
+                      typename Generator::result_type init, bool in_place)
+{
+  typedef typename Generator::result_type value_type;
+  value_type value = generator(comm.rank());
+  std::unique_ptr<value_type[]> send = std::make_unique<value_type[]>(10);
+  std::size_t const size = 10;
+  std::fill_n(send.get(), size, value);
+
+  using boost::mpi::all_reduce;
+  using boost::mpi::inplace;
+
+  if (comm.rank() == 0) {
+      char const* place = in_place ? "in place" : "out of place";
+      std::cout << "Reducing (" << place << ") array to " << op_kind << " of " << type_kind << "...";
+      std::cout.flush();
+  }
+  std::unique_ptr<value_type[]> result;
+  if (in_place) {
+    all_reduce(comm, inplace(send.get()), size, op);
+    result.swap(send);
+  } else {
+    std::unique_ptr<value_type[]> recv = std::make_unique<value_type[]>(10);
+    all_reduce(comm, send.get(), size, recv.get(), op);
+    result.swap(recv);
+  }
+  
+  // Compute expected result
+  std::unique_ptr<value_type[]> generated_values = std::make_unique<value_type[]>(comm.size());
+  for (int p = 0; p < comm.size(); ++p)
+    generated_values[p] = generator(p);
+  value_type expected_result = std::accumulate(generated_values.get(),
+                                               generated_values.get()+comm.size(),
+                                               init, op);
+  
+  bool passed = (std::equal_range(result.get(), result.get()+size, expected_result)
+                 == std::make_pair(result.get(), result.get()+size));
+  if (passed && comm.rank() == 0)
+    std::cout << "OK." << std::endl;
+  
+  comm.barrier();
+  return passed;
+}
+
+// Test the 4 families of all reduce: (value, array) X (in place, out of place)
+// Return numbers of failed tests
+template<typename Generator, typename Op>
+int
+all_reduce_test(const communicator& comm, Generator generator,
+                const char* type_kind, Op op, const char* op_kind,
+                typename Generator::result_type init)
+{
+  const bool in_place = true;
+  const bool out_of_place = false;
+  
+  int failed = 0;
+  failed += int(!all_reduce_one_test(comm, generator, type_kind, op, op_kind,  init, in_place));
+  failed += int(!all_reduce_one_test(comm, generator, type_kind, op, op_kind,  init, out_of_place));
+  failed += int(!all_reduce_array_test(comm, generator, type_kind, op, op_kind, init, in_place));
+  failed += int(!all_reduce_array_test(comm, generator, type_kind, op, op_kind, init, out_of_place));
+  return failed;
+}
 
 namespace boost { namespace mpi {
 

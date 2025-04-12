@@ -1,12 +1,12 @@
 // Copyright 2014 Renato Tegon Forti, Antony Polukhin.
-// Copyright Antony Polukhin, 2015-2024.
+// Copyright Antony Polukhin, 2015-2025.
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
 // or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #include <iostream>
-#include <boost/make_shared.hpp>
+#include <memory>
 
 // MinGW related workaround
 #define BOOST_DLL_FORCE_ALIAS_INSTANTIATION
@@ -17,23 +17,23 @@
 
 namespace my_namespace {
 
-class my_plugin_aggregator : public my_plugin_api {
+class my_plugin_aggregator final: public my_plugin_api {
     float aggr_;
     my_plugin_aggregator() : aggr_(0) {}
 
 public:
-    std::string name() const {
+    std::string name() const override {
         return "aggregator";
     }
 
-    float calculate(float x, float y) {
+    float calculate(float x, float y) override {
         aggr_ += x + y;
         return aggr_;
     }
 
     // Factory method
-    static boost::shared_ptr<my_plugin_aggregator> create() {
-        return boost::shared_ptr<my_plugin_aggregator>(
+    static std::shared_ptr<my_plugin_api> create() {
+        return std::shared_ptr<my_plugin_aggregator>(
             new my_plugin_aggregator()
         );
     }

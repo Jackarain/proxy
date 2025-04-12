@@ -10,17 +10,20 @@ project(boost_heap VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
 option(BOOST_HEAP_BUILD_TESTS "Build boost::heap tests" OFF)
 option(BOOST_HEAP_USE_FILE_SET "Use FILE_SET for boost::heap" OFF)
 
+if (NOT DEFINED CMAKE_CXX_STANDARD)
+    set(CMAKE_CXX_STANDARD 14)
+endif()
 
 add_library(boost_heap INTERFACE)
 add_library(Boost::heap ALIAS boost_heap)
 
 target_include_directories(boost_heap INTERFACE include)
+target_compile_features(boost_heap INTERFACE cxx_std_14)
+set_target_properties( boost_heap PROPERTIES CMAKE_CXX_STANDARD_REQUIRED 14)
 
 target_link_libraries(boost_heap
   INTERFACE
-    Boost::array
     Boost::assert
-    Boost::bind
     Boost::concept_check
     Boost::config
     Boost::core
@@ -29,7 +32,6 @@ target_link_libraries(boost_heap
     Boost::parameter
     Boost::static_assert
     Boost::throw_exception
-    Boost::type_traits
 )
 
 if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.23 AND BOOST_HEAP_USE_FILE_SET)

@@ -10,3 +10,5 @@ CMakeFiles/**
 # Editor Options
 .vscode
 .idea
+
+.DS_Store

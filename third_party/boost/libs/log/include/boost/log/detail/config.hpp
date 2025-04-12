@@ -92,12 +92,14 @@
 #   define BOOST_LOG_BROKEN_CONSTANT_EXPRESSIONS
 #endif
 
-#if (defined(BOOST_NO_CXX11_HDR_CODECVT) && BOOST_CXX_VERSION < 201703) || (defined(_MSVC_STL_VERSION) && _MSVC_STL_VERSION < 142)
+#if (defined(BOOST_NO_CXX11_HDR_CODECVT) && BOOST_CXX_VERSION < 201703) || (BOOST_CXX_VERSION >= 202002) || \
+    (defined(_MSVC_STL_VERSION) && _MSVC_STL_VERSION < 142)
     // The compiler does not support std::codecvt<char16_t> and std::codecvt<char32_t> specializations.
     // The BOOST_NO_CXX11_HDR_CODECVT means there's no usable <codecvt>, which is slightly different from this macro.
     // But in order for <codecvt> to be implemented the std::codecvt specializations have to be implemented as well.
     // We need to check the C++ version as well, since <codecvt> is deprecated from C++17 onwards which may cause
     // BOOST_NO_CXX11_HDR_CODECVT to be set, even though std::codecvt in <locale> is just fine.
+    // The std::codecvt<char16_t> and std::codecvt<char32_t> specializations were eventually deprecated in C++20.
 #   define BOOST_LOG_NO_CXX11_CODECVT_FACETS
 #endif
 
@@ -113,8 +115,8 @@
 #   include <vsbConfig.h>
 #endif
 
-#if (!defined(__CRYSTAX__) && defined(__ANDROID__) && (__ANDROID_API__ < 21)) \
-     || (defined(__VXWORKS__) && !defined(_WRS_CONFIG_USER_MANAGEMENT))
+#if (!defined(__CRYSTAX__) && defined(__ANDROID__) && (__ANDROID_API__ < 21)) || \
+     (defined(__VXWORKS__) && !defined(_WRS_CONFIG_USER_MANAGEMENT))
 // Until Android API version 21 Google NDK does not provide getpwuid_r
 #    define BOOST_LOG_NO_GETPWUID_R
 #endif

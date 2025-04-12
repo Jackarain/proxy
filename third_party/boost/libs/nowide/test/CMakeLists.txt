@@ -1,11 +1,11 @@
-# Copyright 2019 - 2021 Alexander Grund
+# Copyright 2019 - 2024 Alexander Grund
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
 include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag(-Wsuggest-override _BOOST_NOWIDE_SUGGEST_OVERRIDE_SUPPORTED)
 
-add_library(boost_nowide_file_test_helpers STATIC file_test_helpers.cpp)
+add_library(boost_nowide_file_test_helpers STATIC EXCLUDE_FROM_ALL file_test_helpers.cpp)
 target_link_libraries(boost_nowide_file_test_helpers PRIVATE Boost::nowide)
 target_compile_definitions(boost_nowide_file_test_helpers PRIVATE BOOST_ALL_NO_LIB)
 
@@ -27,7 +27,7 @@ function(boost_nowide_add_test name)
   endif()
   set(name ${PROJECT_NAME}-${name})
   
-  add_executable(${name} ${ARG_SRC})
+  add_executable(${name} EXCLUDE_FROM_ALL ${ARG_SRC})
   add_dependencies(tests ${name})
   target_link_libraries(${name} PRIVATE Boost::nowide ${ARG_LIBRARIES})
   boost_add_warnings(${name} pedantic ${Boost_NOWIDE_WERROR})

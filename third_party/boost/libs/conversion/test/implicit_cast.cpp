@@ -18,8 +18,8 @@ struct foo
     operator long() const { return 0; }
 };
 
-typedef type<long> long_type;
-typedef type<foo> foo_type;
+using long_type = type<long>;
+using foo_type = type<foo>;
 
 int main()
 {

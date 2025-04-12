@@ -39,7 +39,7 @@ Asciidoctor::Extensions.register do
               isPinned = !isPinned;
               localStorage.setItem('tocPinned', isPinned);
               html.classList.toggle('toc-pinned', isPinned);
-              updateTocVisibility(isPinned);  state
+              updateTocVisibility(isPinned);
             });
 
             tocButton.addEventListener("mouseenter", () => {

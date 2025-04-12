@@ -1,0 +1,24 @@
+////
+Copyright 2025 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+http://www.boost.org/LICENSE_1_0.txt
+////
+
+[#changes]
+# Revision History
+:toc:
+:toc-title:
+:idprefix:
+
+## Changes in 1.88.0
+
+* Converted documentation to AsciiDoc (Christian Mazakas).
+* Added `noexcept` and `constexpr` as appropriate.
+* Marked obsolete functions as deprecated.
+* Removed obsolete compiler workarounds.
+* Changed `array<T, 0>::begin()`, `cbegin()`, `end()`, `cend()` to return `nullptr`, enabling `constexpr`.
+  This matches the behavior of `std::array`.
+* Removed local `hash_value` overload; `boost::hash` supports array-like types natively.
+* `array<T, 0>` can now be initialized with `= {{}}`.
+* Added `operator\<\=>`.
+* Added `to_array`.

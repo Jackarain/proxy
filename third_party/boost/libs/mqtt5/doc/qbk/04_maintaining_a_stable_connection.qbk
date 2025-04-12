@@ -1,0 +1,90 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:connection_maintenance Maintaining a Stable Connection]
+[nochunk]
+
+This chapter delves into the strategies used by the __Client__ to sustain a stable connection with the Broker.
+
+[section:keep_alive Understanding Keep Alive and Server Keep Alive]
+
+Firstly, it is important to understand `Keep Alive` and `Server Keep Alive` and their role
+in maintaining a stable connection.
+
+The MQTT protocol defines a `Keep Alive` value, which is the maximum time interval that is permitted to elapse
+between the point at which the Client finishes transmitting one packet and the point at which it starts sending the next.
+In some instances, the Broker might propose a `Server Keep Alive` interval,
+which the Client should adopt instead of the previously set `Keep Alive` interval (further referred to as the negotiated `Keep Alive` interval).
+
+If the Client does not transmit any packet within a period equal to `1.5` times the negotiated `Keep Alive` interval,
+the Broker is required to close the connection to the Client.
+
+The Client is responsible for ensuring that the interval between packets being sent does not exceed the negotiated `Keep Alive` interval.
+The __Client__ does this automatically by sending a __PINGREQ__ to the Broker every negotiated `Keep Alive` seconds,
+independent of any ongoing activity in the connection.
+
+If the negotiated `Keep Alive` interval is `0`, the Keep Alive mechanism is deactivated, and the __Client__ will *not* send any __PINGREQ__
+packets. This makes the user responsible for maintaining the connection with the Broker.
+
+Use [refmem mqtt_client keep_alive] function during the __Client__ configuration phase to specify your preferred `Keep Alive` time in seconds.
+Otherwise, the __Client__ defaults to a `Keep Alive` period of `60 seconds`.
+
+[note
+    The MQTT protocol does not use the TCP's built-in keep-alive mechanism as it is inflexible and limited in that it can be configured solely at the operating system level.
+    The default time a connection must be idle before sending the first keep-alive packet is typically set to 2 hours,
+    exceeding the tolerances of most MQTT applications.
+]
+
+[endsect] [/keep_alive]
+
+[section:half_open_connections Detecting and Handling Half-open Connections]
+
+Ensuring the integrity and stability of network connections is a complex task,
+given the number of potential disruptions such as software anomalies,
+hardware failures, signal loss, router complications, interruptions in the connectivity path, and more.
+A robust Client implementation must accurately detect and resolve such disruptions despite the inherent difficulty in identifying them.
+
+Under normal circumstances, when one side wants to close the TCP connection, a TCP termination procedure, or a 4-way handshake, is initiated.
+The initiating side sends a TCP packet indicating the end of data transmission to finish a TCP connection, which is then acknowledged by the receiver.
+The receiver, in turn, sends the same termination packet, receiving an acknowledgement from the initiating side to conclude the process.
+This ensures both sides have finished sending and receiving all data and agree to close the connection gracefully.
+
+However, the connection may be abruptly terminated due to external disturbances.
+For example, consider a situation in which the Client communicates with a Broker but suddenly experiences an unexpected signal loss. 
+Considering neither side initiated a 4-way handshake to close the connection,
+the Client has no reason to perceive the connection as anything but open.
+Consequently, it will continue to send packets to the Broker and await responses,
+oblivious that the packets would never reach the Broker on the other end.
+This results in a half-open TCP connection scenario,
+where the connection is effectively terminated on one end but remains active on the other.
+
+Without any mechanisms in place to identify half-open connections, the Client risks
+remaining in a half-open state indefinitely.
+A common strategy to address a half-open state is to incorporate a timeout mechanism.
+Within this strategy, the Client anticipates receiving some data from the Broker within a predefined
+timeout interval.
+Successful data reception within this interval affirms that the connection is active and stable.
+However, if no data is received within the timeout interval, the Client will close the connection, presuming network failure.
+Consequently, if the Client is in the half-open state, then no data will come through to it, and the connection will time out.
+This condition triggers the Client to initiate the reconnection procedure to try to restore the severed connection.
+
+To avoid false detections of a half-open state in idle connections, the Client must ensure consistent data exchange.
+This is achieved through periodic __PINGREQ__ packets sent by the Client to the Broker,
+which responds with __PINGRESP__ packet, affirming its operational status.
+
+The __Client__ will dispatch a __PINGREQ__ at an interval equal to the negotiated `Keep Alive` seconds and expects
+to receive some data
+[footnote The __Client__ is not required to specifically receive __PINGRESP__ to its __PINGREQ__. Any data from the Broker will suffice to confirm its status.]
+from the Broker within `1.5` times the negotiated `Keep Alive` seconds.
+If no data is received within this time, the __Client__ will assume a half-open state and initiate a reconnect procedure
+described in the [link mqtt5.auto_reconnect Built-in auto-reconnect and retry mechanism].
+
+[important If the negotiated `Keep Alive` value is set to `0`, the timeout mechanism to detect a half-open connection
+is disabled. As a result, the __Client__ loses its capability to identify and adequately respond to half-open scenarios.]
+
+[endsect] [/half_open_connections]
+
+[endsect] [/connection_maintenance]

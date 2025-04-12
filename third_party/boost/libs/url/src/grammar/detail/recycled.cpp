@@ -56,7 +56,7 @@ struct all_reports
 static all_reports all_reports_;
 } // detail
 
-namespace see_below {
+namespace implementation_defined {
 void
 recycled_add_impl(
     std::size_t n) noexcept
@@ -100,7 +100,7 @@ recycled_remove_impl(
     detail::all_reports_.count--;
     detail::all_reports_.bytes-=n;
 }
-} // see_below
+} // implementation_defined
 } // grammar
 } // urls
 } // boost

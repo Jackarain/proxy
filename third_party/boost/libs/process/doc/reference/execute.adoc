@@ -1,0 +1,33 @@
+
+== `execute.hpp`
+[#execute]
+
+The execute header provides two error categories:
+
+[source,cpp]
+----
+
+// Run a process and wait for it to complete.
+template<typename Executor> int execute(basic_process<Executor> proc);
+template<typename Executor> int execute(basic_process<Executor> proc, error_code & ec)
+
+// Execute a process asynchronously
+template<typename Executor = net::any_io_executor,
+        BOOST_PROCESS_V2_COMPLETION_TOKEN_FOR(void (error_code, int))
+        WaitHandler = net::default_completion_token_t<Executor>>
+auto async_execute(basic_process<Executor> proc,
+                         WaitHandler && handler = net::default_completion_token_t<Executor>());
+----
+
+The `async_execute` function asynchronously for a process to complete.
+
+ Cancelling the execution will signal the child process to exit
+ with the following interpretations:
+
+- `cancellation_type::total`    -> interrupt
+- `cancellation_type::partial`  -> request_exit
+- `cancellation_type::terminal` -> terminate
+
+It is to note that `async_execute` will use the lowest selected cancellation
+type. A subprocess might ignore anything not terminal.
+

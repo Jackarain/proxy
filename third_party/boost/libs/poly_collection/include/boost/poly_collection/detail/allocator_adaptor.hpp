@@ -1,4 +1,4 @@
-/* Copyright 2018 Joaquin M Lopez Munoz.
+/* Copyright 2018-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -36,13 +36,13 @@ namespace detail{
  * prevents intermediate entities from calling Allocator::[construct|destroy].
  * allocator_adaptor<Allocator> does this by taking advantage of the fact that
  * elements are ultimately held within a value_holder:
- *  - construct(value_holder<T>*,...) uses placement new construction and
+ *  - construct(value_holder<T,U>*,...) uses placement new construction and
  *    passes the wrapped Allocator object for value_holder<T> to use for
  *    its inner construction of T.
  *  - For the rest of types, construct uses placement new construction and
  *    passes down the adaptor object itself as an argument following an
  *    approach analogous to that of std::scoped_allocator_adaptor.
- *  - destroy(value_holder<T>) resorts to Allocator::destroy to destroy the
+ *  - destroy(value_holder<T,U>) resorts to Allocator::destroy to destroy the
  *    contained T element.
  *  - For the rest of types, destroy(T) calls ~T directly.
  *
@@ -53,7 +53,7 @@ namespace detail{
 template<typename T>
 class value_holder_base;
 
-template<typename T>
+template<typename T,typename U>
 class value_holder;
 
 template<typename T,typename Allocator,typename... Args>
@@ -144,10 +144,11 @@ struct allocator_adaptor:Allocator
       p,std::forward<Args>(args)...);
   }
 
-  template<typename T,typename... Args>
-  void construct(value_holder<T>* p,Args&&... args)
+  template<typename T,typename U,typename... Args>
+  void construct(value_holder<T,U>* p,Args&&... args)
   {
-    ::new ((void*)p) value_holder<T>(allocator(),std::forward<Args>(args)...);
+    ::new ((void*)p) value_holder<T,U>(
+      allocator(),std::forward<Args>(args)...);
   }
 
   template<typename T1,typename T2,typename... Args1,typename... Args2>
@@ -206,8 +207,8 @@ struct allocator_adaptor:Allocator
     p->~T();
   }
 
-  template<typename T>
-  void destroy(value_holder<T>* p)
+  template<typename T,typename U>
+  void destroy(value_holder<T,U>* p)
   {
     traits::destroy(
       allocator(),

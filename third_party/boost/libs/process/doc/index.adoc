@@ -1,0 +1,51 @@
+= boost.process
+Klemens Morgenstern <klemens.morgenstern@gmx.net>
+Version 2.0, 19.11.2024
+:source-highlighter: rouge
+:toc: left
+:toclevels: 4
+:icons: font
+:idprefix:
+:docinfo: private-footer
+:source-highlighter: rouge
+:source-language: c++
+:example-caption: Example
+
+:imagesdir: ./images
+
+:leveloffset: +1
+
+include::quickstart.adoc[]
+include::launcher.adoc[]
+
+= Initializers
+
+include::start_dir.adoc[]
+include::stdio.adoc[]
+include::env.adoc[]
+
+= Reference
+
+
+include::reference/bind_launcher.adoc[]
+include::reference/cstring_ref.adoc[]
+include::reference/default_launcher.adoc[]
+include::reference/environment.adoc[]
+include::reference/error.adoc[]
+include::reference/execute.adoc[]
+include::reference/exit_code.adoc[]
+include::reference/ext.adoc[]
+include::reference/pid.adoc[]
+include::reference/popen.adoc[]
+include::reference/process.adoc[]
+include::reference/process_handle.adoc[]
+include::reference/shell.adoc[]
+include::reference/start_dir.adoc[]
+include::reference/stdio.adoc[]
+include::reference/ext.adoc[]
+include::reference/posix/bind_fd.adoc[]
+include::reference/windows/creation_flags.adoc[]
+include::reference/windows/show_window.adoc[]
+
+include::version2.adoc[]
+include::acknowledgements.adoc[]

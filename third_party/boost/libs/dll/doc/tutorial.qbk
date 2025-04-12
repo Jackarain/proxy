@@ -1,6 +1,6 @@
 [/
     Copyright 2014 Renato Tegon Forti, Antony Polukhin
-    Copyright Antony Polukhin, 2015-2024
+    Copyright Antony Polukhin, 2015-2025
     Distributed under the Boost Software License, Version 1.0.
     (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 /]
@@ -27,7 +27,7 @@ Now let's make a DLL/DSO library that will holds implementation of plugin interf
 [import ../example/tutorial1/my_plugin_sum.cpp]
 [plugcpp_my_plugin_sum]
 
-Simple application that loads plugin using the [funcref boost::dll::import]
+Simple application that loads plugin using the [funcref boost::dll::import_symbol]
 and [enumref boost::dll::load_mode::type append_decorations]:
 
 [import ../example/tutorial1/tutorial1.cpp]
@@ -312,7 +312,7 @@ __to_top
 
 [section Advanced library reference counting]
 
-As noted in documentation to the [funcref boost::dll::import]
+As noted in documentation to the [funcref boost::dll::import_symbol]
 variables and functions returned from those functions hold a reference to the shared library. However nested objects and
 objects that are returned by `import*` functions do not hold a reference to the shared library. There's no way to solve
 this issue on the Boost.DLL library level, but you can take care of this problem by your own. Here's an example how this
@@ -339,7 +339,7 @@ Now let's define the plugin:
 
 This plugin does not differ much from our previous examples except the additional method that calls
 [funcref boost::dll::this_line_location] and `create()` function that returns a simple pointer instead of
-`boost::shared_ptr`.
+`std::shared_ptr`.
 
 Now lets make a function that binds a newly created instance of `my_refcounting_api` to a shared library:
 [plugcpp_library_holding_deleter_api_bind]
@@ -348,7 +348,7 @@ In `bind` method we call `plugin->location()`. This call results in a call to
 [funcref boost::dll::this_line_location] and returns the plugin location. Then a `shared_ptr` that holds a `shared_library`
 is created using the `make_shared` call.
 
-After that we construct a `boost::shared_ptr<my_refcounting_api>` with a `library_holding_deleter` that keeps an instance of the shared library.
+After that we construct a `std::shared_ptr<my_refcounting_api>` with a `library_holding_deleter` that keeps an instance of the shared library.
 
 [note Use `std::unique_ptr<my_refcounting_api>` instead of `my_refcounting_api*` in production code to avoid memory leaks when `plugin->location()`
 throws or when some other class rises an exception.]
@@ -389,7 +389,7 @@ __to_top
 [section Importing a C function from Windows dll]
 
 This a trivial example, but it has one tricky place. When you are importing a C function by *it's name* 
-you must use [funcref boost::dll::import], not [funcref boost::dll::import_alias]:
+you must use [funcref boost::dll::import_symbol], not [funcref boost::dll::import_alias]:
 
 [import ../example/tutorial9/tutorial9.cpp]
 [callplugcpp_tutorial9]

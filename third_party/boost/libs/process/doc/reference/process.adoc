@@ -1,0 +1,174 @@
+== `process.hpp`
+[#process]
+
+[source,cpp]
+----
+// A class managing a subprocess
+/* A `basic_process` object manages a subprocess; it tracks the status and exit-code,
+ * and will terminate the process on destruction if `detach` was not called.
+*/
+template<typename Executor = net::any_io_executor>
+struct basic_process
+{
+  // The executor of the process
+  using executor_type = Executor;
+  // Get the executor of the process
+  executor_type get_executor() {return process_handle_.get_executor();}
+
+  // The non-closing handle type
+  using handle_type = basic_process_handle<executor_type>;
+
+  // Get the underlying non-closing handle
+  handle_type & handle() { return process_handle_; }
+
+  // Get the underlying non-closing handle
+  const handle_type & handle() const { return process_handle_; }
+
+  // Provides access to underlying operating system facilities
+  using native_handle_type = typename handle_type::native_handle_type;
+
+  // Rebinds the process_handle to another executor.
+  template <typename Executor1>
+  struct rebind_executor
+  {
+    // The socket type when rebound to the specified executor.
+    typedef basic_process<Executor1> other;
+  };
+
+  /** An empty process is similar to a default constructed thread. It holds an empty
+  handle and is a place holder for a process that is to be launched later. */
+  basic_process() = default;
+
+  basic_process(const basic_process&) = delete;
+  basic_process& operator=(const basic_process&) = delete;
+
+  // Move construct the process. It will be detached from `lhs`.
+  basic_process(basic_process&& lhs) = default;
+
+  // Move assign a process. It will be detached from `lhs`.
+  basic_process& operator=(basic_process&& lhs) = default;
+
+  // Move construct and rebind the executor.
+  template<typename Executor1>
+  basic_process(basic_process<Executor1>&& lhs);
+
+  // Construct a child from a property list and launch it using the default launcher..
+  template<typename ... Inits>
+  explicit basic_process(
+      executor_type executor,
+      const filesystem::path& exe,
+      std::initializer_list<string_view> args,
+      Inits&&... inits);
+  
+  // Construct a child from a property list and launch it using the default launcher..
+  template<typename Args, typename ... Inits>
+  explicit basic_process(
+      executor_type executor,
+      const filesystem::path& exe,
+      Args&& args, Inits&&... inits);
+
+  // Construct a child from a property list and launch it using the default launcher..
+  template<typename ExecutionContext, typename ... Inits>
+  explicit basic_process(
+          ExecutionContext & context,
+          const filesystem::path& exe,
+          std::initializer_list<string_view> args,
+          Inits&&... inits);
+  // Construct a child from a property list and launch it using the default launcher.
+  template<typename ExecutionContext, typename Args, typename ... Inits>
+  explicit basic_process(
+          ExecutionContext & context,
+          const filesystem::path&>::type exe,
+          Args&& args, Inits&&... inits);
+
+  // Attach to an existing process
+  explicit basic_process(executor_type exec, pid_type pid);
+
+  // Attach to an existing process and the internal handle
+  explicit basic_process(executor_type exec, pid_type pid, native_handle_type native_handle);
+
+  // Create an invalid handle
+  explicit basic_process(executor_type exec);
+
+  // Attach to an existing process
+  template <typename ExecutionContext>
+  explicit basic_process(ExecutionContext & context, pid_type pid);
+
+  // Attach to an existing process and the internal handle
+  template <typename ExecutionContext>
+  explicit basic_process(ExecutionContext & context, pid_type pid, native_handle_type native_handle);
+
+  // Create an invalid handle
+  template <typename ExecutionContext>
+  explicit basic_process(ExecutionContext & context);
+
+
+
+  // Destruct the handle and terminate the process if it wasn't detached.
+  ~basic_process();
+
+  // Sends the process a signal to ask for an interrupt, which the process may interpret as a shutdown.
+  /** Maybe be ignored by the subprocess. */
+  void interrupt(error_code & ec);
+  void interrupt();
+
+  // Throwing @overload void interrupt()
+
+
+  // Sends the process a signal to ask for a graceful shutdown. Maybe be ignored by the subprocess.
+  void request_exit(error_code & ec);
+  void request_exit();
+
+  // Send the process a signal requesting it to stop. This may rely on undocumented functions.
+  void suspend(error_code &ec);
+  void suspend();
+
+
+  // Send the process a signal requesting it to resume. This may rely on undocumented functions.
+  void resume(error_code &ec);
+  void resume();
+
+  // Unconditionally terminates the process and stores the exit code in exit_status.
+  void terminate(error_code & ec);
+  void terminate();
+
+  // Waits for the process to exit, store the exit code internally and return it.
+  int wait(error_code & ec);
+  int wait();
+
+  // Detach the process.
+  handle_type detach();
+  // Get the native
+  native_handle_type native_handle() {return process_handle_.native_handle(); }
+
+  // Return the evaluated exit_code.
+  int exit_code() cons;
+
+  // Get the id of the process;
+  pid_type id() const;
+
+  // The native handle of the process. 
+  /** This might be undefined on posix systems that only support signals */
+  native_exit_code_type native_exit_code() const;
+
+  // Checks if the current process is running. 
+  /* If it has already completed the exit code will be stored internally
+   * and can be obtained by calling `exit_code.
+   */
+  bool running();
+  bool running(error_code & ec) noexcept;
+
+  // Check if the process is referring to an existing process.
+  /** Note that this might be a process that already exited.*/
+  bool is_open() const;
+  
+  // Asynchronously wait for the process to exit and deliver the native exit-code in the completion handler.
+  template <BOOST_PROCESS_V2_COMPLETION_TOKEN_FOR(void (error_code, int))
+  WaitHandler = net::default_completion_token_t<executor_type>>
+  auto async_wait(WaitHandler && handler = net::default_completion_token_t<executor_type>());
+};
+
+// Process with the default executor.
+typedef basic_process<> process;
+
+----

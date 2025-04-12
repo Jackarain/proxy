@@ -31,7 +31,7 @@ if (BOOST_URL_WARNINGS_AS_ERRORS)
             set(BOOST_URL_TEST_FLAGS "-Wall -Werror")
         endif()
     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "MSVC")
-        set(BOOST_URL_TEST_FLAGS "/W4 /WX")
+        set(BOOST_URL_TEST_FLAGS "/W4 /WX /we4265 /wd4251")
     endif()
 
     # Print test configuration if running in CI

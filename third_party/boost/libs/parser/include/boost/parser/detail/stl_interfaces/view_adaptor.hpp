@@ -24,8 +24,9 @@
 #define BOOST_PARSER_USE_CPP23_STD_RANGE_ADAPTOR_CLOSURE 0
 #endif
 
-#if !BOOST_PARSER_USE_CPP23_STD_RANGE_ADAPTOR_CLOSURE &&               \
-    BOOST_PARSER_DETAIL_STL_INTERFACES_USE_CONCEPTS && defined(__GNUC__) && 12 <= __GNUC__
+#if !BOOST_PARSER_USE_CPP23_STD_RANGE_ADAPTOR_CLOSURE &&                       \
+    BOOST_PARSER_DETAIL_STL_INTERFACES_USE_CONCEPTS &&                         \
+    defined(BOOST_PARSER_GCC) && 12 <= __GNUC__
 #define BOOST_PARSER_USE_LIBSTDCPP_GCC12_RANGE_ADAPTOR_CLOSURE 1
 #else
 #define BOOST_PARSER_USE_LIBSTDCPP_GCC12_RANGE_ADAPTOR_CLOSURE 0
@@ -328,23 +329,20 @@ namespace boost::parser::detail { namespace stl_interfaces {
     {
         constexpr adaptor(F f) : f_(f) {}
 
-        // clang-format off
         template<typename... Args>
         constexpr auto operator()(Args &&... args) const
-        // clang-format on
         {
 #if BOOST_PARSER_DETAIL_STL_INTERFACES_USE_CONCEPTS
             if constexpr (std::is_invocable_v<F const &, Args...>) {
-                return f_((Args &&) args...);
+                return f_((Args &&)args...);
             } else {
-                return closure(
-                    stl_interfaces::bind_back(f_, (Args &&) args...));
+                return closure(stl_interfaces::bind_back(f_, (Args &&)args...));
             }
 #else
             return detail::adaptor_impl<
                 F const &,
                 detail::is_invocable_v<F const &, Args...>,
-                Args...>::call(f_, (Args &&) args...);
+                Args...>::call(f_, (Args &&)args...);
 #endif
         }
 

@@ -1,5 +1,5 @@
 // Copyright 2014 Renato Tegon Forti, Antony Polukhin.
-// Copyright Antony Polukhin, 2015-2024.
+// Copyright Antony Polukhin, 2015-2025.
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
@@ -8,9 +8,8 @@
 #include "../b2_workarounds.hpp"
 //[callplugcpp_tutorial3
 #include <boost/dll/import.hpp> // for import_alias
-#include <boost/make_shared.hpp>
-#include <boost/function.hpp>
 #include <iostream>
+#include <memory>
 #include "../tutorial_common/my_plugin_api.hpp"
 
 namespace dll = boost::dll;
@@ -27,9 +26,10 @@ std::size_t search_for_symbols(const std::vector<boost::dll::fs::path>& plugins)
         }
 
         // library has symbol, importing...
-        typedef boost::shared_ptr<my_plugin_api> (pluginapi_create_t)();
-        boost::function<pluginapi_create_t> creator
-            = dll::import_alias<pluginapi_create_t>(boost::move(lib), "create_plugin");
+        using pluginapi_create_t = std::shared_ptr<my_plugin_api>();
+        auto creator = dll::import_alias<pluginapi_create_t>(
+            std::move(lib), "create_plugin"
+        );
 
         std::cout << "Matching plugin name: " << creator()->name() << std::endl;
         ++ plugins_found;

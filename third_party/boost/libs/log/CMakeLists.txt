@@ -1,9 +1,9 @@
-# Copyright 2021-2023 Andrey Semashev
+# Copyright 2021-2024 Andrey Semashev
 #
 # Distributed under the Boost Software License, Version 1.0.
 # See accompanying file LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.5...3.16)
 project(BoostLog VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
 
 include(CheckCXXSourceCompiles)
@@ -258,8 +258,8 @@ if (WIN32)
                 OUTPUT
                     "${CMAKE_CURRENT_BINARY_DIR}/src/windows/simple_event_log.h"
                     "${CMAKE_CURRENT_BINARY_DIR}/src/windows/simple_event_log.rc"
+                COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/src/windows"
                 COMMAND "${CMAKE_MC_COMPILER}"
-                ARGS
                     -h "${CMAKE_CURRENT_BINARY_DIR}/src/windows"
                     -r "${CMAKE_CURRENT_BINARY_DIR}/src/windows"
                     "${CMAKE_CURRENT_SOURCE_DIR}/src/windows/simple_event_log.mc"
@@ -269,8 +269,6 @@ if (WIN32)
                     "Building src/windows/simple_event_log.mc"
                 VERBATIM
             )
-            set_source_files_properties("${CMAKE_CURRENT_BINARY_DIR}/src/windows/simple_event_log.h" PROPERTIES GENERATED TRUE)
-            set_source_files_properties("${CMAKE_CURRENT_BINARY_DIR}/src/windows/simple_event_log.rc" PROPERTIES GENERATED TRUE)
 
             if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
                 # Workaround for a windres.exe issue on MinGW-w64: by default, it uses popen to pipe preprocessed
@@ -308,7 +306,7 @@ else()
 endif()
 
 if (CYGWIN)
-    # Boost.Interprocess does not compile on Cygwin: https://github.com/boostorg/interprocess/issues/76
+    # Boost.Interprocess does not compile on Cygwin: https://github.com/boostorg/interprocess/issues/242
     set(BOOST_LOG_WITHOUT_IPC ON)
     list(APPEND boost_log_common_private_defines
         __USE_W32_SOCKETS
@@ -327,6 +325,9 @@ if (WIN32 OR CYGWIN)
         ws2_32
         mswsock
         advapi32
+    )
+    list(APPEND boost_log_setup_private_libs
+        ws2_32
     )
 endif()
 
@@ -657,6 +658,7 @@ if (NOT BOOST_LOG_WITHOUT_SETTINGS_PARSERS)
 
     target_link_libraries(boost_log_setup
         PRIVATE
+            ${boost_log_setup_private_libs}
             ${boost_log_common_private_linkflags}
     )
 else()

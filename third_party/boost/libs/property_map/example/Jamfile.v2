@@ -7,6 +7,8 @@
 
 import testing ;
 
+project : requirements <library>/boost/property_map//boost_property_map ;
+
 test-suite "property_map-examples"
    :    [ run compose_property_map_example.cpp ]
         [ run example1.cpp ]

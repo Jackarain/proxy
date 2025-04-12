@@ -13,101 +13,56 @@ env:
 
 jobs:
   posix:
+    defaults:
+      run:
+        shell: bash
+
     strategy:
       fail-fast: false
       matrix:
         include:
-          - toolset: gcc-5
-            cxxstd: "11,14,1z"
-            os: ubuntu-18.04
-            install: g++-5
-          - toolset: gcc-6
-            cxxstd: "11,14,1z"
-            os: ubuntu-18.04
-            install: g++-6
-          - toolset: gcc-7
-            cxxstd: "11,14,17"
-            os: ubuntu-18.04
-          - toolset: gcc-10
-            cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
-            install: g++-10
-          - toolset: gcc-12
-            cxxstd: "11,14,17,20,2b"
-            os: ubuntu-22.04
-            install: g++-12
-          - toolset: clang
-            compiler: clang++-3.9
-            cxxstd: "11,14"
-            os: ubuntu-18.04
-            install: clang-3.9
-          - toolset: clang
-            compiler: clang++-4.0
-            cxxstd: "11,14"
-            os: ubuntu-18.04
-            install: clang-4.0
-          - toolset: clang
-            compiler: clang++-5.0
-            cxxstd: "11,14,1z"
-            os: ubuntu-18.04
-            install: clang-5.0
-          - toolset: clang
-            compiler: clang++-6.0
-            cxxstd: "11,14,17"
-            os: ubuntu-18.04
-            install: clang-6.0
-          - toolset: clang
-            compiler: clang++-7
-            cxxstd: "11,14,17"
-            os: ubuntu-18.04
-            install: clang-7
-          - toolset: clang
-            compiler: clang++-8
-            cxxstd: "11,14,17"
-            os: ubuntu-20.04
-            install: clang-8
-          - toolset: clang
-            compiler: clang++-9
-            cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
-            install: clang-9
-          - toolset: clang
-            compiler: clang++-10
-            cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
-            install: clang-10
-          - toolset: clang
-            compiler: clang++-11
-            cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
-            install: clang-11
-          - toolset: clang
-            compiler: clang++-12
-            cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
-            install: clang-12
-          - toolset: clang
-            compiler: clang++-13
-            cxxstd: "11,14,17,20,2b"
-            os: ubuntu-22.04
-            install: clang-13
-          - toolset: clang
-            compiler: clang++-14
-            cxxstd: "11,14,17,20,2b"
-            os: ubuntu-22.04
-            install: clang-14
-          - toolset: clang
-            cxxstd: "11,14,17,2a"
-            os: macos-11
+          - { toolset: gcc-5,                        cxxstd: "11,14,1z",       os: ubuntu-latest, container: 'ubuntu:18.04', install: g++-5 }
+          - { toolset: gcc-6,                        cxxstd: "11,14,1z",       os: ubuntu-latest, container: 'ubuntu:18.04', install: g++-6 }
+          - { toolset: gcc-7,                        cxxstd: "11,14,17",       os: ubuntu-20.04, install: g++-7 }
+          - { toolset: gcc-10,                       cxxstd: "11,14,17,2a",    os: ubuntu-22.04, install: g++-10 }
+          - { toolset: gcc-12,                       cxxstd: "11,14,17,20,2b", os: ubuntu-22.04, install: g++-12 }
+          - { toolset: clang, compiler: clang++-3.9, cxxstd: "11,14",          os: ubuntu-latest, container: 'ubuntu:18.04', install: clang-3.9 }
+          - { toolset: clang, compiler: clang++-4.0, cxxstd: "11,14",          os: ubuntu-latest, container: 'ubuntu:18.04', install: clang-4.0 }
+          - { toolset: clang, compiler: clang++-5.0, cxxstd: "11,14,1z",       os: ubuntu-latest, container: 'ubuntu:18.04', install: clang-5.0 }
+          - { toolset: clang, compiler: clang++-6.0, cxxstd: "11,14,17",       os: ubuntu-20.04, install: clang-6.0 }
+          - { toolset: clang, compiler: clang++-7,   cxxstd: "11,14,17",       os: ubuntu-20.04, install: clang-7 }
+          - { toolset: clang, compiler: clang++-8,   cxxstd: "11,14,17",       os: ubuntu-20.04, install: clang-8 }
+          - { toolset: clang, compiler: clang++-9,   cxxstd: "11,14,17,2a",    os: ubuntu-20.04, install: clang-9 }
+          - { toolset: clang, compiler: clang++-10,  cxxstd: "11,14,17,2a",    os: ubuntu-20.04, install: clang-10 }
+          - { toolset: clang, compiler: clang++-11,  cxxstd: "11,14,17,2a",    os: ubuntu-20.04, install: clang-11 }
+          - { toolset: clang, compiler: clang++-12,  cxxstd: "11,14,17,2a",    os: ubuntu-20.04, install: clang-12 }
+          - { toolset: clang, compiler: clang++-13,  cxxstd: "11,14,17,20,2b", os: ubuntu-22.04, install: clang-13 }
+          - { toolset: clang, compiler: clang++-14,  cxxstd: "11,14,17,20,2b", os: ubuntu-22.04, install: clang-14 }
+          - { toolset: clang,                        cxxstd: "11,14,17,2a",    os: macos-13 }
 
     runs-on: ${{matrix.os}}
+    container:
+      image: ${{matrix.container}}
+      volumes:
+        - /node20217:/node20217:rw,rshared
+        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Setup container environment
+        if: matrix.container
+        run: |
+          apt-get update
+          apt-get -y install sudo python3 git g++ curl
+          if [[ "${{matrix.container}}" == "ubuntu:1"* ]]; then
+            # Node 20 doesn't work with Ubuntu 16/18  glibc: https://github.com/actions/checkout/issues/1590
+            curl -sL https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz | tar -xJ --strip-components 1 -C /node20217
+          fi
+
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
-        run: sudo apt install ${{matrix.install}}
+        run: sudo apt-get -y install ${{matrix.install}}
 
       - name: Setup Boost
         run: |
@@ -127,7 +82,7 @@ jobs:
           cd boost-root
           cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
           git submodule update --init tools/boostdep
-          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+          python3 tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
           ./bootstrap.sh
           ./b2 -d0 headers
 
@@ -207,7 +162,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd

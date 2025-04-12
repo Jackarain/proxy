@@ -1,0 +1,31 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:Authenticator Authenticator concept]
+
+A type `T` satisfies `Authenticator` concept if it satisifes the requirements listed below.
+
+[table
+    [[operation] [type] [arguments]]
+    [
+        [```a.async_auth(step, data, h)```]
+        [`void`]
+        [
+[*`step`] is [reflink2 auth_step_e boost::mqtt5::auth_step_e] that specifies current authentication stage.
+
+[*`data`] is `std::string`, server's authentication data.
+
+[*`h`] is [asioreflink any_completion_handler any_completion_handler] with signature `void(__ERROR_CODE__ ec, std::string client_data)`. If `ec` is non-trivial, authentication is aborted.
+        ]
+    ]
+    [
+        [```a.method()```]
+        [`std::string_view`, authentication method]
+        []
+    ]
+]
+
+[endsect]

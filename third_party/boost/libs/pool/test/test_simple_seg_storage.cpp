@@ -316,44 +316,6 @@ int main()
         }
 
         {
-            char* const pc = track_allocator::malloc(4 * partition_sz);
-            test_simp_seg_store tstore;
-            tstore.add_ordered_block(pc, 4 * partition_sz, partition_sz);
-
-            void* pvret = tstore.malloc_n(1, 2 * partition_sz);
-            BOOST_TEST(pvret == 0);
-
-            // There should still be two contiguous
-            //  and one non-contiguous chunk left
-            std::size_t nchunks = 0;
-            while(!tstore.empty())
-            {
-                tstore.malloc();
-                ++nchunks;
-            }
-            BOOST_TEST(nchunks == 4);
-        }
-
-        {
-            char* const pc = track_allocator::malloc(4 * partition_sz);
-            test_simp_seg_store tstore;
-            tstore.add_ordered_block(pc, 4 * partition_sz, partition_sz);
-
-            void* pvret = tstore.malloc_n(2, 2 * partition_sz);
-            BOOST_TEST(pvret == 0);
-
-            // There should still be two contiguous
-            //  and one non-contiguous chunk left
-            std::size_t nchunks = 0;
-            while(!tstore.empty())
-            {
-                tstore.malloc();
-                ++nchunks;
-            }
-            BOOST_TEST(nchunks == 4);
-        }
-
-        {
             char* const pc = track_allocator::malloc(12 * partition_sz);
             test_simp_seg_store tstore;
             tstore.add_ordered_block(pc, 2 * partition_sz, partition_sz);

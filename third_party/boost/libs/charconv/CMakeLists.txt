@@ -27,8 +27,9 @@ int main()
 {
     __float128 f = -2.0Q;
     f = fabsq(f);
+    __float128 big = HUGE_VALQ;
 
-    return 0;
+    return f == big;
 }
 ")
 
@@ -46,7 +47,6 @@ target_link_libraries(boost_charconv
 # Check to see if the user specified BOOST_CHARCONV_NO_QUADMATH even with quadmath support being available
 if(NOT BOOST_CHARCONV_QUADMATH_FOUND OR BOOST_CHARCONV_NO_QUADMATH)
   message(STATUS "Boost.Charconv: quadmath support OFF")
-  target_compile_definitions(boost_charconv PUBLIC BOOST_CHARCONV_NO_QUADMATH)
 else()
   message(STATUS "Boost.Charconv: quadmath support ON")
   target_compile_definitions(boost_charconv PUBLIC BOOST_CHARCONV_HAS_QUADMATH)

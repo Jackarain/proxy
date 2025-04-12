@@ -89,6 +89,12 @@ public:
             iterator( rhs.iterator )
         {}
 
+        handle_type& operator=( handle_type const& rhs )
+        {
+            iterator = rhs.iterator;
+            return *this;
+        }
+
         bool operator==( handle_type const& rhs ) const
         {
             return iterator == rhs.iterator;
@@ -153,7 +159,6 @@ protected:
         return *this;
     }
 
-#ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
     priority_queue_mutable_wrapper( priority_queue_mutable_wrapper&& rhs ) :
         q_( std::move( rhs.q_ ) )
     {
@@ -168,8 +173,6 @@ protected:
         std::swap( objects, rhs.objects );
         return *this;
     }
-#endif
-
 
 public:
     template < typename iterator_type >
@@ -229,7 +232,7 @@ public:
         ordered_iterator( void ) :
             adaptor_type( 0 ),
             unvisited_nodes( indirect_cmp() ),
-            q_( NULL )
+            q_( nullptr )
         {}
 
         ordered_iterator( const priority_queue_mutable_wrapper* q, indirect_cmp const& cmp ) :
@@ -348,7 +351,6 @@ public:
         return handle_type( ret );
     }
 
-#if !defined( BOOST_NO_CXX11_RVALUE_REFERENCES ) && !defined( BOOST_NO_CXX11_VARIADIC_TEMPLATES )
     template < class... Args >
     handle_type emplace( Args&&... args )
     {
@@ -357,7 +359,6 @@ public:
         q_.push( ret );
         return handle_type( ret );
     }
-#endif
 
     void pop( void )
     {
@@ -407,7 +408,7 @@ public:
      * */
     void increase( handle_type handle, const_reference v )
     {
-        BOOST_ASSERT( !value_compare()( v, handle.iterator->first ) );
+        BOOST_ASSERT( !value_comp()( v, handle.iterator->first ) );
         handle.iterator->first = v;
         increase( handle );
     }
@@ -436,7 +437,7 @@ public:
      * */
     void decrease( handle_type handle, const_reference v )
     {
-        BOOST_ASSERT( !value_compare()( handle.iterator->first, v ) );
+        BOOST_ASSERT( !value_comp()( handle.iterator->first, v ) );
         handle.iterator->first = v;
         decrease( handle );
     }

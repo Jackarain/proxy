@@ -1,0 +1,132 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:getting_started Getting Started]
+[nochunk]
+
+This section guides you through the steps to properly configure the __Client__ to establish a connection with your chosen MQTT Broker.
+
+The __Client__ does *not* expose connect functions (nor asynchronous connect functions).
+Instead, it features a function that will start the Client (see [refmem mqtt_client async_run]).
+All configuration of the __Client__ must be finalised before invoking [refmem mqtt_client async_run].
+Upon calling this function, the __Client__ makes its initial attempt to connect.
+
+[section:transport_protocol Choosing a Suitable Transport Protocol]
+
+The initial step is selecting an appropriate transport protocol for your MQTT connection.
+
+The __MQTT__ protocol relies on an underlying transport protocol that guarantees the orderly and reliable
+transmission of byte streams between the Client and Server in both directions.
+Common transport protocols meeting these criteria include TCP/IP, TLS/SSL for secure transmissions,
+and WebSocket over TCP/IP and TLS/SSL.
+
+MQTT Brokers come in various implementations and support different transport protocols.
+Therefore, it is important to familiarise yourself with the protocols your chosen Broker supports.
+Additionally, gather any necessary details, such as certificate authority, client certificate, or private keys,
+which might be required for establishing a secure connection.
+
+In this example, we choose TCP/IP as the underlying protocol to initialize the __Client__.
+
+[!c++]
+    // Initialize the execution context required to run I/O operations.
+    boost::asio::io_context ioc;
+    
+    // Construct the Client with ``__TCP_SOCKET__`` as the underlying stream.
+    boost::mqtt5::mqtt_client<boost::asio::ip::tcp::socket> client(ioc);
+
+[endsect] [/transport_protocol]
+
+[section:configuration Configuring Your MQTT Connection]
+
+The __Client__ offers a variety of functions for configuring your MQTT connection settings.
+These functionalities include:
+
+* *Specifying a list of Brokers:* You *must* use this function to assign a list of Brokers that the __Client__ will try to connect to (see [refmem mqtt_client brokers]). 
+The __Client__ allows for the specification of multiple Brokers for the connections.
+It is important to ensure that *only Brokers belonging to the same cluster are included in this list*.
+Listing Brokers from different clusters may lead to inconsistencies between MQTT Sessions.
+* *Setting connection Credentials:* Set the authentication details (Client Identifier, User Name, Password) (see [refmem mqtt_client credentials]).
+* *Configuring Keep Alive Interval:* Set the maximum allowed interval between two consecutive transmissions from the Client (see [refmem mqtt_client keep_alive]).
+* *Assign a custom user-implemented authenticator:* The custom authentication will be used for __ENHANCED_AUTH__ ([refmem mqtt_client authenticator]).
+* *Defining CONNECT Packet Properties:* Specify properties that will be included in the __CONNECT__ packet sent during connection initiation (see [refmem mqtt_client connect_property] and [refmem mqtt_client connect_properties]).
+
+Firstly, we will specify the Broker we want to connect to using the [refmem mqtt_client brokers] function.
+This can be __HIVEMQ__'s public Broker available at `broker.hivemq.com`:1883.
+Additionally, we can set the Client Identifier using the [refmem mqtt_client credentials] function. This is not mandatory, as some Brokers allow anonymous connections.
+
+After configuring the `mqtt_client`, we call the [refmem mqtt_client async_run] function.
+This starts the process of establishing a connection with the Broker.
+
+[configure_tcp_client]
+
+It is important to note that these configurations apply to every Broker listed in [refmem mqtt_client brokers].
+To modify any configuration parameters, you must first stop the __Client__ using [refmem mqtt_client cancel] or [refmem mqtt_client async_disconnect].
+Afterwards, you can re-apply the configurations and restart the __Client__ with [refmem mqtt_client async_run].
+
+[endsect] [/configuration]
+
+[section:establishing_a_connection Establishing a Connection]
+
+The __Client__ initiates a connection with the first Broker from the list of Brokers assigned using [refmem mqtt_client brokers].
+A single attempt at connecting involves several steps:
+
+# Resolving the Broker's hostname.
+# Creating a TCP connection.
+# Performing the TLS/SSL Handshake /(if applicable)/.
+# Performing the WebSocket Handshake /(if applicable)/.
+# Performing the MQTT handshake. This involves sending the __CONNECT__ packet to the Broker, /(if applicable)/ exchanging __AUTH__ packets (see __ENHANCED_AUTH__), and continuing until the Broker sends the __CONNACK__ packet.
+
+The connection is successfully established once the __Client__ receives a __CONNACK__ packet with Reason Code `0x00` (`Success`).
+The attempt fails if any of the following occurs:
+
+* Any of the steps from 1 to 5 encounters a failure.
+* The __Client__ does not receive the results of the hostname resolution within `5 seconds`.
+* The __Client__ is unable to complete steps 2 through 5 within `5 seconds`.
+
+If this connection attempt is unsuccessful, it proceeds to the next Broker in order, continuing this process until it establishes a connection or exhausts all options without success.
+Upon reaching the end of the list without a successful connection, the __Client__ enters a backoff period before making another round of attempts with the entire list. 
+The duration of this backoff period in milliseconds is determined by the formula:
+
+    2^(min(retry_count, 4)) * 1000 + jitter
+
+In this formula, `retry_count` represents the number of complete cycles through the list without a successful connection,
+and `jitter` is a randomly chosen value between `-500ms` to `500ms`, intended to prevent synchronised reconnection attempts in scenarios with multiple clients.
+
+[endsect] [/establishing_a_connection]
+
+[section:using_the_client Using the Client]
+
+After calling [refmem mqtt_client async_run], you can now use the Client according to your application needs.
+In this case, we will publish a "Hello World!" message to `boost-mqtt5/test` topic with Quality of Service 0 (at most once) using the [refmem mqtt_client async_publish] function.
+
+[publish_hello_world]
+
+You can find the full program listing for this chapter at the link below:
+
+* [link mqtt5.hello_world_over_tcp hello_world_over_tcp.cpp]
+
+Additional "Hello World!" examples for different underlying transport protocols can be found here:
+
+* [link mqtt5.hello_world_over_tls hello_world_over_tls.cpp]
+* [link mqtt5.hello_world_over_websocket_tcp hello_world_over_websocket_tcp.cpp]
+* [link mqtt5.hello_world_over_websocket_tls hello_world_over_websocket_tls.cpp]
+
+[endsect] [/using_the_client]
+
+[section:debugging Debugging the Client]
+
+If you encounter configuration or connection issues, you can use our logging mechanism to debug problems.
+The __Client__ introduces a __LoggerType__ as its third template parameter, which specifies the type used for logging events within the __Client__.
+
+The __Self__ library provides a built-in [ghreflink include/boost/mqtt5/logger.hpp logger] implementation that outputs operation results to stderr.
+This logger outputs detailed information about each step in the connection process, including DNS resolution, TCP connection, TLS handshake, WebSocket handshake, and MQTT handshake.
+To enable this functionality, construct the __Client__ with an instance of this logger class:
+
+[init_tcp_client_with_logger]
+
+[endsect] [/debugging]
+
+[endsect] [/getting_started]

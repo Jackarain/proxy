@@ -1,5 +1,5 @@
 // Copyright 2014 Renato Tegon Forti, Antony Polukhin.
-// Copyright Antony Polukhin, 2015-2024.
+// Copyright Antony Polukhin, 2015-2025.
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
@@ -14,17 +14,17 @@
 
 namespace my_namespace {
 
-class my_plugin_sum : public my_plugin_api {
+class my_plugin_sum final: public my_plugin_api {
 public:
     my_plugin_sum() {
         std::cout << "Constructing my_plugin_sum" << std::endl;
     }
 
-    std::string name() const {
+    std::string name() const override {
         return "sum";
     }
 
-    float calculate(float x, float y) {
+    float calculate(float x, float y) override {
         return x + y;
     }
    
@@ -33,11 +33,11 @@ public:
     }
 };
 
-// Exporting `my_namespace::plugin` variable with alias name `plugin`
-// (Has the same effect as `BOOST_DLL_ALIAS(my_namespace::plugin, plugin)`)
+// Exporting `my_namespace::plugin` variable with name `plugin`
 extern "C" BOOST_SYMBOL_EXPORT my_plugin_sum plugin;
 my_plugin_sum plugin;
 
 } // namespace my_namespace
+
 
 //]

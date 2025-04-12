@@ -257,6 +257,7 @@ struct gather_ranged_impl
 #endif
 
 
+
     awaitable(Range & aws_, std::false_type /* needs operator co_await */)
       : fork::shared_state((512 + sizeof(co_awaitable_type<type>)) * std::size(aws_))
       , aws{alloc}

@@ -83,7 +83,17 @@ numbers mean faster random number generation.
   [[__ranlux64_4_01] [~10[sup 171]] [`24*sizeof(double)`] [[ranlux64_4_speed]] [-]]
   [[__ranlux24] [~10[sup 171]] [`24*sizeof(uint32_t)`] [[ranlux24_speed]] [-]]
   [[__ranlux48] [~10[sup 171]] [`12*sizeof(uint64_t)`] [[ranlux48_speed]] [-]]
-  [[__splitmix64] [2[sup 64]] [`sizeof(uint64_t)`] [[-]] [-]]
+  [[__splitmix64] [2[sup 64]] [`sizeof(uint64_t)`] [155%] [See: https://prng.di.unimi.it]]
+  [[__xoshiro256pp] [2[sup 256]] [`4*sizeof(uint64_t)`] [132%] [xoshiro256++ from https://prng.di.unimi.it]]
+  [[__xoshiro256d] [2[sup 256]] [`4*sizeof(uint64_t)`] [139%] [This generator returns doubles instead of uint64_t. It is modified xoshiro256+ from https://prng.di.unimi.it]]
+  [[__xoshiro256mm] [2[sup 256]] [`4*sizeof(uint64_t)`] [116%] [xoshiro256** from https://prng.di.unimi.it]]
+  [[__xoshiro512pp] [2[sup 512]] [`8*sizeof(uint64_t)`] [133%] [xoshiro512++ from https://prng.di.unimi.it]]
+  [[__xoshiro512d] [2[sup 512]] [`8*sizeof(uint64_t)`] [144%] [This generator returns doubles instead of uint64_t. It is modified xoshiro512+ from https://prng.di.unimi.it]]
+  [[__xoshiro512mm] [2[sup 512]] [`8*sizeof(uint64_t)`] [113%] [xoshiro512** from https://prng.di.unimi.it]]
+  [[__xoshiro128pp] [2[sup 128]] [`4*sizeof(uint32_t)`] [133%] [xoshiro128++ from https://prng.di.unimi.it. Returns uint32_t]]
+  [[__xoshiro128f] [2[sup 128]] [`4*sizeof(uint32_t)`] [145%] [This generator returns float instead of uint32_t. It is modified xoshiro128+ from https://prng.di.unimi.it]]
+  [[__xoshiro128mm] [2[sup 128]] [`4*sizeof(uint32_t)`] [116%] [xoshiro128** from https://prng.di.unimi.it. Returns uint32_t]]
+
 ]
 
 As observable from the table, there is generally a quality/performance/memory
@@ -95,8 +105,12 @@ generators for a given application of Monte Carlo simulation will improve
 the confidence in the results.
 
 If the names of the generators don't ring any bell and you have no idea
-which generator to use, it is reasonable to employ __mt19937 for a start: It
-is fast and has acceptable quality.
+which generator to use, it is reasonable to employ __xoshiro256pp for a start: It
+is fast and of high quality.
+
+If you need a 32-bit return instead of 64-bit prefer __xoshiro128pp.
+
+If you need either double or float as the return type prefer __xoshiro256d or __xoshiro128f respectively.
 
 [note These random number generators are not intended for use in applications
 where non-deterministic random numbers are required. See __random_device

@@ -48,14 +48,14 @@ information is needed, call on `indirect_reference`.
 Both of these templates are essential to the correct functioning of
 [link iterator.specialized.indirect `indirect_iterator`].
 
-[h2 `minimum_category`]
+[h2 `min_category`]
 
-`minimum_category` takes two iterator categories or two iterator traversal tags
+`min_category` takes one or more iterator categories or iterator traversal tags
 and returns the one that is the weakest (i.e. least advanced). For example:
 
   static_assert(
       is_same<
-          minimum_category<
+          min_category<
               std::forward_iterator_tag,
               std::random_access_iterator_tag
           >::type,

@@ -2,9 +2,9 @@
 
 # Copyright (C) 2002-2003 Douglas Gregor
 
-# Use, modification and distribution is subject to the Boost Software License, 
-# Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at 
-# http://www.boost.org/LICENSE_1_0.txt) 
+# Use, modification and distribution is subject to the Boost Software License,
+# Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
 
 # For more information, see http://www.boost.org/
 
@@ -13,13 +13,15 @@ import os ;
 import regex ;
 import testing ;
 
-local self = logic ;
+path-constant self : . ;
+
+project : requirements <library>/boost/logic//boost_logic ;
 
 rule test-expected-failures
 {
     local all_rules = ;
     local file ;
-    local tests_path = [ path.make $(BOOST_ROOT)/libs/$(self)/test/compile-fail ] ;
+    local tests_path = [ path.make $(self)/../test/compile-fail ] ;
     for file in [ path.glob-tree $(tests_path) : *.cpp ]
     {
         local rel_file = [ path.relative-to $(tests_path) $(file) ] ;
@@ -37,7 +39,7 @@ rule test-header-isolation
 {
     local all_rules = ;
     local file ;
-    local headers_path = [ path.make $(BOOST_ROOT)/libs/$(self)/include ] ;
+    local headers_path = [ path.make $(self)/../include ] ;
     for file in [ path.glob-tree $(headers_path) : *.hpp ]
     {
         local rel_file = [ path.relative-to $(headers_path) $(file) ] ;
@@ -53,7 +55,7 @@ rule test-header-isolation
     return $(all_rules) ;
 }
 
-  test-suite logic  : 
+  test-suite logic  :
     [ test-expected-failures ]
     [ test-header-isolation ]
     [ run tribool_test.cpp ]

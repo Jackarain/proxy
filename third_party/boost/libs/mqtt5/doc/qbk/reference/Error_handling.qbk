@@ -1,0 +1,91 @@
+[/
+    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Distributed under the Boost Software License, Version 1.0.
+    (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:Error_handling Error handling]
+
+The table below provides a reference of all __ERROR_CODE__ instances that asynchronous operations
+may complete with, along with the reasons for their occurrence.
+
+[table:error_codes Error codes
+    [[Error code] [Cause]]
+    [[`boost::system::errc::errc_t::success`] [The operation completed successfully.]]
+    [[`boost::asio::error::opreation_aborted`] [
+        The operation has been cancelled. 
+        The cancellation of the operation can be triggered by invoking either [refmem mqtt_client cancel]
+        or [refmem mqtt_client async_disconnect]. Furthermore, if a cancellation slot has been associated
+        with the __CompletionToken__ provided and the corresponding cancellation signal is emitted,
+        the operation will also finish with this error code (see __ASIO_PER_OP_CANCELLATION__).
+    ]]
+    [[`boost::asio::no_recovery`] [
+        An non-recoverable error occurred during the attempt by the [reflink2 mqtt_client `mqtt_client`]
+        to establish a connection with the Server. The cause of this error may be attributed to the connection 
+        related parameters used during the initialization of the [reflink2 mqtt_client `mqtt_client`].
+    ]]
+    [[`boost::mqtt5::client::error::malformed_packet`][
+        The Client has attempted to send a packet that does not conform to the specification.
+        This issue can arise from improperly formed UTF-8 encoded strings.
+        Additionally, this error can be caused by providing out-of-range values.
+    ]]
+    [[`boost::mqtt5::client::error::packet_too_large`][
+        The Client has attempted to send a packet larger than the Maximum Packet Size the Server
+        is willing to process.
+    ]]
+    [[`boost::mqtt5::client::error::session_expired`][
+        The Client has established a successful connection with a Server, but either the session does not exist or has expired.
+        In cases where the Client had previously set up subscriptions to Topics, these subscriptions are also expired.
+        Therefore, the Client should re-subscribe.
+        This error code is exclusive to completion handlers associated with [refmem mqtt_client async_receive] calls.
+    ]]
+    [[`boost::mqtt5::client::error::pid_overrun`] [
+        This error code signifies that the Client was unable to allocate a Packet Identifier for
+        the current operation due to the exhaustion of the available identifiers.
+        This occurs when there are 65535 outgoing Packets awaiting their responses.
+    ]]
+    [[`boost::mqtt5::client::error::invalid_topic`] [
+        The Client has attempted to perform an action (publish, subscribe or unsubscribe) on an invalid Topic.
+        See __TOPIC_SEMANTIC_AND_USAGE__ for information on properly formed Topics.
+        This error code is exclusive to completion handlers associated with [refmem mqtt_client async_publish], 
+        [refmem mqtt_client async_subscribe], and [refmem mqtt_client async_unsubscribe] calls.
+        In the case of [refmem mqtt_client async_subscribe] and [refmem mqtt_client async_unsubscribe], this error code 
+        occurs if at least one Topic provided is malformed.
+    ]]
+    [[`boost::mqtt5::client::error::qos_not_supported`] [
+        The Client has attempted to publish an Application Message with __QOS__ higher
+        than the Maximum __QOS__ specified by the Server.
+        The Server does not support this __QOS__ (see __MAXIMUM_QOS__).
+        This error code is exclusive to completion handlers associated with [refmem mqtt_client async_publish] calls.
+    ]]
+    [[`boost::mqtt5::client::error::retain_not_available`] [
+        The Client has attempted to publish an Application Message with the __RETAIN__ flag set to 1.
+        However, the Server does not support retained messages (see __RETAIN_AVAILABLE__).
+        This error code is exclusive to completion handlers associated with [refmem mqtt_client async_publish] calls.
+    ]]
+    [[`boost::mqtt5::client::error::topic_alias_maximum`] [
+        The Client has attempted to publish an Application Message with the Topic Alias 
+        exceeding the Server's supported Topic Alias Maximum. Additionally, this error code
+        will arise in instances when the Server does NOT support Topic Aliases, and the 
+        Client has attempted to use them. See __TOPIC_ALIAS_MAX__.
+        This error code is exclusive to completion handlers associated with [refmem mqtt_client async_publish] calls.
+    ]]
+    [[`boost::mqtt5::client::error::wildcard_subscription_not_available`] [
+        The Client has attempted to subscribe to multiple Topics using Wildcard Character (`+` and/or `#`).
+        However, the Server does not support Wildcard Subscriptions.
+        This error code is exclusive to completion handlers associated with [refmem mqtt_client async_subscribe] calls.
+    ]]
+    [[`boost::mqtt5::client::error::subscription_identifier_not_available`] [
+        The Client has attempted to associate a subscription with a Subscription Identifier.
+        However, the Server either does not support Subscription Identifiers or the Subscription Identifier provided
+        is out of range (the Subscription Identifier can have a value of 1 to 268,435,455).
+        This error code is exclusive to completion handlers associated with [refmem mqtt_client async_subscribe] calls.
+    ]]
+    [[`boost::mqtt5::client::error::shared_subscription_not_available`] [
+        The Client has attempted to establish a Shared Subscription.
+        However, the Server does not support Shared Subscriptions.
+        This error code is exclusive to completion handlers associated with [refmem mqtt_client async_subscribe] calls.
+    ]]
+]
+
+[endsect]

@@ -1,0 +1,182 @@
+#
+# Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+#
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+#
+
+name: CI-Windows
+
+on: [push, pull_request]
+
+jobs:
+  windows-cmake:
+    name: "CMake ${{ matrix.toolset }} ${{ matrix.architecture }} std=c++${{ matrix.cxxstd }}"
+    defaults:
+      run:
+        shell: cmd
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - toolset: msvc-14.3
+            os: windows-2022
+            architecture: Win32
+            generator: Visual Studio 17 2022
+            cxxstd: 20
+            build-type: 'Debug'
+            cxxflags: ''
+            ldflags: ''
+
+          - toolset: msvc-14.3
+            os: windows-2022
+            architecture: x64
+            generator: Visual Studio 17 2022
+            cxxstd: 20
+            build-type: 'Debug'
+            cxxflags: ''
+            ldflags: ''
+
+    runs-on: ${{ matrix.os }}
+    env:
+      CXXFLAGS: ${{ matrix.cxxflags }} /D_WIN32_WINNT=0x0601 /DWIN32_LEAN_AND_MEAN=1 /DNOMINMAX=1 /D_FILE_OFFSET_BITS=64 /DBOOST_ALL_NO_LIB /EHsc /bigobj
+      LDFLAGS: ${{ matrix.ldflags }}
+      CMAKE_BUILD_PARALLEL_LEVEL: 4
+  
+    steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+        
+        - name: Setup OpenSSL
+          env:
+            OPENSSL_ROOT: "C:\\OpenSSL"
+          run: |
+            if "${{ matrix.architecture }}" == "x64" (
+                choco install --no-progress -y openssl --x64
+            )
+            if "${{ matrix.architecture }}" == "Win32" (
+                set openssl_install_dir="C:\\Program Files (x86)\\OpenSSL-Win32"
+                choco install --no-progress -y openssl --forcex86 --version 1.1.1.2100
+            )
+            if "${{ matrix.architecture }}" == "x64" (
+                if exist "C:\Program Files\OpenSSL\" (
+                set openssl_install_dir="C:\\Program Files\\OpenSSL"
+                ) else (
+                set openssl_install_dir="C:\\Program Files\\OpenSSL-Win64"
+                )
+            )
+            mklink /D %OPENSSL_ROOT% %openssl_install_dir%
+            refreshenv
+            set
+
+        - name: Setup CMake
+          run: choco install cmake
+
+        - name: Setup Boost
+          run: python3 tools/ci.py setup-boost --source-dir=%cd%
+
+        - name: Build a Boost distribution using B2
+          run : |
+            python3 tools/ci.py build-b2-distro ^
+              --toolset ${{ matrix.toolset }}
+
+        - name: Build a Boost distribution using CMake
+          run: |
+            python3 tools/ci.py build-cmake-distro ^
+              --build-type ${{ matrix.build-type }} ^
+              --cxxstd ${{ matrix.cxxstd }} ^
+              --toolset ${{ matrix.toolset }} ^
+              --generator "${{ matrix.generator }}"
+
+        - name: Build standalone examples using CMake
+          run: |
+            python3 tools/ci.py build-cmake-standalone-examples ^
+              --build-type ${{ matrix.build-type }} ^
+              --cxxstd ${{ matrix.cxxstd }} ^
+              --toolset ${{ matrix.toolset }} ^
+              --generator "${{ matrix.generator }}"
+            
+        - name: Build standalone tests using CMake
+          run: |
+            python3 tools/ci.py build-cmake-standalone-tests ^
+              --build-type ${{ matrix.build-type }} ^
+              --cxxstd ${{ matrix.cxxstd }} ^
+              --toolset ${{ matrix.toolset }} ^
+              --generator "${{ matrix.generator }}"
+
+        - name: Run standalone tests
+          run: |
+            python3 tools/ci.py run-cmake-standalone-tests ^
+              --build-type ${{ matrix.build-type }}
+    
+        - name: Run CMake find_package test with B2 distribution
+          run: |
+            python3 tools/ci.py run-cmake-b2-find-package-tests ^
+              --build-type ${{ matrix.build-type }} ^
+              --cxxstd ${{ matrix.cxxstd }} ^
+              --toolset ${{ matrix.toolset }} ^
+              --generator "${{ matrix.generator }}"
+
+        - name: Run CMake find_package test with CMake distribution
+          run: |
+            python3 tools/ci.py run-cmake-find-package-tests ^
+              --build-type ${{ matrix.build-type }} ^
+              --cxxstd ${{ matrix.cxxstd }} ^
+              --toolset ${{ matrix.toolset }} ^
+              --generator "${{ matrix.generator }}"
+      
+        - name: Run CMake add_subdirectory test with CMake distribution
+          run: |
+            python3 tools/ci.py run-cmake-add-subdirectory-tests ^
+              --build-type ${{ matrix.build-type }} ^
+              --cxxstd ${{ matrix.cxxstd }} ^
+              --toolset ${{ matrix.toolset }} ^
+              --generator "${{ matrix.generator }}"
+
+  windows-b2:
+    name: "B2 ${{ matrix.toolset }} ${{ matrix.architecture }} std=c++${{ matrix.cxxstd }}"
+    defaults:
+      run:
+        shell: cmd
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - toolset: msvc-14.3
+            os: windows-2022
+            architecture: Win32
+            generator: Visual Studio 17 2022
+            cxxstd: "17,20"
+            build-type: 'release'
+            cxxflags: ''
+            ldflags: ''
+
+          - toolset: msvc-14.3
+            os: windows-2022
+            architecture: x64
+            generator: Visual Studio 17 2022
+            cxxstd: "17,20"
+            build-type: 'release'
+            cxxflags: ''
+            ldflags: ''
+
+    runs-on: ${{ matrix.os }}
+    env:
+      CXXFLAGS: ${{ matrix.cxxflags }} /D_WIN32_WINNT=0x0601 /DWIN32_LEAN_AND_MEAN=1 /DNOMINMAX=1 /D_FILE_OFFSET_BITS=64 /DBOOST_ALL_NO_LIB /EHsc /bigobj
+      LDFLAGS: ${{ matrix.ldflags }}
+  
+    steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+        
+        - name: Setup Boost
+          run: python3 tools/ci.py setup-boost --source-dir=%cd%
+
+        - name: Build and run project tests using B2
+          run: |
+            python3 tools/ci.py run-b2-tests ^
+              --toolset ${{ matrix.toolset }} ^
+              --cxxstd ${{ matrix.cxxstd }} ^
+              --variant ${{ matrix.build-type }}

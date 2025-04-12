@@ -1,0 +1,95 @@
+[#header_unordered_map]
+== `<boost/unordered/unordered_map.hpp>` Synopsis
+
+:idprefix: header_unordered_map_
+
+Defines `xref:reference/unordered_map.adoc#unordered_map[boost::unordered_map]`,
+`xref:reference/unordered_multimap.adoc#unordered_multimap[boost::unordered_multimap]`
+and associated functions and alias templates.
+
+[listing,subs="+macros,+quotes"]
+-----
+
+namespace boost {
+namespace unordered {
+
+  template<class Key,
+           class T,
+           class Hash = boost::hash<Key>,
+           class Pred = std::equal_to<Key>,
+           class Allocator = std::allocator<std::pair<const Key, T>>>
+  class xref:reference/unordered_map.adoc#unordered_map[unordered_map];
+
+  // Equality Comparisons
+  template<class Key, class T, class Hash, class Pred, class Alloc>
+    bool xref:reference/unordered_map.adoc#unordered_map_operator_2[operator++==++](const unordered_map<Key, T, Hash, Pred, Alloc>& x,
+                    const unordered_map<Key, T, Hash, Pred, Alloc>& y);
+
+  template<class Key, class T, class Hash, class Pred, class Alloc>
+    bool xref:reference/unordered_map.adoc#unordered_map_operator_3[operator!=](const unordered_map<Key, T, Hash, Pred, Alloc>& x,
+                    const unordered_map<Key, T, Hash, Pred, Alloc>& y);
+
+  // swap
+  template<class Key, class T, class Hash, class Pred, class Alloc>
+    void xref:reference/unordered_map.adoc#unordered_map_swap_2[swap](unordered_map<Key, T, Hash, Pred, Alloc>& x,
+              unordered_map<Key, T, Hash, Pred, Alloc>& y)
+      noexcept(noexcept(x.swap(y)));
+
+  // Erasure
+  template<class K, class T, class H, class P, class A, class Predicate>
+    typename unordered_map<K, T, H, P, A>::size_type
+      xref:reference/unordered_map.adoc#unordered_map_erase_if[erase_if](unordered_map<K, T, H, P, A>& c, Predicate pred);
+
+  template<class Key,
+           class T,
+           class Hash = boost::hash<Key>,
+           class Pred = std::equal_to<Key>,
+           class Allocator = std::allocator<std::pair<const Key, T>>>
+  class xref:reference/unordered_multimap.adoc#unordered_multimap[unordered_multimap];
+
+  // Equality Comparisons
+  template<class Key, class T, class Hash, class Pred, class Alloc>
+    bool xref:reference/unordered_multimap.adoc#unordered_multimap_operator[operator++==++](const unordered_multimap<Key, T, Hash, Pred, Alloc>& x,
+                    const unordered_multimap<Key, T, Hash, Pred, Alloc>& y);
+
+  template<class Key, class T, class Hash, class Pred, class Alloc>
+    bool xref:reference/unordered_multimap.adoc#unordered_multimap_operator_2[operator!=](const unordered_multimap<Key, T, Hash, Pred, Alloc>& x,
+                    const unordered_multimap<Key, T, Hash, Pred, Alloc>& y);
+
+  // swap
+  template<class Key, class T, class Hash, class Pred, class Alloc>
+    void xref:reference/unordered_multimap.adoc#unordered_multimap_swap_2[swap](unordered_multimap<Key, T, Hash, Pred, Alloc>& x,
+              unordered_multimap<Key, T, Hash, Pred, Alloc>& y)
+      noexcept(noexcept(x.swap(y)));
+
+  // Erasure
+  template<class K, class T, class H, class P, class A, class Predicate>
+    typename unordered_multimap<K, T, H, P, A>::size_type
+      xref:reference/unordered_multimap.adoc#unordered_multimap_erase_if[erase_if](unordered_multimap<K, T, H, P, A>& c, Predicate pred);
+
+  // Pmr aliases (C++17 and up)
+  namespace pmr {
+    template<class Key,
+             class T,
+             class Hash = boost::hash<Key>,
+             class Pred = std::equal_to<Key>>
+    using unordered_map =
+      boost::unordered::unordered_map<Key, T, Hash, Pred,
+        std::pmr::polymorphic_allocator<std::pair<const Key, T>>>;
+
+    template<class Key,
+             class T,
+             class Hash = boost::hash<Key>,
+             class Pred = std::equal_to<Key>>
+    using unordered_multimap =
+      boost::unordered::unordered_multimap<Key, T, Hash, Pred,
+        std::pmr::polymorphic_allocator<std::pair<const Key, T>>>;
+  } // namespace pmr
+
+} // namespace unordered
+
+using unordered::unordered_map;
+using unordered::unordered_multimap;
+
+} // namespace boost
+-----

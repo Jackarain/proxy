@@ -1,5 +1,5 @@
 //  Copyright 2016 Klemens Morgenstern
-//  Copyright Antony Polukhin, 2019-2024
+//  Copyright Antony Polukhin, 2019-2025
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
@@ -9,7 +9,9 @@
 #define BOOST_DLL_SMART_LIBRARY_HPP_
 
 /// \file boost/dll/smart_library.hpp
-/// \warning Extremely experimental! Requires C++11! Will change in next version of Boost! boost/dll/smart_library.hpp is not included in boost/dll.hpp
+/// \warning Experimental feature that relies on an incomplete implementation of platform specific C++
+///          mangling. In case of an issue provide a PR with a fix and tests to https://github.com/boostorg/dll .
+///          boost/dll/smart_library.hpp is not included in boost/dll.hpp
 /// \brief Contains the boost::dll::experimental::smart_library class for loading mangled symbols.
 
 #include <boost/dll/config.hpp>
@@ -27,11 +29,9 @@
 #include <boost/dll/detail/get_mem_fn_type.hpp>
 #include <boost/dll/detail/ctor_dtor.hpp>
 #include <boost/dll/detail/type_info.hpp>
-#include <boost/type_traits/is_object.hpp>
-#include <boost/type_traits/is_void.hpp>
-#include <boost/type_traits/is_function.hpp>
 
-
+#include <type_traits>
+#include <utility>  // std::move
 
 namespace boost {
 namespace dll {
@@ -46,17 +46,18 @@ using boost::dll::detail::destructor;
 * This class allows type safe loading of overloaded functions, member-functions, constructors and variables.
 * It also allows to overwrite classes so they can be loaded, while being declared with different names.
 *
-* \warning Is still very experimental.
+* \warning Experimental feature that relies on an incomplete implementation of platform specific C++
+*          mangling. In case of an issue provide a PR with a fix and tests to https://github.com/boostorg/dll
 *
 * Currently known limitations:
 *
 * Member functions must be defined outside of the class to be exported. That is:
 * \code
 * //not exported:
-* struct BOOST_SYMBOL_EXPORT my_class { void func() {}};
+* struct BOOST_SYMBOL_EXPORT my_class { void func() {} };
 * //exported
-* struct BOOST_SYMBOL_EXPORT my_class { void func();};
-* void my_class::func() {};
+* struct BOOST_SYMBOL_EXPORT my_class { void func(); };
+* void my_class::func() {}
 * \endcode
 *
 * With the current analysis, the first version does get exported in MSVC.
@@ -72,14 +73,14 @@ using boost::dll::detail::destructor;
 * This does however not happen when the value is set inside the constructor function.
 */
 class smart_library {
-    shared_library _lib;
-    detail::mangled_storage_impl _storage;
+    shared_library lib_;
+    detail::mangled_storage_impl storage_;
 
 public:
     /*!
      * Get the underlying shared_library
      */
-    const shared_library &shared_lib() const {return _lib;}
+    const shared_library &shared_lib() const noexcept { return lib_;}
 
     using mangled_storage = detail::mangled_storage_impl;
     /*!
@@ -87,18 +88,18 @@ public:
     *
     * \throw Nothing.
     */
-    const mangled_storage &symbol_storage() const {return _storage;}
+    const mangled_storage &symbol_storage() const noexcept { return storage_; }
 
     ///Overload, for current development.
-    mangled_storage &symbol_storage() {return _storage;}
+    mangled_storage &symbol_storage() noexcept { return storage_; }
 
     //! \copydoc shared_library::shared_library()
-    smart_library() BOOST_NOEXCEPT {};
+    smart_library() = default;
 
     //! \copydoc shared_library::shared_library(const boost::dll::fs::path& lib_path, load_mode::type mode = load_mode::default_mode)
     smart_library(const boost::dll::fs::path& lib_path, load_mode::type mode = load_mode::default_mode) {
-        _lib.load(lib_path, mode);
-        _storage.load(lib_path);
+        lib_.load(lib_path, mode);
+        storage_.load(lib_path);
     }
 
     //! \copydoc shared_library::shared_library(const boost::dll::fs::path& lib_path, boost::dll::fs::error_code& ec, load_mode::type mode = load_mode::default_mode)
@@ -117,9 +118,7 @@ public:
      *
      * \throw Nothing.
      */
-     smart_library(const smart_library & lib) BOOST_NOEXCEPT
-         : _lib(lib._lib), _storage(lib._storage)
-     {}
+     smart_library(const smart_library & lib) = default;
    /*!
     * Move a smart_library object.
     *
@@ -127,9 +126,7 @@ public:
     *
     * \throw Nothing.
     */
-    smart_library(BOOST_RV_REF(smart_library) lib) BOOST_NOEXCEPT
-        : _lib(boost::move(lib._lib)), _storage(boost::move(lib._storage))
-    {}
+    smart_library(smart_library&& lib)  = default;
 
     /*!
       * Construct from a shared_library object.
@@ -138,10 +135,10 @@ public:
       *
       * \throw Nothing.
       */
-      explicit smart_library(const shared_library & lib) BOOST_NOEXCEPT
-          : _lib(lib)
+      explicit smart_library(const shared_library & lib) noexcept
+          : lib_(lib)
       {
-          _storage.load(lib.location());
+          storage_.load(lib.location());
       }
      /*!
      * Construct from a shared_library object.
@@ -150,10 +147,10 @@ public:
      *
      * \throw Nothing.
      */
-     explicit smart_library(BOOST_RV_REF(shared_library) lib) BOOST_NOEXCEPT
-         : _lib(boost::move(static_cast<shared_library&>(lib)))
+     explicit smart_library(shared_library&& lib) noexcept
+         : lib_(std::move(lib))
      {
-         _storage.load(lib.location());
+         storage_.load(lib.location());
      }
 
     /*!
@@ -164,13 +161,13 @@ public:
     *
     * \throw Nothing.
     */
-    ~smart_library() BOOST_NOEXCEPT {};
+    ~smart_library() = default;
 
     //! \copydoc shared_library::load(const boost::dll::fs::path& lib_path, load_mode::type mode = load_mode::default_mode)
     void load(const boost::dll::fs::path& lib_path, load_mode::type mode = load_mode::default_mode) {
         boost::dll::fs::error_code ec;
-        _storage.load(lib_path);
-        _lib.load(lib_path, mode, ec);
+        storage_.load(lib_path);
+        lib_.load(lib_path, mode, ec);
 
         if (ec) {
             boost::dll::detail::report_error(ec, "load() failed");
@@ -180,15 +177,15 @@ public:
     //! \copydoc shared_library::load(const boost::dll::fs::path& lib_path, boost::dll::fs::error_code& ec, load_mode::type mode = load_mode::default_mode)
     void load(const boost::dll::fs::path& lib_path, boost::dll::fs::error_code& ec, load_mode::type mode = load_mode::default_mode) {
         ec.clear();
-        _storage.load(lib_path);
-        _lib.load(lib_path, mode, ec);
+        storage_.load(lib_path);
+        lib_.load(lib_path, mode, ec);
     }
 
     //! \copydoc shared_library::load(const boost::dll::fs::path& lib_path, load_mode::type mode, boost::dll::fs::error_code& ec)
     void load(const boost::dll::fs::path& lib_path, load_mode::type mode, boost::dll::fs::error_code& ec) {
         ec.clear();
-        _storage.load(lib_path);
-        _lib.load(lib_path, mode, ec);
+        storage_.load(lib_path);
+        lib_.load(lib_path, mode, ec);
     }
 
     /*!
@@ -206,7 +203,7 @@ public:
      */
     template<typename T>
     T& get_variable(const std::string &name) const {
-        return _lib.get<T>(_storage.get_variable<T>(name));
+        return lib_.get<T>(storage_.get_variable<T>(name));
     }
 
     /*!
@@ -232,7 +229,7 @@ public:
      */
     template<typename Func>
     Func& get_function(const std::string &name) const {
-        return _lib.get<Func>(_storage.get_function<Func>(name));
+        return lib_.get<Func>(storage_.get_function<Func>(name));
     }
 
     /*!
@@ -261,8 +258,8 @@ public:
      */
     template<typename Class, typename Func>
     typename boost::dll::detail::get_mem_fn_type<Class, Func>::mem_fn get_mem_fn(const std::string& name) const {
-        return _lib.get<typename boost::dll::detail::get_mem_fn_type<Class, Func>::mem_fn>(
-                _storage.get_mem_fn<Class, Func>(name)
+        return lib_.get<typename boost::dll::detail::get_mem_fn_type<Class, Func>::mem_fn>(
+                storage_.get_mem_fn<Class, Func>(name)
         );
     }
 
@@ -284,7 +281,7 @@ public:
      */
     template<typename Signature>
     constructor<Signature> get_constructor() const {
-        return boost::dll::detail::load_ctor<Signature>(_lib, _storage.get_constructor<Signature>());
+        return boost::dll::detail::load_ctor<Signature>(lib_, storage_.get_constructor<Signature>());
     }
 
     /*!
@@ -306,7 +303,7 @@ public:
      */
     template<typename Class>
     destructor<Class> get_destructor() const {
-        return boost::dll::detail::load_dtor<Class>(_lib, _storage.get_destructor<Class>());
+        return boost::dll::detail::load_dtor<Class>(lib_, storage_.get_destructor<Class>());
     }
     /*!
      * Load the typeinfo of the given type.
@@ -328,7 +325,7 @@ public:
     template<typename Class>
     const std::type_info& get_type_info() const
     {
-        return boost::dll::detail::load_type_info<Class>(_lib, _storage);
+        return boost::dll::detail::load_type_info<Class>(lib_, storage_);
     }
     /**
      * This function can be used to add a type alias.
@@ -352,69 +349,66 @@ public:
      * \warning The alias will only be applied for the type signature, it will not replace the token in the scoped name.
      */
     template<typename Alias> void add_type_alias(const std::string& name) {
-        this->_storage.add_alias<Alias>(name);
+        this->storage_.add_alias<Alias>(name);
     }
 
     //! \copydoc shared_library::unload()
-    void unload() BOOST_NOEXCEPT {
-        _storage.clear();
-        _lib.unload();
+    void unload() noexcept {
+        storage_.clear();
+        lib_.unload();
     }
 
     //! \copydoc shared_library::is_loaded() const
-    bool is_loaded() const BOOST_NOEXCEPT {
-        return _lib.is_loaded();
-    }
-
-    //! \copydoc shared_library::operator!() const
-    bool operator!() const BOOST_NOEXCEPT {
-        return !is_loaded();
+    bool is_loaded() const noexcept {
+        return lib_.is_loaded();
     }
 
     //! \copydoc shared_library::operator bool() const
-    BOOST_EXPLICIT_OPERATOR_BOOL()
+    explicit operator bool() const noexcept {
+        return is_loaded();
+    }
 
     //! \copydoc shared_library::has(const char* symbol_name) const
-    bool has(const char* symbol_name) const BOOST_NOEXCEPT {
-        return _lib.has(symbol_name);
+    bool has(const char* symbol_name) const noexcept {
+        return lib_.has(symbol_name);
     }
 
     //! \copydoc shared_library::has(const std::string& symbol_name) const
-    bool has(const std::string& symbol_name) const BOOST_NOEXCEPT {
-        return _lib.has(symbol_name);
+    bool has(const std::string& symbol_name) const noexcept {
+        return lib_.has(symbol_name);
     }
 
     //! \copydoc shared_library::assign(const shared_library& lib)
     smart_library& assign(const smart_library& lib) {
-       _lib.assign(lib._lib);
-       _storage.assign(lib._storage);
+       lib_.assign(lib.lib_);
+       storage_.assign(lib.storage_);
        return *this;
     }
 
     //! \copydoc shared_library::swap(shared_library& rhs)
-    void swap(smart_library& rhs) BOOST_NOEXCEPT {
-        _lib.swap(rhs._lib);
-        _storage.swap(rhs._storage);
+    void swap(smart_library& rhs) noexcept {
+        lib_.swap(rhs.lib_);
+        storage_.swap(rhs.storage_);
     }
 };
 
 /// Very fast equality check that compares the actual DLL/DSO objects. Throws nothing.
-inline bool operator==(const smart_library& lhs, const smart_library& rhs) BOOST_NOEXCEPT {
+inline bool operator==(const smart_library& lhs, const smart_library& rhs) noexcept {
     return lhs.shared_lib().native() == rhs.shared_lib().native();
 }
 
 /// Very fast inequality check that compares the actual DLL/DSO objects. Throws nothing.
-inline bool operator!=(const smart_library& lhs, const smart_library& rhs) BOOST_NOEXCEPT {
+inline bool operator!=(const smart_library& lhs, const smart_library& rhs) noexcept {
     return lhs.shared_lib().native() != rhs.shared_lib().native();
 }
 
 /// Compare the actual DLL/DSO objects without any guarantee to be stable between runs. Throws nothing.
-inline bool operator<(const smart_library& lhs, const smart_library& rhs) BOOST_NOEXCEPT {
+inline bool operator<(const smart_library& lhs, const smart_library& rhs) noexcept {
     return lhs.shared_lib().native() < rhs.shared_lib().native();
 }
 
 /// Swaps two shared libraries. Does not invalidate symbols and functions loaded from libraries. Throws nothing.
-inline void swap(smart_library& lhs, smart_library& rhs) BOOST_NOEXCEPT {
+inline void swap(smart_library& lhs, smart_library& rhs) noexcept {
     lhs.swap(rhs);
 }
 
@@ -439,14 +433,14 @@ void get(const smart_library& sm, const std::string &name);
 #endif
 
 template<class T>
-typename boost::enable_if<boost::is_object<T>, T&>::type get(const smart_library& sm, const std::string &name)
+typename std::enable_if<std::is_object<T>::value, T&>::type get(const smart_library& sm, const std::string &name)
 
 {
     return sm.get_variable<T>(name);
 }
 
 template<class T>
-typename boost::enable_if<boost::is_function<T>, T&>::type get(const smart_library& sm, const std::string &name)
+typename std::enable_if<std::is_function<T>::value, T&>::type get(const smart_library& sm, const std::string &name)
 {
     return sm.get_function<T>(name);
 }

@@ -1,0 +1,59 @@
+////
+Copyright 2024 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_is_endian_independent]
+# <boost/hash2/is_endian_independent.hpp>
+:idprefix: ref_is_endian_independent_
+
+```
+namespace boost {
+namespace hash2 {
+
+template<class T> struct is_endian_independent;
+
+} // namespace hash2
+} // namespace boost
+```
+
+## is_endian_independent
+
+```
+template<class T> struct is_endian_independent:
+    std::integral_constant< bool, sizeof(T) == 1 >
+{
+};
+
+template<class T> struct is_endian_independent<T const>:
+    is_endian_independent<T>
+{
+};
+```
+
+The trait `is_endian_independent` is used by the library to detect _endian-independent_ types.
+
+A type is _endian-independent_ if its memory representation is the same on little-endian and big-endian platforms.
+
+This includes all single byte types (with a `sizeof` of 1) and all types whose constituent members are also endian-independent.
+
+The default implementation of the trait only reports `true` for single byte types. It can be specialized for endian independent user-defined types.
+
+For example, the following type
+
+```
+struct X
+{
+    unsigned char a;
+    unsigned char b;
+    unsigned char c;
+};
+```
+
+is endian-independent, and `is_endian_independent` can be specialized appropriately for it:
+
+```
+template<> struct boost::hash2::is_endian_independent<X>: std::true_type {};
+```
+

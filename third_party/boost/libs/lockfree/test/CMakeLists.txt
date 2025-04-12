@@ -35,6 +35,8 @@ set(Tests
     stack_test
     stack_unbounded_stress_test
     tagged_ptr_test
+    spsc_value_test
+    spsc_value_stress_test
 )
 
 foreach(Test ${Tests})

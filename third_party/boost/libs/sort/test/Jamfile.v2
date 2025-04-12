@@ -7,8 +7,13 @@
 #
 #  See http://www.boost.org/libs/sort for library home page.
 
-import ../../config/checks/config : requires ;
+import-search /boost/config/checks ;
+import config : requires ;
 import testing ;
+
+project : requirements
+    <library>/boost/test//boost_test_exec_monitor
+    ;
 
 {
   test-suite "sort"

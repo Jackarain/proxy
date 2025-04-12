@@ -15,7 +15,7 @@ namespace boost { namespace charconv { namespace detail {
 template <typename T>
 inline bool issignaling BOOST_PREVENT_MACRO_SUBSTITUTION (T x) noexcept;
 
-#if BOOST_CHARCONV_LDBL_BITS == 128
+#if BOOST_CHARCONV_LDBL_BITS == 128 || defined(BOOST_CHARCONV_HAS_QUADMATH)
 
 struct words128
 {

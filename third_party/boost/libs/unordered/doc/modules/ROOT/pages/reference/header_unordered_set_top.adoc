@@ -1,0 +1,9 @@
+[#header_unordered_set_fwd_top]
+== `<boost/unordered_set.hpp>` Synopsis
+
+:idprefix: header_unordered_set_top_
+
+[listing,subs="+macros,+quotes"]
+-----
+#include xref:reference/header_unordered_set.adoc[<boost/unordered/unordered_set.hpp>]
+-----

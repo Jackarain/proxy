@@ -195,8 +195,8 @@ namespace { void _set_se_translator( void* ) {} }
 #endif
 
 #if (!defined(BOOST_MSSTL_VERSION) || (BOOST_MSSTL_VERSION >= 120)) && (!defined(__GLIBC__) || ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 2))))
-// glibc 2.2 - 2.17 required __STDC_FORMAT_MACROS to be defined for use of PRIxPTR
-#  if defined(__GLIBC__) && !((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 18)))
+// glibc 2.2 - 2.17 required __STDC_FORMAT_MACROS to be defined for use of PRIxPTR, as well as some versions of macOS.
+#  if (defined(__GLIBC__) && !((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 18)))) || defined(__APPLE__)
 #    ifndef __STDC_FORMAT_MACROS
 #      define __STDC_FORMAT_MACROS 1
 #      define BOOST_TEST_DEFINED_STDC_FORMAT_MACROS
@@ -207,7 +207,18 @@ namespace { void _set_se_translator( void* ) {} }
 #  ifdef BOOST_TEST_DEFINED_STDC_FORMAT_MACROS
 #    undef __STDC_FORMAT_MACROS
 #  endif
-#else
+#endif
+// If any modern toolchain did not pick up a definition from above it will here
+#ifndef BOOST_TEST_PRIxPTR
+#  ifdef __has_include
+#    if __has_include(<cinttypes>)
+#      include <cinttypes>
+#      define BOOST_TEST_PRIxPTR PRIxPTR
+#    endif
+#  endif
+#endif
+// Last resort
+#ifndef BOOST_TEST_PRIxPTR
 #  define BOOST_TEST_PRIxPTR "08lx"
 #endif
 

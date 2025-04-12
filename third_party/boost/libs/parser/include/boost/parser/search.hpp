@@ -541,25 +541,21 @@ namespace boost::parser {
                 typename GlobalState,
                 typename ErrorHandler,
                 typename SkipParser>
-            requires(
-                std::ranges::viewable_range<R>) &&
-                can_search_all_view<
-                    to_range_t<R>,
-                    Parser,
-                    GlobalState,
-                    ErrorHandler,
-                    SkipParser>
-                // clang-format off
+                requires(std::ranges::viewable_range<R>) && can_search_all_view<
+                                                                to_range_t<R>,
+                                                                Parser,
+                                                                GlobalState,
+                                                                ErrorHandler,
+                                                                SkipParser>
             [[nodiscard]] constexpr auto operator()(
                 R && r,
                 parser_interface<Parser, GlobalState, ErrorHandler> const &
                     parser,
                 parser_interface<SkipParser> const & skip,
                 trace trace_mode = trace::off) const
-            // clang-format on
             {
                 return search_all_view(
-                    to_range<R>::call((R &&) r), parser, skip, trace_mode);
+                    to_range<R>::call((R &&)r), parser, skip, trace_mode);
             }
 
             template<
@@ -567,24 +563,21 @@ namespace boost::parser {
                 typename Parser,
                 typename GlobalState,
                 typename ErrorHandler>
-            requires(
-                std::ranges::viewable_range<R>) &&
-                can_search_all_view<
-                    to_range_t<R>,
-                    Parser,
-                    GlobalState,
-                    ErrorHandler,
-                    parser_interface<eps_parser<detail::phony>>>
-                // clang-format off
+                requires(std::ranges::viewable_range<R>) &&
+                        can_search_all_view<
+                            to_range_t<R>,
+                            Parser,
+                            GlobalState,
+                            ErrorHandler,
+                            parser_interface<eps_parser<detail::phony>>>
             [[nodiscard]] constexpr auto operator()(
                 R && r,
                 parser_interface<Parser, GlobalState, ErrorHandler> const &
                     parser,
                 trace trace_mode = trace::off) const
-            // clang-format on
             {
                 return (*this)(
-                    (R &&) r,
+                    (R &&)r,
                     parser,
                     parser_interface<eps_parser<detail::phony>>{},
                     trace_mode);

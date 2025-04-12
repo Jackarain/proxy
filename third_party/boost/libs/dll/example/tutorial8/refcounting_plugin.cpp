@@ -1,5 +1,5 @@
 // Copyright 2014 Renato Tegon Forti, Antony Polukhin.
-// Copyright Antony Polukhin, 2015-2024.
+// Copyright Antony Polukhin, 2015-2025.
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
@@ -14,21 +14,21 @@
 
 namespace my_namespace {
 
-class my_plugin_refcounting : public my_refcounting_api {
+class my_plugin_refcounting final: public my_refcounting_api {
 public:    
     // Must be instantiated in plugin
-    boost::dll::fs::path location() const {
+    boost::dll::fs::path location() const override {
         return boost::dll::this_line_location(); // location of this plugin
     }
 
-    std::string name() const {
+    std::string name() const override {
         return "refcounting";
     }
 
     // ...
     //<-
     // This block is invisible for Quickbook documentation
-    float calculate(float /*x*/, float /*y*/) {
+    float calculate(float /*x*/, float /*y*/) override {
         return 0;
     }
     //->

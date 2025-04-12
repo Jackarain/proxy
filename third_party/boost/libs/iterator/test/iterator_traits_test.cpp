@@ -20,15 +20,13 @@
 //              reference type from operator* (David Abrahams)
 //  19 Jan 2001 Initial version with iterator operators (David Abrahams)
 
-#include <boost/type_traits/is_same.hpp>
 #include <boost/operators.hpp>
-#include <boost/static_assert.hpp>
 #include <boost/config.hpp>
 #include <iterator>
 #include <vector>
 #include <list>
 #include <boost/core/lightweight_test.hpp>
-#include <iostream>
+#include <type_traits>
 
 // A UDT for which we can specialize std::iterator_traits<element*> on
 // compilers which don't support partial specialization. There's no
@@ -98,7 +96,7 @@ template <> struct assertion<true>
 
 template <class T, class U>
 struct assert_same
-    : assertion<(::boost::is_same<T,U>::value)>
+    : assertion<(std::is_same<T,U>::value)>
 {
 };
 
