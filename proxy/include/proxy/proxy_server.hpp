@@ -4992,7 +4992,7 @@ R"x*x*x(<html>
 			{
 				XLOG_DBG << "domain: '" << ctx.domain_
 					<< "', expire: '" << ctx.expire_date_
-					<< ", cert: '" << ctx.cert_.filepath_.string()
+					<< "', cert: '" << ctx.cert_.filepath_.string()
 					<< "', key: '" << ctx.key_.filepath_.string()
 					<< "', dhparam: '" << ctx.dhparam_.filepath_.string()
 					<< "', pwd: '" << ctx.pwd_.filepath_.string() << "'";
