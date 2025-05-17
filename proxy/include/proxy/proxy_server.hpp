@@ -735,7 +735,7 @@ R"x*x*x(<html>
 		}
 
 	public:
-		virtual void start() override
+		void start() override
 		{
 			auto server = m_proxy_server.lock();
 			if (!server)
@@ -808,7 +808,7 @@ R"x*x*x(<html>
 				}, net::detached);
 		}
 
-		virtual void close() override
+		void close() override
 		{
 			if (m_abort)
 				return;
@@ -827,13 +827,13 @@ R"x*x*x(<html>
 			m_timer.cancel();
 		}
 
-		virtual void set_tproxy_remote(
+		void set_tproxy_remote(
 			const net::ip::tcp::endpoint& tproxy_remote) override
 		{
 			m_tproxy_remote = tproxy_remote;
 		}
 
-		virtual size_t connection_id() override
+		size_t connection_id() override
 		{
 			return m_connection_id;
 		}
@@ -5188,22 +5188,22 @@ R"x*x*x(<html>
 		}
 
 	private:
-		virtual void remove_session(size_t id) override
+		void remove_session(size_t id) override
 		{
 			m_clients.erase(id);
 		}
 
-		virtual size_t num_session() override
+		size_t num_session() override
 		{
 			return m_clients.size();
 		}
 
-		virtual const proxy_server_option& option() override
+		const proxy_server_option& option() override
 		{
 			return m_option;
 		}
 
-		virtual net::ssl::context& ssl_context() override
+		net::ssl::context& ssl_context() override
 		{
 			return m_ssl_srv_context;
 		}
