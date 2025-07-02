@@ -782,7 +782,7 @@
                 audioPlayer.src = musicUrl;
 
                 // 更新UI
-                trackTitle.textContent = track.filename;
+                trackTitle.textContent = track.filename.split('.').slice(0, -1).join('.');
                 trackArtist.textContent = formatFileSize(track.filesize);
 
                 // 重置歌词显示
