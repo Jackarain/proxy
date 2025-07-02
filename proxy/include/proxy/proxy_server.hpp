@@ -3559,6 +3559,7 @@ R"x*x*x(<html>
 
 				BEGIN_HTTP_ROUTE()
 					ON_HTTP_ROUTE(R"(^(.*)?\/$)", on_http_dir)
+					ON_HTTP_ROUTE(R"(^(.*)?(\/\?r=json.*)$)", on_http_all_json)
 					ON_HTTP_ROUTE(R"(^(.*)?(\/\?q=json.*)$)", on_http_json)
 					ON_HTTP_ROUTE(R"(^(?!.*\/$).*$)", on_http_get)
 				END_HTTP_ROUTE()
@@ -3854,12 +3855,114 @@ R"x*x*x(<html>
 					}, token);
 		}
 
+		inline net::awaitable<void> on_http_all_json(const http_context& hctx)
+		{
+			boost::system::error_code ec;
+			auto& request = hctx.request_;
+
+			auto target = fs::path(make_real_target_path(hctx.command_[0])).lexically_normal();
+
+			fs::recursive_directory_iterator end;
+			auto it = fs::recursive_directory_iterator(target, fs::directory_options::skip_permission_denied, ec);
+			if (ec)
+			{
+				string_response res{ http::status::found, request.version() };
+				res.set(http::field::server, version_string);
+				res.set(http::field::date, server_date_string());
+				res.set(http::field::location, "/");
+				res.keep_alive(request.keep_alive());
+				res.prepare_payload();
+
+				http::serializer<false, string_body, http::fields> sr(res);
+				co_await http::async_write(
+					m_local_socket,
+					sr,
+					net_awaitable[ec]);
+				if (ec)
+					XLOG_WARN << "connection id: "
+					<< m_connection_id
+					<< ", http_dir write location err: "
+					<< ec.message();
+
+				co_return;
+			}
+
+			bool hash = false;
+
+			urls::params_view qp(hctx.command_[1]);
+			if (qp.find("hash") != qp.end())
+				hash = true;
+
+			boost::json::array path_list;
+
+			for (; it != end && !m_abort; it++)
+			{
+				const auto& item = it->path();
+				boost::json::object obj;
+
+				auto [ftime, unc_path] = file_last_wirte_time(item);
+				obj["last_write_time"] = ftime;
+
+				if (fs::is_directory(unc_path.empty() ? item : unc_path, ec))
+				{
+					auto leaf = boost::nowide::narrow(fs::relative(item, target).wstring());
+					obj["filename"] = leaf;
+					obj["is_dir"] = true;
+				}
+				else
+				{
+					auto leaf = boost::nowide::narrow(fs::relative(item, target).wstring());
+					obj["filename"] = leaf;
+					obj["is_dir"] = false;
+					if (unc_path.empty())
+						unc_path = item;
+					auto sz = fs::file_size(unc_path, ec);
+					if (ec)
+						sz = 0;
+					obj["filesize"] = sz;
+					if (hash)
+					{
+						auto ret = co_await
+							async_hash_file(unc_path, net_awaitable[ec]);
+						if (ec)
+							ret = "";
+						obj["hash"] = ret;
+					}
+				}
+
+				path_list.push_back(obj);
+			}
+
+			auto body = boost::json::serialize(path_list);
+
+			string_response res{ http::status::ok, request.version() };
+			res.set(http::field::server, version_string);
+			res.set(http::field::date, server_date_string());
+			res.set(http::field::content_type, "application/json");
+			res.keep_alive(request.keep_alive());
+			res.body() = body;
+			res.prepare_payload();
+
+			http::serializer<false, string_body, http::fields> sr(res);
+			co_await http::async_write(
+				m_local_socket,
+				sr,
+				net_awaitable[ec]);
+			if (ec)
+				XLOG_WARN << "connection id: "
+				<< m_connection_id
+				<< ", http dir write body err: "
+				<< ec.message();
+
+			co_return;
+		}
+
 		inline net::awaitable<void> on_http_json(const http_context& hctx)
 		{
 			boost::system::error_code ec;
 			auto& request = hctx.request_;
 
-			auto target = make_real_target_path(hctx.command_[0]);
+			auto target = fs::path(make_real_target_path(hctx.command_[0])).lexically_normal();
 
 			fs::directory_iterator end;
 			fs::directory_iterator it(target, ec);
@@ -3904,13 +4007,13 @@ R"x*x*x(<html>
 
 				if (fs::is_directory(unc_path.empty() ? item : unc_path, ec))
 				{
-					auto leaf = boost::nowide::narrow(item.filename().wstring());
+					auto leaf = boost::nowide::narrow(fs::relative(item, target).wstring());
 					obj["filename"] = leaf;
 					obj["is_dir"] = true;
 				}
 				else
 				{
-					auto leaf =  boost::nowide::narrow(item.filename().wstring());
+					auto leaf = boost::nowide::narrow(fs::relative(item, target).wstring());
 					obj["filename"] = leaf;
 					obj["is_dir"] = false;
 					if (unc_path.empty())
