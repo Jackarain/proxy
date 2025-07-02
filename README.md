@@ -130,20 +130,21 @@ docker build . -t proxy:v1
 | scramble | 数据是否启用噪声加扰(即通过随机噪声数据混淆数据传输)，此选项需要在2端同时开启 |
 | noise_length | 在启用 `scramble` 的时候，随机发送的噪声数据最大长度，默认最大长度为4k |
 
-## 静态文件 http 服务器
+## 静态文件 http 服务器(可配置为云音乐播放器)
 
-`proxy server` 不仅是一个 `proxy` 服务器，同时还可以做为一个真实的静态文件 `http` 服务，且支持 `http range`，所以也可以作为 `http` 视频文件服务器，播放器播放 `http` 视频文件时通过 `http` 的 `bytes range` 协议进行 `seek`（快进快退），使用方法如下
+`proxy server` 不仅是一个 `proxy` 服务器，同时还可以做为一个真实的静态文件 `http` 服务，且支持 `http range`，所以也可以作为 `http` 音视频文件服务器，播放器播放 `http` 音视频文件时通过 `http` 的 `bytes range` 协议进行 `seek`（快进快退），使用方法如下
 
 ``` bash
-./proxy_server --autoindex true --http_doc /user/doc --server_listen 0.0.0.0:1080
+./proxy_server --autoindex true --http_doc /user/music --server_listen 0.0.0.0:1080
 ```
 
-然后使用浏览器打开地址 `http://localhost:1080/` 运行效果（浏览器打开）：
+在目录 `/user/music` 中添加音乐文件（以及`.lrc`歌词文件），复制本项目中 `example/music` 下的 `index.html` 放入 `/user/music` 目录中，然后使用浏览器打开地址 `http://localhost:1080/` 运行效果（浏览器打开）：
 
-![image](https://github.com/user-attachments/assets/ef8bb911-29d2-4fa0-a195-1325d1d85e5e)
-![image](https://github.com/user-attachments/assets/6c3910b0-521a-46ed-a814-61cc75166e49)
+![image](https://github.com/user-attachments/assets/3910015e-f4d6-4162-912b-8b7594c41d88)
 
-本人的 [blog](https://www.jackarain.org) 就是直接运行在 `proxy_server` 上的静态页面(由 `jekyll` 生成)，它同时也是我的代理服务。
+当然，如果你希望只有你自己可以访问，那么在上面命令行添加参数 `--htpasswd true` 并通过参数 `--auth_users` 配置登陆用户名和密码，打开页面时就会要求验证登陆。
+
+本人的 [blog](https://www.jackarain.org) 就是直接运行在 `proxy_server` 上的静态页面(由 `jekyll` 生成)，它同时也是我的代理服务，还是我的 [音乐播放器](https://www.jackarain.org/music/index.html)
 
 ## 其它相关
 

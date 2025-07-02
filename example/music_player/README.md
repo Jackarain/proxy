@@ -9,6 +9,7 @@
 ```
 
 参数 `autoindex` 是启动 `http` 文件浏览功能
+
 参数 `http_doc` 是启动 `http` 文件所在目录
 
 在 `/user/music` 目录下，你可以将 `mp3，aac, m4a` 等音乐文件拷贝到这里，甚至是 `.lrc` 的歌词文件也拷贝到这个目录下(或 `/user/music/lyrics` 目录下)，同时也将这个 `index.html` 文件拷贝到 `/user/music` 目录下
