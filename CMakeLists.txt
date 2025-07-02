@@ -387,6 +387,11 @@ endif()
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
 
+#默认使用 boost.filesystem 而不是 std.filesystem, 这是因为
+#std.filesystem 在 GCC-12.3 以下的版本在非 ASCII 中会构造失败
+#参考链接:https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95048
+add_definitions(-DUSE_BOOST_FILESYSTEM)
+
 #独立编译asio时, 必须要在使用者项目定义, 否则会将
 #定义BOOST_ASIO_HEADER_ONLY, 使用者将会导致符号冲突.
 

@@ -84,6 +84,13 @@
 
 #include <boost/algorithm/string.hpp>
 
+#ifdef USE_BOOST_FILESYSTEM
+// 为避免低版本(gcc-12.3 以下)的 libstdc++ 中 filesystem 的
+// bug( https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95048 )
+// 可以使用 boost.filesystem 来规避这个 bug
+# include <boost/filesystem.hpp>
+#endif // USE_BOOST_FILESYSTEM
+
 #include <fmt/xchar.h>
 #include <fmt/format.h>
 
@@ -123,7 +130,11 @@ namespace proxy {
 
 	namespace urls = boost::urls;			// form <boost/url.hpp>
 
+#ifdef USE_BOOST_FILESYSTEM
+	namespace fs = boost::filesystem;
+#else
 	namespace fs = std::filesystem;
+#endif
 
 	using string_body = http::string_body;
 	using dynamic_body = http::dynamic_body;
