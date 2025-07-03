@@ -167,7 +167,8 @@
             max-width: 90%;
         }
 
-        .prev-lyric, .next-lyric {
+        .prev-lyric,
+        .next-lyric {
             color: rgba(255, 255, 255, 0.7);
             font-size: 1.3rem;
             text-align: center;
@@ -184,8 +185,13 @@
         }
 
         @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .track-info {
@@ -412,9 +418,20 @@
         }
 
         @keyframes pulse {
-            0% { opacity: 0.3; transform: scale(0.9); }
-            50% { opacity: 1; transform: scale(1); }
-            100% { opacity: 0.3; transform: scale(0.9); }
+            0% {
+                opacity: 0.3;
+                transform: scale(0.9);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            100% {
+                opacity: 0.3;
+                transform: scale(0.9);
+            }
         }
 
         .error {
@@ -486,7 +503,8 @@
                 font-size: 1.4rem;
             }
 
-            .prev-lyric, .next-lyric {
+            .prev-lyric,
+            .next-lyric {
                 font-size: 1.1rem;
             }
         }
@@ -510,11 +528,17 @@
         }
 
         @keyframes float {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(100px, 100px) rotate(360deg); }
+            0% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+
+            100% {
+                transform: translate(100px, 100px) rotate(360deg);
+            }
         }
     </style>
 </head>
+
 <body>
     <!-- 背景动画元素 -->
     <div class="bg-animation">
@@ -527,8 +551,9 @@
         <div class="player-container">
             <div class="now-playing">
                 <div class="album-art">
-                    <i class="fas fa-music"></i>
-                    <!-- 歌词显示区域 -->
+                    <canvas id="visualizer" width="390" height="390"></canvas>
+
+                    <!-- 歌词显示区域 <i class="fas fa-music"></canvas></i> -->
                     <div class="lyrics-container">
                         <div class="prev-lyric"></div>
                         <div class="current-lyric">选择歌曲开始播放</div>
@@ -570,7 +595,8 @@
 
                 <div class="volume-container">
                     <i class="fas fa-volume-up"></i>
-                    <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.01" value="0.7">
+                    <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.01"
+                        value="0.7">
                 </div>
             </div>
 
@@ -588,14 +614,50 @@
         </div>
 
         <footer>
-            <p>音乐播放器 &copy; 2025 | <a href="https://github.com/Jackarain/proxy" style="text-decoration: none; color: inherit;">Jackarain</a></p>
+            <p>音乐播放器 &copy; 2025 | <a href="https://github.com/Jackarain/proxy"
+                    style="text-decoration: none; color: inherit;">Jackarain</a></p>
         </footer>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // 获取DOM元素
+        document.addEventListener('DOMContentLoaded', function () {
+
+            // 创建音频上下文
+            let audioContext = new (window.AudioContext || window.webkitAudioContext)()
+
+            // 音频播放器
             const audioPlayer = new Audio();
+
+            // 创建各结点
+            let audioAnalyser, audioSource, audioGain, dataArray;
+
+            // 创建 source 结点
+            audioSource = audioContext.createMediaElementSource(audioPlayer);
+            // 创建 analyser 结点
+            audioAnalyser = audioContext.createAnalyser();
+
+            // 配置 analyser 结点的一些参数
+            audioAnalyser.fftSize = 2048;
+            const bufferLength = audioAnalyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+
+            // 将源连接到 analyser 结点
+            audioSource.connect(audioAnalyser);
+
+            // 创建 gain 结点
+            audioGain = audioContext.createGain();
+
+            // 将 analyser 结点连接到 gain 结点
+            audioAnalyser.connect(audioGain);
+
+            // 最后将 gain 结点连接到 audioContext 的 destination, 即扬声器
+            audioGain.connect(audioContext.destination);
+
+            const frequencyData = true;
+            const canvas = document.getElementById('visualizer');
+            const canvasContext = canvas.getContext('2d');
+
+            // 获取DOM元素
             const playPauseBtn = document.getElementById('play-pause-btn');
             const prevBtn = document.getElementById('prev-btn');
             const nextBtn = document.getElementById('next-btn');
@@ -619,6 +681,9 @@
             const prevLyricEl = document.querySelector('.prev-lyric');
             const nextLyricEl = document.querySelector('.next-lyric');
 
+            // 当前 URL
+            const indexUrl = window.location.href;
+
             // 状态变量
             let currentTrackIndex = -1;
             let tracks = [];
@@ -634,9 +699,66 @@
                 { name: "单曲循环", icon: "fas fa-redo", indicator: "3" }
             ];
 
+
+            ////////////////////////////////////////////////////////////////////////////////////////////////////
+            /// 绘制可视化特效
+
+            function drawVisualization() {
+                requestAnimationFrame(drawVisualization);
+                if (frequencyData) {
+                    audioAnalyser.getByteFrequencyData(dataArray);
+                } else {
+                    audioAnalyser.getByteTimeDomainData(dataArray);
+                }
+
+                // 清空画布
+                canvasContext.fillStyle = '#16213e';
+                canvasContext.fillRect(0, 0, canvas.width, canvas.height);
+
+                // 绘制波形
+                canvasContext.lineWidth = 3;
+                canvasContext.strokeStyle = '#4cc9f0';
+                canvasContext.beginPath();
+
+                const sliceWidth = canvas.width / bufferLength;
+                let x = 0;
+
+                for (let i = 0; i < bufferLength; i++) {
+                    const v = dataArray[i] / 128.0;
+                    let y = 0;
+                    if (frequencyData) {
+                        y = canvas.height - (v * canvas.height / 3);
+                    } else {
+                        y = v * canvas.height / 2;
+                    }
+
+                    if (i === 0) canvasContext.moveTo(x, y);
+                    else canvasContext.lineTo(x, y);
+
+                    x += sliceWidth;
+                }
+
+                if (!frequencyData)
+                    canvasContext.lineTo(canvas.width, canvas.height / 2);
+
+                canvasContext.stroke();
+
+                // 添加进度指示器
+                if (false && audioPlayer.duration) {
+                    const progress = (audioPlayer.currentTime / audioPlayer.duration) * canvas.width;
+                    canvasContext.strokeStyle = 'rgba(255, 100, 100, 0.7)';
+                    canvasContext.beginPath();
+                    canvasContext.moveTo(progress, 0);
+                    canvasContext.lineTo(progress, canvas.height);
+                    canvasContext.stroke();
+                }
+            }
+
+            ////////////////////////////////////////////////////////////////////////////////////////////////////
+
             // 修复URL构建问题
             function getJsonUrl() {
-                const currentUrl = new URL(window.location.href);
+                const currentUrl = new URL(indexUrl);
 
                 // 移除文件名部分（如果有）
                 let path = currentUrl.pathname;
@@ -658,7 +780,7 @@
 
             // 获取歌词目录的JSON URL
             function getLyricsJsonUrl() {
-                const currentUrl = new URL(window.location.href);
+                const currentUrl = new URL(indexUrl);
                 let path = currentUrl.pathname;
 
                 if (path.endsWith('.html')) {
@@ -727,11 +849,6 @@
                     renderPlaylist();
                     loadingEl.style.display = 'none';
 
-                    // 自动播放第一首
-                    setTimeout(() => {
-                        playTrack(0);
-                    }, 500);
-
                 } catch (error) {
                     console.error('加载播放列表失败:', error);
                     loadingEl.innerHTML = `<div class="error">
@@ -770,6 +887,24 @@
                 });
             }
 
+            function onPlayed() {
+                isPlaying = true;
+                updatePlayButton();
+
+                // 添加播放状态类
+                nowPlaying.classList.add('playing');
+                albumArt.classList.add('playing');
+
+                // 高亮当前播放项
+                renderPlaylist();
+
+                // 绘制可视化效果
+                drawVisualization();
+
+                // 设置播放结束事件
+                audioPlayer.onended = playNext;
+            }
+
             // 播放指定曲目
             async function playTrack(index) {
                 if (index < 0 || index >= tracks.length) return;
@@ -779,6 +914,10 @@
 
                 // 构建音乐文件URL
                 const musicUrl = getMusicUrl(track.filename);
+
+                audioPlayer.crossOrigin = 'anonymous';
+
+                // 打开 musicUrl
                 audioPlayer.src = musicUrl;
 
                 // 更新UI
@@ -792,19 +931,7 @@
                 await loadLyrics(track.filename);
 
                 // 播放音乐
-                audioPlayer.play();
-                isPlaying = true;
-                updatePlayButton();
-
-                // 添加播放状态类
-                nowPlaying.classList.add('playing');
-                albumArt.classList.add('playing');
-
-                // 高亮当前播放项
-                renderPlaylist();
-
-                // 设置播放结束事件
-                audioPlayer.onended = playNext;
+                audioPlay();
             }
 
             async function loadLyrics(filename) {
@@ -933,7 +1060,7 @@
 
             // 获取音乐文件的完整URL
             function getMusicUrl(filename) {
-                const currentUrl = new URL(window.location.href);
+                const currentUrl = new URL(indexUrl);
                 let path = currentUrl.pathname;
 
                 // 移除文件名部分（如果有）
@@ -952,7 +1079,7 @@
 
             // 获取歌词文件的完整URL
             function getLyricsUrl(filename, subdir) {
-                const currentUrl = new URL(window.location.href);
+                const currentUrl = new URL(indexUrl);
                 let path = currentUrl.pathname;
 
                 // 移除文件名部分（如果有）
@@ -973,7 +1100,7 @@
             }
 
             // 播放/暂停控制
-            function togglePlay() {
+            async function togglePlay() {
                 if (currentTrackIndex === -1 && tracks.length > 0) {
                     playTrack(0);
                     return;
@@ -984,12 +1111,28 @@
                     nowPlaying.classList.remove('playing');
                     albumArt.classList.remove('playing');
                 } else {
-                    audioPlayer.play();
+                    audioPlay();
                     nowPlaying.classList.add('playing');
                     albumArt.classList.add('playing');
                 }
                 isPlaying = !isPlaying;
                 updatePlayButton();
+            }
+
+            // 调用播放.
+            async function audioPlay() {
+                try {
+                    // 恢复挂起的音频上下文
+                    if (audioContext.state === 'suspended') {
+                        await audioContext.resume();
+                    }
+                    audioPlayer.play();
+                    onPlayed();
+                } catch (error) {
+                    console.log(error);
+                    // Autoplay was prevented.
+                    // Show a "Play" button so that user can start playback.
+                }
             }
 
             // 更新播放按钮图标
@@ -1074,7 +1217,8 @@
 
             // 设置音量
             function setVolume() {
-                audioPlayer.volume = volumeSlider.value;
+                // 使用 audioGain 来调整音量 /* audioPlayer.volume = volumeSlider.value; */
+                audioGain.gain.value = volumeSlider.value;
 
                 // 更新音量图标
                 const volumeIcon = document.querySelector('.volume-container i');
@@ -1112,10 +1256,14 @@
             progressBar.addEventListener('click', setProgress);
             volumeSlider.addEventListener('input', setVolume);
 
+            audioPlayer.addEventListener('loadeddata', () => console.log('音频加载成功'));
+            audioPlayer.addEventListener('error', () => console.error('音频加载失败:', audioPlayer.error));
+
             // 初始化
             loadPlaylist();
             updateModeButton(); // 初始化模式按钮
         });
     </script>
 </body>
+
 </html>
