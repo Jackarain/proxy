@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -551,9 +552,8 @@
         <div class="player-container">
             <div class="now-playing">
                 <div class="album-art">
-                    <canvas id="visualizer" width="390" height="390"></canvas>
-
-                    <!-- 歌词显示区域 <i class="fas fa-music"></canvas></i> -->
+                    <i class="fas fa-music" id="famusic"></i>
+                    <!-- 歌词显示区域 <canvas id="visualizer" width="390" height="390"></canvas> <i class="fas fa-music"></canvas></i> -->
                     <div class="lyrics-container">
                         <div class="prev-lyric"></div>
                         <div class="current-lyric">选择歌曲开始播放</div>
@@ -653,9 +653,11 @@
             // 最后将 gain 结点连接到 audioContext 的 destination, 即扬声器
             audioGain.connect(audioContext.destination);
 
-            const frequencyData = true;
-            const canvas = document.getElementById('visualizer');
-            const canvasContext = canvas.getContext('2d');
+            // const canvas = document.getElementById('visualizer');
+            // const canvasContext = canvas.getContext('2d');
+
+            let canvas = null;
+            let canvasContext = null;
 
             // 获取DOM元素
             const playPauseBtn = document.getElementById('play-pause-btn');
@@ -684,6 +686,9 @@
             // 当前 URL
             const indexUrl = window.location.href;
 
+            // 当前特效显示
+            let currnetVisualizer = 0;
+
             // 状态变量
             let currentTrackIndex = -1;
             let tracks = [];
@@ -699,13 +704,49 @@
                 { name: "单曲循环", icon: "fas fa-redo", indicator: "3" }
             ];
 
-
             ////////////////////////////////////////////////////////////////////////////////////////////////////
             /// 绘制可视化特效
 
+            function changeVisualizer() {
+                if (++currnetVisualizer > 2)
+                    currnetVisualizer = 0;
+
+                if (currnetVisualizer === 0) {
+                    const visualizer = document.getElementById('visualizer');
+                    if (visualizer) {
+                        visualizer.remove();
+
+                        const musicIcon = document.createElement('i');
+                        musicIcon.className = 'fas fa-music';
+                        musicIcon.id = 'famusic';
+
+                        albumArt.appendChild(musicIcon);
+                    }
+                } else {
+                    const famusic = document.getElementById('famusic');
+                    if (famusic) {
+                        famusic.remove();
+
+                        const visualizer = document.createElement('canvas');
+                        visualizer.id = 'visualizer';
+                        visualizer.style.cssText = `width: 390px; height: 390px;`;
+
+                        albumArt.appendChild(visualizer);
+
+                        canvas = document.getElementById('visualizer');
+                        canvasContext = canvas.getContext('2d');
+
+                        drawVisualization();
+                    }
+                }
+            }
+
             function drawVisualization() {
+                if (currnetVisualizer === 0)
+                    return;
+
                 requestAnimationFrame(drawVisualization);
-                if (frequencyData) {
+                if (currnetVisualizer === 1) {
                     audioAnalyser.getByteFrequencyData(dataArray);
                 } else {
                     audioAnalyser.getByteTimeDomainData(dataArray);
@@ -724,9 +765,27 @@
                 let x = 0;
 
                 for (let i = 0; i < bufferLength; i++) {
-                    const v = dataArray[i] / 128.0;
+                    // 计算加权平均值
+                    let windowSize = 20; // 滑动窗口大小（可调整，越大越平滑）
+                    let sum = 0;
+                    let weightSum = 0;
+                    let halfWindow = Math.floor(windowSize / 2);
+
+                    // 遍历滑动窗口
+                    for (let j = -halfWindow; j <= halfWindow; j++) {
+                        let index = i + j;
+                        // 边界检查
+                        if (index >= 0 && index < bufferLength) {
+                            sum += dataArray[index] / 128.0; // 累加数据点
+                            weightSum += 1; // 均匀权重为 1
+                        }
+                    }
+
+                    // 计算加权平均值
+                    let v = sum / weightSum;
+
                     let y = 0;
-                    if (frequencyData) {
+                    if (currnetVisualizer === 1) {
                         y = canvas.height - (v * canvas.height / 3);
                     } else {
                         y = v * canvas.height / 2;
@@ -738,7 +797,7 @@
                     x += sliceWidth;
                 }
 
-                if (!frequencyData)
+                if (currnetVisualizer !== 1)
                     canvasContext.lineTo(canvas.width, canvas.height / 2);
 
                 canvasContext.stroke();
@@ -1217,7 +1276,7 @@
 
             // 设置音量
             function setVolume() {
-                // 使用 audioGain 来调整音量 /* audioPlayer.volume = volumeSlider.value; */
+                // audioPlayer.volume = volumeSlider.value;
                 audioGain.gain.value = volumeSlider.value;
 
                 // 更新音量图标
@@ -1255,6 +1314,7 @@
             audioPlayer.addEventListener('timeupdate', updateProgress);
             progressBar.addEventListener('click', setProgress);
             volumeSlider.addEventListener('input', setVolume);
+            albumArt.addEventListener('click', changeVisualizer);
 
             audioPlayer.addEventListener('loadeddata', () => console.log('音频加载成功'));
             audioPlayer.addEventListener('error', () => console.error('音频加载失败:', audioPlayer.error));
