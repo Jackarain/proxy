@@ -629,7 +629,7 @@
             const audioPlayer = new Audio();
 
             // 创建各结点
-            let audioAnalyser, audioSource, audioGain, dataArray;
+            let audioAnalyser, audioSource, dataArray;
 
             // 创建 source 结点
             audioSource = audioContext.createMediaElementSource(audioPlayer);
@@ -644,17 +644,8 @@
             // 将源连接到 analyser 结点
             audioSource.connect(audioAnalyser);
 
-            // 创建 gain 结点
-            audioGain = audioContext.createGain();
-
-            // 将 analyser 结点连接到 gain 结点
-            audioAnalyser.connect(audioGain);
-
-            // 最后将 gain 结点连接到 audioContext 的 destination, 即扬声器
-            audioGain.connect(audioContext.destination);
-
-            // const canvas = document.getElementById('visualizer');
-            // const canvasContext = canvas.getContext('2d');
+            // 将 analyser 结点连接到 audioContext 的 destination, 即扬声器
+            audioAnalyser.connect(audioContext.destination);
 
             let canvas = null;
             let canvasContext = null;
@@ -745,7 +736,6 @@
                 if (currnetVisualizer === 0)
                     return;
 
-                requestAnimationFrame(drawVisualization);
                 if (currnetVisualizer === 1) {
                     audioAnalyser.getByteFrequencyData(dataArray);
                 } else {
@@ -802,15 +792,7 @@
 
                 canvasContext.stroke();
 
-                // 添加进度指示器
-                if (false && audioPlayer.duration) {
-                    const progress = (audioPlayer.currentTime / audioPlayer.duration) * canvas.width;
-                    canvasContext.strokeStyle = 'rgba(255, 100, 100, 0.7)';
-                    canvasContext.beginPath();
-                    canvasContext.moveTo(progress, 0);
-                    canvasContext.lineTo(progress, canvas.height);
-                    canvasContext.stroke();
-                }
+                requestAnimationFrame(drawVisualization);
             }
 
             ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1276,8 +1258,7 @@
 
             // 设置音量
             function setVolume() {
-                // audioPlayer.volume = volumeSlider.value;
-                audioGain.gain.value = volumeSlider.value;
+                audioPlayer.volume = volumeSlider.value;
 
                 // 更新音量图标
                 const volumeIcon = document.querySelector('.volume-container i');
