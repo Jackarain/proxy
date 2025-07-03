@@ -678,7 +678,7 @@
             const indexUrl = window.location.href;
 
             // 当前特效显示
-            let currnetVisualizer = 0;
+            let currentVisualizer = 0;
 
             // 状态变量
             let currentTrackIndex = -1;
@@ -699,10 +699,10 @@
             /// 绘制可视化特效
 
             function changeVisualizer() {
-                if (++currnetVisualizer > 2)
-                    currnetVisualizer = 0;
+                if (++currentVisualizer > 5)
+                    currentVisualizer = 0;
 
-                if (currnetVisualizer === 0) {
+                if (currentVisualizer === 0) {
                     const visualizer = document.getElementById('visualizer');
                     if (visualizer) {
                         visualizer.remove();
@@ -732,12 +732,21 @@
                 }
             }
 
+            // 用于存储特效所需的状态
+            const visualizerStates = {
+                particleSystem: [],
+                rotationAngle: 0,
+                peakHistory: new Array(60).fill(0) // 用于存储峰值历史
+            };
+
+            const visualizerFreq = [1, 2, 3, 4];
+
             function drawVisualization() {
-                if (currnetVisualizer === 0)
+                if (currentVisualizer === 0)
                     return;
 
                 // 获取数据
-                if (currnetVisualizer === 1) {
+                if (currentVisualizer in visualizerFreq) {
                     audioAnalyser.getByteFrequencyData(dataArray);
                 } else {
                     audioAnalyser.getByteTimeDomainData(dataArray);
@@ -747,7 +756,162 @@
                 canvasContext.fillStyle = '#16213e';
                 canvasContext.fillRect(0, 0, canvas.width, canvas.height);
 
-                // 配置样式
+                // 根据当前可视化模式调用不同的渲染函数
+                switch (currentVisualizer) {
+                    case 2:
+                        drawCircularSpectrum(); // 圆形频谱
+                        break;
+                    case 3:
+                        drawBarSpectrum();      // 柱状频谱
+                        break;
+                    case 4:
+                        drawSpiralSpectrum();   // 螺旋频谱
+                        break;
+                    default:
+                        drawBasicWaveform();    // 默认波形
+                }
+
+                // 下一帧
+                requestAnimationFrame(drawVisualization);
+            }
+
+            // ====== 特效实现 ====== //
+            function drawCircularSpectrum() {
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const radius = Math.min(centerX, centerY) * 0.7;
+
+                canvasContext.lineWidth = 2;
+                canvasContext.strokeStyle = '#4cc9f0';
+                canvasContext.beginPath();
+
+                const bars = 180; // 显示180个频段
+                const barAngle = (Math.PI * 2) / bars;
+
+                for (let i = 0; i < bars; i++) {
+                    // 获取频率数据（平均采样）
+                    const idx = Math.floor(i * bufferLength / bars);
+                    const value = dataArray[idx] / 256;
+
+                    // 计算条形的长度（基于频率强度）
+                    const barLength = value * radius * 0.8;
+
+                    // 计算当前角度
+                    const angle = i * barAngle + visualizerStates.rotationAngle;
+
+                    // 计算起点和终点
+                    const startX = centerX + Math.cos(angle) * radius;
+                    const startY = centerY + Math.sin(angle) * radius;
+                    const endX = centerX + Math.cos(angle) * (radius + barLength);
+                    const endY = centerY + Math.sin(angle) * (radius + barLength);
+
+                    // 创建渐变
+                    const gradient = canvasContext.createLinearGradient(startX, startY, endX, endY);
+                    gradient.addColorStop(0, '#4cc9f0');
+                    gradient.addColorStop(1, '#f72585');
+
+                    canvasContext.strokeStyle = gradient;
+                    canvasContext.beginPath();
+                    canvasContext.moveTo(startX, startY);
+                    canvasContext.lineTo(endX, endY);
+                    canvasContext.stroke();
+                }
+
+                // 缓慢旋转
+                visualizerStates.rotationAngle += 0.002;
+            }
+
+            function drawBarSpectrum() {
+                const originalBufferLength = bufferLength;
+                const eightyPercentLength = Math.floor(originalBufferLength * 0.8);
+
+                const truncatedDataArray = new Uint8Array(eightyPercentLength);
+                for (let i = 0; i < eightyPercentLength; i++) {
+                    truncatedDataArray[i] = dataArray[i];
+                }
+
+                const resampledDataArray = new Uint8Array(originalBufferLength);
+
+                for (let i = 0; i < originalBufferLength; i++) {
+                    const sourceIndex = (i / originalBufferLength) * eightyPercentLength;
+
+                    const index1 = Math.floor(sourceIndex);
+                    const index2 = Math.min(Math.ceil(sourceIndex), eightyPercentLength - 1);
+
+                    const value1 = truncatedDataArray[index1];
+                    const value2 = truncatedDataArray[index2];
+
+                    const weight = sourceIndex - index1;
+                    resampledDataArray[i] = Math.round(value1 * (1 - weight) + value2 * weight);
+                }
+
+                const bufferWidth = bufferLength;
+                const barWidth = (canvas.width / bufferWidth);
+                canvasContext.fillStyle = '#000';
+                canvasContext.fillRect(0, 0, canvas.width, canvas.height);
+
+                for (let i = 0; i < bufferWidth; i++) {
+                    const weightingFactor = (i / bufferWidth) * 1.0 + 0.7;
+
+                    let barHeight = resampledDataArray[i] * (canvas.height / 256);
+                    barHeight *= weightingFactor; // Apply the weighting
+
+                    const hue = i * 360 / bufferWidth;
+
+                    canvasContext.fillStyle = `hsl(${hue}, 100%, 60%)`;
+                    canvasContext.fillRect(i * barWidth, canvas.height - barHeight, barWidth - 1, barHeight);
+                }
+            }
+
+            function drawSpiralSpectrum() {
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+
+                canvasContext.lineWidth = 3;
+                canvasContext.beginPath();
+
+                const spiralTurns = 3;
+                const maxRadius = Math.min(centerX, centerY) * 0.8;
+                const startRadius = maxRadius * 0.2;
+
+                for (let i = 0; i < bufferLength; i++) {
+                    // 计算当前点在螺旋上的位置
+                    const progress = i / bufferLength;
+                    const angle = progress * Math.PI * 2 * spiralTurns + visualizerStates.rotationAngle;
+                    const radius = startRadius + progress * (maxRadius - startRadius);
+
+                    // 获取频率值
+                    const value = dataArray[i] / 256;
+
+                    // 计算偏移量（基于频率强度）
+                    const offset = value * maxRadius * 0.3;
+
+                    // 计算实际坐标
+                    const x = centerX + Math.cos(angle) * (radius + offset);
+                    const y = centerY + Math.sin(angle) * (radius + offset);
+
+                    if (i === 0) {
+                        canvasContext.moveTo(x, y);
+                    } else {
+                        canvasContext.lineTo(x, y);
+                    }
+                }
+
+                // 创建渐变描边
+                const gradient = canvasContext.createLinearGradient(0, 0, canvas.width, canvas.height);
+                gradient.addColorStop(0, '#4cc9f0');
+                gradient.addColorStop(0.5, '#7209b7');
+                gradient.addColorStop(1, '#f72585');
+
+                canvasContext.strokeStyle = gradient;
+                canvasContext.stroke();
+
+                // 旋转效果
+                visualizerStates.rotationAngle += 0.01;
+            }
+
+            // 基础波形, 包括时域和频率2种波形
+            function drawBasicWaveform() {
                 canvasContext.lineWidth = 1;
                 canvasContext.strokeStyle = '#4cc9f0';
                 canvasContext.beginPath();
@@ -757,15 +921,12 @@
                 let y = 0;
                 let v = 0;
 
-                // 绘图
                 for (let i = 0; i < bufferLength; i++) {
                     v = dataArray[i] / 128.0;
 
-                    if (currnetVisualizer === 1) {
-                        // 频域：顶部开始绘图
+                    if (currentVisualizer === 1) {
                         y = canvas.height - (v * canvas.height / 3);
                     } else {
-                        // 时域：中轴上下波动
                         y = v * canvas.height / 2;
                     }
 
@@ -777,13 +938,10 @@
                     x += sliceWidth;
                 }
 
-                if (currnetVisualizer !== 1)
+                if (currentVisualizer !== 1)
                     canvasContext.lineTo(canvas.width, canvas.height / 2);
 
                 canvasContext.stroke();
-
-                // 下一帧
-                requestAnimationFrame(drawVisualization);
             }
 
             ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -920,6 +1078,8 @@
             }
 
             function onPlayed() {
+                isPlaying = true;
+
                 updatePlayButton();
 
                 // 添加播放状态类
@@ -1139,6 +1299,7 @@
 
                 if (isPlaying) {
                     audioPlayer.pause();
+                    isPlaying = false;
                     nowPlaying.classList.remove('playing');
                     albumArt.classList.remove('playing');
                 } else {
@@ -1146,7 +1307,6 @@
                     nowPlaying.classList.add('playing');
                     albumArt.classList.add('playing');
                 }
-                isPlaying = !isPlaying;
                 updatePlayButton();
             }
 
