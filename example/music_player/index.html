@@ -736,6 +736,7 @@
                 if (currnetVisualizer === 0)
                     return;
 
+                // 获取数据
                 if (currnetVisualizer === 1) {
                     audioAnalyser.getByteFrequencyData(dataArray);
                 } else {
@@ -746,43 +747,32 @@
                 canvasContext.fillStyle = '#16213e';
                 canvasContext.fillRect(0, 0, canvas.width, canvas.height);
 
-                // 绘制波形
-                canvasContext.lineWidth = 3;
+                // 配置样式
+                canvasContext.lineWidth = 1;
                 canvasContext.strokeStyle = '#4cc9f0';
                 canvasContext.beginPath();
 
                 const sliceWidth = canvas.width / bufferLength;
                 let x = 0;
+                let y = 0;
+                let v = 0;
 
+                // 绘图
                 for (let i = 0; i < bufferLength; i++) {
-                    // 计算加权平均值
-                    let windowSize = 20; // 滑动窗口大小（可调整，越大越平滑）
-                    let sum = 0;
-                    let weightSum = 0;
-                    let halfWindow = Math.floor(windowSize / 2);
+                    v = dataArray[i] / 128.0;
 
-                    // 遍历滑动窗口
-                    for (let j = -halfWindow; j <= halfWindow; j++) {
-                        let index = i + j;
-                        // 边界检查
-                        if (index >= 0 && index < bufferLength) {
-                            sum += dataArray[index] / 128.0; // 累加数据点
-                            weightSum += 1; // 均匀权重为 1
-                        }
-                    }
-
-                    // 计算加权平均值
-                    let v = sum / weightSum;
-
-                    let y = 0;
                     if (currnetVisualizer === 1) {
+                        // 频域：顶部开始绘图
                         y = canvas.height - (v * canvas.height / 3);
                     } else {
+                        // 时域：中轴上下波动
                         y = v * canvas.height / 2;
                     }
 
-                    if (i === 0) canvasContext.moveTo(x, y);
-                    else canvasContext.lineTo(x, y);
+                    if (i === 0)
+                        canvasContext.moveTo(x, y);
+                    else
+                        canvasContext.lineTo(x, y);
 
                     x += sliceWidth;
                 }
@@ -792,6 +782,7 @@
 
                 canvasContext.stroke();
 
+                // 下一帧
                 requestAnimationFrame(drawVisualization);
             }
 
