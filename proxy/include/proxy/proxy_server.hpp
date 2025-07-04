@@ -2139,7 +2139,7 @@ R"x*x*x(<html>
 			// 用户认证逻辑.
 			bool verify_passed = m_option.auth_users_.empty();
 
-			for (auto [user, pwd] : m_option.auth_users_)
+			for (const auto& [user, pwd] : m_option.auth_users_)
 			{
 				if (user == userid)
 				{
