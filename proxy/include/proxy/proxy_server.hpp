@@ -3710,7 +3710,7 @@ R"x*x*x(<html>
 		format_path_list(const std::string& path, boost::system::error_code& ec)
 		{
 			fs::directory_iterator end;
-			fs::directory_iterator it(path, ec);
+			fs::directory_iterator it(path, fs::directory_options::skip_permission_denied, ec);
 			if (ec)
 			{
 				XLOG_DBG << "connection id: "
@@ -3965,7 +3965,7 @@ R"x*x*x(<html>
 			auto target = fs::path(make_real_target_path(hctx.command_[0])).lexically_normal();
 
 			fs::directory_iterator end;
-			fs::directory_iterator it(target, ec);
+			fs::directory_iterator it(target, fs::directory_options::skip_permission_denied, ec);
 			if (ec)
 			{
 				string_response res{ http::status::found, request.version() };
@@ -4863,7 +4863,7 @@ R"x*x*x(<html>
 
 			certificate_file file;
 
-			for (const auto& entry : fs::directory_iterator(directory))
+			for (const auto& entry : fs::directory_iterator(directory, fs::directory_options::skip_permission_denied))
 			{
 				if (entry.is_directory())
 				{
