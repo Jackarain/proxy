@@ -369,7 +369,7 @@ R"x*x*x(<html>
 	//////////////////////////////////////////////////////////////////////////
 
 	// 检测 host 是否是域名或主机名, 如果是域名则返回 true, 否则返回 false.
-	inline bool detect_hostname(const std::string& host) noexcept
+	inline bool detect_hostname(std::string_view host) noexcept
 	{
 		boost::system::error_code ec;
 		net::ip::make_address(host, ec);
