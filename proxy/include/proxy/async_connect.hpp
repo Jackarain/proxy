@@ -11,13 +11,6 @@
 #ifndef INCLUDE__2023_10_18__ASYNC_CONNECT_HPP
 #define INCLUDE__2023_10_18__ASYNC_CONNECT_HPP
 
-#include <atomic>
-#include <iterator>
-#include <memory>
-#include <tuple>
-#include <type_traits>
-#include <utility>
-#include <vector>
 
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/connect.hpp>
@@ -32,6 +25,15 @@
 #include <boost/smart_ptr/weak_ptr.hpp>
 
 #include <boost/system/error_code.hpp>
+
+#include <atomic>
+#include <iterator>
+#include <memory>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 
 namespace asio_util {
 namespace net = boost::asio;

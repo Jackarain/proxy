@@ -9,16 +9,16 @@
 #define INCLUDE__2023_11_25__PROXY_SOCKET_HPP
 
 
-#include <cstdint>
-#include <type_traits>
+#include "proxy/variant_stream.hpp"
+#include "proxy/scramble.hpp"
+#include "proxy/tcp_socket.hpp"
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/stream.hpp>
 #include <boost/asio/buffer.hpp>
 
-#include "proxy/variant_stream.hpp"
-#include "proxy/scramble.hpp"
-#include "proxy/tcp_socket.hpp"
+#include <cstdint>
+#include <type_traits>
 
 
 namespace util {

@@ -12,24 +12,29 @@
 #define INCLUDE__2023_10_18__PROXY_SERVER_HPP
 
 
-#include <algorithm>
-#include <cstddef>
-#include <filesystem>
-#include <limits>
-#include <memory>
-#include <optional>
-#include <cstdint>
-#include <span>
-#include <cstdint>
-#include <sstream>
-#include <string>
-#include <array>
-#include <thread>
-#include <type_traits>
-#include <vector>
-#include <tuple>
-#include <unordered_map>
-#include <unordered_set>
+#include "proxy/use_awaitable.hpp"
+#include "proxy/async_connect.hpp"
+#include "proxy/logging.hpp"
+#include "proxy/variant_stream.hpp"
+#include "proxy/default_cert.hpp"
+#include "proxy/fileop.hpp"
+#include "proxy/strutil.hpp"
+#include "proxy/ipip.hpp"
+
+#include "proxy/socks_enums.hpp"
+#include "proxy/socks_client.hpp"
+#include "proxy/http_proxy_client.hpp"
+#include "proxy/socks_io.hpp"
+
+#include "proxy/xxhash.hpp"
+#include "proxy/scramble.hpp"
+
+#include "proxy/proxy_stream.hpp"
+
+
+#include <fmt/xchar.h>
+#include <fmt/format.h>
+
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/co_spawn.hpp>
@@ -91,28 +96,25 @@
 # include <boost/filesystem.hpp>
 #endif // USE_BOOST_FILESYSTEM
 
-#include <fmt/xchar.h>
-#include <fmt/format.h>
 
-
-#include "proxy/use_awaitable.hpp"
-#include "proxy/async_connect.hpp"
-#include "proxy/logging.hpp"
-#include "proxy/variant_stream.hpp"
-#include "proxy/default_cert.hpp"
-#include "proxy/fileop.hpp"
-#include "proxy/strutil.hpp"
-#include "proxy/ipip.hpp"
-
-#include "proxy/socks_enums.hpp"
-#include "proxy/socks_client.hpp"
-#include "proxy/http_proxy_client.hpp"
-#include "proxy/socks_io.hpp"
-
-#include "proxy/xxhash.hpp"
-#include "proxy/scramble.hpp"
-
-#include "proxy/proxy_stream.hpp"
+#include <algorithm>
+#include <cstddef>
+#include <filesystem>
+#include <limits>
+#include <memory>
+#include <optional>
+#include <cstdint>
+#include <span>
+#include <cstdint>
+#include <sstream>
+#include <string>
+#include <array>
+#include <thread>
+#include <type_traits>
+#include <vector>
+#include <tuple>
+#include <unordered_map>
+#include <unordered_set>
 
 
 namespace proxy {

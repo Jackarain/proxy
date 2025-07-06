@@ -12,6 +12,10 @@
 #define INCLUDE__2023_11_24__SCRAMBLE_HPP
 
 
+#include "proxy/xxhash.hpp"
+
+#include <boost/assert.hpp>
+
 #include <random>
 #include <cstdint>
 #include <sstream>
@@ -20,9 +24,6 @@
 #include <span>
 #include <limits>
 
-#include <boost/assert.hpp>
-
-#include "proxy/xxhash.hpp"
 
 namespace proxy {
 

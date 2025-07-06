@@ -12,25 +12,6 @@
 #define INCLUDE__2016_10_14__LOGGING_HPP
 
 
-#include <version>
-#include <codecvt>
-#include <clocale>
-#include <fstream>
-#include <chrono>
-#include <mutex>
-#include <memory>
-#include <string>
-#include <tuple>
-#include <thread>
-#include <functional>
-#include <filesystem>
-#include <system_error>
-#include <atomic>
-#include <deque>
-#include <csignal>
-#include <condition_variable>
-#include <optional>
-
 #ifndef LOGGING_DISABLE_BOOST_ASIO_ENDPOINT
 # if defined(__has_include)
 #  if __has_include(<boost/asio.hpp>)
@@ -166,6 +147,25 @@ namespace std {
 #  pragma warning(pop)
 # endif
 #endif
+
+#include <version>
+#include <codecvt>
+#include <clocale>
+#include <fstream>
+#include <chrono>
+#include <mutex>
+#include <memory>
+#include <string>
+#include <tuple>
+#include <thread>
+#include <functional>
+#include <filesystem>
+#include <system_error>
+#include <atomic>
+#include <deque>
+#include <csignal>
+#include <condition_variable>
+#include <optional>
 
 
 //////////////////////////////////////////////////////////////////////////

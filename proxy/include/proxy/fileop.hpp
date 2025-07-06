@@ -9,6 +9,11 @@
 #define INCLUDE__2023_10_18__FILEOP_HPP
 
 
+#if __has_include(<boost/filesystem.hpp>)
+#  define HAS_BOOST_FILESYSTEM
+#  include <boost/filesystem.hpp>
+#endif
+
 #include <cstdint>
 #include <fstream>
 #include <span>
@@ -17,11 +22,6 @@
 #include <string_view>
 #include <type_traits>
 #include <filesystem>
-
-#if __has_include(<boost/filesystem.hpp>)
-#  define HAS_BOOST_FILESYSTEM
-#  include <boost/filesystem.hpp>
-#endif
 
 
 //////////////////////////////////////////////////////////////////////////

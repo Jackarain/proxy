@@ -12,19 +12,6 @@
 #define INCLUDE__2023_10_18__MAIN_HPP
 
 
-#include <string>
-#include <string_view>
-#include <iterator>
-#include <algorithm>
-#include <optional>
-#include <iostream>
-#include <sstream>
-#include <memory>
-#include <ios>
-
-#include <boost/version.hpp>
-#include <boost/config.hpp>
-
 #ifdef __linux__
 #  include <sys/resource.h>
 
@@ -53,6 +40,20 @@
 #    define OPENSSL_VERSION_TEXT "NONE"
 #  endif
 #endif
+
+#include <boost/version.hpp>
+#include <boost/config.hpp>
+
+#include <string>
+#include <string_view>
+#include <iterator>
+#include <algorithm>
+#include <optional>
+#include <iostream>
+#include <sstream>
+#include <memory>
+#include <ios>
+
 
 //////////////////////////////////////////////////////////////////////////
 

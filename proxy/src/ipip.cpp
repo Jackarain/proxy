@@ -5,10 +5,10 @@
 // Email:  jack.wgm at gmail dot com
 //
 
-#include <boost/algorithm/string.hpp>
-
 #include "proxy/ipip.hpp"
 #include "proxy/logging.hpp"
+
+#include <boost/algorithm/string.hpp>
 
 using byte = unsigned char;
 using uint = unsigned int;

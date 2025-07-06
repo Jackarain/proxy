@@ -17,6 +17,8 @@
 #define INCLUDE__2023_10_18__STRUTIL_HPP
 
 
+#include <boost/date_time/posix_time/posix_time.hpp>
+
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
@@ -27,7 +29,6 @@
 #include <map>
 #include <optional>
 
-#include <boost/date_time/posix_time/posix_time.hpp>
 
 //! The strutil namespace
 namespace strutil

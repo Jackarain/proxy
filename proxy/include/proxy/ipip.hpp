@@ -8,12 +8,13 @@
 #ifndef INCLUDE__2019_10_18__FILEOP_HPP
 #define INCLUDE__2019_10_18__FILEOP_HPP
 
+#include <boost/filesystem.hpp>
+#include <boost/asio/ip/address.hpp>
+
 #include <vector>
 #include <string>
 #include <exception>
 
-#include <boost/filesystem.hpp>
-#include <boost/asio/ip/address.hpp>
 
 namespace proxy {
 	namespace net = boost::asio;

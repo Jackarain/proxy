@@ -8,18 +8,6 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-
-#include <limits>
-
-#include <boost/asio/io_context.hpp>
-#include <boost/asio/co_spawn.hpp>
-#include <boost/asio/detached.hpp>
-#include <boost/asio/signal_set.hpp>
-
-#include <boost/algorithm/string/join.hpp>
-#include <boost/program_options.hpp>
-namespace po = boost::program_options;
-
 #include "proxy/proxy_server.hpp"
 #include "proxy/socks_client.hpp"
 #include "proxy/logging.hpp"
@@ -45,6 +33,18 @@ namespace po = boost::program_options;
 #endif
 
 #include "main.hpp"
+
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/detached.hpp>
+#include <boost/asio/signal_set.hpp>
+
+#include <boost/algorithm/string/join.hpp>
+#include <boost/program_options.hpp>
+namespace po = boost::program_options;
+
+#include <limits>
+
 
 namespace net = boost::asio;
 using namespace proxy;

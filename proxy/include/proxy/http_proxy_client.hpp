@@ -12,10 +12,8 @@
 #define INCLUDE__2023_10_18__HTTP_PROXY_CLIENT_HPP
 
 
-#include <cstdlib>
-#include <string>
-#include <memory>
-
+#include "proxy/use_awaitable.hpp"
+#include "proxy/strutil.hpp"
 
 #include <boost/system/error_code.hpp>
 
@@ -41,9 +39,10 @@
 # pragma warning(pop)
 #endif
 
+#include <cstdlib>
+#include <string>
+#include <memory>
 
-#include "proxy/use_awaitable.hpp"
-#include "proxy/strutil.hpp"
 
 namespace proxy {
 
