@@ -39,6 +39,7 @@
 #include <boost/asio/detached.hpp>
 #include <boost/asio/signal_set.hpp>
 
+#include <boost/nowide/args.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
@@ -307,6 +308,7 @@ namespace std
 
 int main(int argc, char** argv)
 {
+	[[maybe_unused]]boost::nowide::args a(argc, argv);
 	platform_init();
 
 	std::string config;
