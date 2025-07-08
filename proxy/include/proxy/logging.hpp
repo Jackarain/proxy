@@ -198,7 +198,13 @@ namespace std {
 
 namespace xlogger {
 
+#ifndef LOGGING_DISABLE_BOOST_FILESYSTEM
+	namespace fs = boost::filesystem;
+	using error_code = boost::system::error_code;
+#else
 	namespace fs = std::filesystem;
+	using error_code = std::error_code;
+#endif
 
 #ifndef LOGGING_DISABLE_BOOST_ASIO_ENDPOINT
 	namespace net = boost::asio;
@@ -745,7 +751,7 @@ public:
 		if (!global_logging___)
 			return;
 
-		std::error_code ignore_ec;
+		error_code ignore_ec;
 		if (!fs::exists(m_log_path, ignore_ec) && global_write_logging___)
 			fs::create_directories(
 				m_log_path.parent_path(), ignore_ec);
@@ -764,7 +770,7 @@ public:
 		if (!global_logging___)
 			return;
 
-		std::error_code ignore_ec;
+		error_code ignore_ec;
 		if (!fs::exists(m_log_path, ignore_ec) && global_write_logging___)
 			fs::create_directories(
 				m_log_path.parent_path(), ignore_ec);
@@ -822,7 +828,7 @@ public:
 
 			m_last_time = time;
 
-			std::error_code ec;
+			error_code ec;
 			if (!fs::copy_file(m_log_path, filename, ec))
 				break;
 
@@ -833,7 +839,7 @@ public:
 			auto fn = filename.string();
 			std::thread th([fn]()
 				{
-					std::error_code ignore_ec;
+					error_code ignore_ec;
 					std::mutex& m = xlogging_compress__::compress_lock();
 					std::lock_guard lock(m);
 					if (!xlogging_compress__::do_compress_gz(fn))
@@ -1442,6 +1448,24 @@ public:
 #endif
 		return strcat_impl(v);
 	}
+	inline logger___& operator<<(const std::pmr::string& v)
+	{
+#ifdef LOGGING_ENABLE_AUTO_UTF8
+		if (!global_logging___)
+			return *this;
+		if (!logger_aux__::utf8_check_is_valid(v))
+		{
+			auto wres = logger_aux__::string_wide(v);
+			if (wres)
+			{
+				auto ret = logger_aux__::utf16_utf8(*wres);
+				if (ret)
+					return strcat_impl(*ret);
+			}
+		}
+#endif
+		return strcat_impl(v);
+	}
 	inline logger___& operator<<(const std::wstring& v)
 	{
 		if (!global_logging___)
@@ -1720,7 +1744,7 @@ public:
 		return *this;
 	}
 #endif
-	inline logger___& operator<<(const fs::path& p) noexcept
+	inline logger___& operator<<(const std::filesystem::path& p) noexcept
 	{
 		if (!global_logging___)
 			return *this;
