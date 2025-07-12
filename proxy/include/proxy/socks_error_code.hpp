@@ -108,12 +108,12 @@ namespace proxy {
 	class error_category_impl
 		: public boost::system::error_category
 	{
-		virtual const char* name() const noexcept override
+		const char* name() const noexcept override
 		{
 			return "SOCKS";
 		}
 
-		virtual std::string message(int e) const override
+		std::string message(int e) const override
 		{
 			switch (static_cast<errc::errc_t>(e))
 			{
