@@ -1335,6 +1335,27 @@ class logger___
 	logger___(const logger___&) = delete;
 	logger___& operator=(const logger___&) = delete;
 public:
+	inline logger___(logger___&& other) noexcept
+		: level_(other.level_)
+		, async_(other.async_)
+		, disable_cout_(other.disable_cout_)
+		, out_(std::move(other.out_))
+	{
+		other.ignore_ = true;
+	}
+
+	inline logger___& operator=(logger___&& other) noexcept
+	{
+		if (this == &other)
+			return *this;
+		level_ = other.level_;
+		async_ = other.async_;
+		disable_cout_ = other.disable_cout_;
+		out_ = std::move(other.out_);
+		other.ignore_ = true;
+		return *this;
+	}
+
 	logger___(const logger_level__& level,
 		bool async = false, bool disable_cout = false)
 		: level_(level)
@@ -1346,7 +1367,7 @@ public:
 	}
 	~logger___()
 	{
-		if (!global_logging___)
+		if (!global_logging___ || ignore_)
 			return;
 
 		// if global_logger_obj___ is nullptr, fallback to
@@ -1814,9 +1835,10 @@ public:
 	}
 
 	std::string out_;
-	const logger_level__& level_;
+	logger_level__ level_;
 	bool async_;
 	bool disable_cout_;
+	bool ignore_{ false };
 };
 
 class empty_logger___
