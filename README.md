@@ -2,6 +2,7 @@
 
 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/Jackarain/proxy/tree/master.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/Jackarain/proxy/tree/master)
 [![actions workflow](https://github.com/jackarain/proxy/actions/workflows/Build.yml/badge.svg)](https://github.com/Jackarain/proxy/actions)
+![Badge](https://hitscounter.dev/api/hit?url=https%3A%2F%2Fgithub.com%2FJackarain%2Fproxy&label=&icon=github&color=%23198754&message=&style=flat&tz=Asia%2FShanghai)
 
 ## proxy 项目简介
 
