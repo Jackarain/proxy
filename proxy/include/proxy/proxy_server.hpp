@@ -709,6 +709,23 @@ R"x*x*x(<html>
 			return static_cast<tcp::socket&>(socket.lowest_layer());
 		}
 
+		// session 的连接日志输出函数, 用于输出连接 id 相关的日志信息, 简化重复
+		// 的 connection id 这些信息的代码.
+		auto log_conn_error() noexcept
+		{
+			return std::move(XLOG_FERR("connection id: {}", m_connection_id));
+		}
+
+		auto log_conn_warning() noexcept
+		{
+			return std::move(XLOG_FWARN("connection id: {}", m_connection_id));
+		}
+
+		auto log_conn_debug() noexcept
+		{
+			return std::move(XLOG_FDBG("connection id: {}", m_connection_id));
+		}
+
 	public:
 		proxy_session(
 			net::any_io_executor executor,
@@ -737,14 +754,10 @@ R"x*x*x(<html>
 			// 从 server 中移除当前 session.
 			server->remove_session(m_connection_id);
 
-			// 打印当前 session 数量.
+			// 打印当前 session 数量相关日志.
 			auto num = server->num_session();
 
-			XLOG_DBG << "connection id: "
-				<< m_connection_id
-				<< ", terminated, "
-				<< num
-				<< " active connections remaining.";
+			log_conn_debug() << ", terminated, " << num << " active connections remaining.";
 		}
 
 	public:
@@ -785,8 +798,7 @@ R"x*x*x(<html>
 				}
 				catch (const std::exception& e)
 				{
-					XLOG_ERR << "connection id: "
-						<< m_connection_id
+					log_conn_error()
 						<< ", params next_proxy error: "
 						<< m_option.proxy_pass_
 						<< ", exception: "
@@ -893,8 +905,7 @@ R"x*x*x(<html>
 				transfer(m_remote_socket, m_local_socket, r2l_transferred)
 				);
 
-			XLOG_DBG << "connection id: "
-				<< m_connection_id
+			log_conn_debug()
 				<< ", transfer completed"
 				<< ", local to remote: "
 				<< l2r_transferred
@@ -931,8 +942,7 @@ R"x*x*x(<html>
 			// 计算数据发送 key.
 			outkey = compute_key(noise);
 
-			XLOG_DBG << "connection id: "
-				<< m_connection_id
+			log_conn_debug()
 				<< ", send noise, length: "
 				<< noise.size();
 
@@ -943,8 +953,7 @@ R"x*x*x(<html>
 				net_awaitable[error]);
 			if (error)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", noise write error: "
 					<< error.message();
 
@@ -961,8 +970,7 @@ R"x*x*x(<html>
 
 			if (error)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", noise read header error: "
 					<< error.message();
 
@@ -975,8 +983,7 @@ R"x*x*x(<html>
 			int remainder = static_cast<int>(noise_length) - 16;
 			if (remainder < 0 || remainder >= std::numeric_limits<uint16_t>::max())
 			{
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", noise length: "
 					<< noise_length
 					<< ", is invalid, noise size: "
@@ -993,16 +1000,14 @@ R"x*x*x(<html>
 
 			if (error)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", noise read body error: "
 					<< error.message();
 
 				co_return false;
 			}
 
-			XLOG_DBG << "connection id: "
-				<< m_connection_id
+			log_conn_debug()
 				<< ", recv noise, length: "
 				<< noise.size();
 
@@ -1033,8 +1038,7 @@ R"x*x*x(<html>
 				net::socket_base::wait_read, net_awaitable[error]);
 			if (error)
 			{
-				XLOG_WARN  << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", socket.async_wait error: "
 					<< error.message();
 				co_return;
@@ -1084,8 +1088,7 @@ R"x*x*x(<html>
 #endif
 			if (ret <= 0)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", peek message return: "
 					<< ret;
 				co_return;
@@ -1152,8 +1155,7 @@ R"x*x*x(<html>
 
 				if (detect[0] != 0x16 && !noise_proto)
 				{
-					XLOG_DBG << "connection id: "
-						<< m_connection_id
+					log_conn_debug()
 						<< ", insecure protocol disabled";
 					co_return;
 				}
@@ -1164,14 +1166,12 @@ R"x*x*x(<html>
 			{
 				if (m_option.disable_socks_)
 				{
-					XLOG_DBG << "connection id: "
-						<< m_connection_id
+					log_conn_debug()
 						<< ", socks protocol disabled";
 					co_return;
 				}
 
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", plain socks4/5 protocol";
 
 				// 开始启动代理协议.
@@ -1179,8 +1179,7 @@ R"x*x*x(<html>
 			}
 			else if (detect[0] == 0x16) // http/socks proxy with ssl crypto protocol.
 			{
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", ssl protocol";
 
 				auto& srv_ssl_context = server->ssl_context();
@@ -1200,8 +1199,7 @@ R"x*x*x(<html>
 
 				if (error)
 				{
-					XLOG_DBG << "connection id: "
-						<< m_connection_id
+					log_conn_debug()
 						<< ", ssl server protocol handshake error: "
 						<< error.message();
 					co_return;
@@ -1219,14 +1217,12 @@ R"x*x*x(<html>
 			{
 				if (m_option.disable_http_)
 				{
-					XLOG_DBG << "connection id: "
-						<< m_connection_id
+					log_conn_debug()
 						<< ", http protocol disabled";
 					co_return;
 				}
 
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", plain http protocol";
 
 				// 开始启动代理协议.
@@ -1235,8 +1231,7 @@ R"x*x*x(<html>
 			else if (handshake_before && m_option.scramble_)
 			{
 				// 进入噪声握手协议, 即: 返回一段噪声给客户端, 并等待客户端返回噪声.
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", noise protocol";
 
 				if (!co_await noise_handshake(
@@ -1248,8 +1243,7 @@ R"x*x*x(<html>
 			}
 			else
 			{
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", unknown protocol";
 			}
 
@@ -1283,8 +1277,7 @@ R"x*x*x(<html>
 					net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_ERR << "connection id: "
-					<< m_connection_id
+				log_conn_error()
 					<< ", read socks version: "
 					<< ec.message();
 				co_return;
@@ -1298,14 +1291,12 @@ R"x*x*x(<html>
 			{
 				if (m_option.disable_socks_)
 				{
-					XLOG_DBG << "connection id: "
-						<< m_connection_id
+					log_conn_debug()
 						<< ", socks5 protocol disabled";
 					co_return;
 				}
 
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", socks version: "
 					<< socks_version;
 
@@ -1316,14 +1307,12 @@ R"x*x*x(<html>
 			{
 				if (m_option.disable_socks_)
 				{
-					XLOG_DBG << "connection id: "
-						<< m_connection_id
+					log_conn_debug()
 						<< ", socks4 protocol disabled";
 					co_return;
 				}
 
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", socks version: "
 					<< socks_version;
 
@@ -1334,8 +1323,7 @@ R"x*x*x(<html>
 			{
 				if (m_option.disable_http_)
 				{
-					XLOG_DBG << "connection id: "
-						<< m_connection_id
+					log_conn_debug()
 						<< ", http protocol disabled";
 					co_return;
 				}
@@ -1358,8 +1346,7 @@ R"x*x*x(<html>
 			{
 				if (m_option.disable_http_)
 				{
-					XLOG_DBG << "connection id: "
-						<< m_connection_id
+					log_conn_debug()
 						<< ", http protocol disabled";
 					co_return;
 				}
@@ -1391,8 +1378,7 @@ R"x*x*x(<html>
 			int nmethods = read<int8_t>(p);
 			if (nmethods <= 0 || nmethods > 255)
 			{
-				XLOG_ERR << "connection id: "
-					<< m_connection_id
+				log_conn_error()
 					<< ", unsupported method : "
 					<< nmethods;
 				co_return;
@@ -1412,8 +1398,7 @@ R"x*x*x(<html>
 				net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_ERR << "connection id: "
-					<< m_connection_id
+				log_conn_error()
 					<< ", read socks methods: "
 					<< ec.message();
 				co_return;
@@ -1471,8 +1456,7 @@ R"x*x*x(<html>
 				net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", write server method error : "
 					<< ec.message();
 				co_return;
@@ -1480,8 +1464,7 @@ R"x*x*x(<html>
 
 			if (method == SOCKS5_AUTH_UNACCEPTABLE)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", no acceptable methods for server";
 				co_return;
 			}
@@ -1507,8 +1490,7 @@ R"x*x*x(<html>
 				net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", read client request error: "
 					<< ec.message();
 				co_return;
@@ -1518,8 +1500,7 @@ R"x*x*x(<html>
 			auto ver = read<int8_t>(p);
 			if (ver != SOCKS_VERSION_5)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", socks requests, invalid protocol: "
 					<< ver;
 				co_return;
@@ -1556,8 +1537,7 @@ R"x*x*x(<html>
 				net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", read client request dst.addr error: "
 					<< ec.message();
 				co_return;
@@ -1578,8 +1558,7 @@ R"x*x*x(<html>
 				domain = dst_endpoint.address().to_string();
 				port = dst_endpoint.port();
 
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", "
 					<< m_local_socket.remote_endpoint()
 					<< " to ipv4: "
@@ -1591,8 +1570,7 @@ R"x*x*x(<html>
 					domain.push_back(read<int8_t>(p));
 				port = read<uint16_t>(p);
 
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", "
 					<< m_local_socket.remote_endpoint()
 					<< " to domain: "
@@ -1615,8 +1593,7 @@ R"x*x*x(<html>
 				domain = dst_endpoint.address().to_string();
 				port = dst_endpoint.port();
 
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", "
 					<< m_local_socket.remote_endpoint()
 					<< " to ipv6: "
@@ -1633,8 +1610,7 @@ R"x*x*x(<html>
 			do {
 				if (m_option.disable_udp_)
 				{
-					XLOG_DBG << "connection id: "
-						<< m_connection_id
+					log_conn_debug()
 						<< ", udp protocol disabled";
 					ec = net::error::connection_refused;
 					break;
@@ -1695,8 +1671,7 @@ R"x*x*x(<html>
 				if (ec)
 					break;
 
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", local udp address: "
 					<< m_local_udp_address.to_string()
 					<< ", udp socket: "
@@ -1727,8 +1702,7 @@ R"x*x*x(<html>
 					net_awaitable[ec]);
 				if (ec)
 				{
-					XLOG_WARN << "connection id: "
-						<< m_connection_id
+					log_conn_warning()
 						<< ", write server response error: "
 						<< ec.message();
 					co_return;
@@ -1803,8 +1777,7 @@ R"x*x*x(<html>
 					net_awaitable[ec]);
 				if (ec)
 				{
-					XLOG_WARN << "connection id: "
-						<< m_connection_id
+					log_conn_warning()
 						<< ", write server response error: "
 						<< ec.message();
 					co_return;
@@ -1814,8 +1787,7 @@ R"x*x*x(<html>
 					co_return;
 			}
 
-			XLOG_DBG << "connection id: "
-				<< m_connection_id
+			log_conn_debug()
 				<< ", connected start transfer";
 
 			// 发起数据传输协程.
@@ -1830,8 +1802,7 @@ R"x*x*x(<html>
 					transfer(m_remote_socket, m_local_socket, r2l_transferred)
 					);
 
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", transfer completed"
 					<< ", local to remote: "
 					<< l2r_transferred
@@ -1840,8 +1811,7 @@ R"x*x*x(<html>
 			}
 			else
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", SOCKS_CMD_BIND and SOCKS5_CMD_UDP is unsupported";
 			}
 
@@ -1997,8 +1967,7 @@ R"x*x*x(<html>
 				}
 			}
 
-			XLOG_DBG << "connection id: "
-				<< m_connection_id
+			log_conn_debug()
 				<< ", recv total: "
 				<< recv_total
 				<< ", send total: "
@@ -2019,8 +1988,7 @@ R"x*x*x(<html>
 				co_await m_timer.async_wait(net_awaitable[ec]);
 				if (ec)
 				{
-					XLOG_WARN << "connection id: "
-						<< m_connection_id
+					log_conn_warning()
 						<< ", ec: "
 						<< ec.message();
 					break;
@@ -2028,16 +1996,14 @@ R"x*x*x(<html>
 
 				if (--m_udp_timeout <= 0)
 				{
-					XLOG_DBG << "connection id: "
-						<< m_connection_id
+					log_conn_debug()
 						<< ", udp socket expired";
 					m_udp_socket.close(ec);
 					break;
 				}
 			}
 
-			XLOG_DBG << "connection id: "
-				<< m_connection_id
+			log_conn_debug()
 				<< ", udp expired timer quit";
 
 			co_return;
@@ -2066,8 +2032,7 @@ R"x*x*x(<html>
 				net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", read socks4 dst: "
 					<< ec.message();
 				co_return;
@@ -2096,8 +2061,7 @@ R"x*x*x(<html>
 				m_local_buffer, '\0', net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", read socks4 userid: "
 					<< ec.message();
 				co_return;
@@ -2118,8 +2082,7 @@ R"x*x*x(<html>
 					m_local_buffer, '\0', net_awaitable[ec]);
 				if (ec)
 				{
-					XLOG_WARN << "connection id: "
-						<< m_connection_id
+					log_conn_warning()
 						<< ", read socks4a hostname: "
 						<< ec.message();
 					co_return;
@@ -2132,8 +2095,7 @@ R"x*x*x(<html>
 				}
 			}
 
-			XLOG_DBG << "connection id: "
-				<< m_connection_id
+			log_conn_debug()
 				<< ", use "
 				<< (socks4a ? "domain: " : "ip: ")
 				<< (socks4a ? hostname : dst_endpoint.address().to_string());
@@ -2152,12 +2114,10 @@ R"x*x*x(<html>
 			}
 
 			if (verify_passed)
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", auth passed";
 			else
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", auth no pass";
 
 			if (!verify_passed)
@@ -2185,15 +2145,13 @@ R"x*x*x(<html>
 					net_awaitable[ec]);
 				if (ec)
 				{
-					XLOG_WARN << "connection id: "
-						<< m_connection_id
+					log_conn_warning()
 						<< ", write socks4 no allow: "
 						<< ec.message();
 					co_return;
 				}
 
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", socks4 "
 					<< userid
 					<< " auth fail";
@@ -2257,8 +2215,7 @@ R"x*x*x(<html>
 				net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", write socks4 response: "
 					<< ec.message();
 				co_return;
@@ -2276,8 +2233,7 @@ R"x*x*x(<html>
 				transfer(m_remote_socket, m_local_socket, r2l_transferred)
 				);
 
-			XLOG_DBG << "connection id: "
-				<< m_connection_id
+			log_conn_debug()
 				<< ", transfer completed"
 				<< ", local to remote: "
 				<< l2r_transferred
@@ -2361,8 +2317,7 @@ R"x*x*x(<html>
 					net_awaitable[ec]);
 				if (ec)
 				{
-					XLOG_WARN << "connection id: "
-						<< m_connection_id
+					log_conn_warning()
 						<< (keep_alive ? ", keepalive" : "")
 						<< ", http_proxy_get request async_read: "
 						<< ec.message();
@@ -2377,8 +2332,7 @@ R"x*x*x(<html>
 
 				keep_alive = req.keep_alive();
 
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", method: " << mth
 					<< ", target: " << target_view
 					<< (pa.empty() ? std::string()
@@ -2401,8 +2355,7 @@ R"x*x*x(<html>
 
 					if (!expect_url.has_error())
 					{
-						XLOG_WARN << "connection id: "
-							<< m_connection_id
+						log_conn_warning()
 							<< ", proxy err: "
 							<< pauth_error_message(auth);
 
@@ -2422,8 +2375,7 @@ R"x*x*x(<html>
 						auto auth = req[http::field::authorization];
 						if (auth.empty() || m_option.auth_users_.empty())
 						{
-							XLOG_WARN << "connection id: "
-								<< m_connection_id
+							log_conn_warning()
 								<< ", auth error: "
 								<< (auth.empty() ? "no auth" : "no user");
 
@@ -2434,8 +2386,7 @@ R"x*x*x(<html>
 						auto auth_result = http_authorization(auth);
 						if (auth_result != PROXY_AUTH_SUCCESS)
 						{
-							XLOG_WARN << "connection id: "
-								<< m_connection_id
+							log_conn_warning()
 								<< ", auth error: "
 								<< pauth_error_message(auth_result);
 
@@ -2545,8 +2496,7 @@ R"x*x*x(<html>
 					m_remote_socket, req, net_awaitable[ec]);
 				if (ec)
 				{
-					XLOG_WARN << "connection id: "
-						<< m_connection_id
+					log_conn_warning()
 						<< ", http_proxy_get request async_write: "
 						<< ec.message();
 					co_return !first;
@@ -2562,8 +2512,7 @@ R"x*x*x(<html>
 					m_remote_socket, buf, parser, net_awaitable[ec]);
 				if (ec)
 				{
-					XLOG_WARN << "connection id: "
-						<< m_connection_id
+					log_conn_warning()
 						<< ", http_proxy_get response async_read: "
 						<< ec.message();
 					co_return !first;
@@ -2573,15 +2522,13 @@ R"x*x*x(<html>
 					m_local_socket, parser.release(), net_awaitable[ec]);
 				if (ec)
 				{
-					XLOG_WARN << "connection id: "
-						<< m_connection_id
+					log_conn_warning()
 						<< ", http_proxy_get response async_write: "
 						<< ec.message();
 					co_return !first;
 				}
 
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", transfer completed"
 					<< ", remote to local: "
 					<< bytes;
@@ -2604,8 +2551,7 @@ R"x*x*x(<html>
 				m_local_buffer, req, net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_ERR << "connection id: "
-					<< m_connection_id
+				log_conn_error()
 					<< ", http_proxy_connect async_read: "
 					<< ec.message();
 
@@ -2616,8 +2562,7 @@ R"x*x*x(<html>
 			auto target_view = std::string(req.target());
 			auto pa = std::string(req[http::field::proxy_authorization]);
 
-			XLOG_DBG << "connection id: "
-				<< m_connection_id
+			log_conn_debug()
 				<< ", method: " << mth
 				<< ", target: " << target_view
 				<< (pa.empty() ? std::string()
@@ -2627,8 +2572,7 @@ R"x*x*x(<html>
 			auto auth = http_authorization(pa);
 			if (auth != PROXY_AUTH_SUCCESS)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", proxy err: "
 					<< pauth_error_message(auth);
 
@@ -2647,8 +2591,7 @@ R"x*x*x(<html>
 			auto pos = target_view.find(':');
 			if (pos == std::string::npos)
 			{
-				XLOG_ERR  << "connection id: "
-					<< m_connection_id
+				log_conn_error()
 					<< ", illegal target: "
 					<< target_view;
 				co_return false;
@@ -2698,8 +2641,7 @@ R"x*x*x(<html>
 				transfer(m_remote_socket, m_local_socket, r2l_transferred)
 				);
 
-			XLOG_DBG << "connection id: "
-				<< m_connection_id
+			log_conn_debug()
 				<< ", transfer completed"
 				<< ", local to remote: "
 				<< l2r_transferred
@@ -2726,8 +2668,7 @@ R"x*x*x(<html>
 				net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", read client username/passwd error: "
 					<< ec.message();
 				co_return false;
@@ -2737,16 +2678,14 @@ R"x*x*x(<html>
 			int auth_version = read<int8_t>(p);
 			if (auth_version != 1)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", socks negotiation, unsupported socks5 protocol";
 				co_return false;
 			}
 			int name_length = read<uint8_t>(p);
 			if (name_length <= 0 || name_length > 255)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", socks negotiation, invalid name length";
 				co_return false;
 			}
@@ -2765,8 +2704,7 @@ R"x*x*x(<html>
 				net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", read client username error: "
 					<< ec.message();
 				co_return false;
@@ -2781,8 +2719,7 @@ R"x*x*x(<html>
 			int passwd_len = read<uint8_t>(p);
 			if (passwd_len <= 0 || passwd_len > 255)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", socks negotiation, invalid passwd length";
 				co_return false;
 			}
@@ -2800,8 +2737,7 @@ R"x*x*x(<html>
 				net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", read client passwd error: "
 					<< ec.message();
 				co_return false;
@@ -2831,8 +2767,7 @@ R"x*x*x(<html>
 				}
 			}
 
-			XLOG_DBG << "connection id: "
-				<< m_connection_id
+			log_conn_debug()
 				<< ", auth: "
 				<< uname
 				<< ", passwd: "
@@ -2865,8 +2800,7 @@ R"x*x*x(<html>
 				net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", server write status error: "
 					<< ec.message();
 				co_return false;
@@ -2980,8 +2914,7 @@ R"x*x*x(<html>
 			if (proxy_port.empty())
 				proxy_port = m_bridge_proxy->scheme();
 
-			XLOG_DBG << "connection id: "
-				<< m_connection_id
+			log_conn_debug()
 				<< ", connect to next proxy: "
 				<< proxy_host
 				<< ":"
@@ -3089,8 +3022,7 @@ R"x*x*x(<html>
 				co_return false;
 			}
 
-			XLOG_DBG << "connection id: "
-				<< m_connection_id
+			log_conn_debug()
 				<< ", connect to next proxy: "
 				<< proxy_host
 				<< ":"
@@ -3104,8 +3036,7 @@ R"x*x*x(<html>
 				if (!co_await noise_handshake(remote_socket, m_outin_key, m_outout_key))
 					co_return false;
 
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", with upstream noise completed";
 			}
 
@@ -3143,8 +3074,7 @@ R"x*x*x(<html>
 			{
 				ec = {};
 
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", connect to next proxy: "
 					<< proxy_host
 					<< " instantiate stream";
@@ -3217,8 +3147,7 @@ R"x*x*x(<html>
 							::ERR_get_error());
 					}
 
-					XLOG_DBG << "connection id: "
-						<< m_connection_id
+					log_conn_debug()
 						<< ", do async ssl handshake...";
 
 					// do async handshake.
@@ -3233,9 +3162,9 @@ R"x*x*x(<html>
 							ec.message());
 					}
 
-					XLOG_FDBG("connection id: {}, ssl handshake: {}",
-						m_connection_id,
-						proxy_host);
+					log_conn_debug()
+						<< ", " << proxy_host
+						<< " ssl handshake completed";
 
 					co_return sock_stream;
 				}
@@ -3268,8 +3197,7 @@ R"x*x*x(<html>
 
 			m_remote_socket = std::move(co_await instantiate_stream());
 
-			XLOG_DBG << "connection id: "
-				<< m_connection_id
+			log_conn_debug()
 				<< ", connect to next proxy: "
 				<< proxy_host
 				<< ":"
@@ -3362,8 +3290,7 @@ R"x*x*x(<html>
 						net_awaitable[ec]);
 					if (ec)
 					{
-						XLOG_WARN << "connection id: "
-							<< m_connection_id
+						log_conn_warning()
 							<< ", resolve: "
 							<< target_host
 							<< ", error: "
@@ -3493,8 +3420,7 @@ R"x*x*x(<html>
 						net_awaitable[ec]);
 					if (ec)
 					{
-						XLOG_DBG << "connection id: "
-							<< m_connection_id
+						log_conn_debug()
 							<< (keep_alive ? ", keepalive" : "")
 							<< ", web async_read_header: "
 							<< ec.message();
@@ -3516,8 +3442,7 @@ R"x*x*x(<html>
 						net_awaitable[ec]);
 					if (ec)
 					{
-						XLOG_DBG << "connection id: "
-							<< m_connection_id
+						log_conn_debug()
 							<< ", web expect async_write: "
 							<< ec.message();
 					}
@@ -3715,8 +3640,7 @@ R"x*x*x(<html>
 			fs::directory_iterator it(path, fs::directory_options::skip_permission_denied, ec);
 			if (ec)
 			{
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", format_path_list read dir: "
 					<< path
 					<< ", error: "
@@ -3881,10 +3805,11 @@ R"x*x*x(<html>
 					sr,
 					net_awaitable[ec]);
 				if (ec)
-					XLOG_WARN << "connection id: "
-					<< m_connection_id
-					<< ", http_dir write location err: "
-					<< ec.message();
+				{
+					log_conn_warning()
+						<< ", http_dir write location err: "
+						<< ec.message();
+				}
 
 				co_return;
 			}
@@ -3951,10 +3876,11 @@ R"x*x*x(<html>
 				sr,
 				net_awaitable[ec]);
 			if (ec)
-				XLOG_WARN << "connection id: "
-				<< m_connection_id
-				<< ", http dir write body err: "
-				<< ec.message();
+			{
+				log_conn_warning()
+					<< ", http dir write body err: "
+					<< ec.message();
+			}
 
 			co_return;
 		}
@@ -3983,10 +3909,11 @@ R"x*x*x(<html>
 					sr,
 					net_awaitable[ec]);
 				if (ec)
-					XLOG_WARN << "connection id: "
-					<< m_connection_id
-					<< ", http_dir write location err: "
-					<< ec.message();
+				{
+					log_conn_warning()
+						<< ", http_dir write location err: "
+						<< ec.message();
+				}
 
 				co_return;
 			}
@@ -4053,10 +3980,11 @@ R"x*x*x(<html>
 				sr,
 				net_awaitable[ec]);
 			if (ec)
-				XLOG_WARN << "connection id: "
-				<< m_connection_id
-				<< ", http dir write body err: "
-				<< ec.message();
+			{
+				log_conn_warning()
+					<< ", http dir write body err: "
+					<< ec.message();
+			}
 
 			co_return;
 		}
@@ -4101,10 +4029,11 @@ R"x*x*x(<html>
 						sr,
 						net_awaitable[ec]);
 					if (ec)
-						XLOG_WARN << "connection id: "
-						<< m_connection_id
-						<< ", http dir write index err: "
-						<< ec.message();
+					{
+						log_conn_warning()
+							<< ", http dir write index err: "
+							<< ec.message();
+					}
 
 					co_return;
 				}
@@ -4126,10 +4055,11 @@ R"x*x*x(<html>
 					sr,
 					net_awaitable[ec]);
 				if (ec)
-					XLOG_WARN << "connection id: "
-					<< m_connection_id
-					<< ", http_dir write location err: "
-					<< ec.message();
+				{
+					log_conn_warning()
+						<< ", http_dir write location err: "
+						<< ec.message();
+				}
 
 				co_return;
 			}
@@ -4163,10 +4093,11 @@ R"x*x*x(<html>
 				sr,
 				net_awaitable[ec]);
 			if (ec)
-				XLOG_WARN << "connection id: "
-				<< m_connection_id
-				<< ", http dir write body err: "
-				<< ec.message();
+			{
+				log_conn_warning()
+					<< ", http dir write body err: "
+					<< ec.message();
+			}
 
 			co_return;
 		}
@@ -4180,8 +4111,7 @@ R"x*x*x(<html>
 
 			if (!fs::exists(path, ec))
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", http "
 					<< hctx.target_
 					<< " file not exists";
@@ -4200,8 +4130,7 @@ R"x*x*x(<html>
 
 			if (fs::is_directory(path, ec))
 			{
-				XLOG_DBG << "connection id: "
-					<< m_connection_id
+				log_conn_debug()
 					<< ", http "
 					<< hctx.target_
 					<< " is directory";
@@ -4222,8 +4151,7 @@ R"x*x*x(<html>
 			size_t content_length = fs::file_size(path, ec);
 			if (ec)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", http "
 					<< hctx.target_
 					<< " file size error: "
@@ -4247,8 +4175,7 @@ R"x*x*x(<html>
 			if (request.count(http::field::referer))
 				referer = std::string(request[http::field::referer]);
 
-			XLOG_DBG << "connection id: "
-				<< m_connection_id
+			log_conn_debug()
 				<< ", http file: "
 				<< hctx.target_
 				<< ", size: "
@@ -4367,8 +4294,7 @@ R"x*x*x(<html>
 				net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", http async_write_header: "
 					<< ec.message();
 
@@ -4419,8 +4345,7 @@ R"x*x*x(<html>
 				}
 				if (ec)
 				{
-					XLOG_WARN << "connection id: "
-						<< m_connection_id
+					log_conn_warning()
 						<< ", http async_write: "
 						<< ec.message()
 						<< ", already write: "
@@ -4468,8 +4393,7 @@ R"x*x*x(<html>
 			co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", default http route err: "
 					<< ec.message();
 			}
@@ -4496,8 +4420,7 @@ R"x*x*x(<html>
 			co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", location http route err: "
 					<< ec.message();
 			}
@@ -4523,8 +4446,7 @@ R"x*x*x(<html>
 				m_local_socket, sr, net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", forbidden http route err: "
 					<< ec.message();
 			}
@@ -4551,8 +4473,7 @@ R"x*x*x(<html>
 				m_local_socket, sr, net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_WARN << "connection id: "
-					<< m_connection_id
+				log_conn_warning()
 					<< ", unauthorized http route err: "
 					<< ec.message();
 			}
