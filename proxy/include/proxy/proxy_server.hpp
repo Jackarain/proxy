@@ -741,7 +741,7 @@ R"x*x*x(<html>
 			, m_timer(executor)
 			, m_connection_id(id)
 			, m_tproxy(tproxy)
-			, m_local_buffer(5242880u) // 5MB max buffer size.
+			, m_local_buffer(10485760u) // 10MB max buffer size.
 			, m_proxy_server(server)
 		{
 		}
