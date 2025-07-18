@@ -741,6 +741,7 @@ R"x*x*x(<html>
 			, m_timer(executor)
 			, m_connection_id(id)
 			, m_tproxy(tproxy)
+			, m_local_buffer(5242880u) // 5MB max buffer size.
 			, m_proxy_server(server)
 		{
 		}
@@ -4623,7 +4624,7 @@ R"x*x*x(<html>
 		net::ip::tcp::endpoint m_tproxy_remote;
 
 		// m_local_buffer 本地缓冲区, 用于接收客户端的数据的 buffer.
-		net::streambuf m_local_buffer{};
+		net::streambuf m_local_buffer;
 
 		// m_inin_key 用于身份为服务端时, 解密接收到的数据的 key.
 		std::vector<uint8_t> m_inin_key;
