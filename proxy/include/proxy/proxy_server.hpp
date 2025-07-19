@@ -3551,17 +3551,17 @@ R"x*x*x(<html>
 
 		inline std::wstring make_target_path(const std::string& target)
 		{
-			std::string url = "http://example.com";
-			if (target.starts_with("/"))
-				url += target;
-			else
-				url += "/" + target;
+			try
+			{
+				auto result = urls::url(
+					target.starts_with("/") ? target : "/" + target);
 
-			auto result = urls::parse_uri(url);
-			if (result.has_error())
-				return boost::nowide::widen(target);
+				return boost::nowide::widen(result.path());
+			}
+			catch (const std::exception&)
+			{}
 
-			return boost::nowide::widen(result->path());
+			return boost::nowide::widen(target);
 		}
 
 		inline std::string make_real_target_path(const std::string& target)
@@ -4136,15 +4136,26 @@ R"x*x*x(<html>
 					<< hctx.target_
 					<< " is directory";
 
-				std::string url = "http://";
-				if (is_crytpo_stream())
-					url = "https://";
-				url += request[http::field::host];
-				urls::url u(url);
-				std::string target = hctx.target_ + "/";
-				u.set_path(target);
+				try
+				{
+					urls::url url;
+					if (is_crytpo_stream())
+						url.set_scheme_id(urls::scheme::https);
+					else
+						url.set_scheme_id(urls::scheme::http);
+					url.set_encoded_authority(request[http::field::host]);
+					url.set_path(hctx.target_ + "/");
 
-				co_await location_http_route(request, u.buffer());
+					co_await location_http_route(request, url.buffer());
+				}
+				catch (const std::exception& e)
+				{
+					log_conn_warning()
+						<< ", http "
+						<< hctx.target_
+						<< " location error: "
+						<< e.what();
+				}
 
 				co_return;
 			}
